@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { request } from "node:http";
 import { test } from "node:test";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createLocalServer } from "./server.mjs";
+import { buildServerConfig } from "../../scripts/configure_local_server.mjs";
+import { createLocalServer, loadServerConfig } from "./server.mjs";
 
 function call(port, method, path, body, headers = {}) {
   return new Promise((resolve, reject) => {
@@ -85,6 +86,31 @@ test("local server validates its advertised public origin", async () => {
   assert.match(info.body.inboxUrl, /^https:\/\/chat\.example\.test\/api\/v1\/inbox\//);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
+});
+
+test("guided server config validates modes and resolves stored paths", async () => {
+  assert.deepEqual(
+    buildServerConfig({ mode: "local", port: "1555", dataDir: "/tmp/ad-config-test" }),
+    { bindHost: "127.0.0.1", port: 1555, dataDir: "/tmp/ad-config-test" },
+  );
+  assert.deepEqual(
+    buildServerConfig({ mode: "reverse-proxy", publicUrl: "https://chat.example.test/", dataDir: "/tmp/ad-config-test" }),
+    { bindHost: "127.0.0.1", port: 1422, dataDir: "/tmp/ad-config-test", publicUrl: "https://chat.example.test" },
+  );
+  assert.throws(() => buildServerConfig({ mode: "direct-tls", publicUrl: "https://chat.example.test" }), /requires both/);
+  assert.throws(() => buildServerConfig({ mode: "reverse-proxy", publicUrl: "http://chat.example.test" }), /HTTPS origin/);
+
+  const directory = await mkdtemp(join(tmpdir(), "another-dimension-config-"));
+  const configFile = join(directory, "server-config.json");
+  await writeFile(configFile, JSON.stringify({ bindHost: "127.0.0.1", port: 1777, dataDir: "state" }));
+  assert.deepEqual(await loadServerConfig(configFile), {
+    bindHost: "127.0.0.1",
+    port: 1777,
+    dataDir: join(directory, "state"),
+  });
+  await writeFile(configFile, JSON.stringify({ unexpected: true }));
+  await assert.rejects(() => loadServerConfig(configFile), /Unknown server config field/);
+  await rm(directory, { recursive: true, force: true });
 });
 
 test("local server rejects malformed inbox requests without storing them", async () => {

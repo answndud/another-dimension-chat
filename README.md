@@ -62,7 +62,7 @@ Build the browser bundle, then start the server on the user's device:
 
 ```sh
 npm --prefix apps/web run build --workspaces=false
-npm --prefix apps/server start --workspaces=false
+./scripts/start_local_server.sh
 ```
 
 Open the private local UI URL printed by the server, including its `#local=...`
@@ -70,8 +70,17 @@ fragment. A plain root URL intentionally runs in manual mode because it cannot
 read or advertise the inbox capability. Treat the printed local UI URL as a
 secret and never include it in logs, screenshots, or support reports.
 
-The same flow can be started from the repository root with
-`./scripts/start_local_server.sh` after the web bundle is built.
+The first run is loopback-only. To choose a peer-reachable HTTPS setup without
+assembling environment variables, run the guided setup; it saves a private
+configuration and immediately starts the server:
+
+```sh
+./scripts/start_local_server.sh --setup
+```
+
+Choose an existing HTTPS reverse proxy/Tailscale Serve route or direct HTTPS
+with your own PEM certificate and key. Later runs use the saved configuration
+with plain `./scripts/start_local_server.sh`.
 
 To create a self-contained release archive:
 
@@ -91,19 +100,19 @@ Run a short two-server transport smoke check with:
 node scripts/smoke_user_owned_servers.mjs
 ```
 
-The default bind is `127.0.0.1:1422`. For a LAN or VPN deployment, set
-`AD_BIND_HOST` explicitly, set `AD_PUBLIC_URL` to the address peers can reach,
-and configure the network exposure yourself:
+The default bind is `127.0.0.1:1422`. A setup can also be scripted while keeping
+the same validated configuration path:
 
 ```sh
-AD_BIND_HOST=0.0.0.0 AD_PUBLIC_URL=https://chat.example.test \
-  npm --prefix apps/server start --workspaces=false
+./scripts/start_local_server.sh --setup \
+  --mode reverse-proxy --public-url https://chat.example.test --port 1422
 ```
 
-`AD_PUBLIC_URL` must be an origin containing only a scheme and host (plus an
-optional port), without a path, credentials, query, or fragment. It is required
-with a `0.0.0.0` bind. This makes the invite address explicit; it does not
-configure DNS, a firewall, or reverse-proxy reachability.
+The public URL must be an HTTPS origin containing only a scheme and host (plus
+an optional port), without a path, credentials, query, or fragment. This makes
+the invite address explicit; it does not configure DNS, a firewall, or
+reverse-proxy reachability. Existing `AD_*` environment variables remain an
+advanced compatibility path when no saved config exists.
 
 The server stores only bounded opaque envelopes and serves the static browser UI.
 
@@ -114,15 +123,16 @@ No ChatGPT Sites or central message hosting is required.
 - Loopback (`127.0.0.1`, default): useful for local development and same-device
   testing; another device cannot reach it.
 - LAN: bind to the machine's LAN interface or `0.0.0.0`, put an HTTPS reverse
-  proxy in front of it, set `AD_PUBLIC_URL` to the HTTPS URL, and apply the host
-  firewall policy. Plain HTTP LAN pages cannot use Web Crypto in normal browsers.
+  proxy in front of it, configure that HTTPS origin through guided setup, and
+  apply the host firewall policy. Plain HTTP LAN pages cannot use Web Crypto in
+  normal browsers.
 - Local UI + LAN API (development only): open each user's UI from that user's
   `localhost` server, while the invite points to the peer's LAN inbox. The
   sealed envelope remains encrypted, but an HTTP capability URL can be observed
   or abused to inject/drop opaque traffic. Use only on a controlled network;
   use HTTPS for production.
 - VPN: advertise an HTTPS address (for example, an HTTPS reverse proxy bound to
-  a Tailscale/WireGuard interface) in `AD_PUBLIC_URL`; the VPN supplies
+  a Tailscale/WireGuard interface) through guided setup; the VPN supplies
   reachability, not this application.
 - Public HTTPS: place the server behind a reverse proxy that you operate,
   configure HTTPS and access controls there, and advertise that HTTPS origin.
@@ -130,9 +140,9 @@ No ChatGPT Sites or central message hosting is required.
 The server does not configure UPnP, port forwarding, TLS certificates,
 authentication, anonymity, or availability automatically.
 
-For a small self-managed setup, the server can also terminate HTTPS directly by
-setting the paired `AD_TLS_KEY_FILE` and `AD_TLS_CERT_FILE` PEM paths. A
-maintained reverse proxy remains preferable for public exposure.
+For a small self-managed setup, guided `direct-tls` mode lets the server
+terminate HTTPS with paired PEM key and certificate paths. A maintained reverse
+proxy remains preferable for public exposure.
 
 For development only, generate a host/IP certificate with
 `./scripts/generate_tls_cert.sh <host-or-ip>`. It is self-signed and must be

@@ -99,6 +99,23 @@ function urlHost(host) {
   return host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
 }
 
+export async function loadServerConfig(configFile) {
+  const absoluteConfigFile = resolve(configFile);
+  let parsed;
+  try { parsed = JSON.parse(await readFile(absoluteConfigFile, "utf8")); } catch (error) {
+    throw new Error(`Could not read server config ${absoluteConfigFile}: ${error.message}`);
+  }
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error("Server config must be a JSON object.");
+  const allowed = new Set(["bindHost", "port", "dataDir", "distDir", "publicUrl", "ttlMs", "tlsKeyFile", "tlsCertFile"]);
+  const unknown = Object.keys(parsed).filter((key) => !allowed.has(key));
+  if (unknown.length) throw new Error(`Unknown server config field: ${unknown.join(", ")}`);
+  const relativePathKeys = ["dataDir", "distDir", "tlsKeyFile", "tlsCertFile"];
+  for (const key of relativePathKeys) {
+    if (parsed[key]) parsed[key] = resolve(dirname(absoluteConfigFile), String(parsed[key]));
+  }
+  return parsed;
+}
+
 export async function createLocalServer({
   bindHost = process.env.AD_BIND_HOST || "127.0.0.1",
   port = Number(process.env.AD_PORT || 1422),
@@ -233,6 +250,9 @@ export async function createLocalServer({
     : createServer(handleRequest);
 
   const localHost = ["0.0.0.0", "::"].includes(bindHost) ? "127.0.0.1" : bindHost;
+  const localUiOrigin = tlsKeyFile && normalizedPublicUrl
+    ? normalizedPublicUrl
+    : `${scheme}://${urlHost(localHost)}:${port}`;
   return {
     server,
     bindHost,
@@ -243,20 +263,31 @@ export async function createLocalServer({
     externalSecure: originFor(bindHost).startsWith("https://"),
     listenerTls: Boolean(tlsKeyFile && tlsCertFile),
     localAccessCapability,
-    localUiUrl: `${scheme}://${urlHost(localHost)}:${port}/#local=${localAccessCapability}`,
+    localUiUrl: `${localUiOrigin}/#local=${localAccessCapability}`,
   };
 }
 
 const launchedDirectly = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
 if (launchedDirectly) {
-  const runtime = await createLocalServer();
-  runtime.server.listen(runtime.port, runtime.bindHost, () => {
-    console.log(`Another Dimension local server listening at ${runtime.listenerTls ? "https" : "http"}://${runtime.bindHost}:${runtime.port}`);
-    console.log(`Advertised origin: ${runtime.publicOrigin}`);
-    console.log(`Open the private local UI: ${runtime.localUiUrl}`);
-    console.log("The local UI URL grants access to inbox settings. Keep it out of logs, screenshots, and support reports.");
-    if (!isLoopbackHost(runtime.bindHost)) console.warn("Warning: non-loopback bind exposes this server to the configured network.");
-    if (!isLoopbackHost(runtime.bindHost) && !runtime.externalSecure) console.warn("Warning: remote browser Web Crypto requires an HTTPS public URL or reverse proxy.");
-    if (runtime.externalSecure && !runtime.listenerTls) console.log(`External HTTPS is expected at ${runtime.publicOrigin}; keep the reverse proxy running.`);
+  const launch = async () => {
+    const args = process.argv.slice(2);
+    if (args.length && (args.length !== 2 || args[0] !== "--config")) {
+      throw new Error("Usage: node apps/server/server.mjs [--config /path/to/server-config.json]");
+    }
+    const options = args.length ? await loadServerConfig(args[1]) : {};
+    const runtime = await createLocalServer(options);
+    runtime.server.listen(runtime.port, runtime.bindHost, () => {
+      console.log(`Another Dimension local server listening at ${runtime.listenerTls ? "https" : "http"}://${runtime.bindHost}:${runtime.port}`);
+      console.log(`Advertised origin: ${runtime.publicOrigin}`);
+      console.log(`Open the private local UI: ${runtime.localUiUrl}`);
+      console.log("The local UI URL grants access to inbox settings. Keep it out of logs, screenshots, and support reports.");
+      if (!isLoopbackHost(runtime.bindHost)) console.warn("Warning: non-loopback bind exposes this server to the configured network.");
+      if (!isLoopbackHost(runtime.bindHost) && !runtime.externalSecure) console.warn("Warning: remote browser Web Crypto requires an HTTPS public URL or reverse proxy.");
+      if (runtime.externalSecure && !runtime.listenerTls) console.log(`External HTTPS is expected at ${runtime.publicOrigin}; keep the reverse proxy running.`);
+    });
+  };
+  launch().catch((error) => {
+    console.error(`Server startup failed: ${error.message}`);
+    process.exitCode = 1;
   });
 }

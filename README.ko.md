@@ -60,13 +60,25 @@ wrapper입니다.
 
 ```sh
 npm --prefix apps/web run build --workspaces=false
-npm --prefix apps/server start --workspaces=false
+./scripts/start_local_server.sh
 ```
 
 서버가 출력하는 `#local=...` fragment까지 포함된 private local UI URL을
 여세요. 일반 root URL은 inbox capability를 읽거나 광고할 수 없어 의도적으로
 manual mode로 동작합니다. 출력된 local UI URL을 비밀로 취급하고 log,
 screenshot, support report에 포함하지 마세요.
+
+첫 실행은 loopback 전용입니다. 환경변수를 직접 조합하지 않고 상대가 접근할
+HTTPS 경로를 선택하려면 guided setup을 실행하세요. private 설정을 저장한 뒤
+서버를 바로 시작합니다.
+
+```sh
+./scripts/start_local_server.sh --setup
+```
+
+기존 HTTPS reverse proxy/Tailscale Serve 또는 직접 보유한 PEM 인증서와 key를
+사용하는 direct HTTPS 중에서 선택할 수 있습니다. 이후에는
+`./scripts/start_local_server.sh`만 실행하면 저장된 설정을 사용합니다.
 
 독립 실행 release archive는 다음처럼 만들 수 있습니다.
 
@@ -87,19 +99,18 @@ archive에는 빌드된 browser bundle과 server runtime이 포함되므로 압�
 node scripts/smoke_user_owned_servers.mjs
 ```
 
-기본 bind는 `127.0.0.1:1422`입니다. LAN이나 VPN으로 노출하려면
-`AD_BIND_HOST`를 명시하고, 상대가 접근할 수 있는 주소를 `AD_PUBLIC_URL`로
-설정한 뒤 네트워크 공개를 사용자가 직접 구성해야 합니다.
+기본 bind는 `127.0.0.1:1422`입니다. guided 설정은 다음처럼 비대화형 명령으로도
+같은 검증된 설정 파일을 만들 수 있습니다.
 
 ```sh
-AD_BIND_HOST=0.0.0.0 AD_PUBLIC_URL=https://chat.example.test \
-  npm --prefix apps/server start --workspaces=false
+./scripts/start_local_server.sh --setup \
+  --mode reverse-proxy --public-url https://chat.example.test --port 1422
 ```
 
-`AD_PUBLIC_URL`은 scheme과 host(선택적 port)만 있는 origin이어야 하며 path,
-credential, query, fragment를 허용하지 않습니다. `0.0.0.0` bind에는 반드시
-설정해야 합니다. 이는 초대에 들어갈 주소를 명확히 할 뿐 DNS, 방화벽,
-reverse proxy의 실제 도달성을 대신 만들지 않습니다.
+public URL은 scheme과 host(선택적 port)만 있는 HTTPS origin이어야 하며 path,
+credential, query, fragment를 허용하지 않습니다. 이는 초대에 들어갈 주소를
+명확히 할 뿐 DNS, 방화벽, reverse proxy의 실제 도달성을 대신 만들지 않습니다.
+저장 설정이 없을 때의 기존 `AD_*` 환경변수는 고급 호환 경로로 유지합니다.
 
 서버는 bounded opaque envelope만 저장하고 정적 browser UI를 제공합니다.
 
@@ -110,7 +121,7 @@ ChatGPT Sites나 중앙 메시지 hosting은 필요하지 않습니다.
 - Loopback(`127.0.0.1`, 기본값): 같은 기기 테스트용이며 다른 기기에서는
   접근할 수 없습니다.
 - LAN: LAN 주소 또는 `0.0.0.0`으로 명시적으로 bind한 뒤 HTTPS reverse
-  proxy를 앞에 두고, `AD_PUBLIC_URL`에는 HTTPS URL을 설정하며 방화벽 정책을
+  proxy를 앞에 두고, guided setup에 HTTPS origin을 설정하며 방화벽 정책을
   직접 적용합니다. 일반 브라우저는 평문 HTTP LAN 페이지에서 Web Crypto를
   사용할 수 없습니다.
 - Local UI + LAN API(개발 전용): 각자 자신의 `localhost` 서버에서 UI를 열고,
@@ -119,16 +130,16 @@ ChatGPT Sites나 중앙 메시지 hosting은 필요하지 않습니다.
   주입·삭제에 악용될 수 있습니다. 통제된 네트워크에서만 사용하고 운영에는
   HTTPS를 사용하세요.
 - VPN: Tailscale/WireGuard 인터페이스에 연결된 HTTPS 주소를
-  `AD_PUBLIC_URL`로 사용합니다. VPN이 도달성을 제공하며 앱이 제공하는
-  기능은 아닙니다.
+  guided setup의 public URL로 사용합니다. VPN이 도달성을 제공하며 앱이
+  제공하는 기능은 아닙니다.
 - 공개 HTTPS: 직접 운영하는 reverse proxy 뒤에 서버를 두고 HTTPS와 접근
   제어를 proxy에서 설정한 뒤 HTTPS origin을 invite에 사용합니다.
 
 서버는 UPnP, port forwarding, TLS 인증서, 인증, anonymity, availability를
 자동으로 제공하지 않습니다.
 
-소규모 자체 운영에서는 `AD_TLS_KEY_FILE`과 `AD_TLS_CERT_FILE`에 한 쌍의 PEM
-파일을 설정해 서버가 HTTPS를 직접 종료할 수도 있습니다. 공개 노출에는
+소규모 자체 운영에서는 guided `direct-tls` mode에서 PEM key와 certificate
+경로를 지정해 서버가 HTTPS를 직접 종료할 수 있습니다. 공개 노출에는
 유지보수되는 reverse proxy를 사용하는 편이 안전합니다.
 
 개발용으로는 `./scripts/generate_tls_cert.sh <host-or-ip>`로 인증서를 만들 수

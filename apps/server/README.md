@@ -6,8 +6,13 @@ plaintext, profile keys, or passphrases.
 
 ```sh
 npm --prefix apps/web run build --workspaces=false
-npm --prefix apps/server start --workspaces=false
+./scripts/start_local_server.sh
 ```
+
+Run `./scripts/start_local_server.sh --setup` for a guided local,
+reverse-proxy/Tailscale Serve, or direct-TLS configuration. It validates and
+saves `.another-dimension-server/server-config.json` with owner-only
+permissions, then starts the server. Later starts reuse it automatically.
 
 The web bundle includes the committed Rust `snow` Noise WebAssembly module.
 Only crypto-source changes require `npm --prefix apps/web run build:crypto

@@ -26,4 +26,4 @@ chmod 644 "$OUTPUT_DIR/server.crt"
 
 echo "Created a self-signed development certificate for $HOST."
 echo "Install the certificate in the devices' trust stores before browser acceptance."
-echo "AD_PUBLIC_URL=https://$HOST AD_TLS_KEY_FILE=$OUTPUT_DIR/server.key AD_TLS_CERT_FILE=$OUTPUT_DIR/server.crt ./scripts/start_local_server.sh"
+echo "./scripts/start_local_server.sh --setup --mode direct-tls --public-url https://$HOST --tls-key $OUTPUT_DIR/server.key --tls-cert $OUTPUT_DIR/server.crt"

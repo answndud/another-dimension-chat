@@ -129,6 +129,9 @@ proxy를 권장한다. `AD_PUBLIC_URL`은 path나 credential이 없는 HTTP(S) o
 별도 local-access capability를 제시한 browser에만 반환한다.
 invite에 포함되는 inbox capability는 POST 전용으로 제한하고, queue GET과 ack는
 local-access capability를 함께 제시한 소유자 browser에만 허용한다.
+사용자가 환경변수를 직접 조합하지 않도록 guided startup이 local,
+reverse-proxy/Tailscale Serve, direct-TLS 중 하나를 검증해 owner-only JSON
+설정으로 저장하고 이후 실행에서 자동 재사용한다.
 
 ### Consequences
 
@@ -141,6 +144,8 @@ local-access capability를 함께 제시한 소유자 browser에만 허용한다
 
 - `apps/server/server.mjs`: loopback default, explicit bind/public URL
 - `apps/server/server.mjs`: optional paired TLS key/certificate termination
+- `scripts/configure_local_server.mjs`, `scripts/start_local_server.sh`: guided
+  config 생성, 권한 제한, 자동 재사용
 - `README.md`, `README.ko.md`: LAN/VPN/HTTPS 선택지와 비자동 보장 명시
 - `SECURITY.md`: user-owned inbox와 non-claims
 
