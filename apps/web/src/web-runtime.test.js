@@ -17,6 +17,8 @@ test("web runtime uses browser crypto and IndexedDB rather than preview storage"
   assert.match(runtime, /PBKDF2/);
   assert.match(runtime, /AES-GCM/);
   assert.match(runtime, /olm_outbound_start/);
+  assert.match(runtime, /olm_account_replenish/);
+  assert.match(runtime, /prekeys/);
   assert.match(runtime, /olm_session_encrypt/);
   assert.match(runtime, /ADWEB3/);
   assert.match(runtime, /ADENVWEB3/);
@@ -106,6 +108,13 @@ async function completeManualHandshake(runtime, passphrases) {
     await runtime.confirmSafetyVerification(runtime.safetyPhrase(profile.selfInviteBody, profile.peer));
     if (runtime.getPendingEnvelope()) await runtime.confirmPendingEnvelopeDelivered();
   }
+  let consumedPrekeyProfile = null;
+  for (const name of Object.keys(passphrases)) {
+    const profile = await runtime.unlockProfile(name, passphrases[name]);
+    if (profile.privateMaterial.prekeys.some((prekey) => prekey.state === "consumed")) consumedPrekeyProfile = profile;
+  }
+  assert.ok(consumedPrekeyProfile);
+  assert.ok(consumedPrekeyProfile.privateMaterial.prekeys.filter((prekey) => prekey.state === "available").length >= 3);
 }
 
 test("two local profiles establish an Olm ratchet, persist it, and reject tamper and replay", async (context) => {

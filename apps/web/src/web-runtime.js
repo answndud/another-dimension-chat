@@ -1,6 +1,7 @@
 import initCrypto, {
   initSync as initCryptoSync,
   olm_account_new,
+  olm_account_replenish,
   olm_inbound_accept,
   olm_outbound_finish,
   olm_outbound_start,
@@ -151,6 +152,28 @@ function storedProfile(profile) {
   };
 }
 
+async function replenishPrekeys(minimum = 3) {
+  const prekeys = activeProfile.privateMaterial.prekeys || [];
+  activeProfile.privateMaterial.prekeys = prekeys;
+  const available = prekeys.filter((prekey) => prekey.state === "available").length;
+  if (available >= minimum) return;
+  const replenished = JSON.parse(olm_account_replenish(activeProfile.privateMaterial.olmAccountPickle, Math.max(3, 10 - available)));
+  activeProfile.privateMaterial.olmAccountPickle = replenished.accountPickle;
+  for (const publicKey of replenished.oneTimePublicKeys || []) {
+    if (!prekeys.some((prekey) => prekey.public === publicKey)) prekeys.push({ public: publicKey, state: "available", issuedAt: null });
+  }
+}
+
+function prekeyByPublic(publicKey) {
+  return (activeProfile.privateMaterial.prekeys || []).find((prekey) => prekey.public === publicKey);
+}
+
+async function consumeLocalPrekey(publicKey) {
+  const prekey = prekeyByPublic(publicKey);
+  if (prekey) prekey.state = "consumed";
+  await replenishPrekeys(3);
+}
+
 async function persistPrivateProfile() {
   const sealed = await sealWithKey(activeProfile.privateMaterial, activeProfile.wrappingKey, base64ToBytes(activeProfile.salt));
   Object.assign(activeProfile, sealed);
@@ -185,6 +208,7 @@ export async function createProfile(name, passphrase) {
   const privateMaterial = {
     ecdsaPrivate: await crypto.subtle.exportKey("jwk", ecdsa.privateKey),
     olmAccountPickle: olm.accountPickle,
+    prekeys: (olm.oneTimePublicKeys || []).map((publicKey) => ({ public: publicKey, state: "available", issuedAt: null })),
     session: null,
   };
   const { wrappingKey: profileWrappingKey, ...sealed } = await sealPrivateMaterial(privateMaterial, passphrase);
@@ -193,7 +217,7 @@ export async function createProfile(name, passphrase) {
     ecdsaPublic,
     olmEd25519Public: olm.ed25519Public,
     olmCurve25519Public: olm.curve25519Public,
-    olmOneTimePublic: olm.oneTimePublic,
+    olmOneTimePublic: olm.oneTimePublicKeys?.[0] || "",
     ...sealed,
     peer: null,
     selfInviteBody: null,
@@ -229,6 +253,12 @@ export async function unlockProfile(name, passphrase) {
 export function lockProfile() { activeProfile = null; }
 
 async function selfInviteBody() {
+  if (activeProfile.selfInviteBody) return activeProfile.selfInviteBody;
+  await replenishPrekeys(1);
+  const prekey = activeProfile.privateMaterial.prekeys.find((candidate) => candidate.state === "available");
+  if (!prekey) throw new Error("No one-time prekey is available. Create a fresh profile before pairing.");
+  prekey.state = "reserved";
+  prekey.issuedAt = Date.now();
   const info = await localServerInfo();
   const body = {
     v: 3,
@@ -236,7 +266,7 @@ async function selfInviteBody() {
     ecdsaPublic: activeProfile.ecdsaPublic,
     olmEd25519Public: activeProfile.olmEd25519Public,
     olmCurve25519Public: activeProfile.olmCurve25519Public,
-    olmOneTimePublic: activeProfile.olmOneTimePublic,
+    olmOneTimePublic: prekey.public,
     messageProtocol: "Olm.v2.Curve25519-AES-SHA2",
     ...(info ? { server: { inboxUrl: info.inboxUrl, protocol: info.protocol } } : {}),
   };
@@ -518,6 +548,7 @@ async function processHandshakeEnvelope(envelope) {
       throw new Error("Olm init is invalid or is not bound to this pairing transcript.");
     }
     activeProfile.privateMaterial.olmAccountPickle = accepted.accountPickle;
+    await consumeLocalPrekey(activeProfile.selfInviteBody.olmOneTimePublic);
     session.sessionPickle = accepted.sessionPickle;
     session.status = "ready";
     session.pendingEnvelope = await signedEnvelope("olm-ready", accepted.message);

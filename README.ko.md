@@ -139,6 +139,13 @@ pairing이 성공해도 바로 메시지를 보낼 수는 없습니다. 두 사�
 각자 확인 버튼을 눌러야 메시지 암호화·전송이 열립니다. 이 확인은 현재 paired
 session에 저장되며, 새 pairing이나 session 재설정에서는 다시 해야 합니다.
 
+각 profile은 Olm one-time prekey를 여러 개 보유합니다. 초대는 그중 하나를
+예약하고, 상대의 최초 handshake가 성공하면 해당 키를 `consumed`로 처리한 뒤
+부족한 키를 보충합니다. prekey 상태는 private profile material 안에 저장되며
+초대·서버·relay에는 개인키가 노출되지 않습니다. 브라우저 저장소를 복사하거나
+profile을 복제하면 이 보장이 깨질 수 있으므로 profile 백업·복제 기능은 아직
+안전한 기능으로 제공하지 않습니다.
+
 두 사용자 서버의 health → opaque 전달 → ack 흐름은 다음 짧은 smoke 명령으로
 확인할 수 있습니다.
 

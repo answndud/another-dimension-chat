@@ -1,12 +1,10 @@
 use another_dimension_crypto::derive_production_safety_material;
-use wasm_bindgen::prelude::*;
 use vodozemac::{
     base64_decode, base64_encode,
-    olm::{
-        Account, AccountPickle, OlmMessage, Session, SessionConfig, SessionPickle,
-    },
+    olm::{Account, AccountPickle, OlmMessage, Session, SessionConfig, SessionPickle},
     Curve25519PublicKey,
 };
+use wasm_bindgen::prelude::*;
 
 fn olm_error<E>(_: E) -> JsValue {
     JsValue::from_str("Olm ratchet operation failed. Discard the input and pair again.")
@@ -55,13 +53,7 @@ pub fn safety_material(transcript: &str) -> String {
 #[wasm_bindgen]
 pub fn olm_account_new() -> Result<String, JsValue> {
     let mut account = Account::new();
-    account.generate_one_time_keys(1);
-    let one_time_public = account
-        .one_time_keys()
-        .values()
-        .next()
-        .copied()
-        .ok_or_else(|| olm_error("missing one-time key"))?;
+    let generated = account.generate_one_time_keys(10);
     account.mark_keys_as_published();
     let identity = account.identity_keys();
     let account_pickle = serialized_account(&account)?;
@@ -69,7 +61,20 @@ pub fn olm_account_new() -> Result<String, JsValue> {
         "accountPickle": account_pickle,
         "ed25519Public": identity.ed25519.to_base64(),
         "curve25519Public": identity.curve25519.to_base64(),
-        "oneTimePublic": one_time_public.to_base64(),
+        "oneTimePublicKeys": generated.created.iter().map(|key| key.to_base64()).collect::<Vec<_>>(),
+    }))
+    .map_err(olm_error)
+}
+
+#[wasm_bindgen]
+pub fn olm_account_replenish(account_pickle: &str, count: usize) -> Result<String, JsValue> {
+    let mut account = account_from_pickle(account_pickle)?;
+    let generated = account.generate_one_time_keys(count.min(10));
+    account.mark_keys_as_published();
+    let account_pickle = serialized_account(&account)?;
+    serde_json::to_string(&serde_json::json!({
+        "accountPickle": account_pickle,
+        "oneTimePublicKeys": generated.created.iter().map(|key| key.to_base64()).collect::<Vec<_>>(),
     }))
     .map_err(olm_error)
 }

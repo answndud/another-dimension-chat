@@ -22,6 +22,9 @@ keys. Signed, independently verifiable app distribution is a release blocker.
 - Profile private material is generated in the browser.
 - Profile private material is encrypted with a passphrase before IndexedDB storage.
 - Peer invites are signed and verified locally.
+- New profiles maintain a bounded local pool of Olm one-time prekeys. The
+  invite reserves one public prekey; a successful inbound handshake consumes
+  it and replenishes the pool from the encrypted local account state.
 - The UI blocks message encryption until both sides explicitly compare and
   confirm the complete safety material for the current paired session.
 - Pairing and message encryption run Olm v2 through the Rust `vodozemac`

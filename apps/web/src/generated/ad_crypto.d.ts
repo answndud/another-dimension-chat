@@ -3,6 +3,8 @@
 
 export function olm_account_new(): string;
 
+export function olm_account_replenish(account_pickle: string, count: number): string;
+
 export function olm_inbound_accept(account_pickle: string, peer_curve25519: string, message_type: number, body: string, transcript: string): string;
 
 export function olm_outbound_finish(session_pickle: string, message_type: number, body: string, transcript: string): string;
@@ -20,6 +22,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly olm_account_new: (a: number) => void;
+    readonly olm_account_replenish: (a: number, b: number, c: number, d: number) => void;
     readonly olm_inbound_accept: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;
     readonly olm_outbound_finish: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
     readonly olm_outbound_start: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
