@@ -16,6 +16,7 @@ cd "$ROOT_DIR"
 run_step "browser runtime tests" npm --prefix apps/web test --workspaces=false
 run_step "local server API tests" npm --prefix apps/server test --workspaces=false
 run_step "browser production build" npm --prefix apps/web run build --workspaces=false
+run_step "release manifest integrity" node scripts/release_manifest.test.mjs
 run_step "user-owned server transport smoke" node scripts/smoke_user_owned_servers.mjs
 
 printf '\nweb/server lightweight verification passed\n'

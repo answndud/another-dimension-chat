@@ -102,6 +102,38 @@ cd another-dimension-0.1.0
 archive에는 빌드된 browser bundle과 server runtime이 포함되므로 압축을 푼
 사용자는 Vite나 원본 저장소가 필요하지 않습니다. Node.js 20 이상이 필요합니다.
 
+### 릴리스 무결성 확인과 서명
+
+기본 실행은 로컬 개발용 `unsigned-development` archive입니다. archive 안에는
+파일별 SHA-256 매니페스트가 들어가며, 파일이 바뀌었는지는 다음 명령으로 확인할
+수 있습니다.
+
+```sh
+node scripts/verify_release_manifest.mjs .
+```
+
+고위험 배포용 archive는 운영자가 별도로 보관하는 Ed25519 PEM 개인키로 서명해야
+합니다. 개인키를 저장소, archive, 로그, README에 넣지 마세요.
+
+```sh
+AD_RELEASE_SIGNING_KEY=/secure/path/release-ed25519-private.pem \
+AD_RELEASE_REQUIRE_SIGNATURE=1 \
+./scripts/build_release.sh
+```
+
+수신자는 별도로 전달받은 신뢰 공개키를 고정해서 검증합니다. 공개키 파일 자체를
+archive에서 읽지 않는 점이 중요합니다.
+
+```sh
+node scripts/verify_release_manifest.mjs . \
+  --require-signature \
+  --public-key /secure/path/release-ed25519-public.pem
+```
+
+공개키 fingerprint는 매니페스트의 `signature.keyId`와 대조해야 합니다. 이 절차는
+번들 변조와 잘못된 서명을 발견하지만, 운영체제·브라우저·호스트가 이미 장악된
+경우나 공개키를 처음 받는 과정의 신뢰 문제까지 해결하지는 않습니다.
+
 두 사용자 서버의 health → opaque 전달 → ack 흐름은 다음 짧은 smoke 명령으로
 확인할 수 있습니다.
 

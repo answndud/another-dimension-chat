@@ -18,9 +18,24 @@ npm --prefix "$PROJECT_DIR/apps/web" run build --workspaces=false
 mkdir -p "$STAGE/another-dimension-$VERSION/apps/server" "$STAGE/another-dimension-$VERSION/apps/web" "$STAGE/another-dimension-$VERSION/scripts"
 cp "$PROJECT_DIR/apps/server/server.mjs" "$PROJECT_DIR/apps/server/package.json" "$PROJECT_DIR/apps/server/README.md" "$STAGE/another-dimension-$VERSION/apps/server/"
 cp -R "$PROJECT_DIR/apps/web/dist" "$STAGE/another-dimension-$VERSION/apps/web/"
-cp "$PROJECT_DIR/scripts/start_local_server.sh" "$PROJECT_DIR/scripts/configure_local_server.mjs" "$PROJECT_DIR/scripts/generate_tls_cert.sh" "$PROJECT_DIR/scripts/check_https_endpoint.mjs" "$STAGE/another-dimension-$VERSION/scripts/"
+cp "$PROJECT_DIR/scripts/start_local_server.sh" "$PROJECT_DIR/scripts/configure_local_server.mjs" "$PROJECT_DIR/scripts/generate_tls_cert.sh" "$PROJECT_DIR/scripts/check_https_endpoint.mjs" "$PROJECT_DIR/scripts/release_manifest.mjs" "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$STAGE/another-dimension-$VERSION/scripts/"
 cp "$PROJECT_DIR/README.md" "$PROJECT_DIR/README.ko.md" "$PROJECT_DIR/SECURITY.md" "$PROJECT_DIR/SUPPORT.md" "$STAGE/another-dimension-$VERSION/"
 chmod +x "$STAGE/another-dimension-$VERSION/scripts/start_local_server.sh" "$STAGE/another-dimension-$VERSION/scripts/configure_local_server.mjs" "$STAGE/another-dimension-$VERSION/scripts/generate_tls_cert.sh"
+
+MANIFEST_ARGS="--version $VERSION"
+VERIFY_ARGS=""
+if [ -n "${AD_RELEASE_SIGNING_KEY:-}" ]; then
+  MANIFEST_ARGS="$MANIFEST_ARGS --private-key $AD_RELEASE_SIGNING_KEY"
+elif [ "${AD_RELEASE_REQUIRE_SIGNATURE:-0}" = "1" ]; then
+  printf '%s\n' "AD_RELEASE_REQUIRE_SIGNATURE=1 requires AD_RELEASE_SIGNING_KEY to point to an Ed25519 PEM private key." >&2
+  exit 1
+fi
+if [ "${AD_RELEASE_REQUIRE_SIGNATURE:-0}" = "1" ]; then VERIFY_ARGS="--require-signature"; fi
+# shellcheck disable=SC2086
+node "$PROJECT_DIR/scripts/create_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $MANIFEST_ARGS
+# Unsigned output is allowed only for local development; verified distribution requires a signature.
+# shellcheck disable=SC2086
+node "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $VERIFY_ARGS
 
 mkdir -p "$RELEASE_ROOT"
 tar -czf "$RELEASE_ROOT/another-dimension-$VERSION.tar.gz" -C "$STAGE" "another-dimension-$VERSION"

@@ -64,7 +64,7 @@ This prototype does not claim:
 - secure deletion, backup recovery, rollback protection, or multi-device recovery
 - protection from compromised browsers, extensions, devices, local malware, or coercion
 - protection when a server or reverse proxy serves altered JavaScript/WASM
-- signed app distribution, reproducible release verification, or safe automatic updates
+- independently trusted signing-key distribution, reproducible builds, or safe automatic updates
 - identity continuity, prekey replenishment, revocation, or device lifecycle recovery
 - rate-limited, spam-resistant, highly available relay delivery
 

@@ -419,6 +419,25 @@ release에는 이미 빌드된 브라우저 bundle, 서버, 설정·TLS·endpoin
 스크립트가 포함됩니다. 압축을 푼 사용자는 Vite나 원본 저장소가 필요하지
 않습니다. Node.js 20 이상은 계속 필요합니다.
 
+기본 archive는 로컬 개발용 unsigned release입니다. 릴리스 디렉터리의 파일별
+SHA-256 매니페스트는 다음처럼 확인할 수 있습니다.
+
+```sh
+node scripts/verify_release_manifest.mjs .
+```
+
+검증된 배포는 저장소 밖의 Ed25519 PEM 개인키로 서명해야 합니다. 개인키를
+저장소나 archive에 넣지 말고, 수신자는 별도로 전달받은 공개키를 고정해
+검증합니다.
+
+```sh
+AD_RELEASE_SIGNING_KEY=/secure/path/release-ed25519-private.pem \
+AD_RELEASE_REQUIRE_SIGNATURE=1 \
+./scripts/build_release.sh
+node scripts/verify_release_manifest.mjs . --require-signature \
+  --public-key /secure/path/release-ed25519-public.pem
+```
+
 ## 10. 개발자가 알아둘 명령
 
 브라우저 테스트와 production bundle 확인:
