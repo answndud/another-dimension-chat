@@ -16,11 +16,13 @@ const DB_VERSION = 1;
 const INVITE_PREFIX = "ADWEB3.";
 const ENVELOPE_PREFIX = "ADENVWEB3.";
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
+const AUTO_LOCK_MS = 5 * 60 * 1000;
 const MAX_ENVELOPE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const profileNames = [];
 let activeProfile = null;
 let localInfoCache = null;
+let lastActivityAt = 0;
 
 const cryptoReady = (() => {
   if (globalThis.__AD_CRYPTO_WASM_BYTES__) {
@@ -60,6 +62,11 @@ async function read(storeName, key) {
 async function write(storeName, value) {
   const db = await openDb();
   try { return await request(db.transaction(storeName, "readwrite").objectStore(storeName), "put", value); } finally { db.close(); }
+}
+
+async function remove(storeName, key) {
+  const db = await openDb();
+  try { return await request(db.transaction(storeName, "readwrite").objectStore(storeName), "delete", key); } finally { db.close(); }
 }
 
 async function all(storeName) {
@@ -233,6 +240,7 @@ export async function createProfile(name, passphrase) {
     wrappingKey: profileWrappingKey,
     privateMaterial,
   };
+  lastActivityAt = Date.now();
   return activeProfile;
 }
 
@@ -249,10 +257,37 @@ export async function unlockProfile(name, passphrase) {
     wrappingKey: profileWrappingKey,
     privateMaterial: material,
   };
+  lastActivityAt = Date.now();
   return activeProfile;
 }
 
-export function lockProfile() { activeProfile = null; }
+export function lockProfile() { activeProfile = null; lastActivityAt = 0; }
+
+export function touchActivity() {
+  if (activeProfile) lastActivityAt = Date.now();
+}
+
+export function checkAutoLock() {
+  if (activeProfile && lastActivityAt > 0 && Date.now() - lastActivityAt >= AUTO_LOCK_MS) {
+    lockProfile();
+    return true;
+  }
+  return false;
+}
+
+export async function deleteProfile(name, passphrase) {
+  const record = await read("profiles", name);
+  if (!record) throw new Error("Local profile not found.");
+  await openPrivateMaterial(record, passphrase);
+  const messages = await all("messages");
+  const seen = await all("seen");
+  for (const message of messages.filter((item) => item.profile === name)) await remove("messages", message.id);
+  for (const item of seen.filter((entry) => entry.profile === name)) await remove("seen", item.id);
+  await remove("profiles", name);
+  const index = profileNames.indexOf(name);
+  if (index >= 0) profileNames.splice(index, 1);
+  if (activeProfile?.name === name) lockProfile();
+}
 
 async function selfInviteBody() {
   const now = Date.now();

@@ -18,6 +18,9 @@ import {
   isSafetyVerified,
   getPendingEnvelope,
   getSessionStatus,
+  deleteProfile,
+  touchActivity,
+  checkAutoLock,
   ready,
 } from "./web-runtime.js";
 import "./styles.css";
@@ -93,7 +96,7 @@ function render() {
   const phrase = state.safety || "Pair with the other person to reveal safety material.";
   app.innerHTML = `
     <section class="shell">
-      <header class="topbar"><div><div class="eyebrow">ANOTHER DIMENSION</div><h1>Local encrypted room</h1></div><button id="lock" class="ghost">Lock ${escapeHtml(state.profile.name)}</button></header>
+      <header class="topbar"><div><div class="eyebrow">ANOTHER DIMENSION</div><h1>Local encrypted room</h1></div><div class="row-between\"><button id="panic-wipe" class="ghost">Panic wipe</button><button id="lock" class="ghost">Lock ${escapeHtml(state.profile.name)}</button></div></header>
       <div class="notice">${escapeHtml(state.notice || (state.serverInfo ? "Your local server is connected. Sealed envelopes can be delivered directly to a peer server." : "Manual mode: run this app from your local server for direct sealed-envelope delivery."))}</div>
       <div class="layout">
         <aside class="card stack">
@@ -153,6 +156,11 @@ function bindAuth() {
 
 function bindRoom() {
   document.querySelector("#lock")?.addEventListener("click", () => { lockProfile(); state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "" }; render(); });
+  document.querySelector("#panic-wipe")?.addEventListener("click", async () => {
+    const passphrase = window.prompt("Type this profile passphrase to permanently wipe its local data:");
+    if (passphrase === null) return;
+    try { await deleteProfile(state.profile.name, passphrase); state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "Local profile data was wiped." }; render(); } catch (error) { state.error = error.message; render(); }
+  });
   document.querySelector("#peer-invite")?.addEventListener("input", (event) => { state.peerInvite = event.currentTarget.value; });
   document.querySelector("#copy-invite")?.addEventListener("click", async () => { await navigator.clipboard.writeText(state.invite); state.notice = "Invite copied. Share it with the other person."; render(); });
   document.querySelector("#revoke-invite")?.addEventListener("click", async () => {
@@ -221,8 +229,12 @@ async function refresh() {
   render();
 }
 
+for (const eventName of ["pointerdown", "keydown", "touchstart"]) document.addEventListener(eventName, touchActivity, { passive: true });
 window.setInterval(() => {
-  if (!document.hidden) receiveMessages(false);
+  if (checkAutoLock()) {
+    state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "Session auto-locked after inactivity." };
+    render();
+  } else if (!document.hidden) receiveMessages(false);
 }, 5_000);
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) receiveMessages(false);

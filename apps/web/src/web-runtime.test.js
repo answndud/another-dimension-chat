@@ -76,6 +76,7 @@ class MemoryIndexedDb {
     return {
       get: (key) => this.result(store.values.get(key)),
       put: (value) => { store.values.set(value[store.keyPath], structuredClone(value)); return this.result(value[store.keyPath]); },
+      delete: (key) => { store.values.delete(key); return this.result(undefined); },
       getAll: () => this.result([...store.values.values()].map((value) => structuredClone(value))),
     };
   }
@@ -219,6 +220,17 @@ test("deep canonical signatures bind nested Olm and server material", async () =
   await runtime.createProfile("peer", "peer-passphrase");
   const forgedOlm = { ...decoded, olmCurve25519Public: "A".repeat(43) };
   await assert.rejects(() => runtime.importInvite(`ADWEB3.${Buffer.from(JSON.stringify(forgedOlm)).toString("base64url")}`), /signature/);
+});
+
+test("profile wipe requires the passphrase and removes the local profile", async () => {
+  if (!globalThis.crypto?.subtle) Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
+  globalThis.indexedDB = new MemoryIndexedDb();
+  const runtime = await import(`./web-runtime.js?wipe=${Date.now()}`);
+  await runtime.ready;
+  await runtime.createProfile("wipe_me", "wipe-me-passphrase");
+  await assert.rejects(() => runtime.deleteProfile("wipe_me", "wrong-passphrase"), /Wrong passphrase/);
+  await runtime.deleteProfile("wipe_me", "wipe-me-passphrase");
+  assert.equal(runtime.listProfiles().includes("wipe_me"), false);
 });
 
 test("inbox sync drives Olm controls and protects read and ack headers", async () => {
