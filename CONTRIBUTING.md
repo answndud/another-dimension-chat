@@ -4,8 +4,8 @@ Another Dimension Chat is not a secure messenger release today.
 
 This repository currently uses a maintainer-driven main-branch workflow. Public
 contributions are welcome as issues or small patches, but every public change
-must preserve the unsigned experimental beta boundary and the no-central-trusted
-server product direction.
+must preserve the unsigned experimental web prototype boundary and the
+no-central-trusted-server product direction.
 
 ## Scope Boundaries
 
@@ -19,7 +19,7 @@ Allowed v0.1 direction:
 - no push notification service
 - no cloud backup
 - explicit user action before network/onion work
-- unsigned GitHub Release beta with manual checksum verification
+- user-owned web/server prototype with manual local release verification
 
 Do not add App Store distribution, notarization, Developer ID signing,
 telemetry, crash upload, cloud reporting, auto-update, centralized account
@@ -77,17 +77,18 @@ repository's [MIT License](LICENSE).
 
 ## Release Discipline
 
-Use the three-level local verification ladder:
+The current product's lightweight verification is web/server focused:
 
 ```bash
-scripts/verify_light.sh  # source-build boundaries + all desktop JavaScript tests
-scripts/verify_full.sh   # light + rustfmt + desktop Tauri cargo check + runtime/workspace tests + clippy; pre-release only
+scripts/verify_light.sh  # browser runtime + local server + transport smoke
 ```
 
-`scripts/verify_light.sh` and `scripts/verify_full.sh` are the canonical
-entrypoints. The optional `smoke_tauri_two_profile.sh` production
-profile/pairing/session/transcript-resume flow is a manual acceptance check,
-not default verification.
+`scripts/verify_light.sh` is the canonical current-product entrypoint.
+`scripts/verify_full.sh`, `scripts/verify_source_build_path.sh`,
+`apps/desktop-tauri/`, `apps/cli/`, and `apps/engine/` are legacy/native
+prototype verification paths. They are not evidence that the current web
+product is production-ready and are run only when their separate boundary is
+explicitly being maintained.
 
 Older release packaging or evidence-generation scripts referenced in historical
 documents are not part of the current development baseline unless they are

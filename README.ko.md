@@ -9,6 +9,11 @@
 프로필과 메시지 키는 브라우저에 두고, 암호화된 로컬 프로필 자료는 IndexedDB에
 저장하며, 각 사용자의 서버는 opaque sealed envelope만 처리합니다.
 
+현재 제품 경계는 `apps/web` browser UI와 `apps/server` 사용자 소유 relay입니다.
+`apps/desktop-tauri`, `apps/cli`, `apps/engine` 및 기존 Rust native crates는
+legacy/native prototype으로 보존되어 있지만 현재 web 제품의 release나 보안
+준비도 증거가 아닙니다.
+
 > **현재 상태:** web-first 실험용 prototype. 감사되지 않았고,
 > production-ready가 아니며, 민감한 통신에 사용하면 안 됩니다. 각 사용자가
 > 자신의 local server를 실행하면 명시적으로 교환한 endpoint를 통해 sealed

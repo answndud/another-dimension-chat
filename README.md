@@ -57,6 +57,11 @@ Olm 초기화 봉투 자동 교환
 때는 HTTPS reverse proxy, Tailscale 같은 VPN 경로, 또는 직접 TLS를 사용해야
 합니다.
 
+현재 제품 경계는 `apps/web` 브라우저 UI와 `apps/server` 사용자 소유 relay입니다.
+`apps/desktop-tauri`, `apps/cli`, `apps/engine` 및 기존 Rust native crates는
+legacy/native prototype으로 보존되어 있지만 현재 웹 제품의 release나 보안
+준비도 증거가 아닙니다.
+
 ## 2. 준비물
 
 소스 저장소에서 개발하거나 직접 서버를 빌드하려면 다음이 필요합니다.

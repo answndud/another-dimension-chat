@@ -1,12 +1,14 @@
 # Desktop Tauri Beta Shell
 
-This directory contains the desktop Tauri shell for Another Dimension Chat.
+This directory contains the legacy desktop Tauri shell for Another Dimension Chat.
 
-It is a local beta candidate, not a secure-release claim.
+It is not the current web/server product, not a secure-release claim, and its
+verification does not establish readiness of `apps/web` or `apps/server`.
 
 Current boundary:
 
-- v0.1 unsigned public beta product surface is this desktop Tauri beta shell.
+- This is a retained native prototype surface. The current v0.1 product surface
+  is the browser UI plus user-owned server in `apps/web` and `apps/server`.
   Android is the next mobile client candidate only after the shared Rust
   core/API boundary stays platform-neutral; iOS follows after that same
   boundary is preserved. Mobile clients are not part of this public beta.
@@ -227,17 +229,18 @@ Current local beta handoff, separate from the public release packaging input:
 - External Tor/onion field testing should record whether bootstrap, onion endpoint launch, endpoint exchange, send, receive, retry, and cancel complete or fail closed. Do not treat Tor blocking, timeout, or peer offline results as release-blocking security failures unless they expose secrets, silently start network work, or corrupt transcript/session state.
 - Peer reports must use the listed leading status tokens and must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, passphrases, profile names, message text, local paths, raw logs, or key material.
 
-Current maintained verification ladder, run from the repository root:
+Legacy/native verification, run from the repository root only when maintaining
+this Tauri prototype:
 
 ```bash
-scripts/verify_light.sh  # source-build boundaries + all desktop JavaScript tests
-scripts/verify_full.sh   # light + rustfmt + desktop Tauri cargo check + runtime/workspace tests + clippy; pre-release only
+scripts/verify_source_build_path.sh  # legacy desktop source/release boundary
+scripts/verify_full.sh               # legacy native pre-release verification
 ```
 
-`scripts/verify_light.sh` and `scripts/verify_full.sh` are the canonical
-entrypoints. The optional `smoke_tauri_two_profile.sh` production
-profile/pairing/session/transcript-resume flow is a manual acceptance check,
-not default verification.
+The current product's canonical entrypoint is `scripts/verify_light.sh`, which
+verifies `apps/web` and `apps/server`. The optional
+`smoke_tauri_two_profile.sh` profile/pairing/session/transcript-resume flow is
+legacy manual acceptance only.
 
 These are the active local development checks. Historical release packaging
 commands referenced in older review packets are not part of the current

@@ -1,4 +1,7 @@
 [workspace]
+# This workspace still contains legacy/native prototype crates. The current
+# product path is apps/web + apps/server + crates/web-crypto-wasm; do not use a
+# full workspace build as current web product evidence.
 members = [
     "crates/identity",
     "crates/pairing",

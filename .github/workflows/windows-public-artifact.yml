@@ -1,4 +1,4 @@
-name: Windows Public Artifact Candidate
+name: Legacy Windows Tauri Artifact Candidate
 
 on:
   workflow_dispatch:

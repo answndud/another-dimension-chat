@@ -14,9 +14,19 @@
 - `crates/core/src/lib.rs`: profile, pairing, messaging orchestration.
 - `crates/pairing/src/lib.rs`: pairing payload, safety transcript, prototype signature boundary.
 - `crates/protocol/src/lib.rs`: message envelope and replay window prototype.
-- `scripts/verify_all.sh`: lightweight canonical local verification entrypoint.
-- `scripts/verify_full.sh`: heavy pre-release/audit verification entrypoint.
+- `scripts/verify_light.sh`: current web/server lightweight verification entrypoint.
+- `scripts/verify_full.sh`: legacy/native heavy pre-release verification entrypoint.
 - `docs/`는 public repository에 올리지 않는 private planning/security notes이며 `.gitignore`에 포함되어 있다.
+
+## 제품 경계
+
+- 현재 제품 경로는 `apps/web`, `apps/server`, `crates/web-crypto-wasm`과 이들이
+  직접 사용하는 최소 Rust dependency boundary다.
+- `apps/desktop-tauri`, `apps/cli`, `apps/engine`, `crates/core`,
+  `crates/identity`, `crates/pairing`, `crates/protocol`, `crates/storage`,
+  `crates/transport`는 legacy/native prototype 경로로 유지되며, 현재 웹 제품의
+  보안 readiness나 release 증거로 간주하지 않는다.
+- legacy/native 소스는 제품 경계 결정과 CI migration이 끝나기 전 삭제하지 않는다.
 
 ## 작업 상태 문서
 

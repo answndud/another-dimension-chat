@@ -19,31 +19,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install Node.js
+        uses: actions/setup-node@v6
         with:
-          components: rustfmt
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
 
-      - name: Install Linux Tauri dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libayatana-appindicator3-dev \
-            libglib2.0-dev \
-            libgtk-3-dev \
-            librsvg2-dev \
-            libwebkit2gtk-4.1-dev \
-            pkg-config
+      - name: Install web dependencies
+        run: npm ci --prefix apps/web --workspaces=false
 
-      - name: Install frontend dependencies
-        run: npm ci --prefix apps/desktop-tauri
-
-      - name: Check generated release artifacts are not tracked
-        run: |
-          if git ls-files 'apps/desktop-tauri/public-release/*' 'apps/desktop-tauri/beta-artifacts/*' | grep -q .; then
-            echo "generated release or beta artifact paths are tracked" >&2
-            exit 1
-          fi
-
-      - name: Verify
-        run: npm --prefix apps/desktop-tauri run verify:light
+      - name: Verify current web/server product
+        run: scripts/verify_light.sh

@@ -13,8 +13,9 @@ run_step() {
 
 cd "$ROOT_DIR"
 
-run_step "source build path verifier (static only)" env AD_VERIFY_SOURCE_BUILD_SKIP_BUILD=1 scripts/verify_source_build_path.sh
-run_step "desktop JavaScript tests" npm --prefix apps/desktop-tauri test
-run_step "macOS DMG verifier tests" node --test apps/desktop-tauri/scripts/verify-macos-dmg.test.mjs
+run_step "browser runtime tests" npm --prefix apps/web test --workspaces=false
+run_step "local server API tests" npm --prefix apps/server test --workspaces=false
+run_step "browser production build" npm --prefix apps/web run build --workspaces=false
+run_step "user-owned server transport smoke" node scripts/smoke_user_owned_servers.mjs
 
-printf '\nlight verification passed\n'
+printf '\nweb/server lightweight verification passed\n'

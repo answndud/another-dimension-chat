@@ -1,4 +1,4 @@
-name: macOS Unsigned Release Candidate
+name: Legacy macOS Tauri Candidate
 
 on:
   workflow_dispatch:
@@ -7,11 +7,6 @@ on:
         description: "Release tag to validate, for example v0.1.0-unsigned-fix"
         required: true
         type: string
-  push:
-    branches:
-      - main
-    tags:
-      - "v*-unsigned-fix*"
 
 permissions:
   contents: read
