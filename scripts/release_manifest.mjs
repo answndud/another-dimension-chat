@@ -5,6 +5,14 @@ import path from 'node:path';
 export const MANIFEST_NAME = 'release-manifest.json';
 export const MANIFEST_VERSION = 1;
 
+function compareVersions(left, right) {
+  const parse = (value) => String(value).split(".").map(Number);
+  const a = parse(left);
+  const b = parse(right);
+  if (a.length !== 3 || b.length !== 3 || [...a, ...b].some((part) => !Number.isSafeInteger(part) || part < 0)) throw new Error("release versions must use MAJOR.MINOR.PATCH");
+  return a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+}
+
 function canonicalJson(value) { return JSON.stringify(value); }
 
 function assertSafeRelativePath(relativePath) {
@@ -56,9 +64,10 @@ export async function writeManifest(root, options = {}) {
   return manifest;
 }
 
-export async function verifyManifest(root, { manifest = null, publicKey = null, requireSignature = false } = {}) {
+export async function verifyManifest(root, { manifest = null, publicKey = null, requireSignature = false, minVersion = null } = {}) {
   const loaded = manifest ?? JSON.parse(await readFile(path.join(root, MANIFEST_NAME), 'utf8'));
   if (loaded.format !== 'another-dimension-release-manifest' || loaded.manifestVersion !== MANIFEST_VERSION) throw new Error('unsupported release manifest');
+  if (minVersion && compareVersions(loaded.releaseVersion, minVersion) < 0) throw new Error(`release ${loaded.releaseVersion} is older than the minimum allowed ${minVersion}`);
   if (!Array.isArray(loaded.files) || loaded.files.some((file) => !file || typeof file.path !== 'string' || !/^[a-f0-9]{64}$/.test(file.sha256))) throw new Error('invalid release manifest file list');
   const listedPaths = new Set();
   for (const listed of loaded.files) {

@@ -33,6 +33,7 @@ elif [ "${AD_RELEASE_REQUIRE_SIGNATURE:-0}" = "1" ]; then
   exit 1
 fi
 if [ "${AD_RELEASE_REQUIRE_SIGNATURE:-0}" = "1" ]; then VERIFY_ARGS="--require-signature"; fi
+if [ -n "${AD_RELEASE_MIN_VERSION:-}" ]; then VERIFY_ARGS="$VERIFY_ARGS --min-version $AD_RELEASE_MIN_VERSION"; fi
 # shellcheck disable=SC2086
 SOURCE_DATE_EPOCH="${AD_RELEASE_SOURCE_DATE_EPOCH:-0}" node "$PROJECT_DIR/scripts/create_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $MANIFEST_ARGS
 # Unsigned output is allowed only for local development; verified distribution requires a signature.

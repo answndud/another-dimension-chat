@@ -23,4 +23,5 @@ test('unsigned development manifests are rejected by the verified path', async (
   const manifest = await createManifest(root, { version: '0.1.0' });
   assert.equal((await verifyManifest(root, { manifest })).signed, false);
   await assert.rejects(() => verifyManifest(root, { manifest, requireSignature: true }), /signed release required/);
+  await assert.rejects(() => verifyManifest(root, { manifest, minVersion: '0.2.0' }), /older than the minimum/);
 });
