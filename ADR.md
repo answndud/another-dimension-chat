@@ -2,7 +2,7 @@
 
 ## ADR-0001 - 사용자별 로컬 서버를 메시지 전달 경계로 사용
 
-- 상태: accepted
+- 상태: superseded by ADR-0006
 - 날짜: 2026-07-31
 - 근거 유형: explicit
 
@@ -18,10 +18,11 @@
 
 ### Decision
 
-각 사용자의 로컬 서버가 정적 웹 UI와 사용자 소유 opaque-envelope inbox를
-제공한다. 서버는 중앙 discovery나 신뢰된 메시지 저장소가 아니며, 평문·private
-key·passphrase를 받지 않는다. 메시지 본문은 브라우저에서 암호화된 envelope로
-서버에 도착한다.
+각 사용자의 로컬 서버가 사용자 소유 opaque-envelope inbox를 제공한다. 초기
+prototype에서는 정적 웹 UI도 함께 제공했지만, UI 코드 공급망과 relay를 같은
+신뢰 경계에 두는 문제 때문에 그 부분은 ADR-0006으로 대체한다. 서버는 중앙
+discovery나 신뢰된 메시지 저장소가 아니며, 평문·private key·passphrase를 받지
+않는다. 메시지 본문은 브라우저에서 암호화된 envelope로 서버에 도착한다.
 
 초기 서버 경계는 다음으로 제한한다.
 
@@ -69,7 +70,7 @@ key·passphrase를 받지 않는다. 메시지 본문은 브라우저에서 암�
 
 ## ADR-0002 - 사용자 소유 서버의 초기 실행 단위를 Node 정적 서버로 고정
 
-- 상태: accepted
+- 상태: superseded by ADR-0006
 - 날짜: 2026-07-31
 - 근거 유형: explicit
 
@@ -274,3 +275,96 @@ WebAssembly adapter로 사용한다.
   persistence, tamper, replay, protected inbox
 - `vodozemac` 0.10 docs and repository: Double Ratchet, modern pickle,
   `js` feature, Apache-2.0, external audit record
+
+## ADR-0006 - 검증된 로컬 UI와 원격 relay/API를 분리
+
+- 상태: accepted
+- 날짜: 2026-07-31
+- 근거 유형: explicit + inferred
+
+### Context
+
+현재 `apps/server/server.mjs`는 한 프로세스에서 정적 browser UI와 사용자 소유
+inbox API를 함께 제공한다. 이 구조는 설치와 same-origin fetch에는 단순하지만,
+원격 reverse proxy·서버 운영자·변조된 release가 JavaScript/WASM을 바꾸면
+암호화가 시작되기 전에 browser passphrase, plaintext, key material을 관찰할 수
+있다. Double Ratchet은 이미 변조된 client code를 보호하지 못한다.
+
+동시에 제품은 중앙 trusted message server 없이 각 사용자의 기기에서 서버를
+운영하고 browser에서 사용하는 방향을 유지해야 한다. 따라서 web 사용을
+포기하지 않으면서 app-code trust와 message relay trust를 분리해야 한다.
+
+### Decision
+
+고위험·검증된 실행 경로는 다음 두 표면을 분리한다.
+
+1. **로컬 UI/runtime surface** — 사용자가 검증한 signed prebuilt server
+   package가 immutable browser bundle을 포함하고, UI는 `127.0.0.1` 또는
+   `localhost`에서만 제공한다. package와 embedded/sidecar bundle의 manifest
+   hash·signature를 시작 시 검증하고, 실패하면 UI와 relay를 시작하지 않는다.
+   사용자는 채팅용 desktop app을 설치하지 않고 browser를 사용하지만, 신뢰
+   anchor가 되는 server runtime package는 설치·검증해야 한다.
+2. **원격 relay/API surface** — 다른 기기에서 접근하는 public endpoint는
+   opaque envelope POST와 소유자 inbox GET/ack 같은 API만 제공한다. 원격
+   endpoint와 reverse proxy는 `index.html`, JavaScript, CSS, WASM을 제공하지
+   않으며 path fallback도 하지 않는다. public `AD_PUBLIC_URL`은 relay API
+   origin으로만 의미를 갖는다.
+3. **개발 편의 모드** — 현재 Node 정적 서버는 local development와 manual
+   smoke용 combined UI+relay 모드로 유지할 수 있다. 이 모드는 unsigned,
+   unverified convenience mode로 표시하며 high-risk mode로 진입할 수 없게
+   한다.
+4. **브라우저 구성** — local UI는 자신의 local relay capability를 loopback
+   API에서 받고, peer invite에는 peer의 relay API endpoint만 포함한다. UI
+   배포 origin과 peer message endpoint를 같은 신뢰 대상으로 취급하지 않는다.
+5. **배포 증거** — release에는 signed manifest, source/build provenance,
+   dependency lock·SBOM, verification 명령과 공개 fingerprint를 포함한다.
+   browser만으로 signature를 자동 검증할 수 없는 한계는 문서와 onboarding에
+   표시하고, 검증이 끝나지 않은 bundle에는 high-risk label을 허용하지 않는다.
+
+### Alternatives
+
+- **현재 combined UI+relay 유지** — 사용은 가장 쉽지만 원격 서버·proxy가
+  browser crypto code를 바꿀 수 있어 고위험 trust boundary를 충족하지 못한다.
+- **중앙 trusted static hosting + 사용자 relay** — UI 배포는 쉬워지지만 중앙
+  code origin을 새로운 trusted party로 추가한다. signed release 검증 없이
+  고위험 경로의 단독 근거로 사용하지 않는다.
+- **chat용 native desktop/mobile app으로 전환** — app-code integrity에는
+  유리하지만 사용자가 browser에서 쓰기를 원한다는 제품 방향과 충돌한다. 현재는
+  chat client가 아니라 검증 가능한 local server/runtime만 package화한다.
+- **browser extension에 trust anchor를 넣기** — 강한 검증 경계를 만들 수
+  있지만 지원 브라우저·배포·권한·유지 비용이 커서 별도 결정으로 남긴다.
+
+### Consequences
+
+- 사용자는 high-risk mode에서 Node/npm과 임의 서버 UI를 신뢰하는 대신 signed
+  server/runtime package를 한 번 검증해야 한다.
+- 실제 web chat은 계속 browser에서 사용하지만, remote relay는 HTML/JS/WASM을
+  제공하지 않는다.
+- local UI와 remote API의 origin이 달라져 CORS, local capability bootstrap,
+  endpoint configuration, service worker 범위를 다시 구현해야 한다.
+- unsigned combined mode는 개발·시연용으로 남지만 security documentation과
+  UI에서 production/high-risk 사용을 차단해야 한다.
+- signed package, reproducible build, update/rollback verification은 아직
+  구현되지 않았으며 이 ADR의 후속 작업이다.
+
+### Evidence
+
+- `apps/server/server.mjs`: 현재 static fallback과 inbox API가 한 request
+  handler에 결합되어 있다.
+- `apps/web/src/web-runtime.js`: local same-origin info와 peer inbox URL을
+  현재 같은 browser runtime에서 처리한다.
+- `scripts/build_release.sh`: 현재 release archive가 web bundle과 Node
+  server를 함께 묶지만 signature·manifest 검증은 제공하지 않는다.
+- `SECURITY.md`: 서버 또는 reverse proxy가 altered JavaScript/WASM을 제공하면
+  client secrets가 노출될 수 있음을 명시한다.
+- `docs/PLAN.md`: relay/API와 app-code distribution 분리를 P1.2 blocker로
+  지정한다.
+
+### Open Questions
+
+- signed server package를 macOS·Windows·Linux에서 어떤 binary/signing channel로
+  배포할지 결정한다.
+- local UI가 relay endpoint를 안전하게 bootstrap하는 구체적인 config/QR/CLI
+  절차를 결정한다.
+- reverse proxy가 API-only surface를 보장하도록 어떤 route/header contract를
+  강제할지 결정한다.
