@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const MAX_ENVELOPE_BYTES = 96 * 1024;
 const MAX_INBOX_ITEMS = 256;
+const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaultDist = resolve(__dirname, "../web/dist");
 
@@ -69,6 +70,7 @@ export async function createLocalServer({
   dataDir = process.env.AD_SERVER_DATA_DIR || resolve(process.cwd(), ".another-dimension-server"),
   distDir = process.env.AD_WEB_DIST_DIR || defaultDist,
   publicUrl = process.env.AD_PUBLIC_URL || "",
+  ttlMs = Number(process.env.AD_INBOX_TTL_MS || DEFAULT_TTL_MS),
 } = {}) {
   await mkdir(dataDir, { recursive: true });
   const capabilityFile = join(dataDir, "inbox-capability");
@@ -77,8 +79,13 @@ export async function createLocalServer({
   try { inboxCapability = (await readFile(capabilityFile, "utf8")).trim(); } catch { inboxCapability = capability(); await writeFile(capabilityFile, `${inboxCapability}\n`, { mode: 0o600 }); }
   let inbox;
   try { inbox = JSON.parse(await readFile(queueFile, "utf8")); } catch { inbox = []; }
+  const purge = () => {
+    const cutoff = Date.now() - ttlMs;
+    inbox = Array.isArray(inbox) ? inbox.filter((item) => Number.isSafeInteger(item.receivedAt) && item.receivedAt >= cutoff).slice(-MAX_INBOX_ITEMS) : [];
+  };
+  purge();
 
-  const persist = () => writeFile(queueFile, JSON.stringify(inbox), { mode: 0o600 });
+  const persist = () => { purge(); return writeFile(queueFile, JSON.stringify(inbox), { mode: 0o600 }); };
   const originFor = (address) => publicUrl || `http://${address}:${port}`;
   const inboxUrlFor = (address) => `${originFor(address)}${capabilityPath(inboxCapability)}`;
 
@@ -98,6 +105,7 @@ export async function createLocalServer({
 
     const inboxPrefix = capabilityPath(inboxCapability);
     if (requestUrl.pathname === inboxPrefix && req.method === "GET") {
+      purge();
       json(res, 200, { protocol: 1, items: inbox }, headers);
       return;
     }

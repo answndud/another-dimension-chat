@@ -38,3 +38,21 @@ test("local server exposes health and a capability-scoped opaque inbox", async (
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });
+
+test("local server recovers its bounded queue and purges expired envelopes", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const first = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist"), ttlMs: 1 });
+  await new Promise((resolve) => first.server.listen(0, "127.0.0.1", resolve));
+  const port = first.server.address().port;
+  const inboxPath = new URL(first.inboxUrl.replace(":0", `:${port}`)).pathname;
+  await call(port, "POST", inboxPath, { envelope: "ADENVWEB1.persisted" });
+  await first.server.close();
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  const second = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist"), ttlMs: 1 });
+  await new Promise((resolve) => second.server.listen(0, "127.0.0.1", resolve));
+  const secondPort = second.server.address().port;
+  const secondPath = new URL(second.inboxUrl.replace(":0", `:${secondPort}`)).pathname;
+  assert.equal((await call(secondPort, "GET", secondPath)).body.items.length, 0);
+  await second.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});

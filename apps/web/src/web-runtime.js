@@ -54,6 +54,27 @@ function encode(value) { return bytesToBase64(new TextEncoder().encode(JSON.stri
 function decode(value) { return JSON.parse(new TextDecoder().decode(base64ToBytes(value))); }
 function canonical(value) { return JSON.stringify(value, Object.keys(value).sort()); }
 
+function validInboxUrl(value) {
+  if (!value) return null;
+  let url;
+  try { url = new URL(String(value)); } catch { throw new Error("Server endpoint is not a valid URL."); }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.hash || !url.pathname.includes('/api/v1/inbox/')) {
+    throw new Error("Server endpoint must be an HTTP(S) capability inbox URL.");
+  }
+  return url.href;
+}
+
+async function localServerInfo() {
+  try {
+    const response = await fetch('/api/v1/info', { headers: { accept: 'application/json' } });
+    if (!response.ok) return null;
+    const info = await response.json();
+    return { ...info, inboxUrl: validInboxUrl(info.inboxUrl) };
+  } catch { return null; }
+}
+
+export async function getLocalServerInfo() { return localServerInfo(); }
+
 async function wrappingKey(passphrase, salt) {
   const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 210_000, hash: "SHA-256" }, material, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
@@ -120,7 +141,8 @@ export function lockProfile() { activeProfile = null; }
 
 export async function exportInvite() {
   if (!activeProfile) throw new Error("Unlock a local profile first.");
-  const body = { v: 1, name: activeProfile.name, ecdhPublic: activeProfile.ecdhPublic, ecdsaPublic: activeProfile.ecdsaPublic };
+  const info = await localServerInfo();
+  const body = { v: 1, name: activeProfile.name, ecdhPublic: activeProfile.ecdhPublic, ecdsaPublic: activeProfile.ecdsaPublic, ...(info ? { server: { inboxUrl: info.inboxUrl, protocol: info.protocol } } : {}) };
   const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, activeProfile.ecdsaPrivate, new TextEncoder().encode(canonical(body)));
   return `ADWEB1.${encode({ ...body, signature: bytesToBase64(signature) })}`;
 }
@@ -131,6 +153,7 @@ export async function importInvite(value) {
   if (!text.startsWith("ADWEB1.")) throw new Error("This is not a valid web invite.");
   const invite = decode(text.slice("ADWEB1.".length));
   const { signature, ...body } = invite;
+  if (body.server) body.server = { ...body.server, inboxUrl: validInboxUrl(body.server.inboxUrl) };
   const publicKey = await crypto.subtle.importKey("jwk", body.ecdsaPublic, { name: "ECDSA", namedCurve: "P-256" }, true, ["verify"]);
   const valid = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, publicKey, base64ToBytes(signature), new TextEncoder().encode(canonical(body)));
   if (!valid || body.v !== 1 || body.name === activeProfile.name) throw new Error("Invite signature or peer identity is invalid.");
@@ -161,10 +184,44 @@ export async function exportEnvelope(text) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await crypto.subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt, info: new TextEncoder().encode("another-dimension-web-message-v1") }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
   const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(message));
-  const envelope = encode({ v: 1, id: crypto.randomUUID(), from: activeProfile.name, to: activeProfile.peer.name, senderEcdhPublic: activeProfile.ecdhPublic, salt: bytesToBase64(salt), iv: bytesToBase64(iv), ciphertext: bytesToBase64(ciphertext), createdAt: Date.now() });
-  const envelopeId = JSON.parse(new TextDecoder().decode(base64ToBytes(envelope))).id;
+  const body = { v: 1, id: crypto.randomUUID(), from: activeProfile.name, to: activeProfile.peer.name, senderEcdhPublic: activeProfile.ecdhPublic, salt: bytesToBase64(salt), iv: bytesToBase64(iv), ciphertext: bytesToBase64(ciphertext), createdAt: Date.now() };
+  const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, activeProfile.ecdsaPrivate, new TextEncoder().encode(canonical(body)));
+  const envelope = encode({ ...body, signature: bytesToBase64(signature) });
+  const envelopeId = body.id;
   await write("messages", { id: `${activeProfile.name}:${envelopeId}`, envelopeId, profile: activeProfile.name, direction: "sent", text: message, createdAt: Date.now() });
   return `ADENVWEB1.${envelope}`;
+}
+
+export async function sendEnvelope(text) {
+  if (!activeProfile?.peer?.server?.inboxUrl) throw new Error("Peer has no reachable server endpoint; export a sealed envelope instead.");
+  const envelope = await exportEnvelope(text);
+  const response = await fetch(activeProfile.peer.server.inboxUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ envelope }) });
+  if (!response.ok) throw new Error("Peer server could not accept the sealed envelope. Export it manually instead.");
+  return envelope;
+}
+
+function ackUrl(inboxUrl) {
+  const url = new URL(inboxUrl);
+  url.pathname = `${url.pathname.replace(/\/$/, '')}/ack`;
+  return url.href;
+}
+
+export async function syncInbox() {
+  const localInfo = await localServerInfo();
+  if (!localInfo?.inboxUrl) throw new Error("This browser is not connected to a local server.");
+  const inboxUrl = localInfo.inboxUrl;
+  const response = await fetch(inboxUrl, { headers: { accept: 'application/json' } });
+  if (!response.ok) throw new Error("Peer server inbox could not be reached.");
+  const payload = await response.json();
+  const accepted = [];
+  for (const item of Array.isArray(payload.items) ? payload.items : []) {
+    try { await importEnvelope(item.envelope); accepted.push(item.id); } catch (error) { if (!/already imported/.test(error.message)) throw error; accepted.push(item.id); }
+  }
+  if (accepted.length) {
+    const ack = await fetch(ackUrl(inboxUrl), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ids: accepted }) });
+    if (!ack.ok) throw new Error("Message was received but the peer server could not acknowledge it.");
+  }
+  return accepted.length;
 }
 
 export async function importEnvelope(value) {
@@ -172,7 +229,10 @@ export async function importEnvelope(value) {
   const text = String(value || "").trim();
   if (!text.startsWith("ADENVWEB1.")) throw new Error("This is not a valid sealed web envelope.");
   const envelope = decode(text.slice("ADENVWEB1.".length));
-  if (envelope.v !== 1 || envelope.to !== activeProfile.name || envelope.from !== activeProfile.peer.name) throw new Error("Envelope identity does not match this room.");
+  if (envelope.v !== 1 || envelope.to !== activeProfile.name || envelope.from !== activeProfile.peer.name || envelope.senderEcdhPublic?.x !== activeProfile.peer.ecdhPublic?.x || !envelope.signature || !Number.isSafeInteger(envelope.createdAt)) throw new Error("Envelope identity does not match this room.");
+  const signingKey = await crypto.subtle.importKey("jwk", activeProfile.peer.ecdsaPublic, { name: "ECDSA", namedCurve: "P-256" }, true, ["verify"]);
+  const { signature, ...body } = envelope;
+  if (!await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, signingKey, base64ToBytes(signature), new TextEncoder().encode(canonical(body)))) throw new Error("Envelope signature is invalid or it was modified.");
   const sender = await crypto.subtle.importKey("jwk", envelope.senderEcdhPublic, { name: "ECDH", namedCurve: "P-256" }, true, []);
   const bits = await crypto.subtle.deriveBits({ name: "ECDH", public: sender }, activeProfile.ecdhPrivate, 256);
   const material = await crypto.subtle.importKey("raw", bits, { name: "HKDF" }, false, ["deriveKey"]);
@@ -189,4 +249,3 @@ export async function listMessages() {
   if (!activeProfile) return [];
   return (await all("messages")).filter((message) => message.profile === activeProfile.name).sort((a, b) => a.createdAt - b.createdAt);
 }
-

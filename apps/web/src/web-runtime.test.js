@@ -17,6 +17,9 @@ test("web runtime uses browser crypto and IndexedDB rather than preview storage"
   assert.match(runtime, /AES-GCM/);
   assert.match(runtime, /ADWEB1/);
   assert.match(runtime, /ADENVWEB1/);
+  assert.match(runtime, /sendEnvelope/);
+  assert.match(runtime, /syncInbox/);
+  assert.match(runtime, /ECDSA/);
   assert.doesNotMatch(runtime, /localStorage/);
 });
 
@@ -95,3 +98,15 @@ test("two local profiles can exchange a real sealed envelope and reject a duplic
   assert.equal((await runtime.listMessages()).length, 1);
 });
 
+test("signed invites preserve optional server capability and reject forged endpoints", async () => {
+  if (!globalThis.crypto?.subtle) Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
+  globalThis.indexedDB = new MemoryIndexedDb();
+  const runtime = await import(`./web-runtime.js?invite=${Date.now()}`);
+  await runtime.ready;
+  await runtime.createProfile("owner", "owner-passphrase");
+  const invite = await runtime.exportInvite();
+  const decoded = JSON.parse(Buffer.from(invite.slice("ADWEB1.".length), "base64url").toString());
+  assert.equal(decoded.server, undefined);
+  await runtime.createProfile("peer", "peer-passphrase");
+  await assert.rejects(() => runtime.importInvite(`ADWEB1.${Buffer.from(JSON.stringify({ ...decoded, server: { inboxUrl: "javascript:alert(1)" } })).toString("base64url")}`), /Server endpoint|signature/);
+});
