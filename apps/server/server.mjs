@@ -166,5 +166,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.log(`Another Dimension local server listening at ${runtime.secure ? "https" : "http"}://${runtime.bindHost}:${runtime.port}`);
     console.log(`Inbox endpoint: ${runtime.inboxUrl}`);
     if (runtime.bindHost !== "127.0.0.1") console.warn("Warning: non-loopback bind exposes this server to the configured network.");
+    if (runtime.bindHost !== "127.0.0.1" && !runtime.inboxUrl.startsWith("https://")) console.warn("Warning: remote browser Web Crypto requires an HTTPS public URL or reverse proxy.");
   });
 }
