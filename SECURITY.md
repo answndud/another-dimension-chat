@@ -25,6 +25,8 @@ keys. Signed, independently verifiable app distribution is a release blocker.
 - New profiles maintain a bounded local pool of Olm one-time prekeys. The
   invite reserves one public prekey; a successful inbound handshake consumes
   it and replenishes the pool from the encrypted local account state.
+- Invites carry a signed random identifier and a 24-hour validity window;
+  expired or implausibly long-lived invites are rejected before pairing.
 - The UI blocks message encryption until both sides explicitly compare and
   confirm the complete safety material for the current paired session.
 - Pairing and message encryption run Olm v2 through the Rust `vodozemac`

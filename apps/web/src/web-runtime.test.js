@@ -89,6 +89,20 @@ function envelopeBody(value) {
   return JSON.parse(Buffer.from(value.slice("ADENVWEB3.".length), "base64url").toString());
 }
 
+function inviteBody(value) {
+  return JSON.parse(Buffer.from(value.slice("ADWEB3.".length), "base64url").toString());
+}
+
+function canonical(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
+}
+
+function bytesToBase64(bytes) {
+  return Buffer.from(bytes).toString("base64url");
+}
+
 async function completeManualHandshake(runtime, passphrases) {
   let pending = "";
   for (const name of Object.keys(passphrases)) {
@@ -136,8 +150,15 @@ test("two local profiles establish an Olm ratchet, persist it, and reject tamper
   const aliceInvite = await runtime.exportInvite();
   const bob = await runtime.createProfile("bob", "bob-passphrase");
   const bobInvite = await runtime.exportInvite();
+  const bobInviteBody = inviteBody(bobInvite);
+  assert.match(bobInviteBody.inviteId, /^[-0-9a-f]{36}$/i);
+  assert.equal(bobInviteBody.expiresAt - bobInviteBody.issuedAt, 24 * 60 * 60 * 1000);
+  const expiredInviteBody = { ...bobInviteBody, issuedAt: Date.now() - (25 * 60 * 60 * 1000), expiresAt: Date.now() - 1 };
+  const expiredSignature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, bob.ecdsaPrivate, new TextEncoder().encode(canonical(expiredInviteBody)));
+  const expiredInvite = `ADWEB3.${Buffer.from(JSON.stringify({ ...expiredInviteBody, signature: bytesToBase64(expiredSignature) })).toString("base64url")}`;
 
   await runtime.unlockProfile("alice", "alice-passphrase");
+  await assert.rejects(() => runtime.importInvite(expiredInvite), /Invite Olm setup material is invalid/);
   const alicePeer = await runtime.importInvite(bobInvite);
   assert.match(runtime.safetyPhrase(alice, alicePeer), /sha256-.+compare/);
   await runtime.unlockProfile("bob", "bob-passphrase");

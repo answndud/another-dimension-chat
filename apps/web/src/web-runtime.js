@@ -14,6 +14,7 @@ const DB_NAME = "another-dimension-web-v3";
 const DB_VERSION = 1;
 const INVITE_PREFIX = "ADWEB3.";
 const ENVELOPE_PREFIX = "ADENVWEB3.";
+const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_ENVELOPE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const profileNames = [];
@@ -253,15 +254,26 @@ export async function unlockProfile(name, passphrase) {
 export function lockProfile() { activeProfile = null; }
 
 async function selfInviteBody() {
-  if (activeProfile.selfInviteBody) return activeProfile.selfInviteBody;
+  const now = Date.now();
+  const existing = activeProfile.selfInviteBody;
+  if (existing && activeProfile.peer) return existing;
+  if (existing && existing.expiresAt > now && existing.inviteId) return existing;
+  const previousPrekey = existing && prekeyByPublic(existing.olmOneTimePublic);
+  if (previousPrekey?.state === "reserved") {
+    previousPrekey.state = "available";
+    previousPrekey.issuedAt = null;
+  }
   await replenishPrekeys(1);
   const prekey = activeProfile.privateMaterial.prekeys.find((candidate) => candidate.state === "available");
   if (!prekey) throw new Error("No one-time prekey is available. Create a fresh profile before pairing.");
   prekey.state = "reserved";
-  prekey.issuedAt = Date.now();
+  prekey.issuedAt = now;
   const info = await localServerInfo();
   const body = {
     v: 3,
+    inviteId: crypto.randomUUID(),
+    issuedAt: now,
+    expiresAt: now + INVITE_TTL_MS,
     name: activeProfile.name,
     ecdsaPublic: activeProfile.ecdsaPublic,
     olmEd25519Public: activeProfile.olmEd25519Public,
@@ -374,6 +386,13 @@ export async function importInvite(value) {
     || !olmKey.test(body.olmCurve25519Public)
     || !olmKey.test(body.olmOneTimePublic)
     || body.messageProtocol !== "Olm.v2.Curve25519-AES-SHA2"
+    || !/^[-0-9a-f]{36}$/i.test(body.inviteId || "")
+    || !Number.isSafeInteger(body.issuedAt)
+    || !Number.isSafeInteger(body.expiresAt)
+    || body.expiresAt <= body.issuedAt
+    || body.expiresAt - body.issuedAt > INVITE_TTL_MS
+    || body.issuedAt > Date.now() + MAX_CLOCK_SKEW_MS
+    || body.expiresAt < Date.now()
   ) throw new Error("Invite Olm setup material is invalid.");
   const publicKey = await crypto.subtle.importKey("jwk", body.ecdsaPublic, { name: "ECDSA", namedCurve: "P-256" }, true, ["verify"]);
   const valid = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, publicKey, base64ToBytes(signature), new TextEncoder().encode(canonical(body)));
