@@ -117,7 +117,9 @@ loopback 서버는 같은 기기에서만 접근된다. 다른 기기와 직접 
 loopback을 기본값으로 유지하고, README에 LAN·Tailscale/WireGuard·사용자 관리
 HTTPS reverse proxy를 별도 선택지로 문서화한다. `AD_PUBLIC_URL`은 상대가 실제로
 접근 가능한 origin으로 사용자가 설정한다. 앱은 자동 port forwarding, 인증서
-발급, 인증, anonymity를 제공하지 않는다.
+발급, 인증, anonymity를 제공하지 않는다. 다만 사용자가 PEM key/certificate를
+제공하면 Node 서버가 직접 HTTPS를 종료할 수 있으며, 공개 운영에는 reverse
+proxy를 권장한다.
 
 ### Consequences
 
@@ -129,5 +131,6 @@ HTTPS reverse proxy를 별도 선택지로 문서화한다. `AD_PUBLIC_URL`은 �
 ### Evidence
 
 - `apps/server/server.mjs`: loopback default, explicit bind/public URL
+- `apps/server/server.mjs`: optional paired TLS key/certificate termination
 - `README.md`, `README.ko.md`: LAN/VPN/HTTPS 선택지와 비자동 보장 명시
 - `SECURITY.md`: user-owned inbox와 non-claims
