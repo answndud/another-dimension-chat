@@ -36,6 +36,7 @@ test("web UI exposes the complete manual pairing and sealed-envelope flow", () =
   ]) assert.match(ui, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), text === "Safety material" ? "i" : ""));
   assert.doesNotMatch(ui, /browser-preview-tauri/);
   assert.doesNotMatch(ui, /production_onion/);
+  assert.match(ui, /Development HTTP endpoint/);
 });
 
 class MemoryIndexedDb {

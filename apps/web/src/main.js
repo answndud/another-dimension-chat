@@ -37,6 +37,12 @@ function endpointOrigin(info) {
   try { return new URL(info.inboxUrl).origin; } catch { return ""; }
 }
 
+function endpointWarning(info) {
+  const origin = endpointOrigin(info);
+  if (!origin || !origin.startsWith("http://") || /localhost|127\.0\.0\.1/.test(origin)) return "";
+  return "Development HTTP endpoint: capability and network metadata are exposed on the LAN. Use HTTPS for production.";
+}
+
 function browserStatus() {
   if (!window.isSecureContext || !window.crypto?.subtle) return "Browser security: use localhost or HTTPS to enable encryption.";
   return "Browser security: Web Crypto enabled.";
@@ -93,6 +99,7 @@ function render() {
           <div class="card safety"><span class="label">SAFETY MATERIAL</span><strong>${escapeHtml(phrase)}</strong><p class="small">Compare this phrase with the other person over a trusted channel before sending messages.</p></div>
           <div class="card stack">
             <div class="row-between"><h2>Sealed message exchange</h2><span class="pill">${state.peer ? `paired · ${escapeHtml(endpointOrigin(state.peer.server)) || "manual"}` : "not paired"}</span></div>
+            ${state.peer && endpointWarning(state.peer.server) ? `<p class="warning">${escapeHtml(endpointWarning(state.peer.server))}</p>` : ""}
             <label>Message<textarea id="message" rows="4" placeholder="Write locally, then send or export a sealed envelope"></textarea></label>
             <div class="row-between"><button id="send-envelope" ${state.peer?.server?.inboxUrl ? "" : "disabled"}>Encrypt and send to peer server</button><button id="sync-inbox" ${state.serverInfo?.inboxUrl ? "" : "disabled"} class="secondary">Sync my inbox</button></div>
             <button id="export-envelope" ${state.peer ? "" : "disabled"}>Encrypt and export envelope</button>
