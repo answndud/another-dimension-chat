@@ -5,8 +5,8 @@ holds only opaque sealed envelopes in a capability-scoped inbox. It never receiv
 plaintext, profile keys, or passphrases.
 
 ```sh
-npm --prefix apps/web run build
-npm --prefix apps/server start
+npm --prefix apps/web run build --workspaces=false
+npm --prefix apps/server start --workspaces=false
 ```
 
 Defaults are loopback-only (`127.0.0.1:1422`). Configure deliberately when using
