@@ -79,6 +79,10 @@ ChatGPT Sites나 중앙 메시지 hosting은 필요하지 않습니다.
 서버는 UPnP, port forwarding, TLS 인증서, 인증, anonymity, availability를
 자동으로 제공하지 않습니다.
 
+소규모 자체 운영에서는 `AD_TLS_KEY_FILE`과 `AD_TLS_CERT_FILE`에 한 쌍의 PEM
+파일을 설정해 서버가 HTTPS를 직접 종료할 수도 있습니다. 공개 노출에는
+유지보수되는 reverse proxy를 사용하는 편이 안전합니다.
+
 ## 웹 보안 경계
 
 브라우저 runtime은 Web Crypto와 IndexedDB를 사용합니다. 서버 없는 수동

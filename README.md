@@ -83,6 +83,10 @@ No ChatGPT Sites or central message hosting is required.
 The server does not configure UPnP, port forwarding, TLS certificates,
 authentication, anonymity, or availability automatically.
 
+For a small self-managed setup, the server can also terminate HTTPS directly by
+setting the paired `AD_TLS_KEY_FILE` and `AD_TLS_CERT_FILE` PEM paths. A
+maintained reverse proxy remains preferable for public exposure.
+
 ## Web security boundary
 
 The browser runtime uses Web Crypto and IndexedDB. The serverless/manual flow

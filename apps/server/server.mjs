@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
+import { createServer as createHttpsServer } from "node:https";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -71,7 +72,10 @@ export async function createLocalServer({
   distDir = process.env.AD_WEB_DIST_DIR || defaultDist,
   publicUrl = process.env.AD_PUBLIC_URL || "",
   ttlMs = Number(process.env.AD_INBOX_TTL_MS || DEFAULT_TTL_MS),
+  tlsKeyFile = process.env.AD_TLS_KEY_FILE || "",
+  tlsCertFile = process.env.AD_TLS_CERT_FILE || "",
 } = {}) {
+  if (Boolean(tlsKeyFile) !== Boolean(tlsCertFile)) throw new Error("AD_TLS_KEY_FILE and AD_TLS_CERT_FILE must be configured together.");
   await mkdir(dataDir, { recursive: true });
   const capabilityFile = join(dataDir, "inbox-capability");
   const queueFile = join(dataDir, "inbox.json");
@@ -86,10 +90,11 @@ export async function createLocalServer({
   purge();
 
   const persist = () => { purge(); return writeFile(queueFile, JSON.stringify(inbox), { mode: 0o600 }); };
-  const originFor = (address) => publicUrl || `http://${address}:${port}`;
+  const scheme = tlsKeyFile && tlsCertFile ? "https" : "http";
+  const originFor = (address) => publicUrl || `${scheme}://${address}:${port}`;
   const inboxUrlFor = (address) => `${originFor(address)}${capabilityPath(inboxCapability)}`;
 
-  const server = createServer(async (req, res) => {
+  const handleRequest = async (req, res) => {
     const requestUrl = new URL(req.url || "/", `http://${req.headers.host || `${bindHost}:${port}`}`);
     const headers = corsHeaders();
     if (req.method === "OPTIONS") { res.writeHead(204, headers); res.end(); return; }
@@ -146,15 +151,19 @@ export async function createLocalServer({
       res.writeHead(200, { "content-type": mimeTypes[extname(fallback)] || "application/octet-stream", "cache-control": "no-cache" });
       createReadStream(fallback).pipe(res);
     } catch { json(res, 500, { error: "web_dist_unavailable" }); }
-  });
+  };
 
-  return { server, bindHost, port, inboxCapability, inboxUrl: inboxUrlFor(bindHost) };
+  const server = tlsKeyFile && tlsCertFile
+    ? createHttpsServer({ key: await readFile(tlsKeyFile), cert: await readFile(tlsCertFile) }, handleRequest)
+    : createServer(handleRequest);
+
+  return { server, bindHost, port, inboxCapability, inboxUrl: inboxUrlFor(bindHost), secure: Boolean(tlsKeyFile && tlsCertFile) };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const runtime = await createLocalServer();
   runtime.server.listen(runtime.port, runtime.bindHost, () => {
-    console.log(`Another Dimension local server listening at http://${runtime.bindHost}:${runtime.port}`);
+    console.log(`Another Dimension local server listening at ${runtime.secure ? "https" : "http"}://${runtime.bindHost}:${runtime.port}`);
     console.log(`Inbox endpoint: ${runtime.inboxUrl}`);
     if (runtime.bindHost !== "127.0.0.1") console.warn("Warning: non-loopback bind exposes this server to the configured network.");
   });

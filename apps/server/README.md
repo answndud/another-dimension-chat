@@ -19,10 +19,13 @@ put an HTTPS reverse proxy in front of the HTTP server for LAN/VPN/public use:
 - `AD_SERVER_DATA_DIR` — private queue and capability storage directory.
 - `AD_WEB_DIST_DIR` — browser bundle directory.
 - `AD_INBOX_TTL_MS` — envelope retention period; default seven days.
+- `AD_TLS_KEY_FILE` and `AD_TLS_CERT_FILE` — optional paired PEM files for
+  direct HTTPS termination. Prefer a maintained reverse proxy for public
+  exposure; never commit or share these files.
 
 The inbox is bounded to 256 items and 96 KiB per envelope. Restart recovery is
 file-backed. A capability URL is equivalent to permission to submit/read that
 inbox, so share invites only with the intended peer and rotate the data directory
-if a capability is exposed. HTTPS termination, authentication, relay, port
+if a capability is exposed. Authentication, relay, port
 forwarding, and anonymity are not provided automatically. Plain HTTP remote
 pages cannot use the browser's Web Crypto APIs in normal browsers.

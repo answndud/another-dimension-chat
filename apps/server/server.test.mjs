@@ -51,6 +51,10 @@ test("local server exposes health and a capability-scoped opaque inbox", async (
   await rm(dataDir, { recursive: true, force: true });
 });
 
+test("local server requires TLS key and certificate as a pair", async () => {
+  await assert.rejects(() => createLocalServer({ tlsKeyFile: "key.pem" }), /must be configured together/);
+});
+
 test("local server rejects malformed inbox requests without storing them", async () => {
   const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
