@@ -29,6 +29,7 @@ export function buildServerConfig({
   mode = "local",
   port = 1422,
   publicUrl = "",
+  corsOrigins = [],
   tlsKeyFile = "",
   tlsCertFile = "",
   dataDir = resolve(projectDir, ".another-dimension-server"),
@@ -39,6 +40,7 @@ export function buildServerConfig({
     port: normalizedPort(port),
     dataDir: resolve(String(dataDir)),
   };
+  if (corsOrigins.length) result.corsOrigins = corsOrigins.map(normalizedOrigin);
   if (normalizedMode === "local") return result;
   if (!["reverse-proxy", "direct-tls"].includes(normalizedMode)) {
     throw new Error("Mode must be local, reverse-proxy, or direct-tls.");
@@ -91,7 +93,7 @@ export async function saveServerConfig(configFile, config) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const allowedArguments = new Set(["--config", "--mode", "--port", "--public-url", "--tls-key", "--tls-cert", "--data-dir"]);
+  const allowedArguments = new Set(["--config", "--mode", "--port", "--public-url", "--cors-origin", "--tls-key", "--tls-cert", "--data-dir"]);
   for (let index = 0; index < args.length; index += 2) {
     if (!allowedArguments.has(args[index])) throw new Error(`Unknown option: ${args[index]}`);
     if (!args[index + 1] || args[index + 1].startsWith("--")) throw new Error(`${args[index]} requires a value.`);
@@ -103,6 +105,7 @@ async function main() {
         mode,
         port: argumentValue(args, "--port") || 1422,
         publicUrl: argumentValue(args, "--public-url"),
+        corsOrigins: argumentValue(args, "--cors-origin") ? argumentValue(args, "--cors-origin").split(",") : [],
         tlsKeyFile: argumentValue(args, "--tls-key"),
         tlsCertFile: argumentValue(args, "--tls-cert"),
         dataDir: argumentValue(args, "--data-dir") || dirname(configFile),

@@ -146,8 +146,13 @@ node scripts/smoke_user_owned_servers.mjs
 
 ```sh
 ./scripts/start_local_server.sh --setup \
-  --mode reverse-proxy --public-url https://chat.example.test --port 1422
+  --mode reverse-proxy --public-url https://chat.example.test \
+  --cors-origin https://peer.example.test --port 1422
 ```
+
+`--cors-origin`은 이 서버의 capability inbox에 브라우저가 접근할 수 있는
+상대 UI origin의 허용목록입니다. 기본값은 모든 origin 허용이 아니며, 실제로
+연결할 상대 origin만 HTTPS로 추가해야 합니다. 여러 origin은 쉼표로 구분합니다.
 
 public URL은 scheme과 host(선택적 port)만 있는 HTTPS origin이어야 하며 path,
 credential, query, fragment를 허용하지 않습니다. 이는 초대에 들어갈 주소를

@@ -9,6 +9,9 @@ import { fileURLToPath } from "node:url";
 const MAX_ENVELOPE_BYTES = 96 * 1024;
 const MAX_INBOX_ITEMS = 256;
 const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_POSTS_PER_WINDOW = 30;
+const MAX_LOCAL_READS_PER_WINDOW = 120;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaultDist = resolve(__dirname, "../web/dist");
 
@@ -28,13 +31,33 @@ function json(res, status, body, headers = {}) {
   res.end(payload);
 }
 
-function corsHeaders() {
+function securityHeaders({ api = false, hsts = false } = {}) {
   return {
-    "access-control-allow-origin": "*",
-    "access-control-allow-headers": "content-type,x-ad-local-access",
-    "access-control-allow-methods": "GET,POST,OPTIONS",
-    "cache-control": "no-store",
+    "cache-control": api ? "no-store" : "no-cache",
+    "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    "permissions-policy": "camera=(), microphone=(), geolocation=()",
+    "referrer-policy": "no-referrer",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    ...(hsts ? { "strict-transport-security": "max-age=31536000" } : {}),
   };
+}
+
+function corsHeaders(req, allowedOrigins, options = {}) {
+  const headers = securityHeaders(options);
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.has(origin)) {
+    headers["access-control-allow-origin"] = origin;
+    headers["access-control-allow-headers"] = "content-type,x-ad-local-access";
+    headers["access-control-allow-methods"] = "GET,POST,OPTIONS";
+    headers.vary = "Origin";
+  }
+  return headers;
+}
+
+function parseOrigins(value) {
+  if (!value) return [];
+  return String(value).split(",").map((origin) => normalizePublicUrl(origin.trim())).filter(Boolean);
 }
 
 async function readBody(req, limit = MAX_ENVELOPE_BYTES + 4096) {
@@ -106,7 +129,7 @@ export async function loadServerConfig(configFile) {
     throw new Error(`Could not read server config ${absoluteConfigFile}: ${error.message}`);
   }
   if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error("Server config must be a JSON object.");
-  const allowed = new Set(["bindHost", "port", "dataDir", "distDir", "publicUrl", "ttlMs", "tlsKeyFile", "tlsCertFile"]);
+  const allowed = new Set(["bindHost", "port", "dataDir", "distDir", "publicUrl", "corsOrigins", "ttlMs", "tlsKeyFile", "tlsCertFile"]);
   const unknown = Object.keys(parsed).filter((key) => !allowed.has(key));
   if (unknown.length) throw new Error(`Unknown server config field: ${unknown.join(", ")}`);
   const relativePathKeys = ["dataDir", "distDir", "tlsKeyFile", "tlsCertFile"];
@@ -122,6 +145,7 @@ export async function createLocalServer({
   dataDir = process.env.AD_SERVER_DATA_DIR || resolve(process.cwd(), ".another-dimension-server"),
   distDir = process.env.AD_WEB_DIST_DIR || defaultDist,
   publicUrl = process.env.AD_PUBLIC_URL || "",
+  corsOrigins = parseOrigins(process.env.AD_CORS_ORIGINS || ""),
   ttlMs = Number(process.env.AD_INBOX_TTL_MS || DEFAULT_TTL_MS),
   tlsKeyFile = process.env.AD_TLS_KEY_FILE || "",
   tlsCertFile = process.env.AD_TLS_CERT_FILE || "",
@@ -130,6 +154,7 @@ export async function createLocalServer({
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("AD_PORT must be an integer between 0 and 65535.");
   if (!Number.isFinite(ttlMs) || ttlMs <= 0) throw new Error("AD_INBOX_TTL_MS must be a positive number.");
   const normalizedPublicUrl = normalizePublicUrl(publicUrl);
+  const allowedCorsOrigins = new Set([normalizedPublicUrl, ...corsOrigins].filter(Boolean));
   if (["0.0.0.0", "::"].includes(bindHost) && !normalizedPublicUrl) throw new Error("AD_PUBLIC_URL is required with a wildcard AD_BIND_HOST.");
   if (tlsKeyFile && normalizedPublicUrl.startsWith("http://")) throw new Error("AD_PUBLIC_URL must use HTTPS when direct TLS is enabled.");
   await mkdir(dataDir, { recursive: true });
@@ -163,11 +188,33 @@ export async function createLocalServer({
   const scheme = tlsKeyFile && tlsCertFile ? "https" : "http";
   const originFor = (address) => normalizedPublicUrl || `${scheme}://${urlHost(address)}:${port}`;
   const inboxUrlFor = (address) => `${originFor(address)}${capabilityPath(inboxCapability)}`;
+  const requestWindows = new Map();
+  const consumeRateLimit = (req, bucket, limit) => {
+    const key = `${bucket}:${req.socket.remoteAddress || "unknown"}`;
+    const now = Date.now();
+    const timestamps = (requestWindows.get(key) || []).filter((timestamp) => now - timestamp < RATE_LIMIT_WINDOW_MS);
+    if (timestamps.length >= limit) {
+      requestWindows.set(key, timestamps);
+      return false;
+    }
+    timestamps.push(now);
+    requestWindows.set(key, timestamps);
+    return true;
+  };
 
   const handleRequest = async (req, res) => {
     const requestUrl = new URL(req.url || "/", `http://${req.headers.host || `${bindHost}:${port}`}`);
-    const headers = corsHeaders();
-    if (req.method === "OPTIONS") { res.writeHead(204, headers); res.end(); return; }
+    const isApi = requestUrl.pathname.startsWith("/api/");
+    const headers = corsHeaders(req, allowedCorsOrigins, { api: isApi, hsts: Boolean(tlsKeyFile || normalizedPublicUrl.startsWith("https://")) });
+    if (isApi && req.headers.origin && !allowedCorsOrigins.has(req.headers.origin)) {
+      json(res, 403, { error: "origin_not_allowed" }, headers);
+      return;
+    }
+    if (req.method === "OPTIONS") {
+      if (!isApi || !req.headers.origin || allowedCorsOrigins.has(req.headers.origin)) { res.writeHead(204, headers); res.end(); }
+      else json(res, 403, { error: "origin_not_allowed" }, headers);
+      return;
+    }
 
     if (requestUrl.pathname === "/api/v1/health" && req.method === "GET") {
       json(res, 200, { ok: true, protocol: 1 }, headers);
@@ -193,6 +240,7 @@ export async function createLocalServer({
 
     const inboxPrefix = capabilityPath(inboxCapability);
     if (requestUrl.pathname === inboxPrefix && req.method === "GET") {
+      if (!consumeRateLimit(req, "inbox-read", MAX_LOCAL_READS_PER_WINDOW)) { json(res, 429, { error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
       if (!hasLocalAccess(req, localAccessCapability)) {
         json(res, 403, { error: "local_access_required" }, headers);
         return;
@@ -202,6 +250,7 @@ export async function createLocalServer({
       return;
     }
     if (requestUrl.pathname === inboxPrefix && req.method === "POST") {
+      if (!consumeRateLimit(req, "inbox-post", MAX_POSTS_PER_WINDOW)) { json(res, 429, { accepted: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
       try {
         const body = JSON.parse(await readBody(req));
         const envelope = String(body?.envelope || "").trim();
@@ -219,6 +268,7 @@ export async function createLocalServer({
       return;
     }
     if (requestUrl.pathname === `${inboxPrefix}/ack` && req.method === "POST") {
+      if (!consumeRateLimit(req, "inbox-ack", MAX_LOCAL_READS_PER_WINDOW)) { json(res, 429, { acknowledged: 0, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
       if (!hasLocalAccess(req, localAccessCapability)) {
         json(res, 403, { acknowledged: 0, error: "local_access_required" }, headers);
         return;
@@ -240,7 +290,7 @@ export async function createLocalServer({
       const target = file && await readFile(file).then(() => file).catch(() => null);
       const fallback = target || safeFile(distDir, "/");
       if (!fallback) { json(res, 500, { error: "web_dist_unavailable" }); return; }
-      res.writeHead(200, { "content-type": mimeTypes[extname(fallback)] || "application/octet-stream", "cache-control": "no-cache" });
+      res.writeHead(200, { ...securityHeaders({ hsts: Boolean(tlsKeyFile || normalizedPublicUrl.startsWith("https://")) }), "content-type": mimeTypes[extname(fallback)] || "application/octet-stream" });
       createReadStream(fallback).pipe(res);
     } catch { json(res, 500, { error: "web_dist_unavailable" }); }
   };

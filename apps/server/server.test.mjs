@@ -12,7 +12,7 @@ function call(port, method, path, body, headers = {}) {
     const req = request({ host: "127.0.0.1", port, method, path, headers: { ...(body ? { "content-type": "application/json" } : {}), ...headers } }, (res) => {
       let text = "";
       res.on("data", (chunk) => { text += chunk; });
-      res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(text) }));
+      res.on("end", () => resolve({ status: res.statusCode, headers: res.headers, body: JSON.parse(text) }));
     });
     req.on("error", reject);
     if (body) req.end(JSON.stringify(body)); else req.end();
@@ -24,7 +24,7 @@ function rawCall(port, method, path, body) {
     const req = request({ host: "127.0.0.1", port, method, path, headers: { "content-type": "application/json" } }, (res) => {
       let text = "";
       res.on("data", (chunk) => { text += chunk; });
-      res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(text) }));
+      res.on("end", () => resolve({ status: res.statusCode, headers: res.headers, body: JSON.parse(text) }));
     });
     req.on("error", reject);
     req.end(body);
@@ -54,6 +54,23 @@ test("local server exposes health and a capability-scoped opaque inbox", async (
   assert.equal(duplicate.status, 202);
   assert.equal((await call(port, "GET", inboxPath, undefined, localHeaders(runtime))).body.items.length, 1);
   assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id] })).status, 403);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("server applies security headers and rejects unlisted cross-origin API calls", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist"), publicUrl: "https://chat.example.test", corsOrigins: ["https://peer.example.test"] });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const health = await call(port, "GET", "/api/v1/health", undefined, { origin: "https://peer.example.test" });
+  assert.equal(health.status, 200);
+  assert.equal(health.headers["access-control-allow-origin"], "https://peer.example.test");
+  assert.equal(health.headers["x-content-type-options"], "nosniff");
+  assert.equal(health.headers["strict-transport-security"], "max-age=31536000");
+  const denied = await call(port, "GET", "/api/v1/health", undefined, { origin: "https://unexpected.example.test" });
+  assert.equal(denied.status, 403);
+  assert.equal(denied.body.error, "origin_not_allowed");
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });
