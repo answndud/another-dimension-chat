@@ -419,6 +419,11 @@ release에는 이미 빌드된 브라우저 bundle, 서버, 설정·TLS·endpoin
 스크립트가 포함됩니다. 압축을 푼 사용자는 Vite나 원본 저장소가 필요하지
 않습니다. Node.js 20 이상은 계속 필요합니다.
 
+배포 전 환경만 확인하려면 `scripts/preflight_local_server.mjs`를 실행하고,
+공개 archive는 `scripts/verify_public_release_gate.mjs`에 trusted public key를
+제공해 서명·SBOM·필수 문서·최소 버전을 함께 검증합니다. unsigned 개발 archive는
+public release gate를 통과하지 않습니다.
+
 기본 archive는 로컬 개발용 unsigned release입니다. 릴리스 디렉터리의 파일별
 SHA-256 매니페스트는 다음처럼 확인할 수 있습니다.
 

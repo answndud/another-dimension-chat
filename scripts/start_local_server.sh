@@ -18,6 +18,12 @@ if [ "${1:-}" = "--setup" ]; then
 fi
 
 if [ -f "$CONFIG_FILE" ]; then
+  node "$PROJECT_DIR/scripts/preflight_local_server.mjs" --config "$CONFIG_FILE"
+else
+  node "$PROJECT_DIR/scripts/preflight_local_server.mjs"
+fi
+
+if [ -f "$CONFIG_FILE" ]; then
   exec node "$PROJECT_DIR/apps/server/server.mjs" --config "$CONFIG_FILE"
 fi
 

@@ -102,6 +102,21 @@ cd another-dimension-0.1.0
 archive에는 빌드된 browser bundle과 server runtime이 포함되므로 압축을 푼
 사용자는 Vite나 원본 저장소가 필요하지 않습니다. Node.js 20 이상이 필요합니다.
 
+실행 전 환경만 확인하려면 다음 preflight를 사용합니다.
+
+```sh
+./scripts/preflight_local_server.mjs --config .another-dimension-server/server-config.json
+```
+
+공개 배포 archive는 운영자가 보관하는 trusted public key로 별도 검증해야
+합니다. unsigned 개발 archive는 public release gate를 통과하지 않습니다.
+
+```sh
+node scripts/verify_public_release_gate.mjs another-dimension-0.1.0 \
+  --public-key /secure/path/release-ed25519-public.pem \
+  --min-version 0.1.0
+```
+
 ### 릴리스 무결성 확인과 서명
 
 기본 실행은 로컬 개발용 `unsigned-development` archive입니다. archive 안에는
