@@ -21,6 +21,10 @@ keys. Signed, independently verifiable app distribution is a release blocker.
 
 - Profile private material is generated in the browser.
 - Profile private material is encrypted with a passphrase before IndexedDB storage.
+- New profile wrapping uses Argon2id in the committed WASM boundary; legacy
+  PBKDF2 records are migrated after a successful unlock. The browser session
+  auto-locks after five minutes of inactivity, and explicit passphrase-confirmed
+  profile wipe removes the local profile, messages, and replay records.
 - Peer invites are signed and verified locally.
 - New profiles maintain a bounded local pool of Olm one-time prekeys. The
   invite reserves one public prekey; a successful inbound handshake consumes

@@ -1,4 +1,5 @@
 import initCrypto, {
+  argon2id_profile_key,
   initSync as initCryptoSync,
   olm_account_new,
   olm_account_replenish,
@@ -119,7 +120,11 @@ async function localServerInfo() {
 
 export async function getLocalServerInfo() { return localServerInfo(); }
 
-async function wrappingKey(passphrase, salt) {
+async function wrappingKey(passphrase, salt, algorithm = "argon2id-v1") {
+  if (algorithm === "argon2id-v1") {
+    const derived = argon2id_profile_key(String(passphrase), salt);
+    return crypto.subtle.importKey("raw", derived, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  }
   const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 210_000, hash: "SHA-256" }, material, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
 }
@@ -133,12 +138,12 @@ async function sealWithKey(material, key, salt) {
 async function sealPrivateMaterial(material, passphrase) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await wrappingKey(passphrase, salt);
-  return { ...(await sealWithKey(material, key, salt)), wrappingKey: key };
+  return { ...(await sealWithKey(material, key, salt)), wrappingKey: key, kdf: "argon2id-v1" };
 }
 
 async function openPrivateMaterial(record, passphrase) {
   const salt = base64ToBytes(record.salt);
-  const key = await wrappingKey(passphrase, salt);
+  const key = await wrappingKey(passphrase, salt, record.kdf || "pbkdf2-v1");
   try {
     const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: base64ToBytes(record.iv) }, key, base64ToBytes(record.sealed));
     return { material: JSON.parse(new TextDecoder().decode(plain)), wrappingKey: key };
@@ -155,6 +160,7 @@ function storedProfile(profile) {
     salt: profile.salt,
     iv: profile.iv,
     sealed: profile.sealed,
+    kdf: profile.kdf || "pbkdf2-v1",
     peer: profile.peer || null,
     selfInviteBody: profile.selfInviteBody || null,
     createdAt: profile.createdAt,
@@ -258,6 +264,11 @@ export async function unlockProfile(name, passphrase) {
     privateMaterial: material,
   };
   lastActivityAt = Date.now();
+  if (!record.kdf) {
+    activeProfile.wrappingKey = await wrappingKey(passphrase, base64ToBytes(record.salt));
+    activeProfile.kdf = "argon2id-v1";
+    await persistPrivateProfile();
+  }
   return activeProfile;
 }
 

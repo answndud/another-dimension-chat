@@ -1,6 +1,34 @@
 /* @ts-self-types="./ad_crypto.d.ts" */
 
 /**
+ * @param {string} passphrase
+ * @param {Uint8Array} salt
+ * @returns {Uint8Array}
+ */
+export function argon2id_profile_key(passphrase, salt) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(passphrase, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray8ToWasm0(salt, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        wasm.argon2id_profile_key(retptr, ptr0, len0, ptr1, len1);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+        if (r3) {
+            throw takeObject(r2);
+        }
+        var v3 = getArrayU8FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_export4(r0, r1 * 1, 1);
+        return v3;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
  * @returns {string}
  */
 export function olm_account_new() {
@@ -24,7 +52,7 @@ export function olm_account_new() {
         return getStringFromWasm0(ptr1, len1);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export2(deferred2_0, deferred2_1, 1);
+        wasm.__wbindgen_export4(deferred2_0, deferred2_1, 1);
     }
 }
 
@@ -38,7 +66,7 @@ export function olm_account_replenish(account_pickle, count) {
     let deferred3_1;
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(account_pickle, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr0 = passStringToWasm0(account_pickle, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len0 = WASM_VECTOR_LEN;
         wasm.olm_account_replenish(retptr, ptr0, len0, count);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
@@ -56,7 +84,7 @@ export function olm_account_replenish(account_pickle, count) {
         return getStringFromWasm0(ptr2, len2);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export2(deferred3_0, deferred3_1, 1);
+        wasm.__wbindgen_export4(deferred3_0, deferred3_1, 1);
     }
 }
 
@@ -70,9 +98,9 @@ export function olm_account_revoke(account_pickle, public_key) {
     let deferred4_1;
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(account_pickle, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr0 = passStringToWasm0(account_pickle, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(public_key, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr1 = passStringToWasm0(public_key, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len1 = WASM_VECTOR_LEN;
         wasm.olm_account_revoke(retptr, ptr0, len0, ptr1, len1);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
@@ -90,7 +118,7 @@ export function olm_account_revoke(account_pickle, public_key) {
         return getStringFromWasm0(ptr3, len3);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export2(deferred4_0, deferred4_1, 1);
+        wasm.__wbindgen_export4(deferred4_0, deferred4_1, 1);
     }
 }
 
@@ -107,13 +135,13 @@ export function olm_inbound_accept(account_pickle, peer_curve25519, message_type
     let deferred6_1;
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(account_pickle, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr0 = passStringToWasm0(account_pickle, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(peer_curve25519, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr1 = passStringToWasm0(peer_curve25519, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(body, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr2 = passStringToWasm0(body, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len2 = WASM_VECTOR_LEN;
-        const ptr3 = passStringToWasm0(transcript, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr3 = passStringToWasm0(transcript, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len3 = WASM_VECTOR_LEN;
         wasm.olm_inbound_accept(retptr, ptr0, len0, ptr1, len1, message_type, ptr2, len2, ptr3, len3);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
@@ -131,7 +159,7 @@ export function olm_inbound_accept(account_pickle, peer_curve25519, message_type
         return getStringFromWasm0(ptr5, len5);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export2(deferred6_0, deferred6_1, 1);
+        wasm.__wbindgen_export4(deferred6_0, deferred6_1, 1);
     }
 }
 
@@ -147,11 +175,11 @@ export function olm_outbound_finish(session_pickle, message_type, body, transcri
     let deferred5_1;
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(session_pickle, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr0 = passStringToWasm0(session_pickle, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(body, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr1 = passStringToWasm0(body, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(transcript, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr2 = passStringToWasm0(transcript, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len2 = WASM_VECTOR_LEN;
         wasm.olm_outbound_finish(retptr, ptr0, len0, message_type, ptr1, len1, ptr2, len2);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
@@ -169,7 +197,7 @@ export function olm_outbound_finish(session_pickle, message_type, body, transcri
         return getStringFromWasm0(ptr4, len4);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export2(deferred5_0, deferred5_1, 1);
+        wasm.__wbindgen_export4(deferred5_0, deferred5_1, 1);
     }
 }
 
@@ -185,13 +213,13 @@ export function olm_outbound_start(account_pickle, peer_curve25519, peer_one_tim
     let deferred6_1;
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(account_pickle, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr0 = passStringToWasm0(account_pickle, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(peer_curve25519, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr1 = passStringToWasm0(peer_curve25519, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(peer_one_time, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr2 = passStringToWasm0(peer_one_time, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len2 = WASM_VECTOR_LEN;
-        const ptr3 = passStringToWasm0(transcript, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr3 = passStringToWasm0(transcript, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len3 = WASM_VECTOR_LEN;
         wasm.olm_outbound_start(retptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
@@ -209,7 +237,7 @@ export function olm_outbound_start(account_pickle, peer_curve25519, peer_one_tim
         return getStringFromWasm0(ptr5, len5);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export2(deferred6_0, deferred6_1, 1);
+        wasm.__wbindgen_export4(deferred6_0, deferred6_1, 1);
     }
 }
 
@@ -224,9 +252,9 @@ export function olm_session_decrypt(session_pickle, message_type, body) {
     let deferred4_1;
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(session_pickle, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr0 = passStringToWasm0(session_pickle, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(body, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr1 = passStringToWasm0(body, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len1 = WASM_VECTOR_LEN;
         wasm.olm_session_decrypt(retptr, ptr0, len0, message_type, ptr1, len1);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
@@ -244,7 +272,7 @@ export function olm_session_decrypt(session_pickle, message_type, body) {
         return getStringFromWasm0(ptr3, len3);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export2(deferred4_0, deferred4_1, 1);
+        wasm.__wbindgen_export4(deferred4_0, deferred4_1, 1);
     }
 }
 
@@ -258,9 +286,9 @@ export function olm_session_encrypt(session_pickle, plaintext) {
     let deferred4_1;
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(session_pickle, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr0 = passStringToWasm0(session_pickle, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passArray8ToWasm0(plaintext, wasm.__wbindgen_export3);
+        const ptr1 = passArray8ToWasm0(plaintext, wasm.__wbindgen_export2);
         const len1 = WASM_VECTOR_LEN;
         wasm.olm_session_encrypt(retptr, ptr0, len0, ptr1, len1);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
@@ -278,7 +306,7 @@ export function olm_session_encrypt(session_pickle, plaintext) {
         return getStringFromWasm0(ptr3, len3);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export2(deferred4_0, deferred4_1, 1);
+        wasm.__wbindgen_export4(deferred4_0, deferred4_1, 1);
     }
 }
 
@@ -291,7 +319,7 @@ export function safety_material(transcript) {
     let deferred2_1;
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(transcript, wasm.__wbindgen_export3, wasm.__wbindgen_export4);
+        const ptr0 = passStringToWasm0(transcript, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len0 = WASM_VECTOR_LEN;
         wasm.safety_material(retptr, ptr0, len0);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
@@ -301,7 +329,7 @@ export function safety_material(transcript) {
         return getStringFromWasm0(r0, r1);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export2(deferred2_0, deferred2_1, 1);
+        wasm.__wbindgen_export4(deferred2_0, deferred2_1, 1);
     }
 }
 function __wbg_get_imports() {

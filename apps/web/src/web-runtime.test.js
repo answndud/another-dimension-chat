@@ -15,6 +15,8 @@ test("web runtime uses browser crypto and IndexedDB rather than preview storage"
   assert.match(runtime, /indexedDB\.open/);
   assert.match(runtime, /crypto\.subtle\.generateKey/);
   assert.match(runtime, /PBKDF2/);
+  assert.match(runtime, /argon2id_profile_key/);
+  assert.match(runtime, /argon2id-v1/);
   assert.match(runtime, /AES-GCM/);
   assert.match(runtime, /olm_outbound_start/);
   assert.match(runtime, /olm_account_replenish/);

@@ -151,6 +151,13 @@ profile을 복제하면 이 보장이 깨질 수 있으므로 profile 백업·�
 안전한 채널로 다시 교환하세요. 이미 pairing을 완료한 세션의 초대는 세션
 연속성을 위해 자동으로 바뀌지 않습니다.
 
+profile private material은 Argon2id 기반 wrapping key로 IndexedDB에 저장됩니다.
+기존 PBKDF2 profile은 올바른 passphrase로 처음 unlock할 때 Argon2id 형식으로
+자동 재포장됩니다. 5분 동안 입력이 없으면 브라우저 세션이 자동 잠기며, 화면의
+`Panic wipe`는 passphrase를 다시 확인한 뒤 해당 profile의 private material과
+로컬 transcript를 삭제합니다. 삭제 데이터는 복구되지 않으므로 실제 백업으로
+간주하지 마세요.
+
 두 사용자 서버의 health → opaque 전달 → ack 흐름은 다음 짧은 smoke 명령으로
 확인할 수 있습니다.
 

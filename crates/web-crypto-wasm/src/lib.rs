@@ -1,4 +1,5 @@
 use another_dimension_crypto::derive_production_safety_material;
+use argon2::{Algorithm, Argon2, Params, Version};
 use vodozemac::{
     base64_decode, base64_encode,
     olm::{Account, AccountPickle, OlmMessage, Session, SessionConfig, SessionPickle},
@@ -48,6 +49,17 @@ fn setup_plaintext(kind: &str, transcript: &str) -> Vec<u8> {
 pub fn safety_material(transcript: &str) -> String {
     let material = derive_production_safety_material(transcript);
     format!("{} · {}", material.number, material.phrase)
+}
+
+#[wasm_bindgen]
+pub fn argon2id_profile_key(passphrase: &str, salt: &[u8]) -> Result<Vec<u8>, JsValue> {
+    let params = Params::new(19_456, 2, 1, Some(32)).map_err(olm_error)?;
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    let mut output = vec![0_u8; 32];
+    argon2
+        .hash_password_into(passphrase.as_bytes(), salt, &mut output)
+        .map_err(olm_error)?;
+    Ok(output)
 }
 
 #[wasm_bindgen]

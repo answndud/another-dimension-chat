@@ -1,6 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export function argon2id_profile_key(passphrase: string, salt: Uint8Array): Uint8Array;
+
 export function olm_account_new(): string;
 
 export function olm_account_replenish(account_pickle: string, count: number): string;
@@ -23,6 +25,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly argon2id_profile_key: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly olm_account_new: (a: number) => void;
     readonly olm_account_replenish: (a: number, b: number, c: number, d: number) => void;
     readonly olm_account_revoke: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -34,9 +37,9 @@ export interface InitOutput {
     readonly safety_material: (a: number, b: number, c: number) => void;
     readonly __wbindgen_export: (a: number) => void;
     readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
-    readonly __wbindgen_export2: (a: number, b: number, c: number) => void;
-    readonly __wbindgen_export3: (a: number, b: number) => number;
-    readonly __wbindgen_export4: (a: number, b: number, c: number, d: number) => number;
+    readonly __wbindgen_export2: (a: number, b: number) => number;
+    readonly __wbindgen_export3: (a: number, b: number, c: number, d: number) => number;
+    readonly __wbindgen_export4: (a: number, b: number, c: number) => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;

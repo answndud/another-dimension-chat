@@ -198,6 +198,7 @@ name = "another-dimension-web-crypto-wasm"
 version = "0.1.0"
 dependencies = [
  "another-dimension-crypto",
+ "argon2",
  "getrandom 0.3.4",
  "serde_json",
  "vodozemac",
