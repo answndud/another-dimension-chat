@@ -53,6 +53,8 @@ test("web UI exposes the complete manual pairing and sealed-envelope flow", () =
   assert.match(serviceWorker, /pathname\.startsWith\("\/api\/"\)/);
   assert.match(serviceWorker, /request\.mode === "navigate"/);
   assert.match(serviceWorker, /caches\.delete/);
+  assert.match(serviceWorker, /another-dimension-web-v5-argon2/);
+  assert.match(serviceWorker, /fetch\(event\.request\)/);
 });
 
 class MemoryIndexedDb {

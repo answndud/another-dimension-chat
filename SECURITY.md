@@ -70,6 +70,10 @@ keys. Signed, independently verifiable app distribution is a release blocker.
   import refuses to overwrite an existing profile. This is user-managed local
   recovery, not cloud backup, and the backup still requires offline passphrase
   protection.
+- The service worker uses a versioned cache, removes older app caches on
+  activation, and prefers fresh successful network responses for static UI
+  assets. This reduces stale-cache rollback risk but is not a cryptographic
+  substitute for independently verified signed releases.
 
 These are implementation behaviors, not proof of secure messenger readiness.
 
