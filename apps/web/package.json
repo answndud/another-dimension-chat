@@ -1,0 +1,16 @@
+{
+  "name": "another-dimension-web",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 1420 --strictPort",
+    "test": "node --test src/web-runtime.test.js"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

@@ -30,13 +30,12 @@
 ## 로컬 실행
 
 ```sh
-npm ci --prefix apps/desktop-tauri
-npm --prefix apps/desktop-tauri run dev
+npm ci --prefix apps/web --workspaces=false
+npm --prefix apps/web run dev --workspaces=false
 ```
 
-Vite가 출력하는 로컬 URL을 엽니다. 현재 web migration 동안에는 기존
-소스 위치를 임시로 사용합니다. 다음 배포 slice에서 web surface를 별도
-`apps/web` 패키지와 static hosting 설정으로 옮깁니다.
+Vite가 출력하는 로컬 URL을 엽니다. 브라우저 제품은 `apps/web`에 있고,
+Tauri 패키지는 선택적인 desktop wrapper입니다.
 
 ## 웹 보안 경계
 
@@ -65,8 +64,8 @@ WebRTC/IP 노출도 명시적으로 다뤄야 합니다.
 ## 검증
 
 ```sh
-npm --prefix apps/desktop-tauri test
-npm --prefix apps/desktop-tauri run build
+npm --prefix apps/web test --workspaces=false
+npm --prefix apps/web run build --workspaces=false
 ```
 
 현재 Node 통합 테스트는 두 로컬 프로필, invite 검증, Web Crypto envelope

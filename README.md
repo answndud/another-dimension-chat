@@ -30,13 +30,12 @@ send it through a channel you choose. The app does not run a message server.
 ## Run locally
 
 ```sh
-npm ci --prefix apps/desktop-tauri
-npm --prefix apps/desktop-tauri run dev
+npm ci --prefix apps/web --workspaces=false
+npm --prefix apps/web run dev --workspaces=false
 ```
 
-Open the local URL printed by Vite. The current source location is retained
-temporarily for the web migration; the next deployment slice will move the
-web surface to a dedicated `apps/web` package and static hosting configuration.
+Open the local URL printed by Vite. The browser product lives in `apps/web`;
+the Tauri package is an optional desktop wrapper.
 
 ## Web security boundary
 
@@ -65,8 +64,8 @@ private keys, or identity discovery, and WebRTC/IP exposure must be explicit.
 ## Validation
 
 ```sh
-npm --prefix apps/desktop-tauri test
-npm --prefix apps/desktop-tauri run build
+npm --prefix apps/web test --workspaces=false
+npm --prefix apps/web run build --workspaces=false
 ```
 
 The current Node integration test exercises two local profiles, invite
