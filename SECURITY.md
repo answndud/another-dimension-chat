@@ -33,6 +33,9 @@ keys. Signed, independently verifiable app distribution is a release blocker.
   expired or implausibly long-lived invites are rejected before pairing.
 - The UI blocks message encryption until both sides explicitly compare and
   confirm the complete safety material for the current paired session.
+- The session stores the peer's long-term identity fingerprint and fails closed
+  if the stored peer identity changes before envelope processing. Transport
+  endpoint changes are separately covered by the safety material.
 - Pairing and message encryption run Olm v2 through the Rust `vodozemac`
   implementation compiled to WebAssembly.
 - Each successful send or receive advances a persisted Double Ratchet session

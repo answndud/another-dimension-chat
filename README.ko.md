@@ -139,6 +139,11 @@ pairing이 성공해도 바로 메시지를 보낼 수는 없습니다. 두 사�
 각자 확인 버튼을 눌러야 메시지 암호화·전송이 열립니다. 이 확인은 현재 paired
 session에 저장되며, 새 pairing이나 session 재설정에서는 다시 해야 합니다.
 
+pairing 시점의 장기 identity key fingerprint는 session 상태에도 묶입니다. 이후
+저장된 peer identity가 달라지면 envelope 처리를 중단하고 새 safety verification을
+포함한 fresh pairing을 요구합니다. 서버 주소나 capability 변경은 identity 변경과
+같지 않지만 safety material에는 포함되므로 별도로 다시 확인해야 합니다.
+
 각 profile은 Olm one-time prekey를 여러 개 보유합니다. 초대는 그중 하나를
 예약하고, 상대의 최초 handshake가 성공하면 해당 키를 `consumed`로 처리한 뒤
 부족한 키를 보충합니다. prekey 상태는 private profile material 안에 저장되며

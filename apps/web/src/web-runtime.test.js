@@ -26,6 +26,7 @@ test("web runtime uses browser crypto and IndexedDB rather than preview storage"
   assert.match(runtime, /ADENVWEB3/);
   assert.match(runtime, /sendEnvelope/);
   assert.match(runtime, /revokeInvite/);
+  assert.match(runtime, /peerIdentity/);
   assert.match(runtime, /syncInbox/);
   assert.match(runtime, /ECDSA/);
   assert.doesNotMatch(runtime, /deriveBits|HKDF/);
@@ -173,6 +174,7 @@ test("two local profiles establish an Olm ratchet, persist it, and reject tamper
   await completeManualHandshake(runtime, { alice: "alice-passphrase", bob: "bob-passphrase" });
 
   await runtime.unlockProfile("alice", "alice-passphrase");
+  assert.ok(runtime.getIdentityFingerprint().includes('"ecdsaPublic"'));
   await assert.rejects(() => runtime.importInvite(bobInvite), /already paired/);
   const envelope = await runtime.exportEnvelope("hello from alice");
   assert.doesNotMatch(envelopeBody(envelope).payload.body, /hello from alice/);

@@ -264,10 +264,18 @@ export async function unlockProfile(name, passphrase) {
     wrappingKey: profileWrappingKey,
     privateMaterial: material,
   };
+  let migratedSession = false;
+  if (activeProfile.privateMaterial.session && activeProfile.peer && !activeProfile.privateMaterial.session.peerIdentity) {
+    activeProfile.privateMaterial.session.localIdentity = identityFingerprint(activeProfile.selfInviteBody || activeProfile);
+    activeProfile.privateMaterial.session.peerIdentity = identityFingerprint(activeProfile.peer);
+    migratedSession = true;
+  }
   lastActivityAt = Date.now();
   if (!record.kdf) {
     activeProfile.wrappingKey = await wrappingKey(passphrase, base64ToBytes(record.salt));
     activeProfile.kdf = "argon2id-v1";
+    await persistPrivateProfile();
+  } else if (migratedSession) {
     await persistPrivateProfile();
   }
   return activeProfile;
@@ -384,6 +392,25 @@ function participantKey(participant) {
   });
 }
 
+function identityFingerprint(participant) {
+  return canonical({
+    name: participant.name,
+    ecdsaPublic: participant.ecdsaPublic,
+    olmEd25519Public: participant.olmEd25519Public,
+    olmCurve25519Public: participant.olmCurve25519Public,
+  });
+}
+
+export function getIdentityFingerprint() {
+  if (!activeProfile) return "";
+  return identityFingerprint({
+    name: activeProfile.name,
+    ecdsaPublic: activeProfile.ecdsaPublic,
+    olmEd25519Public: activeProfile.olmEd25519Public,
+    olmCurve25519Public: activeProfile.olmCurve25519Public,
+  });
+}
+
 function sessionTranscript(local, peer) {
   const participants = [local, peer]
     .map((participant) => ({
@@ -437,6 +464,8 @@ async function initializeOlmSession() {
     role,
     status: role === "initiator" ? "init-sent" : "waiting-init",
     transcript: sessionTranscript(local, peer),
+    localIdentity: identityFingerprint(local),
+    peerIdentity: identityFingerprint(peer),
     safetyVerified: false,
     pendingEnvelope: null,
   };
@@ -635,6 +664,7 @@ async function verifiedEnvelope(value) {
 
 async function processHandshakeEnvelope(envelope) {
   const session = activeProfile.privateMaterial.session;
+  if (!session?.peerIdentity || session.peerIdentity !== identityFingerprint(activeProfile.peer)) throw new Error("Peer identity changed. Stop and establish a fresh verified session.");
   if (envelope.type === "olm-init") {
     if (session.role !== "responder" || session.status !== "waiting-init") throw new Error("Unexpected Olm init message.");
     let accepted;
