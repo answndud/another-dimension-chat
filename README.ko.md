@@ -90,6 +90,11 @@ ChatGPT Sites나 중앙 메시지 hosting은 필요하지 않습니다.
 파일을 설정해 서버가 HTTPS를 직접 종료할 수도 있습니다. 공개 노출에는
 유지보수되는 reverse proxy를 사용하는 편이 안전합니다.
 
+개발용으로는 `./scripts/generate_tls_cert.sh <host-or-ip>`로 인증서를 만들 수
+있습니다. self-signed 인증서이므로 브라우저가 수용하려면 각 기기의 trust
+store에 직접 설치해야 하며, 스크립트는 시스템 trust 설정을 자동 변경하지
+않습니다.
+
 ## 웹 보안 경계
 
 브라우저 runtime은 Web Crypto와 IndexedDB를 사용합니다. 서버 없는 수동

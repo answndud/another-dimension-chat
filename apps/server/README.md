@@ -23,6 +23,10 @@ put an HTTPS reverse proxy in front of the HTTP server for LAN/VPN/public use:
   direct HTTPS termination. Prefer a maintained reverse proxy for public
   exposure; never commit or share these files.
 
+For development, `./scripts/generate_tls_cert.sh <host-or-ip>` creates a
+self-signed certificate. Install it in the browser device trust stores before
+testing; do not use this certificate workflow as a production PKI.
+
 The inbox is bounded to 256 items and 96 KiB per envelope. Restart recovery is
 file-backed. A capability URL is equivalent to permission to submit/read that
 inbox, so share invites only with the intended peer and rotate the data directory

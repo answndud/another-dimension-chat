@@ -93,6 +93,11 @@ For a small self-managed setup, the server can also terminate HTTPS directly by
 setting the paired `AD_TLS_KEY_FILE` and `AD_TLS_CERT_FILE` PEM paths. A
 maintained reverse proxy remains preferable for public exposure.
 
+For development only, generate a host/IP certificate with
+`./scripts/generate_tls_cert.sh <host-or-ip>`. It is self-signed and must be
+installed in the relevant devices' trust stores before a browser can accept it;
+the script does not change system trust automatically.
+
 ## Web security boundary
 
 The browser runtime uses Web Crypto and IndexedDB. The serverless/manual flow
