@@ -54,6 +54,12 @@ npm --prefix apps/server start --workspaces=false
 The same flow can be started from the repository root with
 `./scripts/start_local_server.sh` after the web bundle is built.
 
+Run a short two-server transport smoke check with:
+
+```sh
+node scripts/smoke_user_owned_servers.mjs
+```
+
 The default bind is `127.0.0.1:1422`. For a LAN or VPN deployment, set
 `AD_BIND_HOST` explicitly, set `AD_PUBLIC_URL` to the address peers can reach,
 and configure the network exposure yourself:

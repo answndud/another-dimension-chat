@@ -64,10 +64,10 @@ function render() {
   app.innerHTML = `
     <section class="shell">
       <header class="topbar"><div><div class="eyebrow">ANOTHER DIMENSION</div><h1>Local encrypted room</h1></div><button id="lock" class="ghost">Lock ${escapeHtml(state.profile.name)}</button></header>
-      <div class="notice">${escapeHtml(state.notice || "Messages stay in this browser until you export a sealed envelope.")}</div>
+      <div class="notice">${escapeHtml(state.notice || (state.serverInfo ? "Your local server is connected. Sealed envelopes can be delivered directly to a peer server." : "Manual mode: run this app from your local server for direct sealed-envelope delivery."))}</div>
       <div class="layout">
         <aside class="card stack">
-          <div><span class="label">LOCAL PROFILE</span><strong>${escapeHtml(state.profile.name)}</strong></div>
+          <div><span class="label">LOCAL PROFILE</span><strong>${escapeHtml(state.profile.name)}</strong><p class="small">${state.serverInfo ? "Local server connected" : "Manual envelope mode"}</p></div>
           <div class="divider"></div>
           <h2>1. Share your invite</h2>
           <p class="small">This code contains public setup material only. Send it through any channel.</p>

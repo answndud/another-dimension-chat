@@ -49,6 +49,13 @@ npm --prefix apps/web run build --workspaces=false
 npm --prefix apps/server start --workspaces=false
 ```
 
+두 사용자 서버의 health → opaque 전달 → ack 흐름은 다음 짧은 smoke 명령으로
+확인할 수 있습니다.
+
+```sh
+node scripts/smoke_user_owned_servers.mjs
+```
+
 기본 bind는 `127.0.0.1:1422`입니다. LAN이나 VPN으로 노출하려면
 `AD_BIND_HOST`를 명시하고, 상대가 접근할 수 있는 주소를 `AD_PUBLIC_URL`로
 설정한 뒤 네트워크 공개를 사용자가 직접 구성해야 합니다.
