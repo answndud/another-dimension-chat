@@ -172,6 +172,11 @@ profile private material은 Argon2id 기반 wrapping key로 IndexedDB에 저장�
 로컬 transcript를 삭제합니다. 삭제 데이터는 복구되지 않으므로 실제 백업으로
 간주하지 마세요.
 
+`Encrypted profile backup`은 현재 passphrase로 감싼 profile record만 내보내며,
+복구 시 기존 profile을 덮어쓰지 않습니다. backup 문자열과 passphrase는 서로
+다른 장소에 보관하세요. 공개 채널·클라우드 메모·스크린샷에 올리지 마세요.
+이 기능은 메시지 transcript의 안전한 자동 cloud backup이 아닙니다.
+
 두 사용자 서버의 health → opaque 전달 → ack 흐름은 다음 짧은 smoke 명령으로
 확인할 수 있습니다.
 

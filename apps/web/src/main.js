@@ -19,6 +19,8 @@ import {
   getPendingEnvelope,
   getSessionStatus,
   deleteProfile,
+  exportProfileBackup,
+  importProfileBackup,
   touchActivity,
   checkAutoLock,
   ready,
@@ -85,6 +87,12 @@ function render() {
             <label>Passphrase<input name="passphrase" required type="password" autocomplete="current-password" /></label>
             <button class="secondary">Unlock</button>
           </form>
+          <div class="card stack">
+            <h2>Encrypted profile backup</h2>
+            <p class="small">Backups contain passphrase-wrapped local data. Keep the passphrase separate and never paste a backup into a public service.</p>
+            <textarea id="backup-import" rows="4" placeholder="Paste an ADBACKUP1 profile backup"></textarea>
+            <button id="import-backup" class="secondary">Import encrypted backup</button>
+          </div>
         </div>
         <p class="disclaimer">Experimental beta. Not audited, not production-ready, and not for sensitive communication.</p>
         ${state.error ? `<p class="error">${escapeHtml(state.error)}</p>` : ""}
@@ -96,7 +104,7 @@ function render() {
   const phrase = state.safety || "Pair with the other person to reveal safety material.";
   app.innerHTML = `
     <section class="shell">
-      <header class="topbar"><div><div class="eyebrow">ANOTHER DIMENSION</div><h1>Local encrypted room</h1></div><div class="row-between\"><button id="panic-wipe" class="ghost">Panic wipe</button><button id="lock" class="ghost">Lock ${escapeHtml(state.profile.name)}</button></div></header>
+      <header class="topbar"><div><div class="eyebrow">ANOTHER DIMENSION</div><h1>Local encrypted room</h1></div><div class="row-between"><button id="export-backup" class="ghost">Copy encrypted backup</button><button id="panic-wipe" class="ghost">Panic wipe</button><button id="lock" class="ghost">Lock ${escapeHtml(state.profile.name)}</button></div></header>
       <div class="notice">${escapeHtml(state.notice || (state.serverInfo ? "Your local server is connected. Sealed envelopes can be delivered directly to a peer server." : "Manual mode: run this app from your local server for direct sealed-envelope delivery."))}</div>
       <div class="layout">
         <aside class="card stack">
@@ -152,6 +160,9 @@ function bindAuth() {
     const data = new FormData(event.currentTarget);
     try { state = { ...state, profile: await unlockProfile(data.get("profile"), data.get("passphrase")), error: "" }; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
+  document.querySelector("#import-backup")?.addEventListener("click", async () => {
+    try { const name = await importProfileBackup(document.querySelector("#backup-import").value); state.notice = `Encrypted backup for ${name} imported. Unlock it with its original passphrase.`; render(); } catch (error) { state.error = error.message; render(); }
+  });
 }
 
 function bindRoom() {
@@ -160,6 +171,9 @@ function bindRoom() {
     const passphrase = window.prompt("Type this profile passphrase to permanently wipe its local data:");
     if (passphrase === null) return;
     try { await deleteProfile(state.profile.name, passphrase); state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "Local profile data was wiped." }; render(); } catch (error) { state.error = error.message; render(); }
+  });
+  document.querySelector("#export-backup")?.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(await exportProfileBackup()); state.notice = "Encrypted backup copied. Store it offline and keep the passphrase separate."; render(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#peer-invite")?.addEventListener("input", (event) => { state.peerInvite = event.currentTarget.value; });
   document.querySelector("#copy-invite")?.addEventListener("click", async () => { await navigator.clipboard.writeText(state.invite); state.notice = "Invite copied. Share it with the other person."; render(); });

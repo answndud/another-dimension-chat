@@ -230,9 +230,13 @@ test("profile wipe requires the passphrase and removes the local profile", async
   const runtime = await import(`./web-runtime.js?wipe=${Date.now()}`);
   await runtime.ready;
   await runtime.createProfile("wipe_me", "wipe-me-passphrase");
+  const backup = await runtime.exportProfileBackup();
   await assert.rejects(() => runtime.deleteProfile("wipe_me", "wrong-passphrase"), /Wrong passphrase/);
   await runtime.deleteProfile("wipe_me", "wipe-me-passphrase");
   assert.equal(runtime.listProfiles().includes("wipe_me"), false);
+  assert.equal(await runtime.importProfileBackup(backup), "wipe_me");
+  const restored = await runtime.unlockProfile("wipe_me", "wipe-me-passphrase");
+  assert.equal(restored.name, "wipe_me");
 });
 
 test("inbox sync drives Olm controls and protects read and ack headers", async () => {

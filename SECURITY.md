@@ -66,6 +66,10 @@ keys. Signed, independently verifiable app distribution is a release blocker.
 - The startup process does not print the private local UI capability URL. It
   writes it to a mode-600 file in the server data directory; the file remains
   a bearer secret and must not be copied into logs or reports.
+- The browser can export/import a passphrase-wrapped `ADBACKUP1` profile record;
+  import refuses to overwrite an existing profile. This is user-managed local
+  recovery, not cloud backup, and the backup still requires offline passphrase
+  protection.
 
 These are implementation behaviors, not proof of secure messenger readiness.
 

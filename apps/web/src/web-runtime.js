@@ -15,6 +15,7 @@ import initCrypto, {
 const DB_NAME = "another-dimension-web-v3";
 const DB_VERSION = 1;
 const INVITE_PREFIX = "ADWEB3.";
+const BACKUP_PREFIX = "ADBACKUP1.";
 const ENVELOPE_PREFIX = "ADENVWEB3.";
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
 const AUTO_LOCK_MS = 5 * 60 * 1000;
@@ -298,6 +299,25 @@ export async function deleteProfile(name, passphrase) {
   const index = profileNames.indexOf(name);
   if (index >= 0) profileNames.splice(index, 1);
   if (activeProfile?.name === name) lockProfile();
+}
+
+export async function exportProfileBackup() {
+  if (!activeProfile) throw new Error("Unlock a local profile first.");
+  return `${BACKUP_PREFIX}${encode(storedProfile(activeProfile))}`;
+}
+
+export async function importProfileBackup(value) {
+  const text = String(value || "").trim();
+  if (!text.startsWith(BACKUP_PREFIX)) throw new Error("This is not a valid encrypted profile backup.");
+  const record = decode(text.slice(BACKUP_PREFIX.length));
+  if (!record || typeof record.name !== "string" || !/^[A-Za-z0-9_-]+$/.test(record.name) || !record.salt || !record.iv || !record.sealed || !record.kdf) {
+    throw new Error("Profile backup metadata is invalid.");
+  }
+  if (await read("profiles", record.name)) throw new Error("That local profile already exists; refusing to overwrite it.");
+  await write("profiles", record);
+  profileNames.push(record.name);
+  profileNames.sort();
+  return record.name;
 }
 
 async function selfInviteBody() {
