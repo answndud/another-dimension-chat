@@ -129,7 +129,7 @@ export async function loadServerConfig(configFile) {
     throw new Error(`Could not read server config ${absoluteConfigFile}: ${error.message}`);
   }
   if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error("Server config must be a JSON object.");
-  const allowed = new Set(["bindHost", "port", "dataDir", "distDir", "publicUrl", "corsOrigins", "ttlMs", "tlsKeyFile", "tlsCertFile"]);
+  const allowed = new Set(["bindHost", "port", "dataDir", "distDir", "publicUrl", "corsOrigins", "trustProxy", "ttlMs", "tlsKeyFile", "tlsCertFile"]);
   const unknown = Object.keys(parsed).filter((key) => !allowed.has(key));
   if (unknown.length) throw new Error(`Unknown server config field: ${unknown.join(", ")}`);
   const relativePathKeys = ["dataDir", "distDir", "tlsKeyFile", "tlsCertFile"];
@@ -146,6 +146,7 @@ export async function createLocalServer({
   distDir = process.env.AD_WEB_DIST_DIR || defaultDist,
   publicUrl = process.env.AD_PUBLIC_URL || "",
   corsOrigins = parseOrigins(process.env.AD_CORS_ORIGINS || ""),
+  trustProxy = process.env.AD_TRUST_PROXY === "1",
   ttlMs = Number(process.env.AD_INBOX_TTL_MS || DEFAULT_TTL_MS),
   tlsKeyFile = process.env.AD_TLS_KEY_FILE || "",
   tlsCertFile = process.env.AD_TLS_CERT_FILE || "",
@@ -154,6 +155,7 @@ export async function createLocalServer({
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("AD_PORT must be an integer between 0 and 65535.");
   if (!Number.isFinite(ttlMs) || ttlMs <= 0) throw new Error("AD_INBOX_TTL_MS must be a positive number.");
   const normalizedPublicUrl = normalizePublicUrl(publicUrl);
+  if (typeof trustProxy !== "boolean") throw new Error("AD_TRUST_PROXY must be boolean.");
   const allowedCorsOrigins = new Set([normalizedPublicUrl, ...corsOrigins].filter(Boolean));
   if (["0.0.0.0", "::"].includes(bindHost) && !normalizedPublicUrl) throw new Error("AD_PUBLIC_URL is required with a wildcard AD_BIND_HOST.");
   if (tlsKeyFile && normalizedPublicUrl.startsWith("http://")) throw new Error("AD_PUBLIC_URL must use HTTPS when direct TLS is enabled.");
@@ -188,9 +190,17 @@ export async function createLocalServer({
   const scheme = tlsKeyFile && tlsCertFile ? "https" : "http";
   const originFor = (address) => normalizedPublicUrl || `${scheme}://${urlHost(address)}:${port}`;
   const inboxUrlFor = (address) => `${originFor(address)}${capabilityPath(inboxCapability)}`;
+  const rotateInboxCapability = async () => {
+    inboxCapability = capability();
+    await writeFile(capabilityFile, `${inboxCapability}\n`, { mode: 0o600 });
+    return inboxCapability;
+  };
   const requestWindows = new Map();
   const consumeRateLimit = (req, bucket, limit) => {
-    const key = `${bucket}:${req.socket.remoteAddress || "unknown"}`;
+    const forwardedFor = trustProxy && typeof req.headers["x-forwarded-for"] === "string"
+      ? req.headers["x-forwarded-for"].split(",")[0].trim()
+      : "";
+    const key = `${bucket}:${forwardedFor || req.socket.remoteAddress || "unknown"}`;
     const now = Date.now();
     const timestamps = (requestWindows.get(key) || []).filter((timestamp) => now - timestamp < RATE_LIMIT_WINDOW_MS);
     if (timestamps.length >= limit) {
@@ -239,6 +249,15 @@ export async function createLocalServer({
     }
 
     const inboxPrefix = capabilityPath(inboxCapability);
+    if (requestUrl.pathname === "/api/v1/inbox/rotate" && req.method === "POST") {
+      if (!hasLocalAccess(req, localAccessCapability)) {
+        json(res, 403, { rotated: false, error: "local_access_required" }, headers);
+        return;
+      }
+      await rotateInboxCapability();
+      json(res, 200, { rotated: true, inboxUrl: inboxUrlFor(bindHost) }, headers);
+      return;
+    }
     if (requestUrl.pathname === inboxPrefix && req.method === "GET") {
       if (!consumeRateLimit(req, "inbox-read", MAX_LOCAL_READS_PER_WINDOW)) { json(res, 429, { error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
       if (!hasLocalAccess(req, localAccessCapability)) {
@@ -275,7 +294,8 @@ export async function createLocalServer({
       }
       try {
         const body = JSON.parse(await readBody(req, 32 * 1024));
-        const ids = new Set(Array.isArray(body?.ids) ? body.ids.map(String) : []);
+        if (!Array.isArray(body?.ids) || body.ids.length > MAX_INBOX_ITEMS) throw new Error("too_many_ids");
+        const ids = new Set(body.ids.map(String));
         const previousLength = inbox.length;
         inbox = inbox.filter((item) => !ids.has(item.id));
         await persist();

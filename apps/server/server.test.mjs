@@ -75,6 +75,22 @@ test("server applies security headers and rejects unlisted cross-origin API call
   await rm(dataDir, { recursive: true, force: true });
 });
 
+test("local access can rotate the inbox capability and invalidate the old URL", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const oldPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
+  const rotated = await call(port, "POST", "/api/v1/inbox/rotate", {}, localHeaders(runtime));
+  assert.equal(rotated.status, 200);
+  const newPath = new URL(rotated.body.inboxUrl.replace(":0", `:${port}`)).pathname;
+  assert.notEqual(newPath, oldPath);
+  assert.equal((await call(port, "POST", oldPath, { envelope: "ADENVWEB1.old-capability" })).status, 405);
+  assert.equal((await call(port, "POST", newPath, { envelope: "ADENVWEB1.new-capability" })).status, 202);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
 test("local server requires TLS key and certificate as a pair", async () => {
   await assert.rejects(() => createLocalServer({ tlsKeyFile: "key.pem" }), /must be configured together/);
 });
@@ -170,6 +186,7 @@ test("ack reports only envelopes that were actually removed", async () => {
   const accepted = await call(port, "POST", inboxPath, { envelope: "ADENVWEB1.ack-count" });
   assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id, "missing"] }, localHeaders(runtime))).body.acknowledged, 1);
   assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id] }, localHeaders(runtime))).body.acknowledged, 0);
+  assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: Array.from({ length: 257 }, (_, index) => String(index)) }, localHeaders(runtime))).status, 400);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });

@@ -154,6 +154,26 @@ node scripts/smoke_user_owned_servers.mjs
 상대 UI origin의 허용목록입니다. 기본값은 모든 origin 허용이 아니며, 실제로
 연결할 상대 origin만 HTTPS로 추가해야 합니다. 여러 origin은 쉼표로 구분합니다.
 
+capability URL이 로그·스크린샷·초대 공유 과정에서 노출되었다고 의심되면 private
+UI에서 다음 로컬 전용 API를 호출해 즉시 교체해야 합니다.
+
+```text
+POST /api/v1/inbox/rotate
+Header: x-ad-local-access: <private local UI capability>
+```
+
+응답으로 새 `inboxUrl`을 받으면 기존 초대에 들어 있던 URL은 폐기하고, 상대방과
+새 초대를 안전한 채널로 다시 교환해야 합니다. 이 API는 `x-ad-local-access`가
+없으면 동작하지 않습니다.
+
+reverse proxy가 앞에 있고 실제 client IP를 `X-Forwarded-For`로 전달하는 경우에만
+설정 파일에 다음을 추가할 수 있습니다. proxy가 외부에서 직접 접근 가능하거나
+헤더를 덮어쓰지 않는다면 활성화하지 마세요.
+
+```json
+{ "trustProxy": true }
+```
+
 public URL은 scheme과 host(선택적 port)만 있는 HTTPS origin이어야 하며 path,
 credential, query, fragment를 허용하지 않습니다. 이는 초대에 들어갈 주소를
 명확히 할 뿐 DNS, 방화벽, reverse proxy의 실제 도달성을 대신 만들지 않습니다.

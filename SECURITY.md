@@ -34,6 +34,11 @@ keys. Signed, independently verifiable app distribution is a release blocker.
 - The inbox capability is returned only when the browser presents the separate
   local-access capability from the private `#local=...` startup URL. Opening the
   public root URL does not disclose or advertise the inbox.
+- The local-access-only `POST /api/v1/inbox/rotate` endpoint replaces a leaked
+  inbox capability; old invite URLs are invalid after rotation.
+- API CORS uses an explicit HTTPS origin allowlist, and inbox POST/read/ack
+  requests have bounded per-client rate limits. `trustProxy` must only be
+  enabled behind a proxy that overwrites `X-Forwarded-For`.
 - The browser can POST a sealed envelope to the peer endpoint in a signed invite
   and can GET/ack its own local inbox; endpoint reachability is a network
   configuration concern, not an identity or confidentiality guarantee.
