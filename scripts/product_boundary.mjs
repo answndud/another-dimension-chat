@@ -9,7 +9,12 @@ export async function loadProductBoundary(root = ".") {
   if (boundary.format !== "another-dimension-product-boundary" || boundary.version !== 1) {
     throw new Error("unsupported product boundary format");
   }
-  if (typeof boundary.supportedProduct !== "string" || boundary.highRiskAllowed !== false) {
+  if (
+    typeof boundary.supportedProduct !== "string"
+    || !boundary.supportedProduct.includes("local OpenMLS daemon")
+    || boundary.candidateProductPath !== "apps/daemon"
+    || boundary.highRiskAllowed !== false
+  ) {
     throw new Error("product boundary must fail closed for high-risk mode");
   }
   for (const field of ["forbiddenReleasePaths", "developmentOnlyModes", "requiredReleaseFiles", "nonClaims"]) {

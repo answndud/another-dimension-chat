@@ -8,12 +8,26 @@ const root = path.resolve(process.argv[2] || ".");
 const requiredSource = [
   "apps/web/package.json",
   "apps/server/server.mjs",
+  "apps/daemon/Cargo.toml",
+  "apps/daemon/src/lib.rs",
+  "apps/daemon/src/model.rs",
+  "apps/daemon/src/protocol_gate.rs",
   "reference/PRODUCT_BOUNDARY.md",
   PRODUCT_BOUNDARY_FILE,
   "SECURITY.md",
 ];
 for (const file of requiredSource) await access(path.join(root, file), constants.R_OK);
 const boundary = await loadProductBoundary(root);
+const daemonManifest = await readFile(path.join(root, "apps/daemon/Cargo.toml"), "utf8");
+const daemonSource = await readFile(path.join(root, "apps/daemon/src/lib.rs"), "utf8");
+const protocolGate = await readFile(path.join(root, "apps/daemon/src/protocol_gate.rs"), "utf8");
+if (!daemonManifest.includes("name = \"another-dimension-daemon\"")) {
+  throw new Error("daemon manifest is not the current product owner");
+}
+for (const marker of ["pub mod model;", "local-security-daemon", "openmls-1"]) {
+  const source = marker === "openmls-1" ? protocolGate : daemonSource;
+  if (!source.includes(marker)) throw new Error(`daemon product contract missing marker: ${marker}`);
+}
 
 const release = process.argv[2] && process.argv[3] === "--release" ? root : null;
 if (release) {

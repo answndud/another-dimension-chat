@@ -3,19 +3,20 @@
 pub mod bridge;
 pub mod bridge_http;
 pub mod cli;
+pub mod device;
 pub mod identity;
 pub mod mls_provider;
 pub mod mls_storage;
+pub mod model;
 pub mod protocol_gate;
 pub mod storage;
 pub mod trust;
 
-/// This crate is the only planned owner of the future local security-daemon
-/// command boundary. Identity and encrypted-store boundaries exist here; the
-/// The local HTTP bridge is intentionally limited to session/status/lock; the
-/// message protocol, relay, and OS keychain integrations remain absent.
+/// This crate owns the daemon product boundary. The typed domain model is
+/// authoritative for future storage, protocol, delivery, and UI contracts;
+/// the implementation gate remains closed until those slices are complete.
 pub const PRODUCT_ROLE: &str = "local-security-daemon";
-pub const IMPLEMENTATION_STATUS: &str = "boundary-only-not-high-risk-ready";
+pub const IMPLEMENTATION_STATUS: &str = "architecture-contract-openmls-path-not-messaging-ready";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Command {
@@ -68,7 +69,10 @@ mod tests {
     #[test]
     fn boundary_exposes_only_planned_commands() {
         assert_eq!(PRODUCT_ROLE, "local-security-daemon");
-        assert_eq!(IMPLEMENTATION_STATUS, "boundary-only-not-high-risk-ready");
+        assert_eq!(
+            IMPLEMENTATION_STATUS,
+            "architecture-contract-openmls-path-not-messaging-ready"
+        );
         assert_eq!(Command::ALL.len(), 8);
         assert_eq!(command_from_name("serve"), Some(Command::Serve));
         assert_eq!(command_from_name("desktop"), None);

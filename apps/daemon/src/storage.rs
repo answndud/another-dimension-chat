@@ -6,7 +6,9 @@ use argon2::{Algorithm, Argon2, Params, Version};
 use getrandom::fill as secure_random;
 use std::{
     collections::BTreeMap,
-    fmt, fs, io,
+    fmt, fs,
+    fs::OpenOptions,
+    io::{self, Write},
     path::{Path, PathBuf},
 };
 use zeroize::{Zeroize, Zeroizing};
@@ -31,6 +33,14 @@ pub enum RecordClass {
     ProtocolSession = 3,
     Transcript = 4,
     Recovery = 5,
+    Account = 6,
+    Contact = 7,
+    Conversation = 8,
+    Message = 9,
+    Outbox = 10,
+    Inbox = 11,
+    Attachment = 12,
+    Seen = 13,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -47,6 +57,14 @@ impl RecordClass {
             3 => Ok(Self::ProtocolSession),
             4 => Ok(Self::Transcript),
             5 => Ok(Self::Recovery),
+            6 => Ok(Self::Account),
+            7 => Ok(Self::Contact),
+            8 => Ok(Self::Conversation),
+            9 => Ok(Self::Message),
+            10 => Ok(Self::Outbox),
+            11 => Ok(Self::Inbox),
+            12 => Ok(Self::Attachment),
+            13 => Ok(Self::Seen),
             _ => Err(StorageError::CorruptStore),
         }
     }
@@ -91,8 +109,8 @@ impl From<io::Error> for StorageError {
     }
 }
 
-/// Keychain integration is intentionally a fail-closed boundary until a
-/// platform-specific implementation is independently reviewed.
+/// OS-backed key storage boundary. Implementations must never expose a key in
+/// command-line arguments, logs, or a non-encrypted file.
 pub trait OsKeyStore {
     fn load_database_key(
         &self,
@@ -103,6 +121,52 @@ pub trait OsKeyStore {
         _profile_id: &str,
         _key: &[u8; KEY_BYTES],
     ) -> Result<(), StorageError>;
+}
+
+#[cfg(target_os = "macos")]
+pub struct MacOsKeyStore;
+
+#[cfg(target_os = "macos")]
+impl MacOsKeyStore {
+    const SERVICE: &'static str = "com.another-dimension.daemon.database-key";
+
+    fn account(profile_id: &str) -> Result<&str, StorageError> {
+        if profile_id.is_empty()
+            || profile_id.len() > 128
+            || !profile_id
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+        {
+            return Err(StorageError::InvalidPassphrase);
+        }
+        Ok(profile_id)
+    }
+}
+
+#[cfg(target_os = "macos")]
+impl OsKeyStore for MacOsKeyStore {
+    fn load_database_key(
+        &self,
+        profile_id: &str,
+    ) -> Result<Zeroizing<[u8; KEY_BYTES]>, StorageError> {
+        let account = Self::account(profile_id)?;
+        let bytes = security_framework::passwords::get_generic_password(Self::SERVICE, account)
+            .map_err(|_| StorageError::OsKeyStoreUnavailable)?;
+        let key: [u8; KEY_BYTES] = bytes
+            .try_into()
+            .map_err(|_| StorageError::OsKeyStoreUnavailable)?;
+        Ok(Zeroizing::new(key))
+    }
+
+    fn save_database_key(
+        &self,
+        profile_id: &str,
+        key: &[u8; KEY_BYTES],
+    ) -> Result<(), StorageError> {
+        let account = Self::account(profile_id)?;
+        security_framework::passwords::set_generic_password(Self::SERVICE, account, key)
+            .map_err(|_| StorageError::OsKeyStoreUnavailable)
+    }
 }
 
 pub struct UnavailableOsKeyStore;
@@ -147,14 +211,32 @@ impl fmt::Debug for EncryptedStore {
 impl EncryptedStore {
     pub fn initialize(path: impl AsRef<Path>, passphrase: &str) -> Result<Self, StorageError> {
         validate_passphrase(passphrase)?;
-        let path = path.as_ref().to_path_buf();
+        let path = path.as_ref();
+        let mut salt = [0_u8; SALT_BYTES];
+        secure_random(&mut salt).map_err(|_| StorageError::Io)?;
+        let key = derive_key(passphrase, &salt)?;
+        Self::initialize_with_key(path, key, salt)
+    }
+
+    pub fn initialize_with_database_key(
+        path: impl AsRef<Path>,
+        key: [u8; KEY_BYTES],
+    ) -> Result<Self, StorageError> {
+        let mut salt = [0_u8; SALT_BYTES];
+        secure_random(&mut salt).map_err(|_| StorageError::Io)?;
+        Self::initialize_with_key(path.as_ref(), Zeroizing::new(key), salt)
+    }
+
+    fn initialize_with_key(
+        path: &Path,
+        key: Zeroizing<[u8; KEY_BYTES]>,
+        salt: [u8; SALT_BYTES],
+    ) -> Result<Self, StorageError> {
+        let path = path.to_path_buf();
         if path.exists() {
             return Err(StorageError::CorruptStore);
         }
         let marker_path = marker_path(&path);
-        let mut salt = [0_u8; SALT_BYTES];
-        secure_random(&mut salt).map_err(|_| StorageError::Io)?;
-        let key = derive_key(passphrase, &salt)?;
         let mut store = Self {
             path,
             marker_path,
@@ -169,10 +251,28 @@ impl EncryptedStore {
 
     pub fn open(path: impl AsRef<Path>, passphrase: &str) -> Result<Self, StorageError> {
         validate_passphrase(passphrase)?;
-        let path = path.as_ref().to_path_buf();
+        let path = path.as_ref();
         let bytes = fs::read(&path)?;
         let parsed = parse_file(&bytes)?;
         let key = derive_key(passphrase, &parsed.salt)?;
+        Self::open_with_key(path, key, parsed)
+    }
+
+    pub fn open_with_database_key(
+        path: impl AsRef<Path>,
+        key: [u8; KEY_BYTES],
+    ) -> Result<Self, StorageError> {
+        let path = path.as_ref();
+        let bytes = fs::read(path)?;
+        let parsed = parse_file(&bytes)?;
+        Self::open_with_key(path, Zeroizing::new(key), parsed)
+    }
+
+    fn open_with_key(
+        path: &Path,
+        key: Zeroizing<[u8; KEY_BYTES]>,
+        parsed: ParsedFile,
+    ) -> Result<Self, StorageError> {
         let cipher = Aes256Gcm::new_from_slice(&*key).map_err(|_| StorageError::CorruptStore)?;
         let plaintext = cipher
             .decrypt(
@@ -191,7 +291,7 @@ impl EncryptedStore {
             }
         }
         let store = Self {
-            path,
+            path: path.to_path_buf(),
             marker_path,
             key,
             salt: parsed.salt,
@@ -540,16 +640,34 @@ fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), StorageError> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let temporary = path.with_extension(format!("tmp-{}", std::process::id()));
-    fs::write(&temporary, contents)?;
-    let mut permissions = fs::metadata(&temporary)?.permissions();
+    let mut suffix = [0_u8; 8];
+    secure_random(&mut suffix).map_err(|_| StorageError::Io)?;
+    let temporary =
+        path.with_extension(format!("tmp-{}-{}", std::process::id(), hex_bytes(&suffix)));
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temporary)?;
+    file.write_all(contents)?;
+    file.sync_all()?;
+    let mut permissions = file.metadata()?.permissions();
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         permissions.set_mode(0o600);
-        fs::set_permissions(&temporary, permissions)?;
+        file.set_permissions(permissions)?;
     }
-    fs::rename(&temporary, path).map_err(|_| StorageError::Io)
+    drop(file);
+    fs::rename(&temporary, path).map_err(|_| StorageError::Io)?;
+    #[cfg(unix)]
+    if let Some(parent) = path.parent() {
+        fs::File::open(parent)?.sync_all()?;
+    }
+    Ok(())
+}
+
+fn hex_bytes(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
 #[cfg(test)]
@@ -596,6 +714,29 @@ mod tests {
             .any(|window| window == b"private-root-material"));
         fs::remove_file(&path).unwrap();
         fs::remove_file(format!("{}.revision", path.display())).unwrap();
+    }
+
+    #[test]
+    fn database_key_boundary_round_trips_without_a_passphrase() {
+        let path = temp_path("database-key");
+        let key = [0x5a; 32];
+        let mut store = EncryptedStore::initialize_with_database_key(&path, key).unwrap();
+        store
+            .put(RecordClass::Account, "profile", b"encrypted metadata")
+            .unwrap();
+        drop(store);
+        let reopened = EncryptedStore::open_with_database_key(&path, key).unwrap();
+        assert_eq!(
+            reopened.get(RecordClass::Account, "profile").as_deref(),
+            Some(b"encrypted metadata".as_slice())
+        );
+        assert!(matches!(
+            EncryptedStore::open_with_database_key(&path, [0x6b; 32]),
+            Err(StorageError::AuthenticationFailed)
+        ));
+        fs::remove_file(&path).unwrap();
+        let marker = path.with_extension("revision");
+        let _ = fs::remove_file(marker);
     }
 
     #[test]
@@ -672,6 +813,41 @@ mod tests {
         ));
         assert_eq!(store.revision(), revision);
         assert_eq!(store.get(RecordClass::ProtocolSession, "bad\nkey"), None);
+        fs::remove_file(&path).unwrap();
+        fs::remove_file(format!("{}.revision", path.display())).unwrap();
+    }
+
+    #[test]
+    fn all_domain_record_classes_round_trip_without_plaintext_leak() {
+        let path = temp_path("domain-records");
+        let mut store = EncryptedStore::initialize(&path, "correct horse battery staple").unwrap();
+        let classes = [
+            RecordClass::Account,
+            RecordClass::Contact,
+            RecordClass::Conversation,
+            RecordClass::Message,
+            RecordClass::Outbox,
+            RecordClass::Inbox,
+            RecordClass::Attachment,
+            RecordClass::Seen,
+        ];
+        for (index, class) in classes.into_iter().enumerate() {
+            store
+                .put(class, &format!("record-{index}"), b"encrypted-domain-value")
+                .unwrap();
+        }
+        drop(store);
+        let reopened = EncryptedStore::open(&path, "correct horse battery staple").unwrap();
+        for (index, class) in classes.into_iter().enumerate() {
+            assert_eq!(
+                reopened.get(class, &format!("record-{index}")).as_deref(),
+                Some(b"encrypted-domain-value".as_slice())
+            );
+        }
+        let bytes = fs::read(&path).unwrap();
+        assert!(!bytes
+            .windows(b"encrypted-domain-value".len())
+            .any(|window| window == b"encrypted-domain-value"));
         fs::remove_file(&path).unwrap();
         fs::remove_file(format!("{}.revision", path.display())).unwrap();
     }

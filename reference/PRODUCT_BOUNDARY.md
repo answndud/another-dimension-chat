@@ -5,29 +5,31 @@
 The only supported product path is:
 
 ```text
-verified browser UI bundle + user-owned API-only relay
+authenticated browser UI + local OpenMLS daemon + user-owned relay
 ```
 
-The browser UI performs profile, pairing, safety confirmation, message
-encryption/decryption, local transcript handling, lock, backup, and wipe
-requests. The relay stores and forwards bounded opaque envelopes. It is not an
-identity provider, contact directory, message archive, push service, or
-trusted decryption service.
+The browser UI is a presentation client for the local daemon. The daemon owns
+profile identity, device state, OpenMLS sessions, encrypted local storage,
+pairing, message delivery, backup, lock, and wipe requests. The relay stores
+and forwards bounded opaque envelopes. It is not an identity provider, contact
+directory, message archive, push service, or trusted decryption service.
 
 The production release package contains only the web UI, relay, release
 verification/install tooling, public documentation, SBOM, provenance, and the
 runtime explicitly required by that package. A package is not a supported
 release merely because its files compile.
 
-The future production candidate has a separate path:
+The current implementation is being migrated onto this single path:
 
 ```text
-apps/daemon = local security-daemon boundary only
+apps/daemon = local OpenMLS security-daemon product owner
 ```
 
-This crate currently exposes command names and an explicit not-ready status;
-it does not own keys, storage, protocol state, or network traffic yet. Its
-presence in the Rust workspace must not be interpreted as high-risk readiness.
+The daemon currently exposes the authoritative domain and protocol boundary,
+but message-session and relay implementations are still in progress. The
+`highRiskAllowed` release flag remains false until the implementation and
+functional evidence are complete. Its presence in the Rust workspace must not
+be interpreted as high-risk readiness.
 
 ## Explicitly unsupported legacy surfaces
 

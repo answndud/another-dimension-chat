@@ -1,6 +1,7 @@
 use crate::{
     bridge::{BridgeConfig, LocalBridge},
     bridge_http::{serve_forever, IdentityView, InviteAuthority},
+    device::{DeviceRegistry, DeviceRegistryError},
     identity::{AccountRootKey, DeviceIdentity, ProfileIdentity},
     storage::{EncryptedStore, RecordClass, StorageError},
     trust::RelayTrust,
@@ -71,6 +72,7 @@ pub fn needs_passphrase(args: &[String]) -> bool {
             ),
             (Some("identity"), Some("show"))
         )
+        || matches!(args.first().map(String::as_str), Some("device"))
 }
 
 pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError> {
@@ -104,9 +106,13 @@ pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError
                 CliError::Usage("serve requires the profile passphrase from stdin".into())
             })?,
         ),
-        "invite" | "contact" | "device" | "update" | "rollback" => {
-            Err(CliError::Unsupported(args[0].clone()))
-        }
+        "device" => device_command(
+            args,
+            passphrase.ok_or_else(|| {
+                CliError::Usage("device command requires the profile passphrase from stdin".into())
+            })?,
+        ),
+        "invite" | "contact" | "update" | "rollback" => Err(CliError::Unsupported(args[0].clone())),
         other => Err(CliError::Usage(format!(
             "unknown command '{other}'; use --help"
         ))),
@@ -141,6 +147,14 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         .ok_or(CliError::NotInitialized)?;
     let summary =
         decode_identity_summary(&record).ok_or(CliError::Storage(StorageError::CorruptStore))?;
+    let root = AccountRootKey::from_seed(summary.root_seed);
+    let registry = decode_registry(&store)?;
+    if !registry.belongs_to(&root) {
+        return Err(StorageError::CorruptStore.into());
+    }
+    registry
+        .authorize(&summary.device_id, now_seconds())
+        .map_err(registry_error)?;
     let root_seed = summary.root_seed;
     let identity = IdentityView {
         account_id: summary.account_id,
@@ -226,10 +240,19 @@ fn init(args: &[String], passphrase: &str) -> Result<String, CliError> {
     let profile = ProfileIdentity::from_account(&root, display_name, None)
         .map_err(|_| CliError::Usage("display name is invalid".into()))?;
     let mut store = EncryptedStore::initialize(store_path(&data_dir), passphrase)?;
+    let mut registry = DeviceRegistry::new(&root);
+    registry
+        .register(device.certificate().clone(), 0)
+        .map_err(registry_error)?;
     store.put(
         RecordClass::AccountRoot,
         "identity",
         &encode_identity(&root, &device, &profile),
+    )?;
+    store.put(
+        RecordClass::Device,
+        "registry",
+        &registry.encode().map_err(registry_error)?,
     )?;
     Ok(format!("profile initialized\naccount_id: {}\ndevice_id: {}\nprivate key: encrypted in local daemon store", profile.account_id().as_str(), device.device_id()))
 }
@@ -412,9 +435,11 @@ fn encode_identity(
     profile: &ProfileIdentity,
 ) -> Vec<u8> {
     let mut bytes = Vec::new();
+    let root_seed = root.seed_bytes();
+    let device_seed = device.seed_bytes();
     bytes.extend_from_slice(IDENTITY_RECORD_MAGIC);
-    append_blob(&mut bytes, &root.seed_bytes());
-    append_blob(&mut bytes, &device.seed_bytes());
+    append_blob(&mut bytes, &*root_seed);
+    append_blob(&mut bytes, &*device_seed);
     append_blob(&mut bytes, device.device_id().as_bytes());
     append_blob(&mut bytes, profile.display_name().as_bytes());
     bytes
@@ -454,6 +479,73 @@ fn open_store(data_dir: &Path, passphrase: &str) -> Result<EncryptedStore, CliEr
         return Err(CliError::NotInitialized);
     }
     Ok(EncryptedStore::open(store_path(data_dir), passphrase)?)
+}
+
+fn decode_registry(store: &EncryptedStore) -> Result<DeviceRegistry, CliError> {
+    let bytes = store
+        .get(RecordClass::Device, "registry")
+        .ok_or(CliError::Storage(StorageError::CorruptStore))?;
+    DeviceRegistry::decode(&bytes).map_err(registry_error)
+}
+
+fn registry_error(error: DeviceRegistryError) -> CliError {
+    CliError::Storage(match error {
+        DeviceRegistryError::Corrupt => StorageError::CorruptStore,
+        DeviceRegistryError::Identity(_) => StorageError::AuthenticationFailed,
+        DeviceRegistryError::WrongAccount
+        | DeviceRegistryError::DuplicateDevice
+        | DeviceRegistryError::UnknownDevice
+        | DeviceRegistryError::DeviceNotActive => StorageError::CorruptStore,
+    })
+}
+
+fn device_command(args: &[String], passphrase: &str) -> Result<String, CliError> {
+    let data_dir = data_dir(args)?;
+    let mut store = open_store(&data_dir, passphrase)?;
+    let mut registry = decode_registry(&store)?;
+    match args.get(1).map(String::as_str) {
+        Some("list") => Ok(registry
+            .records()
+            .map(|record| {
+                format!(
+                    "device_id: {}\nstate: {:?}\nexpires_at: {}",
+                    record.certificate().device_id(),
+                    record.state(),
+                    record.certificate().expires_at()
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")),
+        Some("revoke") => {
+            let device_id = option(args, "--id")?
+                .ok_or_else(|| CliError::Usage("device revoke requires --id DEVICE_ID".into()))?;
+            let record = store
+                .get(RecordClass::AccountRoot, "identity")
+                .ok_or(CliError::NotInitialized)?;
+            let summary = decode_identity_summary(&record)
+                .ok_or(CliError::Storage(StorageError::CorruptStore))?;
+            let root = AccountRootKey::from_seed(summary.root_seed);
+            registry
+                .revoke(&root, &device_id, now_seconds())
+                .map_err(registry_error)?;
+            store.put(
+                RecordClass::Device,
+                "registry",
+                &registry.encode().map_err(registry_error)?,
+            )?;
+            Ok(format!("device revoked: {device_id}"))
+        }
+        _ => Err(CliError::Usage(
+            "use device list or device revoke --id DEVICE_ID".into(),
+        )),
+    }
+}
+
+fn now_seconds() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0)
 }
 fn data_dir(args: &[String]) -> Result<PathBuf, CliError> {
     Ok(option(args, "--data-dir")?
@@ -524,7 +616,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CliError> {
     Ok(())
 }
 fn help_text() -> String {
-    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  doctor [--data-dir PATH]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery import --input PATH [--data-dir PATH]\n\nPassphrases are read from stdin and are never accepted as arguments.".into()
+    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery import --input PATH [--data-dir PATH]\n\nPassphrases are read from stdin and are never accepted as arguments.".into()
 }
 
 #[cfg(test)]
@@ -571,6 +663,32 @@ mod tests {
         .unwrap();
         assert!(identity.contains("account_id: ad1pk"));
         assert!(identity.contains("display_name: Reporter"));
+        let devices = run(
+            &arg(&["device", "list", "--data-dir", source.to_str().unwrap()]),
+            Some("correct horse battery staple"),
+        )
+        .unwrap();
+        assert!(devices.contains("device_id: device-1"));
+        assert!(devices.contains("state: Active"));
+        let revoked = run(
+            &arg(&[
+                "device",
+                "revoke",
+                "--id",
+                "device-1",
+                "--data-dir",
+                source.to_str().unwrap(),
+            ]),
+            Some("correct horse battery staple"),
+        )
+        .unwrap();
+        assert!(revoked.contains("device revoked: device-1"));
+        let devices = run(
+            &arg(&["device", "list", "--data-dir", source.to_str().unwrap()]),
+            Some("correct horse battery staple"),
+        )
+        .unwrap();
+        assert!(devices.contains("state: Revoked"));
         assert!(run(
             &arg(&["identity", "show", "--data-dir", source.to_str().unwrap()]),
             Some("wrong horse battery staple")

@@ -148,6 +148,14 @@ impl fmt::Debug for LocalBridge {
 }
 
 impl LocalBridge {
+    pub fn bind_host(&self) -> IpAddr {
+        self.config.bind_host()
+    }
+
+    pub fn port(&self) -> u16 {
+        self.config.port()
+    }
+
     pub fn new(config: BridgeConfig) -> Result<Self, BridgeError> {
         let bootstrap = random_token()?;
         Ok(Self {
@@ -246,10 +254,6 @@ impl LocalBridge {
 
     pub fn invalidate_session(&mut self) {
         self.session = None;
-    }
-
-    pub(crate) fn bind_listener(&self) -> Result<TcpListener, BridgeError> {
-        self.config.bind_listener()
     }
 
     fn check_origin_host(&self, origin: &str, host: &str) -> Result<(), BridgeError> {

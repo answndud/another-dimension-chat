@@ -2,6 +2,7 @@
 import { readFile } from "node:fs/promises";
 
 const bridge = await readFile("apps/daemon/src/bridge.rs", "utf8");
+const bridgeHttp = await readFile("apps/daemon/src/bridge_http.rs", "utf8");
 const failures = [];
 for (const marker of [
   "TcpListener",
@@ -22,5 +23,15 @@ for (const marker of [
 for (const forbidden of ["localStorage", "IndexedDB", "private_key", "plaintext"]) {
   if (bridge.includes(forbidden)) failures.push(`local bridge must not own browser/private-state surface: ${forbidden}`);
 }
+if (failures.length) { console.error(failures.join("\n")); process.exit(1); }
+for (const marker of [
+  "axum::serve",
+  "tokio::net::TcpListener",
+  "to_bytes(body, MAX_REQUEST_BYTES)",
+  "Duration::from_secs(10)",
+]) {
+  if (!bridgeHttp.includes(marker)) failures.push(`HTTP server marker missing: ${marker}`);
+}
+if (bridgeHttp.includes("fn serve_connection")) failures.push("manual TCP connection parser is still live");
 if (failures.length) { console.error(failures.join("\n")); process.exit(1); }
 console.log("local bridge boundary passed: loopback, one-time bootstrap, origin/host, CSRF, cookie, version, and restart controls present");

@@ -1,8 +1,8 @@
 {
   "format": "another-dimension-product-boundary",
   "version": 1,
-  "supportedProduct": "verified browser UI bundle + user-owned API-only relay",
-  "candidateProduct": "apps/daemon local security daemon boundary (not implemented; high-risk disabled)",
+  "supportedProduct": "authenticated browser UI + local OpenMLS daemon + user-owned relay",
+  "candidateProduct": "apps/daemon local OpenMLS security daemon (implementation in progress; high-risk disabled)",
   "candidateProductPath": "apps/daemon",
   "forbiddenReleasePaths": [
     "apps/desktop-tauri",

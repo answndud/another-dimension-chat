@@ -1,5 +1,6 @@
 use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use std::fmt;
+use zeroize::Zeroizing;
 
 const KEY_BYTES: usize = 32;
 const SIGNATURE_BYTES: usize = 64;
@@ -80,8 +81,8 @@ impl AccountRootKey {
         self.signing_key.verifying_key().to_bytes()
     }
 
-    pub fn seed_bytes(&self) -> [u8; KEY_BYTES] {
-        self.signing_key.to_bytes()
+    pub fn seed_bytes(&self) -> Zeroizing<[u8; KEY_BYTES]> {
+        Zeroizing::new(self.signing_key.to_bytes())
     }
 
     pub fn account_id(&self) -> AccountId {
@@ -167,8 +168,8 @@ impl DeviceIdentity {
     pub fn public_key(&self) -> [u8; KEY_BYTES] {
         self.signing_key.verifying_key().to_bytes()
     }
-    pub fn seed_bytes(&self) -> [u8; KEY_BYTES] {
-        self.signing_key.to_bytes()
+    pub fn seed_bytes(&self) -> Zeroizing<[u8; KEY_BYTES]> {
+        Zeroizing::new(self.signing_key.to_bytes())
     }
 
     /// Application-owned binding for the future MLS credential adapter.
@@ -216,6 +217,9 @@ impl fmt::Debug for MlsCredentialBinding {
 impl MlsCredentialBinding {
     pub fn account_id(&self) -> AccountId {
         account_id_from_public(&self.account_public_key)
+    }
+    pub fn account_public_key(&self) -> [u8; KEY_BYTES] {
+        self.account_public_key
     }
     pub fn device_id(&self) -> &str {
         &self.device_id
@@ -308,6 +312,9 @@ impl DeviceCertificate {
     pub fn account_id(&self) -> AccountId {
         account_id_from_public(&self.account_public_key)
     }
+    pub fn account_public_key(&self) -> [u8; KEY_BYTES] {
+        self.account_public_key
+    }
     pub fn device_id(&self) -> &str {
         &self.device_id
     }
@@ -327,8 +334,38 @@ impl DeviceCertificate {
         self.revoked
     }
 
+    pub fn signature(&self) -> [u8; SIGNATURE_BYTES] {
+        self.signature
+    }
+
+    pub fn from_parts(
+        account_public_key: [u8; KEY_BYTES],
+        device_id: String,
+        device_public_key: [u8; KEY_BYTES],
+        protocol_package_hash: [u8; KEY_BYTES],
+        issued_at: u64,
+        expires_at: u64,
+        signature: [u8; SIGNATURE_BYTES],
+        revoked: bool,
+    ) -> Result<Self, IdentityError> {
+        let certificate = Self {
+            account_public_key,
+            device_id,
+            device_public_key,
+            protocol_package_hash,
+            issued_at,
+            expires_at,
+            signature,
+            revoked,
+        };
+        certificate.verify_signature()?;
+        Ok(certificate)
+    }
+
     pub fn apply_revocation(&mut self, revocation: &DeviceRevocation) -> Result<(), IdentityError> {
-        self.verify(self.issued_at)?;
+        // A valid certificate may be revoked after its natural expiry. Verify
+        // the root signature, not the current validity window.
+        self.verify_signature()?;
         revocation.verify(self)?;
         self.revoked = true;
         Ok(())
@@ -344,6 +381,14 @@ impl DeviceCertificate {
         if now >= self.expires_at {
             return Err(IdentityError::ExpiredCertificate);
         }
+        if self.expires_at <= self.issued_at || validate_device_id(self.device_id.clone()).is_err()
+        {
+            return Err(IdentityError::InvalidCertificate);
+        }
+        self.verify_signature()
+    }
+
+    fn verify_signature(&self) -> Result<(), IdentityError> {
         if self.expires_at <= self.issued_at || validate_device_id(self.device_id.clone()).is_err()
         {
             return Err(IdentityError::InvalidCertificate);

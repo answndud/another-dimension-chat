@@ -5,13 +5,22 @@ use crate::{
     identity::AccountRootKey,
     trust::RelayTrust,
 };
+use axum::{
+    body::{to_bytes, Body},
+    extract::State,
+    http::{Request as HttpRequest, StatusCode},
+    response::Response,
+    routing::any,
+    Router,
+};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use sha2::{Digest, Sha256};
 use std::{
-    fs,
-    io::{Read, Write},
-    net::TcpStream,
+    fs, io,
+    net::SocketAddr,
     path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+    time::Duration,
 };
 
 const MAX_REQUEST_BYTES: usize = 16 * 1024;
@@ -443,52 +452,120 @@ pub fn handle_request_with_context(
 }
 
 pub fn serve_forever(
-    mut bridge: LocalBridge,
+    bridge: LocalBridge,
     ui_root: Option<&Path>,
     identity: Option<IdentityView>,
-    mut invite_authority: Option<InviteAuthority>,
+    invite_authority: Option<InviteAuthority>,
 ) -> std::io::Result<()> {
-    let listener = bridge
-        .bind_listener()
-        .map_err(|error| std::io::Error::other(error.to_string()))?;
-    for stream in listener.incoming() {
-        if let Ok(mut stream) = stream {
-            let _ = serve_connection(
-                &mut bridge,
-                &mut stream,
-                unix_now(),
-                ui_root,
-                identity.as_ref(),
-                invite_authority.as_mut(),
-            );
-        }
-    }
-    Ok(())
+    let address = SocketAddr::new(bridge.bind_host(), bridge.port());
+    let state = AppState {
+        bridge: Arc::new(Mutex::new(bridge)),
+        ui_root: ui_root.map(Path::to_path_buf),
+        identity,
+        invite_authority: invite_authority.map(|authority| Arc::new(Mutex::new(authority))),
+    };
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()
+        .map_err(|error| io::Error::other(error.to_string()))?;
+    runtime.block_on(async move {
+        let listener = tokio::net::TcpListener::bind(address).await?;
+        let app = Router::new().fallback(any(axum_handler)).with_state(state);
+        axum::serve(listener, app)
+            .await
+            .map_err(|error| io::Error::other(error.to_string()))
+    })
 }
 
-fn serve_connection(
-    bridge: &mut LocalBridge,
-    stream: &mut TcpStream,
-    now: u64,
-    ui_root: Option<&Path>,
-    identity: Option<&IdentityView>,
-    invite_authority: Option<&mut InviteAuthority>,
-) -> std::io::Result<()> {
-    let mut raw = Vec::new();
-    let mut buffer = [0_u8; 2048];
-    while raw.len() < MAX_REQUEST_BYTES {
-        let read = stream.read(&mut buffer)?;
-        if read == 0 {
-            break;
-        }
-        raw.extend_from_slice(&buffer[..read]);
-        if raw.windows(4).any(|window| window == b"\r\n\r\n") {
-            break;
+#[derive(Clone)]
+struct AppState {
+    bridge: Arc<Mutex<LocalBridge>>,
+    ui_root: Option<PathBuf>,
+    identity: Option<IdentityView>,
+    invite_authority: Option<Arc<Mutex<InviteAuthority>>>,
+}
+
+async fn axum_handler(State(state): State<AppState>, request: HttpRequest<Body>) -> Response<Body> {
+    let (parts, body) = request.into_parts();
+    let body = match tokio::time::timeout(
+        Duration::from_secs(10),
+        to_bytes(body, MAX_REQUEST_BYTES),
+    )
+    .await
+    {
+        Ok(Ok(body)) => body,
+        Ok(Err(_)) => return axum_response(response(413, "request_too_large", None, None)),
+        Err(_) => return axum_response(response(408, "request_timeout", None, None)),
+    };
+    let Some(raw) = axum_request_bytes(&parts, &body) else {
+        return axum_response(response(400, "invalid_request", None, None));
+    };
+    let Ok(mut bridge) = state.bridge.lock() else {
+        return axum_response(response(503, "bridge_unavailable", None, None));
+    };
+    let mut invite_guard = state
+        .invite_authority
+        .as_ref()
+        .and_then(|authority| authority.lock().ok());
+    let output = handle_request_with_context(
+        &mut bridge,
+        &raw,
+        unix_now(),
+        state.ui_root.as_deref(),
+        state.identity.as_ref(),
+        invite_guard.as_deref_mut(),
+    );
+    axum_response(output)
+}
+
+fn axum_request_bytes(parts: &axum::http::request::Parts, body: &[u8]) -> Option<Vec<u8>> {
+    let target = parts.uri.path_and_query()?.as_str();
+    if target.contains('?') || target.contains('#') {
+        return None;
+    }
+    let method = parts.method.as_str();
+    let mut raw = format!("{method} {target} HTTP/1.1\r\n");
+    for (name, value) in &parts.headers {
+        let value = value.to_str().ok()?;
+        raw.push_str(name.as_str());
+        raw.push_str(": ");
+        raw.push_str(value);
+        raw.push_str("\r\n");
+    }
+    raw.push_str(&format!("Content-Length: {}\r\n\r\n", body.len()));
+    let mut bytes = raw.into_bytes();
+    bytes.extend_from_slice(body);
+    Some(bytes)
+}
+
+fn axum_response(raw: Vec<u8>) -> Response<Body> {
+    let Some(separator) = raw.windows(4).position(|window| window == b"\r\n\r\n") else {
+        return Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(Body::from("invalid daemon response"))
+            .expect("static response is valid");
+    };
+    let header_text = String::from_utf8_lossy(&raw[..separator]);
+    let mut lines = header_text.split("\r\n");
+    let status = lines
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .and_then(|value| value.parse::<u16>().ok())
+        .and_then(|value| StatusCode::from_u16(value).ok())
+        .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+    let mut builder = Response::builder().status(status);
+    for line in lines {
+        if let Some((name, value)) = line.split_once(':') {
+            if name.eq_ignore_ascii_case("content-length") {
+                continue;
+            }
+            builder = builder.header(name, value.trim());
         }
     }
-    let output =
-        handle_request_with_context(bridge, &raw, now, ui_root, identity, invite_authority);
-    stream.write_all(&output)
+    builder
+        .body(Body::from(raw[separator + 4..].to_vec()))
+        .unwrap_or_else(|_| Response::new(Body::from("invalid daemon response")))
 }
 
 struct Request<'a> {
@@ -672,8 +749,10 @@ fn hex_nibble(value: u8) -> Option<u8> {
 
 #[cfg(test)]
 mod tests {
-    use super::handle_request;
+    use super::{axum_request_bytes, handle_request};
     use crate::bridge::{BridgeConfig, LocalBridge};
+    use axum::body::Body;
+    use axum::http::{Request, Uri};
     use std::net::{IpAddr, Ipv4Addr};
 
     fn bridge() -> LocalBridge {
@@ -726,5 +805,28 @@ mod tests {
         ))
         .unwrap()
         .starts_with("HTTP/1.1 403"));
+    }
+
+    #[test]
+    fn axum_request_adapter_preserves_body_and_rejects_query_targets() {
+        let request = Request::builder()
+            .method("POST")
+            .uri(Uri::from_static("/local-session/exchange"))
+            .header("host", "127.0.0.1:1420")
+            .header("origin", "http://127.0.0.1:1420")
+            .body(Body::empty())
+            .unwrap();
+        let (parts, _) = request.into_parts();
+        let raw = axum_request_bytes(&parts, br#"{"token":"x"}"#).unwrap();
+        assert!(raw.ends_with(br#"{"token":"x"}"#));
+        assert!(raw.windows(4).any(|window| window == b"\r\n\r\n"));
+
+        let request = Request::builder()
+            .method("GET")
+            .uri(Uri::from_static("/local-api/status?debug=1"))
+            .body(Body::empty())
+            .unwrap();
+        let (parts, _) = request.into_parts();
+        assert!(axum_request_bytes(&parts, &[]).is_none());
     }
 }
