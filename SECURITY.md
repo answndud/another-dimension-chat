@@ -11,6 +11,12 @@ ChatGPT Sites project or central message host is required by the product. The
 Tauri desktop target is a secondary development wrapper, not the current
 product distribution boundary.
 
+The current server also serves a convenience copy of the browser UI. That copy
+is not a trusted high-risk code-distribution boundary: an operator, reverse
+proxy, compromised host, or altered release can replace JavaScript or WASM
+before encryption starts and can therefore observe passphrases, plaintext, and
+keys. Signed, independently verifiable app distribution is a release blocker.
+
 ## Current web behavior
 
 - Profile private material is generated in the browser.
@@ -57,6 +63,10 @@ This prototype does not claim:
 - reliable automatic delivery, Tor/onion delivery, or censorship resistance
 - secure deletion, backup recovery, rollback protection, or multi-device recovery
 - protection from compromised browsers, extensions, devices, local malware, or coercion
+- protection when a server or reverse proxy serves altered JavaScript/WASM
+- signed app distribution, reproducible release verification, or safe automatic updates
+- identity continuity, prekey replenishment, revocation, or device lifecycle recovery
+- rate-limited, spam-resistant, highly available relay delivery
 
 The underlying `vodozemac` project reports an external audit, but that does not
 audit this application's identity signatures, transcript binding, persistence,

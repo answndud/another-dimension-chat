@@ -13,17 +13,17 @@ The long-term product direction is a high-risk 1:1 messenger with no central
 trusted server for identity, contact discovery, message relay, push delivery,
 or cloud backup.
 
-The v0.1 unsigned public beta is narrower:
+The current web prototype is narrower:
 
-- local desktop beta testing
-- invite-code room flow
-- safety phrase confirmation
-- local encrypted profile/session/message store exercise
-- saved-room restart/resume recovery
-- explicit local manual encrypted envelope exchange
-- explicit private-route setup only for advanced transport work
-- explicit onion/Tor attempt paths after manual user action
-- redacted diagnostics and public release artifact verification
+- user-owned Node server plus browser UI
+- signed invite-code room flow
+- safety material confirmation
+- browser-local profile, Olm account/session, and message transcript storage
+- two-control-message Olm setup and restart/resume exercise
+- automatic opaque-envelope delivery between explicitly exchanged endpoints
+- manual encrypted-envelope fallback when a server is unavailable
+- HTTPS/reverse-proxy/direct-TLS configuration for advanced users
+- redacted diagnostics and local release-archive verification
 
 ## Assets
 
@@ -47,20 +47,16 @@ logs, or key material.
 
 Current implementation evidence includes:
 
-- passphrase-first local product unlock/lock path
-- local encrypted profile/session/message store boundaries
-- durable local session lifecycle records
-- conversation/profile/full local data wipe controls
-- local backup-exclusion verification boundary
-- forward-only schema version boundary
-- destructive migration blocked
-- marker-only rollback detection boundary
-- fail-closed onion/Tor attempt paths
-- disabled network/onion work on app launch
+- passphrase-first browser profile unlock/lock path
+- passphrase-wrapped IndexedDB profile/session/message records
+- signed invite and envelope verification
+- canonical safety material bound to identity and setup material
+- Olm v2 Double Ratchet message setup through the Rust WASM adapter
+- bounded opaque inbox with separate write and local read/ack capabilities
+- duplicate envelope rejection and a bounded age/replay window
+- manual encrypted-envelope fallback
 - public support diagnostics redaction boundary
-- manual GitHub Release download with SHA-256 verification
-- dependency lockfile hash baseline for reviewers
-- public threat-model review input and explicit review-gap handling
+- explicit documentation of endpoint, browser, device, and metadata limits
 
 These are implementation guardrails, not a secure messenger claim.
 
@@ -87,6 +83,11 @@ This beta does not claim:
 - secure deletion from storage media
 - dependency audit, SBOM, reproducible build, signing, notarization, or auto-update
 - completed independent review, reviewer signoff, or public user safety signoff
+- trusted signed JavaScript/WASM distribution or verified update channel
+- protection against a malicious server or proxy serving altered browser code
+- rate-limited, abuse-resistant, high-availability relay delivery
+- identity continuity, prekey replenishment, revocation, or device lifecycle
+- protection from IP, timing, endpoint, size, or global traffic correlation
 - crash upload, telemetry, raw log export, or safe publication of private logs
 
 ## Non-Goals
@@ -110,15 +111,15 @@ v0.1 does not include:
 
 ## User Risk Statement
 
-The unsigned public beta is for development and review only.
+The unsigned web prototype is for development and review only.
 
-It is an unsigned experimental public beta, not notarized, not audited,
-not production-ready, and sensitive communication is prohibited.
+It is an unsigned experimental web prototype, not audited, not
+production-ready, and sensitive communication is prohibited.
 
-External onion delivery is outside the v0.1 public product claim. Same-machine
-local rehearsal can exercise development flow, but it is not external peer
-evidence and must not be presented as such. No peer report is expected or
-required for this v0.1 claim, and no external delivery claim is made.
+Anonymity, external onion delivery, censorship resistance, and global traffic
+protection are outside the current product claim. Same-machine or HTTPS/VPN
+rehearsal can exercise the message flow, but it is not evidence for those
+properties and must not be presented as such.
 
 macOS may require the user to manually allow the app in Privacy & Security.
 The project does not ask users to bypass macOS protections with terminal

@@ -1,11 +1,12 @@
 # Crypto Decision Notes
 
-Another Dimension Chat does not have production cryptography today.
+Another Dimension Chat has a browser message-encryption implementation, but
+does not have production security assurance today.
 
-This document records the current public-safe crypto boundary before any
-placeholder crypto is replaced. It is intentionally conservative: no
-production security claim should be made until the selected design has
-implementation, tests, review, and release discipline behind it.
+This document records the actual cryptographic boundary and its remaining
+gates. A reviewed primitive or library does not by itself review this app's
+identity, transcript binding, browser code delivery, local storage, relay,
+metadata, or user workflow.
 
 ## Current State
 
@@ -32,34 +33,30 @@ The repository currently has:
   ordering and identity, endpoint, prekey, and capability sensitivity.
 - Production safety material derivation with a SHA-256 based, domain-separated
   display boundary independent from `dev-insecure` fake crypto.
-- A narrow Noise XX smoke boundary using `snow` with constrained features for
-  `25519 + ChaChaPoly + BLAKE2s`.
-- Noise static public keys with a public prekey bundle string format.
-- `ProductionSessionPlan` rejection of invalid Noise prekey bundles.
-- `ProductionSetupDraft` generation of an Ed25519 production pairing draft and
-  a Noise static keypair together.
-- Core-level setup handshake smoke using the deterministic canonical dialer as
-  the Noise initiator.
-- `NoiseTransportPair` exposure of a narrow one-message encrypt/decrypt
-  boundary after Noise XX transport mode.
-- `ProductionEnvelopeSession` wiring of in-memory Noise transport to
-  `protocol::Envelope` for a caller-supplied message number.
-- Replay acceptance only after successful decrypt, so tampered ciphertext does
-  not advance replay state.
-- Browser protocol v3 uses `vodozemac` Olm v2 through a narrow WASM adapter,
-  persists passphrase-wrapped account/session pickles, and advances the Double
-  Ratchet state after successful encrypt/decrypt.
+- A native prototype with a narrow Noise XX boundary using `snow`. This is not
+  the current browser message path.
+- Browser protocol v3 using `vodozemac` Olm v2 through a narrow WASM adapter.
+  The browser creates an Olm account, performs a two-control-message setup,
+  encrypts/decrypts messages with the Double Ratchet, and persists the session
+  pickle after successful operations.
+- P-256 Web Crypto signatures for invites and envelopes, with a canonical
+  transcript used for the displayed safety material and Olm setup plaintext.
+- Passphrase-wrapped browser IndexedDB records for the current profile,
+  account/session pickle, and local transcript.
 
 The repository does not currently have:
 
-- Real E2EE.
 - An independent audit of the application's browser protocol composition.
-- Stored production signature keys.
-- Integrated production key agreement for app messages.
-- Production key storage.
-- Broader production randomness policy for session establishment.
-- Production encrypted local storage.
-- Persistent production session state.
+- A trusted, signed, independently verifiable JavaScript/WASM distribution
+  boundary.
+- A complete identity continuity, prekey replenishment, rotation, revocation,
+  and device lifecycle design.
+- High-risk metadata protection, anonymity, censorship resistance, or secure
+  relay availability.
+- A reviewed high-risk local storage, backup, recovery, panic-wipe, or secure
+  deletion policy.
+- A production release process with reproducible artifacts, SBOM, dependency
+  audit, signed updates, and rollback protection.
 
 ## Non-Negotiable Rules
 
@@ -76,27 +73,28 @@ The repository does not currently have:
 
 ## Current Direction
 
-The native prototype remains on the existing Noise-based sync boundary. The
-browser product uses the reviewed-library Olm Double Ratchet boundary:
+The browser product uses the reviewed-library Olm Double Ratchet boundary:
 
 1. Pairwise identity per contact.
 2. Invite-code pairing as the first supported setup path.
-3. Pairing payload includes identity material, signed session setup material,
-   rendezvous endpoint, and capability commitments.
-4. Safety number derives from a canonical transcript that includes the identity
-   and setup material.
-5. Safety material display is derived from the canonical transcript with a
-   reviewed hash crate, while browser message encryption is handled by the
-   high-level `vodozemac` Olm API, not by custom CLI or UI cryptography.
+3. The invite contains identity and setup material plus an explicitly exchanged
+   relay endpoint/capability. The relay is transport, not an identity authority.
+4. Safety material derives from a canonical transcript that includes both
+   identities and setup material.
+5. Browser message encryption is handled by the high-level `vodozemac` Olm API,
+   not by custom UI cryptography.
 6. `dev-insecure` remains available only for development tests.
+7. This boundary is not a high-risk release until app-code distribution,
+   prekey lifecycle, local storage, metadata, UX, and independent review gates
+   are complete.
 
 ## Implementation Gate
 
-Before a production message/session implementation expands beyond the current
-smoke boundary, add tests that prove:
+Before this browser implementation can be considered for a security-reviewed
+release, add tests and evidence that prove:
 
 - Signed production pairing payloads are required on both sides.
-- Noise setup material is bound to the canonical safety transcript.
+- Olm setup material is bound to the canonical safety transcript.
 - A wrong identity key, changed endpoint, changed capability set, or
   mismatched prekey bundle prevents setup.
 - The canonical connection direction is stable across both peers.
@@ -105,16 +103,18 @@ smoke boundary, add tests that prove:
   advance replay state.
 - Session state is persisted only where the encrypted storage and session
   lifecycle boundary explicitly permits it.
-- No production messaging command is exposed while the crypto/session boundary
-  is incomplete.
+- A modified JavaScript/WASM bundle cannot be presented as a verified release.
+- Identity, prekey, endpoint, and capability rotation/revocation are explicit.
+- No high-risk mode is exposed while the app-code, metadata, and storage
+  boundaries remain incomplete.
 
 ## Open Questions
 
-- Which maintained Rust-compatible signature library should back pairwise
-  identity?
-- Is the current `snow` Noise XX direction acceptable after documenting how
-  static private keys are stored, rotated, and bound to endpoint rotation?
-- Should the first production replacement prioritize identity signatures or
-  full message session encryption?
-- How should production key material be stored before encrypted storage is
-  complete?
+- What trusted bootstrap lets a browser user independently verify the signed
+  app bundle when the user's own server also serves a convenience UI?
+- Which prekey pool, replenishment, rotation, and revocation model fits the
+  user-owned relay without creating central contact discovery?
+- Which anonymity/metadata route can be supported without making an unverified
+  Tor or censorship-resistance claim?
+- Which local backup, recovery, and panic-wipe behavior is safe to promise on
+  browser storage that cannot guarantee secure deletion?

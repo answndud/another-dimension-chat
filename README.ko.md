@@ -14,6 +14,11 @@
 > 자신의 local server를 실행하면 명시적으로 교환한 endpoint를 통해 sealed
 > envelope를 직접 전달할 수 있습니다.
 
+> **앱 코드 공급망 경고:** 현재 local server는 편의를 위해 browser
+> JavaScript/WASM도 제공합니다. server나 reverse proxy가 변조되면 암호화가
+> 시작되기 전에 passphrase·평문·key가 탈취될 수 있습니다. 독립적으로 검증할
+> signed app release가 아직 없으므로 고위험 통신에 사용하면 안 됩니다.
+
 ## 현재 웹 prototype에서 동작하는 것
 
 - passphrase를 사용하는 로컬 브라우저 프로필 생성·unlock
