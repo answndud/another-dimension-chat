@@ -64,11 +64,12 @@ transport component. It must not receive plaintext messages, private keys,
 passphrases, or centralized contact discovery data. WebRTC and any direct
 network path must make IP and metadata exposure explicit.
 
-Treat an inbox capability URL as a bearer secret: anyone who learns it can read,
-submit, acknowledge, or delete opaque envelopes. Do not put it in logs, support
-reports, screenshots, public proxy configuration, or monitoring URLs. If it is
-exposed, stop the server, move the old data directory aside, and start with a
-new data directory to rotate the capability.
+Treat an inbox capability URL as a bearer secret: anyone who learns it can
+submit opaque envelopes and observe submission results, but read and ack require
+the separate local-access capability. Do not put either capability in logs,
+support reports, screenshots, public proxy configuration, or monitoring URLs.
+If one is exposed, stop the server, move the old data directory aside, and start
+with a new data directory to rotate both capabilities.
 
 The private local UI URL is also a bearer secret. Its fragment is not sent in
 ordinary HTTP requests, but it remains visible in browser history and on-screen.

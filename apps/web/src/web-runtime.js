@@ -4,6 +4,7 @@ const MAX_ENVELOPE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const profileNames = [];
 let activeProfile = null;
+let localInfoCache = null;
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -67,13 +68,15 @@ function validInboxUrl(value) {
 }
 
 async function localServerInfo() {
+  if (localInfoCache) return localInfoCache;
   try {
     const localAccess = new URLSearchParams(globalThis.location?.hash?.slice(1) || "").get("local");
     if (!localAccess) return null;
     const response = await fetch('/api/v1/info', { headers: { accept: 'application/json', 'x-ad-local-access': localAccess } });
     if (!response.ok) return null;
     const info = await response.json();
-    return { ...info, inboxUrl: validInboxUrl(info.inboxUrl) };
+    localInfoCache = { ...info, inboxUrl: validInboxUrl(info.inboxUrl), localAccess };
+    return localInfoCache;
   } catch { return null; }
 }
 
@@ -236,7 +239,8 @@ export async function syncInbox() {
   const localInfo = await localServerInfo();
   if (!localInfo?.inboxUrl) throw new Error("This browser is not connected to a local server.");
   const inboxUrl = localInfo.inboxUrl;
-  const response = await fetch(inboxUrl, { headers: { accept: 'application/json' } });
+  const localHeaders = { accept: 'application/json', 'x-ad-local-access': localInfo.localAccess };
+  const response = await fetch(inboxUrl, { headers: localHeaders });
   if (!response.ok) throw new Error("Peer server inbox could not be reached.");
   const payload = await response.json();
   const accepted = [];
@@ -244,7 +248,7 @@ export async function syncInbox() {
     try { await importEnvelope(item.envelope); accepted.push(item.id); } catch (error) { if (!/already imported/.test(error.message)) throw error; accepted.push(item.id); }
   }
   if (accepted.length) {
-    const ack = await fetch(ackUrl(inboxUrl), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ids: accepted }) });
+    const ack = await fetch(ackUrl(inboxUrl), { method: 'POST', headers: { 'content-type': 'application/json', 'x-ad-local-access': localInfo.localAccess }, body: JSON.stringify({ ids: accepted }) });
     if (!ack.ok) throw new Error("Message was received but the peer server could not acknowledge it.");
   }
   return accepted.length;

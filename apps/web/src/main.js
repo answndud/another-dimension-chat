@@ -18,6 +18,7 @@ import "./styles.css";
 
 const app = document.querySelector("#app");
 let state = { profile: null, peer: null, serverInfo: null, safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "" };
+let syncInFlight = false;
 
 if (window.isSecureContext && "serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
@@ -152,14 +153,35 @@ function bindRoom() {
     try { state.envelope = await exportEnvelope(document.querySelector("#message").value); state.notice = "Envelope encrypted. Move it to the other browser, then paste it into Incoming envelope."; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#send-envelope")?.addEventListener("click", async () => {
-    try { state.envelope = await sendEnvelope(document.querySelector("#message").value); state.notice = "Envelope encrypted and delivered to the peer server. The peer must sync their inbox."; await refresh(); } catch (error) { state.envelope = error.envelope || state.envelope; state.notice = error.envelope ? "Peer server unavailable. The prepared envelope is ready below for manual delivery." : "Delivery failed. Check the server and try again."; state.error = error.message; render(); }
+    try { state.envelope = await sendEnvelope(document.querySelector("#message").value); state.notice = "Envelope encrypted and delivered. The peer receives it automatically while their room is open."; await refresh(); } catch (error) { state.envelope = error.envelope || state.envelope; state.notice = error.envelope ? "Peer server unavailable. The prepared envelope is ready below for manual delivery." : "Delivery failed. Check the server and try again."; state.error = error.message; render(); }
   });
-  document.querySelector("#sync-inbox")?.addEventListener("click", async () => {
-    try { const count = await syncInbox(); state.notice = count ? `${count} sealed envelope${count === 1 ? "" : "s"} received and acknowledged.` : "Peer inbox is empty."; await refresh(); } catch (error) { state.notice = "Inbox sync failed. Keep the server running and try Sync again."; state.error = error.message; render(); }
-  });
+  document.querySelector("#sync-inbox")?.addEventListener("click", () => receiveMessages(true));
   document.querySelector("#import-envelope")?.addEventListener("click", async () => {
     try { await importEnvelope(document.querySelector("#incoming").value); state.notice = "Envelope decrypted locally and added to the transcript."; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
+}
+
+async function receiveMessages(manual = false) {
+  if (syncInFlight || !state.profile || !state.peer || !state.serverInfo?.inboxUrl) return;
+  syncInFlight = true;
+  try {
+    const count = await syncInbox();
+    if (count) {
+      state.notice = `${count} sealed envelope${count === 1 ? "" : "s"} received and acknowledged.`;
+      await refresh();
+    } else if (manual) {
+      state.notice = "Peer inbox is empty.";
+      render();
+    }
+  } catch (error) {
+    if (manual) {
+      state.notice = "Inbox sync failed. Keep the server running and try Sync again.";
+      state.error = error.message;
+      render();
+    }
+  } finally {
+    syncInFlight = false;
+  }
 }
 
 async function refresh() {
@@ -171,6 +193,13 @@ async function refresh() {
   state.error = "";
   render();
 }
+
+window.setInterval(() => {
+  if (!document.hidden) receiveMessages(false);
+}, 5_000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) receiveMessages(false);
+});
 
 ready.then(render).catch((error) => {
   state.error = error.message;

@@ -38,9 +38,10 @@ self-signed certificate. Install it in the browser device trust stores before
 testing; do not use this certificate workflow as a production PKI.
 
 The inbox is bounded to 256 items and 96 KiB per envelope. Restart recovery is
-file-backed. A capability URL is equivalent to permission to submit/read that
-inbox, so share invites only with the intended peer and rotate the data directory
-if a capability is exposed. Authentication, relay, port
+file-backed. The invite capability permits submission only; queue reads and
+acknowledgements additionally require the private local-access capability.
+Share invites only with the intended peer and rotate the data directory if
+either capability is exposed. Authentication, relay, port
 forwarding, and anonymity are not provided automatically. Plain HTTP remote
 pages cannot use the browser's Web Crypto APIs in normal browsers.
 

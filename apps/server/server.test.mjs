@@ -30,6 +30,10 @@ function rawCall(port, method, path, body) {
   });
 }
 
+function localHeaders(runtime) {
+  return { "x-ad-local-access": runtime.localAccessCapability };
+}
+
 test("local server exposes health and a capability-scoped opaque inbox", async () => {
   const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
@@ -41,12 +45,14 @@ test("local server exposes health and a capability-scoped opaque inbox", async (
   const envelope = "ADENVWEB1.test-envelope";
   const accepted = await call(port, "POST", inboxPath, { envelope });
   assert.equal(accepted.status, 202);
-  const listed = await call(port, "GET", inboxPath);
+  assert.equal((await call(port, "GET", inboxPath)).status, 403);
+  const listed = await call(port, "GET", inboxPath, undefined, localHeaders(runtime));
   assert.equal(listed.body.items.length, 1);
   assert.equal(listed.body.items[0].envelope, envelope);
   const duplicate = await call(port, "POST", inboxPath, { envelope });
   assert.equal(duplicate.status, 202);
-  assert.equal((await call(port, "GET", inboxPath)).body.items.length, 1);
+  assert.equal((await call(port, "GET", inboxPath, undefined, localHeaders(runtime))).body.items.length, 1);
+  assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id] })).status, 403);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });
@@ -89,7 +95,7 @@ test("local server rejects malformed inbox requests without storing them", async
   const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
   assert.equal((await rawCall(port, "POST", inboxPath, "not-json")).status, 400);
   assert.equal((await call(port, "POST", `${inboxPath}/../inbox`, { envelope: "ADENVWEB1.invalid-path" })).status, 405);
-  assert.equal((await call(port, "GET", inboxPath)).body.items.length, 0);
+  assert.equal((await call(port, "GET", inboxPath, undefined, localHeaders(runtime))).body.items.length, 0);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });
@@ -107,7 +113,7 @@ test("local server recovers its bounded queue and purges expired envelopes", asy
   await new Promise((resolve) => second.server.listen(0, "127.0.0.1", resolve));
   const secondPort = second.server.address().port;
   const secondPath = new URL(second.inboxUrl.replace(":0", `:${secondPort}`)).pathname;
-  assert.equal((await call(secondPort, "GET", secondPath)).body.items.length, 0);
+  assert.equal((await call(secondPort, "GET", secondPath, undefined, localHeaders(second))).body.items.length, 0);
   await second.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });
@@ -119,8 +125,8 @@ test("ack reports only envelopes that were actually removed", async () => {
   const port = runtime.server.address().port;
   const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
   const accepted = await call(port, "POST", inboxPath, { envelope: "ADENVWEB1.ack-count" });
-  assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id, "missing"] })).body.acknowledged, 1);
-  assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id] })).body.acknowledged, 0);
+  assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id, "missing"] }, localHeaders(runtime))).body.acknowledged, 1);
+  assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id] }, localHeaders(runtime))).body.acknowledged, 0);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });

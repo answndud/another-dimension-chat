@@ -41,13 +41,14 @@ const accepted = await getJson("public inbox delivery", inboxUrl, {
   headers: { "content-type": "application/json" },
   body: JSON.stringify({ envelope }),
 });
-const listed = await getJson("public inbox read", inboxUrl);
+const localHeaders = { "x-ad-local-access": localAccess };
+const listed = await getJson("private inbox read", inboxUrl, { headers: localHeaders });
 assert.ok(listed.items.some((item) => item.id === accepted.id && item.envelope === envelope), "The accepted envelope was not readable.");
 
 const ackUrl = new URL(`${inboxUrl.pathname}/ack`, inboxUrl);
-const acknowledged = await getJson("public inbox acknowledgement", ackUrl, {
+const acknowledged = await getJson("private inbox acknowledgement", ackUrl, {
   method: "POST",
-  headers: { "content-type": "application/json" },
+  headers: { "content-type": "application/json", ...localHeaders },
   body: JSON.stringify({ ids: [accepted.id] }),
 });
 assert.equal(acknowledged.acknowledged, 1);

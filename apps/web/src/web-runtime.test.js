@@ -8,6 +8,7 @@ import { test } from "node:test";
 const srcDir = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const runtime = readFileSync(resolve(srcDir, "web-runtime.js"), "utf8");
 const ui = readFileSync(resolve(srcDir, "main.js"), "utf8");
+const serviceWorker = readFileSync(resolve(srcDir, "../public/sw.js"), "utf8");
 
 test("web runtime uses browser crypto and IndexedDB rather than preview storage", () => {
   assert.match(runtime, /indexedDB\.open/);
@@ -37,6 +38,11 @@ test("web UI exposes the complete manual pairing and sealed-envelope flow", () =
   assert.doesNotMatch(ui, /browser-preview-tauri/);
   assert.doesNotMatch(ui, /production_onion/);
   assert.match(ui, /Development HTTP endpoint/);
+  assert.match(ui, /setInterval[\s\S]*5_000/);
+  assert.match(ui, /visibilitychange/);
+  assert.match(serviceWorker, /pathname\.startsWith\("\/api\/"\)/);
+  assert.match(serviceWorker, /request\.mode === "navigate"/);
+  assert.match(serviceWorker, /caches\.delete/);
 });
 
 class MemoryIndexedDb {
@@ -126,4 +132,47 @@ test("signed invites preserve optional server capability and reject forged endpo
   assert.equal(decoded.server, undefined);
   await runtime.createProfile("peer", "peer-passphrase");
   await assert.rejects(() => runtime.importInvite(`ADWEB1.${Buffer.from(JSON.stringify({ ...decoded, server: { inboxUrl: "javascript:alert(1)" } })).toString("base64url")}`), /Server endpoint|signature/);
+});
+
+test("inbox sync uses local access for read and ack", async () => {
+  if (!globalThis.crypto?.subtle) Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
+  globalThis.indexedDB = new MemoryIndexedDb();
+  Object.defineProperty(globalThis, "location", { value: { hash: "#local=owner-token" }, configurable: true });
+  const calls = [];
+  let queuedEnvelope;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    if (String(url) === "/api/v1/info") {
+      return { ok: true, json: async () => ({ protocol: 1, inboxUrl: "https://owner.invalid/api/v1/inbox/write-capability" }) };
+    }
+    if (options.method === "POST" && String(url).endsWith("/ack")) {
+      return { ok: true, json: async () => ({ acknowledged: 1 }) };
+    }
+    return { ok: true, json: async () => ({ items: [{ id: "queue-id", envelope: queuedEnvelope }] }) };
+  };
+
+  try {
+    const runtime = await import(`./web-runtime.js?sync=${Date.now()}`);
+    await runtime.ready;
+    const alice = await runtime.createProfile("sync_alice", "alice-passphrase");
+    const aliceInvite = await runtime.exportInvite();
+    await runtime.createProfile("sync_bob", "bob-passphrase");
+    const bobInvite = await runtime.exportInvite();
+    await runtime.unlockProfile("sync_alice", "alice-passphrase");
+    await runtime.importInvite(bobInvite);
+    queuedEnvelope = await runtime.exportEnvelope("automatic receive");
+    await runtime.unlockProfile("sync_bob", "bob-passphrase");
+    await runtime.importInvite(aliceInvite);
+
+    assert.equal(await runtime.syncInbox(), 1);
+    const inboxRead = calls.find((call) => call.url.includes("/inbox/") && !call.options.method);
+    const inboxAck = calls.find((call) => call.url.endsWith("/ack"));
+    assert.equal(inboxRead.options.headers["x-ad-local-access"], "owner-token");
+    assert.equal(inboxAck.options.headers["x-ad-local-access"], "owner-token");
+    assert.equal((await runtime.listMessages())[0].text, "automatic receive");
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete globalThis.location;
+  }
 });

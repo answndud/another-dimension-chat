@@ -127,6 +127,8 @@ proxy를 권장한다. `AD_PUBLIC_URL`은 path나 credential이 없는 HTTP(S) o
 외부에 광고된 HTTPS를 분리해 reverse proxy 설정을 직접 TLS로 오인하지 않게 한다.
 공개 root에서 inbox capability가 노출되지 않도록 server info는 시작 시 생성한
 별도 local-access capability를 제시한 browser에만 반환한다.
+invite에 포함되는 inbox capability는 POST 전용으로 제한하고, queue GET과 ack는
+local-access capability를 함께 제시한 소유자 browser에만 허용한다.
 
 ### Consequences
 

@@ -25,7 +25,10 @@ envelopes.
 - Reject an envelope imported twice.
 - Persist profile material and transcript data in IndexedDB for later unlock.
 - Send sealed envelopes to a peer's explicitly exchanged server endpoint.
-- Sync and acknowledge sealed envelopes from the current user's local server.
+- Automatically receive and acknowledge sealed envelopes while the unlocked
+  room is visible, with a manual Sync action for recovery.
+- Keep the peer's invite capability write-only; queue read and ack require the
+  owner's separate local-access capability.
 
 The preferred delivery flow is user-owned server-to-server transport. Manual
 invite and sealed-envelope copy/paste remains available when a server is not
@@ -126,7 +129,8 @@ installed in the relevant devices' trust stores before a browser can accept it;
 the script does not change system trust automatically.
 
 After configuring a publicly trusted, non-loopback HTTPS endpoint, check its
-certificate, health, advertised origin, opaque delivery, read, and ack:
+certificate, health, advertised origin, public opaque delivery, private read,
+and private ack:
 
 ```sh
 node scripts/check_https_endpoint.mjs https://chat.example.test

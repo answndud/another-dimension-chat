@@ -24,7 +24,9 @@
 - 같은 envelope의 중복 가져오기 거부
 - IndexedDB 기반 프로필 자료와 transcript 저장·재unlock 복구
 - 상대가 교환한 server endpoint로 sealed envelope 전송
-- 자신의 local server inbox 동기화와 ack
+- unlock된 room이 보이는 동안 새 envelope 자동 수신·ack 및 복구용 수동 Sync
+- 상대에게 공유한 invite capability는 write-only로 제한하고 queue 조회·ack는
+  소유자의 별도 local-access capability로 보호
 
 기본 자동 전달은 사용자 소유 server 간에만 동작합니다. 서버가 꺼져 있거나
 도달할 수 없으면 invite와 sealed envelope를 복사하는 수동 모드로 돌아갑니다.
@@ -123,8 +125,8 @@ store에 직접 설치해야 하며, 스크립트는 시스템 trust 설정을 �
 않습니다.
 
 공개적으로 신뢰되는 비-loopback HTTPS 주소를 구성한 뒤 인증서 신뢰,
-health, 초대에 광고될 origin, opaque envelope 전달·조회·ack를 한 번에
-확인합니다.
+health, 초대에 광고될 origin, public opaque envelope 전달과 local-access가
+필요한 조회·ack를 한 번에 확인합니다.
 
 ```sh
 node scripts/check_https_endpoint.mjs https://chat.example.test

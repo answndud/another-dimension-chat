@@ -175,6 +175,10 @@ export async function createLocalServer({
 
     const inboxPrefix = capabilityPath(inboxCapability);
     if (requestUrl.pathname === inboxPrefix && req.method === "GET") {
+      if (!hasLocalAccess(req, localAccessCapability)) {
+        json(res, 403, { error: "local_access_required" }, headers);
+        return;
+      }
       purge();
       json(res, 200, { protocol: 1, items: inbox }, headers);
       return;
@@ -197,6 +201,10 @@ export async function createLocalServer({
       return;
     }
     if (requestUrl.pathname === `${inboxPrefix}/ack` && req.method === "POST") {
+      if (!hasLocalAccess(req, localAccessCapability)) {
+        json(res, 403, { acknowledged: 0, error: "local_access_required" }, headers);
+        return;
+      }
       try {
         const body = JSON.parse(await readBody(req, 32 * 1024));
         const ids = new Set(Array.isArray(body?.ids) ? body.ids.map(String) : []);
