@@ -32,6 +32,16 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function endpointOrigin(info) {
+  if (!info?.inboxUrl) return "";
+  try { return new URL(info.inboxUrl).origin; } catch { return ""; }
+}
+
+function browserStatus() {
+  if (!window.isSecureContext || !window.crypto?.subtle) return "Browser security: use localhost or HTTPS to enable encryption.";
+  return "Browser security: Web Crypto enabled.";
+}
+
 function render() {
   if (!state.profile) {
     app.innerHTML = `
@@ -39,6 +49,7 @@ function render() {
         <div class="eyebrow">ANOTHER DIMENSION</div>
         <h1>A private room in your browser.</h1>
         <p class="lede">No account. No message server. Create a local profile, exchange a public invite, and move sealed messages through a channel you choose.</p>
+        <div class="notice">${escapeHtml(browserStatus())}</div>
         <div class="card grid-two">
           <form id="create-form" class="stack">
             <h2>Create local profile</h2>
@@ -67,13 +78,13 @@ function render() {
       <div class="notice">${escapeHtml(state.notice || (state.serverInfo ? "Your local server is connected. Sealed envelopes can be delivered directly to a peer server." : "Manual mode: run this app from your local server for direct sealed-envelope delivery."))}</div>
       <div class="layout">
         <aside class="card stack">
-          <div><span class="label">LOCAL PROFILE</span><strong>${escapeHtml(state.profile.name)}</strong><p class="small">${state.serverInfo ? "Local server connected" : "Manual envelope mode"}</p></div>
+          <div><span class="label">LOCAL PROFILE</span><strong>${escapeHtml(state.profile.name)}</strong><p class="small">${state.serverInfo ? `Local server connected · ${escapeHtml(endpointOrigin(state.serverInfo))}` : "Manual envelope mode"}</p></div>
           <div class="divider"></div>
           <h2>1. Share your invite</h2>
           <p class="small">This code contains public setup material only. Send it through any channel.</p>
           <textarea id="invite" readonly rows="5">${escapeHtml(state.invite)}</textarea>
           <button id="copy-invite" class="secondary">Copy invite</button>
-          <p class="small">Your invite includes your local server capability when this page is served by it. Loopback addresses are reachable only on this device.</p>
+          <p class="small">Your invite includes a server capability when this page is served by it. Share the invite only with the intended peer.</p>
           <h2>2. Add peer invite</h2>
           <textarea id="peer-invite" rows="5" placeholder="Paste the other person's invite here">${escapeHtml(state.peerInvite)}</textarea>
           <button id="pair">Pair and verify</button>
@@ -81,13 +92,14 @@ function render() {
         <section class="stack">
           <div class="card safety"><span class="label">SAFETY MATERIAL</span><strong>${escapeHtml(phrase)}</strong><p class="small">Compare this phrase with the other person over a trusted channel before sending messages.</p></div>
           <div class="card stack">
-            <div class="row-between"><h2>Sealed message exchange</h2><span class="pill">${state.peer ? "paired" : "not paired"}</span></div>
+            <div class="row-between"><h2>Sealed message exchange</h2><span class="pill">${state.peer ? `paired · ${escapeHtml(endpointOrigin(state.peer.server)) || "manual"}` : "not paired"}</span></div>
             <label>Message<textarea id="message" rows="4" placeholder="Write locally, then send or export a sealed envelope"></textarea></label>
             <div class="row-between"><button id="send-envelope" ${state.peer?.server?.inboxUrl ? "" : "disabled"}>Encrypt and send to peer server</button><button id="sync-inbox" ${state.serverInfo?.inboxUrl ? "" : "disabled"} class="secondary">Sync my inbox</button></div>
             <button id="export-envelope" ${state.peer ? "" : "disabled"}>Encrypt and export envelope</button>
             <label>Outgoing envelope<textarea id="envelope" rows="5" placeholder="Your sealed envelope appears here">${escapeHtml(state.envelope)}</textarea></label>
             <label>Incoming envelope<textarea id="incoming" rows="5" placeholder="Paste the peer's sealed envelope here"></textarea></label>
             <button id="import-envelope" ${state.peer ? "" : "disabled"} class="secondary">Import and decrypt</button>
+            ${state.envelope ? '<p class="small">An outgoing envelope is ready for manual delivery if the peer server is unavailable.</p>' : ""}
           </div>
           <div class="card stack"><div class="row-between"><h2>Conversation</h2><span class="small">Encrypted local transcript</span></div>${renderMessages()}</div>
         </section>
@@ -126,10 +138,10 @@ function bindRoom() {
     try { state.envelope = await exportEnvelope(document.querySelector("#message").value); state.notice = "Envelope encrypted. Move it to the other browser, then paste it into Incoming envelope."; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#send-envelope")?.addEventListener("click", async () => {
-    try { state.envelope = await sendEnvelope(document.querySelector("#message").value); state.notice = "Envelope encrypted and delivered to the peer server. The peer must sync their inbox."; await refresh(); } catch (error) { state.error = error.message; render(); }
+    try { state.envelope = await sendEnvelope(document.querySelector("#message").value); state.notice = "Envelope encrypted and delivered to the peer server. The peer must sync their inbox."; await refresh(); } catch (error) { state.envelope = error.envelope || state.envelope; state.notice = error.envelope ? "Peer server unavailable. The prepared envelope is ready below for manual delivery." : "Delivery failed. Check the server and try again."; state.error = error.message; render(); }
   });
   document.querySelector("#sync-inbox")?.addEventListener("click", async () => {
-    try { const count = await syncInbox(); state.notice = count ? `${count} sealed envelope${count === 1 ? "" : "s"} received and acknowledged.` : "Peer inbox is empty."; await refresh(); } catch (error) { state.error = error.message; render(); }
+    try { const count = await syncInbox(); state.notice = count ? `${count} sealed envelope${count === 1 ? "" : "s"} received and acknowledged.` : "Peer inbox is empty."; await refresh(); } catch (error) { state.notice = "Inbox sync failed. Keep the server running and try Sync again."; state.error = error.message; render(); }
   });
   document.querySelector("#import-envelope")?.addEventListener("click", async () => {
     try { await importEnvelope(document.querySelector("#incoming").value); state.notice = "Envelope decrypted locally and added to the transcript."; await refresh(); } catch (error) { state.error = error.message; render(); }

@@ -99,7 +99,10 @@ test("two local profiles can exchange a real sealed envelope and reject a duplic
   bobPeer.server = { inboxUrl: "https://peer.invalid/api/v1/inbox/test" };
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => ({ ok: false });
-  await assert.rejects(() => runtime.sendEnvelope("failed delivery"), /could not accept/);
+  let failedDelivery;
+  try { await runtime.sendEnvelope("failed delivery"); } catch (error) { failedDelivery = error; }
+  assert.match(failedDelivery.message, /could not accept/);
+  assert.match(failedDelivery.envelope, /^ADENVWEB1\./);
   globalThis.fetch = originalFetch;
   assert.equal((await runtime.listMessages()).filter((message) => message.direction === "sent").length, 0);
 

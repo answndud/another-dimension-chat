@@ -215,7 +215,11 @@ export async function sendEnvelope(text) {
   if (!message) throw new Error("Write a message first.");
   const envelope = await exportEnvelope(message, { record: false });
   const response = await fetch(activeProfile.peer.server.inboxUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ envelope }) });
-  if (!response.ok) throw new Error("Peer server could not accept the sealed envelope. Export it manually instead.");
+  if (!response.ok) {
+    const error = new Error("Peer server could not accept the sealed envelope. Export the prepared envelope manually instead.");
+    error.envelope = envelope;
+    throw error;
+  }
   await recordSentEnvelope(envelope, message);
   return envelope;
 }
