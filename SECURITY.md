@@ -16,7 +16,10 @@ product distribution boundary.
 - Profile private material is generated in the browser.
 - Profile private material is encrypted with a passphrase before IndexedDB storage.
 - Peer invites are signed and verified locally.
-- Messages are encrypted locally and exchanged as sealed envelopes.
+- Pairing runs `Noise_XX_25519_ChaChaPoly_BLAKE2s` through the repository's
+  Rust `snow` boundary compiled to WebAssembly.
+- Messages are encrypted locally with the established Noise state and exchanged
+  as signed sealed envelopes.
 - Transcript records remain in browser-local storage for the current profile.
 - No central message server, push service, cloud backup, or account recovery exists.
 - A user-owned local server may store bounded opaque sealed envelopes for that
@@ -46,15 +49,20 @@ This prototype does not claim:
 
 - audited or production-ready security
 - safety for sensitive communication
-- Signal-level, Noise-level, or equivalent security
+- Signal-level security, a reviewed messenger protocol, or equivalent assurance
+- a message ratchet, forward secrecy after persisted session-state compromise,
+  or post-compromise recovery
 - anonymity, untraceability, or protection from global traffic correlation
 - reliable automatic delivery, Tor/onion delivery, or censorship resistance
 - secure deletion, backup recovery, rollback protection, or multi-device recovery
 - protection from compromised browsers, extensions, devices, local malware, or coercion
 
-Web Crypto and IndexedDB do not protect an unlocked browser session or a
-compromised endpoint. Browser support, browser implementation details, and
-storage behavior must be verified before any stronger claim is considered.
+Using Noise does not by itself make this a reviewed secure messenger. The
+current stateless message boundary persists enough encrypted handshake material
+to reconstruct transport keys and has no ratchet. Web Crypto, WebAssembly, and
+IndexedDB do not protect an unlocked browser session or a compromised endpoint.
+Browser support, implementation details, and storage behavior must be verified
+before any stronger claim is considered.
 
 ## Online delivery boundary
 

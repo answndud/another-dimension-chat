@@ -12,12 +12,15 @@ import {
   listMessages,
   lockProfile,
   getLocalServerInfo,
+  confirmPendingEnvelopeDelivered,
+  getPendingEnvelope,
+  getSessionStatus,
   ready,
 } from "./web-runtime.js";
 import "./styles.css";
 
 const app = document.querySelector("#app");
-let state = { profile: null, peer: null, serverInfo: null, safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "" };
+let state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "" };
 let syncInFlight = false;
 
 if (window.isSecureContext && "serviceWorker" in navigator) {
@@ -106,11 +109,13 @@ function render() {
         <section class="stack">
           <div class="card safety"><span class="label">SAFETY MATERIAL</span><strong>${escapeHtml(phrase)}</strong><p class="small">Compare this phrase with the other person over a trusted channel before sending messages.</p></div>
           <div class="card stack">
-            <div class="row-between"><h2>Sealed message exchange</h2><span class="pill">${state.peer ? `paired · ${escapeHtml(endpointOrigin(state.peer.server)) || "manual"}` : "not paired"}</span></div>
+            <div class="row-between"><h2>Sealed message exchange</h2><span class="pill">${state.peer ? `${escapeHtml(state.sessionStatus)} · ${escapeHtml(endpointOrigin(state.peer.server)) || "manual"}` : "not paired"}</span></div>
             ${state.peer && endpointWarning(state.peer.server) ? `<p class="warning">${escapeHtml(endpointWarning(state.peer.server))}</p>` : ""}
+            ${state.peer && state.sessionStatus !== "ready" ? '<p class="warning">Noise session is establishing. Keep both rooms open, or move the pending handshake envelope manually.</p>' : ""}
+            ${state.pendingHandshake && state.sessionStatus === "ready" ? '<p class="warning">Deliver the final ready envelope to the peer, then confirm delivery before messaging.</p><button id="confirm-handshake" class="secondary">I delivered the handshake envelope</button>' : ""}
             <label>Message<textarea id="message" rows="4" placeholder="Write locally, then send or export a sealed envelope"></textarea></label>
-            <div class="row-between"><button id="send-envelope" ${state.peer?.server?.inboxUrl ? "" : "disabled"}>Encrypt and send to peer server</button><button id="sync-inbox" ${state.serverInfo?.inboxUrl ? "" : "disabled"} class="secondary">Sync my inbox</button></div>
-            <button id="export-envelope" ${state.peer ? "" : "disabled"}>Encrypt and export envelope</button>
+            <div class="row-between"><button id="send-envelope" ${state.peer?.server?.inboxUrl && state.sessionStatus === "ready" && !state.pendingHandshake ? "" : "disabled"}>Encrypt and send to peer server</button><button id="sync-inbox" ${state.serverInfo?.inboxUrl ? "" : "disabled"} class="secondary">Sync my inbox</button></div>
+            <button id="export-envelope" ${state.peer && state.sessionStatus === "ready" && !state.pendingHandshake ? "" : "disabled"}>Encrypt and export envelope</button>
             <label>Outgoing envelope<textarea id="envelope" rows="5" placeholder="Your sealed envelope appears here">${escapeHtml(state.envelope)}</textarea></label>
             <label>Incoming envelope<textarea id="incoming" rows="5" placeholder="Paste the peer's sealed envelope here"></textarea></label>
             <button id="import-envelope" ${state.peer ? "" : "disabled"} class="secondary">Import and decrypt</button>
@@ -143,11 +148,11 @@ function bindAuth() {
 }
 
 function bindRoom() {
-  document.querySelector("#lock")?.addEventListener("click", () => { lockProfile(); state = { profile: null, peer: null, serverInfo: null, safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "" }; render(); });
+  document.querySelector("#lock")?.addEventListener("click", () => { lockProfile(); state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "" }; render(); });
   document.querySelector("#peer-invite")?.addEventListener("input", (event) => { state.peerInvite = event.currentTarget.value; });
   document.querySelector("#copy-invite")?.addEventListener("click", async () => { await navigator.clipboard.writeText(state.invite); state.notice = "Invite copied. Share it with the other person."; render(); });
   document.querySelector("#pair")?.addEventListener("click", async () => {
-    try { state.peer = await importInvite(state.peerInvite); state.safety = safetyPhrase(state.profile, state.peer); state.notice = "Pairing verified. Compare the safety phrase before sending."; await refresh(); } catch (error) { state.error = error.message; render(); }
+    try { state.peer = await importInvite(state.peerInvite); state.safety = safetyPhrase(state.profile, state.peer); state.notice = "Invite verified. Noise session establishment started; compare the safety material now."; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#export-envelope")?.addEventListener("click", async () => {
     try { state.envelope = await exportEnvelope(document.querySelector("#message").value); state.notice = "Envelope encrypted. Move it to the other browser, then paste it into Incoming envelope."; await refresh(); } catch (error) { state.error = error.message; render(); }
@@ -156,8 +161,11 @@ function bindRoom() {
     try { state.envelope = await sendEnvelope(document.querySelector("#message").value); state.notice = "Envelope encrypted and delivered. The peer receives it automatically while their room is open."; await refresh(); } catch (error) { state.envelope = error.envelope || state.envelope; state.notice = error.envelope ? "Peer server unavailable. The prepared envelope is ready below for manual delivery." : "Delivery failed. Check the server and try again."; state.error = error.message; render(); }
   });
   document.querySelector("#sync-inbox")?.addEventListener("click", () => receiveMessages(true));
+  document.querySelector("#confirm-handshake")?.addEventListener("click", async () => {
+    try { await confirmPendingEnvelopeDelivered(); state.notice = "Manual Noise handshake delivery confirmed. Messaging is enabled."; await refresh(); } catch (error) { state.error = error.message; render(); }
+  });
   document.querySelector("#import-envelope")?.addEventListener("click", async () => {
-    try { await importEnvelope(document.querySelector("#incoming").value); state.notice = "Envelope decrypted locally and added to the transcript."; await refresh(); } catch (error) { state.error = error.message; render(); }
+    try { const message = await importEnvelope(document.querySelector("#incoming").value); state.notice = message === null ? "Noise handshake advanced. Move any pending response envelope back to the peer." : "Envelope decrypted locally and added to the transcript."; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
 }
 
@@ -165,9 +173,13 @@ async function receiveMessages(manual = false) {
   if (syncInFlight || !state.profile || !state.peer || !state.serverInfo?.inboxUrl) return;
   syncInFlight = true;
   try {
+    const previousStatus = getSessionStatus();
     const count = await syncInbox();
-    if (count) {
-      state.notice = `${count} sealed envelope${count === 1 ? "" : "s"} received and acknowledged.`;
+    const sessionChanged = previousStatus !== getSessionStatus();
+    if (count || sessionChanged) {
+      state.notice = count
+        ? `${count} sealed envelope${count === 1 ? "" : "s"} received and acknowledged.`
+        : `Noise session advanced to ${getSessionStatus()}.`;
       await refresh();
     } else if (manual) {
       state.notice = "Peer inbox is empty.";
@@ -188,7 +200,12 @@ async function refresh() {
   state.invite = await exportInvite();
   state.serverInfo = await getLocalServerInfo();
   state.peer = state.profile?.peer || state.peer;
+  state.sessionStatus = getSessionStatus();
   state.safety = state.peer ? safetyPhrase(state.profile, state.peer) : "";
+  const pendingHandshake = getPendingEnvelope();
+  if (pendingHandshake) state.envelope = pendingHandshake;
+  else if (state.pendingHandshake && state.envelope === state.pendingHandshake) state.envelope = "";
+  state.pendingHandshake = pendingHandshake;
   state.messages = await listMessages();
   state.error = "";
   render();

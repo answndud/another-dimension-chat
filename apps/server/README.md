@@ -9,6 +9,10 @@ npm --prefix apps/web run build --workspaces=false
 npm --prefix apps/server start --workspaces=false
 ```
 
+The web bundle includes the committed Rust `snow` Noise WebAssembly module.
+Only crypto-source changes require `npm --prefix apps/web run build:crypto
+--workspaces=false`; ordinary server starts and release builds do not compile Rust.
+
 Open the private local UI URL printed at startup, including its `#local=...`
 fragment. That fragment authorizes the browser to read the inbox setting; a
 plain root URL remains in manual mode. Never share or log the private local UI

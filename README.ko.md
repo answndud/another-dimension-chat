@@ -18,6 +18,8 @@
 
 - passphrase를 사용하는 로컬 브라우저 프로필 생성·unlock
 - 서명된 공개 invite 생성과 상대 invite 검증
+- 기존 Rust `snow` 구현을 browser WebAssembly로 실행하는
+  `Noise_XX_25519_ChaChaPoly_BLAKE2s` session 설정
 - 메시지 전에 비교하는 deterministic safety phrase
 - 브라우저에서 메시지 암호화 및 sealed envelope 내보내기
 - 상대 envelope 가져오기 및 로컬 복호화
@@ -30,6 +32,11 @@
 
 기본 자동 전달은 사용자 소유 server 간에만 동작합니다. 서버가 꺼져 있거나
 도달할 수 없으면 invite와 sealed envelope를 복사하는 수동 모드로 돌아갑니다.
+최초 pairing은 서명된 Noise control envelope 네 개(`init`, `reply`, `finish`,
+`ready`)를 교환합니다. 양쪽 unlock room을 열어 두면 자동으로 진행되며,
+수동 모드에서는 같은 복사·붙여넣기 입력으로 전달할 수 있습니다. 마지막
+`ready` envelope를 보낸 사용자는 UI에서 전달 완료를 확인해야 메시지 입력이
+활성화됩니다.
 
 ## 로컬 실행
 
@@ -41,6 +48,11 @@ npm --prefix apps/web run dev --workspaces=false
 Vite가 출력하는 로컬 URL을 엽니다. 브라우저 제품은 `apps/web`에 있고,
 local server 제품은 `apps/server`에 있으며, Tauri 패키지는 선택적인 desktop
 wrapper입니다.
+
+생성된 Noise WebAssembly module은 commit되므로 일반 release build는 Rust를
+다시 compile하지 않습니다. `crates/crypto` 또는 `crates/web-crypto-wasm`을
+수정한 경우에만 `npm --prefix apps/web run build:crypto --workspaces=false`로
+명시적으로 재생성합니다. Rust WASM target과 wasm-bindgen 0.2.121이 필요합니다.
 
 ## 사용자 기기에서 local server 실행
 
@@ -139,15 +151,22 @@ node scripts/check_https_endpoint.mjs https://chat.example.test
 
 ## 웹 보안 경계
 
-브라우저 runtime은 Web Crypto와 IndexedDB를 사용합니다. 서버 없는 수동
-흐름에서는 private key, passphrase, 평문 메시지, transcript를 업로드하지
-않습니다. 단, 브라우저 저장소와 unlock된 메모리는 기기, 브라우저 프로필,
-확장 프로그램, 로컬 악성코드의 영향을 받습니다.
+브라우저 runtime은 invite/envelope 서명과 passphrase wrapping에 Web Crypto
+P-256을 사용하고, Noise XX 설정과 메시지 암호화에는 기존 Rust `snow` 구현을
+사용합니다. private Noise state, nonce, transcript는 passphrase로 감싸
+IndexedDB에 저장합니다. 서버 없는 수동 흐름에서는 private key, passphrase,
+평문 메시지, transcript를 업로드하지 않습니다. 단, 브라우저 저장소와
+unlock된 메모리는 기기, 브라우저 프로필, 확장 프로그램, 로컬 악성코드의
+영향을 받습니다.
 
 이 prototype은 production E2EE, anonymity, 신뢰 가능한 전달, secure
 deletion, backup recovery, rollback protection, compromised endpoint 방어를
-주장하지 않습니다. 현재 브라우저 암호화 흐름은 prototype 경계이며,
-review된 Signal 또는 Noise 배포와 동등하지 않습니다.
+주장하지 않습니다. Noise 위에 message ratchet, 독립 보안 감사,
+post-compromise recovery가 없으므로 reviewed Signal 배포와 동등하지 않습니다.
+
+protocol v2 profile은 별도 IndexedDB database를 사용합니다. 기존 v1 browser
+profile은 삭제하지 않지만 v2에서 불러오지 않으므로 새 profile을 만들고 다시
+pairing해야 합니다.
 
 ## 아직 포함하지 않는 것
 
@@ -168,10 +187,10 @@ npm --prefix apps/web test --workspaces=false
 npm --prefix apps/web run build --workspaces=false
 ```
 
-현재 Node 통합 테스트는 두 로컬 프로필, invite 검증, Web Crypto envelope
-암복호화, 중복·변조·replay 거부, bounded inbox, unlock 후 transcript 복구를
-확인합니다. 두 local server process와 두 in-app browser origin의 실제
-전송·수신·ack 왕복도 확인했습니다.
+현재 Node 통합 테스트는 두 로컬 프로필, signed invite 검증, 네 단계 Noise XX
+설정, 암호화 메시지 교환, 중복·nested-field 변조·replay 거부, 보호된 inbox
+접근, unlock 후 session/transcript 복구를 확인합니다. 두 local server
+process와 두 in-app browser origin도 함께 사용합니다.
 
 ## 보안 및 지원
 

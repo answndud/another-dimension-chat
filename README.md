@@ -19,6 +19,8 @@ envelopes.
 
 - Create and unlock a local browser profile with a passphrase.
 - Export a signed public invite and verify a peer invite.
+- Establish `Noise_XX_25519_ChaChaPoly_BLAKE2s` through the existing Rust
+  `snow` implementation compiled to browser WebAssembly.
 - Compare a deterministic safety phrase before messaging.
 - Encrypt a message locally and export a sealed envelope.
 - Import and decrypt a peer envelope locally.
@@ -32,7 +34,11 @@ envelopes.
 
 The preferred delivery flow is user-owned server-to-server transport. Manual
 invite and sealed-envelope copy/paste remains available when a server is not
-running or is unreachable.
+running or is unreachable. Initial pairing exchanges four signed Noise control
+envelopes (`init`, `reply`, `finish`, `ready`); this happens automatically while
+both unlocked rooms are open, or through the same copy/paste fields in manual
+mode. In manual mode, the sender of the final `ready` envelope confirms its
+delivery in the UI before message controls are enabled.
 
 ## Run locally
 
@@ -44,6 +50,11 @@ npm --prefix apps/web run dev --workspaces=false
 Open the local URL printed by Vite. The browser product lives in `apps/web`;
 the local server product lives in `apps/server`; the Tauri package is an
 optional desktop wrapper.
+
+The generated Noise WebAssembly module is committed so a release build does
+not compile Rust. When changing `crates/crypto` or `crates/web-crypto-wasm`,
+regenerate it explicitly with `npm --prefix apps/web run build:crypto
+--workspaces=false`. This requires the Rust WASM target and wasm-bindgen 0.2.121.
 
 ## Run a user-owned local server
 
@@ -143,15 +154,23 @@ real browsers remains the final user acceptance. Set `AD_SERVER_DATA_DIR`,
 
 ## Web security boundary
 
-The browser runtime uses Web Crypto and IndexedDB. The serverless/manual flow
-does not upload private keys, passphrases, plaintext messages, or message
-transcripts. Browser storage and unlocked browser memory are still exposed to
-the device, browser profile, extensions, and local malware.
+The browser runtime uses Web Crypto for P-256 invite/envelope signatures and
+passphrase wrapping, and the existing Rust `snow` implementation for Noise XX
+setup and message encryption. Private Noise state, nonces, and transcript
+records are passphrase-wrapped in IndexedDB. The serverless/manual flow does not
+upload private keys, passphrases, plaintext messages, or message transcripts.
+Browser storage and unlocked browser memory are still exposed to the device,
+browser profile, extensions, and local malware.
 
 This prototype does not claim production E2EE, anonymity, reliable delivery,
 secure deletion, backup recovery, rollback protection, or protection from a
-compromised endpoint. The current browser cryptographic flow is a prototype
-boundary and is not equivalent to a reviewed Signal or Noise deployment.
+compromised endpoint. Noise is used without a message ratchet, independent
+security audit, or post-compromise recovery; this is not equivalent to a
+reviewed Signal deployment.
+
+Protocol-v2 profiles use a separate IndexedDB database. Existing v1 browser
+profiles are left untouched but are not loaded; create fresh profiles and pair
+again after upgrading.
 
 ## Deliberately not included yet
 
@@ -172,11 +191,11 @@ npm --prefix apps/web test --workspaces=false
 npm --prefix apps/web run build --workspaces=false
 ```
 
-The current Node integration test exercises two local profiles, invite
-verification, Web Crypto envelope encryption/decryption, duplicate rejection,
-tamper/replay boundaries, bounded inbox behavior, and unlock-based transcript
-recovery. A two-origin in-app-browser smoke flow has also been run against two
-local server processes.
+The current Node integration test exercises two local profiles, signed invite
+verification, the four-message Noise XX setup, encrypted message exchange,
+duplicate rejection, nested-field tamper/replay boundaries, protected inbox
+access, and unlock-based session/transcript recovery. A two-origin
+in-app-browser flow is also used against two local server processes.
 
 ## Security and support
 

@@ -143,3 +143,65 @@ local-access capability를 함께 제시한 소유자 browser에만 허용한다
 - `apps/server/server.mjs`: optional paired TLS key/certificate termination
 - `README.md`, `README.ko.md`: LAN/VPN/HTTPS 선택지와 비자동 보장 명시
 - `SECURITY.md`: user-owned inbox와 non-claims
+
+## ADR-0004 - 브라우저 메시지 암호화를 기존 Rust Noise XX 경계로 통합
+
+- 상태: accepted
+- 날짜: 2026-07-31
+- 근거 유형: explicit + inferred
+
+### Context
+
+초기 web prototype의 브라우저 전용 P-256 ECDH/HKDF/AES-GCM 조합은 저장소의
+Rust 암호 경계와 분리되어 있었고, nested JSON을 완전히 서명하지 않는
+canonicalization 오류도 있었다. 사용자는 시연 가능한 완성품을 요구하면서
+필요하면 아키텍처를 교체하도록 명시했다. `reference/CRYPTO_DECISION.md`는
+직접 암호 구성을 만들지 않고 기존 `snow` Noise XX 경계를 확장하는 방향을
+정한다.
+
+### Decision
+
+`crates/crypto`의 `Noise_XX_25519_ChaChaPoly_BLAKE2s` 구현을 얇은
+`crates/web-crypto-wasm` adapter로 브라우저에 제공한다. ECDSA P-256은
+invite, handshake control, message envelope의 identity signature에만 사용하고,
+Noise XX가 session setup과 message encryption을 담당한다.
+
+- protocol v2는 nested object 전체를 재귀적으로 정렬한 canonical JSON에
+  서명한다.
+- 네 단계 signed control envelope(`init`, `reply`, `finish`, `ready`)로 양쪽이
+  동일한 peer static key와 session 완료를 확인한다.
+- Noise private key, handshake 복구 자료, send/receive nonce와 pending control
+  envelope는 passphrase-wrapped profile material에 저장한다.
+- protocol v1 IndexedDB는 삭제하지 않고 별도 v2 database를 사용한다. 자동
+  migration은 하지 않으며 사용자는 새 profile로 다시 pairing한다.
+- 생성된 WASM은 release에 포함하고, crypto source 변경 시에만 명시적으로
+  재생성한다.
+
+### Alternatives
+
+- **브라우저 전용 custom ECDH/HKDF/AES-GCM 유지** — Rust 보안 경계와 중복되고
+  protocol review surface가 커져 폐기한다.
+- **Signal Double Ratchet을 즉시 직접 구현** — 검토된 구현과 lifecycle 설계 없이
+  직접 만드는 것은 현재 crypto 원칙에 어긋난다.
+- **서버에서 암복호화** — 서버에 trusted key boundary를 만들므로 제품 방향과
+  충돌한다.
+
+### Consequences
+
+- 최초 pairing에 네 번의 control-envelope 전달이 필요하고 browser bundle에
+  약 143 KiB의 WASM이 추가된다.
+- session state는 lock/reload 후 복구되지만, persisted handshake material로
+  transport key를 재구성하므로 ratchet, full forward secrecy,
+  post-compromise recovery를 제공하지 않는다.
+- Noise 사용은 보안 감사나 Signal 수준 보장을 뜻하지 않는다.
+- v1 profile은 보존되지만 v2 runtime에서 표시되지 않으며 다시 pairing해야 한다.
+
+### Evidence
+
+- `crates/web-crypto-wasm/src/lib.rs`: browser-facing narrow Noise adapter
+- `crates/crypto/src/lib.rs`: reviewed-library `snow` setup/transport boundary
+- `apps/web/src/web-runtime.js`: deep canonical signature, persisted handshake,
+  nonce/replay lifecycle
+- `apps/web/src/web-runtime.test.js`: handshake, tamper, replay, persistence,
+  protected inbox integration
+- `reference/CRYPTO_DECISION.md`: existing Noise direction and implementation gate
