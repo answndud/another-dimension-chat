@@ -19,7 +19,7 @@ function call(port, method, path, body) {
 
 const root = await mkdtemp(join(tmpdir(), "another-dimension-smoke-"));
 const serverA = await createLocalServer({ port: 0, dataDir: join(root, "a"), distDir: join(root, "missing-a") });
-const serverB = await createLocalServer({ port: 0, dataDir: join(root, "b"), distDir: join(root, "missing-b") });
+let serverB = await createLocalServer({ port: 0, dataDir: join(root, "b"), distDir: join(root, "missing-b") });
 await Promise.all([
   new Promise((resolve) => serverA.server.listen(0, "127.0.0.1", resolve)),
   new Promise((resolve) => serverB.server.listen(0, "127.0.0.1", resolve)),
@@ -27,17 +27,27 @@ await Promise.all([
 
 try {
   const portA = serverA.server.address().port;
-  const portB = serverB.server.address().port;
-  const pathB = new URL(serverB.inboxUrl.replace(":0", `:${portB}`)).pathname;
+  let portB = serverB.server.address().port;
+  let pathB = new URL(serverB.inboxUrl.replace(":0", `:${portB}`)).pathname;
   assert.deepEqual((await call(portA, "GET", "/api/v1/health")).body, { ok: true, protocol: 1 });
   assert.deepEqual((await call(portB, "GET", "/api/v1/health")).body, { ok: true, protocol: 1 });
   const envelope = "ADENVWEB1.smoke-opaque-envelope";
   const accepted = await call(portB, "POST", pathB, { envelope });
   assert.equal(accepted.status, 202);
   assert.equal((await call(portB, "GET", pathB)).body.items.length, 1);
-  assert.equal((await call(portB, "POST", `${pathB}/ack`, { ids: [accepted.body.id] })).body.acknowledged, 1);
-  assert.equal((await call(portB, "GET", pathB)).body.items.length, 0);
-  console.log("user-owned server smoke passed: health -> opaque delivery -> ack -> empty inbox");
+  await serverB.server.close();
+  serverB = await createLocalServer({ port: 0, dataDir: join(root, "b"), distDir: join(root, "missing-b") });
+  await new Promise((resolve) => serverB.server.listen(0, "127.0.0.1", resolve));
+  const restartedPortB = serverB.server.address().port;
+  const restartedPathB = new URL(serverB.inboxUrl.replace(":0", `:${restartedPortB}`)).pathname;
+  assert.notEqual(restartedPortB, portB);
+  assert.equal((await call(restartedPortB, "GET", restartedPathB)).body.items.length, 1);
+  const duplicate = await call(restartedPortB, "POST", restartedPathB, { envelope });
+  assert.equal(duplicate.status, 202);
+  assert.equal((await call(restartedPortB, "GET", restartedPathB)).body.items.length, 1);
+  assert.equal((await call(restartedPortB, "POST", `${restartedPathB}/ack`, { ids: [accepted.body.id] })).body.acknowledged, 1);
+  assert.equal((await call(restartedPortB, "GET", restartedPathB)).body.items.length, 0);
+  console.log("user-owned server smoke passed: health -> delivery -> restart -> duplicate rejection -> ack -> empty inbox");
 } finally {
   await Promise.all([serverA.server.close(), serverB.server.close()]);
   await rm(root, { recursive: true, force: true });
