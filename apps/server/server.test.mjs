@@ -190,3 +190,17 @@ test("ack reports only envelopes that were actually removed", async () => {
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });
+
+test("relay refuses new envelopes when the bounded queue is full", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  await writeFile(join(dataDir, "inbox.json"), JSON.stringify(Array.from({ length: 256 }, (_, index) => ({ id: `existing-${index}`, envelope: `ADENVWEB1.existing-${index}`, receivedAt: Date.now() }))));
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
+  const response = await call(port, "POST", inboxPath, { envelope: "ADENVWEB1.queue-full" });
+  assert.equal(response.status, 429);
+  assert.equal(response.body.error, "queue_full");
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});

@@ -276,6 +276,10 @@ export async function createLocalServer({
         if (!/^ADENVWEB(?:1|2|3)\./.test(envelope) || Buffer.byteLength(envelope) > MAX_ENVELOPE_BYTES) throw new Error("invalid_envelope");
         const id = storeId(envelope);
         if (!inbox.some((item) => item.id === id)) {
+          if (inbox.length >= MAX_INBOX_ITEMS) {
+            json(res, 429, { accepted: false, error: "queue_full" }, { ...headers, "retry-after": "60" });
+            return;
+          }
           inbox.push({ id, envelope, receivedAt: Date.now() });
           inbox = inbox.slice(-MAX_INBOX_ITEMS);
           await persist();
