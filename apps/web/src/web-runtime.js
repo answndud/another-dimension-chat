@@ -183,7 +183,16 @@ async function messageKey(peer) {
   return crypto.subtle.importKey("raw", bits, { name: "HKDF" }, false, ["deriveKey"]);
 }
 
-export async function exportEnvelope(text) {
+function envelopeIdFromValue(value) {
+  return decode(String(value).slice("ADENVWEB1.".length)).id;
+}
+
+async function recordSentEnvelope(envelope, text) {
+  const envelopeId = envelopeIdFromValue(envelope);
+  await write("messages", { id: `${activeProfile.name}:${envelopeId}`, envelopeId, profile: activeProfile.name, direction: "sent", text, createdAt: Date.now() });
+}
+
+export async function exportEnvelope(text, { record = true } = {}) {
   if (!activeProfile?.peer) throw new Error("Pair with a peer before sending.");
   const message = String(text || "").trim();
   if (!message) throw new Error("Write a message first.");
@@ -195,16 +204,19 @@ export async function exportEnvelope(text) {
   const body = { v: 1, id: crypto.randomUUID(), from: activeProfile.name, to: activeProfile.peer.name, senderEcdhPublic: activeProfile.ecdhPublic, salt: bytesToBase64(salt), iv: bytesToBase64(iv), ciphertext: bytesToBase64(ciphertext), createdAt: Date.now() };
   const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, activeProfile.ecdsaPrivate, new TextEncoder().encode(canonical(body)));
   const envelope = encode({ ...body, signature: bytesToBase64(signature) });
-  const envelopeId = body.id;
-  await write("messages", { id: `${activeProfile.name}:${envelopeId}`, envelopeId, profile: activeProfile.name, direction: "sent", text: message, createdAt: Date.now() });
-  return `ADENVWEB1.${envelope}`;
+  const result = `ADENVWEB1.${envelope}`;
+  if (record) await recordSentEnvelope(result, message);
+  return result;
 }
 
 export async function sendEnvelope(text) {
   if (!activeProfile?.peer?.server?.inboxUrl) throw new Error("Peer has no reachable server endpoint; export a sealed envelope instead.");
-  const envelope = await exportEnvelope(text);
+  const message = String(text || "").trim();
+  if (!message) throw new Error("Write a message first.");
+  const envelope = await exportEnvelope(message, { record: false });
   const response = await fetch(activeProfile.peer.server.inboxUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ envelope }) });
   if (!response.ok) throw new Error("Peer server could not accept the sealed envelope. Export it manually instead.");
+  await recordSentEnvelope(envelope, message);
   return envelope;
 }
 

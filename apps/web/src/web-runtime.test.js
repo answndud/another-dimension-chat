@@ -96,6 +96,12 @@ test("two local profiles can exchange a real sealed envelope and reject a duplic
   await assert.rejects(() => runtime.importEnvelope(tampered), /signature is invalid/);
   assert.equal(await runtime.importEnvelope(envelope), "hello from alice");
   await assert.rejects(() => runtime.importEnvelope(envelope), /already imported/);
+  bobPeer.server = { inboxUrl: "https://peer.invalid/api/v1/inbox/test" };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: false });
+  await assert.rejects(() => runtime.sendEnvelope("failed delivery"), /could not accept/);
+  globalThis.fetch = originalFetch;
+  assert.equal((await runtime.listMessages()).filter((message) => message.direction === "sent").length, 0);
 
   runtime.lockProfile();
   await runtime.unlockProfile("bob", "bob-passphrase");
