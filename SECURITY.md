@@ -21,11 +21,18 @@ product distribution boundary.
 - No central message server, push service, cloud backup, or account recovery exists.
 - A user-owned local server may store bounded opaque sealed envelopes for that
   user's inbox; it is not trusted with plaintext or private keys.
+- The inbox capability is returned only when the browser presents the separate
+  local-access capability from the private `#local=...` startup URL. Opening the
+  public root URL does not disclose or advertise the inbox.
 - The browser can POST a sealed envelope to the peer endpoint in a signed invite
   and can GET/ack its own local inbox; endpoint reachability is a network
   configuration concern, not an identity or confidentiality guarantee.
 - Remote browser origins must use HTTPS (localhost is the development exception)
   because Web Crypto is unavailable in ordinary insecure HTTP contexts.
+- `AD_PUBLIC_URL` is only an advertised origin. HTTPS in that setting means the
+  operator asserts that a trusted reverse proxy or direct TLS endpoint exists;
+  it does not prove reachability or certificate trust. The endpoint check and
+  a two-browser exchange are required before relying on that route.
 - A localhost UI may reach an HTTP LAN inbox for controlled development testing,
   but the capability URL and network metadata are then exposed to the LAN and
   an attacker can inject or drop opaque envelopes. This is not a production
@@ -56,6 +63,17 @@ or signaling service is added later, it must be treated as an untrusted
 transport component. It must not receive plaintext messages, private keys,
 passphrases, or centralized contact discovery data. WebRTC and any direct
 network path must make IP and metadata exposure explicit.
+
+Treat an inbox capability URL as a bearer secret: anyone who learns it can read,
+submit, acknowledge, or delete opaque envelopes. Do not put it in logs, support
+reports, screenshots, public proxy configuration, or monitoring URLs. If it is
+exposed, stop the server, move the old data directory aside, and start with a
+new data directory to rotate the capability.
+
+The private local UI URL is also a bearer secret. Its fragment is not sent in
+ordinary HTTP requests, but it remains visible in browser history and on-screen.
+Do not share it. Rotating the server data directory rotates both local access
+and inbox capabilities.
 
 ## Public support data
 

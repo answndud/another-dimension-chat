@@ -6,9 +6,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createLocalServer } from "./server.mjs";
 
-function call(port, method, path, body) {
+function call(port, method, path, body, headers = {}) {
   return new Promise((resolve, reject) => {
-    const req = request({ host: "127.0.0.1", port, method, path, headers: body ? { "content-type": "application/json" } : {} }, (res) => {
+    const req = request({ host: "127.0.0.1", port, method, path, headers: { ...(body ? { "content-type": "application/json" } : {}), ...headers } }, (res) => {
       let text = "";
       res.on("data", (chunk) => { text += chunk; });
       res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(text) }));
@@ -55,6 +55,32 @@ test("local server requires TLS key and certificate as a pair", async () => {
   await assert.rejects(() => createLocalServer({ tlsKeyFile: "key.pem" }), /must be configured together/);
 });
 
+test("local server validates its advertised public origin", async () => {
+  await assert.rejects(() => createLocalServer({ publicUrl: "https://example.test/chat" }), /must be an HTTP\(S\) origin/);
+  await assert.rejects(() => createLocalServer({ publicUrl: "https://user@example.test" }), /must be an HTTP\(S\) origin/);
+  await assert.rejects(() => createLocalServer({ bindHost: "0.0.0.0" }), /AD_PUBLIC_URL is required/);
+
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({
+    bindHost: "0.0.0.0",
+    port: 0,
+    publicUrl: "https://chat.example.test/",
+    dataDir,
+    distDir: join(dataDir, "missing-dist"),
+  });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  assert.equal((await call(port, "GET", "/api/v1/info")).status, 403);
+  const info = await call(port, "GET", "/api/v1/info", undefined, { "x-ad-local-access": runtime.localAccessCapability });
+  assert.equal(info.body.publicOrigin, "https://chat.example.test");
+  assert.equal(info.body.externalSecure, true);
+  assert.equal(info.body.listenerTls, false);
+  assert.equal(info.body.networkScope, "non-loopback");
+  assert.match(info.body.inboxUrl, /^https:\/\/chat\.example\.test\/api\/v1\/inbox\//);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
 test("local server rejects malformed inbox requests without storing them", async () => {
   const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
@@ -83,5 +109,18 @@ test("local server recovers its bounded queue and purges expired envelopes", asy
   const secondPath = new URL(second.inboxUrl.replace(":0", `:${secondPort}`)).pathname;
   assert.equal((await call(secondPort, "GET", secondPath)).body.items.length, 0);
   await second.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("ack reports only envelopes that were actually removed", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
+  const accepted = await call(port, "POST", inboxPath, { envelope: "ADENVWEB1.ack-count" });
+  assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id, "missing"] })).body.acknowledged, 1);
+  assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id] })).body.acknowledged, 0);
+  await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });

@@ -68,7 +68,9 @@ function validInboxUrl(value) {
 
 async function localServerInfo() {
   try {
-    const response = await fetch('/api/v1/info', { headers: { accept: 'application/json' } });
+    const localAccess = new URLSearchParams(globalThis.location?.hash?.slice(1) || "").get("local");
+    if (!localAccess) return null;
+    const response = await fetch('/api/v1/info', { headers: { accept: 'application/json', 'x-ad-local-access': localAccess } });
     if (!response.ok) return null;
     const info = await response.json();
     return { ...info, inboxUrl: validInboxUrl(info.inboxUrl) };

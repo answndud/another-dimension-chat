@@ -17,10 +17,21 @@ Keep reports redacted and limited to:
 - whether the local web build loaded
 - whether the local server health endpoint loaded
 - whether the peer endpoint was loopback, LAN, VPN, or reverse-proxy HTTPS
+- whether `scripts/check_https_endpoint.mjs` passed, without including its URL
 
 Never post invite codes, sealed envelopes, message text, safety phrases,
 profile names, passphrases, private keys, browser storage exports, raw logs,
-local paths, crash dumps, or screenshots of private rooms.
+local paths, crash dumps, private local UI URLs, or screenshots of private rooms.
+
+## Recovery boundary
+
+- If the peer server is unreachable, use the prepared outgoing envelope in the
+  manual copy/paste flow; a failed automatic send is not recorded as delivered.
+- After a server restart or endpoint change, create and exchange a fresh signed
+  invite. Existing queued envelopes remain available only when the same data
+  directory is retained.
+- If an inbox capability is exposed, stop the server and start with a new data
+  directory. Retain the old queue privately only as long as recovery requires.
 
 ## Security reports
 

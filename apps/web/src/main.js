@@ -43,6 +43,12 @@ function endpointWarning(info) {
   return "Development HTTP endpoint: capability and network metadata are exposed on the LAN. Use HTTPS for production.";
 }
 
+function localServerStatus(info) {
+  if (!info) return "Manual envelope mode";
+  const transport = info.externalSecure ? "HTTPS endpoint advertised" : info.networkScope === "loopback" ? "loopback only" : "development HTTP";
+  return `Local server connected · ${endpointOrigin(info)} · ${transport}`;
+}
+
 function browserStatus() {
   if (!window.isSecureContext || !window.crypto?.subtle) return "Browser security: use localhost or HTTPS to enable encryption.";
   return "Browser security: Web Crypto enabled.";
@@ -84,7 +90,8 @@ function render() {
       <div class="notice">${escapeHtml(state.notice || (state.serverInfo ? "Your local server is connected. Sealed envelopes can be delivered directly to a peer server." : "Manual mode: run this app from your local server for direct sealed-envelope delivery."))}</div>
       <div class="layout">
         <aside class="card stack">
-          <div><span class="label">LOCAL PROFILE</span><strong>${escapeHtml(state.profile.name)}</strong><p class="small">${state.serverInfo ? `Local server connected · ${escapeHtml(endpointOrigin(state.serverInfo))}` : "Manual envelope mode"}</p></div>
+          <div><span class="label">LOCAL PROFILE</span><strong>${escapeHtml(state.profile.name)}</strong><p class="small">${escapeHtml(localServerStatus(state.serverInfo))}</p></div>
+          ${state.serverInfo && endpointWarning(state.serverInfo) ? `<p class="warning">${escapeHtml(endpointWarning(state.serverInfo))}</p>` : ""}
           <div class="divider"></div>
           <h2>1. Share your invite</h2>
           <p class="small">This code contains public setup material only. Send it through any channel.</p>

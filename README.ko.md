@@ -49,6 +49,11 @@ npm --prefix apps/web run build --workspaces=false
 npm --prefix apps/server start --workspaces=false
 ```
 
+서버가 출력하는 `#local=...` fragment까지 포함된 private local UI URL을
+여세요. 일반 root URL은 inbox capability를 읽거나 광고할 수 없어 의도적으로
+manual mode로 동작합니다. 출력된 local UI URL을 비밀로 취급하고 log,
+screenshot, support report에 포함하지 마세요.
+
 독립 실행 release archive는 다음처럼 만들 수 있습니다.
 
 ```sh
@@ -76,6 +81,11 @@ node scripts/smoke_user_owned_servers.mjs
 AD_BIND_HOST=0.0.0.0 AD_PUBLIC_URL=https://chat.example.test \
   npm --prefix apps/server start --workspaces=false
 ```
+
+`AD_PUBLIC_URL`은 scheme과 host(선택적 port)만 있는 origin이어야 하며 path,
+credential, query, fragment를 허용하지 않습니다. `0.0.0.0` bind에는 반드시
+설정해야 합니다. 이는 초대에 들어갈 주소를 명확히 할 뿐 DNS, 방화벽,
+reverse proxy의 실제 도달성을 대신 만들지 않습니다.
 
 서버는 bounded opaque envelope만 저장하고 정적 browser UI를 제공합니다.
 
@@ -111,6 +121,19 @@ ChatGPT Sites나 중앙 메시지 hosting은 필요하지 않습니다.
 있습니다. self-signed 인증서이므로 브라우저가 수용하려면 각 기기의 trust
 store에 직접 설치해야 하며, 스크립트는 시스템 trust 설정을 자동 변경하지
 않습니다.
+
+공개적으로 신뢰되는 비-loopback HTTPS 주소를 구성한 뒤 인증서 신뢰,
+health, 초대에 광고될 origin, opaque envelope 전달·조회·ack를 한 번에
+확인합니다.
+
+```sh
+node scripts/check_https_endpoint.mjs https://chat.example.test
+```
+
+이 명령은 HTTP, localhost, 신뢰되지 않은 인증서, 다른 origin을 광고하는
+서버를 실패로 처리합니다. 실제 브라우저에서 두 사용자의 초대를 교환한 뒤
+한 번 송수신하는 것이 마지막 사용자 acceptance입니다. 기본값이 아닌 local
+구성은 `AD_SERVER_DATA_DIR`, `AD_PORT`, `AD_LOCAL_URL`을 함께 설정합니다.
 
 ## 웹 보안 경계
 

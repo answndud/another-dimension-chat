@@ -122,7 +122,11 @@ HTTPS reverse proxy를 별도 선택지로 문서화한다. `AD_PUBLIC_URL`은 �
 접근 가능한 origin으로 사용자가 설정한다. 앱은 자동 port forwarding, 인증서
 발급, 인증, anonymity를 제공하지 않는다. 다만 사용자가 PEM key/certificate를
 제공하면 Node 서버가 직접 HTTPS를 종료할 수 있으며, 공개 운영에는 reverse
-proxy를 권장한다.
+proxy를 권장한다. `AD_PUBLIC_URL`은 path나 credential이 없는 HTTP(S) origin으로
+검증하고, wildcard bind에는 필수로 요구한다. 서버 info는 listener TLS와
+외부에 광고된 HTTPS를 분리해 reverse proxy 설정을 직접 TLS로 오인하지 않게 한다.
+공개 root에서 inbox capability가 노출되지 않도록 server info는 시작 시 생성한
+별도 local-access capability를 제시한 browser에만 반환한다.
 
 ### Consequences
 

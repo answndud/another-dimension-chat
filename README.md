@@ -51,6 +51,11 @@ npm --prefix apps/web run build --workspaces=false
 npm --prefix apps/server start --workspaces=false
 ```
 
+Open the private local UI URL printed by the server, including its `#local=...`
+fragment. A plain root URL intentionally runs in manual mode because it cannot
+read or advertise the inbox capability. Treat the printed local UI URL as a
+secret and never include it in logs, screenshots, or support reports.
+
 The same flow can be started from the repository root with
 `./scripts/start_local_server.sh` after the web bundle is built.
 
@@ -80,6 +85,11 @@ and configure the network exposure yourself:
 AD_BIND_HOST=0.0.0.0 AD_PUBLIC_URL=https://chat.example.test \
   npm --prefix apps/server start --workspaces=false
 ```
+
+`AD_PUBLIC_URL` must be an origin containing only a scheme and host (plus an
+optional port), without a path, credentials, query, or fragment. It is required
+with a `0.0.0.0` bind. This makes the invite address explicit; it does not
+configure DNS, a firewall, or reverse-proxy reachability.
 
 The server stores only bounded opaque envelopes and serves the static browser UI.
 
@@ -114,6 +124,18 @@ For development only, generate a host/IP certificate with
 `./scripts/generate_tls_cert.sh <host-or-ip>`. It is self-signed and must be
 installed in the relevant devices' trust stores before a browser can accept it;
 the script does not change system trust automatically.
+
+After configuring a publicly trusted, non-loopback HTTPS endpoint, check its
+certificate, health, advertised origin, opaque delivery, read, and ack:
+
+```sh
+node scripts/check_https_endpoint.mjs https://chat.example.test
+```
+
+The command rejects HTTP, localhost, untrusted certificates, and a server that
+advertises another origin. A two-user invite exchange and message round trip in
+real browsers remains the final user acceptance. Set `AD_SERVER_DATA_DIR`,
+`AD_PORT`, or `AD_LOCAL_URL` when checking a non-default local configuration.
 
 ## Web security boundary
 

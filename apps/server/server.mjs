@@ -1,6 +1,6 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createReadStream, realpathSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
 import { dirname, extname, join, normalize, resolve } from "node:path";
@@ -30,7 +30,7 @@ function json(res, status, body, headers = {}) {
 function corsHeaders() {
   return {
     "access-control-allow-origin": "*",
-    "access-control-allow-headers": "content-type",
+    "access-control-allow-headers": "content-type,x-ad-local-access",
     "access-control-allow-methods": "GET,POST,OPTIONS",
     "cache-control": "no-store",
   };
@@ -57,12 +57,45 @@ function capability() {
   return randomBytes(32).toString("base64url");
 }
 
+function hasLocalAccess(req, expected) {
+  const supplied = req.headers["x-ad-local-access"];
+  if (typeof supplied !== "string") return false;
+  const suppliedBytes = Buffer.from(supplied);
+  const expectedBytes = Buffer.from(expected);
+  return suppliedBytes.length === expectedBytes.length && timingSafeEqual(suppliedBytes, expectedBytes);
+}
+
 function capabilityPath(value) {
   return `/api/v1/inbox/${value}`;
 }
 
 function storeId(envelope) {
   return createHash("sha256").update(envelope).digest("hex");
+}
+
+function normalizePublicUrl(value) {
+  if (!value) return "";
+  let url;
+  try { url = new URL(String(value)); } catch { throw new Error("AD_PUBLIC_URL must be a valid HTTP(S) origin."); }
+  if (
+    !["http:", "https:"].includes(url.protocol)
+    || url.username
+    || url.password
+    || url.pathname !== "/"
+    || url.search
+    || url.hash
+  ) {
+    throw new Error("AD_PUBLIC_URL must be an HTTP(S) origin without credentials, path, query, or fragment.");
+  }
+  return url.origin;
+}
+
+function isLoopbackHost(host) {
+  return host === "localhost" || host === "::1" || /^127(?:\.\d{1,3}){3}$/.test(host);
+}
+
+function urlHost(host) {
+  return host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
 }
 
 export async function createLocalServer({
@@ -76,11 +109,19 @@ export async function createLocalServer({
   tlsCertFile = process.env.AD_TLS_CERT_FILE || "",
 } = {}) {
   if (Boolean(tlsKeyFile) !== Boolean(tlsCertFile)) throw new Error("AD_TLS_KEY_FILE and AD_TLS_CERT_FILE must be configured together.");
+  if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("AD_PORT must be an integer between 0 and 65535.");
+  if (!Number.isFinite(ttlMs) || ttlMs <= 0) throw new Error("AD_INBOX_TTL_MS must be a positive number.");
+  const normalizedPublicUrl = normalizePublicUrl(publicUrl);
+  if (["0.0.0.0", "::"].includes(bindHost) && !normalizedPublicUrl) throw new Error("AD_PUBLIC_URL is required with a wildcard AD_BIND_HOST.");
+  if (tlsKeyFile && normalizedPublicUrl.startsWith("http://")) throw new Error("AD_PUBLIC_URL must use HTTPS when direct TLS is enabled.");
   await mkdir(dataDir, { recursive: true });
   const capabilityFile = join(dataDir, "inbox-capability");
+  const localAccessFile = join(dataDir, "local-access-capability");
   const queueFile = join(dataDir, "inbox.json");
   let inboxCapability;
   try { inboxCapability = (await readFile(capabilityFile, "utf8")).trim(); } catch { inboxCapability = capability(); await writeFile(capabilityFile, `${inboxCapability}\n`, { mode: 0o600 }); }
+  let localAccessCapability;
+  try { localAccessCapability = (await readFile(localAccessFile, "utf8")).trim(); } catch { localAccessCapability = capability(); await writeFile(localAccessFile, `${localAccessCapability}\n`, { mode: 0o600 }); }
   let inbox;
   try { inbox = JSON.parse(await readFile(queueFile, "utf8")); } catch { inbox = []; }
   const purge = () => {
@@ -89,9 +130,20 @@ export async function createLocalServer({
   };
   purge();
 
-  const persist = () => { purge(); return writeFile(queueFile, JSON.stringify(inbox), { mode: 0o600 }); };
+  let persistChain = Promise.resolve();
+  const persist = () => {
+    purge();
+    const snapshot = JSON.stringify(inbox);
+    const temporaryQueueFile = `${queueFile}.tmp`;
+    const operation = persistChain.then(async () => {
+      await writeFile(temporaryQueueFile, snapshot, { mode: 0o600 });
+      await rename(temporaryQueueFile, queueFile);
+    });
+    persistChain = operation.catch(() => {});
+    return operation;
+  };
   const scheme = tlsKeyFile && tlsCertFile ? "https" : "http";
-  const originFor = (address) => publicUrl || `${scheme}://${address}:${port}`;
+  const originFor = (address) => normalizedPublicUrl || `${scheme}://${urlHost(address)}:${port}`;
   const inboxUrlFor = (address) => `${originFor(address)}${capabilityPath(inboxCapability)}`;
 
   const handleRequest = async (req, res) => {
@@ -104,7 +156,20 @@ export async function createLocalServer({
       return;
     }
     if (requestUrl.pathname === "/api/v1/info" && req.method === "GET") {
-      json(res, 200, { protocol: 1, inboxUrl: inboxUrlFor(bindHost), maxEnvelopeBytes: MAX_ENVELOPE_BYTES }, headers);
+      if (!hasLocalAccess(req, localAccessCapability)) {
+        json(res, 403, { error: "local_access_required" }, headers);
+        return;
+      }
+      const publicOrigin = originFor(bindHost);
+      json(res, 200, {
+        protocol: 1,
+        inboxUrl: inboxUrlFor(bindHost),
+        publicOrigin,
+        externalSecure: publicOrigin.startsWith("https://"),
+        listenerTls: Boolean(tlsKeyFile && tlsCertFile),
+        networkScope: isLoopbackHost(bindHost) ? "loopback" : "non-loopback",
+        maxEnvelopeBytes: MAX_ENVELOPE_BYTES,
+      }, headers);
       return;
     }
 
@@ -135,9 +200,10 @@ export async function createLocalServer({
       try {
         const body = JSON.parse(await readBody(req, 32 * 1024));
         const ids = new Set(Array.isArray(body?.ids) ? body.ids.map(String) : []);
+        const previousLength = inbox.length;
         inbox = inbox.filter((item) => !ids.has(item.id));
         await persist();
-        json(res, 200, { acknowledged: ids.size }, headers);
+        json(res, 200, { acknowledged: previousLength - inbox.length }, headers);
       } catch (error) { json(res, 400, { acknowledged: 0, error: error.message }, headers); }
       return;
     }
@@ -157,16 +223,31 @@ export async function createLocalServer({
     ? createHttpsServer({ key: await readFile(tlsKeyFile), cert: await readFile(tlsCertFile) }, handleRequest)
     : createServer(handleRequest);
 
-  return { server, bindHost, port, inboxCapability, inboxUrl: inboxUrlFor(bindHost), secure: Boolean(tlsKeyFile && tlsCertFile) };
+  const localHost = ["0.0.0.0", "::"].includes(bindHost) ? "127.0.0.1" : bindHost;
+  return {
+    server,
+    bindHost,
+    port,
+    inboxCapability,
+    inboxUrl: inboxUrlFor(bindHost),
+    publicOrigin: originFor(bindHost),
+    externalSecure: originFor(bindHost).startsWith("https://"),
+    listenerTls: Boolean(tlsKeyFile && tlsCertFile),
+    localAccessCapability,
+    localUiUrl: `${scheme}://${urlHost(localHost)}:${port}/#local=${localAccessCapability}`,
+  };
 }
 
 const launchedDirectly = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
 if (launchedDirectly) {
   const runtime = await createLocalServer();
   runtime.server.listen(runtime.port, runtime.bindHost, () => {
-    console.log(`Another Dimension local server listening at ${runtime.secure ? "https" : "http"}://${runtime.bindHost}:${runtime.port}`);
-    console.log(`Inbox endpoint: ${runtime.inboxUrl}`);
-    if (runtime.bindHost !== "127.0.0.1") console.warn("Warning: non-loopback bind exposes this server to the configured network.");
-    if (runtime.bindHost !== "127.0.0.1" && !runtime.inboxUrl.startsWith("https://")) console.warn("Warning: remote browser Web Crypto requires an HTTPS public URL or reverse proxy.");
+    console.log(`Another Dimension local server listening at ${runtime.listenerTls ? "https" : "http"}://${runtime.bindHost}:${runtime.port}`);
+    console.log(`Advertised origin: ${runtime.publicOrigin}`);
+    console.log(`Open the private local UI: ${runtime.localUiUrl}`);
+    console.log("The local UI URL grants access to inbox settings. Keep it out of logs, screenshots, and support reports.");
+    if (!isLoopbackHost(runtime.bindHost)) console.warn("Warning: non-loopback bind exposes this server to the configured network.");
+    if (!isLoopbackHost(runtime.bindHost) && !runtime.externalSecure) console.warn("Warning: remote browser Web Crypto requires an HTTPS public URL or reverse proxy.");
+    if (runtime.externalSecure && !runtime.listenerTls) console.log(`External HTTPS is expected at ${runtime.publicOrigin}; keep the reverse proxy running.`);
   });
 }
