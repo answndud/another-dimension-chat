@@ -14,7 +14,7 @@ reverse-proxy/Tailscale Serve, or direct-TLS configuration. It validates and
 saves `.another-dimension-server/server-config.json` with owner-only
 permissions, then starts the server. Later starts reuse it automatically.
 
-The web bundle includes the committed Rust `snow` Noise WebAssembly module.
+The web bundle includes the committed Rust `vodozemac` Olm WebAssembly module.
 Only crypto-source changes require `npm --prefix apps/web run build:crypto
 --workspaces=false`; ordinary server starts and release builds do not compile Rust.
 

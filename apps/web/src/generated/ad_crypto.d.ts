@@ -1,80 +1,36 @@
 /* tslint:disable */
 /* eslint-disable */
 
-export class NoiseFinishExport {
-    private constructor();
-    free(): void;
-    [Symbol.dispose](): void;
-    readonly message: Uint8Array;
-    readonly remoteStatic: Uint8Array;
-}
+export function olm_account_new(): string;
 
-export class NoiseHandshakeExport {
-    private constructor();
-    free(): void;
-    [Symbol.dispose](): void;
-    readonly ephemeralPrivate: Uint8Array;
-    readonly message: Uint8Array;
-}
+export function olm_inbound_accept(account_pickle: string, peer_curve25519: string, message_type: number, body: string, transcript: string): string;
 
-export class NoiseKeypairExport {
-    private constructor();
-    free(): void;
-    [Symbol.dispose](): void;
-    readonly prekeyBundle: string;
-    readonly privateKey: Uint8Array;
-    readonly publicKey: Uint8Array;
-}
+export function olm_outbound_finish(session_pickle: string, message_type: number, body: string, transcript: string): string;
 
-export function noise_generate_keypair(): NoiseKeypairExport;
+export function olm_outbound_start(account_pickle: string, peer_curve25519: string, peer_one_time: string, transcript: string): string;
 
-export function noise_handshake_finish(transcript: string, static_private: Uint8Array, static_public: Uint8Array, ephemeral_private: Uint8Array, reply_message: Uint8Array): NoiseFinishExport;
+export function olm_session_decrypt(session_pickle: string, message_type: number, body: string): string;
 
-export function noise_handshake_init(transcript: string, static_private: Uint8Array, static_public: Uint8Array): NoiseHandshakeExport;
+export function olm_session_encrypt(session_pickle: string, plaintext: Uint8Array): string;
 
-export function noise_handshake_reply(transcript: string, static_private: Uint8Array, static_public: Uint8Array, init_message: Uint8Array): NoiseHandshakeExport;
-
-export function noise_initiator_decrypt(transcript: string, static_private: Uint8Array, static_public: Uint8Array, ephemeral_private: Uint8Array, reply_message: Uint8Array, nonce: number, ciphertext: Uint8Array): Uint8Array;
-
-export function noise_initiator_encrypt(transcript: string, static_private: Uint8Array, static_public: Uint8Array, ephemeral_private: Uint8Array, reply_message: Uint8Array, nonce: number, plaintext: Uint8Array): Uint8Array;
-
-export function noise_responder_decrypt(transcript: string, static_private: Uint8Array, static_public: Uint8Array, init_message: Uint8Array, ephemeral_private: Uint8Array, finish_message: Uint8Array, nonce: number, ciphertext: Uint8Array): Uint8Array;
-
-export function noise_responder_encrypt(transcript: string, static_private: Uint8Array, static_public: Uint8Array, init_message: Uint8Array, ephemeral_private: Uint8Array, finish_message: Uint8Array, nonce: number, plaintext: Uint8Array): Uint8Array;
-
-export function noise_safety_material(transcript: string): string;
-
-export function noise_validate_finish(transcript: string, static_private: Uint8Array, static_public: Uint8Array, init_message: Uint8Array, ephemeral_private: Uint8Array, finish_message: Uint8Array): Uint8Array;
+export function safety_material(transcript: string): string;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly __wbg_noisefinishexport_free: (a: number, b: number) => void;
-    readonly __wbg_noisekeypairexport_free: (a: number, b: number) => void;
-    readonly noise_generate_keypair: (a: number) => void;
-    readonly noise_handshake_finish: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => void;
-    readonly noise_handshake_init: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-    readonly noise_handshake_reply: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
-    readonly noise_initiator_decrypt: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => void;
-    readonly noise_initiator_encrypt: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => void;
-    readonly noise_responder_decrypt: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number) => void;
-    readonly noise_responder_encrypt: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number) => void;
-    readonly noise_safety_material: (a: number, b: number, c: number) => void;
-    readonly noise_validate_finish: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number) => void;
-    readonly noisefinishexport_message: (a: number, b: number) => void;
-    readonly noisefinishexport_remoteStatic: (a: number, b: number) => void;
-    readonly noisekeypairexport_prekeyBundle: (a: number, b: number) => void;
-    readonly noisekeypairexport_privateKey: (a: number, b: number) => void;
-    readonly noisekeypairexport_publicKey: (a: number, b: number) => void;
-    readonly noisehandshakeexport_ephemeralPrivate: (a: number, b: number) => void;
-    readonly noisehandshakeexport_message: (a: number, b: number) => void;
-    readonly __wbg_noisehandshakeexport_free: (a: number, b: number) => void;
+    readonly olm_account_new: (a: number) => void;
+    readonly olm_inbound_accept: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;
+    readonly olm_outbound_finish: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
+    readonly olm_outbound_start: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+    readonly olm_session_decrypt: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+    readonly olm_session_encrypt: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly safety_material: (a: number, b: number, c: number) => void;
     readonly __wbindgen_export: (a: number) => void;
     readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
-    readonly __wbindgen_export2: (a: number, b: number) => number;
-    readonly __wbindgen_export3: (a: number, b: number, c: number, d: number) => number;
-    readonly __wbindgen_export4: (a: number, b: number, c: number) => void;
+    readonly __wbindgen_export2: (a: number, b: number, c: number) => void;
+    readonly __wbindgen_export3: (a: number, b: number) => number;
+    readonly __wbindgen_export4: (a: number, b: number, c: number, d: number) => number;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;

@@ -64,7 +64,7 @@ function render() {
       <section class="shell narrow">
         <div class="eyebrow">ANOTHER DIMENSION</div>
         <h1>A private room in your browser.</h1>
-        <p class="lede">No account. No message server. Create a local profile, exchange a public invite, and move sealed messages through a channel you choose.</p>
+        <p class="lede">No account. No central message server. Create a local profile, exchange a public invite, and move sealed messages through a channel you choose.</p>
         <div class="notice">${escapeHtml(browserStatus())}</div>
         <div class="card grid-two">
           <form id="create-form" class="stack">
@@ -104,14 +104,14 @@ function render() {
           <p class="small">Your invite includes a server capability when this page is served by it. Share the invite only with the intended peer.</p>
           <h2>2. Add peer invite</h2>
           <textarea id="peer-invite" rows="5" placeholder="Paste the other person's invite here">${escapeHtml(state.peerInvite)}</textarea>
-          <button id="pair">Pair and verify</button>
+          <button id="pair" ${state.peer ? "disabled" : ""}>${state.peer ? "Profile already paired" : "Pair and verify"}</button>
         </aside>
         <section class="stack">
           <div class="card safety"><span class="label">SAFETY MATERIAL</span><strong>${escapeHtml(phrase)}</strong><p class="small">Compare this phrase with the other person over a trusted channel before sending messages.</p></div>
           <div class="card stack">
             <div class="row-between"><h2>Sealed message exchange</h2><span class="pill">${state.peer ? `${escapeHtml(state.sessionStatus)} · ${escapeHtml(endpointOrigin(state.peer.server)) || "manual"}` : "not paired"}</span></div>
             ${state.peer && endpointWarning(state.peer.server) ? `<p class="warning">${escapeHtml(endpointWarning(state.peer.server))}</p>` : ""}
-            ${state.peer && state.sessionStatus !== "ready" ? '<p class="warning">Noise session is establishing. Keep both rooms open, or move the pending handshake envelope manually.</p>' : ""}
+            ${state.peer && state.sessionStatus !== "ready" ? '<p class="warning">Olm ratchet session is establishing. Keep both rooms open, or move the pending handshake envelope manually.</p>' : ""}
             ${state.pendingHandshake && state.sessionStatus === "ready" ? '<p class="warning">Deliver the final ready envelope to the peer, then confirm delivery before messaging.</p><button id="confirm-handshake" class="secondary">I delivered the handshake envelope</button>' : ""}
             <label>Message<textarea id="message" rows="4" placeholder="Write locally, then send or export a sealed envelope"></textarea></label>
             <div class="row-between"><button id="send-envelope" ${state.peer?.server?.inboxUrl && state.sessionStatus === "ready" && !state.pendingHandshake ? "" : "disabled"}>Encrypt and send to peer server</button><button id="sync-inbox" ${state.serverInfo?.inboxUrl ? "" : "disabled"} class="secondary">Sync my inbox</button></div>
@@ -152,7 +152,7 @@ function bindRoom() {
   document.querySelector("#peer-invite")?.addEventListener("input", (event) => { state.peerInvite = event.currentTarget.value; });
   document.querySelector("#copy-invite")?.addEventListener("click", async () => { await navigator.clipboard.writeText(state.invite); state.notice = "Invite copied. Share it with the other person."; render(); });
   document.querySelector("#pair")?.addEventListener("click", async () => {
-    try { state.peer = await importInvite(state.peerInvite); state.safety = safetyPhrase(state.profile, state.peer); state.notice = "Invite verified. Noise session establishment started; compare the safety material now."; await refresh(); } catch (error) { state.error = error.message; render(); }
+    try { state.peer = await importInvite(state.peerInvite); state.safety = safetyPhrase(state.profile, state.peer); state.notice = "Invite verified. Olm ratchet session establishment started; compare the safety material now."; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#export-envelope")?.addEventListener("click", async () => {
     try { state.envelope = await exportEnvelope(document.querySelector("#message").value); state.notice = "Envelope encrypted. Move it to the other browser, then paste it into Incoming envelope."; await refresh(); } catch (error) { state.error = error.message; render(); }
@@ -162,10 +162,10 @@ function bindRoom() {
   });
   document.querySelector("#sync-inbox")?.addEventListener("click", () => receiveMessages(true));
   document.querySelector("#confirm-handshake")?.addEventListener("click", async () => {
-    try { await confirmPendingEnvelopeDelivered(); state.notice = "Manual Noise handshake delivery confirmed. Messaging is enabled."; await refresh(); } catch (error) { state.error = error.message; render(); }
+    try { await confirmPendingEnvelopeDelivered(); state.notice = "Manual Olm handshake delivery confirmed. Messaging is enabled."; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#import-envelope")?.addEventListener("click", async () => {
-    try { const message = await importEnvelope(document.querySelector("#incoming").value); state.notice = message === null ? "Noise handshake advanced. Move any pending response envelope back to the peer." : "Envelope decrypted locally and added to the transcript."; await refresh(); } catch (error) { state.error = error.message; render(); }
+    try { const message = await importEnvelope(document.querySelector("#incoming").value); state.notice = message === null ? "Olm handshake advanced. Move any pending response envelope back to the peer." : "Envelope decrypted locally and added to the transcript."; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
 }
 
@@ -179,7 +179,7 @@ async function receiveMessages(manual = false) {
     if (count || sessionChanged) {
       state.notice = count
         ? `${count} sealed envelope${count === 1 ? "" : "s"} received and acknowledged.`
-        : `Noise session advanced to ${getSessionStatus()}.`;
+        : `Olm session advanced to ${getSessionStatus()}.`;
       await refresh();
     } else if (manual) {
       state.notice = "Peer inbox is empty.";

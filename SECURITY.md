@@ -16,10 +16,11 @@ product distribution boundary.
 - Profile private material is generated in the browser.
 - Profile private material is encrypted with a passphrase before IndexedDB storage.
 - Peer invites are signed and verified locally.
-- Pairing runs `Noise_XX_25519_ChaChaPoly_BLAKE2s` through the repository's
-  Rust `snow` boundary compiled to WebAssembly.
-- Messages are encrypted locally with the established Noise state and exchanged
-  as signed sealed envelopes.
+- Pairing and message encryption run Olm v2 through the Rust `vodozemac`
+  implementation compiled to WebAssembly.
+- Each successful send or receive advances a persisted Double Ratchet session
+  pickle before the next message operation.
+- Messages are exchanged as deeply signed sealed envelopes.
 - Transcript records remain in browser-local storage for the current profile.
 - No central message server, push service, cloud backup, or account recovery exists.
 - A user-owned local server may store bounded opaque sealed envelopes for that
@@ -50,19 +51,19 @@ This prototype does not claim:
 - audited or production-ready security
 - safety for sensitive communication
 - Signal-level security, a reviewed messenger protocol, or equivalent assurance
-- a message ratchet, forward secrecy after persisted session-state compromise,
-  or post-compromise recovery
+- an independent audit of this application's protocol composition or browser integration
+- post-quantum security or protection when a compromised endpoint remains under attacker control
 - anonymity, untraceability, or protection from global traffic correlation
 - reliable automatic delivery, Tor/onion delivery, or censorship resistance
 - secure deletion, backup recovery, rollback protection, or multi-device recovery
 - protection from compromised browsers, extensions, devices, local malware, or coercion
 
-Using Noise does not by itself make this a reviewed secure messenger. The
-current stateless message boundary persists enough encrypted handshake material
-to reconstruct transport keys and has no ratchet. Web Crypto, WebAssembly, and
-IndexedDB do not protect an unlocked browser session or a compromised endpoint.
-Browser support, implementation details, and storage behavior must be verified
-before any stronger claim is considered.
+The underlying `vodozemac` project reports an external audit, but that does not
+audit this application's identity signatures, transcript binding, persistence,
+delivery, or UI. Web Crypto, WebAssembly, and IndexedDB do not protect an
+unlocked browser session or a compromised endpoint. Browser support,
+implementation details, and storage behavior must be verified before any
+stronger claim is considered.
 
 ## Online delivery boundary
 

@@ -1,34 +1,30 @@
-import initNoise, {
-  initSync as initNoiseSync,
-  noise_generate_keypair,
-  noise_handshake_finish,
-  noise_handshake_init,
-  noise_handshake_reply,
-  noise_initiator_decrypt,
-  noise_initiator_encrypt,
-  noise_responder_decrypt,
-  noise_responder_encrypt,
-  noise_safety_material,
-  noise_validate_finish,
+import initCrypto, {
+  initSync as initCryptoSync,
+  olm_account_new,
+  olm_inbound_accept,
+  olm_outbound_finish,
+  olm_outbound_start,
+  olm_session_decrypt,
+  olm_session_encrypt,
+  safety_material,
 } from "./generated/ad_crypto.js";
 
-const DB_NAME = "another-dimension-web-v2";
+const DB_NAME = "another-dimension-web-v3";
 const DB_VERSION = 1;
-const INVITE_PREFIX = "ADWEB2.";
-const ENVELOPE_PREFIX = "ADENVWEB2.";
+const INVITE_PREFIX = "ADWEB3.";
+const ENVELOPE_PREFIX = "ADENVWEB3.";
 const MAX_ENVELOPE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
-const MAX_RECEIVED_NONCES = 1024;
 const profileNames = [];
 let activeProfile = null;
 let localInfoCache = null;
 
-const noiseReady = (() => {
-  if (globalThis.__AD_NOISE_WASM_BYTES__) {
-    initNoiseSync({ module: globalThis.__AD_NOISE_WASM_BYTES__ });
+const cryptoReady = (() => {
+  if (globalThis.__AD_CRYPTO_WASM_BYTES__) {
+    initCryptoSync({ module: globalThis.__AD_CRYPTO_WASM_BYTES__ });
     return Promise.resolve();
   }
-  return initNoise();
+  return initCrypto();
 })();
 
 function openDb() {
@@ -88,12 +84,6 @@ function canonical(value) {
   return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
 }
 
-function equalBytes(left, right) {
-  const a = new Uint8Array(left);
-  const b = new Uint8Array(right);
-  return a.length === b.length && a.every((byte, index) => byte === b[index]);
-}
-
 function validInboxUrl(value) {
   if (!value) return null;
   let url;
@@ -149,7 +139,9 @@ function storedProfile(profile) {
   return {
     name: profile.name,
     ecdsaPublic: profile.ecdsaPublic,
-    noisePublic: profile.noisePublic,
+    olmEd25519Public: profile.olmEd25519Public,
+    olmCurve25519Public: profile.olmCurve25519Public,
+    olmOneTimePublic: profile.olmOneTimePublic,
     salt: profile.salt,
     iv: profile.iv,
     sealed: profile.sealed,
@@ -174,7 +166,7 @@ function ensureCrypto() {
 }
 
 export const ready = (async () => {
-  await noiseReady;
+  await cryptoReady;
   const records = await all("profiles").catch(() => []);
   profileNames.splice(0, profileNames.length, ...records.map((record) => record.name).sort());
 })();
@@ -183,29 +175,35 @@ export function listProfiles() { return [...profileNames]; }
 
 export async function createProfile(name, passphrase) {
   ensureCrypto();
-  await noiseReady;
+  await cryptoReady;
   if (!/^[A-Za-z0-9_-]+$/.test(String(name)) || String(name).length > 48) throw new Error("Use letters, numbers, hyphen, or underscore for the profile name.");
   if (String(passphrase).length < 10) throw new Error("Use a passphrase of at least 10 characters.");
   if (await read("profiles", name)) throw new Error("That local profile already exists.");
   const ecdsa = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
-  const noise = noise_generate_keypair();
-  const noisePrivate = noise.privateKey;
-  const noisePublic = noise.publicKey;
-  noise.free();
+  const olm = JSON.parse(olm_account_new());
   const ecdsaPublic = await crypto.subtle.exportKey("jwk", ecdsa.publicKey);
   const privateMaterial = {
     ecdsaPrivate: await crypto.subtle.exportKey("jwk", ecdsa.privateKey),
-    noisePrivate: bytesToBase64(noisePrivate),
+    olmAccountPickle: olm.accountPickle,
     session: null,
   };
   const { wrappingKey: profileWrappingKey, ...sealed } = await sealPrivateMaterial(privateMaterial, passphrase);
-  const record = { name: String(name), ecdsaPublic, noisePublic: bytesToBase64(noisePublic), ...sealed, peer: null, selfInviteBody: null, createdAt: Date.now() };
+  const record = {
+    name: String(name),
+    ecdsaPublic,
+    olmEd25519Public: olm.ed25519Public,
+    olmCurve25519Public: olm.curve25519Public,
+    olmOneTimePublic: olm.oneTimePublic,
+    ...sealed,
+    peer: null,
+    selfInviteBody: null,
+    createdAt: Date.now(),
+  };
   await write("profiles", record);
   profileNames.push(record.name);
   activeProfile = {
     ...record,
     ecdsaPrivate: ecdsa.privateKey,
-    noisePrivate,
     wrappingKey: profileWrappingKey,
     privateMaterial,
   };
@@ -214,7 +212,7 @@ export async function createProfile(name, passphrase) {
 
 export async function unlockProfile(name, passphrase) {
   ensureCrypto();
-  await noiseReady;
+  await cryptoReady;
   const record = await read("profiles", name);
   if (!record) throw new Error("Local profile not found.");
   const { material, wrappingKey: profileWrappingKey } = await openPrivateMaterial(record, passphrase);
@@ -222,7 +220,6 @@ export async function unlockProfile(name, passphrase) {
   activeProfile = {
     ...record,
     ecdsaPrivate,
-    noisePrivate: base64ToBytes(material.noisePrivate),
     wrappingKey: profileWrappingKey,
     privateMaterial: material,
   };
@@ -234,11 +231,13 @@ export function lockProfile() { activeProfile = null; }
 async function selfInviteBody() {
   const info = await localServerInfo();
   const body = {
-    v: 2,
+    v: 3,
     name: activeProfile.name,
     ecdsaPublic: activeProfile.ecdsaPublic,
-    noisePublic: activeProfile.noisePublic,
-    noiseProtocol: "Noise_XX_25519_ChaChaPoly_BLAKE2s",
+    olmEd25519Public: activeProfile.olmEd25519Public,
+    olmCurve25519Public: activeProfile.olmCurve25519Public,
+    olmOneTimePublic: activeProfile.olmOneTimePublic,
+    messageProtocol: "Olm.v2.Curve25519-AES-SHA2",
     ...(info ? { server: { inboxUrl: info.inboxUrl, protocol: info.protocol } } : {}),
   };
   activeProfile.selfInviteBody = body;
@@ -254,7 +253,10 @@ export async function exportInvite() {
 }
 
 function participantKey(participant) {
-  return canonical({ ecdsaPublic: participant.ecdsaPublic, noisePublic: participant.noisePublic });
+  return canonical({
+    ecdsaPublic: participant.ecdsaPublic,
+    olmCurve25519Public: participant.olmCurve25519Public,
+  });
 }
 
 function sessionTranscript(local, peer) {
@@ -262,16 +264,18 @@ function sessionTranscript(local, peer) {
     .map((participant) => ({
       name: participant.name,
       ecdsaPublic: participant.ecdsaPublic,
-      noisePublic: participant.noisePublic,
+      olmEd25519Public: participant.olmEd25519Public,
+      olmCurve25519Public: participant.olmCurve25519Public,
+      olmOneTimePublic: participant.olmOneTimePublic,
       server: participant.server || null,
     }))
     .sort((left, right) => participantKey(left).localeCompare(participantKey(right)));
-  return `AD-NOISE-SESSION-V2|${canonical(participants)}`;
+  return `AD-OLM-SESSION-V3|${canonical(participants)}`;
 }
 
 async function signedEnvelope(type, payload) {
   const body = {
-    v: 2,
+    v: 3,
     type,
     id: crypto.randomUUID(),
     from: activeProfile.name,
@@ -297,7 +301,7 @@ async function flushPendingEnvelope() {
   return true;
 }
 
-async function initializeNoiseSession() {
+async function initializeOlmSession() {
   const local = activeProfile.selfInviteBody || await selfInviteBody();
   const peer = activeProfile.peer;
   const localKey = participantKey(local);
@@ -308,17 +312,18 @@ async function initializeNoiseSession() {
     role,
     status: role === "initiator" ? "init-sent" : "waiting-init",
     transcript: sessionTranscript(local, peer),
-    sendNonce: 0,
-    receivedNonces: [],
     pendingEnvelope: null,
   };
   activeProfile.privateMaterial.session = session;
   if (role === "initiator") {
-    const init = noise_handshake_init(session.transcript, activeProfile.noisePrivate, base64ToBytes(activeProfile.noisePublic));
-    session.initMessage = bytesToBase64(init.message);
-    session.ephemeralPrivate = bytesToBase64(init.ephemeralPrivate);
-    init.free();
-    session.pendingEnvelope = await signedEnvelope("noise-init", { message: session.initMessage });
+    const init = JSON.parse(olm_outbound_start(
+      activeProfile.privateMaterial.olmAccountPickle,
+      peer.olmCurve25519Public,
+      peer.olmOneTimePublic,
+      session.transcript,
+    ));
+    session.sessionPickle = init.sessionPickle;
+    session.pendingEnvelope = await signedEnvelope("olm-init", init.message);
   }
   await persistPrivateProfile();
   await flushPendingEnvelope().catch(() => false);
@@ -326,25 +331,30 @@ async function initializeNoiseSession() {
 
 export async function importInvite(value) {
   if (!activeProfile) throw new Error("Unlock a local profile first.");
+  if (activeProfile.peer) throw new Error("This profile is already paired. Create a fresh profile to pair with someone else.");
   const text = String(value || "").trim();
-  if (!text.startsWith(INVITE_PREFIX)) throw new Error("This is not a valid Noise web invite.");
+  if (!text.startsWith(INVITE_PREFIX)) throw new Error("This is not a valid Olm web invite.");
   const invite = decode(text.slice(INVITE_PREFIX.length));
   const { signature, ...body } = invite;
   if (body.server) body.server = { ...body.server, inboxUrl: validInboxUrl(body.server.inboxUrl) };
-  let peerNoisePublic;
-  try { peerNoisePublic = base64ToBytes(body.noisePublic); } catch { throw new Error("Invite Noise setup material is invalid."); }
-  if (peerNoisePublic.length !== 32 || body.noiseProtocol !== "Noise_XX_25519_ChaChaPoly_BLAKE2s") throw new Error("Invite Noise setup material is invalid.");
+  const olmKey = /^[A-Za-z0-9+/]{43}$/;
+  if (
+    !olmKey.test(body.olmEd25519Public)
+    || !olmKey.test(body.olmCurve25519Public)
+    || !olmKey.test(body.olmOneTimePublic)
+    || body.messageProtocol !== "Olm.v2.Curve25519-AES-SHA2"
+  ) throw new Error("Invite Olm setup material is invalid.");
   const publicKey = await crypto.subtle.importKey("jwk", body.ecdsaPublic, { name: "ECDSA", namedCurve: "P-256" }, true, ["verify"]);
   const valid = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, publicKey, base64ToBytes(signature), new TextEncoder().encode(canonical(body)));
-  if (!valid || body.v !== 2 || body.name === activeProfile.name) throw new Error("Invite signature or peer identity is invalid.");
+  if (!valid || body.v !== 3 || body.name === activeProfile.name) throw new Error("Invite signature or peer identity is invalid.");
   activeProfile.peer = body;
-  await initializeNoiseSession();
+  await initializeOlmSession();
   return body;
 }
 
 export function safetyPhrase(local, peer) {
-  if (!local?.selfInviteBody || !peer) return "Noise session setup is not ready.";
-  return `${noise_safety_material(sessionTranscript(local.selfInviteBody, peer))} · compare over a trusted channel`;
+  if (!local?.selfInviteBody || !peer) return "Olm session setup is not ready.";
+  return `${safety_material(sessionTranscript(local.selfInviteBody, peer))} · compare over a trusted channel`;
 }
 
 export function getSessionStatus() {
@@ -373,44 +383,26 @@ async function recordSentEnvelope(envelope, text) {
   await write("messages", { id: `${activeProfile.name}:${envelopeId}`, envelopeId, profile: activeProfile.name, direction: "sent", text, createdAt: Date.now() });
 }
 
-function sessionCiphertext(session, nonce, plaintext) {
-  const localPublic = base64ToBytes(activeProfile.noisePublic);
-  if (session.role === "initiator") {
-    return noise_initiator_encrypt(
-      session.transcript,
-      activeProfile.noisePrivate,
-      localPublic,
-      base64ToBytes(session.ephemeralPrivate),
-      base64ToBytes(session.replyMessage),
-      nonce,
-      plaintext,
-    );
-  }
-  return noise_responder_encrypt(
-    session.transcript,
-    activeProfile.noisePrivate,
-    localPublic,
-    base64ToBytes(session.initMessage),
-    base64ToBytes(session.ephemeralPrivate),
-    base64ToBytes(session.finishMessage),
-    nonce,
-    plaintext,
-  );
-}
-
 export async function exportEnvelope(text, { record = true } = {}) {
   if (!activeProfile?.peer) throw new Error("Pair with a peer before sending.");
   const message = String(text || "").trim();
   if (!message) throw new Error("Write a message first.");
   const session = activeProfile.privateMaterial.session;
-  if (session?.status !== "ready") throw new Error("The Noise session is still establishing. Keep both rooms open or move the pending handshake envelope manually.");
-  if (session.pendingEnvelope) throw new Error("Deliver and confirm the final Noise handshake envelope before sending a message.");
-  if (!Number.isSafeInteger(session.sendNonce) || session.sendNonce >= 0xffff_ffff) throw new Error("Noise message limit reached. Pair again with a fresh session.");
-  const nonce = session.sendNonce;
-  session.sendNonce += 1;
-  await persistPrivateProfile();
-  const ciphertext = sessionCiphertext(session, nonce, new TextEncoder().encode(message));
-  const result = await signedEnvelope("message", { nonce, ciphertext: bytesToBase64(ciphertext) });
+  if (session?.status !== "ready") throw new Error("The Olm session is still establishing. Keep both rooms open or move the pending handshake envelope manually.");
+  if (session.pendingEnvelope) throw new Error("Deliver and confirm the final Olm handshake envelope before sending a message.");
+  let encrypted;
+  try {
+    encrypted = JSON.parse(olm_session_encrypt(session.sessionPickle, new TextEncoder().encode(message)));
+  } catch {
+    throw new Error("Olm message encryption failed. Pair again before sending.");
+  }
+  const result = await signedEnvelope("message", encrypted.message);
+  const previousPickle = session.sessionPickle;
+  session.sessionPickle = encrypted.sessionPickle;
+  try { await persistPrivateProfile(); } catch (error) {
+    session.sessionPickle = previousPickle;
+    throw error;
+  }
   if (record) await recordSentEnvelope(result, message);
   return result;
 }
@@ -421,7 +413,7 @@ export async function sendEnvelope(text) {
   if (!message) throw new Error("Write a message first.");
   const session = activeProfile.privateMaterial.session;
   if (session?.pendingEnvelope && !await flushPendingEnvelope().catch(() => false)) {
-    throw new Error("The final Noise handshake envelope has not reached the peer yet. Keep both rooms open or deliver it manually.");
+    throw new Error("The final Olm handshake envelope has not reached the peer yet. Keep both rooms open or deliver it manually.");
   }
   const envelope = await exportEnvelope(message, { record: false });
   const response = await fetch(activeProfile.peer.server.inboxUrl, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ envelope }) });
@@ -470,14 +462,14 @@ export async function syncInbox() {
 
 async function verifiedEnvelope(value) {
   const text = String(value || "").trim();
-  if (!text.startsWith(ENVELOPE_PREFIX)) throw new Error("This is not a valid sealed Noise envelope.");
+  if (!text.startsWith(ENVELOPE_PREFIX)) throw new Error("This is not a valid sealed Olm envelope.");
   const envelope = decode(text.slice(ENVELOPE_PREFIX.length));
   const now = Date.now();
   if (
-    envelope.v !== 2
+    envelope.v !== 3
     || envelope.to !== activeProfile.name
     || envelope.from !== activeProfile.peer.name
-    || !["noise-init", "noise-reply", "noise-finish", "noise-ready", "message"].includes(envelope.type)
+    || !["olm-init", "olm-ready", "message"].includes(envelope.type)
     || !envelope.signature
     || !Number.isSafeInteger(envelope.createdAt)
     || !/^[-0-9a-f]{36}$/i.test(envelope.id)
@@ -495,88 +487,43 @@ async function verifiedEnvelope(value) {
 
 async function processHandshakeEnvelope(envelope) {
   const session = activeProfile.privateMaterial.session;
-  const localPublic = base64ToBytes(activeProfile.noisePublic);
-  const peerPublic = base64ToBytes(activeProfile.peer.noisePublic);
-  if (envelope.type === "noise-init") {
-    if (session.role !== "responder" || session.status !== "waiting-init") throw new Error("Unexpected Noise init message.");
-    const initMessage = base64ToBytes(envelope.payload?.message);
-    const reply = noise_handshake_reply(session.transcript, activeProfile.noisePrivate, localPublic, initMessage);
-    session.initMessage = bytesToBase64(initMessage);
-    session.replyMessage = bytesToBase64(reply.message);
-    session.ephemeralPrivate = bytesToBase64(reply.ephemeralPrivate);
-    reply.free();
-    session.status = "reply-sent";
-    session.pendingEnvelope = await signedEnvelope("noise-reply", { message: session.replyMessage });
-  } else if (envelope.type === "noise-reply") {
-    if (session.role !== "initiator" || session.status !== "init-sent") throw new Error("Unexpected Noise reply message.");
-    session.pendingEnvelope = null;
-    const replyMessage = base64ToBytes(envelope.payload?.message);
-    const finish = noise_handshake_finish(
-      session.transcript,
-      activeProfile.noisePrivate,
-      localPublic,
-      base64ToBytes(session.ephemeralPrivate),
-      replyMessage,
-    );
-    if (!equalBytes(finish.remoteStatic, peerPublic)) {
-      finish.free();
-      throw new Error("Noise reply is not bound to the paired static key.");
+  if (envelope.type === "olm-init") {
+    if (session.role !== "responder" || session.status !== "waiting-init") throw new Error("Unexpected Olm init message.");
+    let accepted;
+    try {
+      accepted = JSON.parse(olm_inbound_accept(
+        activeProfile.privateMaterial.olmAccountPickle,
+        activeProfile.peer.olmCurve25519Public,
+        envelope.payload?.messageType,
+        envelope.payload?.body,
+        session.transcript,
+      ));
+    } catch {
+      throw new Error("Olm init is invalid or is not bound to this pairing transcript.");
     }
-    session.replyMessage = bytesToBase64(replyMessage);
-    session.finishMessage = bytesToBase64(finish.message);
-    finish.free();
-    session.status = "finish-sent";
-    session.pendingEnvelope = await signedEnvelope("noise-finish", { message: session.finishMessage });
-  } else if (envelope.type === "noise-finish") {
-    if (session.role !== "responder" || session.status !== "reply-sent") throw new Error("Unexpected Noise finish message.");
-    session.pendingEnvelope = null;
-    const finishMessage = base64ToBytes(envelope.payload?.message);
-    const remote = noise_validate_finish(
-      session.transcript,
-      activeProfile.noisePrivate,
-      localPublic,
-      base64ToBytes(session.initMessage),
-      base64ToBytes(session.ephemeralPrivate),
-      finishMessage,
-    );
-    if (!equalBytes(remote, peerPublic)) throw new Error("Noise finish is not bound to the paired static key.");
-    session.finishMessage = bytesToBase64(finishMessage);
+    activeProfile.privateMaterial.olmAccountPickle = accepted.accountPickle;
+    session.sessionPickle = accepted.sessionPickle;
     session.status = "ready";
-    session.pendingEnvelope = await signedEnvelope("noise-ready", {});
-  } else if (envelope.type === "noise-ready") {
-    if (session.role !== "initiator" || session.status !== "finish-sent") throw new Error("Unexpected Noise ready message.");
+    session.pendingEnvelope = await signedEnvelope("olm-ready", accepted.message);
+  } else if (envelope.type === "olm-ready") {
+    if (session.role !== "initiator" || session.status !== "init-sent") throw new Error("Unexpected Olm ready message.");
+    try {
+      session.sessionPickle = olm_outbound_finish(
+        session.sessionPickle,
+        envelope.payload?.messageType,
+        envelope.payload?.body,
+        session.transcript,
+      );
+    } catch {
+      throw new Error("Olm ready message is invalid or is not bound to this pairing transcript.");
+    }
     session.pendingEnvelope = null;
     session.status = "ready";
   } else {
-    throw new Error("Unsupported Noise control envelope.");
+    throw new Error("Unsupported Olm control envelope.");
   }
   await persistPrivateProfile();
   await flushPendingEnvelope().catch(() => false);
-}
-
-function decryptMessage(session, nonce, ciphertext) {
-  const localPublic = base64ToBytes(activeProfile.noisePublic);
-  if (session.role === "initiator") {
-    return noise_initiator_decrypt(
-      session.transcript,
-      activeProfile.noisePrivate,
-      localPublic,
-      base64ToBytes(session.ephemeralPrivate),
-      base64ToBytes(session.replyMessage),
-      nonce,
-      ciphertext,
-    );
-  }
-  return noise_responder_decrypt(
-    session.transcript,
-    activeProfile.noisePrivate,
-    localPublic,
-    base64ToBytes(session.initMessage),
-    base64ToBytes(session.ephemeralPrivate),
-    base64ToBytes(session.finishMessage),
-    nonce,
-    ciphertext,
-  );
 }
 
 export async function importEnvelope(value) {
@@ -588,14 +535,19 @@ export async function importEnvelope(value) {
     return null;
   }
   const session = activeProfile.privateMaterial.session;
-  const nonce = envelope.payload?.nonce;
-  if (session?.status !== "ready" || !Number.isSafeInteger(nonce) || nonce < 0 || nonce >= 0xffff_ffff) throw new Error("Noise session or message nonce is invalid.");
-  if (session.receivedNonces.includes(nonce)) throw new Error("This Noise nonce was already imported.");
-  let plain;
-  try { plain = decryptMessage(session, nonce, base64ToBytes(envelope.payload?.ciphertext)); } catch { throw new Error("Noise envelope authentication failed or it was modified."); }
-  const message = new TextDecoder().decode(plain);
-  session.receivedNonces.push(nonce);
-  session.receivedNonces = session.receivedNonces.slice(-MAX_RECEIVED_NONCES);
+  if (session?.status !== "ready") throw new Error("Olm session is not ready.");
+  let decrypted;
+  try {
+    decrypted = JSON.parse(olm_session_decrypt(
+      session.sessionPickle,
+      envelope.payload?.messageType,
+      envelope.payload?.body,
+    ));
+  } catch {
+    throw new Error("Olm envelope authentication failed, was replayed, or was modified.");
+  }
+  const message = new TextDecoder().decode(base64ToBytes(decrypted.plaintext));
+  session.sessionPickle = decrypted.sessionPickle;
   await persistPrivateProfile();
   await write("seen", { id: `${activeProfile.name}:${envelope.id}`, profile: activeProfile.name, createdAt: Date.now() });
   await write("messages", { id: `${activeProfile.name}:${envelope.id}`, envelopeId: envelope.id, profile: activeProfile.name, direction: "received", text: message, createdAt: envelope.createdAt });

@@ -1,4 +1,4 @@
-const CACHE = "another-dimension-web-v3";
+const CACHE = "another-dimension-web-v4";
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

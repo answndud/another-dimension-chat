@@ -19,8 +19,8 @@ envelopes.
 
 - Create and unlock a local browser profile with a passphrase.
 - Export a signed public invite and verify a peer invite.
-- Establish `Noise_XX_25519_ChaChaPoly_BLAKE2s` through the existing Rust
-  `snow` implementation compiled to browser WebAssembly.
+- Establish an Olm v2 Double Ratchet session through the audited Rust
+  `vodozemac` implementation compiled to browser WebAssembly.
 - Compare a deterministic safety phrase before messaging.
 - Encrypt a message locally and export a sealed envelope.
 - Import and decrypt a peer envelope locally.
@@ -34,11 +34,11 @@ envelopes.
 
 The preferred delivery flow is user-owned server-to-server transport. Manual
 invite and sealed-envelope copy/paste remains available when a server is not
-running or is unreachable. Initial pairing exchanges four signed Noise control
-envelopes (`init`, `reply`, `finish`, `ready`); this happens automatically while
-both unlocked rooms are open, or through the same copy/paste fields in manual
-mode. In manual mode, the sender of the final `ready` envelope confirms its
-delivery in the UI before message controls are enabled.
+running or is unreachable. Initial pairing exchanges two signed Olm control
+envelopes (`init`, `ready`); this happens automatically while both unlocked
+rooms are open, or through the same copy/paste fields in manual mode. In manual
+mode, the sender of the final `ready` envelope confirms its delivery in the UI
+before message controls are enabled.
 
 ## Run locally
 
@@ -51,7 +51,7 @@ Open the local URL printed by Vite. The browser product lives in `apps/web`;
 the local server product lives in `apps/server`; the Tauri package is an
 optional desktop wrapper.
 
-The generated Noise WebAssembly module is committed so a release build does
+The generated cryptography WebAssembly module is committed so a release build does
 not compile Rust. When changing `crates/crypto` or `crates/web-crypto-wasm`,
 regenerate it explicitly with `npm --prefix apps/web run build:crypto
 --workspaces=false`. This requires the Rust WASM target and wasm-bindgen 0.2.121.
@@ -165,22 +165,24 @@ real browsers remains the final user acceptance. Set `AD_SERVER_DATA_DIR`,
 ## Web security boundary
 
 The browser runtime uses Web Crypto for P-256 invite/envelope signatures and
-passphrase wrapping, and the existing Rust `snow` implementation for Noise XX
-setup and message encryption. Private Noise state, nonces, and transcript
-records are passphrase-wrapped in IndexedDB. The serverless/manual flow does not
+passphrase wrapping, and Rust `vodozemac` Olm v2 for 3DH setup and Double
+Ratchet message encryption. Private account/session pickles and transcript
+records are passphrase-wrapped in IndexedDB and the session pickle advances
+after every successful send or receive. The serverless/manual flow does not
 upload private keys, passphrases, plaintext messages, or message transcripts.
 Browser storage and unlocked browser memory are still exposed to the device,
 browser profile, extensions, and local malware.
 
 This prototype does not claim production E2EE, anonymity, reliable delivery,
 secure deletion, backup recovery, rollback protection, or protection from a
-compromised endpoint. Noise is used without a message ratchet, independent
-security audit, or post-compromise recovery; this is not equivalent to a
-reviewed Signal deployment.
+compromised endpoint. The underlying Olm implementation has an external audit,
+but this application's protocol composition and browser integration do not;
+this is not equivalent to a reviewed Signal deployment.
 
-Protocol-v2 profiles use a separate IndexedDB database. Existing v1 browser
+Protocol-v3 profiles use a separate IndexedDB database. Existing v1/v2 browser
 profiles are left untouched but are not loaded; create fresh profiles and pair
-again after upgrading.
+again after upgrading. A profile is deliberately bound to one peer because its
+published one-time setup key is single-use.
 
 ## Deliberately not included yet
 
@@ -202,9 +204,9 @@ npm --prefix apps/web run build --workspaces=false
 ```
 
 The current Node integration test exercises two local profiles, signed invite
-verification, the four-message Noise XX setup, encrypted message exchange,
-duplicate rejection, nested-field tamper/replay boundaries, protected inbox
-access, and unlock-based session/transcript recovery. A two-origin
+verification, the two-message Olm setup, ratcheted and out-of-order encrypted
+message exchange, duplicate rejection, nested-field tamper/replay boundaries,
+protected inbox access, and unlock-based session/transcript recovery. A two-origin
 in-app-browser flow is also used against two local server processes.
 
 ## Security and support

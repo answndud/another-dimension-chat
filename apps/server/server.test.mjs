@@ -43,7 +43,7 @@ test("local server exposes health and a capability-scoped opaque inbox", async (
   const health = await call(port, "GET", "/api/v1/health");
   assert.deepEqual(health.body, { ok: true, protocol: 1 });
   const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
-  const envelope = "ADENVWEB1.test-envelope";
+  const envelope = "ADENVWEB3.test-envelope";
   const accepted = await call(port, "POST", inboxPath, { envelope });
   assert.equal(accepted.status, 202);
   assert.equal((await call(port, "GET", inboxPath)).status, 403);

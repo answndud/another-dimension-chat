@@ -46,11 +46,14 @@ The repository currently has:
   `protocol::Envelope` for a caller-supplied message number.
 - Replay acceptance only after successful decrypt, so tampered ciphertext does
   not advance replay state.
+- Browser protocol v3 uses `vodozemac` Olm v2 through a narrow WASM adapter,
+  persists passphrase-wrapped account/session pickles, and advances the Double
+  Ratchet state after successful encrypt/decrypt.
 
 The repository does not currently have:
 
 - Real E2EE.
-- A reviewed ratchet implementation.
+- An independent audit of the application's browser protocol composition.
 - Stored production signature keys.
 - Integrated production key agreement for app messages.
 - Production key storage.
@@ -73,8 +76,8 @@ The repository does not currently have:
 
 ## Current Direction
 
-The first production message/session work stays on the existing Noise-based
-sync boundary:
+The native prototype remains on the existing Noise-based sync boundary. The
+browser product uses the reviewed-library Olm Double Ratchet boundary:
 
 1. Pairwise identity per contact.
 2. Invite-code pairing as the first supported setup path.
@@ -83,8 +86,8 @@ sync boundary:
 4. Safety number derives from a canonical transcript that includes the identity
    and setup material.
 5. Safety material display is derived from the canonical transcript with a
-   reviewed hash crate, while message encryption is handled by a reviewed
-   session construction, not by the CLI or UI.
+   reviewed hash crate, while browser message encryption is handled by the
+   high-level `vodozemac` Olm API, not by custom CLI or UI cryptography.
 6. `dev-insecure` remains available only for development tests.
 
 ## Implementation Gate

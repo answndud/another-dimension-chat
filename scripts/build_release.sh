@@ -10,7 +10,7 @@ trap 'rm -rf "$STAGE"' EXIT INT TERM
 
 node -e 'const major = Number(process.versions.node.split(".")[0]); if (major < 20) { console.error(`Node.js 20 or newer is required (found ${process.version}).`); process.exit(1); }'
 if [ ! -f "$PROJECT_DIR/apps/web/src/generated/ad_crypto_bg.wasm" ]; then
-  printf '%s\n' "Missing browser Noise module. Run: npm --prefix apps/web run build:crypto --workspaces=false" >&2
+  printf '%s\n' "Missing browser cryptography module. Run: npm --prefix apps/web run build:crypto --workspaces=false" >&2
   exit 1
 fi
 npm --prefix "$PROJECT_DIR/apps/web" run build --workspaces=false

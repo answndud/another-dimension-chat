@@ -9,21 +9,23 @@ const srcDir = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const runtime = readFileSync(resolve(srcDir, "web-runtime.js"), "utf8");
 const ui = readFileSync(resolve(srcDir, "main.js"), "utf8");
 const serviceWorker = readFileSync(resolve(srcDir, "../public/sw.js"), "utf8");
-globalThis.__AD_NOISE_WASM_BYTES__ = readFileSync(resolve(srcDir, "generated/ad_crypto_bg.wasm"));
+globalThis.__AD_CRYPTO_WASM_BYTES__ = readFileSync(resolve(srcDir, "generated/ad_crypto_bg.wasm"));
 
 test("web runtime uses browser crypto and IndexedDB rather than preview storage", () => {
   assert.match(runtime, /indexedDB\.open/);
   assert.match(runtime, /crypto\.subtle\.generateKey/);
   assert.match(runtime, /PBKDF2/);
   assert.match(runtime, /AES-GCM/);
-  assert.match(runtime, /noise_handshake_init/);
-  assert.match(runtime, /noise_initiator_encrypt/);
-  assert.match(runtime, /ADWEB2/);
-  assert.match(runtime, /ADENVWEB2/);
+  assert.match(runtime, /olm_outbound_start/);
+  assert.match(runtime, /olm_session_encrypt/);
+  assert.match(runtime, /ADWEB3/);
+  assert.match(runtime, /ADENVWEB3/);
   assert.match(runtime, /sendEnvelope/);
   assert.match(runtime, /syncInbox/);
   assert.match(runtime, /ECDSA/);
   assert.doesNotMatch(runtime, /deriveBits|HKDF/);
+  assert.doesNotMatch(runtime, /noise_handshake|noise_(?:initiator|responder)/);
+  assert.doesNotMatch(runtime, /ADWEB2|ADENVWEB2/);
   assert.doesNotMatch(runtime, /localStorage/);
 });
 
@@ -82,7 +84,7 @@ class MemoryIndexedDb {
 }
 
 function envelopeBody(value) {
-  return JSON.parse(Buffer.from(value.slice("ADENVWEB2.".length), "base64url").toString());
+  return JSON.parse(Buffer.from(value.slice("ADENVWEB3.".length), "base64url").toString());
 }
 
 async function completeManualHandshake(runtime, passphrases) {
@@ -104,7 +106,7 @@ async function completeManualHandshake(runtime, passphrases) {
   }
 }
 
-test("two local profiles establish Noise, persist it, and reject tamper and replay", async (context) => {
+test("two local profiles establish an Olm ratchet, persist it, and reject tamper and replay", async (context) => {
   if (!globalThis.crypto?.subtle) Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
   globalThis.indexedDB = new MemoryIndexedDb();
   Object.defineProperty(globalThis, "location", { value: { hash: "#local=test-token" }, configurable: true });
@@ -133,15 +135,22 @@ test("two local profiles establish Noise, persist it, and reject tamper and repl
   await completeManualHandshake(runtime, { alice: "alice-passphrase", bob: "bob-passphrase" });
 
   await runtime.unlockProfile("alice", "alice-passphrase");
+  await assert.rejects(() => runtime.importInvite(bobInvite), /already paired/);
   const envelope = await runtime.exportEnvelope("hello from alice");
+  assert.doesNotMatch(envelopeBody(envelope).payload.body, /hello from alice/);
   const tamperedBody = envelopeBody(envelope);
-  tamperedBody.payload.ciphertext = `${tamperedBody.payload.ciphertext.slice(0, -1)}A`;
-  const tampered = `ADENVWEB2.${Buffer.from(JSON.stringify(tamperedBody)).toString("base64url")}`;
+  tamperedBody.payload.body = `${tamperedBody.payload.body.slice(0, -1)}A`;
+  const tampered = `ADENVWEB3.${Buffer.from(JSON.stringify(tamperedBody)).toString("base64url")}`;
 
   await runtime.unlockProfile("bob", "bob-passphrase");
   await assert.rejects(() => runtime.importEnvelope(tampered), /signature is invalid/);
   assert.equal(await runtime.importEnvelope(envelope), "hello from alice");
   await assert.rejects(() => runtime.importEnvelope(envelope), /already imported/);
+  const replyOne = await runtime.exportEnvelope("ratchet reply one", { record: false });
+  const replyTwo = await runtime.exportEnvelope("ratchet reply two", { record: false });
+  await runtime.unlockProfile("alice", "alice-passphrase");
+  assert.equal(await runtime.importEnvelope(replyTwo), "ratchet reply two");
+  assert.equal(await runtime.importEnvelope(replyOne), "ratchet reply one");
   let deliveryProfile;
   for (const [name, passphrase] of Object.entries({ alice: "alice-passphrase", bob: "bob-passphrase" })) {
     await runtime.unlockProfile(name, passphrase);
@@ -154,7 +163,7 @@ test("two local profiles establish Noise, persist it, and reject tamper and repl
   let failedDelivery;
   try { await runtime.sendEnvelope("failed delivery"); } catch (error) { failedDelivery = error; }
   assert.match(failedDelivery.message, /could not accept/);
-  assert.match(failedDelivery.envelope, /^ADENVWEB2\./);
+  assert.match(failedDelivery.envelope, /^ADENVWEB3\./);
 
   runtime.lockProfile();
   await runtime.unlockProfile("bob", "bob-passphrase");
@@ -162,21 +171,21 @@ test("two local profiles establish Noise, persist it, and reject tamper and repl
   assert.equal((await runtime.listMessages()).length, 1);
 });
 
-test("deep canonical signatures bind nested Noise and server material", async () => {
+test("deep canonical signatures bind nested Olm and server material", async () => {
   if (!globalThis.crypto?.subtle) Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
   globalThis.indexedDB = new MemoryIndexedDb();
   const runtime = await import(`./web-runtime.js?invite=${Date.now()}`);
   await runtime.ready;
   await runtime.createProfile("owner", "owner-passphrase");
   const invite = await runtime.exportInvite();
-  const decoded = JSON.parse(Buffer.from(invite.slice("ADWEB2.".length), "base64url").toString());
+  const decoded = JSON.parse(Buffer.from(invite.slice("ADWEB3.".length), "base64url").toString());
   assert.equal(decoded.server, undefined);
   await runtime.createProfile("peer", "peer-passphrase");
-  const forgedNoise = { ...decoded, noisePublic: Buffer.alloc(32, 7).toString("base64url") };
-  await assert.rejects(() => runtime.importInvite(`ADWEB2.${Buffer.from(JSON.stringify(forgedNoise)).toString("base64url")}`), /signature/);
+  const forgedOlm = { ...decoded, olmCurve25519Public: "A".repeat(43) };
+  await assert.rejects(() => runtime.importInvite(`ADWEB3.${Buffer.from(JSON.stringify(forgedOlm)).toString("base64url")}`), /signature/);
 });
 
-test("inbox sync drives Noise controls and protects read and ack headers", async () => {
+test("inbox sync drives Olm controls and protects read and ack headers", async () => {
   if (!globalThis.crypto?.subtle) Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
   globalThis.indexedDB = new MemoryIndexedDb();
   Object.defineProperty(globalThis, "location", { value: { hash: "#local=owner-token" }, configurable: true });

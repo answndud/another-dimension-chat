@@ -31,4 +31,4 @@ mkdir -p "$OUT_DIR"
   --out-name ad_crypto \
   "$TARGET_DIR/another_dimension_web_crypto_wasm.wasm"
 
-printf '%s\n' "Generated browser Noise module in $OUT_DIR"
+printf '%s\n' "Generated browser cryptography module in $OUT_DIR"

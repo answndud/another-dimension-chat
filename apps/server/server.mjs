@@ -205,7 +205,7 @@ export async function createLocalServer({
       try {
         const body = JSON.parse(await readBody(req));
         const envelope = String(body?.envelope || "").trim();
-        if (!/^ADENVWEB(?:1|2)\./.test(envelope) || Buffer.byteLength(envelope) > MAX_ENVELOPE_BYTES) throw new Error("invalid_envelope");
+        if (!/^ADENVWEB(?:1|2|3)\./.test(envelope) || Buffer.byteLength(envelope) > MAX_ENVELOPE_BYTES) throw new Error("invalid_envelope");
         const id = storeId(envelope);
         if (!inbox.some((item) => item.id === id)) {
           inbox.push({ id, envelope, receivedAt: Date.now() });

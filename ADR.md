@@ -151,7 +151,7 @@ reverse-proxy/Tailscale Serve, direct-TLS 중 하나를 검증해 owner-only JSO
 
 ## ADR-0004 - 브라우저 메시지 암호화를 기존 Rust Noise XX 경계로 통합
 
-- 상태: accepted
+- 상태: superseded by ADR-0005
 - 날짜: 2026-07-31
 - 근거 유형: explicit + inferred
 
@@ -210,3 +210,67 @@ Noise XX가 session setup과 message encryption을 담당한다.
 - `apps/web/src/web-runtime.test.js`: handshake, tamper, replay, persistence,
   protected inbox integration
 - `reference/CRYPTO_DECISION.md`: existing Noise direction and implementation gate
+
+## ADR-0005 - 브라우저 session을 vodozemac Olm Double Ratchet으로 교체
+
+- 상태: accepted
+- 날짜: 2026-07-31
+- 근거 유형: explicit + inferred
+
+### Context
+
+ADR-0004의 stateless Noise transport는 lock/reload 복구를 위해 handshake 자료를
+저장하고 매 메시지마다 동일한 transport key를 재구성했다. 따라서 persisted
+state가 노출되면 과거 메시지 key도 재구성할 수 있고 post-compromise recovery를
+위한 ratchet이 없었다. 고위험 1:1 messenger 목표에는 직접 만든 KDF/rekey가
+아니라 유지보수되는 ratchet 구현이 필요하다.
+
+검토한 후보 중 공식 Signal `libsignal`은 Double Ratchet을 제공하지만 AGPL과
+전용 nightly/native build chain이 현재 MIT browser WASM 배포 경계에 맞지 않았다.
+`snow`의 transport rekey는 application이 동기화를 책임져야 하고 state
+serialization을 제공하지 않아 browser restart와 안전하게 결합할 수 없었다.
+
+### Decision
+
+browser protocol v3는 Apache-2.0 `vodozemac` 0.10의 고수준 Olm API를
+WebAssembly adapter로 사용한다.
+
+- Olm v2 full HMAC 설정과 3DH one-time key setup을 사용한다.
+- signed invite가 P-256 identity, Olm Ed25519/Curve25519 identity,
+  single-use one-time public key, endpoint를 재귀 canonical signature로 묶는다.
+- deterministic initiator가 `olm-init` pre-key control envelope를 보내고,
+  responder가 transcript를 복호화·검증한 뒤 `olm-ready` normal envelope로
+  응답한다.
+- account/session pickle은 passphrase-wrapped profile 안에 저장하고 성공한
+  encrypt/decrypt마다 전진한 session pickle을 다음 작업 전에 저장한다.
+- Olm 자체 out-of-order key 보관을 사용하며 application nonce/KDF/AEAD를
+  추가하지 않는다.
+- one-time key 재사용을 막기 위해 profile 하나를 peer 한 명에 고정한다.
+- v1/v2 IndexedDB는 삭제하지 않고 별도 v3 database를 사용하며 자동 migration
+  없이 새 profile과 re-pairing을 요구한다.
+
+### Consequences
+
+- handshake control envelope가 네 개에서 두 개로 줄고 offline initiator setup이
+  가능해진다.
+- 성공한 양방향 송수신이 Double Ratchet state를 전진시켜 forward secrecy와
+  self-healing 기반을 제공한다.
+- WASM asset은 약 467 KiB(gzip 약 197 KiB)로 증가한다.
+- `vodozemac` 프로젝트의 외부 감사는 근거가 되지만 이 앱의 signature 조합,
+  persistence, UI, transport를 감사한 것은 아니므로 production/Signal 수준을
+  주장하지 않는다.
+- Olm v2 session config는 crate의 `experimental-session-config` feature로
+  노출되지만 v1의 8-byte truncated MAC 대신 full HMAC을 사용한다. dependency
+  upgrade 시 이 경계를 재검증해야 한다.
+- post-quantum 보안, multi-device session, backup recovery는 제공하지 않는다.
+
+### Evidence
+
+- `crates/web-crypto-wasm/src/lib.rs`: account/session pickle, 3DH setup,
+  high-level Olm encrypt/decrypt adapter
+- `apps/web/src/web-runtime.js`: protocol v3 transcript, signed controls,
+  atomic ratchet persistence and single-peer profile lifecycle
+- `apps/web/src/web-runtime.test.js`: bidirectional/out-of-order ratchet,
+  persistence, tamper, replay, protected inbox
+- `vodozemac` 0.10 docs and repository: Double Ratchet, modern pickle,
+  `js` feature, Apache-2.0, external audit record
