@@ -1,5 +1,7 @@
 const DB_NAME = "another-dimension-web-v1";
 const DB_VERSION = 1;
+const MAX_ENVELOPE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const profileNames = [];
 let activeProfile = null;
 
@@ -229,7 +231,8 @@ export async function importEnvelope(value) {
   const text = String(value || "").trim();
   if (!text.startsWith("ADENVWEB1.")) throw new Error("This is not a valid sealed web envelope.");
   const envelope = decode(text.slice("ADENVWEB1.".length));
-  if (envelope.v !== 1 || envelope.to !== activeProfile.name || envelope.from !== activeProfile.peer.name || envelope.senderEcdhPublic?.x !== activeProfile.peer.ecdhPublic?.x || !envelope.signature || !Number.isSafeInteger(envelope.createdAt)) throw new Error("Envelope identity does not match this room.");
+  const now = Date.now();
+  if (envelope.v !== 1 || envelope.to !== activeProfile.name || envelope.from !== activeProfile.peer.name || JSON.stringify(envelope.senderEcdhPublic) !== JSON.stringify(activeProfile.peer.ecdhPublic) || !envelope.signature || !Number.isSafeInteger(envelope.createdAt) || !/^[-0-9a-f]{36}$/i.test(envelope.id) || envelope.createdAt < now - MAX_ENVELOPE_AGE_MS || envelope.createdAt > now + MAX_CLOCK_SKEW_MS) throw new Error("Envelope identity or replay window does not match this room.");
   const signingKey = await crypto.subtle.importKey("jwk", activeProfile.peer.ecdsaPublic, { name: "ECDSA", namedCurve: "P-256" }, true, ["verify"]);
   const { signature, ...body } = envelope;
   if (!await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, signingKey, base64ToBytes(signature), new TextEncoder().encode(canonical(body)))) throw new Error("Envelope signature is invalid or it was modified.");

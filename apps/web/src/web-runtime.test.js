@@ -100,6 +100,9 @@ test("two local profiles can exchange a real sealed envelope and reject a duplic
   runtime.lockProfile();
   await runtime.unlockProfile("bob", "bob-passphrase");
   assert.equal((await runtime.listMessages()).length, 1);
+  await runtime.createProfile("charlie", "charlie-passphrase");
+  await runtime.importInvite(aliceInvite);
+  await assert.rejects(() => runtime.importEnvelope(envelope), /identity|replay window/);
 });
 
 test("signed invites preserve optional server capability and reject forged endpoints", async () => {
