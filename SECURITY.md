@@ -6,9 +6,10 @@ Another Dimension Chat is an experimental web-first prototype and is not
 ready for real communication. It is not audited, not production-ready, and
 not for sensitive communication.
 
-The current web surface runs locally in a browser. Public hosting is not yet
-available. The Tauri desktop target is a secondary development wrapper, not
-the current product distribution boundary.
+The current direction is a user-owned local server plus a browser UI. No
+ChatGPT Sites project or central message host is required by the product. The
+Tauri desktop target is a secondary development wrapper, not the current
+product distribution boundary.
 
 ## Current web behavior
 
@@ -18,6 +19,8 @@ the current product distribution boundary.
 - Messages are encrypted locally and exchanged as sealed envelopes.
 - Transcript records remain in browser-local storage for the current profile.
 - No central message server, push service, cloud backup, or account recovery exists.
+- A user-owned local server may store bounded opaque sealed envelopes for that
+  user's inbox; it is not trusted with plaintext or private keys.
 
 These are implementation behaviors, not proof of secure messenger readiness.
 

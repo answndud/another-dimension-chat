@@ -45,6 +45,7 @@ PLAN.md
 /.another-dimension-prototype/
 /another-dimension-dev*/
 /another-dimension-smoke*/
+**/.another-dimension-server/
 *.pair
 *.adpair
 

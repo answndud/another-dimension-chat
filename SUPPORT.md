@@ -2,8 +2,9 @@
 
 Another Dimension Chat is a web-first experimental prototype. It is not
 audited, not production-ready, and sensitive communication is prohibited.
-Public hosting is not available yet; local development uses the Vite web
-runtime. The old macOS DMG is a legacy artifact, not the primary product path.
+Each user may run the local server on their own device; local development uses
+the Vite web runtime. The old macOS DMG is a legacy artifact, not the primary
+product path.
 
 ## Public support
 

@@ -5,14 +5,14 @@
 **계정·전화번호·contact discovery·중앙 메시지 저장·push 없이 브라우저에서
 실행하는 1:1 암호화 메시지 prototype.**
 
-현재 제품 방향은 static web app입니다. 브라우저에서 프로필과 메시지 키를
-만들고, 암호화된 로컬 프로필 자료와 transcript를 IndexedDB에 저장하며,
-서명된 invite와 sealed message envelope를 사용자가 선택한 채널로 직접
-전달합니다.
+현재 제품 방향은 사용자 소유 local server와 browser UI의 조합입니다.
+프로필과 메시지 키는 브라우저에 두고, 암호화된 로컬 프로필 자료는 IndexedDB에
+저장하며, 각 사용자의 서버는 opaque sealed envelope만 처리합니다.
 
 > **현재 상태:** web-first 실험용 prototype. 감사되지 않았고,
-> production-ready가 아니며, 민감한 통신에 사용하면 안 됩니다. 아직 public
-> hosting과 신뢰 가능한 자동 전달은 제공하지 않습니다.
+> production-ready가 아니며, 민감한 통신에 사용하면 안 됩니다. hosting은
+> 사용자가 소유한 배포 계정에서 선택적으로 연결하며, 신뢰 가능한 자동
+> 전달은 제공하지 않습니다.
 
 ## 현재 웹 prototype에서 동작하는 것
 
@@ -35,7 +35,30 @@ npm --prefix apps/web run dev --workspaces=false
 ```
 
 Vite가 출력하는 로컬 URL을 엽니다. 브라우저 제품은 `apps/web`에 있고,
-Tauri 패키지는 선택적인 desktop wrapper입니다.
+local server 제품은 `apps/server`에 있으며, Tauri 패키지는 선택적인 desktop
+wrapper입니다.
+
+## 사용자 기기에서 local server 실행
+
+브라우저 bundle을 만든 뒤 사용자의 기기에서 서버를 실행합니다.
+
+```sh
+npm --prefix apps/web run build --workspaces=false
+npm --prefix apps/server start --workspaces=false
+```
+
+기본 bind는 `127.0.0.1:1422`입니다. LAN이나 VPN으로 노출하려면
+`AD_BIND_HOST`를 명시하고, 상대가 접근할 수 있는 주소를 `AD_PUBLIC_URL`로
+설정한 뒤 네트워크 공개를 사용자가 직접 구성해야 합니다.
+
+```sh
+AD_BIND_HOST=0.0.0.0 AD_PUBLIC_URL=http://192.168.1.20:1422 \
+  npm --prefix apps/server start --workspaces=false
+```
+
+서버는 bounded opaque envelope만 저장하고 정적 browser UI를 제공합니다.
+
+ChatGPT Sites나 중앙 메시지 hosting은 필요하지 않습니다.
 
 ## 웹 보안 경계
 
@@ -53,9 +76,9 @@ review된 Signal 또는 Noise 배포와 동등하지 않습니다.
 
 - 계정·전화번호·이메일 identity·검색 username·contact discovery
 - 중앙 메시지 relay·push·cloud backup·계정 복구
-- 자동 online delivery·WebRTC·Tor/onion·offline mailbox
+- 자동 WebRTC·Tor/onion·offline mailbox
 - 그룹 채팅·파일·통화·multi-device 동기화
-- public hosting·서명 release·공증·production security 주장
+- 서명 release·공증·production security 주장
 
 자동 전달은 이후 opaque relay 또는 signaling 서비스로 별도 검토합니다.
 그 서버가 평문·private key·identity discovery를 보유해서는 안 되며,
