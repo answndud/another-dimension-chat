@@ -3,6 +3,7 @@
 export const memory: WebAssembly.Memory;
 export const olm_account_new: (a: number) => void;
 export const olm_account_replenish: (a: number, b: number, c: number, d: number) => void;
+export const olm_account_revoke: (a: number, b: number, c: number, d: number, e: number) => void;
 export const olm_inbound_accept: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;
 export const olm_outbound_finish: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
 export const olm_outbound_start: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;

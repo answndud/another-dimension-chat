@@ -23,6 +23,7 @@ test("web runtime uses browser crypto and IndexedDB rather than preview storage"
   assert.match(runtime, /ADWEB3/);
   assert.match(runtime, /ADENVWEB3/);
   assert.match(runtime, /sendEnvelope/);
+  assert.match(runtime, /revokeInvite/);
   assert.match(runtime, /syncInbox/);
   assert.match(runtime, /ECDSA/);
   assert.doesNotMatch(runtime, /deriveBits|HKDF/);
@@ -212,6 +213,9 @@ test("deep canonical signatures bind nested Olm and server material", async () =
   const invite = await runtime.exportInvite();
   const decoded = JSON.parse(Buffer.from(invite.slice("ADWEB3.".length), "base64url").toString());
   assert.equal(decoded.server, undefined);
+  await runtime.revokeInvite();
+  const rotatedInvite = await runtime.exportInvite();
+  assert.notEqual(inviteBody(rotatedInvite).inviteId, decoded.inviteId);
   await runtime.createProfile("peer", "peer-passphrase");
   const forgedOlm = { ...decoded, olmCurve25519Public: "A".repeat(43) };
   await assert.rejects(() => runtime.importInvite(`ADWEB3.${Buffer.from(JSON.stringify(forgedOlm)).toString("base64url")}`), /signature/);

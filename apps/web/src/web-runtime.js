@@ -2,6 +2,7 @@ import initCrypto, {
   initSync as initCryptoSync,
   olm_account_new,
   olm_account_replenish,
+  olm_account_revoke,
   olm_inbound_accept,
   olm_outbound_finish,
   olm_outbound_start,
@@ -268,6 +269,7 @@ async function selfInviteBody() {
   if (!prekey) throw new Error("No one-time prekey is available. Create a fresh profile before pairing.");
   prekey.state = "reserved";
   prekey.issuedAt = now;
+  activeProfile.olmOneTimePublic = prekey.public;
   const info = await localServerInfo();
   const body = {
     v: 3,
@@ -292,6 +294,21 @@ export async function exportInvite() {
   const body = await selfInviteBody();
   const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, activeProfile.ecdsaPrivate, new TextEncoder().encode(canonical(body)));
   return `${INVITE_PREFIX}${encode({ ...body, signature: bytesToBase64(signature) })}`;
+}
+
+export async function revokeInvite() {
+  if (!activeProfile) throw new Error("Unlock a local profile first.");
+  if (activeProfile.peer) throw new Error("The paired session is active. Create a fresh profile to revoke its identity safely.");
+  const existing = activeProfile.selfInviteBody;
+  if (!existing) return false;
+  const prekey = prekeyByPublic(existing.olmOneTimePublic);
+  if (prekey) prekey.state = "revoked";
+  activeProfile.privateMaterial.olmAccountPickle = olm_account_revoke(activeProfile.privateMaterial.olmAccountPickle, existing.olmOneTimePublic);
+  activeProfile.selfInviteBody = null;
+  activeProfile.olmOneTimePublic = "";
+  await persistPrivateProfile();
+  await persistPublicProfile();
+  return true;
 }
 
 function participantKey(participant) {

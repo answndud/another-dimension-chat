@@ -3,6 +3,7 @@ import {
   unlockProfile,
   listProfiles,
   exportInvite,
+  revokeInvite,
   importInvite,
   safetyPhrase,
   exportEnvelope,
@@ -103,6 +104,7 @@ function render() {
           <p class="small">This code contains public setup material only. Send it through any channel.</p>
           <textarea id="invite" readonly rows="5">${escapeHtml(state.invite)}</textarea>
           <button id="copy-invite" class="secondary">Copy invite</button>
+          ${!state.peer ? '<button id="revoke-invite" class="ghost">Revoke this invite and issue a new one</button>' : ""}
           <p class="small">Your invite includes a server capability when this page is served by it. Share the invite only with the intended peer.</p>
           <h2>2. Add peer invite</h2>
           <textarea id="peer-invite" rows="5" placeholder="Paste the other person's invite here">${escapeHtml(state.peerInvite)}</textarea>
@@ -153,6 +155,9 @@ function bindRoom() {
   document.querySelector("#lock")?.addEventListener("click", () => { lockProfile(); state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "" }; render(); });
   document.querySelector("#peer-invite")?.addEventListener("input", (event) => { state.peerInvite = event.currentTarget.value; });
   document.querySelector("#copy-invite")?.addEventListener("click", async () => { await navigator.clipboard.writeText(state.invite); state.notice = "Invite copied. Share it with the other person."; render(); });
+  document.querySelector("#revoke-invite")?.addEventListener("click", async () => {
+    try { await revokeInvite(); state.notice = "The previous invite was revoked. Share the newly generated invite instead."; await refresh(); } catch (error) { state.error = error.message; render(); }
+  });
   document.querySelector("#pair")?.addEventListener("click", async () => {
     try { state.peer = await importInvite(state.peerInvite); state.safety = safetyPhrase(state.profile, state.peer); state.notice = "Invite verified. Olm ratchet session establishment started; compare the safety material now."; await refresh(); } catch (error) { state.error = error.message; render(); }
   });

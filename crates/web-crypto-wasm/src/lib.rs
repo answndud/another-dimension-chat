@@ -80,6 +80,14 @@ pub fn olm_account_replenish(account_pickle: &str, count: usize) -> Result<Strin
 }
 
 #[wasm_bindgen]
+pub fn olm_account_revoke(account_pickle: &str, public_key: &str) -> Result<String, JsValue> {
+    let mut account = account_from_pickle(account_pickle)?;
+    let public_key = Curve25519PublicKey::from_base64(public_key).map_err(olm_error)?;
+    account.remove_one_time_key(public_key);
+    serialized_account(&account)
+}
+
+#[wasm_bindgen]
 pub fn olm_outbound_start(
     account_pickle: &str,
     peer_curve25519: &str,
