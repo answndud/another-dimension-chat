@@ -6,6 +6,7 @@ pub mod cli;
 pub mod device;
 pub mod identity;
 pub mod mls_provider;
+pub mod mls_session;
 pub mod mls_storage;
 pub mod model;
 pub mod protocol_gate;
