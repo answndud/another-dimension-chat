@@ -49,6 +49,18 @@ npm --prefix apps/web run build --workspaces=false
 npm --prefix apps/server start --workspaces=false
 ```
 
+독립 실행 release archive는 다음처럼 만들 수 있습니다.
+
+```sh
+./scripts/build_release.sh
+tar -xzf public-release/another-dimension-0.1.0.tar.gz
+cd another-dimension-0.1.0
+./scripts/start_local_server.sh
+```
+
+archive에는 빌드된 browser bundle과 server runtime이 포함되므로 압축을 푼
+사용자는 Vite나 원본 저장소가 필요하지 않습니다. Node.js 20 이상이 필요합니다.
+
 두 사용자 서버의 health → opaque 전달 → ack 흐름은 다음 짧은 smoke 명령으로
 확인할 수 있습니다.
 

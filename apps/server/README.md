@@ -9,6 +9,9 @@ npm --prefix apps/web run build --workspaces=false
 npm --prefix apps/server start --workspaces=false
 ```
 
+For a source-independent archive, run `./scripts/build_release.sh` from the
+repository root and start the extracted `scripts/start_local_server.sh`.
+
 Defaults are loopback-only (`127.0.0.1:1422`). Configure deliberately when using
 another device. The browser UI must be opened from HTTPS (except localhost), so
 put an HTTPS reverse proxy in front of the HTTP server for LAN/VPN/public use:

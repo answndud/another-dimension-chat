@@ -54,6 +54,18 @@ npm --prefix apps/server start --workspaces=false
 The same flow can be started from the repository root with
 `./scripts/start_local_server.sh` after the web bundle is built.
 
+To create a self-contained release archive:
+
+```sh
+./scripts/build_release.sh
+tar -xzf public-release/another-dimension-0.1.0.tar.gz
+cd another-dimension-0.1.0
+./scripts/start_local_server.sh
+```
+
+The archive contains the built browser bundle and server runtime; the extracted
+user does not need Vite or the source repository. Node.js 20 or newer is required.
+
 Run a short two-server transport smoke check with:
 
 ```sh

@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { createReadStream } from "node:fs";
+import { createReadStream, realpathSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
@@ -160,7 +160,8 @@ export async function createLocalServer({
   return { server, bindHost, port, inboxCapability, inboxUrl: inboxUrlFor(bindHost), secure: Boolean(tlsKeyFile && tlsCertFile) };
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+const launchedDirectly = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (launchedDirectly) {
   const runtime = await createLocalServer();
   runtime.server.listen(runtime.port, runtime.bindHost, () => {
     console.log(`Another Dimension local server listening at ${runtime.secure ? "https" : "http"}://${runtime.bindHost}:${runtime.port}`);
