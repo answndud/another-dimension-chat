@@ -13,6 +13,8 @@ import {
   lockProfile,
   getLocalServerInfo,
   confirmPendingEnvelopeDelivered,
+  confirmSafetyVerification,
+  isSafetyVerified,
   getPendingEnvelope,
   getSessionStatus,
   ready,
@@ -107,15 +109,15 @@ function render() {
           <button id="pair" ${state.peer ? "disabled" : ""}>${state.peer ? "Profile already paired" : "Pair and verify"}</button>
         </aside>
         <section class="stack">
-          <div class="card safety"><span class="label">SAFETY MATERIAL</span><strong>${escapeHtml(phrase)}</strong><p class="small">Compare this phrase with the other person over a trusted channel before sending messages.</p></div>
+          <div class="card safety"><span class="label">SAFETY MATERIAL</span><strong>${escapeHtml(phrase)}</strong><p class="small">Compare this phrase with the other person over a trusted channel before sending messages.</p>${state.peer && !isSafetyVerified() ? '<input id="safety-confirmation" placeholder="Paste the complete phrase after comparing" autocomplete="off" /><button id="confirm-safety" class="secondary">I compared and verified this phrase</button>' : state.peer ? '<p class="verified">Safety material verified for this session.</p>' : ""}</div>
           <div class="card stack">
             <div class="row-between"><h2>Sealed message exchange</h2><span class="pill">${state.peer ? `${escapeHtml(state.sessionStatus)} · ${escapeHtml(endpointOrigin(state.peer.server)) || "manual"}` : "not paired"}</span></div>
             ${state.peer && endpointWarning(state.peer.server) ? `<p class="warning">${escapeHtml(endpointWarning(state.peer.server))}</p>` : ""}
             ${state.peer && state.sessionStatus !== "ready" ? '<p class="warning">Olm ratchet session is establishing. Keep both rooms open, or move the pending handshake envelope manually.</p>' : ""}
             ${state.pendingHandshake && state.sessionStatus === "ready" ? '<p class="warning">Deliver the final ready envelope to the peer, then confirm delivery before messaging.</p><button id="confirm-handshake" class="secondary">I delivered the handshake envelope</button>' : ""}
             <label>Message<textarea id="message" rows="4" placeholder="Write locally, then send or export a sealed envelope"></textarea></label>
-            <div class="row-between"><button id="send-envelope" ${state.peer?.server?.inboxUrl && state.sessionStatus === "ready" && !state.pendingHandshake ? "" : "disabled"}>Encrypt and send to peer server</button><button id="sync-inbox" ${state.serverInfo?.inboxUrl ? "" : "disabled"} class="secondary">Sync my inbox</button></div>
-            <button id="export-envelope" ${state.peer && state.sessionStatus === "ready" && !state.pendingHandshake ? "" : "disabled"}>Encrypt and export envelope</button>
+            <div class="row-between"><button id="send-envelope" ${state.peer?.server?.inboxUrl && state.sessionStatus === "ready" && isSafetyVerified() && !state.pendingHandshake ? "" : "disabled"}>Encrypt and send to peer server</button><button id="sync-inbox" ${state.serverInfo?.inboxUrl ? "" : "disabled"} class="secondary">Sync my inbox</button></div>
+            <button id="export-envelope" ${state.peer && state.sessionStatus === "ready" && isSafetyVerified() && !state.pendingHandshake ? "" : "disabled"}>Encrypt and export envelope</button>
             <label>Outgoing envelope<textarea id="envelope" rows="5" placeholder="Your sealed envelope appears here">${escapeHtml(state.envelope)}</textarea></label>
             <label>Incoming envelope<textarea id="incoming" rows="5" placeholder="Paste the peer's sealed envelope here"></textarea></label>
             <button id="import-envelope" ${state.peer ? "" : "disabled"} class="secondary">Import and decrypt</button>
@@ -153,6 +155,9 @@ function bindRoom() {
   document.querySelector("#copy-invite")?.addEventListener("click", async () => { await navigator.clipboard.writeText(state.invite); state.notice = "Invite copied. Share it with the other person."; render(); });
   document.querySelector("#pair")?.addEventListener("click", async () => {
     try { state.peer = await importInvite(state.peerInvite); state.safety = safetyPhrase(state.profile, state.peer); state.notice = "Invite verified. Olm ratchet session establishment started; compare the safety material now."; await refresh(); } catch (error) { state.error = error.message; render(); }
+  });
+  document.querySelector("#confirm-safety")?.addEventListener("click", async () => {
+    try { await confirmSafetyVerification(document.querySelector("#safety-confirmation").value); state.notice = "Safety material verified. Messaging is now enabled for this session."; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#export-envelope")?.addEventListener("click", async () => {
     try { state.envelope = await exportEnvelope(document.querySelector("#message").value); state.notice = "Envelope encrypted. Move it to the other browser, then paste it into Incoming envelope."; await refresh(); } catch (error) { state.error = error.message; render(); }

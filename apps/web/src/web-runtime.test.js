@@ -100,8 +100,10 @@ async function completeManualHandshake(runtime, passphrases) {
     pending = runtime.getPendingEnvelope();
   }
   for (const name of Object.keys(passphrases)) {
-    await runtime.unlockProfile(name, passphrases[name]);
+    const profile = await runtime.unlockProfile(name, passphrases[name]);
     assert.equal(runtime.getSessionStatus(), "ready");
+    await assert.rejects(() => runtime.exportEnvelope("blocked before safety verification"), /Compare the safety material/);
+    await runtime.confirmSafetyVerification(runtime.safetyPhrase(profile.selfInviteBody, profile.peer));
     if (runtime.getPendingEnvelope()) await runtime.confirmPendingEnvelopeDelivered();
   }
 }
@@ -139,7 +141,7 @@ test("two local profiles establish an Olm ratchet, persist it, and reject tamper
   const envelope = await runtime.exportEnvelope("hello from alice");
   assert.doesNotMatch(envelopeBody(envelope).payload.body, /hello from alice/);
   const tamperedBody = envelopeBody(envelope);
-  tamperedBody.payload.body = `${tamperedBody.payload.body.slice(0, -1)}A`;
+  tamperedBody.payload.body = `A${tamperedBody.payload.body.slice(1)}`;
   const tampered = `ADENVWEB3.${Buffer.from(JSON.stringify(tamperedBody)).toString("base64url")}`;
 
   await runtime.unlockProfile("bob", "bob-passphrase");
@@ -228,8 +230,9 @@ test("inbox sync drives Olm controls and protects read and ack headers", async (
       await runtime.unlockProfile(target, target === "sync_alice" ? "alice-passphrase" : "bob-passphrase");
       await runtime.syncInbox();
     }
-    await runtime.unlockProfile("sync_alice", "alice-passphrase");
+    const syncAlice = await runtime.unlockProfile("sync_alice", "alice-passphrase");
     assert.equal(runtime.getSessionStatus(), "ready");
+    await runtime.confirmSafetyVerification(runtime.safetyPhrase(syncAlice.selfInviteBody, syncAlice.peer));
     const queuedEnvelope = await runtime.exportEnvelope("automatic receive");
     queue.push({ id: "message-id", envelope: queuedEnvelope });
     await runtime.unlockProfile("sync_bob", "bob-passphrase");

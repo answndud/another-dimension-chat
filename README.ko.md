@@ -134,6 +134,11 @@ node scripts/verify_release_manifest.mjs . \
 번들 변조와 잘못된 서명을 발견하지만, 운영체제·브라우저·호스트가 이미 장악된
 경우나 공개키를 처음 받는 과정의 신뢰 문제까지 해결하지는 않습니다.
 
+pairing이 성공해도 바로 메시지를 보낼 수는 없습니다. 두 사람이 서로 다른
+신뢰된 채널(대면, 별도 음성 통화 등)로 화면의 전체 safety material을 비교하고,
+각자 확인 버튼을 눌러야 메시지 암호화·전송이 열립니다. 이 확인은 현재 paired
+session에 저장되며, 새 pairing이나 session 재설정에서는 다시 해야 합니다.
+
 두 사용자 서버의 health → opaque 전달 → ack 흐름은 다음 짧은 smoke 명령으로
 확인할 수 있습니다.
 

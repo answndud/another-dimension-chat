@@ -312,6 +312,7 @@ async function initializeOlmSession() {
     role,
     status: role === "initiator" ? "init-sent" : "waiting-init",
     transcript: sessionTranscript(local, peer),
+    safetyVerified: false,
     pendingEnvelope: null,
   };
   activeProfile.privateMaterial.session = session;
@@ -361,6 +362,20 @@ export function getSessionStatus() {
   return activeProfile?.privateMaterial?.session?.status || "not-paired";
 }
 
+export function isSafetyVerified() {
+  return activeProfile?.privateMaterial?.session?.safetyVerified === true;
+}
+
+export async function confirmSafetyVerification(material) {
+  const session = activeProfile?.privateMaterial?.session;
+  if (!session || !activeProfile.peer) throw new Error("Pair with a peer before verifying safety material.");
+  if (String(material || "").trim() !== safetyPhrase(activeProfile.selfInviteBody, activeProfile.peer)) {
+    throw new Error("Safety material does not match. Compare the complete phrase over a trusted channel.");
+  }
+  session.safetyVerified = true;
+  await persistPrivateProfile();
+}
+
 export function getPendingEnvelope() {
   return activeProfile?.privateMaterial?.session?.pendingEnvelope || "";
 }
@@ -389,6 +404,7 @@ export async function exportEnvelope(text, { record = true } = {}) {
   if (!message) throw new Error("Write a message first.");
   const session = activeProfile.privateMaterial.session;
   if (session?.status !== "ready") throw new Error("The Olm session is still establishing. Keep both rooms open or move the pending handshake envelope manually.");
+  if (!session.safetyVerified) throw new Error("Compare the safety material with the peer and confirm it before sending messages.");
   if (session.pendingEnvelope) throw new Error("Deliver and confirm the final Olm handshake envelope before sending a message.");
   let encrypted;
   try {
