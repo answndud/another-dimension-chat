@@ -1,157 +1,83 @@
-# Another Dimension Chat — Unsigned DMG Primary
-
-<p>
-  <img src="https://img.shields.io/badge/status-unsigned%20DMG%20primary-blue" alt="Unsigned DMG primary">
-  <img src="https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-lightgrey" alt="Platform">
-  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
-</p>
+# Another Dimension Chat — Web-first prototype
 
 [English](README.md) | 한국어
 
-**계정, 전화번호, contact discovery, 클라우드 메시지 저장,
-푸시 알림 의존성을 피하는 local-first 1:1 메신저 베타.**
+**계정·전화번호·contact discovery·중앙 메시지 저장·push 없이 브라우저에서
+실행하는 1:1 암호화 메시지 prototype.**
 
-**Rust**와 **Tauri**로 제작. 현재 테스트 흐름은 pairwise invite room,
-safety material 비교, 로컬 암호화 저장, 수동 sealed-message 교환을 사용.
+현재 제품 방향은 static web app입니다. 브라우저에서 프로필과 메시지 키를
+만들고, 암호화된 로컬 프로필 자료와 transcript를 IndexedDB에 저장하며,
+서명된 invite와 sealed message envelope를 사용자가 선택한 채널로 직접
+전달합니다.
 
-> **현재 상태:** unsigned DMG primary macOS Apple Silicon 베타. 감사되지
-> 않았고, production-ready가 아니며, 민감한 통신에 사용하면 안 됨.
+> **현재 상태:** web-first 실험용 prototype. 감사되지 않았고,
+> production-ready가 아니며, 민감한 통신에 사용하면 안 됩니다. 아직 public
+> hosting과 신뢰 가능한 자동 전달은 제공하지 않습니다.
 
-## 지금 제공하는 이점
+## 현재 웹 prototype에서 동작하는 것
 
-| 이점 | 현재 베타 동작 |
-|------|----------------|
-| 계정 생성 없음 | 내 기기에 로컬 프로필 생성 |
-| 공개 식별자 없음 | 초대 코드로 한 사람과만 연결 |
-| 중앙 메시지 저장 없음 | 내보내기 전까지 메시지는 로컬에 보관 |
-| 전달 채널 직접 선택 | sealed message를 원하는 채널로 전달 |
-| 명확한 안전 확인 | room 사용 전 safety material 비교 |
+- passphrase를 사용하는 로컬 브라우저 프로필 생성·unlock
+- 서명된 공개 invite 생성과 상대 invite 검증
+- 메시지 전에 비교하는 deterministic safety phrase
+- 브라우저에서 메시지 암호화 및 sealed envelope 내보내기
+- 상대 envelope 가져오기 및 로컬 복호화
+- 같은 envelope의 중복 가져오기 거부
+- IndexedDB 기반 프로필 자료와 transcript 저장·재unlock 복구
 
-## macOS 설치
+기본 전달 방식은 수동 전달입니다. invite나 sealed envelope를 복사해서
+사용자가 선택한 채널로 보내며, 앱은 메시지 서버를 실행하지 않습니다.
 
-Apple 칩이 탑재된 Mac(M1 이상)에서 사용할 수 있습니다. Intel Mac은 아직
-지원하지 않습니다.
-
-### [최신 macOS DMG 바로 다운로드](https://github.com/answndud/another-dimension-chat/releases/download/latest/another-dimension-chat-0.1.0-beta-onion-arm64.dmg)
-
-1. 다운로드된 파일을 엽니다.
-2. **Another Dimension Chat**을 **Applications(응용 프로그램)** 폴더로
-   드래그합니다.
-3. Applications 폴더에서 앱을 실행합니다.
-
-이 베타는 Apple Developer ID로 서명되지 않아 첫 실행이 차단될 수 있습니다.
-그럴 때는 **시스템 설정 > 개인정보 보호 및 보안**을 열고 아래로 스크롤한
-다음 **확인 없이 열기(Open Anyway)**를 클릭하세요. 이 버튼은 macOS가 앱
-실행을 한 번 차단한 뒤에만 나타납니다. 버튼이 보이지 않으면
-**Applications(응용 프로그램)** 폴더에서 **Another Dimension Chat**을
-Control-클릭하고 **열기(Open)**를 선택한 뒤 확인 창에서 다시 **열기(Open)**를
-선택하세요.
-
-선택적인 다운로드 검증, 문제 해결, 삭제 방법은
-[unsigned DMG로 macOS 설치](INSTALL_UNSIGNED_DMG_MACOS.md)를 참고하세요.
-
-## 개발자용
-
-macOS 앱을 소스에서 직접 빌드하려면 아래 안내를 따르세요.
-
-- [macOS에서 소스 빌드로 설치](INSTALL_FROM_SOURCE_MACOS.md)
-
-짧은 버전:
+## 로컬 실행
 
 ```sh
-git clone https://github.com/answndud/another-dimension-chat.git
-cd another-dimension-chat
 npm ci --prefix apps/desktop-tauri
-npm --prefix apps/desktop-tauri run tauri:build:beta-onion
+npm --prefix apps/desktop-tauri run dev
 ```
 
-빌드된 앱 번들은
-`apps/desktop-tauri/src-tauri/target/release/bundle/macos/Another Dimension Chat.app`
-에 생성됩니다.
-이 source build 경로는 app 번들 전용이며, 다운로드한 GitHub Release DMG에
-의존하지 않습니다.
+Vite가 출력하는 로컬 URL을 엽니다. 현재 web migration 동안에는 기존
+소스 위치를 임시로 사용합니다. 다음 배포 slice에서 web surface를 별도
+`apps/web` 패키지와 static hosting 설정으로 옮깁니다.
 
-이 경로의 저장공간 계약은 다음과 같습니다.
+## 웹 보안 경계
 
-- clean build 도중에는 Rust/Tauri 임시 공간이 500MB를 넘을 수 있지만,
-  그 임시 target 데이터는 checkout 밖에서만 만들어지고 빌드 종료 후
-  삭제됩니다.
-- 빌드가 끝난 뒤 저장소 checkout 자체는 500MB 이하를 유지해야 하며,
-  영구적인 `target/`, `src-tauri/target/`, `.build-cache/`가 남지 않아야
-  합니다.
-- 런타임 앱 소유 데이터 예산은 checkout과 별개입니다. 현재 로컬 runtime
-  목표는 앱 데이터 총합 256MB이며, 프로필별 암호화 저장소 쓰기는 128MB로
-  제한됩니다.
-- 전역 Rust toolchain, Cargo registry/cache, 공유 npm dependency 다운로드는
-  다른 프로젝트와 공유되는 머신 단위 개발 비용이므로 checkout 500MB
-  예산에 포함하지 않습니다.
+브라우저 runtime은 Web Crypto와 IndexedDB를 사용합니다. 서버 없는 수동
+흐름에서는 private key, passphrase, 평문 메시지, transcript를 업로드하지
+않습니다. 단, 브라우저 저장소와 unlock된 메모리는 기기, 브라우저 프로필,
+확장 프로그램, 로컬 악성코드의 영향을 받습니다.
 
-재현 가능한 빌드 기준은
-[macOS 재현성 빌드 노트](REPRODUCIBLE_BUILD_MACOS.md)를 보세요.
+이 prototype은 production E2EE, anonymity, 신뢰 가능한 전달, secure
+deletion, backup recovery, rollback protection, compromised endpoint 방어를
+주장하지 않습니다. 현재 브라우저 암호화 흐름은 prototype 경계이며,
+review된 Signal 또는 Noise 배포와 동등하지 않습니다.
 
-GitHub Release DMG는 macOS의 기본 설치 경로입니다. 소스 빌드는 대체
-경로입니다. fallback 세부 내용은 [SECURITY.md](SECURITY.md)에만 둡니다.
+## 아직 포함하지 않는 것
 
-## 빠른 시작
+- 계정·전화번호·이메일 identity·검색 username·contact discovery
+- 중앙 메시지 relay·push·cloud backup·계정 복구
+- 자동 online delivery·WebRTC·Tor/onion·offline mailbox
+- 그룹 채팅·파일·통화·multi-device 동기화
+- public hosting·서명 release·공증·production security 주장
 
-1. 로컬 프로필 생성.
-2. 초대 코드로 pairwise room 생성 또는 참가.
-3. 상대와 safety material 비교.
-4. 메시지 작성 후 sealed message(`encrypted envelope`) 내보내기.
-5. 원하는 채널로 해당 파일/텍스트 전달.
-6. 상대쪽에서 가져오고 같은 방식으로 답장.
+자동 전달은 이후 opaque relay 또는 signaling 서비스로 별도 검토합니다.
+그 서버가 평문·private key·identity discovery를 보유해서는 안 되며,
+WebRTC/IP 노출도 명시적으로 다뤄야 합니다.
 
-중앙 계정, 검색 가능한 username, contact discovery 서비스, 메시지 릴레이,
-클라우드 백업, 푸시 알림 서비스는 없음.
-
-## 플랫폼
-
-| 플랫폼 | 공개 상태 |
-|--------|-----------|
-| macOS Apple Silicon | unsigned DMG primary, source build alternate |
-| Windows | 공개 앱 없음 |
-
-## 중요
-
-이 베타는 **어떤 보안 claim도 하지 않음**. 실험적 onion/network delivery는
-명시적 동작이고 fail-closed이며, 신뢰 가능한 전달 claim이 아님.
-
-[SECURITY.md](SECURITY.md) 참고. 지원은 redacted public issue로 요청:
-invite code, payload, key, raw log, private room screenshot 게시 금지.
-
-## 공개 릴리스 체크리스트
-
-공개 배포 전에 아래 항목을 확인하세요.
-
-- macOS 경로가 unsigned DMG primary인지 확인한다.
-- 다운로드한 DMG와 checksum이 같은 release asset인지 확인한다.
-- 현재 베타 문구가 `not audited`, `not production-ready`, `not for sensitive communication`을 유지하는지 확인한다.
-- public diagnostics가 redacted이고 room-scoped인지 확인한다.
-- signing, notarization, secure messenger readiness, reliable external delivery를 주장하는 문구가 없는지 확인한다.
-
-## 소스에서 빌드
-
-macOS source build 대체 경로는 [macOS에서 소스 빌드로 설치](INSTALL_FROM_SOURCE_MACOS.md)를 보세요.
+## 검증
 
 ```sh
-scripts/verify_light.sh  # source-build 경계 + 모든 desktop JavaScript 테스트
-scripts/verify_full.sh   # light + rustfmt + desktop Tauri cargo check + runtime/workspace 테스트 + clippy; 사전 릴리즈 전용
+npm --prefix apps/desktop-tauri test
+npm --prefix apps/desktop-tauri run build
 ```
 
-`scripts/verify_light.sh`와 `scripts/verify_full.sh`가 canonical entrypoint입니다.
-CLI smoke는 기본 검증이 아닌 수동 acceptance이며, `smoke_tauri_two_profile.sh`
-는 production profile/pairing/session/transcript resume를 확인합니다.
+현재 Node 통합 테스트는 두 로컬 프로필, invite 검증, Web Crypto envelope
+암복호화, 중복 거부, unlock 후 transcript 복구를 확인합니다. 실제 브라우저
+context acceptance는 로컬 browser automation binary가 준비된 뒤 진행합니다.
 
-`npm --prefix apps/desktop-tauri run check:storage-budget`는 tracked source
-surface 제한도 함께 검사합니다. 기준은 tracked 파일 180개, tracked 디렉터리
-45개, frontend `src/` 파일 40개, reference 4개, `scripts/`와
-`apps/desktop-tauri/scripts/`를 합친 scripts 20개입니다.
+## 보안 및 지원
 
-## 프로젝트 문서
+사용 전에 [SECURITY.md](SECURITY.md)를 읽으세요. 민감한 통신에는 사용하지
+마세요. 공개 지원 요청에 invite code, envelope, key, passphrase, 평문
+메시지, raw log, 로컬 경로, private room screenshot을 포함하지 마세요.
 
-| 필요 | 시작 문서 |
-|------|-----------|
-| 보안 경계 | [SECURITY.md](SECURITY.md) |
-| 지원 / 버그 제보 | [SUPPORT.md](SUPPORT.md) |
-| 기여 | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| 라이선스 | [MIT](LICENSE) |
+[CONTRIBUTING.md](CONTRIBUTING.md), [SUPPORT.md](SUPPORT.md),
+[MIT license](LICENSE)도 참고하세요.

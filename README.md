@@ -1,159 +1,85 @@
-# Another Dimension Chat — Unsigned DMG Primary
-
-<p>
-  <img src="https://img.shields.io/badge/status-unsigned%20DMG%20primary-blue" alt="Unsigned DMG primary">
-  <img src="https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-lightgrey" alt="Platform">
-  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
-</p>
+# Another Dimension Chat — Web-first prototype
 
 English | [한국어](README.ko.md)
 
-**A local-first 1:1 messenger beta that avoids accounts, phone numbers,
-contact discovery, cloud message storage, and push-notification dependency.**
+**A browser-local 1:1 encrypted-message prototype with no account, phone
+number, contact discovery, central message store, or push dependency.**
 
-Built with **Rust** and **Tauri**. Current testing uses pairwise invite rooms,
-safety material comparison, local encrypted storage, and manual sealed-message
-exchange.
+The current product direction is a static web app. It creates the profile and
+message keys in the browser, stores encrypted local profile material in
+IndexedDB, and moves signed invites and sealed message envelopes through a
+channel chosen by the users.
 
-> **Current status:** unsigned DMG primary macOS Apple Silicon beta. Not
-> audited, not production-ready, and not for sensitive communication.
+> **Current status:** web-first experimental prototype. It is not audited, not
+> production-ready, and not for sensitive communication. Public hosting and
+> reliable automatic delivery are not available yet.
 
-## What You Get Today
+## What works in the current web prototype
 
-| Benefit | Current beta behavior |
-|---------|-----------------------|
-| No account setup | Create a local profile on your device |
-| No public identifier | Pair with one person using an invite code |
-| No central message storage | Messages stay local unless you export them |
-| User-chosen delivery | Move sealed messages through any channel you choose |
-| Clear safety step | Compare safety material before using the room |
+- Create and unlock a local browser profile with a passphrase.
+- Export a signed public invite and verify a peer invite.
+- Compare a deterministic safety phrase before messaging.
+- Encrypt a message locally and export a sealed envelope.
+- Import and decrypt a peer envelope locally.
+- Reject an envelope imported twice.
+- Persist profile material and transcript data in IndexedDB for later unlock.
 
-## Install on macOS
+The default delivery flow is manual: copy an invite or sealed envelope and
+send it through a channel you choose. The app does not run a message server.
 
-For Macs with an Apple chip (M1 or newer). Intel Macs are not supported.
-
-### [Download the latest macOS DMG](https://github.com/answndud/another-dimension-chat/releases/download/latest/another-dimension-chat-0.1.0-beta-onion-arm64.dmg)
-
-1. Open the downloaded file.
-2. Drag **Another Dimension Chat** into the **Applications** folder.
-3. Open the app from Applications.
-
-macOS may block the first launch because this beta does not have an Apple
-Developer ID signature. If that happens, open **System Settings > Privacy &
-Security**, scroll down, and click **Open Anyway**. This button appears only
-after macOS has blocked an attempted launch. If it is not shown, open
-**Applications**, Control-click **Another Dimension Chat**, choose **Open**, and
-choose **Open** again in the confirmation dialog.
-
-For optional download verification, troubleshooting, and uninstall steps, see
-[Install the unsigned DMG on macOS](INSTALL_UNSIGNED_DMG_MACOS.md).
-
-## For Developers
-
-To build the macOS app from source, follow the source build guide:
-
-- [Install from source on macOS](INSTALL_FROM_SOURCE_MACOS.md)
-
-Short version:
+## Run locally
 
 ```sh
-git clone https://github.com/answndud/another-dimension-chat.git
-cd another-dimension-chat
 npm ci --prefix apps/desktop-tauri
-npm --prefix apps/desktop-tauri run tauri:build:beta-onion
+npm --prefix apps/desktop-tauri run dev
 ```
 
-The built app bundle is under
-`apps/desktop-tauri/src-tauri/target/release/bundle/macos/Another Dimension Chat.app`.
-This source-build path is app-bundle only; it does not rely on a downloadable
-GitHub Release DMG.
+Open the local URL printed by Vite. The current source location is retained
+temporarily for the web migration; the next deployment slice will move the
+web surface to a dedicated `apps/web` package and static hosting configuration.
 
-Storage contract for this path:
+## Web security boundary
 
-- Clean builds may use more than 500MB of temporary Rust/Tauri space while the
-  build is running, but that temporary target data lives outside the checkout
-  and is deleted after the build exits.
-- The repository checkout itself is expected to stay under 500MB after the
-  build finishes, without persistent `target/`, `src-tauri/target/`, or
-  `.build-cache/` directories left behind.
-- Runtime app-owned data is a separate budget from the checkout. The current
-  local runtime target is 256MB total app data, with per-profile encrypted
-  store writes capped at 128MB.
-- Global Rust toolchains, Cargo registry/cache data, and shared npm dependency
-  downloads are machine-level development costs, not part of the checkout
-  500MB budget.
+The browser runtime uses Web Crypto and IndexedDB. The serverless/manual flow
+does not upload private keys, passphrases, plaintext messages, or message
+transcripts. Browser storage and unlocked browser memory are still exposed to
+the device, browser profile, extensions, and local malware.
 
-For reproducible build details, see
-[Reproducible build notes for macOS](REPRODUCIBLE_BUILD_MACOS.md).
+This prototype does not claim production E2EE, anonymity, reliable delivery,
+secure deletion, backup recovery, rollback protection, or protection from a
+compromised endpoint. The current browser cryptographic flow is a prototype
+boundary and is not equivalent to a reviewed Signal or Noise deployment.
 
-Source build remains the alternate path. Legacy fallback details live in
-[SECURITY.md](SECURITY.md).
+## Deliberately not included yet
 
-## Quick Start
+- Accounts, phone numbers, email identity, searchable usernames, and contact discovery
+- Central message relay, push notifications, cloud backup, and account recovery
+- Automatic online delivery, WebRTC, Tor/onion transport, and offline mailbox
+- Group chat, files, calls, and multi-device synchronization
+- Public hosting, signed releases, notarization, and production security claims
 
-1. Create a local profile.
-2. Create or join a pairwise room via invite code.
-3. Compare safety material with the other person.
-4. Write a message and export a sealed message (`encrypted envelope`).
-5. Send that file/text through your own channel.
-6. Import it on the other side, then reply the same way.
+Automatic delivery may be considered later as a separate opaque relay or
+signaling service. It must not become a trusted holder of message plaintext,
+private keys, or identity discovery, and WebRTC/IP exposure must be explicit.
 
-There is no central account, searchable username, contact discovery service,
-message relay, cloud backup, or push notification service.
-
-## Platforms
-
-| Platform | Public status |
-|----------|---------------|
-| macOS Apple Silicon | Unsigned DMG primary, source build alternate |
-| Windows | No public app yet |
-
-## Before Using
-
-This beta makes **no security claim**. Experimental onion/network delivery is
-explicit, fail-closed, and not a reliable delivery claim.
-
-Read [SECURITY.md](SECURITY.md). For support, open a redacted public issue:
-no invite codes, payloads, keys, raw logs, or screenshots of private room data.
-
-## Public Release Checklist
-
-Use this checklist before treating any public build as ready to share:
-
-- Confirm the macOS path is unsigned DMG primary and the checksum matches the
-  release asset.
-- Confirm the current beta wording still says not audited, not production-ready, and not for sensitive communication.
-- Confirm public diagnostics stay redacted and room-scoped.
-- Confirm no release note or README text claims signing, notarization, secure messenger readiness, or reliable external delivery.
-
-## From Source
-
-Use the macOS source build guide for the alternate path:
-
-- [Install from source on macOS](INSTALL_FROM_SOURCE_MACOS.md)
-
-Use the lightweight and full verification entrypoints:
+## Validation
 
 ```sh
-scripts/verify_light.sh  # source-build boundaries + all desktop JavaScript tests
-scripts/verify_full.sh   # light + rustfmt + desktop Tauri cargo check + runtime/workspace tests + clippy; pre-release only
+npm --prefix apps/desktop-tauri test
+npm --prefix apps/desktop-tauri run build
 ```
 
-`scripts/verify_light.sh` and `scripts/verify_full.sh` are the canonical
-entrypoints. The CLI smoke script is a manual acceptance check, not default
-verification: `smoke_tauri_two_profile.sh` covers production
-profile/pairing/session/transcript resume.
+The current Node integration test exercises two local profiles, invite
+verification, Web Crypto envelope encryption/decryption, duplicate rejection,
+and unlock-based transcript recovery. Browser-context acceptance is still
+pending a locally installed browser automation binary.
 
-`npm --prefix apps/desktop-tauri run check:storage-budget` also enforces the
-tracked source surface limits: 180 tracked files, 45 tracked directories, 40
-frontend `src/` files, 4 reference files, and 20 scripts across `scripts/`
-plus `apps/desktop-tauri/scripts/`.
+## Security and support
 
-## Project Docs
+Read [SECURITY.md](SECURITY.md) before using the prototype. Do not use it for
+sensitive communication. Public support requests must not include invite
+codes, envelopes, keys, passphrases, plaintext messages, raw logs, local
+paths, or screenshots of private rooms.
 
-| Need | Start here |
-|------|------------|
-| Security boundary | [SECURITY.md](SECURITY.md) |
-| Support / bug reports | [SUPPORT.md](SUPPORT.md) |
-| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| License | [MIT](LICENSE) |
+See [CONTRIBUTING.md](CONTRIBUTING.md), [SUPPORT.md](SUPPORT.md), and the
+[MIT license](LICENSE) for project conventions.

@@ -1,113 +1,32 @@
 # Support
 
-Another Dimension Chat is an unsigned experimental public beta. The primary
-macOS install path is the unsigned DMG. It is not notarized, not audited, not
-production-ready, and sensitive communication prohibited.
+Another Dimension Chat is a web-first experimental prototype. It is not
+audited, not production-ready, and sensitive communication is prohibited.
+Public hosting is not available yet; local development uses the Vite web
+runtime. The old macOS DMG is a legacy artifact, not the primary product path.
 
-## Public Support
+## Public support
 
-For install, checksum, launch, and redacted diagnostics questions, use the
-`Unsigned public beta support` issue template. Keep the report room-scoped:
-public diagnostics only, no raw logs, no local paths, no invite codes, no
-payloads, no message text, no safety phrases, no passphrases, no keys, and no
-screenshots of private room data.
+Keep reports redacted and limited to:
 
-Post only:
+- app version or commit
+- browser and platform
+- broad failure class
+- recovery action reached
+- whether the local web build loaded
 
-- app version
-- build channel
-- build commit
-- platform
-- checksum verification result
-- unsigned macOS install step reached
-- public diagnostics copied from the app
-- redacted failure class
+Never post invite codes, sealed envelopes, message text, safety phrases,
+profile names, passphrases, private keys, browser storage exports, raw logs,
+local paths, crash dumps, or screenshots of private rooms.
 
-Allowed public intake fields are:
+## Security reports
 
-- app-status
-- app-version
-- build-channel
-- build-commit
-- platform
-- public-diagnostics
-- checksum-result
-- failure-class
-- recovery-next-action
-- desktop-acceptance-status
-- desktop-acceptance-blockers
-- app-launch-network
-- release-class-readiness
-- high-risk-runtime-evidence-source
-- high-risk-runtime-evidence-accepted
-- high-risk-runtime-primary-blocker
-- high-risk-runtime-failure-class
-- engine-sidecar-status-failure-class
-- engine-sidecar-manual-self-test-failure-class
-- engine-sidecar-redacted-runtime-status
+Use GitHub private vulnerability reporting when available. If it is
+unavailable, publish only a minimal redacted request for a private contact
+path. Do not include exploit details or sensitive material in a public issue.
 
-Forbidden public intake fields are:
+## Legacy macOS artifacts
 
-- raw logs
-- crash dumps
-- screenshots
-- onion endpoints
-- endpoints
-- invite codes
-- pairing payloads
-- envelope payloads
-- endpoint payloads
-- message text
-- local paths
-- payloads
-- safety phrases
-- profile names
-- passphrases
-- private keys
-- key material
-- private planning notes
-- support bundles
-
-The intake policy fields are:
-
-- `allowed_public_intake_fields=app-status#app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network#release-class-readiness#high-risk-runtime-evidence-source#high-risk-runtime-evidence-accepted#high-risk-runtime-primary-blocker#high-risk-runtime-failure-class#engine-sidecar-status-failure-class#engine-sidecar-manual-self-test-failure-class#engine-sidecar-redacted-runtime-status`
-- `forbidden_public_intake_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles`
-
-Do not post raw logs, crash dumps, local paths, endpoints, payloads, invite
-codes, safety phrases, message text, passphrases, private keys, key material,
-private planning notes, files from `docs/`, local app data, or screenshots that
-show private room data.
-
-## Security Reports
-
-Use GitHub private vulnerability reporting when available.
-
-If private vulnerability reporting is unavailable, open a `Security contact
-request` issue with only a minimal public summary. Do not include exploit
-details or sensitive material in public issues.
-
-## Unsigned DMG Primary
-
-The primary macOS install path is the unsigned DMG.
-
-Follow the unsigned DMG guide first:
-
-- [Install the unsigned DMG on macOS](INSTALL_UNSIGNED_DMG_MACOS.md)
-
-## Source Build Alternate
-
-Use source build only if you intentionally want the alternate path.
-
-Follow the source build guide first:
-
-- [Install from source on macOS](INSTALL_FROM_SOURCE_MACOS.md)
-
-## Legacy DMG Fallback
-
-If you intentionally choose the legacy DMG fallback, download the DMG and
-matching `.sha256` from the same GitHub Release:
-
-<https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned>
-
-Verify the checksum before using the normal macOS Privacy & Security manual
-allow path.
+The repository contains historical macOS installation notes and release
+artifacts. They are not the current product distribution route and do not
+represent web hosting, production readiness, or a security guarantee.

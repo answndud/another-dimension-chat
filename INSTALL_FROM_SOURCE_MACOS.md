@@ -1,7 +1,8 @@
-# Install from Source on macOS
+# Legacy desktop wrapper: build from source on macOS
 
-This is the primary macOS install path for developers and other people who want
-to build the app locally instead of downloading a DMG.
+The browser runtime is the current product direction. This guide is retained
+for developers who intentionally want to build the optional Tauri desktop
+wrapper; it is not the primary way to use the app.
 
 ## Requirements
 
@@ -89,5 +90,5 @@ For build-version and toolchain expectations, see
 
 - If you are trying to help a non-developer, the source build path is usually
   the wrong path.
-- If you intentionally use the legacy DMG fallback, verify the checksum
-  first and treat it as an optional convenience path, not the primary one.
+- If you intentionally use the legacy DMG fallback, verify the checksum first
+  and treat it as a historical convenience path.

@@ -1,7 +1,7 @@
 # Reproducible Build Notes for macOS
 
-This document collects the build inputs that should stay stable when you want
-to compare two local macOS source builds.
+This document collects the build inputs for the optional, legacy macOS Tauri
+wrapper. It does not describe the current browser deployment path.
 
 ## Keep Fixed
 

@@ -1,94 +1,65 @@
 # Security Policy
 
-## Current Status
+## Current status
 
-Another Dimension Chat is not ready for real communication.
+Another Dimension Chat is an experimental web-first prototype and is not
+ready for real communication. It is not audited, not production-ready, and
+not for sensitive communication.
 
-The current macOS release is an unsigned DMG primary experimental public beta
-with a source-build alternate path and a legacy unsigned DMG fallback for
-explicit optional use. It is not signed, not notarized, not audited, not
-production-ready, and not for sensitive communication. It is not a secure
-messenger release.
-The public v0.1 repository surface is macOS desktop only.
+The current web surface runs locally in a browser. Public hosting is not yet
+available. The Tauri desktop target is a secondary development wrapper, not
+the current product distribution boundary.
 
-## Supported Public Build
+## Current web behavior
 
-| Platform | Public status |
-|----------|---------------|
-| macOS Apple Silicon | unsigned DMG primary, source-build alternate, legacy unsigned DMG fallback |
-| Windows | No public app yet |
+- Profile private material is generated in the browser.
+- Profile private material is encrypted with a passphrase before IndexedDB storage.
+- Peer invites are signed and verified locally.
+- Messages are encrypted locally and exchanged as sealed envelopes.
+- Transcript records remain in browser-local storage for the current profile.
+- No central message server, push service, cloud backup, or account recovery exists.
 
-## Public Release Readiness Checklist
+These are implementation behaviors, not proof of secure messenger readiness.
 
-Before any public-facing release note or support response, confirm all of the
-following:
+## Non-claims
 
-- The build is described as unsigned DMG primary macOS beta, not a signed or notarized release.
-- The wording still keeps `not audited`, `not production-ready`, and `not for sensitive communication`.
-- Public support diagnostics stay redacted and do not include raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, or screenshots of private room data.
-- Any macOS DMG is described as the primary install route, but it remains unsigned, not notarized, and not a security proof.
-- No copy claims secure messenger readiness, reliable external delivery, or production security.
+This prototype does not claim:
 
-## Non-Claims
-
-This beta does not claim:
-
-- audited security
-- production readiness
+- audited or production-ready security
 - safety for sensitive communication
-- anonymity or untraceability
-- reliable onion/network delivery
-- Briar/Cwtch-equivalent privacy or security
-- protection from compromised endpoints, coercion, unaudited implementation bugs, or full global traffic correlation
+- Signal-level, Noise-level, or equivalent security
+- anonymity, untraceability, or protection from global traffic correlation
+- reliable automatic delivery, Tor/onion delivery, or censorship resistance
+- secure deletion, backup recovery, rollback protection, or multi-device recovery
+- protection from compromised browsers, extensions, devices, local malware, or coercion
 
-Experimental onion/network delivery is explicit, fail-closed, and outside the
-default manual encrypted-envelope flow. It is not a reliable delivery claim.
+Web Crypto and IndexedDB do not protect an unlocked browser session or a
+compromised endpoint. Browser support, browser implementation details, and
+storage behavior must be verified before any stronger claim is considered.
 
-## Implementation Notes
+## Future online delivery boundary
 
-The current public decision notes are reduced to four files:
+Automatic delivery is not part of the current web product. If a relay or
+signaling service is added later, it must be treated as an untrusted transport
+component. It must not receive plaintext messages, private keys, passphrases,
+or centralized contact discovery data. WebRTC and any direct network path must
+make IP and metadata exposure explicit.
+
+## Public support data
+
+Do not publish invite codes, sealed envelopes, key material, passphrases,
+plaintext messages, safety phrases, profile names, raw logs, crash dumps,
+local paths, browser storage exports, or screenshots of private rooms.
+
+Security reports should use GitHub private vulnerability reporting when
+available. If it is unavailable, publish only a minimal redacted issue asking
+for a private contact path; do not include exploit details or private data.
+
+## Related review notes
+
+The files under `reference/` are design review notes, not security claims:
 
 - [Public Threat Model](reference/PUBLIC_THREAT_MODEL.md)
 - [Crypto Decision](reference/CRYPTO_DECISION.md)
 - [Storage Decision](reference/STORAGE_DECISION.md)
 - [Transport Decision](reference/TRANSPORT_DECISION.md)
-
-These are review aids, not security claims.
-
-## Source Build Boundary
-
-The public macOS distribution path is an unsigned GitHub DMG for normal
-installers, with a source-build alternate path and a legacy unsigned GitHub DMG
-convenience path for explicit fallback use. It is not signed, not notarized,
-not audited, not production-ready, and sensitive communication is prohibited.
-
-The storage boundary for this public source-build path is split into checkout
-space and runtime app-owned space:
-
-- Clean source builds may use more than 500MB of temporary Rust/Tauri build
-  space while the build is running, but that temporary target data must live
-  outside the repository checkout and be removed after the build exits.
-- After the build finishes, the repository checkout itself is expected to stay
-  under 500MB without persistent `target/`, `apps/desktop-tauri/src-tauri/target/`,
-  or `.build-cache/` directories left behind.
-- Runtime local app-owned data is a separate budget from the checkout. The
-  current desktop runtime target is 256MB total app-owned data, with each
-  encrypted profile store capped at 128MB and write attempts fail-closed when
-  that per-profile cap is reached.
-- Global Rust toolchains, Cargo registry/cache directories, and shared npm
-  dependency downloads are developer-machine costs and are not counted toward
-  the repository checkout budget.
-
-## Reporting Security Issues
-
-If you find a security issue, use GitHub's private vulnerability reporting
-feature if it is enabled for the repository.
-
-If private vulnerability reporting is not enabled, open a minimal public issue
-that does not include exploit details, crash dumps, screenshots, support
-bundles, payload samples, endpoint details, or sensitive information, and ask
-only for a private contact path.
-
-Public support requests should stay redacted and limited to the app status,
-build identity, checksum result, broad failure class, recovery next action,
-and other non-sensitive support fields.

@@ -1,33 +1,16 @@
-# Install the unsigned DMG on macOS
+# Legacy unsigned DMG on macOS
 
-This is the primary macOS install path for Apple Silicon users.
+The web runtime is the current product direction. This document describes a
+historical unsigned macOS artifact only; it is not the primary installation
+path and is not a production security release.
 
-## Steps
+If you intentionally test the legacy artifact:
 
-1. Download the GitHub Release DMG and the matching `SHA256SUMS.txt`.
-2. Verify the checksum from the same release:
+1. Download the DMG and matching checksum from the same historical release.
+2. Verify the checksum with `shasum -a 256`.
+3. Drag the app into `/Applications`.
+4. If macOS blocks the first launch, use Finder's **Open** confirmation path
+   or **Privacy & Security > Open Anyway**.
 
-```sh
-shasum -a 256 -c SHA256SUMS.txt
-```
-
-3. Open the DMG, drag `Another Dimension Chat.app` into `/Applications`, and
-   eject the DMG.
-4. Launch the app once. If macOS blocks the first launch, open **System
-   Settings > Privacy & Security**, scroll down, and click **Open Anyway**.
-   The button only appears after macOS has blocked an attempted launch.
-5. If **Open Anyway** still does not appear, open **Applications**, Control-click
-   **Another Dimension Chat**, choose **Open**, then choose **Open** again in the
-   confirmation dialog. This is the normal Finder approval path for an unsigned
-   app.
-
-## What Not To Do
-
-- Do not use `xattr` to remove quarantine.
-- Do not disable Gatekeeper globally.
-- Do not install a custom certificate.
-
-## Source Build Alternate
-
-If you intentionally want the alternate path, use
-[Install from source on macOS](INSTALL_FROM_SOURCE_MACOS.md).
+Do not remove quarantine with `xattr`, disable Gatekeeper, or install a custom
+certificate. Prefer the local web runtime for current development.
