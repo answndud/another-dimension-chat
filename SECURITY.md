@@ -26,6 +26,10 @@ product distribution boundary.
   configuration concern, not an identity or confidentiality guarantee.
 - Remote browser origins must use HTTPS (localhost is the development exception)
   because Web Crypto is unavailable in ordinary insecure HTTP contexts.
+- A localhost UI may reach an HTTP LAN inbox for controlled development testing,
+  but the capability URL and network metadata are then exposed to the LAN and
+  an attacker can inject or drop opaque envelopes. This is not a production
+  HTTPS transport claim.
 
 These are implementation behaviors, not proof of secure messenger readiness.
 

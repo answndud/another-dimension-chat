@@ -33,6 +33,9 @@ key·passphrase를 받지 않는다. 메시지 본문은 브라우저에서 암�
 - 서버 간 연결 자동화, UPnP/포트포워딩, 공용 relay, Tor/WebRTC는 이 slice에 넣지 않는다.
 - 외부 접속 가능성은 사용자의 네트워크와 TLS/VPN 구성에 달려 있으며 서버가
   anonymity나 availability를 보장하지 않는다.
+- 개발 환경에서는 localhost UI가 통제된 LAN의 HTTP inbox를 호출할 수 있지만,
+  capability와 metadata 노출·opaque traffic 주입/삭제 위험 때문에 운영 경로로
+  취급하지 않는다.
 
 ### Alternatives
 

@@ -80,6 +80,11 @@ No ChatGPT Sites or central message hosting is required.
 - LAN: bind to the machine's LAN interface or `0.0.0.0`, put an HTTPS reverse
   proxy in front of it, set `AD_PUBLIC_URL` to the HTTPS URL, and apply the host
   firewall policy. Plain HTTP LAN pages cannot use Web Crypto in normal browsers.
+- Local UI + LAN API (development only): open each user's UI from that user's
+  `localhost` server, while the invite points to the peer's LAN inbox. The
+  sealed envelope remains encrypted, but an HTTP capability URL can be observed
+  or abused to inject/drop opaque traffic. Use only on a controlled network;
+  use HTTPS for production.
 - VPN: advertise an HTTPS address (for example, an HTTPS reverse proxy bound to
   a Tailscale/WireGuard interface) in `AD_PUBLIC_URL`; the VPN supplies
   reachability, not this application.

@@ -77,6 +77,11 @@ ChatGPT Sites나 중앙 메시지 hosting은 필요하지 않습니다.
   proxy를 앞에 두고, `AD_PUBLIC_URL`에는 HTTPS URL을 설정하며 방화벽 정책을
   직접 적용합니다. 일반 브라우저는 평문 HTTP LAN 페이지에서 Web Crypto를
   사용할 수 없습니다.
+- Local UI + LAN API(개발 전용): 각자 자신의 `localhost` 서버에서 UI를 열고,
+  invite는 상대의 LAN inbox를 가리키게 할 수 있습니다. sealed envelope는
+  암호화된 상태로 유지되지만 HTTP capability URL은 노출되거나 opaque traffic
+  주입·삭제에 악용될 수 있습니다. 통제된 네트워크에서만 사용하고 운영에는
+  HTTPS를 사용하세요.
 - VPN: Tailscale/WireGuard 인터페이스에 연결된 HTTPS 주소를
   `AD_PUBLIC_URL`로 사용합니다. VPN이 도달성을 제공하며 앱이 제공하는
   기능은 아닙니다.
