@@ -18,6 +18,18 @@ function call(port, method, path, body) {
   });
 }
 
+function rawCall(port, method, path, body) {
+  return new Promise((resolve, reject) => {
+    const req = request({ host: "127.0.0.1", port, method, path, headers: { "content-type": "application/json" } }, (res) => {
+      let text = "";
+      res.on("data", (chunk) => { text += chunk; });
+      res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(text) }));
+    });
+    req.on("error", reject);
+    req.end(body);
+  });
+}
+
 test("local server exposes health and a capability-scoped opaque inbox", async () => {
   const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
@@ -35,6 +47,19 @@ test("local server exposes health and a capability-scoped opaque inbox", async (
   const duplicate = await call(port, "POST", inboxPath, { envelope });
   assert.equal(duplicate.status, 202);
   assert.equal((await call(port, "GET", inboxPath)).body.items.length, 1);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("local server rejects malformed inbox requests without storing them", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
+  assert.equal((await rawCall(port, "POST", inboxPath, "not-json")).status, 400);
+  assert.equal((await call(port, "POST", `${inboxPath}/../inbox`, { envelope: "ADENVWEB1.invalid-path" })).status, 405);
+  assert.equal((await call(port, "GET", inboxPath)).body.items.length, 0);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });

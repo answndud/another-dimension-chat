@@ -86,10 +86,14 @@ test("two local profiles can exchange a real sealed envelope and reject a duplic
   const alicePeer = await runtime.importInvite(bobInvite);
   assert.match(runtime.safetyPhrase(alice, alicePeer), /compare this phrase/);
   const envelope = await runtime.exportEnvelope("hello from alice");
+  const envelopeBody = JSON.parse(Buffer.from(envelope.slice("ADENVWEB1.".length), "base64url").toString());
+  envelopeBody.ciphertext = `${envelopeBody.ciphertext.slice(0, -1)}A`;
+  const tampered = `ADENVWEB1.${Buffer.from(JSON.stringify(envelopeBody)).toString("base64url")}`;
 
   await runtime.unlockProfile("bob", "bob-passphrase");
   const bobPeer = await runtime.importInvite(aliceInvite);
   assert.match(runtime.safetyPhrase(bob, bobPeer), /compare this phrase/);
+  await assert.rejects(() => runtime.importEnvelope(tampered), /signature is invalid/);
   assert.equal(await runtime.importEnvelope(envelope), "hello from alice");
   await assert.rejects(() => runtime.importEnvelope(envelope), /already imported/);
 
