@@ -11,9 +11,9 @@ material stays in IndexedDB, and each user's server only handles opaque sealed
 envelopes.
 
 > **Current status:** web-first experimental prototype. It is not audited, not
-> production-ready, and not for sensitive communication. Hosting is an
-> optional user-owned deployment concern; reliable automatic delivery is not
-> available.
+> production-ready, and not for sensitive communication. Each user may run a
+> local server for direct opaque-envelope delivery; the server is not a central
+> host.
 
 ## What works in the current web prototype
 
@@ -24,9 +24,12 @@ envelopes.
 - Import and decrypt a peer envelope locally.
 - Reject an envelope imported twice.
 - Persist profile material and transcript data in IndexedDB for later unlock.
+- Send sealed envelopes to a peer's explicitly exchanged server endpoint.
+- Sync and acknowledge sealed envelopes from the current user's local server.
 
-The default delivery flow is manual: copy an invite or sealed envelope and
-send it through a channel you choose. The app does not run a message server.
+The preferred delivery flow is user-owned server-to-server transport. Manual
+invite and sealed-envelope copy/paste remains available when a server is not
+running or is unreachable.
 
 ## Run locally
 
@@ -48,18 +51,37 @@ npm --prefix apps/web run build --workspaces=false
 npm --prefix apps/server start --workspaces=false
 ```
 
+The same flow can be started from the repository root with
+`./scripts/start_local_server.sh` after the web bundle is built.
+
 The default bind is `127.0.0.1:1422`. For a LAN or VPN deployment, set
 `AD_BIND_HOST` explicitly, set `AD_PUBLIC_URL` to the address peers can reach,
 and configure the network exposure yourself:
 
 ```sh
-AD_BIND_HOST=0.0.0.0 AD_PUBLIC_URL=http://192.168.1.20:1422 \
+AD_BIND_HOST=0.0.0.0 AD_PUBLIC_URL=https://chat.example.test \
   npm --prefix apps/server start --workspaces=false
 ```
 
 The server stores only bounded opaque envelopes and serves the static browser UI.
 
 No ChatGPT Sites or central message hosting is required.
+
+### Network choices
+
+- Loopback (`127.0.0.1`, default): useful for local development and same-device
+  testing; another device cannot reach it.
+- LAN: bind to the machine's LAN interface or `0.0.0.0`, put an HTTPS reverse
+  proxy in front of it, set `AD_PUBLIC_URL` to the HTTPS URL, and apply the host
+  firewall policy. Plain HTTP LAN pages cannot use Web Crypto in normal browsers.
+- VPN: advertise an HTTPS address (for example, an HTTPS reverse proxy bound to
+  a Tailscale/WireGuard interface) in `AD_PUBLIC_URL`; the VPN supplies
+  reachability, not this application.
+- Public HTTPS: place the server behind a reverse proxy that you operate,
+  configure HTTPS and access controls there, and advertise that HTTPS origin.
+
+The server does not configure UPnP, port forwarding, TLS certificates,
+authentication, anonymity, or availability automatically.
 
 ## Web security boundary
 
@@ -81,7 +103,7 @@ boundary and is not equivalent to a reviewed Signal or Noise deployment.
 - Group chat, files, calls, and multi-device synchronization
 - Signed releases, notarization, and production security claims
 
-Automatic delivery may be considered later as a separate opaque relay or
+Automatic relay delivery may be considered later as a separate opaque relay or
 signaling service. It must not become a trusted holder of message plaintext,
 private keys, or identity discovery, and WebRTC/IP exposure must be explicit.
 
@@ -94,8 +116,9 @@ npm --prefix apps/web run build --workspaces=false
 
 The current Node integration test exercises two local profiles, invite
 verification, Web Crypto envelope encryption/decryption, duplicate rejection,
-and unlock-based transcript recovery. Browser-context acceptance is still
-pending a locally installed browser automation binary.
+tamper/replay boundaries, bounded inbox behavior, and unlock-based transcript
+recovery. A two-origin in-app-browser smoke flow has also been run against two
+local server processes.
 
 ## Security and support
 

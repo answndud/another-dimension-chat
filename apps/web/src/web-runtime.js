@@ -107,6 +107,10 @@ async function importPrivateKeys(material) {
 
 function profileView(record, privateKeys) { return { ...record, ...privateKeys }; }
 
+function ensureCrypto() {
+  if (globalThis.isSecureContext === false || !globalThis.crypto?.subtle) throw new Error("A secure browser context (HTTPS or localhost) is required for Web Crypto.");
+}
+
 export const ready = (async () => {
   const records = await all("profiles").catch(() => []);
   profileNames.splice(0, profileNames.length, ...records.map((record) => record.name).sort());
@@ -115,6 +119,7 @@ export const ready = (async () => {
 export function listProfiles() { return [...profileNames]; }
 
 export async function createProfile(name, passphrase) {
+  ensureCrypto();
   if (!/^[A-Za-z0-9_-]+$/.test(String(name)) || String(name).length > 48) throw new Error("Use letters, numbers, hyphen, or underscore for the profile name.");
   if (String(passphrase).length < 10) throw new Error("Use a passphrase of at least 10 characters.");
   if (await read("profiles", name)) throw new Error("That local profile already exists.");
@@ -132,6 +137,7 @@ export async function createProfile(name, passphrase) {
 }
 
 export async function unlockProfile(name, passphrase) {
+  ensureCrypto();
   const record = await read("profiles", name);
   if (!record) throw new Error("Local profile not found.");
   const material = await openPrivateMaterial(record, passphrase);

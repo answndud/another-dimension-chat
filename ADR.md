@@ -55,12 +55,79 @@ key·passphrase를 받지 않는다. 메시지 본문은 브라우저에서 암�
 
 - `AGENTS.md`: 중앙 trusted server, central message server, push, contact discovery를
   v0.1 범위에서 제외한다.
-- `apps/web/src/web-runtime.js`: 현재 브라우저 로컬 암호화와 수동 envelope 경계를
-  구현하지만 transport endpoint는 아직 없다.
+- `apps/web/src/web-runtime.js`: signed invite의 선택적 capability endpoint와
+  sealed envelope 전송·수신·ack·서명/replay 검증을 구현한다.
 - 사용자 요청: 각 사용자가 본인의 기기에서 서버를 켜고 상대가 접속하는 방식을 선택했다.
 
 ### Open Questions
 
-- 원격 접속의 기본 경로를 LAN, Tailscale/WireGuard 같은 VPN, 사용자가 관리하는
-  HTTPS reverse proxy 중 무엇으로 안내할지 결정해야 한다.
-- 서버 binary를 Node prototype으로 시작할지 Rust/desktop binary에 통합할지 결정해야 한다.
+- 최종 배포 binary가 필요한 시점에 Node 실행 요구사항을 Rust/desktop wrapper로
+  대체할지는 별도 ADR로 결정한다.
+
+## ADR-0002 - 사용자 소유 서버의 초기 실행 단위를 Node 정적 서버로 고정
+
+- 상태: accepted
+- 날짜: 2026-07-31
+- 근거 유형: explicit
+
+### Context
+
+제품은 중앙 hosting 계정 없이 각 사용자의 기기에서 서버를 시작할 수 있어야
+한다. 현재 브라우저 bundle과 opaque inbox를 함께 제공하는 구현은 Node 내장
+HTTP API만으로 동작하며, Rust/Tauri 전체 native build는 CPU와 배포 복잡도가
+크고 아직 서버 경계와 통합되지 않았다.
+
+### Decision
+
+v0.1의 재현 가능한 실행 단위는 `apps/server/server.mjs`와 빌드된
+`apps/web/dist`를 Node.js로 실행하는 방식으로 한다. 사용자는
+`scripts/start_local_server.sh` 또는 `npm --prefix apps/server start
+--workspaces=false`로 시작한다. Rust CLI와 Tauri는 현재 서버를 대체하지 않는
+선택적 wrapper로 유지하며, native binary 전환은 별도 결정으로 남긴다.
+
+### Consequences
+
+- Node.js가 설치된 새 기기에서 bundle build → server start → browser open을
+  재현할 수 있다.
+- signed release, notarization, 자동 업데이트, OS 서비스 등록은 아직 제공하지
+  않는다.
+- Node runtime 자체의 보안 업데이트와 사용자 운영 책임이 생긴다.
+
+### Evidence
+
+- `apps/server/server.mjs`: static UI, health, capability inbox, bounded storage
+- `scripts/start_local_server.sh`: bundle 존재를 확인하는 단일 시작 명령
+- `apps/server/server.test.mjs`: health, malformed request, TTL, restart recovery
+
+## ADR-0003 - 원격 도달성은 사용자가 선택한 네트워크 경로로 분리
+
+- 상태: accepted
+- 날짜: 2026-07-31
+- 근거 유형: explicit
+
+### Context
+
+loopback 서버는 같은 기기에서만 접근된다. 다른 기기와 직접 통신하려면 LAN,
+사용자 관리 VPN, 또는 사용자 관리 HTTPS reverse proxy 중 하나가 필요하다.
+앱이 UPnP, port forwarding, TLS, anonymity를 자동으로 보장한다고 설명하면
+사용자가 도달성과 보안 보장을 혼동할 수 있다.
+
+### Decision
+
+loopback을 기본값으로 유지하고, README에 LAN·Tailscale/WireGuard·사용자 관리
+HTTPS reverse proxy를 별도 선택지로 문서화한다. `AD_PUBLIC_URL`은 상대가 실제로
+접근 가능한 origin으로 사용자가 설정한다. 앱은 자동 port forwarding, 인증서
+발급, 인증, anonymity를 제공하지 않는다.
+
+### Consequences
+
+- endpoint 교환만으로 원격 도달성이 생긴다고 약속하지 않는다.
+- VPN과 reverse proxy의 TLS·접근 제어·방화벽 정책은 사용자가 운영한다.
+- 각 경로는 capability URL과 envelope 암호화 경계를 유지하지만 metadata와
+  네트워크 노출은 경로에 따라 달라진다.
+
+### Evidence
+
+- `apps/server/server.mjs`: loopback default, explicit bind/public URL
+- `README.md`, `README.ko.md`: LAN/VPN/HTTPS 선택지와 비자동 보장 명시
+- `SECURITY.md`: user-owned inbox와 non-claims

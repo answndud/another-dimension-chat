@@ -21,6 +21,11 @@ product distribution boundary.
 - No central message server, push service, cloud backup, or account recovery exists.
 - A user-owned local server may store bounded opaque sealed envelopes for that
   user's inbox; it is not trusted with plaintext or private keys.
+- The browser can POST a sealed envelope to the peer endpoint in a signed invite
+  and can GET/ack its own local inbox; endpoint reachability is a network
+  configuration concern, not an identity or confidentiality guarantee.
+- Remote browser origins must use HTTPS (localhost is the development exception)
+  because Web Crypto is unavailable in ordinary insecure HTTP contexts.
 
 These are implementation behaviors, not proof of secure messenger readiness.
 
@@ -40,13 +45,13 @@ Web Crypto and IndexedDB do not protect an unlocked browser session or a
 compromised endpoint. Browser support, browser implementation details, and
 storage behavior must be verified before any stronger claim is considered.
 
-## Future online delivery boundary
+## Online delivery boundary
 
-Automatic delivery is not part of the current web product. If a relay or
-signaling service is added later, it must be treated as an untrusted transport
-component. It must not receive plaintext messages, private keys, passphrases,
-or centralized contact discovery data. WebRTC and any direct network path must
-make IP and metadata exposure explicit.
+The current direct delivery path uses user-owned capability inboxes. If a relay
+or signaling service is added later, it must be treated as an untrusted
+transport component. It must not receive plaintext messages, private keys,
+passphrases, or centralized contact discovery data. WebRTC and any direct
+network path must make IP and metadata exposure explicit.
 
 ## Public support data
 

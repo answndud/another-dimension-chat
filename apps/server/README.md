@@ -10,7 +10,8 @@ npm --prefix apps/server start
 ```
 
 Defaults are loopback-only (`127.0.0.1:1422`). Configure deliberately when using
-another device:
+another device. The browser UI must be opened from HTTPS (except localhost), so
+put an HTTPS reverse proxy in front of the HTTP server for LAN/VPN/public use:
 
 - `AD_BIND_HOST` — bind address; use a LAN/VPN address only when you understand the exposure.
 - `AD_PORT` — listening port.
@@ -22,5 +23,6 @@ another device:
 The inbox is bounded to 256 items and 96 KiB per envelope. Restart recovery is
 file-backed. A capability URL is equivalent to permission to submit/read that
 inbox, so share invites only with the intended peer and rotate the data directory
-if a capability is exposed. HTTPS, authentication, relay, port forwarding, and
-anonymity are not provided automatically.
+if a capability is exposed. HTTPS termination, authentication, relay, port
+forwarding, and anonymity are not provided automatically. Plain HTTP remote
+pages cannot use the browser's Web Crypto APIs in normal browsers.
