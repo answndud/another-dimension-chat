@@ -59,21 +59,26 @@ test("release profiles are pinned for public build targets", () => {
   ]);
 });
 
-test("public shell cargo tree excludes legacy runtime graph", () => {
+test("default desktop build uses the runnable embedded command surface", () => {
   assertFileContains("apps/desktop-tauri/src-tauri/tauri.conf.json", '"targets": ["dmg"]');
+  assertFileContains(
+    "apps/desktop-tauri/src-tauri/Cargo.toml",
+    'default = ["legacy-embedded-runtime"]',
+  );
   assertFileContains(
     "apps/desktop-tauri/package.json",
     "node scripts/run-clean-build.mjs node apps/desktop-tauri/scripts/with-cargo-target.mjs tauri build",
   );
   assertFileContains(
     "apps/desktop-tauri/package.json",
-    "VITE_AD_BUILD_CHANNEL=beta-onion node scripts/run-clean-build.mjs node apps/desktop-tauri/scripts/prepare-engine-sidecar.mjs --release --manual-e2ee-runtime --tauri-build -- tauri build --config src-tauri/tauri.sidecar.conf.json",
+    "VITE_AD_BUILD_CHANNEL=beta-onion node scripts/run-clean-build.mjs node apps/desktop-tauri/scripts/with-cargo-target.mjs tauri build --features manual-onion-client-attempt",
   );
   assertFileContains("apps/desktop-tauri/package.json", "tauri:build:macos-dmg:beta-onion");
   assertFileContains("apps/desktop-tauri/package.json", "--bundles dmg");
   assertFileDoesNotContain("apps/desktop-tauri/package.json", "verify:warm");
   assertFileDoesNotContain("apps/desktop-tauri/package.json", "verify:cold");
   assertFileDoesNotContain("apps/desktop-tauri/package.json", "legacy:tauri");
+  assertFileDoesNotContain("apps/desktop-tauri/package.json", "tauri:build:beta-onion.*prepare-engine-sidecar");
   assertFileDoesNotContain("scripts/smoke_tauri_two_profile.sh", ".build-cache");
   assertFileDoesNotContain("scripts/smoke_tauri_two_profile.sh", "Library/Caches/another-dimension");
 

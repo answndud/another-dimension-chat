@@ -13,7 +13,10 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [features]
-default = ["public-shell"]
+# The shipped desktop app must register the real production command surface.
+# `public-shell` remains an explicit sidecar contract probe for packaging work,
+# but it is not a runnable chat application.
+default = ["legacy-embedded-runtime"]
 public-shell = []
 legacy-embedded-runtime = [
     "dep:another-dimension-core",

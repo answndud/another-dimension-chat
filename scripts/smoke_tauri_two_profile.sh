@@ -3,8 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-CARGO_TARGET_DIR="$(mktemp -d "${TMPDIR:-/tmp}/another-dimension-cargo-target.XXXXXX")"
-trap 'rm -rf "$CARGO_TARGET_DIR"' EXIT
+DEFAULT_CARGO_TARGET_DIR="${TMPDIR:-/tmp}/another-dimension-cargo-target"
+CARGO_TARGET_DIR="${AD_CARGO_TARGET_DIR:-$DEFAULT_CARGO_TARGET_DIR}"
+if [[ "${AD_SMOKE_CLEAN_TARGET:-0}" == "1" ]]; then
+  rm -rf -- "$CARGO_TARGET_DIR"
+fi
 mkdir -p "$CARGO_TARGET_DIR"
 export CARGO_TARGET_DIR
 
