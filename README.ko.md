@@ -151,6 +151,20 @@ profile을 복제하면 이 보장이 깨질 수 있으므로 profile 백업·�
 안전한 채널로 다시 교환하세요. 이미 pairing을 완료한 세션의 초대는 세션
 연속성을 위해 자동으로 바뀌지 않습니다.
 
+서버가 관찰자에게 숨겨 주지 못하는 정보도 명확히 알아야 합니다.
+
+| 관찰자 | 볼 수 있는 정보 | 이 앱이 보장하지 않는 것 |
+| --- | --- | --- |
+| 인터넷 서비스 제공자·VPN·reverse proxy | 접속 IP, 접속 시각, 통신량, 요청 대상 host, 대략적인 봉투 크기와 빈도 | 익명성, Tor 수준의 origin 보호, traffic correlation 방지 |
+| relay 운영자 | 접속 client IP(구성에 따라), inbox URL을 아는 sender의 제출 시각·크기·빈도, opaque ciphertext | 평문·private key·passphrase 복호화 |
+| 악성 browser/server/proxy | JS/WASM 교체, 입력·화면·passphrase·복호화 전후 데이터 | 앱 암호화가 이미 장악된 실행 환경을 구해 주지 않음 |
+
+일반 HTTPS·VPN은 전송 경로 보호와 도달성 도구일 뿐 익명성 경로가 아닙니다.
+local/LAN HTTP mode는 capability와 metadata가 네트워크에 노출될 수 있으므로
+민감한 통신에 사용하지 마세요. 서버 시작 시 private UI URL 자체는 터미널에
+출력하지 않고 `.another-dimension-server/local-ui-url` 파일(mode 600)에만
+기록합니다.
+
 profile private material은 Argon2id 기반 wrapping key로 IndexedDB에 저장됩니다.
 기존 PBKDF2 profile은 올바른 passphrase로 처음 unlock할 때 Argon2id 형식으로
 자동 재포장됩니다. 5분 동안 입력이 없으면 브라우저 세션이 자동 잠기며, 화면의

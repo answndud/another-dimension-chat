@@ -63,6 +63,9 @@ keys. Signed, independently verifiable app distribution is a release blocker.
   but the capability URL and network metadata are then exposed to the LAN and
   an attacker can inject or drop opaque envelopes. This is not a production
   HTTPS transport claim.
+- The startup process does not print the private local UI capability URL. It
+  writes it to a mode-600 file in the server data directory; the file remains
+  a bearer secret and must not be copied into logs or reports.
 
 These are implementation behaviors, not proof of secure messenger readiness.
 

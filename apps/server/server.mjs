@@ -162,6 +162,7 @@ export async function createLocalServer({
   await mkdir(dataDir, { recursive: true });
   const capabilityFile = join(dataDir, "inbox-capability");
   const localAccessFile = join(dataDir, "local-access-capability");
+  const localUiUrlFile = join(dataDir, "local-ui-url");
   const queueFile = join(dataDir, "inbox.json");
   let inboxCapability;
   try { inboxCapability = (await readFile(capabilityFile, "utf8")).trim(); } catch { inboxCapability = capability(); await writeFile(capabilityFile, `${inboxCapability}\n`, { mode: 0o600 }); }
@@ -327,6 +328,8 @@ export async function createLocalServer({
   const localUiOrigin = tlsKeyFile && normalizedPublicUrl
     ? normalizedPublicUrl
     : `${scheme}://${urlHost(localHost)}:${port}`;
+  const localUiUrl = `${localUiOrigin}/#local=${localAccessCapability}`;
+  await writeFile(localUiUrlFile, `${localUiUrl}\n`, { mode: 0o600 });
   return {
     server,
     bindHost,
@@ -337,7 +340,8 @@ export async function createLocalServer({
     externalSecure: originFor(bindHost).startsWith("https://"),
     listenerTls: Boolean(tlsKeyFile && tlsCertFile),
     localAccessCapability,
-    localUiUrl: `${localUiOrigin}/#local=${localAccessCapability}`,
+    localUiUrl,
+    localUiUrlFile,
   };
 }
 
@@ -353,8 +357,7 @@ if (launchedDirectly) {
     runtime.server.listen(runtime.port, runtime.bindHost, () => {
       console.log(`Another Dimension local server listening at ${runtime.listenerTls ? "https" : "http"}://${runtime.bindHost}:${runtime.port}`);
       console.log(`Advertised origin: ${runtime.publicOrigin}`);
-      console.log(`Open the private local UI: ${runtime.localUiUrl}`);
-      console.log("The local UI URL grants access to inbox settings. Keep it out of logs, screenshots, and support reports.");
+      console.log(`Private local UI URL written to ${runtime.localUiUrlFile} (mode 600); do not print or share its contents.`);
       if (!isLoopbackHost(runtime.bindHost)) console.warn("Warning: non-loopback bind exposes this server to the configured network.");
       if (!isLoopbackHost(runtime.bindHost) && !runtime.externalSecure) console.warn("Warning: remote browser Web Crypto requires an HTTPS public URL or reverse proxy.");
       if (runtime.externalSecure && !runtime.listenerTls) console.log(`External HTTPS is expected at ${runtime.publicOrigin}; keep the reverse proxy running.`);
