@@ -18,8 +18,10 @@ npm --prefix "$PROJECT_DIR/apps/web" run build --workspaces=false
 mkdir -p "$STAGE/another-dimension-$VERSION/apps/server" "$STAGE/another-dimension-$VERSION/apps/web" "$STAGE/another-dimension-$VERSION/scripts"
 cp "$PROJECT_DIR/apps/server/server.mjs" "$PROJECT_DIR/apps/server/package.json" "$PROJECT_DIR/apps/server/README.md" "$STAGE/another-dimension-$VERSION/apps/server/"
 cp -R "$PROJECT_DIR/apps/web/dist" "$STAGE/another-dimension-$VERSION/apps/web/"
+cp "$PROJECT_DIR/apps/web/package.json" "$PROJECT_DIR/apps/web/package-lock.json" "$STAGE/another-dimension-$VERSION/apps/web/"
 cp "$PROJECT_DIR/scripts/start_local_server.sh" "$PROJECT_DIR/scripts/configure_local_server.mjs" "$PROJECT_DIR/scripts/generate_tls_cert.sh" "$PROJECT_DIR/scripts/check_https_endpoint.mjs" "$PROJECT_DIR/scripts/release_manifest.mjs" "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$STAGE/another-dimension-$VERSION/scripts/"
 cp "$PROJECT_DIR/README.md" "$PROJECT_DIR/README.ko.md" "$PROJECT_DIR/SECURITY.md" "$PROJECT_DIR/SUPPORT.md" "$STAGE/another-dimension-$VERSION/"
+node "$PROJECT_DIR/scripts/generate_sbom.mjs" "$STAGE/another-dimension-$VERSION/apps/web/package-lock.json" "$STAGE/another-dimension-$VERSION/SBOM.cyclonedx.json"
 chmod +x "$STAGE/another-dimension-$VERSION/scripts/start_local_server.sh" "$STAGE/another-dimension-$VERSION/scripts/configure_local_server.mjs" "$STAGE/another-dimension-$VERSION/scripts/generate_tls_cert.sh"
 
 MANIFEST_ARGS="--version $VERSION"
@@ -32,7 +34,7 @@ elif [ "${AD_RELEASE_REQUIRE_SIGNATURE:-0}" = "1" ]; then
 fi
 if [ "${AD_RELEASE_REQUIRE_SIGNATURE:-0}" = "1" ]; then VERIFY_ARGS="--require-signature"; fi
 # shellcheck disable=SC2086
-node "$PROJECT_DIR/scripts/create_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $MANIFEST_ARGS
+SOURCE_DATE_EPOCH="${AD_RELEASE_SOURCE_DATE_EPOCH:-0}" node "$PROJECT_DIR/scripts/create_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $MANIFEST_ARGS
 # Unsigned output is allowed only for local development; verified distribution requires a signature.
 # shellcheck disable=SC2086
 node "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $VERIFY_ARGS

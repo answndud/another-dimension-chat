@@ -36,7 +36,11 @@ export async function createManifest(root, { version, privateKey } = {}) {
     files.push({ path: file.relativePath, bytes: contents.byteLength, sha256: createHash('sha256').update(contents).digest('hex') });
   }
   files.sort((a, b) => a.path.localeCompare(b.path));
-  const manifest = { format: 'another-dimension-release-manifest', manifestVersion: MANIFEST_VERSION, releaseVersion: version, createdAt: new Date().toISOString(), files, signature: null };
+  const sourceDateEpoch = Number(process.env.SOURCE_DATE_EPOCH);
+  const createdAt = Number.isSafeInteger(sourceDateEpoch) && sourceDateEpoch >= 0
+    ? new Date(sourceDateEpoch * 1000).toISOString()
+    : new Date().toISOString();
+  const manifest = { format: 'another-dimension-release-manifest', manifestVersion: MANIFEST_VERSION, releaseVersion: version, createdAt, files, signature: null };
   if (privateKey) {
     const publicKey = createPublicKey(privateKey);
     const publicKeyDer = publicKey.export({ type: 'spki', format: 'der' });
