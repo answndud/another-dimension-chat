@@ -235,6 +235,24 @@ This still does not provide:
 - Durable session transport state.
 - Full receive pipeline integration with Tor/onion transport or UI.
 
+## Replay Rollback Protection Decision
+
+v0.1 does not claim replay rollback protection against encrypted database snapshot restore.
+
+Current replay persistence guarantees are intentionally narrower:
+
+- Replay state is stored through the SQLCipher-backed `ADREC1` record path.
+- Replay state is not written as plaintext database bytes.
+- Receive flow loads replay state before decrypt.
+- Receive flow saves replay state only after decrypt and replay acceptance succeed.
+- Duplicate or old message numbers are rejected relative to the current database state.
+
+This does not protect against an attacker who can restore an older encrypted database snapshot and still cause the app to unlock it. SQLCipher protects at-rest confidentiality; it does not by itself prove that the database file is the newest version ever opened by the profile.
+
+Before this project can claim rollback protection, it needs a separate design and tests for at least one monotonic state source. Candidate approaches include OS-backed secure storage, TPM/Secure Enclave/StrongBox-backed counters or wrapped state, protocol-level peer checkpointing, or another reviewed external monotonic mechanism. Each option has platform, recovery, backup, and coercion tradeoffs and must be handled in a separate ADR before implementation.
+
+Public product language must therefore avoid claims like "persistent replay protection" or "rollback-proof local state." The current claim is limited to encrypted replay persistence with correct commit ordering in the current database state.
+
 ## Unlock and Key Wrapping Decision
 
 Initial v0.1 direction: keep unlock explicit and passphrase-first. `StorageDatabaseKey` still has only test-only construction, while normal code must go through `ProfilePassphrase` and `LockedProfileStore`/`SqlCipherRecordStore::unlock_with_passphrase`.

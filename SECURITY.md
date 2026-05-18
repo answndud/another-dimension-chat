@@ -26,7 +26,8 @@ This project does not currently claim:
 - OS keychain/DPAPI/Keystore wrapping.
 - Production encrypted local storage lifecycle.
 - Durable production key storage.
-- Durable production session or replay persistence.
+- Durable production session persistence.
+- Replay rollback protection against encrypted database snapshot restore.
 - Protection against device compromise.
 - Protection against coercion.
 - Protection against malicious contacts.
