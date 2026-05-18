@@ -26,6 +26,7 @@ What exists today:
 - Fail-closed onion transport adapter skeleton with no real network behavior.
 - Arti-first Tor lifecycle decision with C Tor fallback and no system Tor default.
 - Optional compile-only `arti-adapter-spike` feature that keeps transport fail-closed.
+- Arti lifecycle decision that rejects shared default Arti dirs and defers onion service key generation.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.
 - High-risk unlock policy tests that reject OS-keystore-only unlock.
