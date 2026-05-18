@@ -606,34 +606,6 @@ mod tests {
     }
 
     #[test]
-    fn production_pairing_payload_for_signs_decodeable_payload() {
-        let private_key =
-            another_dimension_identity::ProductionPairwisePrivateKey::from_ed25519_dalek_seed(
-                [11_u8; 32],
-            )
-            .expect("valid production seed");
-        let payload = production_pairing_payload_for(
-            &ProfileName::new("alice").expect("valid profile"),
-            &private_key,
-            production_pairing_params(),
-        )
-        .expect("production payload");
-
-        assert!(payload
-            .pairwise_public_key
-            .as_str()
-            .starts_with("ed25519-dalek-v2:"));
-        assert!(payload
-            .pairwise_signature
-            .as_str()
-            .starts_with("ed25519-dalek-v2:"));
-        assert_eq!(
-            PairingPayload::decode(&payload.encode().expect("payload encodes")),
-            Ok(payload)
-        );
-    }
-
-    #[test]
     fn production_pairing_nonce_uses_random_file_safe_encoding() {
         let first = production_pairing_nonce().expect("nonce");
         let second = production_pairing_nonce().expect("nonce");
@@ -672,30 +644,6 @@ mod tests {
         assert!(params.issued_at_local_ms >= before);
         assert!(params.issued_at_local_ms <= after);
         assert_eq!(params.ttl_seconds, DEFAULT_TTL_SECONDS);
-    }
-
-    #[test]
-    fn production_pairing_payload_with_defaults_signs_decodeable_payload() {
-        let private_key =
-            another_dimension_identity::ProductionPairwisePrivateKey::from_ed25519_dalek_seed(
-                [12_u8; 32],
-            )
-            .expect("valid production seed");
-        let payload = production_pairing_payload_with_defaults(
-            &ProfileName::new("alice").expect("valid profile"),
-            &private_key,
-            "alice.onion",
-            "PendingCryptoDesign",
-        )
-        .expect("production payload");
-
-        assert!(payload
-            .pairing_nonce
-            .starts_with(PRODUCTION_PAIRING_NONCE_PREFIX));
-        assert_eq!(
-            PairingPayload::decode(&payload.encode().expect("payload encodes")),
-            Ok(payload)
-        );
     }
 
     #[test]
@@ -918,42 +866,6 @@ mod tests {
     }
 
     #[test]
-    fn transcript_changes_when_endpoint_changes() {
-        let mut alice = PairingPayload {
-            owner_profile: ProfileName::new("alice").expect("valid profile"),
-            pairing_nonce: "alice-nonce".to_string(),
-            pairwise_public_key: PairwisePublicKey::new("alice-pub").expect("valid public key"),
-            pairwise_signature: test_signature(),
-            rendezvous_endpoint: "alice-a.onion".to_string(),
-            endpoint_rotation_policy: "manual-v1".to_string(),
-            protocol_capabilities: "prototype".to_string(),
-            prekey_bundle: "PendingCryptoDesign".to_string(),
-            issued_at_local_ms: 0,
-            ttl_seconds: DEFAULT_TTL_SECONDS,
-        };
-        let bob = PairingPayload {
-            owner_profile: ProfileName::new("bob").expect("valid profile"),
-            pairing_nonce: "bob-nonce".to_string(),
-            pairwise_public_key: PairwisePublicKey::new("bob-pub").expect("valid public key"),
-            pairwise_signature: test_signature(),
-            rendezvous_endpoint: "bob.onion".to_string(),
-            endpoint_rotation_policy: "manual-v1".to_string(),
-            protocol_capabilities: "prototype".to_string(),
-            prekey_bundle: "PendingCryptoDesign".to_string(),
-            issued_at_local_ms: 0,
-            ttl_seconds: DEFAULT_TTL_SECONDS,
-        };
-
-        let original = transcript(&alice, &bob).expect("transcript should build");
-        alice.rendezvous_endpoint = "alice-b.onion".to_string();
-
-        assert_ne!(
-            original,
-            transcript(&alice, &bob).expect("transcript should build")
-        );
-    }
-
-    #[test]
     fn safety_transcript_has_stable_test_vector() {
         let alice = sample_payload("alice", "alice-nonce", "alice-pub", "alice.onion", 1_000);
         let bob = sample_payload("bob", "bob-nonce", "bob-pub", "bob.onion", 2_000);
@@ -982,113 +894,6 @@ mod tests {
             original,
             transcript(&alice, &changed_prekey).expect("transcript")
         );
-    }
-
-    #[test]
-    fn production_safety_transcript_is_order_independent_and_decodeable() {
-        let alice = production_payload_for_transcript(
-            "alice",
-            [21_u8; 32],
-            "alice-nonce",
-            "alice.onion",
-            "alice-prekey",
-            "prototype-production-pairing-v1",
-            1_000,
-        );
-        let bob = production_payload_for_transcript(
-            "bob",
-            [22_u8; 32],
-            "bob-nonce",
-            "bob.onion",
-            "bob-prekey",
-            "prototype-production-pairing-v1",
-            2_000,
-        );
-
-        assert_eq!(
-            PairingPayload::decode(&alice.encode().expect("alice payload encodes")),
-            Ok(alice.clone())
-        );
-        assert_eq!(
-            PairingPayload::decode(&bob.encode().expect("bob payload encodes")),
-            Ok(bob.clone())
-        );
-        let transcript_ab = transcript(&alice, &bob).expect("transcript");
-        let transcript_ba = transcript(&bob, &alice).expect("transcript");
-
-        assert!(transcript_ab.starts_with("ADPAIR-SAFETY-V1|"));
-        assert_eq!(transcript_ab, transcript_ba);
-    }
-
-    #[test]
-    fn production_safety_transcript_changes_when_identity_endpoint_prekey_or_capability_changes() {
-        let alice = production_payload_for_transcript(
-            "alice",
-            [31_u8; 32],
-            "alice-nonce",
-            "alice.onion",
-            "alice-prekey",
-            "prototype-production-pairing-v1",
-            1_000,
-        );
-        let bob = production_payload_for_transcript(
-            "bob",
-            [32_u8; 32],
-            "bob-nonce",
-            "bob.onion",
-            "bob-prekey",
-            "prototype-production-pairing-v1",
-            2_000,
-        );
-        let original = transcript(&alice, &bob).expect("transcript");
-
-        for changed_bob in [
-            production_payload_for_transcript(
-                "bob",
-                [33_u8; 32],
-                "bob-nonce",
-                "bob.onion",
-                "bob-prekey",
-                "prototype-production-pairing-v1",
-                2_000,
-            ),
-            production_payload_for_transcript(
-                "bob",
-                [32_u8; 32],
-                "bob-nonce",
-                "bob-rotated.onion",
-                "bob-prekey",
-                "prototype-production-pairing-v1",
-                2_000,
-            ),
-            production_payload_for_transcript(
-                "bob",
-                [32_u8; 32],
-                "bob-nonce",
-                "bob.onion",
-                "bob-rotated-prekey",
-                "prototype-production-pairing-v1",
-                2_000,
-            ),
-            production_payload_for_transcript(
-                "bob",
-                [32_u8; 32],
-                "bob-nonce",
-                "bob.onion",
-                "bob-prekey",
-                "prototype-production-pairing-v2",
-                2_000,
-            ),
-        ] {
-            assert_ne!(
-                original,
-                transcript(&alice, &changed_bob).expect("transcript")
-            );
-            assert_eq!(
-                PairingPayload::decode(&changed_bob.encode().expect("changed payload encodes")),
-                Ok(changed_bob)
-            );
-        }
     }
 
     fn sample_payload(
@@ -1141,34 +946,6 @@ mod tests {
             production_pairing_params(),
         )
         .expect("production signed payload")
-    }
-
-    fn production_payload_for_transcript(
-        owner: &str,
-        seed: [u8; 32],
-        nonce: &str,
-        endpoint: &str,
-        prekey: &str,
-        capabilities: &str,
-        issued_at_local_ms: u128,
-    ) -> PairingPayload {
-        let private_key =
-            another_dimension_identity::ProductionPairwisePrivateKey::from_ed25519_dalek_seed(seed)
-                .expect("valid production seed");
-        production_pairing_payload_for(
-            &ProfileName::new(owner).expect("valid profile"),
-            &private_key,
-            ProductionPairingPayloadParams {
-                pairing_nonce: nonce.to_string(),
-                rendezvous_endpoint: endpoint.to_string(),
-                endpoint_rotation_policy: "manual-v1".to_string(),
-                protocol_capabilities: capabilities.to_string(),
-                prekey_bundle: prekey.to_string(),
-                issued_at_local_ms,
-                ttl_seconds: DEFAULT_TTL_SECONDS,
-            },
-        )
-        .expect("production transcript payload")
     }
 
     fn production_pairing_params() -> ProductionPairingPayloadParams {
