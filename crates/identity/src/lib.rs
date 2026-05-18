@@ -6,6 +6,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 const MAX_PRODUCTION_KEY_MATERIAL_SIZE: usize = 4096;
 const ED25519_KEY_SIZE: usize = 32;
 const ED25519_SIGNATURE_SIZE: usize = 64;
+const ED25519_DALEK_V2_SIGNATURE_PREFIX: &str = "ed25519-dalek-v2:";
+const DEV_SIGNATURE_PREFIX: &str = "dev-sign-v1-";
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ProfileName(String);
@@ -114,6 +116,31 @@ impl PairwiseSignature {
 
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+
+    pub fn scheme(&self) -> Result<PairwiseSignatureScheme, IdentityError> {
+        if self.0.starts_with(DEV_SIGNATURE_PREFIX) {
+            return Ok(PairwiseSignatureScheme::DevInsecureV1);
+        }
+        if self.0.starts_with(ED25519_DALEK_V2_SIGNATURE_PREFIX) {
+            return Ok(PairwiseSignatureScheme::Ed25519DalekV2);
+        }
+        Err(IdentityError::InvalidKeyMaterial)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PairwiseSignatureScheme {
+    DevInsecureV1,
+    Ed25519DalekV2,
+}
+
+impl PairwiseSignatureScheme {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::DevInsecureV1 => "dev-insecure-v1",
+            Self::Ed25519DalekV2 => "ed25519-dalek-v2",
+        }
     }
 }
 
@@ -305,6 +332,35 @@ impl ProductionPairwiseSignature {
     ) -> Result<Self, IdentityError> {
         Self::from_bytes(ProductionKeyAlgorithm::Ed25519DalekV2, bytes)
     }
+
+    pub fn to_pairwise_signature(&self) -> Result<PairwiseSignature, IdentityError> {
+        match self.algorithm {
+            ProductionKeyAlgorithm::Ed25519DalekV2 => {
+                let signature_bytes =
+                    <[u8; ED25519_SIGNATURE_SIZE]>::try_from(self.bytes.as_slice())
+                        .map_err(|_| IdentityError::InvalidKeyMaterial)?;
+                PairwiseSignature::new(format!(
+                    "{ED25519_DALEK_V2_SIGNATURE_PREFIX}{}",
+                    encode_hex(&signature_bytes)
+                ))
+            }
+            ProductionKeyAlgorithm::PendingReview => Err(IdentityError::InvalidKeyMaterial),
+        }
+    }
+
+    pub fn from_pairwise_signature(value: &PairwiseSignature) -> Result<Self, IdentityError> {
+        match value.scheme()? {
+            PairwiseSignatureScheme::Ed25519DalekV2 => {
+                let encoded = value
+                    .as_str()
+                    .strip_prefix(ED25519_DALEK_V2_SIGNATURE_PREFIX)
+                    .ok_or(IdentityError::InvalidKeyMaterial)?;
+                let bytes = decode_hex_array::<ED25519_SIGNATURE_SIZE>(encoded)?;
+                Self::from_ed25519_dalek_bytes(bytes)
+            }
+            PairwiseSignatureScheme::DevInsecureV1 => Err(IdentityError::InvalidKeyMaterial),
+        }
+    }
 }
 
 impl fmt::Debug for ProductionPairwiseSignature {
@@ -404,7 +460,39 @@ fn dev_pairing_signature(public_key: &str, private_key: &str, message: &[u8]) ->
         hash ^= u64::from(*byte);
         hash = hash.wrapping_mul(0x100000001b3);
     }
-    format!("dev-sign-v1-{hash:016x}")
+    format!("{DEV_SIGNATURE_PREFIX}{hash:016x}")
+}
+
+fn encode_hex(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        out.push(HEX[(byte >> 4) as usize] as char);
+        out.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    out
+}
+
+fn decode_hex_array<const N: usize>(value: &str) -> Result<[u8; N], IdentityError> {
+    if value.len() != N * 2 {
+        return Err(IdentityError::InvalidKeyMaterial);
+    }
+    let mut out = [0_u8; N];
+    for (index, chunk) in value.as_bytes().chunks(2).enumerate() {
+        let high = hex_value(chunk[0])?;
+        let low = hex_value(chunk[1])?;
+        out[index] = (high << 4) | low;
+    }
+    Ok(out)
+}
+
+fn hex_value(byte: u8) -> Result<u8, IdentityError> {
+    match byte {
+        b'0'..=b'9' => Ok(byte - b'0'),
+        b'a'..=b'f' => Ok(byte - b'a' + 10),
+        b'A'..=b'F' => Ok(byte - b'A' + 10),
+        _ => Err(IdentityError::InvalidKeyMaterial),
+    }
 }
 
 #[cfg(feature = "dev-insecure")]
@@ -456,9 +544,20 @@ mod tests {
         assert!(identity
             .public_key()
             .verify_pairing_signature(message, &signature));
+        assert_eq!(
+            signature.scheme(),
+            Ok(PairwiseSignatureScheme::DevInsecureV1)
+        );
         assert!(!identity
             .public_key()
             .verify_pairing_signature(b"changed payload", &signature));
+    }
+
+    #[test]
+    fn unknown_pairwise_signature_scheme_is_rejected_by_classifier() {
+        let signature = PairwiseSignature::new("unsigned-test-signature").expect("signature");
+
+        assert_eq!(signature.scheme(), Err(IdentityError::InvalidKeyMaterial));
     }
 
     #[test]
@@ -562,6 +661,50 @@ mod tests {
         );
         assert_eq!(signature.as_bytes(), expected_signature);
         assert!(public_key.verify_pairing_signature(b"", &signature));
+    }
+
+    #[test]
+    fn ed25519_dalek_pairwise_signature_encoding_is_scheme_tagged() {
+        let private_key =
+            ProductionPairwisePrivateKey::from_ed25519_dalek_seed([11_u8; 32]).expect("valid seed");
+        let production_signature = private_key
+            .sign_pairing_payload(b"canonical pairing payload")
+            .expect("signature should build");
+
+        let pairwise_signature = production_signature
+            .to_pairwise_signature()
+            .expect("pairwise signature");
+        let decoded = ProductionPairwiseSignature::from_pairwise_signature(&pairwise_signature)
+            .expect("production signature");
+
+        assert_eq!(
+            pairwise_signature.scheme(),
+            Ok(PairwiseSignatureScheme::Ed25519DalekV2)
+        );
+        assert!(pairwise_signature.as_str().starts_with("ed25519-dalek-v2:"));
+        assert_eq!(decoded, production_signature);
+    }
+
+    #[test]
+    fn production_signature_decoder_rejects_dev_signature_scheme() {
+        let dev_signature = PairwiseSignature::new("dev-sign-v1-0000000000000000")
+            .expect("valid dev signature string");
+
+        assert_eq!(
+            ProductionPairwiseSignature::from_pairwise_signature(&dev_signature),
+            Err(IdentityError::InvalidKeyMaterial)
+        );
+    }
+
+    #[test]
+    fn production_signature_decoder_rejects_malformed_ed25519_hex() {
+        let malformed =
+            PairwiseSignature::new("ed25519-dalek-v2:not-hex").expect("signature string");
+
+        assert_eq!(
+            ProductionPairwiseSignature::from_pairwise_signature(&malformed),
+            Err(IdentityError::InvalidKeyMaterial)
+        );
     }
 
     #[test]
