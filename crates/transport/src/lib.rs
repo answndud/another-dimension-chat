@@ -261,6 +261,7 @@ pub trait EnvelopeTransport {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OnionEnvelopeTransport {
     policy: TransportPolicy,
+    runtime_state: TransportRuntimeState,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -294,11 +295,25 @@ impl OnionEnvelopeTransport {
     pub fn fail_closed_high_risk() -> Self {
         Self {
             policy: TransportPolicy::high_risk_default(),
+            runtime_state: TransportRuntimeState::disabled(),
         }
+    }
+
+    pub fn fail_closed_after_preflight(
+        preflight: TransportRuntimePreflight,
+    ) -> Result<Self, TransportRuntimeError> {
+        Ok(Self {
+            policy: TransportPolicy::high_risk_default(),
+            runtime_state: TransportRuntimeState::from_preflight(preflight)?,
+        })
     }
 
     pub fn policy(&self) -> &TransportPolicy {
         &self.policy
+    }
+
+    pub fn runtime_state(&self) -> TransportRuntimeState {
+        self.runtime_state
     }
 }
 
@@ -590,6 +605,7 @@ mod tests {
         let onion = TransportRoute::onion("example.onion").expect("onion route");
         let envelope = sample_envelope();
 
+        assert_eq!(transport.runtime_state(), TransportRuntimeState::Disabled);
         assert_eq!(
             transport.send_envelope(TransportSendRequest {
                 route: &onion,
@@ -600,6 +616,46 @@ mod tests {
         assert_eq!(
             transport.receive_envelopes(TransportReceiveRequest { route: &onion }),
             Err(TransportError::Unavailable)
+        );
+    }
+
+    #[test]
+    fn onion_transport_can_hold_ready_runtime_state_but_still_fails_closed() {
+        let transport =
+            OnionEnvelopeTransport::fail_closed_after_preflight(TransportRuntimePreflight {
+                runtime_network_enabled: true,
+                state_cache_dirs_accessible: true,
+                log_redaction_ready: true,
+                bridge_or_censorship_ready: true,
+            })
+            .expect("ready runtime state");
+        let onion = TransportRoute::onion("example.onion").expect("onion route");
+        let envelope = sample_envelope();
+
+        assert_eq!(
+            transport.runtime_state(),
+            TransportRuntimeState::Ready(TransportRuntimeReady)
+        );
+        assert_eq!(
+            transport.send_envelope(TransportSendRequest {
+                route: &onion,
+                envelope: &envelope,
+            }),
+            Err(TransportError::Unavailable)
+        );
+        assert_eq!(
+            transport.receive_envelopes(TransportReceiveRequest { route: &onion }),
+            Err(TransportError::Unavailable)
+        );
+    }
+
+    #[test]
+    fn onion_transport_rejects_runtime_state_when_preflight_fails() {
+        assert_eq!(
+            OnionEnvelopeTransport::fail_closed_after_preflight(
+                TransportRuntimePreflight::disabled_by_default()
+            ),
+            Err(TransportRuntimeError::RuntimeNetworkDisabled)
         );
     }
 

@@ -19,6 +19,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `TransportRuntimeError` separates future preflight, bootstrap, bridge/censorship, onion service, send, and receive failures before a network-capable adapter exists.
 - `TransportRuntimePreflight` maps disabled runtime network, state/cache directory access, log redaction, and bridge/censorship readiness to explicit runtime errors.
 - `TransportRuntimeState` separates disabled fail-closed state from a future runtime-ready state that can only be created from successful preflight.
+- `OnionEnvelopeTransport` stores runtime state, but send/receive remains fail-closed even when that state is ready.
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
 - `arti_lifecycle_decision()` requires app-private state/cache directories, backup exclusion, log redaction, and no onion service key generation until a storage decision exists.
 - `ArtiAppPrivateDirs` and `ArtiAdapterSpike::fail_closed_app_private_config` compile-check app-private `TorClientConfigBuilder::from_directories` wiring without bootstrapping Tor.
@@ -226,3 +227,16 @@ Current state model:
 - `TransportRuntimeState::Ready(TransportRuntimeReady)` represents only a satisfied gate, not a live Tor client.
 
 This still does not bootstrap Tor, open sockets, launch onion services, or send/receive envelopes. It only prevents future code from constructing a runtime-ready adapter state without first passing the explicit preflight gate.
+
+## Transport Adapter State Wiring To Onion Skeleton
+
+Decision as of 2026-05-18: `OnionEnvelopeTransport` now stores `TransportRuntimeState`, but a ready runtime state does not make the adapter network-capable.
+
+Current wiring:
+
+- `OnionEnvelopeTransport::fail_closed_high_risk()` creates a high-risk onion-only adapter with `TransportRuntimeState::Disabled`.
+- `OnionEnvelopeTransport::fail_closed_after_preflight(...)` creates a ready runtime state only after `TransportRuntimePreflight` succeeds.
+- Send and receive still return `TransportError::Unavailable` for allowed onion routes.
+- Direct routes still fail policy checks before any network attempt.
+
+This keeps state wiring separate from runtime behavior. A later implementation must add a real adapter type or explicit runtime transition before any Tor bootstrap, socket activity, onion service launch, or envelope transfer can occur.
