@@ -75,6 +75,7 @@ When `ed25519-dalek` is added:
 - Verify production public key plus production signature payloads with the Ed25519 production path.
 - Keep production pairing payload construction separate from development pairing material generation.
 - Keep production pairing draft construction free of storage, backup, and export policy.
+- Keep production safety transcript tests tied to signed, decodeable production payloads.
 - Keep private key debug output redacted.
 - Keep deterministic test vectors around the pairing decoder production verification boundary.
 
@@ -92,6 +93,7 @@ The first implementation commit that adds `ed25519-dalek` must include tests for
 - Proving debug output does not print private key bytes. Done.
 - Constructing and decoding a production-signed pairing payload through the production API. Done.
 - Constructing a production pairing draft that returns both the generated key and signed payload. Done.
+- Proving production safety transcripts are order-independent and change when identity, endpoint, prekey, or capabilities change. Done.
 
 ## Deferred Decisions
 
