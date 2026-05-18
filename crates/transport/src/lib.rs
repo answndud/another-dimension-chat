@@ -192,6 +192,35 @@ impl EnvelopeTransport for OnionEnvelopeTransport {
     }
 }
 
+#[cfg(feature = "arti-adapter-spike")]
+pub mod arti_adapter_spike {
+    use super::*;
+    use arti_client::TorClientConfig;
+
+    #[derive(Clone, Debug)]
+    pub struct ArtiAdapterSpike {
+        config: TorClientConfig,
+        transport: OnionEnvelopeTransport,
+    }
+
+    impl ArtiAdapterSpike {
+        pub fn fail_closed_default_config() -> Self {
+            Self {
+                config: TorClientConfig::default(),
+                transport: OnionEnvelopeTransport::fail_closed_high_risk(),
+            }
+        }
+
+        pub fn config(&self) -> &TorClientConfig {
+            &self.config
+        }
+
+        pub fn transport(&self) -> &OnionEnvelopeTransport {
+            &self.transport
+        }
+    }
+}
+
 fn is_safe_endpoint_token(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= 128
@@ -344,5 +373,26 @@ mod tests {
             message_type: MessageType::Data,
             padded_ciphertext: b"ciphertext".to_vec(),
         }
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn arti_adapter_spike_compiles_without_opening_network() {
+        let spike = arti_adapter_spike::ArtiAdapterSpike::fail_closed_default_config();
+        let onion = TransportRoute::onion("example.onion").expect("onion route");
+        let envelope = sample_envelope();
+
+        assert_eq!(
+            spike.transport().policy().mode(),
+            TransportMode::HighRiskOnionOnly
+        );
+        assert!(format!("{:?}", spike.config()).contains("TorClientConfig"));
+        assert_eq!(
+            spike.transport().send_envelope(TransportSendRequest {
+                route: &onion,
+                envelope: &envelope,
+            }),
+            Err(TransportError::Unavailable)
+        );
     }
 }
