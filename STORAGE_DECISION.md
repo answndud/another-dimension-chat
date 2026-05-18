@@ -24,6 +24,7 @@ The repository currently has:
 - An unlock policy boundary that rejects OS-keystore-only unlock, including in high-risk mode.
 - Durable `ReplayWindowState` storage through `SqlCipherRecordStore`.
 - Tests that replay state does not appear as plaintext database bytes.
+- Core receive boundary that persists replay state only after successful decrypt/replay acceptance.
 
 The repository does not currently have:
 
@@ -31,7 +32,7 @@ The repository does not currently have:
 - Password-based key derivation.
 - Production key wrapping.
 - Durable production private key storage.
-- Integrated production replay state storage in the receive flow.
+- Replay rollback protection.
 - Durable Noise transport or ratchet state storage.
 - Backup, export, import, or migration behavior.
 - Production OS keychain/DPAPI/Keystore wrapping.
@@ -213,7 +214,26 @@ Limitations:
 
 - Replay state rollback protection is not implemented.
 - The record id must still be allocated by a higher-level caller.
-- This does not yet integrate with `ProductionEnvelopeSession` receive flow.
+- Initial `ProductionEnvelopeSession` receive integration is in place, but a full transport/UI receive pipeline is not.
+
+## Receive Flow Replay Persistence
+
+`ProductionEnvelopeSession::decrypt_at_responder_with_persistent_replay` is the first core receive boundary that connects message decrypt, replay checks, and SQLCipher-backed replay state persistence.
+
+Current behavior:
+
+- Load existing replay state from `SqlCipherRecordStore`.
+- Use a fresh replay window when no state exists.
+- Reject duplicate or old message numbers before decrypt.
+- Decrypt the envelope.
+- Save updated replay state only after decrypt succeeds.
+- Do not persist replay advancement for tampered ciphertext.
+
+This still does not provide:
+
+- Rollback protection for an attacker who can restore an older database snapshot.
+- Durable session transport state.
+- Full receive pipeline integration with Tor/onion transport or UI.
 
 ## Unlock and Key Wrapping Decision
 
@@ -286,7 +306,7 @@ Only records classified as `EncryptedAtRestRequired` may be encoded as `ADREC1`.
 3. Add an encrypted record envelope format independent of any specific backend. Initial `ADREC1` container is in place.
 4. Add a minimal encrypted storage implementation for non-session records only. Initial SQLCipher-backed `ADREC1` store spike is in place.
 5. Wire production key material only after unlock and key wrapping behavior is tested. Initial passphrase unlock boundary and negative tests are in place.
-6. Persist replay state only after metadata leakage and rollback behavior are tested. Initial SQLCipher-backed replay state persistence is in place, but rollback protection is still open.
+6. Persist replay state only after metadata leakage and rollback behavior are tested. Initial SQLCipher-backed replay state persistence and receive-flow commit ordering are in place, but rollback protection is still open.
 7. Keep session transport state in memory until a separate session lifecycle decision changes that rule.
 
 ## Open Questions

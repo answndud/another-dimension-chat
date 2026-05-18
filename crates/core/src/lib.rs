@@ -14,6 +14,9 @@ pub mod production {
     use another_dimension_protocol::{
         encode_hex, Envelope, MessageType, ProtocolError, ReplayWindow,
     };
+    use another_dimension_storage::production::{
+        EncryptedRecordId, EncryptedRecordScope, ProductionStorageError, SqlCipherRecordStore,
+    };
     use sha2::{Digest, Sha256};
 
     const CANONICAL_DIALER_DOMAIN: &[u8] = b"AD-SESSION-CANONICAL-DIALER-V1";
@@ -101,6 +104,23 @@ pub mod production {
             *replay_window = next_replay_window;
             Ok(plaintext)
         }
+
+        pub fn decrypt_at_responder_with_persistent_replay(
+            &mut self,
+            envelope: &Envelope,
+            store: &SqlCipherRecordStore,
+            replay_record_id: &EncryptedRecordId,
+            replay_scope: EncryptedRecordScope,
+            window_size: u64,
+        ) -> Result<Vec<u8>, ProductionSessionError> {
+            let mut replay_window = store
+                .load_replay_window(replay_record_id)?
+                .map(Ok)
+                .unwrap_or_else(|| ReplayWindow::new(window_size))?;
+            let plaintext = self.decrypt_at_responder_with_replay(envelope, &mut replay_window)?;
+            store.save_replay_window(replay_record_id, replay_scope, &replay_window)?;
+            Ok(plaintext)
+        }
     }
 
     #[derive(Debug, Eq, PartialEq)]
@@ -108,6 +128,7 @@ pub mod production {
         Pairing(PairingError),
         Crypto(CryptoError),
         Protocol(ProtocolError),
+        Storage(ProductionStorageError),
         NonProductionPairingPayload,
         SamePairwiseIdentity,
         NoiseStaticKeyMismatch,
@@ -129,6 +150,12 @@ pub mod production {
     impl From<ProtocolError> for ProductionSessionError {
         fn from(value: ProtocolError) -> Self {
             Self::Protocol(value)
+        }
+    }
+
+    impl From<ProductionStorageError> for ProductionSessionError {
+        fn from(value: ProductionStorageError) -> Self {
+            Self::Storage(value)
         }
     }
 
@@ -319,6 +346,7 @@ pub mod production {
         use another_dimension_pairing::{
             production_pairing_payload_for, ProductionPairingPayloadParams, DEFAULT_TTL_SECONDS,
         };
+        use another_dimension_storage::production::{LockedProfileStore, ProfilePassphrase};
 
         #[test]
         fn production_setup_draft_signs_payload_with_noise_prekey_bundle() {
@@ -537,6 +565,76 @@ pub mod production {
                 .is_ok());
         }
 
+        #[test]
+        fn production_receive_persists_replay_after_successful_decrypt() {
+            let (alice, bob) = production_setup_pair();
+            let mut session = establish_envelope_session_from_setup_drafts(&alice, &bob)
+                .expect("envelope session");
+            let (_dir, store) = production_test_store("persistent-replay-success");
+            let record_id = EncryptedRecordId::new("replay_0001").expect("record id");
+            let scope = EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile"));
+            let envelope = session
+                .encrypt_from_canonical_dialer(1, b"message one")
+                .expect("encrypt envelope");
+
+            assert_eq!(
+                session
+                    .decrypt_at_responder_with_persistent_replay(
+                        &envelope,
+                        &store,
+                        &record_id,
+                        scope.clone(),
+                        4,
+                    )
+                    .expect("decrypt envelope"),
+                b"message one"
+            );
+            assert_eq!(
+                store
+                    .load_replay_window(&record_id)
+                    .expect("load replay")
+                    .expect("replay persisted")
+                    .highest_seen(),
+                1
+            );
+            assert_eq!(
+                session.decrypt_at_responder_with_persistent_replay(
+                    &envelope, &store, &record_id, scope, 4
+                ),
+                Err(ProductionSessionError::Protocol(
+                    ProtocolError::ReplayMessage
+                ))
+            );
+        }
+
+        #[test]
+        fn production_receive_tamper_does_not_persist_replay_state() {
+            let (alice, bob) = production_setup_pair();
+            let mut session = establish_envelope_session_from_setup_drafts(&alice, &bob)
+                .expect("envelope session");
+            let (_dir, store) = production_test_store("persistent-replay-tamper");
+            let record_id = EncryptedRecordId::new("replay_0001").expect("record id");
+            let scope = EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile"));
+            let mut envelope = session
+                .encrypt_from_canonical_dialer(1, b"message one")
+                .expect("encrypt envelope");
+            let last = envelope
+                .padded_ciphertext
+                .last_mut()
+                .expect("ciphertext is non-empty");
+            *last ^= 0x01;
+
+            assert!(session
+                .decrypt_at_responder_with_persistent_replay(
+                    &envelope, &store, &record_id, scope, 4
+                )
+                .is_err());
+            assert_eq!(
+                store.load_replay_window(&record_id).expect("load replay"),
+                None
+            );
+        }
+
         fn production_setup_pair() -> (ProductionSetupDraft, ProductionSetupDraft) {
             let alice = production_setup_draft_with_defaults(
                 &ProfileName::new("alice").expect("valid profile"),
@@ -549,6 +647,22 @@ pub mod production {
             )
             .expect("bob setup");
             (alice, bob)
+        }
+
+        fn production_test_store(test_name: &str) -> (std::path::PathBuf, SqlCipherRecordStore) {
+            let dir = std::env::temp_dir().join(format!(
+                "another-dimension-core-sqlcipher-{test_name}-{}-{:?}",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+            if dir.exists() {
+                std::fs::remove_dir_all(&dir).expect("remove stale test dir");
+            }
+            std::fs::create_dir_all(&dir).expect("create test dir");
+            let locked = LockedProfileStore::new(dir.join("store.db"));
+            let passphrase = ProfilePassphrase::new("test-passphrase").expect("passphrase");
+            let store = locked.unlock(&passphrase).expect("unlock store");
+            (dir, store)
         }
 
         #[test]

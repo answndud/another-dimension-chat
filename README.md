@@ -26,6 +26,7 @@ What exists today:
 - Passphrase unlock boundary tests for SQLCipher storage.
 - High-risk unlock policy tests that reject OS-keystore-only unlock.
 - First durable replay-window record wiring through SQLCipher storage.
+- Core receive boundary that saves replay state only after successful decrypt.
 - Padded message envelope prototype.
 - Replay window prototype.
 - CLI hardening tests for malformed input, duplicate pairing scans, replay handling, message expiry, and prototype boundary behavior.
