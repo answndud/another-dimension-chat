@@ -37,14 +37,21 @@ Status: in progress.
 
 Goal: make the CLI prototype stricter without claiming real security.
 
-Tasks:
+Covered by tests:
 
-- Add public-safe tests for malformed CLI inputs and error messages. Started.
-- Keep pairing payload parsing deterministic and bounded. Started.
-- Keep duplicate pairing scans rejected for pending and active contacts. Started.
-- Keep replayed message envelopes from being displayed twice. Started.
-- Keep plaintext out of the development store where the current envelope model allows it. Started.
-- Add explicit tests that default builds do not expose `dev-insecure` command behavior. Started.
+- Malformed CLI inputs and user-facing error behavior.
+- Pairing payload parsing boundaries, malformed segments, and oversized input rejection.
+- Duplicate pairing scans for pending and active contacts.
+- Replayed message envelopes not being displayed twice.
+- Plaintext message content not being persisted by the current development store path.
+- Default builds rejecting prototype commands that require `dev-insecure`.
+
+Remaining tasks:
+
+- Add more negative tests around profile/contact identifier validation.
+- Add CLI tests for pairing cancel and pairing expiry behavior.
+- Add CLI tests for message expiry behavior.
+- Keep the public README and roadmap aligned as the prototype boundary changes.
 
 Exit criteria:
 
