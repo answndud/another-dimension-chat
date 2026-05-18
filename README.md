@@ -144,6 +144,8 @@ scripts/smoke_dev_cli.sh
 
 See [ROADMAP.md](ROADMAP.md) for the public development roadmap.
 
+Phase 2 crypto planning is tracked in [CRYPTO_DECISION.md](CRYPTO_DECISION.md). That document is not a security claim; it is the decision boundary that must be resolved before placeholder crypto is replaced.
+
 ## License
 
 This repository is currently marked `UNLICENSED` in the Rust workspace metadata.

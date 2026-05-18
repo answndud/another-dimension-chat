@@ -61,12 +61,13 @@ Maintenance rule:
 
 ## Phase 2: Real Crypto Decision
 
-Status: not started.
+Status: in progress.
 
 Goal: choose the production cryptographic approach before replacing placeholders.
 
 Tasks:
 
+- Maintain [CRYPTO_DECISION.md](CRYPTO_DECISION.md) as the public-safe decision boundary for Phase 2.
 - Select maintained Rust-compatible libraries for identity signatures and session encryption.
 - Decide how pairing payload signatures map to real pairwise identity keys.
 - Decide whether the first production session model uses a Signal-style ratchet, Noise-based construction, or another reviewed design.
