@@ -9,6 +9,7 @@ fn main() {
 #[cfg(not(feature = "dev-insecure"))]
 fn main() {
     eprintln!("another-dimension prototype commands require --features dev-insecure");
+    std::process::exit(1);
 }
 
 #[cfg(feature = "dev-insecure")]
