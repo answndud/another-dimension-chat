@@ -22,6 +22,7 @@ What exists today:
 - Pairing confirm, cancel, and expiry lifecycle.
 - Production-facing Ed25519 key generation, pairing draft, signature, nonce, and safety material boundaries.
 - Production setup, in-memory Noise transport, envelope encryption/decryption, replay rejection, and storage policy boundaries for tests.
+- SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Padded message envelope prototype.
 - Replay window prototype.
 - CLI hardening tests for malformed input, duplicate pairing scans, replay handling, message expiry, and prototype boundary behavior.
@@ -33,7 +34,8 @@ What does not exist yet:
 - Real end-to-end encryption.
 - Usable production messaging.
 - Real Tor/onion transport.
-- Production encrypted local storage.
+- Production unlock/key management.
+- Production encrypted local storage lifecycle.
 - Tauri desktop app.
 - Android or iOS app.
 - Offline mailbox.
