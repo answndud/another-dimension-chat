@@ -33,7 +33,7 @@ Exit criteria:
 
 ## Phase 1: Prototype Boundary Hardening
 
-Status: in progress.
+Status: completed for the current CLI prototype boundary.
 
 Goal: make the CLI prototype stricter without claiming real security.
 
@@ -49,15 +49,15 @@ Covered by tests:
 - Pairing cancel and fresh pending pairing expiry CLI behavior.
 - Message expiry removing pending envelopes before receive.
 
-Remaining tasks:
-
-- Keep the public README and roadmap aligned as the prototype boundary changes.
-
 Exit criteria:
 
 - CLI smoke flow and workspace tests cover the current prototype invariants.
 - Default builds remain visibly separate from `dev-insecure` builds.
-- No new feature weakens the warning or prototype boundary.
+- No current feature weakens the warning or prototype boundary.
+
+Maintenance rule:
+
+- Reopen this phase if new CLI prototype behavior is added before Phase 2.
 
 ## Phase 2: Real Crypto Decision
 

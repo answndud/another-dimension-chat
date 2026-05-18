@@ -22,6 +22,7 @@ What exists today:
 - Pairing confirm, cancel, and expiry lifecycle.
 - Padded message envelope prototype.
 - Replay window prototype.
+- CLI hardening tests for malformed input, duplicate pairing scans, replay handling, message expiry, and prototype boundary behavior.
 - Local smoke test scripts.
 - GitHub Actions verification workflow.
 
