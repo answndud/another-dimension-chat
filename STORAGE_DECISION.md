@@ -108,6 +108,50 @@ The first backend spike should:
 - Decide test-only key handling so it cannot be confused with production unlock.
 - Add a dependency review note before adding `rusqlite`/SQLCipher features.
 
+## Dependency Review Before First Backend Spike
+
+No new storage encryption dependency has been added yet.
+
+Candidate dependency:
+
+```toml
+rusqlite = { version = "0.39.0", features = ["bundled-sqlcipher-vendored-openssl"] }
+```
+
+Rationale:
+
+- `cargo search` currently reports `rusqlite = "0.39.0"`.
+- The `rusqlite` README documents `bundled-sqlcipher` and `bundled-sqlcipher-vendored-openssl`.
+- The vendored OpenSSL path is more likely to make CI and Windows builds reproducible than relying on a system `libcrypto` or system SQLCipher install.
+- Keeping SQLite/SQLCipher access in `crates/storage` preserves CLI/core testability and avoids pushing storage logic into the Tauri frontend/plugin layer.
+
+Known costs and risks:
+
+- Adds C/FFI build surface through SQLite/SQLCipher/OpenSSL.
+- Increases CI and local build time.
+- Introduces OpenSSL vendoring and license/review surface.
+- Mobile cross-compilation may need target-specific follow-up even if desktop CI works.
+- SQLCipher protects database pages at rest, but does not solve unlocked-device compromise, screenshots, process memory extraction, logs, crash dumps, or malicious contacts.
+
+Initial feature choice:
+
+- Prefer `bundled-sqlcipher-vendored-openssl` for the first desktop/CI spike.
+- Re-evaluate before Android/iOS support.
+- Do not use Tauri SQL plugin for core storage.
+- Do not use Tauri Stronghold as the first message database backend.
+
+Test-only key handling for the first spike:
+
+- Use an explicit `TestOnlyStorageKey` type behind tests or an obviously named test helper.
+- Never expose a production default key.
+- Do not read a test key from environment variables that could be mistaken for a production unlock path.
+- Test database files must live under temporary directories and must not be reused across runs.
+- Tests must assert that plaintext record bodies are not visible in the database bytes.
+
+Dependency addition gate:
+
+Before adding the dependency, confirm that the next slice is only a local encrypted storage spike for `ADREC1` records and is not a production unlock/key-management implementation.
+
 ## Encrypted Record Envelope
 
 `ADREC1` is the first storage record envelope:
