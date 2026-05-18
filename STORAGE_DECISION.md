@@ -61,10 +61,54 @@ Before implementing durable production storage, decide and document:
 - Crash dump, log, and temporary file handling.
 - Migration strategy from prototype data, if any.
 
+## Backend Selection Decision
+
+Initial v0.1 direction: use a SQLCipher-compatible SQLite backend from the Rust core, with OS keychain integration treated as key wrapping/unlock support rather than the primary message store.
+
+This is a provisional implementation direction, not approval to add the dependency yet.
+
+### Candidate Comparison
+
+| Candidate | Decision | Reason |
+| --- | --- | --- |
+| `rusqlite` + SQLCipher feature path | Prefer for first backend spike | Keeps storage in Rust core, fits desktop-first development, and has documented SQLCipher/bundled SQLCipher build paths. |
+| Direct SQLCipher C integration | Defer | More build and FFI surface than needed before the schema and record codec are stable. |
+| Tauri SQL plugin | Do not use for core storage | Places storage behind the app shell/plugin boundary instead of the Rust core; less suitable for CLI/core tests. |
+| Tauri Stronghold plugin | Defer | Useful to evaluate later for secret storage, but tying the first durable store to Tauri would complicate non-UI core testing. |
+| Rust `keyring` crate | Do not depend directly on v4 | The current crate describes itself as sample code and points application developers to the lower-level keyring ecosystem. |
+| OS keychain/DPAPI/Keystore only | Not enough | Good for wrapping an app database key, not for structured message/replay/contact storage. |
+| Custom encrypted file format | Do not use first | Too much custom cryptographic and corruption-recovery surface for this project. |
+
+### Source Notes
+
+- SQLCipher describes itself as full database encryption for SQLite and lists major desktop/mobile platforms including Windows, iOS, macOS, Android, and Linux: <https://www.zetetic.net/sqlcipher/>.
+- `rusqlite` documents `sqlcipher`, `bundled-sqlcipher`, and `bundled-sqlcipher-vendored-openssl` feature paths: <https://github.com/rusqlite/rusqlite>.
+- Tauri documents official SQL and Stronghold plugins, but the storage boundary for this project should remain in Rust core first: <https://v2.tauri.app/plugin/>.
+- `keyring` 4.x says application developers should not depend on that crate directly and should use the keyring ecosystem components instead: <https://github.com/open-source-cooperative/keyring-rs>.
+
+### Initial Backend Spike Scope
+
+The first backend spike should:
+
+- Add the storage dependency only after an encrypted record envelope is defined.
+- Keep the database writer behind production storage policy checks.
+- Store only records classified as `EncryptedAtRestRequired`.
+- Reject `SessionTransportState` even when encrypted storage is available.
+- Use a test-only ephemeral key in tests, clearly separated from production unlock/key wrapping.
+- Avoid OS keychain integration in the first spike.
+- Avoid migrations from `dev-insecure` data.
+
+### Required Follow-up Before Dependency Addition
+
+- Define encrypted record envelope versioning and associated data.
+- Decide whether schema metadata may remain plaintext or should be placed inside the encrypted DB as well.
+- Decide test-only key handling so it cannot be confused with production unlock.
+- Add a dependency review note before adding `rusqlite`/SQLCipher features.
+
 ## Implementation Sequence
 
 1. Add production storage record classification and plaintext persistence rejection. Done in `crates/storage`.
-2. Add a public-safe backend selection decision before adding new dependencies.
+2. Add a public-safe backend selection decision before adding new dependencies. Initial direction: Rust-core SQLCipher-compatible SQLite, likely through `rusqlite`, after the encrypted record envelope is defined.
 3. Add an encrypted record envelope format independent of any specific backend.
 4. Add a minimal encrypted storage implementation for non-session records only.
 5. Wire production key material only after unlock and key wrapping behavior is tested.
