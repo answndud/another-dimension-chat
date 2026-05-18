@@ -67,4 +67,8 @@ Not decided here:
 
 Evaluate a minimal Noise-based synchronous session boundary first, likely through `snow`, because it can fit the current 1:1 online-only pairing model without inventing a custom key exchange.
 
-This is only a candidate direction. The next code change should add test scaffolding around a `ProductionSession` boundary before adding any session dependency.
+This is only a candidate direction.
+
+## Current Code Boundary
+
+`crates/core` now contains a narrow `ProductionSessionPlan` boundary. It accepts only verified production pairing payloads, commits to the safety transcript, and selects a deterministic canonical dialer from pairwise public keys with domain-separated hashing. It still does not implement message encryption, Noise handshakes, ratchets, session secret storage, or transport authentication.

@@ -22,6 +22,7 @@ dependencies = [
  "another-dimension-protocol",
  "another-dimension-storage",
  "another-dimension-transport",
+ "sha2",
 ]
 
 [[package]]
