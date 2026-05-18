@@ -23,6 +23,7 @@ The repository currently has:
 - Production pairing draft construction can return a generated private key plus signed payload without deciding storage, backup, or export.
 - Pairing payload canonicalization and signature boundary in `crates/pairing`.
 - Production safety transcript tests cover signed production payload ordering and identity, endpoint, prekey, and capability sensitivity.
+- Production safety material derivation has a SHA-256 based, domain-separated display boundary independent from `dev-insecure` fake crypto.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
 
@@ -68,7 +69,7 @@ The current architecture points toward this first production boundary:
 - In-person QR pairing as the first supported setup path.
 - Pairing payload includes identity material, signed session setup material, rendezvous endpoint, and capability commitments.
 - Safety number derives from a canonical transcript that includes the identity and setup material.
-- Message encryption is handled by a reviewed session construction, not by the CLI or UI.
+- Safety material display is derived from the canonical transcript with a reviewed hash crate, while message encryption is handled by a reviewed session construction, not by the CLI or UI.
 - `dev-insecure` remains available only for development tests after production crypto is introduced.
 
 This is a direction, not an approval to implement crypto from scratch.
@@ -110,9 +111,10 @@ Minimum test coverage:
 1. Add production key type wrappers without changing CLI behavior. Done for the initial byte wrapper boundary.
 2. Add test vectors for canonical transcript and signature verification. Initial integration fixtures are in place.
 3. Add maintained signature dependency and replace dev pairing signatures behind a production feature or default path. `ed25519-dalek` stable 2.x is added to `crates/identity`; pairwise private key generation, pairing decoder wiring, and production pairing draft/payload construction are in place.
-4. Add session establishment tests before selecting message encryption implementation.
-5. Replace fake message encryption only after pairing identity verification is production-backed.
-6. Keep development fake crypto behind `dev-insecure` for test ergonomics.
+4. Add production safety material display boundary before selecting message encryption implementation. Initial SHA-256 display derivation is in place.
+5. Add session establishment tests before selecting message encryption implementation.
+6. Replace fake message encryption only after pairing identity verification is production-backed.
+7. Keep development fake crypto behind `dev-insecure` for test ergonomics.
 
 ## Open Questions
 
