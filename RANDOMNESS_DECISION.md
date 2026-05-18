@@ -16,7 +16,7 @@ pn-v1-<32 lowercase hex chars>
 
 The current nonce size is 16 random bytes encoded as lowercase hex with a fixed scheme prefix.
 
-A higher-level production pairing default helper uses this nonce API and the local system clock to fill nonce, timestamp, TTL, endpoint rotation policy, and capability defaults. Rendezvous endpoint and prekey material remain caller-supplied because transport and session-establishment decisions are not complete.
+A higher-level production pairing default helper uses this nonce API and the local system clock to fill nonce, timestamp, TTL, endpoint rotation policy, and capability defaults. A production pairing draft helper combines this with generated Ed25519 key material and returns the key plus signed payload to the caller. Rendezvous endpoint and prekey material remain caller-supplied because transport and session-establishment decisions are not complete.
 
 ## Why This Boundary
 
@@ -48,6 +48,7 @@ Metadata was checked with `cargo search` and `cargo info` on 2026-05-18.
 - Do not use this pairing nonce API as a key generator.
 - Generate Ed25519 pairwise private key seeds through the dedicated identity API, not through ad hoc callers.
 - Do not hide rendezvous endpoint or prekey decisions behind the nonce/defaults helper.
+- Do not persist, export, or back up generated private keys inside the draft helper.
 - Do not log production nonce generation failures with sensitive environment details.
 - Keep nonce strings lowercase, scheme-tagged, and file-name safe.
 - Keep production key generation as a separate decision.
@@ -62,5 +63,6 @@ Current tests cover:
 - Two generated nonces are not equal under normal OS randomness.
 - Default production pairing params use generated nonce, local timestamp, default TTL, default endpoint rotation policy, and default capability string.
 - Two generated Ed25519 pairwise private keys differ under normal OS randomness and can sign/verify pairing payload bytes.
+- Production pairing draft construction returns a generated private key and decodeable signed payload.
 
 This is not statistical randomness testing. It only protects the API boundary and encoding invariants.

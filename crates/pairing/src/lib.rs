@@ -39,6 +39,12 @@ pub struct ProductionPairingPayloadParams {
     pub ttl_seconds: u64,
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub struct ProductionPairingDraft {
+    pub private_key: ProductionPairwisePrivateKey,
+    pub payload: PairingPayload,
+}
+
 impl PairingPayload {
     pub fn encode(&self) -> Result<String, PairingError> {
         let canonical = self.canonical_bytes()?;
@@ -166,6 +172,25 @@ pub fn production_pairing_payload_for(
         .to_pairwise_signature()
         .map_err(|_| PairingError::InvalidPayload)?;
     Ok(payload)
+}
+
+pub fn production_pairing_draft_with_defaults(
+    profile: &ProfileName,
+    rendezvous_endpoint: impl Into<String>,
+    prekey_bundle: impl Into<String>,
+) -> Result<ProductionPairingDraft, PairingError> {
+    let private_key = ProductionPairwisePrivateKey::generate_ed25519_dalek()
+        .map_err(|_| PairingError::RandomnessUnavailable)?;
+    let payload = production_pairing_payload_with_defaults(
+        profile,
+        &private_key,
+        rendezvous_endpoint,
+        prekey_bundle,
+    )?;
+    Ok(ProductionPairingDraft {
+        private_key,
+        payload,
+    })
 }
 
 pub fn production_pairing_payload_with_defaults(
@@ -670,6 +695,31 @@ mod tests {
         assert_eq!(
             PairingPayload::decode(&payload.encode().expect("payload encodes")),
             Ok(payload)
+        );
+    }
+
+    #[test]
+    fn production_pairing_draft_with_defaults_returns_key_and_decodeable_payload() {
+        let draft = production_pairing_draft_with_defaults(
+            &ProfileName::new("alice").expect("valid profile"),
+            "alice.onion",
+            "PendingCryptoDesign",
+        )
+        .expect("production draft");
+
+        assert_eq!(
+            draft.private_key.algorithm(),
+            another_dimension_identity::ProductionKeyAlgorithm::Ed25519DalekV2
+        );
+        assert!(draft
+            .payload
+            .pairing_nonce
+            .starts_with(PRODUCTION_PAIRING_NONCE_PREFIX));
+        assert_eq!(draft.payload.rendezvous_endpoint, "alice.onion");
+        assert_eq!(draft.payload.prekey_bundle, "PendingCryptoDesign");
+        assert_eq!(
+            PairingPayload::decode(&draft.payload.encode().expect("payload encodes")),
+            Ok(draft.payload)
         );
     }
 
