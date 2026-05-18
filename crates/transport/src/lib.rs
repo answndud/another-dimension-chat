@@ -222,12 +222,61 @@ impl EnvelopeTransport for OnionEnvelopeTransport {
 #[cfg(feature = "arti-adapter-spike")]
 pub mod arti_adapter_spike {
     use super::*;
-    use arti_client::TorClientConfig;
+    use arti_client::{config::TorClientConfigBuilder, TorClientConfig};
+    use std::{
+        path::{Path, PathBuf},
+        sync::Arc,
+    };
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub enum ArtiConfigError {
+        EmptyDirectory,
+        RelativeDirectory,
+        SharedDefaultDirectory,
+        SameStateAndCacheDirectory,
+        BuildFailed,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ArtiAppPrivateDirs {
+        state_dir: PathBuf,
+        cache_dir: PathBuf,
+    }
+
+    impl ArtiAppPrivateDirs {
+        pub fn new(
+            state_dir: impl Into<PathBuf>,
+            cache_dir: impl Into<PathBuf>,
+        ) -> Result<Self, ArtiConfigError> {
+            let state_dir = state_dir.into();
+            let cache_dir = cache_dir.into();
+
+            validate_app_private_dir(&state_dir)?;
+            validate_app_private_dir(&cache_dir)?;
+            if state_dir == cache_dir {
+                return Err(ArtiConfigError::SameStateAndCacheDirectory);
+            }
+
+            Ok(Self {
+                state_dir,
+                cache_dir,
+            })
+        }
+
+        pub fn state_dir(&self) -> &Path {
+            &self.state_dir
+        }
+
+        pub fn cache_dir(&self) -> &Path {
+            &self.cache_dir
+        }
+    }
 
     #[derive(Clone, Debug)]
     pub struct ArtiAdapterSpike {
         config: TorClientConfig,
         transport: OnionEnvelopeTransport,
+        dirs: Option<Arc<ArtiAppPrivateDirs>>,
     }
 
     impl ArtiAdapterSpike {
@@ -235,7 +284,23 @@ pub mod arti_adapter_spike {
             Self {
                 config: TorClientConfig::default(),
                 transport: OnionEnvelopeTransport::fail_closed_high_risk(),
+                dirs: None,
             }
+        }
+
+        pub fn fail_closed_app_private_config(
+            dirs: ArtiAppPrivateDirs,
+        ) -> Result<Self, ArtiConfigError> {
+            let config =
+                TorClientConfigBuilder::from_directories(dirs.state_dir(), dirs.cache_dir())
+                    .build()
+                    .map_err(|_| ArtiConfigError::BuildFailed)?;
+
+            Ok(Self {
+                config,
+                transport: OnionEnvelopeTransport::fail_closed_high_risk(),
+                dirs: Some(Arc::new(dirs)),
+            })
         }
 
         pub fn config(&self) -> &TorClientConfig {
@@ -245,6 +310,34 @@ pub mod arti_adapter_spike {
         pub fn transport(&self) -> &OnionEnvelopeTransport {
             &self.transport
         }
+
+        pub fn dirs(&self) -> Option<&ArtiAppPrivateDirs> {
+            self.dirs.as_deref()
+        }
+    }
+
+    fn validate_app_private_dir(path: &Path) -> Result<(), ArtiConfigError> {
+        let text = path.to_string_lossy();
+        if text.is_empty() {
+            return Err(ArtiConfigError::EmptyDirectory);
+        }
+        if !path.is_absolute() {
+            return Err(ArtiConfigError::RelativeDirectory);
+        }
+        if looks_like_shared_arti_default(&text) {
+            return Err(ArtiConfigError::SharedDefaultDirectory);
+        }
+        Ok(())
+    }
+
+    fn looks_like_shared_arti_default(path: &str) -> bool {
+        let normalized = path.replace('\\', "/").to_ascii_lowercase();
+        normalized.contains("${arti_")
+            || normalized.ends_with("/.cache/arti")
+            || normalized.ends_with("/.local/share/arti")
+            || normalized.ends_with("/library/application support/arti")
+            || normalized.ends_with("/appdata/roaming/arti")
+            || normalized.ends_with("/appdata/local/arti")
     }
 }
 
@@ -435,6 +528,65 @@ mod tests {
                 envelope: &envelope,
             }),
             Err(TransportError::Unavailable)
+        );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn arti_adapter_spike_builds_app_private_config_without_opening_network() {
+        let root = std::env::temp_dir().join("another-dimension-test-profile");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let spike =
+            arti_adapter_spike::ArtiAdapterSpike::fail_closed_app_private_config(dirs.clone())
+                .expect("app private config");
+        let onion = TransportRoute::onion("example.onion").expect("onion route");
+        let envelope = sample_envelope();
+
+        assert_eq!(spike.dirs(), Some(&dirs));
+        assert!(format!("{:?}", spike.config()).contains("TorClientConfig"));
+        assert_eq!(
+            spike.transport().send_envelope(TransportSendRequest {
+                route: &onion,
+                envelope: &envelope,
+            }),
+            Err(TransportError::Unavailable)
+        );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn arti_app_private_dirs_reject_shared_defaults_and_relative_paths() {
+        let root = std::env::temp_dir().join("another-dimension-test-profile");
+        let shared_state = if cfg!(windows) {
+            r"C:\Users\alex\AppData\Roaming\arti"
+        } else {
+            "/Users/alex/.local/share/arti"
+        };
+        let shared_cache = if cfg!(windows) {
+            r"C:\Users\alex\AppData\Local\arti"
+        } else {
+            "/Users/alex/.cache/arti"
+        };
+
+        assert_eq!(
+            arti_adapter_spike::ArtiAppPrivateDirs::new(shared_state, root.join("cache")),
+            Err(arti_adapter_spike::ArtiConfigError::SharedDefaultDirectory)
+        );
+        assert_eq!(
+            arti_adapter_spike::ArtiAppPrivateDirs::new(root.join("state"), shared_cache),
+            Err(arti_adapter_spike::ArtiConfigError::SharedDefaultDirectory)
+        );
+        assert_eq!(
+            arti_adapter_spike::ArtiAppPrivateDirs::new("relative-state", root.join("cache"),),
+            Err(arti_adapter_spike::ArtiConfigError::RelativeDirectory)
+        );
+        assert_eq!(
+            arti_adapter_spike::ArtiAppPrivateDirs::new(root.join("same"), root.join("same")),
+            Err(arti_adapter_spike::ArtiConfigError::SameStateAndCacheDirectory)
         );
     }
 }
