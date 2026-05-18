@@ -109,6 +109,12 @@ This runs:
 
 The CLI commands require the `dev-insecure` feature.
 
+The default build exposes only a local production-boundary self-test. It does not send messages, persist keys, or create a secure messenger release:
+
+```bash
+cargo run -q -- production self-test
+```
+
 Example local flow:
 
 ```bash

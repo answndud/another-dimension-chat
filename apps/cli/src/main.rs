@@ -8,8 +8,55 @@ fn main() {
 
 #[cfg(not(feature = "dev-insecure"))]
 fn main() {
-    eprintln!("another-dimension prototype commands require --features dev-insecure");
-    std::process::exit(1);
+    if let Err(error) = production_main() {
+        eprintln!("error: {error}");
+        std::process::exit(1);
+    }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn production_main() -> Result<(), String> {
+    let args = std::env::args().skip(1).collect::<Vec<_>>();
+    match args.as_slice() {
+        [cmd, sub] if cmd == "production" && sub == "self-test" => {
+            run_production_self_test()?;
+            eprintln!("warning: production self-test is not a secure messenger release");
+            println!("production boundary self-test passed");
+        }
+        _ => {
+            return Err(
+                "another-dimension prototype commands require --features dev-insecure".to_string(),
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn run_production_self_test() -> Result<(), String> {
+    use another_dimension_core::production::{
+        production_setup_draft_with_defaults, run_setup_draft_handshake_smoke,
+    };
+    use another_dimension_identity::ProfileName;
+
+    let alice = production_setup_draft_with_defaults(
+        &ProfileName::new("alice").map_err(|_| "invalid built-in profile")?,
+        "alice.onion",
+    )
+    .map_err(|_| "production setup failed")?;
+    let bob = production_setup_draft_with_defaults(
+        &ProfileName::new("bob").map_err(|_| "invalid built-in profile")?,
+        "bob.onion",
+    )
+    .map_err(|_| "production setup failed")?;
+    let plaintext = b"production boundary self-test";
+    let result = run_setup_draft_handshake_smoke(&alice, &bob, plaintext)
+        .map_err(|_| "production handshake failed")?;
+    if result.plaintext == plaintext {
+        Ok(())
+    } else {
+        Err("production decrypt mismatch".to_string())
+    }
 }
 
 #[cfg(feature = "dev-insecure")]
