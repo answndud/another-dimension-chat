@@ -44,6 +44,7 @@ dependencies = [
 name = "another-dimension-pairing"
 version = "0.1.0"
 dependencies = [
+ "another-dimension-crypto",
  "another-dimension-identity",
  "getrandom",
 ]
