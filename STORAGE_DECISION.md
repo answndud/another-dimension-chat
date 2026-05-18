@@ -179,6 +179,41 @@ It does not support:
 - Persistent Noise/session transport state.
 - A security-ready release.
 
+## Unlock and Key Wrapping Decision
+
+Initial v0.1 direction: keep production unlock/key wrapping unimplemented until the UI and local threat model are narrower. The current `StorageDatabaseKey` has only test-only construction, so normal production code cannot silently create a database key.
+
+When production unlock is added, prefer this sequence:
+
+1. Add an explicit profile unlock API in Rust core.
+2. Support a passphrase unlock path first, relying on SQLCipher passphrase key derivation rather than adding a separate custom KDF.
+3. Add OS keychain/DPAPI/Keystore wrapping only as an optional convenience or recovery layer after the passphrase path is tested.
+4. Keep high-risk mode from auto-unlocking solely because the user is logged into the OS account.
+5. Add key rotation through SQLCipher rekey only after backup, rollback, and recovery behavior are documented.
+
+Rationale:
+
+- SQLCipher documents `PRAGMA key` as supporting passphrase-based key derivation and states that passphrases are converted to database keys using PBKDF2.
+- SQLCipher documents raw key input too, but using raw keys would require this project to define its own key generation, wrapping, and salt handling earlier than needed.
+- OS keychains are useful for wrapping or storing secrets, but using them as the only unlock factor weakens the high-risk local compromise story.
+- A passphrase-first API keeps the next Tauri UI honest: unlock is a visible user action, not an implicit side effect of app launch.
+
+Non-decisions:
+
+- No Argon2 dependency has been selected.
+- No OS keychain crate has been selected.
+- No biometric unlock behavior has been selected.
+- No recovery code, backup key, or remote reset behavior has been selected.
+- No production default key exists.
+
+Required tests before production unlock:
+
+- Opening an existing DB with the wrong passphrase fails before any records are returned.
+- No passphrase, database key, or derived key appears in debug output, logs, panic text, or CLI output.
+- Locked profiles cannot read `ADREC1` records.
+- High-risk mode does not auto-unlock through OS keychain alone.
+- Rekey/rotation tests exist before any key rotation UI is exposed.
+
 ## Encrypted Record Envelope
 
 `ADREC1` is the first storage record envelope:
