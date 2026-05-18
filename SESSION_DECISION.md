@@ -80,3 +80,5 @@ This is only a candidate direction.
 `run_setup_draft_handshake_smoke` connects two setup drafts to the session plan and a Noise XX smoke handshake. The deterministic canonical dialer becomes the Noise initiator. The function rejects a setup draft when its local Noise private keypair does not match the signed public prekey bundle.
 
 `NoiseTransportPair` is now the narrow production crypto boundary after a successful Noise XX handshake. It supports initiator-to-responder encrypt/decrypt in memory and has tamper rejection coverage. It is still not persisted and is not connected to message storage, replay windows, or onion transport.
+
+`ProductionEnvelopeSession` connects the in-memory Noise transport pair to `protocol::Envelope`. The current boundary uses caller-supplied message numbers and a domain-separated hash of the safety transcript as a non-persistent test channel id. It is not a durable session identifier and is not yet connected to storage, transport, or replay persistence.

@@ -1,7 +1,7 @@
 pub mod production {
     use another_dimension_crypto::production::{
-        generate_noise_static_keypair, run_noise_xx_handshake_smoke, NoisePrekeyBundle,
-        NoiseStaticKeypair,
+        establish_noise_xx_transport_pair, generate_noise_static_keypair,
+        run_noise_xx_handshake_smoke, NoisePrekeyBundle, NoiseStaticKeypair, NoiseTransportPair,
     };
     use another_dimension_crypto::CryptoError;
     use another_dimension_identity::{
@@ -11,9 +11,11 @@ pub mod production {
         production_pairing_draft_with_defaults, transcript, PairingError, PairingPayload,
         ProductionPairingDraft,
     };
+    use another_dimension_protocol::{encode_hex, Envelope, MessageType};
     use sha2::{Digest, Sha256};
 
     const CANONICAL_DIALER_DOMAIN: &[u8] = b"AD-SESSION-CANONICAL-DIALER-V1";
+    const PRODUCTION_CHANNEL_DOMAIN: &[u8] = b"AD-PRODUCTION-CHANNEL-V1";
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct ProductionSessionPlan {
@@ -43,6 +45,50 @@ pub mod production {
         pub plaintext: Vec<u8>,
     }
 
+    #[derive(Debug)]
+    pub struct ProductionEnvelopeSession {
+        plan: ProductionSessionPlan,
+        channel_id: String,
+        transport: NoiseTransportPair,
+    }
+
+    impl ProductionEnvelopeSession {
+        pub fn plan(&self) -> &ProductionSessionPlan {
+            &self.plan
+        }
+
+        pub fn channel_id(&self) -> &str {
+            &self.channel_id
+        }
+
+        pub fn encrypt_from_canonical_dialer(
+            &mut self,
+            message_number: u64,
+            plaintext: &[u8],
+        ) -> Result<Envelope, ProductionSessionError> {
+            Ok(Envelope {
+                protocol_version: 1,
+                channel_id: self.channel_id.clone(),
+                message_number,
+                message_type: MessageType::Data,
+                padded_ciphertext: self.transport.initiator_encrypt(plaintext)?,
+            })
+        }
+
+        pub fn decrypt_at_responder(
+            &mut self,
+            envelope: &Envelope,
+        ) -> Result<Vec<u8>, ProductionSessionError> {
+            if envelope.channel_id != self.channel_id || envelope.message_type != MessageType::Data
+            {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            self.transport
+                .responder_decrypt(&envelope.padded_ciphertext)
+                .map_err(ProductionSessionError::from)
+        }
+    }
+
     #[derive(Debug, Eq, PartialEq)]
     pub enum ProductionSessionError {
         Pairing(PairingError),
@@ -50,6 +96,7 @@ pub mod production {
         NonProductionPairingPayload,
         SamePairwiseIdentity,
         NoiseStaticKeyMismatch,
+        UnexpectedEnvelope,
     }
 
     impl From<PairingError> for ProductionSessionError {
@@ -150,6 +197,51 @@ pub mod production {
         })
     }
 
+    pub fn establish_envelope_session_from_setup_drafts(
+        local: &ProductionSetupDraft,
+        remote: &ProductionSetupDraft,
+    ) -> Result<ProductionEnvelopeSession, ProductionSessionError> {
+        let plan = plan_session_from_verified_pairing_payloads(
+            &local.pairing.payload,
+            &remote.pairing.payload,
+        )?;
+        require_matching_noise_static(&local.noise_static, &plan.local_noise_static_public_key)?;
+        require_matching_noise_static(&remote.noise_static, &plan.remote_noise_static_public_key)?;
+        let (initiator, responder) = match plan.local_role {
+            SessionRole::CanonicalDialer => (&local.noise_static, &remote.noise_static),
+            SessionRole::Responder => (&remote.noise_static, &local.noise_static),
+        };
+        let transport =
+            establish_noise_xx_transport_pair(&plan.safety_transcript, initiator, responder)?;
+        verify_transport_remote_static(&plan, &transport)?;
+        let channel_id = production_channel_id(&plan);
+        Ok(ProductionEnvelopeSession {
+            plan,
+            channel_id,
+            transport,
+        })
+    }
+
+    fn verify_transport_remote_static(
+        plan: &ProductionSessionPlan,
+        transport: &NoiseTransportPair,
+    ) -> Result<(), ProductionSessionError> {
+        let expected_initiator_remote = match plan.local_role {
+            SessionRole::CanonicalDialer => &plan.remote_noise_static_public_key,
+            SessionRole::Responder => &plan.local_noise_static_public_key,
+        };
+        let expected_responder_remote = match plan.local_role {
+            SessionRole::CanonicalDialer => &plan.local_noise_static_public_key,
+            SessionRole::Responder => &plan.remote_noise_static_public_key,
+        };
+        if transport.initiator_remote_static() != expected_initiator_remote
+            || transport.responder_remote_static() != expected_responder_remote
+        {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
+        Ok(())
+    }
+
     fn require_matching_noise_static(
         keypair: &NoiseStaticKeypair,
         expected_public_key: &[u8],
@@ -187,6 +279,14 @@ pub mod production {
         hasher.update([0]);
         hasher.update(payload.pairwise_public_key.as_str().as_bytes());
         hasher.finalize().into()
+    }
+
+    fn production_channel_id(plan: &ProductionSessionPlan) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(PRODUCTION_CHANNEL_DOMAIN);
+        hasher.update([0]);
+        hasher.update(plan.safety_transcript.as_bytes());
+        format!("adchan1:{}", encode_hex(&hasher.finalize()))
     }
 
     #[cfg(test)]
@@ -267,6 +367,68 @@ pub mod production {
                 .ciphertext
                 .windows(plaintext.len())
                 .any(|window| window == plaintext));
+        }
+
+        #[test]
+        fn production_setup_drafts_can_encrypt_and_decrypt_envelope() {
+            let alice = production_setup_draft_with_defaults(
+                &ProfileName::new("alice").expect("valid profile"),
+                "alice.onion",
+            )
+            .expect("alice setup");
+            let bob = production_setup_draft_with_defaults(
+                &ProfileName::new("bob").expect("valid profile"),
+                "bob.onion",
+            )
+            .expect("bob setup");
+            let plaintext = b"production envelope message";
+            let mut session = establish_envelope_session_from_setup_drafts(&alice, &bob)
+                .expect("envelope session");
+
+            let envelope = session
+                .encrypt_from_canonical_dialer(1, plaintext)
+                .expect("encrypt envelope");
+
+            assert_eq!(envelope.protocol_version, 1);
+            assert_eq!(envelope.channel_id, session.channel_id());
+            assert_eq!(envelope.message_number, 1);
+            assert_eq!(envelope.message_type, MessageType::Data);
+            assert!(!envelope
+                .padded_ciphertext
+                .windows(plaintext.len())
+                .any(|window| window == plaintext));
+            assert_eq!(
+                session
+                    .decrypt_at_responder(&envelope)
+                    .expect("decrypt envelope"),
+                plaintext
+            );
+        }
+
+        #[test]
+        fn production_envelope_session_rejects_tampered_ciphertext() {
+            let alice = production_setup_draft_with_defaults(
+                &ProfileName::new("alice").expect("valid profile"),
+                "alice.onion",
+            )
+            .expect("alice setup");
+            let bob = production_setup_draft_with_defaults(
+                &ProfileName::new("bob").expect("valid profile"),
+                "bob.onion",
+            )
+            .expect("bob setup");
+            let mut session = establish_envelope_session_from_setup_drafts(&alice, &bob)
+                .expect("envelope session");
+            let mut envelope = session
+                .encrypt_from_canonical_dialer(1, b"production envelope message")
+                .expect("encrypt envelope");
+            let last = envelope
+                .padded_ciphertext
+                .last_mut()
+                .expect("ciphertext is non-empty");
+            *last ^= 0x01;
+
+            assert!(session.decrypt_at_responder(&envelope).is_err());
         }
 
         #[test]
