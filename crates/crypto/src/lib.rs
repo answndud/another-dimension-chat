@@ -28,11 +28,18 @@ pub fn derive_production_safety_material(transcript: &str) -> SafetyMaterial {
 pub enum CryptoError {
     Protocol(ProtocolError),
     InvalidUtf8,
+    Noise(String),
 }
 
 impl From<ProtocolError> for CryptoError {
     fn from(value: ProtocolError) -> Self {
         Self::Protocol(value)
+    }
+}
+
+impl From<snow::Error> for CryptoError {
+    fn from(value: snow::Error) -> Self {
+        Self::Noise(value.to_string())
     }
 }
 
@@ -73,6 +80,170 @@ fn encode_hex(bytes: &[u8]) -> String {
         out.push(HEX[(byte & 0x0f) as usize] as char);
     }
     out
+}
+
+pub mod production {
+    use super::CryptoError;
+    use snow::{params::NoiseParams, Builder};
+    use std::fmt;
+
+    pub const NOISE_XX_PATTERN: &str = "Noise_XX_25519_ChaChaPoly_BLAKE2s";
+
+    #[derive(Clone, Eq, PartialEq)]
+    pub struct NoiseStaticKeypair {
+        private: Vec<u8>,
+        public: Vec<u8>,
+    }
+
+    impl NoiseStaticKeypair {
+        pub fn public_key(&self) -> &[u8] {
+            &self.public
+        }
+    }
+
+    impl fmt::Debug for NoiseStaticKeypair {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_struct("NoiseStaticKeypair")
+                .field("private", &"[redacted]")
+                .field("public_len", &self.public.len())
+                .finish()
+        }
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct NoiseHandshakeSmokeResult {
+        pub initiator_remote_static: Vec<u8>,
+        pub responder_remote_static: Vec<u8>,
+        pub ciphertext: Vec<u8>,
+        pub plaintext: Vec<u8>,
+    }
+
+    pub fn generate_noise_static_keypair() -> Result<NoiseStaticKeypair, CryptoError> {
+        let keypair = Builder::new(noise_params()?).generate_keypair()?;
+        Ok(NoiseStaticKeypair {
+            private: keypair.private,
+            public: keypair.public,
+        })
+    }
+
+    pub fn run_noise_xx_handshake_smoke(
+        safety_transcript: &str,
+        initiator_static: &NoiseStaticKeypair,
+        responder_static: &NoiseStaticKeypair,
+        plaintext: &[u8],
+    ) -> Result<NoiseHandshakeSmokeResult, CryptoError> {
+        run_noise_xx_handshake_smoke_with_prologues(
+            safety_transcript.as_bytes(),
+            safety_transcript.as_bytes(),
+            initiator_static,
+            responder_static,
+            plaintext,
+        )
+    }
+
+    fn run_noise_xx_handshake_smoke_with_prologues(
+        initiator_prologue: &[u8],
+        responder_prologue: &[u8],
+        initiator_static: &NoiseStaticKeypair,
+        responder_static: &NoiseStaticKeypair,
+        plaintext: &[u8],
+    ) -> Result<NoiseHandshakeSmokeResult, CryptoError> {
+        let mut initiator = Builder::new(noise_params()?)
+            .local_private_key(&initiator_static.private)?
+            .prologue(initiator_prologue)?
+            .build_initiator()?;
+        let mut responder = Builder::new(noise_params()?)
+            .local_private_key(&responder_static.private)?
+            .prologue(responder_prologue)?
+            .build_responder()?;
+
+        let mut read_buf = [0_u8; 1024];
+        let mut message = [0_u8; 1024];
+
+        let len = initiator.write_message(&[], &mut message)?;
+        responder.read_message(&message[..len], &mut read_buf)?;
+
+        let len = responder.write_message(&[], &mut message)?;
+        initiator.read_message(&message[..len], &mut read_buf)?;
+
+        let len = initiator.write_message(&[], &mut message)?;
+        responder.read_message(&message[..len], &mut read_buf)?;
+
+        let initiator_remote_static = initiator
+            .get_remote_static()
+            .ok_or_else(|| CryptoError::Noise("missing initiator remote static".to_string()))?
+            .to_vec();
+        let responder_remote_static = responder
+            .get_remote_static()
+            .ok_or_else(|| CryptoError::Noise("missing responder remote static".to_string()))?
+            .to_vec();
+
+        let mut initiator_transport = initiator.into_transport_mode()?;
+        let mut responder_transport = responder.into_transport_mode()?;
+
+        let mut ciphertext_buf = vec![0_u8; plaintext.len() + 64];
+        let ciphertext_len = initiator_transport.write_message(plaintext, &mut ciphertext_buf)?;
+        ciphertext_buf.truncate(ciphertext_len);
+
+        let mut plaintext_buf = vec![0_u8; ciphertext_buf.len()];
+        let plaintext_len =
+            responder_transport.read_message(&ciphertext_buf, &mut plaintext_buf)?;
+        plaintext_buf.truncate(plaintext_len);
+
+        Ok(NoiseHandshakeSmokeResult {
+            initiator_remote_static,
+            responder_remote_static,
+            ciphertext: ciphertext_buf,
+            plaintext: plaintext_buf,
+        })
+    }
+
+    fn noise_params() -> Result<NoiseParams, CryptoError> {
+        NOISE_XX_PATTERN.parse().map_err(CryptoError::from)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn noise_xx_smoke_round_trips_without_plaintext_ciphertext() {
+            let initiator = generate_noise_static_keypair().expect("initiator static key");
+            let responder = generate_noise_static_keypair().expect("responder static key");
+            let plaintext = b"pairwise message body";
+
+            let result = run_noise_xx_handshake_smoke(
+                "ADPAIR-SAFETY-V1|alice|bob",
+                &initiator,
+                &responder,
+                plaintext,
+            )
+            .expect("handshake smoke succeeds");
+
+            assert_eq!(result.plaintext, plaintext);
+            assert_eq!(result.initiator_remote_static, responder.public_key());
+            assert_eq!(result.responder_remote_static, initiator.public_key());
+            assert!(!result
+                .ciphertext
+                .windows(plaintext.len())
+                .any(|window| window == plaintext));
+        }
+
+        #[test]
+        fn noise_xx_smoke_rejects_transcript_mismatch() {
+            let initiator = generate_noise_static_keypair().expect("initiator static key");
+            let responder = generate_noise_static_keypair().expect("responder static key");
+
+            assert!(run_noise_xx_handshake_smoke_with_prologues(
+                b"ADPAIR-SAFETY-V1|alice|bob",
+                b"ADPAIR-SAFETY-V1|alice|tampered-bob",
+                &initiator,
+                &responder,
+                b"body",
+            )
+            .is_err());
+        }
+    }
 }
 
 #[cfg(test)]

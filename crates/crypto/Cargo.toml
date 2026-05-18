@@ -7,10 +7,10 @@ publish.workspace = true
 [dependencies]
 another-dimension-protocol = { path = "../protocol" }
 sha2 = "0.10.9"
+snow = { version = "0.10.0", default-features = false, features = ["use-blake2", "use-chacha20poly1305", "use-curve25519", "use-getrandom"] }
 
 [features]
 dev-insecure = []
 
 [lints]
 workspace = true
-

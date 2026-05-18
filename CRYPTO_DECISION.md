@@ -25,6 +25,7 @@ The repository currently has:
 - Production safety transcript tests cover signed production payload ordering and identity, endpoint, prekey, and capability sensitivity.
 - Production safety material derivation has a SHA-256 based, domain-separated display boundary independent from `dev-insecure` fake crypto.
 - Integration tests cover signed production payloads through transcript construction and production safety material derivation.
+- A narrow Noise XX smoke boundary uses `snow` with constrained features for `25519 + ChaChaPoly + BLAKE2s` and binds the handshake prologue to the safety transcript.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
 
@@ -33,7 +34,7 @@ The repository does not currently have:
 - Real E2EE.
 - A reviewed ratchet implementation.
 - Stored production signature keys.
-- Real key agreement.
+- Integrated production key agreement for app messages.
 - Production key storage.
 - Broader production randomness policy for session establishment.
 - Production encrypted local storage.
@@ -114,14 +115,14 @@ Minimum test coverage:
 2. Add test vectors for canonical transcript and signature verification. Initial integration fixtures are in place.
 3. Add maintained signature dependency and replace dev pairing signatures behind a production feature or default path. `ed25519-dalek` stable 2.x is added to `crates/identity`; pairwise private key generation, pairing decoder wiring, and production pairing draft/payload construction are in place.
 4. Add production safety material display boundary before selecting message encryption implementation. Initial SHA-256 display derivation is in place.
-5. Add session establishment decision boundary and tests before selecting message encryption implementation.
-6. Replace fake message encryption only after pairing identity verification is production-backed.
+5. Add session establishment decision boundary and tests before selecting message encryption implementation. Initial `ProductionSessionPlan` and Noise XX smoke boundaries are in place.
+6. Replace fake message encryption only after pairing identity verification is production-backed and the Noise/prekey material is carried through pairing payloads.
 7. Keep development fake crypto behind `dev-insecure` for test ergonomics.
 
 ## Open Questions
 
 - Which maintained Rust-compatible signature library should back pairwise identity?
-- Which maintained session protocol implementation is acceptable for the first production prototype?
+- Is the current `snow` Noise XX direction acceptable after documenting how X25519 static keys are generated, carried in the pairing prekey bundle, stored, rotated, and bound to pairwise Ed25519 identity signatures?
 - Should Phase 2 prioritize identity signatures first or full message session encryption first?
 - How should production key material be stored before Phase 3 encrypted storage is complete?
 - What review threshold is required before any release artifact includes production crypto enabled by default?
