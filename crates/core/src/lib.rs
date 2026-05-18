@@ -1,8 +1,15 @@
 pub mod production {
-    use another_dimension_crypto::production::NoisePrekeyBundle;
+    use another_dimension_crypto::production::{
+        generate_noise_static_keypair, NoisePrekeyBundle, NoiseStaticKeypair,
+    };
     use another_dimension_crypto::CryptoError;
-    use another_dimension_identity::{PairwisePublicKeyScheme, PairwiseSignatureScheme};
-    use another_dimension_pairing::{transcript, PairingError, PairingPayload};
+    use another_dimension_identity::{
+        PairwisePublicKeyScheme, PairwiseSignatureScheme, ProfileName,
+    };
+    use another_dimension_pairing::{
+        production_pairing_draft_with_defaults, transcript, PairingError, PairingPayload,
+        ProductionPairingDraft,
+    };
     use sha2::{Digest, Sha256};
 
     const CANONICAL_DIALER_DOMAIN: &[u8] = b"AD-SESSION-CANONICAL-DIALER-V1";
@@ -23,6 +30,12 @@ pub mod production {
     }
 
     #[derive(Debug, Eq, PartialEq)]
+    pub struct ProductionSetupDraft {
+        pub pairing: ProductionPairingDraft,
+        pub noise_static: NoiseStaticKeypair,
+    }
+
+    #[derive(Debug, Eq, PartialEq)]
     pub enum ProductionSessionError {
         Pairing(PairingError),
         Crypto(CryptoError),
@@ -40,6 +53,20 @@ pub mod production {
         fn from(value: CryptoError) -> Self {
             Self::Crypto(value)
         }
+    }
+
+    pub fn production_setup_draft_with_defaults(
+        profile: &ProfileName,
+        rendezvous_endpoint: impl Into<String>,
+    ) -> Result<ProductionSetupDraft, ProductionSessionError> {
+        let noise_static = generate_noise_static_keypair()?;
+        let prekey_bundle = noise_static.prekey_bundle()?.encode();
+        let pairing =
+            production_pairing_draft_with_defaults(profile, rendezvous_endpoint, prekey_bundle)?;
+        Ok(ProductionSetupDraft {
+            pairing,
+            noise_static,
+        })
     }
 
     pub fn plan_session_from_verified_pairing_payloads(
@@ -106,13 +133,58 @@ pub mod production {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use another_dimension_crypto::production::generate_noise_static_keypair;
         use another_dimension_identity::{
             PairwisePublicKey, PairwiseSignature, ProductionPairwisePrivateKey, ProfileName,
         };
         use another_dimension_pairing::{
             production_pairing_payload_for, ProductionPairingPayloadParams, DEFAULT_TTL_SECONDS,
         };
+
+        #[test]
+        fn production_setup_draft_signs_payload_with_noise_prekey_bundle() {
+            let draft = production_setup_draft_with_defaults(
+                &ProfileName::new("alice").expect("valid profile"),
+                "alice.onion",
+            )
+            .expect("setup draft");
+            let decoded_payload =
+                PairingPayload::decode(&draft.pairing.payload.encode().expect("payload encodes"))
+                    .expect("payload decodes");
+            let prekey =
+                NoisePrekeyBundle::decode(&draft.pairing.payload.prekey_bundle).expect("prekey");
+
+            assert_eq!(decoded_payload, draft.pairing.payload);
+            assert_eq!(prekey.public_key(), draft.noise_static.public_key());
+        }
+
+        #[test]
+        fn production_setup_drafts_can_plan_session() {
+            let alice = production_setup_draft_with_defaults(
+                &ProfileName::new("alice").expect("valid profile"),
+                "alice.onion",
+            )
+            .expect("alice setup");
+            let bob = production_setup_draft_with_defaults(
+                &ProfileName::new("bob").expect("valid profile"),
+                "bob.onion",
+            )
+            .expect("bob setup");
+
+            let plan = plan_session_from_verified_pairing_payloads(
+                &alice.pairing.payload,
+                &bob.pairing.payload,
+            )
+            .expect("session plan");
+
+            assert_eq!(
+                plan.local_noise_static_public_key,
+                alice.noise_static.public_key()
+            );
+            assert_eq!(
+                plan.remote_noise_static_public_key,
+                bob.noise_static.public_key()
+            );
+        }
 
         #[test]
         fn production_session_plan_is_order_stable() {
