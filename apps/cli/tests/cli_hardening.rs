@@ -46,6 +46,19 @@ fn default_build_rejects_prototype_commands() {
 }
 
 #[test]
+#[cfg(not(feature = "dev-insecure"))]
+fn default_build_runs_production_boundary_self_test_without_secrets() {
+    let output = run(&["production", "self-test"]);
+
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "production boundary self-test passed\n");
+    let error = stderr(&output);
+    assert!(error.contains("not a secure messenger release"));
+    assert!(!error.contains("private"));
+    assert!(!error.contains("ADPAIR2|"));
+}
+
+#[test]
 #[cfg(feature = "dev-insecure")]
 fn malformed_command_prints_help_and_fails() {
     let output = run(&["pairing", "start", "--wrong", "alice"]);
