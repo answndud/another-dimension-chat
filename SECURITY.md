@@ -6,7 +6,7 @@ Another Dimension Chat is not ready for real communication.
 
 The current public repository contains an early `dev-insecure` Rust prototype. It is useful for testing development flow and protocol boundaries, but it does not provide production-grade confidentiality, anonymity, metadata resistance, or endpoint protection.
 
-Default-build production code now includes narrow decision boundaries for pairing, session setup, envelope handling, replay rejection, storage policy tests, a SQLCipher-backed storage spike, passphrase unlock tests, high-risk unlock policy tests, first replay-window persistence tests, receive-flow replay commit-order tests, and session-scoped opaque replay record id derivation. These are implementation guardrails, not a secure messenger release.
+Default-build production code now includes narrow decision boundaries for pairing, session setup, envelope handling, replay rejection, transport policy, storage policy tests, a SQLCipher-backed storage spike, passphrase unlock tests, high-risk unlock policy tests, first replay-window persistence tests, receive-flow replay commit-order tests, and session-scoped opaque replay record id derivation. These are implementation guardrails, not a secure messenger release.
 
 Do not use this project to communicate sensitive information.
 
@@ -22,6 +22,7 @@ This project does not currently claim:
 
 - Real end-to-end encryption.
 - Real Tor/onion transport.
+- Production transport adapter implementation.
 - Production unlock/key management.
 - OS keychain/DPAPI/Keystore wrapping.
 - Production encrypted local storage lifecycle.
@@ -39,5 +40,6 @@ This project does not currently claim:
 - Keep development-only crypto, storage, and transport behavior behind `dev-insecure`.
 - Preserve the `WARNING: dev-insecure build. Not for real communication.` runtime warning.
 - Do not add new security claims without matching implementation, tests, and review.
+- Keep high-risk transport policy onion-only unless a separate ADR changes that rule.
 - Do not persist production private keys, replay state, message envelopes, local message indexes, or session transport state as plaintext.
 - Do not publish private planning notes or sensitive threat-model details from ignored local documentation.
