@@ -21,6 +21,7 @@ What exists today:
 - Safety number and safety phrase prototype.
 - Pairing confirm, cancel, and expiry lifecycle.
 - Production-facing Ed25519 key generation, pairing draft, signature, nonce, and safety material boundaries.
+- Production setup, in-memory Noise transport, envelope encryption/decryption, replay rejection, and storage policy boundaries for tests.
 - Padded message envelope prototype.
 - Replay window prototype.
 - CLI hardening tests for malformed input, duplicate pairing scans, replay handling, message expiry, and prototype boundary behavior.
@@ -30,7 +31,7 @@ What exists today:
 What does not exist yet:
 
 - Real end-to-end encryption.
-- Production session establishment.
+- Usable production messaging.
 - Real Tor/onion transport.
 - Production encrypted local storage.
 - Tauri desktop app.
@@ -68,7 +69,7 @@ crates/
   identity/         pairwise identity and contact types
   pairing/          pairing payload and safety transcript logic
   protocol/         message envelope and replay window logic
-  storage/          development storage boundary
+  storage/          development storage and production policy boundary
   transport/        development transport boundary
 
 scripts/
@@ -146,6 +147,7 @@ scripts/smoke_dev_cli.sh
 - Do not add direct P2P/WebRTC as the high-risk default transport.
 - Do not introduce phone-number, email, global account, searchable username, centralized contact discovery, push notification, or cloud backup dependencies in v0.1.
 - Keep fake crypto and development storage behind `dev-insecure`.
+- Do not persist production private keys, replay state, message envelopes, local message indexes, or session transport state as plaintext.
 - Do not commit local dev data, pairing payloads, logs, generated artifacts, or private planning notes.
 
 ## Roadmap
@@ -161,6 +163,8 @@ The first production pairing nonce randomness boundary is tracked in [RANDOMNESS
 The first production safety material display boundary is tracked in [SAFETY_MATERIAL_DECISION.md](SAFETY_MATERIAL_DECISION.md).
 
 The first production session establishment boundary is tracked in [SESSION_DECISION.md](SESSION_DECISION.md).
+
+The first production storage policy boundary is tracked in [STORAGE_DECISION.md](STORAGE_DECISION.md).
 
 ## License
 

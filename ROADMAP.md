@@ -101,12 +101,14 @@ Exit criteria:
 
 ## Phase 3: Production Storage Decision
 
-Status: not started.
+Status: in progress.
 
 Goal: replace development storage with an encrypted local storage boundary.
 
 Tasks:
 
+- Maintain [STORAGE_DECISION.md](STORAGE_DECISION.md) as the public-safe storage decision boundary.
+- Keep production storage classification tests in front of any encrypted backend implementation.
 - Choose a production storage backend.
 - Define key derivation and local key storage assumptions.
 - Decide platform keychain integration for desktop.
