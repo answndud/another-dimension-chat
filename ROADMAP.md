@@ -76,6 +76,7 @@ Tasks:
 - Keep production pairing signature strings scheme-tagged before decoder wiring.
 - Reject explicit mixed dev/production public key and signature schemes during pairing decode.
 - Verify production public key plus production signature pairing payloads through the Ed25519 path.
+- Keep production pairing payload construction separate from `dev-insecure` pairing material generation.
 - Select maintained Rust-compatible libraries for identity signatures and session encryption.
 - Decide how pairing payload signatures map to real pairwise identity keys.
 - Decide whether the first production session model uses a Signal-style ratchet, Noise-based construction, or another reviewed design.

@@ -8,7 +8,7 @@ Another Dimension Chat still does not have production cryptography. This documen
 
 Use `ed25519-dalek` 2.x as the first production identity signature candidate.
 
-The crate is now added to `crates/identity` with tests that prove the production boundary is being used. Pairing decode verifies production public key plus production signature pairs through the Ed25519 path. Development pairing payloads still use the explicit development placeholder path.
+The crate is now added to `crates/identity` with tests that prove the production boundary is being used. Pairing decode verifies production public key plus production signature pairs through the Ed25519 path. Pairing construction can sign caller-supplied production pairing parameters with an Ed25519 production private key. Development pairing payloads still use the explicit development placeholder path.
 
 Production public keys and signatures are encoded for pairing payload transport as scheme-tagged strings:
 
@@ -72,6 +72,7 @@ When `ed25519-dalek` is added:
 - Keep production pairing signatures scheme-tagged so future payload decoders do not silently mix dev and production verification.
 - Reject explicit dev public key plus production signature, and production public key plus dev signature payloads.
 - Verify production public key plus production signature payloads with the Ed25519 production path.
+- Keep production pairing payload construction separate from development pairing material generation.
 - Keep private key debug output redacted.
 - Keep deterministic test vectors around the pairing decoder production verification boundary.
 
@@ -86,6 +87,7 @@ The first implementation commit that adds `ed25519-dalek` must include tests for
 - Rejecting a mismatched public key. Done.
 - Rejecting development placeholder key material in production wrappers. Done.
 - Proving debug output does not print private key bytes. Done.
+- Constructing and decoding a production-signed pairing payload through the production API. Done.
 
 ## Deferred Decisions
 
