@@ -7,6 +7,7 @@ pub enum TransportError {
     ReceiveFailed,
     InvalidEndpoint,
     PolicyViolation,
+    Unavailable,
 }
 
 pub trait Transport {
@@ -159,6 +160,38 @@ pub trait EnvelopeTransport {
     ) -> Result<Vec<Envelope>, TransportError>;
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OnionEnvelopeTransport {
+    policy: TransportPolicy,
+}
+
+impl OnionEnvelopeTransport {
+    pub fn fail_closed_high_risk() -> Self {
+        Self {
+            policy: TransportPolicy::high_risk_default(),
+        }
+    }
+
+    pub fn policy(&self) -> &TransportPolicy {
+        &self.policy
+    }
+}
+
+impl EnvelopeTransport for OnionEnvelopeTransport {
+    fn send_envelope(&self, request: TransportSendRequest<'_>) -> Result<(), TransportError> {
+        self.policy.require_allowed(request.route)?;
+        Err(TransportError::Unavailable)
+    }
+
+    fn receive_envelopes(
+        &self,
+        request: TransportReceiveRequest<'_>,
+    ) -> Result<Vec<Envelope>, TransportError> {
+        self.policy.require_allowed(request.route)?;
+        Err(TransportError::Unavailable)
+    }
+}
+
 fn is_safe_endpoint_token(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= 128
@@ -203,6 +236,7 @@ pub mod dev_insecure {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use another_dimension_protocol::MessageType;
 
     #[test]
     fn high_risk_default_allows_only_onion_routes() {
@@ -261,6 +295,54 @@ mod tests {
                 TransportRoute::onion(endpoint),
                 Err(TransportError::InvalidEndpoint)
             );
+        }
+    }
+
+    #[test]
+    fn onion_transport_skeleton_fails_closed_until_adapter_exists() {
+        let transport = OnionEnvelopeTransport::fail_closed_high_risk();
+        let onion = TransportRoute::onion("example.onion").expect("onion route");
+        let envelope = sample_envelope();
+
+        assert_eq!(
+            transport.send_envelope(TransportSendRequest {
+                route: &onion,
+                envelope: &envelope,
+            }),
+            Err(TransportError::Unavailable)
+        );
+        assert_eq!(
+            transport.receive_envelopes(TransportReceiveRequest { route: &onion }),
+            Err(TransportError::Unavailable)
+        );
+    }
+
+    #[test]
+    fn onion_transport_skeleton_rejects_direct_routes_before_network_attempt() {
+        let transport = OnionEnvelopeTransport::fail_closed_high_risk();
+        let direct = TransportRoute::direct_peer("peer.example").expect("direct route");
+        let envelope = sample_envelope();
+
+        assert_eq!(
+            transport.send_envelope(TransportSendRequest {
+                route: &direct,
+                envelope: &envelope,
+            }),
+            Err(TransportError::PolicyViolation)
+        );
+        assert_eq!(
+            transport.receive_envelopes(TransportReceiveRequest { route: &direct }),
+            Err(TransportError::PolicyViolation)
+        );
+    }
+
+    fn sample_envelope() -> Envelope {
+        Envelope {
+            protocol_version: 1,
+            channel_id: "adchan1:test".to_string(),
+            message_number: 1,
+            message_type: MessageType::Data,
+            padded_ciphertext: b"ciphertext".to_vec(),
         }
     }
 }

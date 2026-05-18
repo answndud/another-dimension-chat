@@ -23,6 +23,7 @@ What exists today:
 - Production-facing Ed25519 key generation, pairing draft, signature, nonce, and safety material boundaries.
 - Production setup, in-memory Noise transport, envelope encryption/decryption, replay rejection, and storage policy boundaries for tests.
 - Transport policy boundary that makes high-risk mode onion-only by default and rejects direct peer routes unless explicitly low-risk.
+- Fail-closed onion transport adapter skeleton with no real network behavior.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.
 - High-risk unlock policy tests that reject OS-keystore-only unlock.
