@@ -79,6 +79,7 @@ Tasks:
 - Verify production public key plus production signature pairing payloads through the Ed25519 path.
 - Keep production pairing payload construction separate from `dev-insecure` pairing material generation.
 - Keep production pairing nonce generation backed by OS randomness and distinct from development nonce generation.
+- Keep production pairing defaults centralized without hiding endpoint or prekey decisions.
 - Select maintained Rust-compatible libraries for identity signatures and session encryption.
 - Decide how pairing payload signatures map to real pairwise identity keys.
 - Decide whether the first production session model uses a Signal-style ratchet, Noise-based construction, or another reviewed design.

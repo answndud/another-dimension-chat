@@ -3,12 +3,13 @@ use another_dimension_identity::{
     PairwiseSignatureScheme, ProductionPairwisePrivateKey, ProductionPairwisePublicKey,
     ProductionPairwiseSignature, ProfileName,
 };
-#[cfg(feature = "dev-insecure")]
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const DEFAULT_TTL_SECONDS: u64 = 600;
 pub const MAX_PAIRING_PAYLOAD_SIZE: usize = 1200;
 pub const PRODUCTION_PAIRING_NONCE_BYTES: usize = 16;
+pub const DEFAULT_ENDPOINT_ROTATION_POLICY: &str = "manual-v1";
+pub const DEFAULT_PRODUCTION_PROTOCOL_CAPABILITIES: &str = "prototype-production-pairing-v1";
 const PRODUCTION_PAIRING_NONCE_PREFIX: &str = "pn-v1-";
 const CANONICAL_MAGIC: &[u8] = b"ADPAIR2-CANONICAL\0";
 const SAFETY_TRANSCRIPT_PREFIX: &str = "ADPAIR-SAFETY-V1";
@@ -167,6 +168,34 @@ pub fn production_pairing_payload_for(
     Ok(payload)
 }
 
+pub fn production_pairing_payload_with_defaults(
+    profile: &ProfileName,
+    private_key: &ProductionPairwisePrivateKey,
+    rendezvous_endpoint: impl Into<String>,
+    prekey_bundle: impl Into<String>,
+) -> Result<PairingPayload, PairingError> {
+    production_pairing_payload_for(
+        profile,
+        private_key,
+        production_pairing_params_with_defaults(rendezvous_endpoint, prekey_bundle)?,
+    )
+}
+
+pub fn production_pairing_params_with_defaults(
+    rendezvous_endpoint: impl Into<String>,
+    prekey_bundle: impl Into<String>,
+) -> Result<ProductionPairingPayloadParams, PairingError> {
+    Ok(ProductionPairingPayloadParams {
+        pairing_nonce: production_pairing_nonce()?,
+        rendezvous_endpoint: rendezvous_endpoint.into(),
+        endpoint_rotation_policy: DEFAULT_ENDPOINT_ROTATION_POLICY.to_string(),
+        protocol_capabilities: DEFAULT_PRODUCTION_PROTOCOL_CAPABILITIES.to_string(),
+        prekey_bundle: prekey_bundle.into(),
+        issued_at_local_ms: current_time_ms()?,
+        ttl_seconds: DEFAULT_TTL_SECONDS,
+    })
+}
+
 pub fn production_pairing_nonce() -> Result<String, PairingError> {
     let mut bytes = [0_u8; PRODUCTION_PAIRING_NONCE_BYTES];
     getrandom::fill(&mut bytes).map_err(|_| PairingError::RandomnessUnavailable)?;
@@ -174,6 +203,13 @@ pub fn production_pairing_nonce() -> Result<String, PairingError> {
         "{PRODUCTION_PAIRING_NONCE_PREFIX}{}",
         encode_hex(&bytes)
     ))
+}
+
+fn current_time_ms() -> Result<u128, PairingError> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .map_err(|_| PairingError::ClockUnavailable)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -377,6 +413,7 @@ pub enum PairingError {
     PayloadTooLarge,
     ExpiredPayload,
     RandomnessUnavailable,
+    ClockUnavailable,
 }
 
 #[cfg(test)]
@@ -585,6 +622,55 @@ mod tests {
             .chars()
             .all(|ch| ch.is_ascii_hexdigit() && !ch.is_ascii_uppercase()));
         assert_ne!(first, second);
+    }
+
+    #[test]
+    fn production_pairing_params_with_defaults_sets_safe_defaults() {
+        let before = current_time_ms().expect("clock");
+        let params = production_pairing_params_with_defaults("alice.onion", "PendingCryptoDesign")
+            .expect("params");
+        let after = current_time_ms().expect("clock");
+
+        assert!(params
+            .pairing_nonce
+            .starts_with(PRODUCTION_PAIRING_NONCE_PREFIX));
+        assert_eq!(params.rendezvous_endpoint, "alice.onion");
+        assert_eq!(
+            params.endpoint_rotation_policy,
+            DEFAULT_ENDPOINT_ROTATION_POLICY
+        );
+        assert_eq!(
+            params.protocol_capabilities,
+            DEFAULT_PRODUCTION_PROTOCOL_CAPABILITIES
+        );
+        assert_eq!(params.prekey_bundle, "PendingCryptoDesign");
+        assert!(params.issued_at_local_ms >= before);
+        assert!(params.issued_at_local_ms <= after);
+        assert_eq!(params.ttl_seconds, DEFAULT_TTL_SECONDS);
+    }
+
+    #[test]
+    fn production_pairing_payload_with_defaults_signs_decodeable_payload() {
+        let private_key =
+            another_dimension_identity::ProductionPairwisePrivateKey::from_ed25519_dalek_seed(
+                [12_u8; 32],
+            )
+            .expect("valid production seed");
+        let payload = production_pairing_payload_with_defaults(
+            &ProfileName::new("alice").expect("valid profile"),
+            &private_key,
+            "alice.onion",
+            "PendingCryptoDesign",
+        )
+        .expect("production payload");
+
+        assert!(payload
+            .pairing_nonce
+            .starts_with(PRODUCTION_PAIRING_NONCE_PREFIX));
+        assert_eq!(
+            PairingPayload::decode(&payload.encode().expect("payload encodes")),
+            Ok(payload)
+        );
     }
 
     #[test]
