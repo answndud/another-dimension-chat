@@ -78,3 +78,5 @@ This is only a candidate direction.
 `ProductionSetupDraft` connects the first setup pieces: it generates the production Ed25519 pairing material and a Noise static keypair together, signs the pairing payload, and carries only the Noise public prekey bundle in that signed payload. It still does not persist private key material.
 
 `run_setup_draft_handshake_smoke` connects two setup drafts to the session plan and a Noise XX smoke handshake. The deterministic canonical dialer becomes the Noise initiator. The function rejects a setup draft when its local Noise private keypair does not match the signed public prekey bundle.
+
+`NoiseTransportPair` is now the narrow production crypto boundary after a successful Noise XX handshake. It supports initiator-to-responder encrypt/decrypt in memory and has tamper rejection coverage. It is still not persisted and is not connected to message storage, replay windows, or onion transport.
