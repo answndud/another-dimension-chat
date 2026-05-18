@@ -1,0 +1,40 @@
+# Rust build output
+/target/
+
+# Private planning and security docs
+/docs/
+
+# Local prototype/dev data
+/.another-dimension-prototype/
+/another-dimension-dev*/
+/another-dimension-smoke*/
+*.pair
+*.adpair
+
+# Environment and secret material
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+*secret*
+*secrets*
+*token*
+*tokens*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp

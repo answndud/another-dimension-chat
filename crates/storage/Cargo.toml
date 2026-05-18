@@ -1,0 +1,21 @@
+[package]
+name = "another-dimension-storage"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+another-dimension-identity = { path = "../identity" }
+another-dimension-pairing = { path = "../pairing" }
+another-dimension-protocol = { path = "../protocol" }
+
+[features]
+dev-insecure = [
+    "another-dimension-identity/dev-insecure",
+    "another-dimension-pairing/dev-insecure",
+    "another-dimension-protocol/dev-insecure",
+]
+
+[lints]
+workspace = true
+

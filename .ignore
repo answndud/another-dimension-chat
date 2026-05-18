@@ -1,0 +1,7 @@
+# Keep local searches focused on source and docs even before this directory is a git repository.
+target/
+.another-dimension-prototype/
+another-dimension-dev*/
+another-dimension-smoke*/
+*.pair
+*.adpair
