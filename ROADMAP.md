@@ -45,10 +45,10 @@ Covered by tests:
 - Replayed message envelopes not being displayed twice.
 - Plaintext message content not being persisted by the current development store path.
 - Default builds rejecting prototype commands that require `dev-insecure`.
+- Negative profile/contact identifier validation.
 
 Remaining tasks:
 
-- Add more negative tests around profile/contact identifier validation.
 - Add CLI tests for pairing cancel and pairing expiry behavior.
 - Add CLI tests for message expiry behavior.
 - Keep the public README and roadmap aligned as the prototype boundary changes.
