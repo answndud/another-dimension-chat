@@ -41,6 +41,7 @@ What does not exist yet:
 - Production unlock/key management.
 - OS keychain/DPAPI/Keystore wrapping.
 - Production encrypted local storage lifecycle.
+- Replay rollback protection against encrypted database snapshot restore.
 - Tauri desktop app.
 - Android or iOS app.
 - Offline mailbox.

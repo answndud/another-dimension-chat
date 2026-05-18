@@ -83,6 +83,27 @@ pub mod production {
         InMemoryOnly,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ReplayRollbackProtection {
+        NotProvided,
+        RequiresExternalMonotonicState,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ReplayPersistenceGuarantees {
+        pub at_rest_encrypted: bool,
+        pub commit_after_decrypt: bool,
+        pub rollback_protection: ReplayRollbackProtection,
+    }
+
+    pub fn replay_persistence_guarantees() -> ReplayPersistenceGuarantees {
+        ReplayPersistenceGuarantees {
+            at_rest_encrypted: true,
+            commit_after_decrypt: true,
+            rollback_protection: ReplayRollbackProtection::NotProvided,
+        }
+    }
+
     #[derive(Debug, Eq, PartialEq)]
     pub enum ProductionStoragePolicyError {
         PlaintextForbidden {
@@ -737,6 +758,18 @@ pub mod production {
             let database_bytes = std::fs::read(&path).expect("read database");
             assert!(!contains_bytes(&database_bytes, b"ADREPLAY1"));
             assert!(!contains_bytes(&database_bytes, b"1,3"));
+        }
+
+        #[test]
+        fn replay_persistence_guarantees_do_not_claim_rollback_protection() {
+            assert_eq!(
+                replay_persistence_guarantees(),
+                ReplayPersistenceGuarantees {
+                    at_rest_encrypted: true,
+                    commit_after_decrypt: true,
+                    rollback_protection: ReplayRollbackProtection::NotProvided,
+                }
+            );
         }
 
         #[test]
