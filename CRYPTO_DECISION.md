@@ -47,6 +47,8 @@ Before replacing placeholder crypto, decide and document:
 - How test vectors are generated, reviewed, stored, and versioned.
 - How production key material is serialized without leaking into logs, CLI output, or public test fixtures.
 
+The first identity signature dependency decision is tracked in [SIGNATURE_DECISION.md](SIGNATURE_DECISION.md).
+
 ## Candidate Direction
 
 The current architecture points toward this first production boundary:
@@ -96,7 +98,7 @@ Minimum test coverage:
 
 1. Add production key type wrappers without changing CLI behavior. Done for the initial byte wrapper boundary.
 2. Add test vectors for canonical transcript and signature verification. Initial integration fixtures are in place.
-3. Add maintained signature dependency and replace dev pairing signatures behind a production feature or default path.
+3. Add maintained signature dependency and replace dev pairing signatures behind a production feature or default path. Initial target: `ed25519-dalek` stable 2.x.
 4. Add session establishment tests before selecting message encryption implementation.
 5. Replace fake message encryption only after pairing identity verification is production-backed.
 6. Keep development fake crypto behind `dev-insecure` for test ergonomics.

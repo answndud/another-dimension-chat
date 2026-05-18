@@ -68,6 +68,7 @@ Goal: choose the production cryptographic approach before replacing placeholders
 Tasks:
 
 - Maintain [CRYPTO_DECISION.md](CRYPTO_DECISION.md) as the public-safe decision boundary for Phase 2.
+- Maintain [SIGNATURE_DECISION.md](SIGNATURE_DECISION.md) for the first identity signature dependency decision.
 - Keep production-facing key wrappers separate from `dev-insecure` placeholder key material.
 - Keep canonical pairing and safety transcript fixture tests stable before replacing placeholder signatures.
 - Select maintained Rust-compatible libraries for identity signatures and session encryption.
