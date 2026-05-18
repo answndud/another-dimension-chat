@@ -98,6 +98,51 @@ fn invalid_pairing_payload_fails_without_response_payload() {
 
 #[test]
 #[cfg(feature = "dev-insecure")]
+fn invalid_profile_name_fails_without_stdout() {
+    let output = run(&["profile", "init", "bad/name"]);
+    let error = stderr(&output);
+
+    assert!(!output.status.success());
+    assert!(stdout(&output).is_empty());
+    assert!(error.contains("WARNING: dev-insecure build. Not for real communication."));
+    assert!(error.contains("invalid profile name"));
+}
+
+#[test]
+#[cfg(feature = "dev-insecure")]
+fn invalid_sender_profile_fails_without_stdout() {
+    let output = run(&[
+        "message", "send", "--from", "bad/name", "--to", "bob", "hello",
+    ]);
+    let error = stderr(&output);
+
+    assert!(!output.status.success());
+    assert!(stdout(&output).is_empty());
+    assert!(error.contains("WARNING: dev-insecure build. Not for real communication."));
+    assert!(error.contains("invalid sender profile"));
+}
+
+#[test]
+#[cfg(feature = "dev-insecure")]
+fn invalid_contact_id_fails_without_stdout() {
+    let output = run(&[
+        "pairing",
+        "confirm",
+        "--profile",
+        "alice",
+        "--contact",
+        "bad/name",
+    ]);
+    let error = stderr(&output);
+
+    assert!(!output.status.success());
+    assert!(stdout(&output).is_empty());
+    assert!(error.contains("WARNING: dev-insecure build. Not for real communication."));
+    assert!(error.contains("invalid contact id"));
+}
+
+#[test]
+#[cfg(feature = "dev-insecure")]
 fn duplicate_pending_pairing_scan_fails_without_response_payload() {
     let workspace = TestWorkspace::new("duplicate-pending-scan");
     let pairing = scan_alice_and_bob(&workspace);
