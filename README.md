@@ -30,6 +30,7 @@ What exists today:
 What does not exist yet:
 
 - Real end-to-end encryption.
+- Production session establishment.
 - Real Tor/onion transport.
 - Production encrypted local storage.
 - Tauri desktop app.
@@ -152,6 +153,8 @@ The first identity signature dependency decision is tracked in [SIGNATURE_DECISI
 The first production pairing nonce randomness boundary is tracked in [RANDOMNESS_DECISION.md](RANDOMNESS_DECISION.md).
 
 The first production safety material display boundary is tracked in [SAFETY_MATERIAL_DECISION.md](SAFETY_MATERIAL_DECISION.md).
+
+The first production session establishment boundary is tracked in [SESSION_DECISION.md](SESSION_DECISION.md).
 
 ## License
 
