@@ -8,7 +8,7 @@ Another Dimension Chat still does not have production cryptography. This documen
 
 Use `ed25519-dalek` 2.x as the first production identity signature candidate.
 
-The crate is now added to `crates/identity` with tests that prove the production boundary is being used. Pairing decode still uses the development placeholder signature and public key path until a later wiring step.
+The crate is now added to `crates/identity` with tests that prove the production boundary is being used. Pairing decode verifies production public key plus production signature pairs through the Ed25519 path. Development pairing payloads still use the explicit development placeholder path.
 
 Production public keys and signatures are encoded for pairing payload transport as scheme-tagged strings:
 
@@ -24,7 +24,7 @@ dev-pub-<opaque-dev-seed>
 dev-sign-v1-<hex>
 ```
 
-The production decoders reject development public key and signature strings. The pairing payload decoder rejects explicit mixed dev/production key-signature pairs before signature verification.
+The production decoders reject development public key and signature strings. The pairing payload decoder rejects explicit mixed dev/production key-signature pairs and verifies production key-signature pairs with the production Ed25519 verifier.
 
 Initial target:
 
@@ -71,8 +71,9 @@ When `ed25519-dalek` is added:
 - Keep production pairing public keys scheme-tagged so future payload decoders do not silently mix dev and production verification.
 - Keep production pairing signatures scheme-tagged so future payload decoders do not silently mix dev and production verification.
 - Reject explicit dev public key plus production signature, and production public key plus dev signature payloads.
+- Verify production public key plus production signature payloads with the Ed25519 production path.
 - Keep private key debug output redacted.
-- Add deterministic test vectors before wiring the pairing decoder to production verification.
+- Keep deterministic test vectors around the pairing decoder production verification boundary.
 
 ## Minimum Tests For The First Implementation Commit
 
