@@ -110,7 +110,7 @@ fn hex_value(byte: u8) -> Result<u8, CryptoError> {
 
 pub mod production {
     use super::{decode_hex, encode_hex, CryptoError};
-    use snow::{params::NoiseParams, Builder};
+    use snow::{params::NoiseParams, Builder, TransportState};
     use std::fmt;
 
     pub const NOISE_XX_PATTERN: &str = "Noise_XX_25519_ChaChaPoly_BLAKE2s";
@@ -149,6 +149,46 @@ pub mod production {
         pub responder_remote_static: Vec<u8>,
         pub ciphertext: Vec<u8>,
         pub plaintext: Vec<u8>,
+    }
+
+    pub struct NoiseTransportPair {
+        initiator_remote_static: Vec<u8>,
+        responder_remote_static: Vec<u8>,
+        initiator: TransportState,
+        responder: TransportState,
+    }
+
+    impl NoiseTransportPair {
+        pub fn initiator_remote_static(&self) -> &[u8] {
+            &self.initiator_remote_static
+        }
+
+        pub fn responder_remote_static(&self) -> &[u8] {
+            &self.responder_remote_static
+        }
+
+        pub fn initiator_encrypt(&mut self, plaintext: &[u8]) -> Result<Vec<u8>, CryptoError> {
+            write_transport_message(&mut self.initiator, plaintext)
+        }
+
+        pub fn responder_decrypt(&mut self, ciphertext: &[u8]) -> Result<Vec<u8>, CryptoError> {
+            read_transport_message(&mut self.responder, ciphertext)
+        }
+    }
+
+    impl fmt::Debug for NoiseTransportPair {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_struct("NoiseTransportPair")
+                .field(
+                    "initiator_remote_static_len",
+                    &self.initiator_remote_static.len(),
+                )
+                .field(
+                    "responder_remote_static_len",
+                    &self.responder_remote_static.len(),
+                )
+                .finish_non_exhaustive()
+        }
     }
 
     #[derive(Clone, Debug, Eq, PartialEq)]
@@ -205,22 +245,41 @@ pub mod production {
         responder_static: &NoiseStaticKeypair,
         plaintext: &[u8],
     ) -> Result<NoiseHandshakeSmokeResult, CryptoError> {
-        run_noise_xx_handshake_smoke_with_prologues(
+        let mut pair = establish_noise_xx_transport_pair_with_prologues(
             safety_transcript.as_bytes(),
             safety_transcript.as_bytes(),
             initiator_static,
             responder_static,
+        )?;
+        let ciphertext = pair.initiator_encrypt(plaintext)?;
+        let plaintext = pair.responder_decrypt(&ciphertext)?;
+        Ok(NoiseHandshakeSmokeResult {
+            initiator_remote_static: pair.initiator_remote_static,
+            responder_remote_static: pair.responder_remote_static,
+            ciphertext,
             plaintext,
+        })
+    }
+
+    pub fn establish_noise_xx_transport_pair(
+        safety_transcript: &str,
+        initiator_static: &NoiseStaticKeypair,
+        responder_static: &NoiseStaticKeypair,
+    ) -> Result<NoiseTransportPair, CryptoError> {
+        establish_noise_xx_transport_pair_with_prologues(
+            safety_transcript.as_bytes(),
+            safety_transcript.as_bytes(),
+            initiator_static,
+            responder_static,
         )
     }
 
-    fn run_noise_xx_handshake_smoke_with_prologues(
+    fn establish_noise_xx_transport_pair_with_prologues(
         initiator_prologue: &[u8],
         responder_prologue: &[u8],
         initiator_static: &NoiseStaticKeypair,
         responder_static: &NoiseStaticKeypair,
-        plaintext: &[u8],
-    ) -> Result<NoiseHandshakeSmokeResult, CryptoError> {
+    ) -> Result<NoiseTransportPair, CryptoError> {
         let mut initiator = Builder::new(noise_params()?)
             .local_private_key(&initiator_static.private)?
             .prologue(initiator_prologue)?
@@ -251,24 +310,35 @@ pub mod production {
             .ok_or_else(|| CryptoError::Noise("missing responder remote static".to_string()))?
             .to_vec();
 
-        let mut initiator_transport = initiator.into_transport_mode()?;
-        let mut responder_transport = responder.into_transport_mode()?;
+        let initiator_transport = initiator.into_transport_mode()?;
+        let responder_transport = responder.into_transport_mode()?;
 
-        let mut ciphertext_buf = vec![0_u8; plaintext.len() + 64];
-        let ciphertext_len = initiator_transport.write_message(plaintext, &mut ciphertext_buf)?;
-        ciphertext_buf.truncate(ciphertext_len);
-
-        let mut plaintext_buf = vec![0_u8; ciphertext_buf.len()];
-        let plaintext_len =
-            responder_transport.read_message(&ciphertext_buf, &mut plaintext_buf)?;
-        plaintext_buf.truncate(plaintext_len);
-
-        Ok(NoiseHandshakeSmokeResult {
+        Ok(NoiseTransportPair {
             initiator_remote_static,
             responder_remote_static,
-            ciphertext: ciphertext_buf,
-            plaintext: plaintext_buf,
+            initiator: initiator_transport,
+            responder: responder_transport,
         })
+    }
+
+    fn write_transport_message(
+        state: &mut TransportState,
+        plaintext: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        let mut out = vec![0_u8; plaintext.len() + 64];
+        let len = state.write_message(plaintext, &mut out)?;
+        out.truncate(len);
+        Ok(out)
+    }
+
+    fn read_transport_message(
+        state: &mut TransportState,
+        ciphertext: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        let mut out = vec![0_u8; ciphertext.len()];
+        let len = state.read_message(ciphertext, &mut out)?;
+        out.truncate(len);
+        Ok(out)
     }
 
     fn noise_params() -> Result<NoiseParams, CryptoError> {
@@ -307,14 +377,52 @@ pub mod production {
             let initiator = generate_noise_static_keypair().expect("initiator static key");
             let responder = generate_noise_static_keypair().expect("responder static key");
 
-            assert!(run_noise_xx_handshake_smoke_with_prologues(
+            assert!(establish_noise_xx_transport_pair_with_prologues(
                 b"ADPAIR-SAFETY-V1|alice|bob",
                 b"ADPAIR-SAFETY-V1|alice|tampered-bob",
                 &initiator,
                 &responder,
-                b"body",
             )
             .is_err());
+        }
+
+        #[test]
+        fn noise_transport_pair_encrypts_decrypts_and_rejects_tampering() {
+            let initiator = generate_noise_static_keypair().expect("initiator static key");
+            let responder = generate_noise_static_keypair().expect("responder static key");
+            let plaintext = b"pairwise message body";
+            let mut pair = establish_noise_xx_transport_pair(
+                "ADPAIR-SAFETY-V1|alice|bob",
+                &initiator,
+                &responder,
+            )
+            .expect("transport pair");
+
+            assert_eq!(pair.initiator_remote_static(), responder.public_key());
+            assert_eq!(pair.responder_remote_static(), initiator.public_key());
+
+            let ciphertext = pair.initiator_encrypt(plaintext).expect("encrypt");
+            assert!(!ciphertext
+                .windows(plaintext.len())
+                .any(|window| window == plaintext));
+            assert_eq!(
+                pair.responder_decrypt(&ciphertext).expect("decrypt"),
+                plaintext
+            );
+
+            let mut tampered_pair = establish_noise_xx_transport_pair(
+                "ADPAIR-SAFETY-V1|alice|bob",
+                &initiator,
+                &responder,
+            )
+            .expect("transport pair");
+            let mut tampered = tampered_pair
+                .initiator_encrypt(plaintext)
+                .expect("encrypt tamper target");
+            let last = tampered.last_mut().expect("ciphertext is non-empty");
+            *last ^= 0x01;
+
+            assert!(tampered_pair.responder_decrypt(&tampered).is_err());
         }
 
         #[test]
