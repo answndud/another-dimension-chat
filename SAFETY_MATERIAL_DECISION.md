@@ -40,5 +40,7 @@ Current tests cover:
 
 - Stable production safety material test vector.
 - Safety material changes when the transcript changes.
+- Signed production pairing payloads derive a stable safety material test vector through transcript construction.
+- Safety material changes when a signed production payload changes.
 
 Pairing tests separately cover that production transcripts are order-independent and sensitive to identity, endpoint, prekey, and capability changes.

@@ -24,6 +24,7 @@ The repository currently has:
 - Pairing payload canonicalization and signature boundary in `crates/pairing`.
 - Production safety transcript tests cover signed production payload ordering and identity, endpoint, prekey, and capability sensitivity.
 - Production safety material derivation has a SHA-256 based, domain-separated display boundary independent from `dev-insecure` fake crypto.
+- Integration tests cover signed production payloads through transcript construction and production safety material derivation.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
 

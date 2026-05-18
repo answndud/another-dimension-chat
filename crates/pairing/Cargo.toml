@@ -8,9 +8,11 @@ publish.workspace = true
 another-dimension-identity = { path = "../identity" }
 getrandom = "0.4.2"
 
+[dev-dependencies]
+another-dimension-crypto = { path = "../crypto" }
+
 [features]
 dev-insecure = ["another-dimension-identity/dev-insecure"]
 
 [lints]
 workspace = true
-
