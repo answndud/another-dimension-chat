@@ -10,6 +10,8 @@
 ## 먼저 볼 파일
 
 - `Cargo.toml`: Rust workspace 구성.
+- `README.md`: public-safe project overview and development commands.
+- `SECURITY.md`: public security policy and non-claims.
 - `apps/cli/src/main.rs`: prototype CLI entrypoint.
 - `crates/core/src/lib.rs`: profile, pairing, messaging orchestration.
 - `crates/pairing/src/lib.rs`: pairing payload, safety transcript, prototype signature boundary.
@@ -40,7 +42,7 @@
 - 생성 산출물이나 로컬 dev data를 문서나 source에 섞지 않는다.
 - local git repository는 `main` branch로 초기화되어 있다.
 - initial prototype scaffold commit은 생성되어 있다.
-- remote는 아직 없다. remote 작업은 별도 작업 단위로 진행한다.
+- remote `origin`은 `git@github.com:answndud/another-dimension-chat.git`이다.
 - GitHub Actions workflow는 `.github/workflows/verify.yml`에 있으며 `scripts/verify_all.sh`를 실행한다.
 
 ## 검증
