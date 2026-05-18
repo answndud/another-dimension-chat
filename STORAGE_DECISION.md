@@ -22,6 +22,8 @@ The repository currently has:
 - Tests that wrong passphrases fail before records are returned.
 - Tests that passphrases and database keys are redacted in debug output.
 - An unlock policy boundary that rejects OS-keystore-only unlock, including in high-risk mode.
+- Durable `ReplayWindowState` storage through `SqlCipherRecordStore`.
+- Tests that replay state does not appear as plaintext database bytes.
 
 The repository does not currently have:
 
@@ -29,7 +31,7 @@ The repository does not currently have:
 - Password-based key derivation.
 - Production key wrapping.
 - Durable production private key storage.
-- Durable production replay state storage.
+- Integrated production replay state storage in the receive flow.
 - Durable Noise transport or ratchet state storage.
 - Backup, export, import, or migration behavior.
 - Production OS keychain/DPAPI/Keystore wrapping.
@@ -177,6 +179,7 @@ It supports:
 - Wrong-passphrase rejection before records are returned.
 - Unlock policy checks that require a passphrase factor before unlock.
 - High-risk mode rejection for OS-keystore-only auto-unlock.
+- Saving and loading durable replay windows as the first wired production record kind.
 
 It does not support:
 
@@ -188,6 +191,29 @@ It does not support:
 - Migration from `dev-insecure` storage.
 - Persistent Noise/session transport state.
 - A security-ready release.
+
+## First Durable Record Wiring
+
+The first durable production record wired into `SqlCipherRecordStore` is `ReplayWindowState`.
+
+Rationale:
+
+- Replay state is security-sensitive metadata and must not be plaintext.
+- It is less dangerous than private identity keys as the first persistence target.
+- It exercises the `EncryptedAtRestRequired` path without introducing key migration, contact import, or session transport persistence.
+
+Current behavior:
+
+- `save_replay_window` stores `ReplayWindow::encode_state()` through an `ADREC1` record of kind `ReplayWindowState`.
+- `load_replay_window` returns `None` for missing records.
+- Loading rejects records whose kind is not `ReplayWindowState`.
+- Tests assert the database file does not contain the `ADREPLAY1` marker or observed replay sequence bytes.
+
+Limitations:
+
+- Replay state rollback protection is not implemented.
+- The record id must still be allocated by a higher-level caller.
+- This does not yet integrate with `ProductionEnvelopeSession` receive flow.
 
 ## Unlock and Key Wrapping Decision
 
@@ -260,7 +286,7 @@ Only records classified as `EncryptedAtRestRequired` may be encoded as `ADREC1`.
 3. Add an encrypted record envelope format independent of any specific backend. Initial `ADREC1` container is in place.
 4. Add a minimal encrypted storage implementation for non-session records only. Initial SQLCipher-backed `ADREC1` store spike is in place.
 5. Wire production key material only after unlock and key wrapping behavior is tested. Initial passphrase unlock boundary and negative tests are in place.
-6. Persist replay state only after metadata leakage and rollback behavior are tested.
+6. Persist replay state only after metadata leakage and rollback behavior are tested. Initial SQLCipher-backed replay state persistence is in place, but rollback protection is still open.
 7. Keep session transport state in memory until a separate session lifecycle decision changes that rule.
 
 ## Open Questions

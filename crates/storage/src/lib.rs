@@ -31,7 +31,7 @@ impl From<io::Error> for StorageError {
 
 pub mod production {
     use super::*;
-    use another_dimension_protocol::{decode_hex, encode_hex};
+    use another_dimension_protocol::{decode_hex, encode_hex, ReplayWindow};
     use rusqlite::{params, Connection, OptionalExtension};
     use std::path::Path;
 
@@ -421,6 +421,38 @@ pub mod production {
                 })
                 .transpose()
         }
+
+        pub fn save_replay_window(
+            &self,
+            record_id: &EncryptedRecordId,
+            scope: EncryptedRecordScope,
+            replay_window: &ReplayWindow,
+        ) -> Result<(), ProductionStorageError> {
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::ReplayWindowState,
+                scope,
+                b"sqlcipher-page-encryption-v1".to_vec(),
+                replay_window.encode_state().into_bytes(),
+            )?;
+            self.put(record_id, &record)
+        }
+
+        pub fn load_replay_window(
+            &self,
+            record_id: &EncryptedRecordId,
+        ) -> Result<Option<ReplayWindow>, ProductionStorageError> {
+            self.get(record_id)?
+                .map(|record| {
+                    if record.kind != ProductionRecordKind::ReplayWindowState {
+                        return Err(ProductionStorageError::InvalidRecord);
+                    }
+                    let state = String::from_utf8(record.sealed_body)
+                        .map_err(|_| ProductionStorageError::InvalidRecord)?;
+                    ReplayWindow::decode_state(&state)
+                        .map_err(|_| ProductionStorageError::InvalidRecord)
+                })
+                .transpose()
+        }
     }
 
     fn verify_sqlcipher_key(connection: &Connection) -> Result<(), ProductionStorageError> {
@@ -677,6 +709,45 @@ pub mod production {
             let database_bytes = std::fs::read(&path).expect("read database");
             assert!(!contains_bytes(&database_bytes, b"sealed-body-for-test"));
             assert!(!contains_bytes(&database_bytes, b"ADREC1"));
+        }
+
+        #[test]
+        fn sqlcipher_store_persists_replay_window_without_plaintext_state_on_disk() {
+            let (_dir, path) = unique_test_database_path("replay-window");
+            let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let mut replay_window = ReplayWindow::new(4).expect("replay window");
+            replay_window.accept(1).expect("accept first");
+            replay_window.accept(3).expect("accept third");
+            let record_id = EncryptedRecordId::new("replay_0001").expect("record id");
+
+            store
+                .save_replay_window(
+                    &record_id,
+                    EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile")),
+                    &replay_window,
+                )
+                .expect("save replay window");
+
+            assert_eq!(
+                store.load_replay_window(&record_id).expect("load"),
+                Some(replay_window)
+            );
+            let database_bytes = std::fs::read(&path).expect("read database");
+            assert!(!contains_bytes(&database_bytes, b"ADREPLAY1"));
+            assert!(!contains_bytes(&database_bytes, b"1,3"));
+        }
+
+        #[test]
+        fn sqlcipher_store_returns_none_for_missing_replay_window() {
+            let (_dir, path) = unique_test_database_path("missing-replay-window");
+            let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let record_id = EncryptedRecordId::new("missing_replay").expect("record id");
+
+            assert_eq!(store.load_replay_window(&record_id).expect("load"), None);
         }
 
         #[test]
