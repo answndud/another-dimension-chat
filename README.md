@@ -33,6 +33,7 @@ What exists today:
 - Transport runtime preflight skeleton with runtime network disabled by default.
 - Transport runtime state skeleton that can become ready only after preflight succeeds.
 - Onion transport skeleton now stores runtime state while keeping send/receive fail-closed.
+- Transport runtime skeleton closeout documenting the remaining gates before network-capable Arti work.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.
 - High-risk unlock policy tests that reject OS-keystore-only unlock.

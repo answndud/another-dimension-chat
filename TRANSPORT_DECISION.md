@@ -47,7 +47,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Add an Arti-first adapter spike while keeping `OnionEnvelopeTransport` fail-closed by default. The spike must not make the app usable for real communication until onion service hosting, bridge behavior, logging, crash handling, and packaging are verified.
+Close out the runtime skeleton and implement the next pre-network gate: real runtime permission and log-redaction preflight decisions. Do not move directly to a network-capable Arti bootstrap until those checks are defined and tested.
 
 ## Tor Lifecycle Decision
 
@@ -240,3 +240,26 @@ Current wiring:
 - Direct routes still fail policy checks before any network attempt.
 
 This keeps state wiring separate from runtime behavior. A later implementation must add a real adapter type or explicit runtime transition before any Tor bootstrap, socket activity, onion service launch, or envelope transfer can occur.
+
+## Transport Runtime API Closeout
+
+Decision as of 2026-05-18: the transport runtime skeleton is complete as a non-network boundary. It is not a Tor adapter and does not make the app usable for real communication.
+
+Closed boundaries:
+
+- High-risk policy rejects direct routes by default.
+- Onion transport remains fail-closed for send and receive.
+- Runtime failures are separated before network code exists.
+- Runtime-ready state can only be constructed from successful preflight.
+- Onion transport can hold runtime state without bootstrapping Tor, opening sockets, launching onion services, or transferring envelopes.
+
+Required before any network-capable Arti adapter:
+
+- Implement real app-private state/cache permission preflight.
+- Enforce log and crash redaction preflight.
+- Decide bridge and censorship behavior for blocked Tor environments.
+- Decide onion service key storage, rotation, deletion, and backup exclusion.
+- Define bootstrap timeout, retry, cancellation, and recovery behavior.
+- Verify platform packaging and security behavior for macOS, Windows, Linux, and Android.
+
+The next implementation phase should target runtime permission and log-redaction preflight decisions, not real Tor bootstrap.
