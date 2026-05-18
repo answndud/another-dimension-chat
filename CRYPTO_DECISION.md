@@ -22,6 +22,7 @@ The repository currently has:
 - Production pairing default construction centralizes nonce, local timestamp, TTL, endpoint rotation policy, and capability defaults while keeping endpoint and prekey material caller-supplied.
 - Production pairing draft construction can return a generated private key plus signed payload without deciding storage, backup, or export.
 - Pairing payload canonicalization and signature boundary in `crates/pairing`.
+- Production safety transcript tests cover signed production payload ordering and identity, endpoint, prekey, and capability sensitivity.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
 
