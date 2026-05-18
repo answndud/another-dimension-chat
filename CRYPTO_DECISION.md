@@ -11,7 +11,7 @@ The repository currently has:
 - A `CryptoSession` trait in `crates/crypto`.
 - Development-only fake encryption behind `dev-insecure`.
 - Pairwise identity types in `crates/identity`.
-- Production-facing key and signature byte wrappers that reject development placeholder material.
+- Production-facing key and signature byte wrappers backed by `ed25519-dalek` for signing and verification tests.
 - Pairing payload canonicalization and signature boundary in `crates/pairing`.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
@@ -98,7 +98,7 @@ Minimum test coverage:
 
 1. Add production key type wrappers without changing CLI behavior. Done for the initial byte wrapper boundary.
 2. Add test vectors for canonical transcript and signature verification. Initial integration fixtures are in place.
-3. Add maintained signature dependency and replace dev pairing signatures behind a production feature or default path. Initial target: `ed25519-dalek` stable 2.x.
+3. Add maintained signature dependency and replace dev pairing signatures behind a production feature or default path. `ed25519-dalek` stable 2.x is added to `crates/identity`; pairing decoder wiring is still pending.
 4. Add session establishment tests before selecting message encryption implementation.
 5. Replace fake message encryption only after pairing identity verification is production-backed.
 6. Keep development fake crypto behind `dev-insecure` for test ergonomics.

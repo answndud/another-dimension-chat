@@ -8,7 +8,7 @@ Another Dimension Chat still does not have production cryptography. This documen
 
 Use `ed25519-dalek` 2.x as the first production identity signature candidate.
 
-Do not add the crate to `Cargo.toml` until the implementation commit also adds tests that prove the production boundary is being used.
+The crate is now added to `crates/identity` with tests that prove the production boundary is being used. Pairing decode still uses the development placeholder signature path until a later wiring step.
 
 Initial target:
 
@@ -48,7 +48,7 @@ Metadata was checked with `cargo search` and `cargo info` on 2026-05-18.
 
 When `ed25519-dalek` is added:
 
-- Add it only to `crates/identity`.
+- Add it only to `crates/identity`. Done.
 - Prefer a narrow feature set; do not enable serialization features unless tests require them.
 - Keep `dev-insecure` placeholder signing available only for dev/test flows.
 - Do not allow `dev-pub-*`, `dev-priv-*`, or `dev-sign-v1-*` material into production key wrappers.
@@ -59,13 +59,13 @@ When `ed25519-dalek` is added:
 
 The first implementation commit that adds `ed25519-dalek` must include tests for:
 
-- Generating or constructing a production signing key.
-- Signing canonical pairing payload bytes.
-- Verifying the signature with the matching production public key.
-- Rejecting tampered canonical bytes.
-- Rejecting a mismatched public key.
-- Rejecting development placeholder key material in production wrappers.
-- Proving debug output does not print private key bytes.
+- Generating or constructing a production signing key. Done.
+- Signing canonical pairing payload bytes. Done.
+- Verifying the signature with the matching production public key. Done.
+- Rejecting tampered canonical bytes. Done.
+- Rejecting a mismatched public key. Done.
+- Rejecting development placeholder key material in production wrappers. Done.
+- Proving debug output does not print private key bytes. Done.
 
 ## Deferred Decisions
 
