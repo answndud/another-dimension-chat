@@ -18,6 +18,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `OnionEnvelopeTransport::fail_closed_high_risk()` enforces high-risk onion-only routing and fails with `TransportError::Unavailable` until a real Tor/onion adapter exists.
 - `TransportRuntimeError` separates future preflight, bootstrap, bridge/censorship, onion service, send, and receive failures before a network-capable adapter exists.
 - `TransportRuntimePreflight` maps disabled runtime network, state/cache directory access, log redaction, and bridge/censorship readiness to explicit runtime errors.
+- `TransportRuntimeState` separates disabled fail-closed state from a future runtime-ready state that can only be created from successful preflight.
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
 - `arti_lifecycle_decision()` requires app-private state/cache directories, backup exclusion, log redaction, and no onion service key generation until a storage decision exists.
 - `ArtiAppPrivateDirs` and `ArtiAdapterSpike::fail_closed_app_private_config` compile-check app-private `TorClientConfigBuilder::from_directories` wiring without bootstrapping Tor.
@@ -213,3 +214,15 @@ Failure mapping:
 - Bridge/censorship readiness failure maps to `CensorshipOrBridgeRequired`.
 
 This skeleton does not inspect real filesystem permissions, configure bridges, bootstrap Tor, open sockets, or launch an onion service. It only fixes the shape of the gate that a later network-capable adapter must satisfy.
+
+## Transport Runtime Adapter State Skeleton
+
+Decision as of 2026-05-18: runtime adapter state is disabled by default. A runtime-ready state can only be constructed from a successful `TransportRuntimePreflight`.
+
+Current state model:
+
+- `TransportRuntimeState::Disabled` is the default fail-closed state.
+- `TransportRuntimeState::from_preflight(...)` returns a runtime error unless every preflight guard succeeds.
+- `TransportRuntimeState::Ready(TransportRuntimeReady)` represents only a satisfied gate, not a live Tor client.
+
+This still does not bootstrap Tor, open sockets, launch onion services, or send/receive envelopes. It only prevents future code from constructing a runtime-ready adapter state without first passing the explicit preflight gate.
