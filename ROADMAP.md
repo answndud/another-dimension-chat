@@ -40,7 +40,7 @@ Goal: make the CLI prototype stricter without claiming real security.
 Tasks:
 
 - Add public-safe tests for malformed CLI inputs and error messages. Started.
-- Keep pairing payload parsing deterministic and bounded.
+- Keep pairing payload parsing deterministic and bounded. Started.
 - Keep duplicate pairing scans rejected for pending and active contacts.
 - Keep replayed message envelopes from being displayed twice.
 - Keep plaintext out of the development store where the current envelope model allows it.
