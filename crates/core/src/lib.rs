@@ -21,6 +21,7 @@ pub mod production {
 
     const CANONICAL_DIALER_DOMAIN: &[u8] = b"AD-SESSION-CANONICAL-DIALER-V1";
     const PRODUCTION_CHANNEL_DOMAIN: &[u8] = b"AD-PRODUCTION-CHANNEL-V1";
+    const PRODUCTION_REPLAY_RECORD_DOMAIN: &[u8] = b"AD-PRODUCTION-REPLAY-RECORD-V1";
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct ProductionSessionPlan {
@@ -64,6 +65,10 @@ pub mod production {
 
         pub fn channel_id(&self) -> &str {
             &self.channel_id
+        }
+
+        pub fn replay_record_id(&self) -> EncryptedRecordId {
+            production_replay_record_id(&self.channel_id)
         }
 
         pub fn encrypt_from_canonical_dialer(
@@ -120,6 +125,23 @@ pub mod production {
             let plaintext = self.decrypt_at_responder_with_replay(envelope, &mut replay_window)?;
             store.save_replay_window(replay_record_id, replay_scope, &replay_window)?;
             Ok(plaintext)
+        }
+
+        pub fn decrypt_at_responder_with_session_replay(
+            &mut self,
+            envelope: &Envelope,
+            store: &SqlCipherRecordStore,
+            replay_scope: EncryptedRecordScope,
+            window_size: u64,
+        ) -> Result<Vec<u8>, ProductionSessionError> {
+            let replay_record_id = self.replay_record_id();
+            self.decrypt_at_responder_with_persistent_replay(
+                envelope,
+                store,
+                &replay_record_id,
+                replay_scope,
+                window_size,
+            )
         }
     }
 
@@ -335,6 +357,15 @@ pub mod production {
         hasher.update([0]);
         hasher.update(plan.safety_transcript.as_bytes());
         format!("adchan1:{}", encode_hex(&hasher.finalize()))
+    }
+
+    fn production_replay_record_id(channel_id: &str) -> EncryptedRecordId {
+        let mut hasher = Sha256::new();
+        hasher.update(PRODUCTION_REPLAY_RECORD_DOMAIN);
+        hasher.update([0]);
+        hasher.update(channel_id.as_bytes());
+        EncryptedRecordId::new(format!("replay_{}", encode_hex(&hasher.finalize())))
+            .expect("domain-separated replay record id is valid")
     }
 
     #[cfg(test)]
@@ -571,7 +602,7 @@ pub mod production {
             let mut session = establish_envelope_session_from_setup_drafts(&alice, &bob)
                 .expect("envelope session");
             let (_dir, store) = production_test_store("persistent-replay-success");
-            let record_id = EncryptedRecordId::new("replay_0001").expect("record id");
+            let record_id = session.replay_record_id();
             let scope = EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile"));
             let envelope = session
                 .encrypt_from_canonical_dialer(1, b"message one")
@@ -598,9 +629,7 @@ pub mod production {
                 1
             );
             assert_eq!(
-                session.decrypt_at_responder_with_persistent_replay(
-                    &envelope, &store, &record_id, scope, 4
-                ),
+                session.decrypt_at_responder_with_session_replay(&envelope, &store, scope, 4),
                 Err(ProductionSessionError::Protocol(
                     ProtocolError::ReplayMessage
                 ))
@@ -613,7 +642,7 @@ pub mod production {
             let mut session = establish_envelope_session_from_setup_drafts(&alice, &bob)
                 .expect("envelope session");
             let (_dir, store) = production_test_store("persistent-replay-tamper");
-            let record_id = EncryptedRecordId::new("replay_0001").expect("record id");
+            let record_id = session.replay_record_id();
             let scope = EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile"));
             let mut envelope = session
                 .encrypt_from_canonical_dialer(1, b"message one")
@@ -633,6 +662,21 @@ pub mod production {
                 store.load_replay_window(&record_id).expect("load replay"),
                 None
             );
+        }
+
+        #[test]
+        fn production_replay_record_id_is_session_scoped_and_opaque() {
+            let (alice, bob) = production_setup_pair();
+            let alice_bob = establish_envelope_session_from_setup_drafts(&alice, &bob)
+                .expect("alice bob session");
+            let (carol, dave) = production_setup_pair();
+            let carol_dave = establish_envelope_session_from_setup_drafts(&carol, &dave)
+                .expect("carol dave session");
+
+            assert_eq!(alice_bob.replay_record_id(), alice_bob.replay_record_id());
+            assert_ne!(alice_bob.replay_record_id(), carol_dave.replay_record_id());
+            assert!(!format!("{:?}", alice_bob.replay_record_id()).contains("adchan1"));
+            assert!(EncryptedRecordId::new(alice_bob.channel_id()).is_err());
         }
 
         fn production_setup_pair() -> (ProductionSetupDraft, ProductionSetupDraft) {

@@ -213,7 +213,6 @@ Current behavior:
 Limitations:
 
 - Replay state rollback protection is not implemented.
-- The record id must still be allocated by a higher-level caller.
 - Initial `ProductionEnvelopeSession` receive integration is in place, but a full transport/UI receive pipeline is not.
 
 ## Receive Flow Replay Persistence
@@ -234,6 +233,21 @@ This still does not provide:
 - Rollback protection for an attacker who can restore an older database snapshot.
 - Durable session transport state.
 - Full receive pipeline integration with Tor/onion transport or UI.
+
+## Receive Storage API Boundary
+
+`ProductionEnvelopeSession` owns replay record id derivation for its current session. Callers should not allocate human-readable replay record ids such as profile names, contact ids, endpoint strings, or channel ids.
+
+Current API boundary:
+
+- `ProductionEnvelopeSession::replay_record_id()` derives an opaque `EncryptedRecordId`.
+- The id is a domain-separated hash of the session `channel_id`.
+- The id is stable for the same session and different across different session transcripts.
+- The id does not embed the `adchan1` channel id string, profile names, contact ids, or endpoints.
+- `decrypt_at_responder_with_session_replay` is the preferred receive helper for current session replay persistence.
+- The lower-level `decrypt_at_responder_with_persistent_replay` remains available for tests and future migration code that needs explicit record ids.
+
+The caller still provides `EncryptedRecordScope` because storage authorization and record ownership are profile/contact concerns outside the in-memory session object. A future UI/transport receive facade should construct that scope from the selected local profile and verified contact, not from untrusted network input.
 
 ## Replay Rollback Protection Decision
 
