@@ -62,11 +62,44 @@ fn production_safety_material_changes_when_signed_payload_changes() {
 
     let original =
         derive_production_safety_material(&transcript(&alice, &bob).expect("transcript"));
-    let changed = derive_production_safety_material(
-        &transcript(&alice, &changed_bob).expect("changed transcript"),
-    );
 
-    assert_ne!(original, changed);
+    for changed_payload in [
+        changed_bob,
+        production_payload(
+            "bob",
+            [53_u8; 32],
+            "bob-nonce",
+            "bob.onion",
+            "bob-prekey",
+            2_000,
+        ),
+        production_payload(
+            "bob",
+            [52_u8; 32],
+            "bob-nonce",
+            "bob.onion",
+            "bob-rotated-prekey",
+            2_000,
+        ),
+        production_payload_with_capabilities(
+            "bob",
+            [52_u8; 32],
+            "bob-nonce",
+            "bob.onion",
+            "bob-prekey",
+            "prototype-production-pairing-v2",
+            2_000,
+        ),
+    ] {
+        assert_eq!(
+            PairingPayload::decode(&changed_payload.encode().expect("payload encodes")),
+            Ok(changed_payload.clone())
+        );
+        let changed = derive_production_safety_material(
+            &transcript(&alice, &changed_payload).expect("changed transcript"),
+        );
+        assert_ne!(original, changed);
+    }
 }
 
 fn production_payload(
@@ -75,6 +108,26 @@ fn production_payload(
     nonce: &str,
     endpoint: &str,
     prekey: &str,
+    issued_at_local_ms: u128,
+) -> PairingPayload {
+    production_payload_with_capabilities(
+        owner,
+        seed,
+        nonce,
+        endpoint,
+        prekey,
+        "prototype-production-pairing-v1",
+        issued_at_local_ms,
+    )
+}
+
+fn production_payload_with_capabilities(
+    owner: &str,
+    seed: [u8; 32],
+    nonce: &str,
+    endpoint: &str,
+    prekey: &str,
+    capabilities: &str,
     issued_at_local_ms: u128,
 ) -> PairingPayload {
     let private_key =
@@ -86,7 +139,7 @@ fn production_payload(
             pairing_nonce: nonce.to_string(),
             rendezvous_endpoint: endpoint.to_string(),
             endpoint_rotation_policy: "manual-v1".to_string(),
-            protocol_capabilities: "prototype-production-pairing-v1".to_string(),
+            protocol_capabilities: capabilities.to_string(),
             prekey_bundle: prekey.to_string(),
             issued_at_local_ms,
             ttl_seconds: DEFAULT_TTL_SECONDS,
