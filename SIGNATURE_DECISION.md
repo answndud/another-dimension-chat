@@ -10,6 +10,20 @@ Use `ed25519-dalek` 2.x as the first production identity signature candidate.
 
 The crate is now added to `crates/identity` with tests that prove the production boundary is being used. Pairing decode still uses the development placeholder signature path until a later wiring step.
 
+Production signatures are encoded for pairing payload transport as scheme-tagged strings:
+
+```text
+ed25519-dalek-v2:<lowercase-hex-signature>
+```
+
+Development signatures remain distinguishable as:
+
+```text
+dev-sign-v1-<hex>
+```
+
+The production decoder rejects development signature strings.
+
 Initial target:
 
 - Crate: `ed25519-dalek`
@@ -52,6 +66,7 @@ When `ed25519-dalek` is added:
 - Prefer a narrow feature set; do not enable serialization features unless tests require them.
 - Keep `dev-insecure` placeholder signing available only for dev/test flows.
 - Do not allow `dev-pub-*`, `dev-priv-*`, or `dev-sign-v1-*` material into production key wrappers.
+- Keep production pairing signatures scheme-tagged so future payload decoders do not silently mix dev and production verification.
 - Keep private key debug output redacted.
 - Add deterministic test vectors before wiring the pairing decoder to production verification.
 

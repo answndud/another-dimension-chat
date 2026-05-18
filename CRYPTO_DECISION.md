@@ -12,6 +12,7 @@ The repository currently has:
 - Development-only fake encryption behind `dev-insecure`.
 - Pairwise identity types in `crates/identity`.
 - Production-facing key and signature byte wrappers backed by `ed25519-dalek` for signing and verification tests.
+- Scheme-tagged production pairing signature strings that are distinct from development signatures.
 - Pairing payload canonicalization and signature boundary in `crates/pairing`.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
