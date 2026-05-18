@@ -20,6 +20,7 @@ dependencies = [
  "another-dimension-crypto",
  "another-dimension-identity",
  "another-dimension-pairing",
+ "another-dimension-protocol",
 ]
 
 [[package]]

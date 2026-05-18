@@ -56,6 +56,8 @@ fn default_build_runs_production_boundary_self_test_without_secrets() {
     assert!(error.contains("not a secure messenger release"));
     assert!(!error.contains("private"));
     assert!(!error.contains("ADPAIR2|"));
+    assert!(!error.contains("adnoise1:"));
+    assert!(!error.contains("ADENV1|"));
 }
 
 #[test]

@@ -9,6 +9,7 @@ another-dimension-core = { path = "../../crates/core" }
 another-dimension-crypto = { path = "../../crates/crypto" }
 another-dimension-identity = { path = "../../crates/identity" }
 another-dimension-pairing = { path = "../../crates/pairing" }
+another-dimension-protocol = { path = "../../crates/protocol" }
 
 [features]
 dev-insecure = [
@@ -20,4 +21,3 @@ dev-insecure = [
 
 [lints]
 workspace = true
-

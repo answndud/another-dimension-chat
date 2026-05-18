@@ -35,9 +35,10 @@ fn production_main() -> Result<(), String> {
 #[cfg(not(feature = "dev-insecure"))]
 fn run_production_self_test() -> Result<(), String> {
     use another_dimension_core::production::{
-        production_setup_draft_with_defaults, run_setup_draft_handshake_smoke,
+        establish_envelope_session_from_setup_drafts, production_setup_draft_with_defaults,
     };
     use another_dimension_identity::ProfileName;
+    use another_dimension_protocol::{ProtocolError, ReplayWindow};
 
     let alice = production_setup_draft_with_defaults(
         &ProfileName::new("alice").map_err(|_| "invalid built-in profile")?,
@@ -50,12 +51,29 @@ fn run_production_self_test() -> Result<(), String> {
     )
     .map_err(|_| "production setup failed")?;
     let plaintext = b"production boundary self-test";
-    let result = run_setup_draft_handshake_smoke(&alice, &bob, plaintext)
-        .map_err(|_| "production handshake failed")?;
-    if result.plaintext == plaintext {
+    let mut session = establish_envelope_session_from_setup_drafts(&alice, &bob)
+        .map_err(|_| "production session failed")?;
+    let envelope = session
+        .encrypt_from_canonical_dialer(1, plaintext)
+        .map_err(|_| "production envelope encryption failed")?;
+    let mut replay_window = ReplayWindow::new(8).map_err(|_| "production replay failed")?;
+    let decrypted = session
+        .decrypt_at_responder_with_replay(&envelope, &mut replay_window)
+        .map_err(|_| "production envelope decryption failed")?;
+    let replay_result = session.decrypt_at_responder_with_replay(&envelope, &mut replay_window);
+    if decrypted == plaintext
+        && matches!(
+            replay_result,
+            Err(
+                another_dimension_core::production::ProductionSessionError::Protocol(
+                    ProtocolError::ReplayMessage
+                )
+            )
+        )
+    {
         Ok(())
     } else {
-        Err("production decrypt mismatch".to_string())
+        Err("production boundary self-test failed".to_string())
     }
 }
 
