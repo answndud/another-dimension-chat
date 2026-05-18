@@ -29,6 +29,7 @@ name = "another-dimension-crypto"
 version = "0.1.0"
 dependencies = [
  "another-dimension-protocol",
+ "sha2",
 ]
 
 [[package]]
