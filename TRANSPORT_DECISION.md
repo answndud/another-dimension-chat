@@ -17,6 +17,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `EnvelopeTransport` defines minimal send/receive methods over encrypted `Envelope` values.
 - `OnionEnvelopeTransport::fail_closed_high_risk()` enforces high-risk onion-only routing and fails with `TransportError::Unavailable` until a real Tor/onion adapter exists.
 - `TransportRuntimeError` separates future preflight, bootstrap, bridge/censorship, onion service, send, and receive failures before a network-capable adapter exists.
+- `TransportRuntimePreflight` maps disabled runtime network, state/cache directory access, log redaction, and bridge/censorship readiness to explicit runtime errors.
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
 - `arti_lifecycle_decision()` requires app-private state/cache directories, backup exclusion, log redaction, and no onion service key generation until a storage decision exists.
 - `ArtiAppPrivateDirs` and `ArtiAdapterSpike::fail_closed_app_private_config` compile-check app-private `TorClientConfigBuilder::from_directories` wiring without bootstrapping Tor.
@@ -192,3 +193,23 @@ Current runtime taxonomy:
   - `ReceiveFailed`
 
 This taxonomy is not a production adapter yet. It is a boundary for later adapter work: policy violations, invalid endpoints, fail-closed unavailability, bootstrap failures, censorship/bridge requirements, onion service key failures, and envelope transfer failures must remain distinguishable in tests and logs. Logs still must not include plaintext, private keys, decrypted envelopes, full onion addresses, contact ids, or profile display names.
+
+## Transport Runtime Preflight Result Skeleton
+
+Decision as of 2026-05-18: runtime network remains disabled by default, and a future adapter must pass explicit preflight checks before any bootstrap attempt.
+
+Current preflight checks:
+
+- `runtime_network_enabled`
+- `state_cache_dirs_accessible`
+- `log_redaction_ready`
+- `bridge_or_censorship_ready`
+
+Failure mapping:
+
+- Runtime network disabled maps to `RuntimeNetworkDisabled`.
+- State/cache directory preflight failure maps to `StateDirectoryPermissionDenied`.
+- Log redaction preflight failure maps to `LogRedactionPreflightFailed`.
+- Bridge/censorship readiness failure maps to `CensorshipOrBridgeRequired`.
+
+This skeleton does not inspect real filesystem permissions, configure bridges, bootstrap Tor, open sockets, or launch an onion service. It only fixes the shape of the gate that a later network-capable adapter must satisfy.
