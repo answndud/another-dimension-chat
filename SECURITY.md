@@ -6,7 +6,7 @@ Another Dimension Chat is not ready for real communication.
 
 The current public repository contains an early `dev-insecure` Rust prototype. It is useful for testing development flow and protocol boundaries, but it does not provide production-grade confidentiality, anonymity, metadata resistance, or endpoint protection.
 
-Default-build production code now includes narrow decision boundaries for pairing, session setup, envelope handling, replay rejection, storage policy tests, a SQLCipher-backed storage spike, passphrase unlock tests, high-risk unlock policy tests, and first replay-window persistence tests. These are implementation guardrails, not a secure messenger release.
+Default-build production code now includes narrow decision boundaries for pairing, session setup, envelope handling, replay rejection, storage policy tests, a SQLCipher-backed storage spike, passphrase unlock tests, high-risk unlock policy tests, first replay-window persistence tests, and receive-flow replay commit-order tests. These are implementation guardrails, not a secure messenger release.
 
 Do not use this project to communicate sensitive information.
 
