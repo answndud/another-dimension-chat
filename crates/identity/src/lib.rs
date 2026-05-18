@@ -311,6 +311,12 @@ impl ProductionPairwisePrivateKey {
         Self::from_bytes(ProductionKeyAlgorithm::Ed25519DalekV2, seed)
     }
 
+    pub fn generate_ed25519_dalek() -> Result<Self, IdentityError> {
+        let mut seed = [0_u8; ED25519_KEY_SIZE];
+        getrandom::fill(&mut seed).map_err(|_| IdentityError::RandomnessUnavailable)?;
+        Self::from_ed25519_dalek_seed(seed)
+    }
+
     pub fn public_key(&self) -> Result<ProductionPairwisePublicKey, IdentityError> {
         match self.algorithm {
             ProductionKeyAlgorithm::Ed25519DalekV2 => {
@@ -474,6 +480,7 @@ pub enum IdentityError {
     InvalidProfileName,
     InvalidContactId,
     InvalidKeyMaterial,
+    RandomnessUnavailable,
 }
 
 fn validate_production_key_material(bytes: &[u8]) -> Result<(), IdentityError> {
@@ -727,6 +734,26 @@ mod tests {
         );
         assert_eq!(signature.as_bytes(), expected_signature);
         assert!(public_key.verify_pairing_signature(b"", &signature));
+    }
+
+    #[test]
+    fn generate_ed25519_dalek_private_key_uses_os_randomness_boundary() {
+        let first =
+            ProductionPairwisePrivateKey::generate_ed25519_dalek().expect("generated private key");
+        let second =
+            ProductionPairwisePrivateKey::generate_ed25519_dalek().expect("generated private key");
+
+        assert_eq!(first.algorithm(), ProductionKeyAlgorithm::Ed25519DalekV2);
+        assert_eq!(second.algorithm(), ProductionKeyAlgorithm::Ed25519DalekV2);
+        assert_ne!(first, second);
+
+        let first_public = first.public_key().expect("first public key");
+        let first_signature = first
+            .sign_pairing_payload(b"canonical pairing payload")
+            .expect("signature");
+        assert!(
+            first_public.verify_pairing_signature(b"canonical pairing payload", &first_signature)
+        );
     }
 
     #[test]
