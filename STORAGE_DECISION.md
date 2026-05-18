@@ -18,6 +18,9 @@ The repository currently has:
 - A narrow SQLCipher-backed `ADREC1` record store spike using `rusqlite` and a test-only storage key boundary.
 - Tests that round-trip `ADREC1` through SQLCipher and assert that the sealed body and `ADREC1` marker are not visible in database file bytes.
 - An opaque `EncryptedRecordId` boundary so row identifiers cannot be path-like profile/contact strings.
+- A passphrase unlock boundary through `ProfilePassphrase` and `LockedProfileStore`.
+- Tests that wrong passphrases fail before records are returned.
+- Tests that passphrases and database keys are redacted in debug output.
 
 The repository does not currently have:
 
@@ -28,7 +31,8 @@ The repository does not currently have:
 - Durable production replay state storage.
 - Durable Noise transport or ratchet state storage.
 - Backup, export, import, or migration behavior.
-- Production unlock/key-management. The current SQLCipher store spike uses test-only key construction.
+- Production OS keychain/DPAPI/Keystore wrapping.
+- Production account recovery or key rotation.
 - Record-level encryption implementation. `ADREC1` is a container format, not an encryption algorithm.
 
 ## Production Storage Classes
@@ -167,12 +171,15 @@ It supports:
 - Rejecting empty or path-like record ids before write.
 - Keeping `SessionTransportState` outside persistent storage through the existing storage policy.
 - Test-only key construction for local verification.
+- Passphrase-based unlock through `ProfilePassphrase`.
+- A locked profile handle that requires explicit unlock before records can be read.
+- Wrong-passphrase rejection before records are returned.
 
 It does not support:
 
-- Production profile unlock.
+- UI-level production profile unlock.
 - OS keychain/DPAPI/Keystore wrapping.
-- Password KDFs.
+- Project-owned password KDFs.
 - Key rotation.
 - Backup/export/import.
 - Migration from `dev-insecure` storage.
@@ -181,7 +188,7 @@ It does not support:
 
 ## Unlock and Key Wrapping Decision
 
-Initial v0.1 direction: keep production unlock/key wrapping unimplemented until the UI and local threat model are narrower. The current `StorageDatabaseKey` has only test-only construction, so normal production code cannot silently create a database key.
+Initial v0.1 direction: keep unlock explicit and passphrase-first. `StorageDatabaseKey` still has only test-only construction, while normal code must go through `ProfilePassphrase` and `LockedProfileStore`/`SqlCipherRecordStore::unlock_with_passphrase`.
 
 When production unlock is added, prefer this sequence:
 
@@ -208,9 +215,9 @@ Non-decisions:
 
 Required tests before production unlock:
 
-- Opening an existing DB with the wrong passphrase fails before any records are returned.
-- No passphrase, database key, or derived key appears in debug output, logs, panic text, or CLI output.
-- Locked profiles cannot read `ADREC1` records.
+- Opening an existing DB with the wrong passphrase fails before any records are returned. Initial storage test is in place.
+- No passphrase, database key, or derived key appears in debug output, logs, panic text, or CLI output. Initial debug redaction test is in place.
+- Locked profiles cannot read `ADREC1` records. Initial locked-handle API is in place.
 - High-risk mode does not auto-unlock through OS keychain alone.
 - Rekey/rotation tests exist before any key rotation UI is exposed.
 
@@ -249,7 +256,7 @@ Only records classified as `EncryptedAtRestRequired` may be encoded as `ADREC1`.
 2. Add a public-safe backend selection decision before adding new dependencies. Initial direction: Rust-core SQLCipher-compatible SQLite, likely through `rusqlite`, after the encrypted record envelope is defined.
 3. Add an encrypted record envelope format independent of any specific backend. Initial `ADREC1` container is in place.
 4. Add a minimal encrypted storage implementation for non-session records only. Initial SQLCipher-backed `ADREC1` store spike is in place.
-5. Wire production key material only after unlock and key wrapping behavior is tested.
+5. Wire production key material only after unlock and key wrapping behavior is tested. Initial passphrase unlock boundary and negative tests are in place.
 6. Persist replay state only after metadata leakage and rollback behavior are tested.
 7. Keep session transport state in memory until a separate session lifecycle decision changes that rule.
 

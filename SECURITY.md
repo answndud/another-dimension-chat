@@ -6,7 +6,7 @@ Another Dimension Chat is not ready for real communication.
 
 The current public repository contains an early `dev-insecure` Rust prototype. It is useful for testing development flow and protocol boundaries, but it does not provide production-grade confidentiality, anonymity, metadata resistance, or endpoint protection.
 
-Default-build production code now includes narrow decision boundaries for pairing, session setup, envelope handling, replay rejection, storage policy tests, and a SQLCipher-backed storage spike. These are implementation guardrails, not a secure messenger release.
+Default-build production code now includes narrow decision boundaries for pairing, session setup, envelope handling, replay rejection, storage policy tests, a SQLCipher-backed storage spike, and passphrase unlock tests. These are implementation guardrails, not a secure messenger release.
 
 Do not use this project to communicate sensitive information.
 
@@ -23,6 +23,7 @@ This project does not currently claim:
 - Real end-to-end encryption.
 - Real Tor/onion transport.
 - Production unlock/key management.
+- OS keychain/DPAPI/Keystore wrapping.
 - Production encrypted local storage lifecycle.
 - Durable production key storage.
 - Durable production session or replay persistence.

@@ -5,6 +5,7 @@ use another_dimension_identity::{ContactId, ProfileName};
 use another_dimension_pairing::{PairingPayload, PendingContact};
 #[cfg(feature = "dev-insecure")]
 use another_dimension_protocol::{Envelope, ReplayWindow};
+use std::fmt;
 #[cfg(feature = "dev-insecure")]
 use std::fs;
 use std::io;
@@ -97,6 +98,7 @@ pub mod production {
         },
         InvalidEncryptedRecord,
         InvalidRecordId,
+        InvalidPassphrase,
     }
 
     #[derive(Debug, Eq, PartialEq)]
@@ -104,6 +106,7 @@ pub mod production {
         Policy(ProductionStoragePolicyError),
         Database(String),
         InvalidRecord,
+        UnlockFailed,
     }
 
     impl From<ProductionStoragePolicyError> for ProductionStorageError {
@@ -118,8 +121,14 @@ pub mod production {
         }
     }
 
-    #[derive(Debug, Eq, PartialEq)]
+    #[derive(Eq, PartialEq)]
     pub struct StorageDatabaseKey(String);
+
+    impl fmt::Debug for StorageDatabaseKey {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("StorageDatabaseKey(<redacted>)")
+        }
+    }
 
     impl StorageDatabaseKey {
         #[cfg(test)]
@@ -129,6 +138,29 @@ pub mod production {
 
         fn expose_for_sqlcipher(&self) -> &str {
             &self.0
+        }
+    }
+
+    #[derive(Eq, PartialEq)]
+    pub struct ProfilePassphrase(String);
+
+    impl fmt::Debug for ProfilePassphrase {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("ProfilePassphrase(<redacted>)")
+        }
+    }
+
+    impl ProfilePassphrase {
+        pub fn new(value: impl Into<String>) -> Result<Self, ProductionStoragePolicyError> {
+            let value = value.into();
+            if value.is_empty() {
+                return Err(ProductionStoragePolicyError::InvalidPassphrase);
+            }
+            Ok(Self(value))
+        }
+
+        fn as_database_key(&self) -> StorageDatabaseKey {
+            StorageDatabaseKey(self.0.clone())
         }
     }
 
@@ -274,13 +306,39 @@ pub mod production {
         connection: Connection,
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct LockedProfileStore {
+        path: std::path::PathBuf,
+    }
+
+    impl LockedProfileStore {
+        pub fn new(path: impl Into<std::path::PathBuf>) -> Self {
+            Self { path: path.into() }
+        }
+
+        pub fn unlock(
+            &self,
+            passphrase: &ProfilePassphrase,
+        ) -> Result<SqlCipherRecordStore, ProductionStorageError> {
+            SqlCipherRecordStore::unlock_with_passphrase(&self.path, passphrase)
+        }
+    }
+
     impl SqlCipherRecordStore {
+        pub fn unlock_with_passphrase(
+            path: impl AsRef<Path>,
+            passphrase: &ProfilePassphrase,
+        ) -> Result<Self, ProductionStorageError> {
+            Self::open(path, &passphrase.as_database_key())
+        }
+
         pub fn open(
             path: impl AsRef<Path>,
             key: &StorageDatabaseKey,
         ) -> Result<Self, ProductionStorageError> {
             let connection = Connection::open(path)?;
             connection.pragma_update(None, "key", key.expose_for_sqlcipher())?;
+            verify_sqlcipher_key(&connection)?;
             connection.execute_batch(
                 "CREATE TABLE IF NOT EXISTS encrypted_records (
                     record_id TEXT PRIMARY KEY NOT NULL,
@@ -323,6 +381,12 @@ pub mod production {
                 })
                 .transpose()
         }
+    }
+
+    fn verify_sqlcipher_key(connection: &Connection) -> Result<(), ProductionStorageError> {
+        connection
+            .query_row("SELECT count(*) FROM sqlite_master", [], |_row| Ok(()))
+            .map_err(|_| ProductionStorageError::UnlockFailed)
     }
 
     pub fn protection_for(kind: ProductionRecordKind) -> StorageProtection {
@@ -463,6 +527,21 @@ pub mod production {
         }
 
         #[test]
+        fn profile_passphrase_and_database_key_debug_are_redacted() {
+            let passphrase =
+                ProfilePassphrase::new("correct horse battery staple").expect("passphrase");
+            let database_key = passphrase.as_database_key();
+
+            assert_eq!(format!("{passphrase:?}"), "ProfilePassphrase(<redacted>)");
+            assert_eq!(
+                format!("{database_key:?}"),
+                "StorageDatabaseKey(<redacted>)"
+            );
+            assert!(!format!("{passphrase:?}").contains("correct horse"));
+            assert!(!format!("{database_key:?}").contains("correct horse"));
+        }
+
+        #[test]
         fn encrypted_record_rejects_plaintext_allowed_and_in_memory_only_kinds() {
             for kind in [
                 ProductionRecordKind::SchemaMarker,
@@ -498,9 +577,9 @@ pub mod production {
         #[test]
         fn sqlcipher_store_round_trips_adrec1_without_plaintext_file_body() {
             let (_dir, path) = unique_test_database_path("round-trip");
-            let store =
-                SqlCipherRecordStore::open(&path, &StorageDatabaseKey::test_only("test-key"))
-                    .expect("open store");
+            let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
             let record = EncryptedRecord::new(
                 ProductionRecordKind::MessageEnvelope,
                 EncryptedRecordScope::contact(
@@ -518,6 +597,56 @@ pub mod production {
             let database_bytes = std::fs::read(&path).expect("read database");
             assert!(!contains_bytes(&database_bytes, b"sealed-body-for-test"));
             assert!(!contains_bytes(&database_bytes, b"ADREC1"));
+        }
+
+        #[test]
+        fn sqlcipher_store_rejects_wrong_passphrase_before_returning_records() {
+            let (_dir, path) = unique_test_database_path("wrong-passphrase");
+            let record_id = EncryptedRecordId::new("record_0001").expect("record id");
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::MessageEnvelope,
+                EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile")),
+                b"nonce-for-test".to_vec(),
+                b"sealed-body-for-test".to_vec(),
+            )
+            .expect("record");
+
+            {
+                let correct = ProfilePassphrase::new("correct-passphrase").expect("passphrase");
+                let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &correct)
+                    .expect("open store");
+                store.put(&record_id, &record).expect("put");
+            }
+
+            let wrong = ProfilePassphrase::new("wrong-passphrase").expect("passphrase");
+            assert_eq!(
+                SqlCipherRecordStore::unlock_with_passphrase(&path, &wrong)
+                    .map(|store| store.get(&record_id)),
+                Err(ProductionStorageError::UnlockFailed)
+            );
+        }
+
+        #[test]
+        fn locked_profile_store_requires_explicit_unlock_before_reads() {
+            let (_dir, path) = unique_test_database_path("locked-profile");
+            let passphrase = ProfilePassphrase::new("correct-passphrase").expect("passphrase");
+            let locked = LockedProfileStore::new(path);
+            let record_id = EncryptedRecordId::new("record_0001").expect("record id");
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::MessageEnvelope,
+                EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile")),
+                b"nonce-for-test".to_vec(),
+                b"sealed-body-for-test".to_vec(),
+            )
+            .expect("record");
+
+            {
+                let unlocked = locked.unlock(&passphrase).expect("unlock");
+                unlocked.put(&record_id, &record).expect("put");
+            }
+
+            let unlocked = locked.unlock(&passphrase).expect("unlock again");
+            assert_eq!(unlocked.get(&record_id).expect("get"), Some(record));
         }
 
         #[test]
