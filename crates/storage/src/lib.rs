@@ -1,6 +1,6 @@
-use another_dimension_identity::ProfileName;
 #[cfg(feature = "dev-insecure")]
-use another_dimension_identity::{ContactId, PairwisePrivateKey};
+use another_dimension_identity::PairwisePrivateKey;
+use another_dimension_identity::{ContactId, ProfileName};
 #[cfg(feature = "dev-insecure")]
 use another_dimension_pairing::{PairingPayload, PendingContact};
 #[cfg(feature = "dev-insecure")]
@@ -29,6 +29,9 @@ impl From<io::Error> for StorageError {
 }
 
 pub mod production {
+    use super::*;
+    use another_dimension_protocol::{decode_hex, encode_hex};
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum ProductionRecordKind {
         SchemaMarker,
@@ -39,6 +42,35 @@ pub mod production {
         MessageEnvelope,
         LocalMessageIndex,
         SessionTransportState,
+    }
+
+    impl ProductionRecordKind {
+        fn as_str(&self) -> &'static str {
+            match self {
+                Self::SchemaMarker => "schema-marker",
+                Self::PairingPayload => "pairing-payload",
+                Self::PairwiseIdentityPrivateKey => "pairwise-identity-private-key",
+                Self::NoiseStaticPrivateKey => "noise-static-private-key",
+                Self::ReplayWindowState => "replay-window-state",
+                Self::MessageEnvelope => "message-envelope",
+                Self::LocalMessageIndex => "local-message-index",
+                Self::SessionTransportState => "session-transport-state",
+            }
+        }
+
+        fn parse(value: &str) -> Result<Self, ProductionStoragePolicyError> {
+            match value {
+                "schema-marker" => Ok(Self::SchemaMarker),
+                "pairing-payload" => Ok(Self::PairingPayload),
+                "pairwise-identity-private-key" => Ok(Self::PairwiseIdentityPrivateKey),
+                "noise-static-private-key" => Ok(Self::NoiseStaticPrivateKey),
+                "replay-window-state" => Ok(Self::ReplayWindowState),
+                "message-envelope" => Ok(Self::MessageEnvelope),
+                "local-message-index" => Ok(Self::LocalMessageIndex),
+                "session-transport-state" => Ok(Self::SessionTransportState),
+                _ => Err(ProductionStoragePolicyError::InvalidEncryptedRecord),
+            }
+        }
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -54,9 +86,130 @@ pub mod production {
             kind: ProductionRecordKind,
             required: StorageProtection,
         },
+        EncryptedRecordForbidden {
+            kind: ProductionRecordKind,
+            protection: StorageProtection,
+        },
         PersistenceForbidden {
             kind: ProductionRecordKind,
         },
+        InvalidEncryptedRecord,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct EncryptedRecordScope {
+        profile: ProfileName,
+        contact: Option<ContactId>,
+    }
+
+    impl EncryptedRecordScope {
+        pub fn profile(profile: ProfileName) -> Self {
+            Self {
+                profile,
+                contact: None,
+            }
+        }
+
+        pub fn contact(profile: ProfileName, contact: ContactId) -> Self {
+            Self {
+                profile,
+                contact: Some(contact),
+            }
+        }
+
+        pub fn profile_name(&self) -> &ProfileName {
+            &self.profile
+        }
+
+        pub fn contact_id(&self) -> Option<&ContactId> {
+            self.contact.as_ref()
+        }
+
+        fn encode_scope(&self) -> String {
+            match &self.contact {
+                Some(contact) => format!("contact:{}", contact.as_str()),
+                None => "profile".to_string(),
+            }
+        }
+
+        fn decode_scope(profile: &str, scope: &str) -> Result<Self, ProductionStoragePolicyError> {
+            let profile = ProfileName::new(profile)
+                .map_err(|_| ProductionStoragePolicyError::InvalidEncryptedRecord)?;
+            if scope == "profile" {
+                return Ok(Self::profile(profile));
+            }
+            let contact = scope
+                .strip_prefix("contact:")
+                .ok_or(ProductionStoragePolicyError::InvalidEncryptedRecord)
+                .and_then(|contact| {
+                    ContactId::new(contact)
+                        .map_err(|_| ProductionStoragePolicyError::InvalidEncryptedRecord)
+                })?;
+            Ok(Self::contact(profile, contact))
+        }
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct EncryptedRecord {
+        pub kind: ProductionRecordKind,
+        pub scope: EncryptedRecordScope,
+        pub nonce: Vec<u8>,
+        pub sealed_body: Vec<u8>,
+    }
+
+    impl EncryptedRecord {
+        pub fn new(
+            kind: ProductionRecordKind,
+            scope: EncryptedRecordScope,
+            nonce: Vec<u8>,
+            sealed_body: Vec<u8>,
+        ) -> Result<Self, ProductionStoragePolicyError> {
+            require_encrypted_record_allowed(kind)?;
+            if nonce.is_empty() || sealed_body.is_empty() {
+                return Err(ProductionStoragePolicyError::InvalidEncryptedRecord);
+            }
+            Ok(Self {
+                kind,
+                scope,
+                nonce,
+                sealed_body,
+            })
+        }
+
+        pub fn associated_data(&self) -> Vec<u8> {
+            format!(
+                "AD-ENCRYPTED-RECORD-V1|{}|{}|{}",
+                self.kind.as_str(),
+                self.scope.profile_name().as_str(),
+                self.scope.encode_scope()
+            )
+            .into_bytes()
+        }
+
+        pub fn encode(&self) -> String {
+            format!(
+                "ADREC1|{}|{}|{}|{}|{}",
+                self.kind.as_str(),
+                self.scope.profile_name().as_str(),
+                self.scope.encode_scope(),
+                encode_hex(&self.nonce),
+                encode_hex(&self.sealed_body)
+            )
+        }
+
+        pub fn decode(value: &str) -> Result<Self, ProductionStoragePolicyError> {
+            let parts = value.trim().split('|').collect::<Vec<_>>();
+            if parts.len() != 6 || parts[0] != "ADREC1" {
+                return Err(ProductionStoragePolicyError::InvalidEncryptedRecord);
+            }
+            let kind = ProductionRecordKind::parse(parts[1])?;
+            let scope = EncryptedRecordScope::decode_scope(parts[2], parts[3])?;
+            let nonce = decode_hex(parts[4])
+                .map_err(|_| ProductionStoragePolicyError::InvalidEncryptedRecord)?;
+            let sealed_body = decode_hex(parts[5])
+                .map_err(|_| ProductionStoragePolicyError::InvalidEncryptedRecord)?;
+            Self::new(kind, scope, nonce, sealed_body)
+        }
     }
 
     pub fn protection_for(kind: ProductionRecordKind) -> StorageProtection {
@@ -69,6 +222,17 @@ pub mod production {
             | ProductionRecordKind::MessageEnvelope
             | ProductionRecordKind::LocalMessageIndex => StorageProtection::EncryptedAtRestRequired,
             ProductionRecordKind::SessionTransportState => StorageProtection::InMemoryOnly,
+        }
+    }
+
+    pub fn require_encrypted_record_allowed(
+        kind: ProductionRecordKind,
+    ) -> Result<(), ProductionStoragePolicyError> {
+        match protection_for(kind) {
+            StorageProtection::EncryptedAtRestRequired => Ok(()),
+            protection => {
+                Err(ProductionStoragePolicyError::EncryptedRecordForbidden { kind, protection })
+            }
         }
     }
 
@@ -151,6 +315,60 @@ pub mod production {
                     kind: ProductionRecordKind::SessionTransportState
                 })
             );
+        }
+
+        #[test]
+        fn encrypted_record_round_trips_with_associated_data_scope() {
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::MessageEnvelope,
+                EncryptedRecordScope::contact(
+                    ProfileName::new("alice").expect("profile"),
+                    ContactId::new("bob").expect("contact"),
+                ),
+                vec![1, 2, 3],
+                vec![4, 5, 6],
+            )
+            .expect("encrypted record");
+
+            let decoded = EncryptedRecord::decode(&record.encode()).expect("decode");
+            assert_eq!(decoded, record);
+            assert_eq!(
+                decoded.associated_data(),
+                b"AD-ENCRYPTED-RECORD-V1|message-envelope|alice|contact:bob"
+            );
+        }
+
+        #[test]
+        fn encrypted_record_rejects_plaintext_allowed_and_in_memory_only_kinds() {
+            for kind in [
+                ProductionRecordKind::SchemaMarker,
+                ProductionRecordKind::SessionTransportState,
+            ] {
+                assert!(matches!(
+                    EncryptedRecord::new(
+                        kind,
+                        EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile")),
+                        vec![1],
+                        vec![2],
+                    ),
+                    Err(ProductionStoragePolicyError::EncryptedRecordForbidden { .. })
+                ));
+            }
+        }
+
+        #[test]
+        fn encrypted_record_decoder_rejects_malformed_records() {
+            for record in [
+                "",
+                "ADREC1|message-envelope|alice|profile|01",
+                "ADREC1|message-envelope|alice|profile|zz|02",
+                "ADREC1|schema-marker|alice|profile|01|02",
+                "ADREC1|session-transport-state|alice|profile|01|02",
+                "ADREC1|message-envelope|bad profile|profile|01|02",
+                "ADREC1|message-envelope|alice|contact:bad contact|01|02",
+            ] {
+                assert!(EncryptedRecord::decode(record).is_err());
+            }
         }
     }
 }

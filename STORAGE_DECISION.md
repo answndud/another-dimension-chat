@@ -13,6 +13,8 @@ The repository currently has:
 - Production record classification for schema markers, pairing payloads, private keys, replay state, message envelopes, local message indexes, and session transport state.
 - Tests that reject plaintext writes for production pairing payloads, private keys, replay state, message envelopes, local message indexes, and session transport state.
 - Tests that keep Noise/session transport state `InMemoryOnly`, even after an encrypted storage backend exists.
+- A backend-independent encrypted record envelope format, `ADREC1`, for storing nonce plus sealed record body produced by a separate encryption layer.
+- Tests that reject `ADREC1` records for plaintext-only schema markers and in-memory-only session transport state.
 
 The repository does not currently have:
 
@@ -24,6 +26,7 @@ The repository does not currently have:
 - Durable production replay state storage.
 - Durable Noise transport or ratchet state storage.
 - Backup, export, import, or migration behavior.
+- Record encryption implementation. `ADREC1` is a container format, not an encryption algorithm.
 
 ## Production Storage Classes
 
@@ -100,16 +103,45 @@ The first backend spike should:
 
 ### Required Follow-up Before Dependency Addition
 
-- Define encrypted record envelope versioning and associated data.
+- Define encrypted record envelope versioning and associated data. Initial `ADREC1` container is in place.
 - Decide whether schema metadata may remain plaintext or should be placed inside the encrypted DB as well.
 - Decide test-only key handling so it cannot be confused with production unlock.
 - Add a dependency review note before adding `rusqlite`/SQLCipher features.
+
+## Encrypted Record Envelope
+
+`ADREC1` is the first storage record envelope:
+
+```text
+ADREC1|<record-kind>|<profile>|<scope>|<nonce-hex>|<sealed-body-hex>
+```
+
+It provides:
+
+- Versioned record prefix.
+- Storage record kind.
+- Profile scope.
+- Optional contact scope.
+- Nonce bytes from the future encryption layer.
+- Sealed body bytes from the future encryption layer.
+- Associated data construction for future AEAD or SQLCipher-adjacent record protection tests.
+
+It does not provide:
+
+- Encryption.
+- Authentication.
+- Key derivation.
+- Key wrapping.
+- Secure deletion.
+- Database page encryption.
+
+Only records classified as `EncryptedAtRestRequired` may be encoded as `ADREC1`. `SchemaMarker` remains outside this encrypted record envelope, and `SessionTransportState` remains `InMemoryOnly`.
 
 ## Implementation Sequence
 
 1. Add production storage record classification and plaintext persistence rejection. Done in `crates/storage`.
 2. Add a public-safe backend selection decision before adding new dependencies. Initial direction: Rust-core SQLCipher-compatible SQLite, likely through `rusqlite`, after the encrypted record envelope is defined.
-3. Add an encrypted record envelope format independent of any specific backend.
+3. Add an encrypted record envelope format independent of any specific backend. Initial `ADREC1` container is in place.
 4. Add a minimal encrypted storage implementation for non-session records only.
 5. Wire production key material only after unlock and key wrapping behavior is tested.
 6. Persist replay state only after metadata leakage and rollback behavior are tested.
