@@ -28,6 +28,8 @@ pub fn derive_production_safety_material(transcript: &str) -> SafetyMaterial {
 pub enum CryptoError {
     Protocol(ProtocolError),
     InvalidUtf8,
+    InvalidHex,
+    InvalidNoisePrekeyBundle,
     Noise(String),
 }
 
@@ -82,12 +84,39 @@ fn encode_hex(bytes: &[u8]) -> String {
     out
 }
 
+fn decode_hex(value: &str) -> Result<Vec<u8>, CryptoError> {
+    if !value.len().is_multiple_of(2) {
+        return Err(CryptoError::InvalidHex);
+    }
+    value
+        .as_bytes()
+        .chunks(2)
+        .map(|chunk| {
+            let high = hex_value(chunk[0])?;
+            let low = hex_value(chunk[1])?;
+            Ok((high << 4) | low)
+        })
+        .collect()
+}
+
+fn hex_value(byte: u8) -> Result<u8, CryptoError> {
+    match byte {
+        b'0'..=b'9' => Ok(byte - b'0'),
+        b'a'..=b'f' => Ok(byte - b'a' + 10),
+        b'A'..=b'F' => Ok(byte - b'A' + 10),
+        _ => Err(CryptoError::InvalidHex),
+    }
+}
+
 pub mod production {
-    use super::CryptoError;
+    use super::{decode_hex, encode_hex, CryptoError};
     use snow::{params::NoiseParams, Builder};
     use std::fmt;
 
     pub const NOISE_XX_PATTERN: &str = "Noise_XX_25519_ChaChaPoly_BLAKE2s";
+    pub const NOISE_PREKEY_BUNDLE_PREFIX: &str = "adnoise1";
+    pub const NOISE_PREKEY_BUNDLE_ALGORITHM: &str = "xx25519-chachapoly-blake2s";
+    pub const NOISE_STATIC_PUBLIC_KEY_BYTES: usize = 32;
 
     #[derive(Clone, Eq, PartialEq)]
     pub struct NoiseStaticKeypair {
@@ -98,6 +127,10 @@ pub mod production {
     impl NoiseStaticKeypair {
         pub fn public_key(&self) -> &[u8] {
             &self.public
+        }
+
+        pub fn prekey_bundle(&self) -> Result<NoisePrekeyBundle, CryptoError> {
+            NoisePrekeyBundle::from_public_key(self.public_key())
         }
     }
 
@@ -116,6 +149,46 @@ pub mod production {
         pub responder_remote_static: Vec<u8>,
         pub ciphertext: Vec<u8>,
         pub plaintext: Vec<u8>,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct NoisePrekeyBundle {
+        public_key: Vec<u8>,
+    }
+
+    impl NoisePrekeyBundle {
+        pub fn from_public_key(public_key: &[u8]) -> Result<Self, CryptoError> {
+            if public_key.len() != NOISE_STATIC_PUBLIC_KEY_BYTES {
+                return Err(CryptoError::InvalidNoisePrekeyBundle);
+            }
+            Ok(Self {
+                public_key: public_key.to_vec(),
+            })
+        }
+
+        pub fn decode(value: &str) -> Result<Self, CryptoError> {
+            let parts = value.split(':').collect::<Vec<_>>();
+            if parts.len() != 3
+                || parts[0] != NOISE_PREKEY_BUNDLE_PREFIX
+                || parts[1] != NOISE_PREKEY_BUNDLE_ALGORITHM
+            {
+                return Err(CryptoError::InvalidNoisePrekeyBundle);
+            }
+            let public_key =
+                decode_hex(parts[2]).map_err(|_| CryptoError::InvalidNoisePrekeyBundle)?;
+            Self::from_public_key(&public_key)
+        }
+
+        pub fn encode(&self) -> String {
+            format!(
+                "{NOISE_PREKEY_BUNDLE_PREFIX}:{NOISE_PREKEY_BUNDLE_ALGORITHM}:{}",
+                encode_hex(&self.public_key)
+            )
+        }
+
+        pub fn public_key(&self) -> &[u8] {
+            &self.public_key
+        }
     }
 
     pub fn generate_noise_static_keypair() -> Result<NoiseStaticKeypair, CryptoError> {
@@ -242,6 +315,29 @@ pub mod production {
                 b"body",
             )
             .is_err());
+        }
+
+        #[test]
+        fn noise_prekey_bundle_round_trips_public_key() {
+            let keypair = generate_noise_static_keypair().expect("static key");
+            let bundle = keypair.prekey_bundle().expect("prekey bundle");
+            let encoded = bundle.encode();
+            let decoded = NoisePrekeyBundle::decode(&encoded).expect("bundle decodes");
+
+            assert!(encoded.starts_with("adnoise1:xx25519-chachapoly-blake2s:"));
+            assert_eq!(decoded.public_key(), keypair.public_key());
+        }
+
+        #[test]
+        fn noise_prekey_bundle_rejects_wrong_algorithm_and_size() {
+            assert_eq!(
+                NoisePrekeyBundle::decode("adnoise1:unknown:00"),
+                Err(CryptoError::InvalidNoisePrekeyBundle)
+            );
+            assert_eq!(
+                NoisePrekeyBundle::decode("adnoise1:xx25519-chachapoly-blake2s:00"),
+                Err(CryptoError::InvalidNoisePrekeyBundle)
+            );
         }
     }
 }
