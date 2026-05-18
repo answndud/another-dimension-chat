@@ -1,4 +1,7 @@
-use another_dimension_identity::{ContactId, PairwisePublicKey, PairwiseSignature, ProfileName};
+use another_dimension_identity::{
+    ContactId, PairwisePublicKey, PairwisePublicKeyScheme, PairwiseSignature,
+    PairwiseSignatureScheme, ProfileName,
+};
 #[cfg(feature = "dev-insecure")]
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -48,6 +51,7 @@ impl PairingPayload {
         let signature =
             PairwiseSignature::new(parts[2]).map_err(|_| PairingError::InvalidPayload)?;
         let payload = Self::decode_canonical(&canonical, signature)?;
+        reject_mixed_signature_scheme(&payload)?;
         if !payload
             .pairwise_public_key
             .verify_pairing_signature(&canonical, &payload.pairwise_signature)
@@ -151,6 +155,22 @@ pub fn transcript(local: &PairingPayload, remote: &PairingPayload) -> Result<Str
 
 fn payload_transcript_fragment(payload: &PairingPayload) -> Result<String, PairingError> {
     Ok(encode_hex(&payload.canonical_bytes()?))
+}
+
+fn reject_mixed_signature_scheme(payload: &PairingPayload) -> Result<(), PairingError> {
+    let public_key_scheme = payload.pairwise_public_key.scheme().ok();
+    let signature_scheme = payload.pairwise_signature.scheme().ok();
+    match (public_key_scheme, signature_scheme) {
+        (
+            Some(PairwisePublicKeyScheme::DevInsecureV1),
+            Some(PairwiseSignatureScheme::Ed25519DalekV2),
+        )
+        | (
+            Some(PairwisePublicKeyScheme::Ed25519DalekV2),
+            Some(PairwiseSignatureScheme::DevInsecureV1),
+        ) => Err(PairingError::InvalidPayload),
+        _ => Ok(()),
+    }
 }
 
 fn write_field(out: &mut Vec<u8>, value: &str) -> Result<(), PairingError> {
@@ -379,6 +399,68 @@ mod tests {
 
         assert_eq!(
             PairingPayload::decode(&tampered),
+            Err(PairingError::InvalidPayload)
+        );
+    }
+
+    #[test]
+    fn decode_rejects_dev_public_key_with_production_signature() {
+        let mut payload = PairingPayload {
+            owner_profile: ProfileName::new("alice").expect("valid profile"),
+            pairing_nonce: "nonce".to_string(),
+            pairwise_public_key: PairwisePublicKey::new("dev-pub-alice").expect("valid public key"),
+            pairwise_signature: test_signature(),
+            rendezvous_endpoint: "dev-rendezvous-alice.onion".to_string(),
+            endpoint_rotation_policy: "manual-v1".to_string(),
+            protocol_capabilities: "prototype".to_string(),
+            prekey_bundle: "PendingCryptoDesign".to_string(),
+            issued_at_local_ms: 1_000,
+            ttl_seconds: DEFAULT_TTL_SECONDS,
+        };
+        let production_key =
+            another_dimension_identity::ProductionPairwisePrivateKey::from_ed25519_dalek_seed(
+                [5_u8; 32],
+            )
+            .expect("valid seed");
+        payload.pairwise_signature = production_key
+            .sign_pairing_payload(&payload.canonical_bytes().expect("canonical bytes"))
+            .expect("production signature")
+            .to_pairwise_signature()
+            .expect("pairwise signature");
+
+        assert_eq!(
+            PairingPayload::decode(&payload.encode().expect("payload encodes")),
+            Err(PairingError::InvalidPayload)
+        );
+    }
+
+    #[test]
+    fn decode_rejects_production_public_key_with_dev_signature() {
+        let production_key =
+            another_dimension_identity::ProductionPairwisePrivateKey::from_ed25519_dalek_seed(
+                [6_u8; 32],
+            )
+            .expect("valid seed");
+        let production_public_key = production_key
+            .public_key()
+            .expect("production public key")
+            .to_pairwise_public_key()
+            .expect("pairwise public key");
+        let payload = sign_payload(PairingPayload {
+            owner_profile: ProfileName::new("alice").expect("valid profile"),
+            pairing_nonce: "nonce".to_string(),
+            pairwise_public_key: production_public_key,
+            pairwise_signature: test_signature(),
+            rendezvous_endpoint: "dev-rendezvous-alice.onion".to_string(),
+            endpoint_rotation_policy: "manual-v1".to_string(),
+            protocol_capabilities: "prototype".to_string(),
+            prekey_bundle: "PendingCryptoDesign".to_string(),
+            issued_at_local_ms: 1_000,
+            ttl_seconds: DEFAULT_TTL_SECONDS,
+        });
+
+        assert_eq!(
+            PairingPayload::decode(&payload.encode().expect("payload encodes")),
             Err(PairingError::InvalidPayload)
         );
     }

@@ -14,6 +14,7 @@ The repository currently has:
 - Production-facing key and signature byte wrappers backed by `ed25519-dalek` for signing and verification tests.
 - Scheme-tagged production pairing public key strings that are distinct from development public keys.
 - Scheme-tagged production pairing signature strings that are distinct from development signatures.
+- Pairing payload decode rejects explicit mixed dev/production public key and signature schemes.
 - Pairing payload canonicalization and signature boundary in `crates/pairing`.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.

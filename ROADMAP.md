@@ -74,6 +74,7 @@ Tasks:
 - Add `ed25519-dalek` production signature wrapper tests before wiring pairing decode to production verification.
 - Keep production pairing public key strings scheme-tagged before decoder wiring.
 - Keep production pairing signature strings scheme-tagged before decoder wiring.
+- Reject explicit mixed dev/production public key and signature schemes during pairing decode.
 - Select maintained Rust-compatible libraries for identity signatures and session encryption.
 - Decide how pairing payload signatures map to real pairwise identity keys.
 - Decide whether the first production session model uses a Signal-style ratchet, Noise-based construction, or another reviewed design.
