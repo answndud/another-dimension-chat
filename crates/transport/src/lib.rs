@@ -48,6 +48,44 @@ impl TransportRuntimeError {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TransportRuntimePreflight {
+    pub runtime_network_enabled: bool,
+    pub state_cache_dirs_accessible: bool,
+    pub log_redaction_ready: bool,
+    pub bridge_or_censorship_ready: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TransportRuntimeReady;
+
+impl TransportRuntimePreflight {
+    pub fn disabled_by_default() -> Self {
+        Self {
+            runtime_network_enabled: false,
+            state_cache_dirs_accessible: false,
+            log_redaction_ready: false,
+            bridge_or_censorship_ready: false,
+        }
+    }
+
+    pub fn check(self) -> Result<TransportRuntimeReady, TransportRuntimeError> {
+        if !self.runtime_network_enabled {
+            return Err(TransportRuntimeError::RuntimeNetworkDisabled);
+        }
+        if !self.state_cache_dirs_accessible {
+            return Err(TransportRuntimeError::StateDirectoryPermissionDenied);
+        }
+        if !self.log_redaction_ready {
+            return Err(TransportRuntimeError::LogRedactionPreflightFailed);
+        }
+        if !self.bridge_or_censorship_ready {
+            return Err(TransportRuntimeError::CensorshipOrBridgeRequired);
+        }
+        Ok(TransportRuntimeReady)
+    }
+}
+
 pub trait Transport {
     fn send_envelope(
         &self,
@@ -577,6 +615,62 @@ mod tests {
         assert!(TransportRuntimeError::OnionServiceLaunchFailed.is_onion_service_failure());
         assert!(!TransportRuntimeError::SendFailed.is_onion_service_failure());
         assert!(!TransportRuntimeError::ReceiveFailed.is_onion_service_failure());
+    }
+
+    #[test]
+    fn runtime_preflight_is_disabled_by_default() {
+        assert_eq!(
+            TransportRuntimePreflight::disabled_by_default().check(),
+            Err(TransportRuntimeError::RuntimeNetworkDisabled)
+        );
+    }
+
+    #[test]
+    fn runtime_preflight_maps_missing_checks_to_runtime_errors() {
+        assert_eq!(
+            TransportRuntimePreflight {
+                runtime_network_enabled: true,
+                state_cache_dirs_accessible: false,
+                log_redaction_ready: true,
+                bridge_or_censorship_ready: true,
+            }
+            .check(),
+            Err(TransportRuntimeError::StateDirectoryPermissionDenied)
+        );
+        assert_eq!(
+            TransportRuntimePreflight {
+                runtime_network_enabled: true,
+                state_cache_dirs_accessible: true,
+                log_redaction_ready: false,
+                bridge_or_censorship_ready: true,
+            }
+            .check(),
+            Err(TransportRuntimeError::LogRedactionPreflightFailed)
+        );
+        assert_eq!(
+            TransportRuntimePreflight {
+                runtime_network_enabled: true,
+                state_cache_dirs_accessible: true,
+                log_redaction_ready: true,
+                bridge_or_censorship_ready: false,
+            }
+            .check(),
+            Err(TransportRuntimeError::CensorshipOrBridgeRequired)
+        );
+    }
+
+    #[test]
+    fn runtime_preflight_success_requires_all_bootstrap_guards() {
+        assert_eq!(
+            TransportRuntimePreflight {
+                runtime_network_enabled: true,
+                state_cache_dirs_accessible: true,
+                log_redaction_ready: true,
+                bridge_or_censorship_ready: true,
+            }
+            .check(),
+            Ok(TransportRuntimeReady)
+        );
     }
 
     #[test]

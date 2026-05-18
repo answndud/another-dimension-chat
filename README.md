@@ -30,6 +30,7 @@ What exists today:
 - App-private Arti config builder spike that validates state/cache dirs without bootstrapping Tor.
 - Arti bootstrap preflight boundary that keeps runtime network and onion key generation disabled.
 - Transport runtime error taxonomy for future bootstrap, bridge, preflight, send/receive, and onion launch failures.
+- Transport runtime preflight skeleton with runtime network disabled by default.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.
 - High-risk unlock policy tests that reject OS-keystore-only unlock.
