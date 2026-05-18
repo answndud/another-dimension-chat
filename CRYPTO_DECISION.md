@@ -17,6 +17,7 @@ The repository currently has:
 - Pairing payload decode rejects explicit mixed dev/production public key and signature schemes.
 - Pairing payload decode verifies production public key plus production signature pairs through the Ed25519 production path.
 - Production pairing payload construction can sign caller-supplied pairing parameters with an Ed25519 production private key.
+- Production pairing nonce construction uses a narrow OS-randomness wrapper backed by `getrandom`.
 - Pairing payload canonicalization and signature boundary in `crates/pairing`.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
@@ -28,7 +29,7 @@ The repository does not currently have:
 - Real signature keys.
 - Real key agreement.
 - Production key storage.
-- Production randomness policy.
+- Broader production randomness policy for key generation and session establishment.
 - Production encrypted local storage.
 
 ## Non-Negotiable Rules
@@ -53,6 +54,7 @@ Before replacing placeholder crypto, decide and document:
 - How production key material is serialized without leaking into logs, CLI output, or public test fixtures.
 
 The first identity signature dependency decision is tracked in [SIGNATURE_DECISION.md](SIGNATURE_DECISION.md).
+The first pairing nonce randomness dependency decision is tracked in [RANDOMNESS_DECISION.md](RANDOMNESS_DECISION.md).
 
 ## Candidate Direction
 

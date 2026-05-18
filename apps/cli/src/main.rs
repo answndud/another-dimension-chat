@@ -140,6 +140,9 @@ fn format_error(error: another_dimension_core::dev_insecure::CoreError) -> Strin
         CoreError::Pairing(another_dimension_pairing::PairingError::PayloadTooLarge) => {
             "pairing payload exceeds QR budget".to_string()
         }
+        CoreError::Pairing(another_dimension_pairing::PairingError::RandomnessUnavailable) => {
+            "secure randomness unavailable".to_string()
+        }
         CoreError::Storage(_) => "storage operation failed".to_string(),
         CoreError::Transport(_) => "transport operation failed".to_string(),
         CoreError::Crypto(_) => "crypto operation failed".to_string(),

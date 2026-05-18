@@ -8,6 +8,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const DEFAULT_TTL_SECONDS: u64 = 600;
 pub const MAX_PAIRING_PAYLOAD_SIZE: usize = 1200;
+pub const PRODUCTION_PAIRING_NONCE_BYTES: usize = 16;
+const PRODUCTION_PAIRING_NONCE_PREFIX: &str = "pn-v1-";
 const CANONICAL_MAGIC: &[u8] = b"ADPAIR2-CANONICAL\0";
 const SAFETY_TRANSCRIPT_PREFIX: &str = "ADPAIR-SAFETY-V1";
 
@@ -163,6 +165,15 @@ pub fn production_pairing_payload_for(
         .to_pairwise_signature()
         .map_err(|_| PairingError::InvalidPayload)?;
     Ok(payload)
+}
+
+pub fn production_pairing_nonce() -> Result<String, PairingError> {
+    let mut bytes = [0_u8; PRODUCTION_PAIRING_NONCE_BYTES];
+    getrandom::fill(&mut bytes).map_err(|_| PairingError::RandomnessUnavailable)?;
+    Ok(format!(
+        "{PRODUCTION_PAIRING_NONCE_PREFIX}{}",
+        encode_hex(&bytes)
+    ))
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -365,6 +376,7 @@ pub enum PairingError {
     InvalidPayload,
     PayloadTooLarge,
     ExpiredPayload,
+    RandomnessUnavailable,
 }
 
 #[cfg(test)]
@@ -557,6 +569,22 @@ mod tests {
             PairingPayload::decode(&payload.encode().expect("payload encodes")),
             Ok(payload)
         );
+    }
+
+    #[test]
+    fn production_pairing_nonce_uses_random_file_safe_encoding() {
+        let first = production_pairing_nonce().expect("nonce");
+        let second = production_pairing_nonce().expect("nonce");
+
+        assert!(first.starts_with(PRODUCTION_PAIRING_NONCE_PREFIX));
+        assert_eq!(
+            first.len(),
+            PRODUCTION_PAIRING_NONCE_PREFIX.len() + PRODUCTION_PAIRING_NONCE_BYTES * 2
+        );
+        assert!(first[PRODUCTION_PAIRING_NONCE_PREFIX.len()..]
+            .chars()
+            .all(|ch| ch.is_ascii_hexdigit() && !ch.is_ascii_uppercase()));
+        assert_ne!(first, second);
     }
 
     #[test]

@@ -6,6 +6,7 @@ publish.workspace = true
 
 [dependencies]
 another-dimension-identity = { path = "../identity" }
+getrandom = "0.4.2"
 
 [features]
 dev-insecure = ["another-dimension-identity/dev-insecure"]

@@ -20,6 +20,7 @@ What exists today:
 - In-person style pairing payload flow.
 - Safety number and safety phrase prototype.
 - Pairing confirm, cancel, and expiry lifecycle.
+- Production-facing Ed25519 pairing signature and nonce construction boundaries.
 - Padded message envelope prototype.
 - Replay window prototype.
 - CLI hardening tests for malformed input, duplicate pairing scans, replay handling, message expiry, and prototype boundary behavior.
@@ -147,6 +148,8 @@ See [ROADMAP.md](ROADMAP.md) for the public development roadmap.
 Phase 2 crypto planning is tracked in [CRYPTO_DECISION.md](CRYPTO_DECISION.md). That document is not a security claim; it is the decision boundary that must be resolved before placeholder crypto is replaced.
 
 The first identity signature dependency decision is tracked in [SIGNATURE_DECISION.md](SIGNATURE_DECISION.md).
+
+The first production pairing nonce randomness boundary is tracked in [RANDOMNESS_DECISION.md](RANDOMNESS_DECISION.md).
 
 ## License
 
