@@ -1,6 +1,7 @@
 use another_dimension_identity::{
     ContactId, PairwisePublicKey, PairwisePublicKeyScheme, PairwiseSignature,
-    PairwiseSignatureScheme, ProductionPairwisePublicKey, ProductionPairwiseSignature, ProfileName,
+    PairwiseSignatureScheme, ProductionPairwisePrivateKey, ProductionPairwisePublicKey,
+    ProductionPairwiseSignature, ProfileName,
 };
 #[cfg(feature = "dev-insecure")]
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -16,6 +17,17 @@ pub struct PairingPayload {
     pub pairing_nonce: String,
     pub pairwise_public_key: PairwisePublicKey,
     pub pairwise_signature: PairwiseSignature,
+    pub rendezvous_endpoint: String,
+    pub endpoint_rotation_policy: String,
+    pub protocol_capabilities: String,
+    pub prekey_bundle: String,
+    pub issued_at_local_ms: u128,
+    pub ttl_seconds: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProductionPairingPayloadParams {
+    pub pairing_nonce: String,
     pub rendezvous_endpoint: String,
     pub endpoint_rotation_policy: String,
     pub protocol_capabilities: String,
@@ -120,6 +132,37 @@ impl PairingPayload {
         let ttl_ms = u128::from(self.ttl_seconds) * 1000;
         observed_at_local_ms.saturating_sub(self.issued_at_local_ms) > ttl_ms
     }
+}
+
+pub fn production_pairing_payload_for(
+    profile: &ProfileName,
+    private_key: &ProductionPairwisePrivateKey,
+    params: ProductionPairingPayloadParams,
+) -> Result<PairingPayload, PairingError> {
+    let pairwise_public_key = private_key
+        .public_key()
+        .map_err(|_| PairingError::InvalidPayload)?
+        .to_pairwise_public_key()
+        .map_err(|_| PairingError::InvalidPayload)?;
+    let mut payload = PairingPayload {
+        owner_profile: profile.clone(),
+        pairing_nonce: params.pairing_nonce,
+        pairwise_public_key,
+        pairwise_signature: PairwiseSignature::new("unsigned")
+            .map_err(|_| PairingError::InvalidPayload)?,
+        rendezvous_endpoint: params.rendezvous_endpoint,
+        endpoint_rotation_policy: params.endpoint_rotation_policy,
+        protocol_capabilities: params.protocol_capabilities,
+        prekey_bundle: params.prekey_bundle,
+        issued_at_local_ms: params.issued_at_local_ms,
+        ttl_seconds: params.ttl_seconds,
+    };
+    payload.pairwise_signature = private_key
+        .sign_pairing_payload(&payload.canonical_bytes()?)
+        .map_err(|_| PairingError::InvalidPayload)?
+        .to_pairwise_signature()
+        .map_err(|_| PairingError::InvalidPayload)?;
+    Ok(payload)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -489,6 +532,53 @@ mod tests {
     }
 
     #[test]
+    fn production_pairing_payload_for_signs_decodeable_payload() {
+        let private_key =
+            another_dimension_identity::ProductionPairwisePrivateKey::from_ed25519_dalek_seed(
+                [11_u8; 32],
+            )
+            .expect("valid production seed");
+        let payload = production_pairing_payload_for(
+            &ProfileName::new("alice").expect("valid profile"),
+            &private_key,
+            production_pairing_params(),
+        )
+        .expect("production payload");
+
+        assert!(payload
+            .pairwise_public_key
+            .as_str()
+            .starts_with("ed25519-dalek-v2:"));
+        assert!(payload
+            .pairwise_signature
+            .as_str()
+            .starts_with("ed25519-dalek-v2:"));
+        assert_eq!(
+            PairingPayload::decode(&payload.encode().expect("payload encodes")),
+            Ok(payload)
+        );
+    }
+
+    #[test]
+    fn production_pairing_payload_for_rejects_unusable_production_key() {
+        let pending_review_key =
+            another_dimension_identity::ProductionPairwisePrivateKey::from_bytes(
+                another_dimension_identity::ProductionKeyAlgorithm::PendingReview,
+                [1_u8; 32],
+            )
+            .expect("valid opaque key bytes");
+
+        assert_eq!(
+            production_pairing_payload_for(
+                &ProfileName::new("alice").expect("valid profile"),
+                &pending_review_key,
+                production_pairing_params()
+            ),
+            Err(PairingError::InvalidPayload)
+        );
+    }
+
+    #[test]
     fn decode_rejects_tampered_production_signed_payload() {
         let payload = production_signed_payload([8_u8; 32]);
         let encoded = payload.encode().expect("payload encodes");
@@ -774,28 +864,24 @@ mod tests {
         let private_key =
             another_dimension_identity::ProductionPairwisePrivateKey::from_ed25519_dalek_seed(seed)
                 .expect("valid production seed");
-        let mut payload = PairingPayload {
-            owner_profile: ProfileName::new("alice").expect("valid profile"),
+        production_pairing_payload_for(
+            &ProfileName::new("alice").expect("valid profile"),
+            &private_key,
+            production_pairing_params(),
+        )
+        .expect("production signed payload")
+    }
+
+    fn production_pairing_params() -> ProductionPairingPayloadParams {
+        ProductionPairingPayloadParams {
             pairing_nonce: "nonce".to_string(),
-            pairwise_public_key: private_key
-                .public_key()
-                .expect("production public key")
-                .to_pairwise_public_key()
-                .expect("pairwise public key"),
-            pairwise_signature: test_signature(),
             rendezvous_endpoint: "alice.onion".to_string(),
             endpoint_rotation_policy: "manual-v1".to_string(),
             protocol_capabilities: "prototype".to_string(),
             prekey_bundle: "PendingCryptoDesign".to_string(),
             issued_at_local_ms: 1_000,
             ttl_seconds: DEFAULT_TTL_SECONDS,
-        };
-        payload.pairwise_signature = private_key
-            .sign_pairing_payload(&payload.canonical_bytes().expect("canonical bytes"))
-            .expect("production signature")
-            .to_pairwise_signature()
-            .expect("pairwise signature");
-        payload
+        }
     }
 
     fn test_signature() -> PairwiseSignature {

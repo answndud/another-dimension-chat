@@ -16,6 +16,7 @@ The repository currently has:
 - Scheme-tagged production pairing signature strings that are distinct from development signatures.
 - Pairing payload decode rejects explicit mixed dev/production public key and signature schemes.
 - Pairing payload decode verifies production public key plus production signature pairs through the Ed25519 production path.
+- Production pairing payload construction can sign caller-supplied pairing parameters with an Ed25519 production private key.
 - Pairing payload canonicalization and signature boundary in `crates/pairing`.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
@@ -102,7 +103,7 @@ Minimum test coverage:
 
 1. Add production key type wrappers without changing CLI behavior. Done for the initial byte wrapper boundary.
 2. Add test vectors for canonical transcript and signature verification. Initial integration fixtures are in place.
-3. Add maintained signature dependency and replace dev pairing signatures behind a production feature or default path. `ed25519-dalek` stable 2.x is added to `crates/identity`; pairing decoder wiring for production public key plus production signature pairs is in place.
+3. Add maintained signature dependency and replace dev pairing signatures behind a production feature or default path. `ed25519-dalek` stable 2.x is added to `crates/identity`; pairing decoder wiring and caller-supplied production pairing payload construction are in place.
 4. Add session establishment tests before selecting message encryption implementation.
 5. Replace fake message encryption only after pairing identity verification is production-backed.
 6. Keep development fake crypto behind `dev-insecure` for test ergonomics.
