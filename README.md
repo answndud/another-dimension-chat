@@ -31,6 +31,7 @@ What exists today:
 - Arti bootstrap preflight boundary that keeps runtime network and onion key generation disabled.
 - Transport runtime error taxonomy for future bootstrap, bridge, preflight, send/receive, and onion launch failures.
 - Transport runtime preflight skeleton with runtime network disabled by default.
+- Transport runtime state skeleton that can become ready only after preflight succeeds.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.
 - High-risk unlock policy tests that reject OS-keystore-only unlock.

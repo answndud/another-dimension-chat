@@ -86,6 +86,28 @@ impl TransportRuntimePreflight {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportRuntimeState {
+    Disabled,
+    Ready(TransportRuntimeReady),
+}
+
+impl TransportRuntimeState {
+    pub fn disabled() -> Self {
+        Self::Disabled
+    }
+
+    pub fn from_preflight(
+        preflight: TransportRuntimePreflight,
+    ) -> Result<Self, TransportRuntimeError> {
+        preflight.check().map(Self::Ready)
+    }
+
+    pub fn is_ready(self) -> bool {
+        matches!(self, Self::Ready(_))
+    }
+}
+
 pub trait Transport {
     fn send_envelope(
         &self,
@@ -671,6 +693,33 @@ mod tests {
             .check(),
             Ok(TransportRuntimeReady)
         );
+    }
+
+    #[test]
+    fn runtime_state_is_disabled_by_default_and_not_ready() {
+        let state = TransportRuntimeState::disabled();
+
+        assert_eq!(state, TransportRuntimeState::Disabled);
+        assert!(!state.is_ready());
+    }
+
+    #[test]
+    fn runtime_state_ready_requires_successful_preflight() {
+        assert_eq!(
+            TransportRuntimeState::from_preflight(TransportRuntimePreflight::disabled_by_default()),
+            Err(TransportRuntimeError::RuntimeNetworkDisabled)
+        );
+
+        let ready = TransportRuntimeState::from_preflight(TransportRuntimePreflight {
+            runtime_network_enabled: true,
+            state_cache_dirs_accessible: true,
+            log_redaction_ready: true,
+            bridge_or_censorship_ready: true,
+        })
+        .expect("runtime ready");
+
+        assert_eq!(ready, TransportRuntimeState::Ready(TransportRuntimeReady));
+        assert!(ready.is_ready());
     }
 
     #[test]
