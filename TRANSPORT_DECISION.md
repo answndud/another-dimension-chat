@@ -18,6 +18,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `OnionEnvelopeTransport::fail_closed_high_risk()` enforces high-risk onion-only routing and fails with `TransportError::Unavailable` until a real Tor/onion adapter exists.
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
 - `arti_lifecycle_decision()` requires app-private state/cache directories, backup exclusion, log redaction, and no onion service key generation until a storage decision exists.
+- `ArtiAppPrivateDirs` and `ArtiAdapterSpike::fail_closed_app_private_config` compile-check app-private `TorClientConfigBuilder::from_directories` wiring without bootstrapping Tor.
 - Dev file transport remains behind the `dev-insecure` feature.
 
 ## What Does Not Exist Yet
@@ -135,3 +136,15 @@ Logging and crash policy:
 - Full Arti debug logs are not acceptable in high-risk mode by default.
 
 The current code-level invariant is `arti_lifecycle_decision()`: app-private state/cache required, shared default Arti directories rejected, backup exclusion required, log redaction required, and onion service key generation disabled until a separate storage decision exists.
+
+## App-Private Arti Config Builder Skeleton
+
+Decision as of 2026-05-18: the optional Arti spike may build an unbootstrapped `TorClientConfig` only from explicit app-private state/cache directories. It must not fall back to shared Arti defaults.
+
+Current code boundary:
+
+- `ArtiAppPrivateDirs::new(state_dir, cache_dir)` rejects empty, relative, shared-default-looking, or identical state/cache directories.
+- `ArtiAdapterSpike::fail_closed_app_private_config(dirs)` calls `TorClientConfigBuilder::from_directories(...).build()` and still returns a fail-closed `OnionEnvelopeTransport`.
+- The spike does not bootstrap Tor, open sockets, launch an onion service, discover system Tor, or generate onion service keys.
+
+This is intentionally a builder skeleton. Runtime bootstrap, bridge/censorship behavior, onion service hosting, and key persistence require separate decisions and tests before any network-capable adapter is allowed.
