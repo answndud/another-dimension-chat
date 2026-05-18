@@ -292,6 +292,38 @@ fn replayed_message_envelope_is_not_displayed_twice() {
 
 #[test]
 #[cfg(feature = "dev-insecure")]
+fn message_expire_removes_pending_envelopes_before_receive() {
+    let workspace = TestWorkspace::new("message-expire-before-receive");
+    confirm_alice_and_bob(&workspace);
+
+    assert_success(run_with_home(
+        &workspace.home,
+        &[
+            "message",
+            "send",
+            "--from",
+            "alice",
+            "--to",
+            "bob",
+            "discard before receive",
+        ],
+    ));
+
+    let expire = run_with_home(&workspace.home, &["message", "expire", "--profile", "bob"]);
+    assert_success(expire.clone());
+    assert_eq!(stdout(&expire), "expired envelopes: 1\n");
+
+    let receive = run_with_home(&workspace.home, &["message", "receive", "--profile", "bob"]);
+    assert_success(receive.clone());
+    assert!(stdout(&receive).is_empty());
+
+    let second_expire = run_with_home(&workspace.home, &["message", "expire", "--profile", "bob"]);
+    assert_success(second_expire.clone());
+    assert_eq!(stdout(&second_expire), "expired envelopes: 0\n");
+}
+
+#[test]
+#[cfg(feature = "dev-insecure")]
 fn sent_message_plaintext_is_not_persisted_in_dev_store() {
     let workspace = TestWorkspace::new("message-plaintext-not-persisted");
     confirm_alice_and_bob(&workspace);
