@@ -18,6 +18,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `OnionEnvelopeTransport::fail_closed_high_risk()` enforces high-risk onion-only routing and fails with `TransportError::Unavailable` until a real Tor/onion adapter exists.
 - `TransportRuntimeError` separates future preflight, bootstrap, bridge/censorship, onion service, send, and receive failures before a network-capable adapter exists.
 - `TransportRuntimePreflight` maps disabled runtime network, state/cache directory access, log redaction, and bridge/censorship readiness to explicit runtime errors.
+- `TransportRuntimePermissionPreflight` maps app-private state/cache policy, backup exclusion, log/crash redaction, and censorship readiness into the runtime preflight gate.
 - `TransportRuntimeState` separates disabled fail-closed state from a future runtime-ready state that can only be created from successful preflight.
 - `OnionEnvelopeTransport` stores runtime state, but send/receive remains fail-closed even when that state is ready.
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
@@ -263,3 +264,25 @@ Required before any network-capable Arti adapter:
 - Verify platform packaging and security behavior for macOS, Windows, Linux, and Android.
 
 The next implementation phase should target runtime permission and log-redaction preflight decisions, not real Tor bootstrap.
+
+## Runtime Permission And Redaction Preflight Decision
+
+Decision as of 2026-05-18: before any network-capable Arti bootstrap, the adapter must pass a separate permission and redaction preflight that is stricter than the generic runtime preflight.
+
+Current code boundary:
+
+- `TransportRuntimePermissionPreflight::locked_down_by_default()` keeps runtime network disabled and all readiness checks false.
+- `app_private_state_cache_dirs` and `backup_exclusion_verified` must both be true before state/cache readiness is accepted.
+- `TransportLogRedactionPolicy::RedactedTransportEventsOnly` is required before log redaction readiness is accepted.
+- `TransportCrashRedactionPolicy::SensitivePathsAndIdentifiersRedacted` is required before crash redaction readiness is accepted.
+- `TransportCensorshipReadiness` must be either `ExplicitlyNotRequiredForThisBuild` or `ConfiguredBeforeBootstrap`; `Unsupported` is not bootstrap-ready.
+- The permission preflight only converts into `TransportRuntimePreflight`. It still does not inspect real filesystem permissions, configure OS backup exclusion, bootstrap Tor, open sockets, launch onion services, or transfer envelopes.
+
+Failure mapping:
+
+- Runtime network disabled maps to `RuntimeNetworkDisabled`.
+- Missing app-private dirs or backup exclusion maps to `StateDirectoryPermissionDenied`.
+- Missing log or crash redaction maps to `LogRedactionPreflightFailed`.
+- Unsupported censorship/bridge behavior maps to `CensorshipOrBridgeRequired`.
+
+This keeps the next adapter honest: a future implementation must replace these booleans with real platform checks before enabling network behavior.

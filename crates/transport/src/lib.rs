@@ -59,6 +59,69 @@ pub struct TransportRuntimePreflight {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TransportRuntimeReady;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportLogRedactionPolicy {
+    NotConfigured,
+    RedactedTransportEventsOnly,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportCrashRedactionPolicy {
+    NotConfigured,
+    SensitivePathsAndIdentifiersRedacted,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportCensorshipReadiness {
+    Unsupported,
+    ExplicitlyNotRequiredForThisBuild,
+    ConfiguredBeforeBootstrap,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TransportRuntimePermissionPreflight {
+    pub runtime_network_enabled: bool,
+    pub app_private_state_cache_dirs: bool,
+    pub backup_exclusion_verified: bool,
+    pub log_redaction_policy: TransportLogRedactionPolicy,
+    pub crash_redaction_policy: TransportCrashRedactionPolicy,
+    pub censorship_readiness: TransportCensorshipReadiness,
+}
+
+impl TransportRuntimePermissionPreflight {
+    pub fn locked_down_by_default() -> Self {
+        Self {
+            runtime_network_enabled: false,
+            app_private_state_cache_dirs: false,
+            backup_exclusion_verified: false,
+            log_redaction_policy: TransportLogRedactionPolicy::NotConfigured,
+            crash_redaction_policy: TransportCrashRedactionPolicy::NotConfigured,
+            censorship_readiness: TransportCensorshipReadiness::Unsupported,
+        }
+    }
+
+    pub fn to_runtime_preflight(self) -> TransportRuntimePreflight {
+        TransportRuntimePreflight {
+            runtime_network_enabled: self.runtime_network_enabled,
+            state_cache_dirs_accessible: self.app_private_state_cache_dirs
+                && self.backup_exclusion_verified,
+            log_redaction_ready: self.log_redaction_policy
+                == TransportLogRedactionPolicy::RedactedTransportEventsOnly
+                && self.crash_redaction_policy
+                    == TransportCrashRedactionPolicy::SensitivePathsAndIdentifiersRedacted,
+            bridge_or_censorship_ready: matches!(
+                self.censorship_readiness,
+                TransportCensorshipReadiness::ExplicitlyNotRequiredForThisBuild
+                    | TransportCensorshipReadiness::ConfiguredBeforeBootstrap
+            ),
+        }
+    }
+
+    pub fn check(self) -> Result<TransportRuntimeReady, TransportRuntimeError> {
+        self.to_runtime_preflight().check()
+    }
+}
+
 impl TransportRuntimePreflight {
     pub fn disabled_by_default() -> Self {
         Self {
@@ -752,6 +815,62 @@ mod tests {
     }
 
     #[test]
+    fn runtime_permission_preflight_is_locked_down_by_default() {
+        assert_eq!(
+            TransportRuntimePermissionPreflight::locked_down_by_default().check(),
+            Err(TransportRuntimeError::RuntimeNetworkDisabled)
+        );
+    }
+
+    #[test]
+    fn runtime_permission_preflight_requires_app_private_dirs_and_backup_exclusion() {
+        let mut preflight = ready_permission_preflight();
+        preflight.app_private_state_cache_dirs = false;
+        assert_eq!(
+            preflight.check(),
+            Err(TransportRuntimeError::StateDirectoryPermissionDenied)
+        );
+
+        let mut preflight = ready_permission_preflight();
+        preflight.backup_exclusion_verified = false;
+        assert_eq!(
+            preflight.check(),
+            Err(TransportRuntimeError::StateDirectoryPermissionDenied)
+        );
+    }
+
+    #[test]
+    fn runtime_permission_preflight_requires_log_and_crash_redaction() {
+        let mut preflight = ready_permission_preflight();
+        preflight.log_redaction_policy = TransportLogRedactionPolicy::NotConfigured;
+        assert_eq!(
+            preflight.check(),
+            Err(TransportRuntimeError::LogRedactionPreflightFailed)
+        );
+
+        let mut preflight = ready_permission_preflight();
+        preflight.crash_redaction_policy = TransportCrashRedactionPolicy::NotConfigured;
+        assert_eq!(
+            preflight.check(),
+            Err(TransportRuntimeError::LogRedactionPreflightFailed)
+        );
+    }
+
+    #[test]
+    fn runtime_permission_preflight_requires_censorship_decision() {
+        let mut preflight = ready_permission_preflight();
+        preflight.censorship_readiness = TransportCensorshipReadiness::Unsupported;
+        assert_eq!(
+            preflight.check(),
+            Err(TransportRuntimeError::CensorshipOrBridgeRequired)
+        );
+
+        let mut preflight = ready_permission_preflight();
+        preflight.censorship_readiness = TransportCensorshipReadiness::ConfiguredBeforeBootstrap;
+        assert_eq!(preflight.check(), Ok(TransportRuntimeReady));
+    }
+
+    #[test]
     fn runtime_state_is_disabled_by_default_and_not_ready() {
         let state = TransportRuntimeState::disabled();
 
@@ -800,6 +919,18 @@ mod tests {
             message_number: 1,
             message_type: MessageType::Data,
             padded_ciphertext: b"ciphertext".to_vec(),
+        }
+    }
+
+    fn ready_permission_preflight() -> TransportRuntimePermissionPreflight {
+        TransportRuntimePermissionPreflight {
+            runtime_network_enabled: true,
+            app_private_state_cache_dirs: true,
+            backup_exclusion_verified: true,
+            log_redaction_policy: TransportLogRedactionPolicy::RedactedTransportEventsOnly,
+            crash_redaction_policy:
+                TransportCrashRedactionPolicy::SensitivePathsAndIdentifiersRedacted,
+            censorship_readiness: TransportCensorshipReadiness::ExplicitlyNotRequiredForThisBuild,
         }
     }
 
