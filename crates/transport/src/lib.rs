@@ -237,6 +237,45 @@ pub mod arti_adapter_spike {
         BuildFailed,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ArtiBootstrapPolicy {
+        DisabledUntilPreflightIsImplemented,
+        ManualClientBootstrapOnly,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ArtiOnionServicePolicy {
+        DisabledUntilKeyLifecycleDecision,
+        LaunchAfterSeparateKeyDecision,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ArtiBridgePolicy {
+        UnsupportedInCurrentSpike,
+        ConfigureBeforeBootstrap,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ArtiBootstrapPreflight {
+        pub bootstrap_policy: ArtiBootstrapPolicy,
+        pub onion_service_policy: ArtiOnionServicePolicy,
+        pub bridge_policy: ArtiBridgePolicy,
+        pub require_log_redaction: bool,
+        pub allow_runtime_network: bool,
+        pub allow_onion_key_generation: bool,
+    }
+
+    pub fn bootstrap_preflight_boundary() -> ArtiBootstrapPreflight {
+        ArtiBootstrapPreflight {
+            bootstrap_policy: ArtiBootstrapPolicy::DisabledUntilPreflightIsImplemented,
+            onion_service_policy: ArtiOnionServicePolicy::DisabledUntilKeyLifecycleDecision,
+            bridge_policy: ArtiBridgePolicy::UnsupportedInCurrentSpike,
+            require_log_redaction: true,
+            allow_runtime_network: false,
+            allow_onion_key_generation: false,
+        }
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct ArtiAppPrivateDirs {
         state_dir: PathBuf,
@@ -587,6 +626,24 @@ mod tests {
         assert_eq!(
             arti_adapter_spike::ArtiAppPrivateDirs::new(root.join("same"), root.join("same")),
             Err(arti_adapter_spike::ArtiConfigError::SameStateAndCacheDirectory)
+        );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn arti_bootstrap_preflight_boundary_disables_runtime_network_by_default() {
+        assert_eq!(
+            arti_adapter_spike::bootstrap_preflight_boundary(),
+            arti_adapter_spike::ArtiBootstrapPreflight {
+                bootstrap_policy:
+                    arti_adapter_spike::ArtiBootstrapPolicy::DisabledUntilPreflightIsImplemented,
+                onion_service_policy:
+                    arti_adapter_spike::ArtiOnionServicePolicy::DisabledUntilKeyLifecycleDecision,
+                bridge_policy: arti_adapter_spike::ArtiBridgePolicy::UnsupportedInCurrentSpike,
+                require_log_redaction: true,
+                allow_runtime_network: false,
+                allow_onion_key_generation: false,
+            }
         );
     }
 }

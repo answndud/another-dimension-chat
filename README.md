@@ -28,6 +28,7 @@ What exists today:
 - Optional compile-only `arti-adapter-spike` feature that keeps transport fail-closed.
 - Arti lifecycle decision that rejects shared default Arti dirs and defers onion service key generation.
 - App-private Arti config builder spike that validates state/cache dirs without bootstrapping Tor.
+- Arti bootstrap preflight boundary that keeps runtime network and onion key generation disabled.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.
 - High-risk unlock policy tests that reject OS-keystore-only unlock.

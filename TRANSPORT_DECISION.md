@@ -19,6 +19,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
 - `arti_lifecycle_decision()` requires app-private state/cache directories, backup exclusion, log redaction, and no onion service key generation until a storage decision exists.
 - `ArtiAppPrivateDirs` and `ArtiAdapterSpike::fail_closed_app_private_config` compile-check app-private `TorClientConfigBuilder::from_directories` wiring without bootstrapping Tor.
+- `bootstrap_preflight_boundary()` keeps Arti runtime network, onion service launch, bridge behavior, and onion key generation disabled in the current spike.
 - Dev file transport remains behind the `dev-insecure` feature.
 
 ## What Does Not Exist Yet
@@ -148,3 +149,23 @@ Current code boundary:
 - The spike does not bootstrap Tor, open sockets, launch an onion service, discover system Tor, or generate onion service keys.
 
 This is intentionally a builder skeleton. Runtime bootstrap, bridge/censorship behavior, onion service hosting, and key persistence require separate decisions and tests before any network-capable adapter is allowed.
+
+## Arti Bootstrap Preflight Boundary
+
+Decision as of 2026-05-18: the Arti spike may describe bootstrap preconditions, but it must not enable runtime network behavior.
+
+Current preflight boundary:
+
+- Client bootstrap is disabled until a separate runtime preflight is implemented.
+- Onion service launch remains disabled until onion service key lifecycle is decided.
+- Bridge/censorship behavior is unsupported in the current spike and must be configured before any future bootstrap attempt.
+- Log redaction remains required before runtime bootstrap can be enabled.
+- Runtime network access and onion key generation are both false by default.
+
+This keeps three operations separate:
+
+- Config building: allowed in the optional compile-only spike.
+- Client bootstrap: not implemented.
+- Onion service launch/key generation: not implemented.
+
+A future network-capable adapter must introduce explicit failure modes for bootstrap timeout, Tor censorship/bridge absence, state directory permission failure, log-redaction preflight failure, onion service key unavailable, and onion service launch failure before replacing fail-closed transport behavior.
