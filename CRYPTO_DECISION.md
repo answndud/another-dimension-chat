@@ -20,6 +20,7 @@ The repository currently has:
 - Production pairing payload construction can sign caller-supplied pairing parameters with an Ed25519 production private key.
 - Production pairing nonce construction uses a narrow OS-randomness wrapper backed by `getrandom`.
 - Production pairing default construction centralizes nonce, local timestamp, TTL, endpoint rotation policy, and capability defaults while keeping endpoint and prekey material caller-supplied.
+- Production pairing draft construction can return a generated private key plus signed payload without deciding storage, backup, or export.
 - Pairing payload canonicalization and signature boundary in `crates/pairing`.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
@@ -107,7 +108,7 @@ Minimum test coverage:
 
 1. Add production key type wrappers without changing CLI behavior. Done for the initial byte wrapper boundary.
 2. Add test vectors for canonical transcript and signature verification. Initial integration fixtures are in place.
-3. Add maintained signature dependency and replace dev pairing signatures behind a production feature or default path. `ed25519-dalek` stable 2.x is added to `crates/identity`; pairwise private key generation, pairing decoder wiring, and caller-supplied production pairing payload construction are in place.
+3. Add maintained signature dependency and replace dev pairing signatures behind a production feature or default path. `ed25519-dalek` stable 2.x is added to `crates/identity`; pairwise private key generation, pairing decoder wiring, and production pairing draft/payload construction are in place.
 4. Add session establishment tests before selecting message encryption implementation.
 5. Replace fake message encryption only after pairing identity verification is production-backed.
 6. Keep development fake crypto behind `dev-insecure` for test ergonomics.

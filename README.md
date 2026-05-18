@@ -20,7 +20,7 @@ What exists today:
 - In-person style pairing payload flow.
 - Safety number and safety phrase prototype.
 - Pairing confirm, cancel, and expiry lifecycle.
-- Production-facing Ed25519 key generation, pairing signature, and nonce construction boundaries.
+- Production-facing Ed25519 key generation, pairing draft, signature, and nonce construction boundaries.
 - Padded message envelope prototype.
 - Replay window prototype.
 - CLI hardening tests for malformed input, duplicate pairing scans, replay handling, message expiry, and prototype boundary behavior.
