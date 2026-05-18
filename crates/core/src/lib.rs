@@ -1,4 +1,6 @@
 pub mod production {
+    use another_dimension_crypto::production::NoisePrekeyBundle;
+    use another_dimension_crypto::CryptoError;
     use another_dimension_identity::{PairwisePublicKeyScheme, PairwiseSignatureScheme};
     use another_dimension_pairing::{transcript, PairingError, PairingPayload};
     use sha2::{Digest, Sha256};
@@ -10,6 +12,8 @@ pub mod production {
         pub safety_transcript: String,
         pub local_role: SessionRole,
         pub canonical_dialer_public_key: String,
+        pub local_noise_static_public_key: Vec<u8>,
+        pub remote_noise_static_public_key: Vec<u8>,
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -21,6 +25,7 @@ pub mod production {
     #[derive(Debug, Eq, PartialEq)]
     pub enum ProductionSessionError {
         Pairing(PairingError),
+        Crypto(CryptoError),
         NonProductionPairingPayload,
         SamePairwiseIdentity,
     }
@@ -28,6 +33,12 @@ pub mod production {
     impl From<PairingError> for ProductionSessionError {
         fn from(value: PairingError) -> Self {
             Self::Pairing(value)
+        }
+    }
+
+    impl From<CryptoError> for ProductionSessionError {
+        fn from(value: CryptoError) -> Self {
+            Self::Crypto(value)
         }
     }
 
@@ -40,6 +51,8 @@ pub mod production {
         if local.pairwise_public_key == remote.pairwise_public_key {
             return Err(ProductionSessionError::SamePairwiseIdentity);
         }
+        let local_prekey = NoisePrekeyBundle::decode(&local.prekey_bundle)?;
+        let remote_prekey = NoisePrekeyBundle::decode(&remote.prekey_bundle)?;
         let safety_transcript = transcript(local, remote)?;
         let local_rank = canonical_dialer_rank(local);
         let remote_rank = canonical_dialer_rank(remote);
@@ -57,6 +70,8 @@ pub mod production {
             safety_transcript,
             local_role,
             canonical_dialer_public_key,
+            local_noise_static_public_key: local_prekey.public_key().to_vec(),
+            remote_noise_static_public_key: remote_prekey.public_key().to_vec(),
         })
     }
 
@@ -91,6 +106,7 @@ pub mod production {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use another_dimension_crypto::production::generate_noise_static_keypair;
         use another_dimension_identity::{
             PairwisePublicKey, PairwiseSignature, ProductionPairwisePrivateKey, ProfileName,
         };
@@ -100,8 +116,10 @@ pub mod production {
 
         #[test]
         fn production_session_plan_is_order_stable() {
-            let alice = production_payload("alice", [51_u8; 32], "alice.onion", "alice-prekey");
-            let bob = production_payload("bob", [52_u8; 32], "bob.onion", "bob-prekey");
+            let alice_prekey = noise_prekey_bundle();
+            let bob_prekey = noise_prekey_bundle();
+            let alice = production_payload("alice", [51_u8; 32], "alice.onion", &alice_prekey);
+            let bob = production_payload("bob", [52_u8; 32], "bob.onion", &bob_prekey);
 
             let alice_view =
                 plan_session_from_verified_pairing_payloads(&alice, &bob).expect("session plan");
@@ -114,11 +132,20 @@ pub mod production {
                 bob_view.canonical_dialer_public_key
             );
             assert_ne!(alice_view.local_role, bob_view.local_role);
+            assert_eq!(
+                alice_view.local_noise_static_public_key,
+                bob_view.remote_noise_static_public_key
+            );
+            assert_eq!(
+                alice_view.remote_noise_static_public_key,
+                bob_view.local_noise_static_public_key
+            );
         }
 
         #[test]
         fn production_session_plan_rejects_non_production_payload() {
-            let alice = production_payload("alice", [51_u8; 32], "alice.onion", "alice-prekey");
+            let alice =
+                production_payload("alice", [51_u8; 32], "alice.onion", &noise_prekey_bundle());
             let dev_like = PairingPayload {
                 owner_profile: ProfileName::new("bob").expect("valid profile"),
                 pairing_nonce: "nonce".to_string(),
@@ -129,7 +156,7 @@ pub mod production {
                 rendezvous_endpoint: "bob.onion".to_string(),
                 endpoint_rotation_policy: "manual-v1".to_string(),
                 protocol_capabilities: "prototype-production-pairing-v1".to_string(),
-                prekey_bundle: "bob-prekey".to_string(),
+                prekey_bundle: noise_prekey_bundle(),
                 issued_at_local_ms: 1_000,
                 ttl_seconds: DEFAULT_TTL_SECONDS,
             };
@@ -142,8 +169,10 @@ pub mod production {
 
         #[test]
         fn production_session_plan_rejects_tampered_payload() {
-            let alice = production_payload("alice", [51_u8; 32], "alice.onion", "alice-prekey");
-            let mut bob = production_payload("bob", [52_u8; 32], "bob.onion", "bob-prekey");
+            let alice =
+                production_payload("alice", [51_u8; 32], "alice.onion", &noise_prekey_bundle());
+            let mut bob =
+                production_payload("bob", [52_u8; 32], "bob.onion", &noise_prekey_bundle());
             bob.rendezvous_endpoint = "bob-rotated.onion".to_string();
 
             assert_eq!(
@@ -152,6 +181,28 @@ pub mod production {
                     PairingError::InvalidPayload
                 ))
             );
+        }
+
+        #[test]
+        fn production_session_plan_rejects_invalid_noise_prekey_bundle() {
+            let alice =
+                production_payload("alice", [51_u8; 32], "alice.onion", &noise_prekey_bundle());
+            let bob = production_payload("bob", [52_u8; 32], "bob.onion", "not-a-noise-prekey");
+
+            assert_eq!(
+                plan_session_from_verified_pairing_payloads(&alice, &bob),
+                Err(ProductionSessionError::Crypto(
+                    CryptoError::InvalidNoisePrekeyBundle
+                ))
+            );
+        }
+
+        fn noise_prekey_bundle() -> String {
+            generate_noise_static_keypair()
+                .expect("noise static key")
+                .prekey_bundle()
+                .expect("prekey bundle")
+                .encode()
         }
 
         fn production_payload(

@@ -26,6 +26,8 @@ The repository currently has:
 - Production safety material derivation has a SHA-256 based, domain-separated display boundary independent from `dev-insecure` fake crypto.
 - Integration tests cover signed production payloads through transcript construction and production safety material derivation.
 - A narrow Noise XX smoke boundary uses `snow` with constrained features for `25519 + ChaChaPoly + BLAKE2s` and binds the handshake prologue to the safety transcript.
+- Noise static public keys have a public prekey bundle string format: `adnoise1:xx25519-chachapoly-blake2s:<hex-public-key>`.
+- `ProductionSessionPlan` rejects signed production pairing payloads whose `prekey_bundle` is not a valid Noise prekey bundle.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
 
@@ -122,7 +124,7 @@ Minimum test coverage:
 ## Open Questions
 
 - Which maintained Rust-compatible signature library should back pairwise identity?
-- Is the current `snow` Noise XX direction acceptable after documenting how X25519 static keys are generated, carried in the pairing prekey bundle, stored, rotated, and bound to pairwise Ed25519 identity signatures?
+- Is the current `snow` Noise XX direction acceptable after documenting how X25519 static keys are stored, rotated, and bound to endpoint rotation?
 - Should Phase 2 prioritize identity signatures first or full message session encryption first?
 - How should production key material be stored before Phase 3 encrypted storage is complete?
 - What review threshold is required before any release artifact includes production crypto enabled by default?
