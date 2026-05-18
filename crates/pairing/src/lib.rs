@@ -36,7 +36,11 @@ impl PairingPayload {
     }
 
     pub fn decode(value: &str) -> Result<Self, PairingError> {
-        let parts = value.trim().split('|').collect::<Vec<_>>();
+        let value = value.trim();
+        if value.len() > MAX_PAIRING_PAYLOAD_SIZE {
+            return Err(PairingError::PayloadTooLarge);
+        }
+        let parts = value.split('|').collect::<Vec<_>>();
         if parts.len() != 3 || parts[0] != "ADPAIR2" {
             return Err(PairingError::InvalidPayload);
         }
@@ -375,6 +379,109 @@ mod tests {
 
         assert_eq!(
             PairingPayload::decode(&tampered),
+            Err(PairingError::InvalidPayload)
+        );
+    }
+
+    #[test]
+    fn decode_rejects_oversized_input_before_parsing() {
+        let oversized = format!("ADPAIR2|{}|signature", "a".repeat(MAX_PAIRING_PAYLOAD_SIZE));
+
+        assert_eq!(
+            PairingPayload::decode(&oversized),
+            Err(PairingError::PayloadTooLarge)
+        );
+    }
+
+    #[test]
+    fn decode_rejects_malformed_adpair2_segments() {
+        for malformed in [
+            "",
+            "ADPAIR2",
+            "ADPAIR2|abcd",
+            "ADPAIR2|abcd|sig|extra",
+            "ADPAIR1|abcd|sig",
+            " ADPAIR2 |abcd|sig",
+        ] {
+            assert_eq!(
+                PairingPayload::decode(malformed),
+                Err(PairingError::InvalidPayload),
+                "malformed payload should fail: {malformed:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn decode_rejects_invalid_canonical_hex() {
+        for malformed in ["ADPAIR2|a|sig", "ADPAIR2|zz|sig", "ADPAIR2|00xz|sig"] {
+            assert_eq!(
+                PairingPayload::decode(malformed),
+                Err(PairingError::InvalidPayload),
+                "malformed hex should fail: {malformed:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn decode_rejects_empty_signature() {
+        let payload = sign_payload(PairingPayload {
+            owner_profile: ProfileName::new("alice").expect("valid profile"),
+            pairing_nonce: "nonce".to_string(),
+            pairwise_public_key: PairwisePublicKey::new("alice-pub").expect("valid public key"),
+            pairwise_signature: test_signature(),
+            rendezvous_endpoint: "dev-rendezvous-alice.onion".to_string(),
+            endpoint_rotation_policy: "manual-v1".to_string(),
+            protocol_capabilities: "prototype".to_string(),
+            prekey_bundle: "PendingCryptoDesign".to_string(),
+            issued_at_local_ms: 1_000,
+            ttl_seconds: DEFAULT_TTL_SECONDS,
+        });
+        let encoded = payload.encode().expect("payload encodes");
+        let mut parts = encoded.split('|').collect::<Vec<_>>();
+        parts[2] = "";
+        let malformed = parts.join("|");
+
+        assert_eq!(
+            PairingPayload::decode(&malformed),
+            Err(PairingError::InvalidPayload)
+        );
+    }
+
+    #[test]
+    fn decode_rejects_canonical_body_with_trailing_bytes() {
+        let mut payload = sign_payload(PairingPayload {
+            owner_profile: ProfileName::new("alice").expect("valid profile"),
+            pairing_nonce: "nonce".to_string(),
+            pairwise_public_key: PairwisePublicKey::new("alice-pub").expect("valid public key"),
+            pairwise_signature: test_signature(),
+            rendezvous_endpoint: "dev-rendezvous-alice.onion".to_string(),
+            endpoint_rotation_policy: "manual-v1".to_string(),
+            protocol_capabilities: "prototype".to_string(),
+            prekey_bundle: "PendingCryptoDesign".to_string(),
+            issued_at_local_ms: 1_000,
+            ttl_seconds: DEFAULT_TTL_SECONDS,
+        });
+        let mut canonical = payload.canonical_bytes().expect("canonical body");
+        canonical.push(0);
+        let private_key = another_dimension_identity::PairwisePrivateKey::new(format!(
+            "dev-priv-for-{}",
+            payload.pairwise_public_key.as_str()
+        ))
+        .expect("valid private key");
+        let identity = another_dimension_identity::PairwiseIdentity::new(
+            payload.pairwise_public_key.clone(),
+            private_key,
+        )
+        .expect("valid identity");
+        payload.pairwise_signature = identity.sign_pairing_payload(&canonical);
+        let malformed = format!(
+            "ADPAIR2|{}|{}",
+            encode_hex(&canonical),
+            payload.pairwise_signature.as_str()
+        );
+
+        assert_eq!(
+            PairingPayload::decode(&malformed),
             Err(PairingError::InvalidPayload)
         );
     }
