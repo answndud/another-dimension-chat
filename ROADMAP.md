@@ -46,10 +46,10 @@ Covered by tests:
 - Plaintext message content not being persisted by the current development store path.
 - Default builds rejecting prototype commands that require `dev-insecure`.
 - Negative profile/contact identifier validation.
+- Pairing cancel and fresh pending pairing expiry CLI behavior.
 
 Remaining tasks:
 
-- Add CLI tests for pairing cancel and pairing expiry behavior.
 - Add CLI tests for message expiry behavior.
 - Keep the public README and roadmap aligned as the prototype boundary changes.
 

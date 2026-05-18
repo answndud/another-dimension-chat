@@ -191,6 +191,85 @@ fn active_contact_pairing_scan_fails_without_response_payload() {
 
 #[test]
 #[cfg(feature = "dev-insecure")]
+fn cancelled_pending_pairing_cannot_be_confirmed_from_cli() {
+    let workspace = TestWorkspace::new("cancelled-pending-pairing");
+    scan_alice_and_bob(&workspace);
+
+    let cancel = run_with_home(
+        &workspace.home,
+        &[
+            "pairing",
+            "cancel",
+            "--profile",
+            "alice",
+            "--contact",
+            "bob",
+        ],
+    );
+    assert_success(cancel.clone());
+    assert_eq!(stdout(&cancel), "pending pairing cancelled: bob\n");
+
+    let second_cancel = run_with_home(
+        &workspace.home,
+        &[
+            "pairing",
+            "cancel",
+            "--profile",
+            "alice",
+            "--contact",
+            "bob",
+        ],
+    );
+    assert_success(second_cancel.clone());
+    assert_eq!(stdout(&second_cancel), "pending pairing not found: bob\n");
+
+    let confirm = run_with_home(
+        &workspace.home,
+        &[
+            "pairing",
+            "confirm",
+            "--profile",
+            "alice",
+            "--contact",
+            "bob",
+        ],
+    );
+
+    let error = stderr(&confirm);
+    assert!(!confirm.status.success());
+    assert!(stdout(&confirm).is_empty());
+    assert!(error.contains("WARNING: dev-insecure build. Not for real communication."));
+    assert!(error.contains("storage operation failed"));
+}
+
+#[test]
+#[cfg(feature = "dev-insecure")]
+fn fresh_pending_pairing_expire_reports_zero_and_keeps_pairing_confirmable() {
+    let workspace = TestWorkspace::new("fresh-pending-pairing-expire");
+    scan_alice_and_bob(&workspace);
+
+    let expire = run_with_home(
+        &workspace.home,
+        &["pairing", "expire", "--profile", "alice"],
+    );
+    assert_success(expire.clone());
+    assert_eq!(stdout(&expire), "expired pending pairings: 0\n");
+
+    assert_success(run_with_home(
+        &workspace.home,
+        &[
+            "pairing",
+            "confirm",
+            "--profile",
+            "alice",
+            "--contact",
+            "bob",
+        ],
+    ));
+}
+
+#[test]
+#[cfg(feature = "dev-insecure")]
 fn replayed_message_envelope_is_not_displayed_twice() {
     let workspace = TestWorkspace::new("replayed-message-envelope");
     confirm_alice_and_bob(&workspace);
