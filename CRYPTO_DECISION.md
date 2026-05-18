@@ -11,6 +11,7 @@ The repository currently has:
 - A `CryptoSession` trait in `crates/crypto`.
 - Development-only fake encryption behind `dev-insecure`.
 - Pairwise identity types in `crates/identity`.
+- Production-facing key and signature byte wrappers that reject development placeholder material.
 - Pairing payload canonicalization and signature boundary in `crates/pairing`.
 - Padded envelope and replay window prototypes in `crates/protocol`.
 
@@ -92,7 +93,7 @@ Minimum test coverage:
 
 ## Implementation Sequence
 
-1. Add production key type wrappers without changing CLI behavior.
+1. Add production key type wrappers without changing CLI behavior. Done for the initial byte wrapper boundary.
 2. Add test vectors for canonical transcript and signature verification.
 3. Add maintained signature dependency and replace dev pairing signatures behind a production feature or default path.
 4. Add session establishment tests before selecting message encryption implementation.
