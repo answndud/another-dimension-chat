@@ -72,6 +72,7 @@ Tasks:
 - Keep production-facing key wrappers separate from `dev-insecure` placeholder key material.
 - Keep canonical pairing and safety transcript fixture tests stable before replacing placeholder signatures.
 - Add `ed25519-dalek` production signature wrapper tests before wiring pairing decode to production verification.
+- Keep production pairing public key strings scheme-tagged before decoder wiring.
 - Keep production pairing signature strings scheme-tagged before decoder wiring.
 - Select maintained Rust-compatible libraries for identity signatures and session encryption.
 - Decide how pairing payload signatures map to real pairwise identity keys.

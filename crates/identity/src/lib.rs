@@ -6,7 +6,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 const MAX_PRODUCTION_KEY_MATERIAL_SIZE: usize = 4096;
 const ED25519_KEY_SIZE: usize = 32;
 const ED25519_SIGNATURE_SIZE: usize = 64;
+const ED25519_DALEK_V2_PUBLIC_KEY_PREFIX: &str = "ed25519-dalek-v2:";
 const ED25519_DALEK_V2_SIGNATURE_PREFIX: &str = "ed25519-dalek-v2:";
+const DEV_PUBLIC_KEY_PREFIX: &str = "dev-pub-";
 const DEV_SIGNATURE_PREFIX: &str = "dev-sign-v1-";
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -79,9 +81,34 @@ impl PairwisePublicKey {
         &self.0
     }
 
+    pub fn scheme(&self) -> Result<PairwisePublicKeyScheme, IdentityError> {
+        if self.0.starts_with(DEV_PUBLIC_KEY_PREFIX) {
+            return Ok(PairwisePublicKeyScheme::DevInsecureV1);
+        }
+        if self.0.starts_with(ED25519_DALEK_V2_PUBLIC_KEY_PREFIX) {
+            return Ok(PairwisePublicKeyScheme::Ed25519DalekV2);
+        }
+        Err(IdentityError::InvalidKeyMaterial)
+    }
+
     pub fn verify_pairing_signature(&self, message: &[u8], signature: &PairwiseSignature) -> bool {
         signature.as_str()
             == dev_pairing_signature(self.as_str(), &private_for_public(self.as_str()), message)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PairwisePublicKeyScheme {
+    DevInsecureV1,
+    Ed25519DalekV2,
+}
+
+impl PairwisePublicKeyScheme {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::DevInsecureV1 => "dev-insecure-v1",
+            Self::Ed25519DalekV2 => "ed25519-dalek-v2",
+        }
     }
 }
 
@@ -186,6 +213,34 @@ impl ProductionPairwisePublicKey {
     pub fn from_ed25519_dalek_bytes(bytes: [u8; ED25519_KEY_SIZE]) -> Result<Self, IdentityError> {
         VerifyingKey::from_bytes(&bytes).map_err(|_| IdentityError::InvalidKeyMaterial)?;
         Self::from_bytes(ProductionKeyAlgorithm::Ed25519DalekV2, bytes)
+    }
+
+    pub fn to_pairwise_public_key(&self) -> Result<PairwisePublicKey, IdentityError> {
+        match self.algorithm {
+            ProductionKeyAlgorithm::Ed25519DalekV2 => {
+                let public_bytes = <[u8; ED25519_KEY_SIZE]>::try_from(self.bytes.as_slice())
+                    .map_err(|_| IdentityError::InvalidKeyMaterial)?;
+                PairwisePublicKey::new(format!(
+                    "{ED25519_DALEK_V2_PUBLIC_KEY_PREFIX}{}",
+                    encode_hex(&public_bytes)
+                ))
+            }
+            ProductionKeyAlgorithm::PendingReview => Err(IdentityError::InvalidKeyMaterial),
+        }
+    }
+
+    pub fn from_pairwise_public_key(value: &PairwisePublicKey) -> Result<Self, IdentityError> {
+        match value.scheme()? {
+            PairwisePublicKeyScheme::Ed25519DalekV2 => {
+                let encoded = value
+                    .as_str()
+                    .strip_prefix(ED25519_DALEK_V2_PUBLIC_KEY_PREFIX)
+                    .ok_or(IdentityError::InvalidKeyMaterial)?;
+                let bytes = decode_hex_array::<ED25519_KEY_SIZE>(encoded)?;
+                Self::from_ed25519_dalek_bytes(bytes)
+            }
+            PairwisePublicKeyScheme::DevInsecureV1 => Err(IdentityError::InvalidKeyMaterial),
+        }
     }
 
     pub fn verify_pairing_signature(
@@ -545,6 +600,10 @@ mod tests {
             .public_key()
             .verify_pairing_signature(message, &signature));
         assert_eq!(
+            identity.public_key().scheme(),
+            Ok(PairwisePublicKeyScheme::DevInsecureV1)
+        );
+        assert_eq!(
             signature.scheme(),
             Ok(PairwiseSignatureScheme::DevInsecureV1)
         );
@@ -558,6 +617,13 @@ mod tests {
         let signature = PairwiseSignature::new("unsigned-test-signature").expect("signature");
 
         assert_eq!(signature.scheme(), Err(IdentityError::InvalidKeyMaterial));
+    }
+
+    #[test]
+    fn unknown_pairwise_public_key_scheme_is_rejected_by_classifier() {
+        let public_key = PairwisePublicKey::new("unsigned-test-key").expect("public key");
+
+        assert_eq!(public_key.scheme(), Err(IdentityError::InvalidKeyMaterial));
     }
 
     #[test]
@@ -683,6 +749,49 @@ mod tests {
         );
         assert!(pairwise_signature.as_str().starts_with("ed25519-dalek-v2:"));
         assert_eq!(decoded, production_signature);
+    }
+
+    #[test]
+    fn ed25519_dalek_pairwise_public_key_encoding_is_scheme_tagged() {
+        let private_key =
+            ProductionPairwisePrivateKey::from_ed25519_dalek_seed([13_u8; 32]).expect("valid seed");
+        let production_public_key = private_key.public_key().expect("public key");
+
+        let pairwise_public_key = production_public_key
+            .to_pairwise_public_key()
+            .expect("pairwise public key");
+        let decoded = ProductionPairwisePublicKey::from_pairwise_public_key(&pairwise_public_key)
+            .expect("production public key");
+
+        assert_eq!(
+            pairwise_public_key.scheme(),
+            Ok(PairwisePublicKeyScheme::Ed25519DalekV2)
+        );
+        assert!(pairwise_public_key
+            .as_str()
+            .starts_with("ed25519-dalek-v2:"));
+        assert_eq!(decoded, production_public_key);
+    }
+
+    #[test]
+    fn production_public_key_decoder_rejects_dev_public_key_scheme() {
+        let dev_public_key =
+            PairwisePublicKey::new("dev-pub-test-seed").expect("valid dev public key string");
+
+        assert_eq!(
+            ProductionPairwisePublicKey::from_pairwise_public_key(&dev_public_key),
+            Err(IdentityError::InvalidKeyMaterial)
+        );
+    }
+
+    #[test]
+    fn production_public_key_decoder_rejects_malformed_ed25519_hex() {
+        let malformed = PairwisePublicKey::new("ed25519-dalek-v2:not-hex").expect("public key");
+
+        assert_eq!(
+            ProductionPairwisePublicKey::from_pairwise_public_key(&malformed),
+            Err(IdentityError::InvalidKeyMaterial)
+        );
     }
 
     #[test]
