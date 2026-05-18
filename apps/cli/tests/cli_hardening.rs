@@ -100,41 +100,7 @@ fn invalid_pairing_payload_fails_without_response_payload() {
 #[cfg(feature = "dev-insecure")]
 fn duplicate_pending_pairing_scan_fails_without_response_payload() {
     let workspace = TestWorkspace::new("duplicate-pending-scan");
-    let alice_payload = workspace.file("alice.pair");
-    let bob_payload = workspace.file("bob.pair");
-
-    assert_success(run_with_home(
-        &workspace.home,
-        &["profile", "init", "alice"],
-    ));
-    assert_success(run_with_home(&workspace.home, &["profile", "init", "bob"]));
-    write_stdout(
-        &alice_payload,
-        run_with_home(&workspace.home, &["pairing", "start", "--profile", "alice"]),
-    );
-    write_stdout(
-        &bob_payload,
-        run_with_home(
-            &workspace.home,
-            &[
-                "pairing",
-                "scan",
-                "--profile",
-                "bob",
-                alice_payload.to_str().expect("valid path"),
-            ],
-        ),
-    );
-    assert_success(run_with_home(
-        &workspace.home,
-        &[
-            "pairing",
-            "scan",
-            "--profile",
-            "alice",
-            bob_payload.to_str().expect("valid path"),
-        ],
-    ));
+    let pairing = scan_alice_and_bob(&workspace);
 
     let duplicate = run_with_home(
         &workspace.home,
@@ -143,7 +109,7 @@ fn duplicate_pending_pairing_scan_fails_without_response_payload() {
             "scan",
             "--profile",
             "alice",
-            bob_payload.to_str().expect("valid path"),
+            pairing.bob_payload.to_str().expect("valid path"),
         ],
     );
 
@@ -158,63 +124,7 @@ fn duplicate_pending_pairing_scan_fails_without_response_payload() {
 #[cfg(feature = "dev-insecure")]
 fn active_contact_pairing_scan_fails_without_response_payload() {
     let workspace = TestWorkspace::new("active-contact-scan");
-    let alice_payload = workspace.file("alice.pair");
-    let bob_payload = workspace.file("bob.pair");
-
-    assert_success(run_with_home(
-        &workspace.home,
-        &["profile", "init", "alice"],
-    ));
-    assert_success(run_with_home(&workspace.home, &["profile", "init", "bob"]));
-    write_stdout(
-        &alice_payload,
-        run_with_home(&workspace.home, &["pairing", "start", "--profile", "alice"]),
-    );
-    write_stdout(
-        &bob_payload,
-        run_with_home(
-            &workspace.home,
-            &[
-                "pairing",
-                "scan",
-                "--profile",
-                "bob",
-                alice_payload.to_str().expect("valid path"),
-            ],
-        ),
-    );
-    assert_success(run_with_home(
-        &workspace.home,
-        &[
-            "pairing",
-            "scan",
-            "--profile",
-            "alice",
-            bob_payload.to_str().expect("valid path"),
-        ],
-    ));
-    assert_success(run_with_home(
-        &workspace.home,
-        &[
-            "pairing",
-            "confirm",
-            "--profile",
-            "alice",
-            "--contact",
-            "bob",
-        ],
-    ));
-    assert_success(run_with_home(
-        &workspace.home,
-        &[
-            "pairing",
-            "confirm",
-            "--profile",
-            "bob",
-            "--contact",
-            "alice",
-        ],
-    ));
+    let pairing = confirm_alice_and_bob(&workspace);
 
     let duplicate = run_with_home(
         &workspace.home,
@@ -223,7 +133,7 @@ fn active_contact_pairing_scan_fails_without_response_payload() {
             "scan",
             "--profile",
             "alice",
-            bob_payload.to_str().expect("valid path"),
+            pairing.bob_payload.to_str().expect("valid path"),
         ],
     );
 
@@ -232,6 +142,28 @@ fn active_contact_pairing_scan_fails_without_response_payload() {
     assert!(stdout(&duplicate).is_empty());
     assert!(error.contains("contact already active: bob"));
     assert!(error.contains("New pairing is not allowed for an active contact."));
+}
+
+#[test]
+#[cfg(feature = "dev-insecure")]
+fn replayed_message_envelope_is_not_displayed_twice() {
+    let workspace = TestWorkspace::new("replayed-message-envelope");
+    confirm_alice_and_bob(&workspace);
+    let message = "hello once";
+
+    assert_success(run_with_home(
+        &workspace.home,
+        &["message", "send", "--from", "alice", "--to", "bob", message],
+    ));
+
+    let first_receive = run_with_home(&workspace.home, &["message", "receive", "--profile", "bob"]);
+    assert_success(first_receive.clone());
+    assert_eq!(stdout(&first_receive), format!("{message}\n"));
+
+    let second_receive =
+        run_with_home(&workspace.home, &["message", "receive", "--profile", "bob"]);
+    assert_success(second_receive.clone());
+    assert!(stdout(&second_receive).is_empty());
 }
 
 #[cfg(feature = "dev-insecure")]
@@ -262,6 +194,80 @@ fn write_stdout(path: &Path, output: Output) {
         stderr: output.stderr.clone(),
     });
     std::fs::write(path, output.stdout).expect("failed to write command stdout");
+}
+
+#[cfg(feature = "dev-insecure")]
+fn scan_alice_and_bob(workspace: &TestWorkspace) -> PairingFiles {
+    let alice_payload = workspace.file("alice.pair");
+    let bob_payload = workspace.file("bob.pair");
+
+    assert_success(run_with_home(
+        &workspace.home,
+        &["profile", "init", "alice"],
+    ));
+    assert_success(run_with_home(&workspace.home, &["profile", "init", "bob"]));
+    write_stdout(
+        &alice_payload,
+        run_with_home(&workspace.home, &["pairing", "start", "--profile", "alice"]),
+    );
+    write_stdout(
+        &bob_payload,
+        run_with_home(
+            &workspace.home,
+            &[
+                "pairing",
+                "scan",
+                "--profile",
+                "bob",
+                alice_payload.to_str().expect("valid path"),
+            ],
+        ),
+    );
+    assert_success(run_with_home(
+        &workspace.home,
+        &[
+            "pairing",
+            "scan",
+            "--profile",
+            "alice",
+            bob_payload.to_str().expect("valid path"),
+        ],
+    ));
+
+    PairingFiles { bob_payload }
+}
+
+#[cfg(feature = "dev-insecure")]
+fn confirm_alice_and_bob(workspace: &TestWorkspace) -> PairingFiles {
+    let pairing = scan_alice_and_bob(workspace);
+    assert_success(run_with_home(
+        &workspace.home,
+        &[
+            "pairing",
+            "confirm",
+            "--profile",
+            "alice",
+            "--contact",
+            "bob",
+        ],
+    ));
+    assert_success(run_with_home(
+        &workspace.home,
+        &[
+            "pairing",
+            "confirm",
+            "--profile",
+            "bob",
+            "--contact",
+            "alice",
+        ],
+    ));
+    pairing
+}
+
+#[cfg(feature = "dev-insecure")]
+struct PairingFiles {
+    bob_payload: PathBuf,
 }
 
 #[cfg(feature = "dev-insecure")]
