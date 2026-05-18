@@ -11,6 +11,7 @@ another-dimension-pairing = { path = "../pairing" }
 another-dimension-protocol = { path = "../protocol" }
 another-dimension-storage = { path = "../storage" }
 another-dimension-transport = { path = "../transport" }
+sha2 = "0.10.9"
 
 [features]
 dev-insecure = [
@@ -24,4 +25,3 @@ dev-insecure = [
 
 [lints]
 workspace = true
-

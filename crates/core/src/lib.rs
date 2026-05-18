@@ -1,3 +1,185 @@
+pub mod production {
+    use another_dimension_identity::{PairwisePublicKeyScheme, PairwiseSignatureScheme};
+    use another_dimension_pairing::{transcript, PairingError, PairingPayload};
+    use sha2::{Digest, Sha256};
+
+    const CANONICAL_DIALER_DOMAIN: &[u8] = b"AD-SESSION-CANONICAL-DIALER-V1";
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ProductionSessionPlan {
+        pub safety_transcript: String,
+        pub local_role: SessionRole,
+        pub canonical_dialer_public_key: String,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum SessionRole {
+        CanonicalDialer,
+        Responder,
+    }
+
+    #[derive(Debug, Eq, PartialEq)]
+    pub enum ProductionSessionError {
+        Pairing(PairingError),
+        NonProductionPairingPayload,
+        SamePairwiseIdentity,
+    }
+
+    impl From<PairingError> for ProductionSessionError {
+        fn from(value: PairingError) -> Self {
+            Self::Pairing(value)
+        }
+    }
+
+    pub fn plan_session_from_verified_pairing_payloads(
+        local: &PairingPayload,
+        remote: &PairingPayload,
+    ) -> Result<ProductionSessionPlan, ProductionSessionError> {
+        require_verified_production_payload(local)?;
+        require_verified_production_payload(remote)?;
+        if local.pairwise_public_key == remote.pairwise_public_key {
+            return Err(ProductionSessionError::SamePairwiseIdentity);
+        }
+        let safety_transcript = transcript(local, remote)?;
+        let local_rank = canonical_dialer_rank(local);
+        let remote_rank = canonical_dialer_rank(remote);
+        let local_role = if local_rank < remote_rank {
+            SessionRole::CanonicalDialer
+        } else {
+            SessionRole::Responder
+        };
+        let canonical_dialer_public_key = match local_role {
+            SessionRole::CanonicalDialer => local.pairwise_public_key.as_str(),
+            SessionRole::Responder => remote.pairwise_public_key.as_str(),
+        }
+        .to_string();
+        Ok(ProductionSessionPlan {
+            safety_transcript,
+            local_role,
+            canonical_dialer_public_key,
+        })
+    }
+
+    fn require_verified_production_payload(
+        payload: &PairingPayload,
+    ) -> Result<(), ProductionSessionError> {
+        if payload.pairwise_public_key.scheme().ok()
+            != Some(PairwisePublicKeyScheme::Ed25519DalekV2)
+            || payload.pairwise_signature.scheme().ok()
+                != Some(PairwiseSignatureScheme::Ed25519DalekV2)
+        {
+            return Err(ProductionSessionError::NonProductionPairingPayload);
+        }
+        let encoded = payload.encode()?;
+        let decoded = PairingPayload::decode(&encoded)?;
+        if decoded != *payload {
+            return Err(ProductionSessionError::Pairing(
+                PairingError::InvalidPayload,
+            ));
+        }
+        Ok(())
+    }
+
+    fn canonical_dialer_rank(payload: &PairingPayload) -> [u8; 32] {
+        let mut hasher = Sha256::new();
+        hasher.update(CANONICAL_DIALER_DOMAIN);
+        hasher.update([0]);
+        hasher.update(payload.pairwise_public_key.as_str().as_bytes());
+        hasher.finalize().into()
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use another_dimension_identity::{
+            PairwisePublicKey, PairwiseSignature, ProductionPairwisePrivateKey, ProfileName,
+        };
+        use another_dimension_pairing::{
+            production_pairing_payload_for, ProductionPairingPayloadParams, DEFAULT_TTL_SECONDS,
+        };
+
+        #[test]
+        fn production_session_plan_is_order_stable() {
+            let alice = production_payload("alice", [51_u8; 32], "alice.onion", "alice-prekey");
+            let bob = production_payload("bob", [52_u8; 32], "bob.onion", "bob-prekey");
+
+            let alice_view =
+                plan_session_from_verified_pairing_payloads(&alice, &bob).expect("session plan");
+            let bob_view =
+                plan_session_from_verified_pairing_payloads(&bob, &alice).expect("session plan");
+
+            assert_eq!(alice_view.safety_transcript, bob_view.safety_transcript);
+            assert_eq!(
+                alice_view.canonical_dialer_public_key,
+                bob_view.canonical_dialer_public_key
+            );
+            assert_ne!(alice_view.local_role, bob_view.local_role);
+        }
+
+        #[test]
+        fn production_session_plan_rejects_non_production_payload() {
+            let alice = production_payload("alice", [51_u8; 32], "alice.onion", "alice-prekey");
+            let dev_like = PairingPayload {
+                owner_profile: ProfileName::new("bob").expect("valid profile"),
+                pairing_nonce: "nonce".to_string(),
+                pairwise_public_key: PairwisePublicKey::new("dev-pub-bob")
+                    .expect("valid public key"),
+                pairwise_signature: PairwiseSignature::new("dev-sign-v1-bob")
+                    .expect("valid signature"),
+                rendezvous_endpoint: "bob.onion".to_string(),
+                endpoint_rotation_policy: "manual-v1".to_string(),
+                protocol_capabilities: "prototype-production-pairing-v1".to_string(),
+                prekey_bundle: "bob-prekey".to_string(),
+                issued_at_local_ms: 1_000,
+                ttl_seconds: DEFAULT_TTL_SECONDS,
+            };
+
+            assert_eq!(
+                plan_session_from_verified_pairing_payloads(&alice, &dev_like),
+                Err(ProductionSessionError::NonProductionPairingPayload)
+            );
+        }
+
+        #[test]
+        fn production_session_plan_rejects_tampered_payload() {
+            let alice = production_payload("alice", [51_u8; 32], "alice.onion", "alice-prekey");
+            let mut bob = production_payload("bob", [52_u8; 32], "bob.onion", "bob-prekey");
+            bob.rendezvous_endpoint = "bob-rotated.onion".to_string();
+
+            assert_eq!(
+                plan_session_from_verified_pairing_payloads(&alice, &bob),
+                Err(ProductionSessionError::Pairing(
+                    PairingError::InvalidPayload
+                ))
+            );
+        }
+
+        fn production_payload(
+            owner: &str,
+            seed: [u8; 32],
+            endpoint: &str,
+            prekey: &str,
+        ) -> PairingPayload {
+            let private_key =
+                ProductionPairwisePrivateKey::from_ed25519_dalek_seed(seed).expect("valid seed");
+            production_pairing_payload_for(
+                &ProfileName::new(owner).expect("valid profile"),
+                &private_key,
+                ProductionPairingPayloadParams {
+                    pairing_nonce: format!("{owner}-nonce"),
+                    rendezvous_endpoint: endpoint.to_string(),
+                    endpoint_rotation_policy: "manual-v1".to_string(),
+                    protocol_capabilities: "prototype-production-pairing-v1".to_string(),
+                    prekey_bundle: prekey.to_string(),
+                    issued_at_local_ms: 1_000,
+                    ttl_seconds: DEFAULT_TTL_SECONDS,
+                },
+            )
+            .expect("payload signs")
+        }
+    }
+}
+
 #[cfg(feature = "dev-insecure")]
 pub mod dev_insecure {
     use another_dimension_crypto::dev_insecure::FakeCryptoSession;
