@@ -61,6 +61,7 @@ Before replacing placeholder crypto, decide and document:
 
 The first identity signature dependency decision is tracked in [SIGNATURE_DECISION.md](SIGNATURE_DECISION.md).
 The first pairing nonce randomness dependency decision is tracked in [RANDOMNESS_DECISION.md](RANDOMNESS_DECISION.md).
+The first session-establishment decision boundary is tracked in [SESSION_DECISION.md](SESSION_DECISION.md).
 
 ## Candidate Direction
 
@@ -113,7 +114,7 @@ Minimum test coverage:
 2. Add test vectors for canonical transcript and signature verification. Initial integration fixtures are in place.
 3. Add maintained signature dependency and replace dev pairing signatures behind a production feature or default path. `ed25519-dalek` stable 2.x is added to `crates/identity`; pairwise private key generation, pairing decoder wiring, and production pairing draft/payload construction are in place.
 4. Add production safety material display boundary before selecting message encryption implementation. Initial SHA-256 display derivation is in place.
-5. Add session establishment tests before selecting message encryption implementation.
+5. Add session establishment decision boundary and tests before selecting message encryption implementation.
 6. Replace fake message encryption only after pairing identity verification is production-backed.
 7. Keep development fake crypto behind `dev-insecure` for test ergonomics.
 

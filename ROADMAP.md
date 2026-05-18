@@ -70,6 +70,7 @@ Tasks:
 - Maintain [CRYPTO_DECISION.md](CRYPTO_DECISION.md) as the public-safe decision boundary for Phase 2.
 - Maintain [SIGNATURE_DECISION.md](SIGNATURE_DECISION.md) for the first identity signature dependency decision.
 - Maintain [RANDOMNESS_DECISION.md](RANDOMNESS_DECISION.md) for the first production pairing nonce randomness boundary.
+- Maintain [SESSION_DECISION.md](SESSION_DECISION.md) for the first production session establishment boundary.
 - Keep production-facing key wrappers separate from `dev-insecure` placeholder key material.
 - Keep production Ed25519 pairwise private key generation backed by OS randomness.
 - Keep canonical pairing and safety transcript fixture tests stable before replacing placeholder signatures.
@@ -85,6 +86,7 @@ Tasks:
 - Keep production safety transcript tests sensitive to identity, endpoint, prekey, and capability changes.
 - Keep production safety material derivation separate from `dev-insecure` fake crypto.
 - Keep signed production payload to safety material integration tests before wiring production UI or storage.
+- Keep session establishment tests in front of any message encryption dependency.
 - Select maintained Rust-compatible libraries for identity signatures and session encryption.
 - Decide how pairing payload signatures map to real pairwise identity keys.
 - Decide whether the first production session model uses a Signal-style ratchet, Noise-based construction, or another reviewed design.
