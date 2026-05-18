@@ -47,10 +47,10 @@ Covered by tests:
 - Default builds rejecting prototype commands that require `dev-insecure`.
 - Negative profile/contact identifier validation.
 - Pairing cancel and fresh pending pairing expiry CLI behavior.
+- Message expiry removing pending envelopes before receive.
 
 Remaining tasks:
 
-- Add CLI tests for message expiry behavior.
 - Keep the public README and roadmap aligned as the prototype boundary changes.
 
 Exit criteria:
