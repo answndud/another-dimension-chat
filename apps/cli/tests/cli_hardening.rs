@@ -166,6 +166,24 @@ fn replayed_message_envelope_is_not_displayed_twice() {
     assert!(stdout(&second_receive).is_empty());
 }
 
+#[test]
+#[cfg(feature = "dev-insecure")]
+fn sent_message_plaintext_is_not_persisted_in_dev_store() {
+    let workspace = TestWorkspace::new("message-plaintext-not-persisted");
+    confirm_alice_and_bob(&workspace);
+    let message = "plaintext should not be stored";
+
+    assert_success(run_with_home(
+        &workspace.home,
+        &["message", "send", "--from", "alice", "--to", "bob", message],
+    ));
+
+    assert!(
+        !path_contains(&workspace.home, message.as_bytes()),
+        "dev store contains plaintext message"
+    );
+}
+
 #[cfg(feature = "dev-insecure")]
 fn temp_payload_path(name: &str) -> std::path::PathBuf {
     let mut path = std::env::temp_dir();
@@ -263,6 +281,30 @@ fn confirm_alice_and_bob(workspace: &TestWorkspace) -> PairingFiles {
         ],
     ));
     pairing
+}
+
+#[cfg(feature = "dev-insecure")]
+fn path_contains(root: &Path, needle: &[u8]) -> bool {
+    if !root.exists() {
+        return false;
+    }
+    let entries = std::fs::read_dir(root).expect("failed to read directory");
+    for entry in entries {
+        let path = entry.expect("failed to read directory entry").path();
+        if path.is_dir() {
+            if path_contains(&path, needle) {
+                return true;
+            }
+            continue;
+        }
+        if path.is_file() {
+            let bytes = std::fs::read(&path).expect("failed to read file");
+            if bytes.windows(needle.len()).any(|window| window == needle) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 #[cfg(feature = "dev-insecure")]
