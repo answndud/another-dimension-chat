@@ -84,3 +84,11 @@ This is only a candidate direction.
 `ProductionEnvelopeSession` connects the in-memory Noise transport pair to `protocol::Envelope`. The current boundary uses caller-supplied message numbers and a domain-separated hash of the safety transcript as a non-persistent test channel id. It is not a durable session identifier and is not yet connected to storage, transport, or replay persistence.
 
 Replay-aware decrypt now uses the existing `ReplayWindow` boundary. Duplicate and old message numbers are rejected before decrypt, while tampered ciphertext does not commit replay state. Replay state is still caller-owned and not persisted by the production boundary.
+
+## Session Persistence Decision
+
+For the current v0.1 production message boundary, production session state is in-memory only.
+
+Do not persist Noise transport state, Noise static private keys, replay state, or derived channel/session state in plaintext local files. Durable production session persistence is blocked until the encrypted local storage phase defines storage keys, unlock behavior, key derivation, backup exclusion, and local compromise limits.
+
+The current implementation may recreate setup drafts and sessions for local self-tests. That is acceptable for boundary verification, but it is not a usable asynchronous messaging model and should not be presented as production-ready communication.
