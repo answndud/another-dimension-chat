@@ -17,6 +17,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `EnvelopeTransport` defines minimal send/receive methods over encrypted `Envelope` values.
 - `OnionEnvelopeTransport::fail_closed_high_risk()` enforces high-risk onion-only routing and fails with `TransportError::Unavailable` until a real Tor/onion adapter exists.
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
+- `arti_lifecycle_decision()` requires app-private state/cache directories, backup exclusion, log redaction, and no onion service key generation until a storage decision exists.
 - Dev file transport remains behind the `dev-insecure` feature.
 
 ## What Does Not Exist Yet
@@ -101,3 +102,36 @@ Primary sources checked:
 - Arti getting started, proxy/onion support note: <https://arti.torproject.org/>
 - Tor support, censorship circumvention overview: <https://support.torproject.org/tor-browser/circumvention/>
 - `arti-client 0.42.0` crate metadata and features: <https://docs.rs/crate/arti-client/latest/features>
+
+## Arti State Directory And Key Lifecycle Decision
+
+Decision as of 2026-05-18: do not use Arti's default shared cache/state directories for this app. A future adapter must pass app-private state and cache directories through `TorClientConfigBuilder::from_directories` or an equivalent builder path.
+
+Rationale:
+
+- `arti-client` documents that its default cache and local data directories may be shared by all programs using those defaults.
+- A high-risk messenger should not share Tor state with unrelated Arti-using programs.
+- The app needs explicit backup exclusion, deletion, and forensic cleanup behavior before writing transport state.
+
+Directory policy:
+
+- `state_dir`: app-private, profile-scoped or install-scoped according to the future profile lifecycle decision.
+- `cache_dir`: app-private and deletable while Arti is not running.
+- Shared `${ARTI_CACHE}` and `${ARTI_LOCAL_DATA}` defaults are not allowed for production adapter use.
+- State/cache paths must not include contact ids, profile display names, onion addresses, or pairwise public keys.
+- The app must document OS backup exclusion behavior before enabling real transport.
+
+Onion service key policy:
+
+- Do not generate or persist onion service keys in the current spike.
+- Do not store onion service private keys in plaintext app files.
+- Do not rely on Arti's on-disk native keystore as a product decision until profile unlock, backup exclusion, deletion, and migration behavior are decided.
+- The next accepted design should choose between app-private Arti keystore, SQLCipher-wrapped key material, or another reviewed key wrapping approach.
+
+Logging and crash policy:
+
+- No transport logs may include plaintext, private keys, decrypted envelopes, onion service private keys, pairwise public keys, contact ids, profile display names, or full onion addresses.
+- Crashes must not dump Arti state paths containing user-identifying names.
+- Full Arti debug logs are not acceptable in high-risk mode by default.
+
+The current code-level invariant is `arti_lifecycle_decision()`: app-private state/cache required, shared default Arti directories rejected, backup exclusion required, log redaction required, and onion service key generation disabled until a separate storage decision exists.
