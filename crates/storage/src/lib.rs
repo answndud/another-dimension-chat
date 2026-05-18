@@ -99,6 +99,7 @@ pub mod production {
         InvalidEncryptedRecord,
         InvalidRecordId,
         InvalidPassphrase,
+        UnlockPolicyViolation,
     }
 
     #[derive(Debug, Eq, PartialEq)]
@@ -161,6 +162,43 @@ pub mod production {
 
         fn as_database_key(&self) -> StorageDatabaseKey {
             StorageDatabaseKey(self.0.clone())
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum UnlockMode {
+        HighRisk,
+        Standard,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum UnlockFactor {
+        Passphrase,
+        OsKeystoreWrappedKey,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct UnlockRequest {
+        mode: UnlockMode,
+        factors: Vec<UnlockFactor>,
+    }
+
+    impl UnlockRequest {
+        pub fn new(mode: UnlockMode, factors: Vec<UnlockFactor>) -> Self {
+            Self { mode, factors }
+        }
+
+        pub fn require_allowed(&self) -> Result<(), ProductionStoragePolicyError> {
+            let has_passphrase = self.factors.contains(&UnlockFactor::Passphrase);
+            if !has_passphrase {
+                return Err(ProductionStoragePolicyError::UnlockPolicyViolation);
+            }
+            if self.mode == UnlockMode::HighRisk
+                && self.factors == [UnlockFactor::OsKeystoreWrappedKey]
+            {
+                return Err(ProductionStoragePolicyError::UnlockPolicyViolation);
+            }
+            Ok(())
         }
     }
 
@@ -320,6 +358,8 @@ pub mod production {
             &self,
             passphrase: &ProfilePassphrase,
         ) -> Result<SqlCipherRecordStore, ProductionStorageError> {
+            UnlockRequest::new(UnlockMode::HighRisk, vec![UnlockFactor::Passphrase])
+                .require_allowed()?;
             SqlCipherRecordStore::unlock_with_passphrase(&self.path, passphrase)
         }
     }
@@ -539,6 +579,46 @@ pub mod production {
             );
             assert!(!format!("{passphrase:?}").contains("correct horse"));
             assert!(!format!("{database_key:?}").contains("correct horse"));
+        }
+
+        #[test]
+        fn high_risk_unlock_rejects_os_keystore_only_auto_unlock() {
+            let request = UnlockRequest::new(
+                UnlockMode::HighRisk,
+                vec![UnlockFactor::OsKeystoreWrappedKey],
+            );
+
+            assert_eq!(
+                request.require_allowed(),
+                Err(ProductionStoragePolicyError::UnlockPolicyViolation)
+            );
+        }
+
+        #[test]
+        fn unlock_policy_requires_passphrase_for_all_modes() {
+            for mode in [UnlockMode::HighRisk, UnlockMode::Standard] {
+                assert_eq!(
+                    UnlockRequest::new(mode, Vec::new()).require_allowed(),
+                    Err(ProductionStoragePolicyError::UnlockPolicyViolation)
+                );
+                assert_eq!(
+                    UnlockRequest::new(mode, vec![UnlockFactor::OsKeystoreWrappedKey])
+                        .require_allowed(),
+                    Err(ProductionStoragePolicyError::UnlockPolicyViolation)
+                );
+                assert_eq!(
+                    UnlockRequest::new(mode, vec![UnlockFactor::Passphrase]).require_allowed(),
+                    Ok(())
+                );
+                assert_eq!(
+                    UnlockRequest::new(
+                        mode,
+                        vec![UnlockFactor::Passphrase, UnlockFactor::OsKeystoreWrappedKey]
+                    )
+                    .require_allowed(),
+                    Ok(())
+                );
+            }
         }
 
         #[test]

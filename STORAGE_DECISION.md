@@ -21,6 +21,7 @@ The repository currently has:
 - A passphrase unlock boundary through `ProfilePassphrase` and `LockedProfileStore`.
 - Tests that wrong passphrases fail before records are returned.
 - Tests that passphrases and database keys are redacted in debug output.
+- An unlock policy boundary that rejects OS-keystore-only unlock, including in high-risk mode.
 
 The repository does not currently have:
 
@@ -174,6 +175,8 @@ It supports:
 - Passphrase-based unlock through `ProfilePassphrase`.
 - A locked profile handle that requires explicit unlock before records can be read.
 - Wrong-passphrase rejection before records are returned.
+- Unlock policy checks that require a passphrase factor before unlock.
+- High-risk mode rejection for OS-keystore-only auto-unlock.
 
 It does not support:
 
@@ -195,7 +198,7 @@ When production unlock is added, prefer this sequence:
 1. Add an explicit profile unlock API in Rust core.
 2. Support a passphrase unlock path first, relying on SQLCipher passphrase key derivation rather than adding a separate custom KDF.
 3. Add OS keychain/DPAPI/Keystore wrapping only as an optional convenience or recovery layer after the passphrase path is tested.
-4. Keep high-risk mode from auto-unlocking solely because the user is logged into the OS account.
+4. Keep high-risk mode from auto-unlocking solely because the user is logged into the OS account. Initial unlock policy test is in place.
 5. Add key rotation through SQLCipher rekey only after backup, rollback, and recovery behavior are documented.
 
 Rationale:
@@ -218,7 +221,7 @@ Required tests before production unlock:
 - Opening an existing DB with the wrong passphrase fails before any records are returned. Initial storage test is in place.
 - No passphrase, database key, or derived key appears in debug output, logs, panic text, or CLI output. Initial debug redaction test is in place.
 - Locked profiles cannot read `ADREC1` records. Initial locked-handle API is in place.
-- High-risk mode does not auto-unlock through OS keychain alone.
+- High-risk mode does not auto-unlock through OS keychain alone. Initial unlock policy test is in place.
 - Rekey/rotation tests exist before any key rotation UI is exposed.
 
 ## Encrypted Record Envelope

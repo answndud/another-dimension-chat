@@ -24,6 +24,7 @@ What exists today:
 - Production setup, in-memory Noise transport, envelope encryption/decryption, replay rejection, and storage policy boundaries for tests.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.
+- High-risk unlock policy tests that reject OS-keystore-only unlock.
 - Padded message envelope prototype.
 - Replay window prototype.
 - CLI hardening tests for malformed input, duplicate pairing scans, replay handling, message expiry, and prototype boundary behavior.
