@@ -15,10 +15,12 @@ The repository currently has:
 - Tests that keep Noise/session transport state `InMemoryOnly`, even after an encrypted storage backend exists.
 - A backend-independent encrypted record envelope format, `ADREC1`, for storing nonce plus sealed record body produced by a separate encryption layer.
 - Tests that reject `ADREC1` records for plaintext-only schema markers and in-memory-only session transport state.
+- A narrow SQLCipher-backed `ADREC1` record store spike using `rusqlite` and a test-only storage key boundary.
+- Tests that round-trip `ADREC1` through SQLCipher and assert that the sealed body and `ADREC1` marker are not visible in database file bytes.
+- An opaque `EncryptedRecordId` boundary so row identifiers cannot be path-like profile/contact strings.
 
 The repository does not currently have:
 
-- SQLCipher or another encrypted database backend.
 - OS keychain, DPAPI, Android Keystore, or iOS Keychain integration.
 - Password-based key derivation.
 - Production key wrapping.
@@ -26,7 +28,8 @@ The repository does not currently have:
 - Durable production replay state storage.
 - Durable Noise transport or ratchet state storage.
 - Backup, export, import, or migration behavior.
-- Record encryption implementation. `ADREC1` is a container format, not an encryption algorithm.
+- Production unlock/key-management. The current SQLCipher store spike uses test-only key construction.
+- Record-level encryption implementation. `ADREC1` is a container format, not an encryption algorithm.
 
 ## Production Storage Classes
 
@@ -111,6 +114,7 @@ The first backend spike should:
 ## Dependency Review Before First Backend Spike
 
 No new storage encryption dependency has been added yet.
+Status: implemented for the first local spike.
 
 Candidate dependency:
 
@@ -150,7 +154,30 @@ Test-only key handling for the first spike:
 
 Dependency addition gate:
 
-Before adding the dependency, confirm that the next slice is only a local encrypted storage spike for `ADREC1` records and is not a production unlock/key-management implementation.
+The dependency was added only for a local encrypted storage spike for `ADREC1` records. This is not a production unlock/key-management implementation.
+
+## SQLCipher Store Spike
+
+The first SQLCipher store boundary is `SqlCipherRecordStore` in `crates/storage`.
+
+It supports:
+
+- Opening a SQLCipher-backed database with an explicit `StorageDatabaseKey`.
+- Storing and loading `ADREC1` records by opaque `EncryptedRecordId`.
+- Rejecting empty or path-like record ids before write.
+- Keeping `SessionTransportState` outside persistent storage through the existing storage policy.
+- Test-only key construction for local verification.
+
+It does not support:
+
+- Production profile unlock.
+- OS keychain/DPAPI/Keystore wrapping.
+- Password KDFs.
+- Key rotation.
+- Backup/export/import.
+- Migration from `dev-insecure` storage.
+- Persistent Noise/session transport state.
+- A security-ready release.
 
 ## Encrypted Record Envelope
 
@@ -186,7 +213,7 @@ Only records classified as `EncryptedAtRestRequired` may be encoded as `ADREC1`.
 1. Add production storage record classification and plaintext persistence rejection. Done in `crates/storage`.
 2. Add a public-safe backend selection decision before adding new dependencies. Initial direction: Rust-core SQLCipher-compatible SQLite, likely through `rusqlite`, after the encrypted record envelope is defined.
 3. Add an encrypted record envelope format independent of any specific backend. Initial `ADREC1` container is in place.
-4. Add a minimal encrypted storage implementation for non-session records only.
+4. Add a minimal encrypted storage implementation for non-session records only. Initial SQLCipher-backed `ADREC1` store spike is in place.
 5. Wire production key material only after unlock and key wrapping behavior is tested.
 6. Persist replay state only after metadata leakage and rollback behavior are tested.
 7. Keep session transport state in memory until a separate session lifecycle decision changes that rule.

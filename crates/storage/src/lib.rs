@@ -31,6 +31,8 @@ impl From<io::Error> for StorageError {
 pub mod production {
     use super::*;
     use another_dimension_protocol::{decode_hex, encode_hex};
+    use rusqlite::{params, Connection, OptionalExtension};
+    use std::path::Path;
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum ProductionRecordKind {
@@ -94,6 +96,40 @@ pub mod production {
             kind: ProductionRecordKind,
         },
         InvalidEncryptedRecord,
+        InvalidRecordId,
+    }
+
+    #[derive(Debug, Eq, PartialEq)]
+    pub enum ProductionStorageError {
+        Policy(ProductionStoragePolicyError),
+        Database(String),
+        InvalidRecord,
+    }
+
+    impl From<ProductionStoragePolicyError> for ProductionStorageError {
+        fn from(value: ProductionStoragePolicyError) -> Self {
+            Self::Policy(value)
+        }
+    }
+
+    impl From<rusqlite::Error> for ProductionStorageError {
+        fn from(value: rusqlite::Error) -> Self {
+            Self::Database(value.to_string())
+        }
+    }
+
+    #[derive(Debug, Eq, PartialEq)]
+    pub struct StorageDatabaseKey(String);
+
+    impl StorageDatabaseKey {
+        #[cfg(test)]
+        fn test_only(value: impl Into<String>) -> Self {
+            Self(value.into())
+        }
+
+        fn expose_for_sqlcipher(&self) -> &str {
+            &self.0
+        }
     }
 
     #[derive(Clone, Debug, Eq, PartialEq)]
@@ -209,6 +245,83 @@ pub mod production {
             let sealed_body = decode_hex(parts[5])
                 .map_err(|_| ProductionStoragePolicyError::InvalidEncryptedRecord)?;
             Self::new(kind, scope, nonce, sealed_body)
+        }
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct EncryptedRecordId(String);
+
+    impl EncryptedRecordId {
+        pub fn new(value: impl Into<String>) -> Result<Self, ProductionStoragePolicyError> {
+            let value = value.into();
+            if value.is_empty()
+                || value.len() > 128
+                || !value
+                    .chars()
+                    .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_')
+            {
+                return Err(ProductionStoragePolicyError::InvalidRecordId);
+            }
+            Ok(Self(value))
+        }
+
+        fn as_str(&self) -> &str {
+            &self.0
+        }
+    }
+
+    pub struct SqlCipherRecordStore {
+        connection: Connection,
+    }
+
+    impl SqlCipherRecordStore {
+        pub fn open(
+            path: impl AsRef<Path>,
+            key: &StorageDatabaseKey,
+        ) -> Result<Self, ProductionStorageError> {
+            let connection = Connection::open(path)?;
+            connection.pragma_update(None, "key", key.expose_for_sqlcipher())?;
+            connection.execute_batch(
+                "CREATE TABLE IF NOT EXISTS encrypted_records (
+                    record_id TEXT PRIMARY KEY NOT NULL,
+                    encoded_record TEXT NOT NULL
+                ) STRICT;",
+            )?;
+            Ok(Self { connection })
+        }
+
+        pub fn put(
+            &self,
+            record_id: &EncryptedRecordId,
+            record: &EncryptedRecord,
+        ) -> Result<(), ProductionStorageError> {
+            require_encrypted_record_allowed(record.kind)?;
+            self.connection.execute(
+                "INSERT INTO encrypted_records (record_id, encoded_record)
+                 VALUES (?1, ?2)
+                 ON CONFLICT(record_id) DO UPDATE SET encoded_record = excluded.encoded_record",
+                params![record_id.as_str(), record.encode()],
+            )?;
+            Ok(())
+        }
+
+        pub fn get(
+            &self,
+            record_id: &EncryptedRecordId,
+        ) -> Result<Option<EncryptedRecord>, ProductionStorageError> {
+            let encoded = self
+                .connection
+                .query_row(
+                    "SELECT encoded_record FROM encrypted_records WHERE record_id = ?1",
+                    params![record_id.as_str()],
+                    |row| row.get::<_, String>(0),
+                )
+                .optional()?;
+            encoded
+                .map(|record| {
+                    EncryptedRecord::decode(&record).map_err(ProductionStorageError::from)
+                })
+                .transpose()
         }
     }
 
@@ -339,6 +452,17 @@ pub mod production {
         }
 
         #[test]
+        fn encrypted_record_id_rejects_path_like_or_empty_identifiers() {
+            assert!(EncryptedRecordId::new("record_0001").is_ok());
+            for value in ["", "alice/bob/0001", "alice:bob", "bad id"] {
+                assert_eq!(
+                    EncryptedRecordId::new(value),
+                    Err(ProductionStoragePolicyError::InvalidRecordId)
+                );
+            }
+        }
+
+        #[test]
         fn encrypted_record_rejects_plaintext_allowed_and_in_memory_only_kinds() {
             for kind in [
                 ProductionRecordKind::SchemaMarker,
@@ -369,6 +493,73 @@ pub mod production {
             ] {
                 assert!(EncryptedRecord::decode(record).is_err());
             }
+        }
+
+        #[test]
+        fn sqlcipher_store_round_trips_adrec1_without_plaintext_file_body() {
+            let (_dir, path) = unique_test_database_path("round-trip");
+            let store =
+                SqlCipherRecordStore::open(&path, &StorageDatabaseKey::test_only("test-key"))
+                    .expect("open store");
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::MessageEnvelope,
+                EncryptedRecordScope::contact(
+                    ProfileName::new("alice").expect("profile"),
+                    ContactId::new("bob").expect("contact"),
+                ),
+                b"nonce-for-test".to_vec(),
+                b"sealed-body-for-test".to_vec(),
+            )
+            .expect("record");
+
+            let record_id = EncryptedRecordId::new("record_0001").expect("record id");
+            store.put(&record_id, &record).expect("put");
+            assert_eq!(store.get(&record_id).expect("get"), Some(record));
+            let database_bytes = std::fs::read(&path).expect("read database");
+            assert!(!contains_bytes(&database_bytes, b"sealed-body-for-test"));
+            assert!(!contains_bytes(&database_bytes, b"ADREC1"));
+        }
+
+        #[test]
+        fn sqlcipher_store_uses_opaque_record_ids() {
+            let (_dir, path) = unique_test_database_path("empty-key");
+            let store =
+                SqlCipherRecordStore::open(&path, &StorageDatabaseKey::test_only("test-key"))
+                    .expect("open store");
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::ReplayWindowState,
+                EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile")),
+                vec![1],
+                vec![2],
+            )
+            .expect("record");
+
+            assert_eq!(
+                EncryptedRecordId::new(""),
+                Err(ProductionStoragePolicyError::InvalidRecordId)
+            );
+            let record_id = EncryptedRecordId::new("record_0001").expect("record id");
+            store.put(&record_id, &record).expect("put");
+        }
+
+        fn unique_test_database_path(test_name: &str) -> (std::path::PathBuf, std::path::PathBuf) {
+            let dir = std::env::temp_dir().join(format!(
+                "another-dimension-sqlcipher-{test_name}-{}-{:?}",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+            if dir.exists() {
+                std::fs::remove_dir_all(&dir).expect("remove stale test dir");
+            }
+            std::fs::create_dir_all(&dir).expect("create test dir");
+            let path = dir.join("store.db");
+            (dir, path)
+        }
+
+        fn contains_bytes(haystack: &[u8], needle: &[u8]) -> bool {
+            haystack
+                .windows(needle.len())
+                .any(|window| window == needle)
         }
     }
 }
