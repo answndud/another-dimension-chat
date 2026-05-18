@@ -33,6 +33,7 @@ The repository currently has:
 - `NoiseTransportPair` exposes a narrow one-message encrypt/decrypt boundary after Noise XX transport mode and rejects tampered ciphertext through the underlying `snow` transport state.
 - `ProductionEnvelopeSession` connects the in-memory Noise transport pair to `protocol::Envelope` for a caller-supplied message number and a domain-separated transcript-derived test channel id.
 - Production envelope receive can commit `ReplayWindow` state only after replay acceptance and successful decrypt, so tampered ciphertext does not advance replay state.
+- Production session, Noise private key, and replay persistence are intentionally not implemented; the current production message boundary is in-memory only until encrypted storage is designed.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
 
@@ -45,6 +46,7 @@ The repository does not currently have:
 - Production key storage.
 - Broader production randomness policy for session establishment.
 - Production encrypted local storage.
+- Persistent production session state.
 
 ## Non-Negotiable Rules
 
@@ -132,4 +134,5 @@ Minimum test coverage:
 - Is the current `snow` Noise XX direction acceptable after documenting how X25519 static private keys are stored, rotated, and bound to endpoint rotation?
 - Should Phase 2 prioritize identity signatures first or full message session encryption first?
 - How should production key material be stored before Phase 3 encrypted storage is complete?
+- Which production session and replay state, if any, should be persisted after encrypted storage exists?
 - What review threshold is required before any release artifact includes production crypto enabled by default?
