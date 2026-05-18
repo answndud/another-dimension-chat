@@ -29,6 +29,7 @@ The repository currently has:
 - Noise static public keys have a public prekey bundle string format: `adnoise1:xx25519-chachapoly-blake2s:<hex-public-key>`.
 - `ProductionSessionPlan` rejects signed production pairing payloads whose `prekey_bundle` is not a valid Noise prekey bundle.
 - `ProductionSetupDraft` can generate an Ed25519 production pairing draft and a Noise static keypair together, placing only the Noise public prekey bundle in the signed pairing payload.
+- Core-level setup handshake smoke uses the deterministic canonical dialer as the Noise initiator and rejects local Noise private keys that do not match the signed prekey bundle.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
 
