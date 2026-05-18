@@ -13,6 +13,7 @@ The repository currently has:
 - Pairwise identity types in `crates/identity`.
 - Production-facing key and signature byte wrappers that reject development placeholder material.
 - Pairing payload canonicalization and signature boundary in `crates/pairing`.
+- Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
 
 The repository does not currently have:
@@ -94,7 +95,7 @@ Minimum test coverage:
 ## Implementation Sequence
 
 1. Add production key type wrappers without changing CLI behavior. Done for the initial byte wrapper boundary.
-2. Add test vectors for canonical transcript and signature verification.
+2. Add test vectors for canonical transcript and signature verification. Initial integration fixtures are in place.
 3. Add maintained signature dependency and replace dev pairing signatures behind a production feature or default path.
 4. Add session establishment tests before selecting message encryption implementation.
 5. Replace fake message encryption only after pairing identity verification is production-backed.
