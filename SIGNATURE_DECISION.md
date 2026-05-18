@@ -8,7 +8,7 @@ Another Dimension Chat still does not have production cryptography. This documen
 
 Use `ed25519-dalek` 2.x as the first production identity signature candidate.
 
-The crate is now added to `crates/identity` with tests that prove the production boundary is being used. Pairing decode verifies production public key plus production signature pairs through the Ed25519 path. Pairing construction can sign caller-supplied production pairing parameters with an Ed25519 production private key. Development pairing payloads still use the explicit development placeholder path.
+The crate is now added to `crates/identity` with tests that prove the production boundary is being used. Pairwise private key generation can use OS randomness through a narrow boundary. Pairing decode verifies production public key plus production signature pairs through the Ed25519 path. Pairing construction can sign caller-supplied production pairing parameters with an Ed25519 production private key. Development pairing payloads still use the explicit development placeholder path.
 
 Production public keys and signatures are encoded for pairing payload transport as scheme-tagged strings:
 
@@ -66,6 +66,7 @@ When `ed25519-dalek` is added:
 
 - Add it only to `crates/identity`. Done.
 - Prefer a narrow feature set; do not enable serialization features unless tests require them.
+- Generate production Ed25519 pairwise private keys through the OS-randomness wrapper only.
 - Keep `dev-insecure` placeholder signing available only for dev/test flows.
 - Do not allow `dev-pub-*`, `dev-priv-*`, or `dev-sign-v1-*` material into production key wrappers.
 - Keep production pairing public keys scheme-tagged so future payload decoders do not silently mix dev and production verification.
@@ -81,6 +82,7 @@ When `ed25519-dalek` is added:
 The first implementation commit that adds `ed25519-dalek` must include tests for:
 
 - Generating or constructing a production signing key. Done.
+- Generating two production signing keys through OS randomness and proving they differ under normal conditions. Done.
 - Signing canonical pairing payload bytes. Done.
 - Verifying the signature with the matching production public key. Done.
 - Rejecting tampered canonical bytes. Done.
@@ -97,6 +99,7 @@ Not decided here:
 - Signal-style ratchet vs Noise-based message session.
 - Prekey bundle format.
 - Production local key storage.
+- Production key backup or export.
 - Session backup or migration.
 - Onion transport authentication.
 

@@ -71,6 +71,7 @@ Tasks:
 - Maintain [SIGNATURE_DECISION.md](SIGNATURE_DECISION.md) for the first identity signature dependency decision.
 - Maintain [RANDOMNESS_DECISION.md](RANDOMNESS_DECISION.md) for the first production pairing nonce randomness boundary.
 - Keep production-facing key wrappers separate from `dev-insecure` placeholder key material.
+- Keep production Ed25519 pairwise private key generation backed by OS randomness.
 - Keep canonical pairing and safety transcript fixture tests stable before replacing placeholder signatures.
 - Add `ed25519-dalek` production signature wrapper tests before wiring pairing decode to production verification.
 - Keep production pairing public key strings scheme-tagged before decoder wiring.

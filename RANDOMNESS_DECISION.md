@@ -1,12 +1,12 @@
 # Randomness Decision
 
-This document records the first public-safe randomness boundary for production pairing nonces.
+This document records the first public-safe randomness boundaries for production pairing nonces and Ed25519 pairwise private key seeds.
 
-Another Dimension Chat still does not have production cryptography. This document only covers pairing nonce generation. It does not decide production key generation, session establishment randomness, storage keys, backups, or release readiness.
+Another Dimension Chat still does not have production cryptography. This document covers only pairing nonce generation and Ed25519 pairwise private key seed generation. It does not decide session establishment randomness, storage keys, backups, or release readiness.
 
 ## Decision
 
-Use `getrandom` as the first OS-randomness dependency for production pairing nonces.
+Use `getrandom` as the first OS-randomness dependency for production pairing nonces and Ed25519 pairwise private key seeds.
 
 The production pairing nonce API is intentionally narrow:
 
@@ -46,6 +46,7 @@ Metadata was checked with `cargo search` and `cargo info` on 2026-05-18.
 - Do not use development nonce generation in production pairing construction.
 - Do not derive production nonces from profile names, timestamps, process IDs, endpoints, or key material.
 - Do not use this pairing nonce API as a key generator.
+- Generate Ed25519 pairwise private key seeds through the dedicated identity API, not through ad hoc callers.
 - Do not hide rendezvous endpoint or prekey decisions behind the nonce/defaults helper.
 - Do not log production nonce generation failures with sensitive environment details.
 - Keep nonce strings lowercase, scheme-tagged, and file-name safe.
@@ -60,5 +61,6 @@ Current tests cover:
 - Lowercase hex body.
 - Two generated nonces are not equal under normal OS randomness.
 - Default production pairing params use generated nonce, local timestamp, default TTL, default endpoint rotation policy, and default capability string.
+- Two generated Ed25519 pairwise private keys differ under normal OS randomness and can sign/verify pairing payload bytes.
 
 This is not statistical randomness testing. It only protects the API boundary and encoding invariants.
