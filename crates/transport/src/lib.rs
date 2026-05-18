@@ -10,6 +10,44 @@ pub enum TransportError {
     Unavailable,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportRuntimeError {
+    BootstrapTimeout,
+    CensorshipOrBridgeRequired,
+    StateDirectoryPermissionDenied,
+    LogRedactionPreflightFailed,
+    OnionServiceKeyUnavailable,
+    OnionServiceLaunchFailed,
+    RuntimeNetworkDisabled,
+    SendFailed,
+    ReceiveFailed,
+}
+
+impl TransportRuntimeError {
+    pub fn is_preflight_failure(self) -> bool {
+        matches!(
+            self,
+            Self::StateDirectoryPermissionDenied | Self::LogRedactionPreflightFailed
+        )
+    }
+
+    pub fn is_bootstrap_failure(self) -> bool {
+        matches!(
+            self,
+            Self::BootstrapTimeout
+                | Self::CensorshipOrBridgeRequired
+                | Self::RuntimeNetworkDisabled
+        )
+    }
+
+    pub fn is_onion_service_failure(self) -> bool {
+        matches!(
+            self,
+            Self::OnionServiceKeyUnavailable | Self::OnionServiceLaunchFailed
+        )
+    }
+}
+
 pub trait Transport {
     fn send_envelope(
         &self,
@@ -522,6 +560,23 @@ mod tests {
             transport.receive_envelopes(TransportReceiveRequest { route: &direct }),
             Err(TransportError::PolicyViolation)
         );
+    }
+
+    #[test]
+    fn runtime_error_taxonomy_separates_preflight_bootstrap_and_onion_failures() {
+        assert!(TransportRuntimeError::StateDirectoryPermissionDenied.is_preflight_failure());
+        assert!(TransportRuntimeError::LogRedactionPreflightFailed.is_preflight_failure());
+        assert!(!TransportRuntimeError::BootstrapTimeout.is_preflight_failure());
+
+        assert!(TransportRuntimeError::BootstrapTimeout.is_bootstrap_failure());
+        assert!(TransportRuntimeError::CensorshipOrBridgeRequired.is_bootstrap_failure());
+        assert!(TransportRuntimeError::RuntimeNetworkDisabled.is_bootstrap_failure());
+        assert!(!TransportRuntimeError::OnionServiceLaunchFailed.is_bootstrap_failure());
+
+        assert!(TransportRuntimeError::OnionServiceKeyUnavailable.is_onion_service_failure());
+        assert!(TransportRuntimeError::OnionServiceLaunchFailed.is_onion_service_failure());
+        assert!(!TransportRuntimeError::SendFailed.is_onion_service_failure());
+        assert!(!TransportRuntimeError::ReceiveFailed.is_onion_service_failure());
     }
 
     #[test]

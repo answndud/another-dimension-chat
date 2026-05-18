@@ -16,6 +16,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `TransportRoute` separates onion, local, and direct-peer routes.
 - `EnvelopeTransport` defines minimal send/receive methods over encrypted `Envelope` values.
 - `OnionEnvelopeTransport::fail_closed_high_risk()` enforces high-risk onion-only routing and fails with `TransportError::Unavailable` until a real Tor/onion adapter exists.
+- `TransportRuntimeError` separates future preflight, bootstrap, bridge/censorship, onion service, send, and receive failures before a network-capable adapter exists.
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
 - `arti_lifecycle_decision()` requires app-private state/cache directories, backup exclusion, log redaction, and no onion service key generation until a storage decision exists.
 - `ArtiAppPrivateDirs` and `ArtiAdapterSpike::fail_closed_app_private_config` compile-check app-private `TorClientConfigBuilder::from_directories` wiring without bootstrapping Tor.
@@ -169,3 +170,25 @@ This keeps three operations separate:
 - Onion service launch/key generation: not implemented.
 
 A future network-capable adapter must introduce explicit failure modes for bootstrap timeout, Tor censorship/bridge absence, state directory permission failure, log-redaction preflight failure, onion service key unavailable, and onion service launch failure before replacing fail-closed transport behavior.
+
+## Transport Runtime Error Taxonomy
+
+Decision as of 2026-05-18: keep the current fail-closed `TransportError::Unavailable` behavior, but define the finer-grained runtime taxonomy now so the future network-capable adapter does not collapse unrelated failures into one bucket.
+
+Current runtime taxonomy:
+
+- Preflight failures:
+  - `StateDirectoryPermissionDenied`
+  - `LogRedactionPreflightFailed`
+- Bootstrap failures:
+  - `RuntimeNetworkDisabled`
+  - `BootstrapTimeout`
+  - `CensorshipOrBridgeRequired`
+- Onion service failures:
+  - `OnionServiceKeyUnavailable`
+  - `OnionServiceLaunchFailed`
+- Envelope transfer failures:
+  - `SendFailed`
+  - `ReceiveFailed`
+
+This taxonomy is not a production adapter yet. It is a boundary for later adapter work: policy violations, invalid endpoints, fail-closed unavailability, bootstrap failures, censorship/bridge requirements, onion service key failures, and envelope transfer failures must remain distinguishable in tests and logs. Logs still must not include plaintext, private keys, decrypted envelopes, full onion addresses, contact ids, or profile display names.
