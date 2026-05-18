@@ -1,8 +1,11 @@
+use ed25519_dalek::{Signature as Ed25519Signature, Signer, SigningKey, VerifyingKey};
 use std::fmt;
 #[cfg(feature = "dev-insecure")]
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const MAX_PRODUCTION_KEY_MATERIAL_SIZE: usize = 4096;
+const ED25519_KEY_SIZE: usize = 32;
+const ED25519_SIGNATURE_SIZE: usize = 64;
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ProfileName(String);
@@ -117,12 +120,14 @@ impl PairwiseSignature {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ProductionKeyAlgorithm {
     PendingReview,
+    Ed25519DalekV2,
 }
 
 impl ProductionKeyAlgorithm {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::PendingReview => "pending-review",
+            Self::Ed25519DalekV2 => "ed25519-dalek-v2",
         }
     }
 }
@@ -149,6 +154,45 @@ impl ProductionPairwisePublicKey {
 
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
+    }
+
+    pub fn from_ed25519_dalek_bytes(bytes: [u8; ED25519_KEY_SIZE]) -> Result<Self, IdentityError> {
+        VerifyingKey::from_bytes(&bytes).map_err(|_| IdentityError::InvalidKeyMaterial)?;
+        Self::from_bytes(ProductionKeyAlgorithm::Ed25519DalekV2, bytes)
+    }
+
+    pub fn verify_pairing_signature(
+        &self,
+        message: &[u8],
+        signature: &ProductionPairwiseSignature,
+    ) -> bool {
+        if self.algorithm != signature.algorithm {
+            return false;
+        }
+        match self.algorithm {
+            ProductionKeyAlgorithm::Ed25519DalekV2 => self.verify_ed25519_dalek(message, signature),
+            ProductionKeyAlgorithm::PendingReview => false,
+        }
+    }
+
+    fn verify_ed25519_dalek(
+        &self,
+        message: &[u8],
+        signature: &ProductionPairwiseSignature,
+    ) -> bool {
+        let Ok(public_bytes) = <[u8; ED25519_KEY_SIZE]>::try_from(self.bytes.as_slice()) else {
+            return false;
+        };
+        let Ok(signature_bytes) =
+            <[u8; ED25519_SIGNATURE_SIZE]>::try_from(signature.bytes.as_slice())
+        else {
+            return false;
+        };
+        let Ok(verifying_key) = VerifyingKey::from_bytes(&public_bytes) else {
+            return false;
+        };
+        let signature = Ed25519Signature::from_bytes(&signature_bytes);
+        verifying_key.verify_strict(message, &signature).is_ok()
     }
 }
 
@@ -179,6 +223,46 @@ impl ProductionPairwisePrivateKey {
 
     pub fn algorithm(&self) -> ProductionKeyAlgorithm {
         self.algorithm
+    }
+
+    pub fn from_ed25519_dalek_seed(seed: [u8; ED25519_KEY_SIZE]) -> Result<Self, IdentityError> {
+        Self::from_bytes(ProductionKeyAlgorithm::Ed25519DalekV2, seed)
+    }
+
+    pub fn public_key(&self) -> Result<ProductionPairwisePublicKey, IdentityError> {
+        match self.algorithm {
+            ProductionKeyAlgorithm::Ed25519DalekV2 => {
+                let signing_key = self.ed25519_dalek_signing_key()?;
+                ProductionPairwisePublicKey::from_bytes(
+                    ProductionKeyAlgorithm::Ed25519DalekV2,
+                    signing_key.verifying_key().to_bytes(),
+                )
+            }
+            ProductionKeyAlgorithm::PendingReview => Err(IdentityError::InvalidKeyMaterial),
+        }
+    }
+
+    pub fn sign_pairing_payload(
+        &self,
+        message: &[u8],
+    ) -> Result<ProductionPairwiseSignature, IdentityError> {
+        match self.algorithm {
+            ProductionKeyAlgorithm::Ed25519DalekV2 => {
+                let signing_key = self.ed25519_dalek_signing_key()?;
+                let signature = signing_key.sign(message);
+                ProductionPairwiseSignature::from_bytes(
+                    ProductionKeyAlgorithm::Ed25519DalekV2,
+                    signature.to_bytes(),
+                )
+            }
+            ProductionKeyAlgorithm::PendingReview => Err(IdentityError::InvalidKeyMaterial),
+        }
+    }
+
+    fn ed25519_dalek_signing_key(&self) -> Result<SigningKey, IdentityError> {
+        let seed = <[u8; ED25519_KEY_SIZE]>::try_from(self.bytes.as_slice())
+            .map_err(|_| IdentityError::InvalidKeyMaterial)?;
+        Ok(SigningKey::from_bytes(&seed))
     }
 }
 
@@ -214,6 +298,12 @@ impl ProductionPairwiseSignature {
 
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
+    }
+
+    pub fn from_ed25519_dalek_bytes(
+        bytes: [u8; ED25519_SIGNATURE_SIZE],
+    ) -> Result<Self, IdentityError> {
+        Self::from_bytes(ProductionKeyAlgorithm::Ed25519DalekV2, bytes)
     }
 }
 
@@ -436,5 +526,104 @@ mod tests {
         assert_eq!(public_key.as_bytes(), b"public-test-vector");
         assert_eq!(signature.algorithm(), ProductionKeyAlgorithm::PendingReview);
         assert_eq!(signature.as_bytes(), b"signature-test-vector");
+    }
+
+    #[test]
+    fn ed25519_dalek_signature_matches_rfc8032_test_vector() {
+        let seed = hex_32("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60");
+        let expected_public =
+            hex_32("d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a");
+        let expected_signature = hex_64(
+            "e5564300c360ac729086e2cc806e828a\
+             84877f1eb8e5d974d873e06522490155\
+             5fb8821590a33bacc61e39701cf9b46b\
+             d25bf5f0595bbe24655141438e7a100b",
+        );
+
+        let private_key =
+            ProductionPairwisePrivateKey::from_ed25519_dalek_seed(seed).expect("valid seed");
+        let public_key = private_key.public_key().expect("public key");
+        let signature = private_key
+            .sign_pairing_payload(b"")
+            .expect("signature should build");
+
+        assert_eq!(
+            private_key.algorithm(),
+            ProductionKeyAlgorithm::Ed25519DalekV2
+        );
+        assert_eq!(
+            public_key.algorithm(),
+            ProductionKeyAlgorithm::Ed25519DalekV2
+        );
+        assert_eq!(public_key.as_bytes(), expected_public);
+        assert_eq!(
+            signature.algorithm(),
+            ProductionKeyAlgorithm::Ed25519DalekV2
+        );
+        assert_eq!(signature.as_bytes(), expected_signature);
+        assert!(public_key.verify_pairing_signature(b"", &signature));
+    }
+
+    #[test]
+    fn ed25519_dalek_signature_rejects_tampering_and_wrong_key() {
+        let private_key =
+            ProductionPairwisePrivateKey::from_ed25519_dalek_seed([7_u8; 32]).expect("valid seed");
+        let wrong_private_key =
+            ProductionPairwisePrivateKey::from_ed25519_dalek_seed([9_u8; 32]).expect("valid seed");
+        let public_key = private_key.public_key().expect("public key");
+        let wrong_public_key = wrong_private_key.public_key().expect("public key");
+        let signature = private_key
+            .sign_pairing_payload(b"canonical pairing payload")
+            .expect("signature should build");
+
+        assert!(public_key.verify_pairing_signature(b"canonical pairing payload", &signature));
+        assert!(!public_key.verify_pairing_signature(b"changed payload", &signature));
+        assert!(
+            !wrong_public_key.verify_pairing_signature(b"canonical pairing payload", &signature)
+        );
+    }
+
+    #[test]
+    fn ed25519_dalek_wrong_length_public_key_does_not_verify() {
+        let private_key =
+            ProductionPairwisePrivateKey::from_ed25519_dalek_seed([3_u8; 32]).expect("valid seed");
+        let signature = private_key
+            .sign_pairing_payload(b"canonical pairing payload")
+            .expect("signature should build");
+        let malformed_public_key = ProductionPairwisePublicKey::from_bytes(
+            ProductionKeyAlgorithm::Ed25519DalekV2,
+            [1_u8; 31],
+        )
+        .expect("byte wrapper accepts deferred algorithm validation");
+
+        assert!(!malformed_public_key
+            .verify_pairing_signature(b"canonical pairing payload", &signature));
+    }
+
+    fn hex_32(value: &str) -> [u8; 32] {
+        hex_array(value)
+    }
+
+    fn hex_64(value: &str) -> [u8; 64] {
+        hex_array(value)
+    }
+
+    fn hex_array<const N: usize>(value: &str) -> [u8; N] {
+        let value = value.replace(char::is_whitespace, "");
+        assert_eq!(value.len(), N * 2);
+        let mut out = [0_u8; N];
+        for (index, chunk) in value.as_bytes().chunks(2).enumerate() {
+            out[index] = (hex_value(chunk[0]) << 4) | hex_value(chunk[1]);
+        }
+        out
+    }
+
+    fn hex_value(byte: u8) -> u8 {
+        match byte {
+            b'0'..=b'9' => byte - b'0',
+            b'a'..=b'f' => byte - b'a' + 10,
+            b'A'..=b'F' => byte - b'A' + 10,
+            _ => panic!("invalid hex byte"),
+        }
     }
 }

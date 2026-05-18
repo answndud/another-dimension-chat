@@ -71,6 +71,7 @@ Tasks:
 - Maintain [SIGNATURE_DECISION.md](SIGNATURE_DECISION.md) for the first identity signature dependency decision.
 - Keep production-facing key wrappers separate from `dev-insecure` placeholder key material.
 - Keep canonical pairing and safety transcript fixture tests stable before replacing placeholder signatures.
+- Add `ed25519-dalek` production signature wrapper tests before wiring pairing decode to production verification.
 - Select maintained Rust-compatible libraries for identity signatures and session encryption.
 - Decide how pairing payload signatures map to real pairwise identity keys.
 - Decide whether the first production session model uses a Signal-style ratchet, Noise-based construction, or another reviewed design.
