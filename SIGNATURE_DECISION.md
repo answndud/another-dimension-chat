@@ -24,7 +24,7 @@ dev-pub-<opaque-dev-seed>
 dev-sign-v1-<hex>
 ```
 
-The production decoders reject development public key and signature strings.
+The production decoders reject development public key and signature strings. The pairing payload decoder rejects explicit mixed dev/production key-signature pairs before signature verification.
 
 Initial target:
 
@@ -70,6 +70,7 @@ When `ed25519-dalek` is added:
 - Do not allow `dev-pub-*`, `dev-priv-*`, or `dev-sign-v1-*` material into production key wrappers.
 - Keep production pairing public keys scheme-tagged so future payload decoders do not silently mix dev and production verification.
 - Keep production pairing signatures scheme-tagged so future payload decoders do not silently mix dev and production verification.
+- Reject explicit dev public key plus production signature, and production public key plus dev signature payloads.
 - Keep private key debug output redacted.
 - Add deterministic test vectors before wiring the pairing decoder to production verification.
 
