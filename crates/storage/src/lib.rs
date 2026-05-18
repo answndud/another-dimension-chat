@@ -28,6 +28,133 @@ impl From<io::Error> for StorageError {
     }
 }
 
+pub mod production {
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionRecordKind {
+        SchemaMarker,
+        PairingPayload,
+        PairwiseIdentityPrivateKey,
+        NoiseStaticPrivateKey,
+        ReplayWindowState,
+        MessageEnvelope,
+        LocalMessageIndex,
+        SessionTransportState,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum StorageProtection {
+        PlaintextAllowed,
+        EncryptedAtRestRequired,
+        InMemoryOnly,
+    }
+
+    #[derive(Debug, Eq, PartialEq)]
+    pub enum ProductionStoragePolicyError {
+        PlaintextForbidden {
+            kind: ProductionRecordKind,
+            required: StorageProtection,
+        },
+        PersistenceForbidden {
+            kind: ProductionRecordKind,
+        },
+    }
+
+    pub fn protection_for(kind: ProductionRecordKind) -> StorageProtection {
+        match kind {
+            ProductionRecordKind::SchemaMarker => StorageProtection::PlaintextAllowed,
+            ProductionRecordKind::PairingPayload
+            | ProductionRecordKind::PairwiseIdentityPrivateKey
+            | ProductionRecordKind::NoiseStaticPrivateKey
+            | ProductionRecordKind::ReplayWindowState
+            | ProductionRecordKind::MessageEnvelope
+            | ProductionRecordKind::LocalMessageIndex => StorageProtection::EncryptedAtRestRequired,
+            ProductionRecordKind::SessionTransportState => StorageProtection::InMemoryOnly,
+        }
+    }
+
+    pub fn require_plaintext_write_allowed(
+        kind: ProductionRecordKind,
+    ) -> Result<(), ProductionStoragePolicyError> {
+        match protection_for(kind) {
+            StorageProtection::PlaintextAllowed => Ok(()),
+            required => Err(ProductionStoragePolicyError::PlaintextForbidden { kind, required }),
+        }
+    }
+
+    pub fn require_persistence_allowed(
+        kind: ProductionRecordKind,
+    ) -> Result<(), ProductionStoragePolicyError> {
+        match protection_for(kind) {
+            StorageProtection::InMemoryOnly => {
+                Err(ProductionStoragePolicyError::PersistenceForbidden { kind })
+            }
+            StorageProtection::PlaintextAllowed | StorageProtection::EncryptedAtRestRequired => {
+                Ok(())
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn production_policy_allows_only_schema_marker_plaintext() {
+            assert_eq!(
+                require_plaintext_write_allowed(ProductionRecordKind::SchemaMarker),
+                Ok(())
+            );
+
+            for kind in [
+                ProductionRecordKind::PairingPayload,
+                ProductionRecordKind::PairwiseIdentityPrivateKey,
+                ProductionRecordKind::NoiseStaticPrivateKey,
+                ProductionRecordKind::ReplayWindowState,
+                ProductionRecordKind::MessageEnvelope,
+                ProductionRecordKind::LocalMessageIndex,
+                ProductionRecordKind::SessionTransportState,
+            ] {
+                assert!(matches!(
+                    require_plaintext_write_allowed(kind),
+                    Err(ProductionStoragePolicyError::PlaintextForbidden { .. })
+                ));
+            }
+        }
+
+        #[test]
+        fn production_secret_and_metadata_records_require_encryption_at_rest() {
+            for kind in [
+                ProductionRecordKind::PairingPayload,
+                ProductionRecordKind::PairwiseIdentityPrivateKey,
+                ProductionRecordKind::NoiseStaticPrivateKey,
+                ProductionRecordKind::ReplayWindowState,
+                ProductionRecordKind::MessageEnvelope,
+                ProductionRecordKind::LocalMessageIndex,
+            ] {
+                assert_eq!(
+                    protection_for(kind),
+                    StorageProtection::EncryptedAtRestRequired
+                );
+                assert_eq!(require_persistence_allowed(kind), Ok(()));
+            }
+        }
+
+        #[test]
+        fn production_session_transport_state_is_in_memory_only() {
+            assert_eq!(
+                protection_for(ProductionRecordKind::SessionTransportState),
+                StorageProtection::InMemoryOnly
+            );
+            assert_eq!(
+                require_persistence_allowed(ProductionRecordKind::SessionTransportState),
+                Err(ProductionStoragePolicyError::PersistenceForbidden {
+                    kind: ProductionRecordKind::SessionTransportState
+                })
+            );
+        }
+    }
+}
+
 #[cfg(feature = "dev-insecure")]
 pub mod dev_insecure {
     use super::*;
