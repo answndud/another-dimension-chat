@@ -2,6 +2,8 @@ use std::fmt;
 #[cfg(feature = "dev-insecure")]
 use std::time::{SystemTime, UNIX_EPOCH};
 
+const MAX_PRODUCTION_KEY_MATERIAL_SIZE: usize = 4096;
+
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ProfileName(String);
 
@@ -112,6 +114,118 @@ impl PairwiseSignature {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ProductionKeyAlgorithm {
+    PendingReview,
+}
+
+impl ProductionKeyAlgorithm {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::PendingReview => "pending-review",
+        }
+    }
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct ProductionPairwisePublicKey {
+    algorithm: ProductionKeyAlgorithm,
+    bytes: Vec<u8>,
+}
+
+impl ProductionPairwisePublicKey {
+    pub fn from_bytes(
+        algorithm: ProductionKeyAlgorithm,
+        bytes: impl Into<Vec<u8>>,
+    ) -> Result<Self, IdentityError> {
+        let bytes = bytes.into();
+        validate_production_key_material(&bytes)?;
+        Ok(Self { algorithm, bytes })
+    }
+
+    pub fn algorithm(&self) -> ProductionKeyAlgorithm {
+        self.algorithm
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+}
+
+impl fmt::Debug for ProductionPairwisePublicKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ProductionPairwisePublicKey")
+            .field("algorithm", &self.algorithm.as_str())
+            .field("length", &self.bytes.len())
+            .finish()
+    }
+}
+
+#[derive(Eq, PartialEq)]
+pub struct ProductionPairwisePrivateKey {
+    algorithm: ProductionKeyAlgorithm,
+    bytes: Vec<u8>,
+}
+
+impl ProductionPairwisePrivateKey {
+    pub fn from_bytes(
+        algorithm: ProductionKeyAlgorithm,
+        bytes: impl Into<Vec<u8>>,
+    ) -> Result<Self, IdentityError> {
+        let bytes = bytes.into();
+        validate_production_key_material(&bytes)?;
+        Ok(Self { algorithm, bytes })
+    }
+
+    pub fn algorithm(&self) -> ProductionKeyAlgorithm {
+        self.algorithm
+    }
+}
+
+impl fmt::Debug for ProductionPairwisePrivateKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ProductionPairwisePrivateKey")
+            .field("algorithm", &self.algorithm.as_str())
+            .field("length", &self.bytes.len())
+            .field("secret", &"[redacted]")
+            .finish()
+    }
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct ProductionPairwiseSignature {
+    algorithm: ProductionKeyAlgorithm,
+    bytes: Vec<u8>,
+}
+
+impl ProductionPairwiseSignature {
+    pub fn from_bytes(
+        algorithm: ProductionKeyAlgorithm,
+        bytes: impl Into<Vec<u8>>,
+    ) -> Result<Self, IdentityError> {
+        let bytes = bytes.into();
+        validate_production_key_material(&bytes)?;
+        Ok(Self { algorithm, bytes })
+    }
+
+    pub fn algorithm(&self) -> ProductionKeyAlgorithm {
+        self.algorithm
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+}
+
+impl fmt::Debug for ProductionPairwiseSignature {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ProductionPairwiseSignature")
+            .field("algorithm", &self.algorithm.as_str())
+            .field("length", &self.bytes.len())
+            .finish()
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PairwiseIdentity {
     public_key: PairwisePublicKey,
@@ -159,6 +273,22 @@ pub enum IdentityError {
     InvalidProfileName,
     InvalidContactId,
     InvalidKeyMaterial,
+}
+
+fn validate_production_key_material(bytes: &[u8]) -> Result<(), IdentityError> {
+    if bytes.is_empty() || bytes.len() > MAX_PRODUCTION_KEY_MATERIAL_SIZE {
+        return Err(IdentityError::InvalidKeyMaterial);
+    }
+    for dev_prefix in [
+        b"dev-pub-" as &[u8],
+        b"dev-priv-" as &[u8],
+        b"dev-sign-v1-" as &[u8],
+    ] {
+        if bytes.starts_with(dev_prefix) {
+            return Err(IdentityError::InvalidKeyMaterial);
+        }
+    }
+    Ok(())
 }
 
 fn private_for_public(public_key: &str) -> String {
@@ -239,5 +369,72 @@ mod tests {
         assert!(!identity
             .public_key()
             .verify_pairing_signature(b"changed payload", &signature));
+    }
+
+    #[test]
+    fn production_key_wrappers_reject_dev_placeholder_material() {
+        for bytes in [
+            b"dev-pub-test-seed" as &[u8],
+            b"dev-priv-test-seed" as &[u8],
+            b"dev-sign-v1-0000000000000000" as &[u8],
+        ] {
+            assert_eq!(
+                ProductionPairwisePublicKey::from_bytes(
+                    ProductionKeyAlgorithm::PendingReview,
+                    bytes
+                ),
+                Err(IdentityError::InvalidKeyMaterial)
+            );
+            assert_eq!(
+                ProductionPairwisePrivateKey::from_bytes(
+                    ProductionKeyAlgorithm::PendingReview,
+                    bytes
+                ),
+                Err(IdentityError::InvalidKeyMaterial)
+            );
+            assert_eq!(
+                ProductionPairwiseSignature::from_bytes(
+                    ProductionKeyAlgorithm::PendingReview,
+                    bytes
+                ),
+                Err(IdentityError::InvalidKeyMaterial)
+            );
+        }
+    }
+
+    #[test]
+    fn production_private_key_debug_does_not_print_secret_bytes() {
+        let private_key = ProductionPairwisePrivateKey::from_bytes(
+            ProductionKeyAlgorithm::PendingReview,
+            b"not-dev-secret-test-vector".to_vec(),
+        )
+        .expect("valid production key wrapper");
+        let debug = format!("{private_key:?}");
+
+        assert!(debug.contains("ProductionPairwisePrivateKey"));
+        assert!(debug.contains("[redacted]"));
+        assert!(!debug.contains("not-dev-secret-test-vector"));
+    }
+
+    #[test]
+    fn production_public_key_and_signature_keep_algorithm_and_bytes() {
+        let public_key = ProductionPairwisePublicKey::from_bytes(
+            ProductionKeyAlgorithm::PendingReview,
+            b"public-test-vector".to_vec(),
+        )
+        .expect("valid production public key wrapper");
+        let signature = ProductionPairwiseSignature::from_bytes(
+            ProductionKeyAlgorithm::PendingReview,
+            b"signature-test-vector".to_vec(),
+        )
+        .expect("valid production signature wrapper");
+
+        assert_eq!(
+            public_key.algorithm(),
+            ProductionKeyAlgorithm::PendingReview
+        );
+        assert_eq!(public_key.as_bytes(), b"public-test-vector");
+        assert_eq!(signature.algorithm(), ProductionKeyAlgorithm::PendingReview);
+        assert_eq!(signature.as_bytes(), b"signature-test-vector");
     }
 }
