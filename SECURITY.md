@@ -24,6 +24,7 @@ This project does not currently claim:
 - Real Tor/onion transport.
 - Production transport adapter implementation.
 - Bridge or censorship-circumvention support.
+- Arti transport bootstrap, onion service launch, or system Tor discovery.
 - Production unlock/key management.
 - OS keychain/DPAPI/Keystore wrapping.
 - Production encrypted local storage lifecycle.

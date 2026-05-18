@@ -16,6 +16,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `TransportRoute` separates onion, local, and direct-peer routes.
 - `EnvelopeTransport` defines minimal send/receive methods over encrypted `Envelope` values.
 - `OnionEnvelopeTransport::fail_closed_high_risk()` enforces high-risk onion-only routing and fails with `TransportError::Unavailable` until a real Tor/onion adapter exists.
+- `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
 - Dev file transport remains behind the `dev-insecure` feature.
 
 ## What Does Not Exist Yet
@@ -69,8 +70,34 @@ Required before replacing fail-closed behavior:
 - Define bridge/censorship behavior, or explicitly mark it out of scope for the build.
 - Verify macOS, Windows, Linux, and Android packaging implications.
 
+## Arti Adapter Dependency Spike
+
+Decision as of 2026-05-18: add `arti-client 0.42.0` only behind the optional `arti-adapter-spike` feature.
+
+Compile surface:
+
+- `arti-client` is optional and not part of the default build.
+- Default Arti features are disabled.
+- The spike enables `tokio`, `rustls`, `onion-service-client`, `onion-service-service`, and `keymgr`.
+- The code only constructs `TorClientConfig::default()` and keeps `OnionEnvelopeTransport` fail-closed.
+- No bootstrap, no socket connection, no onion service launch, and no system Tor discovery happens in this spike.
+
+Constraints:
+
+- `arti-client 0.42.0` declares Rust 1.89 or newer.
+- Onion-service APIs still require explicit feature choices and may change.
+- Bridge/pluggable transport support remains a separate decision.
+- Android packaging and static-link behavior need their own verification before the feature can become default.
+
+Verification command for this spike:
+
+```text
+cargo test -p another-dimension-transport --features arti-adapter-spike
+```
+
 Primary sources checked:
 
 - Arti FAQ, status as of January 2026: <https://arti.torproject.org/FAQs/>
 - Arti getting started, proxy/onion support note: <https://arti.torproject.org/>
 - Tor support, censorship circumvention overview: <https://support.torproject.org/tor-browser/circumvention/>
+- `arti-client 0.42.0` crate metadata and features: <https://docs.rs/crate/arti-client/latest/features>
