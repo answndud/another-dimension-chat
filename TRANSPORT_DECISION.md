@@ -39,4 +39,38 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Add a production Tor/onion lifecycle decision before replacing the fail-closed skeleton. That decision must cover bundled Tor versus Arti, onion service key lifecycle, censorship/bridge behavior, logging, crash handling, and cross-platform packaging.
+Add an Arti-first adapter spike while keeping `OnionEnvelopeTransport` fail-closed by default. The spike must not make the app usable for real communication until onion service hosting, bridge behavior, logging, crash handling, and packaging are verified.
+
+## Tor Lifecycle Decision
+
+Decision as of 2026-05-18: use Arti as the first v0.1 production adapter candidate, keep C Tor as the fallback candidate, and do not depend on a user-installed system Tor as the default path.
+
+Rationale:
+
+- Arti is Rust-native, embeddable, and fits the Tauri + Rust core architecture.
+- Official Arti documentation says Arti is ready for proxy use and for developers embedding Tor support in Rust projects, with onion service support available, while still noting that not all C Tor functionality is available.
+- System Tor would weaken UX and policy control because the app could not reliably enforce high-risk transport invariants, lifecycle state, logging behavior, or packaging assumptions.
+- Bundled C Tor remains the compatibility fallback if Arti lacks a required feature for onion service hosting, censorship circumvention, or platform packaging.
+
+Non-goals for the first adapter spike:
+
+- No direct P2P fallback.
+- No automatic system Tor discovery.
+- No production claim that Tor transport works.
+- No bridge/censorship-circumvention claim.
+- No onion key persistence until storage and backup behavior are separately decided.
+
+Required before replacing fail-closed behavior:
+
+- Confirm Arti can connect to and host onion services for the target platforms.
+- Define onion service key generation, storage class, rotation, and deletion.
+- Define Tor state directory location and backup exclusion behavior.
+- Define log redaction and crash dump behavior.
+- Define bridge/censorship behavior, or explicitly mark it out of scope for the build.
+- Verify macOS, Windows, Linux, and Android packaging implications.
+
+Primary sources checked:
+
+- Arti FAQ, status as of January 2026: <https://arti.torproject.org/FAQs/>
+- Arti getting started, proxy/onion support note: <https://arti.torproject.org/>
+- Tor support, censorship circumvention overview: <https://support.torproject.org/tor-browser/circumvention/>

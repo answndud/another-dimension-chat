@@ -23,6 +23,7 @@ This project does not currently claim:
 - Real end-to-end encryption.
 - Real Tor/onion transport.
 - Production transport adapter implementation.
+- Bridge or censorship-circumvention support.
 - Production unlock/key management.
 - OS keychain/DPAPI/Keystore wrapping.
 - Production encrypted local storage lifecycle.
