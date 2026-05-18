@@ -35,6 +35,7 @@ What exists today:
 - Onion transport skeleton now stores runtime state while keeping send/receive fail-closed.
 - Transport runtime skeleton closeout documenting the remaining gates before network-capable Arti work.
 - Runtime permission and redaction preflight boundary for app-private dirs, backup exclusion, log/crash redaction, and censorship readiness.
+- Runtime state/cache directory probe skeleton with redacted permission failures and no Tor bootstrap.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.
 - High-risk unlock policy tests that reject OS-keystore-only unlock.

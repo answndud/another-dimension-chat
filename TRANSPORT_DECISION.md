@@ -19,6 +19,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `TransportRuntimeError` separates future preflight, bootstrap, bridge/censorship, onion service, send, and receive failures before a network-capable adapter exists.
 - `TransportRuntimePreflight` maps disabled runtime network, state/cache directory access, log redaction, and bridge/censorship readiness to explicit runtime errors.
 - `TransportRuntimePermissionPreflight` maps app-private state/cache policy, backup exclusion, log/crash redaction, and censorship readiness into the runtime preflight gate.
+- `probe_app_private_state_cache_dirs` creates and probes explicit state/cache directories without exposing path details in runtime errors.
 - `TransportRuntimeState` separates disabled fail-closed state from a future runtime-ready state that can only be created from successful preflight.
 - `OnionEnvelopeTransport` stores runtime state, but send/receive remains fail-closed even when that state is ready.
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
@@ -286,3 +287,26 @@ Failure mapping:
 - Unsupported censorship/bridge behavior maps to `CensorshipOrBridgeRequired`.
 
 This keeps the next adapter honest: a future implementation must replace these booleans with real platform checks before enabling network behavior.
+
+## Runtime Permission Preflight Platform Skeleton
+
+Decision as of 2026-05-18: add a minimal filesystem probe skeleton for app-private transport state/cache directories, but keep backup exclusion, logging setup, Tor bootstrap, socket activity, and onion service launch disabled.
+
+Current code boundary:
+
+- `probe_app_private_state_cache_dirs(state_dir, cache_dir)` rejects empty, relative, shared-default-looking, or identical state/cache directories.
+- The probe creates both directories and performs a write/delete probe file check in each directory.
+- Successful probing returns `TransportStateCacheDirsReady`, which can be used to construct `TransportRuntimePermissionPreflight::from_platform_preflight(...)`.
+- `TransportRuntimeProbeError` does not carry raw path strings and maps to `TransportRuntimeError::StateDirectoryPermissionDenied` for the generic runtime gate.
+- Backup exclusion is still an explicit boolean input and is not claimed to be implemented.
+
+Still not implemented:
+
+- OS-specific backup exclusion verification.
+- OS-specific permission hardening.
+- Redacted transport logging implementation.
+- Crash dump redaction implementation.
+- Bridge/censorship configuration.
+- Tor bootstrap, socket opens, onion service launch, or envelope transfer.
+
+The next step should either turn log/crash redaction into a concrete runtime logging boundary or define bootstrap timeout/retry behavior. It should not enable real network transport yet.
