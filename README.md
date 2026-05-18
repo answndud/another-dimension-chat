@@ -139,6 +139,10 @@ scripts/smoke_dev_cli.sh
 - Keep fake crypto and development storage behind `dev-insecure`.
 - Do not commit local dev data, pairing payloads, logs, generated artifacts, or private planning notes.
 
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the public development roadmap.
+
 ## License
 
 This repository is currently marked `UNLICENSED` in the Rust workspace metadata.
