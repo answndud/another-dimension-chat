@@ -42,7 +42,7 @@ Tasks:
 - Add public-safe tests for malformed CLI inputs and error messages. Started.
 - Keep pairing payload parsing deterministic and bounded. Started.
 - Keep duplicate pairing scans rejected for pending and active contacts. Started.
-- Keep replayed message envelopes from being displayed twice.
+- Keep replayed message envelopes from being displayed twice. Started.
 - Keep plaintext out of the development store where the current envelope model allows it.
 - Add explicit tests that default builds do not expose `dev-insecure` command behavior. Started.
 
