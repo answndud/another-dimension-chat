@@ -1,0 +1,21 @@
+[workspace]
+members = [
+    "crates/identity",
+    "crates/pairing",
+    "crates/crypto",
+    "crates/protocol",
+    "crates/transport",
+    "crates/storage",
+    "crates/core",
+    "apps/cli",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "UNLICENSED"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+

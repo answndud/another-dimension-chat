@@ -1,0 +1,27 @@
+[package]
+name = "another-dimension-core"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+another-dimension-crypto = { path = "../crypto" }
+another-dimension-identity = { path = "../identity" }
+another-dimension-pairing = { path = "../pairing" }
+another-dimension-protocol = { path = "../protocol" }
+another-dimension-storage = { path = "../storage" }
+another-dimension-transport = { path = "../transport" }
+
+[features]
+dev-insecure = [
+    "another-dimension-crypto/dev-insecure",
+    "another-dimension-identity/dev-insecure",
+    "another-dimension-pairing/dev-insecure",
+    "another-dimension-protocol/dev-insecure",
+    "another-dimension-storage/dev-insecure",
+    "another-dimension-transport/dev-insecure",
+]
+
+[lints]
+workspace = true
+

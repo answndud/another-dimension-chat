@@ -1,0 +1,12 @@
+[package]
+name = "another-dimension-identity"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+
+[features]
+dev-insecure = []
+
+[lints]
+workspace = true
+

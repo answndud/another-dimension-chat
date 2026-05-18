@@ -1,0 +1,23 @@
+[package]
+name = "another-dimension"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+another-dimension-core = { path = "../../crates/core" }
+another-dimension-crypto = { path = "../../crates/crypto" }
+another-dimension-identity = { path = "../../crates/identity" }
+another-dimension-pairing = { path = "../../crates/pairing" }
+
+[features]
+dev-insecure = [
+    "another-dimension-core/dev-insecure",
+    "another-dimension-crypto/dev-insecure",
+    "another-dimension-identity/dev-insecure",
+    "another-dimension-pairing/dev-insecure",
+]
+
+[lints]
+workspace = true
+
