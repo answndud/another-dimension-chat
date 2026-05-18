@@ -16,6 +16,8 @@ pn-v1-<32 lowercase hex chars>
 
 The current nonce size is 16 random bytes encoded as lowercase hex with a fixed scheme prefix.
 
+A higher-level production pairing default helper uses this nonce API and the local system clock to fill nonce, timestamp, TTL, endpoint rotation policy, and capability defaults. Rendezvous endpoint and prekey material remain caller-supplied because transport and session-establishment decisions are not complete.
+
 ## Why This Boundary
 
 Pairing nonces are included in canonical pairing payloads and are also used by the development store path today. They must therefore be:
@@ -44,6 +46,7 @@ Metadata was checked with `cargo search` and `cargo info` on 2026-05-18.
 - Do not use development nonce generation in production pairing construction.
 - Do not derive production nonces from profile names, timestamps, process IDs, endpoints, or key material.
 - Do not use this pairing nonce API as a key generator.
+- Do not hide rendezvous endpoint or prekey decisions behind the nonce/defaults helper.
 - Do not log production nonce generation failures with sensitive environment details.
 - Keep nonce strings lowercase, scheme-tagged, and file-name safe.
 - Keep production key generation as a separate decision.
@@ -56,5 +59,6 @@ Current tests cover:
 - Fixed encoded length.
 - Lowercase hex body.
 - Two generated nonces are not equal under normal OS randomness.
+- Default production pairing params use generated nonce, local timestamp, default TTL, default endpoint rotation policy, and default capability string.
 
 This is not statistical randomness testing. It only protects the API boundary and encoding invariants.

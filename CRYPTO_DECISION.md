@@ -18,6 +18,7 @@ The repository currently has:
 - Pairing payload decode verifies production public key plus production signature pairs through the Ed25519 production path.
 - Production pairing payload construction can sign caller-supplied pairing parameters with an Ed25519 production private key.
 - Production pairing nonce construction uses a narrow OS-randomness wrapper backed by `getrandom`.
+- Production pairing default construction centralizes nonce, local timestamp, TTL, endpoint rotation policy, and capability defaults while keeping endpoint and prekey material caller-supplied.
 - Pairing payload canonicalization and signature boundary in `crates/pairing`.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
