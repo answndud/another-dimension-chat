@@ -1,6 +1,7 @@
 pub mod production {
     use another_dimension_crypto::production::{
-        generate_noise_static_keypair, NoisePrekeyBundle, NoiseStaticKeypair,
+        generate_noise_static_keypair, run_noise_xx_handshake_smoke, NoisePrekeyBundle,
+        NoiseStaticKeypair,
     };
     use another_dimension_crypto::CryptoError;
     use another_dimension_identity::{
@@ -35,12 +36,20 @@ pub mod production {
         pub noise_static: NoiseStaticKeypair,
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ProductionHandshakeSmokeResult {
+        pub plan: ProductionSessionPlan,
+        pub ciphertext: Vec<u8>,
+        pub plaintext: Vec<u8>,
+    }
+
     #[derive(Debug, Eq, PartialEq)]
     pub enum ProductionSessionError {
         Pairing(PairingError),
         Crypto(CryptoError),
         NonProductionPairingPayload,
         SamePairwiseIdentity,
+        NoiseStaticKeyMismatch,
     }
 
     impl From<PairingError> for ProductionSessionError {
@@ -100,6 +109,56 @@ pub mod production {
             local_noise_static_public_key: local_prekey.public_key().to_vec(),
             remote_noise_static_public_key: remote_prekey.public_key().to_vec(),
         })
+    }
+
+    pub fn run_setup_draft_handshake_smoke(
+        local: &ProductionSetupDraft,
+        remote: &ProductionSetupDraft,
+        plaintext: &[u8],
+    ) -> Result<ProductionHandshakeSmokeResult, ProductionSessionError> {
+        let plan = plan_session_from_verified_pairing_payloads(
+            &local.pairing.payload,
+            &remote.pairing.payload,
+        )?;
+        require_matching_noise_static(&local.noise_static, &plan.local_noise_static_public_key)?;
+        require_matching_noise_static(&remote.noise_static, &plan.remote_noise_static_public_key)?;
+
+        let (initiator, responder) = match plan.local_role {
+            SessionRole::CanonicalDialer => (&local.noise_static, &remote.noise_static),
+            SessionRole::Responder => (&remote.noise_static, &local.noise_static),
+        };
+        let handshake =
+            run_noise_xx_handshake_smoke(&plan.safety_transcript, initiator, responder, plaintext)?;
+        let expected_initiator_remote = match plan.local_role {
+            SessionRole::CanonicalDialer => &plan.remote_noise_static_public_key,
+            SessionRole::Responder => &plan.local_noise_static_public_key,
+        };
+        let expected_responder_remote = match plan.local_role {
+            SessionRole::CanonicalDialer => &plan.local_noise_static_public_key,
+            SessionRole::Responder => &plan.remote_noise_static_public_key,
+        };
+        if handshake.initiator_remote_static != *expected_initiator_remote
+            || handshake.responder_remote_static != *expected_responder_remote
+        {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
+
+        Ok(ProductionHandshakeSmokeResult {
+            plan,
+            ciphertext: handshake.ciphertext,
+            plaintext: handshake.plaintext,
+        })
+    }
+
+    fn require_matching_noise_static(
+        keypair: &NoiseStaticKeypair,
+        expected_public_key: &[u8],
+    ) -> Result<(), ProductionSessionError> {
+        if keypair.public_key() == expected_public_key {
+            Ok(())
+        } else {
+            Err(ProductionSessionError::NoiseStaticKeyMismatch)
+        }
     }
 
     fn require_verified_production_payload(
@@ -183,6 +242,50 @@ pub mod production {
             assert_eq!(
                 plan.remote_noise_static_public_key,
                 bob.noise_static.public_key()
+            );
+        }
+
+        #[test]
+        fn production_setup_drafts_can_run_transcript_bound_handshake_smoke() {
+            let alice = production_setup_draft_with_defaults(
+                &ProfileName::new("alice").expect("valid profile"),
+                "alice.onion",
+            )
+            .expect("alice setup");
+            let bob = production_setup_draft_with_defaults(
+                &ProfileName::new("bob").expect("valid profile"),
+                "bob.onion",
+            )
+            .expect("bob setup");
+            let plaintext = b"session bootstrap message";
+
+            let result =
+                run_setup_draft_handshake_smoke(&alice, &bob, plaintext).expect("handshake smoke");
+
+            assert_eq!(result.plaintext, plaintext);
+            assert!(!result
+                .ciphertext
+                .windows(plaintext.len())
+                .any(|window| window == plaintext));
+        }
+
+        #[test]
+        fn production_setup_handshake_rejects_noise_static_key_mismatch() {
+            let alice = production_setup_draft_with_defaults(
+                &ProfileName::new("alice").expect("valid profile"),
+                "alice.onion",
+            )
+            .expect("alice setup");
+            let mut bob = production_setup_draft_with_defaults(
+                &ProfileName::new("bob").expect("valid profile"),
+                "bob.onion",
+            )
+            .expect("bob setup");
+            bob.noise_static = generate_noise_static_keypair().expect("replacement keypair");
+
+            assert_eq!(
+                run_setup_draft_handshake_smoke(&alice, &bob, b"body"),
+                Err(ProductionSessionError::NoiseStaticKeyMismatch)
             );
         }
 
