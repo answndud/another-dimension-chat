@@ -15,11 +15,12 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `TransportPolicy::low_risk_direct_allowed()` is the only policy that allows direct peer routes.
 - `TransportRoute` separates onion, local, and direct-peer routes.
 - `EnvelopeTransport` defines minimal send/receive methods over encrypted `Envelope` values.
+- `OnionEnvelopeTransport::fail_closed_high_risk()` enforces high-risk onion-only routing and fails with `TransportError::Unavailable` until a real Tor/onion adapter exists.
 - Dev file transport remains behind the `dev-insecure` feature.
 
 ## What Does Not Exist Yet
 
-- A real Tor/onion adapter.
+- A real Tor/onion adapter behind the fail-closed skeleton.
 - Bundled Tor or Arti lifecycle management.
 - Onion service key generation, rotation, or persistence.
 - Bridge/censorship-circumvention support.
@@ -38,4 +39,4 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Add a production onion transport adapter boundary without adding real network behavior first. The adapter should enforce `TransportPolicy::high_risk_default()` and fail closed until Tor/onion lifecycle decisions are implemented.
+Add a production Tor/onion lifecycle decision before replacing the fail-closed skeleton. That decision must cover bundled Tor versus Arti, onion service key lifecycle, censorship/bridge behavior, logging, crash handling, and cross-platform packaging.
