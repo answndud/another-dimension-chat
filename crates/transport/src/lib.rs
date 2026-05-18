@@ -1,5 +1,9 @@
 use another_dimension_identity::ProfileName;
 use another_dimension_protocol::Envelope;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum TransportError {
@@ -21,6 +25,22 @@ pub enum TransportRuntimeError {
     RuntimeNetworkDisabled,
     SendFailed,
     ReceiveFailed,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportRuntimeProbeError {
+    EmptyDirectory,
+    RelativeDirectory,
+    SharedDefaultDirectory,
+    SameStateAndCacheDirectory,
+    DirectoryCreateFailed,
+    DirectoryProbeFailed,
+}
+
+impl From<TransportRuntimeProbeError> for TransportRuntimeError {
+    fn from(_error: TransportRuntimeProbeError) -> Self {
+        Self::StateDirectoryPermissionDenied
+    }
 }
 
 impl TransportRuntimeError {
@@ -46,6 +66,79 @@ impl TransportRuntimeError {
             Self::OnionServiceKeyUnavailable | Self::OnionServiceLaunchFailed
         )
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TransportStateCacheDirsReady {
+    state_dir: PathBuf,
+    cache_dir: PathBuf,
+}
+
+impl TransportStateCacheDirsReady {
+    pub fn state_dir(&self) -> &Path {
+        &self.state_dir
+    }
+
+    pub fn cache_dir(&self) -> &Path {
+        &self.cache_dir
+    }
+}
+
+pub fn probe_app_private_state_cache_dirs(
+    state_dir: impl Into<PathBuf>,
+    cache_dir: impl Into<PathBuf>,
+) -> Result<TransportStateCacheDirsReady, TransportRuntimeProbeError> {
+    let state_dir = state_dir.into();
+    let cache_dir = cache_dir.into();
+
+    validate_transport_runtime_dir(&state_dir)?;
+    validate_transport_runtime_dir(&cache_dir)?;
+    if state_dir == cache_dir {
+        return Err(TransportRuntimeProbeError::SameStateAndCacheDirectory);
+    }
+
+    fs::create_dir_all(&state_dir)
+        .map_err(|_| TransportRuntimeProbeError::DirectoryCreateFailed)?;
+    fs::create_dir_all(&cache_dir)
+        .map_err(|_| TransportRuntimeProbeError::DirectoryCreateFailed)?;
+
+    probe_writable_dir(&state_dir)?;
+    probe_writable_dir(&cache_dir)?;
+
+    Ok(TransportStateCacheDirsReady {
+        state_dir,
+        cache_dir,
+    })
+}
+
+fn validate_transport_runtime_dir(path: &Path) -> Result<(), TransportRuntimeProbeError> {
+    let text = path.to_string_lossy();
+    if text.is_empty() {
+        return Err(TransportRuntimeProbeError::EmptyDirectory);
+    }
+    if !path.is_absolute() {
+        return Err(TransportRuntimeProbeError::RelativeDirectory);
+    }
+    if looks_like_shared_arti_default(&text) {
+        return Err(TransportRuntimeProbeError::SharedDefaultDirectory);
+    }
+    Ok(())
+}
+
+fn probe_writable_dir(path: &Path) -> Result<(), TransportRuntimeProbeError> {
+    let probe = path.join(".another-dimension-transport-preflight");
+    fs::write(&probe, b"probe").map_err(|_| TransportRuntimeProbeError::DirectoryProbeFailed)?;
+    fs::remove_file(&probe).map_err(|_| TransportRuntimeProbeError::DirectoryProbeFailed)
+}
+
+fn looks_like_shared_arti_default(path: &str) -> bool {
+    let normalized = path.replace('\\', "/").to_ascii_lowercase();
+    normalized.contains("${arti_")
+        || normalized.ends_with("/.cache/arti")
+        || normalized.ends_with("/.local/share/arti")
+        || normalized.ends_with("/library/application support/arti")
+        || normalized.ends_with("/appdata/roaming/arti")
+        || normalized.ends_with("/appdata/local/arti")
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -97,6 +190,25 @@ impl TransportRuntimePermissionPreflight {
             log_redaction_policy: TransportLogRedactionPolicy::NotConfigured,
             crash_redaction_policy: TransportCrashRedactionPolicy::NotConfigured,
             censorship_readiness: TransportCensorshipReadiness::Unsupported,
+        }
+    }
+
+    pub fn from_platform_preflight(
+        dirs: &TransportStateCacheDirsReady,
+        runtime_network_enabled: bool,
+        backup_exclusion_verified: bool,
+        log_redaction_policy: TransportLogRedactionPolicy,
+        crash_redaction_policy: TransportCrashRedactionPolicy,
+        censorship_readiness: TransportCensorshipReadiness,
+    ) -> Self {
+        debug_assert_ne!(dirs.state_dir(), dirs.cache_dir());
+        Self {
+            runtime_network_enabled,
+            app_private_state_cache_dirs: true,
+            backup_exclusion_verified,
+            log_redaction_policy,
+            crash_redaction_policy,
+            censorship_readiness,
         }
     }
 
@@ -399,10 +511,7 @@ impl EnvelopeTransport for OnionEnvelopeTransport {
 pub mod arti_adapter_spike {
     use super::*;
     use arti_client::{config::TorClientConfigBuilder, TorClientConfig};
-    use std::{
-        path::{Path, PathBuf},
-        sync::Arc,
-    };
+    use std::sync::Arc;
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub enum ArtiConfigError {
@@ -543,16 +652,6 @@ pub mod arti_adapter_spike {
             return Err(ArtiConfigError::SharedDefaultDirectory);
         }
         Ok(())
-    }
-
-    fn looks_like_shared_arti_default(path: &str) -> bool {
-        let normalized = path.replace('\\', "/").to_ascii_lowercase();
-        normalized.contains("${arti_")
-            || normalized.ends_with("/.cache/arti")
-            || normalized.ends_with("/.local/share/arti")
-            || normalized.ends_with("/library/application support/arti")
-            || normalized.ends_with("/appdata/roaming/arti")
-            || normalized.ends_with("/appdata/local/arti")
     }
 }
 
@@ -871,6 +970,86 @@ mod tests {
     }
 
     #[test]
+    fn runtime_directory_probe_creates_and_checks_state_cache_dirs() {
+        let root = unique_transport_test_root("dir-probe");
+        let state_dir = root.join("state");
+        let cache_dir = root.join("cache");
+
+        let ready = probe_app_private_state_cache_dirs(&state_dir, &cache_dir)
+            .expect("state/cache probe should pass");
+
+        assert_eq!(ready.state_dir(), state_dir.as_path());
+        assert_eq!(ready.cache_dir(), cache_dir.as_path());
+        assert!(state_dir.is_dir());
+        assert!(cache_dir.is_dir());
+        assert!(!state_dir
+            .join(".another-dimension-transport-preflight")
+            .exists());
+        assert!(!cache_dir
+            .join(".another-dimension-transport-preflight")
+            .exists());
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn runtime_directory_probe_rejects_unsafe_paths_before_writes() {
+        let root = unique_transport_test_root("dir-reject");
+        let shared_state = if cfg!(windows) {
+            r"C:\Users\alex\AppData\Roaming\arti"
+        } else {
+            "/Users/alex/.local/share/arti"
+        };
+
+        assert_eq!(
+            probe_app_private_state_cache_dirs("relative-state", root.join("cache")),
+            Err(TransportRuntimeProbeError::RelativeDirectory)
+        );
+        assert_eq!(
+            probe_app_private_state_cache_dirs(shared_state, root.join("cache")),
+            Err(TransportRuntimeProbeError::SharedDefaultDirectory)
+        );
+        assert_eq!(
+            probe_app_private_state_cache_dirs(root.join("same"), root.join("same")),
+            Err(TransportRuntimeProbeError::SameStateAndCacheDirectory)
+        );
+        assert!(!root.exists());
+    }
+
+    #[test]
+    fn runtime_directory_probe_error_maps_to_redacted_runtime_failure() {
+        let root = unique_transport_test_root("dir-error");
+        let error = probe_app_private_state_cache_dirs("relative-state", root.join("cache"))
+            .expect_err("relative path should fail");
+
+        assert_eq!(
+            TransportRuntimeError::from(error),
+            TransportRuntimeError::StateDirectoryPermissionDenied
+        );
+        assert!(!format!("{error:?}").contains("relative-state"));
+    }
+
+    #[test]
+    fn runtime_permission_preflight_uses_directory_probe_token() {
+        let root = unique_transport_test_root("platform-preflight");
+        let dirs = probe_app_private_state_cache_dirs(root.join("state"), root.join("cache"))
+            .expect("state/cache probe should pass");
+
+        let preflight = TransportRuntimePermissionPreflight::from_platform_preflight(
+            &dirs,
+            true,
+            true,
+            TransportLogRedactionPolicy::RedactedTransportEventsOnly,
+            TransportCrashRedactionPolicy::SensitivePathsAndIdentifiersRedacted,
+            TransportCensorshipReadiness::ExplicitlyNotRequiredForThisBuild,
+        );
+
+        assert_eq!(preflight.check(), Ok(TransportRuntimeReady));
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn runtime_state_is_disabled_by_default_and_not_ready() {
         let state = TransportRuntimeState::disabled();
 
@@ -932,6 +1111,17 @@ mod tests {
                 TransportCrashRedactionPolicy::SensitivePathsAndIdentifiersRedacted,
             censorship_readiness: TransportCensorshipReadiness::ExplicitlyNotRequiredForThisBuild,
         }
+    }
+
+    fn unique_transport_test_root(label: &str) -> PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time")
+            .as_nanos();
+        std::env::temp_dir().join(format!(
+            "another-dimension-{label}-{}-{nanos}",
+            std::process::id()
+        ))
     }
 
     #[cfg(feature = "arti-adapter-spike")]
