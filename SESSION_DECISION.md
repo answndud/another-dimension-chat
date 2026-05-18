@@ -82,3 +82,5 @@ This is only a candidate direction.
 `NoiseTransportPair` is now the narrow production crypto boundary after a successful Noise XX handshake. It supports initiator-to-responder encrypt/decrypt in memory and has tamper rejection coverage. It is still not persisted and is not connected to message storage, replay windows, or onion transport.
 
 `ProductionEnvelopeSession` connects the in-memory Noise transport pair to `protocol::Envelope`. The current boundary uses caller-supplied message numbers and a domain-separated hash of the safety transcript as a non-persistent test channel id. It is not a durable session identifier and is not yet connected to storage, transport, or replay persistence.
+
+Replay-aware decrypt now uses the existing `ReplayWindow` boundary. Duplicate and old message numbers are rejected before decrypt, while tampered ciphertext does not commit replay state. Replay state is still caller-owned and not persisted by the production boundary.

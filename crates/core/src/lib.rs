@@ -11,7 +11,9 @@ pub mod production {
         production_pairing_draft_with_defaults, transcript, PairingError, PairingPayload,
         ProductionPairingDraft,
     };
-    use another_dimension_protocol::{encode_hex, Envelope, MessageType};
+    use another_dimension_protocol::{
+        encode_hex, Envelope, MessageType, ProtocolError, ReplayWindow,
+    };
     use sha2::{Digest, Sha256};
 
     const CANONICAL_DIALER_DOMAIN: &[u8] = b"AD-SESSION-CANONICAL-DIALER-V1";
@@ -87,12 +89,25 @@ pub mod production {
                 .responder_decrypt(&envelope.padded_ciphertext)
                 .map_err(ProductionSessionError::from)
         }
+
+        pub fn decrypt_at_responder_with_replay(
+            &mut self,
+            envelope: &Envelope,
+            replay_window: &mut ReplayWindow,
+        ) -> Result<Vec<u8>, ProductionSessionError> {
+            let mut next_replay_window = replay_window.clone();
+            next_replay_window.accept(envelope.message_number)?;
+            let plaintext = self.decrypt_at_responder(envelope)?;
+            *replay_window = next_replay_window;
+            Ok(plaintext)
+        }
     }
 
     #[derive(Debug, Eq, PartialEq)]
     pub enum ProductionSessionError {
         Pairing(PairingError),
         Crypto(CryptoError),
+        Protocol(ProtocolError),
         NonProductionPairingPayload,
         SamePairwiseIdentity,
         NoiseStaticKeyMismatch,
@@ -108,6 +123,12 @@ pub mod production {
     impl From<CryptoError> for ProductionSessionError {
         fn from(value: CryptoError) -> Self {
             Self::Crypto(value)
+        }
+    }
+
+    impl From<ProtocolError> for ProductionSessionError {
+        fn from(value: ProtocolError) -> Self {
+            Self::Protocol(value)
         }
     }
 
@@ -429,6 +450,105 @@ pub mod production {
             *last ^= 0x01;
 
             assert!(session.decrypt_at_responder(&envelope).is_err());
+        }
+
+        #[test]
+        fn production_envelope_replay_window_rejects_duplicate_message() {
+            let (alice, bob) = production_setup_pair();
+            let mut session = establish_envelope_session_from_setup_drafts(&alice, &bob)
+                .expect("envelope session");
+            let mut replay_window = ReplayWindow::new(4).expect("replay window");
+            let envelope = session
+                .encrypt_from_canonical_dialer(1, b"message one")
+                .expect("encrypt envelope");
+
+            assert_eq!(
+                session
+                    .decrypt_at_responder_with_replay(&envelope, &mut replay_window)
+                    .expect("decrypt envelope"),
+                b"message one"
+            );
+            assert_eq!(
+                session.decrypt_at_responder_with_replay(&envelope, &mut replay_window),
+                Err(ProductionSessionError::Protocol(
+                    ProtocolError::ReplayMessage
+                ))
+            );
+        }
+
+        #[test]
+        fn production_envelope_replay_window_rejects_old_message() {
+            let (alice, bob) = production_setup_pair();
+            let mut session = establish_envelope_session_from_setup_drafts(&alice, &bob)
+                .expect("envelope session");
+            let mut replay_window = ReplayWindow::new(2).expect("replay window");
+            let first = session
+                .encrypt_from_canonical_dialer(1, b"message one")
+                .expect("encrypt first");
+            let second = session
+                .encrypt_from_canonical_dialer(2, b"message two")
+                .expect("encrypt second");
+            let third = session
+                .encrypt_from_canonical_dialer(3, b"message three")
+                .expect("encrypt third");
+
+            assert!(session
+                .decrypt_at_responder_with_replay(&first, &mut replay_window)
+                .is_ok());
+            assert!(session
+                .decrypt_at_responder_with_replay(&second, &mut replay_window)
+                .is_ok());
+            assert!(session
+                .decrypt_at_responder_with_replay(&third, &mut replay_window)
+                .is_ok());
+            assert_eq!(
+                session.decrypt_at_responder_with_replay(&first, &mut replay_window),
+                Err(ProductionSessionError::Protocol(ProtocolError::OldMessage))
+            );
+        }
+
+        #[test]
+        fn production_envelope_tamper_does_not_advance_replay_window() {
+            let (alice, bob) = production_setup_pair();
+            let mut session = establish_envelope_session_from_setup_drafts(&alice, &bob)
+                .expect("envelope session");
+            let mut replay_window = ReplayWindow::new(4).expect("replay window");
+            let mut tampered = session
+                .encrypt_from_canonical_dialer(1, b"message one")
+                .expect("encrypt tampered");
+            let last = tampered
+                .padded_ciphertext
+                .last_mut()
+                .expect("ciphertext is non-empty");
+            *last ^= 0x01;
+            assert!(session
+                .decrypt_at_responder_with_replay(&tampered, &mut replay_window)
+                .is_err());
+
+            let (alice, bob) = production_setup_pair();
+            let mut fresh_session = establish_envelope_session_from_setup_drafts(&alice, &bob)
+                .expect("fresh envelope session");
+            let valid = fresh_session
+                .encrypt_from_canonical_dialer(1, b"message one")
+                .expect("encrypt valid");
+            assert_eq!(replay_window.highest_seen(), 0);
+            assert!(fresh_session
+                .decrypt_at_responder_with_replay(&valid, &mut replay_window)
+                .is_ok());
+        }
+
+        fn production_setup_pair() -> (ProductionSetupDraft, ProductionSetupDraft) {
+            let alice = production_setup_draft_with_defaults(
+                &ProfileName::new("alice").expect("valid profile"),
+                "alice.onion",
+            )
+            .expect("alice setup");
+            let bob = production_setup_draft_with_defaults(
+                &ProfileName::new("bob").expect("valid profile"),
+                "bob.onion",
+            )
+            .expect("bob setup");
+            (alice, bob)
         }
 
         #[test]
