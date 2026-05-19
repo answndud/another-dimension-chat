@@ -97,6 +97,12 @@ pub enum OnionServiceLaunchPreflightError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionServiceDescriptorPublicationError {
+    EndpointPublicationPolicyMissing,
+    DescriptorPublicationNotImplemented,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EndpointLifecycleError {
     GlobalEndpointForbidden,
     IdentityKeyCouplingForbidden,
@@ -1842,6 +1848,12 @@ pub struct OnionServiceLaunchPreflight {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct OnionServiceLaunchReady;
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct OnionServiceDescriptorPublicationBoundary {
+    _launch_ready: OnionServiceLaunchReady,
+    endpoint_publication_policy: OnionEndpointPublicationPolicy,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -1893,6 +1905,52 @@ impl OnionServiceLaunchPreflight {
         }
 
         Ok(OnionServiceLaunchReady)
+    }
+}
+
+impl OnionServiceDescriptorPublicationBoundary {
+    pub fn from_launch_ready(
+        launch_ready: OnionServiceLaunchReady,
+        endpoint_publication_policy: OnionEndpointPublicationPolicy,
+    ) -> Result<Self, OnionServiceDescriptorPublicationError> {
+        if endpoint_publication_policy != OnionEndpointPublicationPolicy::PairwiseRendezvousOnly {
+            return Err(OnionServiceDescriptorPublicationError::EndpointPublicationPolicyMissing);
+        }
+
+        Ok(Self {
+            _launch_ready: launch_ready,
+            endpoint_publication_policy,
+        })
+    }
+
+    pub fn endpoint_publication_policy(self) -> OnionEndpointPublicationPolicy {
+        self.endpoint_publication_policy
+    }
+
+    pub fn publish_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        sink: &mut S,
+    ) -> Result<(), OnionServiceDescriptorPublicationError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::OnionServiceLaunchFailed,
+        ));
+        Err(OnionServiceDescriptorPublicationError::DescriptorPublicationNotImplemented)
+    }
+}
+
+impl fmt::Debug for OnionServiceDescriptorPublicationBoundary {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OnionServiceDescriptorPublicationBoundary")
+            .field(
+                "endpoint_publication_policy",
+                &self.endpoint_publication_policy,
+            )
+            .field("descriptor", &"<not-published>")
+            .field("onion_endpoint", &"<redacted>")
+            .field("contact_id", &"<redacted>")
+            .field("profile_name", &"<redacted>")
+            .finish()
     }
 }
 
@@ -2343,6 +2401,17 @@ pub mod arti_adapter_spike {
                 TransportRuntimeError::OnionServiceLaunchFailed,
             ));
             Err(OnionServiceLaunchAdapterError::OnionHostingNotImplemented)
+        }
+
+        pub fn descriptor_publication_boundary(
+            &self,
+            endpoint_publication_policy: OnionEndpointPublicationPolicy,
+        ) -> Result<OnionServiceDescriptorPublicationBoundary, OnionServiceDescriptorPublicationError>
+        {
+            OnionServiceDescriptorPublicationBoundary::from_launch_ready(
+                self._launch_ready,
+                endpoint_publication_policy,
+            )
         }
     }
 
@@ -4121,6 +4190,72 @@ mod tests {
         assert_redacted_event_hides(&event, &["example.onion", "alice", "bob"]);
     }
 
+    #[test]
+    fn onion_service_descriptor_publication_requires_pairwise_policy() {
+        assert_eq!(
+            OnionServiceDescriptorPublicationBoundary::from_launch_ready(
+                OnionServiceLaunchReady,
+                OnionEndpointPublicationPolicy::Missing,
+            ),
+            Err(OnionServiceDescriptorPublicationError::EndpointPublicationPolicyMissing)
+        );
+
+        let boundary = OnionServiceDescriptorPublicationBoundary::from_launch_ready(
+            OnionServiceLaunchReady,
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+        )
+        .expect("descriptor publication boundary");
+
+        assert_eq!(
+            boundary.endpoint_publication_policy(),
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly
+        );
+    }
+
+    #[test]
+    fn onion_service_descriptor_publication_fails_closed_and_redacts_output() {
+        let boundary = OnionServiceDescriptorPublicationBoundary::from_launch_ready(
+            OnionServiceLaunchReady,
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+        )
+        .expect("descriptor publication boundary");
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        assert_eq!(
+            boundary.publish_fail_closed(&mut sink),
+            Err(OnionServiceDescriptorPublicationError::DescriptorPublicationNotImplemented)
+        );
+        assert_eq!(sink.events().len(), 1);
+        assert_eq!(
+            sink.events()[0].kind(),
+            TransportRuntimeEventKind::RuntimePreflightFailed
+        );
+        assert_eq!(
+            sink.events()[0].runtime_error(),
+            Some(TransportRuntimeError::OnionServiceLaunchFailed)
+        );
+
+        let rendered = format!("{boundary:?}");
+        assert!(rendered.contains("OnionServiceDescriptorPublicationBoundary"));
+        assert!(rendered.contains("<not-published>"));
+        assert!(rendered.contains("<redacted>"));
+        assert!(!rendered.contains("example.onion"));
+        assert!(!rendered.contains("alice"));
+        assert!(!rendered.contains("bob"));
+        assert!(!rendered.contains("private-key"));
+        assert!(!rendered.contains("descriptor-value"));
+        assert_redacted_event_hides(
+            &sink.events()[0],
+            &[
+                "example.onion",
+                "alice",
+                "bob",
+                "private-key",
+                "descriptor-value",
+            ],
+        );
+    }
+
     fn sample_envelope() -> Envelope {
         Envelope {
             protocol_version: 1,
@@ -4643,6 +4778,57 @@ mod tests {
         assert!(!rendered.contains("arti-state"));
         assert!(!rendered.contains("arti-cache"));
         assert!(!rendered.contains(".onion"));
+        assert_redacted_event_hides(
+            sink.events().last().expect("event"),
+            &["example.onion", "alice", "bob", "private-key", "descriptor"],
+        );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn onion_service_launch_adapter_exposes_descriptor_publication_boundary() {
+        let root = unique_transport_test_root("onion-descriptor-boundary");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let mut owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+        owner.mark_bootstrapped_for_adapter_test(&mut sink);
+        let launch_adapter =
+            arti_adapter_spike::OnionServiceLaunchAdapterSkeleton::from_ready_owner(
+                OnionServiceLaunchReady,
+                &ready_onion_service_key_material(),
+                &owner,
+            )
+            .expect("launch adapter");
+
+        assert_eq!(
+            launch_adapter.descriptor_publication_boundary(OnionEndpointPublicationPolicy::Missing),
+            Err(OnionServiceDescriptorPublicationError::EndpointPublicationPolicyMissing)
+        );
+
+        let boundary = launch_adapter
+            .descriptor_publication_boundary(OnionEndpointPublicationPolicy::PairwiseRendezvousOnly)
+            .expect("descriptor publication boundary");
+        assert_eq!(
+            boundary.publish_fail_closed(&mut sink),
+            Err(OnionServiceDescriptorPublicationError::DescriptorPublicationNotImplemented)
+        );
+        assert_eq!(
+            sink.events().last().expect("event").runtime_error(),
+            Some(TransportRuntimeError::OnionServiceLaunchFailed)
+        );
         assert_redacted_event_hides(
             sink.events().last().expect("event"),
             &["example.onion", "alice", "bob", "private-key", "descriptor"],

@@ -57,7 +57,28 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue pre-network transport work by defining the next launch-state boundary after key material readiness. Do not implement real onion hosting, descriptor publication, inbound streams, or envelope send/receive until the launch-state and descriptor-publication boundaries are tested separately.
+Continue pre-network transport work by defining the next inbound-stream boundary after descriptor publication remains fail-closed. Do not implement real onion hosting, descriptor publication, inbound streams, or envelope send/receive until each boundary is tested separately.
+
+## Onion Service Descriptor Publication Boundary
+
+Decision as of 2026-05-19: descriptor publication is a distinct boundary after launch preflight and before any onion hosting behavior.
+
+Current code boundary:
+
+- `OnionServiceDescriptorPublicationBoundary` can be constructed only from `OnionServiceLaunchReady`.
+- The boundary accepts only `OnionEndpointPublicationPolicy::PairwiseRendezvousOnly`.
+- Missing publication policy is rejected before any descriptor publication attempt.
+- `publish_fail_closed(...)` records only a redacted runtime event and returns `DescriptorPublicationNotImplemented`.
+- The feature-gated `OnionServiceLaunchAdapterSkeleton` can expose the descriptor publication boundary, but it still does not publish descriptors.
+- Debug and event output must not expose onion endpoint, descriptor value, private key, contact id, profile name, or path material.
+
+Still not implemented:
+
+- Real descriptor creation.
+- Descriptor publication through Arti.
+- Onion service hosting.
+- Inbound stream handling.
+- Envelope send/receive over onion streams.
 
 ## Onion Service Key Material Adapter Boundary
 
