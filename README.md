@@ -60,6 +60,7 @@ What exists today:
 - Stream adapter closeout boundary that requires both inbound and outbound fail-closed adapters before session binding can be considered, while still forbidding bound-session shortcuts, envelope I/O, and usable messaging.
 - Stream closeout integration ordering boundary that places remote peer authentication after stream adapter closeout and verified pairwise session binding after remote peer authentication, while still forbidding envelope I/O and usable messaging.
 - Stream boundary consolidation review that freezes further stream readiness-token expansion and selects cleanup/module decomposition before adding new network behavior.
+- Transport module decomposition preparation that selects redacted runtime events and event sinks as the first behavior-preserving split target.
 - Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
 - Encrypted endpoint update control-envelope boundary that pads endpoint rotation plaintext before Noise encryption and wraps only opaque control ciphertext after a validated pairwise update.
 - Production envelope session hook for endpoint update control encryption/decryption without Tor delivery or onion hosting.
