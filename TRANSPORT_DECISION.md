@@ -57,7 +57,40 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving module split: runtime preflight and permission preflight. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving module split: endpoint and endpoint-rotation state. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Runtime Preflight Module Extraction
+
+Decision as of 2026-05-19: runtime preflight, permission preflight, app-private directory probing, backup exclusion verification, bridge/censorship readiness, and runtime state are extracted into `crates/transport/src/runtime_preflight.rs`. `crates/transport/src/lib.rs` re-exports the same public names to preserve the public API.
+
+Moved without behavior change:
+
+- `TransportRuntimePreflight`
+- `TransportRuntimeReady`
+- `TransportRuntimeState`
+- `TransportRuntimePermissionPreflight`
+- `TransportLogRedactionPolicy`
+- `TransportCrashRedactionPolicy`
+- `TransportCensorshipReadiness`
+- `BridgeRequirement`
+- `BridgeCensorshipConfiguration`
+- `BridgeCensorshipReady`
+- `TransportStateCacheDirsReady`
+- `TransportBackupExclusionVerification`
+- `probe_app_private_state_cache_dirs(...)`
+- `verify_transport_backup_exclusion(...)`
+
+Preserved invariants:
+
+- Runtime remains disabled by default.
+- Runtime ready state still requires explicit network enablement, app-private state/cache directory readiness, backup exclusion verification, log/crash redaction readiness, and bridge/censorship readiness.
+- Raw bridge lines remain rejected.
+- Shared/default Arti directories remain rejected.
+- No Tor bootstrap, descriptor publication, stream I/O, envelope I/O, or messaging capability was added.
+
+Next split target:
+
+- Endpoint and endpoint-rotation state.
 
 ## Bootstrap Policy Module Extraction
 
