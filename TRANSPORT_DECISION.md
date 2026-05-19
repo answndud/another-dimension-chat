@@ -21,6 +21,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `TransportRuntimePermissionPreflight` maps app-private state/cache policy, backup exclusion, log/crash redaction, and censorship readiness into the runtime preflight gate.
 - `probe_app_private_state_cache_dirs` creates and probes explicit state/cache directories without exposing path details in runtime errors.
 - `RedactedTransportRuntimeEvent` records transport event categories without storing raw paths, endpoints, contact ids, profile names, plaintext, or key material.
+- `TransportBootstrapPolicy` bounds future bootstrap timeout, retry, cancellation, and censorship classification behavior without bootstrapping Tor.
 - `TransportRuntimeState` separates disabled fail-closed state from a future runtime-ready state that can only be created from successful preflight.
 - `OnionEnvelopeTransport` stores runtime state, but send/receive remains fail-closed even when that state is ready.
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
@@ -332,3 +333,24 @@ Still not implemented:
 - Tor bootstrap, socket opens, onion service launch, or envelope transfer.
 
 A future adapter must log redacted runtime events rather than raw Arti config paths, onion endpoints, contact ids, profile names, plaintext, private keys, or decrypted envelope data.
+
+## Arti Bootstrap Timeout And Retry Decision
+
+Decision as of 2026-05-19: before enabling any network-capable Arti adapter, bootstrap behavior must be bounded by explicit timeout, retry, cancellation, and failure-classification policy.
+
+Current code boundary:
+
+- `TransportBootstrapTimeoutPolicy` rejects zero timeout and timeouts above 120 seconds.
+- `TransportBootstrapRetryPolicy` rejects zero attempts, more than three attempts, zero backoff, and initial backoff greater than maximum backoff.
+- `TransportBootstrapPolicy` rejects silent retry.
+- `TransportBootstrapPolicy::high_risk_default()` uses a 45 second timeout, two attempts, 500 ms initial backoff, 2 second max backoff, no silent retry, and separate censorship classification.
+- `TransportBootstrapOutcome` maps cancellation, timeout, censorship/bridge requirement, and transient network failure into runtime error categories.
+
+Still not implemented:
+
+- Real Arti bootstrap.
+- Async timers, sleeps, cancellation tokens, or retry loops.
+- Bridge configuration.
+- Socket opens, onion service launch, or envelope transfer.
+
+A future adapter must surface bootstrap timeout, cancellation, and censorship/bridge-required outcomes instead of waiting forever or retrying silently.
