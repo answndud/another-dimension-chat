@@ -224,6 +224,14 @@ pub enum OutboundStreamGateError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OutboundStreamAdapterError {
+    OutboundStreamGateRequired,
+    TransportPolicyViolation,
+    OutboundDialNotImplemented,
+    OutboundSendNotImplemented,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NetworkExperimentScope {
     BootstrapOnly,
     OnionHosting,
@@ -2278,6 +2286,12 @@ pub struct OutboundStreamGateDecision {
     usable_messaging_claimed: bool,
 }
 
+#[derive(Clone, Eq, PartialEq)]
+pub struct OutboundStreamFailClosedAdapter {
+    _gate_ready: OutboundStreamGateReady,
+    boundary: OnionOutboundStreamBoundary,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -3209,6 +3223,62 @@ impl OutboundStreamGateDecision {
         }
 
         Ok(OutboundStreamGateReady)
+    }
+}
+
+impl OutboundStreamFailClosedAdapter {
+    pub fn from_gate_ready(
+        gate_ready: OutboundStreamGateReady,
+        pairwise_endpoint: PairwiseRendezvousEndpoint,
+        policy: TransportPolicy,
+    ) -> Result<Self, OutboundStreamAdapterError> {
+        let boundary =
+            OnionOutboundStreamBoundary::from_pairwise_endpoint(pairwise_endpoint, policy)
+                .map_err(|_| OutboundStreamAdapterError::TransportPolicyViolation)?;
+
+        Ok(Self {
+            _gate_ready: gate_ready,
+            boundary,
+        })
+    }
+
+    pub fn from_missing_gate() -> Result<Self, OutboundStreamAdapterError> {
+        Err(OutboundStreamAdapterError::OutboundStreamGateRequired)
+    }
+
+    pub fn dial_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        sink: &mut S,
+    ) -> Result<(), OutboundStreamAdapterError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::SendFailed,
+        ));
+        Err(OutboundStreamAdapterError::OutboundDialNotImplemented)
+    }
+
+    pub fn send_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        _envelope: &Envelope,
+        sink: &mut S,
+    ) -> Result<(), OutboundStreamAdapterError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::SendFailed,
+        ));
+        Err(OutboundStreamAdapterError::OutboundSendNotImplemented)
+    }
+}
+
+impl fmt::Debug for OutboundStreamFailClosedAdapter {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OutboundStreamFailClosedAdapter")
+            .field("gate", &"<ready>")
+            .field("boundary", &self.boundary)
+            .field("stream_id", &"<redacted>")
+            .field("remote_endpoint", &"<redacted>")
+            .field("contact_id", &"<redacted>")
+            .field("profile_name", &"<redacted>")
+            .finish()
     }
 }
 
@@ -5489,6 +5559,71 @@ mod tests {
     }
 
     #[test]
+    fn outbound_stream_fail_closed_adapter_requires_gate_ready_token_and_high_risk_policy() {
+        assert_eq!(
+            OutboundStreamFailClosedAdapter::from_missing_gate(),
+            Err(OutboundStreamAdapterError::OutboundStreamGateRequired)
+        );
+
+        assert_eq!(
+            OutboundStreamFailClosedAdapter::from_gate_ready(
+                ready_outbound_stream_gate(),
+                sample_pairwise_endpoint(),
+                TransportPolicy::local_only(),
+            ),
+            Err(OutboundStreamAdapterError::TransportPolicyViolation)
+        );
+
+        let adapter = OutboundStreamFailClosedAdapter::from_gate_ready(
+            ready_outbound_stream_gate(),
+            sample_pairwise_endpoint(),
+            TransportPolicy::high_risk_default(),
+        )
+        .expect("outbound stream adapter");
+        let rendered = format!("{adapter:?}");
+
+        assert!(rendered.contains("OutboundStreamFailClosedAdapter"));
+        assert!(rendered.contains("<ready>"));
+        assert!(rendered.contains("<redacted>"));
+        assert!(!rendered.contains("example.onion"));
+        assert!(!rendered.contains("alice"));
+        assert!(!rendered.contains("bob"));
+        assert!(!rendered.contains("stream-1"));
+    }
+
+    #[test]
+    fn outbound_stream_fail_closed_adapter_records_redacted_events_only() {
+        let adapter = OutboundStreamFailClosedAdapter::from_gate_ready(
+            ready_outbound_stream_gate(),
+            sample_pairwise_endpoint(),
+            TransportPolicy::high_risk_default(),
+        )
+        .expect("outbound stream adapter");
+        let envelope = sample_envelope();
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        assert_eq!(
+            adapter.dial_fail_closed(&mut sink),
+            Err(OutboundStreamAdapterError::OutboundDialNotImplemented)
+        );
+        assert_eq!(
+            adapter.send_fail_closed(&envelope, &mut sink),
+            Err(OutboundStreamAdapterError::OutboundSendNotImplemented)
+        );
+        assert_eq!(sink.events().len(), 2);
+        for event in sink.events() {
+            assert_eq!(
+                event.kind(),
+                TransportRuntimeEventKind::RuntimePreflightFailed
+            );
+            assert_eq!(
+                event.runtime_error(),
+                Some(TransportRuntimeError::SendFailed)
+            );
+        }
+    }
+
+    #[test]
     fn runtime_preflight_is_disabled_by_default() {
         assert_eq!(
             TransportRuntimePreflight::disabled_by_default().check(),
@@ -6824,6 +6959,15 @@ mod tests {
         )
         .check()
         .expect("inbound stream gate ready")
+    }
+
+    fn ready_outbound_stream_gate() -> OutboundStreamGateReady {
+        OutboundStreamGateDecision::from_pairwise_endpoint_and_policy(
+            sample_pairwise_endpoint(),
+            TransportPolicy::high_risk_default(),
+        )
+        .check()
+        .expect("outbound stream gate ready")
     }
 
     fn ready_onion_service_key_material() -> OnionServiceKeyMaterialReady {
