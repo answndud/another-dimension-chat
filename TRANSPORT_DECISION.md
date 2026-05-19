@@ -57,7 +57,30 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue pre-network transport work by defining a network-capable experiment gate proposal or another bounded pre-network closeout. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+Continue pre-network transport work by deciding whether to open the first feature-gated bootstrap-only experiment or keep closing pre-network documentation gaps. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+
+## Network-Capable Experiment Gate Proposal
+
+Decision as of 2026-05-19: the only currently allowed network-capable experiment scope is manual bootstrap-only. Onion hosting, stream I/O, and envelope I/O experiments remain unsupported until they have separate gates.
+
+Current code boundary:
+
+- `NetworkExperimentGateProposal::locked_down(...)` fails closed by default.
+- `NetworkExperimentGateProposal::bootstrap_only_manual_spike(...)` requires completed pre-network closeout.
+- The experiment scope must be `NetworkExperimentScope::BootstrapOnly`.
+- The manual gate must be `FeatureGatedManualOnly`.
+- Operator consent must be `ExplicitForLocalManualSpike`.
+- Verification policy must be `HeavyIsolatedTargetAndManualCiExcluded`.
+- Target/cache policy must be `IsolatedTemporaryTarget`.
+- Onion hosting, stream I/O, and envelope I/O scopes are rejected with `UnsupportedExperimentScope`.
+
+Still not implemented:
+
+- Any new network-capable behavior beyond existing manual bootstrap paths.
+- Onion hosting experiments.
+- Stream I/O experiments.
+- Envelope I/O experiments.
+- Usable messaging.
 
 ## Post-Auth Stream Readiness Ordering Boundary
 
