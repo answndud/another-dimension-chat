@@ -1893,6 +1893,12 @@ pub mod arti_adapter_spike {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum OnionServiceLaunchAdapterError {
+        PersistentClientNotBootstrapped,
+        OnionHostingNotImplemented,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct PersistentArtiClientLifecycleSummary {
         state: PersistentArtiClientLifecycleState,
         client_owned: bool,
@@ -1962,6 +1968,16 @@ pub mod arti_adapter_spike {
             self.state = PersistentArtiClientLifecycleState::Shutdown;
             sink.record(RedactedTransportRuntimeEvent::runtime_lifecycle_changed());
         }
+
+        #[cfg(test)]
+        pub fn mark_bootstrapped_for_adapter_test<S: TransportRuntimeEventSink>(
+            &mut self,
+            sink: &mut S,
+        ) {
+            self.client = Some(Arc::new(()));
+            self.state = PersistentArtiClientLifecycleState::Bootstrapped;
+            sink.record(RedactedTransportRuntimeEvent::runtime_lifecycle_changed());
+        }
     }
 
     impl fmt::Debug for PersistentArtiClientOwner {
@@ -1970,6 +1986,58 @@ pub mod arti_adapter_spike {
                 .debug_struct("PersistentArtiClientOwner")
                 .field("state", &self.state)
                 .field("client_owned", &self.client.is_some())
+                .field("state_dir", &"<redacted>")
+                .field("cache_dir", &"<redacted>")
+                .finish()
+        }
+    }
+
+    #[derive(Clone, Copy, Eq, PartialEq)]
+    pub struct OnionServiceLaunchAdapterSkeleton {
+        _launch_ready: OnionServiceLaunchReady,
+        owner_summary: PersistentArtiClientLifecycleSummary,
+    }
+
+    impl OnionServiceLaunchAdapterSkeleton {
+        pub fn from_ready_owner(
+            launch_ready: OnionServiceLaunchReady,
+            owner: &PersistentArtiClientOwner,
+        ) -> Result<Self, OnionServiceLaunchAdapterError> {
+            let owner_summary = owner.summary();
+            if owner_summary.state() != PersistentArtiClientLifecycleState::Bootstrapped
+                || !owner_summary.client_owned()
+            {
+                return Err(OnionServiceLaunchAdapterError::PersistentClientNotBootstrapped);
+            }
+
+            Ok(Self {
+                _launch_ready: launch_ready,
+                owner_summary,
+            })
+        }
+
+        pub fn owner_summary(self) -> PersistentArtiClientLifecycleSummary {
+            self.owner_summary
+        }
+
+        pub fn launch_fail_closed<S: TransportRuntimeEventSink>(
+            &self,
+            sink: &mut S,
+        ) -> Result<(), OnionServiceLaunchAdapterError> {
+            sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+                TransportRuntimeError::OnionServiceLaunchFailed,
+            ));
+            Err(OnionServiceLaunchAdapterError::OnionHostingNotImplemented)
+        }
+    }
+
+    impl fmt::Debug for OnionServiceLaunchAdapterSkeleton {
+        fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter
+                .debug_struct("OnionServiceLaunchAdapterSkeleton")
+                .field("owner_state", &self.owner_summary.state())
+                .field("client_owned", &self.owner_summary.client_owned())
+                .field("launch_descriptor", &"<not-created>")
                 .field("state_dir", &"<redacted>")
                 .field("cache_dir", &"<redacted>")
                 .finish()
@@ -3933,6 +4001,97 @@ mod tests {
         assert_eq!(
             sink.events()[0].kind(),
             TransportRuntimeEventKind::RuntimeLifecycleChanged
+        );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn onion_service_launch_adapter_rejects_non_bootstrapped_owner() {
+        let root = unique_transport_test_root("onion-launch-rejects-unbootstrapped");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
+
+        assert_eq!(
+            arti_adapter_spike::OnionServiceLaunchAdapterSkeleton::from_ready_owner(
+                OnionServiceLaunchReady,
+                &owner,
+            ),
+            Err(
+                arti_adapter_spike::OnionServiceLaunchAdapterError::PersistentClientNotBootstrapped
+            )
+        );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn onion_service_launch_adapter_fails_closed_without_hosting_or_sensitive_output() {
+        let root = unique_transport_test_root("onion-launch-adapter-fail-closed");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let mut owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+        owner.mark_bootstrapped_for_adapter_test(&mut sink);
+        let launch_adapter =
+            arti_adapter_spike::OnionServiceLaunchAdapterSkeleton::from_ready_owner(
+                OnionServiceLaunchReady,
+                &owner,
+            )
+            .expect("launch adapter");
+
+        assert_eq!(
+            launch_adapter.owner_summary().state(),
+            arti_adapter_spike::PersistentArtiClientLifecycleState::Bootstrapped
+        );
+        assert!(launch_adapter.owner_summary().client_owned());
+        assert_eq!(
+            launch_adapter.launch_fail_closed(&mut sink),
+            Err(arti_adapter_spike::OnionServiceLaunchAdapterError::OnionHostingNotImplemented)
+        );
+        assert_eq!(
+            sink.events().last().expect("event").kind(),
+            TransportRuntimeEventKind::RuntimePreflightFailed
+        );
+        assert_eq!(
+            sink.events().last().expect("event").runtime_error(),
+            Some(TransportRuntimeError::OnionServiceLaunchFailed)
+        );
+
+        let rendered = format!("{launch_adapter:?}");
+        assert!(rendered.contains("OnionServiceLaunchAdapterSkeleton"));
+        assert!(rendered.contains("<redacted>"));
+        assert!(rendered.contains("<not-created>"));
+        assert!(!rendered.contains(root.to_string_lossy().as_ref()));
+        assert!(!rendered.contains("arti-state"));
+        assert!(!rendered.contains("arti-cache"));
+        assert!(!rendered.contains(".onion"));
+        assert_redacted_event_hides(
+            sink.events().last().expect("event"),
+            &["example.onion", "alice", "bob", "private-key", "descriptor"],
         );
     }
 
