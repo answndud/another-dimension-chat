@@ -65,6 +65,7 @@ What exists today:
 - Extracted bootstrap policy module that preserves bounded bootstrap policy and fail-closed execution skeleton behavior through `crates/transport/src/lib.rs` re-exports.
 - Extracted runtime preflight module that preserves runtime readiness, app-private directory probing, backup exclusion, and bridge/censorship readiness behavior through `crates/transport/src/lib.rs` re-exports.
 - Extracted endpoint state module that preserves onion endpoint validation, pairwise rendezvous endpoint state, endpoint rotation state, and encrypted endpoint-update control-envelope behavior through `crates/transport/src/lib.rs` re-exports.
+- Extracted stream session boundary module that preserves verified session binding, remote peer authentication, bound stream session, envelope I/O readiness, and stream closeout ordering behavior through `crates/transport/src/lib.rs` re-exports.
 - Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
 - Encrypted endpoint update control-envelope boundary that pads endpoint rotation plaintext before Noise encryption and wraps only opaque control ciphertext after a validated pairwise update.
 - Production envelope session hook for endpoint update control encryption/decryption without Tor delivery or onion hosting.
