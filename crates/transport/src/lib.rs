@@ -1,4 +1,4 @@
-use another_dimension_identity::ProfileName;
+use another_dimension_identity::{ContactId, ProfileName};
 use another_dimension_protocol::Envelope;
 #[cfg(target_os = "macos")]
 use std::process::Command;
@@ -85,6 +85,14 @@ pub enum OnionServiceLaunchPreflightError {
     EndpointPublicationPolicyMissing,
     EndpointUpdatePolicyMissing,
     LogRedactionRequired,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum EndpointLifecycleError {
+    GlobalEndpointForbidden,
+    IdentityKeyCouplingForbidden,
+    ExistingEncryptedSessionRequired,
+    EndpointUnchanged,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1096,6 +1104,114 @@ impl OnionServiceEndpoint {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RendezvousEndpointScope {
+    PairwiseContact,
+    GlobalDirectory,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RendezvousEndpointIdentityBinding {
+    TransportScoped,
+    DerivedFromIdentityKey,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum EndpointUpdateChannel {
+    ExistingEncryptedSession,
+    PlaintextControl,
+    OutOfBandPairingPayload,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct PairwiseRendezvousEndpoint {
+    contact_id: ContactId,
+    endpoint: OnionServiceEndpoint,
+}
+
+impl PairwiseRendezvousEndpoint {
+    pub fn new(
+        contact_id: ContactId,
+        endpoint: OnionServiceEndpoint,
+        scope: RendezvousEndpointScope,
+        identity_binding: RendezvousEndpointIdentityBinding,
+    ) -> Result<Self, EndpointLifecycleError> {
+        if scope != RendezvousEndpointScope::PairwiseContact {
+            return Err(EndpointLifecycleError::GlobalEndpointForbidden);
+        }
+        if identity_binding != RendezvousEndpointIdentityBinding::TransportScoped {
+            return Err(EndpointLifecycleError::IdentityKeyCouplingForbidden);
+        }
+
+        Ok(Self {
+            contact_id,
+            endpoint,
+        })
+    }
+
+    pub fn contact_id(&self) -> &ContactId {
+        &self.contact_id
+    }
+
+    pub fn endpoint(&self) -> &OnionServiceEndpoint {
+        &self.endpoint
+    }
+}
+
+impl fmt::Debug for PairwiseRendezvousEndpoint {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PairwiseRendezvousEndpoint")
+            .field("contact_id", &"<redacted>")
+            .field("endpoint", &"<redacted>")
+            .finish()
+    }
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct PairwiseEndpointUpdate {
+    contact_id: ContactId,
+    new_endpoint: OnionServiceEndpoint,
+}
+
+impl PairwiseEndpointUpdate {
+    pub fn for_existing_encrypted_session(
+        current: &PairwiseRendezvousEndpoint,
+        new_endpoint: OnionServiceEndpoint,
+        channel: EndpointUpdateChannel,
+    ) -> Result<Self, EndpointLifecycleError> {
+        if channel != EndpointUpdateChannel::ExistingEncryptedSession {
+            return Err(EndpointLifecycleError::ExistingEncryptedSessionRequired);
+        }
+        if current.endpoint() == &new_endpoint {
+            return Err(EndpointLifecycleError::EndpointUnchanged);
+        }
+
+        Ok(Self {
+            contact_id: current.contact_id().clone(),
+            new_endpoint,
+        })
+    }
+
+    pub fn contact_id(&self) -> &ContactId {
+        &self.contact_id
+    }
+
+    pub fn new_endpoint(&self) -> &OnionServiceEndpoint {
+        &self.new_endpoint
+    }
+}
+
+impl fmt::Debug for PairwiseEndpointUpdate {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PairwiseEndpointUpdate")
+            .field("contact_id", &"<redacted>")
+            .field("new_endpoint", &"<redacted>")
+            .finish()
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LocalTransportEndpoint(String);
 
@@ -1991,6 +2107,113 @@ mod tests {
                 Err(TransportError::InvalidEndpoint)
             );
         }
+    }
+
+    #[test]
+    fn pairwise_rendezvous_endpoint_rejects_global_or_identity_key_bound_scope() {
+        let contact = ContactId::new("bob").expect("contact");
+        let endpoint = OnionServiceEndpoint::new("bobsecret.onion").expect("endpoint");
+
+        assert_eq!(
+            PairwiseRendezvousEndpoint::new(
+                contact.clone(),
+                endpoint.clone(),
+                RendezvousEndpointScope::GlobalDirectory,
+                RendezvousEndpointIdentityBinding::TransportScoped,
+            ),
+            Err(EndpointLifecycleError::GlobalEndpointForbidden)
+        );
+        assert_eq!(
+            PairwiseRendezvousEndpoint::new(
+                contact,
+                endpoint,
+                RendezvousEndpointScope::PairwiseContact,
+                RendezvousEndpointIdentityBinding::DerivedFromIdentityKey,
+            ),
+            Err(EndpointLifecycleError::IdentityKeyCouplingForbidden)
+        );
+    }
+
+    #[test]
+    fn pairwise_rendezvous_endpoint_accepts_transport_scoped_contact_endpoint() {
+        let contact = ContactId::new("bob").expect("contact");
+        let endpoint = OnionServiceEndpoint::new("bobsecret.onion").expect("endpoint");
+        let pairwise = PairwiseRendezvousEndpoint::new(
+            contact.clone(),
+            endpoint.clone(),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
+        .expect("pairwise endpoint");
+
+        assert_eq!(pairwise.contact_id(), &contact);
+        assert_eq!(pairwise.endpoint(), &endpoint);
+
+        let rendered = format!("{pairwise:?}");
+        assert!(rendered.contains("<redacted>"));
+        assert!(!rendered.contains("bob"));
+        assert!(!rendered.contains("bobsecret.onion"));
+    }
+
+    #[test]
+    fn endpoint_update_requires_existing_encrypted_session() {
+        let current = PairwiseRendezvousEndpoint::new(
+            ContactId::new("bob").expect("contact"),
+            OnionServiceEndpoint::new("oldsecret.onion").expect("endpoint"),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
+        .expect("current endpoint");
+
+        for channel in [
+            EndpointUpdateChannel::PlaintextControl,
+            EndpointUpdateChannel::OutOfBandPairingPayload,
+        ] {
+            assert_eq!(
+                PairwiseEndpointUpdate::for_existing_encrypted_session(
+                    &current,
+                    OnionServiceEndpoint::new("newsecret.onion").expect("endpoint"),
+                    channel,
+                ),
+                Err(EndpointLifecycleError::ExistingEncryptedSessionRequired)
+            );
+        }
+    }
+
+    #[test]
+    fn endpoint_update_rejects_unchanged_endpoint_and_redacts_rotation_context() {
+        let current = PairwiseRendezvousEndpoint::new(
+            ContactId::new("bob").expect("contact"),
+            OnionServiceEndpoint::new("oldsecret.onion").expect("endpoint"),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
+        .expect("current endpoint");
+
+        assert_eq!(
+            PairwiseEndpointUpdate::for_existing_encrypted_session(
+                &current,
+                OnionServiceEndpoint::new("oldsecret.onion").expect("endpoint"),
+                EndpointUpdateChannel::ExistingEncryptedSession,
+            ),
+            Err(EndpointLifecycleError::EndpointUnchanged)
+        );
+
+        let update = PairwiseEndpointUpdate::for_existing_encrypted_session(
+            &current,
+            OnionServiceEndpoint::new("newsecret.onion").expect("endpoint"),
+            EndpointUpdateChannel::ExistingEncryptedSession,
+        )
+        .expect("endpoint update");
+
+        assert_eq!(update.contact_id(), current.contact_id());
+        assert_eq!(update.new_endpoint().as_str(), "newsecret.onion");
+
+        let rendered = format!("{update:?}");
+        assert!(rendered.contains("<redacted>"));
+        assert!(!rendered.contains("bob"));
+        assert!(!rendered.contains("oldsecret.onion"));
+        assert!(!rendered.contains("newsecret.onion"));
     }
 
     #[test]

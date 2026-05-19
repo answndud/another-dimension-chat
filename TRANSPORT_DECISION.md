@@ -690,3 +690,28 @@ Still not implemented:
 - Tauri runtime wiring.
 
 Next accepted phase: endpoint lifecycle/update boundary or onion launch adapter skeleton. Do not implement envelope send/receive until onion service hosting and authenticated endpoint update are separately specified.
+
+## Endpoint Lifecycle Update Boundary
+
+Decision as of 2026-05-19: rendezvous endpoints are contact-scoped transport coordinates, not global account addresses. Endpoint updates must be delivered through an existing encrypted session.
+
+Current rules:
+
+- `PairwiseRendezvousEndpoint` accepts only `RendezvousEndpointScope::PairwiseContact`.
+- Global-directory style endpoint scope is rejected.
+- Endpoint identity binding must be `RendezvousEndpointIdentityBinding::TransportScoped`.
+- Endpoints derived from identity keys are rejected.
+- `PairwiseEndpointUpdate::for_existing_encrypted_session(...)` accepts only `EndpointUpdateChannel::ExistingEncryptedSession`.
+- Plaintext control messages and out-of-band pairing payloads cannot rotate an established endpoint.
+- Unchanged endpoint updates are rejected.
+- `Debug` output for endpoint lifecycle/update types redacts contact ids and onion endpoint values.
+
+Still not implemented:
+
+- Actual encrypted endpoint update message format.
+- Endpoint persistence.
+- Endpoint publication over Tor.
+- Onion service launch.
+- Envelope send/receive over Tor.
+
+Next accepted phase: encrypted endpoint update message boundary or onion launch adapter skeleton. Do not implement envelope send/receive until onion service hosting and authenticated endpoint update are separately specified.
