@@ -1,5 +1,5 @@
 use another_dimension_identity::{ContactId, ProfileName};
-use another_dimension_protocol::Envelope;
+use another_dimension_protocol::{pad_to_bucket, Envelope, MessageType};
 #[cfg(target_os = "macos")]
 use std::process::Command;
 use std::{
@@ -93,6 +93,8 @@ pub enum EndpointLifecycleError {
     IdentityKeyCouplingForbidden,
     ExistingEncryptedSessionRequired,
     EndpointUnchanged,
+    EmptyEncryptedPayload,
+    InvalidControlEnvelope,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1212,6 +1214,67 @@ impl fmt::Debug for PairwiseEndpointUpdate {
     }
 }
 
+#[derive(Clone, Eq, PartialEq)]
+pub struct EncryptedEndpointUpdateControlEnvelope {
+    contact_id: ContactId,
+    envelope: Envelope,
+}
+
+impl EncryptedEndpointUpdateControlEnvelope {
+    pub fn from_pairwise_update(
+        update: &PairwiseEndpointUpdate,
+        channel_id: impl Into<String>,
+        message_number: u64,
+        encrypted_payload: Vec<u8>,
+    ) -> Result<Self, EndpointLifecycleError> {
+        if encrypted_payload.is_empty() {
+            return Err(EndpointLifecycleError::EmptyEncryptedPayload);
+        }
+        let channel_id = channel_id.into();
+        if channel_id.is_empty() || message_number == 0 {
+            return Err(EndpointLifecycleError::InvalidControlEnvelope);
+        }
+
+        let padded_ciphertext = pad_to_bucket(&encrypted_payload)
+            .map_err(|_| EndpointLifecycleError::InvalidControlEnvelope)?;
+        let envelope = Envelope {
+            protocol_version: 1,
+            channel_id,
+            message_number,
+            message_type: MessageType::Control,
+            padded_ciphertext,
+        };
+
+        Ok(Self {
+            contact_id: update.contact_id().clone(),
+            envelope,
+        })
+    }
+
+    pub fn contact_id(&self) -> &ContactId {
+        &self.contact_id
+    }
+
+    pub fn envelope(&self) -> &Envelope {
+        &self.envelope
+    }
+}
+
+impl fmt::Debug for EncryptedEndpointUpdateControlEnvelope {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("EncryptedEndpointUpdateControlEnvelope")
+            .field("contact_id", &"<redacted>")
+            .field("message_type", &self.envelope.message_type)
+            .field("message_number", &self.envelope.message_number)
+            .field(
+                "padded_ciphertext_len",
+                &self.envelope.padded_ciphertext.len(),
+            )
+            .finish()
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LocalTransportEndpoint(String);
 
@@ -2214,6 +2277,104 @@ mod tests {
         assert!(!rendered.contains("bob"));
         assert!(!rendered.contains("oldsecret.onion"));
         assert!(!rendered.contains("newsecret.onion"));
+    }
+
+    #[test]
+    fn encrypted_endpoint_update_control_envelope_wraps_only_control_ciphertext() {
+        let current = PairwiseRendezvousEndpoint::new(
+            ContactId::new("bob").expect("contact"),
+            OnionServiceEndpoint::new("oldsecret.onion").expect("endpoint"),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
+        .expect("current endpoint");
+        let update = PairwiseEndpointUpdate::for_existing_encrypted_session(
+            &current,
+            OnionServiceEndpoint::new("newsecret.onion").expect("endpoint"),
+            EndpointUpdateChannel::ExistingEncryptedSession,
+        )
+        .expect("endpoint update");
+
+        let control = EncryptedEndpointUpdateControlEnvelope::from_pairwise_update(
+            &update,
+            "adchan1:endpoint-update",
+            7,
+            b"opaque encrypted endpoint update".to_vec(),
+        )
+        .expect("control envelope");
+
+        assert_eq!(control.contact_id(), current.contact_id());
+        assert_eq!(control.envelope().protocol_version, 1);
+        assert_eq!(control.envelope().channel_id, "adchan1:endpoint-update");
+        assert_eq!(control.envelope().message_number, 7);
+        assert_eq!(control.envelope().message_type, MessageType::Control);
+        assert_eq!(control.envelope().padded_ciphertext.len(), 256);
+
+        let debug = format!("{control:?}");
+        assert!(debug.contains("EncryptedEndpointUpdateControlEnvelope"));
+        assert!(debug.contains("Control"));
+        assert!(debug.contains("padded_ciphertext_len"));
+        assert!(!debug.contains("bob"));
+        assert!(!debug.contains("oldsecret.onion"));
+        assert!(!debug.contains("newsecret.onion"));
+
+        let rendered_ciphertext = String::from_utf8_lossy(&control.envelope().padded_ciphertext);
+        assert!(!rendered_ciphertext.contains("oldsecret.onion"));
+        assert!(!rendered_ciphertext.contains("newsecret.onion"));
+    }
+
+    #[test]
+    fn encrypted_endpoint_update_control_envelope_rejects_invalid_shape() {
+        let current = PairwiseRendezvousEndpoint::new(
+            ContactId::new("bob").expect("contact"),
+            OnionServiceEndpoint::new("oldsecret.onion").expect("endpoint"),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
+        .expect("current endpoint");
+        let update = PairwiseEndpointUpdate::for_existing_encrypted_session(
+            &current,
+            OnionServiceEndpoint::new("newsecret.onion").expect("endpoint"),
+            EndpointUpdateChannel::ExistingEncryptedSession,
+        )
+        .expect("endpoint update");
+
+        assert_eq!(
+            EncryptedEndpointUpdateControlEnvelope::from_pairwise_update(
+                &update,
+                "adchan1:endpoint-update",
+                1,
+                Vec::new(),
+            ),
+            Err(EndpointLifecycleError::EmptyEncryptedPayload)
+        );
+        assert_eq!(
+            EncryptedEndpointUpdateControlEnvelope::from_pairwise_update(
+                &update,
+                "",
+                1,
+                b"ciphertext".to_vec(),
+            ),
+            Err(EndpointLifecycleError::InvalidControlEnvelope)
+        );
+        assert_eq!(
+            EncryptedEndpointUpdateControlEnvelope::from_pairwise_update(
+                &update,
+                "adchan1:endpoint-update",
+                0,
+                b"ciphertext".to_vec(),
+            ),
+            Err(EndpointLifecycleError::InvalidControlEnvelope)
+        );
+        assert_eq!(
+            EncryptedEndpointUpdateControlEnvelope::from_pairwise_update(
+                &update,
+                "adchan1:endpoint-update",
+                1,
+                vec![7; 8193],
+            ),
+            Err(EndpointLifecycleError::InvalidControlEnvelope)
+        );
     }
 
     #[test]

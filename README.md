@@ -40,6 +40,7 @@ What exists today:
 - Onion service key lifecycle decision boundary that permits only SQLCipher-wrapped, profile-unlocked key material after backup exclusion verification.
 - Onion service launch preflight boundary that requires profile unlock, key readiness, persistent client readiness, endpoint publication/update policy, and redacted events before any future launch.
 - Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
+- Encrypted endpoint update control-envelope boundary that wraps endpoint rotation payloads only as opaque padded control ciphertext after a validated pairwise update.
 - Bridge/censorship configuration decision boundary that rejects raw bridge lines and accepts only explicit no-bridge or redacted bridge-config readiness.
 - Redacted transport runtime event boundary for logs/crash contexts without raw paths, endpoints, contact ids, profile names, plaintext, or key material.
 - Runtime event sink boundary that accepts only redacted transport events.
