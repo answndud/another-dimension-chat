@@ -57,7 +57,29 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue pre-network transport work by defining the remote peer authentication boundary over streams. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+Continue pre-network transport work by defining the post-auth stream readiness ordering boundary. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+
+## Remote Peer Authentication Over Stream Boundary
+
+Decision as of 2026-05-19: a verified pairwise encrypted-session binding is not enough to bind a network stream to the expected remote peer. Bound stream/session state now also requires an authenticated pairwise peer proof.
+
+Current code boundary:
+
+- `RemotePeerAuthenticationReady` can be constructed only with `RemotePeerAuthenticationContext::AuthenticatedPairwisePeer`.
+- Missing or unauthenticated peer proof is rejected with `RemotePeerAuthenticationRequired`.
+- `BoundInboundStreamSession` requires an inbound stream boundary, verified session binding, and remote peer authentication readiness.
+- `BoundOutboundStreamSession` requires an outbound stream boundary, verified session binding, and remote peer authentication readiness.
+- Inbound stream/session binding rejects session/authentication contact mismatch with `ContactMismatch`.
+- Outbound stream/session binding rejects endpoint/session/authentication contact mismatch with `ContactMismatch`.
+- Debug and event output must not expose peer proof, session transcript, endpoint, stream id, contact id, profile name, plaintext, ciphertext, private key, or path material.
+
+Still not implemented:
+
+- Real peer proof exchange over streams.
+- Real cryptographic transcript verification in transport.
+- Real stream read/write behavior.
+- Envelope send/receive over onion streams.
+- Usable messaging.
 
 ## Envelope I/O Adapter Fail-Closed Boundary
 
