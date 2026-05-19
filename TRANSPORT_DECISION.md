@@ -57,7 +57,26 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next boundary after inbound stream fail-closed adapter. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until each boundary is tested separately and still fails closed by default.
+Continue transport work with the next boundary after outbound stream gate. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until each boundary is tested separately and still fails closed by default.
+
+## Outbound Stream Gate Boundary
+
+Decision as of 2026-05-19: outbound stream behavior remains gated after pairwise endpoint and high-risk onion policy checks. The gate does not dial or send; it only fixes the conditions required before a future outbound stream adapter can be considered.
+
+Current code boundary:
+
+- `OutboundStreamGateDecision::locked_down()` fails closed without a pairwise endpoint.
+- `OutboundStreamGateDecision::from_pairwise_endpoint_and_policy(...)` requires a `PairwiseRendezvousEndpoint`.
+- The transport policy must be `HighRiskOnionOnly`; local-only and low-risk direct policies are rejected for this gate.
+- Dial, send, envelope I/O, and usable messaging flags are rejected.
+- Existing outbound stream boundary methods still fail closed and emit only redacted runtime events.
+
+Still not implemented:
+
+- Real outbound stream dial.
+- Real outbound stream send.
+- Real envelope I/O.
+- Usable messaging.
 
 ## Inbound Stream Fail-Closed Adapter Boundary
 

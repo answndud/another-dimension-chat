@@ -214,6 +214,16 @@ pub enum InboundStreamAdapterError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OutboundStreamGateError {
+    PairwiseEndpointRequired,
+    HighRiskOnionPolicyRequired,
+    DialForbidden,
+    SendForbidden,
+    EnvelopeIoForbidden,
+    UsableMessagingClaimForbidden,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NetworkExperimentScope {
     BootstrapOnly,
     OnionHosting,
@@ -2255,6 +2265,19 @@ pub struct InboundStreamFailClosedAdapter {
     boundary: OnionInboundStreamBoundary,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct OutboundStreamGateReady;
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OutboundStreamGateDecision {
+    pairwise_endpoint: Option<PairwiseRendezvousEndpoint>,
+    policy: TransportPolicy,
+    dial_enabled: bool,
+    send_enabled: bool,
+    envelope_io_enabled: bool,
+    usable_messaging_claimed: bool,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -3133,6 +3156,59 @@ impl fmt::Debug for InboundStreamFailClosedAdapter {
             .field("contact_id", &"<redacted>")
             .field("profile_name", &"<redacted>")
             .finish()
+    }
+}
+
+impl OutboundStreamGateDecision {
+    pub fn locked_down() -> Self {
+        Self {
+            pairwise_endpoint: None,
+            policy: TransportPolicy::local_only(),
+            dial_enabled: false,
+            send_enabled: false,
+            envelope_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn from_pairwise_endpoint_and_policy(
+        pairwise_endpoint: PairwiseRendezvousEndpoint,
+        policy: TransportPolicy,
+    ) -> Self {
+        Self {
+            pairwise_endpoint: Some(pairwise_endpoint),
+            policy,
+            dial_enabled: false,
+            send_enabled: false,
+            envelope_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn check(self) -> Result<OutboundStreamGateReady, OutboundStreamGateError> {
+        let Some(pairwise_endpoint) = self.pairwise_endpoint else {
+            return Err(OutboundStreamGateError::PairwiseEndpointRequired);
+        };
+        let route = TransportRoute::OnionService(pairwise_endpoint.endpoint().clone());
+        if self.policy.mode() != TransportMode::HighRiskOnionOnly
+            || self.policy.require_allowed(&route).is_err()
+        {
+            return Err(OutboundStreamGateError::HighRiskOnionPolicyRequired);
+        }
+        if self.dial_enabled {
+            return Err(OutboundStreamGateError::DialForbidden);
+        }
+        if self.send_enabled {
+            return Err(OutboundStreamGateError::SendForbidden);
+        }
+        if self.envelope_io_enabled {
+            return Err(OutboundStreamGateError::EnvelopeIoForbidden);
+        }
+        if self.usable_messaging_claimed {
+            return Err(OutboundStreamGateError::UsableMessagingClaimForbidden);
+        }
+
+        Ok(OutboundStreamGateReady)
     }
 }
 
@@ -5322,6 +5398,93 @@ mod tests {
                 event.runtime_error(),
                 Some(TransportRuntimeError::ReceiveFailed)
             );
+        }
+    }
+
+    #[test]
+    fn outbound_stream_gate_requires_pairwise_endpoint_and_high_risk_onion_policy() {
+        assert_eq!(
+            OutboundStreamGateDecision::locked_down().check(),
+            Err(OutboundStreamGateError::PairwiseEndpointRequired)
+        );
+
+        assert_eq!(
+            OutboundStreamGateDecision::from_pairwise_endpoint_and_policy(
+                sample_pairwise_endpoint(),
+                TransportPolicy::local_only(),
+            )
+            .check(),
+            Err(OutboundStreamGateError::HighRiskOnionPolicyRequired)
+        );
+
+        assert_eq!(
+            OutboundStreamGateDecision::from_pairwise_endpoint_and_policy(
+                sample_pairwise_endpoint(),
+                TransportPolicy::low_risk_direct_allowed(),
+            )
+            .check(),
+            Err(OutboundStreamGateError::HighRiskOnionPolicyRequired)
+        );
+
+        assert_eq!(
+            OutboundStreamGateDecision::from_pairwise_endpoint_and_policy(
+                sample_pairwise_endpoint(),
+                TransportPolicy::high_risk_default(),
+            )
+            .check(),
+            Ok(OutboundStreamGateReady)
+        );
+    }
+
+    #[test]
+    fn outbound_stream_gate_rejects_dial_send_envelope_and_messaging_shortcuts() {
+        for (decision, expected) in [
+            (
+                OutboundStreamGateDecision {
+                    pairwise_endpoint: Some(sample_pairwise_endpoint()),
+                    policy: TransportPolicy::high_risk_default(),
+                    dial_enabled: true,
+                    send_enabled: false,
+                    envelope_io_enabled: false,
+                    usable_messaging_claimed: false,
+                },
+                OutboundStreamGateError::DialForbidden,
+            ),
+            (
+                OutboundStreamGateDecision {
+                    pairwise_endpoint: Some(sample_pairwise_endpoint()),
+                    policy: TransportPolicy::high_risk_default(),
+                    dial_enabled: false,
+                    send_enabled: true,
+                    envelope_io_enabled: false,
+                    usable_messaging_claimed: false,
+                },
+                OutboundStreamGateError::SendForbidden,
+            ),
+            (
+                OutboundStreamGateDecision {
+                    pairwise_endpoint: Some(sample_pairwise_endpoint()),
+                    policy: TransportPolicy::high_risk_default(),
+                    dial_enabled: false,
+                    send_enabled: false,
+                    envelope_io_enabled: true,
+                    usable_messaging_claimed: false,
+                },
+                OutboundStreamGateError::EnvelopeIoForbidden,
+            ),
+            (
+                OutboundStreamGateDecision {
+                    pairwise_endpoint: Some(sample_pairwise_endpoint()),
+                    policy: TransportPolicy::high_risk_default(),
+                    dial_enabled: false,
+                    send_enabled: false,
+                    envelope_io_enabled: false,
+                    usable_messaging_claimed: true,
+                },
+                OutboundStreamGateError::UsableMessagingClaimForbidden,
+            ),
+        ] {
+            assert_eq!(decision.check(), Err(expected));
         }
     }
 
