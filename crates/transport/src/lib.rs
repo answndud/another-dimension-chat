@@ -232,6 +232,17 @@ pub enum OutboundStreamAdapterError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum StreamAdapterCloseoutError {
+    InboundAdapterRequired,
+    OutboundAdapterRequired,
+    RemotePeerAuthenticationBoundaryRequired,
+    VerifiedPairwiseSessionBoundaryRequired,
+    BoundSessionShortcutForbidden,
+    EnvelopeIoForbidden,
+    UsableMessagingClaimForbidden,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NetworkExperimentScope {
     BootstrapOnly,
     OnionHosting,
@@ -2292,6 +2303,20 @@ pub struct OutboundStreamFailClosedAdapter {
     boundary: OnionOutboundStreamBoundary,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct StreamAdapterCloseoutReady;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct StreamAdapterCloseoutDecision {
+    inbound_adapter_ready: bool,
+    outbound_adapter_ready: bool,
+    remote_peer_authentication_required: bool,
+    verified_pairwise_session_required: bool,
+    bound_session_shortcut_claimed: bool,
+    envelope_io_claimed: bool,
+    usable_messaging_claimed: bool,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -3279,6 +3304,86 @@ impl fmt::Debug for OutboundStreamFailClosedAdapter {
             .field("contact_id", &"<redacted>")
             .field("profile_name", &"<redacted>")
             .finish()
+    }
+}
+
+impl StreamAdapterCloseoutDecision {
+    pub fn locked_down() -> Self {
+        Self {
+            inbound_adapter_ready: false,
+            outbound_adapter_ready: false,
+            remote_peer_authentication_required: true,
+            verified_pairwise_session_required: true,
+            bound_session_shortcut_claimed: false,
+            envelope_io_claimed: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn from_fail_closed_adapters(
+        _inbound: &InboundStreamFailClosedAdapter,
+        _outbound: &OutboundStreamFailClosedAdapter,
+    ) -> Self {
+        Self {
+            inbound_adapter_ready: true,
+            outbound_adapter_ready: true,
+            remote_peer_authentication_required: true,
+            verified_pairwise_session_required: true,
+            bound_session_shortcut_claimed: false,
+            envelope_io_claimed: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn without_remote_peer_authentication_boundary(mut self) -> Self {
+        self.remote_peer_authentication_required = false;
+        self
+    }
+
+    pub fn without_verified_pairwise_session_boundary(mut self) -> Self {
+        self.verified_pairwise_session_required = false;
+        self
+    }
+
+    pub fn claim_bound_session_shortcut(mut self) -> Self {
+        self.bound_session_shortcut_claimed = true;
+        self
+    }
+
+    pub fn claim_envelope_io(mut self) -> Self {
+        self.envelope_io_claimed = true;
+        self
+    }
+
+    pub fn claim_usable_messaging(mut self) -> Self {
+        self.usable_messaging_claimed = true;
+        self
+    }
+
+    pub fn check(self) -> Result<StreamAdapterCloseoutReady, StreamAdapterCloseoutError> {
+        if !self.inbound_adapter_ready {
+            return Err(StreamAdapterCloseoutError::InboundAdapterRequired);
+        }
+        if !self.outbound_adapter_ready {
+            return Err(StreamAdapterCloseoutError::OutboundAdapterRequired);
+        }
+        if !self.remote_peer_authentication_required {
+            return Err(StreamAdapterCloseoutError::RemotePeerAuthenticationBoundaryRequired);
+        }
+        if !self.verified_pairwise_session_required {
+            return Err(StreamAdapterCloseoutError::VerifiedPairwiseSessionBoundaryRequired);
+        }
+        if self.bound_session_shortcut_claimed {
+            return Err(StreamAdapterCloseoutError::BoundSessionShortcutForbidden);
+        }
+        if self.envelope_io_claimed {
+            return Err(StreamAdapterCloseoutError::EnvelopeIoForbidden);
+        }
+        if self.usable_messaging_claimed {
+            return Err(StreamAdapterCloseoutError::UsableMessagingClaimForbidden);
+        }
+
+        Ok(StreamAdapterCloseoutReady)
     }
 }
 
@@ -5624,6 +5729,63 @@ mod tests {
     }
 
     #[test]
+    fn stream_adapter_closeout_requires_inbound_and_outbound_fail_closed_adapters() {
+        assert_eq!(
+            StreamAdapterCloseoutDecision::locked_down().check(),
+            Err(StreamAdapterCloseoutError::InboundAdapterRequired)
+        );
+
+        let decision = StreamAdapterCloseoutDecision::from_fail_closed_adapters(
+            &sample_inbound_stream_fail_closed_adapter(),
+            &sample_outbound_stream_fail_closed_adapter(),
+        );
+
+        assert_eq!(decision.check(), Ok(StreamAdapterCloseoutReady));
+    }
+
+    #[test]
+    fn stream_adapter_closeout_requires_authentication_and_session_boundaries() {
+        let decision = StreamAdapterCloseoutDecision::from_fail_closed_adapters(
+            &sample_inbound_stream_fail_closed_adapter(),
+            &sample_outbound_stream_fail_closed_adapter(),
+        );
+
+        assert_eq!(
+            decision
+                .without_remote_peer_authentication_boundary()
+                .check(),
+            Err(StreamAdapterCloseoutError::RemotePeerAuthenticationBoundaryRequired)
+        );
+        assert_eq!(
+            decision
+                .without_verified_pairwise_session_boundary()
+                .check(),
+            Err(StreamAdapterCloseoutError::VerifiedPairwiseSessionBoundaryRequired)
+        );
+    }
+
+    #[test]
+    fn stream_adapter_closeout_rejects_shortcuts_to_session_io_and_messaging() {
+        let decision = StreamAdapterCloseoutDecision::from_fail_closed_adapters(
+            &sample_inbound_stream_fail_closed_adapter(),
+            &sample_outbound_stream_fail_closed_adapter(),
+        );
+
+        assert_eq!(
+            decision.claim_bound_session_shortcut().check(),
+            Err(StreamAdapterCloseoutError::BoundSessionShortcutForbidden)
+        );
+        assert_eq!(
+            decision.claim_envelope_io().check(),
+            Err(StreamAdapterCloseoutError::EnvelopeIoForbidden)
+        );
+        assert_eq!(
+            decision.claim_usable_messaging().check(),
+            Err(StreamAdapterCloseoutError::UsableMessagingClaimForbidden)
+        );
+    }
+
+    #[test]
     fn runtime_preflight_is_disabled_by_default() {
         assert_eq!(
             TransportRuntimePreflight::disabled_by_default().check(),
@@ -6849,6 +7011,22 @@ mod tests {
             sample_remote_peer_authentication("bob"),
         )
         .expect("bound outbound stream")
+    }
+
+    fn sample_inbound_stream_fail_closed_adapter() -> InboundStreamFailClosedAdapter {
+        InboundStreamFailClosedAdapter::from_gate_ready(
+            ready_inbound_stream_gate(),
+            OnionServiceDescriptorPublicationReady,
+        )
+    }
+
+    fn sample_outbound_stream_fail_closed_adapter() -> OutboundStreamFailClosedAdapter {
+        OutboundStreamFailClosedAdapter::from_gate_ready(
+            ready_outbound_stream_gate(),
+            sample_pairwise_endpoint(),
+            TransportPolicy::high_risk_default(),
+        )
+        .expect("outbound stream adapter")
     }
 
     fn sample_pairwise_endpoint() -> PairwiseRendezvousEndpoint {
