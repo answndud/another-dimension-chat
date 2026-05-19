@@ -42,6 +42,7 @@ What exists today:
 - Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
 - Encrypted endpoint update control-envelope boundary that pads endpoint rotation plaintext before Noise encryption and wraps only opaque control ciphertext after a validated pairwise update.
 - Production envelope session hook for endpoint update control encryption/decryption without Tor delivery or onion hosting.
+- SQLCipher-backed pairwise rendezvous endpoint state persistence boundary with session/contact-scoped opaque record ids.
 - Bridge/censorship configuration decision boundary that rejects raw bridge lines and accepts only explicit no-bridge or redacted bridge-config readiness.
 - Redacted transport runtime event boundary for logs/crash contexts without raw paths, endpoints, contact ids, profile names, plaintext, or key material.
 - Runtime event sink boundary that accepts only redacted transport events.

@@ -44,6 +44,7 @@ pub mod production {
         ReplayWindowState,
         MessageEnvelope,
         LocalMessageIndex,
+        RendezvousEndpointState,
         SessionTransportState,
     }
 
@@ -57,6 +58,7 @@ pub mod production {
                 Self::ReplayWindowState => "replay-window-state",
                 Self::MessageEnvelope => "message-envelope",
                 Self::LocalMessageIndex => "local-message-index",
+                Self::RendezvousEndpointState => "rendezvous-endpoint-state",
                 Self::SessionTransportState => "session-transport-state",
             }
         }
@@ -70,6 +72,7 @@ pub mod production {
                 "replay-window-state" => Ok(Self::ReplayWindowState),
                 "message-envelope" => Ok(Self::MessageEnvelope),
                 "local-message-index" => Ok(Self::LocalMessageIndex),
+                "rendezvous-endpoint-state" => Ok(Self::RendezvousEndpointState),
                 "session-transport-state" => Ok(Self::SessionTransportState),
                 _ => Err(ProductionStoragePolicyError::InvalidEncryptedRecord),
             }
@@ -490,7 +493,10 @@ pub mod production {
             | ProductionRecordKind::NoiseStaticPrivateKey
             | ProductionRecordKind::ReplayWindowState
             | ProductionRecordKind::MessageEnvelope
-            | ProductionRecordKind::LocalMessageIndex => StorageProtection::EncryptedAtRestRequired,
+            | ProductionRecordKind::LocalMessageIndex
+            | ProductionRecordKind::RendezvousEndpointState => {
+                StorageProtection::EncryptedAtRestRequired
+            }
             ProductionRecordKind::SessionTransportState => StorageProtection::InMemoryOnly,
         }
     }
@@ -546,6 +552,7 @@ pub mod production {
                 ProductionRecordKind::ReplayWindowState,
                 ProductionRecordKind::MessageEnvelope,
                 ProductionRecordKind::LocalMessageIndex,
+                ProductionRecordKind::RendezvousEndpointState,
                 ProductionRecordKind::SessionTransportState,
             ] {
                 assert!(matches!(
@@ -564,6 +571,7 @@ pub mod production {
                 ProductionRecordKind::ReplayWindowState,
                 ProductionRecordKind::MessageEnvelope,
                 ProductionRecordKind::LocalMessageIndex,
+                ProductionRecordKind::RendezvousEndpointState,
             ] {
                 assert_eq!(
                     protection_for(kind),

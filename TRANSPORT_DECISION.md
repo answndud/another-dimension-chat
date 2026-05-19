@@ -742,3 +742,27 @@ Still not implemented:
 - Envelope send/receive over Tor.
 
 Next accepted phase: endpoint update persistence boundary or onion launch adapter skeleton. Do not implement envelope send/receive until onion service hosting and authenticated endpoint update are separately specified.
+
+## Endpoint Update Persistence Boundary
+
+Decision as of 2026-05-19: pairwise rendezvous endpoint state may be persisted only through the encrypted production storage boundary. Record ids must be session/contact scoped and opaque.
+
+Current rules:
+
+- `PairwiseRendezvousEndpoint::encode_state()` uses the minimal `ADENDPOINTSTATE1` state schema.
+- `PairwiseRendezvousEndpoint::decode_state(...)` rejects malformed contact ids, non-onion endpoints, and unexpected schemas.
+- `ProductionRecordKind::RendezvousEndpointState` requires encryption at rest.
+- `ProductionEnvelopeSession::endpoint_state_record_id(...)` derives an opaque record id from the production channel id and contact id using a domain-separated hash.
+- Endpoint state record ids do not contain profile names, contact ids, onion endpoints, or channel ids.
+- `save_pairwise_endpoint_state(...)` requires the encrypted record scope contact to match the endpoint contact.
+- Endpoint state is stored through `SqlCipherRecordStore`; the plaintext endpoint state schema and raw onion endpoint are not present in the database file in tests.
+
+Still not implemented:
+
+- Endpoint update delivery over Tor.
+- Endpoint publication over Tor.
+- Onion service launch.
+- Envelope send/receive over Tor.
+- Endpoint rotation conflict resolution after reconnect.
+
+Next accepted phase: onion launch adapter skeleton or endpoint rotation apply/reconnect boundary. Do not implement envelope send/receive until onion service hosting and authenticated endpoint update are separately specified.

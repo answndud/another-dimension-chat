@@ -95,6 +95,7 @@ pub enum EndpointLifecycleError {
     EndpointUnchanged,
     EmptyEncryptedPayload,
     InvalidControlEnvelope,
+    InvalidEndpointState,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1132,6 +1133,8 @@ pub struct PairwiseRendezvousEndpoint {
 }
 
 impl PairwiseRendezvousEndpoint {
+    const STATE_SCHEMA: &'static str = "ADENDPOINTSTATE1";
+
     pub fn new(
         contact_id: ContactId,
         endpoint: OnionServiceEndpoint,
@@ -1157,6 +1160,32 @@ impl PairwiseRendezvousEndpoint {
 
     pub fn endpoint(&self) -> &OnionServiceEndpoint {
         &self.endpoint
+    }
+
+    pub fn encode_state(&self) -> String {
+        format!(
+            "{}|{}|{}",
+            Self::STATE_SCHEMA,
+            self.contact_id.as_str(),
+            self.endpoint.as_str()
+        )
+    }
+
+    pub fn decode_state(value: &str) -> Result<Self, EndpointLifecycleError> {
+        let parts = value.trim().split('|').collect::<Vec<_>>();
+        if parts.len() != 3 || parts[0] != Self::STATE_SCHEMA {
+            return Err(EndpointLifecycleError::InvalidEndpointState);
+        }
+        let contact_id =
+            ContactId::new(parts[1]).map_err(|_| EndpointLifecycleError::InvalidEndpointState)?;
+        let endpoint = OnionServiceEndpoint::new(parts[2])
+            .map_err(|_| EndpointLifecycleError::InvalidEndpointState)?;
+        Self::new(
+            contact_id,
+            endpoint,
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
     }
 }
 
@@ -2263,6 +2292,37 @@ mod tests {
         assert!(rendered.contains("<redacted>"));
         assert!(!rendered.contains("bob"));
         assert!(!rendered.contains("bobsecret.onion"));
+    }
+
+    #[test]
+    fn pairwise_rendezvous_endpoint_state_round_trips_and_rejects_malformed_state() {
+        let pairwise = PairwiseRendezvousEndpoint::new(
+            ContactId::new("bob").expect("contact"),
+            OnionServiceEndpoint::new("bobsecret.onion").expect("endpoint"),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
+        .expect("pairwise endpoint");
+
+        let encoded = pairwise.encode_state();
+        assert_eq!(encoded, "ADENDPOINTSTATE1|bob|bobsecret.onion");
+        assert_eq!(
+            PairwiseRendezvousEndpoint::decode_state(&encoded).expect("decode"),
+            pairwise
+        );
+
+        for malformed in [
+            "",
+            "ADENDPOINTSTATE1|bob",
+            "ADENDPOINTSTATE1|bob|example.com",
+            "ADENDPOINTSTATE1|bad contact|bobsecret.onion",
+            "OTHER|bob|bobsecret.onion",
+        ] {
+            assert_eq!(
+                PairwiseRendezvousEndpoint::decode_state(malformed),
+                Err(EndpointLifecycleError::InvalidEndpointState)
+            );
+        }
     }
 
     #[test]
