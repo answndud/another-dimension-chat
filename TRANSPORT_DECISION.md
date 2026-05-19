@@ -708,7 +708,6 @@ Current rules:
 
 Still not implemented:
 
-- Actual encrypted endpoint update message format.
 - Endpoint persistence.
 - Endpoint publication over Tor.
 - Onion service launch.
@@ -724,21 +723,22 @@ Current rules:
 
 - `EncryptedEndpointUpdateControlEnvelope::from_pairwise_update(...)` requires a `PairwiseEndpointUpdate`, so plaintext and out-of-band update channels remain outside the construction path.
 - The output envelope uses protocol version `1` and `MessageType::Control`.
+- `EndpointUpdateControlPlaintext` uses the minimal `ADENDPOINTUPDATE1` schema and is constructed only from a validated `PairwiseEndpointUpdate`.
+- Endpoint update plaintext is bucket-padded before Noise encryption. Ciphertext is not padded after encryption because that would invalidate AEAD authentication.
+- `ProductionEnvelopeSession::encrypt_endpoint_update_from_canonical_dialer(...)` is the current production encryption hookup for endpoint update control envelopes.
 - Message number `0` is rejected.
 - Empty channel ids are rejected.
 - Empty encrypted payloads are rejected.
 - Payloads too large for the existing padded envelope buckets are rejected.
-- The encrypted payload is treated as opaque ciphertext and padded through the existing protocol bucket policy.
-- `Debug` output redacts contact ids and does not expose old or new onion endpoint values.
+- Control envelope validation treats encrypted payloads as opaque ciphertext.
+- `Debug` output for plaintext and envelope types redacts contact ids and does not expose old or new onion endpoint values.
 
 Still not implemented:
 
-- Actual endpoint update plaintext schema.
-- Actual encryption hookup for endpoint update payloads.
 - Endpoint update persistence.
 - Endpoint update delivery over Tor.
 - Endpoint publication over Tor.
 - Onion service launch.
 - Envelope send/receive over Tor.
 
-Next accepted phase: endpoint update payload encryption hookup or onion launch adapter skeleton. Do not implement envelope send/receive until onion service hosting and authenticated endpoint update are separately specified.
+Next accepted phase: endpoint update persistence boundary or onion launch adapter skeleton. Do not implement envelope send/receive until onion service hosting and authenticated endpoint update are separately specified.
