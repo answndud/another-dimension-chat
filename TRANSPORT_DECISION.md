@@ -57,7 +57,29 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue pre-network transport work by defining the outbound onion stream/send boundary. Do not implement real onion hosting, descriptor publication, inbound streams, outbound streams, or envelope send/receive until each boundary is tested separately.
+Continue pre-network transport work by defining the stream peer/session binding boundary. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+
+## Onion Outbound Stream/Send Fail-Closed Boundary
+
+Decision as of 2026-05-19: outbound onion dial/send handling remains a separate boundary and cannot be reached through a global endpoint or direct-peer route.
+
+Current code boundary:
+
+- `OnionOutboundStreamBoundary` requires a `PairwiseRendezvousEndpoint`.
+- Missing pairwise endpoint readiness is rejected with `PairwiseEndpointRequired`.
+- Non-onion transport policy is rejected with `TransportPolicyViolation` before any dial attempt.
+- `dial_fail_closed(...)` records only a redacted runtime event and returns `OutboundDialNotImplemented`.
+- `send_fail_closed(...)` records only a redacted runtime event and returns `OutboundSendNotImplemented`.
+- The feature-gated `OnionServiceLaunchAdapterSkeleton` can expose the outbound stream boundary only after launch-adapter readiness.
+- Debug and event output must not expose onion endpoint, remote endpoint, stream id, descriptor value, private key, contact id, profile name, envelope ciphertext, or path material.
+
+Still not implemented:
+
+- Real outbound onion dialing.
+- Stream write behavior.
+- Remote peer/session binding.
+- Envelope send over onion streams.
+- Usable messaging.
 
 ## Onion Inbound Stream Fail-Closed Boundary
 

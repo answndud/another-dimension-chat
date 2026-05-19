@@ -42,6 +42,7 @@ What exists today:
 - Onion service launch preflight boundary that requires profile unlock, key readiness, persistent client readiness, endpoint publication/update policy, and redacted events before any future launch.
 - Onion service descriptor publication boundary that accepts only pairwise rendezvous publication policy and still fails closed without publishing descriptors.
 - Onion inbound stream boundary that requires descriptor-publication readiness and still fails closed for accept/read/write.
+- Onion outbound stream/send boundary that requires a pairwise rendezvous endpoint and onion transport policy while still failing closed for dial/send.
 - Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
 - Encrypted endpoint update control-envelope boundary that pads endpoint rotation plaintext before Noise encryption and wraps only opaque control ciphertext after a validated pairwise update.
 - Production envelope session hook for endpoint update control encryption/decryption without Tor delivery or onion hosting.
