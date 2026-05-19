@@ -57,7 +57,26 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next boundary after descriptor publication gate. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until each boundary is tested separately and still fails closed by default.
+Continue transport work with the next boundary after descriptor publication fail-closed adapter. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until each boundary is tested separately and still fails closed by default.
+
+## Descriptor Publication Fail-Closed Adapter Boundary
+
+Decision as of 2026-05-19: descriptor publication adapter creation requires descriptor publication gate readiness. The adapter still does not publish descriptors; its publish path records only a redacted runtime event and returns a not-implemented error.
+
+Current code boundary:
+
+- `DescriptorPublicationFailClosedAdapter::from_missing_gate()` fails closed without gate readiness.
+- `DescriptorPublicationFailClosedAdapter::from_gate_ready(...)` requires `DescriptorPublicationGateReady`.
+- The adapter carries only pairwise rendezvous publication policy from the gate.
+- `publish_fail_closed(...)` records a redacted runtime preflight failure event.
+- Debug output redacts descriptor, onion endpoint, contact id, and profile name.
+
+Still not implemented:
+
+- Real descriptor publication.
+- Real stream I/O.
+- Real envelope I/O.
+- Usable messaging.
 
 ## Descriptor Publication Gate Boundary
 
