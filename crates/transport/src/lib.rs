@@ -323,6 +323,7 @@ pub enum TransportRuntimeEventKind {
     BootstrapSucceeded,
     DirectoryProbeFailed,
     RouteRejected,
+    RuntimeLifecycleChanged,
     RuntimePreflightFailed,
     TransferFailed,
     SensitiveContextRejected,
@@ -388,6 +389,16 @@ impl RedactedTransportRuntimeEvent {
             runtime_error,
             probe_error: None,
             route_kind: Some(route.kind()),
+            transfer_direction: None,
+        }
+    }
+
+    pub fn runtime_lifecycle_changed() -> Self {
+        Self {
+            kind: TransportRuntimeEventKind::RuntimeLifecycleChanged,
+            runtime_error: None,
+            probe_error: None,
+            route_kind: None,
             transfer_direction: None,
         }
     }
@@ -1516,6 +1527,108 @@ pub mod arti_adapter_spike {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum PersistentArtiClientLifecycleState {
+        Unbootstrapped,
+        Bootstrapping,
+        Bootstrapped,
+        Dormant,
+        Shutdown,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum PersistentArtiClientLifecycleError {
+        AlreadyShutdown,
+        BootstrapAlreadyInProgress,
+        ClientAlreadyBootstrapped,
+        RuntimeNetworkDisabled,
+        BootstrapFailed(TransportRuntimeError),
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct PersistentArtiClientLifecycleSummary {
+        state: PersistentArtiClientLifecycleState,
+        client_owned: bool,
+        timeout_seconds: u16,
+    }
+
+    impl PersistentArtiClientLifecycleSummary {
+        pub fn state(self) -> PersistentArtiClientLifecycleState {
+            self.state
+        }
+
+        pub fn client_owned(self) -> bool {
+            self.client_owned
+        }
+
+        pub fn timeout_seconds(self) -> u16 {
+            self.timeout_seconds
+        }
+    }
+
+    pub struct PersistentArtiClientOwner {
+        adapter: BoundedArtiBootstrapAdapterSpike,
+        state: PersistentArtiClientLifecycleState,
+        client: Option<Arc<dyn Send + Sync + 'static>>,
+    }
+
+    impl PersistentArtiClientOwner {
+        pub fn new_unbootstrapped(adapter: BoundedArtiBootstrapAdapterSpike) -> Self {
+            Self {
+                adapter,
+                state: PersistentArtiClientLifecycleState::Unbootstrapped,
+                client: None,
+            }
+        }
+
+        pub fn adapter(&self) -> &BoundedArtiBootstrapAdapterSpike {
+            &self.adapter
+        }
+
+        pub fn state(&self) -> PersistentArtiClientLifecycleState {
+            self.state
+        }
+
+        pub fn summary(&self) -> PersistentArtiClientLifecycleSummary {
+            PersistentArtiClientLifecycleSummary {
+                state: self.state,
+                client_owned: self.client.is_some(),
+                timeout_seconds: self.adapter.skeleton().policy().timeout().seconds(),
+            }
+        }
+
+        pub fn mark_dormant<S: TransportRuntimeEventSink>(
+            &mut self,
+            sink: &mut S,
+        ) -> Result<(), PersistentArtiClientLifecycleError> {
+            if self.state == PersistentArtiClientLifecycleState::Shutdown {
+                return Err(PersistentArtiClientLifecycleError::AlreadyShutdown);
+            }
+
+            self.state = PersistentArtiClientLifecycleState::Dormant;
+            sink.record(RedactedTransportRuntimeEvent::runtime_lifecycle_changed());
+            Ok(())
+        }
+
+        pub fn shutdown<S: TransportRuntimeEventSink>(&mut self, sink: &mut S) {
+            self.client = None;
+            self.state = PersistentArtiClientLifecycleState::Shutdown;
+            sink.record(RedactedTransportRuntimeEvent::runtime_lifecycle_changed());
+        }
+    }
+
+    impl fmt::Debug for PersistentArtiClientOwner {
+        fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter
+                .debug_struct("PersistentArtiClientOwner")
+                .field("state", &self.state)
+                .field("client_owned", &self.client.is_some())
+                .field("state_dir", &"<redacted>")
+                .field("cache_dir", &"<redacted>")
+                .finish()
+        }
+    }
+
     #[cfg(feature = "arti-manual-bootstrap")]
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum ManualArtiBootstrapNetworkPermission {
@@ -1604,6 +1717,65 @@ pub mod arti_adapter_spike {
                 Err(_elapsed) => self
                     .adapter
                     .execute_fail_closed(TransportBootstrapOutcome::TimedOut, sink),
+            }
+        }
+    }
+
+    #[cfg(feature = "arti-manual-bootstrap")]
+    impl PersistentArtiClientOwner {
+        pub async fn bootstrap_and_keep_client<S: TransportRuntimeEventSink>(
+            &mut self,
+            network_permission: ManualArtiBootstrapNetworkPermission,
+            sink: &mut S,
+        ) -> Result<(), PersistentArtiClientLifecycleError> {
+            match self.state {
+                PersistentArtiClientLifecycleState::Shutdown => {
+                    return Err(PersistentArtiClientLifecycleError::AlreadyShutdown);
+                }
+                PersistentArtiClientLifecycleState::Bootstrapping => {
+                    return Err(PersistentArtiClientLifecycleError::BootstrapAlreadyInProgress);
+                }
+                PersistentArtiClientLifecycleState::Bootstrapped => {
+                    return Err(PersistentArtiClientLifecycleError::ClientAlreadyBootstrapped);
+                }
+                PersistentArtiClientLifecycleState::Unbootstrapped
+                | PersistentArtiClientLifecycleState::Dormant => {}
+            }
+
+            if network_permission == ManualArtiBootstrapNetworkPermission::Disabled {
+                let error = TransportRuntimeError::RuntimeNetworkDisabled;
+                sink.record(RedactedTransportRuntimeEvent::bootstrap_failed(error));
+                return Err(PersistentArtiClientLifecycleError::RuntimeNetworkDisabled);
+            }
+
+            self.state = PersistentArtiClientLifecycleState::Bootstrapping;
+            sink.record(RedactedTransportRuntimeEvent::runtime_lifecycle_changed());
+
+            let policy = self.adapter.skeleton().policy();
+            let timeout = std::time::Duration::from_secs(u64::from(policy.timeout().seconds()));
+            let attempt =
+                arti_client::TorClient::create_bootstrapped(self.adapter.config().clone());
+
+            match tokio::time::timeout(timeout, attempt).await {
+                Ok(Ok(client)) => {
+                    self.client = Some(Arc::new(client));
+                    self.state = PersistentArtiClientLifecycleState::Bootstrapped;
+                    sink.record(RedactedTransportRuntimeEvent::bootstrap_succeeded());
+                    Ok(())
+                }
+                Ok(Err(_error)) => {
+                    self.state = PersistentArtiClientLifecycleState::Unbootstrapped;
+                    let error =
+                        TransportBootstrapOutcome::TransientNetworkFailure.runtime_error(policy);
+                    sink.record(RedactedTransportRuntimeEvent::bootstrap_failed(error));
+                    Err(PersistentArtiClientLifecycleError::BootstrapFailed(error))
+                }
+                Err(_elapsed) => {
+                    self.state = PersistentArtiClientLifecycleState::Unbootstrapped;
+                    let error = TransportBootstrapOutcome::TimedOut.runtime_error(policy);
+                    sink.record(RedactedTransportRuntimeEvent::bootstrap_failed(error));
+                    Err(PersistentArtiClientLifecycleError::BootstrapFailed(error))
+                }
             }
         }
     }
@@ -2934,6 +3106,123 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn persistent_arti_client_owner_starts_unbootstrapped_without_network() {
+        let root = unique_transport_test_root("persistent-arti-owner");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
+
+        assert_eq!(
+            owner.state(),
+            arti_adapter_spike::PersistentArtiClientLifecycleState::Unbootstrapped
+        );
+        assert_eq!(
+            owner.summary().state(),
+            arti_adapter_spike::PersistentArtiClientLifecycleState::Unbootstrapped
+        );
+        assert!(!owner.summary().client_owned());
+        assert_eq!(
+            owner.summary().timeout_seconds(),
+            TransportBootstrapPolicy::high_risk_default()
+                .timeout()
+                .seconds()
+        );
+        assert_eq!(
+            owner.adapter().transport().policy().mode(),
+            TransportMode::HighRiskOnionOnly
+        );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn persistent_arti_client_owner_redacts_debug_and_shutdown_drops_client_slot() {
+        let root = unique_transport_test_root("persistent-arti-redacted");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let mut owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        owner.shutdown(&mut sink);
+
+        assert_eq!(
+            owner.state(),
+            arti_adapter_spike::PersistentArtiClientLifecycleState::Shutdown
+        );
+        assert!(!owner.summary().client_owned());
+        assert_eq!(sink.events().len(), 1);
+        assert_eq!(
+            sink.events()[0].kind(),
+            TransportRuntimeEventKind::RuntimeLifecycleChanged
+        );
+
+        let rendered = format!("{owner:?}");
+        assert!(rendered.contains("Shutdown"));
+        assert!(rendered.contains("<redacted>"));
+        assert!(!rendered.contains(root.to_string_lossy().as_ref()));
+        assert!(!rendered.contains("arti-state"));
+        assert!(!rendered.contains("arti-cache"));
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn persistent_arti_client_owner_can_enter_dormant_before_network_execution() {
+        let root = unique_transport_test_root("persistent-arti-dormant");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let mut owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        owner.mark_dormant(&mut sink).expect("mark dormant");
+
+        assert_eq!(
+            owner.state(),
+            arti_adapter_spike::PersistentArtiClientLifecycleState::Dormant
+        );
+        assert!(!owner.summary().client_owned());
+        assert_eq!(
+            sink.events()[0].kind(),
+            TransportRuntimeEventKind::RuntimeLifecycleChanged
+        );
+    }
+
     #[cfg(feature = "arti-manual-bootstrap")]
     #[test]
     fn manual_arti_bootstrap_attempt_gate_is_disabled_by_default() {
@@ -3029,6 +3318,47 @@ mod tests {
             sink.events()[0].kind(),
             TransportRuntimeEventKind::BootstrapFailed
         );
+        assert_eq!(
+            sink.events()[0].runtime_error(),
+            Some(TransportRuntimeError::RuntimeNetworkDisabled)
+        );
+    }
+
+    #[cfg(feature = "arti-manual-bootstrap")]
+    #[tokio::test]
+    async fn persistent_arti_client_owner_fails_closed_when_manual_network_disabled() {
+        let root = unique_transport_test_root("persistent-arti-manual-disabled");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let mut owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        assert_eq!(
+            owner
+                .bootstrap_and_keep_client(
+                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::Disabled,
+                    &mut sink,
+                )
+                .await,
+            Err(arti_adapter_spike::PersistentArtiClientLifecycleError::RuntimeNetworkDisabled)
+        );
+        assert_eq!(
+            owner.state(),
+            arti_adapter_spike::PersistentArtiClientLifecycleState::Unbootstrapped
+        );
+        assert!(!owner.summary().client_owned());
         assert_eq!(
             sink.events()[0].runtime_error(),
             Some(TransportRuntimeError::RuntimeNetworkDisabled)

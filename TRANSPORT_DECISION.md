@@ -523,7 +523,7 @@ The manual gate rules are:
 
 Still not implemented:
 
-- Persistent Arti client lifecycle.
+- Production runtime integration for persistent Arti client lifecycle.
 - Onion service hosting.
 - Envelope send/receive over Tor.
 - Bridge configuration storage or pluggable transport packaging.
@@ -554,7 +554,7 @@ Rules:
 
 Still not implemented:
 
-- Persistent Arti client lifecycle.
+- Persistent Arti client lifecycle is not wired into this CLI command.
 - User profile integration for transport state/cache directories.
 - Onion service hosting.
 - Envelope send/receive over Tor.
@@ -585,8 +585,43 @@ Still not implemented:
 
 - OS-specific app data root discovery.
 - Profile unlock integration.
-- Persistent Arti client lifecycle.
+- Production runtime integration for persistent Arti client lifecycle.
 - Onion service hosting.
 - Envelope send/receive over Tor.
 
 Next accepted phase: persistent Arti client lifecycle boundary. It should consume profile-scoped dirs instead of inventing another path layout.
+
+## Persistent Arti Client Lifecycle Boundary
+
+Decision as of 2026-05-19: the transport crate may now model persistent Arti client ownership separately from the earlier one-shot bootstrap-and-drop spike.
+
+Current lifecycle states:
+
+```text
+Unbootstrapped
+Bootstrapping
+Bootstrapped
+Dormant
+Shutdown
+```
+
+Current rules:
+
+- `PersistentArtiClientOwner::new_unbootstrapped(...)` is the only constructor for the owner boundary.
+- The owner consumes the existing `BoundedArtiBootstrapAdapterSpike`, so app-private config, runtime readiness, bounded bootstrap policy, fail-closed onion transport, and redacted event reporting remain centralized.
+- `bootstrap_and_keep_client(...)` exists only behind `arti-manual-bootstrap`.
+- Disabled manual network permission fails closed with a redacted `RuntimeNetworkDisabled` event and leaves the owner `Unbootstrapped`.
+- Successful manual bootstrap stores the Arti client inside the owner instead of immediately dropping it.
+- The owner `Debug` output redacts local state/cache paths.
+- `shutdown(...)` clears the stored client slot and records only a redacted lifecycle event.
+- This boundary does not expose stream connection, send/receive, onion hosting, bridge configuration, or usable messaging.
+
+Still not implemented:
+
+- CLI/Tauri runtime wiring for the persistent owner.
+- Onion service launch.
+- Envelope send/receive over Tor.
+- Bridge configuration UX.
+- Production runtime shutdown semantics beyond the local owner state transition.
+
+Next accepted phase: wire the manual CLI to the persistent lifecycle owner or start an onion service launch preflight boundary. Do not implement envelope send/receive until onion service hosting and endpoint lifecycle are separately specified.

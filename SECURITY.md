@@ -6,7 +6,7 @@ Another Dimension Chat is not ready for real communication.
 
 The current public repository contains an early `dev-insecure` Rust prototype. It is useful for testing development flow and protocol boundaries, but it does not provide production-grade confidentiality, anonymity, metadata resistance, or endpoint protection.
 
-Default-build production code now includes narrow decision boundaries for pairing, session setup, envelope handling, replay rejection, transport policy, a fail-closed onion transport adapter skeleton, pre-network transport blockers, backup-exclusion verification boundaries, onion service key lifecycle policy boundaries, bridge/censorship readiness policy boundaries, bootstrap execution skeleton boundaries, a bounded Arti bootstrap adapter spike boundary, a manual Arti bootstrap attempt gate, a local-only manual bootstrap CLI gate, profile-scoped transport directory resolution, storage policy tests, a SQLCipher-backed storage spike, passphrase unlock tests, high-risk unlock policy tests, first replay-window persistence tests, receive-flow replay commit-order tests, and session-scoped opaque replay record id derivation. These are implementation guardrails, not a secure messenger release.
+Default-build production code now includes narrow decision boundaries for pairing, session setup, envelope handling, replay rejection, transport policy, a fail-closed onion transport adapter skeleton, pre-network transport blockers, backup-exclusion verification boundaries, onion service key lifecycle policy boundaries, bridge/censorship readiness policy boundaries, bootstrap execution skeleton boundaries, a bounded Arti bootstrap adapter spike boundary, a manual Arti bootstrap attempt gate, a local-only manual bootstrap CLI gate, profile-scoped transport directory resolution, a persistent Arti client lifecycle owner boundary, storage policy tests, a SQLCipher-backed storage spike, passphrase unlock tests, high-risk unlock policy tests, first replay-window persistence tests, receive-flow replay commit-order tests, and session-scoped opaque replay record id derivation. These are implementation guardrails, not a secure messenger release.
 
 Do not use this project to communicate sensitive information.
 
@@ -24,7 +24,7 @@ This project does not currently claim:
 - Real Tor/onion transport.
 - Production transport adapter implementation.
 - Bridge or censorship-circumvention support.
-- Arti transport bootstrap, onion service launch, system Tor discovery, runtime Tor connectivity, or bridge/censorship behavior.
+- Production Arti transport bootstrap, onion service launch, system Tor discovery, runtime Tor connectivity, or bridge/censorship behavior.
 - Onion service key generation, rotation, persistence, backup, or migration.
 - Actual onion service private key material.
 - Production unlock/key management.
