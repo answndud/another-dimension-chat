@@ -207,6 +207,13 @@ pub enum InboundStreamGateError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum InboundStreamAdapterError {
+    InboundStreamGateRequired,
+    InboundAcceptNotImplemented,
+    InboundReadWriteNotImplemented,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NetworkExperimentScope {
     BootstrapOnly,
     OnionHosting,
@@ -2242,6 +2249,12 @@ pub struct InboundStreamGateDecision {
     usable_messaging_claimed: bool,
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct InboundStreamFailClosedAdapter {
+    _gate_ready: InboundStreamGateReady,
+    boundary: OnionInboundStreamBoundary,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -3068,6 +3081,58 @@ impl InboundStreamGateDecision {
         }
 
         Ok(InboundStreamGateReady)
+    }
+}
+
+impl InboundStreamFailClosedAdapter {
+    pub fn from_gate_ready(
+        gate_ready: InboundStreamGateReady,
+        descriptor_ready: OnionServiceDescriptorPublicationReady,
+    ) -> Self {
+        Self {
+            _gate_ready: gate_ready,
+            boundary: OnionInboundStreamBoundary::from_descriptor_publication_ready(
+                descriptor_ready,
+            ),
+        }
+    }
+
+    pub fn from_missing_gate() -> Result<Self, InboundStreamAdapterError> {
+        Err(InboundStreamAdapterError::InboundStreamGateRequired)
+    }
+
+    pub fn accept_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        sink: &mut S,
+    ) -> Result<(), InboundStreamAdapterError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::ReceiveFailed,
+        ));
+        Err(InboundStreamAdapterError::InboundAcceptNotImplemented)
+    }
+
+    pub fn read_write_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        sink: &mut S,
+    ) -> Result<(), InboundStreamAdapterError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::ReceiveFailed,
+        ));
+        Err(InboundStreamAdapterError::InboundReadWriteNotImplemented)
+    }
+}
+
+impl fmt::Debug for InboundStreamFailClosedAdapter {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("InboundStreamFailClosedAdapter")
+            .field("gate", &"<ready>")
+            .field("boundary", &self.boundary)
+            .field("stream_id", &"<redacted>")
+            .field("remote_endpoint", &"<redacted>")
+            .field("contact_id", &"<redacted>")
+            .field("profile_name", &"<redacted>")
+            .finish()
     }
 }
 
@@ -5210,6 +5275,57 @@ mod tests {
     }
 
     #[test]
+    fn inbound_stream_fail_closed_adapter_requires_gate_ready_token() {
+        assert_eq!(
+            InboundStreamFailClosedAdapter::from_missing_gate(),
+            Err(InboundStreamAdapterError::InboundStreamGateRequired)
+        );
+
+        let adapter = InboundStreamFailClosedAdapter::from_gate_ready(
+            ready_inbound_stream_gate(),
+            OnionServiceDescriptorPublicationReady,
+        );
+        let rendered = format!("{adapter:?}");
+
+        assert!(rendered.contains("InboundStreamFailClosedAdapter"));
+        assert!(rendered.contains("<ready>"));
+        assert!(rendered.contains("<redacted>"));
+        assert!(!rendered.contains("example.onion"));
+        assert!(!rendered.contains("alice"));
+        assert!(!rendered.contains("bob"));
+        assert!(!rendered.contains("stream-1"));
+    }
+
+    #[test]
+    fn inbound_stream_fail_closed_adapter_records_redacted_events_only() {
+        let adapter = InboundStreamFailClosedAdapter::from_gate_ready(
+            ready_inbound_stream_gate(),
+            OnionServiceDescriptorPublicationReady,
+        );
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        assert_eq!(
+            adapter.accept_fail_closed(&mut sink),
+            Err(InboundStreamAdapterError::InboundAcceptNotImplemented)
+        );
+        assert_eq!(
+            adapter.read_write_fail_closed(&mut sink),
+            Err(InboundStreamAdapterError::InboundReadWriteNotImplemented)
+        );
+        assert_eq!(sink.events().len(), 2);
+        for event in sink.events() {
+            assert_eq!(
+                event.kind(),
+                TransportRuntimeEventKind::RuntimePreflightFailed
+            );
+            assert_eq!(
+                event.runtime_error(),
+                Some(TransportRuntimeError::ReceiveFailed)
+            );
+        }
+    }
+
+    #[test]
     fn runtime_preflight_is_disabled_by_default() {
         assert_eq!(
             TransportRuntimePreflight::disabled_by_default().check(),
@@ -6529,6 +6645,22 @@ mod tests {
         )
         .check()
         .expect("descriptor publication gate ready")
+    }
+
+    fn ready_inbound_stream_gate() -> InboundStreamGateReady {
+        let publication_gate = ready_descriptor_publication_gate();
+        let publication_adapter = DescriptorPublicationFailClosedAdapter::from_gate_ready(
+            publication_gate,
+            OnionServiceLaunchReady,
+        )
+        .expect("descriptor publication adapter");
+
+        InboundStreamGateDecision::from_publication_gate_and_adapter(
+            publication_gate,
+            &publication_adapter,
+        )
+        .check()
+        .expect("inbound stream gate ready")
     }
 
     fn ready_onion_service_key_material() -> OnionServiceKeyMaterialReady {
