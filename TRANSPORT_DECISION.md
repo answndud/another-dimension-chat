@@ -57,7 +57,27 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Close out the runtime skeleton and implement the next pre-network gate: real runtime permission and log-redaction preflight decisions. Do not move directly to a network-capable Arti bootstrap until those checks are defined and tested.
+Continue pre-network transport work by connecting onion-service key readiness to the launch path through an explicit adapter boundary. Do not implement real onion hosting, descriptor publication, inbound streams, or envelope send/receive until the key-material and launch-state boundaries are tested separately.
+
+## Endpoint Rotation Apply/Reconnect Boundary
+
+Decision as of 2026-05-19: endpoint rotation is a local verified-session state transition before any reconnect or network attempt.
+
+Current code boundary:
+
+- `EndpointRotationSequence` is nonzero and monotonic.
+- `PairwiseEndpointRotationState` tracks current endpoint state, one pending update, and the last applied sequence.
+- Staging requires `EndpointRotationApplyContext::ExistingEncryptedSessionVerified`.
+- Unverified control payloads, contact mismatch, stale pending replacement, rollback after an applied sequence, and applying without a pending update are rejected.
+- Applying a pending update swaps the current pairwise rendezvous endpoint only when the sequence matches the pending update.
+- Reconnect remains `reconnect_fail_closed(...)`: it records a redacted runtime event and returns `EndpointReconnectNotImplemented`.
+
+Still not implemented:
+
+- Actual Tor reconnect, dial, send, or receive behavior.
+- Endpoint update delivery over Tor.
+- Conflict resolution beyond the monotonic local sequence boundary.
+- Durable persistence of the whole rotation state. Only pairwise endpoint state persistence exists today.
 
 ## Tor Lifecycle Decision
 
