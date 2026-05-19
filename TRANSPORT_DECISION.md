@@ -57,7 +57,26 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next boundary after onion hosting gate. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until each boundary is tested separately and still fails closed by default.
+Continue transport work with the next boundary after descriptor publication gate. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until each boundary is tested separately and still fails closed by default.
+
+## Descriptor Publication Gate Boundary
+
+Decision as of 2026-05-19: descriptor publication remains a separate gate after onion hosting readiness. The gate does not publish descriptors; it only records the conditions required before a future fail-closed publication adapter may be considered.
+
+Current code boundary:
+
+- `DescriptorPublicationGateDecision::locked_down()` fails closed without `OnionHostingGateReady`.
+- `DescriptorPublicationGateDecision::pairwise_rendezvous_only(...)` requires onion hosting readiness.
+- The endpoint publication policy must be `PairwiseRendezvousOnly`.
+- Redacted transport events must be required before any publication path is considered.
+- Stream I/O and usable messaging claims are still rejected.
+
+Still not implemented:
+
+- Real descriptor publication.
+- Real stream I/O.
+- Real envelope I/O.
+- Usable messaging.
 
 ## Onion Hosting Gate Boundary
 
