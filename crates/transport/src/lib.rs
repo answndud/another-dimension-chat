@@ -144,6 +144,48 @@ pub enum PostAuthStreamReadinessOrderingError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum NetworkExperimentGateError {
+    PreNetworkCloseoutRequired,
+    ManualFeatureGateRequired,
+    ExplicitOperatorConsentRequired,
+    HeavyVerificationPolicyRequired,
+    TargetCacheIsolationRequired,
+    UnsupportedExperimentScope,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum NetworkExperimentScope {
+    BootstrapOnly,
+    OnionHosting,
+    StreamIo,
+    EnvelopeIo,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum NetworkExperimentManualGate {
+    Disabled,
+    FeatureGatedManualOnly,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum NetworkExperimentOperatorConsent {
+    Missing,
+    ExplicitForLocalManualSpike,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum NetworkExperimentVerificationPolicy {
+    DefaultLightweightOnly,
+    HeavyIsolatedTargetAndManualCiExcluded,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum NetworkExperimentTargetCachePolicy {
+    SharedProjectTarget,
+    IsolatedTemporaryTarget,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EndpointLifecycleError {
     GlobalEndpointForbidden,
     IdentityKeyCouplingForbidden,
@@ -2030,6 +2072,21 @@ pub struct PostAuthOutboundStreamReadinessOrder {
     _envelope_io_boundary: OutboundEnvelopeIoAdapterBoundary,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct NetworkExperimentGateReady {
+    scope: NetworkExperimentScope,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct NetworkExperimentGateProposal {
+    pre_network_closeout_complete: bool,
+    scope: NetworkExperimentScope,
+    manual_gate: NetworkExperimentManualGate,
+    operator_consent: NetworkExperimentOperatorConsent,
+    verification_policy: NetworkExperimentVerificationPolicy,
+    target_cache_policy: NetworkExperimentTargetCachePolicy,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -2485,6 +2542,66 @@ impl fmt::Debug for PostAuthOutboundStreamReadinessOrder {
             .field("session_binding", &"<required-before-envelope-io>")
             .field("envelope_io", &"<fail-closed>")
             .finish()
+    }
+}
+
+impl NetworkExperimentGateProposal {
+    pub fn locked_down(scope: NetworkExperimentScope) -> Self {
+        Self {
+            pre_network_closeout_complete: false,
+            scope,
+            manual_gate: NetworkExperimentManualGate::Disabled,
+            operator_consent: NetworkExperimentOperatorConsent::Missing,
+            verification_policy: NetworkExperimentVerificationPolicy::DefaultLightweightOnly,
+            target_cache_policy: NetworkExperimentTargetCachePolicy::SharedProjectTarget,
+        }
+    }
+
+    pub fn bootstrap_only_manual_spike(
+        closeout: &TransportPreNetworkCloseout,
+        operator_consent: NetworkExperimentOperatorConsent,
+        verification_policy: NetworkExperimentVerificationPolicy,
+        target_cache_policy: NetworkExperimentTargetCachePolicy,
+    ) -> Self {
+        Self {
+            pre_network_closeout_complete: closeout.network_execution_allowed(),
+            scope: NetworkExperimentScope::BootstrapOnly,
+            manual_gate: NetworkExperimentManualGate::FeatureGatedManualOnly,
+            operator_consent,
+            verification_policy,
+            target_cache_policy,
+        }
+    }
+
+    pub fn check(self) -> Result<NetworkExperimentGateReady, NetworkExperimentGateError> {
+        if !self.pre_network_closeout_complete {
+            return Err(NetworkExperimentGateError::PreNetworkCloseoutRequired);
+        }
+        if self.scope != NetworkExperimentScope::BootstrapOnly {
+            return Err(NetworkExperimentGateError::UnsupportedExperimentScope);
+        }
+        if self.manual_gate != NetworkExperimentManualGate::FeatureGatedManualOnly {
+            return Err(NetworkExperimentGateError::ManualFeatureGateRequired);
+        }
+        if self.operator_consent != NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike {
+            return Err(NetworkExperimentGateError::ExplicitOperatorConsentRequired);
+        }
+        if self.verification_policy
+            != NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded
+        {
+            return Err(NetworkExperimentGateError::HeavyVerificationPolicyRequired);
+        }
+        if self.target_cache_policy != NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget {
+            return Err(NetworkExperimentGateError::TargetCacheIsolationRequired);
+        }
+
+        Ok(NetworkExperimentGateReady { scope: self.scope })
+    }
+}
+
+impl NetworkExperimentGateReady {
+    pub fn scope(self) -> NetworkExperimentScope {
+        self.scope
     }
 }
 
@@ -4013,6 +4130,98 @@ mod tests {
             closeout.next_phase(),
             TransportNextPhase::ArtiBootstrapExecutionSkeleton
         );
+    }
+
+    #[test]
+    fn network_experiment_gate_is_locked_down_by_default() {
+        let proposal =
+            NetworkExperimentGateProposal::locked_down(NetworkExperimentScope::BootstrapOnly);
+
+        assert_eq!(
+            proposal.check(),
+            Err(NetworkExperimentGateError::PreNetworkCloseoutRequired)
+        );
+    }
+
+    #[test]
+    fn network_experiment_gate_allows_only_manual_bootstrap_with_isolated_heavy_verification() {
+        let closeout = TransportPreNetworkCloseout::from_blockers(Vec::new());
+
+        assert_eq!(
+            NetworkExperimentGateProposal::bootstrap_only_manual_spike(
+                &TransportPreNetworkCloseout::high_risk_default(),
+                NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
+                NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
+                NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
+            )
+            .check(),
+            Err(NetworkExperimentGateError::PreNetworkCloseoutRequired)
+        );
+        assert_eq!(
+            NetworkExperimentGateProposal::bootstrap_only_manual_spike(
+                &closeout,
+                NetworkExperimentOperatorConsent::Missing,
+                NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
+                NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
+            )
+            .check(),
+            Err(NetworkExperimentGateError::ExplicitOperatorConsentRequired)
+        );
+        assert_eq!(
+            NetworkExperimentGateProposal::bootstrap_only_manual_spike(
+                &closeout,
+                NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
+                NetworkExperimentVerificationPolicy::DefaultLightweightOnly,
+                NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
+            )
+            .check(),
+            Err(NetworkExperimentGateError::HeavyVerificationPolicyRequired)
+        );
+        assert_eq!(
+            NetworkExperimentGateProposal::bootstrap_only_manual_spike(
+                &closeout,
+                NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
+                NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
+                NetworkExperimentTargetCachePolicy::SharedProjectTarget,
+            )
+            .check(),
+            Err(NetworkExperimentGateError::TargetCacheIsolationRequired)
+        );
+
+        let ready = NetworkExperimentGateProposal::bootstrap_only_manual_spike(
+            &closeout,
+            NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
+            NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
+            NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
+        )
+        .check()
+        .expect("network experiment gate ready");
+
+        assert_eq!(ready.scope(), NetworkExperimentScope::BootstrapOnly);
+    }
+
+    #[test]
+    fn network_experiment_gate_rejects_non_bootstrap_scopes_until_separate_boundaries_exist() {
+        for scope in [
+            NetworkExperimentScope::OnionHosting,
+            NetworkExperimentScope::StreamIo,
+            NetworkExperimentScope::EnvelopeIo,
+        ] {
+            let proposal = NetworkExperimentGateProposal {
+                pre_network_closeout_complete: true,
+                scope,
+                manual_gate: NetworkExperimentManualGate::FeatureGatedManualOnly,
+                operator_consent: NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
+                verification_policy:
+                    NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
+                target_cache_policy: NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
+            };
+
+            assert_eq!(
+                proposal.check(),
+                Err(NetworkExperimentGateError::UnsupportedExperimentScope)
+            );
+        }
     }
 
     #[test]
