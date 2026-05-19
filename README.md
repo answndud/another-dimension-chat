@@ -37,6 +37,7 @@ What exists today:
 - Runtime permission and redaction preflight boundary for app-private dirs, backup exclusion, log/crash redaction, and censorship readiness.
 - Runtime state/cache directory probe skeleton with redacted permission failures and no Tor bootstrap.
 - Redacted transport runtime event boundary for logs/crash contexts without raw paths, endpoints, contact ids, profile names, plaintext, or key material.
+- Runtime event sink boundary that accepts only redacted transport events.
 - Arti bootstrap timeout/retry/cancellation policy boundary without opening network connections.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.

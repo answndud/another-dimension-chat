@@ -21,6 +21,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `TransportRuntimePermissionPreflight` maps app-private state/cache policy, backup exclusion, log/crash redaction, and censorship readiness into the runtime preflight gate.
 - `probe_app_private_state_cache_dirs` creates and probes explicit state/cache directories without exposing path details in runtime errors.
 - `RedactedTransportRuntimeEvent` records transport event categories without storing raw paths, endpoints, contact ids, profile names, plaintext, or key material.
+- `TransportRuntimeEventSink` accepts only redacted transport runtime events.
 - `TransportBootstrapPolicy` bounds future bootstrap timeout, retry, cancellation, and censorship classification behavior without bootstrapping Tor.
 - `TransportRuntimeState` separates disabled fail-closed state from a future runtime-ready state that can only be created from successful preflight.
 - `OnionEnvelopeTransport` stores runtime state, but send/receive remains fail-closed even when that state is ready.
@@ -354,3 +355,23 @@ Still not implemented:
 - Socket opens, onion service launch, or envelope transfer.
 
 A future adapter must surface bootstrap timeout, cancellation, and censorship/bridge-required outcomes instead of waiting forever or retrying silently.
+
+## Runtime Logging Backend Skeleton
+
+Decision as of 2026-05-19: add a minimal logging sink boundary that accepts only `RedactedTransportRuntimeEvent`. This is still not a global logger, `tracing` subscriber, crash handler, or production logging backend.
+
+Current code boundary:
+
+- `TransportRuntimeEventSink` exposes only `record(RedactedTransportRuntimeEvent)`.
+- `NoopTransportRuntimeEventSink` consumes redacted events without persistence.
+- `InMemoryTransportRuntimeEventSink` stores redacted events for tests and future adapter wiring checks.
+- Tests verify sensitive profile/contact/endpoint/plaintext/key inputs do not appear in stored event debug/display output.
+
+Still not implemented:
+
+- Global logger or `tracing` subscriber.
+- Crash dump handler integration.
+- Persistent logs.
+- Tor bootstrap, socket opens, onion service launch, or envelope transfer.
+
+A future adapter should receive a `TransportRuntimeEventSink` and emit redacted events through it instead of logging raw runtime context directly.
