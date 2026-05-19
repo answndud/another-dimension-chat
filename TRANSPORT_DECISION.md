@@ -57,7 +57,40 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving module split: onion service key lifecycle/material boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving module split: pre-network closeout boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Key Lifecycle And Material Module Extraction
+
+Decision as of 2026-05-19: profile transport unlock readiness, onion service key lifecycle policy, wrapped key record identifiers, and onion service key material readiness are extracted into `crates/transport/src/key_material.rs`. `crates/transport/src/lib.rs` re-exports the same public names to preserve the public API.
+
+Moved without behavior change:
+
+- `OnionServiceKeyPolicy`
+- `OnionServiceKeyGenerationPolicy`
+- `OnionServiceKeyStoragePolicy`
+- `OnionServiceKeyRotationPolicy`
+- `OnionServiceKeyDeletionPolicy`
+- `OnionServiceKeyMigrationPolicy`
+- `OnionServiceKeyLifecycleDecision`
+- `OnionServiceKeyLifecycleReady`
+- `ProfileTransportUnlockReady`
+- `OnionServiceKeyRecordId`
+- `OnionServiceKeyMaterialState`
+- `OnionServiceKeyMaterialDecision`
+- `OnionServiceKeyMaterialReady`
+
+Preserved invariants:
+
+- Onion service key lifecycle still fails closed until explicit profile unlock, SQLCipher-wrapped storage, backup-exclusion verification, rotation policy, deletion policy, and migration policy are all present.
+- Plaintext app-file storage remains rejected.
+- Key material readiness still requires profile unlock and lifecycle readiness before a SQLCipher-wrapped record can become ready.
+- Plaintext key bytes remain rejected.
+- Key record ids still use the existing safe token validation and debug output remains redacted.
+- No key generation, plaintext key loading, descriptor publication, real stream I/O, envelope send/receive, or usable messaging capability was added.
+
+Next split target:
+
+- Pre-network closeout boundaries.
 
 ## Hosting And Phase Gate Module Extraction
 
@@ -94,7 +127,7 @@ Preserved invariants:
 
 Next split target:
 
-- Onion service key lifecycle/material boundaries.
+- Completed by key lifecycle/material module extraction.
 
 ## Launch And Descriptor Boundary Module Extraction
 
