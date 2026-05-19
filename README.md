@@ -58,6 +58,7 @@ What exists today:
 - Outbound stream gate boundary that requires a pairwise rendezvous endpoint and high-risk onion-only policy while still forbidding dial, send, envelope I/O, and usable messaging.
 - Outbound stream fail-closed adapter boundary that requires outbound stream gate readiness and records only redacted events before returning dial/send not-implemented errors.
 - Stream adapter closeout boundary that requires both inbound and outbound fail-closed adapters before session binding can be considered, while still forbidding bound-session shortcuts, envelope I/O, and usable messaging.
+- Stream closeout integration ordering boundary that places remote peer authentication after stream adapter closeout and verified pairwise session binding after remote peer authentication, while still forbidding envelope I/O and usable messaging.
 - Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
 - Encrypted endpoint update control-envelope boundary that pads endpoint rotation plaintext before Noise encryption and wraps only opaque control ciphertext after a validated pairwise update.
 - Production envelope session hook for endpoint update control encryption/decryption without Tor delivery or onion hosting.

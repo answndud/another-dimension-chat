@@ -144,6 +144,15 @@ pub enum PostAuthStreamReadinessOrderingError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum StreamCloseoutIntegrationError {
+    CloseoutReadyRequired,
+    RemotePeerAuthenticationMustFollowCloseout,
+    SessionBindingMustFollowRemotePeerAuthentication,
+    EnvelopeIoForbidden,
+    UsableMessagingClaimForbidden,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NetworkExperimentGateError {
     PreNetworkCloseoutRequired,
     ManualFeatureGateRequired,
@@ -2317,6 +2326,15 @@ pub struct StreamAdapterCloseoutDecision {
     usable_messaging_claimed: bool,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct StreamCloseoutIntegrationOrder {
+    closeout_ready: bool,
+    remote_peer_authentication_next: bool,
+    session_binding_after_remote_authentication: bool,
+    envelope_io_claimed: bool,
+    usable_messaging_claimed: bool,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -3384,6 +3402,70 @@ impl StreamAdapterCloseoutDecision {
         }
 
         Ok(StreamAdapterCloseoutReady)
+    }
+}
+
+impl StreamCloseoutIntegrationOrder {
+    pub fn locked_down() -> Self {
+        Self {
+            closeout_ready: false,
+            remote_peer_authentication_next: false,
+            session_binding_after_remote_authentication: false,
+            envelope_io_claimed: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn from_closeout_ready(_closeout: StreamAdapterCloseoutReady) -> Self {
+        Self {
+            closeout_ready: true,
+            remote_peer_authentication_next: true,
+            session_binding_after_remote_authentication: true,
+            envelope_io_claimed: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn without_remote_peer_authentication_next(mut self) -> Self {
+        self.remote_peer_authentication_next = false;
+        self
+    }
+
+    pub fn without_session_binding_after_remote_authentication(mut self) -> Self {
+        self.session_binding_after_remote_authentication = false;
+        self
+    }
+
+    pub fn claim_envelope_io(mut self) -> Self {
+        self.envelope_io_claimed = true;
+        self
+    }
+
+    pub fn claim_usable_messaging(mut self) -> Self {
+        self.usable_messaging_claimed = true;
+        self
+    }
+
+    pub fn check(self) -> Result<Self, StreamCloseoutIntegrationError> {
+        if !self.closeout_ready {
+            return Err(StreamCloseoutIntegrationError::CloseoutReadyRequired);
+        }
+        if !self.remote_peer_authentication_next {
+            return Err(StreamCloseoutIntegrationError::RemotePeerAuthenticationMustFollowCloseout);
+        }
+        if !self.session_binding_after_remote_authentication {
+            return Err(
+                StreamCloseoutIntegrationError::SessionBindingMustFollowRemotePeerAuthentication,
+            );
+        }
+        if self.envelope_io_claimed {
+            return Err(StreamCloseoutIntegrationError::EnvelopeIoForbidden);
+        }
+        if self.usable_messaging_claimed {
+            return Err(StreamCloseoutIntegrationError::UsableMessagingClaimForbidden);
+        }
+
+        Ok(self)
     }
 }
 
@@ -5786,6 +5868,54 @@ mod tests {
     }
 
     #[test]
+    fn stream_closeout_integration_requires_closeout_ready_before_next_gate() {
+        assert_eq!(
+            StreamCloseoutIntegrationOrder::locked_down().check(),
+            Err(StreamCloseoutIntegrationError::CloseoutReadyRequired)
+        );
+
+        let order = StreamCloseoutIntegrationOrder::from_closeout_ready(
+            sample_stream_adapter_closeout_ready(),
+        );
+
+        assert_eq!(order.check(), Ok(order));
+    }
+
+    #[test]
+    fn stream_closeout_integration_orders_remote_auth_before_session_binding() {
+        let order = StreamCloseoutIntegrationOrder::from_closeout_ready(
+            sample_stream_adapter_closeout_ready(),
+        );
+
+        assert_eq!(
+            order.without_remote_peer_authentication_next().check(),
+            Err(StreamCloseoutIntegrationError::RemotePeerAuthenticationMustFollowCloseout)
+        );
+        assert_eq!(
+            order
+                .without_session_binding_after_remote_authentication()
+                .check(),
+            Err(StreamCloseoutIntegrationError::SessionBindingMustFollowRemotePeerAuthentication)
+        );
+    }
+
+    #[test]
+    fn stream_closeout_integration_still_rejects_io_and_messaging() {
+        let order = StreamCloseoutIntegrationOrder::from_closeout_ready(
+            sample_stream_adapter_closeout_ready(),
+        );
+
+        assert_eq!(
+            order.claim_envelope_io().check(),
+            Err(StreamCloseoutIntegrationError::EnvelopeIoForbidden)
+        );
+        assert_eq!(
+            order.claim_usable_messaging().check(),
+            Err(StreamCloseoutIntegrationError::UsableMessagingClaimForbidden)
+        );
+    }
+
+    #[test]
     fn runtime_preflight_is_disabled_by_default() {
         assert_eq!(
             TransportRuntimePreflight::disabled_by_default().check(),
@@ -7027,6 +7157,15 @@ mod tests {
             TransportPolicy::high_risk_default(),
         )
         .expect("outbound stream adapter")
+    }
+
+    fn sample_stream_adapter_closeout_ready() -> StreamAdapterCloseoutReady {
+        StreamAdapterCloseoutDecision::from_fail_closed_adapters(
+            &sample_inbound_stream_fail_closed_adapter(),
+            &sample_outbound_stream_fail_closed_adapter(),
+        )
+        .check()
+        .expect("stream adapter closeout ready")
     }
 
     fn sample_pairwise_endpoint() -> PairwiseRendezvousEndpoint {
