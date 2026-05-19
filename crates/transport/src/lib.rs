@@ -319,6 +319,7 @@ impl TransportPreNetworkCloseout {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TransportRuntimeEventKind {
+    BootstrapFailed,
     DirectoryProbeFailed,
     RouteRejected,
     RuntimePreflightFailed,
@@ -342,6 +343,16 @@ pub struct RedactedTransportRuntimeEvent {
 }
 
 impl RedactedTransportRuntimeEvent {
+    pub fn bootstrap_failed(error: TransportRuntimeError) -> Self {
+        Self {
+            kind: TransportRuntimeEventKind::BootstrapFailed,
+            runtime_error: Some(error),
+            probe_error: None,
+            route_kind: None,
+            transfer_direction: None,
+        }
+    }
+
     pub fn directory_probe_failed(path: &Path, error: TransportRuntimeProbeError) -> Self {
         let _ = path;
         Self {
@@ -516,6 +527,40 @@ impl TransportRuntimeError {
             self,
             Self::OnionServiceKeyUnavailable | Self::OnionServiceLaunchFailed
         )
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TransportBootstrapExecutionSkeleton {
+    runtime_ready: TransportRuntimeReady,
+    policy: TransportBootstrapPolicy,
+}
+
+impl TransportBootstrapExecutionSkeleton {
+    pub fn new(runtime_ready: TransportRuntimeReady, policy: TransportBootstrapPolicy) -> Self {
+        Self {
+            runtime_ready,
+            policy,
+        }
+    }
+
+    pub fn policy(self) -> TransportBootstrapPolicy {
+        self.policy
+    }
+
+    pub fn runtime_ready(self) -> TransportRuntimeReady {
+        self.runtime_ready
+    }
+
+    pub fn execute_fail_closed<S: TransportRuntimeEventSink>(
+        self,
+        outcome: TransportBootstrapOutcome,
+        sink: &mut S,
+    ) -> Result<(), TransportRuntimeError> {
+        let _ = self.runtime_ready;
+        let error = outcome.runtime_error(self.policy);
+        sink.record(RedactedTransportRuntimeEvent::bootstrap_failed(error));
+        Err(error)
     }
 }
 
@@ -1674,6 +1719,67 @@ mod tests {
             TransportBootstrapOutcome::CensorshipOrBridgeRequired.runtime_error(policy),
             TransportRuntimeError::BootstrapTimeout
         );
+    }
+
+    #[test]
+    fn bootstrap_execution_skeleton_requires_ready_runtime_and_bounded_policy() {
+        let skeleton = TransportBootstrapExecutionSkeleton::new(
+            TransportRuntimeReady,
+            TransportBootstrapPolicy::high_risk_default(),
+        );
+
+        assert_eq!(skeleton.runtime_ready(), TransportRuntimeReady);
+        assert_eq!(
+            skeleton.policy(),
+            TransportBootstrapPolicy::high_risk_default()
+        );
+    }
+
+    #[test]
+    fn bootstrap_execution_skeleton_fails_closed_and_records_redacted_event() {
+        let skeleton = TransportBootstrapExecutionSkeleton::new(
+            TransportRuntimeReady,
+            TransportBootstrapPolicy::high_risk_default(),
+        );
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        assert_eq!(
+            skeleton.execute_fail_closed(TransportBootstrapOutcome::TimedOut, &mut sink),
+            Err(TransportRuntimeError::BootstrapTimeout)
+        );
+
+        assert_eq!(sink.events().len(), 1);
+        assert_eq!(
+            sink.events()[0].kind(),
+            TransportRuntimeEventKind::BootstrapFailed
+        );
+        assert_eq!(
+            sink.events()[0].runtime_error(),
+            Some(TransportRuntimeError::BootstrapTimeout)
+        );
+    }
+
+    #[test]
+    fn bootstrap_execution_skeleton_classifies_censorship_without_raw_context() {
+        let skeleton = TransportBootstrapExecutionSkeleton::new(
+            TransportRuntimeReady,
+            TransportBootstrapPolicy::high_risk_default(),
+        );
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        assert_eq!(
+            skeleton.execute_fail_closed(
+                TransportBootstrapOutcome::CensorshipOrBridgeRequired,
+                &mut sink,
+            ),
+            Err(TransportRuntimeError::CensorshipOrBridgeRequired)
+        );
+
+        let rendered = format!("{:?}", sink.events());
+        assert!(rendered.contains("CensorshipOrBridgeRequired"));
+        assert!(!rendered.contains("obfs4"));
+        assert!(!rendered.contains(".onion"));
+        assert!(!rendered.contains("Library/Application Support"));
     }
 
     #[test]

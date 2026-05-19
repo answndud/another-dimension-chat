@@ -26,6 +26,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `RedactedTransportRuntimeEvent` records transport event categories without storing raw paths, endpoints, contact ids, profile names, plaintext, or key material.
 - `TransportRuntimeEventSink` accepts only redacted transport runtime events.
 - `TransportBootstrapPolicy` bounds future bootstrap timeout, retry, cancellation, and censorship classification behavior without bootstrapping Tor.
+- `TransportBootstrapExecutionSkeleton` requires runtime readiness, bounded bootstrap policy, and redacted event sink while still failing closed.
 - `TransportPreNetworkCloseout` records the remaining hard blockers before any network execution skeleton is allowed.
 - `TransportRuntimeState` separates disabled fail-closed state from a future runtime-ready state that can only be created from successful preflight.
 - `OnionEnvelopeTransport` stores runtime state, but send/receive remains fail-closed even when that state is ready.
@@ -468,3 +469,25 @@ Still not implemented:
 - Tor bootstrap, socket opens, onion service launch, or envelope transfer.
 
 Next accepted phase: Arti bootstrap execution skeleton. It must still remain bounded, fail-closed, and must not claim usable real communication until send/receive/onion hosting are separately implemented and verified.
+
+## Arti Bootstrap Execution Skeleton
+
+Decision as of 2026-05-19: after the pre-network blockers are closed, the first bootstrap execution boundary is still fail-closed. It does not create a usable Tor client, open sockets, launch onion services, or transfer envelopes.
+
+Current code boundary:
+
+- `TransportBootstrapExecutionSkeleton::new(...)` requires a `TransportRuntimeReady` token and a bounded `TransportBootstrapPolicy`.
+- `execute_fail_closed(...)` requires a `TransportRuntimeEventSink` so bootstrap outcomes are recorded only as redacted runtime events.
+- Timeout, cancellation, censorship/bridge-required, and transient network outcomes map into existing `TransportRuntimeError` categories.
+- The skeleton currently returns an error for every outcome.
+- Tests verify bootstrap failures are redacted and do not include bridge lines, onion addresses, or local state paths.
+
+Still not implemented:
+
+- Actual Arti client bootstrap.
+- Async timer, retry loop, or cancellation token integration.
+- Tor socket activity.
+- Onion service launch.
+- Envelope send/receive.
+
+Next accepted phase: a bounded Arti client bootstrap adapter spike may be considered, but it must keep send/receive and onion hosting fail-closed until those phases have their own tests and public-safe documentation.
