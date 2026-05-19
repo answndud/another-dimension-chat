@@ -10,8 +10,15 @@ another-dimension-crypto = { path = "../../crates/crypto" }
 another-dimension-identity = { path = "../../crates/identity" }
 another-dimension-pairing = { path = "../../crates/pairing" }
 another-dimension-protocol = { path = "../../crates/protocol" }
+another-dimension-transport = { path = "../../crates/transport", optional = true }
+tokio = { version = "1.52.3", default-features = false, features = ["rt", "time"], optional = true }
 
 [features]
+arti-manual-bootstrap = [
+    "dep:another-dimension-transport",
+    "dep:tokio",
+    "another-dimension-transport/arti-manual-bootstrap",
+]
 dev-insecure = [
     "another-dimension-core/dev-insecure",
     "another-dimension-crypto/dev-insecure",

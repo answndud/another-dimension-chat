@@ -61,6 +61,48 @@ fn default_build_runs_production_boundary_self_test_without_secrets() {
 }
 
 #[test]
+#[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
+fn manual_bootstrap_cli_gate_is_disabled_without_execute_network_flag() {
+    let root = temp_cli_path("manual-bootstrap-disabled");
+    let state_dir = root.join("arti-state");
+    let cache_dir = root.join("arti-cache");
+    let output = run(&[
+        "transport",
+        "bootstrap",
+        "--state-dir",
+        state_dir.to_str().expect("state path"),
+        "--cache-dir",
+        cache_dir.to_str().expect("cache path"),
+    ]);
+    let out = stdout(&output);
+    let error = stderr(&output);
+
+    let _ = std::fs::remove_dir_all(root);
+
+    assert!(!output.status.success());
+    assert!(out.contains("BootstrapFailed"));
+    assert!(out.contains("RuntimeNetworkDisabled"));
+    assert!(out.contains("usable_transport=false"));
+    assert!(error.contains("manual bootstrap attempt failed: RuntimeNetworkDisabled"));
+    assert!(!out.contains("arti-state"));
+    assert!(!out.contains("arti-cache"));
+    assert!(!error.contains("arti-state"));
+    assert!(!error.contains("arti-cache"));
+}
+
+#[test]
+#[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
+fn manual_bootstrap_cli_requires_explicit_app_private_dirs() {
+    let output = run(&["transport", "bootstrap"]);
+    let error = stderr(&output);
+
+    assert!(!output.status.success());
+    assert!(stdout(&output).is_empty());
+    assert!(error.contains("usage:"));
+    assert!(error.contains("local-only manual Arti bootstrap spike"));
+}
+
+#[test]
 #[cfg(feature = "dev-insecure")]
 fn malformed_command_prints_help_and_fails() {
     let output = run(&["pairing", "start", "--wrong", "alice"]);
@@ -357,6 +399,14 @@ fn sent_message_plaintext_is_not_persisted_in_dev_store() {
 
 #[cfg(feature = "dev-insecure")]
 fn temp_payload_path(name: &str) -> std::path::PathBuf {
+    temp_cli_path(name)
+}
+
+#[cfg(any(
+    feature = "dev-insecure",
+    all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap")
+))]
+fn temp_cli_path(name: &str) -> std::path::PathBuf {
     let mut path = std::env::temp_dir();
     path.push(format!(
         "another-dimension-cli-test-{}-{name}",
