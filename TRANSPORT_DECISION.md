@@ -57,7 +57,29 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue pre-network transport work by connecting onion-service key readiness to the launch path through an explicit adapter boundary. Do not implement real onion hosting, descriptor publication, inbound streams, or envelope send/receive until the key-material and launch-state boundaries are tested separately.
+Continue pre-network transport work by defining the next launch-state boundary after key material readiness. Do not implement real onion hosting, descriptor publication, inbound streams, or envelope send/receive until the launch-state and descriptor-publication boundaries are tested separately.
+
+## Onion Service Key Material Adapter Boundary
+
+Decision as of 2026-05-19: onion service launch preflight requires an explicit key-material readiness token, not only a key lifecycle policy decision.
+
+Current code boundary:
+
+- `OnionServiceKeyMaterialDecision` requires profile unlock, lifecycle readiness, and SQLCipher-wrapped key record readiness.
+- `OnionServiceKeyRecordId` is validated as an opaque local record id and rejects empty or path-like ids.
+- Plaintext key bytes are rejected with `PlaintextKeyMaterialForbidden`.
+- Locked profile and missing wrapped-record states fail closed before launch preflight.
+- `OnionServiceLaunchPreflight::from_ready_boundaries(...)` now takes `OnionServiceKeyMaterialReady`.
+- The feature-gated `OnionServiceLaunchAdapterSkeleton::from_ready_owner(...)` also requires `OnionServiceKeyMaterialReady`.
+- Debug output redacts the key record id and states that raw key material is not loaded.
+
+Still not implemented:
+
+- Real onion service private key generation.
+- Loading key bytes from SQLCipher.
+- Passing key material into Arti.
+- Descriptor publication or onion hosting.
+- Envelope send/receive over onion streams.
 
 ## Endpoint Rotation Apply/Reconnect Boundary
 

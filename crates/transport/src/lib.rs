@@ -70,6 +70,15 @@ pub enum OnionServiceKeyLifecycleError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionServiceKeyMaterialError {
+    ProfileLocked,
+    LifecycleNotReady,
+    MissingSqlcipherWrappedRecord,
+    PlaintextKeyMaterialForbidden,
+    InvalidRecordId,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BridgeCensorshipConfigurationError {
     Unsupported,
     BridgeRequiredButMissing,
@@ -1663,6 +1672,151 @@ impl OnionServiceKeyLifecycleDecision {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ProfileTransportUnlockReady;
 
+#[derive(Clone, Eq, PartialEq)]
+pub struct OnionServiceKeyRecordId {
+    value: String,
+}
+
+impl OnionServiceKeyRecordId {
+    pub fn new(value: impl Into<String>) -> Result<Self, OnionServiceKeyMaterialError> {
+        let value = value.into();
+        if !is_safe_endpoint_token(&value) {
+            return Err(OnionServiceKeyMaterialError::InvalidRecordId);
+        }
+        Ok(Self { value })
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.value
+    }
+}
+
+impl fmt::Debug for OnionServiceKeyRecordId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OnionServiceKeyRecordId")
+            .field("value", &"<redacted>")
+            .finish()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionServiceKeyMaterialState {
+    Missing,
+    ProfileLocked,
+    PlaintextKeyBytesProvided,
+    SqlcipherWrappedRecordReady,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct OnionServiceKeyMaterialDecision {
+    profile_unlocked: bool,
+    lifecycle_ready: bool,
+    material_state: OnionServiceKeyMaterialState,
+    record_id: Option<OnionServiceKeyRecordId>,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct OnionServiceKeyMaterialReady {
+    record_id: OnionServiceKeyRecordId,
+}
+
+impl OnionServiceKeyMaterialDecision {
+    pub fn locked_down_by_default() -> Self {
+        Self {
+            profile_unlocked: false,
+            lifecycle_ready: false,
+            material_state: OnionServiceKeyMaterialState::Missing,
+            record_id: None,
+        }
+    }
+
+    pub fn profile_locked(
+        _lifecycle: &OnionServiceKeyLifecycleReady,
+        record_id: OnionServiceKeyRecordId,
+    ) -> Self {
+        Self {
+            profile_unlocked: false,
+            lifecycle_ready: true,
+            material_state: OnionServiceKeyMaterialState::ProfileLocked,
+            record_id: Some(record_id),
+        }
+    }
+
+    pub fn plaintext_key_bytes_after_unlock(
+        _profile_unlock: &ProfileTransportUnlockReady,
+        _lifecycle: &OnionServiceKeyLifecycleReady,
+    ) -> Self {
+        Self {
+            profile_unlocked: true,
+            lifecycle_ready: true,
+            material_state: OnionServiceKeyMaterialState::PlaintextKeyBytesProvided,
+            record_id: None,
+        }
+    }
+
+    pub fn sqlcipher_wrapped_record_after_unlock(
+        _profile_unlock: &ProfileTransportUnlockReady,
+        _lifecycle: &OnionServiceKeyLifecycleReady,
+        record_id: OnionServiceKeyRecordId,
+    ) -> Self {
+        Self {
+            profile_unlocked: true,
+            lifecycle_ready: true,
+            material_state: OnionServiceKeyMaterialState::SqlcipherWrappedRecordReady,
+            record_id: Some(record_id),
+        }
+    }
+
+    pub fn check(self) -> Result<OnionServiceKeyMaterialReady, OnionServiceKeyMaterialError> {
+        if !self.profile_unlocked {
+            return Err(OnionServiceKeyMaterialError::ProfileLocked);
+        }
+        if !self.lifecycle_ready {
+            return Err(OnionServiceKeyMaterialError::LifecycleNotReady);
+        }
+        if self.material_state == OnionServiceKeyMaterialState::PlaintextKeyBytesProvided {
+            return Err(OnionServiceKeyMaterialError::PlaintextKeyMaterialForbidden);
+        }
+        if self.material_state != OnionServiceKeyMaterialState::SqlcipherWrappedRecordReady {
+            return Err(OnionServiceKeyMaterialError::MissingSqlcipherWrappedRecord);
+        }
+
+        let record_id = self
+            .record_id
+            .ok_or(OnionServiceKeyMaterialError::MissingSqlcipherWrappedRecord)?;
+        Ok(OnionServiceKeyMaterialReady { record_id })
+    }
+}
+
+impl OnionServiceKeyMaterialReady {
+    pub fn record_id(&self) -> &OnionServiceKeyRecordId {
+        &self.record_id
+    }
+}
+
+impl fmt::Debug for OnionServiceKeyMaterialDecision {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OnionServiceKeyMaterialDecision")
+            .field("profile_unlocked", &self.profile_unlocked)
+            .field("lifecycle_ready", &self.lifecycle_ready)
+            .field("material_state", &self.material_state)
+            .field("record_id", &self.record_id.as_ref().map(|_| "<redacted>"))
+            .finish()
+    }
+}
+
+impl fmt::Debug for OnionServiceKeyMaterialReady {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OnionServiceKeyMaterialReady")
+            .field("record_id", &"<redacted>")
+            .field("raw_key_material", &"<not-loaded>")
+            .finish()
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum OnionEndpointPublicationPolicy {
     Missing,
@@ -1702,7 +1856,7 @@ impl OnionServiceLaunchPreflight {
 
     pub fn from_ready_boundaries(
         _profile_unlock: &ProfileTransportUnlockReady,
-        _key_lifecycle: &OnionServiceKeyLifecycleReady,
+        _key_material: &OnionServiceKeyMaterialReady,
         persistent_client_ready: bool,
         endpoint_publication_policy: OnionEndpointPublicationPolicy,
         endpoint_update_policy: OnionEndpointUpdatePolicy,
@@ -2153,12 +2307,14 @@ pub mod arti_adapter_spike {
     #[derive(Clone, Copy, Eq, PartialEq)]
     pub struct OnionServiceLaunchAdapterSkeleton {
         _launch_ready: OnionServiceLaunchReady,
+        _key_material_ready: bool,
         owner_summary: PersistentArtiClientLifecycleSummary,
     }
 
     impl OnionServiceLaunchAdapterSkeleton {
         pub fn from_ready_owner(
             launch_ready: OnionServiceLaunchReady,
+            _key_material: &OnionServiceKeyMaterialReady,
             owner: &PersistentArtiClientOwner,
         ) -> Result<Self, OnionServiceLaunchAdapterError> {
             let owner_summary = owner.summary();
@@ -2170,6 +2326,7 @@ pub mod arti_adapter_spike {
 
             Ok(Self {
                 _launch_ready: launch_ready,
+                _key_material_ready: true,
                 owner_summary,
             })
         }
@@ -2195,6 +2352,7 @@ pub mod arti_adapter_spike {
                 .debug_struct("OnionServiceLaunchAdapterSkeleton")
                 .field("owner_state", &self.owner_summary.state())
                 .field("client_owned", &self.owner_summary.client_owned())
+                .field("key_material", &"<redacted>")
                 .field("launch_descriptor", &"<not-created>")
                 .field("state_dir", &"<redacted>")
                 .field("cache_dir", &"<redacted>")
@@ -3805,6 +3963,72 @@ mod tests {
     }
 
     #[test]
+    fn onion_service_key_material_requires_unlock_lifecycle_and_wrapped_record() {
+        let profile_unlock = ProfileTransportUnlockReady;
+        let key_lifecycle = OnionServiceKeyLifecycleReady;
+        let record_id = OnionServiceKeyRecordId::new("onion-key-record-1").expect("record id");
+
+        assert_eq!(
+            OnionServiceKeyMaterialDecision::locked_down_by_default().check(),
+            Err(OnionServiceKeyMaterialError::ProfileLocked)
+        );
+        assert_eq!(
+            OnionServiceKeyMaterialDecision::profile_locked(&key_lifecycle, record_id.clone())
+                .check(),
+            Err(OnionServiceKeyMaterialError::ProfileLocked)
+        );
+        assert_eq!(
+            OnionServiceKeyMaterialDecision::plaintext_key_bytes_after_unlock(
+                &profile_unlock,
+                &key_lifecycle,
+            )
+            .check(),
+            Err(OnionServiceKeyMaterialError::PlaintextKeyMaterialForbidden)
+        );
+
+        let ready = OnionServiceKeyMaterialDecision::sqlcipher_wrapped_record_after_unlock(
+            &profile_unlock,
+            &key_lifecycle,
+            record_id.clone(),
+        )
+        .check()
+        .expect("key material ready");
+
+        assert_eq!(ready.record_id(), &record_id);
+    }
+
+    #[test]
+    fn onion_service_key_material_rejects_unsafe_ids_and_redacts_debug() {
+        assert_eq!(
+            OnionServiceKeyRecordId::new(""),
+            Err(OnionServiceKeyMaterialError::InvalidRecordId)
+        );
+        assert_eq!(
+            OnionServiceKeyRecordId::new("../secret-key"),
+            Err(OnionServiceKeyMaterialError::InvalidRecordId)
+        );
+
+        let profile_unlock = ProfileTransportUnlockReady;
+        let key_lifecycle = OnionServiceKeyLifecycleReady;
+        let record_id = OnionServiceKeyRecordId::new("secret-onion-key-record").expect("record id");
+        let decision = OnionServiceKeyMaterialDecision::sqlcipher_wrapped_record_after_unlock(
+            &profile_unlock,
+            &key_lifecycle,
+            record_id,
+        );
+        let ready = decision.clone().check().expect("key material ready");
+        let decision_debug = format!("{decision:?}");
+        let ready_debug = format!("{ready:?}");
+
+        assert!(decision_debug.contains("<redacted>"));
+        assert!(ready_debug.contains("<redacted>"));
+        assert!(ready_debug.contains("<not-loaded>"));
+        assert!(!decision_debug.contains("secret-onion-key-record"));
+        assert!(!ready_debug.contains("secret-onion-key-record"));
+        assert!(!ready_debug.contains("private-key"));
+    }
+
+    #[test]
     fn onion_service_launch_preflight_is_locked_down_by_default() {
         assert_eq!(
             OnionServiceLaunchPreflight::locked_down_by_default().check(),
@@ -3815,11 +4039,11 @@ mod tests {
     #[test]
     fn onion_service_launch_preflight_requires_persistent_client_and_endpoint_policies() {
         let profile_unlock = ProfileTransportUnlockReady;
-        let key_lifecycle = OnionServiceKeyLifecycleReady;
+        let key_material = ready_onion_service_key_material();
 
         let preflight = OnionServiceLaunchPreflight::from_ready_boundaries(
             &profile_unlock,
-            &key_lifecycle,
+            &key_material,
             false,
             OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
             OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
@@ -3832,7 +4056,7 @@ mod tests {
 
         let preflight = OnionServiceLaunchPreflight::from_ready_boundaries(
             &profile_unlock,
-            &key_lifecycle,
+            &key_material,
             true,
             OnionEndpointPublicationPolicy::Missing,
             OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
@@ -3845,7 +4069,7 @@ mod tests {
 
         let preflight = OnionServiceLaunchPreflight::from_ready_boundaries(
             &profile_unlock,
-            &key_lifecycle,
+            &key_material,
             true,
             OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
             OnionEndpointUpdatePolicy::Missing,
@@ -3860,10 +4084,10 @@ mod tests {
     #[test]
     fn onion_service_launch_preflight_requires_redacted_events() {
         let profile_unlock = ProfileTransportUnlockReady;
-        let key_lifecycle = OnionServiceKeyLifecycleReady;
+        let key_material = ready_onion_service_key_material();
         let preflight = OnionServiceLaunchPreflight::from_ready_boundaries(
             &profile_unlock,
-            &key_lifecycle,
+            &key_material,
             true,
             OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
             OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
@@ -3879,10 +4103,10 @@ mod tests {
     #[test]
     fn onion_service_launch_preflight_accepts_ready_boundaries_without_launching_service() {
         let profile_unlock = ProfileTransportUnlockReady;
-        let key_lifecycle = OnionServiceKeyLifecycleReady;
+        let key_material = ready_onion_service_key_material();
         let preflight = OnionServiceLaunchPreflight::from_ready_boundaries(
             &profile_unlock,
-            &key_lifecycle,
+            &key_material,
             true,
             OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
             OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
@@ -3905,6 +4129,16 @@ mod tests {
             message_type: MessageType::Data,
             padded_ciphertext: b"ciphertext".to_vec(),
         }
+    }
+
+    fn ready_onion_service_key_material() -> OnionServiceKeyMaterialReady {
+        OnionServiceKeyMaterialDecision::sqlcipher_wrapped_record_after_unlock(
+            &ProfileTransportUnlockReady,
+            &OnionServiceKeyLifecycleReady,
+            OnionServiceKeyRecordId::new("onion-key-record-1").expect("record id"),
+        )
+        .check()
+        .expect("key material ready")
     }
 
     fn ready_permission_preflight() -> TransportRuntimePermissionPreflight {
@@ -4345,6 +4579,7 @@ mod tests {
         assert_eq!(
             arti_adapter_spike::OnionServiceLaunchAdapterSkeleton::from_ready_owner(
                 OnionServiceLaunchReady,
+                &ready_onion_service_key_material(),
                 &owner,
             ),
             Err(
@@ -4377,6 +4612,7 @@ mod tests {
         let launch_adapter =
             arti_adapter_spike::OnionServiceLaunchAdapterSkeleton::from_ready_owner(
                 OnionServiceLaunchReady,
+                &ready_onion_service_key_material(),
                 &owner,
             )
             .expect("launch adapter");
