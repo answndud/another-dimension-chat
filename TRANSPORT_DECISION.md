@@ -57,7 +57,34 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving module split: stream gate and fail-closed stream adapter boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving module split: onion service launch and descriptor publication boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Stream Gate Module Extraction
+
+Decision as of 2026-05-19: inbound/outbound stream gate decisions and fail-closed stream adapter boundaries are extracted into `crates/transport/src/stream_gate.rs`. `crates/transport/src/lib.rs` re-exports the same public names to preserve the public API.
+
+Moved without behavior change:
+
+- `InboundStreamGateReady`
+- `InboundStreamGateDecision`
+- `InboundStreamFailClosedAdapter`
+- `OutboundStreamGateReady`
+- `OutboundStreamGateDecision`
+- `OutboundStreamFailClosedAdapter`
+
+Preserved invariants:
+
+- Inbound stream gate still requires descriptor publication gate readiness and fail-closed descriptor publication adapter readiness.
+- Inbound stream gate still forbids accept, read/write, envelope I/O, and usable messaging claims.
+- Inbound fail-closed adapter still records only redacted runtime events and returns not-implemented errors for accept/read-write attempts.
+- Outbound stream gate still requires a pairwise rendezvous endpoint and high-risk onion-only policy.
+- Outbound stream gate still forbids dial, send, envelope I/O, and usable messaging claims.
+- Outbound fail-closed adapter still records only redacted runtime events and returns not-implemented errors for dial/send attempts.
+- No descriptor publication, real stream I/O, envelope send/receive, or usable messaging capability was added.
+
+Next split target:
+
+- Onion service launch and descriptor publication boundaries.
 
 ## Stream Session Boundary Module Extraction
 
@@ -89,10 +116,6 @@ Preserved invariants:
 - Envelope I/O still requires explicit readiness and still fails closed.
 - Stream closeout still requires inbound/outbound fail-closed adapters, remote authentication, verified session binding, and still forbids bound-session shortcuts, envelope I/O, and usable messaging claims.
 - No descriptor publication, real stream I/O, envelope send/receive, or usable messaging capability was added.
-
-Next split target:
-
-- Stream gate and fail-closed stream adapter boundaries.
 
 ## Endpoint State Module Extraction
 
