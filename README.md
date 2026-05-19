@@ -46,6 +46,7 @@ What exists today:
 - Stream peer/session binding boundary that requires a verified pairwise encrypted session before stream I/O can approach envelope send/receive, while still failing closed.
 - Envelope I/O adapter boundary that requires explicit I/O readiness after bound stream/session state and still fails closed for envelope receive/send.
 - Remote peer authentication boundary that requires an authenticated pairwise peer proof before bound stream/session state can be created.
+- Post-auth stream readiness ordering boundary that fixes the typed order from stream/auth/session binding to envelope I/O while still failing closed.
 - Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
 - Encrypted endpoint update control-envelope boundary that pads endpoint rotation plaintext before Noise encryption and wraps only opaque control ciphertext after a validated pairwise update.
 - Production envelope session hook for endpoint update control encryption/decryption without Tor delivery or onion hosting.

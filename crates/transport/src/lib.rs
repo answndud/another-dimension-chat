@@ -139,6 +139,11 @@ pub enum RemotePeerAuthenticationError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PostAuthStreamReadinessOrderingError {
+    EnvelopeIoBoundaryRequired,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EndpointLifecycleError {
     GlobalEndpointForbidden,
     IdentityKeyCouplingForbidden,
@@ -2015,6 +2020,16 @@ pub struct OutboundEnvelopeIoAdapterBoundary {
     _io_ready: EnvelopeIoAdapterReady,
 }
 
+#[derive(Clone, Eq, PartialEq)]
+pub struct PostAuthInboundStreamReadinessOrder {
+    _envelope_io_boundary: InboundEnvelopeIoAdapterBoundary,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct PostAuthOutboundStreamReadinessOrder {
+    _envelope_io_boundary: OutboundEnvelopeIoAdapterBoundary,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -2405,6 +2420,70 @@ impl fmt::Debug for OutboundEnvelopeIoAdapterBoundary {
             .field("padded_payload", &"<redacted>")
             .field("channel_id", &"<redacted>")
             .field("message_number", &"<redacted>")
+            .finish()
+    }
+}
+
+impl PostAuthInboundStreamReadinessOrder {
+    pub fn from_envelope_io_boundary(
+        envelope_io_boundary: InboundEnvelopeIoAdapterBoundary,
+    ) -> Self {
+        Self {
+            _envelope_io_boundary: envelope_io_boundary,
+        }
+    }
+
+    pub fn from_missing_envelope_io_boundary() -> Result<Self, PostAuthStreamReadinessOrderingError>
+    {
+        Err(PostAuthStreamReadinessOrderingError::EnvelopeIoBoundaryRequired)
+    }
+}
+
+impl fmt::Debug for PostAuthInboundStreamReadinessOrder {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PostAuthInboundStreamReadinessOrder")
+            .field("launch", &"<required-before-descriptor>")
+            .field("descriptor", &"<required-before-inbound-stream>")
+            .field("stream", &"<redacted>")
+            .field(
+                "remote_peer_authentication",
+                &"<required-before-session-binding>",
+            )
+            .field("session_binding", &"<required-before-envelope-io>")
+            .field("envelope_io", &"<fail-closed>")
+            .finish()
+    }
+}
+
+impl PostAuthOutboundStreamReadinessOrder {
+    pub fn from_envelope_io_boundary(
+        envelope_io_boundary: OutboundEnvelopeIoAdapterBoundary,
+    ) -> Self {
+        Self {
+            _envelope_io_boundary: envelope_io_boundary,
+        }
+    }
+
+    pub fn from_missing_envelope_io_boundary() -> Result<Self, PostAuthStreamReadinessOrderingError>
+    {
+        Err(PostAuthStreamReadinessOrderingError::EnvelopeIoBoundaryRequired)
+    }
+}
+
+impl fmt::Debug for PostAuthOutboundStreamReadinessOrder {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PostAuthOutboundStreamReadinessOrder")
+            .field("launch", &"<required-before-outbound-stream>")
+            .field("pairwise_endpoint", &"<required-before-outbound-stream>")
+            .field("stream", &"<redacted>")
+            .field(
+                "remote_peer_authentication",
+                &"<required-before-session-binding>",
+            )
+            .field("session_binding", &"<required-before-envelope-io>")
+            .field("envelope_io", &"<fail-closed>")
             .finish()
     }
 }
@@ -5093,6 +5172,50 @@ mod tests {
                     "session-secret",
                 ],
             );
+        }
+    }
+
+    #[test]
+    fn post_auth_stream_readiness_order_requires_envelope_io_boundary() {
+        assert_eq!(
+            PostAuthInboundStreamReadinessOrder::from_missing_envelope_io_boundary(),
+            Err(PostAuthStreamReadinessOrderingError::EnvelopeIoBoundaryRequired)
+        );
+        assert_eq!(
+            PostAuthOutboundStreamReadinessOrder::from_missing_envelope_io_boundary(),
+            Err(PostAuthStreamReadinessOrderingError::EnvelopeIoBoundaryRequired)
+        );
+
+        let inbound = PostAuthInboundStreamReadinessOrder::from_envelope_io_boundary(
+            InboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
+                sample_bound_inbound_stream_session(),
+                EnvelopeIoAdapterReady,
+            ),
+        );
+        let outbound = PostAuthOutboundStreamReadinessOrder::from_envelope_io_boundary(
+            OutboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
+                sample_bound_outbound_stream_session(),
+                EnvelopeIoAdapterReady,
+            ),
+        );
+        let inbound_rendered = format!("{inbound:?}");
+        let outbound_rendered = format!("{outbound:?}");
+
+        assert!(inbound_rendered.contains("PostAuthInboundStreamReadinessOrder"));
+        assert!(inbound_rendered.contains("required-before-descriptor"));
+        assert!(inbound_rendered.contains("required-before-inbound-stream"));
+        assert!(outbound_rendered.contains("PostAuthOutboundStreamReadinessOrder"));
+        assert!(outbound_rendered.contains("required-before-outbound-stream"));
+        assert!(outbound_rendered.contains("required-before-session-binding"));
+        for rendered in [&inbound_rendered, &outbound_rendered] {
+            assert!(rendered.contains("<redacted>"));
+            assert!(rendered.contains("<fail-closed>"));
+            assert!(!rendered.contains("example.onion"));
+            assert!(!rendered.contains("bob"));
+            assert!(!rendered.contains("peer-proof"));
+            assert!(!rendered.contains("session-transcript"));
+            assert!(!rendered.contains("adchan1:test"));
+            assert!(!rendered.contains("ciphertext"));
         }
     }
 
