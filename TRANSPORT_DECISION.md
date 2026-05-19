@@ -57,7 +57,30 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the first behavior-preserving module split: extract redacted transport runtime events and event sinks before adding new network behavior. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving module split: bootstrap policy and execution skeleton. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Transport Runtime Events Module Extraction
+
+Decision as of 2026-05-19: redacted transport runtime events and event sinks are extracted into `crates/transport/src/runtime_events.rs`. `crates/transport/src/lib.rs` re-exports the same public names to preserve the public API.
+
+Moved without behavior change:
+
+- `TransportRuntimeEventKind`
+- `TransportTransferDirection`
+- `RedactedTransportRuntimeEvent`
+- `TransportRuntimeEventSink`
+- `NoopTransportRuntimeEventSink`
+- `InMemoryTransportRuntimeEventSink`
+
+Preserved invariants:
+
+- Redacted events still do not store raw directory paths, onion endpoints, contact ids, profile names, plaintext, or key material.
+- Event sinks still accept only `RedactedTransportRuntimeEvent`.
+- No stream I/O, envelope I/O, descriptor publication, or messaging capability was added.
+
+Next split target:
+
+- Bootstrap policy and bootstrap execution skeleton.
 
 ## Transport Module Decomposition Preparation
 
