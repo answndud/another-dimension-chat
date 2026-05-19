@@ -57,7 +57,26 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next boundary after stream adapter closeout. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until each boundary is tested separately and still fails closed by default.
+Continue transport work with the next boundary after stream closeout integration ordering. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until each boundary is tested separately and still fails closed by default.
+
+## Stream Closeout Integration Ordering Boundary
+
+Decision as of 2026-05-19: stream adapter closeout is now an explicit prerequisite before the next post-stream gates can be considered. The next gate is remote peer authentication, followed by verified pairwise session binding, and only then the already fail-closed envelope I/O boundary.
+
+Current code boundary:
+
+- `StreamCloseoutIntegrationOrder::locked_down()` fails closed without `StreamAdapterCloseoutReady`.
+- `StreamCloseoutIntegrationOrder::from_closeout_ready(...)` fixes the order after stream adapter closeout.
+- Remote peer authentication must follow closeout.
+- Verified pairwise session binding must follow remote peer authentication.
+- Envelope I/O and usable messaging claims are still rejected.
+
+Still not implemented:
+
+- Real stream read/write.
+- Automatic construction of bound stream sessions from real network streams.
+- Real envelope I/O.
+- Usable messaging.
 
 ## Stream Adapter Closeout And Session Binding Gate Boundary
 
