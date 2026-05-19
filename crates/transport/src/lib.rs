@@ -348,6 +348,34 @@ impl fmt::Display for RedactedTransportRuntimeEvent {
     }
 }
 
+pub trait TransportRuntimeEventSink {
+    fn record(&mut self, event: RedactedTransportRuntimeEvent);
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct NoopTransportRuntimeEventSink;
+
+impl TransportRuntimeEventSink for NoopTransportRuntimeEventSink {
+    fn record(&mut self, _event: RedactedTransportRuntimeEvent) {}
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct InMemoryTransportRuntimeEventSink {
+    events: Vec<RedactedTransportRuntimeEvent>,
+}
+
+impl InMemoryTransportRuntimeEventSink {
+    pub fn events(&self) -> &[RedactedTransportRuntimeEvent] {
+        &self.events
+    }
+}
+
+impl TransportRuntimeEventSink for InMemoryTransportRuntimeEventSink {
+    fn record(&mut self, event: RedactedTransportRuntimeEvent) {
+        self.events.push(event);
+    }
+}
+
 impl From<TransportRuntimeProbeError> for TransportRuntimeError {
     fn from(_error: TransportRuntimeProbeError) -> Self {
         Self::StateDirectoryPermissionDenied
@@ -1541,6 +1569,45 @@ mod tests {
         assert_eq!(
             event.transfer_direction(),
             Some(TransportTransferDirection::Send)
+        );
+    }
+
+    #[test]
+    fn runtime_event_noop_sink_accepts_only_redacted_events() {
+        let mut sink = NoopTransportRuntimeEventSink;
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::BootstrapTimeout,
+        ));
+    }
+
+    #[test]
+    fn runtime_event_memory_sink_stores_only_redacted_events() {
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+        let profile = ProfileName::new("alice-secret-profile").expect("profile");
+
+        sink.record(RedactedTransportRuntimeEvent::sensitive_context_rejected(
+            &profile,
+            "bob-sensitive-contact",
+            "contactsecret.onion",
+            "meet at 10",
+            b"raw-private-key-material",
+            TransportRuntimeError::LogRedactionPreflightFailed,
+        ));
+
+        assert_eq!(sink.events().len(), 1);
+        assert_eq!(
+            sink.events()[0].kind(),
+            TransportRuntimeEventKind::SensitiveContextRejected
+        );
+        assert_redacted_event_hides(
+            &sink.events()[0],
+            &[
+                "alice-secret-profile",
+                "bob-sensitive-contact",
+                "contactsecret.onion",
+                "meet at 10",
+                "raw-private-key-material",
+            ],
         );
     }
 
