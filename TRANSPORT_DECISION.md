@@ -57,7 +57,26 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue pre-network transport work by deciding whether to open the first feature-gated bootstrap-only experiment or keep closing pre-network documentation gaps. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+Continue transport closeout by choosing the next non-messaging boundary after the bootstrap-only decision. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+
+## Bootstrap-Only Experiment Decision
+
+Decision as of 2026-05-19: the existing `arti-manual-bootstrap` and local lifecycle bootstrap smoke paths are the only allowed network-capable experiments. This decision does not add new bootstrap behavior. It only records that, after the network experiment gate passes, the project may keep using the existing manual bootstrap/lifecycle smoke path for local investigation.
+
+Current code boundary:
+
+- `BootstrapOnlyExperimentDecision::locked_down()` rejects execution without a ready network experiment gate.
+- `BootstrapOnlyExperimentDecision::existing_manual_bootstrap_only(...)` requires the `ArtiManualBootstrapFeature` feature state.
+- The only accepted expansion is `ExistingManualBootstrapAndLifecycleOnly`.
+- New bootstrap behavior, onion hosting, stream I/O, and envelope I/O expansions are rejected with `UnsupportedBootstrapExpansion`.
+
+Still not implemented:
+
+- Any additional network-capable bootstrap behavior.
+- Onion hosting experiments.
+- Stream I/O experiments.
+- Envelope I/O experiments.
+- Usable messaging.
 
 ## Network-Capable Experiment Gate Proposal
 
