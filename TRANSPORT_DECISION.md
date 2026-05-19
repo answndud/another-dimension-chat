@@ -20,6 +20,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `TransportRuntimePreflight` maps disabled runtime network, state/cache directory access, log redaction, and bridge/censorship readiness to explicit runtime errors.
 - `TransportRuntimePermissionPreflight` maps app-private state/cache policy, backup exclusion, log/crash redaction, and censorship readiness into the runtime preflight gate.
 - `probe_app_private_state_cache_dirs` creates and probes explicit state/cache directories without exposing path details in runtime errors.
+- `verify_transport_backup_exclusion` verifies backup-exclusion metadata before a runtime preflight can use a backup verification token.
 - `RedactedTransportRuntimeEvent` records transport event categories without storing raw paths, endpoints, contact ids, profile names, plaintext, or key material.
 - `TransportRuntimeEventSink` accepts only redacted transport runtime events.
 - `TransportBootstrapPolicy` bounds future bootstrap timeout, retry, cancellation, and censorship classification behavior without bootstrapping Tor.
@@ -394,3 +395,25 @@ Current code boundary:
 - Network execution is allowed only when the blocker list is empty, at which point the next phase is only an Arti bootstrap execution skeleton, not a usable transport.
 
 Next accepted phase: backup exclusion verification. The project should not start real Tor bootstrap, socket opens, onion service launch, or envelope transfer before the backup-exclusion and onion-key lifecycle decisions are implemented and tested.
+
+## Transport Backup Exclusion Verification
+
+Decision as of 2026-05-19: app-private transport state/cache directories must have a separate backup-exclusion verification token before a future runtime adapter can treat them as bootstrap-ready.
+
+Current code boundary:
+
+- `TransportBackupExclusionVerification` is the token future runtime preflight code should use instead of passing an arbitrary boolean.
+- `verify_transport_backup_exclusion(...)` checks both state and cache directories.
+- On macOS, verification probes `com.apple.metadata:com_apple_backup_excludeItem` with `xattr -p` and requires non-empty metadata on both directories.
+- On non-macOS platforms, verification returns `UnsupportedPlatform` and therefore fails closed.
+- `TransportRuntimePermissionPreflight::from_verified_platform_preflight(...)` accepts the backup-exclusion token and maps it into the existing runtime preflight gate.
+- `TransportPreNetworkCloseout::after_backup_exclusion_verification(...)` removes only the backup blocker; onion service key lifecycle and bridge/censorship configuration remain blockers.
+
+Still not implemented:
+
+- Setting backup-exclusion metadata.
+- Windows, Linux, Android, or iOS backup-exclusion verification.
+- OS-specific permission hardening.
+- Tor bootstrap, socket opens, onion service launch, or envelope transfer.
+
+Next accepted phase: onion service key lifecycle decision. Network execution remains blocked until onion key lifecycle and bridge/censorship decisions are also closed.

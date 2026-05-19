@@ -1,5 +1,7 @@
 use another_dimension_identity::ProfileName;
 use another_dimension_protocol::Envelope;
+#[cfg(target_os = "macos")]
+use std::process::Command;
 use std::{
     fmt, fs,
     path::{Path, PathBuf},
@@ -47,6 +49,14 @@ pub enum TransportRuntimeProbeError {
     SameStateAndCacheDirectory,
     DirectoryCreateFailed,
     DirectoryProbeFailed,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportBackupExclusionError {
+    UnsupportedPlatform,
+    MissingStateDirectoryBackupExclusion,
+    MissingCacheDirectoryBackupExclusion,
+    MetadataProbeFailed,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -231,6 +241,15 @@ impl TransportPreNetworkCloseout {
     pub fn high_risk_default() -> Self {
         Self::from_blockers(vec![
             TransportPreNetworkBlocker::BackupExclusionVerification,
+            TransportPreNetworkBlocker::OnionServiceKeyLifecycle,
+            TransportPreNetworkBlocker::BridgeCensorshipConfiguration,
+        ])
+    }
+
+    pub fn after_backup_exclusion_verification(
+        _verification: &TransportBackupExclusionVerification,
+    ) -> Self {
+        Self::from_blockers(vec![
             TransportPreNetworkBlocker::OnionServiceKeyLifecycle,
             TransportPreNetworkBlocker::BridgeCensorshipConfiguration,
         ])
@@ -486,6 +505,78 @@ impl TransportStateCacheDirsReady {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TransportBackupExclusionVerification;
+
+pub fn verify_transport_backup_exclusion(
+    dirs: &TransportStateCacheDirsReady,
+) -> Result<TransportBackupExclusionVerification, TransportBackupExclusionError> {
+    verify_dir_backup_exclusion(dirs.state_dir()).map_err(map_state_backup_exclusion_error)?;
+    verify_dir_backup_exclusion(dirs.cache_dir()).map_err(map_cache_backup_exclusion_error)?;
+    Ok(TransportBackupExclusionVerification)
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum DirectoryBackupExclusionProbeError {
+    UnsupportedPlatform,
+    MissingBackupExclusion,
+    MetadataProbeFailed,
+}
+
+fn map_state_backup_exclusion_error(
+    error: DirectoryBackupExclusionProbeError,
+) -> TransportBackupExclusionError {
+    match error {
+        DirectoryBackupExclusionProbeError::UnsupportedPlatform => {
+            TransportBackupExclusionError::UnsupportedPlatform
+        }
+        DirectoryBackupExclusionProbeError::MissingBackupExclusion => {
+            TransportBackupExclusionError::MissingStateDirectoryBackupExclusion
+        }
+        DirectoryBackupExclusionProbeError::MetadataProbeFailed => {
+            TransportBackupExclusionError::MetadataProbeFailed
+        }
+    }
+}
+
+fn map_cache_backup_exclusion_error(
+    error: DirectoryBackupExclusionProbeError,
+) -> TransportBackupExclusionError {
+    match error {
+        DirectoryBackupExclusionProbeError::UnsupportedPlatform => {
+            TransportBackupExclusionError::UnsupportedPlatform
+        }
+        DirectoryBackupExclusionProbeError::MissingBackupExclusion => {
+            TransportBackupExclusionError::MissingCacheDirectoryBackupExclusion
+        }
+        DirectoryBackupExclusionProbeError::MetadataProbeFailed => {
+            TransportBackupExclusionError::MetadataProbeFailed
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn verify_dir_backup_exclusion(path: &Path) -> Result<(), DirectoryBackupExclusionProbeError> {
+    let output = Command::new("xattr")
+        .arg("-p")
+        .arg("com.apple.metadata:com_apple_backup_excludeItem")
+        .arg(path)
+        .output()
+        .map_err(|_| DirectoryBackupExclusionProbeError::MetadataProbeFailed)?;
+
+    if output.status.success() && !output.stdout.is_empty() {
+        Ok(())
+    } else {
+        Err(DirectoryBackupExclusionProbeError::MissingBackupExclusion)
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn verify_dir_backup_exclusion(_path: &Path) -> Result<(), DirectoryBackupExclusionProbeError> {
+    Err(DirectoryBackupExclusionProbeError::UnsupportedPlatform)
+}
+
 pub fn probe_app_private_state_cache_dirs(
     state_dir: impl Into<PathBuf>,
     cache_dir: impl Into<PathBuf>,
@@ -612,6 +703,25 @@ impl TransportRuntimePermissionPreflight {
             crash_redaction_policy,
             censorship_readiness,
         }
+    }
+
+    pub fn from_verified_platform_preflight(
+        dirs: &TransportStateCacheDirsReady,
+        runtime_network_enabled: bool,
+        backup_exclusion_verification: &TransportBackupExclusionVerification,
+        log_redaction_policy: TransportLogRedactionPolicy,
+        crash_redaction_policy: TransportCrashRedactionPolicy,
+        censorship_readiness: TransportCensorshipReadiness,
+    ) -> Self {
+        let _ = backup_exclusion_verification;
+        Self::from_platform_preflight(
+            dirs,
+            runtime_network_enabled,
+            true,
+            log_redaction_policy,
+            crash_redaction_policy,
+            censorship_readiness,
+        )
     }
 
     pub fn to_runtime_preflight(self) -> TransportRuntimePreflight {
@@ -1384,6 +1494,26 @@ mod tests {
     }
 
     #[test]
+    fn pre_network_closeout_moves_to_onion_key_lifecycle_after_backup_exclusion() {
+        let verification = TransportBackupExclusionVerification;
+        let closeout =
+            TransportPreNetworkCloseout::after_backup_exclusion_verification(&verification);
+
+        assert!(!closeout.network_execution_allowed());
+        assert_eq!(
+            closeout.blockers(),
+            &[
+                TransportPreNetworkBlocker::OnionServiceKeyLifecycle,
+                TransportPreNetworkBlocker::BridgeCensorshipConfiguration,
+            ]
+        );
+        assert_eq!(
+            closeout.next_phase(),
+            TransportNextPhase::OnionServiceKeyLifecycle
+        );
+    }
+
+    #[test]
     fn runtime_preflight_is_disabled_by_default() {
         assert_eq!(
             TransportRuntimePreflight::disabled_by_default().check(),
@@ -1571,6 +1701,57 @@ mod tests {
         );
 
         assert_eq!(preflight.check(), Ok(TransportRuntimeReady));
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn runtime_permission_preflight_can_use_backup_exclusion_token() {
+        let root = unique_transport_test_root("verified-platform-preflight");
+        let dirs = probe_app_private_state_cache_dirs(root.join("state"), root.join("cache"))
+            .expect("state/cache probe should pass");
+        let verification = TransportBackupExclusionVerification;
+
+        let preflight = TransportRuntimePermissionPreflight::from_verified_platform_preflight(
+            &dirs,
+            true,
+            &verification,
+            TransportLogRedactionPolicy::RedactedTransportEventsOnly,
+            TransportCrashRedactionPolicy::SensitivePathsAndIdentifiersRedacted,
+            TransportCensorshipReadiness::ExplicitlyNotRequiredForThisBuild,
+        );
+
+        assert_eq!(preflight.check(), Ok(TransportRuntimeReady));
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    #[cfg(not(target_os = "macos"))]
+    fn backup_exclusion_verification_fails_closed_on_unsupported_platforms() {
+        let root = unique_transport_test_root("backup-exclusion-unsupported");
+        let dirs = probe_app_private_state_cache_dirs(root.join("state"), root.join("cache"))
+            .expect("state/cache probe should pass");
+
+        assert_eq!(
+            verify_transport_backup_exclusion(&dirs),
+            Err(TransportBackupExclusionError::UnsupportedPlatform)
+        );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn backup_exclusion_verification_requires_macos_metadata() {
+        let root = unique_transport_test_root("backup-exclusion-macos-missing");
+        let dirs = probe_app_private_state_cache_dirs(root.join("state"), root.join("cache"))
+            .expect("state/cache probe should pass");
+
+        assert_eq!(
+            verify_transport_backup_exclusion(&dirs),
+            Err(TransportBackupExclusionError::MissingStateDirectoryBackupExclusion)
+        );
 
         let _ = fs::remove_dir_all(root);
     }
