@@ -49,6 +49,7 @@ What exists today:
 - Post-auth stream readiness ordering boundary that fixes the typed order from stream/auth/session binding to envelope I/O while still failing closed.
 - Network-capable experiment gate proposal that permits only manual, feature-gated, bootstrap-only experiments with isolated heavy verification.
 - Bootstrap-only experiment decision boundary that treats the existing manual bootstrap/lifecycle smoke path as the only allowed network-capable experiment.
+- Transport phase closeout boundary that selects onion hosting gate work before stream I/O, envelope I/O, or any usable messaging claim.
 - Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
 - Encrypted endpoint update control-envelope boundary that pads endpoint rotation plaintext before Noise encryption and wraps only opaque control ciphertext after a validated pairwise update.
 - Production envelope session hook for endpoint update control encryption/decryption without Tor delivery or onion hosting.
