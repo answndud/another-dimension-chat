@@ -57,7 +57,30 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving module split: pre-network closeout boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving module split: remaining onion stream boundary types. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Pre-Network Closeout Module Extraction
+
+Decision as of 2026-05-19: pre-network blocker tracking, next-phase selection, and network execution gating are extracted into `crates/transport/src/pre_network.rs`. `crates/transport/src/lib.rs` re-exports the same public names to preserve the public API.
+
+Moved without behavior change:
+
+- `TransportPreNetworkBlocker`
+- `TransportNextPhase`
+- `TransportPreNetworkCloseout`
+
+Preserved invariants:
+
+- High-risk default closeout still blocks network execution until backup exclusion, onion service key lifecycle, and bridge/censorship configuration blockers are cleared.
+- Backup exclusion verification still moves the next phase to onion service key lifecycle.
+- Onion service key lifecycle readiness still moves the next phase to bridge/censorship configuration.
+- Bridge/censorship readiness still clears pre-network blockers and selects only the fail-closed Arti bootstrap execution skeleton as the next phase.
+- Empty blockers are the only condition that allows network execution.
+- No Tor bootstrap, descriptor publication, real stream I/O, envelope send/receive, or usable messaging capability was added.
+
+Next split target:
+
+- Remaining onion stream boundary types.
 
 ## Key Lifecycle And Material Module Extraction
 
@@ -90,7 +113,7 @@ Preserved invariants:
 
 Next split target:
 
-- Pre-network closeout boundaries.
+- Completed by pre-network closeout module extraction.
 
 ## Hosting And Phase Gate Module Extraction
 
