@@ -16,6 +16,7 @@ pub enum TransportError {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TransportRuntimeError {
+    BootstrapCancelled,
     BootstrapTimeout,
     CensorshipOrBridgeRequired,
     StateDirectoryPermissionDenied,
@@ -28,6 +29,17 @@ pub enum TransportRuntimeError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportBootstrapPolicyError {
+    ZeroTimeout,
+    TimeoutTooLong,
+    ZeroRetryAttempts,
+    TooManyRetryAttempts,
+    ZeroBackoff,
+    BackoffExceedsMaximum,
+    SilentRetryForbidden,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TransportRuntimeProbeError {
     EmptyDirectory,
     RelativeDirectory,
@@ -35,6 +47,163 @@ pub enum TransportRuntimeProbeError {
     SameStateAndCacheDirectory,
     DirectoryCreateFailed,
     DirectoryProbeFailed,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TransportBootstrapTimeoutPolicy {
+    seconds: u16,
+}
+
+impl TransportBootstrapTimeoutPolicy {
+    pub const MAX_TIMEOUT_SECONDS: u16 = 120;
+
+    pub fn new(seconds: u16) -> Result<Self, TransportBootstrapPolicyError> {
+        if seconds == 0 {
+            return Err(TransportBootstrapPolicyError::ZeroTimeout);
+        }
+        if seconds > Self::MAX_TIMEOUT_SECONDS {
+            return Err(TransportBootstrapPolicyError::TimeoutTooLong);
+        }
+        Ok(Self { seconds })
+    }
+
+    pub fn high_risk_default() -> Self {
+        Self { seconds: 45 }
+    }
+
+    pub fn seconds(self) -> u16 {
+        self.seconds
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TransportBootstrapRetryPolicy {
+    max_attempts: u8,
+    initial_backoff_ms: u32,
+    max_backoff_ms: u32,
+}
+
+impl TransportBootstrapRetryPolicy {
+    pub const MAX_ATTEMPTS: u8 = 3;
+
+    pub fn new(
+        max_attempts: u8,
+        initial_backoff_ms: u32,
+        max_backoff_ms: u32,
+    ) -> Result<Self, TransportBootstrapPolicyError> {
+        if max_attempts == 0 {
+            return Err(TransportBootstrapPolicyError::ZeroRetryAttempts);
+        }
+        if max_attempts > Self::MAX_ATTEMPTS {
+            return Err(TransportBootstrapPolicyError::TooManyRetryAttempts);
+        }
+        if initial_backoff_ms == 0 || max_backoff_ms == 0 {
+            return Err(TransportBootstrapPolicyError::ZeroBackoff);
+        }
+        if initial_backoff_ms > max_backoff_ms {
+            return Err(TransportBootstrapPolicyError::BackoffExceedsMaximum);
+        }
+        Ok(Self {
+            max_attempts,
+            initial_backoff_ms,
+            max_backoff_ms,
+        })
+    }
+
+    pub fn high_risk_default() -> Self {
+        Self {
+            max_attempts: 2,
+            initial_backoff_ms: 500,
+            max_backoff_ms: 2_000,
+        }
+    }
+
+    pub fn max_attempts(self) -> u8 {
+        self.max_attempts
+    }
+
+    pub fn initial_backoff_ms(self) -> u32 {
+        self.initial_backoff_ms
+    }
+
+    pub fn max_backoff_ms(self) -> u32 {
+        self.max_backoff_ms
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TransportBootstrapPolicy {
+    timeout: TransportBootstrapTimeoutPolicy,
+    retry: TransportBootstrapRetryPolicy,
+    allow_silent_retry: bool,
+    classify_censorship_separately: bool,
+}
+
+impl TransportBootstrapPolicy {
+    pub fn new(
+        timeout: TransportBootstrapTimeoutPolicy,
+        retry: TransportBootstrapRetryPolicy,
+        allow_silent_retry: bool,
+        classify_censorship_separately: bool,
+    ) -> Result<Self, TransportBootstrapPolicyError> {
+        if allow_silent_retry {
+            return Err(TransportBootstrapPolicyError::SilentRetryForbidden);
+        }
+        Ok(Self {
+            timeout,
+            retry,
+            allow_silent_retry,
+            classify_censorship_separately,
+        })
+    }
+
+    pub fn high_risk_default() -> Self {
+        Self {
+            timeout: TransportBootstrapTimeoutPolicy::high_risk_default(),
+            retry: TransportBootstrapRetryPolicy::high_risk_default(),
+            allow_silent_retry: false,
+            classify_censorship_separately: true,
+        }
+    }
+
+    pub fn timeout(self) -> TransportBootstrapTimeoutPolicy {
+        self.timeout
+    }
+
+    pub fn retry(self) -> TransportBootstrapRetryPolicy {
+        self.retry
+    }
+
+    pub fn allow_silent_retry(self) -> bool {
+        self.allow_silent_retry
+    }
+
+    pub fn classify_censorship_separately(self) -> bool {
+        self.classify_censorship_separately
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportBootstrapOutcome {
+    Cancelled,
+    TimedOut,
+    CensorshipOrBridgeRequired,
+    TransientNetworkFailure,
+}
+
+impl TransportBootstrapOutcome {
+    pub fn runtime_error(self, policy: TransportBootstrapPolicy) -> TransportRuntimeError {
+        match self {
+            Self::Cancelled => TransportRuntimeError::BootstrapCancelled,
+            Self::TimedOut | Self::TransientNetworkFailure => {
+                TransportRuntimeError::BootstrapTimeout
+            }
+            Self::CensorshipOrBridgeRequired if policy.classify_censorship_separately() => {
+                TransportRuntimeError::CensorshipOrBridgeRequired
+            }
+            Self::CensorshipOrBridgeRequired => TransportRuntimeError::BootstrapTimeout,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -196,7 +365,8 @@ impl TransportRuntimeError {
     pub fn is_bootstrap_failure(self) -> bool {
         matches!(
             self,
-            Self::BootstrapTimeout
+            Self::BootstrapCancelled
+                | Self::BootstrapTimeout
                 | Self::CensorshipOrBridgeRequired
                 | Self::RuntimeNetworkDisabled
         )
@@ -988,6 +1158,7 @@ mod tests {
         assert!(TransportRuntimeError::LogRedactionPreflightFailed.is_preflight_failure());
         assert!(!TransportRuntimeError::BootstrapTimeout.is_preflight_failure());
 
+        assert!(TransportRuntimeError::BootstrapCancelled.is_bootstrap_failure());
         assert!(TransportRuntimeError::BootstrapTimeout.is_bootstrap_failure());
         assert!(TransportRuntimeError::CensorshipOrBridgeRequired.is_bootstrap_failure());
         assert!(TransportRuntimeError::RuntimeNetworkDisabled.is_bootstrap_failure());
@@ -997,6 +1168,99 @@ mod tests {
         assert!(TransportRuntimeError::OnionServiceLaunchFailed.is_onion_service_failure());
         assert!(!TransportRuntimeError::SendFailed.is_onion_service_failure());
         assert!(!TransportRuntimeError::ReceiveFailed.is_onion_service_failure());
+    }
+
+    #[test]
+    fn bootstrap_policy_has_bounded_high_risk_defaults() {
+        let policy = TransportBootstrapPolicy::high_risk_default();
+
+        assert_eq!(policy.timeout().seconds(), 45);
+        assert_eq!(policy.retry().max_attempts(), 2);
+        assert_eq!(policy.retry().initial_backoff_ms(), 500);
+        assert_eq!(policy.retry().max_backoff_ms(), 2_000);
+        assert!(!policy.allow_silent_retry());
+        assert!(policy.classify_censorship_separately());
+    }
+
+    #[test]
+    fn bootstrap_policy_rejects_unbounded_or_silent_retry() {
+        assert_eq!(
+            TransportBootstrapTimeoutPolicy::new(0),
+            Err(TransportBootstrapPolicyError::ZeroTimeout)
+        );
+        assert_eq!(
+            TransportBootstrapTimeoutPolicy::new(
+                TransportBootstrapTimeoutPolicy::MAX_TIMEOUT_SECONDS + 1
+            ),
+            Err(TransportBootstrapPolicyError::TimeoutTooLong)
+        );
+        assert_eq!(
+            TransportBootstrapRetryPolicy::new(0, 500, 2_000),
+            Err(TransportBootstrapPolicyError::ZeroRetryAttempts)
+        );
+        assert_eq!(
+            TransportBootstrapRetryPolicy::new(
+                TransportBootstrapRetryPolicy::MAX_ATTEMPTS + 1,
+                500,
+                2_000,
+            ),
+            Err(TransportBootstrapPolicyError::TooManyRetryAttempts)
+        );
+        assert_eq!(
+            TransportBootstrapRetryPolicy::new(1, 0, 2_000),
+            Err(TransportBootstrapPolicyError::ZeroBackoff)
+        );
+        assert_eq!(
+            TransportBootstrapRetryPolicy::new(1, 2_000, 500),
+            Err(TransportBootstrapPolicyError::BackoffExceedsMaximum)
+        );
+        assert_eq!(
+            TransportBootstrapPolicy::new(
+                TransportBootstrapTimeoutPolicy::high_risk_default(),
+                TransportBootstrapRetryPolicy::high_risk_default(),
+                true,
+                true,
+            ),
+            Err(TransportBootstrapPolicyError::SilentRetryForbidden)
+        );
+    }
+
+    #[test]
+    fn bootstrap_outcome_maps_cancellation_timeout_and_censorship() {
+        let policy = TransportBootstrapPolicy::high_risk_default();
+
+        assert_eq!(
+            TransportBootstrapOutcome::Cancelled.runtime_error(policy),
+            TransportRuntimeError::BootstrapCancelled
+        );
+        assert_eq!(
+            TransportBootstrapOutcome::TimedOut.runtime_error(policy),
+            TransportRuntimeError::BootstrapTimeout
+        );
+        assert_eq!(
+            TransportBootstrapOutcome::TransientNetworkFailure.runtime_error(policy),
+            TransportRuntimeError::BootstrapTimeout
+        );
+        assert_eq!(
+            TransportBootstrapOutcome::CensorshipOrBridgeRequired.runtime_error(policy),
+            TransportRuntimeError::CensorshipOrBridgeRequired
+        );
+    }
+
+    #[test]
+    fn bootstrap_policy_can_collapse_censorship_when_not_configured() {
+        let policy = TransportBootstrapPolicy::new(
+            TransportBootstrapTimeoutPolicy::high_risk_default(),
+            TransportBootstrapRetryPolicy::high_risk_default(),
+            false,
+            false,
+        )
+        .expect("policy");
+
+        assert_eq!(
+            TransportBootstrapOutcome::CensorshipOrBridgeRequired.runtime_error(policy),
+            TransportRuntimeError::BootstrapTimeout
+        );
     }
 
     #[test]
