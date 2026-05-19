@@ -20,6 +20,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `TransportRuntimePreflight` maps disabled runtime network, state/cache directory access, log redaction, and bridge/censorship readiness to explicit runtime errors.
 - `TransportRuntimePermissionPreflight` maps app-private state/cache policy, backup exclusion, log/crash redaction, and censorship readiness into the runtime preflight gate.
 - `probe_app_private_state_cache_dirs` creates and probes explicit state/cache directories without exposing path details in runtime errors.
+- `RedactedTransportRuntimeEvent` records transport event categories without storing raw paths, endpoints, contact ids, profile names, plaintext, or key material.
 - `TransportRuntimeState` separates disabled fail-closed state from a future runtime-ready state that can only be created from successful preflight.
 - `OnionEnvelopeTransport` stores runtime state, but send/receive remains fail-closed even when that state is ready.
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
@@ -310,3 +311,24 @@ Still not implemented:
 - Tor bootstrap, socket opens, onion service launch, or envelope transfer.
 
 The next step should either turn log/crash redaction into a concrete runtime logging boundary or define bootstrap timeout/retry behavior. It should not enable real network transport yet.
+
+## Runtime Log And Crash Redaction Boundary
+
+Decision as of 2026-05-19: transport runtime logging must go through a redacted event boundary before any network-capable adapter is allowed. This is a data-shape boundary, not a logging backend.
+
+Current code boundary:
+
+- `RedactedTransportRuntimeEvent` stores event kind, runtime error category, probe error category, route kind, and transfer direction only.
+- Directory probe events accept a raw path but do not store or display it.
+- Route rejection events accept a route but store only `TransportKind`, not the endpoint string.
+- Sensitive-context events accept profile/contact/endpoint/plaintext/key inputs but do not store or display them.
+- `Debug` and `Display` for redacted events are explicitly limited to category fields.
+
+Still not implemented:
+
+- A `tracing` subscriber or concrete logging backend.
+- Crash dump handler integration.
+- OS-specific path redaction policy.
+- Tor bootstrap, socket opens, onion service launch, or envelope transfer.
+
+A future adapter must log redacted runtime events rather than raw Arti config paths, onion endpoints, contact ids, profile names, plaintext, private keys, or decrypted envelope data.
