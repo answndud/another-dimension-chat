@@ -168,6 +168,19 @@ pub enum TransportPhaseCloseoutError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionHostingGateError {
+    TransportPhaseCloseoutRequired,
+    ManualFeatureGateRequired,
+    ArtiAdapterFeatureRequired,
+    LaunchPreflightRequired,
+    OnionServiceKeyRequired,
+    BootstrappedPersistentClientRequired,
+    DescriptorPublicationForbidden,
+    StreamIoForbidden,
+    UsableMessagingClaimForbidden,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NetworkExperimentScope {
     BootstrapOnly,
     OnionHosting,
@@ -220,6 +233,12 @@ pub enum TransportNextRiskBoundary {
     StreamIo,
     EnvelopeIo,
     UsableMessaging,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionHostingGateFeatureState {
+    NotCompiled,
+    ArtiAdapterSpikeFeature,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -2148,6 +2167,22 @@ pub struct TransportPhaseCloseoutDecision {
     usable_messaging_claimed: bool,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct OnionHostingGateReady;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct OnionHostingGateDecision {
+    transport_phase_closeout_ready: Option<TransportPhaseCloseoutReady>,
+    manual_gate: NetworkExperimentManualGate,
+    feature_state: OnionHostingGateFeatureState,
+    launch_preflight_ready: bool,
+    onion_service_key_ready: bool,
+    bootstrapped_persistent_client_ready: bool,
+    descriptor_publication_enabled: bool,
+    stream_io_enabled: bool,
+    usable_messaging_claimed: bool,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -2750,6 +2785,75 @@ impl TransportPhaseCloseoutDecision {
 impl TransportPhaseCloseoutReady {
     pub fn next_boundary(self) -> TransportNextRiskBoundary {
         self.next_boundary
+    }
+}
+
+impl OnionHostingGateDecision {
+    pub fn locked_down() -> Self {
+        Self {
+            transport_phase_closeout_ready: None,
+            manual_gate: NetworkExperimentManualGate::Disabled,
+            feature_state: OnionHostingGateFeatureState::NotCompiled,
+            launch_preflight_ready: false,
+            onion_service_key_ready: false,
+            bootstrapped_persistent_client_ready: false,
+            descriptor_publication_enabled: false,
+            stream_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn from_ready_boundaries(
+        transport_phase_closeout_ready: TransportPhaseCloseoutReady,
+        _launch_ready: OnionServiceLaunchReady,
+        _key_material: &OnionServiceKeyMaterialReady,
+        manual_gate: NetworkExperimentManualGate,
+        feature_state: OnionHostingGateFeatureState,
+        bootstrapped_persistent_client_ready: bool,
+    ) -> Self {
+        Self {
+            transport_phase_closeout_ready: Some(transport_phase_closeout_ready),
+            manual_gate,
+            feature_state,
+            launch_preflight_ready: true,
+            onion_service_key_ready: true,
+            bootstrapped_persistent_client_ready,
+            descriptor_publication_enabled: false,
+            stream_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn check(self) -> Result<OnionHostingGateReady, OnionHostingGateError> {
+        if self.transport_phase_closeout_ready.is_none() {
+            return Err(OnionHostingGateError::TransportPhaseCloseoutRequired);
+        }
+        if self.manual_gate != NetworkExperimentManualGate::FeatureGatedManualOnly {
+            return Err(OnionHostingGateError::ManualFeatureGateRequired);
+        }
+        if self.feature_state != OnionHostingGateFeatureState::ArtiAdapterSpikeFeature {
+            return Err(OnionHostingGateError::ArtiAdapterFeatureRequired);
+        }
+        if !self.launch_preflight_ready {
+            return Err(OnionHostingGateError::LaunchPreflightRequired);
+        }
+        if !self.onion_service_key_ready {
+            return Err(OnionHostingGateError::OnionServiceKeyRequired);
+        }
+        if !self.bootstrapped_persistent_client_ready {
+            return Err(OnionHostingGateError::BootstrappedPersistentClientRequired);
+        }
+        if self.descriptor_publication_enabled {
+            return Err(OnionHostingGateError::DescriptorPublicationForbidden);
+        }
+        if self.stream_io_enabled {
+            return Err(OnionHostingGateError::StreamIoForbidden);
+        }
+        if self.usable_messaging_claimed {
+            return Err(OnionHostingGateError::UsableMessagingClaimForbidden);
+        }
+
+        Ok(OnionHostingGateReady)
     }
 }
 
@@ -4525,6 +4629,159 @@ mod tests {
     }
 
     #[test]
+    fn onion_hosting_gate_requires_closeout_feature_preflight_key_and_bootstrapped_client() {
+        let phase_ready = ready_transport_phase_closeout();
+        let key_material = ready_onion_service_key_material();
+        let launch_ready = OnionServiceLaunchPreflight::from_ready_boundaries(
+            &ProfileTransportUnlockReady,
+            &key_material,
+            true,
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+            OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
+            true,
+        )
+        .check()
+        .expect("launch preflight ready");
+
+        assert_eq!(
+            OnionHostingGateDecision::locked_down().check(),
+            Err(OnionHostingGateError::TransportPhaseCloseoutRequired)
+        );
+        assert_eq!(
+            OnionHostingGateDecision::from_ready_boundaries(
+                phase_ready,
+                launch_ready,
+                &key_material,
+                NetworkExperimentManualGate::Disabled,
+                OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
+                true,
+            )
+            .check(),
+            Err(OnionHostingGateError::ManualFeatureGateRequired)
+        );
+        assert_eq!(
+            OnionHostingGateDecision::from_ready_boundaries(
+                phase_ready,
+                launch_ready,
+                &key_material,
+                NetworkExperimentManualGate::FeatureGatedManualOnly,
+                OnionHostingGateFeatureState::NotCompiled,
+                true,
+            )
+            .check(),
+            Err(OnionHostingGateError::ArtiAdapterFeatureRequired)
+        );
+        assert_eq!(
+            OnionHostingGateDecision::from_ready_boundaries(
+                phase_ready,
+                launch_ready,
+                &key_material,
+                NetworkExperimentManualGate::FeatureGatedManualOnly,
+                OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
+                false,
+            )
+            .check(),
+            Err(OnionHostingGateError::BootstrappedPersistentClientRequired)
+        );
+
+        assert_eq!(
+            OnionHostingGateDecision::from_ready_boundaries(
+                phase_ready,
+                launch_ready,
+                &key_material,
+                NetworkExperimentManualGate::FeatureGatedManualOnly,
+                OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
+                true,
+            )
+            .check(),
+            Ok(OnionHostingGateReady)
+        );
+    }
+
+    #[test]
+    fn onion_hosting_gate_rejects_descriptor_stream_and_messaging_claims() {
+        let phase_ready = ready_transport_phase_closeout();
+
+        for forbidden_decision in [
+            OnionHostingGateDecision {
+                transport_phase_closeout_ready: Some(phase_ready),
+                manual_gate: NetworkExperimentManualGate::FeatureGatedManualOnly,
+                feature_state: OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
+                launch_preflight_ready: false,
+                onion_service_key_ready: true,
+                bootstrapped_persistent_client_ready: true,
+                descriptor_publication_enabled: false,
+                stream_io_enabled: false,
+                usable_messaging_claimed: false,
+            },
+            OnionHostingGateDecision {
+                transport_phase_closeout_ready: Some(phase_ready),
+                manual_gate: NetworkExperimentManualGate::FeatureGatedManualOnly,
+                feature_state: OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
+                launch_preflight_ready: true,
+                onion_service_key_ready: false,
+                bootstrapped_persistent_client_ready: true,
+                descriptor_publication_enabled: false,
+                stream_io_enabled: false,
+                usable_messaging_claimed: false,
+            },
+        ] {
+            assert!(matches!(
+                forbidden_decision.check(),
+                Err(OnionHostingGateError::LaunchPreflightRequired
+                    | OnionHostingGateError::OnionServiceKeyRequired)
+            ));
+        }
+
+        for (decision, expected) in [
+            (
+                OnionHostingGateDecision {
+                    transport_phase_closeout_ready: Some(phase_ready),
+                    manual_gate: NetworkExperimentManualGate::FeatureGatedManualOnly,
+                    feature_state: OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
+                    launch_preflight_ready: true,
+                    onion_service_key_ready: true,
+                    bootstrapped_persistent_client_ready: true,
+                    descriptor_publication_enabled: true,
+                    stream_io_enabled: false,
+                    usable_messaging_claimed: false,
+                },
+                OnionHostingGateError::DescriptorPublicationForbidden,
+            ),
+            (
+                OnionHostingGateDecision {
+                    transport_phase_closeout_ready: Some(phase_ready),
+                    manual_gate: NetworkExperimentManualGate::FeatureGatedManualOnly,
+                    feature_state: OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
+                    launch_preflight_ready: true,
+                    onion_service_key_ready: true,
+                    bootstrapped_persistent_client_ready: true,
+                    descriptor_publication_enabled: false,
+                    stream_io_enabled: true,
+                    usable_messaging_claimed: false,
+                },
+                OnionHostingGateError::StreamIoForbidden,
+            ),
+            (
+                OnionHostingGateDecision {
+                    transport_phase_closeout_ready: Some(phase_ready),
+                    manual_gate: NetworkExperimentManualGate::FeatureGatedManualOnly,
+                    feature_state: OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
+                    launch_preflight_ready: true,
+                    onion_service_key_ready: true,
+                    bootstrapped_persistent_client_ready: true,
+                    descriptor_publication_enabled: false,
+                    stream_io_enabled: false,
+                    usable_messaging_claimed: true,
+                },
+                OnionHostingGateError::UsableMessagingClaimForbidden,
+            ),
+        ] {
+            assert_eq!(decision.check(), Err(expected));
+        }
+    }
+
+    #[test]
     fn runtime_preflight_is_disabled_by_default() {
         assert_eq!(
             TransportRuntimePreflight::disabled_by_default().check(),
@@ -5786,6 +6043,28 @@ mod tests {
             message_type: MessageType::Data,
             padded_ciphertext: b"ciphertext".to_vec(),
         }
+    }
+
+    fn ready_transport_phase_closeout() -> TransportPhaseCloseoutReady {
+        let closeout = TransportPreNetworkCloseout::from_blockers(Vec::new());
+        let gate_ready = NetworkExperimentGateProposal::bootstrap_only_manual_spike(
+            &closeout,
+            NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
+            NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
+            NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
+        )
+        .check()
+        .expect("network experiment gate ready");
+        let bootstrap_ready = BootstrapOnlyExperimentDecision::existing_manual_bootstrap_only(
+            gate_ready,
+            BootstrapOnlyExperimentFeatureState::ArtiManualBootstrapFeature,
+        )
+        .check()
+        .expect("bootstrap-only experiment decision ready");
+
+        TransportPhaseCloseoutDecision::select_onion_hosting_gate(bootstrap_ready)
+            .check()
+            .expect("transport phase closeout ready")
     }
 
     fn ready_onion_service_key_material() -> OnionServiceKeyMaterialReady {
