@@ -5,7 +5,7 @@ pub mod production {
     };
     use another_dimension_crypto::CryptoError;
     use another_dimension_identity::{
-        PairwisePublicKeyScheme, PairwiseSignatureScheme, ProfileName,
+        ContactId, PairwisePublicKeyScheme, PairwiseSignatureScheme, ProfileName,
     };
     use another_dimension_pairing::{
         production_pairing_draft_with_defaults, transcript, PairingError, PairingPayload,
@@ -15,17 +15,20 @@ pub mod production {
         encode_hex, Envelope, MessageType, ProtocolError, ReplayWindow,
     };
     use another_dimension_storage::production::{
-        EncryptedRecordId, EncryptedRecordScope, ProductionStorageError, SqlCipherRecordStore,
+        EncryptedRecord, EncryptedRecordId, EncryptedRecordScope, ProductionRecordKind,
+        ProductionStorageError, SqlCipherRecordStore,
     };
     use another_dimension_transport::{
         EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
-        EndpointUpdateControlPlaintext, PairwiseEndpointUpdate,
+        EndpointUpdateControlPlaintext, PairwiseEndpointUpdate, PairwiseRendezvousEndpoint,
     };
     use sha2::{Digest, Sha256};
 
     const CANONICAL_DIALER_DOMAIN: &[u8] = b"AD-SESSION-CANONICAL-DIALER-V1";
     const PRODUCTION_CHANNEL_DOMAIN: &[u8] = b"AD-PRODUCTION-CHANNEL-V1";
     const PRODUCTION_REPLAY_RECORD_DOMAIN: &[u8] = b"AD-PRODUCTION-REPLAY-RECORD-V1";
+    const PRODUCTION_ENDPOINT_STATE_RECORD_DOMAIN: &[u8] =
+        b"AD-PRODUCTION-ENDPOINT-STATE-RECORD-V1";
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct ProductionSessionPlan {
@@ -73,6 +76,10 @@ pub mod production {
 
         pub fn replay_record_id(&self) -> EncryptedRecordId {
             production_replay_record_id(&self.channel_id)
+        }
+
+        pub fn endpoint_state_record_id(&self, contact_id: &ContactId) -> EncryptedRecordId {
+            production_endpoint_state_record_id(&self.channel_id, contact_id)
         }
 
         pub fn encrypt_from_canonical_dialer(
@@ -200,6 +207,50 @@ pub mod production {
                 window_size,
             )
         }
+
+        pub fn save_pairwise_endpoint_state(
+            &self,
+            store: &SqlCipherRecordStore,
+            scope: EncryptedRecordScope,
+            endpoint: &PairwiseRendezvousEndpoint,
+        ) -> Result<EncryptedRecordId, ProductionSessionError> {
+            if scope.contact_id() != Some(endpoint.contact_id()) {
+                return Err(ProductionSessionError::EndpointScopeMismatch);
+            }
+            let record_id = self.endpoint_state_record_id(endpoint.contact_id());
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::RendezvousEndpointState,
+                scope,
+                b"sqlcipher-page-encryption-v1".to_vec(),
+                endpoint.encode_state().into_bytes(),
+            )
+            .map_err(ProductionStorageError::from)?;
+            store.put(&record_id, &record)?;
+            Ok(record_id)
+        }
+
+        pub fn load_pairwise_endpoint_state(
+            &self,
+            store: &SqlCipherRecordStore,
+            contact_id: &ContactId,
+        ) -> Result<Option<PairwiseRendezvousEndpoint>, ProductionSessionError> {
+            let record_id = self.endpoint_state_record_id(contact_id);
+            store
+                .get(&record_id)?
+                .map(|record| {
+                    if record.kind != ProductionRecordKind::RendezvousEndpointState {
+                        return Err(ProductionSessionError::UnexpectedEnvelope);
+                    }
+                    let state = String::from_utf8(record.sealed_body)
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let endpoint = PairwiseRendezvousEndpoint::decode_state(&state)?;
+                    if endpoint.contact_id() != contact_id {
+                        return Err(ProductionSessionError::EndpointScopeMismatch);
+                    }
+                    Ok(endpoint)
+                })
+                .transpose()
+        }
     }
 
     #[derive(Debug, Eq, PartialEq)]
@@ -213,6 +264,7 @@ pub mod production {
         SamePairwiseIdentity,
         NoiseStaticKeyMismatch,
         UnexpectedEnvelope,
+        EndpointScopeMismatch,
     }
 
     impl From<PairingError> for ProductionSessionError {
@@ -430,6 +482,20 @@ pub mod production {
         hasher.update(channel_id.as_bytes());
         EncryptedRecordId::new(format!("replay_{}", encode_hex(&hasher.finalize())))
             .expect("domain-separated replay record id is valid")
+    }
+
+    fn production_endpoint_state_record_id(
+        channel_id: &str,
+        contact_id: &ContactId,
+    ) -> EncryptedRecordId {
+        let mut hasher = Sha256::new();
+        hasher.update(PRODUCTION_ENDPOINT_STATE_RECORD_DOMAIN);
+        hasher.update([0]);
+        hasher.update(channel_id.as_bytes());
+        hasher.update([0]);
+        hasher.update(contact_id.as_str().as_bytes());
+        EncryptedRecordId::new(format!("endpoint_{}", encode_hex(&hasher.finalize())))
+            .expect("domain-separated endpoint state record id is valid")
     }
 
     #[cfg(test)]
@@ -804,6 +870,72 @@ pub mod production {
             assert!(EncryptedRecordId::new(alice_bob.channel_id()).is_err());
         }
 
+        #[test]
+        fn production_endpoint_state_persists_through_encrypted_store_with_opaque_record_id() {
+            let (alice, bob) = production_setup_pair();
+            let session =
+                establish_envelope_session_from_setup_drafts(&alice, &bob).expect("session");
+            let contact = ContactId::new("bob").expect("contact");
+            let endpoint = PairwiseRendezvousEndpoint::new(
+                contact.clone(),
+                OnionServiceEndpoint::new("bobsecret.onion").expect("endpoint"),
+                RendezvousEndpointScope::PairwiseContact,
+                RendezvousEndpointIdentityBinding::TransportScoped,
+            )
+            .expect("pairwise endpoint");
+            let (dir, store) = production_test_store("endpoint-state");
+            let scope = EncryptedRecordScope::contact(
+                ProfileName::new("alice").expect("profile"),
+                contact.clone(),
+            );
+
+            let record_id = session
+                .save_pairwise_endpoint_state(&store, scope, &endpoint)
+                .expect("save endpoint state");
+
+            assert_eq!(
+                session
+                    .load_pairwise_endpoint_state(&store, &contact)
+                    .expect("load endpoint state"),
+                Some(endpoint)
+            );
+            assert_eq!(record_id, session.endpoint_state_record_id(&contact));
+            let rendered_record_id = format!("{record_id:?}");
+            assert!(!rendered_record_id.contains("alice"));
+            assert!(!rendered_record_id.contains("bob"));
+            assert!(!rendered_record_id.contains("adchan1"));
+
+            let database_bytes = std::fs::read(dir.join("store.db")).expect("read database");
+            assert!(!contains_bytes(&database_bytes, b"ADENDPOINTSTATE1"));
+            assert!(!contains_bytes(&database_bytes, b"bobsecret.onion"));
+            assert!(!contains_bytes(&database_bytes, b"alice"));
+            assert!(!contains_bytes(&database_bytes, b"bob"));
+        }
+
+        #[test]
+        fn production_endpoint_state_rejects_scope_mismatch() {
+            let (alice, bob) = production_setup_pair();
+            let session =
+                establish_envelope_session_from_setup_drafts(&alice, &bob).expect("session");
+            let endpoint = PairwiseRendezvousEndpoint::new(
+                ContactId::new("bob").expect("contact"),
+                OnionServiceEndpoint::new("bobsecret.onion").expect("endpoint"),
+                RendezvousEndpointScope::PairwiseContact,
+                RendezvousEndpointIdentityBinding::TransportScoped,
+            )
+            .expect("pairwise endpoint");
+            let (_dir, store) = production_test_store("endpoint-state-scope-mismatch");
+            let scope = EncryptedRecordScope::contact(
+                ProfileName::new("alice").expect("profile"),
+                ContactId::new("carol").expect("contact"),
+            );
+
+            assert_eq!(
+                session.save_pairwise_endpoint_state(&store, scope, &endpoint),
+                Err(ProductionSessionError::EndpointScopeMismatch)
+            );
+        }
+
         fn production_setup_pair() -> (ProductionSetupDraft, ProductionSetupDraft) {
             let alice = production_setup_draft_with_defaults(
                 &ProfileName::new("alice").expect("valid profile"),
@@ -832,6 +964,12 @@ pub mod production {
             let passphrase = ProfilePassphrase::new("test-passphrase").expect("passphrase");
             let store = locked.unlock(&passphrase).expect("unlock store");
             (dir, store)
+        }
+
+        fn contains_bytes(haystack: &[u8], needle: &[u8]) -> bool {
+            haystack
+                .windows(needle.len())
+                .any(|window| window == needle)
         }
 
         #[test]
