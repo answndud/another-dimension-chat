@@ -38,6 +38,7 @@ What exists today:
 - Runtime state/cache directory probe skeleton with redacted permission failures and no Tor bootstrap.
 - Backup exclusion verification boundary that checks macOS backup-exclusion metadata and fails closed on unsupported platforms.
 - Onion service key lifecycle decision boundary that permits only SQLCipher-wrapped, profile-unlocked key material after backup exclusion verification.
+- Onion service key material adapter boundary that requires profile unlock, lifecycle readiness, and SQLCipher-wrapped key record readiness before launch preflight.
 - Onion service launch preflight boundary that requires profile unlock, key readiness, persistent client readiness, endpoint publication/update policy, and redacted events before any future launch.
 - Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
 - Encrypted endpoint update control-envelope boundary that pads endpoint rotation plaintext before Noise encryption and wraps only opaque control ciphertext after a validated pairwise update.
