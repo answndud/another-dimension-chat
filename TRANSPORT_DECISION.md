@@ -506,3 +506,27 @@ The current spike guarantees:
 - The spike still does not construct or bootstrap a live Arti `TorClient`, open sockets, launch onion services, discover system Tor, or transfer envelopes.
 
 This is the last compile-only adapter boundary before an explicit network-capable experiment. The next accepted phase must add a separate manual/feature-gated actual bootstrap attempt with timeout and cancellation behavior, and it must not claim usable messaging until send, receive, and onion hosting are separately implemented and verified.
+
+## Manual Arti Bootstrap Attempt Gate
+
+Decision as of 2026-05-19: a real Arti bootstrap attempt is allowed only behind the explicit `arti-manual-bootstrap` feature and `ManualArtiBootstrapAttemptGate::explicitly_enabled_for_manual_spike(...)`. The default gate is disabled and records `RuntimeNetworkDisabled` as a redacted bootstrap failure without touching the network.
+
+The manual gate rules are:
+
+- `arti-adapter-spike` remains compile-only unless `arti-manual-bootstrap` is also enabled.
+- `ManualArtiBootstrapAttemptGate::disabled(...)` is the safe/default constructor.
+- `ManualArtiBootstrapAttemptGate::explicitly_enabled_for_manual_spike(...)` is the only constructor that may call `arti_client::TorClient::create_bootstrapped(...)`.
+- The Arti call is wrapped in `tokio::time::timeout(...)` using the existing bounded `TransportBootstrapPolicy`.
+- Arti bootstrap errors are collapsed to a redacted bootstrap failure; raw Arti errors, local paths, bridge lines, onion endpoints, and contact identifiers must not be logged.
+- A bootstrap success records only `BootstrapSucceeded`.
+- The returned Arti client is deliberately dropped in this spike. Success does not mean usable messaging.
+
+Still not implemented:
+
+- Persistent Arti client lifecycle.
+- Onion service hosting.
+- Envelope send/receive over Tor.
+- Bridge configuration storage or pluggable transport packaging.
+- User-facing CLI/Tauri command for the manual bootstrap attempt.
+
+Next accepted phase: add a local-only manual CLI/dev command for the bootstrap gate or start the persistent Arti client lifecycle boundary. Either path must keep usable messaging claims out of README/SECURITY until send/receive and onion hosting exist.

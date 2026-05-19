@@ -320,6 +320,7 @@ impl TransportPreNetworkCloseout {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TransportRuntimeEventKind {
     BootstrapFailed,
+    BootstrapSucceeded,
     DirectoryProbeFailed,
     RouteRejected,
     RuntimePreflightFailed,
@@ -347,6 +348,16 @@ impl RedactedTransportRuntimeEvent {
         Self {
             kind: TransportRuntimeEventKind::BootstrapFailed,
             runtime_error: Some(error),
+            probe_error: None,
+            route_kind: None,
+            transfer_direction: None,
+        }
+    }
+
+    pub fn bootstrap_succeeded() -> Self {
+        Self {
+            kind: TransportRuntimeEventKind::BootstrapSucceeded,
+            runtime_error: None,
             probe_error: None,
             route_kind: None,
             transfer_direction: None,
@@ -1458,6 +1469,98 @@ pub mod arti_adapter_spike {
             sink: &mut S,
         ) -> Result<(), TransportRuntimeError> {
             self.skeleton.execute_fail_closed(outcome, sink)
+        }
+    }
+
+    #[cfg(feature = "arti-manual-bootstrap")]
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ManualArtiBootstrapNetworkPermission {
+        Disabled,
+        ExplicitlyEnabledForManualSpike,
+    }
+
+    #[cfg(feature = "arti-manual-bootstrap")]
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ManualArtiBootstrapAttemptSummary {
+        network_permission: ManualArtiBootstrapNetworkPermission,
+        timeout_seconds: u16,
+    }
+
+    #[cfg(feature = "arti-manual-bootstrap")]
+    impl ManualArtiBootstrapAttemptSummary {
+        pub fn network_permission(self) -> ManualArtiBootstrapNetworkPermission {
+            self.network_permission
+        }
+
+        pub fn timeout_seconds(self) -> u16 {
+            self.timeout_seconds
+        }
+    }
+
+    #[cfg(feature = "arti-manual-bootstrap")]
+    #[derive(Clone, Debug)]
+    pub struct ManualArtiBootstrapAttemptGate {
+        adapter: BoundedArtiBootstrapAdapterSpike,
+        network_permission: ManualArtiBootstrapNetworkPermission,
+    }
+
+    #[cfg(feature = "arti-manual-bootstrap")]
+    impl ManualArtiBootstrapAttemptGate {
+        pub fn disabled(adapter: BoundedArtiBootstrapAdapterSpike) -> Self {
+            Self {
+                adapter,
+                network_permission: ManualArtiBootstrapNetworkPermission::Disabled,
+            }
+        }
+
+        pub fn explicitly_enabled_for_manual_spike(
+            adapter: BoundedArtiBootstrapAdapterSpike,
+        ) -> Self {
+            Self {
+                adapter,
+                network_permission:
+                    ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+            }
+        }
+
+        pub fn summary(&self) -> ManualArtiBootstrapAttemptSummary {
+            ManualArtiBootstrapAttemptSummary {
+                network_permission: self.network_permission,
+                timeout_seconds: self.adapter.skeleton().policy().timeout().seconds(),
+            }
+        }
+
+        pub fn adapter(&self) -> &BoundedArtiBootstrapAdapterSpike {
+            &self.adapter
+        }
+
+        pub async fn bootstrap_once_and_drop_client<S: TransportRuntimeEventSink>(
+            &self,
+            sink: &mut S,
+        ) -> Result<(), TransportRuntimeError> {
+            if self.network_permission == ManualArtiBootstrapNetworkPermission::Disabled {
+                let error = TransportRuntimeError::RuntimeNetworkDisabled;
+                sink.record(RedactedTransportRuntimeEvent::bootstrap_failed(error));
+                return Err(error);
+            }
+
+            let policy = self.adapter.skeleton().policy();
+            let timeout = std::time::Duration::from_secs(u64::from(policy.timeout().seconds()));
+            let attempt =
+                arti_client::TorClient::create_bootstrapped(self.adapter.config().clone());
+
+            match tokio::time::timeout(timeout, attempt).await {
+                Ok(Ok(_client)) => {
+                    sink.record(RedactedTransportRuntimeEvent::bootstrap_succeeded());
+                    Ok(())
+                }
+                Ok(Err(_error)) => self
+                    .adapter
+                    .execute_fail_closed(TransportBootstrapOutcome::TransientNetworkFailure, sink),
+                Err(_elapsed) => self
+                    .adapter
+                    .execute_fail_closed(TransportBootstrapOutcome::TimedOut, sink),
+            }
         }
     }
 
@@ -2734,6 +2837,107 @@ mod tests {
                 .transport()
                 .receive_envelopes(TransportReceiveRequest { route: &onion }),
             Err(TransportError::Unavailable)
+        );
+    }
+
+    #[cfg(feature = "arti-manual-bootstrap")]
+    #[test]
+    fn manual_arti_bootstrap_attempt_gate_is_disabled_by_default() {
+        let root = unique_transport_test_root("manual-arti-disabled");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let gate = arti_adapter_spike::ManualArtiBootstrapAttemptGate::disabled(adapter);
+
+        assert_eq!(
+            gate.summary().network_permission(),
+            arti_adapter_spike::ManualArtiBootstrapNetworkPermission::Disabled
+        );
+        assert_eq!(
+            gate.summary().timeout_seconds(),
+            TransportBootstrapPolicy::high_risk_default()
+                .timeout()
+                .seconds()
+        );
+    }
+
+    #[cfg(feature = "arti-manual-bootstrap")]
+    #[test]
+    fn manual_arti_bootstrap_attempt_gate_can_be_explicitly_enabled_without_bootstrapping() {
+        let root = unique_transport_test_root("manual-arti-enabled");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let gate =
+            arti_adapter_spike::ManualArtiBootstrapAttemptGate::explicitly_enabled_for_manual_spike(
+                adapter,
+            );
+
+        assert_eq!(
+            gate.summary().network_permission(),
+            arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike
+        );
+        assert_eq!(
+            gate.adapter().transport().policy().mode(),
+            TransportMode::HighRiskOnionOnly
+        );
+    }
+
+    #[cfg(feature = "arti-manual-bootstrap")]
+    #[tokio::test]
+    async fn manual_arti_bootstrap_attempt_gate_fails_closed_when_disabled() {
+        let root = unique_transport_test_root("manual-arti-fail-closed");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let gate = arti_adapter_spike::ManualArtiBootstrapAttemptGate::disabled(adapter);
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        assert_eq!(
+            gate.bootstrap_once_and_drop_client(&mut sink).await,
+            Err(TransportRuntimeError::RuntimeNetworkDisabled)
+        );
+        assert_eq!(sink.events().len(), 1);
+        assert_eq!(
+            sink.events()[0].kind(),
+            TransportRuntimeEventKind::BootstrapFailed
+        );
+        assert_eq!(
+            sink.events()[0].runtime_error(),
+            Some(TransportRuntimeError::RuntimeNetworkDisabled)
         );
     }
 }

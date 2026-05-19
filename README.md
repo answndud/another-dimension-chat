@@ -44,6 +44,7 @@ What exists today:
 - Arti bootstrap timeout/retry/cancellation policy boundary without opening network connections.
 - Arti bootstrap execution skeleton that requires runtime readiness, bounded bootstrap policy, and redacted event sink while still failing closed.
 - Bounded Arti bootstrap adapter spike that binds app-private config, runtime readiness, bounded policy, and redacted event reporting while still failing closed.
+- Manual Arti bootstrap attempt gate behind an explicit feature/API, disabled by default and still separate from send/receive or onion hosting.
 - Pre-network transport closeout boundary that blocks network execution until backup exclusion, onion service key lifecycle, and bridge/censorship decisions are cleared.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.

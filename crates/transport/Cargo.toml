@@ -9,6 +9,7 @@ another-dimension-identity = { path = "../identity" }
 another-dimension-protocol = { path = "../protocol" }
 another-dimension-storage = { path = "../storage" }
 arti-client = { version = "0.42.0", default-features = false, optional = true }
+tokio = { version = "1.52.3", default-features = false, features = ["macros", "rt", "time"], optional = true }
 
 [features]
 arti-adapter-spike = [
@@ -18,6 +19,10 @@ arti-adapter-spike = [
     "arti-client/onion-service-client",
     "arti-client/onion-service-service",
     "arti-client/keymgr",
+]
+arti-manual-bootstrap = [
+    "arti-adapter-spike",
+    "dep:tokio",
 ]
 dev-insecure = [
     "another-dimension-identity/dev-insecure",
