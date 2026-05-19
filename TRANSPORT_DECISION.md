@@ -57,7 +57,30 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next boundary after stream closeout integration ordering. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until each boundary is tested separately and still fails closed by default.
+Continue transport work with cleanup/module decomposition before adding another stream readiness token. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Transport Stream Boundary Consolidation Review
+
+Decision as of 2026-05-19: the stream boundary path is now sufficiently gated for the current prototype phase. Do not add another stream readiness-token layer before cleanup. The current sequence is:
+
+1. Inbound/outbound stream gates reject direct shortcuts and forbidden capabilities.
+2. Fail-closed adapters require gate readiness and record only redacted events.
+3. Stream adapter closeout requires both fail-closed adapters.
+4. Stream closeout integration ordering places remote peer authentication before verified pairwise session binding, and keeps envelope I/O fail-closed.
+
+Consolidation outcome:
+
+- Keep the existing gate/adapter/closeout/order split for now because each layer expresses a distinct security boundary.
+- Stop adding new stream readiness tokens until the transport module is easier to review.
+- Prefer cleanup and module decomposition before any remote-auth or envelope-I/O integration change.
+- Keep the lightweight verification policy: targeted test first, then `scripts/verify_all.sh`.
+
+Still not implemented:
+
+- Real stream read/write.
+- Automatic construction of bound stream sessions from real network streams.
+- Real envelope I/O.
+- Usable messaging.
 
 ## Stream Closeout Integration Ordering Boundary
 
