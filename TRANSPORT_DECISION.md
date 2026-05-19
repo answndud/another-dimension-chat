@@ -57,7 +57,29 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving module split: remaining onion stream boundary types. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving module split: Arti lifecycle and adapter-spike boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Onion Stream Boundary Module Extraction
+
+Decision as of 2026-05-19: inbound and outbound onion stream boundary tokens are extracted into `crates/transport/src/onion_stream_boundary.rs`. `crates/transport/src/lib.rs` re-exports the same public names to preserve the public API.
+
+Moved without behavior change:
+
+- `OnionInboundStreamBoundary`
+- `OnionOutboundStreamBoundary`
+
+Preserved invariants:
+
+- Inbound stream boundary still requires descriptor publication readiness before construction.
+- Inbound accept/read-write paths still record only redacted runtime events and return not-implemented errors.
+- Outbound stream boundary still requires a pairwise rendezvous endpoint and an onion-allowed transport policy before construction.
+- Outbound dial/send paths still record only redacted runtime events and return not-implemented errors.
+- Debug output for inbound/outbound boundaries still redacts descriptor, onion endpoint, remote endpoint, stream id, contact id, and profile name material.
+- No real accept, dial, stream I/O, envelope send/receive, descriptor publication, or usable messaging capability was added.
+
+Next split target:
+
+- Arti lifecycle and adapter-spike boundaries.
 
 ## Pre-Network Closeout Module Extraction
 
@@ -80,7 +102,7 @@ Preserved invariants:
 
 Next split target:
 
-- Remaining onion stream boundary types.
+- Completed by onion stream boundary module extraction.
 
 ## Key Lifecycle And Material Module Extraction
 
