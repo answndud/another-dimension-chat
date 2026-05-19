@@ -57,7 +57,44 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving module split: onion hosting gate and transport phase closeout boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving module split: onion service key lifecycle/material boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Hosting And Phase Gate Module Extraction
+
+Decision as of 2026-05-19: network experiment gating, bootstrap-only experiment decisions, transport phase closeout, and onion hosting gate decisions are extracted into `crates/transport/src/hosting_phase.rs`. `crates/transport/src/lib.rs` re-exports the same public names to preserve the public API.
+
+Moved without behavior change:
+
+- `NetworkExperimentScope`
+- `NetworkExperimentManualGate`
+- `NetworkExperimentOperatorConsent`
+- `NetworkExperimentVerificationPolicy`
+- `NetworkExperimentTargetCachePolicy`
+- `NetworkExperimentGateProposal`
+- `NetworkExperimentGateReady`
+- `BootstrapOnlyExperimentFeatureState`
+- `BootstrapOnlyExperimentExpansion`
+- `BootstrapOnlyExperimentDecision`
+- `BootstrapOnlyExperimentReady`
+- `TransportNextRiskBoundary`
+- `TransportPhaseCloseoutDecision`
+- `TransportPhaseCloseoutReady`
+- `OnionHostingGateFeatureState`
+- `OnionHostingGateDecision`
+- `OnionHostingGateReady`
+
+Preserved invariants:
+
+- Network experiment gating still requires pre-network closeout, bootstrap-only scope, manual feature gating, explicit operator consent, heavy isolated verification, and an isolated temporary target cache.
+- Bootstrap-only experiment decisions still allow only the existing manual bootstrap/lifecycle path.
+- Transport phase closeout still selects only the onion hosting gate next and forbids stream, envelope, or usable messaging shortcuts.
+- Onion hosting gate still requires transport phase closeout, manual feature gating, Arti adapter spike feature presence, launch preflight, onion key readiness, and a bootstrapped persistent client.
+- Onion hosting gate still forbids descriptor publication, stream I/O, and usable messaging claims.
+- No descriptor publication, real stream I/O, envelope send/receive, or usable messaging capability was added.
+
+Next split target:
+
+- Onion service key lifecycle/material boundaries.
 
 ## Launch And Descriptor Boundary Module Extraction
 
@@ -86,7 +123,7 @@ Preserved invariants:
 
 Next split target:
 
-- Onion hosting gate and transport phase closeout boundaries.
+- Completed by hosting/phase gate module extraction.
 
 ## Stream Gate Module Extraction
 
