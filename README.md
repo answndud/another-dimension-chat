@@ -52,6 +52,7 @@ What exists today:
 - Transport phase closeout boundary that selects onion hosting gate work before stream I/O, envelope I/O, or any usable messaging claim.
 - Onion hosting gate boundary that requires transport closeout, manual feature gating, launch preflight, onion key readiness, and a bootstrapped persistent client while still forbidding descriptor publication and stream I/O.
 - Descriptor publication gate boundary that requires onion hosting readiness, pairwise rendezvous-only publication policy, and redacted events while still forbidding stream I/O and usable messaging.
+- Descriptor publication fail-closed adapter boundary that requires descriptor publication gate readiness and records only a redacted event before returning a not-implemented error.
 - Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
 - Encrypted endpoint update control-envelope boundary that pads endpoint rotation plaintext before Noise encryption and wraps only opaque control ciphertext after a validated pairwise update.
 - Production envelope session hook for endpoint update control encryption/decryption without Tor delivery or onion hosting.
