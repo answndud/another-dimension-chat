@@ -141,7 +141,7 @@ rustup component add rustfmt clippy
 
 ## Verify
 
-Run the full local verification suite:
+Run the lightweight local verification suite:
 
 ```bash
 scripts/verify_all.sh
@@ -149,8 +149,18 @@ scripts/verify_all.sh
 
 This runs:
 
-- CLI smoke flow.
 - `cargo fmt --all -- --check`
+- `cargo test --workspace --lib`
+
+For a heavier pre-release, audit, or risky cross-cutting change pass, run:
+
+```bash
+scripts/verify_full.sh
+```
+
+This additionally runs:
+
+- CLI smoke flow.
 - `cargo test --workspace`
 - `cargo test --workspace --features dev-insecure`
 - `cargo clippy --workspace --all-targets --all-features`
