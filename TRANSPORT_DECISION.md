@@ -57,7 +57,32 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving module split: remaining transport policy/envelope skeleton boundaries or a consolidation pass over the now-smaller transport root. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving module split: remaining transport policy/envelope skeleton boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Transport Error Taxonomy Module Extraction
+
+Decision as of 2026-05-20: transport error taxonomy is extracted into `crates/transport/src/errors.rs`. `crates/transport/src/lib.rs` re-exports the same public error names to preserve the public API.
+
+Moved without behavior change:
+
+- transport policy/runtime errors
+- runtime probe and backup exclusion errors
+- key lifecycle/material errors
+- censorship/readiness errors
+- onion launch, descriptor, stream, and adapter errors
+- stream session, closeout, and endpoint lifecycle errors
+- `TransportRuntimeError` classification helpers
+- `TransportRuntimeProbeError` to `TransportRuntimeError` mapping
+
+Preserved invariants:
+
+- Error names and variants remain available through `another_dimension_transport::...`.
+- Runtime error classification still separates preflight, bootstrap, and onion-service failures.
+- No real accept, dial, stream I/O, envelope send/receive, descriptor publication, or usable messaging capability was added.
+
+Next split target:
+
+- Remaining transport policy/envelope skeleton boundaries.
 
 ## Arti Lifecycle And Adapter-Spike Module Extraction
 
@@ -89,7 +114,7 @@ Preserved invariants:
 
 Next split target:
 
-- Remaining transport policy/envelope skeleton boundaries or transport-root consolidation.
+- Completed by transport error taxonomy module extraction.
 
 ## Onion Stream Boundary Module Extraction
 
