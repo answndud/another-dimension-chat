@@ -57,7 +57,38 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving module split: remaining transport policy/envelope skeleton boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving split: transport root test/helper cleanup or the next documented boundary after confirming the now-small root surface. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Transport Policy And Envelope Skeleton Module Extraction
+
+Decision as of 2026-05-20: transport policy, route classification, endpoint wrappers, envelope transport traits, and the fail-closed onion envelope skeleton are extracted into `crates/transport/src/transport_policy.rs`. `crates/transport/src/lib.rs` re-exports the same public names to preserve the public API.
+
+Moved without behavior change:
+
+- `Transport`
+- `TransportMode`
+- `TransportKind`
+- `TransportPolicy`
+- `TransportRoute`
+- `LocalTransportEndpoint`
+- `DirectPeerEndpoint`
+- `TransportSendRequest`
+- `TransportReceiveRequest`
+- `EnvelopeTransport`
+- `OnionEnvelopeTransport`
+- internal endpoint-token validator
+
+Preserved invariants:
+
+- High-risk default still allows only onion-service routes.
+- Direct peer routes still require explicit low-risk policy.
+- `OnionEnvelopeTransport` still fails closed with `TransportError::Unavailable` after route-policy checks.
+- Ready runtime state can still be held by the skeleton without enabling send/receive.
+- No real accept, dial, stream I/O, envelope send/receive, descriptor publication, or usable messaging capability was added.
+
+Next split target:
+
+- Transport root test/helper cleanup or next documented boundary selection.
 
 ## Transport Error Taxonomy Module Extraction
 
@@ -82,7 +113,7 @@ Preserved invariants:
 
 Next split target:
 
-- Remaining transport policy/envelope skeleton boundaries.
+- Completed by transport policy/envelope skeleton module extraction.
 
 ## Arti Lifecycle And Adapter-Spike Module Extraction
 
