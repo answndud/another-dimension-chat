@@ -57,7 +57,40 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving module split: endpoint and endpoint-rotation state. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving module split: stream/session readiness and authentication boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Endpoint State Module Extraction
+
+Decision as of 2026-05-19: onion endpoint validation, pairwise rendezvous endpoint state, endpoint update/rotation state, pending rotation handling, and endpoint-update control-envelope boundaries are extracted into `crates/transport/src/endpoint_state.rs`. `crates/transport/src/lib.rs` re-exports the same public names to preserve the public API.
+
+Moved without behavior change:
+
+- `OnionServiceEndpoint`
+- `RendezvousEndpointScope`
+- `RendezvousEndpointIdentityBinding`
+- `EndpointUpdateChannel`
+- `EndpointRotationSequence`
+- `EndpointRotationApplyContext`
+- `PairwiseRendezvousEndpoint`
+- `PairwiseEndpointUpdate`
+- `PendingEndpointRotation`
+- `PairwiseEndpointRotationState`
+- `EndpointUpdateControlPlaintext`
+- `EncryptedEndpointUpdateControlEnvelope`
+
+Preserved invariants:
+
+- Onion endpoint validation remains narrow and still rejects non-onion or unsafe endpoint tokens.
+- Pairwise rendezvous endpoints still reject global directory scope and identity-key-derived endpoint binding.
+- Endpoint updates still require an existing encrypted session.
+- Endpoint rotation still rejects stale, rollback, unverified, and contact-mismatched updates.
+- Endpoint reconnect remains fail-closed and records only redacted runtime events.
+- Endpoint-update control envelopes remain control-message only and require bucket-compatible opaque encrypted payloads.
+- No Tor descriptor publication, stream I/O, envelope I/O, or usable messaging capability was added.
+
+Next split target:
+
+- Stream/session readiness and remote-peer authentication boundaries.
 
 ## Runtime Preflight Module Extraction
 
@@ -87,10 +120,6 @@ Preserved invariants:
 - Raw bridge lines remain rejected.
 - Shared/default Arti directories remain rejected.
 - No Tor bootstrap, descriptor publication, stream I/O, envelope I/O, or messaging capability was added.
-
-Next split target:
-
-- Endpoint and endpoint-rotation state.
 
 ## Bootstrap Policy Module Extraction
 
