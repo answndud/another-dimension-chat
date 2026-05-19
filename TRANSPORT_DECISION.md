@@ -766,3 +766,26 @@ Still not implemented:
 - Endpoint rotation conflict resolution after reconnect.
 
 Next accepted phase: onion launch adapter skeleton or endpoint rotation apply/reconnect boundary. Do not implement envelope send/receive until onion service hosting and authenticated endpoint update are separately specified.
+
+## Onion Service Launch Adapter Skeleton
+
+Decision as of 2026-05-19: add only a fail-closed launch adapter boundary. This does not create an onion service, publish a descriptor, accept inbound streams, or send/receive envelopes.
+
+Current rules:
+
+- `OnionServiceLaunchAdapterSkeleton::from_ready_owner(...)` requires an `OnionServiceLaunchReady` token.
+- The launch adapter also requires a `PersistentArtiClientOwner` whose state is `Bootstrapped` and whose client slot is owned.
+- Unbootstrapped, dormant, shutdown, or clientless owners are rejected.
+- `launch_fail_closed(...)` records only a redacted `OnionServiceLaunchFailed` runtime event and returns `OnionHostingNotImplemented`.
+- Debug output for the adapter redacts state/cache dirs and does not expose endpoint, key, descriptor, profile, or contact material.
+
+Still not implemented:
+
+- Actual onion service creation.
+- Onion service descriptor publication.
+- Onion service private key generation or loading.
+- Inbound stream handling.
+- Envelope send/receive over Tor.
+- Endpoint rotation apply/reconnect behavior.
+
+Next accepted phase: endpoint rotation apply/reconnect boundary or onion service key material adapter boundary. Do not implement envelope send/receive until onion service hosting and authenticated endpoint update are separately specified.
