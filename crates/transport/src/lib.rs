@@ -126,6 +126,13 @@ pub enum StreamSessionBindingError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum EnvelopeIoAdapterError {
+    EnvelopeIoReadinessRequired,
+    InboundEnvelopeReceiveNotImplemented,
+    OutboundEnvelopeSendNotImplemented,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EndpointLifecycleError {
     GlobalEndpointForbidden,
     IdentityKeyCouplingForbidden,
@@ -1942,6 +1949,21 @@ pub struct BoundOutboundStreamSession {
     session_binding: PairwiseStreamSessionBinding,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct EnvelopeIoAdapterReady;
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct InboundEnvelopeIoAdapterBoundary {
+    _bound_stream_session: BoundInboundStreamSession,
+    _io_ready: EnvelopeIoAdapterReady,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct OutboundEnvelopeIoAdapterBoundary {
+    _bound_stream_session: BoundOutboundStreamSession,
+    _io_ready: EnvelopeIoAdapterReady,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -2240,6 +2262,87 @@ impl fmt::Debug for BoundOutboundStreamSession {
             .field("contact_id", &"<redacted>")
             .field("session", &"<verified>")
             .field("envelope", &"<not-sent>")
+            .finish()
+    }
+}
+
+impl InboundEnvelopeIoAdapterBoundary {
+    pub fn from_bound_stream_session(
+        bound_stream_session: BoundInboundStreamSession,
+        io_ready: EnvelopeIoAdapterReady,
+    ) -> Self {
+        Self {
+            _bound_stream_session: bound_stream_session,
+            _io_ready: io_ready,
+        }
+    }
+
+    pub fn from_missing_io_readiness() -> Result<Self, EnvelopeIoAdapterError> {
+        Err(EnvelopeIoAdapterError::EnvelopeIoReadinessRequired)
+    }
+
+    pub fn receive_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        sink: &mut S,
+    ) -> Result<Vec<Envelope>, EnvelopeIoAdapterError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::ReceiveFailed,
+        ));
+        Err(EnvelopeIoAdapterError::InboundEnvelopeReceiveNotImplemented)
+    }
+}
+
+impl fmt::Debug for InboundEnvelopeIoAdapterBoundary {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("InboundEnvelopeIoAdapterBoundary")
+            .field("bound_stream_session", &"<redacted>")
+            .field("io_readiness", &"<present>")
+            .field("envelope", &"<not-read>")
+            .field("padded_payload", &"<redacted>")
+            .field("channel_id", &"<redacted>")
+            .field("message_number", &"<redacted>")
+            .finish()
+    }
+}
+
+impl OutboundEnvelopeIoAdapterBoundary {
+    pub fn from_bound_stream_session(
+        bound_stream_session: BoundOutboundStreamSession,
+        io_ready: EnvelopeIoAdapterReady,
+    ) -> Self {
+        Self {
+            _bound_stream_session: bound_stream_session,
+            _io_ready: io_ready,
+        }
+    }
+
+    pub fn from_missing_io_readiness() -> Result<Self, EnvelopeIoAdapterError> {
+        Err(EnvelopeIoAdapterError::EnvelopeIoReadinessRequired)
+    }
+
+    pub fn send_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        _envelope: &Envelope,
+        sink: &mut S,
+    ) -> Result<(), EnvelopeIoAdapterError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::SendFailed,
+        ));
+        Err(EnvelopeIoAdapterError::OutboundEnvelopeSendNotImplemented)
+    }
+}
+
+impl fmt::Debug for OutboundEnvelopeIoAdapterBoundary {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OutboundEnvelopeIoAdapterBoundary")
+            .field("bound_stream_session", &"<redacted>")
+            .field("io_readiness", &"<present>")
+            .field("envelope", &"<not-sent>")
+            .field("padded_payload", &"<redacted>")
+            .field("channel_id", &"<redacted>")
+            .field("message_number", &"<redacted>")
             .finish()
     }
 }
@@ -4813,6 +4916,109 @@ mod tests {
                 ],
             );
         }
+    }
+
+    #[test]
+    fn envelope_io_adapter_requires_explicit_readiness_after_bound_session() {
+        assert_eq!(
+            InboundEnvelopeIoAdapterBoundary::from_missing_io_readiness(),
+            Err(EnvelopeIoAdapterError::EnvelopeIoReadinessRequired)
+        );
+        assert_eq!(
+            OutboundEnvelopeIoAdapterBoundary::from_missing_io_readiness(),
+            Err(EnvelopeIoAdapterError::EnvelopeIoReadinessRequired)
+        );
+
+        let inbound = InboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
+            sample_bound_inbound_stream_session(),
+            EnvelopeIoAdapterReady,
+        );
+        let outbound = OutboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
+            sample_bound_outbound_stream_session(),
+            EnvelopeIoAdapterReady,
+        );
+        let inbound_rendered = format!("{inbound:?}");
+        let outbound_rendered = format!("{outbound:?}");
+
+        assert!(inbound_rendered.contains("InboundEnvelopeIoAdapterBoundary"));
+        assert!(outbound_rendered.contains("OutboundEnvelopeIoAdapterBoundary"));
+        for rendered in [&inbound_rendered, &outbound_rendered] {
+            assert!(rendered.contains("<redacted>"));
+            assert!(!rendered.contains("example.onion"));
+            assert!(!rendered.contains("bob"));
+            assert!(!rendered.contains("adchan1:test"));
+            assert!(!rendered.contains("ciphertext"));
+            assert!(!rendered.contains("session-secret"));
+        }
+    }
+
+    #[test]
+    fn envelope_io_adapter_still_fails_closed_for_send_receive() {
+        let inbound = InboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
+            sample_bound_inbound_stream_session(),
+            EnvelopeIoAdapterReady,
+        );
+        let outbound = OutboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
+            sample_bound_outbound_stream_session(),
+            EnvelopeIoAdapterReady,
+        );
+        let envelope = sample_envelope();
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        assert_eq!(
+            inbound.receive_fail_closed(&mut sink),
+            Err(EnvelopeIoAdapterError::InboundEnvelopeReceiveNotImplemented)
+        );
+        assert_eq!(
+            outbound.send_fail_closed(&envelope, &mut sink),
+            Err(EnvelopeIoAdapterError::OutboundEnvelopeSendNotImplemented)
+        );
+        assert_eq!(sink.events().len(), 2);
+        assert_eq!(
+            sink.events()[0].runtime_error(),
+            Some(TransportRuntimeError::ReceiveFailed)
+        );
+        assert_eq!(
+            sink.events()[1].runtime_error(),
+            Some(TransportRuntimeError::SendFailed)
+        );
+        for event in sink.events() {
+            assert_redacted_event_hides(
+                event,
+                &[
+                    "example.onion",
+                    "alice",
+                    "bob",
+                    "stream-1",
+                    "descriptor-value",
+                    "private-key",
+                    "adchan1:test",
+                    "ciphertext",
+                    "session-secret",
+                ],
+            );
+        }
+    }
+
+    fn sample_bound_inbound_stream_session() -> BoundInboundStreamSession {
+        BoundInboundStreamSession::from_inbound_stream(
+            OnionInboundStreamBoundary::from_descriptor_publication_ready(
+                OnionServiceDescriptorPublicationReady,
+            ),
+            sample_stream_session_binding("bob"),
+        )
+    }
+
+    fn sample_bound_outbound_stream_session() -> BoundOutboundStreamSession {
+        BoundOutboundStreamSession::from_outbound_stream(
+            OnionOutboundStreamBoundary::from_pairwise_endpoint(
+                sample_pairwise_endpoint(),
+                TransportPolicy::high_risk_default(),
+            )
+            .expect("outbound boundary"),
+            sample_stream_session_binding("bob"),
+        )
+        .expect("bound outbound stream")
     }
 
     fn sample_pairwise_endpoint() -> PairwiseRendezvousEndpoint {
