@@ -133,6 +133,12 @@ pub enum EnvelopeIoAdapterError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RemotePeerAuthenticationError {
+    RemotePeerAuthenticationRequired,
+    ContactMismatch,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EndpointLifecycleError {
     GlobalEndpointForbidden,
     IdentityKeyCouplingForbidden,
@@ -1205,6 +1211,12 @@ pub enum StreamSessionVerificationContext {
     UnverifiedSession,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RemotePeerAuthenticationContext {
+    AuthenticatedPairwisePeer,
+    UnauthenticatedPeer,
+}
+
 #[derive(Clone, Eq, PartialEq)]
 pub struct PairwiseRendezvousEndpoint {
     contact_id: ContactId,
@@ -1481,6 +1493,43 @@ impl fmt::Debug for PairwiseStreamSessionBinding {
             .field("contact_id", &"<redacted>")
             .field("session", &"<verified>")
             .field("session_secret", &"<not-held>")
+            .finish()
+    }
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct RemotePeerAuthenticationReady {
+    contact_id: ContactId,
+}
+
+impl RemotePeerAuthenticationReady {
+    pub fn from_authenticated_pairwise_peer(
+        contact_id: ContactId,
+        context: RemotePeerAuthenticationContext,
+    ) -> Result<Self, RemotePeerAuthenticationError> {
+        if context != RemotePeerAuthenticationContext::AuthenticatedPairwisePeer {
+            return Err(RemotePeerAuthenticationError::RemotePeerAuthenticationRequired);
+        }
+
+        Ok(Self { contact_id })
+    }
+
+    pub fn from_missing_peer_proof() -> Result<Self, RemotePeerAuthenticationError> {
+        Err(RemotePeerAuthenticationError::RemotePeerAuthenticationRequired)
+    }
+
+    pub fn contact_id(&self) -> &ContactId {
+        &self.contact_id
+    }
+}
+
+impl fmt::Debug for RemotePeerAuthenticationReady {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("RemotePeerAuthenticationReady")
+            .field("contact_id", &"<redacted>")
+            .field("peer_proof", &"<verified>")
+            .field("session_transcript", &"<redacted>")
             .finish()
     }
 }
@@ -1941,12 +1990,14 @@ pub struct OnionOutboundStreamBoundary {
 pub struct BoundInboundStreamSession {
     _inbound_stream: OnionInboundStreamBoundary,
     session_binding: PairwiseStreamSessionBinding,
+    _remote_peer_authentication: RemotePeerAuthenticationReady,
 }
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct BoundOutboundStreamSession {
     _outbound_stream: OnionOutboundStreamBoundary,
     session_binding: PairwiseStreamSessionBinding,
+    _remote_peer_authentication: RemotePeerAuthenticationReady,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -2181,11 +2232,17 @@ impl BoundInboundStreamSession {
     pub fn from_inbound_stream(
         inbound_stream: OnionInboundStreamBoundary,
         session_binding: PairwiseStreamSessionBinding,
-    ) -> Self {
-        Self {
+        remote_peer_authentication: RemotePeerAuthenticationReady,
+    ) -> Result<Self, RemotePeerAuthenticationError> {
+        if session_binding.contact_id() != remote_peer_authentication.contact_id() {
+            return Err(RemotePeerAuthenticationError::ContactMismatch);
+        }
+
+        Ok(Self {
             _inbound_stream: inbound_stream,
             session_binding,
-        }
+            _remote_peer_authentication: remote_peer_authentication,
+        })
     }
 
     pub fn from_missing_session_binding() -> Result<Self, StreamSessionBindingError> {
@@ -2223,14 +2280,19 @@ impl BoundOutboundStreamSession {
     pub fn from_outbound_stream(
         outbound_stream: OnionOutboundStreamBoundary,
         session_binding: PairwiseStreamSessionBinding,
-    ) -> Result<Self, StreamSessionBindingError> {
+        remote_peer_authentication: RemotePeerAuthenticationReady,
+    ) -> Result<Self, RemotePeerAuthenticationError> {
         if outbound_stream.contact_id() != session_binding.contact_id() {
-            return Err(StreamSessionBindingError::ContactMismatch);
+            return Err(RemotePeerAuthenticationError::ContactMismatch);
+        }
+        if outbound_stream.contact_id() != remote_peer_authentication.contact_id() {
+            return Err(RemotePeerAuthenticationError::ContactMismatch);
         }
 
         Ok(Self {
             _outbound_stream: outbound_stream,
             session_binding,
+            _remote_peer_authentication: remote_peer_authentication,
         })
     }
 
@@ -4841,13 +4903,23 @@ mod tests {
             BoundOutboundStreamSession::from_outbound_stream(
                 outbound.clone(),
                 sample_stream_session_binding("carol"),
+                sample_remote_peer_authentication("bob"),
             ),
-            Err(StreamSessionBindingError::ContactMismatch)
+            Err(RemotePeerAuthenticationError::ContactMismatch)
+        );
+        assert_eq!(
+            BoundOutboundStreamSession::from_outbound_stream(
+                outbound.clone(),
+                sample_stream_session_binding("bob"),
+                sample_remote_peer_authentication("carol"),
+            ),
+            Err(RemotePeerAuthenticationError::ContactMismatch)
         );
 
         let bound = BoundOutboundStreamSession::from_outbound_stream(
             outbound,
             sample_stream_session_binding("bob"),
+            sample_remote_peer_authentication("bob"),
         )
         .expect("bound outbound stream");
         let rendered = format!("{bound:?}");
@@ -4864,22 +4936,46 @@ mod tests {
     }
 
     #[test]
-    fn bound_stream_sessions_still_fail_closed_for_envelope_io() {
-        let inbound = BoundInboundStreamSession::from_inbound_stream(
-            OnionInboundStreamBoundary::from_descriptor_publication_ready(
-                OnionServiceDescriptorPublicationReady,
-            ),
-            sample_stream_session_binding("bob"),
+    fn remote_peer_authentication_is_required_before_bound_stream_session() {
+        assert_eq!(
+            RemotePeerAuthenticationReady::from_missing_peer_proof(),
+            Err(RemotePeerAuthenticationError::RemotePeerAuthenticationRequired)
         );
-        let outbound = BoundOutboundStreamSession::from_outbound_stream(
-            OnionOutboundStreamBoundary::from_pairwise_endpoint(
-                sample_pairwise_endpoint(),
-                TransportPolicy::high_risk_default(),
-            )
-            .expect("outbound boundary"),
-            sample_stream_session_binding("bob"),
-        )
-        .expect("bound outbound stream");
+        assert_eq!(
+            RemotePeerAuthenticationReady::from_authenticated_pairwise_peer(
+                ContactId::new("bob").expect("contact"),
+                RemotePeerAuthenticationContext::UnauthenticatedPeer,
+            ),
+            Err(RemotePeerAuthenticationError::RemotePeerAuthenticationRequired)
+        );
+        assert_eq!(
+            BoundInboundStreamSession::from_inbound_stream(
+                OnionInboundStreamBoundary::from_descriptor_publication_ready(
+                    OnionServiceDescriptorPublicationReady,
+                ),
+                sample_stream_session_binding("bob"),
+                sample_remote_peer_authentication("carol"),
+            ),
+            Err(RemotePeerAuthenticationError::ContactMismatch)
+        );
+
+        let peer = sample_remote_peer_authentication("bob");
+        let rendered = format!("{peer:?}");
+
+        assert_eq!(peer.contact_id().as_str(), "bob");
+        assert!(rendered.contains("RemotePeerAuthenticationReady"));
+        assert!(rendered.contains("<redacted>"));
+        assert!(rendered.contains("<verified>"));
+        assert!(!rendered.contains("bob"));
+        assert!(!rendered.contains("peer-proof"));
+        assert!(!rendered.contains("session-transcript"));
+        assert!(!rendered.contains("example.onion"));
+    }
+
+    #[test]
+    fn bound_stream_sessions_still_fail_closed_for_envelope_io() {
+        let inbound = sample_bound_inbound_stream_session();
+        let outbound = sample_bound_outbound_stream_session();
         let envelope = sample_envelope();
         let mut sink = InMemoryTransportRuntimeEventSink::default();
 
@@ -5006,7 +5102,9 @@ mod tests {
                 OnionServiceDescriptorPublicationReady,
             ),
             sample_stream_session_binding("bob"),
+            sample_remote_peer_authentication("bob"),
         )
+        .expect("bound inbound stream")
     }
 
     fn sample_bound_outbound_stream_session() -> BoundOutboundStreamSession {
@@ -5017,6 +5115,7 @@ mod tests {
             )
             .expect("outbound boundary"),
             sample_stream_session_binding("bob"),
+            sample_remote_peer_authentication("bob"),
         )
         .expect("bound outbound stream")
     }
@@ -5037,6 +5136,14 @@ mod tests {
             StreamSessionVerificationContext::VerifiedPairwiseEncryptedSession,
         )
         .expect("verified binding")
+    }
+
+    fn sample_remote_peer_authentication(contact_id: &str) -> RemotePeerAuthenticationReady {
+        RemotePeerAuthenticationReady::from_authenticated_pairwise_peer(
+            ContactId::new(contact_id).expect("contact"),
+            RemotePeerAuthenticationContext::AuthenticatedPairwisePeer,
+        )
+        .expect("remote peer authentication")
     }
 
     fn sample_envelope() -> Envelope {
