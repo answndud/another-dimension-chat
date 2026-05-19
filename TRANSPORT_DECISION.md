@@ -715,3 +715,30 @@ Still not implemented:
 - Envelope send/receive over Tor.
 
 Next accepted phase: encrypted endpoint update message boundary or onion launch adapter skeleton. Do not implement envelope send/receive until onion service hosting and authenticated endpoint update are separately specified.
+
+## Encrypted Endpoint Update Message Boundary
+
+Decision as of 2026-05-19: endpoint update messages may be shaped only as production control envelopes after a validated pairwise endpoint update exists. This is still a message-boundary skeleton, not real endpoint update delivery.
+
+Current rules:
+
+- `EncryptedEndpointUpdateControlEnvelope::from_pairwise_update(...)` requires a `PairwiseEndpointUpdate`, so plaintext and out-of-band update channels remain outside the construction path.
+- The output envelope uses protocol version `1` and `MessageType::Control`.
+- Message number `0` is rejected.
+- Empty channel ids are rejected.
+- Empty encrypted payloads are rejected.
+- Payloads too large for the existing padded envelope buckets are rejected.
+- The encrypted payload is treated as opaque ciphertext and padded through the existing protocol bucket policy.
+- `Debug` output redacts contact ids and does not expose old or new onion endpoint values.
+
+Still not implemented:
+
+- Actual endpoint update plaintext schema.
+- Actual encryption hookup for endpoint update payloads.
+- Endpoint update persistence.
+- Endpoint update delivery over Tor.
+- Endpoint publication over Tor.
+- Onion service launch.
+- Envelope send/receive over Tor.
+
+Next accepted phase: endpoint update payload encryption hookup or onion launch adapter skeleton. Do not implement envelope send/receive until onion service hosting and authenticated endpoint update are separately specified.
