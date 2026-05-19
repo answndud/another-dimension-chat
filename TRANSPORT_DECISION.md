@@ -57,7 +57,39 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving module split: Arti lifecycle and adapter-spike boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving module split: remaining transport policy/envelope skeleton boundaries or a consolidation pass over the now-smaller transport root. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Arti Lifecycle And Adapter-Spike Module Extraction
+
+Decision as of 2026-05-19: Arti lifecycle decision data is extracted into `crates/transport/src/arti_lifecycle.rs`, and the feature-gated Arti adapter spike is extracted into `crates/transport/src/arti_adapter_spike.rs`. `crates/transport/src/lib.rs` re-exports the same public names and preserves the existing `arti_adapter_spike::...` module path when the feature is enabled.
+
+Moved without behavior change:
+
+- `ArtiLifecycleDecision`
+- `arti_lifecycle_decision`
+- `arti_adapter_spike::ArtiConfigError`
+- `arti_adapter_spike::ArtiBootstrapPreflight`
+- `arti_adapter_spike::ArtiAppPrivateDirs`
+- `arti_adapter_spike::ProfileScopedTransportDirs`
+- `arti_adapter_spike::ArtiAdapterSpike`
+- `arti_adapter_spike::BoundedArtiBootstrapAdapterSpike`
+- `arti_adapter_spike::PersistentArtiClientOwner`
+- `arti_adapter_spike::OnionServiceLaunchAdapterSkeleton`
+- `arti_adapter_spike::ManualArtiBootstrapAttemptGate`
+
+Preserved invariants:
+
+- Arti lifecycle policy still rejects shared default directories and key generation before storage/key lifecycle decisions.
+- App-private Arti state/cache directory validation still rejects relative paths, shared defaults, and identical state/cache directories.
+- Bounded bootstrap adapter still requires a fail-closed bootstrap skeleton and does not open network connections by construction.
+- Persistent client owner still starts unbootstrapped, redacts state/cache directory debug output, and only changes lifecycle state through explicit methods.
+- Launch adapter skeleton still requires launch readiness, key material readiness, and a bootstrapped persistent client owner before construction, then still fails closed without hosting.
+- Manual bootstrap remains feature-gated and disabled unless explicitly enabled for the local manual spike.
+- No real accept, dial, stream I/O, envelope send/receive, descriptor publication, or usable messaging capability was added.
+
+Next split target:
+
+- Remaining transport policy/envelope skeleton boundaries or transport-root consolidation.
 
 ## Onion Stream Boundary Module Extraction
 
@@ -79,7 +111,7 @@ Preserved invariants:
 
 Next split target:
 
-- Arti lifecycle and adapter-spike boundaries.
+- Completed by Arti lifecycle and adapter-spike module extraction.
 
 ## Pre-Network Closeout Module Extraction
 
