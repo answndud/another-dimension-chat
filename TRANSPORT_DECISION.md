@@ -654,3 +654,39 @@ Still not implemented:
 - Production runtime shutdown semantics beyond the local owner state transition.
 
 Next accepted phase: onion service launch preflight boundary or manual persistent lifecycle shutdown/status command. Do not implement envelope send/receive until onion service hosting and endpoint lifecycle are separately specified.
+
+## Onion Service Launch Preflight Boundary
+
+Decision as of 2026-05-19: onion service launch must remain blocked until a separate preflight proves the launch has the minimum local prerequisites. This phase does not launch an onion service.
+
+Current preflight inputs:
+
+```text
+ProfileTransportUnlockReady
+OnionServiceKeyLifecycleReady
+persistent client ready flag
+OnionEndpointPublicationPolicy
+OnionEndpointUpdatePolicy
+redacted events only flag
+```
+
+Current rules:
+
+- `OnionServiceLaunchPreflight::locked_down_by_default()` fails closed.
+- Profile unlock is required before launch can become ready.
+- Onion service key lifecycle readiness is required before launch can become ready.
+- A persistent client must already be ready before launch can become ready.
+- Endpoint publication must be pairwise rendezvous only; public directory style publication remains outside scope.
+- Endpoint update must happen through an existing encrypted session only.
+- Launch preflight requires redacted event handling before any future launch code may run.
+- The preflight returns only `OnionServiceLaunchReady`; it does not expose or store onion endpoints, onion private keys, contact identifiers, profile names, raw Arti errors, or launch descriptors.
+
+Still not implemented:
+
+- Actual onion service launch.
+- Onion service private key generation or persistence.
+- Onion endpoint publication/update messages.
+- Envelope send/receive over Tor.
+- Tauri runtime wiring.
+
+Next accepted phase: endpoint lifecycle/update boundary or onion launch adapter skeleton. Do not implement envelope send/receive until onion service hosting and authenticated endpoint update are separately specified.

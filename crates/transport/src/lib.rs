@@ -78,6 +78,16 @@ pub enum BridgeCensorshipConfigurationError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionServiceLaunchPreflightError {
+    ProfileUnlockRequired,
+    OnionServiceKeyNotReady,
+    PersistentClientNotReady,
+    EndpointPublicationPolicyMissing,
+    EndpointUpdatePolicyMissing,
+    LogRedactionRequired,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TransportBootstrapTimeoutPolicy {
     seconds: u16,
 }
@@ -1234,6 +1244,88 @@ impl OnionServiceKeyLifecycleDecision {
             return Err(OnionServiceKeyLifecycleError::MigrationPolicyMissing);
         }
         Ok(OnionServiceKeyLifecycleReady)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ProfileTransportUnlockReady;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionEndpointPublicationPolicy {
+    Missing,
+    PairwiseRendezvousOnly,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionEndpointUpdatePolicy {
+    Missing,
+    ExistingEncryptedSessionOnly,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct OnionServiceLaunchPreflight {
+    profile_unlocked: bool,
+    onion_service_key_ready: bool,
+    persistent_client_ready: bool,
+    endpoint_publication_policy: OnionEndpointPublicationPolicy,
+    endpoint_update_policy: OnionEndpointUpdatePolicy,
+    redacted_events_only: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct OnionServiceLaunchReady;
+
+impl OnionServiceLaunchPreflight {
+    pub fn locked_down_by_default() -> Self {
+        Self {
+            profile_unlocked: false,
+            onion_service_key_ready: false,
+            persistent_client_ready: false,
+            endpoint_publication_policy: OnionEndpointPublicationPolicy::Missing,
+            endpoint_update_policy: OnionEndpointUpdatePolicy::Missing,
+            redacted_events_only: false,
+        }
+    }
+
+    pub fn from_ready_boundaries(
+        _profile_unlock: &ProfileTransportUnlockReady,
+        _key_lifecycle: &OnionServiceKeyLifecycleReady,
+        persistent_client_ready: bool,
+        endpoint_publication_policy: OnionEndpointPublicationPolicy,
+        endpoint_update_policy: OnionEndpointUpdatePolicy,
+        redacted_events_only: bool,
+    ) -> Self {
+        Self {
+            profile_unlocked: true,
+            onion_service_key_ready: true,
+            persistent_client_ready,
+            endpoint_publication_policy,
+            endpoint_update_policy,
+            redacted_events_only,
+        }
+    }
+
+    pub fn check(self) -> Result<OnionServiceLaunchReady, OnionServiceLaunchPreflightError> {
+        if !self.profile_unlocked {
+            return Err(OnionServiceLaunchPreflightError::ProfileUnlockRequired);
+        }
+        if !self.onion_service_key_ready {
+            return Err(OnionServiceLaunchPreflightError::OnionServiceKeyNotReady);
+        }
+        if !self.persistent_client_ready {
+            return Err(OnionServiceLaunchPreflightError::PersistentClientNotReady);
+        }
+        if self.endpoint_publication_policy == OnionEndpointPublicationPolicy::Missing {
+            return Err(OnionServiceLaunchPreflightError::EndpointPublicationPolicyMissing);
+        }
+        if self.endpoint_update_policy == OnionEndpointUpdatePolicy::Missing {
+            return Err(OnionServiceLaunchPreflightError::EndpointUpdatePolicyMissing);
+        }
+        if !self.redacted_events_only {
+            return Err(OnionServiceLaunchPreflightError::LogRedactionRequired);
+        }
+
+        Ok(OnionServiceLaunchReady)
     }
 }
 
@@ -2796,6 +2888,99 @@ mod tests {
         let decision = OnionServiceKeyLifecycleDecision::sqlcipher_wrapped_after_unlock(&backup);
 
         assert_eq!(decision.check(), Ok(OnionServiceKeyLifecycleReady));
+    }
+
+    #[test]
+    fn onion_service_launch_preflight_is_locked_down_by_default() {
+        assert_eq!(
+            OnionServiceLaunchPreflight::locked_down_by_default().check(),
+            Err(OnionServiceLaunchPreflightError::ProfileUnlockRequired)
+        );
+    }
+
+    #[test]
+    fn onion_service_launch_preflight_requires_persistent_client_and_endpoint_policies() {
+        let profile_unlock = ProfileTransportUnlockReady;
+        let key_lifecycle = OnionServiceKeyLifecycleReady;
+
+        let preflight = OnionServiceLaunchPreflight::from_ready_boundaries(
+            &profile_unlock,
+            &key_lifecycle,
+            false,
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+            OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
+            true,
+        );
+        assert_eq!(
+            preflight.check(),
+            Err(OnionServiceLaunchPreflightError::PersistentClientNotReady)
+        );
+
+        let preflight = OnionServiceLaunchPreflight::from_ready_boundaries(
+            &profile_unlock,
+            &key_lifecycle,
+            true,
+            OnionEndpointPublicationPolicy::Missing,
+            OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
+            true,
+        );
+        assert_eq!(
+            preflight.check(),
+            Err(OnionServiceLaunchPreflightError::EndpointPublicationPolicyMissing)
+        );
+
+        let preflight = OnionServiceLaunchPreflight::from_ready_boundaries(
+            &profile_unlock,
+            &key_lifecycle,
+            true,
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+            OnionEndpointUpdatePolicy::Missing,
+            true,
+        );
+        assert_eq!(
+            preflight.check(),
+            Err(OnionServiceLaunchPreflightError::EndpointUpdatePolicyMissing)
+        );
+    }
+
+    #[test]
+    fn onion_service_launch_preflight_requires_redacted_events() {
+        let profile_unlock = ProfileTransportUnlockReady;
+        let key_lifecycle = OnionServiceKeyLifecycleReady;
+        let preflight = OnionServiceLaunchPreflight::from_ready_boundaries(
+            &profile_unlock,
+            &key_lifecycle,
+            true,
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+            OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
+            false,
+        );
+
+        assert_eq!(
+            preflight.check(),
+            Err(OnionServiceLaunchPreflightError::LogRedactionRequired)
+        );
+    }
+
+    #[test]
+    fn onion_service_launch_preflight_accepts_ready_boundaries_without_launching_service() {
+        let profile_unlock = ProfileTransportUnlockReady;
+        let key_lifecycle = OnionServiceKeyLifecycleReady;
+        let preflight = OnionServiceLaunchPreflight::from_ready_boundaries(
+            &profile_unlock,
+            &key_lifecycle,
+            true,
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+            OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
+            true,
+        );
+
+        assert_eq!(preflight.check(), Ok(OnionServiceLaunchReady));
+
+        let event = RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::OnionServiceLaunchFailed,
+        );
+        assert_redacted_event_hides(&event, &["example.onion", "alice", "bob"]);
     }
 
     fn sample_envelope() -> Envelope {

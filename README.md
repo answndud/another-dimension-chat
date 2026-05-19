@@ -38,6 +38,7 @@ What exists today:
 - Runtime state/cache directory probe skeleton with redacted permission failures and no Tor bootstrap.
 - Backup exclusion verification boundary that checks macOS backup-exclusion metadata and fails closed on unsupported platforms.
 - Onion service key lifecycle decision boundary that permits only SQLCipher-wrapped, profile-unlocked key material after backup exclusion verification.
+- Onion service launch preflight boundary that requires profile unlock, key readiness, persistent client readiness, endpoint publication/update policy, and redacted events before any future launch.
 - Bridge/censorship configuration decision boundary that rejects raw bridge lines and accepts only explicit no-bridge or redacted bridge-config readiness.
 - Redacted transport runtime event boundary for logs/crash contexts without raw paths, endpoints, contact ids, profile names, plaintext, or key material.
 - Runtime event sink boundary that accepts only redacted transport events.
