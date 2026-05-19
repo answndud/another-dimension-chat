@@ -57,7 +57,28 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue pre-network transport work by defining the next inbound-stream boundary after descriptor publication remains fail-closed. Do not implement real onion hosting, descriptor publication, inbound streams, or envelope send/receive until each boundary is tested separately.
+Continue pre-network transport work by defining the outbound onion stream/send boundary. Do not implement real onion hosting, descriptor publication, inbound streams, outbound streams, or envelope send/receive until each boundary is tested separately.
+
+## Onion Inbound Stream Fail-Closed Boundary
+
+Decision as of 2026-05-19: inbound onion stream handling remains a separate boundary after descriptor-publication readiness.
+
+Current code boundary:
+
+- `OnionInboundStreamBoundary` requires `OnionServiceDescriptorPublicationReady`.
+- Missing descriptor-publication readiness is rejected with `DescriptorPublicationRequired`.
+- `accept_fail_closed(...)` records only a redacted runtime event and returns `InboundAcceptNotImplemented`.
+- `read_write_fail_closed(...)` records only a redacted runtime event and returns `InboundReadWriteNotImplemented`.
+- The feature-gated `OnionServiceLaunchAdapterSkeleton` can expose the inbound stream boundary only when given descriptor-publication readiness.
+- Debug and event output must not expose onion endpoint, remote endpoint, stream id, descriptor value, private key, contact id, profile name, or path material.
+
+Still not implemented:
+
+- Real inbound onion listener creation.
+- Stream accept/read/write.
+- Remote peer/session binding.
+- Envelope receive over onion streams.
+- Usable messaging.
 
 ## Onion Service Descriptor Publication Boundary
 
