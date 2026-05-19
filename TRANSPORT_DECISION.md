@@ -57,7 +57,32 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving module split: bootstrap policy and execution skeleton. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving module split: runtime preflight and permission preflight. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Bootstrap Policy Module Extraction
+
+Decision as of 2026-05-19: bootstrap timeout/retry/policy, bootstrap outcome mapping, and the fail-closed bootstrap execution skeleton are extracted into `crates/transport/src/bootstrap.rs`. `crates/transport/src/lib.rs` re-exports the same public names to preserve the public API.
+
+Moved without behavior change:
+
+- `TransportBootstrapPolicyError`
+- `TransportBootstrapTimeoutPolicy`
+- `TransportBootstrapRetryPolicy`
+- `TransportBootstrapPolicy`
+- `TransportBootstrapOutcome`
+- `TransportBootstrapExecutionSkeleton`
+
+Preserved invariants:
+
+- High-risk bootstrap policy remains bounded.
+- Silent retry remains forbidden.
+- Censorship classification behavior remains policy-controlled.
+- The execution skeleton still requires `TransportRuntimeReady`, records only redacted events, and fails closed.
+- No Tor bootstrap, descriptor publication, stream I/O, envelope I/O, or messaging capability was added.
+
+Next split target:
+
+- Runtime preflight and permission preflight.
 
 ## Transport Runtime Events Module Extraction
 
