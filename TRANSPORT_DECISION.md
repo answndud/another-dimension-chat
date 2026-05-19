@@ -57,7 +57,27 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport closeout by choosing the next non-messaging boundary after the bootstrap-only decision. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+Continue transport work with an onion hosting gate boundary. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the onion hosting gate is tested separately and still fails closed by default.
+
+## Transport Phase Closeout and Next Boundary Selection
+
+Decision as of 2026-05-19: the next risk boundary after the bootstrap-only decision is the onion hosting gate. Stream I/O and envelope I/O remain too early because they require an onion service hosting boundary first. Usable messaging claims remain forbidden.
+
+Current code boundary:
+
+- `TransportPhaseCloseoutDecision::locked_down(...)` rejects closeout without a ready bootstrap-only decision.
+- `TransportPhaseCloseoutDecision::select_onion_hosting_gate(...)` is the only accepted closeout path.
+- The selected next boundary must be `TransportNextRiskBoundary::OnionHostingGate`.
+- Stream I/O, envelope I/O, and usable messaging shortcuts are rejected.
+- A usable messaging claim is rejected even when the next boundary is otherwise valid.
+
+Still not implemented:
+
+- Real onion hosting.
+- Real descriptor publication.
+- Real stream I/O.
+- Real envelope I/O.
+- Usable messaging.
 
 ## Bootstrap-Only Experiment Decision
 

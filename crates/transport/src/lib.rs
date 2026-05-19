@@ -161,6 +161,13 @@ pub enum BootstrapOnlyExperimentDecisionError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportPhaseCloseoutError {
+    BootstrapOnlyDecisionRequired,
+    UnsupportedNextBoundary,
+    UsableMessagingClaimForbidden,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NetworkExperimentScope {
     BootstrapOnly,
     OnionHosting,
@@ -205,6 +212,14 @@ pub enum BootstrapOnlyExperimentExpansion {
     OnionHosting,
     StreamIo,
     EnvelopeIo,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportNextRiskBoundary {
+    OnionHostingGate,
+    StreamIo,
+    EnvelopeIo,
+    UsableMessaging,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -2121,6 +2136,18 @@ pub struct BootstrapOnlyExperimentDecision {
     expansion: BootstrapOnlyExperimentExpansion,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TransportPhaseCloseoutReady {
+    next_boundary: TransportNextRiskBoundary,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TransportPhaseCloseoutDecision {
+    bootstrap_only_ready: Option<BootstrapOnlyExperimentReady>,
+    next_boundary: TransportNextRiskBoundary,
+    usable_messaging_claimed: bool,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -2683,6 +2710,46 @@ impl BootstrapOnlyExperimentDecision {
 impl BootstrapOnlyExperimentReady {
     pub fn expansion(self) -> BootstrapOnlyExperimentExpansion {
         self.expansion
+    }
+}
+
+impl TransportPhaseCloseoutDecision {
+    pub fn locked_down(next_boundary: TransportNextRiskBoundary) -> Self {
+        Self {
+            bootstrap_only_ready: None,
+            next_boundary,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn select_onion_hosting_gate(bootstrap_only_ready: BootstrapOnlyExperimentReady) -> Self {
+        Self {
+            bootstrap_only_ready: Some(bootstrap_only_ready),
+            next_boundary: TransportNextRiskBoundary::OnionHostingGate,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn check(self) -> Result<TransportPhaseCloseoutReady, TransportPhaseCloseoutError> {
+        if self.bootstrap_only_ready.is_none() {
+            return Err(TransportPhaseCloseoutError::BootstrapOnlyDecisionRequired);
+        }
+        if self.usable_messaging_claimed {
+            return Err(TransportPhaseCloseoutError::UsableMessagingClaimForbidden);
+        }
+        if self.next_boundary != TransportNextRiskBoundary::OnionHostingGate {
+            return Err(TransportPhaseCloseoutError::UnsupportedNextBoundary);
+        }
+
+        Ok(TransportPhaseCloseoutReady {
+            next_boundary: self.next_boundary,
+        })
+    }
+}
+
+impl TransportPhaseCloseoutReady {
+    pub fn next_boundary(self) -> TransportNextRiskBoundary {
+        self.next_boundary
     }
 }
 
@@ -4372,6 +4439,89 @@ mod tests {
                 Err(BootstrapOnlyExperimentDecisionError::UnsupportedBootstrapExpansion)
             );
         }
+    }
+
+    #[test]
+    fn transport_phase_closeout_selects_onion_hosting_gate_as_next_boundary() {
+        let closeout = TransportPreNetworkCloseout::from_blockers(Vec::new());
+        let gate_ready = NetworkExperimentGateProposal::bootstrap_only_manual_spike(
+            &closeout,
+            NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
+            NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
+            NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
+        )
+        .check()
+        .expect("network experiment gate ready");
+        let bootstrap_ready = BootstrapOnlyExperimentDecision::existing_manual_bootstrap_only(
+            gate_ready,
+            BootstrapOnlyExperimentFeatureState::ArtiManualBootstrapFeature,
+        )
+        .check()
+        .expect("bootstrap-only experiment decision ready");
+
+        assert_eq!(
+            TransportPhaseCloseoutDecision::locked_down(
+                TransportNextRiskBoundary::OnionHostingGate
+            )
+            .check(),
+            Err(TransportPhaseCloseoutError::BootstrapOnlyDecisionRequired)
+        );
+
+        let ready = TransportPhaseCloseoutDecision::select_onion_hosting_gate(bootstrap_ready)
+            .check()
+            .expect("transport phase closeout ready");
+
+        assert_eq!(
+            ready.next_boundary(),
+            TransportNextRiskBoundary::OnionHostingGate
+        );
+    }
+
+    #[test]
+    fn transport_phase_closeout_rejects_stream_envelope_and_messaging_shortcuts() {
+        let closeout = TransportPreNetworkCloseout::from_blockers(Vec::new());
+        let gate_ready = NetworkExperimentGateProposal::bootstrap_only_manual_spike(
+            &closeout,
+            NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
+            NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
+            NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
+        )
+        .check()
+        .expect("network experiment gate ready");
+        let bootstrap_ready = BootstrapOnlyExperimentDecision::existing_manual_bootstrap_only(
+            gate_ready,
+            BootstrapOnlyExperimentFeatureState::ArtiManualBootstrapFeature,
+        )
+        .check()
+        .expect("bootstrap-only experiment decision ready");
+
+        for next_boundary in [
+            TransportNextRiskBoundary::StreamIo,
+            TransportNextRiskBoundary::EnvelopeIo,
+            TransportNextRiskBoundary::UsableMessaging,
+        ] {
+            let decision = TransportPhaseCloseoutDecision {
+                bootstrap_only_ready: Some(bootstrap_ready),
+                next_boundary,
+                usable_messaging_claimed: false,
+            };
+
+            assert_eq!(
+                decision.check(),
+                Err(TransportPhaseCloseoutError::UnsupportedNextBoundary)
+            );
+        }
+
+        let messaging_claim = TransportPhaseCloseoutDecision {
+            bootstrap_only_ready: Some(bootstrap_ready),
+            next_boundary: TransportNextRiskBoundary::OnionHostingGate,
+            usable_messaging_claimed: true,
+        };
+
+        assert_eq!(
+            messaging_claim.check(),
+            Err(TransportPhaseCloseoutError::UsableMessagingClaimForbidden)
+        );
     }
 
     #[test]
