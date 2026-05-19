@@ -16,7 +16,8 @@
 - `crates/core/src/lib.rs`: profile, pairing, messaging orchestration.
 - `crates/pairing/src/lib.rs`: pairing payload, safety transcript, prototype signature boundary.
 - `crates/protocol/src/lib.rs`: message envelope and replay window prototype.
-- `scripts/verify_all.sh`: canonical local verification entrypoint.
+- `scripts/verify_all.sh`: lightweight canonical local verification entrypoint.
+- `scripts/verify_full.sh`: heavy pre-release/audit verification entrypoint.
 - `docs/`는 public repository에 올리지 않는 private planning/security notes이며 `.gitignore`에 포함되어 있다.
 
 ## 보안 원칙
@@ -43,16 +44,15 @@
 - local git repository는 `main` branch로 초기화되어 있다.
 - initial prototype scaffold commit은 생성되어 있다.
 - remote `origin`은 `git@github.com:answndud/another-dimension-chat.git`이다.
-- GitHub Actions workflow는 `.github/workflows/verify.yml`에 있으며 `scripts/verify_all.sh`를 실행한다.
+- GitHub Actions workflow는 `.github/workflows/verify.yml`에 있으며 lightweight `scripts/verify_all.sh`를 실행한다.
 
 ## 검증
 
-- 전체 local verification은 `scripts/verify_all.sh`를 우선 사용한다.
+- 기본 local verification은 lightweight `scripts/verify_all.sh`를 우선 사용한다.
+- heavy verification은 pre-release, audit, broad refactor, dependency/feature 변경처럼 비용을 감수할 가치가 있을 때만 `scripts/verify_full.sh`로 실행한다.
 - 기본 Rust 검증 명령:
   - `cargo fmt --all -- --check`
-  - `cargo test --workspace`
-  - `cargo test --workspace --features dev-insecure`
-  - `cargo clippy --workspace --all-targets --all-features`
+  - `cargo test --workspace --lib`
 - CLI flow, pairing lifecycle, storage lifecycle, replay behavior를 건드리면 `scripts/smoke_dev_cli.sh`도 실행한다.
 - `dev-insecure` 검증은 prototype flow 검증이며 실제 보안 검증이 아니다.
 - 문서 변경은 관련 파일 존재와 핵심 섹션을 확인하고, 작업 상태가 바뀌면 `docs/PLAN.md`, `docs/PROGRESS.md`, `docs/COMPLETED.md`를 함께 갱신한다.

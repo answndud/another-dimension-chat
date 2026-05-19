@@ -13,10 +13,7 @@ run_step() {
 
 cd "$ROOT_DIR"
 
-run_step "dev CLI smoke" scripts/smoke_dev_cli.sh
 run_step "rustfmt" cargo fmt --all -- --check
-run_step "default tests" cargo test --workspace
-run_step "dev-insecure tests" cargo test --workspace --features dev-insecure
-run_step "clippy" cargo clippy --workspace --all-targets --all-features
+run_step "workspace library tests" cargo test --workspace --lib
 
-printf '\nall verification steps passed\n'
+printf '\nlight verification steps passed\n'
