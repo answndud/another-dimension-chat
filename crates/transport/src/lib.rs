@@ -103,6 +103,13 @@ pub enum OnionServiceDescriptorPublicationError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionInboundStreamError {
+    DescriptorPublicationRequired,
+    InboundAcceptNotImplemented,
+    InboundReadWriteNotImplemented,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EndpointLifecycleError {
     GlobalEndpointForbidden,
     IdentityKeyCouplingForbidden,
@@ -1854,6 +1861,14 @@ pub struct OnionServiceDescriptorPublicationBoundary {
     endpoint_publication_policy: OnionEndpointPublicationPolicy,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct OnionServiceDescriptorPublicationReady;
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct OnionInboundStreamBoundary {
+    _descriptor_ready: OnionServiceDescriptorPublicationReady,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -1948,6 +1963,54 @@ impl fmt::Debug for OnionServiceDescriptorPublicationBoundary {
             )
             .field("descriptor", &"<not-published>")
             .field("onion_endpoint", &"<redacted>")
+            .field("contact_id", &"<redacted>")
+            .field("profile_name", &"<redacted>")
+            .finish()
+    }
+}
+
+impl OnionInboundStreamBoundary {
+    pub fn from_descriptor_publication_ready(
+        descriptor_ready: OnionServiceDescriptorPublicationReady,
+    ) -> Self {
+        Self {
+            _descriptor_ready: descriptor_ready,
+        }
+    }
+
+    pub fn from_missing_descriptor_publication() -> Result<Self, OnionInboundStreamError> {
+        Err(OnionInboundStreamError::DescriptorPublicationRequired)
+    }
+
+    pub fn accept_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        sink: &mut S,
+    ) -> Result<(), OnionInboundStreamError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::ReceiveFailed,
+        ));
+        Err(OnionInboundStreamError::InboundAcceptNotImplemented)
+    }
+
+    pub fn read_write_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        sink: &mut S,
+    ) -> Result<(), OnionInboundStreamError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::ReceiveFailed,
+        ));
+        Err(OnionInboundStreamError::InboundReadWriteNotImplemented)
+    }
+}
+
+impl fmt::Debug for OnionInboundStreamBoundary {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OnionInboundStreamBoundary")
+            .field("descriptor", &"<redacted>")
+            .field("onion_endpoint", &"<redacted>")
+            .field("remote_endpoint", &"<redacted>")
+            .field("stream_id", &"<redacted>")
             .field("contact_id", &"<redacted>")
             .field("profile_name", &"<redacted>")
             .finish()
@@ -2412,6 +2475,13 @@ pub mod arti_adapter_spike {
                 self._launch_ready,
                 endpoint_publication_policy,
             )
+        }
+
+        pub fn inbound_stream_boundary(
+            &self,
+            descriptor_ready: OnionServiceDescriptorPublicationReady,
+        ) -> OnionInboundStreamBoundary {
+            OnionInboundStreamBoundary::from_descriptor_publication_ready(descriptor_ready)
         }
     }
 
@@ -4256,6 +4326,66 @@ mod tests {
         );
     }
 
+    #[test]
+    fn onion_inbound_stream_boundary_requires_descriptor_publication_ready() {
+        assert_eq!(
+            OnionInboundStreamBoundary::from_missing_descriptor_publication(),
+            Err(OnionInboundStreamError::DescriptorPublicationRequired)
+        );
+
+        let boundary = OnionInboundStreamBoundary::from_descriptor_publication_ready(
+            OnionServiceDescriptorPublicationReady,
+        );
+        let rendered = format!("{boundary:?}");
+
+        assert!(rendered.contains("OnionInboundStreamBoundary"));
+        assert!(rendered.contains("<redacted>"));
+        assert!(!rendered.contains("example.onion"));
+        assert!(!rendered.contains("alice"));
+        assert!(!rendered.contains("bob"));
+        assert!(!rendered.contains("stream-1"));
+        assert!(!rendered.contains("descriptor-value"));
+    }
+
+    #[test]
+    fn onion_inbound_stream_accept_and_io_fail_closed_with_redacted_events() {
+        let boundary = OnionInboundStreamBoundary::from_descriptor_publication_ready(
+            OnionServiceDescriptorPublicationReady,
+        );
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        assert_eq!(
+            boundary.accept_fail_closed(&mut sink),
+            Err(OnionInboundStreamError::InboundAcceptNotImplemented)
+        );
+        assert_eq!(
+            boundary.read_write_fail_closed(&mut sink),
+            Err(OnionInboundStreamError::InboundReadWriteNotImplemented)
+        );
+        assert_eq!(sink.events().len(), 2);
+        for event in sink.events() {
+            assert_eq!(
+                event.kind(),
+                TransportRuntimeEventKind::RuntimePreflightFailed
+            );
+            assert_eq!(
+                event.runtime_error(),
+                Some(TransportRuntimeError::ReceiveFailed)
+            );
+            assert_redacted_event_hides(
+                event,
+                &[
+                    "example.onion",
+                    "alice",
+                    "bob",
+                    "stream-1",
+                    "descriptor-value",
+                    "private-key",
+                ],
+            );
+        }
+    }
+
     fn sample_envelope() -> Envelope {
         Envelope {
             protocol_version: 1,
@@ -4832,6 +4962,51 @@ mod tests {
         assert_redacted_event_hides(
             sink.events().last().expect("event"),
             &["example.onion", "alice", "bob", "private-key", "descriptor"],
+        );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn onion_service_launch_adapter_exposes_inbound_stream_boundary() {
+        let root = unique_transport_test_root("onion-inbound-stream-boundary");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let mut owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+        owner.mark_bootstrapped_for_adapter_test(&mut sink);
+        let launch_adapter =
+            arti_adapter_spike::OnionServiceLaunchAdapterSkeleton::from_ready_owner(
+                OnionServiceLaunchReady,
+                &ready_onion_service_key_material(),
+                &owner,
+            )
+            .expect("launch adapter");
+        let inbound =
+            launch_adapter.inbound_stream_boundary(OnionServiceDescriptorPublicationReady);
+
+        assert_eq!(
+            inbound.accept_fail_closed(&mut sink),
+            Err(OnionInboundStreamError::InboundAcceptNotImplemented)
+        );
+        assert_eq!(
+            sink.events().last().expect("event").runtime_error(),
+            Some(TransportRuntimeError::ReceiveFailed)
+        );
+        assert_redacted_event_hides(
+            sink.events().last().expect("event"),
+            &["example.onion", "alice", "bob", "stream-1", "descriptor"],
         );
     }
 
