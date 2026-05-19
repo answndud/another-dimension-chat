@@ -96,6 +96,12 @@ pub enum EndpointLifecycleError {
     EmptyEncryptedPayload,
     InvalidControlEnvelope,
     InvalidEndpointState,
+    EncryptedSessionVerificationRequired,
+    EndpointContactMismatch,
+    EndpointRotationRollback,
+    EndpointRotationStale,
+    EndpointRotationNotPending,
+    EndpointReconnectNotImplemented,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1126,6 +1132,28 @@ pub enum EndpointUpdateChannel {
     OutOfBandPairingPayload,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct EndpointRotationSequence(u64);
+
+impl EndpointRotationSequence {
+    pub fn new(value: u64) -> Result<Self, EndpointLifecycleError> {
+        if value == 0 {
+            return Err(EndpointLifecycleError::EndpointRotationStale);
+        }
+        Ok(Self(value))
+    }
+
+    pub fn value(self) -> u64 {
+        self.0
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum EndpointRotationApplyContext {
+    ExistingEncryptedSessionVerified,
+    UnverifiedControlPayload,
+}
+
 #[derive(Clone, Eq, PartialEq)]
 pub struct PairwiseRendezvousEndpoint {
     contact_id: ContactId,
@@ -1239,6 +1267,136 @@ impl fmt::Debug for PairwiseEndpointUpdate {
             .debug_struct("PairwiseEndpointUpdate")
             .field("contact_id", &"<redacted>")
             .field("new_endpoint", &"<redacted>")
+            .finish()
+    }
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct PendingEndpointRotation {
+    sequence: EndpointRotationSequence,
+    update: PairwiseEndpointUpdate,
+}
+
+impl PendingEndpointRotation {
+    pub fn sequence(&self) -> EndpointRotationSequence {
+        self.sequence
+    }
+
+    pub fn update(&self) -> &PairwiseEndpointUpdate {
+        &self.update
+    }
+}
+
+impl fmt::Debug for PendingEndpointRotation {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PendingEndpointRotation")
+            .field("sequence", &self.sequence)
+            .field("contact_id", &"<redacted>")
+            .field("new_endpoint", &"<redacted>")
+            .finish()
+    }
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct PairwiseEndpointRotationState {
+    current: PairwiseRendezvousEndpoint,
+    pending: Option<PendingEndpointRotation>,
+    last_applied_sequence: u64,
+}
+
+impl PairwiseEndpointRotationState {
+    pub fn new(current: PairwiseRendezvousEndpoint) -> Self {
+        Self {
+            current,
+            pending: None,
+            last_applied_sequence: 0,
+        }
+    }
+
+    pub fn current(&self) -> &PairwiseRendezvousEndpoint {
+        &self.current
+    }
+
+    pub fn pending(&self) -> Option<&PendingEndpointRotation> {
+        self.pending.as_ref()
+    }
+
+    pub fn last_applied_sequence(&self) -> u64 {
+        self.last_applied_sequence
+    }
+
+    pub fn stage_verified_update(
+        &mut self,
+        update: PairwiseEndpointUpdate,
+        sequence: EndpointRotationSequence,
+        context: EndpointRotationApplyContext,
+    ) -> Result<(), EndpointLifecycleError> {
+        if context != EndpointRotationApplyContext::ExistingEncryptedSessionVerified {
+            return Err(EndpointLifecycleError::EncryptedSessionVerificationRequired);
+        }
+        if update.contact_id() != self.current.contact_id() {
+            return Err(EndpointLifecycleError::EndpointContactMismatch);
+        }
+        if sequence.value() <= self.last_applied_sequence {
+            return Err(EndpointLifecycleError::EndpointRotationRollback);
+        }
+        if let Some(pending) = &self.pending {
+            if sequence <= pending.sequence() {
+                return Err(EndpointLifecycleError::EndpointRotationStale);
+            }
+        }
+
+        self.pending = Some(PendingEndpointRotation { sequence, update });
+        Ok(())
+    }
+
+    pub fn apply_pending(
+        &mut self,
+        sequence: EndpointRotationSequence,
+    ) -> Result<(), EndpointLifecycleError> {
+        let pending = self
+            .pending
+            .take()
+            .ok_or(EndpointLifecycleError::EndpointRotationNotPending)?;
+        if sequence != pending.sequence() {
+            self.pending = Some(pending);
+            return Err(EndpointLifecycleError::EndpointRotationStale);
+        }
+        if sequence.value() <= self.last_applied_sequence {
+            self.pending = Some(pending);
+            return Err(EndpointLifecycleError::EndpointRotationRollback);
+        }
+
+        self.current = PairwiseRendezvousEndpoint::new(
+            pending.update.contact_id().clone(),
+            pending.update.new_endpoint().clone(),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )?;
+        self.last_applied_sequence = sequence.value();
+        Ok(())
+    }
+
+    pub fn reconnect_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        sink: &mut S,
+    ) -> Result<(), EndpointLifecycleError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::RuntimeNetworkDisabled,
+        ));
+        Err(EndpointLifecycleError::EndpointReconnectNotImplemented)
+    }
+}
+
+impl fmt::Debug for PairwiseEndpointRotationState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PairwiseEndpointRotationState")
+            .field("contact_id", &"<redacted>")
+            .field("current_endpoint", &"<redacted>")
+            .field("pending", &self.pending.as_ref().map(|_| "<redacted>"))
+            .field("last_applied_sequence", &self.last_applied_sequence)
             .finish()
     }
 }
@@ -2452,6 +2610,166 @@ mod tests {
         assert!(!rendered.contains("bob"));
         assert!(!rendered.contains("oldsecret.onion"));
         assert!(!rendered.contains("newsecret.onion"));
+    }
+
+    #[test]
+    fn endpoint_rotation_state_stages_and_applies_only_verified_updates() {
+        let current = PairwiseRendezvousEndpoint::new(
+            ContactId::new("bob").expect("contact"),
+            OnionServiceEndpoint::new("oldsecret.onion").expect("endpoint"),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
+        .expect("current endpoint");
+        let update = PairwiseEndpointUpdate::for_existing_encrypted_session(
+            &current,
+            OnionServiceEndpoint::new("newsecret.onion").expect("endpoint"),
+            EndpointUpdateChannel::ExistingEncryptedSession,
+        )
+        .expect("endpoint update");
+        let mut state = PairwiseEndpointRotationState::new(current);
+
+        assert_eq!(
+            state.stage_verified_update(
+                update.clone(),
+                EndpointRotationSequence::new(1).expect("sequence"),
+                EndpointRotationApplyContext::UnverifiedControlPayload,
+            ),
+            Err(EndpointLifecycleError::EncryptedSessionVerificationRequired)
+        );
+
+        state
+            .stage_verified_update(
+                update,
+                EndpointRotationSequence::new(1).expect("sequence"),
+                EndpointRotationApplyContext::ExistingEncryptedSessionVerified,
+            )
+            .expect("stage verified update");
+        assert_eq!(
+            state.pending().expect("pending").sequence(),
+            EndpointRotationSequence::new(1).expect("sequence")
+        );
+
+        state
+            .apply_pending(EndpointRotationSequence::new(1).expect("sequence"))
+            .expect("apply pending");
+        assert_eq!(state.current().endpoint().as_str(), "newsecret.onion");
+        assert_eq!(state.last_applied_sequence(), 1);
+        assert!(state.pending().is_none());
+
+        let rendered = format!("{state:?}");
+        assert!(rendered.contains("PairwiseEndpointRotationState"));
+        assert!(rendered.contains("<redacted>"));
+        assert!(!rendered.contains("bob"));
+        assert!(!rendered.contains("oldsecret.onion"));
+        assert!(!rendered.contains("newsecret.onion"));
+    }
+
+    #[test]
+    fn endpoint_rotation_state_rejects_rollback_stale_and_contact_mismatch() {
+        let current = PairwiseRendezvousEndpoint::new(
+            ContactId::new("bob").expect("contact"),
+            OnionServiceEndpoint::new("oldsecret.onion").expect("endpoint"),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
+        .expect("current endpoint");
+        let bob_update = PairwiseEndpointUpdate::for_existing_encrypted_session(
+            &current,
+            OnionServiceEndpoint::new("newsecret.onion").expect("endpoint"),
+            EndpointUpdateChannel::ExistingEncryptedSession,
+        )
+        .expect("endpoint update");
+        let carol_current = PairwiseRendezvousEndpoint::new(
+            ContactId::new("carol").expect("contact"),
+            OnionServiceEndpoint::new("carolsecret.onion").expect("endpoint"),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
+        .expect("carol endpoint");
+        let carol_update = PairwiseEndpointUpdate::for_existing_encrypted_session(
+            &carol_current,
+            OnionServiceEndpoint::new("carolnew.onion").expect("endpoint"),
+            EndpointUpdateChannel::ExistingEncryptedSession,
+        )
+        .expect("carol update");
+        let mut state = PairwiseEndpointRotationState::new(current);
+
+        assert_eq!(
+            state.apply_pending(EndpointRotationSequence::new(1).expect("sequence")),
+            Err(EndpointLifecycleError::EndpointRotationNotPending)
+        );
+        assert_eq!(
+            state.stage_verified_update(
+                carol_update,
+                EndpointRotationSequence::new(1).expect("sequence"),
+                EndpointRotationApplyContext::ExistingEncryptedSessionVerified,
+            ),
+            Err(EndpointLifecycleError::EndpointContactMismatch)
+        );
+
+        state
+            .stage_verified_update(
+                bob_update.clone(),
+                EndpointRotationSequence::new(2).expect("sequence"),
+                EndpointRotationApplyContext::ExistingEncryptedSessionVerified,
+            )
+            .expect("stage update");
+        assert_eq!(
+            state.stage_verified_update(
+                bob_update.clone(),
+                EndpointRotationSequence::new(2).expect("sequence"),
+                EndpointRotationApplyContext::ExistingEncryptedSessionVerified,
+            ),
+            Err(EndpointLifecycleError::EndpointRotationStale)
+        );
+        assert_eq!(
+            state.apply_pending(EndpointRotationSequence::new(1).expect("sequence")),
+            Err(EndpointLifecycleError::EndpointRotationStale)
+        );
+        state
+            .apply_pending(EndpointRotationSequence::new(2).expect("sequence"))
+            .expect("apply update");
+        assert_eq!(
+            state.stage_verified_update(
+                bob_update,
+                EndpointRotationSequence::new(1).expect("sequence"),
+                EndpointRotationApplyContext::ExistingEncryptedSessionVerified,
+            ),
+            Err(EndpointLifecycleError::EndpointRotationRollback)
+        );
+        assert_eq!(
+            EndpointRotationSequence::new(0),
+            Err(EndpointLifecycleError::EndpointRotationStale)
+        );
+    }
+
+    #[test]
+    fn endpoint_rotation_reconnect_is_fail_closed_and_redacted() {
+        let current = PairwiseRendezvousEndpoint::new(
+            ContactId::new("bob").expect("contact"),
+            OnionServiceEndpoint::new("oldsecret.onion").expect("endpoint"),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
+        .expect("current endpoint");
+        let state = PairwiseEndpointRotationState::new(current);
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        assert_eq!(
+            state.reconnect_fail_closed(&mut sink),
+            Err(EndpointLifecycleError::EndpointReconnectNotImplemented)
+        );
+        assert_eq!(sink.events().len(), 1);
+        assert_eq!(
+            sink.events()[0].kind(),
+            TransportRuntimeEventKind::RuntimePreflightFailed
+        );
+        assert_eq!(
+            sink.events()[0].runtime_error(),
+            Some(TransportRuntimeError::RuntimeNetworkDisabled)
+        );
+        assert_redacted_event_hides(&sink.events()[0], &["bob", "oldsecret.onion", ".onion"]);
     }
 
     #[test]
