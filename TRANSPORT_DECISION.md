@@ -57,7 +57,34 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with cleanup/module decomposition before adding another stream readiness token. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the first behavior-preserving module split: extract redacted transport runtime events and event sinks before adding new network behavior. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Transport Module Decomposition Preparation
+
+Decision as of 2026-05-19: `crates/transport/src/lib.rs` is large enough that new behavior should pause until low-risk module decomposition begins. The split must preserve public API compatibility and fail-closed behavior.
+
+Preferred split order:
+
+1. Runtime events and event sinks.
+2. Bootstrap policy and execution skeleton.
+3. Runtime preflight and permission preflight.
+4. Endpoint and endpoint-rotation state.
+5. Onion lifecycle, hosting, descriptor publication, and stream gates.
+6. Optional/manual Arti spike modules.
+
+First split target:
+
+- Extract `TransportRuntimeEventKind`, `TransportTransferDirection`, `RedactedTransportRuntimeEvent`, `TransportRuntimeEventSink`, `NoopTransportRuntimeEventSink`, and `InMemoryTransportRuntimeEventSink`.
+- Re-export the same public names from `crates/transport/src/lib.rs`.
+- Do not change constructor behavior, redaction behavior, event categories, or tests.
+- Do not add new stream, envelope, or messaging capabilities.
+
+Verification for the first split:
+
+- `cargo test -p another-dimension-transport redacted_runtime_event`
+- `cargo test -p another-dimension-transport runtime_event`
+- `scripts/verify_all.sh`
+- `git diff --check`
 
 ## Transport Stream Boundary Consolidation Review
 
