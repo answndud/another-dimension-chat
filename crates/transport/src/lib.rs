@@ -1410,6 +1410,57 @@ pub mod arti_adapter_spike {
         }
     }
 
+    #[derive(Clone, Debug)]
+    pub struct BoundedArtiBootstrapAdapterSpike {
+        config: TorClientConfig,
+        dirs: Arc<ArtiAppPrivateDirs>,
+        skeleton: TransportBootstrapExecutionSkeleton,
+        transport: OnionEnvelopeTransport,
+    }
+
+    impl BoundedArtiBootstrapAdapterSpike {
+        pub fn fail_closed_app_private_config(
+            dirs: ArtiAppPrivateDirs,
+            skeleton: TransportBootstrapExecutionSkeleton,
+        ) -> Result<Self, ArtiConfigError> {
+            let config =
+                TorClientConfigBuilder::from_directories(dirs.state_dir(), dirs.cache_dir())
+                    .build()
+                    .map_err(|_| ArtiConfigError::BuildFailed)?;
+
+            Ok(Self {
+                config,
+                dirs: Arc::new(dirs),
+                skeleton,
+                transport: OnionEnvelopeTransport::fail_closed_high_risk(),
+            })
+        }
+
+        pub fn config(&self) -> &TorClientConfig {
+            &self.config
+        }
+
+        pub fn dirs(&self) -> &ArtiAppPrivateDirs {
+            &self.dirs
+        }
+
+        pub fn skeleton(&self) -> TransportBootstrapExecutionSkeleton {
+            self.skeleton
+        }
+
+        pub fn transport(&self) -> &OnionEnvelopeTransport {
+            &self.transport
+        }
+
+        pub fn execute_fail_closed<S: TransportRuntimeEventSink>(
+            &self,
+            outcome: TransportBootstrapOutcome,
+            sink: &mut S,
+        ) -> Result<(), TransportRuntimeError> {
+            self.skeleton.execute_fail_closed(outcome, sink)
+        }
+    }
+
     fn validate_app_private_dir(path: &Path) -> Result<(), ArtiConfigError> {
         let text = path.to_string_lossy();
         if text.is_empty() {
@@ -2575,6 +2626,114 @@ mod tests {
                 allow_runtime_network: false,
                 allow_onion_key_generation: false,
             }
+        );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn bounded_arti_bootstrap_adapter_spike_binds_runtime_policy_without_opening_network() {
+        let root = unique_transport_test_root("bounded-arti-bootstrap");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let skeleton = TransportBootstrapExecutionSkeleton::new(
+            TransportRuntimeReady,
+            TransportBootstrapPolicy::high_risk_default(),
+        );
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs.clone(),
+                skeleton,
+            )
+            .expect("bounded adapter");
+
+        assert_eq!(adapter.dirs(), &dirs);
+        assert_eq!(adapter.skeleton().runtime_ready(), TransportRuntimeReady);
+        assert_eq!(
+            adapter.skeleton().policy(),
+            TransportBootstrapPolicy::high_risk_default()
+        );
+        assert!(format!("{:?}", adapter.config()).contains("TorClientConfig"));
+        assert_eq!(
+            adapter.transport().policy().mode(),
+            TransportMode::HighRiskOnionOnly
+        );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn bounded_arti_bootstrap_adapter_spike_fails_closed_and_records_redacted_event() {
+        let root = unique_transport_test_root("bounded-arti-fail-closed");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        assert_eq!(
+            adapter.execute_fail_closed(TransportBootstrapOutcome::TimedOut, &mut sink),
+            Err(TransportRuntimeError::BootstrapTimeout)
+        );
+        assert_eq!(sink.events().len(), 1);
+        assert_eq!(
+            sink.events()[0].kind(),
+            TransportRuntimeEventKind::BootstrapFailed
+        );
+        assert_eq!(
+            sink.events()[0].runtime_error(),
+            Some(TransportRuntimeError::BootstrapTimeout)
+        );
+        assert_redacted_event_hides(
+            &sink.events()[0],
+            &[".onion", "Library/Application Support", "arti-state"],
+        );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn bounded_arti_bootstrap_adapter_spike_keeps_envelope_transport_unavailable() {
+        let root = unique_transport_test_root("bounded-arti-envelope");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let onion = TransportRoute::onion("example.onion").expect("onion route");
+        let envelope = sample_envelope();
+
+        assert_eq!(
+            adapter.transport().send_envelope(TransportSendRequest {
+                route: &onion,
+                envelope: &envelope,
+            }),
+            Err(TransportError::Unavailable)
+        );
+        assert_eq!(
+            adapter
+                .transport()
+                .receive_envelopes(TransportReceiveRequest { route: &onion }),
+            Err(TransportError::Unavailable)
         );
     }
 }

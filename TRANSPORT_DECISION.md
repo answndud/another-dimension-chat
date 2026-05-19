@@ -491,3 +491,18 @@ Still not implemented:
 - Envelope send/receive.
 
 Next accepted phase: a bounded Arti client bootstrap adapter spike may be considered, but it must keep send/receive and onion hosting fail-closed until those phases have their own tests and public-safe documentation.
+
+## Bounded Arti Client Bootstrap Adapter Spike
+
+Decision as of 2026-05-19: the optional `arti-adapter-spike` feature may now bind app-private Arti configuration, a runtime-ready token, bounded bootstrap policy, fail-closed onion transport, and redacted runtime event reporting into one adapter boundary.
+
+The current spike guarantees:
+
+- `BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(...)` only accepts explicit app-private state/cache directories through the existing directory validator.
+- The adapter requires `TransportBootstrapExecutionSkeleton`, which already carries `TransportRuntimeReady` and `TransportBootstrapPolicy`.
+- Bootstrap failure outcomes must be recorded through `TransportRuntimeEventSink` as redacted events.
+- Envelope send/receive remains `TransportError::Unavailable`.
+- Onion service hosting remains unimplemented.
+- The spike still does not construct or bootstrap a live Arti `TorClient`, open sockets, launch onion services, discover system Tor, or transfer envelopes.
+
+This is the last compile-only adapter boundary before an explicit network-capable experiment. The next accepted phase must add a separate manual/feature-gated actual bootstrap attempt with timeout and cancellation behavior, and it must not claim usable messaging until send, receive, and onion hosting are separately implemented and verified.
