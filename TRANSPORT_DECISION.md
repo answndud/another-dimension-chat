@@ -57,7 +57,25 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next boundary after descriptor publication fail-closed adapter. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until each boundary is tested separately and still fails closed by default.
+Continue transport work with the next boundary after inbound stream gate. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until each boundary is tested separately and still fails closed by default.
+
+## Inbound Stream Gate Boundary
+
+Decision as of 2026-05-19: inbound stream behavior remains gated after descriptor publication readiness. The gate does not accept or read/write streams; it only fixes the conditions required before a future inbound stream adapter can be considered.
+
+Current code boundary:
+
+- `InboundStreamGateDecision::locked_down()` fails closed without descriptor publication gate readiness.
+- `InboundStreamGateDecision::from_publication_gate_and_adapter(...)` requires `DescriptorPublicationGateReady` and a `DescriptorPublicationFailClosedAdapter`.
+- Accept, read/write, envelope I/O, and usable messaging flags are rejected.
+- Existing inbound stream boundary methods still fail closed and emit only redacted runtime events.
+
+Still not implemented:
+
+- Real inbound stream accept.
+- Real inbound stream read/write.
+- Real envelope I/O.
+- Usable messaging.
 
 ## Descriptor Publication Fail-Closed Adapter Boundary
 

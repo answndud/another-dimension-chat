@@ -197,6 +197,16 @@ pub enum DescriptorPublicationAdapterError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum InboundStreamGateError {
+    DescriptorPublicationGateRequired,
+    DescriptorPublicationAdapterRequired,
+    AcceptForbidden,
+    ReadWriteForbidden,
+    EnvelopeIoForbidden,
+    UsableMessagingClaimForbidden,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NetworkExperimentScope {
     BootstrapOnly,
     OnionHosting,
@@ -2219,6 +2229,19 @@ pub struct DescriptorPublicationFailClosedAdapter {
     boundary: OnionServiceDescriptorPublicationBoundary,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct InboundStreamGateReady;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct InboundStreamGateDecision {
+    descriptor_publication_gate_ready: Option<DescriptorPublicationGateReady>,
+    descriptor_publication_adapter_ready: bool,
+    accept_enabled: bool,
+    read_write_enabled: bool,
+    envelope_io_enabled: bool,
+    usable_messaging_claimed: bool,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -2995,6 +3018,56 @@ impl fmt::Debug for DescriptorPublicationFailClosedAdapter {
             .field("contact_id", &"<redacted>")
             .field("profile_name", &"<redacted>")
             .finish()
+    }
+}
+
+impl InboundStreamGateDecision {
+    pub fn locked_down() -> Self {
+        Self {
+            descriptor_publication_gate_ready: None,
+            descriptor_publication_adapter_ready: false,
+            accept_enabled: false,
+            read_write_enabled: false,
+            envelope_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn from_publication_gate_and_adapter(
+        descriptor_publication_gate_ready: DescriptorPublicationGateReady,
+        _adapter: &DescriptorPublicationFailClosedAdapter,
+    ) -> Self {
+        Self {
+            descriptor_publication_gate_ready: Some(descriptor_publication_gate_ready),
+            descriptor_publication_adapter_ready: true,
+            accept_enabled: false,
+            read_write_enabled: false,
+            envelope_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn check(self) -> Result<InboundStreamGateReady, InboundStreamGateError> {
+        if self.descriptor_publication_gate_ready.is_none() {
+            return Err(InboundStreamGateError::DescriptorPublicationGateRequired);
+        }
+        if !self.descriptor_publication_adapter_ready {
+            return Err(InboundStreamGateError::DescriptorPublicationAdapterRequired);
+        }
+        if self.accept_enabled {
+            return Err(InboundStreamGateError::AcceptForbidden);
+        }
+        if self.read_write_enabled {
+            return Err(InboundStreamGateError::ReadWriteForbidden);
+        }
+        if self.envelope_io_enabled {
+            return Err(InboundStreamGateError::EnvelopeIoForbidden);
+        }
+        if self.usable_messaging_claimed {
+            return Err(InboundStreamGateError::UsableMessagingClaimForbidden);
+        }
+
+        Ok(InboundStreamGateReady)
     }
 }
 
@@ -5045,6 +5118,95 @@ mod tests {
         assert!(rendered.contains("<redacted>"));
         assert!(!rendered.contains("example.onion"));
         assert!(!rendered.contains("alice"));
+    }
+
+    #[test]
+    fn inbound_stream_gate_requires_descriptor_publication_gate_and_adapter() {
+        assert_eq!(
+            InboundStreamGateDecision::locked_down().check(),
+            Err(InboundStreamGateError::DescriptorPublicationGateRequired)
+        );
+
+        let gate_ready = ready_descriptor_publication_gate();
+        let missing_adapter = InboundStreamGateDecision {
+            descriptor_publication_gate_ready: Some(gate_ready),
+            descriptor_publication_adapter_ready: false,
+            accept_enabled: false,
+            read_write_enabled: false,
+            envelope_io_enabled: false,
+            usable_messaging_claimed: false,
+        };
+
+        assert_eq!(
+            missing_adapter.check(),
+            Err(InboundStreamGateError::DescriptorPublicationAdapterRequired)
+        );
+
+        let adapter = DescriptorPublicationFailClosedAdapter::from_gate_ready(
+            gate_ready,
+            OnionServiceLaunchReady,
+        )
+        .expect("descriptor publication adapter");
+
+        assert_eq!(
+            InboundStreamGateDecision::from_publication_gate_and_adapter(gate_ready, &adapter)
+                .check(),
+            Ok(InboundStreamGateReady)
+        );
+    }
+
+    #[test]
+    fn inbound_stream_gate_rejects_accept_readwrite_envelope_and_messaging_shortcuts() {
+        let gate_ready = ready_descriptor_publication_gate();
+
+        for (decision, expected) in [
+            (
+                InboundStreamGateDecision {
+                    descriptor_publication_gate_ready: Some(gate_ready),
+                    descriptor_publication_adapter_ready: true,
+                    accept_enabled: true,
+                    read_write_enabled: false,
+                    envelope_io_enabled: false,
+                    usable_messaging_claimed: false,
+                },
+                InboundStreamGateError::AcceptForbidden,
+            ),
+            (
+                InboundStreamGateDecision {
+                    descriptor_publication_gate_ready: Some(gate_ready),
+                    descriptor_publication_adapter_ready: true,
+                    accept_enabled: false,
+                    read_write_enabled: true,
+                    envelope_io_enabled: false,
+                    usable_messaging_claimed: false,
+                },
+                InboundStreamGateError::ReadWriteForbidden,
+            ),
+            (
+                InboundStreamGateDecision {
+                    descriptor_publication_gate_ready: Some(gate_ready),
+                    descriptor_publication_adapter_ready: true,
+                    accept_enabled: false,
+                    read_write_enabled: false,
+                    envelope_io_enabled: true,
+                    usable_messaging_claimed: false,
+                },
+                InboundStreamGateError::EnvelopeIoForbidden,
+            ),
+            (
+                InboundStreamGateDecision {
+                    descriptor_publication_gate_ready: Some(gate_ready),
+                    descriptor_publication_adapter_ready: true,
+                    accept_enabled: false,
+                    read_write_enabled: false,
+                    envelope_io_enabled: false,
+                    usable_messaging_claimed: true,
+                },
+                InboundStreamGateError::UsableMessagingClaimForbidden,
+            ),
+        ] {
+            assert_eq!(decision.check(), Err(expected));
+        }
     }
 
     #[test]
