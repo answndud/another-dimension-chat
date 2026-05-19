@@ -110,6 +110,14 @@ pub enum OnionInboundStreamError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionOutboundStreamError {
+    PairwiseEndpointRequired,
+    TransportPolicyViolation,
+    OutboundDialNotImplemented,
+    OutboundSendNotImplemented,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EndpointLifecycleError {
     GlobalEndpointForbidden,
     IdentityKeyCouplingForbidden,
@@ -1869,6 +1877,12 @@ pub struct OnionInboundStreamBoundary {
     _descriptor_ready: OnionServiceDescriptorPublicationReady,
 }
 
+#[derive(Clone, Eq, PartialEq)]
+pub struct OnionOutboundStreamBoundary {
+    pairwise_endpoint: PairwiseRendezvousEndpoint,
+    policy: TransportPolicy,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -2013,6 +2027,71 @@ impl fmt::Debug for OnionInboundStreamBoundary {
             .field("stream_id", &"<redacted>")
             .field("contact_id", &"<redacted>")
             .field("profile_name", &"<redacted>")
+            .finish()
+    }
+}
+
+impl OnionOutboundStreamBoundary {
+    pub fn from_pairwise_endpoint(
+        pairwise_endpoint: PairwiseRendezvousEndpoint,
+        policy: TransportPolicy,
+    ) -> Result<Self, OnionOutboundStreamError> {
+        let route = TransportRoute::OnionService(pairwise_endpoint.endpoint().clone());
+        policy
+            .require_allowed(&route)
+            .map_err(|_| OnionOutboundStreamError::TransportPolicyViolation)?;
+
+        Ok(Self {
+            pairwise_endpoint,
+            policy,
+        })
+    }
+
+    pub fn from_missing_pairwise_endpoint() -> Result<Self, OnionOutboundStreamError> {
+        Err(OnionOutboundStreamError::PairwiseEndpointRequired)
+    }
+
+    pub fn dial_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        sink: &mut S,
+    ) -> Result<(), OnionOutboundStreamError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::SendFailed,
+        ));
+        Err(OnionOutboundStreamError::OutboundDialNotImplemented)
+    }
+
+    pub fn send_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        _envelope: &Envelope,
+        sink: &mut S,
+    ) -> Result<(), OnionOutboundStreamError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::SendFailed,
+        ));
+        Err(OnionOutboundStreamError::OutboundSendNotImplemented)
+    }
+
+    pub fn contact_id(&self) -> &ContactId {
+        self.pairwise_endpoint.contact_id()
+    }
+
+    pub fn policy(&self) -> &TransportPolicy {
+        &self.policy
+    }
+}
+
+impl fmt::Debug for OnionOutboundStreamBoundary {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OnionOutboundStreamBoundary")
+            .field("pairwise_endpoint", &"<redacted>")
+            .field("onion_endpoint", &"<redacted>")
+            .field("remote_endpoint", &"<redacted>")
+            .field("stream_id", &"<redacted>")
+            .field("contact_id", &"<redacted>")
+            .field("profile_name", &"<redacted>")
+            .field("policy_mode", &self.policy.mode)
             .finish()
     }
 }
@@ -2482,6 +2561,14 @@ pub mod arti_adapter_spike {
             descriptor_ready: OnionServiceDescriptorPublicationReady,
         ) -> OnionInboundStreamBoundary {
             OnionInboundStreamBoundary::from_descriptor_publication_ready(descriptor_ready)
+        }
+
+        pub fn outbound_stream_boundary(
+            &self,
+            pairwise_endpoint: PairwiseRendezvousEndpoint,
+            policy: TransportPolicy,
+        ) -> Result<OnionOutboundStreamBoundary, OnionOutboundStreamError> {
+            OnionOutboundStreamBoundary::from_pairwise_endpoint(pairwise_endpoint, policy)
         }
     }
 
@@ -4386,6 +4473,91 @@ mod tests {
         }
     }
 
+    #[test]
+    fn onion_outbound_stream_boundary_requires_pairwise_endpoint_and_onion_policy() {
+        assert_eq!(
+            OnionOutboundStreamBoundary::from_missing_pairwise_endpoint(),
+            Err(OnionOutboundStreamError::PairwiseEndpointRequired)
+        );
+
+        assert_eq!(
+            OnionOutboundStreamBoundary::from_pairwise_endpoint(
+                sample_pairwise_endpoint(),
+                TransportPolicy::local_only(),
+            ),
+            Err(OnionOutboundStreamError::TransportPolicyViolation)
+        );
+
+        let boundary = OnionOutboundStreamBoundary::from_pairwise_endpoint(
+            sample_pairwise_endpoint(),
+            TransportPolicy::high_risk_default(),
+        )
+        .expect("outbound boundary");
+        let rendered = format!("{boundary:?}");
+
+        assert_eq!(boundary.contact_id().as_str(), "bob");
+        assert_eq!(boundary.policy(), &TransportPolicy::high_risk_default());
+        assert!(rendered.contains("OnionOutboundStreamBoundary"));
+        assert!(rendered.contains("<redacted>"));
+        assert!(!rendered.contains("example.onion"));
+        assert!(!rendered.contains("alice"));
+        assert!(!rendered.contains("bob"));
+        assert!(!rendered.contains("stream-1"));
+    }
+
+    #[test]
+    fn onion_outbound_stream_dial_and_send_fail_closed_with_redacted_events() {
+        let boundary = OnionOutboundStreamBoundary::from_pairwise_endpoint(
+            sample_pairwise_endpoint(),
+            TransportPolicy::high_risk_default(),
+        )
+        .expect("outbound boundary");
+        let envelope = sample_envelope();
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        assert_eq!(
+            boundary.dial_fail_closed(&mut sink),
+            Err(OnionOutboundStreamError::OutboundDialNotImplemented)
+        );
+        assert_eq!(
+            boundary.send_fail_closed(&envelope, &mut sink),
+            Err(OnionOutboundStreamError::OutboundSendNotImplemented)
+        );
+        assert_eq!(sink.events().len(), 2);
+        for event in sink.events() {
+            assert_eq!(
+                event.kind(),
+                TransportRuntimeEventKind::RuntimePreflightFailed
+            );
+            assert_eq!(
+                event.runtime_error(),
+                Some(TransportRuntimeError::SendFailed)
+            );
+            assert_redacted_event_hides(
+                event,
+                &[
+                    "example.onion",
+                    "alice",
+                    "bob",
+                    "stream-1",
+                    "descriptor-value",
+                    "private-key",
+                    "ciphertext",
+                ],
+            );
+        }
+    }
+
+    fn sample_pairwise_endpoint() -> PairwiseRendezvousEndpoint {
+        PairwiseRendezvousEndpoint::new(
+            ContactId::new("bob").expect("contact"),
+            OnionServiceEndpoint::new("example.onion").expect("endpoint"),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
+        .expect("pairwise endpoint")
+    }
+
     fn sample_envelope() -> Envelope {
         Envelope {
             protocol_version: 1,
@@ -5003,6 +5175,55 @@ mod tests {
         assert_eq!(
             sink.events().last().expect("event").runtime_error(),
             Some(TransportRuntimeError::ReceiveFailed)
+        );
+        assert_redacted_event_hides(
+            sink.events().last().expect("event"),
+            &["example.onion", "alice", "bob", "stream-1", "descriptor"],
+        );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn onion_service_launch_adapter_exposes_outbound_stream_boundary() {
+        let root = unique_transport_test_root("onion-outbound-stream-boundary");
+        let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+            root.join("arti-state"),
+            root.join("arti-cache"),
+        )
+        .expect("app private dirs");
+        let adapter =
+            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                dirs,
+                TransportBootstrapExecutionSkeleton::new(
+                    TransportRuntimeReady,
+                    TransportBootstrapPolicy::high_risk_default(),
+                ),
+            )
+            .expect("bounded adapter");
+        let mut owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+        owner.mark_bootstrapped_for_adapter_test(&mut sink);
+        let launch_adapter =
+            arti_adapter_spike::OnionServiceLaunchAdapterSkeleton::from_ready_owner(
+                OnionServiceLaunchReady,
+                &ready_onion_service_key_material(),
+                &owner,
+            )
+            .expect("launch adapter");
+        let outbound = launch_adapter
+            .outbound_stream_boundary(
+                sample_pairwise_endpoint(),
+                TransportPolicy::high_risk_default(),
+            )
+            .expect("outbound boundary");
+
+        assert_eq!(
+            outbound.dial_fail_closed(&mut sink),
+            Err(OnionOutboundStreamError::OutboundDialNotImplemented)
+        );
+        assert_eq!(
+            sink.events().last().expect("event").runtime_error(),
+            Some(TransportRuntimeError::SendFailed)
         );
         assert_redacted_event_hides(
             sink.events().last().expect("event"),
