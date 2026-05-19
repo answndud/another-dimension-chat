@@ -207,6 +207,68 @@ impl TransportBootstrapOutcome {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportPreNetworkBlocker {
+    BackupExclusionVerification,
+    OnionServiceKeyLifecycle,
+    BridgeCensorshipConfiguration,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportNextPhase {
+    BackupExclusionVerification,
+    OnionServiceKeyLifecycle,
+    BridgeCensorshipConfiguration,
+    ArtiBootstrapExecutionSkeleton,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TransportPreNetworkCloseout {
+    blockers: Vec<TransportPreNetworkBlocker>,
+    next_phase: TransportNextPhase,
+}
+
+impl TransportPreNetworkCloseout {
+    pub fn high_risk_default() -> Self {
+        Self::from_blockers(vec![
+            TransportPreNetworkBlocker::BackupExclusionVerification,
+            TransportPreNetworkBlocker::OnionServiceKeyLifecycle,
+            TransportPreNetworkBlocker::BridgeCensorshipConfiguration,
+        ])
+    }
+
+    pub fn from_blockers(blockers: Vec<TransportPreNetworkBlocker>) -> Self {
+        let next_phase = if blockers
+            .contains(&TransportPreNetworkBlocker::BackupExclusionVerification)
+        {
+            TransportNextPhase::BackupExclusionVerification
+        } else if blockers.contains(&TransportPreNetworkBlocker::OnionServiceKeyLifecycle) {
+            TransportNextPhase::OnionServiceKeyLifecycle
+        } else if blockers.contains(&TransportPreNetworkBlocker::BridgeCensorshipConfiguration) {
+            TransportNextPhase::BridgeCensorshipConfiguration
+        } else {
+            TransportNextPhase::ArtiBootstrapExecutionSkeleton
+        };
+
+        Self {
+            blockers,
+            next_phase,
+        }
+    }
+
+    pub fn blockers(&self) -> &[TransportPreNetworkBlocker] {
+        &self.blockers
+    }
+
+    pub fn next_phase(&self) -> TransportNextPhase {
+        self.next_phase
+    }
+
+    pub fn network_execution_allowed(&self) -> bool {
+        self.blockers.is_empty()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TransportRuntimeEventKind {
     DirectoryProbeFailed,
     RouteRejected,
@@ -1288,6 +1350,36 @@ mod tests {
         assert_eq!(
             TransportBootstrapOutcome::CensorshipOrBridgeRequired.runtime_error(policy),
             TransportRuntimeError::BootstrapTimeout
+        );
+    }
+
+    #[test]
+    fn pre_network_closeout_blocks_network_execution_by_default() {
+        let closeout = TransportPreNetworkCloseout::high_risk_default();
+
+        assert!(!closeout.network_execution_allowed());
+        assert_eq!(
+            closeout.blockers(),
+            &[
+                TransportPreNetworkBlocker::BackupExclusionVerification,
+                TransportPreNetworkBlocker::OnionServiceKeyLifecycle,
+                TransportPreNetworkBlocker::BridgeCensorshipConfiguration,
+            ]
+        );
+        assert_eq!(
+            closeout.next_phase(),
+            TransportNextPhase::BackupExclusionVerification
+        );
+    }
+
+    #[test]
+    fn pre_network_closeout_allows_bootstrap_skeleton_only_after_blockers_clear() {
+        let closeout = TransportPreNetworkCloseout::from_blockers(Vec::new());
+
+        assert!(closeout.network_execution_allowed());
+        assert_eq!(
+            closeout.next_phase(),
+            TransportNextPhase::ArtiBootstrapExecutionSkeleton
         );
     }
 
