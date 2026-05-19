@@ -27,6 +27,12 @@ fn production_main() -> Result<(), String> {
         [cmd, sub, args @ ..] if cmd == "transport" && sub == "bootstrap" => {
             run_manual_bootstrap_command(args)?;
         }
+        #[cfg(feature = "arti-manual-bootstrap")]
+        [cmd, sub, action, args @ ..]
+            if cmd == "transport" && sub == "lifecycle" && action == "bootstrap" =>
+        {
+            run_manual_lifecycle_bootstrap_command(args)?;
+        }
         _ => {
             return Err(
                 "another-dimension prototype commands require --features dev-insecure".to_string(),
@@ -127,6 +133,53 @@ fn run_manual_bootstrap_command(args: &[String]) -> Result<(), String> {
 }
 
 #[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
+fn run_manual_lifecycle_bootstrap_command(args: &[String]) -> Result<(), String> {
+    use another_dimension_transport::arti_adapter_spike::{
+        BoundedArtiBootstrapAdapterSpike, ManualArtiBootstrapNetworkPermission,
+        PersistentArtiClientOwner,
+    };
+    use another_dimension_transport::{
+        InMemoryTransportRuntimeEventSink, TransportBootstrapExecutionSkeleton,
+        TransportBootstrapPolicy, TransportRuntimeReady,
+    };
+
+    let options = ManualBootstrapCommandOptions::parse_with_help(args, manual_lifecycle_help)?;
+    let network_permission = if options.execute_network {
+        ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike
+    } else {
+        ManualArtiBootstrapNetworkPermission::Disabled
+    };
+    let dirs = options.resolve_dirs()?;
+    let adapter = BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+        dirs,
+        TransportBootstrapExecutionSkeleton::new(
+            TransportRuntimeReady,
+            TransportBootstrapPolicy::high_risk_default(),
+        ),
+    )
+    .map_err(|_| "failed to build app-private Arti config for manual lifecycle".to_string())?;
+    let mut owner = PersistentArtiClientOwner::new_unbootstrapped(adapter);
+    let mut sink = InMemoryTransportRuntimeEventSink::default();
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .build()
+        .map_err(|_| "failed to create manual lifecycle runtime".to_string())?;
+    let result = runtime.block_on(owner.bootstrap_and_keep_client(network_permission, &mut sink));
+
+    for event in sink.events() {
+        println!("{event}");
+    }
+    println!(
+        "manual lifecycle summary: permission={network_permission:?} state={:?} client_owned={} timeout_seconds={} usable_transport=false",
+        owner.summary().state(),
+        owner.summary().client_owned(),
+        owner.summary().timeout_seconds()
+    );
+
+    result.map_err(|error| format!("manual lifecycle bootstrap failed: {error:?}"))
+}
+
+#[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
 struct ManualBootstrapCommandOptions {
     dirs: ManualBootstrapDirectoryInput,
     execute_network: bool,
@@ -147,6 +200,10 @@ enum ManualBootstrapDirectoryInput {
 #[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
 impl ManualBootstrapCommandOptions {
     fn parse(args: &[String]) -> Result<Self, String> {
+        Self::parse_with_help(args, manual_bootstrap_help)
+    }
+
+    fn parse_with_help(args: &[String], help: fn() -> String) -> Result<Self, String> {
         let mut state_dir = None;
         let mut cache_dir = None;
         let mut profile = None;
@@ -183,7 +240,7 @@ impl ManualBootstrapCommandOptions {
                     execute_network = true;
                 }
                 _ => {
-                    return Err(manual_bootstrap_help());
+                    return Err(help());
                 }
             }
             index += 1;
@@ -195,7 +252,7 @@ impl ManualBootstrapCommandOptions {
                 cache_dir,
             }),
             (None, None) => None,
-            _ => return Err(manual_bootstrap_help()),
+            _ => return Err(help()),
         };
         let profile_scoped = match (profile, app_data_root) {
             (Some(profile), Some(app_data_root)) => {
@@ -205,12 +262,12 @@ impl ManualBootstrapCommandOptions {
                 })
             }
             (None, None) => None,
-            _ => return Err(manual_bootstrap_help()),
+            _ => return Err(help()),
         };
 
         let dirs = match (profile_scoped, explicit) {
             (Some(dirs), None) | (None, Some(dirs)) => dirs,
-            (None, None) | (Some(_), Some(_)) => return Err(manual_bootstrap_help()),
+            (None, None) | (Some(_), Some(_)) => return Err(help()),
         };
 
         Ok(Self {
@@ -252,6 +309,16 @@ fn manual_bootstrap_help() -> String {
   another-dimension transport bootstrap --profile <name> --app-data-root <absolute-app-private-root> [--execute-network]
 
 This is a local-only manual Arti bootstrap spike. It is not messaging, send/receive, or onion hosting."
+        .to_string()
+}
+
+#[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
+fn manual_lifecycle_help() -> String {
+    "usage:
+  another-dimension transport lifecycle bootstrap --state-dir <absolute-app-private-dir> --cache-dir <absolute-app-private-dir> [--execute-network]
+  another-dimension transport lifecycle bootstrap --profile <name> --app-data-root <absolute-app-private-root> [--execute-network]
+
+This is a local-only manual persistent Arti lifecycle spike. It is not messaging, send/receive, or onion hosting."
         .to_string()
 }
 

@@ -48,6 +48,7 @@ What exists today:
 - Local-only manual bootstrap CLI gate that requires explicit app-private dirs and `--execute-network` before attempting network bootstrap.
 - Profile-scoped transport directory resolver for app-private Arti state/cache directories, with redacted CLI output.
 - Persistent Arti client lifecycle owner boundary with unbootstrapped, bootstrapping, bootstrapped, dormant, and shutdown states.
+- Local-only manual lifecycle bootstrap CLI gate that smoke-tests persistent owner state without send/receive or onion hosting.
 - Pre-network transport closeout boundary that blocks network execution until backup exclusion, onion service key lifecycle, and bridge/censorship decisions are cleared.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.
@@ -165,6 +166,17 @@ cargo run -q --features arti-manual-bootstrap -- \
 ```
 
 Without `--execute-network`, this command exercises only the disabled gate and records a redacted `RuntimeNetworkDisabled` event. With `--execute-network`, it may attempt a real Arti bootstrap, still without send/receive, onion hosting, or usable messaging. The lower-level transport crate now has a persistent client owner boundary, but the CLI command remains a local manual bootstrap spike rather than a messenger runtime.
+
+Manual persistent lifecycle spike, local only:
+
+```bash
+cargo run -q --features arti-manual-bootstrap -- \
+  transport lifecycle bootstrap \
+  --profile alice \
+  --app-data-root /absolute/app-private/root
+```
+
+Without `--execute-network`, this command performs no network bootstrap and prints a redacted lifecycle summary with `state=Unbootstrapped`, `client_owned=false`, and `usable_transport=false`. With `--execute-network`, it may attempt a manual Arti bootstrap and keep the client inside the lifecycle owner, but it still does not implement send/receive, onion hosting, or usable messaging.
 
 Example local flow:
 

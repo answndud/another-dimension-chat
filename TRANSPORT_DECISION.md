@@ -554,7 +554,6 @@ Rules:
 
 Still not implemented:
 
-- Persistent Arti client lifecycle is not wired into this CLI command.
 - User profile integration for transport state/cache directories.
 - Onion service hosting.
 - Envelope send/receive over Tor.
@@ -618,10 +617,40 @@ Current rules:
 
 Still not implemented:
 
-- CLI/Tauri runtime wiring for the persistent owner.
+- Tauri runtime wiring for the persistent owner.
 - Onion service launch.
 - Envelope send/receive over Tor.
 - Bridge configuration UX.
 - Production runtime shutdown semantics beyond the local owner state transition.
 
 Next accepted phase: wire the manual CLI to the persistent lifecycle owner or start an onion service launch preflight boundary. Do not implement envelope send/receive until onion service hosting and endpoint lifecycle are separately specified.
+
+## Local-Only Manual Lifecycle Bootstrap CLI Gate
+
+Decision as of 2026-05-19: the CLI may expose a separate local-only manual lifecycle command when built with `arti-manual-bootstrap`.
+
+Command shape:
+
+```text
+another-dimension transport lifecycle bootstrap --state-dir <absolute-app-private-dir> --cache-dir <absolute-app-private-dir> [--execute-network]
+another-dimension transport lifecycle bootstrap --profile <name> --app-data-root <absolute-app-private-root> [--execute-network]
+```
+
+Rules:
+
+- The existing `transport bootstrap` command remains the one-shot bootstrap-and-drop spike.
+- `transport lifecycle bootstrap` is the manual smoke-test path for `PersistentArtiClientOwner`.
+- Without `--execute-network`, the command performs no network bootstrap, records `RuntimeNetworkDisabled`, and prints only a redacted lifecycle summary.
+- The disabled summary must show `state=Unbootstrapped`, `client_owned=false`, and `usable_transport=false`.
+- With `--execute-network`, the command may attempt manual Arti bootstrap and keep the client in the owner, but it still must not claim usable messaging.
+- Output must not include local state/cache paths, profile names, onion endpoints, bridge lines, contact identifiers, plaintext, private key material, or raw Arti errors.
+
+Still not implemented:
+
+- Tauri runtime wiring for the persistent owner.
+- Onion service launch.
+- Envelope send/receive over Tor.
+- Bridge configuration UX.
+- Production runtime shutdown semantics beyond the local owner state transition.
+
+Next accepted phase: onion service launch preflight boundary or manual persistent lifecycle shutdown/status command. Do not implement envelope send/receive until onion service hosting and endpoint lifecycle are separately specified.
