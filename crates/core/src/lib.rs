@@ -17,6 +17,10 @@ pub mod production {
     use another_dimension_storage::production::{
         EncryptedRecordId, EncryptedRecordScope, ProductionStorageError, SqlCipherRecordStore,
     };
+    use another_dimension_transport::{
+        EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
+        EndpointUpdateControlPlaintext, PairwiseEndpointUpdate,
+    };
     use sha2::{Digest, Sha256};
 
     const CANONICAL_DIALER_DOMAIN: &[u8] = b"AD-SESSION-CANONICAL-DIALER-V1";
@@ -76,13 +80,52 @@ pub mod production {
             message_number: u64,
             plaintext: &[u8],
         ) -> Result<Envelope, ProductionSessionError> {
+            self.encrypt_from_canonical_dialer_with_type(
+                message_number,
+                plaintext,
+                MessageType::Data,
+            )
+        }
+
+        pub fn encrypt_control_from_canonical_dialer(
+            &mut self,
+            message_number: u64,
+            plaintext: &[u8],
+        ) -> Result<Envelope, ProductionSessionError> {
+            self.encrypt_from_canonical_dialer_with_type(
+                message_number,
+                plaintext,
+                MessageType::Control,
+            )
+        }
+
+        fn encrypt_from_canonical_dialer_with_type(
+            &mut self,
+            message_number: u64,
+            plaintext: &[u8],
+            message_type: MessageType,
+        ) -> Result<Envelope, ProductionSessionError> {
             Ok(Envelope {
                 protocol_version: 1,
                 channel_id: self.channel_id.clone(),
                 message_number,
-                message_type: MessageType::Data,
+                message_type,
                 padded_ciphertext: self.transport.initiator_encrypt(plaintext)?,
             })
+        }
+
+        pub fn encrypt_endpoint_update_from_canonical_dialer(
+            &mut self,
+            update: &PairwiseEndpointUpdate,
+            message_number: u64,
+        ) -> Result<EncryptedEndpointUpdateControlEnvelope, ProductionSessionError> {
+            let plaintext = EndpointUpdateControlPlaintext::from_pairwise_update(update);
+            let envelope = self.encrypt_control_from_canonical_dialer(
+                message_number,
+                &plaintext.encode_padded()?,
+            )?;
+            EncryptedEndpointUpdateControlEnvelope::from_control_envelope(update, envelope)
+                .map_err(ProductionSessionError::from)
         }
 
         pub fn decrypt_at_responder(
@@ -90,6 +133,20 @@ pub mod production {
             envelope: &Envelope,
         ) -> Result<Vec<u8>, ProductionSessionError> {
             if envelope.channel_id != self.channel_id || envelope.message_type != MessageType::Data
+            {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            self.transport
+                .responder_decrypt(&envelope.padded_ciphertext)
+                .map_err(ProductionSessionError::from)
+        }
+
+        pub fn decrypt_control_at_responder(
+            &mut self,
+            envelope: &Envelope,
+        ) -> Result<Vec<u8>, ProductionSessionError> {
+            if envelope.channel_id != self.channel_id
+                || envelope.message_type != MessageType::Control
             {
                 return Err(ProductionSessionError::UnexpectedEnvelope);
             }
@@ -151,6 +208,7 @@ pub mod production {
         Crypto(CryptoError),
         Protocol(ProtocolError),
         Storage(ProductionStorageError),
+        EndpointLifecycle(EndpointLifecycleError),
         NonProductionPairingPayload,
         SamePairwiseIdentity,
         NoiseStaticKeyMismatch,
@@ -178,6 +236,12 @@ pub mod production {
     impl From<ProductionStorageError> for ProductionSessionError {
         fn from(value: ProductionStorageError) -> Self {
             Self::Storage(value)
+        }
+    }
+
+    impl From<EndpointLifecycleError> for ProductionSessionError {
+        fn from(value: EndpointLifecycleError) -> Self {
+            Self::EndpointLifecycle(value)
         }
     }
 
@@ -372,12 +436,18 @@ pub mod production {
     mod tests {
         use super::*;
         use another_dimension_identity::{
-            PairwisePublicKey, PairwiseSignature, ProductionPairwisePrivateKey, ProfileName,
+            ContactId, PairwisePublicKey, PairwiseSignature, ProductionPairwisePrivateKey,
+            ProfileName,
         };
         use another_dimension_pairing::{
             production_pairing_payload_for, ProductionPairingPayloadParams, DEFAULT_TTL_SECONDS,
         };
+        use another_dimension_protocol::trim_padding;
         use another_dimension_storage::production::{LockedProfileStore, ProfilePassphrase};
+        use another_dimension_transport::{
+            EndpointUpdateChannel, OnionServiceEndpoint, PairwiseRendezvousEndpoint,
+            RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
+        };
 
         #[test]
         fn production_setup_draft_signs_payload_with_noise_prekey_bundle() {
@@ -483,6 +553,61 @@ pub mod production {
                     .expect("decrypt envelope"),
                 plaintext
             );
+        }
+
+        #[test]
+        fn production_session_encrypts_endpoint_update_as_control_envelope() {
+            let alice = production_setup_draft_with_defaults(
+                &ProfileName::new("alice").expect("valid profile"),
+                "alice.onion",
+            )
+            .expect("alice setup");
+            let bob = production_setup_draft_with_defaults(
+                &ProfileName::new("bob").expect("valid profile"),
+                "bob.onion",
+            )
+            .expect("bob setup");
+            let current = PairwiseRendezvousEndpoint::new(
+                ContactId::new("bob").expect("contact"),
+                OnionServiceEndpoint::new("oldsecret.onion").expect("endpoint"),
+                RendezvousEndpointScope::PairwiseContact,
+                RendezvousEndpointIdentityBinding::TransportScoped,
+            )
+            .expect("current endpoint");
+            let update = PairwiseEndpointUpdate::for_existing_encrypted_session(
+                &current,
+                OnionServiceEndpoint::new("newsecret.onion").expect("endpoint"),
+                EndpointUpdateChannel::ExistingEncryptedSession,
+            )
+            .expect("endpoint update");
+            let plaintext = EndpointUpdateControlPlaintext::from_pairwise_update(&update);
+            let mut session = establish_envelope_session_from_setup_drafts(&alice, &bob)
+                .expect("envelope session");
+
+            let control = session
+                .encrypt_endpoint_update_from_canonical_dialer(&update, 2)
+                .expect("endpoint update control envelope");
+
+            assert_eq!(control.contact_id(), current.contact_id());
+            assert_eq!(control.envelope().protocol_version, 1);
+            assert_eq!(control.envelope().channel_id, session.channel_id());
+            assert_eq!(control.envelope().message_number, 2);
+            assert_eq!(control.envelope().message_type, MessageType::Control);
+            assert!(!control
+                .envelope()
+                .padded_ciphertext
+                .windows("newsecret.onion".len())
+                .any(|window| window == b"newsecret.onion"));
+
+            let decrypted = session
+                .decrypt_control_at_responder(control.envelope())
+                .expect("decrypt endpoint update");
+            assert_eq!(trim_padding(&decrypted), plaintext.encode().as_slice());
+
+            let debug = format!("{control:?}");
+            assert!(!debug.contains("bob"));
+            assert!(!debug.contains("oldsecret.onion"));
+            assert!(!debug.contains("newsecret.onion"));
         }
 
         #[test]
