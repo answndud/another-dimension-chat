@@ -57,7 +57,42 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving module split: stream/session readiness and authentication boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving module split: stream gate and fail-closed stream adapter boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Stream Session Boundary Module Extraction
+
+Decision as of 2026-05-19: verified pairwise session binding, remote peer authentication readiness, bound inbound/outbound stream sessions, envelope I/O readiness adapters, and stream closeout ordering are extracted into `crates/transport/src/stream_session.rs`. `crates/transport/src/lib.rs` re-exports the same public names to preserve the public API.
+
+Moved without behavior change:
+
+- `StreamSessionVerificationContext`
+- `RemotePeerAuthenticationContext`
+- `PairwiseStreamSessionBinding`
+- `RemotePeerAuthenticationReady`
+- `BoundInboundStreamSession`
+- `BoundOutboundStreamSession`
+- `EnvelopeIoAdapterReady`
+- `InboundEnvelopeIoAdapterBoundary`
+- `OutboundEnvelopeIoAdapterBoundary`
+- `PostAuthInboundStreamReadinessOrder`
+- `PostAuthOutboundStreamReadinessOrder`
+- `StreamAdapterCloseoutReady`
+- `StreamAdapterCloseoutDecision`
+- `StreamCloseoutIntegrationOrder`
+
+Preserved invariants:
+
+- Session binding still requires a verified pairwise encrypted session.
+- Remote peer authentication still requires an authenticated pairwise peer proof.
+- Bound inbound/outbound stream sessions still require contact-id alignment.
+- Bound stream send/receive remains fail-closed.
+- Envelope I/O still requires explicit readiness and still fails closed.
+- Stream closeout still requires inbound/outbound fail-closed adapters, remote authentication, verified session binding, and still forbids bound-session shortcuts, envelope I/O, and usable messaging claims.
+- No descriptor publication, real stream I/O, envelope send/receive, or usable messaging capability was added.
+
+Next split target:
+
+- Stream gate and fail-closed stream adapter boundaries.
 
 ## Endpoint State Module Extraction
 
@@ -87,10 +122,6 @@ Preserved invariants:
 - Endpoint reconnect remains fail-closed and records only redacted runtime events.
 - Endpoint-update control envelopes remain control-message only and require bucket-compatible opaque encrypted payloads.
 - No Tor descriptor publication, stream I/O, envelope I/O, or usable messaging capability was added.
-
-Next split target:
-
-- Stream/session readiness and remote-peer authentication boundaries.
 
 ## Runtime Preflight Module Extraction
 
