@@ -70,6 +70,14 @@ pub enum OnionServiceKeyLifecycleError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BridgeCensorshipConfigurationError {
+    Unsupported,
+    BridgeRequiredButMissing,
+    RawBridgeLineForbidden,
+    EmptyRedactedBridgeConfigId,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TransportBootstrapTimeoutPolicy {
     seconds: u16,
 }
@@ -271,6 +279,10 @@ impl TransportPreNetworkCloseout {
         Self::from_blockers(vec![
             TransportPreNetworkBlocker::BridgeCensorshipConfiguration,
         ])
+    }
+
+    pub fn after_bridge_censorship_configuration(_configuration: &BridgeCensorshipReady) -> Self {
+        Self::from_blockers(Vec::new())
     }
 
     pub fn from_blockers(blockers: Vec<TransportPreNetworkBlocker>) -> Self {
@@ -683,6 +695,76 @@ pub enum TransportCensorshipReadiness {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BridgeRequirement {
+    ExplicitlyNotRequiredForThisBuild,
+    RequiredBeforeBootstrap,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum BridgeCensorshipConfiguration {
+    Unsupported,
+    NoBridgeRequired,
+    BridgeConfigured { redacted_bridge_config_id: String },
+    RawBridgeLine { value: String },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct BridgeCensorshipReady {
+    readiness: TransportCensorshipReadiness,
+}
+
+impl BridgeCensorshipReady {
+    pub fn readiness(self) -> TransportCensorshipReadiness {
+        self.readiness
+    }
+}
+
+impl BridgeCensorshipConfiguration {
+    pub fn check(
+        self,
+        requirement: BridgeRequirement,
+    ) -> Result<BridgeCensorshipReady, BridgeCensorshipConfigurationError> {
+        match (requirement, self) {
+            (BridgeRequirement::ExplicitlyNotRequiredForThisBuild, Self::NoBridgeRequired) => {
+                Ok(BridgeCensorshipReady {
+                    readiness: TransportCensorshipReadiness::ExplicitlyNotRequiredForThisBuild,
+                })
+            }
+            (BridgeRequirement::ExplicitlyNotRequiredForThisBuild, Self::Unsupported)
+            | (BridgeRequirement::RequiredBeforeBootstrap, Self::Unsupported) => {
+                Err(BridgeCensorshipConfigurationError::Unsupported)
+            }
+            (_, Self::RawBridgeLine { value }) => {
+                let _ = value;
+                Err(BridgeCensorshipConfigurationError::RawBridgeLineForbidden)
+            }
+            (BridgeRequirement::RequiredBeforeBootstrap, Self::NoBridgeRequired) => {
+                Err(BridgeCensorshipConfigurationError::BridgeRequiredButMissing)
+            }
+            (
+                BridgeRequirement::RequiredBeforeBootstrap,
+                Self::BridgeConfigured {
+                    redacted_bridge_config_id,
+                },
+            ) => {
+                if redacted_bridge_config_id.trim().is_empty() {
+                    return Err(BridgeCensorshipConfigurationError::EmptyRedactedBridgeConfigId);
+                }
+                Ok(BridgeCensorshipReady {
+                    readiness: TransportCensorshipReadiness::ConfiguredBeforeBootstrap,
+                })
+            }
+            (
+                BridgeRequirement::ExplicitlyNotRequiredForThisBuild,
+                Self::BridgeConfigured { .. },
+            ) => Ok(BridgeCensorshipReady {
+                readiness: TransportCensorshipReadiness::ExplicitlyNotRequiredForThisBuild,
+            }),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TransportRuntimePermissionPreflight {
     pub runtime_network_enabled: bool,
     pub app_private_state_cache_dirs: bool,
@@ -739,6 +821,24 @@ impl TransportRuntimePermissionPreflight {
             log_redaction_policy,
             crash_redaction_policy,
             censorship_readiness,
+        )
+    }
+
+    pub fn from_fully_verified_preflight(
+        dirs: &TransportStateCacheDirsReady,
+        runtime_network_enabled: bool,
+        backup_exclusion_verification: &TransportBackupExclusionVerification,
+        bridge_censorship_ready: BridgeCensorshipReady,
+        log_redaction_policy: TransportLogRedactionPolicy,
+        crash_redaction_policy: TransportCrashRedactionPolicy,
+    ) -> Self {
+        Self::from_verified_platform_preflight(
+            dirs,
+            runtime_network_enabled,
+            backup_exclusion_verification,
+            log_redaction_policy,
+            crash_redaction_policy,
+            bridge_censorship_ready.readiness(),
         )
     }
 
@@ -1643,6 +1743,21 @@ mod tests {
     }
 
     #[test]
+    fn pre_network_closeout_allows_bootstrap_skeleton_after_bridge_config() {
+        let ready = BridgeCensorshipReady {
+            readiness: TransportCensorshipReadiness::ExplicitlyNotRequiredForThisBuild,
+        };
+        let closeout = TransportPreNetworkCloseout::after_bridge_censorship_configuration(&ready);
+
+        assert!(closeout.network_execution_allowed());
+        assert_eq!(closeout.blockers(), &[]);
+        assert_eq!(
+            closeout.next_phase(),
+            TransportNextPhase::ArtiBootstrapExecutionSkeleton
+        );
+    }
+
+    #[test]
     fn runtime_preflight_is_disabled_by_default() {
         assert_eq!(
             TransportRuntimePreflight::disabled_by_default().check(),
@@ -1752,6 +1867,94 @@ mod tests {
         let mut preflight = ready_permission_preflight();
         preflight.censorship_readiness = TransportCensorshipReadiness::ConfiguredBeforeBootstrap;
         assert_eq!(preflight.check(), Ok(TransportRuntimeReady));
+    }
+
+    #[test]
+    fn bridge_censorship_configuration_is_unsupported_by_default() {
+        assert_eq!(
+            BridgeCensorshipConfiguration::Unsupported
+                .check(BridgeRequirement::ExplicitlyNotRequiredForThisBuild),
+            Err(BridgeCensorshipConfigurationError::Unsupported)
+        );
+    }
+
+    #[test]
+    fn bridge_censorship_configuration_allows_explicit_no_bridge_build() {
+        let ready = BridgeCensorshipConfiguration::NoBridgeRequired
+            .check(BridgeRequirement::ExplicitlyNotRequiredForThisBuild)
+            .expect("no bridge build should be ready");
+
+        assert_eq!(
+            ready.readiness(),
+            TransportCensorshipReadiness::ExplicitlyNotRequiredForThisBuild
+        );
+    }
+
+    #[test]
+    fn bridge_censorship_configuration_requires_bridge_when_declared() {
+        assert_eq!(
+            BridgeCensorshipConfiguration::NoBridgeRequired
+                .check(BridgeRequirement::RequiredBeforeBootstrap),
+            Err(BridgeCensorshipConfigurationError::BridgeRequiredButMissing)
+        );
+
+        assert_eq!(
+            BridgeCensorshipConfiguration::BridgeConfigured {
+                redacted_bridge_config_id: String::new(),
+            }
+            .check(BridgeRequirement::RequiredBeforeBootstrap),
+            Err(BridgeCensorshipConfigurationError::EmptyRedactedBridgeConfigId)
+        );
+    }
+
+    #[test]
+    fn bridge_censorship_configuration_rejects_raw_bridge_lines() {
+        let config = BridgeCensorshipConfiguration::RawBridgeLine {
+            value: "obfs4 198.51.100.1:443 fingerprint cert=secret iat-mode=0".to_string(),
+        };
+
+        assert_eq!(
+            config.check(BridgeRequirement::RequiredBeforeBootstrap),
+            Err(BridgeCensorshipConfigurationError::RawBridgeLineForbidden)
+        );
+    }
+
+    #[test]
+    fn bridge_censorship_configuration_accepts_redacted_config_id() {
+        let ready = BridgeCensorshipConfiguration::BridgeConfigured {
+            redacted_bridge_config_id: "bridge-config-01".to_string(),
+        }
+        .check(BridgeRequirement::RequiredBeforeBootstrap)
+        .expect("redacted bridge config should be ready");
+
+        assert_eq!(
+            ready.readiness(),
+            TransportCensorshipReadiness::ConfiguredBeforeBootstrap
+        );
+    }
+
+    #[test]
+    fn runtime_permission_preflight_can_use_bridge_censorship_token() {
+        let root = unique_transport_test_root("fully-verified-preflight");
+        let dirs = probe_app_private_state_cache_dirs(root.join("state"), root.join("cache"))
+            .expect("state/cache probe should pass");
+        let backup = TransportBackupExclusionVerification;
+        let bridge = BridgeCensorshipConfiguration::NoBridgeRequired
+            .check(BridgeRequirement::ExplicitlyNotRequiredForThisBuild)
+            .expect("bridge decision should pass");
+
+        let preflight = TransportRuntimePermissionPreflight::from_fully_verified_preflight(
+            &dirs,
+            true,
+            &backup,
+            bridge,
+            TransportLogRedactionPolicy::RedactedTransportEventsOnly,
+            TransportCrashRedactionPolicy::SensitivePathsAndIdentifiersRedacted,
+        );
+
+        assert_eq!(preflight.check(), Ok(TransportRuntimeReady));
+
+        let _ = fs::remove_dir_all(root);
     }
 
     #[test]

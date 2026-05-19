@@ -22,6 +22,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `probe_app_private_state_cache_dirs` creates and probes explicit state/cache directories without exposing path details in runtime errors.
 - `verify_transport_backup_exclusion` verifies backup-exclusion metadata before a runtime preflight can use a backup verification token.
 - `OnionServiceKeyLifecycleDecision` blocks onion key readiness unless generation is after explicit profile unlock, key material is SQLCipher-wrapped, backup exclusion is verified, and rotation/deletion/migration policies are present.
+- `BridgeCensorshipConfiguration` blocks censorship readiness unless the build explicitly requires no bridge or supplies a redacted bridge-config identifier.
 - `RedactedTransportRuntimeEvent` records transport event categories without storing raw paths, endpoints, contact ids, profile names, plaintext, or key material.
 - `TransportRuntimeEventSink` accepts only redacted transport runtime events.
 - `TransportBootstrapPolicy` bounds future bootstrap timeout, retry, cancellation, and censorship classification behavior without bootstrapping Tor.
@@ -444,3 +445,26 @@ Still not implemented:
 - Tor bootstrap, socket opens, onion service launch, or envelope transfer.
 
 Next accepted phase: bridge/censorship configuration. Network execution remains blocked until censorship/bridge behavior is also closed.
+
+## Bridge And Censorship Configuration Decision
+
+Decision as of 2026-05-19: bridge/censorship readiness must be explicit before any future bootstrap skeleton. This does not implement bridge transport or censorship circumvention.
+
+Current code boundary:
+
+- `BridgeCensorshipConfiguration::Unsupported` is not bootstrap-ready.
+- `NoBridgeRequired` is accepted only when the build explicitly declares bridge support not required.
+- If bridge support is required before bootstrap, `NoBridgeRequired` is rejected.
+- Raw bridge lines are rejected at this boundary.
+- A required bridge path may become ready only through a non-empty redacted bridge-config identifier.
+- `TransportRuntimePermissionPreflight::from_fully_verified_preflight(...)` accepts a `BridgeCensorshipReady` token instead of an arbitrary censorship boolean.
+- `TransportPreNetworkCloseout::after_bridge_censorship_configuration(...)` removes the final pre-network blocker and allows only the next Arti bootstrap execution skeleton phase.
+
+Still not implemented:
+
+- Actual bridge configuration storage.
+- Actual bridge line parsing or validation.
+- Pluggable transport packaging.
+- Tor bootstrap, socket opens, onion service launch, or envelope transfer.
+
+Next accepted phase: Arti bootstrap execution skeleton. It must still remain bounded, fail-closed, and must not claim usable real communication until send/receive/onion hosting are separately implemented and verified.
