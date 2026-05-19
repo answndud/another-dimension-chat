@@ -57,7 +57,29 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue pre-network transport work by defining the envelope I/O adapter boundary. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+Continue pre-network transport work by defining the remote peer authentication boundary over streams. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+
+## Envelope I/O Adapter Fail-Closed Boundary
+
+Decision as of 2026-05-19: bound stream/session readiness is not envelope I/O readiness. A future adapter must pass an explicit envelope I/O readiness gate before envelope receive/send can be reached.
+
+Current code boundary:
+
+- `EnvelopeIoAdapterReady` is a separate readiness token after bound stream/session state.
+- `InboundEnvelopeIoAdapterBoundary` requires a `BoundInboundStreamSession` plus `EnvelopeIoAdapterReady`.
+- `OutboundEnvelopeIoAdapterBoundary` requires a `BoundOutboundStreamSession` plus `EnvelopeIoAdapterReady`.
+- Missing I/O readiness is rejected with `EnvelopeIoReadinessRequired`.
+- `receive_fail_closed(...)` records only a redacted runtime event and returns `InboundEnvelopeReceiveNotImplemented`.
+- `send_fail_closed(...)` records only a redacted runtime event and returns `OutboundEnvelopeSendNotImplemented`.
+- Debug and event output must not expose onion endpoint, remote endpoint, stream id, descriptor value, private key, contact id, profile name, envelope ciphertext, channel id, message number, session secret, or path material.
+
+Still not implemented:
+
+- Real envelope reads from onion streams.
+- Real envelope writes to onion streams.
+- Remote peer authentication over streams.
+- Decrypt/receive pipeline integration.
+- Usable messaging.
 
 ## Stream Peer/Session Binding Fail-Closed Boundary
 
