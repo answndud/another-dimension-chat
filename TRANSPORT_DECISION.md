@@ -539,12 +539,14 @@ Command shape:
 
 ```text
 another-dimension transport bootstrap --state-dir <absolute-app-private-dir> --cache-dir <absolute-app-private-dir> [--execute-network]
+another-dimension transport bootstrap --profile <name> --app-data-root <absolute-app-private-root> [--execute-network]
 ```
 
 Rules:
 
 - Default CLI builds still reject prototype commands and do not include this transport command.
-- The command requires explicit state/cache directories.
+- The command requires either explicit state/cache directories or a profile-scoped app data root.
+- The profile-scoped form is preferred because it centralizes transport directory layout.
 - Without `--execute-network`, the command uses `ManualArtiBootstrapAttemptGate::disabled(...)`, performs no network bootstrap, and prints only redacted event/summary output.
 - With `--execute-network`, the command is allowed to call the manual bootstrap gate and may touch the network.
 - Output must not include local state/cache paths, onion endpoints, bridge lines, contact identifiers, plaintext, or private key material.
@@ -559,3 +561,32 @@ Still not implemented:
 - Bridge configuration UX.
 
 Next accepted phase: persistent Arti client lifecycle boundary or profile-scoped transport directory resolution. Do not implement send/receive or onion hosting until a persistent client ownership model exists.
+
+## Profile-Scoped Transport Directory Resolution
+
+Decision as of 2026-05-19: transport state/cache directory layout should be resolved from a profile name and an app-private data root before persistent Arti lifecycle work begins.
+
+Current layout:
+
+```text
+<app-data-root>/profiles/<profile>/transport/arti-state
+<app-data-root>/profiles/<profile>/transport/arti-cache
+```
+
+Current rules:
+
+- The app data root must be absolute and must not look like a shared Arti default directory.
+- Profile names use the existing `ProfileName` validator.
+- `ProfileScopedTransportDirs` exposes concrete directories to internal code but redacts them in `Debug`.
+- The manual CLI command accepts `--profile <name> --app-data-root <root>` and does not print the profile name or resolved local paths in normal output/errors.
+- The direct `--state-dir/--cache-dir` form remains a manual escape hatch for this spike, but profile-scoped resolution is the preferred path.
+
+Still not implemented:
+
+- OS-specific app data root discovery.
+- Profile unlock integration.
+- Persistent Arti client lifecycle.
+- Onion service hosting.
+- Envelope send/receive over Tor.
+
+Next accepted phase: persistent Arti client lifecycle boundary. It should consume profile-scoped dirs instead of inventing another path layout.

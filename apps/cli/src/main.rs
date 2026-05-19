@@ -84,7 +84,7 @@ fn run_production_self_test() -> Result<(), String> {
 #[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
 fn run_manual_bootstrap_command(args: &[String]) -> Result<(), String> {
     use another_dimension_transport::arti_adapter_spike::{
-        ArtiAppPrivateDirs, BoundedArtiBootstrapAdapterSpike, ManualArtiBootstrapAttemptGate,
+        BoundedArtiBootstrapAdapterSpike, ManualArtiBootstrapAttemptGate,
     };
     use another_dimension_transport::{
         InMemoryTransportRuntimeEventSink, TransportBootstrapExecutionSkeleton,
@@ -92,9 +92,8 @@ fn run_manual_bootstrap_command(args: &[String]) -> Result<(), String> {
     };
 
     let options = ManualBootstrapCommandOptions::parse(args)?;
-    let dirs = ArtiAppPrivateDirs::new(options.state_dir, options.cache_dir).map_err(|_| {
-        "invalid app-private Arti state/cache directories for manual bootstrap".to_string()
-    })?;
+    let execute_network = options.execute_network;
+    let dirs = options.resolve_dirs()?;
     let adapter = BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
         dirs,
         TransportBootstrapExecutionSkeleton::new(
@@ -103,7 +102,7 @@ fn run_manual_bootstrap_command(args: &[String]) -> Result<(), String> {
         ),
     )
     .map_err(|_| "failed to build app-private Arti config for manual bootstrap".to_string())?;
-    let gate = if options.execute_network {
+    let gate = if execute_network {
         ManualArtiBootstrapAttemptGate::explicitly_enabled_for_manual_spike(adapter)
     } else {
         ManualArtiBootstrapAttemptGate::disabled(adapter)
@@ -129,9 +128,20 @@ fn run_manual_bootstrap_command(args: &[String]) -> Result<(), String> {
 
 #[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
 struct ManualBootstrapCommandOptions {
-    state_dir: std::path::PathBuf,
-    cache_dir: std::path::PathBuf,
+    dirs: ManualBootstrapDirectoryInput,
     execute_network: bool,
+}
+
+#[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
+enum ManualBootstrapDirectoryInput {
+    Explicit {
+        state_dir: std::path::PathBuf,
+        cache_dir: std::path::PathBuf,
+    },
+    ProfileScoped {
+        profile: another_dimension_identity::ProfileName,
+        app_data_root: std::path::PathBuf,
+    },
 }
 
 #[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
@@ -139,6 +149,8 @@ impl ManualBootstrapCommandOptions {
     fn parse(args: &[String]) -> Result<Self, String> {
         let mut state_dir = None;
         let mut cache_dir = None;
+        let mut profile = None;
+        let mut app_data_root = None;
         let mut execute_network = false;
         let mut index = 0;
 
@@ -152,6 +164,21 @@ impl ManualBootstrapCommandOptions {
                     index += 1;
                     cache_dir = args.get(index).map(std::path::PathBuf::from);
                 }
+                "--profile" => {
+                    index += 1;
+                    profile = args
+                        .get(index)
+                        .map(|value| {
+                            another_dimension_identity::ProfileName::new(value).map_err(|_| {
+                                "invalid profile name for manual bootstrap".to_string()
+                            })
+                        })
+                        .transpose()?;
+                }
+                "--app-data-root" => {
+                    index += 1;
+                    app_data_root = args.get(index).map(std::path::PathBuf::from);
+                }
                 "--execute-network" => {
                     execute_network = true;
                 }
@@ -162,11 +189,59 @@ impl ManualBootstrapCommandOptions {
             index += 1;
         }
 
+        let explicit = match (state_dir, cache_dir) {
+            (Some(state_dir), Some(cache_dir)) => Some(ManualBootstrapDirectoryInput::Explicit {
+                state_dir,
+                cache_dir,
+            }),
+            (None, None) => None,
+            _ => return Err(manual_bootstrap_help()),
+        };
+        let profile_scoped = match (profile, app_data_root) {
+            (Some(profile), Some(app_data_root)) => {
+                Some(ManualBootstrapDirectoryInput::ProfileScoped {
+                    profile,
+                    app_data_root,
+                })
+            }
+            (None, None) => None,
+            _ => return Err(manual_bootstrap_help()),
+        };
+
+        let dirs = match (profile_scoped, explicit) {
+            (Some(dirs), None) | (None, Some(dirs)) => dirs,
+            (None, None) | (Some(_), Some(_)) => return Err(manual_bootstrap_help()),
+        };
+
         Ok(Self {
-            state_dir: state_dir.ok_or_else(manual_bootstrap_help)?,
-            cache_dir: cache_dir.ok_or_else(manual_bootstrap_help)?,
+            dirs,
             execute_network,
         })
+    }
+
+    fn resolve_dirs(
+        self,
+    ) -> Result<another_dimension_transport::arti_adapter_spike::ArtiAppPrivateDirs, String> {
+        match self.dirs {
+            ManualBootstrapDirectoryInput::Explicit {
+                state_dir,
+                cache_dir,
+            } => another_dimension_transport::arti_adapter_spike::ArtiAppPrivateDirs::new(
+                state_dir, cache_dir,
+            )
+            .map_err(|_| {
+                "invalid app-private Arti state/cache directories for manual bootstrap".to_string()
+            }),
+            ManualBootstrapDirectoryInput::ProfileScoped {
+                profile,
+                app_data_root,
+            } => another_dimension_transport::arti_adapter_spike::ProfileScopedTransportDirs::from_app_data_root(
+                app_data_root,
+                &profile,
+            )
+            .map(another_dimension_transport::arti_adapter_spike::ProfileScopedTransportDirs::into_arti_dirs)
+            .map_err(|_| "invalid profile-scoped transport directory root".to_string()),
+        }
     }
 }
 
@@ -174,6 +249,7 @@ impl ManualBootstrapCommandOptions {
 fn manual_bootstrap_help() -> String {
     "usage:
   another-dimension transport bootstrap --state-dir <absolute-app-private-dir> --cache-dir <absolute-app-private-dir> [--execute-network]
+  another-dimension transport bootstrap --profile <name> --app-data-root <absolute-app-private-root> [--execute-network]
 
 This is a local-only manual Arti bootstrap spike. It is not messaging, send/receive, or onion hosting."
         .to_string()

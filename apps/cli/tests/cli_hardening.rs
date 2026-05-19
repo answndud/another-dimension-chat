@@ -92,6 +92,38 @@ fn manual_bootstrap_cli_gate_is_disabled_without_execute_network_flag() {
 
 #[test]
 #[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
+fn manual_bootstrap_cli_can_use_profile_scoped_transport_dirs_without_leaking_paths() {
+    let root = temp_cli_path("manual-bootstrap-profile-scoped");
+    let output = run(&[
+        "transport",
+        "bootstrap",
+        "--profile",
+        "alice",
+        "--app-data-root",
+        root.to_str().expect("app data root"),
+    ]);
+    let out = stdout(&output);
+    let error = stderr(&output);
+
+    let _ = std::fs::remove_dir_all(root);
+
+    assert!(!output.status.success());
+    assert!(out.contains("BootstrapFailed"));
+    assert!(out.contains("RuntimeNetworkDisabled"));
+    assert!(out.contains("usable_transport=false"));
+    assert!(error.contains("manual bootstrap attempt failed: RuntimeNetworkDisabled"));
+    assert!(!out.contains("alice"));
+    assert!(!out.contains("profiles"));
+    assert!(!out.contains("arti-state"));
+    assert!(!out.contains("arti-cache"));
+    assert!(!error.contains("alice"));
+    assert!(!error.contains("profiles"));
+    assert!(!error.contains("arti-state"));
+    assert!(!error.contains("arti-cache"));
+}
+
+#[test]
+#[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
 fn manual_bootstrap_cli_requires_explicit_app_private_dirs() {
     let output = run(&["transport", "bootstrap"]);
     let error = stderr(&output);
@@ -100,6 +132,33 @@ fn manual_bootstrap_cli_requires_explicit_app_private_dirs() {
     assert!(stdout(&output).is_empty());
     assert!(error.contains("usage:"));
     assert!(error.contains("local-only manual Arti bootstrap spike"));
+}
+
+#[test]
+#[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
+fn manual_bootstrap_cli_rejects_mixed_directory_modes() {
+    let root = temp_cli_path("manual-bootstrap-mixed");
+    let state_dir = root.join("state");
+    let cache_dir = root.join("cache");
+    let output = run(&[
+        "transport",
+        "bootstrap",
+        "--profile",
+        "alice",
+        "--app-data-root",
+        root.to_str().expect("app data root"),
+        "--state-dir",
+        state_dir.to_str().expect("state path"),
+        "--cache-dir",
+        cache_dir.to_str().expect("cache path"),
+    ]);
+    let error = stderr(&output);
+
+    let _ = std::fs::remove_dir_all(root);
+
+    assert!(!output.status.success());
+    assert!(stdout(&output).is_empty());
+    assert!(error.contains("usage:"));
 }
 
 #[test]
