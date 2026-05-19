@@ -57,7 +57,28 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with an onion hosting gate boundary. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the onion hosting gate is tested separately and still fails closed by default.
+Continue transport work with the next boundary after onion hosting gate. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until each boundary is tested separately and still fails closed by default.
+
+## Onion Hosting Gate Boundary
+
+Decision as of 2026-05-19: onion hosting remains gated even after transport phase closeout. The gate can become ready only when transport closeout selected onion hosting, manual feature gating is active, the Arti adapter spike feature is present, launch preflight is ready, onion service key material is ready, and a persistent client is already bootstrapped.
+
+Current code boundary:
+
+- `OnionHostingGateDecision::locked_down()` fails closed without transport phase closeout.
+- `OnionHostingGateDecision::from_ready_boundaries(...)` requires `TransportPhaseCloseoutReady`, `OnionServiceLaunchReady`, and `OnionServiceKeyMaterialReady`.
+- The manual gate must be `FeatureGatedManualOnly`.
+- The feature state must be `ArtiAdapterSpikeFeature`.
+- A bootstrapped persistent client must be explicitly ready.
+- Descriptor publication, stream I/O, and usable messaging claims are still rejected.
+
+Still not implemented:
+
+- Real onion hosting.
+- Real descriptor publication.
+- Real stream I/O.
+- Real envelope I/O.
+- Usable messaging.
 
 ## Transport Phase Closeout and Next Boundary Selection
 
