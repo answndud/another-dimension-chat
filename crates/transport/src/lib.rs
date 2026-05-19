@@ -154,6 +154,13 @@ pub enum NetworkExperimentGateError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BootstrapOnlyExperimentDecisionError {
+    NetworkExperimentGateRequired,
+    ManualBootstrapFeatureRequired,
+    UnsupportedBootstrapExpansion,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NetworkExperimentScope {
     BootstrapOnly,
     OnionHosting,
@@ -183,6 +190,21 @@ pub enum NetworkExperimentVerificationPolicy {
 pub enum NetworkExperimentTargetCachePolicy {
     SharedProjectTarget,
     IsolatedTemporaryTarget,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BootstrapOnlyExperimentFeatureState {
+    NotCompiled,
+    ArtiManualBootstrapFeature,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BootstrapOnlyExperimentExpansion {
+    ExistingManualBootstrapAndLifecycleOnly,
+    NewBootstrapBehavior,
+    OnionHosting,
+    StreamIo,
+    EnvelopeIo,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -2087,6 +2109,18 @@ pub struct NetworkExperimentGateProposal {
     target_cache_policy: NetworkExperimentTargetCachePolicy,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct BootstrapOnlyExperimentReady {
+    expansion: BootstrapOnlyExperimentExpansion,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct BootstrapOnlyExperimentDecision {
+    gate_ready: Option<NetworkExperimentGateReady>,
+    feature_state: BootstrapOnlyExperimentFeatureState,
+    expansion: BootstrapOnlyExperimentExpansion,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -2602,6 +2636,53 @@ impl NetworkExperimentGateProposal {
 impl NetworkExperimentGateReady {
     pub fn scope(self) -> NetworkExperimentScope {
         self.scope
+    }
+}
+
+impl BootstrapOnlyExperimentDecision {
+    pub fn locked_down() -> Self {
+        Self {
+            gate_ready: None,
+            feature_state: BootstrapOnlyExperimentFeatureState::NotCompiled,
+            expansion: BootstrapOnlyExperimentExpansion::NewBootstrapBehavior,
+        }
+    }
+
+    pub fn existing_manual_bootstrap_only(
+        gate_ready: NetworkExperimentGateReady,
+        feature_state: BootstrapOnlyExperimentFeatureState,
+    ) -> Self {
+        Self {
+            gate_ready: Some(gate_ready),
+            feature_state,
+            expansion: BootstrapOnlyExperimentExpansion::ExistingManualBootstrapAndLifecycleOnly,
+        }
+    }
+
+    pub fn check(
+        self,
+    ) -> Result<BootstrapOnlyExperimentReady, BootstrapOnlyExperimentDecisionError> {
+        if self.gate_ready.is_none() {
+            return Err(BootstrapOnlyExperimentDecisionError::NetworkExperimentGateRequired);
+        }
+        if self.feature_state != BootstrapOnlyExperimentFeatureState::ArtiManualBootstrapFeature {
+            return Err(BootstrapOnlyExperimentDecisionError::ManualBootstrapFeatureRequired);
+        }
+        if self.expansion
+            != BootstrapOnlyExperimentExpansion::ExistingManualBootstrapAndLifecycleOnly
+        {
+            return Err(BootstrapOnlyExperimentDecisionError::UnsupportedBootstrapExpansion);
+        }
+
+        Ok(BootstrapOnlyExperimentReady {
+            expansion: self.expansion,
+        })
+    }
+}
+
+impl BootstrapOnlyExperimentReady {
+    pub fn expansion(self) -> BootstrapOnlyExperimentExpansion {
+        self.expansion
     }
 }
 
@@ -4220,6 +4301,75 @@ mod tests {
             assert_eq!(
                 proposal.check(),
                 Err(NetworkExperimentGateError::UnsupportedExperimentScope)
+            );
+        }
+    }
+
+    #[test]
+    fn bootstrap_only_experiment_decision_keeps_manual_bootstrap_as_the_only_allowed_path() {
+        let closeout = TransportPreNetworkCloseout::from_blockers(Vec::new());
+        let gate_ready = NetworkExperimentGateProposal::bootstrap_only_manual_spike(
+            &closeout,
+            NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
+            NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
+            NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
+        )
+        .check()
+        .expect("network experiment gate ready");
+
+        assert_eq!(
+            BootstrapOnlyExperimentDecision::locked_down().check(),
+            Err(BootstrapOnlyExperimentDecisionError::NetworkExperimentGateRequired)
+        );
+        assert_eq!(
+            BootstrapOnlyExperimentDecision::existing_manual_bootstrap_only(
+                gate_ready,
+                BootstrapOnlyExperimentFeatureState::NotCompiled,
+            )
+            .check(),
+            Err(BootstrapOnlyExperimentDecisionError::ManualBootstrapFeatureRequired)
+        );
+
+        let ready = BootstrapOnlyExperimentDecision::existing_manual_bootstrap_only(
+            gate_ready,
+            BootstrapOnlyExperimentFeatureState::ArtiManualBootstrapFeature,
+        )
+        .check()
+        .expect("bootstrap-only experiment decision ready");
+
+        assert_eq!(
+            ready.expansion(),
+            BootstrapOnlyExperimentExpansion::ExistingManualBootstrapAndLifecycleOnly
+        );
+    }
+
+    #[test]
+    fn bootstrap_only_experiment_decision_rejects_new_network_expansion() {
+        let closeout = TransportPreNetworkCloseout::from_blockers(Vec::new());
+        let gate_ready = NetworkExperimentGateProposal::bootstrap_only_manual_spike(
+            &closeout,
+            NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
+            NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
+            NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
+        )
+        .check()
+        .expect("network experiment gate ready");
+
+        for expansion in [
+            BootstrapOnlyExperimentExpansion::NewBootstrapBehavior,
+            BootstrapOnlyExperimentExpansion::OnionHosting,
+            BootstrapOnlyExperimentExpansion::StreamIo,
+            BootstrapOnlyExperimentExpansion::EnvelopeIo,
+        ] {
+            let decision = BootstrapOnlyExperimentDecision {
+                gate_ready: Some(gate_ready),
+                feature_state: BootstrapOnlyExperimentFeatureState::ArtiManualBootstrapFeature,
+                expansion,
+            };
+
+            assert_eq!(
+                decision.check(),
+                Err(BootstrapOnlyExperimentDecisionError::UnsupportedBootstrapExpansion)
             );
         }
     }
