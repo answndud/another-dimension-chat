@@ -57,7 +57,27 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue pre-network transport work by defining the post-auth stream readiness ordering boundary. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+Continue pre-network transport work by defining a network-capable experiment gate proposal or another bounded pre-network closeout. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+
+## Post-Auth Stream Readiness Ordering Boundary
+
+Decision as of 2026-05-19: the post-auth stream path is ordered by types. A final post-auth readiness order can be constructed only after the relevant envelope I/O adapter boundary exists.
+
+Current code boundary:
+
+- `PostAuthInboundStreamReadinessOrder` requires `InboundEnvelopeIoAdapterBoundary`.
+- `PostAuthOutboundStreamReadinessOrder` requires `OutboundEnvelopeIoAdapterBoundary`.
+- Missing envelope I/O boundary is rejected with `EnvelopeIoBoundaryRequired`.
+- The inbound order documents launch, descriptor publication, inbound stream, remote peer authentication, session binding, and envelope I/O sequence.
+- The outbound order documents launch, pairwise endpoint, outbound stream, remote peer authentication, session binding, and envelope I/O sequence.
+- Debug output must not expose endpoint, contact id, peer proof, session transcript, channel id, ciphertext, private key, or path material.
+
+Still not implemented:
+
+- Real peer proof exchange over streams.
+- Real stream read/write behavior.
+- Real envelope send/receive.
+- Usable messaging.
 
 ## Remote Peer Authentication Over Stream Boundary
 
