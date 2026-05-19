@@ -1,7 +1,7 @@
 use another_dimension_identity::ProfileName;
 use another_dimension_protocol::Envelope;
 use std::{
-    fs,
+    fmt, fs,
     path::{Path, PathBuf},
 };
 
@@ -35,6 +35,148 @@ pub enum TransportRuntimeProbeError {
     SameStateAndCacheDirectory,
     DirectoryCreateFailed,
     DirectoryProbeFailed,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportRuntimeEventKind {
+    DirectoryProbeFailed,
+    RouteRejected,
+    RuntimePreflightFailed,
+    TransferFailed,
+    SensitiveContextRejected,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportTransferDirection {
+    Send,
+    Receive,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct RedactedTransportRuntimeEvent {
+    kind: TransportRuntimeEventKind,
+    runtime_error: Option<TransportRuntimeError>,
+    probe_error: Option<TransportRuntimeProbeError>,
+    route_kind: Option<TransportKind>,
+    transfer_direction: Option<TransportTransferDirection>,
+}
+
+impl RedactedTransportRuntimeEvent {
+    pub fn directory_probe_failed(path: &Path, error: TransportRuntimeProbeError) -> Self {
+        let _ = path;
+        Self {
+            kind: TransportRuntimeEventKind::DirectoryProbeFailed,
+            runtime_error: Some(error.into()),
+            probe_error: Some(error),
+            route_kind: None,
+            transfer_direction: None,
+        }
+    }
+
+    pub fn route_rejected(route: &TransportRoute, error: TransportError) -> Self {
+        let runtime_error = match error {
+            TransportError::PolicyViolation | TransportError::InvalidEndpoint => None,
+            TransportError::DeliveryFailed => Some(TransportRuntimeError::SendFailed),
+            TransportError::ReceiveFailed => Some(TransportRuntimeError::ReceiveFailed),
+            TransportError::Unavailable => Some(TransportRuntimeError::RuntimeNetworkDisabled),
+        };
+
+        Self {
+            kind: TransportRuntimeEventKind::RouteRejected,
+            runtime_error,
+            probe_error: None,
+            route_kind: Some(route.kind()),
+            transfer_direction: None,
+        }
+    }
+
+    pub fn runtime_preflight_failed(error: TransportRuntimeError) -> Self {
+        Self {
+            kind: TransportRuntimeEventKind::RuntimePreflightFailed,
+            runtime_error: Some(error),
+            probe_error: None,
+            route_kind: None,
+            transfer_direction: None,
+        }
+    }
+
+    pub fn transfer_failed(
+        direction: TransportTransferDirection,
+        error: TransportRuntimeError,
+    ) -> Self {
+        Self {
+            kind: TransportRuntimeEventKind::TransferFailed,
+            runtime_error: Some(error),
+            probe_error: None,
+            route_kind: None,
+            transfer_direction: Some(direction),
+        }
+    }
+
+    pub fn sensitive_context_rejected(
+        profile: &ProfileName,
+        contact_id: &str,
+        onion_endpoint: &str,
+        plaintext: &str,
+        key_material: &[u8],
+        error: TransportRuntimeError,
+    ) -> Self {
+        let _ = (profile, contact_id, onion_endpoint, plaintext, key_material);
+        Self {
+            kind: TransportRuntimeEventKind::SensitiveContextRejected,
+            runtime_error: Some(error),
+            probe_error: None,
+            route_kind: None,
+            transfer_direction: None,
+        }
+    }
+
+    pub fn kind(&self) -> TransportRuntimeEventKind {
+        self.kind
+    }
+
+    pub fn runtime_error(&self) -> Option<TransportRuntimeError> {
+        self.runtime_error
+    }
+
+    pub fn probe_error(&self) -> Option<TransportRuntimeProbeError> {
+        self.probe_error
+    }
+
+    pub fn route_kind(&self) -> Option<TransportKind> {
+        self.route_kind
+    }
+
+    pub fn transfer_direction(&self) -> Option<TransportTransferDirection> {
+        self.transfer_direction
+    }
+}
+
+impl fmt::Debug for RedactedTransportRuntimeEvent {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("RedactedTransportRuntimeEvent")
+            .field("kind", &self.kind)
+            .field("runtime_error", &self.runtime_error)
+            .field("probe_error", &self.probe_error)
+            .field("route_kind", &self.route_kind)
+            .field("transfer_direction", &self.transfer_direction)
+            .finish()
+    }
+}
+
+impl fmt::Display for RedactedTransportRuntimeEvent {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "transport_event kind={:?} runtime_error={:?} probe_error={:?} route_kind={:?} direction={:?}",
+            self.kind,
+            self.runtime_error,
+            self.probe_error,
+            self.route_kind,
+            self.transfer_direction
+        )
+    }
 }
 
 impl From<TransportRuntimeProbeError> for TransportRuntimeError {
@@ -1050,6 +1192,95 @@ mod tests {
     }
 
     #[test]
+    fn redacted_runtime_event_does_not_expose_directory_paths() {
+        let raw_path = Path::new("/Users/alex/Library/Application Support/AnotherDimension/secret");
+        let event = RedactedTransportRuntimeEvent::directory_probe_failed(
+            raw_path,
+            TransportRuntimeProbeError::DirectoryProbeFailed,
+        );
+
+        assert_eq!(
+            event.kind(),
+            TransportRuntimeEventKind::DirectoryProbeFailed
+        );
+        assert_eq!(
+            event.runtime_error(),
+            Some(TransportRuntimeError::StateDirectoryPermissionDenied)
+        );
+        assert_eq!(
+            event.probe_error(),
+            Some(TransportRuntimeProbeError::DirectoryProbeFailed)
+        );
+        assert_redacted_event_hides(&event, &["alex", "AnotherDimension", "secret"]);
+    }
+
+    #[test]
+    fn redacted_runtime_event_does_not_expose_onion_endpoint() {
+        let route = TransportRoute::onion("secretabc.onion").expect("onion route");
+        let event =
+            RedactedTransportRuntimeEvent::route_rejected(&route, TransportError::PolicyViolation);
+
+        assert_eq!(event.kind(), TransportRuntimeEventKind::RouteRejected);
+        assert_eq!(event.route_kind(), Some(TransportKind::OnionService));
+        assert_redacted_event_hides(&event, &["secretabc.onion", "secretabc"]);
+    }
+
+    #[test]
+    fn redacted_runtime_event_does_not_expose_profile_contact_plaintext_or_keys() {
+        let profile = ProfileName::new("alice-secret-profile").expect("profile");
+        let contact_id = "bob-sensitive-contact";
+        let onion_endpoint = "contactsecret.onion";
+        let plaintext = "meet at 10";
+        let key_material = b"raw-private-key-material";
+
+        let event = RedactedTransportRuntimeEvent::sensitive_context_rejected(
+            &profile,
+            contact_id,
+            onion_endpoint,
+            plaintext,
+            key_material,
+            TransportRuntimeError::LogRedactionPreflightFailed,
+        );
+
+        assert_eq!(
+            event.kind(),
+            TransportRuntimeEventKind::SensitiveContextRejected
+        );
+        assert_eq!(
+            event.runtime_error(),
+            Some(TransportRuntimeError::LogRedactionPreflightFailed)
+        );
+        assert_redacted_event_hides(
+            &event,
+            &[
+                "alice-secret-profile",
+                "bob-sensitive-contact",
+                "contactsecret.onion",
+                "meet at 10",
+                "raw-private-key-material",
+            ],
+        );
+    }
+
+    #[test]
+    fn redacted_runtime_event_records_transfer_category_only() {
+        let event = RedactedTransportRuntimeEvent::transfer_failed(
+            TransportTransferDirection::Send,
+            TransportRuntimeError::SendFailed,
+        );
+
+        assert_eq!(event.kind(), TransportRuntimeEventKind::TransferFailed);
+        assert_eq!(
+            event.runtime_error(),
+            Some(TransportRuntimeError::SendFailed)
+        );
+        assert_eq!(
+            event.transfer_direction(),
+            Some(TransportTransferDirection::Send)
+        );
+    }
+
+    #[test]
     fn runtime_state_is_disabled_by_default_and_not_ready() {
         let state = TransportRuntimeState::disabled();
 
@@ -1122,6 +1353,25 @@ mod tests {
             "another-dimension-{label}-{}-{nanos}",
             std::process::id()
         ))
+    }
+
+    fn assert_redacted_event_hides(
+        event: &RedactedTransportRuntimeEvent,
+        forbidden_fragments: &[&str],
+    ) {
+        let debug = format!("{event:?}");
+        let display = event.to_string();
+
+        for fragment in forbidden_fragments {
+            assert!(
+                !debug.contains(fragment),
+                "debug output leaked forbidden fragment: {fragment}"
+            );
+            assert!(
+                !display.contains(fragment),
+                "display output leaked forbidden fragment: {fragment}"
+            );
+        }
     }
 
     #[cfg(feature = "arti-adapter-spike")]
