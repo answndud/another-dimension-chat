@@ -23,6 +23,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `RedactedTransportRuntimeEvent` records transport event categories without storing raw paths, endpoints, contact ids, profile names, plaintext, or key material.
 - `TransportRuntimeEventSink` accepts only redacted transport runtime events.
 - `TransportBootstrapPolicy` bounds future bootstrap timeout, retry, cancellation, and censorship classification behavior without bootstrapping Tor.
+- `TransportPreNetworkCloseout` records the remaining hard blockers before any network execution skeleton is allowed.
 - `TransportRuntimeState` separates disabled fail-closed state from a future runtime-ready state that can only be created from successful preflight.
 - `OnionEnvelopeTransport` stores runtime state, but send/receive remains fail-closed even when that state is ready.
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
@@ -375,3 +376,21 @@ Still not implemented:
 - Tor bootstrap, socket opens, onion service launch, or envelope transfer.
 
 A future adapter should receive a `TransportRuntimeEventSink` and emit redacted events through it instead of logging raw runtime context directly.
+
+## Transport Runtime Pre-Network Closeout
+
+Decision as of 2026-05-19: the pre-network transport phase is close enough to identify remaining hard blockers, but not close enough to start a network-capable adapter.
+
+Current closeout blockers:
+
+- OS backup exclusion verification for app-private transport state/cache.
+- Onion service key generation, storage, rotation, deletion, migration, and backup behavior.
+- Bridge/censorship configuration for environments where direct Tor bootstrap is blocked.
+
+Current code boundary:
+
+- `TransportPreNetworkCloseout::high_risk_default()` returns these blockers and keeps network execution disallowed.
+- `TransportNextPhase` records the next implementation target instead of letting code silently jump to bootstrap.
+- Network execution is allowed only when the blocker list is empty, at which point the next phase is only an Arti bootstrap execution skeleton, not a usable transport.
+
+Next accepted phase: backup exclusion verification. The project should not start real Tor bootstrap, socket opens, onion service launch, or envelope transfer before the backup-exclusion and onion-key lifecycle decisions are implemented and tested.
