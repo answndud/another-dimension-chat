@@ -60,6 +60,16 @@ pub enum TransportBackupExclusionError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionServiceKeyLifecycleError {
+    GenerationBeforeProfileUnlock,
+    PlaintextStorageForbidden,
+    BackupExclusionNotVerified,
+    RotationPolicyMissing,
+    DeletionPolicyMissing,
+    MigrationPolicyMissing,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TransportBootstrapTimeoutPolicy {
     seconds: u16,
 }
@@ -251,6 +261,14 @@ impl TransportPreNetworkCloseout {
     ) -> Self {
         Self::from_blockers(vec![
             TransportPreNetworkBlocker::OnionServiceKeyLifecycle,
+            TransportPreNetworkBlocker::BridgeCensorshipConfiguration,
+        ])
+    }
+
+    pub fn after_onion_service_key_lifecycle(
+        _verification: &OnionServiceKeyLifecycleReady,
+    ) -> Self {
+        Self::from_blockers(vec![
             TransportPreNetworkBlocker::BridgeCensorshipConfiguration,
         ])
     }
@@ -958,6 +976,101 @@ pub enum OnionServiceKeyPolicy {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionServiceKeyGenerationPolicy {
+    DisabledUntilProfileUnlock,
+    AfterExplicitProfileUnlock,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionServiceKeyStoragePolicy {
+    Undecided,
+    PlaintextAppFile,
+    SqlcipherWrappedByProfileKey,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionServiceKeyRotationPolicy {
+    Missing,
+    ManualRotationWithContactEndpointUpdate,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionServiceKeyDeletionPolicy {
+    Missing,
+    DeleteOnProfileDestroy,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OnionServiceKeyMigrationPolicy {
+    Missing,
+    NoAutomaticMigration,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct OnionServiceKeyLifecycleDecision {
+    pub generation_policy: OnionServiceKeyGenerationPolicy,
+    pub storage_policy: OnionServiceKeyStoragePolicy,
+    pub backup_exclusion_verified: bool,
+    pub rotation_policy: OnionServiceKeyRotationPolicy,
+    pub deletion_policy: OnionServiceKeyDeletionPolicy,
+    pub migration_policy: OnionServiceKeyMigrationPolicy,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct OnionServiceKeyLifecycleReady;
+
+impl OnionServiceKeyLifecycleDecision {
+    pub fn locked_down_by_default() -> Self {
+        Self {
+            generation_policy: OnionServiceKeyGenerationPolicy::DisabledUntilProfileUnlock,
+            storage_policy: OnionServiceKeyStoragePolicy::Undecided,
+            backup_exclusion_verified: false,
+            rotation_policy: OnionServiceKeyRotationPolicy::Missing,
+            deletion_policy: OnionServiceKeyDeletionPolicy::Missing,
+            migration_policy: OnionServiceKeyMigrationPolicy::Missing,
+        }
+    }
+
+    pub fn sqlcipher_wrapped_after_unlock(
+        _backup_exclusion_verification: &TransportBackupExclusionVerification,
+    ) -> Self {
+        Self {
+            generation_policy: OnionServiceKeyGenerationPolicy::AfterExplicitProfileUnlock,
+            storage_policy: OnionServiceKeyStoragePolicy::SqlcipherWrappedByProfileKey,
+            backup_exclusion_verified: true,
+            rotation_policy: OnionServiceKeyRotationPolicy::ManualRotationWithContactEndpointUpdate,
+            deletion_policy: OnionServiceKeyDeletionPolicy::DeleteOnProfileDestroy,
+            migration_policy: OnionServiceKeyMigrationPolicy::NoAutomaticMigration,
+        }
+    }
+
+    pub fn check(self) -> Result<OnionServiceKeyLifecycleReady, OnionServiceKeyLifecycleError> {
+        if self.generation_policy != OnionServiceKeyGenerationPolicy::AfterExplicitProfileUnlock {
+            return Err(OnionServiceKeyLifecycleError::GenerationBeforeProfileUnlock);
+        }
+        if self.storage_policy == OnionServiceKeyStoragePolicy::PlaintextAppFile {
+            return Err(OnionServiceKeyLifecycleError::PlaintextStorageForbidden);
+        }
+        if self.storage_policy != OnionServiceKeyStoragePolicy::SqlcipherWrappedByProfileKey {
+            return Err(OnionServiceKeyLifecycleError::PlaintextStorageForbidden);
+        }
+        if !self.backup_exclusion_verified {
+            return Err(OnionServiceKeyLifecycleError::BackupExclusionNotVerified);
+        }
+        if self.rotation_policy == OnionServiceKeyRotationPolicy::Missing {
+            return Err(OnionServiceKeyLifecycleError::RotationPolicyMissing);
+        }
+        if self.deletion_policy == OnionServiceKeyDeletionPolicy::Missing {
+            return Err(OnionServiceKeyLifecycleError::DeletionPolicyMissing);
+        }
+        if self.migration_policy == OnionServiceKeyMigrationPolicy::Missing {
+            return Err(OnionServiceKeyLifecycleError::MigrationPolicyMissing);
+        }
+        Ok(OnionServiceKeyLifecycleReady)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ArtiLifecycleDecision {
     pub require_app_private_state_dir: bool,
     pub require_app_private_cache_dir: bool,
@@ -1514,6 +1627,22 @@ mod tests {
     }
 
     #[test]
+    fn pre_network_closeout_moves_to_bridge_config_after_onion_key_lifecycle() {
+        let ready = OnionServiceKeyLifecycleReady;
+        let closeout = TransportPreNetworkCloseout::after_onion_service_key_lifecycle(&ready);
+
+        assert!(!closeout.network_execution_allowed());
+        assert_eq!(
+            closeout.blockers(),
+            &[TransportPreNetworkBlocker::BridgeCensorshipConfiguration]
+        );
+        assert_eq!(
+            closeout.next_phase(),
+            TransportNextPhase::BridgeCensorshipConfiguration
+        );
+    }
+
+    #[test]
     fn runtime_preflight_is_disabled_by_default() {
         assert_eq!(
             TransportRuntimePreflight::disabled_by_default().check(),
@@ -1924,6 +2053,70 @@ mod tests {
                 onion_service_key_policy: OnionServiceKeyPolicy::DoNotGenerateUntilStorageDecision,
             }
         );
+    }
+
+    #[test]
+    fn onion_service_key_lifecycle_is_locked_down_by_default() {
+        assert_eq!(
+            OnionServiceKeyLifecycleDecision::locked_down_by_default().check(),
+            Err(OnionServiceKeyLifecycleError::GenerationBeforeProfileUnlock)
+        );
+    }
+
+    #[test]
+    fn onion_service_key_lifecycle_rejects_plaintext_or_unverified_storage() {
+        let backup = TransportBackupExclusionVerification;
+        let mut decision =
+            OnionServiceKeyLifecycleDecision::sqlcipher_wrapped_after_unlock(&backup);
+        decision.storage_policy = OnionServiceKeyStoragePolicy::PlaintextAppFile;
+        assert_eq!(
+            decision.check(),
+            Err(OnionServiceKeyLifecycleError::PlaintextStorageForbidden)
+        );
+
+        let mut decision =
+            OnionServiceKeyLifecycleDecision::sqlcipher_wrapped_after_unlock(&backup);
+        decision.backup_exclusion_verified = false;
+        assert_eq!(
+            decision.check(),
+            Err(OnionServiceKeyLifecycleError::BackupExclusionNotVerified)
+        );
+    }
+
+    #[test]
+    fn onion_service_key_lifecycle_requires_rotation_deletion_and_migration_policies() {
+        let backup = TransportBackupExclusionVerification;
+        let mut decision =
+            OnionServiceKeyLifecycleDecision::sqlcipher_wrapped_after_unlock(&backup);
+        decision.rotation_policy = OnionServiceKeyRotationPolicy::Missing;
+        assert_eq!(
+            decision.check(),
+            Err(OnionServiceKeyLifecycleError::RotationPolicyMissing)
+        );
+
+        let mut decision =
+            OnionServiceKeyLifecycleDecision::sqlcipher_wrapped_after_unlock(&backup);
+        decision.deletion_policy = OnionServiceKeyDeletionPolicy::Missing;
+        assert_eq!(
+            decision.check(),
+            Err(OnionServiceKeyLifecycleError::DeletionPolicyMissing)
+        );
+
+        let mut decision =
+            OnionServiceKeyLifecycleDecision::sqlcipher_wrapped_after_unlock(&backup);
+        decision.migration_policy = OnionServiceKeyMigrationPolicy::Missing;
+        assert_eq!(
+            decision.check(),
+            Err(OnionServiceKeyLifecycleError::MigrationPolicyMissing)
+        );
+    }
+
+    #[test]
+    fn onion_service_key_lifecycle_accepts_sqlcipher_wrapped_after_unlock_policy() {
+        let backup = TransportBackupExclusionVerification;
+        let decision = OnionServiceKeyLifecycleDecision::sqlcipher_wrapped_after_unlock(&backup);
+
+        assert_eq!(decision.check(), Ok(OnionServiceKeyLifecycleReady));
     }
 
     fn sample_envelope() -> Envelope {

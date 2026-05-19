@@ -6,7 +6,7 @@ Another Dimension Chat is not ready for real communication.
 
 The current public repository contains an early `dev-insecure` Rust prototype. It is useful for testing development flow and protocol boundaries, but it does not provide production-grade confidentiality, anonymity, metadata resistance, or endpoint protection.
 
-Default-build production code now includes narrow decision boundaries for pairing, session setup, envelope handling, replay rejection, transport policy, a fail-closed onion transport adapter skeleton, pre-network transport blockers, backup-exclusion verification boundaries, storage policy tests, a SQLCipher-backed storage spike, passphrase unlock tests, high-risk unlock policy tests, first replay-window persistence tests, receive-flow replay commit-order tests, and session-scoped opaque replay record id derivation. These are implementation guardrails, not a secure messenger release.
+Default-build production code now includes narrow decision boundaries for pairing, session setup, envelope handling, replay rejection, transport policy, a fail-closed onion transport adapter skeleton, pre-network transport blockers, backup-exclusion verification boundaries, onion service key lifecycle policy boundaries, storage policy tests, a SQLCipher-backed storage spike, passphrase unlock tests, high-risk unlock policy tests, first replay-window persistence tests, receive-flow replay commit-order tests, and session-scoped opaque replay record id derivation. These are implementation guardrails, not a secure messenger release.
 
 Do not use this project to communicate sensitive information.
 
@@ -26,6 +26,7 @@ This project does not currently claim:
 - Bridge or censorship-circumvention support.
 - Arti transport bootstrap, onion service launch, system Tor discovery, runtime Tor connectivity, or bridge/censorship behavior.
 - Onion service key generation, rotation, persistence, backup, or migration.
+- Actual onion service private key material.
 - Production unlock/key management.
 - OS keychain/DPAPI/Keystore wrapping.
 - Production encrypted local storage lifecycle.

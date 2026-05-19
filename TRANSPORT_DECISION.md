@@ -21,6 +21,7 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 - `TransportRuntimePermissionPreflight` maps app-private state/cache policy, backup exclusion, log/crash redaction, and censorship readiness into the runtime preflight gate.
 - `probe_app_private_state_cache_dirs` creates and probes explicit state/cache directories without exposing path details in runtime errors.
 - `verify_transport_backup_exclusion` verifies backup-exclusion metadata before a runtime preflight can use a backup verification token.
+- `OnionServiceKeyLifecycleDecision` blocks onion key readiness unless generation is after explicit profile unlock, key material is SQLCipher-wrapped, backup exclusion is verified, and rotation/deletion/migration policies are present.
 - `RedactedTransportRuntimeEvent` records transport event categories without storing raw paths, endpoints, contact ids, profile names, plaintext, or key material.
 - `TransportRuntimeEventSink` accepts only redacted transport runtime events.
 - `TransportBootstrapPolicy` bounds future bootstrap timeout, retry, cancellation, and censorship classification behavior without bootstrapping Tor.
@@ -417,3 +418,29 @@ Still not implemented:
 - Tor bootstrap, socket opens, onion service launch, or envelope transfer.
 
 Next accepted phase: onion service key lifecycle decision. Network execution remains blocked until onion key lifecycle and bridge/censorship decisions are also closed.
+
+## Onion Service Key Lifecycle Decision
+
+Decision as of 2026-05-19: onion service private key material must not be generated, stored, rotated, deleted, migrated, or backed up implicitly. A future adapter must first pass a lifecycle decision boundary.
+
+Current code boundary:
+
+- `OnionServiceKeyLifecycleDecision::locked_down_by_default()` is not ready.
+- Generation is accepted only after explicit profile unlock.
+- Plaintext app-file storage is rejected.
+- The current accepted storage policy is SQLCipher-wrapped by the unlocked profile key.
+- Backup exclusion must be verified before lifecycle readiness.
+- Rotation must be explicit and accompanied by a contact endpoint update.
+- Deletion is tied to profile destruction.
+- Automatic migration is disabled by default.
+- `TransportPreNetworkCloseout::after_onion_service_key_lifecycle(...)` removes only the onion-key blocker; bridge/censorship configuration remains a blocker.
+
+Still not implemented:
+
+- Actual onion service private key generation.
+- Actual Arti keystore integration.
+- Actual SQLCipher key record schema for onion service keys.
+- Endpoint update message flow for rotation.
+- Tor bootstrap, socket opens, onion service launch, or envelope transfer.
+
+Next accepted phase: bridge/censorship configuration. Network execution remains blocked until censorship/bridge behavior is also closed.
