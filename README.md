@@ -40,6 +40,7 @@ What exists today:
 - Onion service key lifecycle decision boundary that permits only SQLCipher-wrapped, profile-unlocked key material after backup exclusion verification.
 - Onion service key material adapter boundary that requires profile unlock, lifecycle readiness, and SQLCipher-wrapped key record readiness before launch preflight.
 - Onion service launch preflight boundary that requires profile unlock, key readiness, persistent client readiness, endpoint publication/update policy, and redacted events before any future launch.
+- Onion service descriptor publication boundary that accepts only pairwise rendezvous publication policy and still fails closed without publishing descriptors.
 - Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
 - Encrypted endpoint update control-envelope boundary that pads endpoint rotation plaintext before Noise encryption and wraps only opaque control ciphertext after a validated pairwise update.
 - Production envelope session hook for endpoint update control encryption/decryption without Tor delivery or onion hosting.
