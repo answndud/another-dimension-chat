@@ -1377,6 +1377,50 @@ pub mod arti_adapter_spike {
         }
     }
 
+    #[derive(Clone, Eq, PartialEq)]
+    pub struct ProfileScopedTransportDirs {
+        dirs: ArtiAppPrivateDirs,
+    }
+
+    impl ProfileScopedTransportDirs {
+        pub fn from_app_data_root(
+            app_data_root: impl Into<PathBuf>,
+            profile: &ProfileName,
+        ) -> Result<Self, ArtiConfigError> {
+            let app_data_root = app_data_root.into();
+            validate_app_private_dir(&app_data_root)?;
+
+            let profile_transport_root = app_data_root
+                .join("profiles")
+                .join(profile.as_str())
+                .join("transport");
+            let dirs = ArtiAppPrivateDirs::new(
+                profile_transport_root.join("arti-state"),
+                profile_transport_root.join("arti-cache"),
+            )?;
+
+            Ok(Self { dirs })
+        }
+
+        pub fn dirs(&self) -> &ArtiAppPrivateDirs {
+            &self.dirs
+        }
+
+        pub fn into_arti_dirs(self) -> ArtiAppPrivateDirs {
+            self.dirs
+        }
+    }
+
+    impl fmt::Debug for ProfileScopedTransportDirs {
+        fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter
+                .debug_struct("ProfileScopedTransportDirs")
+                .field("state_dir", &"<redacted>")
+                .field("cache_dir", &"<redacted>")
+                .finish()
+        }
+    }
+
     #[derive(Clone, Debug)]
     pub struct ArtiAdapterSpike {
         config: TorClientConfig,
@@ -2712,6 +2756,56 @@ mod tests {
             arti_adapter_spike::ArtiAppPrivateDirs::new(root.join("same"), root.join("same")),
             Err(arti_adapter_spike::ArtiConfigError::SameStateAndCacheDirectory)
         );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn profile_scoped_transport_dirs_resolve_app_private_arti_dirs() {
+        let root = unique_transport_test_root("profile-transport-dirs");
+        let profile = ProfileName::new("alice").expect("profile");
+        let dirs =
+            arti_adapter_spike::ProfileScopedTransportDirs::from_app_data_root(&root, &profile)
+                .expect("profile scoped dirs");
+
+        assert_eq!(
+            dirs.dirs().state_dir(),
+            root.join("profiles")
+                .join("alice")
+                .join("transport")
+                .join("arti-state")
+        );
+        assert_eq!(
+            dirs.dirs().cache_dir(),
+            root.join("profiles")
+                .join("alice")
+                .join("transport")
+                .join("arti-cache")
+        );
+    }
+
+    #[cfg(feature = "arti-adapter-spike")]
+    #[test]
+    fn profile_scoped_transport_dirs_reject_unsafe_root_and_redact_debug() {
+        let profile = ProfileName::new("alice").expect("profile");
+        assert_eq!(
+            arti_adapter_spike::ProfileScopedTransportDirs::from_app_data_root(
+                "relative-root",
+                &profile
+            ),
+            Err(arti_adapter_spike::ArtiConfigError::RelativeDirectory)
+        );
+
+        let root = unique_transport_test_root("profile-transport-redacted");
+        let dirs =
+            arti_adapter_spike::ProfileScopedTransportDirs::from_app_data_root(&root, &profile)
+                .expect("profile scoped dirs");
+        let rendered = format!("{dirs:?}");
+
+        assert!(rendered.contains("<redacted>"));
+        assert!(!rendered.contains("alice"));
+        assert!(!rendered.contains(root.to_string_lossy().as_ref()));
+        assert!(!rendered.contains("arti-state"));
+        assert!(!rendered.contains("arti-cache"));
     }
 
     #[cfg(feature = "arti-adapter-spike")]
