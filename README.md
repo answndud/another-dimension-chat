@@ -71,6 +71,7 @@ What exists today:
 - Extracted hosting/phase gate module that preserves network experiment gating, bootstrap-only experiment decisions, transport phase closeout, and onion hosting gate behavior through `crates/transport/src/lib.rs` re-exports.
 - Extracted key lifecycle/material module that preserves profile unlock readiness, onion service key lifecycle policy, wrapped key record readiness, and redacted key-material debug behavior through `crates/transport/src/lib.rs` re-exports.
 - Extracted pre-network closeout module that preserves blocker ordering, next-phase selection, and network execution gating through `crates/transport/src/lib.rs` re-exports.
+- Extracted onion stream boundary module that preserves inbound descriptor-readiness gating, outbound pairwise endpoint policy checks, redacted debug output, and fail-closed accept/dial/send behavior through `crates/transport/src/lib.rs` re-exports.
 - Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
 - Encrypted endpoint update control-envelope boundary that pads endpoint rotation plaintext before Noise encryption and wraps only opaque control ciphertext after a validated pairwise update.
 - Production envelope session hook for endpoint update control encryption/decryption without Tor delivery or onion hosting.
