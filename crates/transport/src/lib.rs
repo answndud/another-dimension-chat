@@ -118,6 +118,14 @@ pub enum OnionOutboundStreamError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum StreamSessionBindingError {
+    VerifiedPairwiseSessionRequired,
+    ContactMismatch,
+    BoundInboundReceiveNotImplemented,
+    BoundOutboundSendNotImplemented,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EndpointLifecycleError {
     GlobalEndpointForbidden,
     IdentityKeyCouplingForbidden,
@@ -1184,6 +1192,12 @@ pub enum EndpointRotationApplyContext {
     UnverifiedControlPayload,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum StreamSessionVerificationContext {
+    VerifiedPairwiseEncryptedSession,
+    UnverifiedSession,
+}
+
 #[derive(Clone, Eq, PartialEq)]
 pub struct PairwiseRendezvousEndpoint {
     contact_id: ContactId,
@@ -1427,6 +1441,39 @@ impl fmt::Debug for PairwiseEndpointRotationState {
             .field("current_endpoint", &"<redacted>")
             .field("pending", &self.pending.as_ref().map(|_| "<redacted>"))
             .field("last_applied_sequence", &self.last_applied_sequence)
+            .finish()
+    }
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct PairwiseStreamSessionBinding {
+    contact_id: ContactId,
+}
+
+impl PairwiseStreamSessionBinding {
+    pub fn from_verified_pairwise_session(
+        contact_id: ContactId,
+        context: StreamSessionVerificationContext,
+    ) -> Result<Self, StreamSessionBindingError> {
+        if context != StreamSessionVerificationContext::VerifiedPairwiseEncryptedSession {
+            return Err(StreamSessionBindingError::VerifiedPairwiseSessionRequired);
+        }
+
+        Ok(Self { contact_id })
+    }
+
+    pub fn contact_id(&self) -> &ContactId {
+        &self.contact_id
+    }
+}
+
+impl fmt::Debug for PairwiseStreamSessionBinding {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PairwiseStreamSessionBinding")
+            .field("contact_id", &"<redacted>")
+            .field("session", &"<verified>")
+            .field("session_secret", &"<not-held>")
             .finish()
     }
 }
@@ -1883,6 +1930,18 @@ pub struct OnionOutboundStreamBoundary {
     policy: TransportPolicy,
 }
 
+#[derive(Clone, Eq, PartialEq)]
+pub struct BoundInboundStreamSession {
+    _inbound_stream: OnionInboundStreamBoundary,
+    session_binding: PairwiseStreamSessionBinding,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct BoundOutboundStreamSession {
+    _outbound_stream: OnionOutboundStreamBoundary,
+    session_binding: PairwiseStreamSessionBinding,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -2092,6 +2151,95 @@ impl fmt::Debug for OnionOutboundStreamBoundary {
             .field("contact_id", &"<redacted>")
             .field("profile_name", &"<redacted>")
             .field("policy_mode", &self.policy.mode)
+            .finish()
+    }
+}
+
+impl BoundInboundStreamSession {
+    pub fn from_inbound_stream(
+        inbound_stream: OnionInboundStreamBoundary,
+        session_binding: PairwiseStreamSessionBinding,
+    ) -> Self {
+        Self {
+            _inbound_stream: inbound_stream,
+            session_binding,
+        }
+    }
+
+    pub fn from_missing_session_binding() -> Result<Self, StreamSessionBindingError> {
+        Err(StreamSessionBindingError::VerifiedPairwiseSessionRequired)
+    }
+
+    pub fn receive_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        sink: &mut S,
+    ) -> Result<(), StreamSessionBindingError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::ReceiveFailed,
+        ));
+        Err(StreamSessionBindingError::BoundInboundReceiveNotImplemented)
+    }
+
+    pub fn contact_id(&self) -> &ContactId {
+        self.session_binding.contact_id()
+    }
+}
+
+impl fmt::Debug for BoundInboundStreamSession {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("BoundInboundStreamSession")
+            .field("stream", &"<redacted>")
+            .field("contact_id", &"<redacted>")
+            .field("session", &"<verified>")
+            .field("envelope", &"<not-read>")
+            .finish()
+    }
+}
+
+impl BoundOutboundStreamSession {
+    pub fn from_outbound_stream(
+        outbound_stream: OnionOutboundStreamBoundary,
+        session_binding: PairwiseStreamSessionBinding,
+    ) -> Result<Self, StreamSessionBindingError> {
+        if outbound_stream.contact_id() != session_binding.contact_id() {
+            return Err(StreamSessionBindingError::ContactMismatch);
+        }
+
+        Ok(Self {
+            _outbound_stream: outbound_stream,
+            session_binding,
+        })
+    }
+
+    pub fn from_missing_session_binding() -> Result<Self, StreamSessionBindingError> {
+        Err(StreamSessionBindingError::VerifiedPairwiseSessionRequired)
+    }
+
+    pub fn send_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        _envelope: &Envelope,
+        sink: &mut S,
+    ) -> Result<(), StreamSessionBindingError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::SendFailed,
+        ));
+        Err(StreamSessionBindingError::BoundOutboundSendNotImplemented)
+    }
+
+    pub fn contact_id(&self) -> &ContactId {
+        self.session_binding.contact_id()
+    }
+}
+
+impl fmt::Debug for BoundOutboundStreamSession {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("BoundOutboundStreamSession")
+            .field("stream", &"<redacted>")
+            .field("contact_id", &"<redacted>")
+            .field("session", &"<verified>")
+            .field("envelope", &"<not-sent>")
             .finish()
     }
 }
@@ -4548,6 +4696,125 @@ mod tests {
         }
     }
 
+    #[test]
+    fn stream_session_binding_requires_verified_pairwise_session() {
+        assert_eq!(
+            PairwiseStreamSessionBinding::from_verified_pairwise_session(
+                ContactId::new("bob").expect("contact"),
+                StreamSessionVerificationContext::UnverifiedSession,
+            ),
+            Err(StreamSessionBindingError::VerifiedPairwiseSessionRequired)
+        );
+        assert_eq!(
+            BoundInboundStreamSession::from_missing_session_binding(),
+            Err(StreamSessionBindingError::VerifiedPairwiseSessionRequired)
+        );
+        assert_eq!(
+            BoundOutboundStreamSession::from_missing_session_binding(),
+            Err(StreamSessionBindingError::VerifiedPairwiseSessionRequired)
+        );
+
+        let binding = sample_stream_session_binding("bob");
+        let rendered = format!("{binding:?}");
+
+        assert_eq!(binding.contact_id().as_str(), "bob");
+        assert!(rendered.contains("PairwiseStreamSessionBinding"));
+        assert!(rendered.contains("<redacted>"));
+        assert!(rendered.contains("<verified>"));
+        assert!(rendered.contains("<not-held>"));
+        assert!(!rendered.contains("bob"));
+        assert!(!rendered.contains("session-secret"));
+    }
+
+    #[test]
+    fn bound_outbound_stream_requires_matching_pairwise_session_contact() {
+        let outbound = OnionOutboundStreamBoundary::from_pairwise_endpoint(
+            sample_pairwise_endpoint(),
+            TransportPolicy::high_risk_default(),
+        )
+        .expect("outbound boundary");
+
+        assert_eq!(
+            BoundOutboundStreamSession::from_outbound_stream(
+                outbound.clone(),
+                sample_stream_session_binding("carol"),
+            ),
+            Err(StreamSessionBindingError::ContactMismatch)
+        );
+
+        let bound = BoundOutboundStreamSession::from_outbound_stream(
+            outbound,
+            sample_stream_session_binding("bob"),
+        )
+        .expect("bound outbound stream");
+        let rendered = format!("{bound:?}");
+
+        assert_eq!(bound.contact_id().as_str(), "bob");
+        assert!(rendered.contains("BoundOutboundStreamSession"));
+        assert!(rendered.contains("<redacted>"));
+        assert!(rendered.contains("<verified>"));
+        assert!(rendered.contains("<not-sent>"));
+        assert!(!rendered.contains("example.onion"));
+        assert!(!rendered.contains("bob"));
+        assert!(!rendered.contains("carol"));
+        assert!(!rendered.contains("ciphertext"));
+    }
+
+    #[test]
+    fn bound_stream_sessions_still_fail_closed_for_envelope_io() {
+        let inbound = BoundInboundStreamSession::from_inbound_stream(
+            OnionInboundStreamBoundary::from_descriptor_publication_ready(
+                OnionServiceDescriptorPublicationReady,
+            ),
+            sample_stream_session_binding("bob"),
+        );
+        let outbound = BoundOutboundStreamSession::from_outbound_stream(
+            OnionOutboundStreamBoundary::from_pairwise_endpoint(
+                sample_pairwise_endpoint(),
+                TransportPolicy::high_risk_default(),
+            )
+            .expect("outbound boundary"),
+            sample_stream_session_binding("bob"),
+        )
+        .expect("bound outbound stream");
+        let envelope = sample_envelope();
+        let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+        assert_eq!(
+            inbound.receive_fail_closed(&mut sink),
+            Err(StreamSessionBindingError::BoundInboundReceiveNotImplemented)
+        );
+        assert_eq!(
+            outbound.send_fail_closed(&envelope, &mut sink),
+            Err(StreamSessionBindingError::BoundOutboundSendNotImplemented)
+        );
+        assert_eq!(sink.events().len(), 2);
+        assert_eq!(
+            sink.events()[0].runtime_error(),
+            Some(TransportRuntimeError::ReceiveFailed)
+        );
+        assert_eq!(
+            sink.events()[1].runtime_error(),
+            Some(TransportRuntimeError::SendFailed)
+        );
+        for event in sink.events() {
+            assert_redacted_event_hides(
+                event,
+                &[
+                    "example.onion",
+                    "alice",
+                    "bob",
+                    "carol",
+                    "stream-1",
+                    "descriptor-value",
+                    "private-key",
+                    "ciphertext",
+                    "session-secret",
+                ],
+            );
+        }
+    }
+
     fn sample_pairwise_endpoint() -> PairwiseRendezvousEndpoint {
         PairwiseRendezvousEndpoint::new(
             ContactId::new("bob").expect("contact"),
@@ -4556,6 +4823,14 @@ mod tests {
             RendezvousEndpointIdentityBinding::TransportScoped,
         )
         .expect("pairwise endpoint")
+    }
+
+    fn sample_stream_session_binding(contact_id: &str) -> PairwiseStreamSessionBinding {
+        PairwiseStreamSessionBinding::from_verified_pairwise_session(
+            ContactId::new(contact_id).expect("contact"),
+            StreamSessionVerificationContext::VerifiedPairwiseEncryptedSession,
+        )
+        .expect("verified binding")
     }
 
     fn sample_envelope() -> Envelope {

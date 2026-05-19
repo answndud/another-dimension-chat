@@ -57,7 +57,30 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue pre-network transport work by defining the stream peer/session binding boundary. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+Continue pre-network transport work by defining the envelope I/O adapter boundary. Do not implement real onion hosting, descriptor publication, network stream I/O, or envelope send/receive until each boundary is tested separately.
+
+## Stream Peer/Session Binding Fail-Closed Boundary
+
+Decision as of 2026-05-19: stream readiness is not envelope I/O readiness. Inbound and outbound streams require a verified pairwise encrypted-session binding before any future envelope receive/send path can be reached.
+
+Current code boundary:
+
+- `PairwiseStreamSessionBinding` can be constructed only with `StreamSessionVerificationContext::VerifiedPairwiseEncryptedSession`.
+- Unverified sessions are rejected with `VerifiedPairwiseSessionRequired`.
+- `BoundInboundStreamSession` requires an `OnionInboundStreamBoundary` plus verified pairwise session binding.
+- `BoundOutboundStreamSession` requires an `OnionOutboundStreamBoundary` plus verified pairwise session binding.
+- Outbound stream/session contact mismatch is rejected with `ContactMismatch`.
+- `receive_fail_closed(...)` records only a redacted runtime event and returns `BoundInboundReceiveNotImplemented`.
+- `send_fail_closed(...)` records only a redacted runtime event and returns `BoundOutboundSendNotImplemented`.
+- Debug and event output must not expose onion endpoint, remote endpoint, stream id, descriptor value, private key, contact id, profile name, envelope ciphertext, session secret, or path material.
+
+Still not implemented:
+
+- Real remote peer authentication over streams.
+- Real stream read/write behavior.
+- Envelope send/receive over onion streams.
+- Session secret handling inside transport.
+- Usable messaging.
 
 ## Onion Outbound Stream/Send Fail-Closed Boundary
 
