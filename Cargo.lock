@@ -103,6 +103,8 @@ dependencies = [
  "another-dimension-identity",
  "another-dimension-pairing",
  "another-dimension-protocol",
+ "another-dimension-transport",
+ "tokio",
 ]
 
 [[package]]

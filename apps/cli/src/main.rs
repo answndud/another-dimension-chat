@@ -23,6 +23,10 @@ fn production_main() -> Result<(), String> {
             eprintln!("warning: production self-test is not a secure messenger release");
             println!("production boundary self-test passed");
         }
+        #[cfg(feature = "arti-manual-bootstrap")]
+        [cmd, sub, args @ ..] if cmd == "transport" && sub == "bootstrap" => {
+            run_manual_bootstrap_command(args)?;
+        }
         _ => {
             return Err(
                 "another-dimension prototype commands require --features dev-insecure".to_string(),
@@ -75,6 +79,104 @@ fn run_production_self_test() -> Result<(), String> {
     } else {
         Err("production boundary self-test failed".to_string())
     }
+}
+
+#[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
+fn run_manual_bootstrap_command(args: &[String]) -> Result<(), String> {
+    use another_dimension_transport::arti_adapter_spike::{
+        ArtiAppPrivateDirs, BoundedArtiBootstrapAdapterSpike, ManualArtiBootstrapAttemptGate,
+    };
+    use another_dimension_transport::{
+        InMemoryTransportRuntimeEventSink, TransportBootstrapExecutionSkeleton,
+        TransportBootstrapPolicy, TransportRuntimeReady,
+    };
+
+    let options = ManualBootstrapCommandOptions::parse(args)?;
+    let dirs = ArtiAppPrivateDirs::new(options.state_dir, options.cache_dir).map_err(|_| {
+        "invalid app-private Arti state/cache directories for manual bootstrap".to_string()
+    })?;
+    let adapter = BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+        dirs,
+        TransportBootstrapExecutionSkeleton::new(
+            TransportRuntimeReady,
+            TransportBootstrapPolicy::high_risk_default(),
+        ),
+    )
+    .map_err(|_| "failed to build app-private Arti config for manual bootstrap".to_string())?;
+    let gate = if options.execute_network {
+        ManualArtiBootstrapAttemptGate::explicitly_enabled_for_manual_spike(adapter)
+    } else {
+        ManualArtiBootstrapAttemptGate::disabled(adapter)
+    };
+    let mut sink = InMemoryTransportRuntimeEventSink::default();
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .build()
+        .map_err(|_| "failed to create manual bootstrap runtime".to_string())?;
+    let result = runtime.block_on(gate.bootstrap_once_and_drop_client(&mut sink));
+
+    for event in sink.events() {
+        println!("{event}");
+    }
+    println!(
+        "manual bootstrap attempt summary: permission={:?} timeout_seconds={} usable_transport=false",
+        gate.summary().network_permission(),
+        gate.summary().timeout_seconds()
+    );
+
+    result.map_err(|error| format!("manual bootstrap attempt failed: {error:?}"))
+}
+
+#[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
+struct ManualBootstrapCommandOptions {
+    state_dir: std::path::PathBuf,
+    cache_dir: std::path::PathBuf,
+    execute_network: bool,
+}
+
+#[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
+impl ManualBootstrapCommandOptions {
+    fn parse(args: &[String]) -> Result<Self, String> {
+        let mut state_dir = None;
+        let mut cache_dir = None;
+        let mut execute_network = false;
+        let mut index = 0;
+
+        while index < args.len() {
+            match args[index].as_str() {
+                "--state-dir" => {
+                    index += 1;
+                    state_dir = args.get(index).map(std::path::PathBuf::from);
+                }
+                "--cache-dir" => {
+                    index += 1;
+                    cache_dir = args.get(index).map(std::path::PathBuf::from);
+                }
+                "--execute-network" => {
+                    execute_network = true;
+                }
+                _ => {
+                    return Err(manual_bootstrap_help());
+                }
+            }
+            index += 1;
+        }
+
+        Ok(Self {
+            state_dir: state_dir.ok_or_else(manual_bootstrap_help)?,
+            cache_dir: cache_dir.ok_or_else(manual_bootstrap_help)?,
+            execute_network,
+        })
+    }
+}
+
+#[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
+fn manual_bootstrap_help() -> String {
+    "usage:
+  another-dimension transport bootstrap --state-dir <absolute-app-private-dir> --cache-dir <absolute-app-private-dir> [--execute-network]
+
+This is a local-only manual Arti bootstrap spike. It is not messaging, send/receive, or onion hosting."
+        .to_string()
 }
 
 #[cfg(feature = "dev-insecure")]

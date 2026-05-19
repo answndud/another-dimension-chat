@@ -530,3 +530,32 @@ Still not implemented:
 - User-facing CLI/Tauri command for the manual bootstrap attempt.
 
 Next accepted phase: add a local-only manual CLI/dev command for the bootstrap gate or start the persistent Arti client lifecycle boundary. Either path must keep usable messaging claims out of README/SECURITY until send/receive and onion hosting exist.
+
+## Local-Only Manual Bootstrap CLI Gate
+
+Decision as of 2026-05-19: the CLI may expose a local-only manual Arti bootstrap command only when built with `arti-manual-bootstrap`.
+
+Command shape:
+
+```text
+another-dimension transport bootstrap --state-dir <absolute-app-private-dir> --cache-dir <absolute-app-private-dir> [--execute-network]
+```
+
+Rules:
+
+- Default CLI builds still reject prototype commands and do not include this transport command.
+- The command requires explicit state/cache directories.
+- Without `--execute-network`, the command uses `ManualArtiBootstrapAttemptGate::disabled(...)`, performs no network bootstrap, and prints only redacted event/summary output.
+- With `--execute-network`, the command is allowed to call the manual bootstrap gate and may touch the network.
+- Output must not include local state/cache paths, onion endpoints, bridge lines, contact identifiers, plaintext, or private key material.
+- Success still means only that the one-shot Arti bootstrap attempt completed; the Arti client is dropped and there is no usable transport.
+
+Still not implemented:
+
+- Persistent Arti client lifecycle.
+- User profile integration for transport state/cache directories.
+- Onion service hosting.
+- Envelope send/receive over Tor.
+- Bridge configuration UX.
+
+Next accepted phase: persistent Arti client lifecycle boundary or profile-scoped transport directory resolution. Do not implement send/receive or onion hosting until a persistent client ownership model exists.
