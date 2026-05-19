@@ -57,7 +57,32 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving split: transport root test/helper cleanup or the next documented boundary after confirming the now-small root surface. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next documented boundary after confirming the transport root now only contains module wiring, public re-exports, and the dev-insecure prototype transport. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the next boundary is explicitly selected.
+
+## Transport Root Test Module Cleanup
+
+Decision as of 2026-05-20: the large transport crate test module is moved out of `crates/transport/src/lib.rs` and into `crates/transport/src/tests.rs`. Production behavior and public API are unchanged.
+
+Moved without behavior change:
+
+- transport policy tests
+- endpoint lifecycle tests
+- fail-closed transport skeleton tests
+- bootstrap/pre-network/hosting/stream boundary tests
+- runtime preflight and redacted event tests
+- Arti adapter spike feature-gated tests
+- shared test helpers
+
+Preserved invariants:
+
+- The transport root now focuses on module declarations, public re-exports, and the `dev-insecure` prototype transport.
+- Test names and feature gates remain unchanged.
+- No production behavior was moved into test-only code.
+- No real accept, dial, stream I/O, envelope send/receive, descriptor publication, or usable messaging capability was added.
+
+Next split target:
+
+- Select the next documented boundary before adding behavior.
 
 ## Transport Policy And Envelope Skeleton Module Extraction
 
@@ -88,7 +113,7 @@ Preserved invariants:
 
 Next split target:
 
-- Transport root test/helper cleanup or next documented boundary selection.
+- Completed by transport root test module cleanup.
 
 ## Transport Error Taxonomy Module Extraction
 
