@@ -181,6 +181,15 @@ pub enum OnionHostingGateError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DescriptorPublicationGateError {
+    OnionHostingGateRequired,
+    PairwisePublicationPolicyRequired,
+    RedactedEventPolicyRequired,
+    StreamIoForbidden,
+    UsableMessagingClaimForbidden,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NetworkExperimentScope {
     BootstrapOnly,
     OnionHosting,
@@ -2183,6 +2192,20 @@ pub struct OnionHostingGateDecision {
     usable_messaging_claimed: bool,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DescriptorPublicationGateReady {
+    endpoint_publication_policy: OnionEndpointPublicationPolicy,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DescriptorPublicationGateDecision {
+    onion_hosting_gate_ready: Option<OnionHostingGateReady>,
+    endpoint_publication_policy: OnionEndpointPublicationPolicy,
+    redacted_events_only: bool,
+    stream_io_enabled: bool,
+    usable_messaging_claimed: bool,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -2854,6 +2877,62 @@ impl OnionHostingGateDecision {
         }
 
         Ok(OnionHostingGateReady)
+    }
+}
+
+impl DescriptorPublicationGateDecision {
+    pub fn locked_down() -> Self {
+        Self {
+            onion_hosting_gate_ready: None,
+            endpoint_publication_policy: OnionEndpointPublicationPolicy::Missing,
+            redacted_events_only: false,
+            stream_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn pairwise_rendezvous_only(
+        onion_hosting_gate_ready: OnionHostingGateReady,
+        endpoint_publication_policy: OnionEndpointPublicationPolicy,
+        redacted_events_only: bool,
+    ) -> Self {
+        Self {
+            onion_hosting_gate_ready: Some(onion_hosting_gate_ready),
+            endpoint_publication_policy,
+            redacted_events_only,
+            stream_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn check(self) -> Result<DescriptorPublicationGateReady, DescriptorPublicationGateError> {
+        if self.onion_hosting_gate_ready.is_none() {
+            return Err(DescriptorPublicationGateError::OnionHostingGateRequired);
+        }
+        if self.endpoint_publication_policy
+            != OnionEndpointPublicationPolicy::PairwiseRendezvousOnly
+        {
+            return Err(DescriptorPublicationGateError::PairwisePublicationPolicyRequired);
+        }
+        if !self.redacted_events_only {
+            return Err(DescriptorPublicationGateError::RedactedEventPolicyRequired);
+        }
+        if self.stream_io_enabled {
+            return Err(DescriptorPublicationGateError::StreamIoForbidden);
+        }
+        if self.usable_messaging_claimed {
+            return Err(DescriptorPublicationGateError::UsableMessagingClaimForbidden);
+        }
+
+        Ok(DescriptorPublicationGateReady {
+            endpoint_publication_policy: self.endpoint_publication_policy,
+        })
+    }
+}
+
+impl DescriptorPublicationGateReady {
+    pub fn endpoint_publication_policy(self) -> OnionEndpointPublicationPolicy {
+        self.endpoint_publication_policy
     }
 }
 
@@ -4782,6 +4861,79 @@ mod tests {
     }
 
     #[test]
+    fn descriptor_publication_gate_requires_hosting_gate_pairwise_policy_and_redacted_events() {
+        let hosting_ready = ready_onion_hosting_gate();
+
+        assert_eq!(
+            DescriptorPublicationGateDecision::locked_down().check(),
+            Err(DescriptorPublicationGateError::OnionHostingGateRequired)
+        );
+        assert_eq!(
+            DescriptorPublicationGateDecision::pairwise_rendezvous_only(
+                hosting_ready,
+                OnionEndpointPublicationPolicy::Missing,
+                true,
+            )
+            .check(),
+            Err(DescriptorPublicationGateError::PairwisePublicationPolicyRequired)
+        );
+        assert_eq!(
+            DescriptorPublicationGateDecision::pairwise_rendezvous_only(
+                hosting_ready,
+                OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                false,
+            )
+            .check(),
+            Err(DescriptorPublicationGateError::RedactedEventPolicyRequired)
+        );
+
+        let ready = DescriptorPublicationGateDecision::pairwise_rendezvous_only(
+            hosting_ready,
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+            true,
+        )
+        .check()
+        .expect("descriptor publication gate ready");
+
+        assert_eq!(
+            ready.endpoint_publication_policy(),
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly
+        );
+    }
+
+    #[test]
+    fn descriptor_publication_gate_rejects_stream_and_messaging_shortcuts() {
+        let hosting_ready = ready_onion_hosting_gate();
+
+        for (decision, expected) in [
+            (
+                DescriptorPublicationGateDecision {
+                    onion_hosting_gate_ready: Some(hosting_ready),
+                    endpoint_publication_policy:
+                        OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                    redacted_events_only: true,
+                    stream_io_enabled: true,
+                    usable_messaging_claimed: false,
+                },
+                DescriptorPublicationGateError::StreamIoForbidden,
+            ),
+            (
+                DescriptorPublicationGateDecision {
+                    onion_hosting_gate_ready: Some(hosting_ready),
+                    endpoint_publication_policy:
+                        OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                    redacted_events_only: true,
+                    stream_io_enabled: false,
+                    usable_messaging_claimed: true,
+                },
+                DescriptorPublicationGateError::UsableMessagingClaimForbidden,
+            ),
+        ] {
+            assert_eq!(decision.check(), Err(expected));
+        }
+    }
+
+    #[test]
     fn runtime_preflight_is_disabled_by_default() {
         assert_eq!(
             TransportRuntimePreflight::disabled_by_default().check(),
@@ -6065,6 +6217,32 @@ mod tests {
         TransportPhaseCloseoutDecision::select_onion_hosting_gate(bootstrap_ready)
             .check()
             .expect("transport phase closeout ready")
+    }
+
+    fn ready_onion_hosting_gate() -> OnionHostingGateReady {
+        let phase_ready = ready_transport_phase_closeout();
+        let key_material = ready_onion_service_key_material();
+        let launch_ready = OnionServiceLaunchPreflight::from_ready_boundaries(
+            &ProfileTransportUnlockReady,
+            &key_material,
+            true,
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+            OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
+            true,
+        )
+        .check()
+        .expect("launch preflight ready");
+
+        OnionHostingGateDecision::from_ready_boundaries(
+            phase_ready,
+            launch_ready,
+            &key_material,
+            NetworkExperimentManualGate::FeatureGatedManualOnly,
+            OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
+            true,
+        )
+        .check()
+        .expect("onion hosting gate ready")
     }
 
     fn ready_onion_service_key_material() -> OnionServiceKeyMaterialReady {
