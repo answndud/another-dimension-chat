@@ -57,7 +57,36 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next behavior-preserving module split: onion service launch and descriptor publication boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+Continue transport work with the next behavior-preserving module split: onion hosting gate and transport phase closeout boundaries. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the transport boundary code is easier to review and still fails closed by default.
+
+## Launch And Descriptor Boundary Module Extraction
+
+Decision as of 2026-05-19: onion service launch preflight, endpoint publication/update policies, descriptor publication boundary, descriptor publication gate, and descriptor fail-closed adapter are extracted into `crates/transport/src/launch_descriptor.rs`. `crates/transport/src/lib.rs` re-exports the same public names to preserve the public API.
+
+Moved without behavior change:
+
+- `OnionEndpointPublicationPolicy`
+- `OnionEndpointUpdatePolicy`
+- `OnionServiceLaunchPreflight`
+- `OnionServiceLaunchReady`
+- `OnionServiceDescriptorPublicationBoundary`
+- `OnionServiceDescriptorPublicationReady`
+- `DescriptorPublicationGateReady`
+- `DescriptorPublicationGateDecision`
+- `DescriptorPublicationFailClosedAdapter`
+
+Preserved invariants:
+
+- Launch preflight still requires profile unlock, onion service key readiness, persistent client readiness, endpoint publication/update policies, and redacted event readiness.
+- Descriptor publication still requires pairwise rendezvous publication policy.
+- Descriptor publication remains fail-closed and records only redacted runtime events.
+- Descriptor gate still requires onion hosting gate readiness, pairwise rendezvous publication policy, redacted events, and still forbids stream I/O and usable messaging claims.
+- Descriptor fail-closed adapter still requires descriptor gate readiness and returns not-implemented for publication attempts.
+- No descriptor publication, real stream I/O, envelope send/receive, or usable messaging capability was added.
+
+Next split target:
+
+- Onion hosting gate and transport phase closeout boundaries.
 
 ## Stream Gate Module Extraction
 
@@ -81,10 +110,6 @@ Preserved invariants:
 - Outbound stream gate still forbids dial, send, envelope I/O, and usable messaging claims.
 - Outbound fail-closed adapter still records only redacted runtime events and returns not-implemented errors for dial/send attempts.
 - No descriptor publication, real stream I/O, envelope send/receive, or usable messaging capability was added.
-
-Next split target:
-
-- Onion service launch and descriptor publication boundaries.
 
 ## Stream Session Boundary Module Extraction
 
