@@ -42,6 +42,7 @@ What exists today:
 - Redacted transport runtime event boundary for logs/crash contexts without raw paths, endpoints, contact ids, profile names, plaintext, or key material.
 - Runtime event sink boundary that accepts only redacted transport events.
 - Arti bootstrap timeout/retry/cancellation policy boundary without opening network connections.
+- Arti bootstrap execution skeleton that requires runtime readiness, bounded bootstrap policy, and redacted event sink while still failing closed.
 - Pre-network transport closeout boundary that blocks network execution until backup exclusion, onion service key lifecycle, and bridge/censorship decisions are cleared.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.
