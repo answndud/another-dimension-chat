@@ -58,6 +58,15 @@ pub mod production {
         Outbound,
     }
 
+    impl SessionConnectionDirection {
+        pub fn opposite(self) -> Self {
+            match self {
+                Self::Inbound => Self::Outbound,
+                Self::Outbound => Self::Inbound,
+            }
+        }
+    }
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum CanonicalConnectionState {
         MissingOrUnauthenticated,
@@ -466,12 +475,19 @@ pub mod production {
             }
         }
 
+        pub fn is_canonical_connection_direction(
+            &self,
+            observed_direction: SessionConnectionDirection,
+        ) -> bool {
+            observed_direction == self.canonical_connection_direction()
+        }
+
         pub fn duplicate_connection_action(
             &self,
             observed_direction: SessionConnectionDirection,
             canonical_state: CanonicalConnectionState,
         ) -> DuplicateConnectionAction {
-            if observed_direction == self.canonical_connection_direction() {
+            if self.is_canonical_connection_direction(observed_direction) {
                 return DuplicateConnectionAction::KeepCanonicalConnection;
             }
             if canonical_state == CanonicalConnectionState::AuthenticatedHealthy {
@@ -1514,11 +1530,11 @@ pub mod production {
                 bob_view.canonical_connection_direction()
             );
 
-            let duplicate_direction = match alice_view.canonical_connection_direction() {
-                SessionConnectionDirection::Inbound => SessionConnectionDirection::Outbound,
-                SessionConnectionDirection::Outbound => SessionConnectionDirection::Inbound,
-            };
+            let duplicate_direction = alice_view.canonical_connection_direction().opposite();
 
+            assert!(alice_view
+                .is_canonical_connection_direction(alice_view.canonical_connection_direction()));
+            assert!(!alice_view.is_canonical_connection_direction(duplicate_direction));
             assert_eq!(
                 alice_view.duplicate_connection_action(
                     alice_view.canonical_connection_direction(),
