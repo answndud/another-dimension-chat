@@ -56,6 +56,7 @@ What exists today:
 - Descriptor publication attempt intent boundary that separates publication intent preparation from the fail-closed publish call without enabling real descriptor publication.
 - Descriptor publication preparation boundary that requires gate readiness, fail-closed adapter readiness, redacted descriptor context, and still forbids descriptor body creation, stream I/O, and usable messaging.
 - Descriptor publication preparation closeout that keeps real Arti descriptor publication deferred and selects redacted descriptor context tightening as the next non-network boundary.
+- Redacted descriptor publication context boundary that replaces boolean redaction flags with a typed redacted context and rejects raw descriptor context before publication preparation.
 - Inbound stream gate boundary that requires descriptor publication gate and adapter readiness while still forbidding accept, read/write, envelope I/O, and usable messaging.
 - Inbound stream fail-closed adapter boundary that requires inbound stream gate readiness and records only redacted events before returning accept/read-write not-implemented errors.
 - Inbound stream accept/read-write intent boundaries that separate descriptor-backed adapter readiness from fail-closed inbound stream calls.

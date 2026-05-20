@@ -65,13 +65,14 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 - Simultaneous connect / double dial handling must use the pairwise public-key rank already in `ProductionSessionPlan`; timing-based rules such as first connected or first handshake finished are forbidden.
 - The canonical connection direction is outbound for the canonical dialer and inbound for the responder. Duplicate connections close only after the canonical connection is authenticated and healthy.
 - Descriptor publication preparation must require descriptor gate readiness, fail-closed adapter readiness, and redacted descriptor context before any later implementation can approach publication.
+- Descriptor publication preparation must use `RedactedDescriptorPublicationContext`; raw descriptor contexts, descriptor bodies, endpoints, contact ids, profile names, and key material must not be passed through this boundary.
 - Onion endpoint rotation remains a protocol/session concern and must be handled inside an authenticated encrypted session when implemented.
 
 ## Next Implementation Step
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-Descriptor publication preparation closeout chooses non-network publication policy tightening before any real Arti descriptor adapter spike. The next transport task is a redacted descriptor publication context boundary. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
+Redacted descriptor publication context is now a typed boundary via `RedactedDescriptorPublicationContext`. The next transport task is a redacted descriptor context closeout review. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
 
 ## Arti Lifecycle Cleanup Closeout
 
