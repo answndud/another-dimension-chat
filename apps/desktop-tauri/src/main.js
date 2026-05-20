@@ -13,6 +13,7 @@ const fields = {
   verification: document.querySelector("#verification"),
   runDemo: document.querySelector("#run-demo"),
   demoState: document.querySelector("#demo-state"),
+  demoWarning: document.querySelector("#demo-warning"),
   demoOutput: document.querySelector("#demo-output"),
 };
 
@@ -63,6 +64,7 @@ async function renderPrototypeStatus() {
 
 async function runLocalDemo() {
   setDemoState("running", "Demo running");
+  setText(fields.demoWarning, "Running dev-insecure local demo.");
   setText(fields.demoOutput, "Running local dev-insecure demo...");
   if (fields.runDemo) {
     fields.runDemo.disabled = true;
@@ -70,9 +72,11 @@ async function runLocalDemo() {
   try {
     const result = await invoke("dev_local_demo");
     setDemoState("success", "Demo completed");
-    setText(fields.demoOutput, `${result.warning}${result.transcript}`);
+    setText(fields.demoWarning, result.warning.trim());
+    setText(fields.demoOutput, result.transcript.trim());
   } catch (error) {
     setDemoState("failed", "Demo failed");
+    setText(fields.demoWarning, "Local demo command failed.");
     setText(fields.demoOutput, `Local demo failed:\n${error}`);
   } finally {
     if (fields.runDemo) {
