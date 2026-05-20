@@ -100,6 +100,7 @@ What exists today:
 - Persistent Arti client lifecycle owner boundary with redacted summary predicates for bootstrapped-client ownership before onion launch preparation.
 - Persistent Arti manual bootstrap disabled path now uses the same redacted attempt-summary predicate as the one-shot manual gate.
 - Onion service launch adapter summary boundary that exposes only owner readiness, key-material readiness, and no-descriptor-created state while staying fail-closed.
+- Arti lifecycle cleanup closeout that keeps future network-capable work behind separate bootstrap, hosting, stream, and envelope-I/O decisions.
 - Local-only manual lifecycle bootstrap CLI gate that smoke-tests persistent owner state without send/receive or onion hosting.
 - Pre-network transport closeout boundary that blocks network execution until backup exclusion, onion service key lifecycle, and bridge/censorship decisions are cleared.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
