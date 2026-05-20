@@ -151,7 +151,7 @@ What does not exist yet:
 - OS keychain/DPAPI/Keystore wrapping.
 - Production encrypted local storage lifecycle.
 - Replay rollback protection against encrypted database snapshot restore.
-- Tauri desktop app. The next selected implementation phase is a minimal Tauri shell scaffold, not a production messaging UI.
+- Production Tauri desktop app. The current Tauri scaffold is a read-only prototype status shell, not a production messaging UI.
 - Android or iOS app.
 - Offline mailbox.
 - Group chat.
