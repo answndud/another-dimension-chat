@@ -11,7 +11,7 @@ pub fn prototype_status() -> PrototypeStatus {
     PrototypeStatus {
         secure_release: false,
         usable_messaging: false,
-        transport_status: "fail closed",
+        transport_status: "fail-closed only",
         storage_status: "prototype boundary",
     }
 }
