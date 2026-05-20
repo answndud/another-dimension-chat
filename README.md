@@ -90,6 +90,7 @@ What exists today:
 - Endpoint rotation apply/reconnect boundary that stages verified updates, rejects stale or rollback updates, and keeps reconnect fail-closed.
 - Production session plans validate signed pairing rendezvous endpoints as pairwise onion endpoints, reject shared rendezvous endpoints, and keep endpoint identity separated from pairwise identity keys.
 - Deterministic duplicate-connection tie-break boundary derived from pairwise public-key ranks: the canonical dialer owns outbound, the responder owns inbound, and duplicate connections close only after the canonical connection is authenticated and healthy.
+- Phase 4 non-network transport boundary closeout: Arti-first, pairwise endpoint validation, encrypted-session endpoint rotation, deterministic duplicate handling, and fail-closed hosting readiness are in place while descriptor publication and stream I/O remain blocked.
 - Bridge/censorship configuration decision boundary that rejects raw bridge lines and accepts only explicit no-bridge or redacted bridge-config readiness.
 - Redacted transport runtime event boundary for logs/crash contexts without raw paths, endpoints, contact ids, profile names, plaintext, or key material.
 - Runtime event sink boundary that accepts only redacted transport events.

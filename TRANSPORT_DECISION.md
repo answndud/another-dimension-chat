@@ -70,7 +70,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-The deterministic duplicate-connection tie-break boundary now lives on `ProductionSessionPlan`. The next transport task is a Phase 4 closeout review to decide whether the remaining work should move toward descriptor publication preparation or stay in non-network cleanup. Keep descriptor publication, network stream I/O, envelope send/receive, and usable messaging behind later boundary decisions.
+Phase 4 non-network boundary slices are closed out for now. The next transport task is descriptor publication preparation, but only as a fail-closed preparation boundary: no real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
 
 ## Arti Lifecycle Cleanup Closeout
 

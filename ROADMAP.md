@@ -124,7 +124,7 @@ Exit criteria:
 
 ## Phase 4: Onion Transport Prototype
 
-Status: first implementation slice selected.
+Status: non-network boundary slices completed; real onion prototype remains blocked.
 
 Goal: introduce a real anonymized transport prototype without making direct P2P the high-risk default.
 
@@ -134,6 +134,14 @@ First slice:
 - Keep bundled C Tor daemon control as a deferred fallback decision, not the default path.
 - Do not use system Tor as the default because it weakens app-private state/cache, logging, bridge policy, and lifecycle control.
 - Start Phase 4 with an Arti bootstrap-to-hosting readiness audit before descriptor publication, stream I/O, envelope I/O, or usable messaging.
+
+Current closeout:
+
+- Arti bootstrap-to-hosting readiness is bound through a fail-closed audit boundary.
+- Pairing rendezvous endpoints validate into pairwise onion endpoints before session planning.
+- Endpoint rotation remains encrypted-session-only and reconnect remains fail-closed.
+- Duplicate connection handling is deterministic and avoids timing-based canonical selection.
+- Real descriptor publication, stream I/O, envelope I/O, and usable messaging remain blocked behind later decisions.
 
 Tasks:
 
@@ -149,6 +157,7 @@ Exit criteria:
 - Endpoint rotation and duplicate connection behavior are deterministic and tested.
 - Transport metadata limitations remain documented and visible.
 - Any network-capable experiment remains manually gated, redacted, and separate from descriptor publication, stream I/O, and usable messaging until a later boundary explicitly opens it.
+- Phase 4 is not a secure messenger release until descriptor publication, stream I/O, and envelope delivery are separately implemented and audited.
 
 ## Phase 5: Tauri Desktop Shell
 
