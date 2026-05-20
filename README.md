@@ -65,6 +65,7 @@ What exists today:
 - Inbound stream accept/read-write intent boundaries that separate descriptor-backed adapter readiness from fail-closed inbound stream calls.
 - Outbound stream gate boundary that requires a pairwise rendezvous endpoint and high-risk onion-only policy while still forbidding dial, send, envelope I/O, and usable messaging.
 - Outbound stream preparation boundary that requires outbound gate readiness and fail-closed adapter readiness while still forbidding dial, send, envelope I/O, and usable messaging.
+- Stream preparation closeout that selects preparation-aware stream adapter closeout before session-binding ordering.
 - Outbound stream fail-closed adapter boundary that requires outbound stream gate readiness and records only redacted events before returning dial/send not-implemented errors.
 - Outbound stream dial/send intent boundaries that separate adapter readiness from fail-closed dial/send calls without enabling real network stream I/O.
 - Stream adapter closeout intent boundary that requires both inbound and outbound fail-closed adapters before closeout readiness can be checked.
