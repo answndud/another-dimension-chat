@@ -155,7 +155,7 @@ pub struct StreamAdapterCloseoutIntent {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct StreamCloseoutIntegrationOrder {
-    closeout_ready: bool,
+    preparation_aware_closeout_ready: bool,
     remote_peer_authentication_next: bool,
     session_binding_after_remote_authentication: bool,
     envelope_io_claimed: bool,
@@ -549,7 +549,7 @@ impl fmt::Debug for StreamAdapterCloseoutIntent {
 impl StreamCloseoutIntegrationOrder {
     pub fn locked_down() -> Self {
         Self {
-            closeout_ready: false,
+            preparation_aware_closeout_ready: false,
             remote_peer_authentication_next: false,
             session_binding_after_remote_authentication: false,
             envelope_io_claimed: false,
@@ -559,7 +559,7 @@ impl StreamCloseoutIntegrationOrder {
 
     pub fn from_closeout_ready(_closeout: StreamAdapterCloseoutReady) -> Self {
         Self {
-            closeout_ready: true,
+            preparation_aware_closeout_ready: true,
             remote_peer_authentication_next: true,
             session_binding_after_remote_authentication: true,
             envelope_io_claimed: false,
@@ -588,7 +588,7 @@ impl StreamCloseoutIntegrationOrder {
     }
 
     pub fn check(self) -> Result<Self, StreamCloseoutIntegrationError> {
-        if !self.closeout_ready {
+        if !self.preparation_aware_closeout_ready {
             return Err(StreamCloseoutIntegrationError::CloseoutReadyRequired);
         }
         if !self.remote_peer_authentication_next {
