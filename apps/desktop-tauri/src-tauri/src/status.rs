@@ -6,6 +6,7 @@ pub struct PrototypeStatus {
     pairing_status: &'static str,
     transport_status: &'static str,
     storage_status: &'static str,
+    verification_status: &'static str,
 }
 
 pub fn redacted_prototype_status() -> PrototypeStatus {
@@ -16,5 +17,6 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         pairing_status: "pairing boundary only",
         transport_status: "fail-closed boundary only",
         storage_status: "storage boundary only",
+        verification_status: "lightweight checks only",
     }
 }
