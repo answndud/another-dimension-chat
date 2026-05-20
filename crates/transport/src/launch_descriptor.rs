@@ -61,6 +61,11 @@ pub struct DescriptorPublicationFailClosedAdapter {
     boundary: OnionServiceDescriptorPublicationBoundary,
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct DescriptorPublicationAttemptIntent {
+    endpoint_publication_policy: OnionEndpointPublicationPolicy,
+}
+
 impl OnionServiceLaunchPreflight {
     pub fn locked_down_by_default() -> Self {
         Self {
@@ -241,14 +246,49 @@ impl DescriptorPublicationFailClosedAdapter {
         &self,
         sink: &mut S,
     ) -> Result<(), DescriptorPublicationAdapterError> {
+        self.prepare_publish_intent().publish_fail_closed(sink)
+    }
+
+    pub fn prepare_publish_intent(self) -> DescriptorPublicationAttemptIntent {
+        DescriptorPublicationAttemptIntent {
+            endpoint_publication_policy: self.boundary.endpoint_publication_policy(),
+        }
+    }
+
+    pub fn endpoint_publication_policy(self) -> OnionEndpointPublicationPolicy {
+        self.boundary.endpoint_publication_policy()
+    }
+}
+
+impl DescriptorPublicationAttemptIntent {
+    pub fn endpoint_publication_policy(self) -> OnionEndpointPublicationPolicy {
+        self.endpoint_publication_policy
+    }
+
+    pub fn publish_fail_closed<S: TransportRuntimeEventSink>(
+        self,
+        sink: &mut S,
+    ) -> Result<(), DescriptorPublicationAdapterError> {
         sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
             TransportRuntimeError::OnionServiceLaunchFailed,
         ));
         Err(DescriptorPublicationAdapterError::DescriptorPublicationNotImplemented)
     }
+}
 
-    pub fn endpoint_publication_policy(self) -> OnionEndpointPublicationPolicy {
-        self.boundary.endpoint_publication_policy()
+impl fmt::Debug for DescriptorPublicationAttemptIntent {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DescriptorPublicationAttemptIntent")
+            .field(
+                "endpoint_publication_policy",
+                &self.endpoint_publication_policy,
+            )
+            .field("descriptor", &"<not-published>")
+            .field("onion_endpoint", &"<redacted>")
+            .field("contact_id", &"<redacted>")
+            .field("profile_name", &"<redacted>")
+            .finish()
     }
 }
 

@@ -57,7 +57,28 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next documented boundary selection after endpoint rotation/reconnect integration. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+Continue transport work with the next documented boundary selection after descriptor publication attempt intent integration. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+
+## Descriptor Publication Attempt Intent Boundary
+
+Decision as of 2026-05-20: descriptor publication now has an explicit `DescriptorPublicationAttemptIntent` between the fail-closed adapter and the publish call. The intent can only be prepared from `DescriptorPublicationFailClosedAdapter`, which already requires descriptor publication gate readiness and pairwise rendezvous-only publication policy. The intent still cannot publish a descriptor.
+
+Moved forward without enabling network behavior:
+
+- `DescriptorPublicationAttemptIntent`
+- `DescriptorPublicationFailClosedAdapter::prepare_publish_intent()`
+
+Preserved invariants:
+
+- Adapter creation still requires `DescriptorPublicationGateReady`.
+- Descriptor publication remains pairwise rendezvous-only.
+- Publish attempts still record only a redacted runtime event and return `DescriptorPublicationNotImplemented`.
+- Debug output for the attempt intent redacts descriptor, onion endpoint, contact, and profile material.
+- No real descriptor publication, stream I/O, envelope send/receive, or usable messaging capability was added.
+
+Next split target:
+
+- Select the next documented transport boundary.
 
 ## Endpoint Rotation Reconnect Intent Boundary
 

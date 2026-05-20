@@ -1401,6 +1401,41 @@ fn descriptor_publication_fail_closed_adapter_records_redacted_event_only() {
 }
 
 #[test]
+fn descriptor_publication_attempt_intent_preserves_fail_closed_boundary() {
+    let gate_ready = ready_descriptor_publication_gate();
+    let adapter = DescriptorPublicationFailClosedAdapter::from_gate_ready(
+        gate_ready,
+        OnionServiceLaunchReady,
+    )
+    .expect("descriptor publication adapter");
+    let intent = adapter.prepare_publish_intent();
+
+    assert_eq!(
+        intent.endpoint_publication_policy(),
+        OnionEndpointPublicationPolicy::PairwiseRendezvousOnly
+    );
+
+    let rendered = format!("{intent:?}");
+    assert!(rendered.contains("DescriptorPublicationAttemptIntent"));
+    assert!(rendered.contains("<not-published>"));
+    assert!(rendered.contains("<redacted>"));
+    assert!(!rendered.contains("example.onion"));
+    assert!(!rendered.contains("alice"));
+
+    let mut sink = InMemoryTransportRuntimeEventSink::default();
+    assert_eq!(
+        intent.publish_fail_closed(&mut sink),
+        Err(DescriptorPublicationAdapterError::DescriptorPublicationNotImplemented)
+    );
+    assert_eq!(sink.events().len(), 1);
+    assert_eq!(
+        sink.events()[0].runtime_error(),
+        Some(TransportRuntimeError::OnionServiceLaunchFailed)
+    );
+    assert_redacted_event_hides(&sink.events()[0], &["example.onion", "alice"]);
+}
+
+#[test]
 fn inbound_stream_gate_requires_descriptor_publication_gate_and_adapter() {
     assert_eq!(
         InboundStreamGateDecision::locked_down().check(),

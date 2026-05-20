@@ -53,6 +53,7 @@ What exists today:
 - Onion hosting gate boundary that requires transport closeout, manual feature gating, launch preflight, onion key readiness, and a bootstrapped persistent client while still forbidding descriptor publication and stream I/O.
 - Descriptor publication gate boundary that requires onion hosting readiness, pairwise rendezvous-only publication policy, and redacted events while still forbidding stream I/O and usable messaging.
 - Descriptor publication fail-closed adapter boundary that requires descriptor publication gate readiness and records only a redacted event before returning a not-implemented error.
+- Descriptor publication attempt intent boundary that separates publication intent preparation from the fail-closed publish call without enabling real descriptor publication.
 - Inbound stream gate boundary that requires descriptor publication gate and adapter readiness while still forbidding accept, read/write, envelope I/O, and usable messaging.
 - Inbound stream fail-closed adapter boundary that requires inbound stream gate readiness and records only redacted events before returning accept/read-write not-implemented errors.
 - Outbound stream gate boundary that requires a pairwise rendezvous endpoint and high-risk onion-only policy while still forbidding dial, send, envelope I/O, and usable messaging.
