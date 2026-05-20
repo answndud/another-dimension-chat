@@ -36,6 +36,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 - `arti_lifecycle_decision()` requires app-private state/cache directories, backup exclusion, log redaction, and no onion service key generation until a storage decision exists.
 - `ArtiAppPrivateDirs` and `ArtiAdapterSpike::fail_closed_app_private_config` compile-check app-private `TorClientConfigBuilder::from_directories` wiring without bootstrapping Tor.
 - `bootstrap_preflight_boundary()` keeps Arti runtime network, onion service launch, bridge behavior, and onion key generation disabled in the current spike.
+- `ArtiBootstrapToHostingReadinessAudit` binds the fail-closed launch adapter summary to the onion hosting gate so the gate derives bootstrapped-client and key-material readiness from the launch boundary instead of caller-supplied booleans.
 - Dev file transport remains behind the `dev-insecure` feature.
 
 ## What Does Not Exist Yet
@@ -65,7 +66,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-The audit should answer only whether the current Arti-first path has enough explicit readiness predicates to move from manual bootstrap toward onion hosting preparation. If it finds a missing invariant, add the smallest fail-closed predicate or summary needed. If it does not, move to the per-contact rendezvous endpoint lifecycle task.
+The audit found one missing coupling point and added `ArtiBootstrapToHostingReadinessAudit`. The next transport task is the per-contact rendezvous endpoint lifecycle path. Keep descriptor publication, network stream I/O, envelope send/receive, and usable messaging behind later boundary decisions.
 
 ## Arti Lifecycle Cleanup Closeout
 

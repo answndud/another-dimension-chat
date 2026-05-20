@@ -1,10 +1,12 @@
 use crate::{
-    OnionEndpointPublicationPolicy, OnionEnvelopeTransport, OnionInboundStreamBoundary,
-    OnionOutboundStreamBoundary, OnionOutboundStreamError,
+    OnionEndpointPublicationPolicy, OnionEnvelopeTransport, OnionHostingGateDecision,
+    OnionHostingGateError, OnionHostingGateFeatureState, OnionHostingGateReady,
+    OnionInboundStreamBoundary, OnionOutboundStreamBoundary, OnionOutboundStreamError,
     OnionServiceDescriptorPublicationBoundary, OnionServiceDescriptorPublicationError,
     OnionServiceDescriptorPublicationReady, OnionServiceKeyMaterialReady, OnionServiceLaunchReady,
     PairwiseRendezvousEndpoint, RedactedTransportRuntimeEvent, TransportBootstrapExecutionSkeleton,
-    TransportBootstrapOutcome, TransportPolicy, TransportRuntimeError, TransportRuntimeEventSink,
+    TransportBootstrapOutcome, TransportPhaseCloseoutReady, TransportPolicy, TransportRuntimeError,
+    TransportRuntimeEventSink,
 };
 use another_dimension_identity::ProfileName;
 use arti_client::{config::TorClientConfigBuilder, TorClientConfig};
@@ -372,6 +374,14 @@ pub struct OnionServiceLaunchAdapterSummary {
     launch_descriptor_created: bool,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ArtiBootstrapToHostingReadinessAudit {
+    transport_phase_closeout_ready: Option<TransportPhaseCloseoutReady>,
+    launch_summary: OnionServiceLaunchAdapterSummary,
+    manual_gate: crate::NetworkExperimentManualGate,
+    feature_state: OnionHostingGateFeatureState,
+}
+
 impl OnionServiceLaunchAdapterSummary {
     pub fn owner_summary(self) -> PersistentArtiClientLifecycleSummary {
         self.owner_summary
@@ -389,6 +399,51 @@ impl OnionServiceLaunchAdapterSummary {
         self.owner_summary.can_prepare_onion_launch()
             && self.key_material_ready
             && !self.launch_descriptor_created
+    }
+}
+
+impl ArtiBootstrapToHostingReadinessAudit {
+    pub fn locked_down(launch_adapter: &OnionServiceLaunchAdapterSkeleton) -> Self {
+        Self {
+            transport_phase_closeout_ready: None,
+            launch_summary: launch_adapter.summary(),
+            manual_gate: crate::NetworkExperimentManualGate::Disabled,
+            feature_state: OnionHostingGateFeatureState::NotCompiled,
+        }
+    }
+
+    pub fn from_ready_boundaries(
+        transport_phase_closeout_ready: TransportPhaseCloseoutReady,
+        launch_adapter: &OnionServiceLaunchAdapterSkeleton,
+    ) -> Self {
+        Self {
+            transport_phase_closeout_ready: Some(transport_phase_closeout_ready),
+            launch_summary: launch_adapter.summary(),
+            manual_gate: crate::NetworkExperimentManualGate::FeatureGatedManualOnly,
+            feature_state: OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
+        }
+    }
+
+    pub fn launch_summary(self) -> OnionServiceLaunchAdapterSummary {
+        self.launch_summary
+    }
+
+    pub fn check(self) -> Result<OnionHostingGateReady, OnionHostingGateError> {
+        OnionHostingGateDecision {
+            transport_phase_closeout_ready: self.transport_phase_closeout_ready,
+            manual_gate: self.manual_gate,
+            feature_state: self.feature_state,
+            launch_preflight_ready: self.launch_summary.can_attempt_fail_closed_launch(),
+            onion_service_key_ready: self.launch_summary.key_material_ready(),
+            bootstrapped_persistent_client_ready: self
+                .launch_summary
+                .owner_summary()
+                .has_bootstrapped_client(),
+            descriptor_publication_enabled: false,
+            stream_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+        .check()
     }
 }
 

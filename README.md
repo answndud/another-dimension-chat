@@ -104,6 +104,7 @@ What exists today:
 - Local-only manual lifecycle bootstrap CLI gate that smoke-tests persistent owner state without send/receive or onion hosting.
 - Pre-network transport closeout boundary that blocks network execution until backup exclusion, onion service key lifecycle, and bridge/censorship decisions are cleared.
 - Phase 4 first-slice decision: Arti-first remains the first prototype path, bundled C Tor is deferred as a fallback decision, system Tor is not the default, and the next transport work is a bootstrap-to-hosting readiness audit before descriptor publication or stream I/O.
+- Arti bootstrap-to-hosting readiness audit boundary that binds the launch adapter summary to the onion hosting gate without enabling descriptor publication, stream I/O, or usable messaging.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.
 - High-risk unlock policy tests that reject OS-keystore-only unlock.
