@@ -86,6 +86,7 @@ What exists today:
 - Core session lifecycle cleanup closeout that selects public CLI boundary cleanup before storage persistence expansion.
 - Public CLI boundary cleanup that makes the default build help/error output list only boundary commands and repeat the non-secure-release claim.
 - Public CLI cleanup closeout that selects production self-test boundary expansion before storage persistence or release hygiene.
+- Production self-test boundary expansion that also checks tampered ciphertext rejection and replay-state non-advance without changing CLI output or enabling messaging.
 - Post-intent stream boundary consolidation review that freezes further stream readiness/intent expansion and selects Arti adapter lifecycle cleanup before adding new network behavior.
 - Transport module decomposition preparation that selects redacted runtime events and event sinks as the first behavior-preserving split target.
 - Extracted transport runtime events module that preserves existing public event and sink names through `crates/transport/src/lib.rs` re-exports.

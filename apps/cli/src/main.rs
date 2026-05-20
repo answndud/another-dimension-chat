@@ -91,6 +91,19 @@ fn run_production_self_test() -> Result<(), String> {
         .decrypt_at_responder_with_replay(&envelope, &mut replay_window)
         .map_err(|_| "production envelope decryption failed")?;
     let replay_result = session.decrypt_at_responder_with_replay(&envelope, &mut replay_window);
+    let valid_after_tamper = session
+        .encrypt_from_canonical_dialer(2, b"tamper boundary")
+        .map_err(|_| "production envelope encryption failed")?;
+    let mut tampered = valid_after_tamper.clone();
+    let last = tampered
+        .padded_ciphertext
+        .last_mut()
+        .ok_or_else(|| "production tamper boundary failed".to_string())?;
+    *last ^= 0x01;
+    let tamper_result = session.decrypt_at_responder_with_replay(&tampered, &mut replay_window);
+    let replay_after_tamper = replay_window.highest_seen();
+    let valid_after_tamper_result =
+        session.decrypt_at_responder_with_replay(&valid_after_tamper, &mut replay_window);
     if decrypted == plaintext
         && matches!(
             replay_result,
@@ -100,6 +113,9 @@ fn run_production_self_test() -> Result<(), String> {
                 )
             )
         )
+        && tamper_result.is_err()
+        && replay_after_tamper == 1
+        && valid_after_tamper_result.is_ok()
     {
         Ok(())
     } else {
