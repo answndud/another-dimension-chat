@@ -42,6 +42,7 @@ fn default_build_rejects_prototype_commands() {
     assert!(error.contains("default build exposes only boundary commands"));
     assert!(error.contains("production self-test"));
     assert!(error.contains("not a secure messenger release"));
+    assert!(error.contains("performs no network I/O and opens no local storage"));
     assert!(error.contains("require --features dev-insecure"));
     assert!(!error.contains("Start chat"));
     assert!(!error.contains("Send message"));
@@ -58,6 +59,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production self-test"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
+    assert!(out.contains("performs no network I/O and opens no local storage"));
     assert!(out.contains("require --features dev-insecure"));
     assert!(!out.contains("message send"));
     assert!(!out.contains("pairing start"));

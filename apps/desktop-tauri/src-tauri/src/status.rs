@@ -6,6 +6,7 @@ pub struct PrototypeStatus {
     profile_status: &'static str,
     pairing_status: &'static str,
     transport_status: &'static str,
+    network_execution_status: &'static str,
     storage_status: &'static str,
     verification_status: &'static str,
 }
@@ -18,6 +19,7 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         profile_status: "profile boundary only",
         pairing_status: "pairing boundary only",
         transport_status: "pre-network fail-closed only",
+        network_execution_status: "network execution disabled",
         storage_status: "ADREC1 storage spike only",
         verification_status: "lightweight checks only",
     }

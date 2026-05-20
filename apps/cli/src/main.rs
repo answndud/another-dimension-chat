@@ -58,6 +58,7 @@ fn production_help() -> String {
 boundary:
   default build is not a secure messenger release
   no usable messaging, profile creation, pairing, transport bootstrap, or storage unlock command is exposed
+  production self-test performs no network I/O and opens no local storage
   prototype profile/pairing/message commands require --features dev-insecure"
         .to_string()
 }
