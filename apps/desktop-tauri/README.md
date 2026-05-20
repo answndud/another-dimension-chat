@@ -15,7 +15,14 @@ Current boundary:
 Planned local commands after dependency installation:
 
 ```bash
-npm install
+npm ci --workspaces=false
 npm run dev
 npm run build
 ```
+
+Dependency/build gate:
+
+- `package-lock.json` is committed to pin the scaffold dependency graph.
+- Lightweight CI checks the scaffold shape and lockfile metadata only.
+- Full Tauri install/build is local-only until a separate heavy workflow decision.
+- Do not add production messaging UI or security-sensitive logic to the frontend.
