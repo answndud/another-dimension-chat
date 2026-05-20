@@ -21,10 +21,11 @@ pub use bootstrap::{
     TransportBootstrapPolicyError, TransportBootstrapRetryPolicy, TransportBootstrapTimeoutPolicy,
 };
 pub use endpoint_state::{
-    EncryptedEndpointUpdateControlEnvelope, EndpointRotationApplyContext, EndpointRotationSequence,
-    EndpointUpdateChannel, EndpointUpdateControlPlaintext, OnionServiceEndpoint,
-    PairwiseEndpointRotationState, PairwiseEndpointUpdate, PairwiseRendezvousEndpoint,
-    PendingEndpointRotation, RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
+    EncryptedEndpointUpdateControlEnvelope, EndpointRotationApplyContext,
+    EndpointRotationReconnectIntent, EndpointRotationSequence, EndpointUpdateChannel,
+    EndpointUpdateControlPlaintext, OnionServiceEndpoint, PairwiseEndpointRotationState,
+    PairwiseEndpointUpdate, PairwiseRendezvousEndpoint, PendingEndpointRotation,
+    RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
 };
 pub use errors::{
     BootstrapOnlyExperimentDecisionError, BridgeCensorshipConfigurationError,
