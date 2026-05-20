@@ -1,5 +1,5 @@
 use super::*;
-use another_dimension_identity::ContactId;
+use another_dimension_identity::{ContactId, ProfileName};
 use another_dimension_protocol::{Envelope, MessageType};
 use std::fs;
 use std::path::{Path, PathBuf};

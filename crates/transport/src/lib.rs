@@ -1,10 +1,7 @@
-#[cfg(any(test, feature = "dev-insecure"))]
-use another_dimension_identity::ProfileName;
-#[cfg(feature = "dev-insecure")]
-use another_dimension_protocol::Envelope;
-
 mod arti_lifecycle;
 mod bootstrap;
+#[cfg(feature = "dev-insecure")]
+pub mod dev_insecure;
 mod endpoint_state;
 mod errors;
 mod hosting_phase;
@@ -100,39 +97,6 @@ pub use transport_policy::{
     Transport, TransportKind, TransportMode, TransportPolicy, TransportReceiveRequest,
     TransportRoute, TransportSendRequest,
 };
-
-#[cfg(feature = "dev-insecure")]
-pub mod dev_insecure {
-    use super::*;
-    use another_dimension_storage::{dev_insecure::DevFileStore, StorageError};
-
-    #[derive(Clone, Debug)]
-    pub struct DevFileTransport {
-        store: DevFileStore,
-    }
-
-    impl DevFileTransport {
-        pub fn new(store: DevFileStore) -> Self {
-            Self { store }
-        }
-    }
-
-    impl Transport for DevFileTransport {
-        fn send_envelope(
-            &self,
-            recipient: &ProfileName,
-            envelope: &Envelope,
-        ) -> Result<(), TransportError> {
-            self.store
-                .save_inbox_envelope(recipient, envelope)
-                .map_err(map_storage)
-        }
-    }
-
-    fn map_storage(_error: StorageError) -> TransportError {
-        TransportError::DeliveryFailed
-    }
-}
 
 #[cfg(test)]
 mod tests;
