@@ -1669,6 +1669,93 @@ fn inbound_stream_fail_closed_adapter_requires_gate_ready_token() {
 }
 
 #[test]
+fn inbound_stream_preparation_requires_gate_and_fail_closed_adapter() {
+    assert_eq!(
+        InboundStreamPreparationBoundary::locked_down().check(),
+        Err(InboundStreamPreparationError::InboundStreamGateRequired)
+    );
+
+    assert_eq!(
+        InboundStreamPreparationBoundary {
+            gate_ready: Some(ready_inbound_stream_gate()),
+            fail_closed_adapter_ready: false,
+            accept_enabled: false,
+            read_write_enabled: false,
+            envelope_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+        .check(),
+        Err(InboundStreamPreparationError::InboundStreamAdapterRequired)
+    );
+
+    let adapter = InboundStreamFailClosedAdapter::from_gate_ready(
+        ready_inbound_stream_gate(),
+        OnionServiceDescriptorPublicationReady,
+    );
+
+    assert_eq!(
+        InboundStreamPreparationBoundary::from_fail_closed_adapter(
+            ready_inbound_stream_gate(),
+            &adapter,
+        )
+        .check(),
+        Ok(InboundStreamPreparationReady)
+    );
+}
+
+#[test]
+fn inbound_stream_preparation_rejects_accept_readwrite_envelope_and_messaging_shortcuts() {
+    for (boundary, expected) in [
+        (
+            InboundStreamPreparationBoundary {
+                gate_ready: Some(ready_inbound_stream_gate()),
+                fail_closed_adapter_ready: true,
+                accept_enabled: true,
+                read_write_enabled: false,
+                envelope_io_enabled: false,
+                usable_messaging_claimed: false,
+            },
+            InboundStreamPreparationError::AcceptForbidden,
+        ),
+        (
+            InboundStreamPreparationBoundary {
+                gate_ready: Some(ready_inbound_stream_gate()),
+                fail_closed_adapter_ready: true,
+                accept_enabled: false,
+                read_write_enabled: true,
+                envelope_io_enabled: false,
+                usable_messaging_claimed: false,
+            },
+            InboundStreamPreparationError::ReadWriteForbidden,
+        ),
+        (
+            InboundStreamPreparationBoundary {
+                gate_ready: Some(ready_inbound_stream_gate()),
+                fail_closed_adapter_ready: true,
+                accept_enabled: false,
+                read_write_enabled: false,
+                envelope_io_enabled: true,
+                usable_messaging_claimed: false,
+            },
+            InboundStreamPreparationError::EnvelopeIoForbidden,
+        ),
+        (
+            InboundStreamPreparationBoundary {
+                gate_ready: Some(ready_inbound_stream_gate()),
+                fail_closed_adapter_ready: true,
+                accept_enabled: false,
+                read_write_enabled: false,
+                envelope_io_enabled: false,
+                usable_messaging_claimed: true,
+            },
+            InboundStreamPreparationError::UsableMessagingClaimForbidden,
+        ),
+    ] {
+        assert_eq!(boundary.check(), Err(expected));
+    }
+}
+
+#[test]
 fn inbound_stream_fail_closed_adapter_records_redacted_events_only() {
     let adapter = InboundStreamFailClosedAdapter::from_gate_ready(
         ready_inbound_stream_gate(),

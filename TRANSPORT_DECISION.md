@@ -66,13 +66,14 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 - The canonical connection direction is outbound for the canonical dialer and inbound for the responder. Duplicate connections close only after the canonical connection is authenticated and healthy.
 - Descriptor publication preparation must require descriptor gate readiness, fail-closed adapter readiness, and redacted descriptor context before any later implementation can approach publication.
 - Descriptor publication preparation must use `RedactedDescriptorPublicationContext`; raw descriptor contexts, descriptor bodies, endpoints, contact ids, profile names, and key material must not be passed through this boundary.
+- Inbound stream preparation must require inbound stream gate readiness and fail-closed adapter readiness before any later implementation can approach accept/read/write behavior.
 - Onion endpoint rotation remains a protocol/session concern and must be handled inside an authenticated encrypted session when implemented.
 
 ## Next Implementation Step
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-Redacted descriptor context closeout chooses inbound stream gate tightening before any real Arti descriptor adapter spike. The next transport task is an inbound stream preparation boundary that remains fail-closed and does not accept/read/write network streams. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
+Inbound stream preparation is now represented by `InboundStreamPreparationBoundary`. The next transport task is inbound stream preparation closeout: decide whether to tighten outbound stream preparation similarly or continue with inbound stream intent ordering. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
 
 ## Arti Lifecycle Cleanup Closeout
 

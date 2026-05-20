@@ -207,6 +207,16 @@ pub enum InboundStreamGateError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum InboundStreamPreparationError {
+    InboundStreamGateRequired,
+    InboundStreamAdapterRequired,
+    AcceptForbidden,
+    ReadWriteForbidden,
+    EnvelopeIoForbidden,
+    UsableMessagingClaimForbidden,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum InboundStreamAdapterError {
     InboundStreamGateRequired,
     InboundAcceptNotImplemented,
