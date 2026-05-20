@@ -85,6 +85,7 @@ What exists today:
 - Public documentation drift closeout that selects core production session lifecycle API cleanup as the next implementation phase.
 - Core session lifecycle cleanup closeout that selects public CLI boundary cleanup before storage persistence expansion.
 - Public CLI boundary cleanup that makes the default build help/error output list only boundary commands and repeat the non-secure-release claim.
+- Public CLI cleanup closeout that selects production self-test boundary expansion before storage persistence or release hygiene.
 - Post-intent stream boundary consolidation review that freezes further stream readiness/intent expansion and selects Arti adapter lifecycle cleanup before adding new network behavior.
 - Transport module decomposition preparation that selects redacted runtime events and event sinks as the first behavior-preserving split target.
 - Extracted transport runtime events module that preserves existing public event and sink names through `crates/transport/src/lib.rs` re-exports.
