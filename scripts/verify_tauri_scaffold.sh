@@ -32,6 +32,7 @@ grep -q 'prototype_status' "$TAURI_DIR/src/lib.rs"
 grep -q 'mod status;' "$TAURI_DIR/src/lib.rs"
 grep -q 'pub use status::PrototypeStatus;' "$TAURI_DIR/src/lib.rs"
 grep -q 'redacted_prototype_status()' "$TAURI_DIR/src/lib.rs"
+grep -q 'pub fn redacted_prototype_status() -> PrototypeStatus' "$TAURI_DIR/src/status.rs"
 grep -q 'secure_release: false' "$TAURI_DIR/src/status.rs"
 grep -q 'usable_messaging: false' "$TAURI_DIR/src/status.rs"
 grep -q 'invoke("prototype_status")' "$APP_DIR/src/main.js"
@@ -44,6 +45,7 @@ grep -q 'Fail-closed only' "$APP_DIR/index.html"
 grep -q 'Unexpected secure-release status' "$APP_DIR/src/main.js"
 grep -q 'Unexpected messaging status' "$APP_DIR/src/main.js"
 grep -q 'transport_status: "fail-closed only"' "$TAURI_DIR/src/status.rs"
+grep -q 'storage_status: "prototype boundary"' "$TAURI_DIR/src/status.rs"
 grep -q '^workspaces=false$' "$APP_DIR/.npmrc"
 grep -q '"lockfileVersion": 3' "$APP_DIR/package-lock.json"
 grep -q '"vite": "^6.0.0"' "$APP_DIR/package-lock.json"
@@ -55,6 +57,24 @@ invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
 test "$invoke_count" = "1"
 
 grep -q 'generate_handler!\[prototype_status\]' "$TAURI_DIR/src/lib.rs"
+
+status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
+test "$status_false_count" = "2"
+
+if grep -n '\btrue\b' "$TAURI_DIR/src/status.rs" >/dev/null; then
+  echo "status adapter must not expose true readiness flags" >&2
+  exit 1
+fi
+
+if grep -n -E 'secure_release:|usable_messaging:|transport_status:|storage_status:' "$TAURI_DIR/src/lib.rs" >/dev/null; then
+  echo "Tauri command wrapper must delegate status construction to status.rs" >&2
+  exit 1
+fi
+
+if grep -n -E '"available"|"ready"|"connected"|"bootstrapped"|"secure release"|"usable messaging"' "$TAURI_DIR/src/status.rs" >/dev/null; then
+  echo "status adapter must not imply readiness or secure-release state" >&2
+  exit 1
+fi
 
 if grep -R 'invoke(' "$APP_DIR/src" | grep -v 'invoke("prototype_status")' >/dev/null; then
   echo "unexpected frontend Tauri command invocation" >&2
