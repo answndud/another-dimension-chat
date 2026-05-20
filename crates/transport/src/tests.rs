@@ -4085,6 +4085,12 @@ async fn persistent_arti_client_owner_fails_closed_when_manual_network_disabled(
         .expect("bounded adapter");
     let mut owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
     let mut sink = InMemoryTransportRuntimeEventSink::default();
+    let disabled_summary =
+        arti_adapter_spike::ManualArtiBootstrapAttemptGate::disabled(owner.adapter().clone())
+            .summary();
+
+    assert!(disabled_summary.network_disabled());
+    assert!(!disabled_summary.permits_manual_network_attempt());
 
     assert_eq!(
         owner
