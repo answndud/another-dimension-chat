@@ -558,7 +558,11 @@ impl PersistentArtiClientOwner {
             | PersistentArtiClientLifecycleState::Dormant => {}
         }
 
-        if network_permission == ManualArtiBootstrapNetworkPermission::Disabled {
+        let attempt_summary = ManualArtiBootstrapAttemptSummary {
+            network_permission,
+            timeout_seconds: self.adapter.skeleton().policy().timeout().seconds(),
+        };
+        if attempt_summary.network_disabled() {
             let error = TransportRuntimeError::RuntimeNetworkDisabled;
             sink.record(RedactedTransportRuntimeEvent::bootstrap_failed(error));
             return Err(PersistentArtiClientLifecycleError::RuntimeNetworkDisabled);

@@ -57,7 +57,27 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next documented Arti adapter lifecycle cleanup selection after manual bootstrap gate summary cleanup. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+Continue transport work with the next documented Arti adapter lifecycle cleanup selection after persistent owner disabled-bootstrap predicate cleanup. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+
+## Persistent Owner Disabled-Bootstrap Predicate Cleanup
+
+Decision as of 2026-05-20: persistent Arti client owner manual bootstrap now uses the same redacted manual-attempt summary predicate for its disabled network path as the one-shot manual bootstrap gate.
+
+Moved without enabling network behavior:
+
+- `PersistentArtiClientOwner::bootstrap_and_keep_client(...)` now constructs a local `ManualArtiBootstrapAttemptSummary` and checks `network_disabled()` before any possible bootstrap attempt.
+- Disabled persistent bootstrap tests assert the same summary predicate used by the one-shot gate.
+
+Preserved invariants:
+
+- Disabled manual network permission still records `RuntimeNetworkDisabled` before returning.
+- The owner remains `Unbootstrapped` and does not retain a client when manual network is disabled.
+- Persistent bootstrap remains behind `arti-manual-bootstrap`.
+- No descriptor publication, onion hosting, stream I/O, envelope I/O, or usable messaging capability was added.
+
+Next split target:
+
+- Select the next Arti adapter lifecycle cleanup boundary.
 
 ## Manual Bootstrap Gate Summary Cleanup
 
