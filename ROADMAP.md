@@ -124,9 +124,16 @@ Exit criteria:
 
 ## Phase 4: Onion Transport Prototype
 
-Status: not started.
+Status: first implementation slice selected.
 
 Goal: introduce a real anonymized transport prototype without making direct P2P the high-risk default.
+
+First slice:
+
+- Use the existing Arti-first adapter spike as the first prototype path.
+- Keep bundled C Tor daemon control as a deferred fallback decision, not the default path.
+- Do not use system Tor as the default because it weakens app-private state/cache, logging, bridge policy, and lifecycle control.
+- Start Phase 4 with an Arti bootstrap-to-hosting readiness audit before descriptor publication, stream I/O, envelope I/O, or usable messaging.
 
 Tasks:
 
@@ -141,6 +148,7 @@ Exit criteria:
 - High-risk transport path does not require direct P2P.
 - Endpoint rotation and duplicate connection behavior are deterministic and tested.
 - Transport metadata limitations remain documented and visible.
+- Any network-capable experiment remains manually gated, redacted, and separate from descriptor publication, stream I/O, and usable messaging until a later boundary explicitly opens it.
 
 ## Phase 5: Tauri Desktop Shell
 

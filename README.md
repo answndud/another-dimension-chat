@@ -103,6 +103,7 @@ What exists today:
 - Arti lifecycle cleanup closeout that keeps future network-capable work behind separate bootstrap, hosting, stream, and envelope-I/O decisions.
 - Local-only manual lifecycle bootstrap CLI gate that smoke-tests persistent owner state without send/receive or onion hosting.
 - Pre-network transport closeout boundary that blocks network execution until backup exclusion, onion service key lifecycle, and bridge/censorship decisions are cleared.
+- Phase 4 first-slice decision: Arti-first remains the first prototype path, bundled C Tor is deferred as a fallback decision, system Tor is not the default, and the next transport work is a bootstrap-to-hosting readiness audit before descriptor publication or stream I/O.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.
 - Passphrase unlock boundary tests for SQLCipher storage.
 - High-risk unlock policy tests that reject OS-keystore-only unlock.
