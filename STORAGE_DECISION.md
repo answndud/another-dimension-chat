@@ -44,7 +44,9 @@ The repository does not currently have:
 
 ## Phase 3 Exit Criteria Review
 
-Current Phase 3 status remains in progress.
+Current Phase 3 status is complete for the v0.1 storage lifecycle boundary.
+
+This does not mean the app has production-ready local storage. It means the current v0.1 boundary is narrow enough to support the next onion transport prototype work without expanding into platform keychain integration, migration, or private key persistence.
 
 Satisfied or partially satisfied:
 
@@ -55,7 +57,7 @@ Satisfied or partially satisfied:
 - Record lifecycle deletion helpers exist for encrypted records, replay state, message envelopes, local message indexes, and pairwise endpoint state.
 - Public documentation avoids secure media erasure and replay rollback-protection claims.
 
-Still incomplete:
+Deferred:
 
 - Full production message persistence and rich local message index schema.
 - Durable production private key storage.
@@ -64,7 +66,7 @@ Still incomplete:
 - Replay rollback protection.
 - Secure deletion from physical media.
 
-Next implementation direction: keep Phase 3 open and add a minimal local message index persistence skeleton before declaring the storage lifecycle boundary ready for the next major phase.
+Next implementation direction: move to the onion transport prototype while keeping the deferred storage work as explicit non-claims. Do not add durable private key storage or production key wrapping without a separate phase decision.
 
 ## Production Storage Classes
 
