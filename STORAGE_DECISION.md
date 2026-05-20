@@ -1,8 +1,8 @@
 # Storage Decision Notes
 
-Another Dimension Chat does not have production encrypted local storage today.
+Another Dimension Chat does not have a complete production encrypted local storage lifecycle today.
 
-This document records the first public-safe storage boundary before any encrypted database, OS keychain integration, or durable production session persistence is implemented. It is intentionally conservative: default production code must not silently persist sensitive production records as plaintext files.
+This document records the current public-safe storage boundary around a narrow SQLCipher-backed `ADREC1` spike. It is intentionally conservative: default production code must not silently persist sensitive production records as plaintext files, and the current spike must not be described as complete production key management, rollback protection, secure deletion, backup, recovery, or durable session persistence.
 
 ## Current State
 
@@ -37,7 +37,6 @@ The repository does not currently have:
 - Replay rollback protection.
 - Durable Noise transport or ratchet state storage.
 - Backup, export, import, or migration behavior.
-- Production OS keychain/DPAPI/Keystore wrapping.
 - Production account recovery or key rotation.
 - Record-level encryption implementation. `ADREC1` is a container format, not an encryption algorithm.
 - Full production message persistence and rich local message index schema.
@@ -66,7 +65,7 @@ Deferred:
 - Replay rollback protection.
 - Secure deletion from physical media.
 
-Next implementation direction: move to the onion transport prototype while keeping the deferred storage work as explicit non-claims. Do not add durable private key storage or production key wrapping without a separate phase decision.
+Current storage direction: keep the SQLCipher spike narrow and explicit while the onion transport prototype work continues. Do not add durable private key storage, production key wrapping, backup/recovery, or replay rollback-protection claims without a separate phase decision.
 
 ## Production Storage Classes
 

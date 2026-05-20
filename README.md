@@ -20,7 +20,7 @@ What exists today:
 - Production-facing guardrails for Ed25519 pairwise identity material, signed pairing drafts, Noise-based session setup smoke tests, envelope encryption/decryption, replay rejection, and local storage policy checks.
 - High-risk transport policy and fail-closed Tor/onion scaffolding: onion-only default routing, direct-route rejection unless explicitly low-risk, Arti-first decisions, app-private directory checks, pre-network blocker tracking, runtime preflight, redacted runtime events, bridge/censorship configuration boundaries, onion key lifecycle policy, and descriptor/stream/envelope-I/O gates.
 - Transport pre-network docs alignment that treats blocker closeout as entry to a bounded fail-closed skeleton, not usable network execution.
-- SQLCipher-backed storage spikes for encrypted record boundaries, passphrase unlock, high-risk unlock policy, replay-window persistence after successful decrypt, pairwise endpoint state, local message indexes, opaque record-id derivation, and internal raw database-key opening only.
+- SQLCipher-backed storage spikes for `ADREC1` record containers, passphrase unlock, high-risk unlock policy, replay-window persistence after successful decrypt, pairwise endpoint state, local message indexes, opaque record-id derivation, and internal raw database-key opening only.
 - A read-only Tauri prototype status shell exposing only release-claim, messaging-surface, profile, pairing, transport, and storage boundary state through `prototype_status`.
 - Tauri verification status boundary that exposes lightweight-check status without adding production commands or readiness claims.
 - Tauri scaffold verifier cleanup that keeps status field and static copy checks aligned without adding build cost.
