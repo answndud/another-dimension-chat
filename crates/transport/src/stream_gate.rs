@@ -48,6 +48,16 @@ pub struct OutboundStreamFailClosedAdapter {
     boundary: OnionOutboundStreamBoundary,
 }
 
+#[derive(Clone, Eq, PartialEq)]
+pub struct OutboundStreamDialIntent {
+    boundary: OnionOutboundStreamBoundary,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct OutboundStreamSendIntent {
+    boundary: OnionOutboundStreamBoundary,
+}
+
 impl InboundStreamGateDecision {
     pub fn locked_down() -> Self {
         Self {
@@ -227,21 +237,78 @@ impl OutboundStreamFailClosedAdapter {
         &self,
         sink: &mut S,
     ) -> Result<(), OutboundStreamAdapterError> {
+        self.prepare_dial_intent().dial_fail_closed(sink)
+    }
+
+    pub fn send_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        envelope: &Envelope,
+        sink: &mut S,
+    ) -> Result<(), OutboundStreamAdapterError> {
+        self.prepare_send_intent(envelope).send_fail_closed(sink)
+    }
+
+    pub fn prepare_dial_intent(&self) -> OutboundStreamDialIntent {
+        OutboundStreamDialIntent {
+            boundary: self.boundary.clone(),
+        }
+    }
+
+    pub fn prepare_send_intent(&self, _envelope: &Envelope) -> OutboundStreamSendIntent {
+        OutboundStreamSendIntent {
+            boundary: self.boundary.clone(),
+        }
+    }
+}
+
+impl OutboundStreamDialIntent {
+    pub fn dial_fail_closed<S: TransportRuntimeEventSink>(
+        &self,
+        sink: &mut S,
+    ) -> Result<(), OutboundStreamAdapterError> {
         sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
             TransportRuntimeError::SendFailed,
         ));
         Err(OutboundStreamAdapterError::OutboundDialNotImplemented)
     }
+}
 
+impl fmt::Debug for OutboundStreamDialIntent {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OutboundStreamDialIntent")
+            .field("boundary", &self.boundary)
+            .field("stream_id", &"<redacted>")
+            .field("remote_endpoint", &"<redacted>")
+            .field("contact_id", &"<redacted>")
+            .field("profile_name", &"<redacted>")
+            .finish()
+    }
+}
+
+impl OutboundStreamSendIntent {
     pub fn send_fail_closed<S: TransportRuntimeEventSink>(
         &self,
-        _envelope: &Envelope,
         sink: &mut S,
     ) -> Result<(), OutboundStreamAdapterError> {
         sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
             TransportRuntimeError::SendFailed,
         ));
         Err(OutboundStreamAdapterError::OutboundSendNotImplemented)
+    }
+}
+
+impl fmt::Debug for OutboundStreamSendIntent {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OutboundStreamSendIntent")
+            .field("boundary", &self.boundary)
+            .field("envelope", &"<redacted>")
+            .field("stream_id", &"<redacted>")
+            .field("remote_endpoint", &"<redacted>")
+            .field("contact_id", &"<redacted>")
+            .field("profile_name", &"<redacted>")
+            .finish()
     }
 }
 
