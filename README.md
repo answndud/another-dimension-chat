@@ -20,6 +20,7 @@ What exists today:
 - Production-facing guardrails for Ed25519 pairwise identity material, signed pairing drafts, Noise-based session setup smoke tests, envelope encryption/decryption, replay rejection, and local storage policy checks.
 - High-risk transport policy and fail-closed Tor/onion scaffolding: onion-only default routing, direct-route rejection unless explicitly low-risk, Arti-first decisions, app-private directory checks, pre-network blocker tracking, runtime preflight, redacted runtime events, bridge/censorship configuration boundaries, onion key lifecycle policy, and descriptor/stream/envelope-I/O gates.
 - Transport pre-network docs alignment that treats blocker closeout as entry to a bounded fail-closed skeleton, not usable network execution.
+- Transport pre-network verifier guard that keeps bounded-fail-closed and no-socket/bootstrap/hosting/transfer non-claims checked in release hygiene.
 - SQLCipher-backed storage spikes for `ADREC1` record containers, passphrase unlock, high-risk unlock policy, replay-window persistence after successful decrypt, pairwise endpoint state, local message indexes, opaque record-id derivation, and internal raw database-key opening only.
 - Storage lifecycle docs alignment that separates the narrow SQLCipher spike from deferred key management, rollback, secure deletion, backup, recovery, and durable session persistence work.
 - Storage lifecycle verifier guard that keeps `ADREC1` container wording and complete-storage-lifecycle non-claims checked in release hygiene.
