@@ -1,12 +1,14 @@
 # Transport Decision
 
-This document records the public-safe transport boundary before a real Tor/onion adapter exists.
+This document records the public-safe transport boundary before a real Tor/onion messaging adapter exists.
 
 ## Current Decision
 
 High-risk mode is onion-only by default.
 
 The default production transport policy rejects direct peer routes. Direct P2P, WebRTC, libp2p direct dialing, STUN, TURN, and ICE-style NAT traversal are not valid high-risk defaults because they can expose IP addresses, timing, network topology, and correlation metadata.
+
+The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control remains a deferred fallback decision, and system Tor is not the default because the app must retain explicit control over app-private state/cache directories, redacted event boundaries, bootstrap permission, censorship/bridge policy, and onion lifecycle readiness.
 
 ## What Exists Today
 
@@ -39,7 +41,9 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 ## What Does Not Exist Yet
 
 - A real Tor/onion adapter behind the fail-closed skeleton.
-- Bundled Tor or Arti lifecycle management.
+- Production Arti lifecycle management.
+- Bundled C Tor daemon control.
+- System Tor discovery or default system Tor usage.
 - Onion service key generation, rotation, or persistence.
 - Bridge/censorship-circumvention support.
 - Transport retry, backoff, or queueing.
@@ -50,6 +54,8 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 - High-risk mode must not silently fall back to direct P2P.
 - Direct peer routes require an explicit low-risk policy.
+- System Tor must not become the default transport implementation.
+- Bundled C Tor must not replace the Arti-first prototype path without a separate decision.
 - Transport code handles already-encrypted protocol envelopes, not plaintext messages.
 - Transport logs must not include plaintext, session secrets, private keys, or decrypted message bodies.
 - Endpoint strings are routing hints, not global account identifiers.
@@ -57,7 +63,9 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Arti lifecycle cleanup is closed out for this phase. Select the next implementation phase outside the Arti lifecycle cleanup series. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+
+The audit should answer only whether the current Arti-first path has enough explicit readiness predicates to move from manual bootstrap toward onion hosting preparation. If it finds a missing invariant, add the smallest fail-closed predicate or summary needed. If it does not, move to the per-contact rendezvous endpoint lifecycle task.
 
 ## Arti Lifecycle Cleanup Closeout
 
