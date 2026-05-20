@@ -83,6 +83,7 @@ What exists today:
 - Tauri prototype status contract that exposes only redacted release, messaging, profile, pairing, transport, and storage boundary state through the existing `prototype_status` command.
 - Tauri prototype status closeout that keeps the desktop command surface frozen and selects a lightweight repository review before adding more UI or core boundaries.
 - Public documentation drift closeout that selects core production session lifecycle API cleanup as the next implementation phase.
+- Core session lifecycle cleanup closeout that selects public CLI boundary cleanup before storage persistence expansion.
 - Post-intent stream boundary consolidation review that freezes further stream readiness/intent expansion and selects Arti adapter lifecycle cleanup before adding new network behavior.
 - Transport module decomposition preparation that selects redacted runtime events and event sinks as the first behavior-preserving split target.
 - Extracted transport runtime events module that preserves existing public event and sink names through `crates/transport/src/lib.rs` re-exports.
