@@ -1575,6 +1575,48 @@ fn inbound_stream_fail_closed_adapter_records_redacted_events_only() {
 }
 
 #[test]
+fn inbound_stream_attempt_intents_preserve_fail_closed_boundary() {
+    let adapter = InboundStreamFailClosedAdapter::from_gate_ready(
+        ready_inbound_stream_gate(),
+        OnionServiceDescriptorPublicationReady,
+    );
+    let accept_intent = adapter.prepare_accept_intent();
+    let read_write_intent = adapter.prepare_read_write_intent();
+
+    let accept_debug = format!("{accept_intent:?}");
+    assert!(accept_debug.contains("InboundStreamAcceptIntent"));
+    assert!(accept_debug.contains("<redacted>"));
+    assert!(!accept_debug.contains("example.onion"));
+    assert!(!accept_debug.contains("alice"));
+    assert!(!accept_debug.contains("bob"));
+
+    let read_write_debug = format!("{read_write_intent:?}");
+    assert!(read_write_debug.contains("InboundStreamReadWriteIntent"));
+    assert!(read_write_debug.contains("<redacted>"));
+    assert!(!read_write_debug.contains("example.onion"));
+    assert!(!read_write_debug.contains("alice"));
+    assert!(!read_write_debug.contains("bob"));
+
+    let mut sink = InMemoryTransportRuntimeEventSink::default();
+    assert_eq!(
+        accept_intent.accept_fail_closed(&mut sink),
+        Err(InboundStreamAdapterError::InboundAcceptNotImplemented)
+    );
+    assert_eq!(
+        read_write_intent.read_write_fail_closed(&mut sink),
+        Err(InboundStreamAdapterError::InboundReadWriteNotImplemented)
+    );
+    assert_eq!(sink.events().len(), 2);
+    for event in sink.events() {
+        assert_eq!(
+            event.runtime_error(),
+            Some(TransportRuntimeError::ReceiveFailed)
+        );
+        assert_redacted_event_hides(event, &["example.onion", "alice", "bob"]);
+    }
+}
+
+#[test]
 fn outbound_stream_gate_requires_pairwise_endpoint_and_high_risk_onion_policy() {
     assert_eq!(
         OutboundStreamGateDecision::locked_down().check(),

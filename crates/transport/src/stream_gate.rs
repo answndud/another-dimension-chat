@@ -29,6 +29,16 @@ pub struct InboundStreamFailClosedAdapter {
     boundary: OnionInboundStreamBoundary,
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct InboundStreamAcceptIntent {
+    boundary: OnionInboundStreamBoundary,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct InboundStreamReadWriteIntent {
+    boundary: OnionInboundStreamBoundary,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct OutboundStreamGateReady;
 
@@ -129,20 +139,77 @@ impl InboundStreamFailClosedAdapter {
         &self,
         sink: &mut S,
     ) -> Result<(), InboundStreamAdapterError> {
-        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
-            TransportRuntimeError::ReceiveFailed,
-        ));
-        Err(InboundStreamAdapterError::InboundAcceptNotImplemented)
+        self.prepare_accept_intent().accept_fail_closed(sink)
     }
 
     pub fn read_write_fail_closed<S: TransportRuntimeEventSink>(
         &self,
         sink: &mut S,
     ) -> Result<(), InboundStreamAdapterError> {
+        self.prepare_read_write_intent()
+            .read_write_fail_closed(sink)
+    }
+
+    pub fn prepare_accept_intent(self) -> InboundStreamAcceptIntent {
+        InboundStreamAcceptIntent {
+            boundary: self.boundary,
+        }
+    }
+
+    pub fn prepare_read_write_intent(self) -> InboundStreamReadWriteIntent {
+        InboundStreamReadWriteIntent {
+            boundary: self.boundary,
+        }
+    }
+}
+
+impl InboundStreamAcceptIntent {
+    pub fn accept_fail_closed<S: TransportRuntimeEventSink>(
+        self,
+        sink: &mut S,
+    ) -> Result<(), InboundStreamAdapterError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::ReceiveFailed,
+        ));
+        Err(InboundStreamAdapterError::InboundAcceptNotImplemented)
+    }
+}
+
+impl fmt::Debug for InboundStreamAcceptIntent {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("InboundStreamAcceptIntent")
+            .field("boundary", &self.boundary)
+            .field("stream_id", &"<redacted>")
+            .field("remote_endpoint", &"<redacted>")
+            .field("contact_id", &"<redacted>")
+            .field("profile_name", &"<redacted>")
+            .finish()
+    }
+}
+
+impl InboundStreamReadWriteIntent {
+    pub fn read_write_fail_closed<S: TransportRuntimeEventSink>(
+        self,
+        sink: &mut S,
+    ) -> Result<(), InboundStreamAdapterError> {
         sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
             TransportRuntimeError::ReceiveFailed,
         ));
         Err(InboundStreamAdapterError::InboundReadWriteNotImplemented)
+    }
+}
+
+impl fmt::Debug for InboundStreamReadWriteIntent {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("InboundStreamReadWriteIntent")
+            .field("boundary", &self.boundary)
+            .field("stream_id", &"<redacted>")
+            .field("remote_endpoint", &"<redacted>")
+            .field("contact_id", &"<redacted>")
+            .field("profile_name", &"<redacted>")
+            .finish()
     }
 }
 

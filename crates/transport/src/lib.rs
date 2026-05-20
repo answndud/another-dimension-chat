@@ -82,9 +82,10 @@ pub use runtime_preflight::{
     TransportRuntimeState, TransportStateCacheDirsReady,
 };
 pub use stream_gate::{
-    InboundStreamFailClosedAdapter, InboundStreamGateDecision, InboundStreamGateReady,
-    OutboundStreamDialIntent, OutboundStreamFailClosedAdapter, OutboundStreamGateDecision,
-    OutboundStreamGateReady, OutboundStreamSendIntent,
+    InboundStreamAcceptIntent, InboundStreamFailClosedAdapter, InboundStreamGateDecision,
+    InboundStreamGateReady, InboundStreamReadWriteIntent, OutboundStreamDialIntent,
+    OutboundStreamFailClosedAdapter, OutboundStreamGateDecision, OutboundStreamGateReady,
+    OutboundStreamSendIntent,
 };
 pub use stream_session::{
     BoundInboundStreamSession, BoundOutboundStreamSession, EnvelopeIoAdapterReady,

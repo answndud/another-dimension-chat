@@ -56,6 +56,7 @@ What exists today:
 - Descriptor publication attempt intent boundary that separates publication intent preparation from the fail-closed publish call without enabling real descriptor publication.
 - Inbound stream gate boundary that requires descriptor publication gate and adapter readiness while still forbidding accept, read/write, envelope I/O, and usable messaging.
 - Inbound stream fail-closed adapter boundary that requires inbound stream gate readiness and records only redacted events before returning accept/read-write not-implemented errors.
+- Inbound stream accept/read-write intent boundaries that separate descriptor-backed adapter readiness from fail-closed inbound stream calls.
 - Outbound stream gate boundary that requires a pairwise rendezvous endpoint and high-risk onion-only policy while still forbidding dial, send, envelope I/O, and usable messaging.
 - Outbound stream fail-closed adapter boundary that requires outbound stream gate readiness and records only redacted events before returning dial/send not-implemented errors.
 - Outbound stream dial/send intent boundaries that separate adapter readiness from fail-closed dial/send calls without enabling real network stream I/O.
