@@ -64,13 +64,14 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 - A production session plan must reject shared rendezvous endpoints because the first v0.1 model assumes per-contact endpoint separation.
 - Simultaneous connect / double dial handling must use the pairwise public-key rank already in `ProductionSessionPlan`; timing-based rules such as first connected or first handshake finished are forbidden.
 - The canonical connection direction is outbound for the canonical dialer and inbound for the responder. Duplicate connections close only after the canonical connection is authenticated and healthy.
+- Descriptor publication preparation must require descriptor gate readiness, fail-closed adapter readiness, and redacted descriptor context before any later implementation can approach publication.
 - Onion endpoint rotation remains a protocol/session concern and must be handled inside an authenticated encrypted session when implemented.
 
 ## Next Implementation Step
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-Phase 4 non-network boundary slices are closed out for now. The next transport task is descriptor publication preparation, but only as a fail-closed preparation boundary: no real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
+Descriptor publication preparation is now represented by `DescriptorPublicationPreparationBoundary`. The next transport task is descriptor publication preparation closeout: decide whether to move toward a real Arti descriptor adapter spike or keep tightening non-network publication policy. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
 
 ## Arti Lifecycle Cleanup Closeout
 

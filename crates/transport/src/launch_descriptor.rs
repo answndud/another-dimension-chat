@@ -1,5 +1,6 @@
 use std::fmt;
 
+use crate::DescriptorPublicationPreparationError;
 use crate::{
     DescriptorPublicationAdapterError, DescriptorPublicationGateError, OnionHostingGateReady,
     OnionServiceDescriptorPublicationError, OnionServiceKeyMaterialReady,
@@ -51,6 +52,21 @@ pub struct DescriptorPublicationGateDecision {
     pub(crate) onion_hosting_gate_ready: Option<OnionHostingGateReady>,
     pub(crate) endpoint_publication_policy: OnionEndpointPublicationPolicy,
     pub(crate) redacted_events_only: bool,
+    pub(crate) stream_io_enabled: bool,
+    pub(crate) usable_messaging_claimed: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DescriptorPublicationPreparationReady {
+    endpoint_publication_policy: OnionEndpointPublicationPolicy,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DescriptorPublicationPreparationBoundary {
+    pub(crate) gate_ready: Option<DescriptorPublicationGateReady>,
+    pub(crate) fail_closed_adapter_ready: bool,
+    pub(crate) redacted_descriptor_context_only: bool,
+    pub(crate) descriptor_body_created: bool,
     pub(crate) stream_io_enabled: bool,
     pub(crate) usable_messaging_claimed: bool,
 }
@@ -218,6 +234,69 @@ impl DescriptorPublicationGateDecision {
 impl DescriptorPublicationGateReady {
     pub fn endpoint_publication_policy(self) -> OnionEndpointPublicationPolicy {
         self.endpoint_publication_policy
+    }
+}
+
+impl DescriptorPublicationPreparationReady {
+    pub fn endpoint_publication_policy(self) -> OnionEndpointPublicationPolicy {
+        self.endpoint_publication_policy
+    }
+}
+
+impl DescriptorPublicationPreparationBoundary {
+    pub fn locked_down() -> Self {
+        Self {
+            gate_ready: None,
+            fail_closed_adapter_ready: false,
+            redacted_descriptor_context_only: false,
+            descriptor_body_created: false,
+            stream_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn from_fail_closed_adapter(
+        gate_ready: DescriptorPublicationGateReady,
+        _adapter: &DescriptorPublicationFailClosedAdapter,
+        redacted_descriptor_context_only: bool,
+    ) -> Self {
+        Self {
+            gate_ready: Some(gate_ready),
+            fail_closed_adapter_ready: true,
+            redacted_descriptor_context_only,
+            descriptor_body_created: false,
+            stream_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn check(
+        self,
+    ) -> Result<DescriptorPublicationPreparationReady, DescriptorPublicationPreparationError> {
+        let gate_ready = self
+            .gate_ready
+            .ok_or(DescriptorPublicationPreparationError::DescriptorPublicationGateRequired)?;
+        if !self.fail_closed_adapter_ready {
+            return Err(
+                DescriptorPublicationPreparationError::DescriptorPublicationAdapterRequired,
+            );
+        }
+        if !self.redacted_descriptor_context_only {
+            return Err(DescriptorPublicationPreparationError::RedactedDescriptorContextRequired);
+        }
+        if self.descriptor_body_created {
+            return Err(DescriptorPublicationPreparationError::DescriptorBodyForbidden);
+        }
+        if self.stream_io_enabled {
+            return Err(DescriptorPublicationPreparationError::StreamIoForbidden);
+        }
+        if self.usable_messaging_claimed {
+            return Err(DescriptorPublicationPreparationError::UsableMessagingClaimForbidden);
+        }
+
+        Ok(DescriptorPublicationPreparationReady {
+            endpoint_publication_policy: gate_ready.endpoint_publication_policy(),
+        })
     }
 }
 

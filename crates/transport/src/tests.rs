@@ -1369,6 +1369,94 @@ fn descriptor_publication_fail_closed_adapter_requires_gate_ready_token() {
 }
 
 #[test]
+fn descriptor_publication_preparation_requires_gate_adapter_and_redacted_context() {
+    let gate_ready = ready_descriptor_publication_gate();
+    let adapter = DescriptorPublicationFailClosedAdapter::from_gate_ready(
+        gate_ready,
+        OnionServiceLaunchReady,
+    )
+    .expect("descriptor publication adapter");
+
+    assert_eq!(
+        DescriptorPublicationPreparationBoundary::locked_down().check(),
+        Err(DescriptorPublicationPreparationError::DescriptorPublicationGateRequired)
+    );
+    assert_eq!(
+        DescriptorPublicationPreparationBoundary {
+            gate_ready: Some(gate_ready),
+            fail_closed_adapter_ready: false,
+            redacted_descriptor_context_only: true,
+            descriptor_body_created: false,
+            stream_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+        .check(),
+        Err(DescriptorPublicationPreparationError::DescriptorPublicationAdapterRequired)
+    );
+    assert_eq!(
+        DescriptorPublicationPreparationBoundary::from_fail_closed_adapter(
+            gate_ready, &adapter, false,
+        )
+        .check(),
+        Err(DescriptorPublicationPreparationError::RedactedDescriptorContextRequired)
+    );
+
+    let ready = DescriptorPublicationPreparationBoundary::from_fail_closed_adapter(
+        gate_ready, &adapter, true,
+    )
+    .check()
+    .expect("descriptor publication preparation ready");
+
+    assert_eq!(
+        ready.endpoint_publication_policy(),
+        OnionEndpointPublicationPolicy::PairwiseRendezvousOnly
+    );
+}
+
+#[test]
+fn descriptor_publication_preparation_rejects_descriptor_stream_and_messaging_shortcuts() {
+    let gate_ready = ready_descriptor_publication_gate();
+
+    for (boundary, expected) in [
+        (
+            DescriptorPublicationPreparationBoundary {
+                gate_ready: Some(gate_ready),
+                fail_closed_adapter_ready: true,
+                redacted_descriptor_context_only: true,
+                descriptor_body_created: true,
+                stream_io_enabled: false,
+                usable_messaging_claimed: false,
+            },
+            DescriptorPublicationPreparationError::DescriptorBodyForbidden,
+        ),
+        (
+            DescriptorPublicationPreparationBoundary {
+                gate_ready: Some(gate_ready),
+                fail_closed_adapter_ready: true,
+                redacted_descriptor_context_only: true,
+                descriptor_body_created: false,
+                stream_io_enabled: true,
+                usable_messaging_claimed: false,
+            },
+            DescriptorPublicationPreparationError::StreamIoForbidden,
+        ),
+        (
+            DescriptorPublicationPreparationBoundary {
+                gate_ready: Some(gate_ready),
+                fail_closed_adapter_ready: true,
+                redacted_descriptor_context_only: true,
+                descriptor_body_created: false,
+                stream_io_enabled: false,
+                usable_messaging_claimed: true,
+            },
+            DescriptorPublicationPreparationError::UsableMessagingClaimForbidden,
+        ),
+    ] {
+        assert_eq!(boundary.check(), Err(expected));
+    }
+}
+
+#[test]
 fn descriptor_publication_fail_closed_adapter_records_redacted_event_only() {
     let gate_ready = ready_descriptor_publication_gate();
     let adapter = DescriptorPublicationFailClosedAdapter::from_gate_ready(

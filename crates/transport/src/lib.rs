@@ -29,15 +29,16 @@ pub use endpoint_state::{
 };
 pub use errors::{
     BootstrapOnlyExperimentDecisionError, BridgeCensorshipConfigurationError,
-    DescriptorPublicationAdapterError, DescriptorPublicationGateError, EndpointLifecycleError,
-    EnvelopeIoAdapterError, InboundStreamAdapterError, InboundStreamGateError,
-    NetworkExperimentGateError, OnionHostingGateError, OnionInboundStreamError,
-    OnionOutboundStreamError, OnionServiceDescriptorPublicationError,
-    OnionServiceKeyLifecycleError, OnionServiceKeyMaterialError, OnionServiceLaunchPreflightError,
-    OutboundStreamAdapterError, OutboundStreamGateError, PostAuthStreamReadinessOrderingError,
-    RemotePeerAuthenticationError, StreamAdapterCloseoutError, StreamCloseoutIntegrationError,
-    StreamSessionBindingError, TransportBackupExclusionError, TransportError,
-    TransportPhaseCloseoutError, TransportRuntimeError, TransportRuntimeProbeError,
+    DescriptorPublicationAdapterError, DescriptorPublicationGateError,
+    DescriptorPublicationPreparationError, EndpointLifecycleError, EnvelopeIoAdapterError,
+    InboundStreamAdapterError, InboundStreamGateError, NetworkExperimentGateError,
+    OnionHostingGateError, OnionInboundStreamError, OnionOutboundStreamError,
+    OnionServiceDescriptorPublicationError, OnionServiceKeyLifecycleError,
+    OnionServiceKeyMaterialError, OnionServiceLaunchPreflightError, OutboundStreamAdapterError,
+    OutboundStreamGateError, PostAuthStreamReadinessOrderingError, RemotePeerAuthenticationError,
+    StreamAdapterCloseoutError, StreamCloseoutIntegrationError, StreamSessionBindingError,
+    TransportBackupExclusionError, TransportError, TransportPhaseCloseoutError,
+    TransportRuntimeError, TransportRuntimeProbeError,
 };
 pub use hosting_phase::{
     BootstrapOnlyExperimentDecision, BootstrapOnlyExperimentExpansion,
@@ -60,6 +61,7 @@ pub use key_material::{
 pub use launch_descriptor::{
     DescriptorPublicationAttemptIntent, DescriptorPublicationFailClosedAdapter,
     DescriptorPublicationGateDecision, DescriptorPublicationGateReady,
+    DescriptorPublicationPreparationBoundary, DescriptorPublicationPreparationReady,
     OnionEndpointPublicationPolicy, OnionEndpointUpdatePolicy,
     OnionServiceDescriptorPublicationBoundary, OnionServiceDescriptorPublicationReady,
     OnionServiceLaunchPreflight, OnionServiceLaunchReady,
