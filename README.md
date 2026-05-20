@@ -63,7 +63,7 @@ What exists today:
 - Stream adapter closeout intent boundary that requires both inbound and outbound fail-closed adapters before closeout readiness can be checked.
 - Stream adapter closeout boundary that requires both inbound and outbound fail-closed adapters before session binding can be considered, while still forbidding bound-session shortcuts, envelope I/O, and usable messaging.
 - Stream closeout integration ordering boundary that places remote peer authentication after stream adapter closeout and verified pairwise session binding after remote peer authentication, while still forbidding envelope I/O and usable messaging.
-- Stream boundary consolidation review that freezes further stream readiness-token expansion and selects cleanup/module decomposition before adding new network behavior.
+- Post-intent stream boundary consolidation review that freezes further stream readiness/intent expansion and selects Arti adapter lifecycle cleanup before adding new network behavior.
 - Transport module decomposition preparation that selects redacted runtime events and event sinks as the first behavior-preserving split target.
 - Extracted transport runtime events module that preserves existing public event and sink names through `crates/transport/src/lib.rs` re-exports.
 - Extracted bootstrap policy module that preserves bounded bootstrap policy and fail-closed execution skeleton behavior through `crates/transport/src/lib.rs` re-exports.

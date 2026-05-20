@@ -57,7 +57,34 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next documented boundary selection after stream adapter closeout intent integration. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+Continue transport work with Arti adapter lifecycle documentation/code cleanup. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+
+## Post-Intent Stream Boundary Consolidation Review
+
+Decision as of 2026-05-20: the recent stream intent boundaries are sufficient for the current prototype phase. Stop adding stream readiness or attempt-intent layers until the Arti adapter lifecycle and transport module review surface are easier to audit.
+
+Current post-intent sequence:
+
+1. Descriptor publication attempt intent remains fail-closed and does not publish descriptors.
+2. Inbound stream accept/read-write intents remain fail-closed and do not accept, read, or write streams.
+3. Outbound stream dial/send intents remain fail-closed and do not dial or send.
+4. Stream adapter closeout intent requires both fail-closed adapters before closeout readiness can be checked.
+5. Stream closeout integration still places remote peer authentication before verified pairwise session binding and keeps envelope I/O fail-closed.
+
+Consolidation outcome:
+
+- Keep the existing gate/adapter/intent/closeout/order split for now because each layer expresses a distinct security boundary.
+- Do not add `RemotePeerAuthenticationIntent`, envelope I/O intent expansion, or usable messaging surfaces in the next phase.
+- Prefer Arti adapter lifecycle documentation/code cleanup before any remote-auth, stream-I/O, or envelope-I/O integration change.
+- Keep the lightweight verification policy for docs-only consolidation changes: `git diff --check` and `git ls-files | rg '^docs/' || true`.
+
+Still not implemented:
+
+- Real descriptor publication.
+- Real stream accept/dial/read/write.
+- Automatic construction of bound stream sessions from real network streams.
+- Real envelope I/O.
+- Usable messaging.
 
 ## Stream Adapter Closeout Intent Boundary
 
@@ -634,7 +661,7 @@ Verification for the first split:
 
 ## Transport Stream Boundary Consolidation Review
 
-Decision as of 2026-05-19: the stream boundary path is now sufficiently gated for the current prototype phase. Do not add another stream readiness-token layer before cleanup. The current sequence is:
+Decision as of 2026-05-19: the stream boundary path was sufficiently gated for the earlier prototype phase. The 2026-05-20 post-intent review above supersedes the next-step recommendation and freezes further stream readiness/intent expansion before Arti adapter lifecycle cleanup. The earlier sequence was:
 
 1. Inbound/outbound stream gates reject direct shortcuts and forbidden capabilities.
 2. Fail-closed adapters require gate readiness and record only redacted events.
