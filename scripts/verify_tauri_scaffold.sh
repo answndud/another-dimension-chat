@@ -35,6 +35,8 @@ grep -q 'redacted_prototype_status()' "$TAURI_DIR/src/lib.rs"
 grep -q 'pub fn redacted_prototype_status() -> PrototypeStatus' "$TAURI_DIR/src/status.rs"
 grep -q 'secure_release: false' "$TAURI_DIR/src/status.rs"
 grep -q 'usable_messaging: false' "$TAURI_DIR/src/status.rs"
+grep -q 'profile_status: "prototype boundary"' "$TAURI_DIR/src/status.rs"
+grep -q 'pairing_status: "prototype boundary"' "$TAURI_DIR/src/status.rs"
 grep -q 'invoke("prototype_status")' "$APP_DIR/src/main.js"
 grep -q 'not a production messaging UI' "$APP_DIR/README.md"
 grep -q 'Prototype shell only' "$APP_DIR/index.html"
@@ -66,7 +68,7 @@ if grep -n '\btrue\b' "$TAURI_DIR/src/status.rs" >/dev/null; then
   exit 1
 fi
 
-if grep -n -E 'secure_release:|usable_messaging:|transport_status:|storage_status:' "$TAURI_DIR/src/lib.rs" >/dev/null; then
+if grep -n -E 'secure_release:|usable_messaging:|profile_status:|pairing_status:|transport_status:|storage_status:' "$TAURI_DIR/src/lib.rs" >/dev/null; then
   echo "Tauri command wrapper must delegate status construction to status.rs" >&2
   exit 1
 fi
