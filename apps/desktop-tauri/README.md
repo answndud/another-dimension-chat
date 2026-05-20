@@ -8,14 +8,15 @@ Current boundary:
 
 - Tauri shell only.
 - Rust owns security-sensitive state and future protocol/storage/transport behavior.
-- Frontend may request redacted prototype status only.
+- Frontend may request redacted prototype status and run the local `dev-insecure` demo transcript command only.
 - Redacted status separates release-claim, messaging-surface, core, profile, pairing, transport, network-execution, storage, and verification boundaries without exposing profile/contact/endpoint data.
 - The core status is static boundary copy in this scaffold; it does not link or call production core protocol, storage, or transport code.
 - The transport status is static pre-network fail-closed copy; it does not bootstrap Tor, host onion services, publish descriptors, open streams, or transfer envelopes.
 - The network-execution status is static disabled copy; it does not grant socket, Tor bootstrap, onion hosting, stream, or envelope transfer permission.
 - The storage status is static `ADREC1` spike copy; it does not claim complete production key management, rollback protection, secure deletion, backup, recovery, or durable session persistence.
 - Status copy must describe boundary-only or disabled prototype states, not readiness, availability, or secure-release claims.
-- The only allowed Tauri command in this scaffold is `prototype_status`.
+- The allowed Tauri commands in this scaffold are `prototype_status` and `dev_local_demo`.
+- `dev_local_demo` runs `cargo run -q --features dev-insecure -- demo local` from a temporary local workspace and returns its warning/transcript; it is not production messaging.
 - No Tor bootstrap, onion hosting, descriptor publication, stream I/O, envelope I/O, push notifications, cloud backup, groups, file transfer, or multi-device support.
 - `src-tauri` is excluded from the root Cargo workspace until the Tauri dependency and platform build costs are accepted as a separate phase.
 
@@ -44,6 +45,7 @@ npm run tauri -- dev
 Dependency/build gate:
 
 - `package-lock.json` is committed to pin the scaffold dependency graph.
+- `src-tauri/Cargo.lock` is committed to pin the local Tauri shell dependency graph.
 - `.npmrc` sets `workspaces=false` so local commands run as an isolated package even when the parent environment enables npm workspaces.
 - Lightweight CI checks the scaffold shape and lockfile metadata only.
 - Full Tauri install/build is local-only until a separate heavy workflow decision.

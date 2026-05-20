@@ -11,6 +11,8 @@ const fields = {
   networkExecution: document.querySelector("#network-execution"),
   storage: document.querySelector("#storage"),
   verification: document.querySelector("#verification"),
+  runDemo: document.querySelector("#run-demo"),
+  demoOutput: document.querySelector("#demo-output"),
 };
 
 function setText(node, value) {
@@ -49,6 +51,27 @@ async function renderPrototypeStatus() {
     setText(fields.storage, "ADREC1 storage spike only");
     setText(fields.verification, "Lightweight checks only");
   }
+}
+
+async function runLocalDemo() {
+  setText(fields.demoOutput, "Running local dev-insecure demo...");
+  if (fields.runDemo) {
+    fields.runDemo.disabled = true;
+  }
+  try {
+    const result = await invoke("dev_local_demo");
+    setText(fields.demoOutput, `${result.warning}${result.transcript}`);
+  } catch (error) {
+    setText(fields.demoOutput, `Local demo failed:\n${error}`);
+  } finally {
+    if (fields.runDemo) {
+      fields.runDemo.disabled = false;
+    }
+  }
+}
+
+if (fields.runDemo) {
+  fields.runDemo.addEventListener("click", runLocalDemo);
 }
 
 renderPrototypeStatus();
