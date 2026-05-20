@@ -3179,9 +3179,17 @@ fn stream_session_binding_requires_verified_pairwise_session() {
     assert_eq!(
         PairwiseStreamSessionBinding::from_verified_pairwise_session(
             ContactId::new("bob").expect("contact"),
-            StreamSessionVerificationContext::UnverifiedSession,
+            RedactedStreamSessionVerificationContext::unverified_session(),
         ),
         Err(StreamSessionBindingError::VerifiedPairwiseSessionRequired)
+    );
+    assert_eq!(
+        PairwiseStreamSessionBinding::from_verified_pairwise_session(
+            ContactId::new("bob").expect("contact"),
+            RedactedStreamSessionVerificationContext::unredacted_verified_pairwise_encrypted_session_for_test(
+            ),
+        ),
+        Err(StreamSessionBindingError::RedactedStreamSessionContextRequired)
     );
     assert_eq!(
         BoundInboundStreamSession::from_missing_session_binding(),
@@ -3202,6 +3210,14 @@ fn stream_session_binding_requires_verified_pairwise_session() {
     assert!(rendered.contains("<not-held>"));
     assert!(!rendered.contains("bob"));
     assert!(!rendered.contains("session-secret"));
+
+    let context = RedactedStreamSessionVerificationContext::verified_pairwise_encrypted_session();
+    let rendered = format!("{context:?}");
+    assert!(rendered.contains("RedactedStreamSessionVerificationContext"));
+    assert!(rendered.contains("<redacted>"));
+    assert!(!rendered.contains("session-proof"));
+    assert!(!rendered.contains("session-transcript"));
+    assert!(!rendered.contains("example.onion"));
 }
 
 #[test]
@@ -3551,7 +3567,7 @@ fn sample_pairwise_endpoint() -> PairwiseRendezvousEndpoint {
 fn sample_stream_session_binding(contact_id: &str) -> PairwiseStreamSessionBinding {
     PairwiseStreamSessionBinding::from_verified_pairwise_session(
         ContactId::new(contact_id).expect("contact"),
-        StreamSessionVerificationContext::VerifiedPairwiseEncryptedSession,
+        RedactedStreamSessionVerificationContext::verified_pairwise_encrypted_session(),
     )
     .expect("verified binding")
 }

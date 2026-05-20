@@ -96,8 +96,9 @@ pub use stream_session::{
     InboundEnvelopeIoAdapterBoundary, OutboundEnvelopeIoAdapterBoundary,
     PairwiseStreamSessionBinding, PostAuthInboundStreamReadinessOrder,
     PostAuthOutboundStreamReadinessOrder, RedactedRemotePeerAuthenticationContext,
-    RemotePeerAuthenticationReady, StreamAdapterCloseoutDecision, StreamAdapterCloseoutIntent,
-    StreamAdapterCloseoutReady, StreamCloseoutIntegrationOrder, StreamSessionVerificationContext,
+    RedactedStreamSessionVerificationContext, RemotePeerAuthenticationReady,
+    StreamAdapterCloseoutDecision, StreamAdapterCloseoutIntent, StreamAdapterCloseoutReady,
+    StreamCloseoutIntegrationOrder,
 };
 pub(crate) use transport_policy::is_safe_endpoint_token;
 pub use transport_policy::{
