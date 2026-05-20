@@ -143,23 +143,23 @@ Exit criteria:
 
 ## Phase 5: Tauri Desktop Shell
 
-Status: selected as the next implementation phase.
+Status: minimal scaffold slice completed; next desktop work must stay behind a redacted status boundary.
 
 Goal: add a thin desktop shell around the Rust core after core behavior is stable.
 
 Tasks:
 
-- Start with a minimal scaffold only; do not add production messaging UI in the first slice.
-- Add `apps/desktop-tauri`.
+- Keep `apps/desktop-tauri` as a minimal scaffold only; do not add production messaging UI.
 - Keep cryptographic, storage, transport, and protocol state in Rust.
 - Keep frontend IPC minimal and explicit.
-- Add UI only for currently supported 1:1 prototype flows.
 - Preserve all CLI/core tests.
 - Keep the shell honest about prototype status and avoid secure-release wording.
 - Do not expose Tor/onion hosting, descriptor publication, stream I/O, envelope I/O, push notifications, cloud backup, groups, file transfer, or multi-device features.
 - Keep Tauri out of the root Rust workspace until dependency/build cost is accepted for CI.
-- Commit a Tauri frontend lockfile, but keep full install/build out of lightweight CI until a separate heavy workflow decision.
-- Document local-only desktop commands and platform prerequisites before adding any Tauri build workflow.
+- Keep the committed frontend lockfile current when scaffold dependencies change.
+- Keep full Tauri install/build out of lightweight CI until a separate heavy workflow decision.
+- Keep local-only desktop commands and platform prerequisites documented.
+- Next slice: connect the Tauri `prototype_status` command to a small Rust-owned status adapter without adding interactive messaging, transport bootstrap, or persistence controls.
 
 Exit criteria:
 
@@ -167,6 +167,7 @@ Exit criteria:
 - Existing Rust verification still passes.
 - UI does not imply security readiness.
 - Tauri commands return redacted status/summaries only until a separate UI flow boundary exists.
+- Minimal scaffold static checks pass through `scripts/verify_tauri_scaffold.sh`.
 
 ## Phase 6: Release and Supply-Chain Baseline
 
