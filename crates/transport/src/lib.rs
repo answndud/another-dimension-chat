@@ -58,8 +58,9 @@ pub use key_material::{
     OnionServiceKeyRotationPolicy, OnionServiceKeyStoragePolicy, ProfileTransportUnlockReady,
 };
 pub use launch_descriptor::{
-    DescriptorPublicationFailClosedAdapter, DescriptorPublicationGateDecision,
-    DescriptorPublicationGateReady, OnionEndpointPublicationPolicy, OnionEndpointUpdatePolicy,
+    DescriptorPublicationAttemptIntent, DescriptorPublicationFailClosedAdapter,
+    DescriptorPublicationGateDecision, DescriptorPublicationGateReady,
+    OnionEndpointPublicationPolicy, OnionEndpointUpdatePolicy,
     OnionServiceDescriptorPublicationBoundary, OnionServiceDescriptorPublicationReady,
     OnionServiceLaunchPreflight, OnionServiceLaunchReady,
 };
