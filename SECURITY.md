@@ -29,7 +29,7 @@ This project does not currently claim:
 - Actual onion service private key material.
 - Production unlock/key management.
 - OS keychain/DPAPI/Keystore wrapping.
-- Production encrypted local storage lifecycle.
+- Complete production encrypted local storage lifecycle.
 - Durable production key storage.
 - Durable production session persistence.
 - Replay rollback protection against encrypted database snapshot restore.
