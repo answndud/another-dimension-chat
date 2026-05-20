@@ -1492,38 +1492,6 @@ fn descriptor_publication_preparation_rejects_descriptor_stream_and_messaging_sh
 }
 
 #[test]
-fn descriptor_publication_fail_closed_adapter_records_redacted_event_only() {
-    let gate_ready = ready_descriptor_publication_gate();
-    let adapter = DescriptorPublicationFailClosedAdapter::from_gate_ready(
-        gate_ready,
-        OnionServiceLaunchReady,
-    )
-    .expect("descriptor publication adapter");
-    let mut sink = InMemoryTransportRuntimeEventSink::default();
-
-    assert_eq!(
-        adapter.publish_fail_closed(&mut sink),
-        Err(DescriptorPublicationAdapterError::DescriptorPublicationNotImplemented)
-    );
-    assert_eq!(sink.events().len(), 1);
-    assert_eq!(
-        sink.events()[0].kind(),
-        TransportRuntimeEventKind::RuntimePreflightFailed
-    );
-    assert_eq!(
-        sink.events()[0].runtime_error(),
-        Some(TransportRuntimeError::OnionServiceLaunchFailed)
-    );
-
-    let rendered = format!("{adapter:?}");
-    assert!(rendered.contains("DescriptorPublicationFailClosedAdapter"));
-    assert!(rendered.contains("<not-published>"));
-    assert!(rendered.contains("<redacted>"));
-    assert!(!rendered.contains("example.onion"));
-    assert!(!rendered.contains("alice"));
-}
-
-#[test]
 fn descriptor_publication_attempt_intent_preserves_fail_closed_boundary() {
     let gate_ready = ready_descriptor_publication_gate();
     let adapter = DescriptorPublicationFailClosedAdapter::from_gate_ready(
@@ -1752,35 +1720,6 @@ fn inbound_stream_preparation_rejects_accept_readwrite_envelope_and_messaging_sh
         ),
     ] {
         assert_eq!(boundary.check(), Err(expected));
-    }
-}
-
-#[test]
-fn inbound_stream_fail_closed_adapter_records_redacted_events_only() {
-    let adapter = InboundStreamFailClosedAdapter::from_gate_ready(
-        ready_inbound_stream_gate(),
-        OnionServiceDescriptorPublicationReady,
-    );
-    let mut sink = InMemoryTransportRuntimeEventSink::default();
-
-    assert_eq!(
-        adapter.accept_fail_closed(&mut sink),
-        Err(InboundStreamAdapterError::InboundAcceptNotImplemented)
-    );
-    assert_eq!(
-        adapter.read_write_fail_closed(&mut sink),
-        Err(InboundStreamAdapterError::InboundReadWriteNotImplemented)
-    );
-    assert_eq!(sink.events().len(), 2);
-    for event in sink.events() {
-        assert_eq!(
-            event.kind(),
-            TransportRuntimeEventKind::RuntimePreflightFailed
-        );
-        assert_eq!(
-            event.runtime_error(),
-            Some(TransportRuntimeError::ReceiveFailed)
-        );
     }
 }
 
@@ -2032,38 +1971,6 @@ fn outbound_stream_preparation_rejects_dial_send_envelope_and_messaging_shortcut
         ),
     ] {
         assert_eq!(boundary.check(), Err(expected));
-    }
-}
-
-#[test]
-fn outbound_stream_fail_closed_adapter_records_redacted_events_only() {
-    let adapter = OutboundStreamFailClosedAdapter::from_gate_ready(
-        ready_outbound_stream_gate(),
-        sample_pairwise_endpoint(),
-        TransportPolicy::high_risk_default(),
-    )
-    .expect("outbound stream adapter");
-    let envelope = sample_envelope();
-    let mut sink = InMemoryTransportRuntimeEventSink::default();
-
-    assert_eq!(
-        adapter.dial_fail_closed(&mut sink),
-        Err(OutboundStreamAdapterError::OutboundDialNotImplemented)
-    );
-    assert_eq!(
-        adapter.send_fail_closed(&envelope, &mut sink),
-        Err(OutboundStreamAdapterError::OutboundSendNotImplemented)
-    );
-    assert_eq!(sink.events().len(), 2);
-    for event in sink.events() {
-        assert_eq!(
-            event.kind(),
-            TransportRuntimeEventKind::RuntimePreflightFailed
-        );
-        assert_eq!(
-            event.runtime_error(),
-            Some(TransportRuntimeError::SendFailed)
-        );
     }
 }
 

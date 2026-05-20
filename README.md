@@ -97,6 +97,7 @@ What exists today:
 - Storage boundary review closeout that selects core/storage API cleanup before adding new durable storage features.
 - Core/storage API cleanup that keeps opaque record-id derivation and explicit replay persistence helpers module-private.
 - Core/storage API cleanup closeout that selects transport boundary/test review before any new network behavior.
+- Transport boundary/test review that keeps new network behavior paused and prunes duplicated direct adapter fail-closed event tests in favor of stronger intent-boundary tests.
 - Post-intent stream boundary consolidation review that freezes further stream readiness/intent expansion and selects Arti adapter lifecycle cleanup before adding new network behavior.
 - Transport module decomposition preparation that selects redacted runtime events and event sinks as the first behavior-preserving split target.
 - Extracted transport runtime events module that preserves existing public event and sink names through `crates/transport/src/lib.rs` re-exports.
