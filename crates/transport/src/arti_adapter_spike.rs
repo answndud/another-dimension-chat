@@ -365,6 +365,33 @@ pub struct OnionServiceLaunchAdapterSkeleton {
     owner_summary: PersistentArtiClientLifecycleSummary,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct OnionServiceLaunchAdapterSummary {
+    owner_summary: PersistentArtiClientLifecycleSummary,
+    key_material_ready: bool,
+    launch_descriptor_created: bool,
+}
+
+impl OnionServiceLaunchAdapterSummary {
+    pub fn owner_summary(self) -> PersistentArtiClientLifecycleSummary {
+        self.owner_summary
+    }
+
+    pub fn key_material_ready(self) -> bool {
+        self.key_material_ready
+    }
+
+    pub fn launch_descriptor_created(self) -> bool {
+        self.launch_descriptor_created
+    }
+
+    pub fn can_attempt_fail_closed_launch(self) -> bool {
+        self.owner_summary.can_prepare_onion_launch()
+            && self.key_material_ready
+            && !self.launch_descriptor_created
+    }
+}
+
 impl OnionServiceLaunchAdapterSkeleton {
     pub fn from_ready_owner(
         launch_ready: OnionServiceLaunchReady,
@@ -385,6 +412,14 @@ impl OnionServiceLaunchAdapterSkeleton {
 
     pub fn owner_summary(self) -> PersistentArtiClientLifecycleSummary {
         self.owner_summary
+    }
+
+    pub fn summary(self) -> OnionServiceLaunchAdapterSummary {
+        OnionServiceLaunchAdapterSummary {
+            owner_summary: self.owner_summary,
+            key_material_ready: self._key_material_ready,
+            launch_descriptor_created: false,
+        }
     }
 
     pub fn launch_fail_closed<S: TransportRuntimeEventSink>(
@@ -426,10 +461,15 @@ impl OnionServiceLaunchAdapterSkeleton {
 
 impl fmt::Debug for OnionServiceLaunchAdapterSkeleton {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let summary = self.summary();
         formatter
             .debug_struct("OnionServiceLaunchAdapterSkeleton")
-            .field("owner_state", &self.owner_summary.state())
-            .field("client_owned", &self.owner_summary.client_owned())
+            .field("owner_state", &summary.owner_summary().state())
+            .field("client_owned", &summary.owner_summary().client_owned())
+            .field(
+                "can_attempt_fail_closed_launch",
+                &summary.can_attempt_fail_closed_launch(),
+            )
             .field("key_material", &"<redacted>")
             .field("launch_descriptor", &"<not-created>")
             .field("state_dir", &"<redacted>")
