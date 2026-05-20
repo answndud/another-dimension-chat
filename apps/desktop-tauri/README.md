@@ -20,9 +20,38 @@ npm run dev
 npm run build
 ```
 
+From the repository root:
+
+```bash
+cd apps/desktop-tauri
+npm ci --workspaces=false
+npm run dev
+```
+
+For a local desktop shell run after the frontend dependencies are installed:
+
+```bash
+npm run tauri -- dev
+```
+
 Dependency/build gate:
 
 - `package-lock.json` is committed to pin the scaffold dependency graph.
 - Lightweight CI checks the scaffold shape and lockfile metadata only.
 - Full Tauri install/build is local-only until a separate heavy workflow decision.
 - Do not add production messaging UI or security-sensitive logic to the frontend.
+
+Platform prerequisites:
+
+- Follow the official Tauri v2 prerequisites before running the desktop shell: https://v2.tauri.app/start/prerequisites/
+- macOS requires the platform developer tools required by Tauri.
+- Windows uses Microsoft Edge WebView2 for rendering.
+- Linux requires distribution-specific WebKitGTK and related system packages.
+- Android and iOS are out of scope for this scaffold slice.
+
+Why full Tauri build is not in CI yet:
+
+- The root Rust workspace verification should remain lightweight.
+- Linux Tauri builds require system packages that are not part of the current Rust-only CI image.
+- macOS and Windows builds introduce signing, notarization, SmartScreen, and platform package decisions that are not part of this prototype shell boundary.
+- A separate heavy workflow should be added only after the app shell needs installable artifacts.
