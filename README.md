@@ -21,6 +21,7 @@ What exists today:
 - High-risk transport policy and fail-closed Tor/onion scaffolding: onion-only default routing, direct-route rejection unless explicitly low-risk, Arti-first decisions, app-private directory checks, runtime preflight, redacted runtime events, bridge/censorship configuration boundaries, onion key lifecycle policy, and descriptor/stream/envelope-I/O gates.
 - SQLCipher-backed storage spikes for encrypted record boundaries, passphrase unlock, high-risk unlock policy, replay-window persistence after successful decrypt, pairwise endpoint state, local message indexes, opaque record-id derivation, and internal raw database-key opening only.
 - A read-only Tauri prototype status shell exposing only release-claim, messaging-surface, profile, pairing, transport, and storage boundary state through `prototype_status`.
+- Tauri verification status boundary that exposes lightweight-check status without adding production commands or readiness claims.
 - Lightweight verification scripts, release-hygiene and Tauri-scaffold static verifiers, CLI hardening tests, and GitHub Actions verification.
 - README status compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
 
