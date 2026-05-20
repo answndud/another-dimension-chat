@@ -72,7 +72,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-Redacted descriptor publication context is now a typed boundary via `RedactedDescriptorPublicationContext`. The next transport task is a redacted descriptor context closeout review. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
+Redacted descriptor context closeout chooses inbound stream gate tightening before any real Arti descriptor adapter spike. The next transport task is an inbound stream preparation boundary that remains fail-closed and does not accept/read/write network streams. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
 
 ## Arti Lifecycle Cleanup Closeout
 
