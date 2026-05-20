@@ -16,6 +16,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 - `TransportPolicy::local_only()` allows only local/manual routes.
 - `TransportPolicy::low_risk_direct_allowed()` is the only policy that allows direct peer routes.
 - `TransportRoute` separates onion, local, and direct-peer routes.
+- Local and direct endpoint wrappers are public route contents, but their constructors are internal; callers must create them through explicit `TransportRoute` constructors and policy checks.
 - `EnvelopeTransport` defines minimal send/receive methods over encrypted `Envelope` values.
 - `OnionEnvelopeTransport::fail_closed_high_risk()` enforces high-risk onion-only routing and fails with `TransportError::Unavailable` until a real Tor/onion adapter exists.
 - `TransportRuntimeError` separates future preflight, bootstrap, bridge/censorship, onion service, send, and receive failures before a network-capable adapter exists.
@@ -400,6 +401,17 @@ Preserved invariants:
 Next split target:
 
 - Completed by transport root test module cleanup.
+
+## Transport API Visibility Review
+
+Decision as of 2026-05-20: keep endpoint route construction explicit and policy-checked. `LocalTransportEndpoint` and `DirectPeerEndpoint` remain visible as route variant contents, but their direct constructors are not public API. Callers must use `TransportRoute::local(...)` or `TransportRoute::direct_peer(...)`, and high-risk send/receive still rejects those routes through `TransportPolicy::high_risk_default()`.
+
+This is intentionally only a surface cleanup:
+
+- No direct P2P/WebRTC/libp2p route is enabled as a high-risk default.
+- No real dial, accept, stream I/O, or envelope transfer behavior is added.
+- `TransportPolicy::low_risk_direct_allowed()` remains the explicit opt-in boundary for direct peer routes.
+- `OnionEnvelopeTransport` still checks route policy first and then fails closed with `TransportError::Unavailable`.
 
 ## Transport Error Taxonomy Module Extraction
 

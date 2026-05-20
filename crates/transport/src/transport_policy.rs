@@ -99,7 +99,7 @@ impl TransportRoute {
 pub struct LocalTransportEndpoint(String);
 
 impl LocalTransportEndpoint {
-    pub fn new(value: impl Into<String>) -> Result<Self, TransportError> {
+    fn new(value: impl Into<String>) -> Result<Self, TransportError> {
         let value = value.into();
         if !is_safe_endpoint_token(&value) {
             return Err(TransportError::InvalidEndpoint);
@@ -112,7 +112,7 @@ impl LocalTransportEndpoint {
 pub struct DirectPeerEndpoint(String);
 
 impl DirectPeerEndpoint {
-    pub fn new(value: impl Into<String>) -> Result<Self, TransportError> {
+    fn new(value: impl Into<String>) -> Result<Self, TransportError> {
         let value = value.into();
         if !is_safe_endpoint_token(&value) {
             return Err(TransportError::InvalidEndpoint);
