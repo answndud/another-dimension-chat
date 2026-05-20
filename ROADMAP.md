@@ -157,6 +157,7 @@ Tasks:
 - Preserve all CLI/core tests.
 - Keep the shell honest about prototype status and avoid secure-release wording.
 - Do not expose Tor/onion hosting, descriptor publication, stream I/O, envelope I/O, push notifications, cloud backup, groups, file transfer, or multi-device features.
+- Keep Tauri out of the root Rust workspace until dependency/build cost is accepted for CI.
 
 Exit criteria:
 
