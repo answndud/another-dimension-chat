@@ -391,6 +391,9 @@ fn dev_main() -> Result<(), String> {
     let args = env::args().skip(1).collect::<Vec<_>>();
     let app = DevApp::new(dev_root());
     match args.as_slice() {
+        [cmd, sub] if cmd == "demo" && sub == "local" => {
+            run_dev_local_demo()?;
+        }
         [cmd, sub, name] if cmd == "profile" && sub == "init" => {
             let profile = ProfileName::new(name).map_err(|_| "invalid profile name")?;
             println!("{}", app.init_profile(profile).map_err(format_error)?);
@@ -476,6 +479,129 @@ fn dev_main() -> Result<(), String> {
 }
 
 #[cfg(feature = "dev-insecure")]
+fn run_dev_local_demo() -> Result<(), String> {
+    use another_dimension_core::dev_insecure::DevApp;
+    use another_dimension_identity::{ContactId, ProfileName};
+    use another_dimension_pairing::PairingPayload;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    const MESSAGE: &str = "hello from the dev-insecure local demo";
+
+    struct DemoWorkspace {
+        root: PathBuf,
+    }
+
+    impl Drop for DemoWorkspace {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.root);
+        }
+    }
+
+    let observed_at_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| "system clock unavailable")?
+        .as_millis();
+    let root = std::env::temp_dir().join(format!(
+        "another-dimension-demo-{}-{observed_at_ms}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&root).map_err(|_| "failed to create demo workspace")?;
+    let workspace = DemoWorkspace { root };
+    let app = DevApp::new(workspace.root.join("home"));
+    let alice = ProfileName::new("alice").map_err(|_| "invalid demo profile")?;
+    let bob = ProfileName::new("bob").map_err(|_| "invalid demo profile")?;
+    let alice_contact = ContactId::new("alice").map_err(|_| "invalid demo contact")?;
+    let bob_contact = ContactId::new("bob").map_err(|_| "invalid demo contact")?;
+
+    println!("Another Dimension Chat dev-insecure local demo");
+    println!();
+    println!("This demonstrates the local prototype flow only.");
+    println!("It is not a secure messenger release and does not use real transport.");
+
+    println!();
+    println!("== Create local profiles ==");
+    println!("{}", app.init_profile(alice.clone()).map_err(format_error)?);
+    println!("{}", app.init_profile(bob.clone()).map_err(format_error)?);
+
+    println!();
+    println!("== Exchange pairing payloads ==");
+    let alice_payload = app.pairing_start(alice.clone()).map_err(format_error)?;
+    let bob_scan = app
+        .pairing_scan(
+            bob.clone(),
+            PairingPayload::decode(&alice_payload).map_err(|_| "invalid demo payload")?,
+        )
+        .map_err(format_error)?;
+    let alice_scan = app
+        .pairing_scan(
+            alice.clone(),
+            PairingPayload::decode(&bob_scan.response_payload)
+                .map_err(|_| "invalid demo response payload")?,
+        )
+        .map_err(format_error)?;
+
+    if bob_scan.safety_number != alice_scan.safety_number {
+        return Err("demo safety numbers do not match".to_string());
+    }
+    if bob_scan.safety_phrase != alice_scan.safety_phrase {
+        return Err("demo safety phrases do not match".to_string());
+    }
+
+    println!("safety number: {}", bob_scan.safety_number);
+    println!("safety phrase: {}", bob_scan.safety_phrase);
+
+    println!();
+    println!("== Confirm pairing ==");
+    println!(
+        "{}",
+        app.pairing_confirm(alice.clone(), bob_contact)
+            .map_err(format_error)?
+    );
+    println!(
+        "{}",
+        app.pairing_confirm(bob.clone(), alice_contact)
+            .map_err(format_error)?
+    );
+
+    println!();
+    println!("== Send message ==");
+    println!(
+        "{}",
+        app.message_send(
+            alice,
+            ContactId::new("bob").map_err(|_| "invalid demo contact")?,
+            MESSAGE.to_string()
+        )
+        .map_err(format_error)?
+    );
+
+    println!();
+    println!("== Receive as Bob ==");
+    let received = app.message_receive(bob.clone()).map_err(format_error)?;
+    for message in &received {
+        println!("{message}");
+    }
+    if received != [MESSAGE.to_string()] {
+        return Err("received message did not match demo message".to_string());
+    }
+
+    println!();
+    println!("== Replay check ==");
+    let replayed = app.message_receive(bob).map_err(format_error)?;
+    if !replayed.is_empty() {
+        return Err("second receive returned a replayed message".to_string());
+    }
+    println!("second receive returned no replayed messages");
+
+    println!();
+    println!("== Demo complete ==");
+    println!("dev-insecure local CLI flow completed");
+    Ok(())
+}
+
+#[cfg(feature = "dev-insecure")]
 fn dev_root() -> std::path::PathBuf {
     std::env::var_os("AD_DEV_HOME")
         .map(std::path::PathBuf::from)
@@ -522,6 +648,7 @@ fn format_error(error: another_dimension_core::dev_insecure::CoreError) -> Strin
 #[cfg(feature = "dev-insecure")]
 fn help() -> String {
     "usage:
+  another-dimension demo local
   another-dimension profile init <name>
   another-dimension pairing start --profile <name>
   another-dimension pairing scan --profile <name> <payload-file>
