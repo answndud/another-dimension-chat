@@ -15,6 +15,20 @@ require_contains() {
   fi
 }
 
+require_status_field() {
+  local field="$1"
+  local value="$2"
+
+  require_contains "$TAURI_DIR/src/status.rs" "$field: \"$value\""
+  require_contains "$APP_DIR/src/main.js" "status.$field"
+}
+
+require_status_copy() {
+  local value="$1"
+
+  require_contains "$APP_DIR/index.html" "$value"
+}
+
 required_files=(
   "$APP_DIR/README.md"
   "$APP_DIR/.npmrc"
@@ -46,13 +60,12 @@ require_contains "$TAURI_DIR/src/lib.rs" 'generate_handler!\[prototype_status\]'
 require_contains "$TAURI_DIR/src/status.rs" 'pub fn redacted_prototype_status() -> PrototypeStatus'
 require_contains "$TAURI_DIR/src/status.rs" 'secure_release: false'
 require_contains "$TAURI_DIR/src/status.rs" 'usable_messaging: false'
-require_contains "$TAURI_DIR/src/status.rs" 'profile_status: "profile boundary only"'
-require_contains "$TAURI_DIR/src/status.rs" 'pairing_status: "pairing boundary only"'
-require_contains "$TAURI_DIR/src/status.rs" 'transport_status: "fail-closed boundary only"'
-require_contains "$TAURI_DIR/src/status.rs" 'storage_status: "storage boundary only"'
-require_contains "$TAURI_DIR/src/status.rs" 'verification_status: "lightweight checks only"'
+require_status_field 'profile_status' 'profile boundary only'
+require_status_field 'pairing_status' 'pairing boundary only'
+require_status_field 'transport_status' 'fail-closed boundary only'
+require_status_field 'storage_status' 'storage boundary only'
+require_status_field 'verification_status' 'lightweight checks only'
 require_contains "$APP_DIR/src/main.js" 'invoke("prototype_status")'
-require_contains "$APP_DIR/src/main.js" 'status.verification_status'
 require_contains "$APP_DIR/src/main.js" 'Unexpected release claim'
 require_contains "$APP_DIR/src/main.js" 'Unexpected messaging status'
 require_contains "$APP_DIR/README.md" 'not a production messaging UI'
@@ -60,10 +73,13 @@ require_contains "$APP_DIR/README.md" 'verification boundaries'
 require_contains "$APP_DIR/index.html" 'Prototype shell only'
 require_contains "$APP_DIR/index.html" 'Another Dimension Chat Prototype'
 require_contains "$APP_DIR/index.html" 'Release claim'
-require_contains "$APP_DIR/index.html" 'No secure-release claim'
-require_contains "$APP_DIR/index.html" 'Disabled in prototype'
-require_contains "$APP_DIR/index.html" 'Fail-closed boundary only'
-require_contains "$APP_DIR/index.html" 'Lightweight checks only'
+require_status_copy 'No secure-release claim'
+require_status_copy 'Disabled in prototype'
+require_status_copy 'Profile boundary only'
+require_status_copy 'Pairing boundary only'
+require_status_copy 'Fail-closed boundary only'
+require_status_copy 'Storage boundary only'
+require_status_copy 'Lightweight checks only'
 require_contains "$APP_DIR/.npmrc" '^workspaces=false$'
 require_contains "$APP_DIR/package-lock.json" '"lockfileVersion": 3'
 require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
