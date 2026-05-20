@@ -28,6 +28,7 @@ What exists today:
 - Transport module cleanup that documents the fail-closed module boundary without changing public re-exports or adding network behavior.
 - Implementation backlog selection that chooses Tauri status static-check tightening as the next small, low-cost slice.
 - Tauri status static-check tightening that keeps the same scaffold invariants while making verifier failures easier to diagnose.
+- Tauri status static-check tightening closeout that selects production storage lifecycle cleanup as the next small implementation slice.
 
 What does not exist yet:
 
