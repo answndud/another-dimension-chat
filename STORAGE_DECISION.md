@@ -273,6 +273,8 @@ Message record ids are allocated by `ProductionEnvelopeSession` helpers rather t
 - `local_message_index_record_id` derives a `msgidx_...` id from the session channel id, verified contact id, and message number.
 - Both helpers use domain-separated hashes and do not embed profile names, contact ids, endpoint strings, plaintext channel ids, or message plaintext in the resulting record id.
 
+Endpoint state cleanup uses `ProductionEnvelopeSession::delete_pairwise_endpoint_state`, which accepts a verified `ContactId`, derives the opaque endpoint state record id internally, and removes the encrypted record idempotently. It does not publish descriptors, rotate endpoints, reconnect streams, or claim secure media erasure.
+
 ## Replay Rollback Protection Decision
 
 v0.1 does not claim replay rollback protection against encrypted database snapshot restore.
