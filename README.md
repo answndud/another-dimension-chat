@@ -14,150 +14,15 @@ The current implementation is intentionally limited to a `dev-insecure` CLI flow
 
 What exists today:
 
-- Rust workspace split into `identity`, `pairing`, `crypto`, `protocol`, `transport`, `storage`, and `core` crates.
-- CLI prototype under `apps/cli`.
-- Pairwise profile and contact model.
-- In-person style pairing payload flow.
-- Safety number and safety phrase prototype.
-- Pairing confirm, cancel, and expiry lifecycle.
-- Production-facing Ed25519 key generation, pairing draft, signature, nonce, and safety material boundaries.
-- Production setup, in-memory Noise transport, envelope encryption/decryption, replay rejection, and storage policy boundaries for tests.
-- Transport policy boundary that makes high-risk mode onion-only by default and rejects direct peer routes unless explicitly low-risk.
-- Fail-closed onion transport adapter skeleton with no real network behavior.
-- Arti-first Tor lifecycle decision with C Tor fallback and no system Tor default.
-- Optional compile-only `arti-adapter-spike` feature that keeps transport fail-closed.
-- Arti lifecycle decision that rejects shared default Arti dirs and defers onion service key generation.
-- App-private Arti config builder spike that validates state/cache dirs without bootstrapping Tor.
-- Arti bootstrap preflight boundary that keeps runtime network and onion key generation disabled.
-- Transport runtime error taxonomy for future bootstrap, bridge, preflight, send/receive, and onion launch failures.
-- Transport runtime preflight skeleton with runtime network disabled by default.
-- Transport runtime state skeleton that can become ready only after preflight succeeds.
-- Onion transport skeleton now stores runtime state while keeping send/receive fail-closed.
-- Transport runtime skeleton closeout documenting the remaining gates before network-capable Arti work.
-- Runtime permission and redaction preflight boundary for app-private dirs, backup exclusion, log/crash redaction, and censorship readiness.
-- Runtime state/cache directory probe skeleton with redacted permission failures and no Tor bootstrap.
-- Backup exclusion verification boundary that checks macOS backup-exclusion metadata and fails closed on unsupported platforms.
-- Onion service key lifecycle decision boundary that permits only SQLCipher-wrapped, profile-unlocked key material after backup exclusion verification.
-- Onion service key material adapter boundary that requires profile unlock, lifecycle readiness, and SQLCipher-wrapped key record readiness before launch preflight.
-- Onion service launch preflight boundary that requires profile unlock, key readiness, persistent client readiness, endpoint publication/update policy, and redacted events before any future launch.
-- Onion service descriptor publication boundary that accepts only pairwise rendezvous publication policy and still fails closed without publishing descriptors.
-- Onion inbound stream boundary that requires descriptor-publication readiness and still fails closed for accept/read/write.
-- Onion outbound stream/send boundary that requires a pairwise rendezvous endpoint and onion transport policy while still failing closed for dial/send.
-- Stream peer/session binding boundary that requires a verified pairwise encrypted session before stream I/O can approach envelope send/receive, while still failing closed.
-- Envelope I/O adapter boundary that requires explicit I/O readiness after bound stream/session state and still fails closed for envelope receive/send.
-- Remote peer authentication boundary that requires an authenticated pairwise peer proof before bound stream/session state can be created.
-- Post-auth stream readiness ordering boundary that fixes the typed order from stream/auth/session binding to envelope I/O while still failing closed.
-- Network-capable experiment gate proposal that permits only manual, feature-gated, bootstrap-only experiments with isolated heavy verification.
-- Bootstrap-only experiment decision boundary that treats the existing manual bootstrap/lifecycle smoke path as the only allowed network-capable experiment.
-- Transport phase closeout boundary that selects onion hosting gate work before stream I/O, envelope I/O, or any usable messaging claim.
-- Onion hosting gate boundary that requires transport closeout, manual feature gating, launch preflight, onion key readiness, and a bootstrapped persistent client while still forbidding descriptor publication and stream I/O.
-- Descriptor publication gate boundary that requires onion hosting readiness, pairwise rendezvous-only publication policy, and redacted events while still forbidding stream I/O and usable messaging.
-- Descriptor publication fail-closed adapter boundary that requires descriptor publication gate readiness and records only a redacted event before returning a not-implemented error.
-- Descriptor publication attempt intent boundary that separates publication intent preparation from the fail-closed publish call without enabling real descriptor publication.
-- Descriptor publication preparation boundary that requires gate readiness, fail-closed adapter readiness, redacted descriptor context, and still forbids descriptor body creation, stream I/O, and usable messaging.
-- Descriptor publication preparation closeout that keeps real Arti descriptor publication deferred and selects redacted descriptor context tightening as the next non-network boundary.
-- Redacted descriptor publication context boundary that replaces boolean redaction flags with a typed redacted context and rejects raw descriptor context before publication preparation.
-- Redacted descriptor context closeout that keeps real Arti descriptor publication deferred and selects inbound stream preparation tightening as the next fail-closed boundary.
-- Inbound stream gate boundary that requires descriptor publication gate and adapter readiness while still forbidding accept, read/write, envelope I/O, and usable messaging.
-- Inbound stream preparation boundary that requires inbound gate readiness and fail-closed adapter readiness while still forbidding accept, read/write, envelope I/O, and usable messaging.
-- Inbound stream preparation closeout that selects symmetric outbound stream preparation as the next fail-closed boundary before further stream intent ordering.
-- Inbound stream fail-closed adapter boundary that requires inbound stream gate readiness and records only redacted events before returning accept/read-write not-implemented errors.
-- Inbound stream accept/read-write intent boundaries that separate descriptor-backed adapter readiness from fail-closed inbound stream calls.
-- Outbound stream gate boundary that requires a pairwise rendezvous endpoint and high-risk onion-only policy while still forbidding dial, send, envelope I/O, and usable messaging.
-- Outbound stream preparation boundary that requires outbound gate readiness and fail-closed adapter readiness while still forbidding dial, send, envelope I/O, and usable messaging.
-- Stream preparation closeout that selects preparation-aware stream adapter closeout before session-binding ordering.
-- Outbound stream fail-closed adapter boundary that requires outbound stream gate readiness and records only redacted events before returning dial/send not-implemented errors.
-- Outbound stream dial/send intent boundaries that separate adapter readiness from fail-closed dial/send calls without enabling real network stream I/O.
-- Stream adapter closeout intent boundary that requires both inbound and outbound fail-closed adapters before closeout readiness can be checked.
-- Stream adapter closeout boundary that requires both inbound and outbound fail-closed adapters before session binding can be considered, while still forbidding bound-session shortcuts, envelope I/O, and usable messaging.
-- Preparation-aware stream adapter closeout that now requires inbound and outbound preparation readiness in addition to fail-closed adapters before session binding can be considered.
-- Stream closeout integration ordering boundary that places remote peer authentication after stream adapter closeout and verified pairwise session binding after remote peer authentication, while still forbidding envelope I/O and usable messaging.
-- Preparation-aware stream closeout integration ordering now names preparation-aware closeout readiness as the required predecessor before remote authentication and session binding.
-- Stream closeout integration closeout that selects remote peer authentication context tightening before further session-binding expansion.
-- Redacted remote peer authentication context boundary that rejects unauthenticated peers and unredacted proof/transcript/endpoint context before remote authentication readiness can be created.
-- Remote peer authentication context closeout that selects pairwise stream session binding context tightening before adding more stream behavior.
-- Redacted pairwise stream session verification context boundary that rejects unverified sessions and unredacted session proof/transcript/endpoint context before stream session binding can be created.
-- Pairwise session binding context closeout that selects envelope I/O readiness tightening before any envelope send/receive behavior.
-- Fail-closed envelope I/O readiness boundary that rejects unredacted envelope body/metadata context before inbound/outbound envelope adapter boundaries can be created.
-- Envelope I/O readiness closeout that pauses additional stream boundary expansion and returns to endpoint rotation apply/reconnect boundary work.
-- Tauri prototype status contract that exposes only redacted release, messaging, profile, pairing, transport, and storage boundary state through the existing `prototype_status` command.
-- Tauri prototype status closeout that keeps the desktop command surface frozen and selects a lightweight repository review before adding more UI or core boundaries.
-- Public documentation drift closeout that selects core production session lifecycle API cleanup as the next implementation phase.
-- Core session lifecycle cleanup closeout that selects public CLI boundary cleanup before storage persistence expansion.
-- Public CLI boundary cleanup that makes the default build help/error output list only boundary commands and repeat the non-secure-release claim.
-- Public CLI cleanup closeout that selects production self-test boundary expansion before storage persistence or release hygiene.
-- Production self-test boundary expansion that also checks tampered ciphertext rejection and replay-state non-advance without changing CLI output or enabling messaging.
-- Production self-test closeout that selects CLI self-test documentation cleanup before release hygiene or storage review.
-- CLI self-test documentation closeout that selects public release hygiene boundary before storage review or new features.
-- Public release hygiene boundary that statically checks non-release metadata, Tauri private package status, public non-claims, and ignored private docs.
-- Public release hygiene closeout that selects lightweight verification wiring for the release hygiene check before storage review.
-- Release hygiene verification wiring that runs the release hygiene static check through the canonical lightweight `scripts/verify_all.sh` path.
-- Release hygiene verification wiring closeout that selects storage boundary review before any storage persistence expansion.
-- Storage boundary review that keeps persistence expansion paused and trims duplicated deletion-helper tests without weakening storage invariants.
-- Storage boundary review closeout that selects core/storage API cleanup before adding new durable storage features.
-- Core/storage API cleanup that keeps opaque record-id derivation and explicit replay persistence helpers module-private.
-- Core/storage API cleanup closeout that selects transport boundary/test review before any new network behavior.
-- Transport boundary/test review that keeps new network behavior paused and prunes duplicated direct adapter fail-closed event tests in favor of stronger intent-boundary tests.
-- Transport boundary/test review closeout that selects Tauri status boundary cleanup before UI feature expansion.
-- Tauri status boundary cleanup that changes desktop status copy to release-claim and boundary-only labels without adding UI flows or readiness claims.
-- Tauri status boundary cleanup closeout that selects README current-boundary compaction before adding more public-facing surface.
-- Post-intent stream boundary consolidation review that freezes further stream readiness/intent expansion and selects Arti adapter lifecycle cleanup before adding new network behavior.
-- Transport module decomposition preparation that selects redacted runtime events and event sinks as the first behavior-preserving split target.
-- Extracted transport runtime events module that preserves existing public event and sink names through `crates/transport/src/lib.rs` re-exports.
-- Extracted bootstrap policy module that preserves bounded bootstrap policy and fail-closed execution skeleton behavior through `crates/transport/src/lib.rs` re-exports.
-- Extracted runtime preflight module that preserves runtime readiness, app-private directory probing, backup exclusion, and bridge/censorship readiness behavior through `crates/transport/src/lib.rs` re-exports.
-- Extracted endpoint state module that preserves onion endpoint validation, pairwise rendezvous endpoint state, endpoint rotation state, and encrypted endpoint-update control-envelope behavior through `crates/transport/src/lib.rs` re-exports.
-- Extracted stream session boundary module that preserves verified session binding, remote peer authentication, bound stream session, envelope I/O readiness, and stream closeout ordering behavior through `crates/transport/src/lib.rs` re-exports.
-- Extracted stream gate module that preserves inbound/outbound stream gate decisions and fail-closed stream adapter behavior through `crates/transport/src/lib.rs` re-exports.
-- Extracted launch/descriptor boundary module that preserves onion service launch preflight, descriptor publication boundary/gate, and descriptor fail-closed adapter behavior through `crates/transport/src/lib.rs` re-exports.
-- Extracted hosting/phase gate module that preserves network experiment gating, bootstrap-only experiment decisions, transport phase closeout, and onion hosting gate behavior through `crates/transport/src/lib.rs` re-exports.
-- Extracted key lifecycle/material module that preserves profile unlock readiness, onion service key lifecycle policy, wrapped key record readiness, and redacted key-material debug behavior through `crates/transport/src/lib.rs` re-exports.
-- Extracted pre-network closeout module that preserves blocker ordering, next-phase selection, and network execution gating through `crates/transport/src/lib.rs` re-exports.
-- Extracted onion stream boundary module that preserves inbound descriptor-readiness gating, outbound pairwise endpoint policy checks, redacted debug output, and fail-closed accept/dial/send behavior through `crates/transport/src/lib.rs` re-exports.
-- Extracted Arti lifecycle and adapter-spike modules that preserve app-private Arti directory validation, bounded bootstrap adapter behavior, persistent client lifecycle, launch adapter skeleton, and manual bootstrap gates.
-- Extracted transport error taxonomy module that preserves public error names and runtime-error classification while reducing the transport root surface.
-- Extracted transport policy/envelope skeleton module that preserves high-risk onion-only route policy and fail-closed envelope transport behavior through `crates/transport/src/lib.rs` re-exports.
-- Moved transport crate tests into `crates/transport/src/tests.rs`, leaving the transport root focused on module wiring, public re-exports, and the dev-insecure prototype transport.
-- Extracted the `dev-insecure` prototype transport module, keeping it feature-gated and separate from production transport boundaries.
-- Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
-- Encrypted endpoint update control-envelope boundary that pads endpoint rotation plaintext before Noise encryption and wraps only opaque control ciphertext after a validated pairwise update.
-- Endpoint rotation reconnect intent boundary that can be created only after applying a verified pending rotation and still fails closed without network reconnect.
-- Production envelope session hook for endpoint update control encryption/decryption without Tor delivery or onion hosting.
-- SQLCipher-backed pairwise rendezvous endpoint state persistence boundary with session/contact-scoped opaque record ids.
-- Fail-closed onion service launch adapter skeleton gated by launch preflight readiness and a bootstrapped persistent Arti client owner.
-- Endpoint rotation apply/reconnect boundary that stages verified updates, rejects stale or rollback updates, and keeps reconnect fail-closed.
-- Production session plans validate signed pairing rendezvous endpoints as pairwise onion endpoints, reject shared rendezvous endpoints, and keep endpoint identity separated from pairwise identity keys.
-- Deterministic duplicate-connection tie-break boundary derived from pairwise public-key ranks: the canonical dialer owns outbound, the responder owns inbound, and duplicate connections close only after the canonical connection is authenticated and healthy.
-- Core production session lifecycle API cleanup that exposes canonical direction checks and direction inversion through explicit helpers while preserving deterministic duplicate-connection behavior.
-- Phase 4 non-network transport boundary closeout: Arti-first, pairwise endpoint validation, encrypted-session endpoint rotation, deterministic duplicate handling, and fail-closed hosting readiness are in place while descriptor publication and stream I/O remain blocked.
-- Bridge/censorship configuration decision boundary that rejects raw bridge lines and accepts only explicit no-bridge or redacted bridge-config readiness.
-- Redacted transport runtime event boundary for logs/crash contexts without raw paths, endpoints, contact ids, profile names, plaintext, or key material.
-- Runtime event sink boundary that accepts only redacted transport events.
-- Arti bootstrap timeout/retry/cancellation policy boundary without opening network connections.
-- Arti bootstrap execution skeleton that requires runtime readiness, bounded bootstrap policy, and redacted event sink while still failing closed.
-- Bounded Arti bootstrap adapter spike that binds app-private config, runtime readiness, bounded policy, and redacted event reporting while still failing closed.
-- Manual Arti bootstrap attempt gate with redacted summary predicates, behind an explicit feature/API, disabled by default and still separate from send/receive or onion hosting.
-- Local-only manual bootstrap CLI gate that requires explicit app-private dirs and `--execute-network` before attempting network bootstrap.
-- Profile-scoped transport directory resolver for app-private Arti state/cache directories, with redacted CLI output.
-- Persistent Arti client lifecycle owner boundary with redacted summary predicates for bootstrapped-client ownership before onion launch preparation.
-- Persistent Arti manual bootstrap disabled path now uses the same redacted attempt-summary predicate as the one-shot manual gate.
-- Onion service launch adapter summary boundary that exposes only owner readiness, key-material readiness, and no-descriptor-created state while staying fail-closed.
-- Arti lifecycle cleanup closeout that keeps future network-capable work behind separate bootstrap, hosting, stream, and envelope-I/O decisions.
-- Local-only manual lifecycle bootstrap CLI gate that smoke-tests persistent owner state without send/receive or onion hosting.
-- Pre-network transport closeout boundary that blocks network execution until backup exclusion, onion service key lifecycle, and bridge/censorship decisions are cleared.
-- Phase 4 first-slice decision: Arti-first remains the first prototype path, bundled C Tor is deferred as a fallback decision, system Tor is not the default, and the next transport work is a bootstrap-to-hosting readiness audit before descriptor publication or stream I/O.
-- Arti bootstrap-to-hosting readiness audit boundary that binds the launch adapter summary to the onion hosting gate without enabling descriptor publication, stream I/O, or usable messaging.
-- SQLCipher-backed `ADREC1` storage spike with test-only key construction.
-- Passphrase unlock boundary tests for SQLCipher storage.
-- High-risk unlock policy tests that reject OS-keystore-only unlock.
-- First durable replay-window record wiring through SQLCipher storage.
-- Core receive boundary that saves replay state only after successful decrypt.
-- Session-scoped opaque replay record id derivation for the production receive boundary.
-- Padded message envelope prototype.
-- Replay window prototype.
-- CLI hardening tests for malformed input, duplicate pairing scans, replay handling, message expiry, and prototype boundary behavior.
-- Local smoke test scripts.
-- GitHub Actions verification workflow.
+- Rust workspace split into `identity`, `pairing`, `crypto`, `protocol`, `transport`, `storage`, and `core` crates, plus CLI and Tauri prototype shells.
+- A `dev-insecure` CLI flow for local pairing and message-flow experimentation only.
+- Pairwise profile/contact, pairing payload, safety number, pairing lifecycle, padded envelope, and replay-window prototypes.
+- Production-facing guardrails for Ed25519 pairwise identity material, signed pairing drafts, Noise-based session setup smoke tests, envelope encryption/decryption, replay rejection, endpoint update control envelopes, deterministic duplicate-connection tie-breaks, and local storage policy checks.
+- A high-risk transport policy boundary that is onion-only by default and rejects direct peer routes unless explicitly low-risk.
+- Fail-closed Tor/onion transport scaffolding: Arti-first decisions, app-private directory checks, runtime preflight, redacted runtime events, bridge/censorship configuration boundaries, onion key lifecycle policy, descriptor/stream/envelope-I/O gates, and manual bootstrap/lifecycle spikes that remain separate from messaging.
+- SQLCipher-backed storage spikes for encrypted record boundaries, passphrase unlock, high-risk unlock policy, replay-window persistence after successful decrypt, pairwise endpoint state, local message indexes, and opaque record-id derivation.
+- A read-only Tauri prototype status shell exposing only release-claim, messaging-surface, profile, pairing, transport, and storage boundary state through `prototype_status`.
+- Static release-hygiene and Tauri-scaffold verifiers, lightweight local verification scripts, CLI hardening tests, and GitHub Actions verification.
 
 What does not exist yet:
 
