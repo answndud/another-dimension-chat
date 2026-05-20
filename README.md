@@ -75,6 +75,7 @@ What exists today:
 - Preparation-aware stream closeout integration ordering now names preparation-aware closeout readiness as the required predecessor before remote authentication and session binding.
 - Stream closeout integration closeout that selects remote peer authentication context tightening before further session-binding expansion.
 - Redacted remote peer authentication context boundary that rejects unauthenticated peers and unredacted proof/transcript/endpoint context before remote authentication readiness can be created.
+- Remote peer authentication context closeout that selects pairwise stream session binding context tightening before adding more stream behavior.
 - Post-intent stream boundary consolidation review that freezes further stream readiness/intent expansion and selects Arti adapter lifecycle cleanup before adding new network behavior.
 - Transport module decomposition preparation that selects redacted runtime events and event sinks as the first behavior-preserving split target.
 - Extracted transport runtime events module that preserves existing public event and sink names through `crates/transport/src/lib.rs` re-exports.

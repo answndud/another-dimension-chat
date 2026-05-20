@@ -76,7 +76,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-Remote peer authentication context tightening is implemented: readiness now requires `RedactedRemotePeerAuthenticationContext`, rejects unauthenticated peers, and rejects unredacted proof/transcript/endpoint context. The next transport task is remote peer authentication context tightening closeout: decide whether session-binding context needs the same treatment or whether stream boundary expansion should pause. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
+Remote peer authentication context tightening closeout chooses pairwise stream session binding context tightening before adding more stream behavior. `StreamSessionVerificationContext::VerifiedPairwiseEncryptedSession` is still a boolean-like context, so the next transport task is to replace it with a typed redacted verified-session context. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
 
 ## Arti Lifecycle Cleanup Closeout
 
