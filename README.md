@@ -60,6 +60,7 @@ What exists today:
 - Outbound stream gate boundary that requires a pairwise rendezvous endpoint and high-risk onion-only policy while still forbidding dial, send, envelope I/O, and usable messaging.
 - Outbound stream fail-closed adapter boundary that requires outbound stream gate readiness and records only redacted events before returning dial/send not-implemented errors.
 - Outbound stream dial/send intent boundaries that separate adapter readiness from fail-closed dial/send calls without enabling real network stream I/O.
+- Stream adapter closeout intent boundary that requires both inbound and outbound fail-closed adapters before closeout readiness can be checked.
 - Stream adapter closeout boundary that requires both inbound and outbound fail-closed adapters before session binding can be considered, while still forbidding bound-session shortcuts, envelope I/O, and usable messaging.
 - Stream closeout integration ordering boundary that places remote peer authentication after stream adapter closeout and verified pairwise session binding after remote peer authentication, while still forbidding envelope I/O and usable messaging.
 - Stream boundary consolidation review that freezes further stream readiness-token expansion and selects cleanup/module decomposition before adding new network behavior.

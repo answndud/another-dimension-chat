@@ -1831,6 +1831,27 @@ fn stream_adapter_closeout_requires_inbound_and_outbound_fail_closed_adapters() 
 }
 
 #[test]
+fn stream_adapter_closeout_intent_preserves_fail_closed_boundary() {
+    let intent = StreamAdapterCloseoutIntent::from_fail_closed_adapters(
+        &sample_inbound_stream_fail_closed_adapter(),
+        &sample_outbound_stream_fail_closed_adapter(),
+    );
+
+    assert_eq!(intent.check(), Ok(StreamAdapterCloseoutReady));
+
+    let rendered = format!("{intent:?}");
+    assert!(rendered.contains("StreamAdapterCloseoutIntent"));
+    assert!(rendered.contains("<ready>"));
+    assert!(rendered.contains("<required-next>"));
+    assert!(rendered.contains("<forbidden>"));
+    assert!(!rendered.contains("example.onion"));
+    assert!(!rendered.contains("alice"));
+    assert!(!rendered.contains("bob"));
+    assert!(!rendered.contains("stream-1"));
+    assert!(!rendered.contains("ciphertext"));
+}
+
+#[test]
 fn stream_adapter_closeout_requires_authentication_and_session_boundaries() {
     let decision = StreamAdapterCloseoutDecision::from_fail_closed_adapters(
         &sample_inbound_stream_fail_closed_adapter(),
