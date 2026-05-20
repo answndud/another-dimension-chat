@@ -35,6 +35,7 @@ What exists today:
 - Transport API visibility review that keeps local/direct endpoint construction behind explicit `TransportRoute` constructors and policy checks.
 - Production self-test small expansion closeout that keeps the added transport-policy check framed as a local boundary test, not usable transport.
 - CLI self-test verifier static tightening that checks release hygiene wording for self-test transport fail-closed non-claims.
+- CLI self-test verifier static tightening closeout that selects warning/dependency cleanup as the next lightweight slice.
 
 What does not exist yet:
 
