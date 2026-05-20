@@ -25,6 +25,7 @@ The repository currently has:
 - Durable `ReplayWindowState` storage through `SqlCipherRecordStore`.
 - Tests that replay state does not appear as plaintext database bytes.
 - Core receive boundary that persists replay state only after successful decrypt/replay acceptance.
+- Local record lifecycle deletion helpers for encrypted records, replay state, message envelopes, local message indexes, and pairwise endpoint state.
 
 The repository does not currently have:
 
@@ -38,6 +39,31 @@ The repository does not currently have:
 - Production OS keychain/DPAPI/Keystore wrapping.
 - Production account recovery or key rotation.
 - Record-level encryption implementation. `ADREC1` is a container format, not an encryption algorithm.
+- Full production message persistence and local message index schema.
+
+## Phase 3 Exit Criteria Review
+
+Current Phase 3 status remains in progress.
+
+Satisfied or partially satisfied:
+
+- Production storage classification exists and rejects plaintext persistence for sensitive production record kinds.
+- SQLCipher-backed record storage exists for `ADREC1` records.
+- Development file storage remains behind the `dev-insecure` feature.
+- Replay state is stored through SQLCipher and committed only after successful decrypt/replay acceptance.
+- Record lifecycle deletion helpers exist for encrypted records, replay state, message envelopes, local message indexes, and pairwise endpoint state.
+- Public documentation avoids secure media erasure and replay rollback-protection claims.
+
+Still incomplete:
+
+- Full production message persistence and local message index schema.
+- Durable production private key storage.
+- Production key wrapping, KDF parameters, and OS keychain/DPAPI/Keystore integration.
+- Migration from `dev-insecure` prototype data.
+- Replay rollback protection.
+- Secure deletion from physical media.
+
+Next implementation direction: keep Phase 3 open and add a minimal local message index persistence skeleton before declaring the storage lifecycle boundary ready for the next major phase.
 
 ## Production Storage Classes
 
