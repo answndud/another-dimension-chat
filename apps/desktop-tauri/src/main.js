@@ -8,6 +8,7 @@ const fields = {
   profile: document.querySelector("#profile"),
   pairing: document.querySelector("#pairing"),
   transport: document.querySelector("#transport"),
+  networkExecution: document.querySelector("#network-execution"),
   storage: document.querySelector("#storage"),
   verification: document.querySelector("#verification"),
 };
@@ -34,6 +35,7 @@ async function renderPrototypeStatus() {
     setText(fields.profile, status.profile_status);
     setText(fields.pairing, status.pairing_status);
     setText(fields.transport, status.transport_status);
+    setText(fields.networkExecution, status.network_execution_status);
     setText(fields.storage, status.storage_status);
     setText(fields.verification, status.verification_status);
   } catch (_error) {
@@ -43,6 +45,7 @@ async function renderPrototypeStatus() {
     setText(fields.profile, "Profile boundary only");
     setText(fields.pairing, "Pairing boundary only");
     setText(fields.transport, "Pre-network fail-closed only");
+    setText(fields.networkExecution, "Network execution disabled");
     setText(fields.storage, "ADREC1 storage spike only");
     setText(fields.verification, "Lightweight checks only");
   }

@@ -22,9 +22,9 @@ What exists today:
 - Transport pre-network docs alignment that treats blocker closeout as entry to a bounded fail-closed skeleton, not usable network execution.
 - Transport pre-network verifier guard that keeps bounded-fail-closed and no-socket/bootstrap/hosting/transfer non-claims checked in release hygiene.
 - SQLCipher-backed storage spikes for `ADREC1` record containers, passphrase unlock, high-risk unlock policy, replay-window persistence after successful decrypt, pairwise endpoint state, local message indexes, opaque record-id derivation, and internal raw database-key opening only.
-- Storage lifecycle docs alignment that separates the narrow SQLCipher spike from deferred key management, rollback, secure deletion, backup, recovery, and durable session persistence work.
+- Storage lifecycle docs alignment that separates the narrow SQLCipher spike from deferred key management, rollback, secure deletion, backup, recovery, and durable session persistence work; it is not a complete production encrypted local storage lifecycle.
 - Storage lifecycle verifier guard that keeps `ADREC1` container wording and complete-storage-lifecycle non-claims checked in release hygiene.
-- A read-only Tauri prototype status shell exposing only redacted release-claim, messaging-surface, core, profile, pairing, transport, storage, and verification boundary state through `prototype_status`.
+- A read-only Tauri prototype status shell exposing only redacted release-claim, messaging-surface, core, profile, pairing, transport, network-execution, storage, and verification boundary state through `prototype_status`.
 - Tauri status docs alignment that clarifies core status is static boundary copy, not a production core runtime call.
 - Tauri verification status boundary that exposes lightweight-check status without adding production commands or readiness claims.
 - Tauri scaffold verifier cleanup that keeps status field and static copy checks aligned without adding build cost.
@@ -135,7 +135,7 @@ This additionally runs:
 
 The CLI commands require the `dev-insecure` feature.
 
-The default build exposes only a local production-boundary self-test. Here, "production" means the default non-`dev-insecure` build boundary, not deployable security. It checks setup, envelope encryption/decryption, replay rejection, tampered ciphertext rejection, replay-state non-advance after tamper in memory, and high-risk transport policy/fail-closed behavior. It does not send messages, persist keys, bootstrap transport, or create a secure messenger release:
+The default build exposes only a local production-boundary self-test. Here, "production" means the default non-`dev-insecure` build boundary, not deployable security. It checks setup, envelope encryption/decryption, replay rejection, tampered ciphertext rejection, replay-state non-advance after tamper in memory, and high-risk transport policy/fail-closed behavior. It does not send messages, persist keys, bootstrap transport, perform network I/O, unlock local storage, or create a secure messenger release:
 
 ```bash
 cargo run -q -- production self-test

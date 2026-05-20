@@ -9,9 +9,10 @@ Current boundary:
 - Tauri shell only.
 - Rust owns security-sensitive state and future protocol/storage/transport behavior.
 - Frontend may request redacted prototype status only.
-- Redacted status separates release-claim, messaging-surface, core, profile, pairing, transport, storage, and verification boundaries without exposing profile/contact/endpoint data.
+- Redacted status separates release-claim, messaging-surface, core, profile, pairing, transport, network-execution, storage, and verification boundaries without exposing profile/contact/endpoint data.
 - The core status is static boundary copy in this scaffold; it does not link or call production core protocol, storage, or transport code.
 - The transport status is static pre-network fail-closed copy; it does not bootstrap Tor, host onion services, publish descriptors, open streams, or transfer envelopes.
+- The network-execution status is static disabled copy; it does not grant socket, Tor bootstrap, onion hosting, stream, or envelope transfer permission.
 - The storage status is static `ADREC1` spike copy; it does not claim complete production key management, rollback protection, secure deletion, backup, recovery, or durable session persistence.
 - Status copy must describe boundary-only or disabled prototype states, not readiness, availability, or secure-release claims.
 - The only allowed Tauri command in this scaffold is `prototype_status`.

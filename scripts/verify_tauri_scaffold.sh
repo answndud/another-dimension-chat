@@ -64,6 +64,7 @@ require_status_field 'core_status' 'core boundary only'
 require_status_field 'profile_status' 'profile boundary only'
 require_status_field 'pairing_status' 'pairing boundary only'
 require_status_field 'transport_status' 'pre-network fail-closed only'
+require_status_field 'network_execution_status' 'network execution disabled'
 require_status_field 'storage_status' 'ADREC1 storage spike only'
 require_status_field 'verification_status' 'lightweight checks only'
 require_contains "$APP_DIR/src/main.js" 'invoke("prototype_status")'
@@ -73,6 +74,8 @@ require_contains "$APP_DIR/README.md" 'not a production messaging UI'
 require_contains "$APP_DIR/README.md" 'core, profile'
 require_contains "$APP_DIR/README.md" 'does not link or call production core protocol'
 require_contains "$APP_DIR/README.md" 'static pre-network fail-closed copy'
+require_contains "$APP_DIR/README.md" 'network-execution'
+require_contains "$APP_DIR/README.md" 'static disabled copy'
 require_contains "$APP_DIR/README.md" 'static `ADREC1` spike copy'
 require_contains "$APP_DIR/README.md" 'does not claim complete production key management'
 require_contains "$APP_DIR/README.md" 'verification boundaries'
@@ -85,6 +88,7 @@ require_status_copy 'Core boundary only'
 require_status_copy 'Profile boundary only'
 require_status_copy 'Pairing boundary only'
 require_status_copy 'Pre-network fail-closed only'
+require_status_copy 'Network execution disabled'
 require_status_copy 'ADREC1 storage spike only'
 require_status_copy 'Lightweight checks only'
 require_contains "$APP_DIR/.npmrc" '^workspaces=false$'
@@ -105,7 +109,7 @@ if grep -n '\btrue\b' "$TAURI_DIR/src/status.rs" >/dev/null; then
   exit 1
 fi
 
-if grep -n -E 'secure_release:|usable_messaging:|core_status:|profile_status:|pairing_status:|transport_status:|storage_status:|verification_status:' "$TAURI_DIR/src/lib.rs" >/dev/null; then
+if grep -n -E 'secure_release:|usable_messaging:|core_status:|profile_status:|pairing_status:|transport_status:|network_execution_status:|storage_status:|verification_status:' "$TAURI_DIR/src/lib.rs" >/dev/null; then
   echo "Tauri command wrapper must delegate status construction to status.rs" >&2
   exit 1
 fi
