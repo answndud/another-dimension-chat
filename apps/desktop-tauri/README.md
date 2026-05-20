@@ -9,6 +9,7 @@ Current boundary:
 - Tauri shell only.
 - Rust owns security-sensitive state and future protocol/storage/transport behavior.
 - Frontend may request redacted prototype status only.
+- Redacted status separates release, messaging, profile, pairing, transport, and storage boundaries without exposing profile/contact/endpoint data.
 - The only allowed Tauri command in this scaffold is `prototype_status`.
 - No Tor bootstrap, onion hosting, descriptor publication, stream I/O, envelope I/O, push notifications, cloud backup, groups, file transfer, or multi-device support.
 - `src-tauri` is excluded from the root Cargo workspace until the Tauri dependency and platform build costs are accepted as a separate phase.
