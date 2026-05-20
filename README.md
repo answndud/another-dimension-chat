@@ -192,6 +192,7 @@ scripts/smoke_dev_cli.sh
 For a readable local demo of the same `dev-insecure` prototype flow:
 
 ```bash
+cargo run -q --features dev-insecure -- demo local
 scripts/demo_dev_cli.sh
 ```
 

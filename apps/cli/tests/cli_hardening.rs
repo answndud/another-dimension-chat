@@ -247,6 +247,25 @@ fn malformed_command_prints_help_and_fails() {
 
 #[test]
 #[cfg(feature = "dev-insecure")]
+fn local_demo_runs_complete_flow() {
+    let output = run(&["demo", "local"]);
+    let out = stdout(&output);
+    let error = stderr(&output);
+
+    assert!(output.status.success());
+    assert!(error.contains("WARNING: dev-insecure build. Not for real communication."));
+    assert!(out.contains("Another Dimension Chat dev-insecure local demo"));
+    assert!(out.contains("not a secure messenger release"));
+    assert!(out.contains("does not use real transport"));
+    assert!(out.contains("safety number: "));
+    assert!(out.contains("safety phrase: "));
+    assert!(out.contains("hello from the dev-insecure local demo"));
+    assert!(out.contains("second receive returned no replayed messages"));
+    assert!(out.contains("dev-insecure local CLI flow completed"));
+}
+
+#[test]
+#[cfg(feature = "dev-insecure")]
 fn message_send_without_text_fails() {
     let output = run(&["message", "send", "--from", "alice", "--to", "bob"]);
     let error = stderr(&output);
