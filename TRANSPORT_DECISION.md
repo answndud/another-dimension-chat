@@ -57,7 +57,30 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next documented boundary selection after descriptor publication attempt intent integration. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+Continue transport work with the next documented boundary selection after outbound stream attempt intent integration. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+
+## Outbound Stream Attempt Intent Boundary
+
+Decision as of 2026-05-20: outbound stream dial/send now have explicit intent tokens between the fail-closed adapter and the dial/send calls. These intents can only be prepared from `OutboundStreamFailClosedAdapter`, which already requires outbound stream gate readiness, a pairwise rendezvous endpoint, and high-risk onion policy. The intents still cannot dial or send on a network stream.
+
+Moved forward without enabling network behavior:
+
+- `OutboundStreamDialIntent`
+- `OutboundStreamSendIntent`
+- `OutboundStreamFailClosedAdapter::prepare_dial_intent()`
+- `OutboundStreamFailClosedAdapter::prepare_send_intent(...)`
+
+Preserved invariants:
+
+- Adapter creation still requires `OutboundStreamGateReady`.
+- Outbound stream readiness still requires a pairwise rendezvous endpoint and high-risk onion-only policy.
+- Dial/send attempts still record only redacted runtime events and return not-implemented errors.
+- Debug output for dial/send intents redacts endpoint, stream, contact, profile, and envelope material.
+- No real dial, send, stream I/O, envelope send/receive, descriptor publication, or usable messaging capability was added.
+
+Next split target:
+
+- Select the next documented transport boundary.
 
 ## Descriptor Publication Attempt Intent Boundary
 

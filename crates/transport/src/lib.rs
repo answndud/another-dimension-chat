@@ -83,7 +83,8 @@ pub use runtime_preflight::{
 };
 pub use stream_gate::{
     InboundStreamFailClosedAdapter, InboundStreamGateDecision, InboundStreamGateReady,
-    OutboundStreamFailClosedAdapter, OutboundStreamGateDecision, OutboundStreamGateReady,
+    OutboundStreamDialIntent, OutboundStreamFailClosedAdapter, OutboundStreamGateDecision,
+    OutboundStreamGateReady, OutboundStreamSendIntent,
 };
 pub use stream_session::{
     BoundInboundStreamSession, BoundOutboundStreamSession, EnvelopeIoAdapterReady,

@@ -1727,6 +1727,53 @@ fn outbound_stream_fail_closed_adapter_records_redacted_events_only() {
 }
 
 #[test]
+fn outbound_stream_attempt_intents_preserve_fail_closed_boundary() {
+    let adapter = OutboundStreamFailClosedAdapter::from_gate_ready(
+        ready_outbound_stream_gate(),
+        sample_pairwise_endpoint(),
+        TransportPolicy::high_risk_default(),
+    )
+    .expect("outbound stream adapter");
+    let envelope = sample_envelope();
+    let dial_intent = adapter.prepare_dial_intent();
+    let send_intent = adapter.prepare_send_intent(&envelope);
+
+    let dial_debug = format!("{dial_intent:?}");
+    assert!(dial_debug.contains("OutboundStreamDialIntent"));
+    assert!(dial_debug.contains("<redacted>"));
+    assert!(dial_debug.contains("HighRiskOnionOnly"));
+    assert!(!dial_debug.contains("example.onion"));
+    assert!(!dial_debug.contains("alice"));
+    assert!(!dial_debug.contains("bob"));
+
+    let send_debug = format!("{send_intent:?}");
+    assert!(send_debug.contains("OutboundStreamSendIntent"));
+    assert!(send_debug.contains("<redacted>"));
+    assert!(send_debug.contains("HighRiskOnionOnly"));
+    assert!(!send_debug.contains("example.onion"));
+    assert!(!send_debug.contains("alice"));
+    assert!(!send_debug.contains("bob"));
+
+    let mut sink = InMemoryTransportRuntimeEventSink::default();
+    assert_eq!(
+        dial_intent.dial_fail_closed(&mut sink),
+        Err(OutboundStreamAdapterError::OutboundDialNotImplemented)
+    );
+    assert_eq!(
+        send_intent.send_fail_closed(&mut sink),
+        Err(OutboundStreamAdapterError::OutboundSendNotImplemented)
+    );
+    assert_eq!(sink.events().len(), 2);
+    for event in sink.events() {
+        assert_eq!(
+            event.runtime_error(),
+            Some(TransportRuntimeError::SendFailed)
+        );
+        assert_redacted_event_hides(event, &["example.onion", "alice", "bob"]);
+    }
+}
+
+#[test]
 fn stream_adapter_closeout_requires_inbound_and_outbound_fail_closed_adapters() {
     assert_eq!(
         StreamAdapterCloseoutDecision::locked_down().check(),
