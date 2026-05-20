@@ -76,7 +76,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-Remote peer authentication context tightening closeout chooses pairwise stream session binding context tightening before adding more stream behavior. `StreamSessionVerificationContext::VerifiedPairwiseEncryptedSession` is still a boolean-like context, so the next transport task is to replace it with a typed redacted verified-session context. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
+Pairwise stream session binding context tightening is implemented: binding now requires `RedactedStreamSessionVerificationContext`, rejects unverified sessions, and rejects unredacted session proof/transcript/endpoint context. The next transport task is pairwise stream session binding context tightening closeout: decide whether stream-bound session ordering is now sufficiently narrow or whether another pre-I/O context boundary is still boolean-like. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
 
 ## Arti Lifecycle Cleanup Closeout
 
@@ -631,7 +631,7 @@ Decision as of 2026-05-19: verified pairwise session binding, remote peer authen
 
 Moved without behavior change:
 
-- `StreamSessionVerificationContext`
+- `RedactedStreamSessionVerificationContext`
 - `RedactedRemotePeerAuthenticationContext`
 - `PairwiseStreamSessionBinding`
 - `RemotePeerAuthenticationReady`
@@ -1116,8 +1116,9 @@ Decision as of 2026-05-19: stream readiness is not envelope I/O readiness. Inbou
 
 Current code boundary:
 
-- `PairwiseStreamSessionBinding` can be constructed only with `StreamSessionVerificationContext::VerifiedPairwiseEncryptedSession`.
+- `PairwiseStreamSessionBinding` can be constructed only with `RedactedStreamSessionVerificationContext::verified_pairwise_encrypted_session()`.
 - Unverified sessions are rejected with `VerifiedPairwiseSessionRequired`.
+- Unredacted session proof, session transcript, or endpoint context is rejected with `RedactedStreamSessionContextRequired`.
 - `BoundInboundStreamSession` requires an `OnionInboundStreamBoundary` plus verified pairwise session binding.
 - `BoundOutboundStreamSession` requires an `OnionOutboundStreamBoundary` plus verified pairwise session binding.
 - Outbound stream/session contact mismatch is rejected with `ContactMismatch`.

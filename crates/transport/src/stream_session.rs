@@ -11,10 +11,65 @@ use crate::{
     TransportRuntimeEventSink,
 };
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum StreamSessionVerificationContext {
-    VerifiedPairwiseEncryptedSession,
-    UnverifiedSession,
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct RedactedStreamSessionVerificationContext {
+    verified_pairwise_encrypted_session: bool,
+    session_proof_redacted: bool,
+    session_transcript_redacted: bool,
+    endpoint_redacted: bool,
+}
+
+impl RedactedStreamSessionVerificationContext {
+    pub fn verified_pairwise_encrypted_session() -> Self {
+        Self {
+            verified_pairwise_encrypted_session: true,
+            session_proof_redacted: true,
+            session_transcript_redacted: true,
+            endpoint_redacted: true,
+        }
+    }
+
+    pub fn unverified_session() -> Self {
+        Self {
+            verified_pairwise_encrypted_session: false,
+            session_proof_redacted: true,
+            session_transcript_redacted: true,
+            endpoint_redacted: true,
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn unredacted_verified_pairwise_encrypted_session_for_test() -> Self {
+        Self {
+            verified_pairwise_encrypted_session: true,
+            session_proof_redacted: false,
+            session_transcript_redacted: false,
+            endpoint_redacted: false,
+        }
+    }
+
+    fn is_verified_pairwise_encrypted_session(&self) -> bool {
+        self.verified_pairwise_encrypted_session
+    }
+
+    fn is_fully_redacted(&self) -> bool {
+        self.session_proof_redacted && self.session_transcript_redacted && self.endpoint_redacted
+    }
+}
+
+impl fmt::Debug for RedactedStreamSessionVerificationContext {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("RedactedStreamSessionVerificationContext")
+            .field(
+                "verified_pairwise_encrypted_session",
+                &self.verified_pairwise_encrypted_session,
+            )
+            .field("session_proof", &"<redacted>")
+            .field("session_transcript", &"<redacted>")
+            .field("endpoint", &"<redacted>")
+            .finish()
+    }
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -86,9 +141,12 @@ pub struct PairwiseStreamSessionBinding {
 impl PairwiseStreamSessionBinding {
     pub fn from_verified_pairwise_session(
         contact_id: ContactId,
-        context: StreamSessionVerificationContext,
+        context: RedactedStreamSessionVerificationContext,
     ) -> Result<Self, StreamSessionBindingError> {
-        if context != StreamSessionVerificationContext::VerifiedPairwiseEncryptedSession {
+        if !context.is_fully_redacted() {
+            return Err(StreamSessionBindingError::RedactedStreamSessionContextRequired);
+        }
+        if !context.is_verified_pairwise_encrypted_session() {
             return Err(StreamSessionBindingError::VerifiedPairwiseSessionRequired);
         }
 

@@ -100,6 +100,7 @@ pub enum OnionOutboundStreamError {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StreamSessionBindingError {
     VerifiedPairwiseSessionRequired,
+    RedactedStreamSessionContextRequired,
     ContactMismatch,
     BoundInboundReceiveNotImplemented,
     BoundOutboundSendNotImplemented,
