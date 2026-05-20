@@ -1429,6 +1429,7 @@ Current state model:
 
 - `TransportRuntimeState::Disabled` is the default fail-closed state.
 - `TransportRuntimeState::from_preflight(...)` returns a runtime error unless every preflight guard succeeds.
+- `TransportRuntimeState::fail_closed_blocker()` reports disabled state as `RuntimeNetworkDisabled` for status/reporting without starting a runtime.
 - `TransportRuntimeState::Ready(TransportRuntimeReady)` represents only a satisfied gate, not a live Tor client.
 
 This still does not bootstrap Tor, open sockets, launch onion services, or send/receive envelopes. It only prevents future code from constructing a runtime-ready adapter state without first passing the explicit preflight gate.

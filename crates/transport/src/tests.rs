@@ -2667,6 +2667,10 @@ fn runtime_state_is_disabled_by_default_and_not_ready() {
 
     assert_eq!(state, TransportRuntimeState::Disabled);
     assert!(!state.is_ready());
+    assert_eq!(
+        state.fail_closed_blocker(),
+        Some(TransportRuntimeError::RuntimeNetworkDisabled)
+    );
 }
 
 #[test]
@@ -2686,6 +2690,7 @@ fn runtime_state_ready_requires_successful_preflight() {
 
     assert_eq!(ready, TransportRuntimeState::Ready(TransportRuntimeReady));
     assert!(ready.is_ready());
+    assert_eq!(ready.fail_closed_blocker(), None);
 }
 
 #[test]
