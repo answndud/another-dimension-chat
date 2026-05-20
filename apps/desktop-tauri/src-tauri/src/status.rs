@@ -12,9 +12,9 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
     PrototypeStatus {
         secure_release: false,
         usable_messaging: false,
-        profile_status: "prototype boundary",
-        pairing_status: "prototype boundary",
-        transport_status: "fail-closed only",
-        storage_status: "prototype boundary",
+        profile_status: "profile boundary only",
+        pairing_status: "pairing boundary only",
+        transport_status: "fail-closed boundary only",
+        storage_status: "storage boundary only",
     }
 }
