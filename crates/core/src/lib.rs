@@ -271,6 +271,16 @@ pub mod production {
                 })
                 .transpose()
         }
+
+        pub fn delete_pairwise_endpoint_state(
+            &self,
+            store: &SqlCipherRecordStore,
+            contact_id: &ContactId,
+        ) -> Result<(), ProductionSessionError> {
+            let record_id = self.endpoint_state_record_id(contact_id);
+            store.delete(&record_id)?;
+            Ok(())
+        }
     }
 
     #[derive(Debug, Eq, PartialEq)]
@@ -1024,6 +1034,73 @@ pub mod production {
             assert_eq!(
                 session.save_pairwise_endpoint_state(&store, scope, &endpoint),
                 Err(ProductionSessionError::EndpointScopeMismatch)
+            );
+        }
+
+        #[test]
+        fn production_endpoint_state_delete_uses_opaque_record_id() {
+            let (alice, bob) = production_setup_pair();
+            let session =
+                establish_envelope_session_from_setup_drafts(&alice, &bob).expect("session");
+            let contact = ContactId::new("bob").expect("contact");
+            let endpoint = PairwiseRendezvousEndpoint::new(
+                contact.clone(),
+                OnionServiceEndpoint::new("bobsecret.onion").expect("endpoint"),
+                RendezvousEndpointScope::PairwiseContact,
+                RendezvousEndpointIdentityBinding::TransportScoped,
+            )
+            .expect("pairwise endpoint");
+            let (_dir, store) = production_test_store("endpoint-state-delete");
+            let scope = EncryptedRecordScope::contact(
+                ProfileName::new("alice").expect("profile"),
+                contact.clone(),
+            );
+
+            session
+                .save_pairwise_endpoint_state(&store, scope, &endpoint)
+                .expect("save endpoint state");
+            assert_eq!(
+                session
+                    .load_pairwise_endpoint_state(&store, &contact)
+                    .expect("load endpoint state"),
+                Some(endpoint)
+            );
+
+            session
+                .delete_pairwise_endpoint_state(&store, &contact)
+                .expect("delete endpoint state");
+
+            assert_eq!(
+                session
+                    .load_pairwise_endpoint_state(&store, &contact)
+                    .expect("load after delete"),
+                None
+            );
+            let record_id = session.endpoint_state_record_id(&contact);
+            let rendered_record_id = format!("{record_id:?}");
+            assert!(!rendered_record_id.contains("bob"));
+            assert!(!rendered_record_id.contains("adchan1"));
+        }
+
+        #[test]
+        fn production_endpoint_state_delete_is_idempotent_for_missing_state() {
+            let (alice, bob) = production_setup_pair();
+            let session =
+                establish_envelope_session_from_setup_drafts(&alice, &bob).expect("session");
+            let contact = ContactId::new("bob").expect("contact");
+            let (_dir, store) = production_test_store("endpoint-state-delete-missing");
+
+            session
+                .delete_pairwise_endpoint_state(&store, &contact)
+                .expect("first delete endpoint state");
+            session
+                .delete_pairwise_endpoint_state(&store, &contact)
+                .expect("second delete endpoint state");
+            assert_eq!(
+                session
+                    .load_pairwise_endpoint_state(&store, &contact)
+                    .expect("load missing endpoint state"),
+                None
             );
         }
 
