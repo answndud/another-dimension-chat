@@ -20,6 +20,17 @@
 - `scripts/verify_full.sh`: heavy pre-release/audit verification entrypoint.
 - `docs/`는 public repository에 올리지 않는 private planning/security notes이며 `.gitignore`에 포함되어 있다.
 
+## 작업 상태 문서
+
+- 세션은 작업 전 `docs/PLAN.md`와 `docs/PROGRESS.md`를 읽는다.
+- `docs/COMPLETED.md`는 완료 archive이며, 과거 맥락이 필요할 때만 읽는다.
+- 범위, 우선순위, 신규 작업은 `docs/PLAN.md`에 기록한다.
+- 진행 상태, 변경 파일, 검증 결과, blocker, 다음 액션은 `docs/PROGRESS.md`에 기록한다.
+- 완료된 작업은 `docs/COMPLETED.md`에 append한 뒤 `docs/PLAN.md`와 `docs/PROGRESS.md`에서 제거한다.
+- `PLAN.md`와 `PROGRESS.md`에 `completed` 상태의 작업, closeout 로그, 완료 phase archive를 남기지 않는다.
+- active 작업이 없으면 `PLAN.md`와 `PROGRESS.md`는 `현재 active 작업 없음`만 명확히 표시한다.
+- 코드와 문서 변경은 같은 작업 단위 안에서 정렬한다.
+
 ## 보안 원칙
 
 - 자체 암호 알고리즘, 자체 random generator, 자체 key derivation 로직을 만들지 않는다.

@@ -42,8 +42,8 @@ async function renderPrototypeStatus() {
     setText(fields.core, "Core boundary only");
     setText(fields.profile, "Profile boundary only");
     setText(fields.pairing, "Pairing boundary only");
-    setText(fields.transport, "Tauri command unavailable");
-    setText(fields.storage, "Storage boundary only");
+    setText(fields.transport, "Pre-network fail-closed only");
+    setText(fields.storage, "ADREC1 storage spike only");
     setText(fields.verification, "Lightweight checks only");
   }
 }

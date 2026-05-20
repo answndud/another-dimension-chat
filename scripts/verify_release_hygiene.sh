@@ -18,6 +18,7 @@ grep -q 'Complete production encrypted local storage lifecycle' "$ROOT_DIR/READM
 grep -q 'does not have a complete production encrypted local storage lifecycle today' "$ROOT_DIR/STORAGE_DECISION.md"
 grep -q 'ADREC1` spike' "$ROOT_DIR/STORAGE_DECISION.md"
 grep -q 'ADREC1` is a container format, not an encryption algorithm' "$ROOT_DIR/STORAGE_DECISION.md"
+grep -Fq 'Here, "production" means the default non-`dev-insecure` build boundary, not deployable security' "$ROOT_DIR/README.md"
 grep -q 'warning: production self-test is not a secure messenger release' "$ROOT_DIR/apps/cli/src/main.rs"
 grep -q 'production boundary self-test passed' "$ROOT_DIR/apps/cli/src/main.rs"
 grep -q 'Release signing or reproducible builds' "$ROOT_DIR/README.md"

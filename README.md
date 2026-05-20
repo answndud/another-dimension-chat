@@ -135,7 +135,7 @@ This additionally runs:
 
 The CLI commands require the `dev-insecure` feature.
 
-The default build exposes only a local production-boundary self-test. It checks setup, envelope encryption/decryption, replay rejection, tampered ciphertext rejection, replay-state non-advance after tamper in memory, and high-risk transport policy/fail-closed behavior. It does not send messages, persist keys, bootstrap transport, or create a secure messenger release:
+The default build exposes only a local production-boundary self-test. Here, "production" means the default non-`dev-insecure` build boundary, not deployable security. It checks setup, envelope encryption/decryption, replay rejection, tampered ciphertext rejection, replay-state non-advance after tamper in memory, and high-risk transport policy/fail-closed behavior. It does not send messages, persist keys, bootstrap transport, or create a secure messenger release:
 
 ```bash
 cargo run -q -- production self-test

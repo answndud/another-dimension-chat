@@ -17,8 +17,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         core_status: "core boundary only",
         profile_status: "profile boundary only",
         pairing_status: "pairing boundary only",
-        transport_status: "fail-closed boundary only",
-        storage_status: "storage boundary only",
+        transport_status: "pre-network fail-closed only",
+        storage_status: "ADREC1 storage spike only",
         verification_status: "lightweight checks only",
     }
 }
