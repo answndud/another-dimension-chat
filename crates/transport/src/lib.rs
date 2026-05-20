@@ -1,3 +1,12 @@
+//! Transport boundary crate.
+//!
+//! This crate is intentionally a set of fail-closed transport guardrails, not a
+//! usable Tor/onion transport implementation. The modules are split by boundary:
+//! policy and endpoint state, runtime/preflight checks, onion hosting and
+//! descriptor gates, stream/session gates, and redacted runtime events. Public
+//! re-exports preserve the current prototype API while keeping the concrete
+//! module layout readable.
+
 mod arti_lifecycle;
 mod bootstrap;
 #[cfg(feature = "dev-insecure")]
