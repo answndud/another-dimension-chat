@@ -76,7 +76,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-Stream closeout integration ordering now names preparation-aware closeout readiness as the required predecessor before remote authentication and session binding. The next transport task is stream closeout integration closeout: decide whether to move next to remote peer authentication context tightening or pause stream boundary expansion. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
+Stream closeout integration closeout chooses remote peer authentication context tightening before any further session-binding expansion. The next transport task is to replace the boolean-like remote peer authentication context with a redacted proof context. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
 
 ## Arti Lifecycle Cleanup Closeout
 
