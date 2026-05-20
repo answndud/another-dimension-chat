@@ -100,6 +100,7 @@ What exists today:
 - Transport boundary/test review that keeps new network behavior paused and prunes duplicated direct adapter fail-closed event tests in favor of stronger intent-boundary tests.
 - Transport boundary/test review closeout that selects Tauri status boundary cleanup before UI feature expansion.
 - Tauri status boundary cleanup that changes desktop status copy to release-claim and boundary-only labels without adding UI flows or readiness claims.
+- Tauri status boundary cleanup closeout that selects README current-boundary compaction before adding more public-facing surface.
 - Post-intent stream boundary consolidation review that freezes further stream readiness/intent expansion and selects Arti adapter lifecycle cleanup before adding new network behavior.
 - Transport module decomposition preparation that selects redacted runtime events and event sinks as the first behavior-preserving split target.
 - Extracted transport runtime events module that preserves existing public event and sink names through `crates/transport/src/lib.rs` re-exports.
