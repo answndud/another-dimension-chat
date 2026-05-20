@@ -396,7 +396,7 @@ pub mod production {
             Self::open(path, &passphrase.as_database_key())
         }
 
-        pub fn open(
+        fn open(
             path: impl AsRef<Path>,
             key: &StorageDatabaseKey,
         ) -> Result<Self, ProductionStorageError> {

@@ -15,7 +15,7 @@ The repository currently has:
 - Tests that keep Noise/session transport state `InMemoryOnly`, even after an encrypted storage backend exists.
 - A backend-independent encrypted record envelope format, `ADREC1`, for storing nonce plus sealed record body produced by a separate encryption layer.
 - Tests that reject `ADREC1` records for plaintext-only schema markers and in-memory-only session transport state.
-- A narrow SQLCipher-backed `ADREC1` record store spike using `rusqlite` and a test-only storage key boundary.
+- A narrow SQLCipher-backed `ADREC1` record store spike using `rusqlite`, with raw database key opening kept internal to the storage module.
 - Tests that round-trip `ADREC1` through SQLCipher and assert that the sealed body and `ADREC1` marker are not visible in database file bytes.
 - An opaque `EncryptedRecordId` boundary so row identifiers cannot be path-like profile/contact strings.
 - A passphrase unlock boundary through `ProfilePassphrase` and `LockedProfileStore`.
@@ -199,10 +199,11 @@ The first SQLCipher store boundary is `SqlCipherRecordStore` in `crates/storage`
 
 It supports:
 
-- Opening a SQLCipher-backed database with an explicit `StorageDatabaseKey`.
+- Opening a SQLCipher-backed database through passphrase-first public unlock APIs.
 - Storing and loading `ADREC1` records by opaque `EncryptedRecordId`.
 - Rejecting empty or path-like record ids before write.
 - Keeping `SessionTransportState` outside persistent storage through the existing storage policy.
+- Internal raw database key opening for local verification and storage-module plumbing only.
 - Test-only key construction for local verification.
 - Passphrase-based unlock through `ProfilePassphrase`.
 - A locked profile handle that requires explicit unlock before records can be read.
@@ -365,7 +366,7 @@ Public product language must therefore avoid claims like "persistent replay prot
 
 ## Unlock and Key Wrapping Decision
 
-Initial v0.1 direction: keep unlock explicit and passphrase-first. `StorageDatabaseKey` still has only test-only construction, while normal code must go through `ProfilePassphrase` and `LockedProfileStore`/`SqlCipherRecordStore::unlock_with_passphrase`.
+Initial v0.1 direction: keep unlock explicit and passphrase-first. `StorageDatabaseKey` still has only test-only construction, and the raw SQLCipher open helper is not part of the public production API. Normal code must go through `ProfilePassphrase` and `LockedProfileStore`/`SqlCipherRecordStore::unlock_with_passphrase`.
 
 When production unlock is added, prefer this sequence:
 
