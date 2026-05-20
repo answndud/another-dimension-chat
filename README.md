@@ -79,6 +79,7 @@ What exists today:
 - Redacted pairwise stream session verification context boundary that rejects unverified sessions and unredacted session proof/transcript/endpoint context before stream session binding can be created.
 - Pairwise session binding context closeout that selects envelope I/O readiness tightening before any envelope send/receive behavior.
 - Fail-closed envelope I/O readiness boundary that rejects unredacted envelope body/metadata context before inbound/outbound envelope adapter boundaries can be created.
+- Envelope I/O readiness closeout that pauses additional stream boundary expansion and returns to endpoint rotation apply/reconnect boundary work.
 - Post-intent stream boundary consolidation review that freezes further stream readiness/intent expansion and selects Arti adapter lifecycle cleanup before adding new network behavior.
 - Transport module decomposition preparation that selects redacted runtime events and event sinks as the first behavior-preserving split target.
 - Extracted transport runtime events module that preserves existing public event and sink names through `crates/transport/src/lib.rs` re-exports.

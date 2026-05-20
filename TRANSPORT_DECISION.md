@@ -76,7 +76,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-Envelope I/O readiness tightening is implemented: adapter boundaries now require `EnvelopeIoAdapterReady::fail_closed()`, reject unredacted envelope body/metadata context, and still return not-implemented errors for send/receive attempts. The next transport task is envelope I/O readiness tightening closeout: decide whether post-auth readiness ordering should be closed out or narrowed further before any additional stream work. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
+Envelope I/O readiness tightening closeout pauses additional stream boundary expansion. Post-auth ordering already requires inbound/outbound envelope adapter boundaries, and adding more pre-I/O ordering tokens would be low-value at this point. The next planned task returns to endpoint rotation apply/reconnect boundary work. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
 
 ## Arti Lifecycle Cleanup Closeout
 
