@@ -57,7 +57,29 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next documented Arti adapter lifecycle cleanup selection after persistent owner disabled-bootstrap predicate cleanup. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+Continue transport work with an Arti lifecycle docs-only closeout review after launch adapter skeleton summary cleanup. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+
+## Launch Adapter Skeleton Summary Cleanup
+
+Decision as of 2026-05-20: onion service launch adapter readiness is now exposed through a redacted launch-adapter summary instead of relying on ad hoc debug fields.
+
+Moved without enabling network behavior:
+
+- `OnionServiceLaunchAdapterSummary`
+- `OnionServiceLaunchAdapterSkeleton::summary()`
+- `OnionServiceLaunchAdapterSummary::can_attempt_fail_closed_launch()`
+- `OnionServiceLaunchAdapterSkeleton` debug output now derives owner/client readiness from the summary.
+
+Preserved invariants:
+
+- Launch adapter construction still requires `OnionServiceLaunchReady`, `OnionServiceKeyMaterialReady`, and a bootstrapped persistent owner.
+- The summary exposes booleans and lifecycle state only; it does not expose endpoints, descriptors, key material, profile names, contact ids, or paths.
+- `can_attempt_fail_closed_launch()` means only that the fail-closed launch call may be reached; it is not onion hosting readiness.
+- Descriptor publication, onion hosting, stream I/O, envelope I/O, and usable messaging remain unimplemented.
+
+Next split target:
+
+- Arti lifecycle docs-only closeout review.
 
 ## Persistent Owner Disabled-Bootstrap Predicate Cleanup
 

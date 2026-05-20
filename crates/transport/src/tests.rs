@@ -3793,6 +3793,13 @@ fn onion_service_launch_adapter_fails_closed_without_hosting_or_sensitive_output
     assert!(launch_adapter.owner_summary().has_bootstrapped_client());
     assert!(launch_adapter.owner_summary().can_prepare_onion_launch());
     assert_eq!(
+        launch_adapter.summary().owner_summary(),
+        launch_adapter.owner_summary()
+    );
+    assert!(launch_adapter.summary().key_material_ready());
+    assert!(!launch_adapter.summary().launch_descriptor_created());
+    assert!(launch_adapter.summary().can_attempt_fail_closed_launch());
+    assert_eq!(
         launch_adapter.launch_fail_closed(&mut sink),
         Err(arti_adapter_spike::OnionServiceLaunchAdapterError::OnionHostingNotImplemented)
     );
@@ -3807,6 +3814,7 @@ fn onion_service_launch_adapter_fails_closed_without_hosting_or_sensitive_output
 
     let rendered = format!("{launch_adapter:?}");
     assert!(rendered.contains("OnionServiceLaunchAdapterSkeleton"));
+    assert!(rendered.contains("can_attempt_fail_closed_launch"));
     assert!(rendered.contains("<redacted>"));
     assert!(rendered.contains("<not-created>"));
     assert!(!rendered.contains(root.to_string_lossy().as_ref()));
