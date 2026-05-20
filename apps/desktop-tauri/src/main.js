@@ -18,13 +18,19 @@ async function renderPrototypeStatus() {
   try {
     const status = await invoke("prototype_status");
 
-    setText(fields.secureRelease, status.secure_release ? "Yes" : "No");
-    setText(fields.messaging, status.usable_messaging ? "Available" : "Unavailable");
+    setText(
+      fields.secureRelease,
+      status.secure_release ? "Unexpected secure-release status" : "Not a secure release",
+    );
+    setText(
+      fields.messaging,
+      status.usable_messaging ? "Unexpected messaging status" : "Not available",
+    );
     setText(fields.transport, status.transport_status);
     setText(fields.storage, status.storage_status);
   } catch (_error) {
-    setText(fields.secureRelease, "No");
-    setText(fields.messaging, "Unavailable");
+    setText(fields.secureRelease, "Not a secure release");
+    setText(fields.messaging, "Not available");
     setText(fields.transport, "Tauri command unavailable");
     setText(fields.storage, "Prototype boundary");
   }
