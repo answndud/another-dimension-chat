@@ -1947,6 +1947,95 @@ fn outbound_stream_fail_closed_adapter_requires_gate_ready_token_and_high_risk_p
 }
 
 #[test]
+fn outbound_stream_preparation_requires_gate_and_fail_closed_adapter() {
+    assert_eq!(
+        OutboundStreamPreparationBoundary::locked_down().check(),
+        Err(OutboundStreamPreparationError::OutboundStreamGateRequired)
+    );
+
+    assert_eq!(
+        OutboundStreamPreparationBoundary {
+            gate_ready: Some(ready_outbound_stream_gate()),
+            fail_closed_adapter_ready: false,
+            dial_enabled: false,
+            send_enabled: false,
+            envelope_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+        .check(),
+        Err(OutboundStreamPreparationError::OutboundStreamAdapterRequired)
+    );
+
+    let adapter = OutboundStreamFailClosedAdapter::from_gate_ready(
+        ready_outbound_stream_gate(),
+        sample_pairwise_endpoint(),
+        TransportPolicy::high_risk_default(),
+    )
+    .expect("outbound stream adapter");
+
+    assert_eq!(
+        OutboundStreamPreparationBoundary::from_fail_closed_adapter(
+            ready_outbound_stream_gate(),
+            &adapter,
+        )
+        .check(),
+        Ok(OutboundStreamPreparationReady)
+    );
+}
+
+#[test]
+fn outbound_stream_preparation_rejects_dial_send_envelope_and_messaging_shortcuts() {
+    for (boundary, expected) in [
+        (
+            OutboundStreamPreparationBoundary {
+                gate_ready: Some(ready_outbound_stream_gate()),
+                fail_closed_adapter_ready: true,
+                dial_enabled: true,
+                send_enabled: false,
+                envelope_io_enabled: false,
+                usable_messaging_claimed: false,
+            },
+            OutboundStreamPreparationError::DialForbidden,
+        ),
+        (
+            OutboundStreamPreparationBoundary {
+                gate_ready: Some(ready_outbound_stream_gate()),
+                fail_closed_adapter_ready: true,
+                dial_enabled: false,
+                send_enabled: true,
+                envelope_io_enabled: false,
+                usable_messaging_claimed: false,
+            },
+            OutboundStreamPreparationError::SendForbidden,
+        ),
+        (
+            OutboundStreamPreparationBoundary {
+                gate_ready: Some(ready_outbound_stream_gate()),
+                fail_closed_adapter_ready: true,
+                dial_enabled: false,
+                send_enabled: false,
+                envelope_io_enabled: true,
+                usable_messaging_claimed: false,
+            },
+            OutboundStreamPreparationError::EnvelopeIoForbidden,
+        ),
+        (
+            OutboundStreamPreparationBoundary {
+                gate_ready: Some(ready_outbound_stream_gate()),
+                fail_closed_adapter_ready: true,
+                dial_enabled: false,
+                send_enabled: false,
+                envelope_io_enabled: false,
+                usable_messaging_claimed: true,
+            },
+            OutboundStreamPreparationError::UsableMessagingClaimForbidden,
+        ),
+    ] {
+        assert_eq!(boundary.check(), Err(expected));
+    }
+}
+
+#[test]
 fn outbound_stream_fail_closed_adapter_records_redacted_events_only() {
     let adapter = OutboundStreamFailClosedAdapter::from_gate_ready(
         ready_outbound_stream_gate(),

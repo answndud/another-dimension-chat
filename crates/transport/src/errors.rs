@@ -234,6 +234,16 @@ pub enum OutboundStreamGateError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OutboundStreamPreparationError {
+    OutboundStreamGateRequired,
+    OutboundStreamAdapterRequired,
+    DialForbidden,
+    SendForbidden,
+    EnvelopeIoForbidden,
+    UsableMessagingClaimForbidden,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum OutboundStreamAdapterError {
     OutboundStreamGateRequired,
     TransportPolicyViolation,
