@@ -30,6 +30,7 @@ pub mod production {
     const PRODUCTION_REPLAY_RECORD_DOMAIN: &[u8] = b"AD-PRODUCTION-REPLAY-RECORD-V1";
     const PRODUCTION_ENDPOINT_STATE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-ENDPOINT-STATE-RECORD-V1";
+    #[cfg(test)]
     const PRODUCTION_MESSAGE_ENVELOPE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-MESSAGE-ENVELOPE-RECORD-V1";
     const PRODUCTION_LOCAL_MESSAGE_INDEX_RECORD_DOMAIN: &[u8] =
@@ -177,6 +178,7 @@ pub mod production {
             production_endpoint_state_record_id(&self.channel_id, contact_id)
         }
 
+        #[cfg(test)]
         fn message_envelope_record_id(
             &self,
             message_number: u64,
@@ -721,6 +723,7 @@ pub mod production {
             .expect("domain-separated endpoint state record id is valid")
     }
 
+    #[cfg(test)]
     fn production_message_envelope_record_id(
         channel_id: &str,
         message_number: u64,
