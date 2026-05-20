@@ -27,6 +27,7 @@ What exists today:
 - Lightweight verification review that keeps `verify_all` small and makes `verify_full` a superset of the lightweight path.
 - Transport module cleanup that documents the fail-closed module boundary without changing public re-exports or adding network behavior.
 - Implementation backlog selection that chooses Tauri status static-check tightening as the next small, low-cost slice.
+- Tauri status static-check tightening that keeps the same scaffold invariants while making verifier failures easier to diagnose.
 
 What does not exist yet:
 
