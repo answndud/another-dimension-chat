@@ -363,6 +363,60 @@ fn endpoint_rotation_reconnect_is_fail_closed_and_redacted() {
 }
 
 #[test]
+fn endpoint_rotation_apply_can_prepare_only_fail_closed_reconnect_intent() {
+    let current = PairwiseRendezvousEndpoint::new(
+        ContactId::new("bob").expect("contact"),
+        OnionServiceEndpoint::new("oldsecret.onion").expect("endpoint"),
+        RendezvousEndpointScope::PairwiseContact,
+        RendezvousEndpointIdentityBinding::TransportScoped,
+    )
+    .expect("current endpoint");
+    let update = PairwiseEndpointUpdate::for_existing_encrypted_session(
+        &current,
+        OnionServiceEndpoint::new("newsecret.onion").expect("endpoint"),
+        EndpointUpdateChannel::ExistingEncryptedSession,
+    )
+    .expect("endpoint update");
+    let sequence = EndpointRotationSequence::new(3).expect("sequence");
+    let mut state = PairwiseEndpointRotationState::new(current);
+
+    state
+        .stage_verified_update(
+            update,
+            sequence,
+            EndpointRotationApplyContext::ExistingEncryptedSessionVerified,
+        )
+        .expect("stage verified update");
+
+    let intent = state
+        .apply_pending_and_prepare_reconnect(sequence)
+        .expect("prepare reconnect intent");
+    assert_eq!(intent.sequence(), sequence);
+    assert_eq!(state.current().endpoint().as_str(), "newsecret.onion");
+    assert_eq!(state.last_applied_sequence(), 3);
+    assert!(state.pending().is_none());
+
+    let rendered = format!("{intent:?}");
+    assert!(rendered.contains("EndpointRotationReconnectIntent"));
+    assert!(rendered.contains("<redacted>"));
+    assert!(!rendered.contains("bob"));
+    assert!(!rendered.contains("oldsecret.onion"));
+    assert!(!rendered.contains("newsecret.onion"));
+
+    let mut sink = InMemoryTransportRuntimeEventSink::default();
+    assert_eq!(
+        intent.reconnect_fail_closed(&mut sink),
+        Err(EndpointLifecycleError::EndpointReconnectNotImplemented)
+    );
+    assert_eq!(sink.events().len(), 1);
+    assert_eq!(
+        sink.events()[0].runtime_error(),
+        Some(TransportRuntimeError::RuntimeNetworkDisabled)
+    );
+    assert_redacted_event_hides(&sink.events()[0], &["bob", "newsecret.onion", ".onion"]);
+}
+
+#[test]
 fn endpoint_update_control_plaintext_pads_before_encryption_and_redacts_debug() {
     let current = PairwiseRendezvousEndpoint::new(
         ContactId::new("bob").expect("contact"),

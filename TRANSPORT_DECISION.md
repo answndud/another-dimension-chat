@@ -57,7 +57,28 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next documented boundary: endpoint rotation/reconnect fail-closed integration. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging.
+Continue transport work with the next documented boundary selection after endpoint rotation/reconnect integration. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+
+## Endpoint Rotation Reconnect Intent Boundary
+
+Decision as of 2026-05-20: applying a pending endpoint rotation can now produce an explicit `EndpointRotationReconnectIntent`. The intent can only be created by `PairwiseEndpointRotationState::apply_pending_and_prepare_reconnect(...)`, which first passes the existing pending-sequence checks and applies the verified rotation. The intent still cannot open a network connection.
+
+Moved forward without enabling network behavior:
+
+- `EndpointRotationReconnectIntent`
+- `PairwiseEndpointRotationState::apply_pending_and_prepare_reconnect(...)`
+
+Preserved invariants:
+
+- Staging still requires `EndpointRotationApplyContext::ExistingEncryptedSessionVerified`.
+- Applying still rejects missing pending updates, stale sequences, rollback, and contact mismatch through existing checks.
+- Reconnect still records only a redacted runtime event and returns `EndpointReconnectNotImplemented`.
+- Debug output for reconnect intent redacts contact and endpoint material.
+- No real reconnect, dial, stream I/O, envelope send/receive, descriptor publication, or usable messaging capability was added.
+
+Next split target:
+
+- Select the next documented transport boundary.
 
 ## Dev-Insecure Prototype Transport Module Extraction
 

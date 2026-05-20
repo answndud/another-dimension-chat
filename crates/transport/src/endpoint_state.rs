@@ -209,6 +209,38 @@ impl fmt::Debug for PendingEndpointRotation {
     }
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct EndpointRotationReconnectIntent {
+    sequence: EndpointRotationSequence,
+}
+
+impl EndpointRotationReconnectIntent {
+    pub fn sequence(self) -> EndpointRotationSequence {
+        self.sequence
+    }
+
+    pub fn reconnect_fail_closed<S: TransportRuntimeEventSink>(
+        self,
+        sink: &mut S,
+    ) -> Result<(), EndpointLifecycleError> {
+        sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+            TransportRuntimeError::RuntimeNetworkDisabled,
+        ));
+        Err(EndpointLifecycleError::EndpointReconnectNotImplemented)
+    }
+}
+
+impl fmt::Debug for EndpointRotationReconnectIntent {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("EndpointRotationReconnectIntent")
+            .field("sequence", &self.sequence)
+            .field("contact_id", &"<redacted>")
+            .field("current_endpoint", &"<redacted>")
+            .finish()
+    }
+}
+
 #[derive(Clone, Eq, PartialEq)]
 pub struct PairwiseEndpointRotationState {
     current: PairwiseRendezvousEndpoint,
@@ -287,6 +319,14 @@ impl PairwiseEndpointRotationState {
         )?;
         self.last_applied_sequence = sequence.value();
         Ok(())
+    }
+
+    pub fn apply_pending_and_prepare_reconnect(
+        &mut self,
+        sequence: EndpointRotationSequence,
+    ) -> Result<EndpointRotationReconnectIntent, EndpointLifecycleError> {
+        self.apply_pending(sequence)?;
+        Ok(EndpointRotationReconnectIntent { sequence })
     }
 
     pub fn reconnect_fail_closed<S: TransportRuntimeEventSink>(
