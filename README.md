@@ -24,6 +24,7 @@ What exists today:
 - Storage lifecycle docs alignment that separates the narrow SQLCipher spike from deferred key management, rollback, secure deletion, backup, recovery, and durable session persistence work.
 - Storage lifecycle verifier guard that keeps `ADREC1` container wording and complete-storage-lifecycle non-claims checked in release hygiene.
 - A read-only Tauri prototype status shell exposing only redacted release-claim, messaging-surface, core, profile, pairing, transport, storage, and verification boundary state through `prototype_status`.
+- Tauri status docs alignment that clarifies core status is static boundary copy, not a production core runtime call.
 - Tauri verification status boundary that exposes lightweight-check status without adding production commands or readiness claims.
 - Tauri scaffold verifier cleanup that keeps status field and static copy checks aligned without adding build cost.
 - Lightweight verification scripts, release-hygiene and Tauri-scaffold static verifiers, CLI hardening tests, and GitHub Actions verification.
