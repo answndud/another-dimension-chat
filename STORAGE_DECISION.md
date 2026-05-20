@@ -267,6 +267,12 @@ Replay-specific cleanup uses `delete_replay_window` so callers do not have to as
 
 Message expiry cleanup uses `delete_message_envelope` and `delete_local_message_index` so future expiry code can remove encrypted local message records without direct table operations. These helpers do not implement mailbox expiry, transport delivery expiry, secure media erasure, or user-facing disappearing-message policy by themselves.
 
+Message record ids are allocated by `ProductionEnvelopeSession` helpers rather than by callers assembling human-readable strings:
+
+- `message_envelope_record_id` derives a `message_...` id from the session channel id, message number, and message type.
+- `local_message_index_record_id` derives a `msgidx_...` id from the session channel id, verified contact id, and message number.
+- Both helpers use domain-separated hashes and do not embed profile names, contact ids, endpoint strings, plaintext channel ids, or message plaintext in the resulting record id.
+
 ## Replay Rollback Protection Decision
 
 v0.1 does not claim replay rollback protection against encrypted database snapshot restore.
