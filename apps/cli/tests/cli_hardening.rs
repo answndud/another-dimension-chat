@@ -39,10 +39,29 @@ fn default_build_rejects_prototype_commands() {
     assert!(!output.status.success());
     assert!(stdout(&output).is_empty());
     let error = stderr(&output);
-    assert!(
-        error.contains("require --features dev-insecure"),
-        "unexpected stderr: {error:?}"
-    );
+    assert!(error.contains("default build exposes only boundary commands"));
+    assert!(error.contains("production self-test"));
+    assert!(error.contains("not a secure messenger release"));
+    assert!(error.contains("require --features dev-insecure"));
+    assert!(!error.contains("Start chat"));
+    assert!(!error.contains("Send message"));
+}
+
+#[test]
+#[cfg(not(feature = "dev-insecure"))]
+fn default_build_help_lists_only_boundary_commands() {
+    let output = run(&["--help"]);
+
+    assert!(output.status.success());
+    assert!(stderr(&output).is_empty());
+    let out = stdout(&output);
+    assert!(out.contains("production self-test"));
+    assert!(out.contains("not a secure messenger release"));
+    assert!(out.contains("no usable messaging"));
+    assert!(out.contains("require --features dev-insecure"));
+    assert!(!out.contains("message send"));
+    assert!(!out.contains("pairing start"));
+    assert!(!out.contains("profile init"));
 }
 
 #[test]
