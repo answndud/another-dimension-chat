@@ -1,19 +1,10 @@
-#[derive(serde::Serialize)]
-pub struct PrototypeStatus {
-    secure_release: bool,
-    usable_messaging: bool,
-    transport_status: &'static str,
-    storage_status: &'static str,
-}
+mod status;
+
+pub use status::PrototypeStatus;
 
 #[tauri::command]
 pub fn prototype_status() -> PrototypeStatus {
-    PrototypeStatus {
-        secure_release: false,
-        usable_messaging: false,
-        transport_status: "fail-closed only",
-        storage_status: "prototype boundary",
-    }
+    status::redacted_prototype_status()
 }
 
 pub fn run() {
