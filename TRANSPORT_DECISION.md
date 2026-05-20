@@ -57,7 +57,34 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with an Arti lifecycle docs-only closeout review after launch adapter skeleton summary cleanup. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+Arti lifecycle cleanup is closed out for this phase. Select the next implementation phase outside the Arti lifecycle cleanup series. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+
+## Arti Lifecycle Cleanup Closeout
+
+Decision as of 2026-05-20: the current Arti lifecycle cleanup series is complete enough for the prototype boundary. Stop adding lifecycle summary/predicate/debug layers unless a concrete later implementation step proves a missing invariant.
+
+Closed-out cleanup sequence:
+
+1. `PersistentArtiClientLifecycleSummary` exposes bootstrapped-client and launch-preparation predicates.
+2. `ManualArtiBootstrapAttemptSummary` exposes disabled/explicit-manual network predicates.
+3. Persistent owner disabled bootstrap uses the same manual-attempt summary predicate as the one-shot gate.
+4. `OnionServiceLaunchAdapterSummary` exposes redacted launch-adapter readiness for fail-closed launch attempts.
+
+Still intentionally blocked:
+
+- Default network bootstrap.
+- Production Arti lifecycle management.
+- Onion service hosting.
+- Descriptor publication.
+- Inbound/outbound stream I/O.
+- Envelope send/receive over Tor.
+- Usable messaging.
+
+Next phase guidance:
+
+- Prefer a non-network phase unless there is a specific implementation reason to continue transport.
+- Acceptable next phase candidates are Tauri shell scaffold, public-safe CLI/profile UX cleanup, or encrypted/local storage lifecycle cleanup.
+- Any real network-capable Arti work must start with a new boundary decision that names the allowed scope, feature gate, verification cost, and fail-closed rollback rule.
 
 ## Launch Adapter Skeleton Summary Cleanup
 
