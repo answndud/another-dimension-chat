@@ -2232,6 +2232,33 @@ fn runtime_preflight_ready_predicate_requires_every_guard() {
 }
 
 #[test]
+fn runtime_preflight_first_blocker_matches_check_without_ready_token() {
+    let missing_dirs = TransportRuntimePreflight {
+        runtime_network_enabled: true,
+        state_cache_dirs_accessible: false,
+        log_redaction_ready: false,
+        bridge_or_censorship_ready: false,
+    };
+    let ready = TransportRuntimePreflight {
+        runtime_network_enabled: true,
+        state_cache_dirs_accessible: true,
+        log_redaction_ready: true,
+        bridge_or_censorship_ready: true,
+    };
+
+    assert_eq!(
+        TransportRuntimePreflight::disabled_by_default().first_runtime_blocker(),
+        Some(TransportRuntimeError::RuntimeNetworkDisabled)
+    );
+    assert_eq!(
+        missing_dirs.first_runtime_blocker(),
+        Some(TransportRuntimeError::StateDirectoryPermissionDenied)
+    );
+    assert_eq!(ready.first_runtime_blocker(), None);
+    assert_eq!(ready.check(), Ok(TransportRuntimeReady));
+}
+
+#[test]
 fn runtime_permission_preflight_is_locked_down_by_default() {
     assert_eq!(
         TransportRuntimePermissionPreflight::locked_down_by_default().check(),

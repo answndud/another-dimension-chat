@@ -722,6 +722,7 @@ Preserved invariants:
 
 - Runtime remains disabled by default.
 - Runtime ready state still requires explicit network enablement, app-private state/cache directory readiness, backup exclusion verification, log/crash redaction readiness, and bridge/censorship readiness.
+- `TransportRuntimePreflight::first_runtime_blocker()` may report the first fail-closed blocker without minting a `TransportRuntimeReady` token.
 - Raw bridge lines remain rejected.
 - Shared/default Arti directories remain rejected.
 - No Tor bootstrap, descriptor publication, stream I/O, envelope I/O, or messaging capability was added.
