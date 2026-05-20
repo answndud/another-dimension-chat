@@ -52,6 +52,26 @@ pub mod production {
         Responder,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum SessionConnectionDirection {
+        Inbound,
+        Outbound,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum CanonicalConnectionState {
+        MissingOrUnauthenticated,
+        AuthenticatedUnhealthy,
+        AuthenticatedHealthy,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum DuplicateConnectionAction {
+        KeepCanonicalConnection,
+        WaitForCanonicalConnection,
+        CloseDuplicateConnection,
+    }
+
     #[derive(Debug, Eq, PartialEq)]
     pub struct ProductionSetupDraft {
         pub pairing: ProductionPairingDraft,
@@ -435,6 +455,30 @@ pub mod production {
     impl From<EndpointLifecycleError> for ProductionSessionError {
         fn from(value: EndpointLifecycleError) -> Self {
             Self::EndpointLifecycle(value)
+        }
+    }
+
+    impl ProductionSessionPlan {
+        pub fn canonical_connection_direction(&self) -> SessionConnectionDirection {
+            match self.local_role {
+                SessionRole::CanonicalDialer => SessionConnectionDirection::Outbound,
+                SessionRole::Responder => SessionConnectionDirection::Inbound,
+            }
+        }
+
+        pub fn duplicate_connection_action(
+            &self,
+            observed_direction: SessionConnectionDirection,
+            canonical_state: CanonicalConnectionState,
+        ) -> DuplicateConnectionAction {
+            if observed_direction == self.canonical_connection_direction() {
+                return DuplicateConnectionAction::KeepCanonicalConnection;
+            }
+            if canonical_state == CanonicalConnectionState::AuthenticatedHealthy {
+                DuplicateConnectionAction::CloseDuplicateConnection
+            } else {
+                DuplicateConnectionAction::WaitForCanonicalConnection
+            }
         }
     }
 
@@ -1446,6 +1490,62 @@ pub mod production {
             assert_eq!(
                 alice_view.remote_noise_static_public_key,
                 bob_view.local_noise_static_public_key
+            );
+        }
+
+        #[test]
+        fn production_session_plan_resolves_duplicate_connections_without_timing_rules() {
+            let alice_prekey = noise_prekey_bundle();
+            let bob_prekey = noise_prekey_bundle();
+            let alice = production_payload("alice", [51_u8; 32], "alice.onion", &alice_prekey);
+            let bob = production_payload("bob", [52_u8; 32], "bob.onion", &bob_prekey);
+
+            let alice_view =
+                plan_session_from_verified_pairing_payloads(&alice, &bob).expect("session plan");
+            let bob_view =
+                plan_session_from_verified_pairing_payloads(&bob, &alice).expect("session plan");
+
+            assert_eq!(
+                alice_view.canonical_dialer_public_key,
+                bob_view.canonical_dialer_public_key
+            );
+            assert_ne!(
+                alice_view.canonical_connection_direction(),
+                bob_view.canonical_connection_direction()
+            );
+
+            let duplicate_direction = match alice_view.canonical_connection_direction() {
+                SessionConnectionDirection::Inbound => SessionConnectionDirection::Outbound,
+                SessionConnectionDirection::Outbound => SessionConnectionDirection::Inbound,
+            };
+
+            assert_eq!(
+                alice_view.duplicate_connection_action(
+                    alice_view.canonical_connection_direction(),
+                    CanonicalConnectionState::MissingOrUnauthenticated,
+                ),
+                DuplicateConnectionAction::KeepCanonicalConnection
+            );
+            assert_eq!(
+                alice_view.duplicate_connection_action(
+                    duplicate_direction,
+                    CanonicalConnectionState::MissingOrUnauthenticated,
+                ),
+                DuplicateConnectionAction::WaitForCanonicalConnection
+            );
+            assert_eq!(
+                alice_view.duplicate_connection_action(
+                    duplicate_direction,
+                    CanonicalConnectionState::AuthenticatedUnhealthy,
+                ),
+                DuplicateConnectionAction::WaitForCanonicalConnection
+            );
+            assert_eq!(
+                alice_view.duplicate_connection_action(
+                    duplicate_direction,
+                    CanonicalConnectionState::AuthenticatedHealthy,
+                ),
+                DuplicateConnectionAction::CloseDuplicateConnection
             );
         }
 
