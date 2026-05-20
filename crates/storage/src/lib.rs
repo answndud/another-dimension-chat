@@ -485,6 +485,13 @@ pub mod production {
                 })
                 .transpose()
         }
+
+        pub fn delete_replay_window(
+            &self,
+            record_id: &EncryptedRecordId,
+        ) -> Result<(), ProductionStorageError> {
+            self.delete(record_id)
+        }
     }
 
     fn verify_sqlcipher_key(connection: &Connection) -> Result<(), ProductionStorageError> {
@@ -796,6 +803,58 @@ pub mod production {
                 .expect("open store");
             let record_id = EncryptedRecordId::new("missing_replay").expect("record id");
 
+            assert_eq!(store.load_replay_window(&record_id).expect("load"), None);
+        }
+
+        #[test]
+        fn sqlcipher_store_delete_replay_window_removes_replay_state() {
+            let (_dir, path) = unique_test_database_path("delete-replay-window");
+            let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let mut replay_window = ReplayWindow::new(4).expect("replay window");
+            replay_window.accept(1).expect("accept first");
+            replay_window.accept(2).expect("accept second");
+            let record_id = EncryptedRecordId::new("replay_delete_0001").expect("record id");
+
+            store
+                .save_replay_window(
+                    &record_id,
+                    EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile")),
+                    &replay_window,
+                )
+                .expect("save replay window");
+            assert_eq!(
+                store.load_replay_window(&record_id).expect("load"),
+                Some(replay_window)
+            );
+
+            store
+                .delete_replay_window(&record_id)
+                .expect("delete replay window");
+
+            assert_eq!(
+                store
+                    .load_replay_window(&record_id)
+                    .expect("load after delete"),
+                None
+            );
+        }
+
+        #[test]
+        fn sqlcipher_store_delete_replay_window_is_idempotent_for_missing_state() {
+            let (_dir, path) = unique_test_database_path("delete-missing-replay-window");
+            let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let record_id = EncryptedRecordId::new("missing_replay_delete").expect("record id");
+
+            store
+                .delete_replay_window(&record_id)
+                .expect("first delete replay");
+            store
+                .delete_replay_window(&record_id)
+                .expect("second delete replay");
             assert_eq!(store.load_replay_window(&record_id).expect("load"), None);
         }
 
