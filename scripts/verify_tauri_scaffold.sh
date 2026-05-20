@@ -50,16 +50,20 @@ require_contains "$TAURI_DIR/src/status.rs" 'profile_status: "profile boundary o
 require_contains "$TAURI_DIR/src/status.rs" 'pairing_status: "pairing boundary only"'
 require_contains "$TAURI_DIR/src/status.rs" 'transport_status: "fail-closed boundary only"'
 require_contains "$TAURI_DIR/src/status.rs" 'storage_status: "storage boundary only"'
+require_contains "$TAURI_DIR/src/status.rs" 'verification_status: "lightweight checks only"'
 require_contains "$APP_DIR/src/main.js" 'invoke("prototype_status")'
+require_contains "$APP_DIR/src/main.js" 'status.verification_status'
 require_contains "$APP_DIR/src/main.js" 'Unexpected release claim'
 require_contains "$APP_DIR/src/main.js" 'Unexpected messaging status'
 require_contains "$APP_DIR/README.md" 'not a production messaging UI'
+require_contains "$APP_DIR/README.md" 'verification boundaries'
 require_contains "$APP_DIR/index.html" 'Prototype shell only'
 require_contains "$APP_DIR/index.html" 'Another Dimension Chat Prototype'
 require_contains "$APP_DIR/index.html" 'Release claim'
 require_contains "$APP_DIR/index.html" 'No secure-release claim'
 require_contains "$APP_DIR/index.html" 'Disabled in prototype'
 require_contains "$APP_DIR/index.html" 'Fail-closed boundary only'
+require_contains "$APP_DIR/index.html" 'Lightweight checks only'
 require_contains "$APP_DIR/.npmrc" '^workspaces=false$'
 require_contains "$APP_DIR/package-lock.json" '"lockfileVersion": 3'
 require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
@@ -78,7 +82,7 @@ if grep -n '\btrue\b' "$TAURI_DIR/src/status.rs" >/dev/null; then
   exit 1
 fi
 
-if grep -n -E 'secure_release:|usable_messaging:|profile_status:|pairing_status:|transport_status:|storage_status:' "$TAURI_DIR/src/lib.rs" >/dev/null; then
+if grep -n -E 'secure_release:|usable_messaging:|profile_status:|pairing_status:|transport_status:|storage_status:|verification_status:' "$TAURI_DIR/src/lib.rs" >/dev/null; then
   echo "Tauri command wrapper must delegate status construction to status.rs" >&2
   exit 1
 fi
