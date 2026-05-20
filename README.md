@@ -33,6 +33,7 @@ What exists today:
 - Production storage lifecycle cleanup closeout that selects storage API visibility cleanup before more storage behavior.
 - Storage API visibility cleanup that keeps raw SQLCipher database-key opening internal and leaves the public path passphrase-first.
 - Transport API visibility review that keeps local/direct endpoint construction behind explicit `TransportRoute` constructors and policy checks.
+- Production self-test small expansion closeout that keeps the added transport-policy check framed as a local boundary test, not usable transport.
 
 What does not exist yet:
 
