@@ -24,6 +24,7 @@ What exists today:
 - A read-only Tauri prototype status shell exposing only release-claim, messaging-surface, profile, pairing, transport, and storage boundary state through `prototype_status`.
 - Static release-hygiene and Tauri-scaffold verifiers, lightweight local verification scripts, CLI hardening tests, and GitHub Actions verification.
 - README boundary compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
+- Lightweight verification review that keeps `verify_all` small and makes `verify_full` a superset of the lightweight path.
 
 What does not exist yet:
 
