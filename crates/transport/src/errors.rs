@@ -190,6 +190,7 @@ pub enum DescriptorPublicationPreparationError {
     DescriptorPublicationGateRequired,
     DescriptorPublicationAdapterRequired,
     RedactedDescriptorContextRequired,
+    RawDescriptorContextForbidden,
     DescriptorBodyForbidden,
     StreamIoForbidden,
     UsableMessagingClaimForbidden,

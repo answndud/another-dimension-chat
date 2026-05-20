@@ -62,10 +62,17 @@ pub struct DescriptorPublicationPreparationReady {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RedactedDescriptorPublicationContext {
+    endpoint_publication_policy: OnionEndpointPublicationPolicy,
+    descriptor_body_present: bool,
+    sensitive_context_present: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct DescriptorPublicationPreparationBoundary {
     pub(crate) gate_ready: Option<DescriptorPublicationGateReady>,
     pub(crate) fail_closed_adapter_ready: bool,
-    pub(crate) redacted_descriptor_context_only: bool,
+    pub(crate) redacted_context: Option<RedactedDescriptorPublicationContext>,
     pub(crate) descriptor_body_created: bool,
     pub(crate) stream_io_enabled: bool,
     pub(crate) usable_messaging_claimed: bool,
@@ -243,12 +250,42 @@ impl DescriptorPublicationPreparationReady {
     }
 }
 
+impl RedactedDescriptorPublicationContext {
+    pub fn pairwise_rendezvous_only(
+        endpoint_publication_policy: OnionEndpointPublicationPolicy,
+    ) -> Self {
+        Self {
+            endpoint_publication_policy,
+            descriptor_body_present: false,
+            sensitive_context_present: false,
+        }
+    }
+
+    pub fn unsafe_raw_context_for_test(
+        endpoint_publication_policy: OnionEndpointPublicationPolicy,
+    ) -> Self {
+        Self {
+            endpoint_publication_policy,
+            descriptor_body_present: true,
+            sensitive_context_present: true,
+        }
+    }
+
+    pub fn endpoint_publication_policy(self) -> OnionEndpointPublicationPolicy {
+        self.endpoint_publication_policy
+    }
+
+    pub fn is_redacted(self) -> bool {
+        !self.descriptor_body_present && !self.sensitive_context_present
+    }
+}
+
 impl DescriptorPublicationPreparationBoundary {
     pub fn locked_down() -> Self {
         Self {
             gate_ready: None,
             fail_closed_adapter_ready: false,
-            redacted_descriptor_context_only: false,
+            redacted_context: None,
             descriptor_body_created: false,
             stream_io_enabled: false,
             usable_messaging_claimed: false,
@@ -258,12 +295,12 @@ impl DescriptorPublicationPreparationBoundary {
     pub fn from_fail_closed_adapter(
         gate_ready: DescriptorPublicationGateReady,
         _adapter: &DescriptorPublicationFailClosedAdapter,
-        redacted_descriptor_context_only: bool,
+        redacted_context: RedactedDescriptorPublicationContext,
     ) -> Self {
         Self {
             gate_ready: Some(gate_ready),
             fail_closed_adapter_ready: true,
-            redacted_descriptor_context_only,
+            redacted_context: Some(redacted_context),
             descriptor_body_created: false,
             stream_io_enabled: false,
             usable_messaging_claimed: false,
@@ -281,7 +318,15 @@ impl DescriptorPublicationPreparationBoundary {
                 DescriptorPublicationPreparationError::DescriptorPublicationAdapterRequired,
             );
         }
-        if !self.redacted_descriptor_context_only {
+        let redacted_context = self
+            .redacted_context
+            .ok_or(DescriptorPublicationPreparationError::RedactedDescriptorContextRequired)?;
+        if !redacted_context.is_redacted() {
+            return Err(DescriptorPublicationPreparationError::RawDescriptorContextForbidden);
+        }
+        if redacted_context.endpoint_publication_policy()
+            != gate_ready.endpoint_publication_policy()
+        {
             return Err(DescriptorPublicationPreparationError::RedactedDescriptorContextRequired);
         }
         if self.descriptor_body_created {

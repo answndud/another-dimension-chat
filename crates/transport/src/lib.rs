@@ -64,7 +64,7 @@ pub use launch_descriptor::{
     DescriptorPublicationPreparationBoundary, DescriptorPublicationPreparationReady,
     OnionEndpointPublicationPolicy, OnionEndpointUpdatePolicy,
     OnionServiceDescriptorPublicationBoundary, OnionServiceDescriptorPublicationReady,
-    OnionServiceLaunchPreflight, OnionServiceLaunchReady,
+    OnionServiceLaunchPreflight, OnionServiceLaunchReady, RedactedDescriptorPublicationContext,
 };
 pub use onion_stream_boundary::{OnionInboundStreamBoundary, OnionOutboundStreamBoundary};
 pub use pre_network::{

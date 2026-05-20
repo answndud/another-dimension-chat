@@ -1385,7 +1385,11 @@ fn descriptor_publication_preparation_requires_gate_adapter_and_redacted_context
         DescriptorPublicationPreparationBoundary {
             gate_ready: Some(gate_ready),
             fail_closed_adapter_ready: false,
-            redacted_descriptor_context_only: true,
+            redacted_context: Some(
+                RedactedDescriptorPublicationContext::pairwise_rendezvous_only(
+                    OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                )
+            ),
             descriptor_body_created: false,
             stream_io_enabled: false,
             usable_messaging_claimed: false,
@@ -1395,14 +1399,33 @@ fn descriptor_publication_preparation_requires_gate_adapter_and_redacted_context
     );
     assert_eq!(
         DescriptorPublicationPreparationBoundary::from_fail_closed_adapter(
-            gate_ready, &adapter, false,
+            gate_ready,
+            &adapter,
+            RedactedDescriptorPublicationContext::unsafe_raw_context_for_test(
+                OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+            ),
+        )
+        .check(),
+        Err(DescriptorPublicationPreparationError::RawDescriptorContextForbidden)
+    );
+    assert_eq!(
+        DescriptorPublicationPreparationBoundary::from_fail_closed_adapter(
+            gate_ready,
+            &adapter,
+            RedactedDescriptorPublicationContext::pairwise_rendezvous_only(
+                OnionEndpointPublicationPolicy::Missing,
+            ),
         )
         .check(),
         Err(DescriptorPublicationPreparationError::RedactedDescriptorContextRequired)
     );
 
     let ready = DescriptorPublicationPreparationBoundary::from_fail_closed_adapter(
-        gate_ready, &adapter, true,
+        gate_ready,
+        &adapter,
+        RedactedDescriptorPublicationContext::pairwise_rendezvous_only(
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+        ),
     )
     .check()
     .expect("descriptor publication preparation ready");
@@ -1422,7 +1445,11 @@ fn descriptor_publication_preparation_rejects_descriptor_stream_and_messaging_sh
             DescriptorPublicationPreparationBoundary {
                 gate_ready: Some(gate_ready),
                 fail_closed_adapter_ready: true,
-                redacted_descriptor_context_only: true,
+                redacted_context: Some(
+                    RedactedDescriptorPublicationContext::pairwise_rendezvous_only(
+                        OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                    ),
+                ),
                 descriptor_body_created: true,
                 stream_io_enabled: false,
                 usable_messaging_claimed: false,
@@ -1433,7 +1460,11 @@ fn descriptor_publication_preparation_rejects_descriptor_stream_and_messaging_sh
             DescriptorPublicationPreparationBoundary {
                 gate_ready: Some(gate_ready),
                 fail_closed_adapter_ready: true,
-                redacted_descriptor_context_only: true,
+                redacted_context: Some(
+                    RedactedDescriptorPublicationContext::pairwise_rendezvous_only(
+                        OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                    ),
+                ),
                 descriptor_body_created: false,
                 stream_io_enabled: true,
                 usable_messaging_claimed: false,
@@ -1444,7 +1475,11 @@ fn descriptor_publication_preparation_rejects_descriptor_stream_and_messaging_sh
             DescriptorPublicationPreparationBoundary {
                 gate_ready: Some(gate_ready),
                 fail_closed_adapter_ready: true,
-                redacted_descriptor_context_only: true,
+                redacted_context: Some(
+                    RedactedDescriptorPublicationContext::pairwise_rendezvous_only(
+                        OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                    ),
+                ),
                 descriptor_body_created: false,
                 stream_io_enabled: false,
                 usable_messaging_claimed: true,
