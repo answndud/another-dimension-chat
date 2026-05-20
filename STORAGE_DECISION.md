@@ -306,6 +306,20 @@ The first local message index skeleton stores only a contact id, message number,
 
 Endpoint state cleanup uses `ProductionEnvelopeSession::delete_pairwise_endpoint_state`, which accepts a verified `ContactId`, derives the opaque endpoint state record id internally, and removes the encrypted record idempotently. It does not publish descriptors, rotate endpoints, reconnect streams, or claim secure media erasure.
 
+## Storage Boundary Review
+
+The current storage boundary should stay smaller than a full message database until the transport and UI receive paths exist.
+
+Current decision:
+
+- Do not add new durable record kinds only to anticipate later UI, mailbox, attachment, or sync features.
+- Keep `SqlCipherRecordStore::delete` as the canonical row deletion behavior.
+- Keep type-specific delete helpers only as thin lifecycle names for replay, message envelope, and local message index cleanup.
+- Test the generic delete behavior once, and test missing-record idempotency for the thin helpers together instead of repeating the same database row lifecycle in separate tests.
+- Keep plaintext-on-disk checks for replay state, endpoint state, and local message index because those encode different metadata leakage risks.
+
+This review does not make the prototype production-secure. It only reduces duplicated verification while preserving the storage invariants that matter for v0.1: no plaintext production records, explicit profile unlock, opaque record ids, encrypted-at-rest record bodies, and no replay rollback protection claim.
+
 ## Replay Rollback Protection Decision
 
 v0.1 does not claim replay rollback protection against encrypted database snapshot restore.
