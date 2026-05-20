@@ -75,7 +75,7 @@ crates/
   pairing/          pairing payload and safety transcript logic
   protocol/         message envelope and replay window logic
   storage/          development storage and production policy boundary
-  transport/        development transport boundary
+  transport/        fail-closed transport policy, onion, runtime, and stream boundaries
 
 scripts/
   smoke_dev_cli.sh  Alice/Bob CLI smoke flow
