@@ -101,7 +101,7 @@ Exit criteria:
 
 ## Phase 3: Production Storage Decision
 
-Status: in progress.
+Status: completed for the current v0.1 storage lifecycle boundary; production key wrapping and durable private key storage are deferred.
 
 Goal: replace development storage with an encrypted local storage boundary.
 
@@ -120,6 +120,7 @@ Exit criteria:
 - Production storage is encrypted at rest.
 - Development storage remains gated behind `dev-insecure`.
 - Local record lifecycle deletion, expiry, and replay state behavior are tested without claiming secure media erasure.
+- Deferred work remains explicitly documented before production key storage, key wrapping, migration, rollback protection, or secure media erasure claims.
 
 ## Phase 4: Onion Transport Prototype
 
