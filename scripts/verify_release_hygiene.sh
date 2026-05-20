@@ -8,6 +8,10 @@ grep -q 'publish = false' "$ROOT_DIR/Cargo.toml"
 grep -q '"private": true' "$ROOT_DIR/apps/desktop-tauri/package.json"
 grep -q 'not ready for real communication' "$ROOT_DIR/SECURITY.md"
 grep -q 'does not .*secure messenger release' "$ROOT_DIR/README.md"
+grep -q 'high-risk transport policy/fail-closed behavior' "$ROOT_DIR/README.md"
+grep -q 'It does not send messages, persist keys, bootstrap transport' "$ROOT_DIR/README.md"
+grep -q 'warning: production self-test is not a secure messenger release' "$ROOT_DIR/apps/cli/src/main.rs"
+grep -q 'production boundary self-test passed' "$ROOT_DIR/apps/cli/src/main.rs"
 grep -q 'Release signing or reproducible builds' "$ROOT_DIR/README.md"
 
 if git -C "$ROOT_DIR" ls-files | grep -E '^docs/' >/dev/null; then
