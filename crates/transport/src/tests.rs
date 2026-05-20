@@ -3984,6 +3984,8 @@ fn manual_arti_bootstrap_attempt_gate_is_disabled_by_default() {
         gate.summary().network_permission(),
         arti_adapter_spike::ManualArtiBootstrapNetworkPermission::Disabled
     );
+    assert!(gate.summary().network_disabled());
+    assert!(!gate.summary().permits_manual_network_attempt());
     assert_eq!(
         gate.summary().timeout_seconds(),
         TransportBootstrapPolicy::high_risk_default()
@@ -4019,6 +4021,8 @@ fn manual_arti_bootstrap_attempt_gate_can_be_explicitly_enabled_without_bootstra
         gate.summary().network_permission(),
         arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike
     );
+    assert!(!gate.summary().network_disabled());
+    assert!(gate.summary().permits_manual_network_attempt());
     assert_eq!(
         gate.adapter().transport().policy().mode(),
         TransportMode::HighRiskOnionOnly

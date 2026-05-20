@@ -57,7 +57,28 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next documented Arti adapter lifecycle cleanup selection. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+Continue transport work with the next documented Arti adapter lifecycle cleanup selection after manual bootstrap gate summary cleanup. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+
+## Manual Bootstrap Gate Summary Cleanup
+
+Decision as of 2026-05-20: manual Arti bootstrap network permission is now exposed through redacted summary predicates instead of open-coded gate permission checks at the one-shot bootstrap boundary.
+
+Moved without enabling network behavior:
+
+- `ManualArtiBootstrapAttemptSummary::network_disabled()`
+- `ManualArtiBootstrapAttemptSummary::permits_manual_network_attempt()`
+- `ManualArtiBootstrapAttemptGate::bootstrap_once_and_drop_client(...)` now uses the disabled predicate before any possible bootstrap attempt.
+
+Preserved invariants:
+
+- The safe/default manual bootstrap gate remains `ManualArtiBootstrapAttemptGate::disabled(...)`.
+- `RuntimeNetworkDisabled` is still recorded before returning when the gate is disabled.
+- The explicit manual spike constructor remains the only path that may reach `arti_client::TorClient::create_bootstrapped(...)`.
+- The manual bootstrap path remains separate from send/receive, onion hosting, descriptor publication, stream I/O, envelope I/O, and usable messaging.
+
+Next split target:
+
+- Select the next Arti adapter lifecycle cleanup boundary.
 
 ## Arti Lifecycle Summary Predicate Cleanup
 
