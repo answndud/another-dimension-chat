@@ -115,6 +115,7 @@ pub enum EnvelopeIoAdapterError {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RemotePeerAuthenticationError {
     RemotePeerAuthenticationRequired,
+    RedactedPeerAuthenticationContextRequired,
     ContactMismatch,
 }
 
