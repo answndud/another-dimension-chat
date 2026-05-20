@@ -372,20 +372,25 @@ impl TransportRuntimePreflight {
             && self.bridge_or_censorship_ready
     }
 
-    pub fn check(self) -> Result<TransportRuntimeReady, TransportRuntimeError> {
+    pub fn first_runtime_blocker(self) -> Option<TransportRuntimeError> {
         if !self.runtime_network_enabled {
-            return Err(TransportRuntimeError::RuntimeNetworkDisabled);
+            return Some(TransportRuntimeError::RuntimeNetworkDisabled);
         }
         if !self.state_cache_dirs_accessible {
-            return Err(TransportRuntimeError::StateDirectoryPermissionDenied);
+            return Some(TransportRuntimeError::StateDirectoryPermissionDenied);
         }
         if !self.log_redaction_ready {
-            return Err(TransportRuntimeError::LogRedactionPreflightFailed);
+            return Some(TransportRuntimeError::LogRedactionPreflightFailed);
         }
         if !self.bridge_or_censorship_ready {
-            return Err(TransportRuntimeError::CensorshipOrBridgeRequired);
+            return Some(TransportRuntimeError::CensorshipOrBridgeRequired);
         }
-        Ok(TransportRuntimeReady)
+        None
+    }
+
+    pub fn check(self) -> Result<TransportRuntimeReady, TransportRuntimeError> {
+        self.first_runtime_blocker()
+            .map_or(Ok(TransportRuntimeReady), Err)
     }
 }
 
