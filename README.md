@@ -23,6 +23,7 @@ What exists today:
 - SQLCipher-backed storage spikes for encrypted record boundaries, passphrase unlock, high-risk unlock policy, replay-window persistence after successful decrypt, pairwise endpoint state, local message indexes, and opaque record-id derivation.
 - A read-only Tauri prototype status shell exposing only release-claim, messaging-surface, profile, pairing, transport, and storage boundary state through `prototype_status`.
 - Static release-hygiene and Tauri-scaffold verifiers, lightweight local verification scripts, CLI hardening tests, and GitHub Actions verification.
+- README boundary compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
 
 What does not exist yet:
 
