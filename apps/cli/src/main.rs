@@ -18,6 +18,12 @@ fn main() {
 fn production_main() -> Result<(), String> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     match args.as_slice() {
+        [] => {
+            println!("{}", production_help());
+        }
+        [help] if help == "--help" || help == "-h" || help == "help" => {
+            println!("{}", production_help());
+        }
         [cmd, sub] if cmd == "production" && sub == "self-test" => {
             run_production_self_test()?;
             eprintln!("warning: production self-test is not a secure messenger release");
@@ -34,12 +40,26 @@ fn production_main() -> Result<(), String> {
             run_manual_lifecycle_bootstrap_command(args)?;
         }
         _ => {
-            return Err(
-                "another-dimension prototype commands require --features dev-insecure".to_string(),
-            );
+            return Err(format!(
+                "another-dimension default build exposes only boundary commands\n\n{}",
+                production_help()
+            ));
         }
     }
     Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn production_help() -> String {
+    "usage:
+  another-dimension production self-test
+  another-dimension --help
+
+boundary:
+  default build is not a secure messenger release
+  no usable messaging, profile creation, pairing, transport bootstrap, or storage unlock command is exposed
+  prototype profile/pairing/message commands require --features dev-insecure"
+        .to_string()
 }
 
 #[cfg(not(feature = "dev-insecure"))]
