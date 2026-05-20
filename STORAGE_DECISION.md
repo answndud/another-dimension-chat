@@ -271,12 +271,12 @@ This still does not provide:
 
 Current API boundary:
 
-- `ProductionEnvelopeSession::replay_record_id()` derives an opaque `EncryptedRecordId`.
+- `ProductionEnvelopeSession` derives the replay `EncryptedRecordId` internally.
 - The id is a domain-separated hash of the session `channel_id`.
 - The id is stable for the same session and different across different session transcripts.
 - The id does not embed the `adchan1` channel id string, profile names, contact ids, or endpoints.
 - `decrypt_at_responder_with_session_replay` is the preferred receive helper for current session replay persistence.
-- The lower-level `decrypt_at_responder_with_persistent_replay` remains available for tests and future migration code that needs explicit record ids.
+- The lower-level explicit-record-id replay helper is module-private and remains available only to internal tests and future in-module migration code.
 
 The caller still provides `EncryptedRecordScope` because storage authorization and record ownership are profile/contact concerns outside the in-memory session object. A future UI/transport receive facade should construct that scope from the selected local profile and verified contact, not from untrusted network input.
 
@@ -296,7 +296,7 @@ Replay-specific cleanup uses `delete_replay_window` so callers do not have to as
 
 Message expiry cleanup uses `delete_message_envelope` and `delete_local_message_index` so future expiry code can remove encrypted local message records without direct table operations. These helpers do not implement mailbox expiry, transport delivery expiry, secure media erasure, or user-facing disappearing-message policy by themselves.
 
-Message record ids are allocated by `ProductionEnvelopeSession` helpers rather than by callers assembling human-readable strings:
+Message record ids are allocated by module-private `ProductionEnvelopeSession` helpers rather than by callers assembling human-readable strings:
 
 - `message_envelope_record_id` derives a `message_...` id from the session channel id, message number, and message type.
 - `local_message_index_record_id` derives a `msgidx_...` id from the session channel id, verified contact id, and message number.
