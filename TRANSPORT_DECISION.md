@@ -1589,9 +1589,10 @@ Current code boundary:
 
 - `TransportPreNetworkCloseout::high_risk_default()` returns these blockers and keeps network execution disallowed.
 - `TransportNextPhase` records the next implementation target instead of letting code silently jump to bootstrap.
-- Network execution is allowed only when the blocker list is empty, at which point the next phase is only an Arti bootstrap execution skeleton, not a usable transport.
+- `network_execution_allowed()` means the pre-network blocker list is empty enough to enter the next bounded fail-closed skeleton. It does not mean sockets, Tor bootstrap, onion hosting, or envelope transfer are allowed.
+- When the blocker list is empty, the next phase is only an Arti bootstrap execution skeleton, not a usable transport.
 
-Next accepted phase: backup exclusion verification. The project should not start real Tor bootstrap, socket opens, onion service launch, or envelope transfer before the backup-exclusion and onion-key lifecycle decisions are implemented and tested.
+Next accepted phase from the default pre-network state: backup exclusion verification. The project should not start real Tor bootstrap, socket opens, onion service launch, or envelope transfer before backup-exclusion, onion-key lifecycle, and bridge/censorship decisions are implemented and tested.
 
 ## Transport Backup Exclusion Verification
 
@@ -1662,7 +1663,7 @@ Still not implemented:
 - Pluggable transport packaging.
 - Tor bootstrap, socket opens, onion service launch, or envelope transfer.
 
-Next accepted phase: Arti bootstrap execution skeleton. It must still remain bounded, fail-closed, and must not claim usable real communication until send/receive/onion hosting are separately implemented and verified.
+Next accepted phase after all pre-network blockers are closed: Arti bootstrap execution skeleton. It must still remain bounded, fail-closed, and must not claim usable real communication until send/receive/onion hosting are separately implemented and verified.
 
 ## Arti Bootstrap Execution Skeleton
 
