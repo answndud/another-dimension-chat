@@ -446,6 +446,14 @@ pub mod production {
                 .transpose()
         }
 
+        pub fn delete(&self, record_id: &EncryptedRecordId) -> Result<(), ProductionStorageError> {
+            self.connection.execute(
+                "DELETE FROM encrypted_records WHERE record_id = ?1",
+                params![record_id.as_str()],
+            )?;
+            Ok(())
+        }
+
         pub fn save_replay_window(
             &self,
             record_id: &EncryptedRecordId,
@@ -789,6 +797,42 @@ pub mod production {
             let record_id = EncryptedRecordId::new("missing_replay").expect("record id");
 
             assert_eq!(store.load_replay_window(&record_id).expect("load"), None);
+        }
+
+        #[test]
+        fn sqlcipher_store_delete_removes_encrypted_record_by_opaque_id() {
+            let (_dir, path) = unique_test_database_path("delete-record");
+            let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let record_id = EncryptedRecordId::new("record_delete_0001").expect("record id");
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::MessageEnvelope,
+                EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile")),
+                b"nonce-for-test".to_vec(),
+                b"sealed-body-for-test".to_vec(),
+            )
+            .expect("record");
+
+            store.put(&record_id, &record).expect("put");
+            assert_eq!(store.get(&record_id).expect("get"), Some(record));
+
+            store.delete(&record_id).expect("delete");
+
+            assert_eq!(store.get(&record_id).expect("get after delete"), None);
+        }
+
+        #[test]
+        fn sqlcipher_store_delete_is_idempotent_for_missing_record() {
+            let (_dir, path) = unique_test_database_path("delete-missing-record");
+            let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let record_id = EncryptedRecordId::new("missing_record").expect("record id");
+
+            store.delete(&record_id).expect("first delete");
+            store.delete(&record_id).expect("second delete");
+            assert_eq!(store.get(&record_id).expect("get missing"), None);
         }
 
         #[test]

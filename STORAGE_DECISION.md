@@ -181,6 +181,7 @@ It supports:
 - Unlock policy checks that require a passphrase factor before unlock.
 - High-risk mode rejection for OS-keystore-only auto-unlock.
 - Saving and loading durable replay windows as the first wired production record kind.
+- Deleting encrypted records by opaque `EncryptedRecordId`.
 
 It does not support:
 
@@ -248,6 +249,18 @@ Current API boundary:
 - The lower-level `decrypt_at_responder_with_persistent_replay` remains available for tests and future migration code that needs explicit record ids.
 
 The caller still provides `EncryptedRecordScope` because storage authorization and record ownership are profile/contact concerns outside the in-memory session object. A future UI/transport receive facade should construct that scope from the selected local profile and verified contact, not from untrusted network input.
+
+## Encrypted Record Deletion Boundary
+
+`SqlCipherRecordStore::delete` removes rows by opaque `EncryptedRecordId` only.
+
+Current behavior:
+
+- Existing encrypted records are removed from `encrypted_records`.
+- Missing records are treated idempotently.
+- Raw profile names, contact ids, endpoint strings, local paths, or message plaintext are not accepted by the deletion API.
+
+This is a lifecycle boundary for later expiry and local deletion flows. It is not secure deletion from physical media, and it does not claim protection against filesystem snapshots, backups, wear leveling, database page history, or an already-unlocked compromised device.
 
 ## Replay Rollback Protection Decision
 
