@@ -492,6 +492,20 @@ pub mod production {
         ) -> Result<(), ProductionStorageError> {
             self.delete(record_id)
         }
+
+        pub fn delete_message_envelope(
+            &self,
+            record_id: &EncryptedRecordId,
+        ) -> Result<(), ProductionStorageError> {
+            self.delete(record_id)
+        }
+
+        pub fn delete_local_message_index(
+            &self,
+            record_id: &EncryptedRecordId,
+        ) -> Result<(), ProductionStorageError> {
+            self.delete(record_id)
+        }
     }
 
     fn verify_sqlcipher_key(connection: &Connection) -> Result<(), ProductionStorageError> {
@@ -856,6 +870,51 @@ pub mod production {
                 .delete_replay_window(&record_id)
                 .expect("second delete replay");
             assert_eq!(store.load_replay_window(&record_id).expect("load"), None);
+        }
+
+        #[test]
+        fn sqlcipher_store_delete_message_envelope_removes_encrypted_envelope_record() {
+            let (_dir, path) = unique_test_database_path("delete-message-envelope");
+            let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let record_id = EncryptedRecordId::new("message_delete_0001").expect("record id");
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::MessageEnvelope,
+                EncryptedRecordScope::contact(
+                    ProfileName::new("alice").expect("profile"),
+                    ContactId::new("bob").expect("contact"),
+                ),
+                b"nonce-for-test".to_vec(),
+                b"sealed-envelope-for-test".to_vec(),
+            )
+            .expect("record");
+
+            store.put(&record_id, &record).expect("put");
+            assert_eq!(store.get(&record_id).expect("get"), Some(record));
+
+            store
+                .delete_message_envelope(&record_id)
+                .expect("delete message envelope");
+
+            assert_eq!(store.get(&record_id).expect("get after delete"), None);
+        }
+
+        #[test]
+        fn sqlcipher_store_delete_local_message_index_is_idempotent() {
+            let (_dir, path) = unique_test_database_path("delete-local-message-index");
+            let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let record_id = EncryptedRecordId::new("local_index_delete_0001").expect("record id");
+
+            store
+                .delete_local_message_index(&record_id)
+                .expect("first delete local index");
+            store
+                .delete_local_message_index(&record_id)
+                .expect("second delete local index");
+            assert_eq!(store.get(&record_id).expect("get missing"), None);
         }
 
         #[test]

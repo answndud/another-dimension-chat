@@ -265,6 +265,8 @@ This is a lifecycle boundary for later expiry and local deletion flows. It is no
 
 Replay-specific cleanup uses `delete_replay_window` so callers do not have to assemble raw table operations. This helper still provides only record lifecycle deletion, not replay rollback protection or secure media erasure.
 
+Message expiry cleanup uses `delete_message_envelope` and `delete_local_message_index` so future expiry code can remove encrypted local message records without direct table operations. These helpers do not implement mailbox expiry, transport delivery expiry, secure media erasure, or user-facing disappearing-message policy by themselves.
+
 ## Replay Rollback Protection Decision
 
 v0.1 does not claim replay rollback protection against encrypted database snapshot restore.
