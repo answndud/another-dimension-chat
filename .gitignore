@@ -1,6 +1,12 @@
 # Rust build output
 /target/
 
+# Frontend build output and dependencies
+node_modules/
+apps/desktop-tauri/node_modules/
+apps/desktop-tauri/dist/
+apps/desktop-tauri/src-tauri/target/
+
 # Private planning and security docs
 /docs/
 

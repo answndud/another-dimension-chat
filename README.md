@@ -155,6 +155,7 @@ The project also does not claim to be generally more secure than Signal. The int
 ```text
 apps/
   cli/              development CLI shell
+  desktop-tauri/    minimal Tauri prototype shell scaffold
 
 crates/
   core/             profile, pairing, and message orchestration
@@ -168,6 +169,7 @@ crates/
 scripts/
   smoke_dev_cli.sh  Alice/Bob CLI smoke flow
   verify_all.sh     canonical local verification entrypoint
+  verify_tauri_scaffold.sh
 ```
 
 Private planning and security notes live outside the public repository scope and are ignored under `docs/`.

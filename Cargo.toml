@@ -9,6 +9,9 @@ members = [
     "crates/core",
     "apps/cli",
 ]
+exclude = [
+    "apps/desktop-tauri/src-tauri",
+]
 resolver = "2"
 
 [workspace.package]
@@ -18,4 +21,3 @@ publish = false
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
-

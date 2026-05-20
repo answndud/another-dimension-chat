@@ -15,5 +15,6 @@ cd "$ROOT_DIR"
 
 run_step "rustfmt" cargo fmt --all -- --check
 run_step "workspace library tests" cargo test --workspace --lib
+run_step "tauri scaffold static checks" scripts/verify_tauri_scaffold.sh
 
 printf '\nlight verification steps passed\n'
