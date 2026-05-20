@@ -101,7 +101,7 @@ Exit criteria:
 
 ## Phase 3: Production Storage Decision
 
-Status: completed for the current v0.1 storage lifecycle boundary; production key wrapping and durable private key storage are deferred.
+Status: completed for the current narrow v0.1 storage lifecycle boundary; complete production encrypted storage, production key wrapping, and durable private key storage are deferred.
 
 Goal: replace development storage with an encrypted local storage boundary.
 

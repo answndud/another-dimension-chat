@@ -29,6 +29,7 @@ What exists today:
 - Implementation backlog selection that chooses Tauri status static-check tightening as the next small, low-cost slice.
 - Tauri status static-check tightening that keeps the same scaffold invariants while making verifier failures easier to diagnose.
 - Tauri status static-check tightening closeout that selects production storage lifecycle cleanup as the next small implementation slice.
+- Production storage lifecycle cleanup that narrows public non-claims around complete encrypted storage, rollback protection, and secure deletion.
 
 What does not exist yet:
 
@@ -40,7 +41,7 @@ What does not exist yet:
 - Actual onion service private key material.
 - Production unlock/key management.
 - OS keychain/DPAPI/Keystore wrapping.
-- Production encrypted local storage lifecycle.
+- Complete production encrypted local storage lifecycle.
 - Replay rollback protection against encrypted database snapshot restore.
 - Production Tauri desktop app. The current Tauri scaffold is a read-only prototype status shell, not a production messaging UI.
 - Android or iOS app.

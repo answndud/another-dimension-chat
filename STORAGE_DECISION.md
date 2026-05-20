@@ -320,6 +320,31 @@ Current decision:
 
 This review does not make the prototype production-secure. It only reduces duplicated verification while preserving the storage invariants that matter for v0.1: no plaintext production records, explicit profile unlock, opaque record ids, encrypted-at-rest record bodies, and no replay rollback protection claim.
 
+## Production Storage Lifecycle Cleanup
+
+The phrase "production storage lifecycle" in this repository means a narrow set of guardrails, not complete production encrypted local storage.
+
+Current lifecycle boundary:
+
+- Production record kinds are classified before persistence.
+- Sensitive production records must not be written as plaintext.
+- Profile storage reads require an explicit passphrase unlock boundary.
+- SQLCipher-backed `ADREC1` storage is a local spike for encrypted record bodies.
+- Replay state commit ordering is tested for the current database state.
+- Opaque record ids are used for replay, message index, and endpoint state records.
+- Local record deletion helpers remove rows by opaque id only.
+
+Non-claims:
+
+- No durable production private key persistence.
+- No complete production encrypted local storage lifecycle.
+- No rollback protection against encrypted database snapshot restore.
+- No secure deletion from physical media.
+- No OS keychain/DPAPI/Keystore wrapping.
+- No migration, backup, export, or recovery behavior.
+
+Public docs should use "storage guardrails", "storage boundary", or "SQLCipher-backed storage spike" unless and until the missing lifecycle pieces above are implemented and reviewed.
+
 ## Replay Rollback Protection Decision
 
 v0.1 does not claim replay rollback protection against encrypted database snapshot restore.
