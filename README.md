@@ -30,6 +30,7 @@ What exists today:
 - Tauri status static-check tightening that keeps the same scaffold invariants while making verifier failures easier to diagnose.
 - Tauri status static-check tightening closeout that selects production storage lifecycle cleanup as the next small implementation slice.
 - Production storage lifecycle cleanup that narrows public non-claims around complete encrypted storage, rollback protection, and secure deletion.
+- Production storage lifecycle cleanup closeout that selects storage API visibility cleanup before more storage behavior.
 
 What does not exist yet:
 
