@@ -57,7 +57,29 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next documented boundary selection after inbound stream attempt intent integration. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+Continue transport work with the next documented boundary selection after stream adapter closeout intent integration. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+
+## Stream Adapter Closeout Intent Boundary
+
+Decision as of 2026-05-20: stream adapter closeout now has an explicit `StreamAdapterCloseoutIntent` between the inbound/outbound fail-closed adapters and closeout readiness checking. The intent can only be prepared from both fail-closed stream adapters and still resolves through the existing closeout decision checks.
+
+Moved forward without enabling network behavior:
+
+- `StreamAdapterCloseoutIntent`
+- `StreamAdapterCloseoutIntent::from_fail_closed_adapters(...)`
+
+Preserved invariants:
+
+- Closeout still requires both inbound and outbound fail-closed adapters.
+- Remote peer authentication remains the next required boundary.
+- Verified pairwise session binding remains required after remote peer authentication.
+- Bound-session shortcuts, envelope I/O, and usable messaging claims remain forbidden.
+- Debug output for the closeout intent redacts endpoint, stream, contact, profile, and envelope material.
+- No real accept, dial, read/write, stream I/O, envelope send/receive, descriptor publication, or usable messaging capability was added.
+
+Next split target:
+
+- Select the next documented transport boundary.
 
 ## Inbound Stream Attempt Intent Boundary
 

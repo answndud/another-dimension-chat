@@ -145,6 +145,11 @@ pub struct StreamAdapterCloseoutDecision {
     usable_messaging_claimed: bool,
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct StreamAdapterCloseoutIntent {
+    decision: StreamAdapterCloseoutDecision,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct StreamCloseoutIntegrationOrder {
     closeout_ready: bool,
@@ -476,6 +481,36 @@ impl StreamAdapterCloseoutDecision {
         }
 
         Ok(StreamAdapterCloseoutReady)
+    }
+}
+
+impl StreamAdapterCloseoutIntent {
+    pub fn from_fail_closed_adapters(
+        inbound: &InboundStreamFailClosedAdapter,
+        outbound: &OutboundStreamFailClosedAdapter,
+    ) -> Self {
+        Self {
+            decision: StreamAdapterCloseoutDecision::from_fail_closed_adapters(inbound, outbound),
+        }
+    }
+
+    pub fn check(self) -> Result<StreamAdapterCloseoutReady, StreamAdapterCloseoutError> {
+        self.decision.check()
+    }
+}
+
+impl fmt::Debug for StreamAdapterCloseoutIntent {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("StreamAdapterCloseoutIntent")
+            .field("inbound_adapter", &"<ready>")
+            .field("outbound_adapter", &"<ready>")
+            .field("remote_peer_authentication", &"<required-next>")
+            .field("verified_pairwise_session", &"<required-after-auth>")
+            .field("bound_session_shortcut", &"<forbidden>")
+            .field("envelope_io", &"<forbidden>")
+            .field("usable_messaging", &"<forbidden>")
+            .finish()
     }
 }
 
