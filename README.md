@@ -16,28 +16,12 @@ What exists today:
 
 - Rust workspace split into `identity`, `pairing`, `crypto`, `protocol`, `transport`, `storage`, and `core` crates, plus CLI and Tauri prototype shells.
 - A `dev-insecure` CLI flow for local pairing and message-flow experimentation only.
-- Pairwise profile/contact, pairing payload, safety number, pairing lifecycle, padded envelope, and replay-window prototypes.
-- Production-facing guardrails for Ed25519 pairwise identity material, signed pairing drafts, Noise-based session setup smoke tests, envelope encryption/decryption, replay rejection, endpoint update control envelopes, deterministic duplicate-connection tie-breaks, and local storage policy checks.
-- A high-risk transport policy boundary that is onion-only by default and rejects direct peer routes unless explicitly low-risk.
-- Fail-closed Tor/onion transport scaffolding: Arti-first decisions, app-private directory checks, runtime preflight, redacted runtime events, bridge/censorship configuration boundaries, onion key lifecycle policy, descriptor/stream/envelope-I/O gates, and manual bootstrap/lifecycle spikes that remain separate from messaging.
-- SQLCipher-backed storage spikes for encrypted record boundaries, passphrase unlock, high-risk unlock policy, replay-window persistence after successful decrypt, pairwise endpoint state, local message indexes, and opaque record-id derivation.
+- Pairwise profile/contact, pairing payload, safety number, pairing lifecycle, padded envelope, replay-window, endpoint update, and deterministic duplicate-connection prototypes.
+- Production-facing guardrails for Ed25519 pairwise identity material, signed pairing drafts, Noise-based session setup smoke tests, envelope encryption/decryption, replay rejection, and local storage policy checks.
+- High-risk transport policy and fail-closed Tor/onion scaffolding: onion-only default routing, direct-route rejection unless explicitly low-risk, Arti-first decisions, app-private directory checks, runtime preflight, redacted runtime events, bridge/censorship configuration boundaries, onion key lifecycle policy, and descriptor/stream/envelope-I/O gates.
+- SQLCipher-backed storage spikes for encrypted record boundaries, passphrase unlock, high-risk unlock policy, replay-window persistence after successful decrypt, pairwise endpoint state, local message indexes, opaque record-id derivation, and internal raw database-key opening only.
 - A read-only Tauri prototype status shell exposing only release-claim, messaging-surface, profile, pairing, transport, and storage boundary state through `prototype_status`.
-- Static release-hygiene and Tauri-scaffold verifiers, lightweight local verification scripts, CLI hardening tests, and GitHub Actions verification.
-- README boundary compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
-- Lightweight verification review that keeps `verify_all` small and makes `verify_full` a superset of the lightweight path.
-- Transport module cleanup that documents the fail-closed module boundary without changing public re-exports or adding network behavior.
-- Implementation backlog selection that chooses Tauri status static-check tightening as the next small, low-cost slice.
-- Tauri status static-check tightening that keeps the same scaffold invariants while making verifier failures easier to diagnose.
-- Tauri status static-check tightening closeout that selects production storage lifecycle cleanup as the next small implementation slice.
-- Production storage lifecycle cleanup that narrows public non-claims around complete encrypted storage, rollback protection, and secure deletion.
-- Production storage lifecycle cleanup closeout that selects storage API visibility cleanup before more storage behavior.
-- Storage API visibility cleanup that keeps raw SQLCipher database-key opening internal and leaves the public path passphrase-first.
-- Transport API visibility review that keeps local/direct endpoint construction behind explicit `TransportRoute` constructors and policy checks.
-- Production self-test small expansion closeout that keeps the added transport-policy check framed as a local boundary test, not usable transport.
-- CLI self-test verifier static tightening that checks release hygiene wording for self-test transport fail-closed non-claims.
-- CLI self-test verifier static tightening closeout that selects warning/dependency cleanup as the next lightweight slice.
-- Production warning cleanup that marks message envelope record-id helpers as test-only instead of allowing dead code broadly.
-- Production warning cleanup closeout that selects README status compaction as the next lightweight maintenance slice.
+- Lightweight verification scripts, release-hygiene and Tauri-scaffold static verifiers, CLI hardening tests, and GitHub Actions verification.
 
 What does not exist yet:
 
