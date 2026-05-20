@@ -83,6 +83,7 @@ crates/
   transport/        fail-closed transport policy, onion, runtime, and stream boundaries
 
 scripts/
+  demo_dev_cli.sh   readable Alice/Bob dev-insecure local demo
   smoke_dev_cli.sh  Alice/Bob CLI smoke flow
   verify_all.sh     canonical local verification entrypoint
   verify_release_hygiene.sh
@@ -186,6 +187,12 @@ For the canonical smoke test, prefer:
 
 ```bash
 scripts/smoke_dev_cli.sh
+```
+
+For a readable local demo of the same `dev-insecure` prototype flow:
+
+```bash
+scripts/demo_dev_cli.sh
 ```
 
 ## Development Rules
