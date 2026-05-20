@@ -3829,6 +3829,58 @@ fn onion_service_launch_adapter_fails_closed_without_hosting_or_sensitive_output
 
 #[cfg(feature = "arti-adapter-spike")]
 #[test]
+fn arti_bootstrap_to_hosting_readiness_audit_binds_launch_summary_to_hosting_gate() {
+    let root = unique_transport_test_root("arti-hosting-readiness-audit");
+    let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+        root.join("arti-state"),
+        root.join("arti-cache"),
+    )
+    .expect("app private dirs");
+    let adapter =
+        arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+            dirs,
+            TransportBootstrapExecutionSkeleton::new(
+                TransportRuntimeReady,
+                TransportBootstrapPolicy::high_risk_default(),
+            ),
+        )
+        .expect("bounded adapter");
+    let mut owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
+    let mut sink = InMemoryTransportRuntimeEventSink::default();
+    owner.mark_bootstrapped_for_adapter_test(&mut sink);
+    let launch_adapter = arti_adapter_spike::OnionServiceLaunchAdapterSkeleton::from_ready_owner(
+        OnionServiceLaunchReady,
+        &ready_onion_service_key_material(),
+        &owner,
+    )
+    .expect("launch adapter");
+
+    let locked_down =
+        arti_adapter_spike::ArtiBootstrapToHostingReadinessAudit::locked_down(&launch_adapter);
+    assert!(locked_down
+        .launch_summary()
+        .can_attempt_fail_closed_launch());
+    assert_eq!(
+        locked_down.check(),
+        Err(OnionHostingGateError::TransportPhaseCloseoutRequired)
+    );
+
+    let ready = arti_adapter_spike::ArtiBootstrapToHostingReadinessAudit::from_ready_boundaries(
+        ready_transport_phase_closeout(),
+        &launch_adapter,
+    )
+    .check();
+    assert_eq!(ready, Ok(OnionHostingGateReady));
+
+    let rendered = format!("{locked_down:?}");
+    assert!(rendered.contains("ArtiBootstrapToHostingReadinessAudit"));
+    assert!(!rendered.contains(root.to_string_lossy().as_ref()));
+    assert!(!rendered.contains("arti-state"));
+    assert!(!rendered.contains("arti-cache"));
+}
+
+#[cfg(feature = "arti-adapter-spike")]
+#[test]
 fn onion_service_launch_adapter_exposes_descriptor_publication_boundary() {
     let root = unique_transport_test_root("onion-descriptor-boundary");
     let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
