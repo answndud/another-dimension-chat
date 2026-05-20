@@ -2124,6 +2124,8 @@ fn stream_adapter_closeout_requires_inbound_and_outbound_fail_closed_adapters() 
     let decision = StreamAdapterCloseoutDecision::from_fail_closed_adapters(
         &sample_inbound_stream_fail_closed_adapter(),
         &sample_outbound_stream_fail_closed_adapter(),
+        sample_inbound_stream_preparation_ready(),
+        sample_outbound_stream_preparation_ready(),
     );
 
     assert_eq!(decision.check(), Ok(StreamAdapterCloseoutReady));
@@ -2134,6 +2136,8 @@ fn stream_adapter_closeout_intent_preserves_fail_closed_boundary() {
     let intent = StreamAdapterCloseoutIntent::from_fail_closed_adapters(
         &sample_inbound_stream_fail_closed_adapter(),
         &sample_outbound_stream_fail_closed_adapter(),
+        sample_inbound_stream_preparation_ready(),
+        sample_outbound_stream_preparation_ready(),
     );
 
     assert_eq!(intent.check(), Ok(StreamAdapterCloseoutReady));
@@ -2155,6 +2159,17 @@ fn stream_adapter_closeout_requires_authentication_and_session_boundaries() {
     let decision = StreamAdapterCloseoutDecision::from_fail_closed_adapters(
         &sample_inbound_stream_fail_closed_adapter(),
         &sample_outbound_stream_fail_closed_adapter(),
+        sample_inbound_stream_preparation_ready(),
+        sample_outbound_stream_preparation_ready(),
+    );
+
+    assert_eq!(
+        decision.without_inbound_preparation().check(),
+        Err(StreamAdapterCloseoutError::InboundPreparationRequired)
+    );
+    assert_eq!(
+        decision.without_outbound_preparation().check(),
+        Err(StreamAdapterCloseoutError::OutboundPreparationRequired)
     );
 
     assert_eq!(
@@ -2176,6 +2191,8 @@ fn stream_adapter_closeout_rejects_shortcuts_to_session_io_and_messaging() {
     let decision = StreamAdapterCloseoutDecision::from_fail_closed_adapters(
         &sample_inbound_stream_fail_closed_adapter(),
         &sample_outbound_stream_fail_closed_adapter(),
+        sample_inbound_stream_preparation_ready(),
+        sample_outbound_stream_preparation_ready(),
     );
 
     assert_eq!(
@@ -3475,10 +3492,30 @@ fn sample_outbound_stream_fail_closed_adapter() -> OutboundStreamFailClosedAdapt
     .expect("outbound stream adapter")
 }
 
+fn sample_inbound_stream_preparation_ready() -> InboundStreamPreparationReady {
+    InboundStreamPreparationBoundary::from_fail_closed_adapter(
+        ready_inbound_stream_gate(),
+        &sample_inbound_stream_fail_closed_adapter(),
+    )
+    .check()
+    .expect("inbound stream preparation ready")
+}
+
+fn sample_outbound_stream_preparation_ready() -> OutboundStreamPreparationReady {
+    OutboundStreamPreparationBoundary::from_fail_closed_adapter(
+        ready_outbound_stream_gate(),
+        &sample_outbound_stream_fail_closed_adapter(),
+    )
+    .check()
+    .expect("outbound stream preparation ready")
+}
+
 fn sample_stream_adapter_closeout_ready() -> StreamAdapterCloseoutReady {
     StreamAdapterCloseoutDecision::from_fail_closed_adapters(
         &sample_inbound_stream_fail_closed_adapter(),
         &sample_outbound_stream_fail_closed_adapter(),
+        sample_inbound_stream_preparation_ready(),
+        sample_outbound_stream_preparation_ready(),
     )
     .check()
     .expect("stream adapter closeout ready")

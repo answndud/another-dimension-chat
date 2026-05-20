@@ -3,11 +3,12 @@ use another_dimension_protocol::Envelope;
 use std::fmt;
 
 use crate::{
-    EnvelopeIoAdapterError, InboundStreamFailClosedAdapter, OnionInboundStreamBoundary,
-    OnionOutboundStreamBoundary, OutboundStreamFailClosedAdapter,
-    PostAuthStreamReadinessOrderingError, RedactedTransportRuntimeEvent,
-    RemotePeerAuthenticationError, StreamAdapterCloseoutError, StreamCloseoutIntegrationError,
-    StreamSessionBindingError, TransportRuntimeError, TransportRuntimeEventSink,
+    EnvelopeIoAdapterError, InboundStreamFailClosedAdapter, InboundStreamPreparationReady,
+    OnionInboundStreamBoundary, OnionOutboundStreamBoundary, OutboundStreamFailClosedAdapter,
+    OutboundStreamPreparationReady, PostAuthStreamReadinessOrderingError,
+    RedactedTransportRuntimeEvent, RemotePeerAuthenticationError, StreamAdapterCloseoutError,
+    StreamCloseoutIntegrationError, StreamSessionBindingError, TransportRuntimeError,
+    TransportRuntimeEventSink,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -138,6 +139,8 @@ pub struct StreamAdapterCloseoutReady;
 pub struct StreamAdapterCloseoutDecision {
     inbound_adapter_ready: bool,
     outbound_adapter_ready: bool,
+    inbound_preparation_ready: bool,
+    outbound_preparation_ready: bool,
     remote_peer_authentication_required: bool,
     verified_pairwise_session_required: bool,
     bound_session_shortcut_claimed: bool,
@@ -409,6 +412,8 @@ impl StreamAdapterCloseoutDecision {
         Self {
             inbound_adapter_ready: false,
             outbound_adapter_ready: false,
+            inbound_preparation_ready: false,
+            outbound_preparation_ready: false,
             remote_peer_authentication_required: true,
             verified_pairwise_session_required: true,
             bound_session_shortcut_claimed: false,
@@ -420,10 +425,14 @@ impl StreamAdapterCloseoutDecision {
     pub fn from_fail_closed_adapters(
         _inbound: &InboundStreamFailClosedAdapter,
         _outbound: &OutboundStreamFailClosedAdapter,
+        _inbound_preparation: InboundStreamPreparationReady,
+        _outbound_preparation: OutboundStreamPreparationReady,
     ) -> Self {
         Self {
             inbound_adapter_ready: true,
             outbound_adapter_ready: true,
+            inbound_preparation_ready: true,
+            outbound_preparation_ready: true,
             remote_peer_authentication_required: true,
             verified_pairwise_session_required: true,
             bound_session_shortcut_claimed: false,
@@ -439,6 +448,16 @@ impl StreamAdapterCloseoutDecision {
 
     pub fn without_verified_pairwise_session_boundary(mut self) -> Self {
         self.verified_pairwise_session_required = false;
+        self
+    }
+
+    pub fn without_inbound_preparation(mut self) -> Self {
+        self.inbound_preparation_ready = false;
+        self
+    }
+
+    pub fn without_outbound_preparation(mut self) -> Self {
+        self.outbound_preparation_ready = false;
         self
     }
 
@@ -464,6 +483,12 @@ impl StreamAdapterCloseoutDecision {
         if !self.outbound_adapter_ready {
             return Err(StreamAdapterCloseoutError::OutboundAdapterRequired);
         }
+        if !self.inbound_preparation_ready {
+            return Err(StreamAdapterCloseoutError::InboundPreparationRequired);
+        }
+        if !self.outbound_preparation_ready {
+            return Err(StreamAdapterCloseoutError::OutboundPreparationRequired);
+        }
         if !self.remote_peer_authentication_required {
             return Err(StreamAdapterCloseoutError::RemotePeerAuthenticationBoundaryRequired);
         }
@@ -488,9 +513,16 @@ impl StreamAdapterCloseoutIntent {
     pub fn from_fail_closed_adapters(
         inbound: &InboundStreamFailClosedAdapter,
         outbound: &OutboundStreamFailClosedAdapter,
+        inbound_preparation: InboundStreamPreparationReady,
+        outbound_preparation: OutboundStreamPreparationReady,
     ) -> Self {
         Self {
-            decision: StreamAdapterCloseoutDecision::from_fail_closed_adapters(inbound, outbound),
+            decision: StreamAdapterCloseoutDecision::from_fail_closed_adapters(
+                inbound,
+                outbound,
+                inbound_preparation,
+                outbound_preparation,
+            ),
         }
     }
 

@@ -70,6 +70,7 @@ What exists today:
 - Outbound stream dial/send intent boundaries that separate adapter readiness from fail-closed dial/send calls without enabling real network stream I/O.
 - Stream adapter closeout intent boundary that requires both inbound and outbound fail-closed adapters before closeout readiness can be checked.
 - Stream adapter closeout boundary that requires both inbound and outbound fail-closed adapters before session binding can be considered, while still forbidding bound-session shortcuts, envelope I/O, and usable messaging.
+- Preparation-aware stream adapter closeout that now requires inbound and outbound preparation readiness in addition to fail-closed adapters before session binding can be considered.
 - Stream closeout integration ordering boundary that places remote peer authentication after stream adapter closeout and verified pairwise session binding after remote peer authentication, while still forbidding envelope I/O and usable messaging.
 - Post-intent stream boundary consolidation review that freezes further stream readiness/intent expansion and selects Arti adapter lifecycle cleanup before adding new network behavior.
 - Transport module decomposition preparation that selects redacted runtime events and event sinks as the first behavior-preserving split target.

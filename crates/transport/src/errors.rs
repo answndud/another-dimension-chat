@@ -255,6 +255,8 @@ pub enum OutboundStreamAdapterError {
 pub enum StreamAdapterCloseoutError {
     InboundAdapterRequired,
     OutboundAdapterRequired,
+    InboundPreparationRequired,
+    OutboundPreparationRequired,
     RemotePeerAuthenticationBoundaryRequired,
     VerifiedPairwiseSessionBoundaryRequired,
     BoundSessionShortcutForbidden,
