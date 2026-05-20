@@ -31,14 +31,14 @@ pub use errors::{
     BootstrapOnlyExperimentDecisionError, BridgeCensorshipConfigurationError,
     DescriptorPublicationAdapterError, DescriptorPublicationGateError,
     DescriptorPublicationPreparationError, EndpointLifecycleError, EnvelopeIoAdapterError,
-    InboundStreamAdapterError, InboundStreamGateError, NetworkExperimentGateError,
-    OnionHostingGateError, OnionInboundStreamError, OnionOutboundStreamError,
-    OnionServiceDescriptorPublicationError, OnionServiceKeyLifecycleError,
-    OnionServiceKeyMaterialError, OnionServiceLaunchPreflightError, OutboundStreamAdapterError,
-    OutboundStreamGateError, PostAuthStreamReadinessOrderingError, RemotePeerAuthenticationError,
-    StreamAdapterCloseoutError, StreamCloseoutIntegrationError, StreamSessionBindingError,
-    TransportBackupExclusionError, TransportError, TransportPhaseCloseoutError,
-    TransportRuntimeError, TransportRuntimeProbeError,
+    InboundStreamAdapterError, InboundStreamGateError, InboundStreamPreparationError,
+    NetworkExperimentGateError, OnionHostingGateError, OnionInboundStreamError,
+    OnionOutboundStreamError, OnionServiceDescriptorPublicationError,
+    OnionServiceKeyLifecycleError, OnionServiceKeyMaterialError, OnionServiceLaunchPreflightError,
+    OutboundStreamAdapterError, OutboundStreamGateError, PostAuthStreamReadinessOrderingError,
+    RemotePeerAuthenticationError, StreamAdapterCloseoutError, StreamCloseoutIntegrationError,
+    StreamSessionBindingError, TransportBackupExclusionError, TransportError,
+    TransportPhaseCloseoutError, TransportRuntimeError, TransportRuntimeProbeError,
 };
 pub use hosting_phase::{
     BootstrapOnlyExperimentDecision, BootstrapOnlyExperimentExpansion,
@@ -85,9 +85,9 @@ pub use runtime_preflight::{
 };
 pub use stream_gate::{
     InboundStreamAcceptIntent, InboundStreamFailClosedAdapter, InboundStreamGateDecision,
-    InboundStreamGateReady, InboundStreamReadWriteIntent, OutboundStreamDialIntent,
-    OutboundStreamFailClosedAdapter, OutboundStreamGateDecision, OutboundStreamGateReady,
-    OutboundStreamSendIntent,
+    InboundStreamGateReady, InboundStreamPreparationBoundary, InboundStreamPreparationReady,
+    InboundStreamReadWriteIntent, OutboundStreamDialIntent, OutboundStreamFailClosedAdapter,
+    OutboundStreamGateDecision, OutboundStreamGateReady, OutboundStreamSendIntent,
 };
 pub use stream_session::{
     BoundInboundStreamSession, BoundOutboundStreamSession, EnvelopeIoAdapterReady,

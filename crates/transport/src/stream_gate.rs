@@ -3,11 +3,11 @@ use std::fmt;
 
 use crate::{
     DescriptorPublicationFailClosedAdapter, DescriptorPublicationGateReady,
-    InboundStreamAdapterError, InboundStreamGateError, OnionInboundStreamBoundary,
-    OnionOutboundStreamBoundary, OnionServiceDescriptorPublicationReady,
-    OutboundStreamAdapterError, OutboundStreamGateError, PairwiseRendezvousEndpoint,
-    RedactedTransportRuntimeEvent, TransportMode, TransportPolicy, TransportRoute,
-    TransportRuntimeError, TransportRuntimeEventSink,
+    InboundStreamAdapterError, InboundStreamGateError, InboundStreamPreparationError,
+    OnionInboundStreamBoundary, OnionOutboundStreamBoundary,
+    OnionServiceDescriptorPublicationReady, OutboundStreamAdapterError, OutboundStreamGateError,
+    PairwiseRendezvousEndpoint, RedactedTransportRuntimeEvent, TransportMode, TransportPolicy,
+    TransportRoute, TransportRuntimeError, TransportRuntimeEventSink,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -17,6 +17,19 @@ pub struct InboundStreamGateReady;
 pub struct InboundStreamGateDecision {
     pub(crate) descriptor_publication_gate_ready: Option<DescriptorPublicationGateReady>,
     pub(crate) descriptor_publication_adapter_ready: bool,
+    pub(crate) accept_enabled: bool,
+    pub(crate) read_write_enabled: bool,
+    pub(crate) envelope_io_enabled: bool,
+    pub(crate) usable_messaging_claimed: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct InboundStreamPreparationReady;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct InboundStreamPreparationBoundary {
+    pub(crate) gate_ready: Option<InboundStreamGateReady>,
+    pub(crate) fail_closed_adapter_ready: bool,
     pub(crate) accept_enabled: bool,
     pub(crate) read_write_enabled: bool,
     pub(crate) envelope_io_enabled: bool,
@@ -160,6 +173,56 @@ impl InboundStreamFailClosedAdapter {
         InboundStreamReadWriteIntent {
             boundary: self.boundary,
         }
+    }
+}
+
+impl InboundStreamPreparationBoundary {
+    pub fn locked_down() -> Self {
+        Self {
+            gate_ready: None,
+            fail_closed_adapter_ready: false,
+            accept_enabled: false,
+            read_write_enabled: false,
+            envelope_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn from_fail_closed_adapter(
+        gate_ready: InboundStreamGateReady,
+        _adapter: &InboundStreamFailClosedAdapter,
+    ) -> Self {
+        Self {
+            gate_ready: Some(gate_ready),
+            fail_closed_adapter_ready: true,
+            accept_enabled: false,
+            read_write_enabled: false,
+            envelope_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn check(self) -> Result<InboundStreamPreparationReady, InboundStreamPreparationError> {
+        if self.gate_ready.is_none() {
+            return Err(InboundStreamPreparationError::InboundStreamGateRequired);
+        }
+        if !self.fail_closed_adapter_ready {
+            return Err(InboundStreamPreparationError::InboundStreamAdapterRequired);
+        }
+        if self.accept_enabled {
+            return Err(InboundStreamPreparationError::AcceptForbidden);
+        }
+        if self.read_write_enabled {
+            return Err(InboundStreamPreparationError::ReadWriteForbidden);
+        }
+        if self.envelope_io_enabled {
+            return Err(InboundStreamPreparationError::EnvelopeIoForbidden);
+        }
+        if self.usable_messaging_claimed {
+            return Err(InboundStreamPreparationError::UsableMessagingClaimForbidden);
+        }
+
+        Ok(InboundStreamPreparationReady)
     }
 }
 
