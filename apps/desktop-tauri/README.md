@@ -11,6 +11,8 @@ Current boundary:
 - Frontend may request redacted prototype status only.
 - Redacted status separates release-claim, messaging-surface, core, profile, pairing, transport, storage, and verification boundaries without exposing profile/contact/endpoint data.
 - The core status is static boundary copy in this scaffold; it does not link or call production core protocol, storage, or transport code.
+- The transport status is static pre-network fail-closed copy; it does not bootstrap Tor, host onion services, publish descriptors, open streams, or transfer envelopes.
+- The storage status is static `ADREC1` spike copy; it does not claim complete production key management, rollback protection, secure deletion, backup, recovery, or durable session persistence.
 - Status copy must describe boundary-only or disabled prototype states, not readiness, availability, or secure-release claims.
 - The only allowed Tauri command in this scaffold is `prototype_status`.
 - No Tor bootstrap, onion hosting, descriptor publication, stream I/O, envelope I/O, push notifications, cloud backup, groups, file transfer, or multi-device support.

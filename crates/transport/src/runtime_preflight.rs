@@ -365,6 +365,13 @@ impl TransportRuntimePreflight {
         }
     }
 
+    pub fn all_runtime_guards_ready(self) -> bool {
+        self.runtime_network_enabled
+            && self.state_cache_dirs_accessible
+            && self.log_redaction_ready
+            && self.bridge_or_censorship_ready
+    }
+
     pub fn check(self) -> Result<TransportRuntimeReady, TransportRuntimeError> {
         if !self.runtime_network_enabled {
             return Err(TransportRuntimeError::RuntimeNetworkDisabled);

@@ -2206,16 +2206,29 @@ fn runtime_preflight_maps_missing_checks_to_runtime_errors() {
 
 #[test]
 fn runtime_preflight_success_requires_all_bootstrap_guards() {
-    assert_eq!(
-        TransportRuntimePreflight {
-            runtime_network_enabled: true,
-            state_cache_dirs_accessible: true,
-            log_redaction_ready: true,
-            bridge_or_censorship_ready: true,
-        }
-        .check(),
-        Ok(TransportRuntimeReady)
-    );
+    let preflight = TransportRuntimePreflight {
+        runtime_network_enabled: true,
+        state_cache_dirs_accessible: true,
+        log_redaction_ready: true,
+        bridge_or_censorship_ready: true,
+    };
+
+    assert!(preflight.all_runtime_guards_ready());
+    assert_eq!(preflight.check(), Ok(TransportRuntimeReady));
+}
+
+#[test]
+fn runtime_preflight_ready_predicate_requires_every_guard() {
+    let disabled = TransportRuntimePreflight::disabled_by_default();
+    let missing_log_redaction = TransportRuntimePreflight {
+        runtime_network_enabled: true,
+        state_cache_dirs_accessible: true,
+        log_redaction_ready: false,
+        bridge_or_censorship_ready: true,
+    };
+
+    assert!(!disabled.all_runtime_guards_ready());
+    assert!(!missing_log_redaction.all_runtime_guards_ready());
 }
 
 #[test]
