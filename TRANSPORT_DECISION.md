@@ -57,7 +57,26 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next documented boundary after confirming the transport root now only contains module wiring, public re-exports, and the dev-insecure prototype transport. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging until the next boundary is explicitly selected.
+Continue transport work with the next documented boundary: endpoint rotation/reconnect fail-closed integration. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging.
+
+## Dev-Insecure Prototype Transport Module Extraction
+
+Decision as of 2026-05-20: the feature-gated `dev-insecure` prototype transport is extracted into `crates/transport/src/dev_insecure.rs`. `crates/transport/src/lib.rs` still exposes the same `dev_insecure::DevFileTransport` module path only when the feature is enabled.
+
+Moved without behavior change:
+
+- `dev_insecure::DevFileTransport`
+- storage error to `TransportError::DeliveryFailed` mapping
+
+Preserved invariants:
+
+- The dev file transport remains feature-gated behind `dev-insecure`.
+- It remains a prototype-only local file transport and is not a production transport path.
+- No production transport API, high-risk policy, onion transport, descriptor publication, stream I/O, envelope send/receive, or usable messaging capability was added.
+
+Next selected boundary:
+
+- Endpoint rotation/reconnect fail-closed integration, without real network reconnect.
 
 ## Transport Root Test Module Cleanup
 

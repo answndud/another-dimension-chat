@@ -76,6 +76,7 @@ What exists today:
 - Extracted transport error taxonomy module that preserves public error names and runtime-error classification while reducing the transport root surface.
 - Extracted transport policy/envelope skeleton module that preserves high-risk onion-only route policy and fail-closed envelope transport behavior through `crates/transport/src/lib.rs` re-exports.
 - Moved transport crate tests into `crates/transport/src/tests.rs`, leaving the transport root focused on module wiring, public re-exports, and the dev-insecure prototype transport.
+- Extracted the `dev-insecure` prototype transport module, keeping it feature-gated and separate from production transport boundaries.
 - Pairwise endpoint lifecycle boundary that rejects global or identity-key-derived rendezvous endpoints and allows endpoint updates only through an existing encrypted session.
 - Encrypted endpoint update control-envelope boundary that pads endpoint rotation plaintext before Noise encryption and wraps only opaque control ciphertext after a validated pairwise update.
 - Production envelope session hook for endpoint update control encryption/decryption without Tor delivery or onion hosting.
