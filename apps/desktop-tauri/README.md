@@ -10,6 +10,7 @@ Current boundary:
 - Rust owns security-sensitive state and future protocol/storage/transport behavior.
 - Frontend may request redacted prototype status only.
 - Redacted status separates release-claim, messaging-surface, core, profile, pairing, transport, storage, and verification boundaries without exposing profile/contact/endpoint data.
+- The core status is static boundary copy in this scaffold; it does not link or call production core protocol, storage, or transport code.
 - Status copy must describe boundary-only or disabled prototype states, not readiness, availability, or secure-release claims.
 - The only allowed Tauri command in this scaffold is `prototype_status`.
 - No Tor bootstrap, onion hosting, descriptor publication, stream I/O, envelope I/O, push notifications, cloud backup, groups, file transfer, or multi-device support.
