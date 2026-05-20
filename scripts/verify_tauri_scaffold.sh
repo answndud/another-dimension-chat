@@ -36,6 +36,24 @@ grep -q '^workspaces=false$' "$APP_DIR/.npmrc"
 grep -q '"lockfileVersion": 3' "$APP_DIR/package-lock.json"
 grep -q '"vite": "^6.0.0"' "$APP_DIR/package-lock.json"
 
+command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
+test "$command_count" = "1"
+
+invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
+test "$invoke_count" = "1"
+
+grep -q 'generate_handler!\[prototype_status\]' "$TAURI_DIR/src/lib.rs"
+
+if grep -R 'invoke(' "$APP_DIR/src" | grep -v 'invoke("prototype_status")' >/dev/null; then
+  echo "unexpected frontend Tauri command invocation" >&2
+  exit 1
+fi
+
+if grep -R -E 'send_message|receive_message|transport_bootstrap|bootstrap_transport|launch_onion|publish_descriptor|accept_stream|dial_stream|send_envelope|receive_envelope|create_profile|pair_contact|cloud_backup|push_notification|group_chat|file_transfer|multi_device' "$APP_DIR/src" "$TAURI_DIR/src" >/dev/null; then
+  echo "unexpected production command surface in Tauri scaffold" >&2
+  exit 1
+fi
+
 cargo metadata --manifest-path "$TAURI_DIR/Cargo.toml" --no-deps --format-version 1 >/dev/null
 
 printf 'tauri scaffold static verification passed\n'
