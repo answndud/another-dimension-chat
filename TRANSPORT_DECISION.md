@@ -57,7 +57,30 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with the next documented boundary selection after outbound stream attempt intent integration. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+Continue transport work with the next documented boundary selection after inbound stream attempt intent integration. Do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+
+## Inbound Stream Attempt Intent Boundary
+
+Decision as of 2026-05-20: inbound stream accept/read-write now have explicit intent tokens between the fail-closed adapter and the accept/read-write calls. These intents can only be prepared from `InboundStreamFailClosedAdapter`, which already requires inbound stream gate readiness and descriptor publication readiness. The intents still cannot accept, read from, or write to a network stream.
+
+Moved forward without enabling network behavior:
+
+- `InboundStreamAcceptIntent`
+- `InboundStreamReadWriteIntent`
+- `InboundStreamFailClosedAdapter::prepare_accept_intent()`
+- `InboundStreamFailClosedAdapter::prepare_read_write_intent()`
+
+Preserved invariants:
+
+- Adapter creation still requires `InboundStreamGateReady`.
+- Inbound stream readiness still requires descriptor publication readiness.
+- Accept/read-write attempts still record only redacted runtime events and return not-implemented errors.
+- Debug output for inbound intents redacts descriptor, endpoint, stream, contact, and profile material.
+- No real accept, read/write, stream I/O, envelope send/receive, descriptor publication, or usable messaging capability was added.
+
+Next split target:
+
+- Select the next documented transport boundary.
 
 ## Outbound Stream Attempt Intent Boundary
 
