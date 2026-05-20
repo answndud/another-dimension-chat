@@ -414,4 +414,11 @@ impl TransportRuntimeState {
     pub fn is_ready(self) -> bool {
         matches!(self, Self::Ready(_))
     }
+
+    pub fn fail_closed_blocker(self) -> Option<TransportRuntimeError> {
+        match self {
+            Self::Disabled => Some(TransportRuntimeError::RuntimeNetworkDisabled),
+            Self::Ready(_) => None,
+        }
+    }
 }
