@@ -4,6 +4,7 @@ import "./styles.css";
 const fields = {
   releaseClaim: document.querySelector("#release-claim"),
   messaging: document.querySelector("#messaging"),
+  core: document.querySelector("#core"),
   profile: document.querySelector("#profile"),
   pairing: document.querySelector("#pairing"),
   transport: document.querySelector("#transport"),
@@ -29,6 +30,7 @@ async function renderPrototypeStatus() {
       fields.messaging,
       status.usable_messaging ? "Unexpected messaging status" : "Disabled in prototype",
     );
+    setText(fields.core, status.core_status);
     setText(fields.profile, status.profile_status);
     setText(fields.pairing, status.pairing_status);
     setText(fields.transport, status.transport_status);
@@ -37,6 +39,7 @@ async function renderPrototypeStatus() {
   } catch (_error) {
     setText(fields.releaseClaim, "No secure-release claim");
     setText(fields.messaging, "Disabled in prototype");
+    setText(fields.core, "Core boundary only");
     setText(fields.profile, "Profile boundary only");
     setText(fields.pairing, "Pairing boundary only");
     setText(fields.transport, "Tauri command unavailable");
