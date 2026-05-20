@@ -37,6 +37,7 @@ What exists today:
 - CLI self-test verifier static tightening that checks release hygiene wording for self-test transport fail-closed non-claims.
 - CLI self-test verifier static tightening closeout that selects warning/dependency cleanup as the next lightweight slice.
 - Production warning cleanup that marks message envelope record-id helpers as test-only instead of allowing dead code broadly.
+- Production warning cleanup closeout that selects README status compaction as the next lightweight maintenance slice.
 
 What does not exist yet:
 
