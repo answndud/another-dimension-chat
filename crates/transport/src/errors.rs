@@ -109,6 +109,7 @@ pub enum StreamSessionBindingError {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EnvelopeIoAdapterError {
     EnvelopeIoReadinessRequired,
+    RedactedEnvelopeIoContextRequired,
     InboundEnvelopeReceiveNotImplemented,
     OutboundEnvelopeSendNotImplemented,
 }
