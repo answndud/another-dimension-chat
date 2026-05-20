@@ -37,6 +37,7 @@ npm run tauri -- dev
 Dependency/build gate:
 
 - `package-lock.json` is committed to pin the scaffold dependency graph.
+- `.npmrc` sets `workspaces=false` so local commands run as an isolated package even when the parent environment enables npm workspaces.
 - Lightweight CI checks the scaffold shape and lockfile metadata only.
 - Full Tauri install/build is local-only until a separate heavy workflow decision.
 - Do not add production messaging UI or security-sensitive logic to the frontend.

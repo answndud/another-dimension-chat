@@ -7,6 +7,7 @@ TAURI_DIR="$APP_DIR/src-tauri"
 
 required_files=(
   "$APP_DIR/README.md"
+  "$APP_DIR/.npmrc"
   "$APP_DIR/package.json"
   "$APP_DIR/package-lock.json"
   "$APP_DIR/index.html"
@@ -31,6 +32,7 @@ grep -q 'secure_release: false' "$TAURI_DIR/src/lib.rs"
 grep -q 'usable_messaging: false' "$TAURI_DIR/src/lib.rs"
 grep -q 'invoke("prototype_status")' "$APP_DIR/src/main.js"
 grep -q 'not a production messaging UI' "$APP_DIR/README.md"
+grep -q '^workspaces=false$' "$APP_DIR/.npmrc"
 grep -q '"lockfileVersion": 3' "$APP_DIR/package-lock.json"
 grep -q '"vite": "^6.0.0"' "$APP_DIR/package-lock.json"
 
