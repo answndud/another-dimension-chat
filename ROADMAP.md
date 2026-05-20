@@ -143,23 +143,27 @@ Exit criteria:
 
 ## Phase 5: Tauri Desktop Shell
 
-Status: not started.
+Status: selected as the next implementation phase.
 
 Goal: add a thin desktop shell around the Rust core after core behavior is stable.
 
 Tasks:
 
+- Start with a minimal scaffold only; do not add production messaging UI in the first slice.
 - Add `apps/desktop-tauri`.
 - Keep cryptographic, storage, transport, and protocol state in Rust.
 - Keep frontend IPC minimal and explicit.
 - Add UI only for currently supported 1:1 prototype flows.
 - Preserve all CLI/core tests.
+- Keep the shell honest about prototype status and avoid secure-release wording.
+- Do not expose Tor/onion hosting, descriptor publication, stream I/O, envelope I/O, push notifications, cloud backup, groups, file transfer, or multi-device features.
 
 Exit criteria:
 
 - Desktop shell does not duplicate security logic in JavaScript.
 - Existing Rust verification still passes.
 - UI does not imply security readiness.
+- Tauri commands return redacted status/summaries only until a separate UI flow boundary exists.
 
 ## Phase 6: Release and Supply-Chain Baseline
 
