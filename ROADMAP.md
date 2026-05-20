@@ -119,7 +119,7 @@ Exit criteria:
 
 - Production storage is encrypted at rest.
 - Development storage remains gated behind `dev-insecure`.
-- Local data deletion, expiry, and replay state behavior are tested.
+- Local record lifecycle deletion, expiry, and replay state behavior are tested without claiming secure media erasure.
 
 ## Phase 4: Onion Transport Prototype
 
