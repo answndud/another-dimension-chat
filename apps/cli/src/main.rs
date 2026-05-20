@@ -69,6 +69,10 @@ fn run_production_self_test() -> Result<(), String> {
     };
     use another_dimension_identity::ProfileName;
     use another_dimension_protocol::{ProtocolError, ReplayWindow};
+    use another_dimension_transport::{
+        EnvelopeTransport, OnionEnvelopeTransport, TransportError, TransportRoute,
+        TransportSendRequest,
+    };
 
     let alice = production_setup_draft_with_defaults(
         &ProfileName::new("alice").map_err(|_| "invalid built-in profile")?,
@@ -104,6 +108,18 @@ fn run_production_self_test() -> Result<(), String> {
     let replay_after_tamper = replay_window.highest_seen();
     let valid_after_tamper_result =
         session.decrypt_at_responder_with_replay(&valid_after_tamper, &mut replay_window);
+    let transport = OnionEnvelopeTransport::fail_closed_high_risk();
+    let direct_route =
+        TransportRoute::direct_peer("peer.example").map_err(|_| "invalid direct route")?;
+    let onion_route = TransportRoute::onion("bob.onion").map_err(|_| "invalid onion route")?;
+    let direct_send_result = transport.send_envelope(TransportSendRequest {
+        route: &direct_route,
+        envelope: &envelope,
+    });
+    let onion_send_result = transport.send_envelope(TransportSendRequest {
+        route: &onion_route,
+        envelope: &envelope,
+    });
     if decrypted == plaintext
         && matches!(
             replay_result,
@@ -116,6 +132,8 @@ fn run_production_self_test() -> Result<(), String> {
         && tamper_result.is_err()
         && replay_after_tamper == 1
         && valid_after_tamper_result.is_ok()
+        && matches!(direct_send_result, Err(TransportError::PolicyViolation))
+        && matches!(onion_send_result, Err(TransportError::Unavailable))
     {
         Ok(())
     } else {
