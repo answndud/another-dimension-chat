@@ -25,6 +25,7 @@ What exists today:
 - Static release-hygiene and Tauri-scaffold verifiers, lightweight local verification scripts, CLI hardening tests, and GitHub Actions verification.
 - README boundary compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
 - Lightweight verification review that keeps `verify_all` small and makes `verify_full` a superset of the lightweight path.
+- Transport module cleanup that documents the fail-closed module boundary without changing public re-exports or adding network behavior.
 
 What does not exist yet:
 
