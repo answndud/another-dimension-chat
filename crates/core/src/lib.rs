@@ -20,7 +20,8 @@ pub mod production {
     };
     use another_dimension_transport::{
         EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
-        EndpointUpdateControlPlaintext, PairwiseEndpointUpdate, PairwiseRendezvousEndpoint,
+        EndpointUpdateControlPlaintext, OnionServiceEndpoint, PairwiseEndpointUpdate,
+        PairwiseRendezvousEndpoint, RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
     };
     use sha2::{Digest, Sha256};
 
@@ -39,6 +40,8 @@ pub mod production {
         pub safety_transcript: String,
         pub local_role: SessionRole,
         pub canonical_dialer_public_key: String,
+        pub local_rendezvous_endpoint: PairwiseRendezvousEndpoint,
+        pub remote_rendezvous_endpoint: PairwiseRendezvousEndpoint,
         pub local_noise_static_public_key: Vec<u8>,
         pub remote_noise_static_public_key: Vec<u8>,
     }
@@ -398,6 +401,8 @@ pub mod production {
         EndpointLifecycle(EndpointLifecycleError),
         NonProductionPairingPayload,
         SamePairwiseIdentity,
+        SameRendezvousEndpoint,
+        InvalidRendezvousEndpoint,
         NoiseStaticKeyMismatch,
         UnexpectedEnvelope,
         EndpointScopeMismatch,
@@ -456,6 +461,11 @@ pub mod production {
         if local.pairwise_public_key == remote.pairwise_public_key {
             return Err(ProductionSessionError::SamePairwiseIdentity);
         }
+        if local.rendezvous_endpoint == remote.rendezvous_endpoint {
+            return Err(ProductionSessionError::SameRendezvousEndpoint);
+        }
+        let local_rendezvous_endpoint = pairwise_rendezvous_endpoint_from_payload(local)?;
+        let remote_rendezvous_endpoint = pairwise_rendezvous_endpoint_from_payload(remote)?;
         let local_prekey = NoisePrekeyBundle::decode(&local.prekey_bundle)?;
         let remote_prekey = NoisePrekeyBundle::decode(&remote.prekey_bundle)?;
         let safety_transcript = transcript(local, remote)?;
@@ -475,6 +485,8 @@ pub mod production {
             safety_transcript,
             local_role,
             canonical_dialer_public_key,
+            local_rendezvous_endpoint,
+            remote_rendezvous_endpoint,
             local_noise_static_public_key: local_prekey.public_key().to_vec(),
             remote_noise_static_public_key: remote_prekey.public_key().to_vec(),
         })
@@ -593,6 +605,21 @@ pub mod production {
             ));
         }
         Ok(())
+    }
+
+    fn pairwise_rendezvous_endpoint_from_payload(
+        payload: &PairingPayload,
+    ) -> Result<PairwiseRendezvousEndpoint, ProductionSessionError> {
+        let contact_id = payload.contact_id()?;
+        let endpoint = OnionServiceEndpoint::new(payload.rendezvous_endpoint.clone())
+            .map_err(|_| ProductionSessionError::InvalidRendezvousEndpoint)?;
+        PairwiseRendezvousEndpoint::new(
+            contact_id,
+            endpoint,
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
+        .map_err(ProductionSessionError::from)
     }
 
     fn canonical_dialer_rank(payload: &PairingPayload) -> [u8; 32] {
@@ -1393,12 +1420,51 @@ pub mod production {
             );
             assert_ne!(alice_view.local_role, bob_view.local_role);
             assert_eq!(
+                alice_view.local_rendezvous_endpoint.contact_id().as_str(),
+                "alice"
+            );
+            assert_eq!(
+                alice_view.local_rendezvous_endpoint.endpoint().as_str(),
+                "alice.onion"
+            );
+            assert_eq!(
+                alice_view.remote_rendezvous_endpoint.contact_id().as_str(),
+                "bob"
+            );
+            assert_eq!(
+                bob_view.local_rendezvous_endpoint.contact_id().as_str(),
+                "bob"
+            );
+            assert_eq!(
+                bob_view.remote_rendezvous_endpoint.contact_id().as_str(),
+                "alice"
+            );
+            assert_eq!(
                 alice_view.local_noise_static_public_key,
                 bob_view.remote_noise_static_public_key
             );
             assert_eq!(
                 alice_view.remote_noise_static_public_key,
                 bob_view.local_noise_static_public_key
+            );
+        }
+
+        #[test]
+        fn production_session_plan_rejects_invalid_or_shared_rendezvous_endpoint() {
+            let alice =
+                production_payload("alice", [51_u8; 32], "alice.onion", &noise_prekey_bundle());
+            let invalid_endpoint =
+                production_payload("bob", [52_u8; 32], "bob.example", &noise_prekey_bundle());
+            let shared_endpoint =
+                production_payload("bob", [53_u8; 32], "alice.onion", &noise_prekey_bundle());
+
+            assert_eq!(
+                plan_session_from_verified_pairing_payloads(&alice, &invalid_endpoint),
+                Err(ProductionSessionError::InvalidRendezvousEndpoint)
+            );
+            assert_eq!(
+                plan_session_from_verified_pairing_payloads(&alice, &shared_endpoint),
+                Err(ProductionSessionError::SameRendezvousEndpoint)
             );
         }
 

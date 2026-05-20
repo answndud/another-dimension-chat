@@ -60,13 +60,15 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 - Transport code handles already-encrypted protocol envelopes, not plaintext messages.
 - Transport logs must not include plaintext, session secrets, private keys, or decrypted message bodies.
 - Endpoint strings are routing hints, not global account identifiers.
+- Pairing rendezvous endpoints must validate into `PairwiseRendezvousEndpoint` values before a production session plan is accepted.
+- A production session plan must reject shared rendezvous endpoints because the first v0.1 model assumes per-contact endpoint separation.
 - Onion endpoint rotation remains a protocol/session concern and must be handled inside an authenticated encrypted session when implemented.
 
 ## Next Implementation Step
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-The audit found one missing coupling point and added `ArtiBootstrapToHostingReadinessAudit`. The next transport task is the per-contact rendezvous endpoint lifecycle path. Keep descriptor publication, network stream I/O, envelope send/receive, and usable messaging behind later boundary decisions.
+The per-contact rendezvous endpoint lifecycle review found that signed pairing endpoints were not yet validated into transport-scoped pairwise endpoints at session-plan time. `ProductionSessionPlan` now carries validated local and remote `PairwiseRendezvousEndpoint` values and rejects shared or invalid rendezvous endpoints. The next transport task is the deterministic duplicate-connection tie-break boundary. Keep descriptor publication, network stream I/O, envelope send/receive, and usable messaging behind later boundary decisions.
 
 ## Arti Lifecycle Cleanup Closeout
 
