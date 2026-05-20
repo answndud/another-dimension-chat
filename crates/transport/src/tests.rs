@@ -2220,6 +2220,7 @@ fn stream_closeout_integration_requires_closeout_ready_before_next_gate() {
         StreamCloseoutIntegrationOrder::from_closeout_ready(sample_stream_adapter_closeout_ready());
 
     assert_eq!(order.check(), Ok(order));
+    assert!(format!("{order:?}").contains("preparation_aware_closeout_ready"));
 }
 
 #[test]
