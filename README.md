@@ -97,7 +97,7 @@ What exists today:
 - Manual Arti bootstrap attempt gate behind an explicit feature/API, disabled by default and still separate from send/receive or onion hosting.
 - Local-only manual bootstrap CLI gate that requires explicit app-private dirs and `--execute-network` before attempting network bootstrap.
 - Profile-scoped transport directory resolver for app-private Arti state/cache directories, with redacted CLI output.
-- Persistent Arti client lifecycle owner boundary with unbootstrapped, bootstrapping, bootstrapped, dormant, and shutdown states.
+- Persistent Arti client lifecycle owner boundary with redacted summary predicates for bootstrapped-client ownership before onion launch preparation.
 - Local-only manual lifecycle bootstrap CLI gate that smoke-tests persistent owner state without send/receive or onion hosting.
 - Pre-network transport closeout boundary that blocks network execution until backup exclusion, onion service key lifecycle, and bridge/censorship decisions are cleared.
 - SQLCipher-backed `ADREC1` storage spike with test-only key construction.

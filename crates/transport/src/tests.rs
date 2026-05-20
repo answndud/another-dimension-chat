@@ -3637,6 +3637,8 @@ fn persistent_arti_client_owner_starts_unbootstrapped_without_network() {
         arti_adapter_spike::PersistentArtiClientLifecycleState::Unbootstrapped
     );
     assert!(!owner.summary().client_owned());
+    assert!(!owner.summary().has_bootstrapped_client());
+    assert!(!owner.summary().can_prepare_onion_launch());
     assert_eq!(
         owner.summary().timeout_seconds(),
         TransportBootstrapPolicy::high_risk_default()
@@ -3788,6 +3790,8 @@ fn onion_service_launch_adapter_fails_closed_without_hosting_or_sensitive_output
         arti_adapter_spike::PersistentArtiClientLifecycleState::Bootstrapped
     );
     assert!(launch_adapter.owner_summary().client_owned());
+    assert!(launch_adapter.owner_summary().has_bootstrapped_client());
+    assert!(launch_adapter.owner_summary().can_prepare_onion_launch());
     assert_eq!(
         launch_adapter.launch_fail_closed(&mut sink),
         Err(arti_adapter_spike::OnionServiceLaunchAdapterError::OnionHostingNotImplemented)

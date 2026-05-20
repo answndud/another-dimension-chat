@@ -57,7 +57,28 @@ The default production transport policy rejects direct peer routes. Direct P2P, 
 
 ## Next Implementation Step
 
-Continue transport work with Arti adapter lifecycle documentation/code cleanup. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+Continue transport work with the next documented Arti adapter lifecycle cleanup selection. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
+
+## Arti Lifecycle Summary Predicate Cleanup
+
+Decision as of 2026-05-20: persistent Arti client lifecycle launch readiness is now expressed through redacted summary predicates instead of open-coded state/client checks at the launch adapter boundary.
+
+Moved without enabling network behavior:
+
+- `PersistentArtiClientLifecycleSummary::has_bootstrapped_client()`
+- `PersistentArtiClientLifecycleSummary::can_prepare_onion_launch()`
+- `OnionServiceLaunchAdapterSkeleton::from_ready_owner(...)` now uses the summary predicate.
+
+Preserved invariants:
+
+- A launch adapter still requires `PersistentArtiClientLifecycleState::Bootstrapped`.
+- A launch adapter still requires the persistent client slot to be owned.
+- The predicate is only lifecycle readiness for the fail-closed launch adapter; it is not descriptor publication, onion hosting, stream I/O, envelope I/O, or usable messaging.
+- Debug and CLI-facing summaries still expose only state, client-owned boolean, timeout, and redacted directory material.
+
+Next split target:
+
+- Select the next Arti adapter lifecycle cleanup boundary.
 
 ## Post-Intent Stream Boundary Consolidation Review
 

@@ -275,6 +275,14 @@ impl PersistentArtiClientLifecycleSummary {
     pub fn timeout_seconds(self) -> u16 {
         self.timeout_seconds
     }
+
+    pub fn has_bootstrapped_client(self) -> bool {
+        self.state == PersistentArtiClientLifecycleState::Bootstrapped && self.client_owned
+    }
+
+    pub fn can_prepare_onion_launch(self) -> bool {
+        self.has_bootstrapped_client()
+    }
 }
 
 pub struct PersistentArtiClientOwner {
@@ -364,9 +372,7 @@ impl OnionServiceLaunchAdapterSkeleton {
         owner: &PersistentArtiClientOwner,
     ) -> Result<Self, OnionServiceLaunchAdapterError> {
         let owner_summary = owner.summary();
-        if owner_summary.state() != PersistentArtiClientLifecycleState::Bootstrapped
-            || !owner_summary.client_owned()
-        {
+        if !owner_summary.can_prepare_onion_launch() {
             return Err(OnionServiceLaunchAdapterError::PersistentClientNotBootstrapped);
         }
 
