@@ -88,7 +88,8 @@ Private planning and security notes live outside the public repository scope and
 ## Requirements
 
 - Rust stable toolchain.
-- `rustfmt` and `clippy` components.
+- `rustfmt` for lightweight verification.
+- `clippy` only for full verification.
 
 Install the components if needed:
 
@@ -108,6 +109,8 @@ This runs:
 
 - `cargo fmt --all -- --check`
 - `cargo test --workspace --lib`
+- Tauri scaffold static checks.
+- Public release hygiene static checks.
 
 For a heavier pre-release, audit, or risky cross-cutting change pass, run:
 

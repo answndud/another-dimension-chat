@@ -8,7 +8,7 @@ on:
 
 jobs:
   verify:
-    name: Rust workspace verification
+    name: Lightweight verification
     runs-on: ubuntu-latest
 
     steps:
