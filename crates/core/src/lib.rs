@@ -29,6 +29,10 @@ pub mod production {
     const PRODUCTION_REPLAY_RECORD_DOMAIN: &[u8] = b"AD-PRODUCTION-REPLAY-RECORD-V1";
     const PRODUCTION_ENDPOINT_STATE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-ENDPOINT-STATE-RECORD-V1";
+    const PRODUCTION_MESSAGE_ENVELOPE_RECORD_DOMAIN: &[u8] =
+        b"AD-PRODUCTION-MESSAGE-ENVELOPE-RECORD-V1";
+    const PRODUCTION_LOCAL_MESSAGE_INDEX_RECORD_DOMAIN: &[u8] =
+        b"AD-PRODUCTION-LOCAL-MESSAGE-INDEX-RECORD-V1";
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct ProductionSessionPlan {
@@ -80,6 +84,22 @@ pub mod production {
 
         pub fn endpoint_state_record_id(&self, contact_id: &ContactId) -> EncryptedRecordId {
             production_endpoint_state_record_id(&self.channel_id, contact_id)
+        }
+
+        pub fn message_envelope_record_id(
+            &self,
+            message_number: u64,
+            message_type: MessageType,
+        ) -> EncryptedRecordId {
+            production_message_envelope_record_id(&self.channel_id, message_number, message_type)
+        }
+
+        pub fn local_message_index_record_id(
+            &self,
+            contact_id: &ContactId,
+            message_number: u64,
+        ) -> EncryptedRecordId {
+            production_local_message_index_record_id(&self.channel_id, contact_id, message_number)
         }
 
         pub fn encrypt_from_canonical_dialer(
@@ -498,6 +518,44 @@ pub mod production {
             .expect("domain-separated endpoint state record id is valid")
     }
 
+    fn production_message_envelope_record_id(
+        channel_id: &str,
+        message_number: u64,
+        message_type: MessageType,
+    ) -> EncryptedRecordId {
+        let mut hasher = Sha256::new();
+        hasher.update(PRODUCTION_MESSAGE_ENVELOPE_RECORD_DOMAIN);
+        hasher.update([0]);
+        hasher.update(channel_id.as_bytes());
+        hasher.update([0]);
+        hasher.update(message_number.to_be_bytes());
+        hasher.update([0]);
+        hasher.update(match message_type {
+            MessageType::Data => b"data".as_slice(),
+            MessageType::Ack => b"ack".as_slice(),
+            MessageType::Control => b"control".as_slice(),
+        });
+        EncryptedRecordId::new(format!("message_{}", encode_hex(&hasher.finalize())))
+            .expect("domain-separated message envelope record id is valid")
+    }
+
+    fn production_local_message_index_record_id(
+        channel_id: &str,
+        contact_id: &ContactId,
+        message_number: u64,
+    ) -> EncryptedRecordId {
+        let mut hasher = Sha256::new();
+        hasher.update(PRODUCTION_LOCAL_MESSAGE_INDEX_RECORD_DOMAIN);
+        hasher.update([0]);
+        hasher.update(channel_id.as_bytes());
+        hasher.update([0]);
+        hasher.update(contact_id.as_str().as_bytes());
+        hasher.update([0]);
+        hasher.update(message_number.to_be_bytes());
+        EncryptedRecordId::new(format!("msgidx_{}", encode_hex(&hasher.finalize())))
+            .expect("domain-separated local message index record id is valid")
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -868,6 +926,39 @@ pub mod production {
             assert_ne!(alice_bob.replay_record_id(), carol_dave.replay_record_id());
             assert!(!format!("{:?}", alice_bob.replay_record_id()).contains("adchan1"));
             assert!(EncryptedRecordId::new(alice_bob.channel_id()).is_err());
+        }
+
+        #[test]
+        fn production_message_record_ids_are_session_scoped_and_opaque() {
+            let (alice, bob) = production_setup_pair();
+            let alice_bob = establish_envelope_session_from_setup_drafts(&alice, &bob)
+                .expect("alice bob session");
+            let (carol, dave) = production_setup_pair();
+            let carol_dave = establish_envelope_session_from_setup_drafts(&carol, &dave)
+                .expect("carol dave session");
+            let contact = ContactId::new("bob").expect("contact");
+
+            let message_one = alice_bob.message_envelope_record_id(1, MessageType::Data);
+            let message_two = alice_bob.message_envelope_record_id(2, MessageType::Data);
+            let control_one = alice_bob.message_envelope_record_id(1, MessageType::Control);
+            let other_session = carol_dave.message_envelope_record_id(1, MessageType::Data);
+            let index_one = alice_bob.local_message_index_record_id(&contact, 1);
+            let index_two = alice_bob.local_message_index_record_id(&contact, 2);
+
+            assert_eq!(
+                message_one,
+                alice_bob.message_envelope_record_id(1, MessageType::Data)
+            );
+            assert_ne!(message_one, message_two);
+            assert_ne!(message_one, control_one);
+            assert_ne!(message_one, other_session);
+            assert_ne!(index_one, index_two);
+            for record_id in [message_one, control_one, index_one] {
+                let debug = format!("{record_id:?}");
+                assert!(!debug.contains("adchan1"));
+                assert!(!debug.contains("bob"));
+                assert!(!debug.contains(alice_bob.channel_id()));
+            }
         }
 
         #[test]
