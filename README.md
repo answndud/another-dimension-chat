@@ -77,6 +77,7 @@ What exists today:
 - Redacted remote peer authentication context boundary that rejects unauthenticated peers and unredacted proof/transcript/endpoint context before remote authentication readiness can be created.
 - Remote peer authentication context closeout that selects pairwise stream session binding context tightening before adding more stream behavior.
 - Redacted pairwise stream session verification context boundary that rejects unverified sessions and unredacted session proof/transcript/endpoint context before stream session binding can be created.
+- Pairwise session binding context closeout that selects envelope I/O readiness tightening before any envelope send/receive behavior.
 - Post-intent stream boundary consolidation review that freezes further stream readiness/intent expansion and selects Arti adapter lifecycle cleanup before adding new network behavior.
 - Transport module decomposition preparation that selects redacted runtime events and event sinks as the first behavior-preserving split target.
 - Extracted transport runtime events module that preserves existing public event and sink names through `crates/transport/src/lib.rs` re-exports.
