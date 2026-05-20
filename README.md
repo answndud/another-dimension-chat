@@ -94,6 +94,7 @@ What exists today:
 - Release hygiene verification wiring that runs the release hygiene static check through the canonical lightweight `scripts/verify_all.sh` path.
 - Release hygiene verification wiring closeout that selects storage boundary review before any storage persistence expansion.
 - Storage boundary review that keeps persistence expansion paused and trims duplicated deletion-helper tests without weakening storage invariants.
+- Storage boundary review closeout that selects core/storage API cleanup before adding new durable storage features.
 - Post-intent stream boundary consolidation review that freezes further stream readiness/intent expansion and selects Arti adapter lifecycle cleanup before adding new network behavior.
 - Transport module decomposition preparation that selects redacted runtime events and event sinks as the first behavior-preserving split target.
 - Extracted transport runtime events module that preserves existing public event and sink names through `crates/transport/src/lib.rs` re-exports.
