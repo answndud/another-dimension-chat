@@ -34,6 +34,7 @@ required_files=(
   "$APP_DIR/.npmrc"
   "$APP_DIR/package.json"
   "$APP_DIR/package-lock.json"
+  "$TAURI_DIR/Cargo.lock"
   "$APP_DIR/index.html"
   "$APP_DIR/src/main.js"
   "$APP_DIR/src/styles.css"
@@ -43,6 +44,7 @@ required_files=(
   "$TAURI_DIR/src/lib.rs"
   "$TAURI_DIR/src/main.rs"
   "$TAURI_DIR/src/status.rs"
+  "$TAURI_DIR/icons/icon.png"
   "$TAURI_DIR/tauri.conf.json"
 )
 
@@ -53,10 +55,14 @@ done
 require_contains "$TAURI_DIR/tauri.conf.json" '"frontendDist": "../dist"'
 require_contains "$TAURI_DIR/tauri.conf.json" '"devUrl": "http://localhost:1420"'
 require_contains "$TAURI_DIR/src/lib.rs" 'prototype_status'
+require_contains "$TAURI_DIR/src/lib.rs" 'dev_local_demo'
 require_contains "$TAURI_DIR/src/lib.rs" 'mod status;'
 require_contains "$TAURI_DIR/src/lib.rs" 'pub use status::PrototypeStatus;'
 require_contains "$TAURI_DIR/src/lib.rs" 'redacted_prototype_status()'
-require_contains "$TAURI_DIR/src/lib.rs" 'generate_handler!\[prototype_status\]'
+require_contains "$TAURI_DIR/src/lib.rs" 'generate_handler!\[prototype_status, dev_local_demo\]'
+require_contains "$TAURI_DIR/src/lib.rs" 'cargo'
+require_contains "$TAURI_DIR/src/lib.rs" 'demo'
+require_contains "$TAURI_DIR/src/lib.rs" 'local'
 require_contains "$TAURI_DIR/src/status.rs" 'pub fn redacted_prototype_status() -> PrototypeStatus'
 require_contains "$TAURI_DIR/src/status.rs" 'secure_release: false'
 require_contains "$TAURI_DIR/src/status.rs" 'usable_messaging: false'
@@ -68,9 +74,12 @@ require_status_field 'network_execution_status' 'network execution disabled'
 require_status_field 'storage_status' 'ADREC1 storage spike only'
 require_status_field 'verification_status' 'lightweight checks only'
 require_contains "$APP_DIR/src/main.js" 'invoke("prototype_status")'
+require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_demo")'
 require_contains "$APP_DIR/src/main.js" 'Unexpected release claim'
 require_contains "$APP_DIR/src/main.js" 'Unexpected messaging status'
 require_contains "$APP_DIR/README.md" 'not a production messaging UI'
+require_contains "$APP_DIR/README.md" 'dev_local_demo'
+require_contains "$APP_DIR/README.md" 'not production messaging'
 require_contains "$APP_DIR/README.md" 'core, profile'
 require_contains "$APP_DIR/README.md" 'does not link or call production core protocol'
 require_contains "$APP_DIR/README.md" 'static pre-network fail-closed copy'
@@ -81,6 +90,8 @@ require_contains "$APP_DIR/README.md" 'does not claim complete production key ma
 require_contains "$APP_DIR/README.md" 'verification boundaries'
 require_contains "$APP_DIR/index.html" 'Prototype shell only'
 require_contains "$APP_DIR/index.html" 'Another Dimension Chat Prototype'
+require_contains "$APP_DIR/index.html" 'Dev-insecure local demo'
+require_contains "$APP_DIR/index.html" 'Run local demo'
 require_contains "$APP_DIR/index.html" 'Release claim'
 require_status_copy 'No secure-release claim'
 require_status_copy 'Disabled in prototype'
@@ -94,12 +105,13 @@ require_status_copy 'Lightweight checks only'
 require_contains "$APP_DIR/.npmrc" '^workspaces=false$'
 require_contains "$APP_DIR/package-lock.json" '"lockfileVersion": 3'
 require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
+require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
 command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "1"
+test "$command_count" = "2"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "1"
+test "$invoke_count" = "2"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -119,7 +131,9 @@ if grep -n -E '"available"|"ready"|"connected"|"bootstrapped"|"secure release"|"
   exit 1
 fi
 
-if grep -R 'invoke(' "$APP_DIR/src" | grep -v 'invoke("prototype_status")' >/dev/null; then
+if grep -R 'invoke(' "$APP_DIR/src" \
+  | grep -v 'invoke("prototype_status")' \
+  | grep -v 'invoke("dev_local_demo")' >/dev/null; then
   echo "unexpected frontend Tauri command invocation" >&2
   exit 1
 fi
@@ -129,7 +143,8 @@ if grep -R -E 'send_message|receive_message|transport_bootstrap|bootstrap_transp
   exit 1
 fi
 
-if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Send message|Connect|Pair contact|Bootstrap|Launch onion|Not a secure release|Not available' "$APP_DIR/index.html" "$APP_DIR/src" >/dev/null; then
+if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Send message|Connect|Pair contact|Bootstrap|Launch onion|Not a secure release|Not available' "$APP_DIR/index.html" "$APP_DIR/src" \
+  | grep -v '<button id="run-demo" type="button">Run local demo</button>' >/dev/null; then
   echo "unexpected interactive or readiness-implying UI copy in Tauri scaffold" >&2
   exit 1
 fi

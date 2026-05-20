@@ -73,6 +73,51 @@ dd {
   overflow-wrap: anywhere;
 }
 
+.demo-panel {
+  display: grid;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 720;
+  letter-spacing: 0;
+}
+
+button {
+  width: fit-content;
+  min-height: 42px;
+  border: 1px solid #25324a;
+  border-radius: 6px;
+  padding: 0 16px;
+  background: #25324a;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+pre {
+  min-height: 180px;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid #d6dbe4;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+  color: #172033;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 560px) {
   .shell {
     padding: 20px;
@@ -85,5 +130,9 @@ dd {
   .status-list div {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  button {
+    width: 100%;
   }
 }
