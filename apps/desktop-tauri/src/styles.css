@@ -104,6 +104,18 @@ button:disabled {
   opacity: 0.68;
 }
 
+.demo-state {
+  width: fit-content;
+  margin: 0;
+  border: 1px solid #d6dbe4;
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: #ffffff;
+  color: #52606d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 pre {
   min-height: 180px;
   margin: 0;
@@ -116,6 +128,18 @@ pre {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 13px;
   white-space: pre-wrap;
+}
+
+pre.is-running {
+  border-color: #9aa7b8;
+}
+
+pre.is-success {
+  border-color: #3b7f5a;
+}
+
+pre.is-failed {
+  border-color: #a33b3b;
 }
 
 @media (max-width: 560px) {
@@ -133,6 +157,10 @@ pre {
   }
 
   button {
+    width: 100%;
+  }
+
+  .demo-state {
     width: 100%;
   }
 }

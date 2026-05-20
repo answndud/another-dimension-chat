@@ -12,12 +12,20 @@ const fields = {
   storage: document.querySelector("#storage"),
   verification: document.querySelector("#verification"),
   runDemo: document.querySelector("#run-demo"),
+  demoState: document.querySelector("#demo-state"),
   demoOutput: document.querySelector("#demo-output"),
 };
 
 function setText(node, value) {
   if (node) {
     node.textContent = value;
+  }
+}
+
+function setDemoState(state, message) {
+  setText(fields.demoState, message);
+  if (fields.demoOutput) {
+    fields.demoOutput.className = `is-${state}`;
   }
 }
 
@@ -54,14 +62,17 @@ async function renderPrototypeStatus() {
 }
 
 async function runLocalDemo() {
+  setDemoState("running", "Demo running");
   setText(fields.demoOutput, "Running local dev-insecure demo...");
   if (fields.runDemo) {
     fields.runDemo.disabled = true;
   }
   try {
     const result = await invoke("dev_local_demo");
+    setDemoState("success", "Demo completed");
     setText(fields.demoOutput, `${result.warning}${result.transcript}`);
   } catch (error) {
+    setDemoState("failed", "Demo failed");
     setText(fields.demoOutput, `Local demo failed:\n${error}`);
   } finally {
     if (fields.runDemo) {
