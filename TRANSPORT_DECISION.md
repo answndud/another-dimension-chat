@@ -76,7 +76,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-Stream closeout integration closeout chooses remote peer authentication context tightening before any further session-binding expansion. The next transport task is to replace the boolean-like remote peer authentication context with a redacted proof context. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
+Remote peer authentication context tightening is implemented: readiness now requires `RedactedRemotePeerAuthenticationContext`, rejects unauthenticated peers, and rejects unredacted proof/transcript/endpoint context. The next transport task is remote peer authentication context tightening closeout: decide whether session-binding context needs the same treatment or whether stream boundary expansion should pause. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
 
 ## Arti Lifecycle Cleanup Closeout
 
@@ -627,12 +627,12 @@ Preserved invariants:
 
 ## Stream Session Boundary Module Extraction
 
-Decision as of 2026-05-19: verified pairwise session binding, remote peer authentication readiness, bound inbound/outbound stream sessions, envelope I/O readiness adapters, and stream closeout ordering are extracted into `crates/transport/src/stream_session.rs`. `crates/transport/src/lib.rs` re-exports the same public names to preserve the public API.
+Decision as of 2026-05-19: verified pairwise session binding, remote peer authentication readiness, bound inbound/outbound stream sessions, envelope I/O readiness adapters, and stream closeout ordering are extracted into `crates/transport/src/stream_session.rs`. `crates/transport/src/lib.rs` re-exports the stream session boundary names from that module.
 
 Moved without behavior change:
 
 - `StreamSessionVerificationContext`
-- `RemotePeerAuthenticationContext`
+- `RedactedRemotePeerAuthenticationContext`
 - `PairwiseStreamSessionBinding`
 - `RemotePeerAuthenticationReady`
 - `BoundInboundStreamSession`
@@ -1071,8 +1071,9 @@ Decision as of 2026-05-19: a verified pairwise encrypted-session binding is not 
 
 Current code boundary:
 
-- `RemotePeerAuthenticationReady` can be constructed only with `RemotePeerAuthenticationContext::AuthenticatedPairwisePeer`.
+- `RemotePeerAuthenticationReady` can be constructed only with `RedactedRemotePeerAuthenticationContext::authenticated_pairwise_peer()`.
 - Missing or unauthenticated peer proof is rejected with `RemotePeerAuthenticationRequired`.
+- Unredacted peer proof, session transcript, or endpoint context is rejected with `RedactedPeerAuthenticationContextRequired`.
 - `BoundInboundStreamSession` requires an inbound stream boundary, verified session binding, and remote peer authentication readiness.
 - `BoundOutboundStreamSession` requires an outbound stream boundary, verified session binding, and remote peer authentication readiness.
 - Inbound stream/session binding rejects session/authentication contact mismatch with `ContactMismatch`.

@@ -95,7 +95,7 @@ pub use stream_session::{
     BoundInboundStreamSession, BoundOutboundStreamSession, EnvelopeIoAdapterReady,
     InboundEnvelopeIoAdapterBoundary, OutboundEnvelopeIoAdapterBoundary,
     PairwiseStreamSessionBinding, PostAuthInboundStreamReadinessOrder,
-    PostAuthOutboundStreamReadinessOrder, RemotePeerAuthenticationContext,
+    PostAuthOutboundStreamReadinessOrder, RedactedRemotePeerAuthenticationContext,
     RemotePeerAuthenticationReady, StreamAdapterCloseoutDecision, StreamAdapterCloseoutIntent,
     StreamAdapterCloseoutReady, StreamCloseoutIntegrationOrder, StreamSessionVerificationContext,
 };

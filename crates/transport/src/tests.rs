@@ -3257,9 +3257,17 @@ fn remote_peer_authentication_is_required_before_bound_stream_session() {
     assert_eq!(
         RemotePeerAuthenticationReady::from_authenticated_pairwise_peer(
             ContactId::new("bob").expect("contact"),
-            RemotePeerAuthenticationContext::UnauthenticatedPeer,
+            RedactedRemotePeerAuthenticationContext::unauthenticated_peer(),
         ),
         Err(RemotePeerAuthenticationError::RemotePeerAuthenticationRequired)
+    );
+    assert_eq!(
+        RemotePeerAuthenticationReady::from_authenticated_pairwise_peer(
+            ContactId::new("bob").expect("contact"),
+            RedactedRemotePeerAuthenticationContext::unredacted_authenticated_pairwise_peer_for_test(
+            ),
+        ),
+        Err(RemotePeerAuthenticationError::RedactedPeerAuthenticationContextRequired)
     );
     assert_eq!(
         BoundInboundStreamSession::from_inbound_stream(
@@ -3280,6 +3288,14 @@ fn remote_peer_authentication_is_required_before_bound_stream_session() {
     assert!(rendered.contains("<redacted>"));
     assert!(rendered.contains("<verified>"));
     assert!(!rendered.contains("bob"));
+    assert!(!rendered.contains("peer-proof"));
+    assert!(!rendered.contains("session-transcript"));
+    assert!(!rendered.contains("example.onion"));
+
+    let context = RedactedRemotePeerAuthenticationContext::authenticated_pairwise_peer();
+    let rendered = format!("{context:?}");
+    assert!(rendered.contains("RedactedRemotePeerAuthenticationContext"));
+    assert!(rendered.contains("<redacted>"));
     assert!(!rendered.contains("peer-proof"));
     assert!(!rendered.contains("session-transcript"));
     assert!(!rendered.contains("example.onion"));
@@ -3543,7 +3559,7 @@ fn sample_stream_session_binding(contact_id: &str) -> PairwiseStreamSessionBindi
 fn sample_remote_peer_authentication(contact_id: &str) -> RemotePeerAuthenticationReady {
     RemotePeerAuthenticationReady::from_authenticated_pairwise_peer(
         ContactId::new(contact_id).expect("contact"),
-        RemotePeerAuthenticationContext::AuthenticatedPairwisePeer,
+        RedactedRemotePeerAuthenticationContext::authenticated_pairwise_peer(),
     )
     .expect("remote peer authentication")
 }

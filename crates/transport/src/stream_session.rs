@@ -17,10 +17,65 @@ pub enum StreamSessionVerificationContext {
     UnverifiedSession,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum RemotePeerAuthenticationContext {
-    AuthenticatedPairwisePeer,
-    UnauthenticatedPeer,
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct RedactedRemotePeerAuthenticationContext {
+    authenticated_pairwise_peer: bool,
+    peer_proof_redacted: bool,
+    session_transcript_redacted: bool,
+    endpoint_redacted: bool,
+}
+
+impl RedactedRemotePeerAuthenticationContext {
+    pub fn authenticated_pairwise_peer() -> Self {
+        Self {
+            authenticated_pairwise_peer: true,
+            peer_proof_redacted: true,
+            session_transcript_redacted: true,
+            endpoint_redacted: true,
+        }
+    }
+
+    pub fn unauthenticated_peer() -> Self {
+        Self {
+            authenticated_pairwise_peer: false,
+            peer_proof_redacted: true,
+            session_transcript_redacted: true,
+            endpoint_redacted: true,
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn unredacted_authenticated_pairwise_peer_for_test() -> Self {
+        Self {
+            authenticated_pairwise_peer: true,
+            peer_proof_redacted: false,
+            session_transcript_redacted: false,
+            endpoint_redacted: false,
+        }
+    }
+
+    fn is_authenticated_pairwise_peer(&self) -> bool {
+        self.authenticated_pairwise_peer
+    }
+
+    fn is_fully_redacted(&self) -> bool {
+        self.peer_proof_redacted && self.session_transcript_redacted && self.endpoint_redacted
+    }
+}
+
+impl fmt::Debug for RedactedRemotePeerAuthenticationContext {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("RedactedRemotePeerAuthenticationContext")
+            .field(
+                "authenticated_pairwise_peer",
+                &self.authenticated_pairwise_peer,
+            )
+            .field("peer_proof", &"<redacted>")
+            .field("session_transcript", &"<redacted>")
+            .field("endpoint", &"<redacted>")
+            .finish()
+    }
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -64,9 +119,12 @@ pub struct RemotePeerAuthenticationReady {
 impl RemotePeerAuthenticationReady {
     pub fn from_authenticated_pairwise_peer(
         contact_id: ContactId,
-        context: RemotePeerAuthenticationContext,
+        context: RedactedRemotePeerAuthenticationContext,
     ) -> Result<Self, RemotePeerAuthenticationError> {
-        if context != RemotePeerAuthenticationContext::AuthenticatedPairwisePeer {
+        if !context.is_fully_redacted() {
+            return Err(RemotePeerAuthenticationError::RedactedPeerAuthenticationContextRequired);
+        }
+        if !context.is_authenticated_pairwise_peer() {
             return Err(RemotePeerAuthenticationError::RemotePeerAuthenticationRequired);
         }
 
