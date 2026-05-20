@@ -62,6 +62,65 @@ pub mod production {
         pub plaintext: Vec<u8>,
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct LocalMessageIndexEntry {
+        contact_id: ContactId,
+        message_number: u64,
+        message_type: MessageType,
+    }
+
+    impl LocalMessageIndexEntry {
+        pub fn new(
+            contact_id: ContactId,
+            message_number: u64,
+            message_type: MessageType,
+        ) -> Result<Self, ProductionSessionError> {
+            if message_number == 0 {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            Ok(Self {
+                contact_id,
+                message_number,
+                message_type,
+            })
+        }
+
+        pub fn contact_id(&self) -> &ContactId {
+            &self.contact_id
+        }
+
+        pub fn message_number(&self) -> u64 {
+            self.message_number
+        }
+
+        pub fn message_type(&self) -> MessageType {
+            self.message_type.clone()
+        }
+
+        fn encode(&self) -> String {
+            format!(
+                "ADMSGIDX1|{}|{}|{}",
+                self.contact_id.as_str(),
+                self.message_number,
+                message_type_tag(&self.message_type)
+            )
+        }
+
+        fn decode(value: &str) -> Result<Self, ProductionSessionError> {
+            let parts = value.split('|').collect::<Vec<_>>();
+            if parts.len() != 4 || parts[0] != "ADMSGIDX1" {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            let contact_id =
+                ContactId::new(parts[1]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let message_number = parts[2]
+                .parse::<u64>()
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let message_type = parse_message_type_tag(parts[3])?;
+            Self::new(contact_id, message_number, message_type)
+        }
+    }
+
     #[derive(Debug)]
     pub struct ProductionEnvelopeSession {
         plan: ProductionSessionPlan,
@@ -280,6 +339,53 @@ pub mod production {
             let record_id = self.endpoint_state_record_id(contact_id);
             store.delete(&record_id)?;
             Ok(())
+        }
+
+        pub fn save_local_message_index(
+            &self,
+            store: &SqlCipherRecordStore,
+            scope: EncryptedRecordScope,
+            entry: &LocalMessageIndexEntry,
+        ) -> Result<EncryptedRecordId, ProductionSessionError> {
+            if scope.contact_id() != Some(entry.contact_id()) {
+                return Err(ProductionSessionError::EndpointScopeMismatch);
+            }
+            let record_id =
+                self.local_message_index_record_id(entry.contact_id(), entry.message_number());
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::LocalMessageIndex,
+                scope,
+                b"sqlcipher-page-encryption-v1".to_vec(),
+                entry.encode().into_bytes(),
+            )
+            .map_err(ProductionStorageError::from)?;
+            store.put(&record_id, &record)?;
+            Ok(record_id)
+        }
+
+        pub fn load_local_message_index(
+            &self,
+            store: &SqlCipherRecordStore,
+            contact_id: &ContactId,
+            message_number: u64,
+        ) -> Result<Option<LocalMessageIndexEntry>, ProductionSessionError> {
+            let record_id = self.local_message_index_record_id(contact_id, message_number);
+            store
+                .get(&record_id)?
+                .map(|record| {
+                    if record.kind != ProductionRecordKind::LocalMessageIndex {
+                        return Err(ProductionSessionError::UnexpectedEnvelope);
+                    }
+                    let state = String::from_utf8(record.sealed_body)
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let entry = LocalMessageIndexEntry::decode(&state)?;
+                    if entry.contact_id() != contact_id || entry.message_number() != message_number
+                    {
+                        return Err(ProductionSessionError::EndpointScopeMismatch);
+                    }
+                    Ok(entry)
+                })
+                .transpose()
         }
     }
 
@@ -564,6 +670,23 @@ pub mod production {
         hasher.update(message_number.to_be_bytes());
         EncryptedRecordId::new(format!("msgidx_{}", encode_hex(&hasher.finalize())))
             .expect("domain-separated local message index record id is valid")
+    }
+
+    fn message_type_tag(message_type: &MessageType) -> &'static str {
+        match message_type {
+            MessageType::Data => "data",
+            MessageType::Ack => "ack",
+            MessageType::Control => "control",
+        }
+    }
+
+    fn parse_message_type_tag(value: &str) -> Result<MessageType, ProductionSessionError> {
+        match value {
+            "data" => Ok(MessageType::Data),
+            "ack" => Ok(MessageType::Ack),
+            "control" => Ok(MessageType::Control),
+            _ => Err(ProductionSessionError::UnexpectedEnvelope),
+        }
     }
 
     #[cfg(test)]
@@ -969,6 +1092,97 @@ pub mod production {
                 assert!(!debug.contains("bob"));
                 assert!(!debug.contains(alice_bob.channel_id()));
             }
+        }
+
+        #[test]
+        fn production_local_message_index_persists_through_encrypted_store() {
+            let (alice, bob) = production_setup_pair();
+            let session =
+                establish_envelope_session_from_setup_drafts(&alice, &bob).expect("session");
+            let contact = ContactId::new("bob").expect("contact");
+            let entry =
+                LocalMessageIndexEntry::new(contact.clone(), 7, MessageType::Data).expect("entry");
+            let (dir, store) = production_test_store("local-message-index");
+            let scope = EncryptedRecordScope::contact(
+                ProfileName::new("alice").expect("profile"),
+                contact.clone(),
+            );
+
+            let record_id = session
+                .save_local_message_index(&store, scope, &entry)
+                .expect("save local message index");
+
+            assert_eq!(
+                session
+                    .load_local_message_index(&store, &contact, 7)
+                    .expect("load local message index"),
+                Some(entry)
+            );
+            assert_eq!(
+                record_id,
+                session.local_message_index_record_id(&contact, 7)
+            );
+            let rendered_record_id = format!("{record_id:?}");
+            assert!(!rendered_record_id.contains("alice"));
+            assert!(!rendered_record_id.contains("bob"));
+            assert!(!rendered_record_id.contains("adchan1"));
+
+            let database_bytes = std::fs::read(dir.join("store.db")).expect("read database");
+            assert!(!contains_bytes(&database_bytes, b"ADMSGIDX1"));
+            assert!(!contains_bytes(&database_bytes, b"bob"));
+            assert!(!contains_bytes(&database_bytes, b"alice"));
+        }
+
+        #[test]
+        fn production_local_message_index_rejects_scope_mismatch() {
+            let (alice, bob) = production_setup_pair();
+            let session =
+                establish_envelope_session_from_setup_drafts(&alice, &bob).expect("session");
+            let entry = LocalMessageIndexEntry::new(
+                ContactId::new("bob").expect("contact"),
+                7,
+                MessageType::Data,
+            )
+            .expect("entry");
+            let (_dir, store) = production_test_store("local-message-index-scope-mismatch");
+            let scope = EncryptedRecordScope::contact(
+                ProfileName::new("alice").expect("profile"),
+                ContactId::new("carol").expect("contact"),
+            );
+
+            assert_eq!(
+                session.save_local_message_index(&store, scope, &entry),
+                Err(ProductionSessionError::EndpointScopeMismatch)
+            );
+        }
+
+        #[test]
+        fn production_local_message_index_delete_uses_allocated_record_id() {
+            let (alice, bob) = production_setup_pair();
+            let session =
+                establish_envelope_session_from_setup_drafts(&alice, &bob).expect("session");
+            let contact = ContactId::new("bob").expect("contact");
+            let entry =
+                LocalMessageIndexEntry::new(contact.clone(), 7, MessageType::Data).expect("entry");
+            let (_dir, store) = production_test_store("local-message-index-delete");
+            let scope = EncryptedRecordScope::contact(
+                ProfileName::new("alice").expect("profile"),
+                contact.clone(),
+            );
+            let record_id = session
+                .save_local_message_index(&store, scope, &entry)
+                .expect("save local message index");
+
+            store
+                .delete_local_message_index(&record_id)
+                .expect("delete local message index");
+
+            assert_eq!(
+                session
+                    .load_local_message_index(&store, &contact, 7)
+                    .expect("load after delete"),
+                None
+            );
         }
 
         #[test]
