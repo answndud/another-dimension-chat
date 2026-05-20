@@ -208,6 +208,7 @@ Current behavior:
 
 - `save_replay_window` stores `ReplayWindow::encode_state()` through an `ADREC1` record of kind `ReplayWindowState`.
 - `load_replay_window` returns `None` for missing records.
+- `delete_replay_window` removes replay state through the same opaque record id boundary and is idempotent for missing state.
 - Loading rejects records whose kind is not `ReplayWindowState`.
 - Tests assert the database file does not contain the `ADREPLAY1` marker or observed replay sequence bytes.
 
@@ -261,6 +262,8 @@ Current behavior:
 - Raw profile names, contact ids, endpoint strings, local paths, or message plaintext are not accepted by the deletion API.
 
 This is a lifecycle boundary for later expiry and local deletion flows. It is not secure deletion from physical media, and it does not claim protection against filesystem snapshots, backups, wear leveling, database page history, or an already-unlocked compromised device.
+
+Replay-specific cleanup uses `delete_replay_window` so callers do not have to assemble raw table operations. This helper still provides only record lifecycle deletion, not replay rollback protection or secure media erasure.
 
 ## Replay Rollback Protection Decision
 
