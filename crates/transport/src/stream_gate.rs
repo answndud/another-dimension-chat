@@ -6,8 +6,9 @@ use crate::{
     InboundStreamAdapterError, InboundStreamGateError, InboundStreamPreparationError,
     OnionInboundStreamBoundary, OnionOutboundStreamBoundary,
     OnionServiceDescriptorPublicationReady, OutboundStreamAdapterError, OutboundStreamGateError,
-    PairwiseRendezvousEndpoint, RedactedTransportRuntimeEvent, TransportMode, TransportPolicy,
-    TransportRoute, TransportRuntimeError, TransportRuntimeEventSink,
+    OutboundStreamPreparationError, PairwiseRendezvousEndpoint, RedactedTransportRuntimeEvent,
+    TransportMode, TransportPolicy, TransportRoute, TransportRuntimeError,
+    TransportRuntimeEventSink,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -59,6 +60,19 @@ pub struct OutboundStreamGateReady;
 pub struct OutboundStreamGateDecision {
     pub(crate) pairwise_endpoint: Option<PairwiseRendezvousEndpoint>,
     pub(crate) policy: TransportPolicy,
+    pub(crate) dial_enabled: bool,
+    pub(crate) send_enabled: bool,
+    pub(crate) envelope_io_enabled: bool,
+    pub(crate) usable_messaging_claimed: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct OutboundStreamPreparationReady;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct OutboundStreamPreparationBoundary {
+    pub(crate) gate_ready: Option<OutboundStreamGateReady>,
+    pub(crate) fail_closed_adapter_ready: bool,
     pub(crate) dial_enabled: bool,
     pub(crate) send_enabled: bool,
     pub(crate) envelope_io_enabled: bool,
@@ -388,6 +402,56 @@ impl OutboundStreamFailClosedAdapter {
         OutboundStreamSendIntent {
             boundary: self.boundary.clone(),
         }
+    }
+}
+
+impl OutboundStreamPreparationBoundary {
+    pub fn locked_down() -> Self {
+        Self {
+            gate_ready: None,
+            fail_closed_adapter_ready: false,
+            dial_enabled: false,
+            send_enabled: false,
+            envelope_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn from_fail_closed_adapter(
+        gate_ready: OutboundStreamGateReady,
+        _adapter: &OutboundStreamFailClosedAdapter,
+    ) -> Self {
+        Self {
+            gate_ready: Some(gate_ready),
+            fail_closed_adapter_ready: true,
+            dial_enabled: false,
+            send_enabled: false,
+            envelope_io_enabled: false,
+            usable_messaging_claimed: false,
+        }
+    }
+
+    pub fn check(self) -> Result<OutboundStreamPreparationReady, OutboundStreamPreparationError> {
+        if self.gate_ready.is_none() {
+            return Err(OutboundStreamPreparationError::OutboundStreamGateRequired);
+        }
+        if !self.fail_closed_adapter_ready {
+            return Err(OutboundStreamPreparationError::OutboundStreamAdapterRequired);
+        }
+        if self.dial_enabled {
+            return Err(OutboundStreamPreparationError::DialForbidden);
+        }
+        if self.send_enabled {
+            return Err(OutboundStreamPreparationError::SendForbidden);
+        }
+        if self.envelope_io_enabled {
+            return Err(OutboundStreamPreparationError::EnvelopeIoForbidden);
+        }
+        if self.usable_messaging_claimed {
+            return Err(OutboundStreamPreparationError::UsableMessagingClaimForbidden);
+        }
+
+        Ok(OutboundStreamPreparationReady)
     }
 }
 

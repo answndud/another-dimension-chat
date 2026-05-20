@@ -35,10 +35,11 @@ pub use errors::{
     NetworkExperimentGateError, OnionHostingGateError, OnionInboundStreamError,
     OnionOutboundStreamError, OnionServiceDescriptorPublicationError,
     OnionServiceKeyLifecycleError, OnionServiceKeyMaterialError, OnionServiceLaunchPreflightError,
-    OutboundStreamAdapterError, OutboundStreamGateError, PostAuthStreamReadinessOrderingError,
-    RemotePeerAuthenticationError, StreamAdapterCloseoutError, StreamCloseoutIntegrationError,
-    StreamSessionBindingError, TransportBackupExclusionError, TransportError,
-    TransportPhaseCloseoutError, TransportRuntimeError, TransportRuntimeProbeError,
+    OutboundStreamAdapterError, OutboundStreamGateError, OutboundStreamPreparationError,
+    PostAuthStreamReadinessOrderingError, RemotePeerAuthenticationError,
+    StreamAdapterCloseoutError, StreamCloseoutIntegrationError, StreamSessionBindingError,
+    TransportBackupExclusionError, TransportError, TransportPhaseCloseoutError,
+    TransportRuntimeError, TransportRuntimeProbeError,
 };
 pub use hosting_phase::{
     BootstrapOnlyExperimentDecision, BootstrapOnlyExperimentExpansion,
@@ -87,7 +88,8 @@ pub use stream_gate::{
     InboundStreamAcceptIntent, InboundStreamFailClosedAdapter, InboundStreamGateDecision,
     InboundStreamGateReady, InboundStreamPreparationBoundary, InboundStreamPreparationReady,
     InboundStreamReadWriteIntent, OutboundStreamDialIntent, OutboundStreamFailClosedAdapter,
-    OutboundStreamGateDecision, OutboundStreamGateReady, OutboundStreamSendIntent,
+    OutboundStreamGateDecision, OutboundStreamGateReady, OutboundStreamPreparationBoundary,
+    OutboundStreamPreparationReady, OutboundStreamSendIntent,
 };
 pub use stream_session::{
     BoundInboundStreamSession, BoundOutboundStreamSession, EnvelopeIoAdapterReady,
