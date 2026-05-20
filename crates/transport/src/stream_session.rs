@@ -223,8 +223,53 @@ pub struct BoundOutboundStreamSession {
     _remote_peer_authentication: RemotePeerAuthenticationReady,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct EnvelopeIoAdapterReady;
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct EnvelopeIoAdapterReady {
+    fail_closed: bool,
+    envelope_body_redacted: bool,
+    envelope_metadata_redacted: bool,
+    send_receive_claimed: bool,
+}
+
+impl EnvelopeIoAdapterReady {
+    pub fn fail_closed() -> Self {
+        Self {
+            fail_closed: true,
+            envelope_body_redacted: true,
+            envelope_metadata_redacted: true,
+            send_receive_claimed: false,
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn unredacted_fail_closed_for_test() -> Self {
+        Self {
+            fail_closed: true,
+            envelope_body_redacted: false,
+            envelope_metadata_redacted: false,
+            send_receive_claimed: false,
+        }
+    }
+
+    fn is_redacted_fail_closed(&self) -> bool {
+        self.fail_closed
+            && self.envelope_body_redacted
+            && self.envelope_metadata_redacted
+            && !self.send_receive_claimed
+    }
+}
+
+impl fmt::Debug for EnvelopeIoAdapterReady {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("EnvelopeIoAdapterReady")
+            .field("fail_closed", &self.fail_closed)
+            .field("envelope_body", &"<redacted>")
+            .field("envelope_metadata", &"<redacted>")
+            .field("send_receive_claimed", &self.send_receive_claimed)
+            .finish()
+    }
+}
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct InboundEnvelopeIoAdapterBoundary {
@@ -382,11 +427,15 @@ impl InboundEnvelopeIoAdapterBoundary {
     pub fn from_bound_stream_session(
         bound_stream_session: BoundInboundStreamSession,
         io_ready: EnvelopeIoAdapterReady,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, EnvelopeIoAdapterError> {
+        if !io_ready.is_redacted_fail_closed() {
+            return Err(EnvelopeIoAdapterError::RedactedEnvelopeIoContextRequired);
+        }
+
+        Ok(Self {
             _bound_stream_session: bound_stream_session,
             _io_ready: io_ready,
-        }
+        })
     }
 
     pub fn from_missing_io_readiness() -> Result<Self, EnvelopeIoAdapterError> {
@@ -422,11 +471,15 @@ impl OutboundEnvelopeIoAdapterBoundary {
     pub fn from_bound_stream_session(
         bound_stream_session: BoundOutboundStreamSession,
         io_ready: EnvelopeIoAdapterReady,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, EnvelopeIoAdapterError> {
+        if !io_ready.is_redacted_fail_closed() {
+            return Err(EnvelopeIoAdapterError::RedactedEnvelopeIoContextRequired);
+        }
+
+        Ok(Self {
             _bound_stream_session: bound_stream_session,
             _io_ready: io_ready,
-        }
+        })
     }
 
     pub fn from_missing_io_readiness() -> Result<Self, EnvelopeIoAdapterError> {

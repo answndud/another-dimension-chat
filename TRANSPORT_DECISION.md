@@ -76,7 +76,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-Pairwise stream session binding context tightening closeout chooses envelope I/O readiness tightening before any envelope send/receive behavior. `EnvelopeIoAdapterReady` is still a public unit token, so the next transport task is to require an explicit fail-closed envelope I/O readiness context before inbound/outbound envelope adapter boundaries can be created. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
+Envelope I/O readiness tightening is implemented: adapter boundaries now require `EnvelopeIoAdapterReady::fail_closed()`, reject unredacted envelope body/metadata context, and still return not-implemented errors for send/receive attempts. The next transport task is envelope I/O readiness tightening closeout: decide whether post-auth readiness ordering should be closed out or narrowed further before any additional stream work. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
 
 ## Arti Lifecycle Cleanup Closeout
 
@@ -1094,10 +1094,11 @@ Decision as of 2026-05-19: bound stream/session readiness is not envelope I/O re
 
 Current code boundary:
 
-- `EnvelopeIoAdapterReady` is a separate readiness token after bound stream/session state.
+- `EnvelopeIoAdapterReady::fail_closed()` is a separate readiness token after bound stream/session state.
 - `InboundEnvelopeIoAdapterBoundary` requires a `BoundInboundStreamSession` plus `EnvelopeIoAdapterReady`.
 - `OutboundEnvelopeIoAdapterBoundary` requires a `BoundOutboundStreamSession` plus `EnvelopeIoAdapterReady`.
 - Missing I/O readiness is rejected with `EnvelopeIoReadinessRequired`.
+- Unredacted envelope body or metadata context is rejected with `RedactedEnvelopeIoContextRequired`.
 - `receive_fail_closed(...)` records only a redacted runtime event and returns `InboundEnvelopeReceiveNotImplemented`.
 - `send_fail_closed(...)` records only a redacted runtime event and returns `OutboundEnvelopeSendNotImplemented`.
 - Debug and event output must not expose onion endpoint, remote endpoint, stream id, descriptor value, private key, contact id, profile name, envelope ciphertext, channel id, message number, session secret, or path material.

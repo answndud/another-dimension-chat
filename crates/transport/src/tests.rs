@@ -3372,23 +3372,35 @@ fn envelope_io_adapter_requires_explicit_readiness_after_bound_session() {
 
     let inbound = InboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
         sample_bound_inbound_stream_session(),
-        EnvelopeIoAdapterReady,
-    );
+        EnvelopeIoAdapterReady::fail_closed(),
+    )
+    .expect("inbound envelope io boundary");
     let outbound = OutboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
         sample_bound_outbound_stream_session(),
-        EnvelopeIoAdapterReady,
+        EnvelopeIoAdapterReady::fail_closed(),
+    )
+    .expect("outbound envelope io boundary");
+    assert_eq!(
+        InboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
+            sample_bound_inbound_stream_session(),
+            EnvelopeIoAdapterReady::unredacted_fail_closed_for_test(),
+        ),
+        Err(EnvelopeIoAdapterError::RedactedEnvelopeIoContextRequired)
     );
     let inbound_rendered = format!("{inbound:?}");
     let outbound_rendered = format!("{outbound:?}");
+    let readiness_rendered = format!("{:?}", EnvelopeIoAdapterReady::fail_closed());
 
     assert!(inbound_rendered.contains("InboundEnvelopeIoAdapterBoundary"));
     assert!(outbound_rendered.contains("OutboundEnvelopeIoAdapterBoundary"));
-    for rendered in [&inbound_rendered, &outbound_rendered] {
+    assert!(readiness_rendered.contains("EnvelopeIoAdapterReady"));
+    for rendered in [&inbound_rendered, &outbound_rendered, &readiness_rendered] {
         assert!(rendered.contains("<redacted>"));
         assert!(!rendered.contains("example.onion"));
         assert!(!rendered.contains("bob"));
         assert!(!rendered.contains("adchan1:test"));
         assert!(!rendered.contains("ciphertext"));
+        assert!(!rendered.contains("plaintext"));
         assert!(!rendered.contains("session-secret"));
     }
 }
@@ -3397,12 +3409,14 @@ fn envelope_io_adapter_requires_explicit_readiness_after_bound_session() {
 fn envelope_io_adapter_still_fails_closed_for_send_receive() {
     let inbound = InboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
         sample_bound_inbound_stream_session(),
-        EnvelopeIoAdapterReady,
-    );
+        EnvelopeIoAdapterReady::fail_closed(),
+    )
+    .expect("inbound envelope io boundary");
     let outbound = OutboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
         sample_bound_outbound_stream_session(),
-        EnvelopeIoAdapterReady,
-    );
+        EnvelopeIoAdapterReady::fail_closed(),
+    )
+    .expect("outbound envelope io boundary");
     let envelope = sample_envelope();
     let mut sink = InMemoryTransportRuntimeEventSink::default();
 
@@ -3455,14 +3469,16 @@ fn post_auth_stream_readiness_order_requires_envelope_io_boundary() {
     let inbound = PostAuthInboundStreamReadinessOrder::from_envelope_io_boundary(
         InboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
             sample_bound_inbound_stream_session(),
-            EnvelopeIoAdapterReady,
-        ),
+            EnvelopeIoAdapterReady::fail_closed(),
+        )
+        .expect("inbound envelope io boundary"),
     );
     let outbound = PostAuthOutboundStreamReadinessOrder::from_envelope_io_boundary(
         OutboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
             sample_bound_outbound_stream_session(),
-            EnvelopeIoAdapterReady,
-        ),
+            EnvelopeIoAdapterReady::fail_closed(),
+        )
+        .expect("outbound envelope io boundary"),
     );
     let inbound_rendered = format!("{inbound:?}");
     let outbound_rendered = format!("{outbound:?}");
