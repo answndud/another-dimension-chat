@@ -54,6 +54,7 @@ What exists today:
 - Descriptor publication gate boundary that requires onion hosting readiness, pairwise rendezvous-only publication policy, and redacted events while still forbidding stream I/O and usable messaging.
 - Descriptor publication fail-closed adapter boundary that requires descriptor publication gate readiness and records only a redacted event before returning a not-implemented error.
 - Descriptor publication attempt intent boundary that separates publication intent preparation from the fail-closed publish call without enabling real descriptor publication.
+- Descriptor publication preparation boundary that requires gate readiness, fail-closed adapter readiness, redacted descriptor context, and still forbids descriptor body creation, stream I/O, and usable messaging.
 - Inbound stream gate boundary that requires descriptor publication gate and adapter readiness while still forbidding accept, read/write, envelope I/O, and usable messaging.
 - Inbound stream fail-closed adapter boundary that requires inbound stream gate readiness and records only redacted events before returning accept/read-write not-implemented errors.
 - Inbound stream accept/read-write intent boundaries that separate descriptor-backed adapter readiness from fail-closed inbound stream calls.

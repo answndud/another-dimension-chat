@@ -186,6 +186,16 @@ pub enum DescriptorPublicationAdapterError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DescriptorPublicationPreparationError {
+    DescriptorPublicationGateRequired,
+    DescriptorPublicationAdapterRequired,
+    RedactedDescriptorContextRequired,
+    DescriptorBodyForbidden,
+    StreamIoForbidden,
+    UsableMessagingClaimForbidden,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum InboundStreamGateError {
     DescriptorPublicationGateRequired,
     DescriptorPublicationAdapterRequired,
