@@ -169,15 +169,15 @@ pub mod production {
             &self.channel_id
         }
 
-        pub fn replay_record_id(&self) -> EncryptedRecordId {
+        fn replay_record_id(&self) -> EncryptedRecordId {
             production_replay_record_id(&self.channel_id)
         }
 
-        pub fn endpoint_state_record_id(&self, contact_id: &ContactId) -> EncryptedRecordId {
+        fn endpoint_state_record_id(&self, contact_id: &ContactId) -> EncryptedRecordId {
             production_endpoint_state_record_id(&self.channel_id, contact_id)
         }
 
-        pub fn message_envelope_record_id(
+        fn message_envelope_record_id(
             &self,
             message_number: u64,
             message_type: MessageType,
@@ -185,7 +185,7 @@ pub mod production {
             production_message_envelope_record_id(&self.channel_id, message_number, message_type)
         }
 
-        pub fn local_message_index_record_id(
+        fn local_message_index_record_id(
             &self,
             contact_id: &ContactId,
             message_number: u64,
@@ -285,7 +285,7 @@ pub mod production {
             Ok(plaintext)
         }
 
-        pub fn decrypt_at_responder_with_persistent_replay(
+        fn decrypt_at_responder_with_persistent_replay(
             &mut self,
             envelope: &Envelope,
             store: &SqlCipherRecordStore,
