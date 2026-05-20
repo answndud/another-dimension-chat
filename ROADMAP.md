@@ -141,6 +141,7 @@ Current closeout:
 - Pairing rendezvous endpoints validate into pairwise onion endpoints before session planning.
 - Endpoint rotation remains encrypted-session-only and reconnect remains fail-closed.
 - Duplicate connection handling is deterministic and avoids timing-based canonical selection.
+- Descriptor publication preparation requires gate readiness, fail-closed adapter readiness, and redacted descriptor context.
 - Real descriptor publication, stream I/O, envelope I/O, and usable messaging remain blocked behind later decisions.
 
 Tasks:
