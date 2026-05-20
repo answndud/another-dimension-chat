@@ -73,7 +73,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-Inbound stream preparation is now represented by `InboundStreamPreparationBoundary`. The next transport task is inbound stream preparation closeout: decide whether to tighten outbound stream preparation similarly or continue with inbound stream intent ordering. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
+Inbound stream preparation closeout chooses symmetric outbound stream preparation before further stream intent ordering. The next transport task is an outbound stream preparation boundary that remains fail-closed and does not dial/send network streams. No real descriptor publication, network stream I/O, envelope send/receive, or usable messaging may be enabled without a later explicit implementation decision.
 
 ## Arti Lifecycle Cleanup Closeout
 
