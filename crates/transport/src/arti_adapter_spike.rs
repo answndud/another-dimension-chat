@@ -461,6 +461,15 @@ impl ManualArtiBootstrapAttemptSummary {
     pub fn timeout_seconds(self) -> u16 {
         self.timeout_seconds
     }
+
+    pub fn network_disabled(self) -> bool {
+        self.network_permission == ManualArtiBootstrapNetworkPermission::Disabled
+    }
+
+    pub fn permits_manual_network_attempt(self) -> bool {
+        self.network_permission
+            == ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike
+    }
 }
 
 #[cfg(feature = "arti-manual-bootstrap")]
@@ -502,7 +511,8 @@ impl ManualArtiBootstrapAttemptGate {
         &self,
         sink: &mut S,
     ) -> Result<(), TransportRuntimeError> {
-        if self.network_permission == ManualArtiBootstrapNetworkPermission::Disabled {
+        let summary = self.summary();
+        if summary.network_disabled() {
             let error = TransportRuntimeError::RuntimeNetworkDisabled;
             sink.record(RedactedTransportRuntimeEvent::bootstrap_failed(error));
             return Err(error);
