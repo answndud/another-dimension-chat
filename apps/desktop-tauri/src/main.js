@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import "./styles.css";
 
 const fields = {
+  themeToggle: document.querySelector("#theme-toggle"),
   releaseClaim: document.querySelector("#release-claim"),
   messaging: document.querySelector("#messaging"),
   core: document.querySelector("#core"),
@@ -129,6 +130,28 @@ const fields = {
 let latestSimulation = null;
 let latestProductionSessionState = null;
 let productionBusyAction = null;
+
+const themeStorageKey = "another-dimension-theme";
+
+function applyTheme(theme) {
+  const mode = theme === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = mode;
+  if (fields.themeToggle) {
+    fields.themeToggle.textContent = mode === "dark" ? "Dark mode" : "Light mode";
+    fields.themeToggle.setAttribute("aria-pressed", String(mode === "dark"));
+  }
+}
+
+function initializeTheme() {
+  const savedTheme = window.localStorage?.getItem(themeStorageKey);
+  applyTheme(savedTheme === "light" ? "light" : "dark");
+}
+
+function toggleTheme() {
+  const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  window.localStorage?.setItem(themeStorageKey, nextTheme);
+  applyTheme(nextTheme);
+}
 
 function setText(node, value) {
   if (node) {
@@ -1370,6 +1393,10 @@ if (fields.runDemo) {
   fields.runDemo.addEventListener("click", runLocalDemo);
 }
 
+if (fields.themeToggle) {
+  fields.themeToggle.addEventListener("click", toggleTheme);
+}
+
 if (fields.productionProfileSelector) {
   fields.productionProfileSelector.addEventListener("change", () => {
     if (fields.productionProfileName && fields.productionProfileSelector.value) {
@@ -1510,6 +1537,7 @@ if (fields.resetLoop) {
   fields.resetLoop.addEventListener("click", resetLoopView);
 }
 
+initializeTheme();
 renderPrototypeStatus();
 resetSimulationView();
 resetProductionProfileView();

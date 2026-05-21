@@ -171,6 +171,11 @@ require_contains "$APP_DIR/src/main.js" 'exportProductionReceivedMessage'
 require_contains "$APP_DIR/src/main.js" 'runProductionTwoProfileRoundtrip'
 require_contains "$APP_DIR/src/main.js" 'runProductionRoundtrip'
 require_contains "$APP_DIR/src/main.js" 'runLocalLoop'
+require_contains "$APP_DIR/index.html" 'data-theme="dark"'
+require_contains "$APP_DIR/index.html" '<button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>'
+require_contains "$APP_DIR/src/main.js" 'themeStorageKey'
+require_contains "$APP_DIR/src/main.js" 'toggleTheme'
+require_contains "$APP_DIR/src/styles.css" '[data-theme="light"]'
 require_contains "$APP_DIR/index.html" 'class="production-workflow"'
 require_contains "$APP_DIR/index.html" '<details class="advanced-panel">'
 require_contains "$APP_DIR/index.html" '<summary>Manual production payload tools</summary>'
@@ -386,6 +391,7 @@ fi
 
 if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Send message|Connect|Pair contact|Bootstrap|Launch onion|Not a secure release|Not available' "$APP_DIR/index.html" "$APP_DIR/src" \
   | grep -v '<button id="run-demo" type="button">Run local demo</button>' \
+  | grep -v '<button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>' \
   | grep -v '<input id="production-profile-name" type="text" value="alice" autocomplete="username" />' \
   | grep -v '<input$' \
   | grep -v '<button id="unlock-production-profile" type="button">Unlock production profile</button>' \
