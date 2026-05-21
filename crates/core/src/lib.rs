@@ -19,7 +19,7 @@ pub mod production {
         require_encrypted_record_allowed, require_persistence_allowed, EncryptedRecord,
         EncryptedRecordId, EncryptedRecordScope, ProductionRecordKind, ProductionStorageError,
         ProductionStoragePolicyError, ReplayRollbackProtection, SqlCipherRecordStore,
-        StorageProtection,
+        StorageProtection, UnlockFactor, UnlockMode, UnlockRequest,
     };
     use another_dimension_transport::{
         EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
@@ -635,6 +635,57 @@ pub mod production {
     impl SessionDurableStateProductUnlockBlockerSummary {
         pub fn passphrase_first_boundary_exists(self) -> bool {
             self.passphrase_first_boundary_exists
+        }
+
+        pub fn production_unlock_command_enabled(self) -> bool {
+            self.production_unlock_command_enabled
+        }
+
+        pub fn app_key_wrapping_decided(self) -> bool {
+            self.app_key_wrapping_decided
+        }
+
+        pub fn backup_exclusion_decided(self) -> bool {
+            self.backup_exclusion_decided
+        }
+
+        pub fn rollback_protection(self) -> ReplayRollbackProtection {
+            self.rollback_protection
+        }
+
+        pub fn durable_session_persistence_ready(self) -> bool {
+            self.durable_session_persistence_ready
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionDurableStateUnlockPolicyHandoffSummary {
+        passphrase_first_boundary_exists: bool,
+        high_risk_requires_passphrase: bool,
+        os_keystore_only_rejected: bool,
+        production_unlock_command_enabled: bool,
+        app_key_wrapping_decided: bool,
+        backup_exclusion_decided: bool,
+        rollback_protection: ReplayRollbackProtection,
+        durable_session_persistence_ready: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    impl SessionDurableStateUnlockPolicyHandoffSummary {
+        pub fn passphrase_first_boundary_exists(self) -> bool {
+            self.passphrase_first_boundary_exists
+        }
+
+        pub fn high_risk_requires_passphrase(self) -> bool {
+            self.high_risk_requires_passphrase
+        }
+
+        pub fn os_keystore_only_rejected(self) -> bool {
+            self.os_keystore_only_rejected
         }
 
         pub fn production_unlock_command_enabled(self) -> bool {
@@ -1288,6 +1339,35 @@ pub mod production {
         }
     }
 
+    pub fn session_durable_state_unlock_policy_handoff_summary(
+    ) -> SessionDurableStateUnlockPolicyHandoffSummary {
+        let blockers = session_durable_state_product_unlock_blocker_summary();
+        let high_risk_requires_passphrase =
+            UnlockRequest::new(UnlockMode::HighRisk, vec![UnlockFactor::Passphrase])
+                .require_allowed()
+                .is_ok();
+        let os_keystore_only_rejected = matches!(
+            UnlockRequest::new(
+                UnlockMode::HighRisk,
+                vec![UnlockFactor::OsKeystoreWrappedKey]
+            )
+            .require_allowed(),
+            Err(ProductionStoragePolicyError::UnlockPolicyViolation)
+        );
+
+        SessionDurableStateUnlockPolicyHandoffSummary {
+            passphrase_first_boundary_exists: blockers.passphrase_first_boundary_exists(),
+            high_risk_requires_passphrase,
+            os_keystore_only_rejected,
+            production_unlock_command_enabled: blockers.production_unlock_command_enabled(),
+            app_key_wrapping_decided: blockers.app_key_wrapping_decided(),
+            backup_exclusion_decided: blockers.backup_exclusion_decided(),
+            rollback_protection: blockers.rollback_protection(),
+            durable_session_persistence_ready: blockers.durable_session_persistence_ready(),
+            runtime_messaging_enabled: blockers.runtime_messaging_enabled(),
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -1870,6 +1950,24 @@ pub mod production {
             let summary = session_durable_state_product_unlock_blocker_summary();
 
             assert!(summary.passphrase_first_boundary_exists());
+            assert!(!summary.production_unlock_command_enabled());
+            assert!(!summary.app_key_wrapping_decided());
+            assert!(!summary.backup_exclusion_decided());
+            assert_eq!(
+                summary.rollback_protection(),
+                ReplayRollbackProtection::NotProvided
+            );
+            assert!(!summary.durable_session_persistence_ready());
+            assert!(!summary.runtime_messaging_enabled());
+        }
+
+        #[test]
+        fn session_durable_state_unlock_policy_handoff_keeps_product_unlock_closed() {
+            let summary = session_durable_state_unlock_policy_handoff_summary();
+
+            assert!(summary.passphrase_first_boundary_exists());
+            assert!(summary.high_risk_requires_passphrase());
+            assert!(summary.os_keystore_only_rejected());
             assert!(!summary.production_unlock_command_enabled());
             assert!(!summary.app_key_wrapping_decided());
             assert!(!summary.backup_exclusion_decided());
