@@ -221,6 +221,8 @@ The first production session establishment boundary is tracked in [SESSION_DECIS
 
 The first production storage policy boundary is tracked in [STORAGE_DECISION.md](STORAGE_DECISION.md).
 
+The cross-component replacement inventory is tracked in [COMPONENT_BOUNDARIES.md](COMPONENT_BOUNDARIES.md). It maps the current `dev-insecure` local loop and guardrail spikes to the crypto, transport, storage, Tauri runtime, and release boundaries that must be resolved before any security-ready claim.
+
 ## License
 
 This repository is currently marked `UNLICENSED` in the Rust workspace metadata.
