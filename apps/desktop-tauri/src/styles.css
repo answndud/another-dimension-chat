@@ -221,6 +221,41 @@ textarea {
   padding-top: 18px;
 }
 
+.production-workflow {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid #d6dbe4;
+  padding-top: 18px;
+}
+
+.advanced-panel {
+  border-top: 1px solid #d6dbe4;
+  padding-top: 18px;
+}
+
+.advanced-panel summary {
+  width: fit-content;
+  min-height: 38px;
+  border: 1px solid #9aa7b8;
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: #ffffff;
+  color: #25324a;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.advanced-stack {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.advanced-stack .loop-panel:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
 .loop-label {
   color: #52606d;
   font-size: 13px;

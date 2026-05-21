@@ -97,6 +97,7 @@ const fields = {
   productionMessageBoundary: document.querySelector("#production-message-boundary"),
   productionTwoProfileA: document.querySelector("#production-two-profile-a"),
   productionTwoProfileB: document.querySelector("#production-two-profile-b"),
+  productionTwoProfilePassphrase: document.querySelector("#production-two-profile-passphrase"),
   productionTwoProfileMessage: document.querySelector("#production-two-profile-message"),
   runProductionTwoProfileRoundtrip: document.querySelector("#run-production-two-profile-roundtrip"),
   productionTwoProfileState: document.querySelector("#production-two-profile-state"),
@@ -446,7 +447,8 @@ function productionTwoProfileInput() {
   return {
     profileA: (fields.productionTwoProfileA?.value ?? "").trim(),
     profileB: (fields.productionTwoProfileB?.value ?? "").trim(),
-    passphrase: fields.productionProfilePassphrase?.value ?? "",
+    passphrase:
+      fields.productionTwoProfilePassphrase?.value || fields.productionProfilePassphrase?.value || "",
     message: (fields.productionTwoProfileMessage?.value ?? "").trim(),
   };
 }
@@ -1393,6 +1395,7 @@ for (const input of [
   fields.productionRemoteMessageEnvelope,
   fields.productionTwoProfileA,
   fields.productionTwoProfileB,
+  fields.productionTwoProfilePassphrase,
   fields.productionTwoProfileMessage,
 ]) {
   if (input) {
