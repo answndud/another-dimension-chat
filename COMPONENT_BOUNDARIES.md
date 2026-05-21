@@ -16,6 +16,7 @@ The project currently has a working local prototype loop:
 - Default CLI `production preflight` prints that aggregate preflight status as read-only redacted copy; it does not create profiles, unlock storage, bootstrap transport, send envelopes, receive envelopes, or mark messaging ready.
 - Tauri `prototype_status` mirrors the production preflight blockers as static read-only copy without executing the CLI command or adding a production messaging command.
 - `ProductionSkeletonNextConnectorSelection` currently selects the session protocol and durable-state gate as the next connector candidate without opening runtime execution.
+- `SessionDurableStateConnectorGate` records the current session durable-state contract: pairwise identity private key, Noise static private key, and replay state require encrypted-at-rest records, while Noise transport state remains in-memory only and runtime execution stays closed.
 - Existing production-facing code is a set of guardrails and spikes, not a complete secure runtime.
 
 ## Boundary Inventory
@@ -30,6 +31,7 @@ The project currently has a working local prototype loop:
 | Replay and message state | Replay window and first durable replay-state guardrails exist; local loop checks non-repeat behavior. | Persist replay/session state through the encrypted storage boundary and address rollback from restored encrypted database snapshots. |
 | Production skeleton preflight | `ProductionSkeletonPreflightSummary` aggregates current session, transport, storage, and command-surface blockers. | Convert preflight blockers into a Rust-owned runtime command only after crypto, transport, storage, and release boundaries are ready. |
 | Production connector selection | `ProductionSkeletonNextConnectorSelection` selects session protocol and durable-state persistence as the current next gate while keeping runtime execution closed. | Turn the selected gate into a reviewed implementation slice before enabling storage unlock, transport I/O, or runtime messaging commands. |
+| Session durable-state gate | `SessionDurableStateConnectorGate` drafts the persistence contract for session-critical state without persisting Noise transport state or opening runtime execution. | Add a reviewed connector harness and storage lifecycle decision before making durable session persistence or production E2EE claims. |
 | Tauri UI | Prototype shell can run dev-only local demos, display structured local state, and mirror read-only production preflight blockers as static status copy. | Replace CLI-wrapper demo commands with narrow Rust-owned runtime commands only after crypto, transport, and storage boundaries are security-ready. |
 | Release and updates | Public copy and static verifiers enforce non-claims; no release signing or reproducible build story exists. | Add signing, reproducible build or equivalent verification, dependency review, and release safety copy before public high-risk use. |
 

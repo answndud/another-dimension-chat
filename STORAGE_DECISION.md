@@ -29,6 +29,7 @@ The repository currently has:
 - Local record lifecycle deletion helpers for encrypted records, replay state, message envelopes, local message indexes, and pairwise endpoint state.
 - A storage backend integration summary that reports the current SQLCipher-backed `ADREC1` spike, passphrase-first unlock boundary, encrypted record-body storage, no production key-management readiness, no replay rollback protection, no secure deletion from physical media, and no session transport persistence.
 - A production message storage boundary summary that keeps replay windows, message envelopes, local message indexes, and endpoint state encrypted-at-rest while keeping session transport state in-memory only.
+- A session durable-state connector gate draft that maps pairwise identity private keys, Noise static private keys, and replay window state to encrypted-at-rest records while keeping Noise/session transport state in-memory only.
 
 The repository does not currently have:
 
@@ -337,6 +338,7 @@ Current lifecycle boundary:
 - Local record deletion helpers remove rows by opaque id only.
 - `storage_backend_integration_boundary_summary()` exposes these guardrails as integration status, while keeping production key management, replay rollback protection, secure media deletion, and session transport persistence explicitly unavailable.
 - `production_message_storage_boundary_summary()` exposes the current production message-path storage status: replay windows, message envelopes, local message indexes, and endpoint state require encrypted-at-rest records; session transport state remains in-memory only; replay commits only after decrypt; rollback protection, production key management, secure media deletion, and durable session transport persistence remain unavailable.
+- `session_durable_state_connector_gate()` records the current cross-core session persistence contract: pairwise identity private keys, Noise static private keys, and replay windows require encrypted-at-rest records; session transport state remains in-memory-only; rollback protection and runtime execution remain unavailable.
 
 Non-claims:
 

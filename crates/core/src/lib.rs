@@ -15,8 +15,8 @@ pub mod production {
         encode_hex, Envelope, MessageType, ProtocolError, ReplayWindow,
     };
     use another_dimension_storage::production::{
-        production_message_storage_boundary_summary, EncryptedRecord, EncryptedRecordId,
-        EncryptedRecordScope, ProductionRecordKind, ProductionStorageError,
+        production_message_storage_boundary_summary, protection_for, EncryptedRecord,
+        EncryptedRecordId, EncryptedRecordScope, ProductionRecordKind, ProductionStorageError,
         ReplayRollbackProtection, SqlCipherRecordStore, StorageProtection,
     };
     use another_dimension_transport::{
@@ -260,6 +260,67 @@ pub mod production {
 
         pub fn production_messaging_ready(self) -> bool {
             self.production_messaging_ready
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionDurableStateConnectorGate {
+        selected_connector: ProductionSkeletonConnector,
+        pairwise_identity_private_key_storage: StorageProtection,
+        noise_static_private_key_storage: StorageProtection,
+        replay_window_storage: StorageProtection,
+        session_transport_storage: StorageProtection,
+        replay_commit_after_decrypt: bool,
+        rollback_protection: ReplayRollbackProtection,
+        opens_storage_unlock_command: bool,
+        opens_transport_io: bool,
+        opens_runtime_messaging: bool,
+        connector_ready: bool,
+    }
+
+    impl SessionDurableStateConnectorGate {
+        pub fn selected_connector(self) -> ProductionSkeletonConnector {
+            self.selected_connector
+        }
+
+        pub fn pairwise_identity_private_key_storage(self) -> StorageProtection {
+            self.pairwise_identity_private_key_storage
+        }
+
+        pub fn noise_static_private_key_storage(self) -> StorageProtection {
+            self.noise_static_private_key_storage
+        }
+
+        pub fn replay_window_storage(self) -> StorageProtection {
+            self.replay_window_storage
+        }
+
+        pub fn session_transport_storage(self) -> StorageProtection {
+            self.session_transport_storage
+        }
+
+        pub fn replay_commit_after_decrypt(self) -> bool {
+            self.replay_commit_after_decrypt
+        }
+
+        pub fn rollback_protection(self) -> ReplayRollbackProtection {
+            self.rollback_protection
+        }
+
+        pub fn opens_storage_unlock_command(self) -> bool {
+            self.opens_storage_unlock_command
+        }
+
+        pub fn opens_transport_io(self) -> bool {
+            self.opens_transport_io
+        }
+
+        pub fn opens_runtime_messaging(self) -> bool {
+            self.opens_runtime_messaging
+        }
+
+        pub fn connector_ready(self) -> bool {
+            self.connector_ready
         }
     }
 
@@ -767,6 +828,29 @@ pub mod production {
         }
     }
 
+    pub fn session_durable_state_connector_gate() -> SessionDurableStateConnectorGate {
+        let selection = production_skeleton_next_connector_selection();
+        let storage = production_message_storage_boundary_summary();
+
+        SessionDurableStateConnectorGate {
+            selected_connector: selection.connector(),
+            pairwise_identity_private_key_storage: protection_for(
+                ProductionRecordKind::PairwiseIdentityPrivateKey,
+            ),
+            noise_static_private_key_storage: protection_for(
+                ProductionRecordKind::NoiseStaticPrivateKey,
+            ),
+            replay_window_storage: storage.replay_window_storage(),
+            session_transport_storage: storage.session_transport_storage(),
+            replay_commit_after_decrypt: storage.replay_commit_after_decrypt(),
+            rollback_protection: storage.rollback_protection(),
+            opens_storage_unlock_command: false,
+            opens_transport_io: false,
+            opens_runtime_messaging: false,
+            connector_ready: false,
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -1114,6 +1198,41 @@ pub mod production {
             );
             assert!(!selection.opens_runtime_execution());
             assert!(!selection.production_messaging_ready());
+        }
+
+        #[test]
+        fn session_durable_state_connector_gate_keeps_runtime_closed() {
+            let gate = session_durable_state_connector_gate();
+
+            assert_eq!(
+                gate.selected_connector(),
+                ProductionSkeletonConnector::SessionProtocolAndStatePersistence
+            );
+            assert_eq!(
+                gate.pairwise_identity_private_key_storage(),
+                StorageProtection::EncryptedAtRestRequired
+            );
+            assert_eq!(
+                gate.noise_static_private_key_storage(),
+                StorageProtection::EncryptedAtRestRequired
+            );
+            assert_eq!(
+                gate.replay_window_storage(),
+                StorageProtection::EncryptedAtRestRequired
+            );
+            assert_eq!(
+                gate.session_transport_storage(),
+                StorageProtection::InMemoryOnly
+            );
+            assert!(gate.replay_commit_after_decrypt());
+            assert_eq!(
+                gate.rollback_protection(),
+                ReplayRollbackProtection::NotProvided
+            );
+            assert!(!gate.opens_storage_unlock_command());
+            assert!(!gate.opens_transport_io());
+            assert!(!gate.opens_runtime_messaging());
+            assert!(!gate.connector_ready());
         }
 
         #[test]
