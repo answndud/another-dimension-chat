@@ -103,6 +103,7 @@ dependencies = [
  "another-dimension-identity",
  "another-dimension-pairing",
  "another-dimension-protocol",
+ "another-dimension-storage",
  "another-dimension-transport",
  "tokio",
 ]

@@ -1,3 +1,5 @@
+#[cfg(not(feature = "dev-insecure"))]
+use std::process::Stdio;
 use std::process::{Command, Output};
 
 #[cfg(feature = "dev-insecure")]
@@ -11,6 +13,28 @@ fn run(args: &[&str]) -> Output {
     Command::new(binary())
         .args(args)
         .output()
+        .expect("failed to run another-dimension binary")
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn run_with_stdin(args: &[&str], stdin: &str) -> Output {
+    use std::io::Write;
+
+    let mut child = Command::new(binary())
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn another-dimension binary");
+    child
+        .stdin
+        .as_mut()
+        .expect("stdin pipe")
+        .write_all(stdin.as_bytes())
+        .expect("failed to write stdin");
+    child
+        .wait_with_output()
         .expect("failed to run another-dimension binary")
 }
 
@@ -58,14 +82,15 @@ fn default_build_help_lists_only_boundary_commands() {
     let out = stdout(&output);
     assert!(out.contains("production self-test"));
     assert!(out.contains("production preflight"));
+    assert!(out.contains("production profile init"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
     assert!(out.contains("preflight is read-only"));
+    assert!(out.contains("storage-only"));
     assert!(out.contains("require --features dev-insecure"));
     assert!(!out.contains("message send"));
     assert!(!out.contains("pairing start"));
-    assert!(!out.contains("profile init"));
 }
 
 #[test]
@@ -104,7 +129,7 @@ fn default_build_rejects_production_skeleton_commands() {
             "missing boundary error for {args:?}: {error}"
         );
         assert!(
-            error.contains("no usable messaging, profile creation, pairing, transport bootstrap, or storage unlock command is exposed"),
+            error.contains("no usable messaging, pairing, transport bootstrap, or long-lived storage unlock command is exposed"),
             "missing default non-command boundary for {args:?}: {error}"
         );
         assert!(
@@ -114,6 +139,75 @@ fn default_build_rejects_production_skeleton_commands() {
             "missing dev-insecure feature boundary for {args:?}: {error}"
         );
     }
+}
+
+#[test]
+#[cfg(not(feature = "dev-insecure"))]
+fn production_profile_init_creates_encrypted_store_without_opening_messaging() {
+    let root = temp_cli_path("production-profile-init");
+    if root.exists() {
+        std::fs::remove_dir_all(&root).expect("remove stale root");
+    }
+    std::fs::create_dir_all(&root).expect("create root");
+    let store = root.join("profile.db");
+    let store_arg = store.to_str().expect("store path");
+
+    let output = run_with_stdin(
+        &[
+            "production",
+            "profile",
+            "init",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let out = stdout(&output);
+    let error = stderr(&output);
+
+    assert!(output.status.success(), "stdout: {out}\nstderr: {error}");
+    assert!(out.contains("production profile initialized:"));
+    assert!(out.contains("storage_opened=true"));
+    assert!(out.contains("profile_marker_written=true"));
+    assert!(out.contains("key_material_exposed=false"));
+    assert!(out.contains("transport_io_opened=false"));
+    assert!(out.contains("runtime_messaging=false"));
+    assert!(error.contains("storage-only"));
+    assert!(store.exists());
+    assert!(!out.contains("alice"));
+    assert!(!out.contains(store_arg));
+    assert!(!out.contains("correct horse"));
+    assert!(!error.contains("alice"));
+    assert!(!error.contains(store_arg));
+    assert!(!error.contains("correct horse"));
+
+    let wrong = run_with_stdin(
+        &[
+            "production",
+            "profile",
+            "init",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "wrong passphrase\n",
+    );
+    let wrong_out = stdout(&wrong);
+    let wrong_error = stderr(&wrong);
+
+    assert!(!wrong.status.success());
+    assert!(wrong_out.is_empty());
+    assert!(wrong_error.contains("unlock failed"));
+    assert!(!wrong_error.contains("alice"));
+    assert!(!wrong_error.contains(store_arg));
+    assert!(!wrong_error.contains("wrong passphrase"));
+
+    let _ = std::fs::remove_dir_all(root);
 }
 
 #[test]
@@ -717,10 +811,6 @@ fn temp_payload_path(name: &str) -> std::path::PathBuf {
     temp_cli_path(name)
 }
 
-#[cfg(any(
-    feature = "dev-insecure",
-    all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap")
-))]
 fn temp_cli_path(name: &str) -> std::path::PathBuf {
     let mut path = std::env::temp_dir();
     path.push(format!(
