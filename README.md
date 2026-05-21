@@ -116,6 +116,7 @@ This runs:
 
 - `cargo fmt --all -- --check`
 - `cargo test --workspace --lib`
+- Default build boundary checks that keep `dev-insecure` out of default feature sets and verify the default CLI exposes only boundary commands.
 - Tauri scaffold static checks.
 - Public release hygiene static checks.
 

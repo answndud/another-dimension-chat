@@ -15,6 +15,7 @@ cd "$ROOT_DIR"
 
 run_step "rustfmt" cargo fmt --all -- --check
 run_step "workspace library tests" cargo test --workspace --lib
+run_step "default build boundary checks" scripts/verify_default_boundary.sh
 run_step "tauri scaffold static checks" scripts/verify_tauri_scaffold.sh
 run_step "release hygiene static checks" scripts/verify_release_hygiene.sh
 
