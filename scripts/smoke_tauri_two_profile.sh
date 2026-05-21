@@ -75,28 +75,28 @@ set passphraseText to system attribute "AD_PASSPHRASE"
 tell application "System Events"
   tell process "another-dimension-desktop-tauri"
     set frontmost to true
-    tell group "App-data local harness" of group "Alice/Bob prototype flow" of group "Another Dimension Chat Prototype" of group 1 of UI element 1 of scroll area 1 of group 1 of group 1 of window 1
-      click text field "Profile A"
+    tell group "App-data local harness" of group "Alice/Bob dev-insecure flow" of group "Another Dimension Chat" of group 1 of UI element 1 of scroll area 1 of group 1 of group 1 of window 1
+      click text field 1
       keystroke "a" using command down
       repeat with nextCharacter in characters of profileA
         keystroke (nextCharacter as text)
         delay 0.03
       end repeat
-      click text field "Profile B"
+      click text field 2
       keystroke "a" using command down
       repeat with nextCharacter in characters of profileB
         keystroke (nextCharacter as text)
         delay 0.03
       end repeat
-      click text field "Passphrase"
+      click text field 3
       keystroke "a" using command down
       repeat with nextCharacter in characters of passphraseText
         keystroke (nextCharacter as text)
         delay 0.02
       end repeat
       delay 0.2
-      if value of text field "Profile A" is not profileA then error "profile A field did not receive smoke value"
-      if value of text field "Profile B" is not profileB then error "profile B field did not receive smoke value"
+      if value of text field 1 is not profileA then error "profile A field did not receive smoke value"
+      if value of text field 2 is not profileB then error "profile B field did not receive smoke value"
       click button "Run two-profile roundtrip"
     end tell
   end tell
@@ -109,7 +109,7 @@ for _ in $(seq 1 60); do
   if ! osascript >"$RESULT_FILE" 2>&1 <<'APPLESCRIPT'
 tell application "System Events"
   tell process "another-dimension-desktop-tauri"
-    tell group "App-data local harness" of group "Alice/Bob prototype flow" of group "Another Dimension Chat Prototype" of group 1 of UI element 1 of scroll area 1 of group 1 of group 1 of window 1
+    tell group "App-data local harness" of group "Alice/Bob dev-insecure flow" of group "Another Dimension Chat" of group 1 of UI element 1 of scroll area 1 of group 1 of group 1 of window 1
       return value of static text 1 of group 2 & linefeed & value of static text 1 of group 3 & linefeed & value of static text 1 of group 2 of list 1 & linefeed & value of static text 1 of group 4 of list 1 & linefeed & value of static text 1 of group 6 of list 1 & linefeed & value of static text 1 of group 8 of list 1
     end tell
   end tell
