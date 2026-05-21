@@ -12,8 +12,9 @@ grep -q 'scripts/verify_release_signing_plan.sh' "$ROOT_DIR/RELEASE_COMPLETION_A
 grep -q 'scripts/verify_release_signing_dry_run.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'scripts/verify_release_detached_signature_fixture.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'scripts/verify_release_signing_tooling_gate.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
-grep -q 'Reproducible or equivalent binary verification | `RELEASE_HARDENING.md` states no reproducible build story exists' \
+grep -q 'Reproducible or equivalent binary verification | `RELEASE_HARDENING.md` records a pre-implementation binary verification plan, but no reproducible build evidence or equivalent binary verification evidence exists' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
+grep -q 'scripts/verify_binary_verification_plan.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'Dependency and supply-chain review | `RELEASE_HARDENING.md` records only a policy skeleton' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'Threat model and release copy alignment | `RELEASE_HARDENING.md` records only a release-candidate signoff skeleton' \

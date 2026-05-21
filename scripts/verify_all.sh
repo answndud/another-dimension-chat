@@ -27,6 +27,7 @@ run_step "release signing plan" scripts/verify_release_signing_plan.sh
 run_step "release signing dry-run" scripts/verify_release_signing_dry_run.sh
 run_step "release detached-signature fixture" scripts/verify_release_detached_signature_fixture.sh
 run_step "release signing tooling gate" scripts/verify_release_signing_tooling_gate.sh
+run_step "binary verification plan" scripts/verify_binary_verification_plan.sh
 run_step "release hygiene static checks" scripts/verify_release_hygiene.sh
 
 printf '\nlight verification steps passed\n'
