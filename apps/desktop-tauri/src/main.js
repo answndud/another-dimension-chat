@@ -40,6 +40,14 @@ const fields = {
   simulationSafetyPhrase: document.querySelector("#simulation-safety-phrase"),
   simulationMessage: document.querySelector("#simulation-message"),
   simulationReplay: document.querySelector("#simulation-replay"),
+  productionRoundtripMessage: document.querySelector("#production-roundtrip-message"),
+  runProductionRoundtrip: document.querySelector("#run-production-roundtrip"),
+  productionRoundtripState: document.querySelector("#production-roundtrip-state"),
+  productionRoundtripWarning: document.querySelector("#production-roundtrip-warning"),
+  productionRoundtripSession: document.querySelector("#production-roundtrip-session"),
+  productionRoundtripEnvelope: document.querySelector("#production-roundtrip-envelope"),
+  productionRoundtripReceive: document.querySelector("#production-roundtrip-receive"),
+  productionRoundtripBoundary: document.querySelector("#production-roundtrip-boundary"),
   loopMessages: document.querySelector("#loop-messages"),
   runLoop: document.querySelector("#run-loop"),
   resetLoop: document.querySelector("#reset-loop"),
@@ -69,6 +77,10 @@ function setDemoState(state, message) {
 
 function setLoopState(message) {
   setText(fields.loopState, message);
+}
+
+function setProductionRoundtripState(message) {
+  setText(fields.productionRoundtripState, message);
 }
 
 function renderDemoSteps(steps) {
@@ -136,12 +148,25 @@ function resetLoopView() {
   }
 }
 
+function resetProductionRoundtripView() {
+  setProductionRoundtripState("Roundtrip idle");
+  setText(fields.productionRoundtripWarning, "Production roundtrip has not run yet.");
+  setText(fields.productionRoundtripSession, "Not checked yet");
+  setText(fields.productionRoundtripEnvelope, "Not checked yet");
+  setText(fields.productionRoundtripReceive, "Not checked yet");
+  setText(fields.productionRoundtripBoundary, "Not checked yet");
+}
+
 function localLoopMessages() {
   return (fields.loopMessages?.value ?? "")
     .split("\n")
     .map((message) => message.trim())
     .filter(Boolean)
     .slice(0, 5);
+}
+
+function productionRoundtripMessage() {
+  return (fields.productionRoundtripMessage?.value ?? "").trim();
 }
 
 function renderLoopResults(messages) {
@@ -295,7 +320,7 @@ async function renderPrototypeStatus() {
     setText(fields.productionSelfTest, "CLI production boundary self-test only");
     setText(
       fields.productionSessionNonReadiness,
-      "No production E2EE claim durable persistence Tauri messaging command or async messaging",
+      "No production E2EE claim network transport durable persistence or async messaging",
     );
     setText(fields.productionPreflight, "Read-only production skeleton blockers copy");
     setText(
@@ -392,8 +417,63 @@ async function runLocalLoop() {
   }
 }
 
+async function runProductionRoundtrip() {
+  const message = productionRoundtripMessage();
+  if (!message) {
+    setProductionRoundtripState("Roundtrip needs a message");
+    setText(fields.productionRoundtripWarning, "Enter a production local message.");
+    return;
+  }
+
+  setProductionRoundtripState("Roundtrip running");
+  setText(fields.productionRoundtripWarning, "Running production core local roundtrip.");
+  setText(fields.productionRoundtripSession, "Waiting for profile, identity, pairing, and handshake");
+  setText(fields.productionRoundtripEnvelope, "Waiting for encrypted envelope");
+  setText(fields.productionRoundtripReceive, "Waiting for received message store");
+  setText(fields.productionRoundtripBoundary, "Waiting for boundary flags");
+  if (fields.runProductionRoundtrip) {
+    fields.runProductionRoundtrip.disabled = true;
+  }
+  try {
+    const result = await invoke("production_local_roundtrip", { message });
+    setProductionRoundtripState("Roundtrip completed");
+    setText(fields.productionRoundtripWarning, result.warning);
+    setText(
+      fields.productionRoundtripSession,
+      `profiles=${result.profile_stores_opened} identities=${result.identities_created} pairing=${result.pairing_payloads_created} drafts=${result.session_drafts_written} transport_state=${result.transport_state_persisted}`,
+    );
+    setText(
+      fields.productionRoundtripEnvelope,
+      `prepared=${result.outbound_message_prepared} encrypted_export=${result.encrypted_envelope_exported}`,
+    );
+    setText(
+      fields.productionRoundtripReceive,
+      `stored=${result.inbound_message_stored} status=${result.received_status_verified} export_match=${result.received_export_matches_input}`,
+    );
+    setText(
+      fields.productionRoundtripBoundary,
+      `plaintext_returned=${result.plaintext_returned_to_frontend} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionRoundtripState("Roundtrip failed");
+    setText(fields.productionRoundtripWarning, String(error));
+    setText(fields.productionRoundtripSession, "Failed");
+    setText(fields.productionRoundtripEnvelope, "Failed");
+    setText(fields.productionRoundtripReceive, "Failed");
+    setText(fields.productionRoundtripBoundary, "Failed");
+  } finally {
+    if (fields.runProductionRoundtrip) {
+      fields.runProductionRoundtrip.disabled = false;
+    }
+  }
+}
+
 if (fields.runDemo) {
   fields.runDemo.addEventListener("click", runLocalDemo);
+}
+
+if (fields.runProductionRoundtrip) {
+  fields.runProductionRoundtrip.addEventListener("click", runProductionRoundtrip);
 }
 
 if (fields.runLoop) {
@@ -406,4 +486,5 @@ if (fields.resetLoop) {
 
 renderPrototypeStatus();
 resetSimulationView();
+resetProductionRoundtripView();
 resetLoopView();

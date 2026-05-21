@@ -73,6 +73,8 @@ require_contains "$TAURI_DIR/src/lib.rs" 'mod status;'
 require_contains "$TAURI_DIR/src/lib.rs" 'pub use status::PrototypeStatus;'
 require_contains "$TAURI_DIR/src/lib.rs" 'redacted_prototype_status()'
 require_contains "$TAURI_DIR/src/lib.rs" 'dev_local_message_loop'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_local_roundtrip'
+require_contains "$TAURI_DIR/src/lib.rs" 'run_production_local_roundtrip'
 require_contains "$TAURI_DIR/src/lib.rs" 'cargo'
 require_contains "$TAURI_DIR/src/lib.rs" 'demo'
 require_contains "$TAURI_DIR/src/lib.rs" 'local'
@@ -86,7 +88,7 @@ require_status_field 'pairing_status' 'pairing boundary only'
 require_status_field 'production_session_status' 'snow Noise XX synchronous evaluation boundary only'
 require_status_field 'production_self_test_status' 'CLI production boundary self-test only'
 require_contains "$TAURI_DIR/src/status.rs" 'production_session_non_readiness:'
-require_contains "$TAURI_DIR/src/status.rs" 'no production E2EE claim durable persistence Tauri messaging command or async messaging'
+require_contains "$TAURI_DIR/src/status.rs" 'no production E2EE claim network transport durable persistence or async messaging'
 require_contains "$APP_DIR/src/main.js" 'status.production_session_non_readiness'
 require_status_field 'production_preflight_status' 'read-only production skeleton blockers copy'
 require_contains "$TAURI_DIR/src/status.rs" 'production_preflight_blockers:'
@@ -113,8 +115,10 @@ require_status_field 'transport_io_status' 'hosting stream envelope messaging di
 require_status_field 'storage_status' 'ADREC1 storage spike only'
 require_status_field 'verification_status' 'lightweight checks only'
 require_contains "$APP_DIR/src/main.js" 'invoke("prototype_status")'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_local_roundtrip"'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_demo")'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_message_loop"'
+require_contains "$APP_DIR/src/main.js" 'runProductionRoundtrip'
 require_contains "$APP_DIR/src/main.js" 'runLocalLoop'
 require_contains "$APP_DIR/src/main.js" 'localLoopMessages'
 require_contains "$APP_DIR/src/main.js" 'renderLoopResults'
@@ -206,11 +210,13 @@ require_contains "$APP_DIR/index.html" 'Snow Noise XX synchronous evaluation bou
 require_contains "$APP_DIR/index.html" 'Production self-test'
 require_contains "$APP_DIR/index.html" 'CLI production boundary self-test only'
 require_contains "$APP_DIR/index.html" 'Production session limits'
-require_contains "$APP_DIR/index.html" 'No production E2EE claim durable persistence Tauri messaging command or async messaging'
+require_contains "$APP_DIR/index.html" 'No production E2EE claim network transport durable persistence or async messaging'
 require_contains "$APP_DIR/index.html" 'Production preflight'
 require_contains "$APP_DIR/index.html" 'Read-only production skeleton blockers copy'
 require_contains "$APP_DIR/index.html" 'Preflight blockers'
 require_contains "$APP_DIR/index.html" 'session E2EE false transport send receive false storage rollback not-provided messaging false'
+require_contains "$APP_DIR/index.html" 'Production core local roundtrip'
+require_contains "$APP_DIR/index.html" 'Run production roundtrip'
 require_contains "$APP_DIR/index.html" 'Repeatable local loop'
 require_contains "$APP_DIR/index.html" 'Local message loop'
 require_contains "$APP_DIR/index.html" 'Run local loop'
@@ -225,7 +231,7 @@ require_status_copy 'Profile boundary only'
 require_status_copy 'Pairing boundary only'
 require_status_copy 'Snow Noise XX synchronous evaluation boundary only'
 require_status_copy 'CLI production boundary self-test only'
-require_status_copy 'No production E2EE claim durable persistence Tauri messaging command or async messaging'
+require_status_copy 'No production E2EE claim network transport durable persistence or async messaging'
 require_status_copy 'Read-only production skeleton blockers copy'
 require_status_copy 'session E2EE false transport send receive false storage rollback not-provided messaging false'
 require_status_copy 'Pre-network fail-closed only'
@@ -242,10 +248,10 @@ require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
 require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
 command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "3"
+test "$command_count" = "4"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "3"
+test "$invoke_count" = "4"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -267,6 +273,7 @@ fi
 
 if grep -R 'invoke(' "$APP_DIR/src" \
   | grep -v 'invoke("prototype_status")' \
+  | grep -v 'invoke("production_local_roundtrip"' \
   | grep -v 'invoke("dev_local_demo")' \
   | grep -v 'invoke("dev_local_message_loop"' >/dev/null; then
   echo "unexpected frontend Tauri command invocation" >&2
@@ -280,6 +287,8 @@ fi
 
 if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Send message|Connect|Pair contact|Bootstrap|Launch onion|Not a secure release|Not available' "$APP_DIR/index.html" "$APP_DIR/src" \
   | grep -v '<button id="run-demo" type="button">Run local demo</button>' \
+  | grep -v '<button id="run-production-roundtrip" type="button">Run production roundtrip</button>' \
+  | grep -v '<textarea id="production-roundtrip-message" rows="3">hello from production core</textarea>' \
   | grep -v '<button id="run-loop" type="button">Run local loop</button>' \
   | grep -v '<button id="reset-loop" type="button" class="flow-control is-secondary">' \
   | grep -v '<textarea id="loop-messages" rows="4">first local loop message' >/dev/null; then

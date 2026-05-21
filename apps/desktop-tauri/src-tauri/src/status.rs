@@ -34,7 +34,7 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         production_session_status: "snow Noise XX synchronous evaluation boundary only",
         production_self_test_status: "CLI production boundary self-test only",
         production_session_non_readiness:
-            "no production E2EE claim durable persistence Tauri messaging command or async messaging",
+            "no production E2EE claim network transport durable persistence or async messaging",
         production_preflight_status: "read-only production skeleton blockers copy",
         production_preflight_blockers:
             "session E2EE false transport send receive false storage rollback not-provided messaging false",

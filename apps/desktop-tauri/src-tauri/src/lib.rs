@@ -54,9 +54,36 @@ pub struct DevLocalPeer {
     inbox_state: &'static str,
 }
 
+#[derive(serde::Serialize)]
+pub struct ProductionLocalRoundtripResult {
+    warning: &'static str,
+    profile_stores_opened: bool,
+    identities_created: bool,
+    pairing_payloads_created: bool,
+    session_drafts_written: bool,
+    transport_state_persisted: bool,
+    outbound_message_prepared: bool,
+    encrypted_envelope_exported: bool,
+    inbound_message_stored: bool,
+    received_status_verified: bool,
+    received_export_matches_input: bool,
+    plaintext_returned_to_frontend: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
 #[tauri::command]
 fn prototype_status() -> PrototypeStatus {
     status::redacted_prototype_status()
+}
+
+#[tauri::command]
+fn production_local_roundtrip(message: String) -> Result<ProductionLocalRoundtripResult, String> {
+    run_production_local_roundtrip(message).map_err(|_| {
+        "production local roundtrip failed without exposing profile, path, or key details"
+            .to_string()
+    })
 }
 
 #[tauri::command]
@@ -292,10 +319,234 @@ fn extract_line_containing(transcript: &str, needle: &str) -> Option<String> {
         .map(ToString::to_string)
 }
 
+fn run_production_local_roundtrip(
+    message: String,
+) -> Result<ProductionLocalRoundtripResult, String> {
+    use another_dimension_core::production::{
+        production_message_inbound_decrypt_import, production_message_outbound_encrypt_prepare,
+        production_message_outbound_envelope_export, production_message_received_export,
+        production_message_received_status, production_message_send_prepare,
+        production_pairing_payload_create, production_pairing_session_handshake_finish_export,
+        production_pairing_session_handshake_finish_import,
+        production_pairing_session_handshake_init_export,
+        production_pairing_session_handshake_reply_export, production_pairing_session_save_draft,
+        production_profile_identity_init, production_profile_init,
+    };
+    use another_dimension_identity::ProfileName;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let message = sanitize_production_roundtrip_message(message)?;
+    let root = unique_production_roundtrip_dir()?;
+    std::fs::create_dir_all(&root).map_err(|_| "failed to create local roundtrip store")?;
+    let alice_store = root.join("alice.db");
+    let bob_store = root.join("bob.db");
+    let passphrase = ProfilePassphrase::new("local-production-roundtrip-passphrase")
+        .map_err(|_| "failed to create local roundtrip passphrase")?;
+    let alice = ProfileName::new("alice").map_err(|_| "failed to create local profile")?;
+    let bob = ProfileName::new("bob").map_err(|_| "failed to create local profile")?;
+
+    let result = (|| {
+        let alice_profile = production_profile_init(&alice_store, alice.clone(), &passphrase)
+            .map_err(|_| "profile init failed")?;
+        let bob_profile = production_profile_init(&bob_store, bob.clone(), &passphrase)
+            .map_err(|_| "profile init failed")?;
+        let alice_identity =
+            production_profile_identity_init(&alice_store, alice.clone(), &passphrase)
+                .map_err(|_| "identity init failed")?;
+        let bob_identity = production_profile_identity_init(&bob_store, bob.clone(), &passphrase)
+            .map_err(|_| "identity init failed")?;
+
+        let alice_payload = production_pairing_payload_create(
+            &alice_store,
+            alice.clone(),
+            &passphrase,
+            "alice.onion",
+        )
+        .map_err(|_| "payload create failed")?;
+        let bob_payload =
+            production_pairing_payload_create(&bob_store, bob.clone(), &passphrase, "bob.onion")
+                .map_err(|_| "payload create failed")?;
+        let alice_payload_value = alice_payload.payload().clone();
+        let bob_payload_value = bob_payload.payload().clone();
+
+        let alice_draft = production_pairing_session_save_draft(
+            &alice_store,
+            alice.clone(),
+            &passphrase,
+            &alice_payload_value,
+            &bob_payload_value,
+        )
+        .map_err(|_| "session draft failed")?;
+        let bob_draft = production_pairing_session_save_draft(
+            &bob_store,
+            bob.clone(),
+            &passphrase,
+            &bob_payload_value,
+            &alice_payload_value,
+        )
+        .map_err(|_| "session draft failed")?;
+
+        let alice_init = production_pairing_session_handshake_init_export(
+            &alice_store,
+            alice.clone(),
+            &passphrase,
+        )
+        .map_err(|_| "handshake init failed")?;
+        let (init_payload, reply_profile, reply_store, finish_profile, finish_store) =
+            if alice_init.handshake_message_created() {
+                (
+                    alice_init.export_payload().to_string(),
+                    bob.clone(),
+                    bob_store.as_path(),
+                    alice.clone(),
+                    alice_store.as_path(),
+                )
+            } else {
+                let bob_init = production_pairing_session_handshake_init_export(
+                    &bob_store,
+                    bob.clone(),
+                    &passphrase,
+                )
+                .map_err(|_| "handshake init failed")?;
+                if !bob_init.handshake_message_created() {
+                    return Err("handshake init was not created");
+                }
+                (
+                    bob_init.export_payload().to_string(),
+                    alice.clone(),
+                    alice_store.as_path(),
+                    bob.clone(),
+                    bob_store.as_path(),
+                )
+            };
+
+        let reply = production_pairing_session_handshake_reply_export(
+            reply_store,
+            reply_profile.clone(),
+            &passphrase,
+            &init_payload,
+        )
+        .map_err(|_| "handshake reply failed")?;
+        let finish = production_pairing_session_handshake_finish_export(
+            finish_store,
+            finish_profile.clone(),
+            &passphrase,
+            reply.export_payload(),
+        )
+        .map_err(|_| "handshake finish failed")?;
+        let finish_import = production_pairing_session_handshake_finish_import(
+            reply_store,
+            reply_profile.clone(),
+            &passphrase,
+            finish.export_payload(),
+        )
+        .map_err(|_| "handshake finish import failed")?;
+
+        let send = production_message_send_prepare(
+            finish_store,
+            finish_profile.clone(),
+            &passphrase,
+            1,
+            &message,
+        )
+        .map_err(|_| "send prepare failed")?;
+        let encrypt = production_message_outbound_encrypt_prepare(
+            finish_store,
+            finish_profile.clone(),
+            &passphrase,
+            1,
+        )
+        .map_err(|_| "encrypt prepare failed")?;
+        let envelope = production_message_outbound_envelope_export(
+            finish_store,
+            finish_profile,
+            &passphrase,
+            1,
+        )
+        .map_err(|_| "envelope export failed")?;
+        let inbound = production_message_inbound_decrypt_import(
+            reply_store,
+            reply_profile.clone(),
+            &passphrase,
+            envelope.export_payload(),
+        )
+        .map_err(|_| "inbound import failed")?;
+        let received_status =
+            production_message_received_status(reply_store, reply_profile.clone(), &passphrase, 1)
+                .map_err(|_| "received status failed")?;
+        let received_export =
+            production_message_received_export(reply_store, reply_profile, &passphrase, 1)
+                .map_err(|_| "received export failed")?;
+
+        Ok(ProductionLocalRoundtripResult {
+            warning:
+                "local production-core roundtrip only; no network, Tor, or secure-release claim",
+            profile_stores_opened: alice_profile.storage_opened() && bob_profile.storage_opened(),
+            identities_created: alice_identity.identity_private_key_written()
+                && bob_identity.identity_private_key_written(),
+            pairing_payloads_created: alice_payload.noise_static_private_key_written()
+                && bob_payload.noise_static_private_key_written(),
+            session_drafts_written: alice_draft.session_draft_written()
+                && bob_draft.session_draft_written(),
+            transport_state_persisted: finish.transport_state_persisted()
+                && finish_import.transport_state_persisted(),
+            outbound_message_prepared: send.pending_message_record_written()
+                && encrypt.encrypted_envelope_written(),
+            encrypted_envelope_exported: envelope.encrypted_envelope_present()
+                && !envelope.export_payload().is_empty(),
+            inbound_message_stored: inbound.received_message_written(),
+            received_status_verified: received_status.received_message_matches_session(),
+            received_export_matches_input: received_export.export_payload() == message.as_slice(),
+            plaintext_returned_to_frontend: false,
+            network_io_attempted: send.network_send_attempted()
+                || encrypt.network_send_attempted()
+                || inbound.network_receive_attempted()
+                || received_status.network_receive_attempted()
+                || received_export.network_receive_attempted(),
+            transport_io_opened: send.transport_io_opened()
+                || encrypt.transport_io_opened()
+                || inbound.transport_io_opened()
+                || received_status.transport_io_opened()
+                || received_export.transport_io_opened(),
+            runtime_messaging_enabled: send.runtime_messaging_enabled()
+                || encrypt.runtime_messaging_enabled()
+                || inbound.runtime_messaging_enabled()
+                || received_status.runtime_messaging_enabled()
+                || received_export.runtime_messaging_enabled(),
+        })
+    })();
+
+    let _ = std::fs::remove_dir_all(&root);
+    result.map_err(ToString::to_string)
+}
+
+fn sanitize_production_roundtrip_message(message: String) -> Result<Vec<u8>, String> {
+    let trimmed = message.trim();
+    if trimmed.is_empty() {
+        return Err("production local roundtrip requires a message".to_string());
+    }
+    if trimmed.len() > 240 {
+        return Err("production local roundtrip message must be 240 bytes or fewer".to_string());
+    }
+    Ok(trimmed.as_bytes().to_vec())
+}
+
+fn unique_production_roundtrip_dir() -> Result<std::path::PathBuf, String> {
+    let millis = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| "failed to create local roundtrip directory name")?
+        .as_millis();
+    Ok(std::env::temp_dir().join(format!(
+        "another-dimension-production-roundtrip-{}-{millis}",
+        std::process::id()
+    )))
+}
+
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             prototype_status,
+            production_local_roundtrip,
             dev_local_demo,
             dev_local_message_loop
         ])
@@ -306,7 +557,9 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_demo_simulation, parse_demo_steps, parse_loop_messages, sanitize_loop_messages,
+        build_demo_simulation, parse_demo_steps, parse_loop_messages,
+        run_production_local_roundtrip, sanitize_loop_messages,
+        sanitize_production_roundtrip_message,
     };
 
     #[test]
@@ -405,5 +658,42 @@ replay check: no replayed messages after message 2
             sanitize_loop_messages(vec![" one ".to_string()]).expect("message"),
             ["one".to_string()]
         );
+    }
+
+    #[test]
+    fn production_roundtrip_message_sanitizer_rejects_empty_input() {
+        assert!(sanitize_production_roundtrip_message(" ".to_string()).is_err());
+        assert_eq!(
+            sanitize_production_roundtrip_message(" production local ".to_string())
+                .expect("message"),
+            b"production local"
+        );
+    }
+
+    #[test]
+    fn production_roundtrip_uses_core_without_returning_plaintext() {
+        let result = run_production_local_roundtrip("tauri production bridge".to_string())
+            .expect("production roundtrip");
+
+        assert!(result.profile_stores_opened);
+        assert!(result.identities_created);
+        assert!(result.pairing_payloads_created);
+        assert!(result.session_drafts_written);
+        assert!(result.transport_state_persisted);
+        assert!(result.outbound_message_prepared);
+        assert!(result.encrypted_envelope_exported);
+        assert!(result.inbound_message_stored);
+        assert!(result.received_status_verified);
+        assert!(result.received_export_matches_input);
+        assert!(!result.plaintext_returned_to_frontend);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+
+        let serialized = serde_json::to_string(&result).expect("serialize result");
+        assert!(!serialized.contains("tauri production bridge"));
+        assert!(!serialized.contains("alice"));
+        assert!(!serialized.contains("bob"));
+        assert!(!serialized.contains("ADENV1"));
     }
 }
