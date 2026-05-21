@@ -307,6 +307,10 @@ impl ProductionPairwisePrivateKey {
         self.algorithm
     }
 
+    pub fn encrypted_storage_bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+
     pub fn from_ed25519_dalek_seed(seed: [u8; ED25519_KEY_SIZE]) -> Result<Self, IdentityError> {
         Self::from_bytes(ProductionKeyAlgorithm::Ed25519DalekV2, seed)
     }

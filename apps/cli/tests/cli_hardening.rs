@@ -84,6 +84,8 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production preflight"));
     assert!(out.contains("production profile init"));
     assert!(out.contains("production profile status"));
+    assert!(out.contains("production identity init"));
+    assert!(out.contains("production identity status"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
@@ -309,6 +311,160 @@ fn production_profile_status_reopens_encrypted_store_without_opening_messaging()
     );
     let wrong_error = stderr(&wrong);
 
+    assert!(!wrong.status.success());
+    assert!(stdout(&wrong).is_empty());
+    assert!(wrong_error.contains("unlock failed"));
+    assert!(!wrong_error.contains("alice"));
+    assert!(!wrong_error.contains(store_arg));
+    assert!(!wrong_error.contains("wrong passphrase"));
+
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+#[cfg(not(feature = "dev-insecure"))]
+fn production_identity_init_and_status_use_encrypted_store_without_opening_messaging() {
+    let root = temp_cli_path("production-identity");
+    if root.exists() {
+        std::fs::remove_dir_all(&root).expect("remove stale root");
+    }
+    std::fs::create_dir_all(&root).expect("create root");
+    let store = root.join("profile.db");
+    let store_arg = store.to_str().expect("store path");
+
+    let missing_profile = run_with_stdin(
+        &[
+            "production",
+            "identity",
+            "status",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let missing_profile_error = stderr(&missing_profile);
+    assert!(!missing_profile.status.success());
+    assert!(stdout(&missing_profile).is_empty());
+    assert!(missing_profile_error.contains("profile marker missing"));
+    assert!(!missing_profile_error.contains("alice"));
+    assert!(!missing_profile_error.contains(store_arg));
+    assert!(!missing_profile_error.contains("correct horse"));
+
+    let init_profile = run_with_stdin(
+        &[
+            "production",
+            "profile",
+            "init",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    assert!(init_profile.status.success());
+
+    let missing_identity = run_with_stdin(
+        &[
+            "production",
+            "identity",
+            "status",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let missing_identity_out = stdout(&missing_identity);
+    let missing_identity_error = stderr(&missing_identity);
+    assert!(missing_identity.status.success());
+    assert!(missing_identity_out.contains("production identity status:"));
+    assert!(missing_identity_out.contains("storage_opened=true"));
+    assert!(missing_identity_out.contains("identity_private_key_present=false"));
+    assert!(missing_identity_out.contains("identity_public_key_derivable=false"));
+    assert!(missing_identity_out.contains("key_material_exposed=false"));
+    assert!(missing_identity_out.contains("transport_io_opened=false"));
+    assert!(missing_identity_out.contains("runtime_messaging=false"));
+    assert!(missing_identity_error.contains("storage-only"));
+    assert!(!missing_identity_out.contains("alice"));
+    assert!(!missing_identity_out.contains(store_arg));
+    assert!(!missing_identity_error.contains("correct horse"));
+
+    let init_identity = run_with_stdin(
+        &[
+            "production",
+            "identity",
+            "init",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let init_identity_out = stdout(&init_identity);
+    let init_identity_error = stderr(&init_identity);
+    assert!(
+        init_identity.status.success(),
+        "stdout: {init_identity_out}\nstderr: {init_identity_error}"
+    );
+    assert!(init_identity_out.contains("production identity initialized:"));
+    assert!(init_identity_out.contains("identity_private_key_written=true"));
+    assert!(init_identity_out.contains("identity_public_key_derivable=true"));
+    assert!(init_identity_out.contains("key_material_exposed=false"));
+    assert!(init_identity_out.contains("transport_io_opened=false"));
+    assert!(init_identity_out.contains("runtime_messaging=false"));
+    assert!(init_identity_error.contains("storage-only"));
+    assert!(!init_identity_out.contains("alice"));
+    assert!(!init_identity_out.contains(store_arg));
+    assert!(!init_identity_out.contains("ed25519"));
+    assert!(!init_identity_error.contains("correct horse"));
+
+    let present = run_with_stdin(
+        &[
+            "production",
+            "identity",
+            "status",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let present_out = stdout(&present);
+    let present_error = stderr(&present);
+    assert!(present.status.success());
+    assert!(present_out.contains("identity_private_key_present=true"));
+    assert!(present_out.contains("identity_public_key_derivable=true"));
+    assert!(present_out.contains("runtime_messaging=false"));
+    assert!(!present_out.contains("alice"));
+    assert!(!present_out.contains(store_arg));
+    assert!(!present_out.contains("ed25519"));
+    assert!(!present_error.contains("correct horse"));
+
+    let wrong = run_with_stdin(
+        &[
+            "production",
+            "identity",
+            "status",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "wrong passphrase\n",
+    );
+    let wrong_error = stderr(&wrong);
     assert!(!wrong.status.success());
     assert!(stdout(&wrong).is_empty());
     assert!(wrong_error.contains("unlock failed"));
