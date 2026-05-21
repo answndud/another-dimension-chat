@@ -9,12 +9,15 @@ Current boundary:
 - Tauri shell only.
 - Rust owns security-sensitive state and future protocol/storage/transport behavior.
 - Frontend may request redacted prototype status and run the local `dev-insecure` demo transcript command only.
-- Redacted status separates release-claim, messaging-surface, core, profile, pairing, production-session, production-self-test, production-session limits, production-preflight, preflight-blockers, transport, network-execution, experimental-transport, bootstrap-status classification, transport-I/O, storage, and verification boundaries without exposing profile/contact/endpoint data.
+- Redacted status separates release-claim, messaging-surface, core, profile, pairing, production-session, production-self-test, production-session limits, production-preflight, preflight-blockers, session durable-state, session unlock-policy, session unlock-limits, transport, network-execution, experimental-transport, bootstrap-status classification, transport-I/O, storage, and verification boundaries without exposing profile/contact/endpoint data.
 - The core status is static boundary copy in this scaffold; it does not link or call production core protocol, storage, or transport code.
 - The production-session status is static evaluation copy for the `snow` Noise XX synchronous boundary; it does not expose a Tauri production messaging command.
 - The production-self-test status points to the CLI `production self-test` boundary only; it does not execute from the Tauri shell or mark messaging usable.
 - The production-session limits copy keeps production E2EE claim, durable session persistence, Tauri production messaging command, and async messaging out of scope.
 - The production-preflight status mirrors the CLI `production preflight` blockers as static read-only copy; it does not execute the CLI command, create profiles, unlock storage, bootstrap transport, send envelopes, receive envelopes, or mark messaging usable.
+- The session durable-state status is static blocker copy for the current v0.1 candidate boundary; it does not execute unlock, write session records, persist Noise transport state, or mark durable session persistence ready.
+- The session unlock-policy status mirrors the high-risk passphrase-required and OS-keystore-only-rejected policy as static copy; it does not expose a product unlock command.
+- The session unlock-limits copy keeps product unlock, durable session persistence, rollback protection, and runtime messaging disabled.
 - The transport status is static pre-network fail-closed copy; it does not bootstrap Tor, host onion services, publish descriptors, open streams, or transfer envelopes.
 - The network-execution status is static disabled copy; it does not grant socket, Tor bootstrap, onion hosting, stream, or envelope transfer permission.
 - The experimental-transport status is static manual-gate summary copy; it does not execute bootstrap or mark transport usable.

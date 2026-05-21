@@ -129,6 +129,7 @@ This runs:
 - Session durable-state store-write status mirror marks that coverage as test-only while keeping production store write, unlock, durable persistence, rollback protection, and runtime messaging disabled.
 - Session durable-state product unlock blocker summary keeps product unlock closed until key wrapping, backup exclusion, rollback, and durable session lifecycle decisions are complete.
 - Session durable-state unlock policy handoff confirms high-risk passphrase-first unlock policy and OS-keystore-only rejection while keeping product unlock and runtime messaging disabled.
+- Tauri prototype status mirrors session durable-state and unlock-policy blockers as static read-only copy without adding unlock, store-write, or runtime messaging commands.
 - Tauri scaffold static checks.
 - Public release hygiene static checks.
 
