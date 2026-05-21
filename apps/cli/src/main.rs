@@ -26,6 +26,7 @@ fn production_main() -> Result<(), String> {
         }
         [cmd, sub] if cmd == "production" && sub == "self-test" => {
             run_production_self_test()?;
+            print_production_self_test_summary();
             eprintln!("warning: production self-test is not a secure messenger release");
             println!("production boundary self-test passed");
         }
@@ -140,6 +141,32 @@ fn run_production_self_test() -> Result<(), String> {
     } else {
         Err("production boundary self-test failed".to_string())
     }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn print_production_self_test_summary() {
+    let summary = another_dimension_core::production::production_session_evaluation_summary();
+
+    println!(
+        "production session candidate: {}",
+        summary.protocol_candidate()
+    );
+    println!(
+        "production session guard coverage: pairing={} safety_transcript={} canonical_dialer={} tamper_rejection={} replay_before_decrypt={} in_memory_only={}",
+        summary.production_pairing_required(),
+        summary.safety_transcript_bound(),
+        summary.canonical_dialer_stable(),
+        summary.ciphertext_tamper_rejected(),
+        summary.replay_guard_before_decrypt(),
+        summary.session_state_in_memory_only()
+    );
+    println!(
+        "production session non-readiness: production_e2ee={} durable_session_persistence={} tauri_production_messaging_command={} usable_async_messaging={}",
+        summary.production_e2ee_ready(),
+        summary.durable_session_persistence_ready(),
+        summary.tauri_production_messaging_command_ready(),
+        summary.usable_async_messaging_ready()
+    );
 }
 
 #[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]

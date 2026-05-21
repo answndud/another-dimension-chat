@@ -9,8 +9,11 @@ Current boundary:
 - Tauri shell only.
 - Rust owns security-sensitive state and future protocol/storage/transport behavior.
 - Frontend may request redacted prototype status and run the local `dev-insecure` demo transcript command only.
-- Redacted status separates release-claim, messaging-surface, core, profile, pairing, transport, network-execution, experimental-transport, bootstrap-status classification, transport-I/O, storage, and verification boundaries without exposing profile/contact/endpoint data.
+- Redacted status separates release-claim, messaging-surface, core, profile, pairing, production-session, production-self-test, production-session limits, transport, network-execution, experimental-transport, bootstrap-status classification, transport-I/O, storage, and verification boundaries without exposing profile/contact/endpoint data.
 - The core status is static boundary copy in this scaffold; it does not link or call production core protocol, storage, or transport code.
+- The production-session status is static evaluation copy for the `snow` Noise XX synchronous boundary; it does not expose a Tauri production messaging command.
+- The production-self-test status points to the CLI `production self-test` boundary only; it does not execute from the Tauri shell or mark messaging usable.
+- The production-session limits copy keeps production E2EE claim, durable session persistence, Tauri production messaging command, and async messaging out of scope.
 - The transport status is static pre-network fail-closed copy; it does not bootstrap Tor, host onion services, publish descriptors, open streams, or transfer envelopes.
 - The network-execution status is static disabled copy; it does not grant socket, Tor bootstrap, onion hosting, stream, or envelope transfer permission.
 - The experimental-transport status is static manual-gate summary copy; it does not execute bootstrap or mark transport usable.

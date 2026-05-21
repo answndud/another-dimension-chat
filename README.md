@@ -143,6 +143,8 @@ The default build exposes only a local production-boundary self-test. Here, "pro
 cargo run -q -- production self-test
 ```
 
+The self-test prints a redacted production-session summary for the current `snow` Noise XX synchronous evaluation boundary. The summary keeps production E2EE, durable session persistence, Tauri production messaging commands, and usable async messaging false.
+
 Manual Arti bootstrap spike, local only:
 
 ```bash
