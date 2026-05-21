@@ -86,16 +86,22 @@ const fields = {
   saveProductionSessionDraft: document.querySelector("#save-production-session-draft"),
   productionHandshakeInitPayload: document.querySelector("#production-handshake-init-payload"),
   useProductionHandshakeInit: document.querySelector("#use-production-handshake-init"),
+  storeProductionHandshakeInit: document.querySelector("#store-production-handshake-init"),
+  loadProductionHandshakeInit: document.querySelector("#load-production-handshake-init"),
   productionRemoteHandshakeInitPayload: document.querySelector(
     "#production-remote-handshake-init-payload",
   ),
   productionHandshakeReplyPayload: document.querySelector("#production-handshake-reply-payload"),
   useProductionHandshakeReply: document.querySelector("#use-production-handshake-reply"),
+  storeProductionHandshakeReply: document.querySelector("#store-production-handshake-reply"),
+  loadProductionHandshakeReply: document.querySelector("#load-production-handshake-reply"),
   productionRemoteHandshakeReplyPayload: document.querySelector(
     "#production-remote-handshake-reply-payload",
   ),
   productionHandshakeFinishPayload: document.querySelector("#production-handshake-finish-payload"),
   useProductionHandshakeFinish: document.querySelector("#use-production-handshake-finish"),
+  storeProductionHandshakeFinish: document.querySelector("#store-production-handshake-finish"),
+  loadProductionHandshakeFinish: document.querySelector("#load-production-handshake-finish"),
   productionRemoteHandshakeFinishPayload: document.querySelector(
     "#production-remote-handshake-finish-payload",
   ),
@@ -167,7 +173,12 @@ let latestSimulation = null;
 let latestProductionSessionState = null;
 let latestProductionTwoProfileSuccess = null;
 let productionBusyAction = null;
-const productionPairingPayloadSlots = new Map();
+const productionPayloadSlots = {
+  pairing: new Map(),
+  handshakeInit: new Map(),
+  handshakeReply: new Map(),
+  handshakeFinish: new Map(),
+};
 
 const themeStorageKey = "another-dimension-theme";
 
@@ -338,33 +349,33 @@ function moveLocalPayload(sourceField, targetField, label) {
   applyProductionActionState();
 }
 
-function storeProductionPairingPayload() {
+function storeProductionPayloadSlot(kind, sourceField, label) {
   const profile = activeProductionProfileName();
-  const value = fields.productionPairingPayload?.value?.trim() ?? "";
+  const value = sourceField?.value?.trim() ?? "";
   if (!profile || !value) {
-    setProductionPairingState("Pairing store needs profile and payload");
-    setText(fields.productionPairingWarning, "Export pairing before storing a local payload slot.");
+    setProductionPairingState(`${label} store needs profile and payload`);
+    setText(fields.productionPairingWarning, `Export ${label.toLowerCase()} before storing a local payload slot.`);
     return;
   }
-  productionPairingPayloadSlots.set(profile, value);
-  setProductionPairingState("Pairing payload stored");
-  setText(fields.productionPairingWarning, `Stored local pairing payload slot for ${profile}.`);
+  productionPayloadSlots[kind].set(profile, value);
+  setProductionPairingState(`${label} stored`);
+  setText(fields.productionPairingWarning, `Stored local ${label.toLowerCase()} slot for ${profile}.`);
   applyProductionActionState();
 }
 
-function loadProductionPairingPayload() {
+function loadProductionPayloadSlot(kind, targetField, label) {
   const profile = activeProductionProfileName();
   const counterpart = productionCounterpartProfile(profile);
-  const value = counterpart ? productionPairingPayloadSlots.get(counterpart) : null;
-  if (!value || !fields.productionRemotePairingPayload) {
-    setProductionPairingState("Remote pairing slot empty");
-    setText(fields.productionPairingWarning, "Store Alice or Bob pairing first, then switch profile and load remote.");
+  const value = counterpart ? productionPayloadSlots[kind].get(counterpart) : null;
+  if (!value || !targetField) {
+    setProductionPairingState(`Remote ${label.toLowerCase()} slot empty`);
+    setText(fields.productionPairingWarning, `Store Alice or Bob ${label.toLowerCase()} first, then switch profile and load remote.`);
     return;
   }
-  fields.productionRemotePairingPayload.value = value;
-  fields.productionRemotePairingPayload.dispatchEvent(new Event("input", { bubbles: true }));
-  setProductionPairingState("Remote pairing loaded");
-  setText(fields.productionPairingWarning, `Loaded ${counterpart} pairing payload into remote field.`);
+  targetField.value = value;
+  targetField.dispatchEvent(new Event("input", { bubbles: true }));
+  setProductionPairingState(`Remote ${label.toLowerCase()} loaded`);
+  setText(fields.productionPairingWarning, `Loaded ${counterpart} ${label.toLowerCase()} into remote field.`);
   applyProductionActionState();
 }
 
@@ -415,11 +426,20 @@ function applyProductionActionState() {
   const hasLocalPairingPayload = Boolean(fields.productionPairingPayload?.value.trim());
   const counterpartProfile = productionCounterpartProfile(activeProductionProfileName());
   const hasRemotePairingSlot = Boolean(
-    counterpartProfile && productionPairingPayloadSlots.has(counterpartProfile),
+    counterpartProfile && productionPayloadSlots.pairing.has(counterpartProfile),
   );
   const hasHandshakeInitPayload = Boolean(fields.productionHandshakeInitPayload?.value.trim());
   const hasHandshakeReplyPayload = Boolean(fields.productionHandshakeReplyPayload?.value.trim());
   const hasHandshakeFinishPayload = Boolean(fields.productionHandshakeFinishPayload?.value.trim());
+  const hasRemoteHandshakeInitSlot = Boolean(
+    counterpartProfile && productionPayloadSlots.handshakeInit.has(counterpartProfile),
+  );
+  const hasRemoteHandshakeReplySlot = Boolean(
+    counterpartProfile && productionPayloadSlots.handshakeReply.has(counterpartProfile),
+  );
+  const hasRemoteHandshakeFinishSlot = Boolean(
+    counterpartProfile && productionPayloadSlots.handshakeFinish.has(counterpartProfile),
+  );
   const hasLocalMessageEnvelope = Boolean(fields.productionMessageEnvelope?.value.trim());
   const hasOutboundMessageInput = Boolean(
     hasProfileUnlockInput &&
@@ -480,8 +500,14 @@ function applyProductionActionState() {
   setDisabled(fields.storeProductionPairingPayload, busy || !hasLocalPairingPayload);
   setDisabled(fields.loadProductionPairingPayload, busy || !hasRemotePairingSlot);
   setDisabled(fields.useProductionHandshakeInit, !availability.useHandshakeInit);
+  setDisabled(fields.storeProductionHandshakeInit, busy || !hasHandshakeInitPayload);
+  setDisabled(fields.loadProductionHandshakeInit, busy || !hasRemoteHandshakeInitSlot);
   setDisabled(fields.useProductionHandshakeReply, !availability.useHandshakeReply);
+  setDisabled(fields.storeProductionHandshakeReply, busy || !hasHandshakeReplyPayload);
+  setDisabled(fields.loadProductionHandshakeReply, busy || !hasRemoteHandshakeReplySlot);
   setDisabled(fields.useProductionHandshakeFinish, !availability.useHandshakeFinish);
+  setDisabled(fields.storeProductionHandshakeFinish, busy || !hasHandshakeFinishPayload);
+  setDisabled(fields.loadProductionHandshakeFinish, busy || !hasRemoteHandshakeFinishSlot);
   setDisabled(fields.useProductionMessageEnvelope, !availability.useMessageEnvelope);
 }
 
@@ -1623,11 +1649,15 @@ if (fields.useProductionPairingPayload) {
 }
 
 if (fields.storeProductionPairingPayload) {
-  fields.storeProductionPairingPayload.addEventListener("click", storeProductionPairingPayload);
+  fields.storeProductionPairingPayload.addEventListener("click", () =>
+    storeProductionPayloadSlot("pairing", fields.productionPairingPayload, "Pairing payload"),
+  );
 }
 
 if (fields.loadProductionPairingPayload) {
-  fields.loadProductionPairingPayload.addEventListener("click", loadProductionPairingPayload);
+  fields.loadProductionPairingPayload.addEventListener("click", () =>
+    loadProductionPayloadSlot("pairing", fields.productionRemotePairingPayload, "Pairing payload"),
+  );
 }
 
 if (fields.saveProductionSessionDraft) {
@@ -1648,6 +1678,18 @@ if (fields.useProductionHandshakeInit) {
   );
 }
 
+if (fields.storeProductionHandshakeInit) {
+  fields.storeProductionHandshakeInit.addEventListener("click", () =>
+    storeProductionPayloadSlot("handshakeInit", fields.productionHandshakeInitPayload, "Handshake init"),
+  );
+}
+
+if (fields.loadProductionHandshakeInit) {
+  fields.loadProductionHandshakeInit.addEventListener("click", () =>
+    loadProductionPayloadSlot("handshakeInit", fields.productionRemoteHandshakeInitPayload, "Handshake init"),
+  );
+}
+
 if (fields.exportProductionHandshakeReply) {
   fields.exportProductionHandshakeReply.addEventListener("click", exportProductionHandshakeReply);
 }
@@ -1662,6 +1704,18 @@ if (fields.useProductionHandshakeReply) {
   );
 }
 
+if (fields.storeProductionHandshakeReply) {
+  fields.storeProductionHandshakeReply.addEventListener("click", () =>
+    storeProductionPayloadSlot("handshakeReply", fields.productionHandshakeReplyPayload, "Handshake reply"),
+  );
+}
+
+if (fields.loadProductionHandshakeReply) {
+  fields.loadProductionHandshakeReply.addEventListener("click", () =>
+    loadProductionPayloadSlot("handshakeReply", fields.productionRemoteHandshakeReplyPayload, "Handshake reply"),
+  );
+}
+
 if (fields.exportProductionHandshakeFinish) {
   fields.exportProductionHandshakeFinish.addEventListener("click", exportProductionHandshakeFinish);
 }
@@ -1673,6 +1727,18 @@ if (fields.useProductionHandshakeFinish) {
       fields.productionRemoteHandshakeFinishPayload,
       "Handshake finish",
     ),
+  );
+}
+
+if (fields.storeProductionHandshakeFinish) {
+  fields.storeProductionHandshakeFinish.addEventListener("click", () =>
+    storeProductionPayloadSlot("handshakeFinish", fields.productionHandshakeFinishPayload, "Handshake finish"),
+  );
+}
+
+if (fields.loadProductionHandshakeFinish) {
+  fields.loadProductionHandshakeFinish.addEventListener("click", () =>
+    loadProductionPayloadSlot("handshakeFinish", fields.productionRemoteHandshakeFinishPayload, "Handshake finish"),
   );
 }
 

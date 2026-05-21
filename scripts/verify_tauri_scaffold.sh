@@ -182,8 +182,8 @@ require_contains "$APP_DIR/package.json" 'test:state'
 require_contains "$APP_DIR/src/main.js" 'productionSessionReadyForMessages'
 require_contains "$APP_DIR/src/main.js" 'applyProductionProfilePreset'
 require_contains "$APP_DIR/src/main.js" 'moveLocalPayload'
-require_contains "$APP_DIR/src/main.js" 'storeProductionPairingPayload'
-require_contains "$APP_DIR/src/main.js" 'loadProductionPairingPayload'
+require_contains "$APP_DIR/src/main.js" 'storeProductionPayloadSlot'
+require_contains "$APP_DIR/src/main.js" 'loadProductionPayloadSlot'
 require_contains "$APP_DIR/src/main.js" 'moveLocalMessageEnvelope'
 require_contains "$APP_DIR/src/main.js" 'exportProductionPairingPayload'
 require_contains "$APP_DIR/src/main.js" 'saveProductionSessionDraft'
@@ -225,6 +225,12 @@ require_contains "$APP_DIR/index.html" 'use-alice-production-profile'
 require_contains "$APP_DIR/index.html" 'use-bob-production-profile'
 require_contains "$APP_DIR/index.html" 'store-production-pairing-payload'
 require_contains "$APP_DIR/index.html" 'load-production-pairing-payload'
+require_contains "$APP_DIR/index.html" 'store-production-handshake-init'
+require_contains "$APP_DIR/index.html" 'load-production-handshake-init'
+require_contains "$APP_DIR/index.html" 'store-production-handshake-reply'
+require_contains "$APP_DIR/index.html" 'load-production-handshake-reply'
+require_contains "$APP_DIR/index.html" 'store-production-handshake-finish'
+require_contains "$APP_DIR/index.html" 'load-production-handshake-finish'
 require_contains "$APP_DIR/src/styles.css" '.production-workflow'
 require_contains "$APP_DIR/src/styles.css" '.advanced-panel'
 require_contains "$APP_DIR/src/main.js" 'localLoopMessages'
@@ -464,12 +470,18 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="save-production-session-draft" type="button">Save draft</button>' \
   | grep -v '<textarea id="production-handshake-init-payload" rows="3" readonly></textarea>' \
   | grep -v '<button id="use-production-handshake-init" type="button">Use init</button>' \
+  | grep -v '<button id="store-production-handshake-init" type="button">Store init</button>' \
+  | grep -v '<button id="load-production-handshake-init" type="button">Load init</button>' \
   | grep -v '<textarea id="production-remote-handshake-init-payload" rows="3"></textarea>' \
   | grep -v '<textarea id="production-handshake-reply-payload" rows="3" readonly></textarea>' \
   | grep -v '<button id="use-production-handshake-reply" type="button">Use reply</button>' \
+  | grep -v '<button id="store-production-handshake-reply" type="button">Store reply</button>' \
+  | grep -v '<button id="load-production-handshake-reply" type="button">Load reply</button>' \
   | grep -v '<textarea id="production-remote-handshake-reply-payload" rows="3"></textarea>' \
   | grep -v '<textarea id="production-handshake-finish-payload" rows="3" readonly></textarea>' \
   | grep -v '<button id="use-production-handshake-finish" type="button">Use finish</button>' \
+  | grep -v '<button id="store-production-handshake-finish" type="button">Store finish</button>' \
+  | grep -v '<button id="load-production-handshake-finish" type="button">Load finish</button>' \
   | grep -v '<textarea id="production-remote-handshake-finish-payload" rows="3"></textarea>' \
   | grep -v '<button id="export-production-handshake-init" type="button">Export init</button>' \
   | grep -v '<button id="export-production-handshake-reply" type="button">Export reply</button>' \
