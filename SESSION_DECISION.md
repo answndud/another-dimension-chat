@@ -107,6 +107,8 @@ Replay-aware decrypt now uses the existing `ReplayWindow` boundary. Duplicate an
 
 `production_session_evaluation_summary()` is the current public-safe harness for this evaluation path. It records that the existing `snow` Noise XX synchronous boundary is covered for production pairing, safety transcript binding, deterministic canonical dialer selection, ciphertext tamper rejection, replay-before-decrypt behavior, and in-memory-only state. It also keeps production E2EE readiness, durable session persistence, Tauri production messaging commands, and usable async messaging explicitly false.
 
+`session_durable_state_connector_gate()` is the first read-only connector-gate draft for durable session state. It records that pairwise identity private keys, Noise static private keys, and replay window state require encrypted-at-rest records; Noise transport state remains in-memory only; replay commits remain after successful decrypt; rollback protection is not provided; and storage unlock commands, transport I/O, runtime messaging, and connector readiness remain false.
+
 ## Session Persistence Decision
 
 For the current v0.1 production message boundary, production session state is in-memory only.
@@ -114,3 +116,5 @@ For the current v0.1 production message boundary, production session state is in
 Do not persist Noise transport state, Noise static private keys, replay state, or derived channel/session state in plaintext local files. Durable production session persistence is blocked until the encrypted local storage phase defines storage keys, unlock behavior, key derivation, backup exclusion, and local compromise limits.
 
 The current implementation may recreate setup drafts and sessions for local self-tests. That is acceptable for boundary verification, but it is not a usable asynchronous messaging model and should not be presented as production-ready communication.
+
+The current durable-state gate is a contract draft, not an implementation of durable production sessions. It does not add a storage unlock command, does not persist Noise transport state, and does not make the existing Noise boundary production E2EE-ready.
