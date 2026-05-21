@@ -291,6 +291,46 @@
               </div>
             </dl>
           </section>
+          <section class="loop-panel" aria-labelledby="production-message-title">
+            <div>
+              <p class="eyebrow">Production message</p>
+              <h3 id="production-message-title">Encrypted envelope path</h3>
+            </div>
+            <label class="loop-label" for="production-message-number">Message number</label>
+            <input id="production-message-number" type="number" min="1" value="1" />
+            <label class="loop-label" for="production-message-body">Message</label>
+            <textarea id="production-message-body" rows="3">hello over stored transport</textarea>
+            <div class="loop-actions">
+              <button id="export-production-message-envelope" type="button">Export message envelope</button>
+            </div>
+            <p id="production-message-state" class="demo-state" aria-live="polite">
+              Message flow idle
+            </p>
+            <p id="production-message-warning" class="demo-warning">
+              Message envelope has not been exported yet.
+            </p>
+            <label class="loop-label" for="production-message-envelope">Envelope</label>
+            <textarea id="production-message-envelope" rows="5" readonly></textarea>
+            <label class="loop-label" for="production-remote-message-envelope">Remote envelope</label>
+            <textarea id="production-remote-message-envelope" rows="5"></textarea>
+            <div class="loop-actions">
+              <button id="import-production-message-envelope" type="button">Import message envelope</button>
+            </div>
+            <dl class="flow-summary">
+              <div>
+                <dt>Outbound</dt>
+                <dd id="production-message-outbound">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Inbound</dt>
+                <dd id="production-message-inbound">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Boundary</dt>
+                <dd id="production-message-boundary">Not checked yet</dd>
+              </div>
+            </dl>
+          </section>
           <section class="loop-panel" aria-labelledby="production-roundtrip-title">
             <div>
               <p class="eyebrow">Production core local roundtrip</p>
