@@ -522,13 +522,14 @@ fn run_production_message_send_prepare_command(args: &[String]) -> Result<(), St
     .map_err(redacted_production_message_send_prepare_error)?;
 
     println!(
-        "production message send prepared: storage_opened={} runtime_material_reconstructable={} outbound_envelope_io_ready={} plaintext_accepted={} message_number_reserved={} local_message_index_written={} envelope_encryption_ready={} network_send_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        "production message send prepared: storage_opened={} runtime_material_reconstructable={} outbound_envelope_io_ready={} plaintext_accepted={} message_number_reserved={} local_message_index_written={} pending_message_record_written={} envelope_encryption_ready={} network_send_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
         summary.storage_opened(),
         summary.runtime_material_reconstructable(),
         summary.outbound_envelope_io_ready(),
         summary.plaintext_accepted(),
         summary.message_number_reserved(),
         summary.local_message_index_written(),
+        summary.pending_message_record_written(),
         summary.envelope_encryption_ready(),
         summary.network_send_attempted(),
         summary.key_material_exposed(),

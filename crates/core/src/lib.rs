@@ -40,7 +40,6 @@ pub mod production {
     const PRODUCTION_REPLAY_RECORD_DOMAIN: &[u8] = b"AD-PRODUCTION-REPLAY-RECORD-V1";
     const PRODUCTION_ENDPOINT_STATE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-ENDPOINT-STATE-RECORD-V1";
-    #[cfg(test)]
     const PRODUCTION_MESSAGE_ENVELOPE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-MESSAGE-ENVELOPE-RECORD-V1";
     const PRODUCTION_LOCAL_MESSAGE_INDEX_RECORD_DOMAIN: &[u8] =
@@ -316,6 +315,7 @@ pub mod production {
         plaintext_accepted: bool,
         message_number_reserved: bool,
         local_message_index_written: bool,
+        pending_message_record_written: bool,
         envelope_encryption_ready: bool,
         network_send_attempted: bool,
         key_material_exposed: bool,
@@ -694,6 +694,10 @@ pub mod production {
 
         pub fn local_message_index_written(self) -> bool {
             self.local_message_index_written
+        }
+
+        pub fn pending_message_record_written(self) -> bool {
+            self.pending_message_record_written
         }
 
         pub fn envelope_encryption_ready(self) -> bool {
@@ -1535,6 +1539,60 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    struct PendingOutboundMessageRecord {
+        contact_id: ContactId,
+        message_number: u64,
+        message_type: MessageType,
+        plaintext: Vec<u8>,
+    }
+
+    impl PendingOutboundMessageRecord {
+        fn new(
+            contact_id: ContactId,
+            message_number: u64,
+            message_type: MessageType,
+            plaintext: &[u8],
+        ) -> Result<Self, ProductionSessionError> {
+            if message_number == 0 || plaintext.is_empty() {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            Ok(Self {
+                contact_id,
+                message_number,
+                message_type,
+                plaintext: plaintext.to_vec(),
+            })
+        }
+
+        fn encode(&self) -> String {
+            format!(
+                "ADPENDINGMSG1|{}|{}|{}|{}",
+                self.contact_id.as_str(),
+                self.message_number,
+                message_type_tag(&self.message_type),
+                encode_hex(&self.plaintext)
+            )
+        }
+
+        #[cfg(test)]
+        fn decode(value: &str) -> Result<Self, ProductionSessionError> {
+            let parts = value.split('|').collect::<Vec<_>>();
+            if parts.len() != 5 || parts[0] != "ADPENDINGMSG1" {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            let contact_id =
+                ContactId::new(parts[1]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let message_number = parts[2]
+                .parse::<u64>()
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let message_type = parse_message_type_tag(parts[3])?;
+            let plaintext =
+                decode_hex(parts[4]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            Self::new(contact_id, message_number, message_type, &plaintext)
+        }
+    }
+
     #[derive(Debug)]
     pub struct ProductionEnvelopeSession {
         plan: ProductionSessionPlan,
@@ -2325,17 +2383,36 @@ pub mod production {
             &material.remote_contact_id,
             message_number,
         );
-        if store.get(&record_id)?.is_some() {
+        let message_record_id = production_message_envelope_record_id(
+            &material.channel_id,
+            message_number,
+            MessageType::Data,
+        );
+        if store.get(&record_id)?.is_some() || store.get(&message_record_id)?.is_some() {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
         let record = EncryptedRecord::new(
             ProductionRecordKind::LocalMessageIndex,
-            EncryptedRecordScope::contact(profile, material.remote_contact_id),
+            EncryptedRecordScope::contact(profile.clone(), material.remote_contact_id.clone()),
             b"sqlcipher-page-encryption-v1".to_vec(),
             entry.encode().into_bytes(),
         )
         .map_err(ProductionStorageError::from)?;
         store.put(&record_id, &record)?;
+        let pending = PendingOutboundMessageRecord::new(
+            material.remote_contact_id.clone(),
+            message_number,
+            MessageType::Data,
+            plaintext,
+        )?;
+        let message_record = EncryptedRecord::new(
+            ProductionRecordKind::MessageEnvelope,
+            EncryptedRecordScope::contact(profile, material.remote_contact_id),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            pending.encode().into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)?;
+        store.put(&message_record_id, &message_record)?;
         Ok(ProductionMessageSendPrepareSummary {
             storage_opened: true,
             runtime_material_reconstructable: true,
@@ -2343,6 +2420,7 @@ pub mod production {
             plaintext_accepted: true,
             message_number_reserved: true,
             local_message_index_written: true,
+            pending_message_record_written: true,
             envelope_encryption_ready: false,
             network_send_attempted: false,
             key_material_exposed: false,
@@ -2896,7 +2974,6 @@ pub mod production {
             .expect("domain-separated endpoint state record id is valid")
     }
 
-    #[cfg(test)]
     fn production_message_envelope_record_id(
         channel_id: &str,
         message_number: u64,
@@ -4078,6 +4155,7 @@ pub mod production {
             assert!(send_prepare.plaintext_accepted());
             assert!(send_prepare.message_number_reserved());
             assert!(send_prepare.local_message_index_written());
+            assert!(send_prepare.pending_message_record_written());
             assert!(!send_prepare.envelope_encryption_ready());
             assert!(!send_prepare.network_send_attempted());
             assert!(!send_prepare.key_material_exposed());
@@ -4103,6 +4181,28 @@ pub mod production {
                 .expect("decode index"),
                 LocalMessageIndexEntry::new(remote_contact.clone(), 1, MessageType::Data)
                     .expect("index entry")
+            );
+            let pending_message = store_after_send
+                .get(&production_message_envelope_record_id(
+                    &channel_id,
+                    1,
+                    MessageType::Data,
+                ))
+                .expect("read pending message")
+                .expect("pending message");
+            assert_eq!(pending_message.kind, ProductionRecordKind::MessageEnvelope);
+            assert_eq!(
+                PendingOutboundMessageRecord::decode(
+                    &String::from_utf8(pending_message.sealed_body).expect("pending body")
+                )
+                .expect("decode pending"),
+                PendingOutboundMessageRecord::new(
+                    remote_contact.clone(),
+                    1,
+                    MessageType::Data,
+                    b"hi"
+                )
+                .expect("pending")
             );
             assert!(matches!(
                 production_message_send_prepare(&alice_store, alice.clone(), &passphrase, 2, b""),
