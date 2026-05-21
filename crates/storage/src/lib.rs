@@ -227,7 +227,7 @@ pub mod production {
             production_key_management_ready: false,
             rollback_protection: replay_persistence_guarantees().rollback_protection,
             secure_deletion_from_media: false,
-            session_transport_persistence_allowed: false,
+            session_transport_persistence_allowed: true,
         }
     }
 
@@ -244,7 +244,7 @@ pub mod production {
             rollback_protection: replay.rollback_protection,
             production_key_management_ready: false,
             secure_deletion_from_media: false,
-            durable_session_transport_persistence_allowed: false,
+            durable_session_transport_persistence_allowed: true,
         }
     }
 
@@ -692,8 +692,10 @@ pub mod production {
             | ProductionRecordKind::LocalMessageIndex
             | ProductionRecordKind::RendezvousEndpointState
             | ProductionRecordKind::HandshakeState
-            | ProductionRecordKind::SessionDraft => StorageProtection::EncryptedAtRestRequired,
-            ProductionRecordKind::SessionTransportState => StorageProtection::InMemoryOnly,
+            | ProductionRecordKind::SessionDraft
+            | ProductionRecordKind::SessionTransportState => {
+                StorageProtection::EncryptedAtRestRequired
+            }
         }
     }
 
@@ -779,6 +781,7 @@ pub mod production {
                 ProductionRecordKind::RendezvousEndpointState,
                 ProductionRecordKind::SessionDraft,
                 ProductionRecordKind::HandshakeState,
+                ProductionRecordKind::SessionTransportState,
             ] {
                 assert_eq!(
                     protection_for(kind),
@@ -789,16 +792,14 @@ pub mod production {
         }
 
         #[test]
-        fn production_session_transport_state_is_in_memory_only() {
+        fn production_session_transport_state_requires_encryption_at_rest() {
             assert_eq!(
                 protection_for(ProductionRecordKind::SessionTransportState),
-                StorageProtection::InMemoryOnly
+                StorageProtection::EncryptedAtRestRequired
             );
             assert_eq!(
                 require_persistence_allowed(ProductionRecordKind::SessionTransportState),
-                Err(ProductionStoragePolicyError::PersistenceForbidden {
-                    kind: ProductionRecordKind::SessionTransportState
-                })
+                Ok(())
             );
         }
 
@@ -891,10 +892,7 @@ pub mod production {
 
         #[test]
         fn encrypted_record_rejects_plaintext_allowed_and_in_memory_only_kinds() {
-            for kind in [
-                ProductionRecordKind::SchemaMarker,
-                ProductionRecordKind::SessionTransportState,
-            ] {
+            for kind in [ProductionRecordKind::SchemaMarker] {
                 assert!(matches!(
                     EncryptedRecord::new(
                         kind,
@@ -914,7 +912,6 @@ pub mod production {
                 "ADREC1|message-envelope|alice|profile|01",
                 "ADREC1|message-envelope|alice|profile|zz|02",
                 "ADREC1|schema-marker|alice|profile|01|02",
-                "ADREC1|session-transport-state|alice|profile|01|02",
                 "ADREC1|message-envelope|bad profile|profile|01|02",
                 "ADREC1|message-envelope|alice|contact:bad contact|01|02",
             ] {
@@ -1000,11 +997,11 @@ pub mod production {
                 ReplayRollbackProtection::NotProvided
             );
             assert!(!summary.secure_deletion_from_media());
-            assert!(!summary.session_transport_persistence_allowed());
+            assert!(summary.session_transport_persistence_allowed());
         }
 
         #[test]
-        fn production_message_storage_summary_keeps_session_transport_in_memory_only() {
+        fn production_message_storage_summary_allows_encrypted_session_transport() {
             let summary = production_message_storage_boundary_summary();
 
             assert_eq!(
@@ -1025,7 +1022,7 @@ pub mod production {
             );
             assert_eq!(
                 summary.session_transport_storage(),
-                StorageProtection::InMemoryOnly
+                StorageProtection::EncryptedAtRestRequired
             );
             assert!(summary.replay_commit_after_decrypt());
             assert_eq!(
@@ -1034,7 +1031,7 @@ pub mod production {
             );
             assert!(!summary.production_key_management_ready());
             assert!(!summary.secure_deletion_from_media());
-            assert!(!summary.durable_session_transport_persistence_allowed());
+            assert!(summary.durable_session_transport_persistence_allowed());
         }
 
         #[test]

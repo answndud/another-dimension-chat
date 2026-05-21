@@ -1791,7 +1791,7 @@ fn production_pairing_session_transport_prepare_help() -> String {
     "usage:
   another-dimension production pairing session transport-prepare --profile <name> --store <path> --passphrase-stdin
 
-Reads the profile passphrase from stdin. Opens an encrypted local profile store, reloads session runtime material, checks local and remote Noise static inputs, and confirms session transport state remains in-memory only until an authenticated handshake can run. This does not persist transport state, open transport, or enable runtime messaging."
+Reads the profile passphrase from stdin. Opens an encrypted local profile store, reloads session runtime material, checks local and remote Noise static inputs, and confirms session transport persistence policy without creating transport state. This does not persist transport state, open transport, or enable runtime messaging."
         .to_string()
 }
 

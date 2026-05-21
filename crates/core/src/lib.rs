@@ -3796,12 +3796,8 @@ pub mod production {
 
     pub fn session_durable_state_connector_test_harness() -> SessionDurableStateConnectorHarness {
         let gate = session_durable_state_connector_gate();
-        let session_transport_persistence_rejected = matches!(
-            require_persistence_allowed(ProductionRecordKind::SessionTransportState),
-            Err(ProductionStoragePolicyError::PersistenceForbidden {
-                kind: ProductionRecordKind::SessionTransportState
-            })
-        );
+        let session_transport_persistence_rejected =
+            require_persistence_allowed(ProductionRecordKind::SessionTransportState).is_err();
 
         SessionDurableStateConnectorHarness {
             selected_connector: gate.selected_connector(),
@@ -4768,7 +4764,7 @@ pub mod production {
             );
             assert_eq!(
                 summary.storage_session_transport_protection(),
-                StorageProtection::InMemoryOnly
+                StorageProtection::EncryptedAtRestRequired
             );
             assert!(summary.storage_replay_commit_after_decrypt());
             assert_eq!(
@@ -4821,7 +4817,7 @@ pub mod production {
             );
             assert_eq!(
                 gate.session_transport_storage(),
-                StorageProtection::InMemoryOnly
+                StorageProtection::EncryptedAtRestRequired
             );
             assert!(gate.replay_commit_after_decrypt());
             assert_eq!(
@@ -4845,7 +4841,7 @@ pub mod production {
             assert!(harness.pairwise_identity_private_key_encrypted_record_allowed());
             assert!(harness.noise_static_private_key_encrypted_record_allowed());
             assert!(harness.replay_window_encrypted_record_allowed());
-            assert!(harness.session_transport_persistence_rejected());
+            assert!(!harness.session_transport_persistence_rejected());
             assert!(harness.rollback_protection_required_before_readiness());
             assert!(!harness.opens_storage_unlock_command());
             assert!(!harness.opens_transport_io());
@@ -4914,10 +4910,10 @@ pub mod production {
             );
             assert_eq!(
                 session_transport.storage_protection(),
-                StorageProtection::InMemoryOnly
+                StorageProtection::EncryptedAtRestRequired
             );
-            assert!(!session_transport.encrypted_record_allowed());
-            assert!(!session_transport.persistence_allowed());
+            assert!(session_transport.encrypted_record_allowed());
+            assert!(session_transport.persistence_allowed());
         }
 
         #[test]
@@ -4944,22 +4940,20 @@ pub mod production {
                 .associated_data()
                 .starts_with(b"AD-ENCRYPTED-RECORD-V1|noise-static-private-key|"));
 
-            let rejected = adapter.prepare_record(
-                SessionDurableStateAdapterRecordKind::SessionTransportState,
-                EncryptedRecordScope::profile(ProfileName::new("alice").expect("valid profile")),
-                b"adapter-spike-nonce".to_vec(),
-                b"sealed-session-transport-record".to_vec(),
+            let session_transport_record = adapter
+                .prepare_record(
+                    SessionDurableStateAdapterRecordKind::SessionTransportState,
+                    EncryptedRecordScope::profile(
+                        ProfileName::new("alice").expect("valid profile"),
+                    ),
+                    b"adapter-spike-nonce".to_vec(),
+                    b"sealed-session-transport-record".to_vec(),
+                )
+                .expect("session transport record can be prepared");
+            assert_eq!(
+                session_transport_record.kind,
+                ProductionRecordKind::SessionTransportState
             );
-            assert!(matches!(
-                rejected,
-                Err(ProductionSessionError::Storage(
-                    ProductionStorageError::Policy(
-                        ProductionStoragePolicyError::PersistenceForbidden {
-                            kind: ProductionRecordKind::SessionTransportState
-                        }
-                    )
-                ))
-            ));
         }
 
         #[test]
@@ -5604,7 +5598,7 @@ pub mod production {
             assert!(transport_prepare.replay_window_loaded());
             assert!(transport_prepare.authenticated_handshake_required());
             assert!(!transport_prepare.session_transport_state_created());
-            assert!(!transport_prepare.session_transport_persistence_allowed());
+            assert!(transport_prepare.session_transport_persistence_allowed());
             assert!(!transport_prepare.key_material_exposed());
             assert!(!transport_prepare.transport_io_opened());
             assert!(!transport_prepare.runtime_messaging_enabled());
