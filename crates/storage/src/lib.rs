@@ -153,6 +153,62 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageStorageBoundarySummary {
+        replay_window_storage: StorageProtection,
+        message_envelope_storage: StorageProtection,
+        local_message_index_storage: StorageProtection,
+        endpoint_state_storage: StorageProtection,
+        session_transport_storage: StorageProtection,
+        replay_commit_after_decrypt: bool,
+        rollback_protection: ReplayRollbackProtection,
+        production_key_management_ready: bool,
+        secure_deletion_from_media: bool,
+        durable_session_transport_persistence_allowed: bool,
+    }
+
+    impl ProductionMessageStorageBoundarySummary {
+        pub fn replay_window_storage(self) -> StorageProtection {
+            self.replay_window_storage
+        }
+
+        pub fn message_envelope_storage(self) -> StorageProtection {
+            self.message_envelope_storage
+        }
+
+        pub fn local_message_index_storage(self) -> StorageProtection {
+            self.local_message_index_storage
+        }
+
+        pub fn endpoint_state_storage(self) -> StorageProtection {
+            self.endpoint_state_storage
+        }
+
+        pub fn session_transport_storage(self) -> StorageProtection {
+            self.session_transport_storage
+        }
+
+        pub fn replay_commit_after_decrypt(self) -> bool {
+            self.replay_commit_after_decrypt
+        }
+
+        pub fn rollback_protection(self) -> ReplayRollbackProtection {
+            self.rollback_protection
+        }
+
+        pub fn production_key_management_ready(self) -> bool {
+            self.production_key_management_ready
+        }
+
+        pub fn secure_deletion_from_media(self) -> bool {
+            self.secure_deletion_from_media
+        }
+
+        pub fn durable_session_transport_persistence_allowed(self) -> bool {
+            self.durable_session_transport_persistence_allowed
+        }
+    }
+
     pub fn storage_backend_integration_boundary_summary() -> StorageBackendIntegrationBoundarySummary
     {
         StorageBackendIntegrationBoundarySummary {
@@ -163,6 +219,23 @@ pub mod production {
             rollback_protection: replay_persistence_guarantees().rollback_protection,
             secure_deletion_from_media: false,
             session_transport_persistence_allowed: false,
+        }
+    }
+
+    pub fn production_message_storage_boundary_summary() -> ProductionMessageStorageBoundarySummary
+    {
+        let replay = replay_persistence_guarantees();
+        ProductionMessageStorageBoundarySummary {
+            replay_window_storage: protection_for(ProductionRecordKind::ReplayWindowState),
+            message_envelope_storage: protection_for(ProductionRecordKind::MessageEnvelope),
+            local_message_index_storage: protection_for(ProductionRecordKind::LocalMessageIndex),
+            endpoint_state_storage: protection_for(ProductionRecordKind::RendezvousEndpointState),
+            session_transport_storage: protection_for(ProductionRecordKind::SessionTransportState),
+            replay_commit_after_decrypt: replay.commit_after_decrypt,
+            rollback_protection: replay.rollback_protection,
+            production_key_management_ready: false,
+            secure_deletion_from_media: false,
+            durable_session_transport_persistence_allowed: false,
         }
     }
 
@@ -882,6 +955,40 @@ pub mod production {
             );
             assert!(!summary.secure_deletion_from_media());
             assert!(!summary.session_transport_persistence_allowed());
+        }
+
+        #[test]
+        fn production_message_storage_summary_keeps_session_transport_in_memory_only() {
+            let summary = production_message_storage_boundary_summary();
+
+            assert_eq!(
+                summary.replay_window_storage(),
+                StorageProtection::EncryptedAtRestRequired
+            );
+            assert_eq!(
+                summary.message_envelope_storage(),
+                StorageProtection::EncryptedAtRestRequired
+            );
+            assert_eq!(
+                summary.local_message_index_storage(),
+                StorageProtection::EncryptedAtRestRequired
+            );
+            assert_eq!(
+                summary.endpoint_state_storage(),
+                StorageProtection::EncryptedAtRestRequired
+            );
+            assert_eq!(
+                summary.session_transport_storage(),
+                StorageProtection::InMemoryOnly
+            );
+            assert!(summary.replay_commit_after_decrypt());
+            assert_eq!(
+                summary.rollback_protection(),
+                ReplayRollbackProtection::NotProvided
+            );
+            assert!(!summary.production_key_management_ready());
+            assert!(!summary.secure_deletion_from_media());
+            assert!(!summary.durable_session_transport_persistence_allowed());
         }
 
         #[test]

@@ -28,6 +28,7 @@ The repository currently has:
 - Local message index skeleton persistence through `ProductionEnvelopeSession`.
 - Local record lifecycle deletion helpers for encrypted records, replay state, message envelopes, local message indexes, and pairwise endpoint state.
 - A storage backend integration summary that reports the current SQLCipher-backed `ADREC1` spike, passphrase-first unlock boundary, encrypted record-body storage, no production key-management readiness, no replay rollback protection, no secure deletion from physical media, and no session transport persistence.
+- A production message storage boundary summary that keeps replay windows, message envelopes, local message indexes, and endpoint state encrypted-at-rest while keeping session transport state in-memory only.
 
 The repository does not currently have:
 
@@ -335,6 +336,7 @@ Current lifecycle boundary:
 - Opaque record ids are used for replay, message index, and endpoint state records.
 - Local record deletion helpers remove rows by opaque id only.
 - `storage_backend_integration_boundary_summary()` exposes these guardrails as integration status, while keeping production key management, replay rollback protection, secure media deletion, and session transport persistence explicitly unavailable.
+- `production_message_storage_boundary_summary()` exposes the current production message-path storage status: replay windows, message envelopes, local message indexes, and endpoint state require encrypted-at-rest records; session transport state remains in-memory only; replay commits only after decrypt; rollback protection, production key management, secure media deletion, and durable session transport persistence remain unavailable.
 
 Non-claims:
 
@@ -344,6 +346,7 @@ Non-claims:
 - No secure deletion from physical media.
 - No OS keychain/DPAPI/Keystore wrapping.
 - No migration, backup, export, or recovery behavior.
+- No durable session transport persistence.
 
 Public docs should use "storage guardrails", "storage boundary", or "SQLCipher-backed storage spike" unless and until the missing lifecycle pieces above are implemented and reviewed.
 
