@@ -167,6 +167,12 @@ pub mod production {
         pub plaintext: Vec<u8>,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct NoiseHandshakeInitSummary {
+        pub message_len: usize,
+        pub key_material_exposed: bool,
+    }
+
     pub struct NoiseTransportPair {
         initiator_remote_static: Vec<u8>,
         responder_remote_static: Vec<u8>,
@@ -288,6 +294,22 @@ pub mod production {
             initiator_static,
             responder_static,
         )
+    }
+
+    pub fn prepare_noise_xx_handshake_init_message(
+        safety_transcript: &str,
+        initiator_static: &NoiseStaticKeypair,
+    ) -> Result<NoiseHandshakeInitSummary, CryptoError> {
+        let mut initiator = Builder::new(noise_params()?)
+            .local_private_key(&initiator_static.private)?
+            .prologue(safety_transcript.as_bytes())?
+            .build_initiator()?;
+        let mut message = [0_u8; 1024];
+        let message_len = initiator.write_message(&[], &mut message)?;
+        Ok(NoiseHandshakeInitSummary {
+            message_len,
+            key_material_exposed: false,
+        })
     }
 
     fn establish_noise_xx_transport_pair_with_prologues(
@@ -439,6 +461,16 @@ pub mod production {
             *last ^= 0x01;
 
             assert!(tampered_pair.responder_decrypt(&tampered).is_err());
+        }
+
+        #[test]
+        fn noise_handshake_init_summary_hides_message_bytes() {
+            let initiator = generate_noise_static_keypair().expect("initiator");
+            let summary = prepare_noise_xx_handshake_init_message("transcript", &initiator)
+                .expect("handshake init");
+
+            assert!(summary.message_len > 0);
+            assert!(!summary.key_material_exposed);
         }
 
         #[test]

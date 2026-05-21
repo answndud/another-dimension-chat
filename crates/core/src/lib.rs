@@ -1,7 +1,8 @@
 pub mod production {
     use another_dimension_crypto::production::{
         establish_noise_xx_transport_pair, generate_noise_static_keypair,
-        run_noise_xx_handshake_smoke, NoisePrekeyBundle, NoiseStaticKeypair, NoiseTransportPair,
+        prepare_noise_xx_handshake_init_message, run_noise_xx_handshake_smoke, NoisePrekeyBundle,
+        NoiseStaticKeypair, NoiseTransportPair,
     };
     use another_dimension_crypto::CryptoError;
     use another_dimension_identity::{
@@ -318,6 +319,22 @@ pub mod production {
         authenticated_handshake_required: bool,
         session_transport_state_created: bool,
         session_transport_persistence_allowed: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionHandshakeInitSummary {
+        storage_opened: bool,
+        session_draft_loaded: bool,
+        local_noise_static_private_key_loaded: bool,
+        local_noise_static_matches_draft: bool,
+        safety_transcript_loaded: bool,
+        local_role_can_initiate: bool,
+        handshake_message_created: bool,
+        handshake_message_len: usize,
+        handshake_message_exposed: bool,
         key_material_exposed: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
@@ -857,6 +874,56 @@ pub mod production {
 
         pub fn session_transport_persistence_allowed(self) -> bool {
             self.session_transport_persistence_allowed
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionHandshakeInitSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_draft_loaded(self) -> bool {
+            self.session_draft_loaded
+        }
+
+        pub fn local_noise_static_private_key_loaded(self) -> bool {
+            self.local_noise_static_private_key_loaded
+        }
+
+        pub fn local_noise_static_matches_draft(self) -> bool {
+            self.local_noise_static_matches_draft
+        }
+
+        pub fn safety_transcript_loaded(self) -> bool {
+            self.safety_transcript_loaded
+        }
+
+        pub fn local_role_can_initiate(self) -> bool {
+            self.local_role_can_initiate
+        }
+
+        pub fn handshake_message_created(self) -> bool {
+            self.handshake_message_created
+        }
+
+        pub fn handshake_message_len(self) -> usize {
+            self.handshake_message_len
+        }
+
+        pub fn handshake_message_exposed(self) -> bool {
+            self.handshake_message_exposed
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -2543,6 +2610,53 @@ pub mod production {
         })
     }
 
+    pub fn production_pairing_session_handshake_init(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionPairingSessionHandshakeInitSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let draft = load_latest_session_draft(&store, &profile)?
+            .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let local_noise_static = store
+            .get(&production_latest_pairing_noise_static_record_id())?
+            .map(decode_production_noise_static_private_key_record)
+            .transpose()?
+            .ok_or(ProductionSessionError::NoiseStaticPrivateKeyMissing)?;
+        let local_matches_draft =
+            local_noise_static.keypair.public_key() == draft.local_noise_static_public_key;
+        if !local_matches_draft {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
+        let local_role_can_initiate = draft.local_role == SessionRole::CanonicalDialer;
+        let handshake = if local_role_can_initiate {
+            Some(prepare_noise_xx_handshake_init_message(
+                &draft.safety_transcript,
+                &local_noise_static.keypair,
+            )?)
+        } else {
+            None
+        };
+        Ok(ProductionPairingSessionHandshakeInitSummary {
+            storage_opened: true,
+            session_draft_loaded: true,
+            local_noise_static_private_key_loaded: true,
+            local_noise_static_matches_draft: true,
+            safety_transcript_loaded: draft.safety_transcript_present,
+            local_role_can_initiate,
+            handshake_message_created: handshake.is_some(),
+            handshake_message_len: handshake.map(|summary| summary.message_len).unwrap_or(0),
+            handshake_message_exposed: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
     fn open_fail_closed_outbound_runtime(
         material: &ProductionSessionRuntimeMaterial,
     ) -> Result<(), ProductionSessionError> {
@@ -3482,6 +3596,7 @@ pub mod production {
         local_role: SessionRole,
         remote_contact_id: ContactId,
         replay_record_id: String,
+        safety_transcript: String,
         safety_transcript_present: bool,
         local_noise_static_public_key: Vec<u8>,
         remote_noise_static_public_key: Vec<u8>,
@@ -3584,6 +3699,8 @@ pub mod production {
             ContactId::new(parts[3]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
         let safety_transcript =
             decode_hex(parts[5]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let safety_transcript = String::from_utf8(safety_transcript)
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
         let local_noise_static_public_key =
             decode_hex(parts[6]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
         let remote_noise_static_public_key =
@@ -3594,6 +3711,7 @@ pub mod production {
             remote_contact_id,
             replay_record_id: parts[4].to_string(),
             safety_transcript_present: !safety_transcript.is_empty(),
+            safety_transcript,
             local_noise_static_public_key,
             remote_noise_static_public_key,
         })
@@ -4555,6 +4673,31 @@ pub mod production {
             assert!(!transport_prepare.key_material_exposed());
             assert!(!transport_prepare.transport_io_opened());
             assert!(!transport_prepare.runtime_messaging_enabled());
+
+            let handshake_init =
+                production_pairing_session_handshake_init(&alice_store, alice.clone(), &passphrase)
+                    .expect("handshake init");
+            assert!(handshake_init.storage_opened());
+            assert!(handshake_init.session_draft_loaded());
+            assert!(handshake_init.local_noise_static_private_key_loaded());
+            assert!(handshake_init.local_noise_static_matches_draft());
+            assert!(handshake_init.safety_transcript_loaded());
+            assert_eq!(
+                handshake_init.local_role_can_initiate(),
+                plan.local_role == SessionRole::CanonicalDialer
+            );
+            assert_eq!(
+                handshake_init.handshake_message_created(),
+                handshake_init.local_role_can_initiate()
+            );
+            assert_eq!(
+                handshake_init.handshake_message_len() > 0,
+                handshake_init.local_role_can_initiate()
+            );
+            assert!(!handshake_init.handshake_message_exposed());
+            assert!(!handshake_init.key_material_exposed());
+            assert!(!handshake_init.transport_io_opened());
+            assert!(!handshake_init.runtime_messaging_enabled());
 
             let pending_status_before =
                 production_message_pending_status(&alice_store, alice.clone(), &passphrase, 1)
