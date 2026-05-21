@@ -33,6 +33,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 - `TransportPreNetworkCloseout` records the remaining hard blockers before any network execution skeleton is allowed.
 - `TransportRuntimeState` separates disabled fail-closed state from a future runtime-ready state that can only be created from successful preflight.
 - `OnionEnvelopeTransport` stores runtime state, but send/receive remains fail-closed even when that state is ready.
+- `OnionEnvelopeTransport::integration_boundary_summary()` exposes the high-risk policy mode, runtime state, first fail-closed blocker, and a false envelope-I/O availability flag without starting bootstrap, hosting, streams, or transfer.
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
 - `arti_lifecycle_decision()` requires app-private state/cache directories, backup exclusion, log redaction, and no onion service key generation until a storage decision exists.
 - `ArtiAppPrivateDirs` and `ArtiAdapterSpike::fail_closed_app_private_config` compile-check app-private `TorClientConfigBuilder::from_directories` wiring without bootstrapping Tor.
@@ -1431,6 +1432,7 @@ Current state model:
 - `TransportRuntimeState::from_preflight(...)` returns a runtime error unless every preflight guard succeeds.
 - `TransportRuntimeState::fail_closed_blocker()` reports disabled state as `RuntimeNetworkDisabled` for status/reporting without starting a runtime.
 - `TransportRuntimeState::Ready(TransportRuntimeReady)` represents only a satisfied gate, not a live Tor client.
+- `TransportAdapterIntegrationBoundarySummary::envelope_io_available()` remains false until a separate implementation phase adds a real adapter with verified send/receive behavior.
 
 This still does not bootstrap Tor, open sockets, launch onion services, or send/receive envelopes. It only prevents future code from constructing a runtime-ready adapter state without first passing the explicit preflight gate.
 

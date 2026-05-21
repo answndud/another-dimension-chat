@@ -130,6 +130,32 @@ pub struct TransportReceiveRequest<'a> {
     pub route: &'a TransportRoute,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TransportAdapterIntegrationBoundarySummary {
+    policy_mode: TransportMode,
+    runtime_state: TransportRuntimeState,
+    fail_closed_blocker: Option<TransportRuntimeError>,
+    envelope_io_available: bool,
+}
+
+impl TransportAdapterIntegrationBoundarySummary {
+    pub fn policy_mode(self) -> TransportMode {
+        self.policy_mode
+    }
+
+    pub fn runtime_state(self) -> TransportRuntimeState {
+        self.runtime_state
+    }
+
+    pub fn fail_closed_blocker(self) -> Option<TransportRuntimeError> {
+        self.fail_closed_blocker
+    }
+
+    pub fn envelope_io_available(self) -> bool {
+        self.envelope_io_available
+    }
+}
+
 pub trait EnvelopeTransport {
     fn send_envelope(&self, request: TransportSendRequest<'_>) -> Result<(), TransportError>;
 
@@ -168,6 +194,15 @@ impl OnionEnvelopeTransport {
 
     pub fn runtime_state(&self) -> TransportRuntimeState {
         self.runtime_state
+    }
+
+    pub fn integration_boundary_summary(&self) -> TransportAdapterIntegrationBoundarySummary {
+        TransportAdapterIntegrationBoundarySummary {
+            policy_mode: self.policy.mode(),
+            runtime_state: self.runtime_state,
+            fail_closed_blocker: self.runtime_state.fail_closed_blocker(),
+            envelope_io_available: false,
+        }
     }
 }
 
