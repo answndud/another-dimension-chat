@@ -95,6 +95,16 @@ const fields = {
   productionMessageOutbound: document.querySelector("#production-message-outbound"),
   productionMessageInbound: document.querySelector("#production-message-inbound"),
   productionMessageBoundary: document.querySelector("#production-message-boundary"),
+  productionTwoProfileA: document.querySelector("#production-two-profile-a"),
+  productionTwoProfileB: document.querySelector("#production-two-profile-b"),
+  productionTwoProfileMessage: document.querySelector("#production-two-profile-message"),
+  runProductionTwoProfileRoundtrip: document.querySelector("#run-production-two-profile-roundtrip"),
+  productionTwoProfileState: document.querySelector("#production-two-profile-state"),
+  productionTwoProfileWarning: document.querySelector("#production-two-profile-warning"),
+  productionTwoProfileProfiles: document.querySelector("#production-two-profile-profiles"),
+  productionTwoProfileSession: document.querySelector("#production-two-profile-session"),
+  productionTwoProfileMessageState: document.querySelector("#production-two-profile-message-state"),
+  productionTwoProfileBoundary: document.querySelector("#production-two-profile-boundary"),
   productionRoundtripMessage: document.querySelector("#production-roundtrip-message"),
   runProductionRoundtrip: document.querySelector("#run-production-roundtrip"),
   productionRoundtripState: document.querySelector("#production-roundtrip-state"),
@@ -138,6 +148,10 @@ function setLoopState(message) {
 
 function setProductionRoundtripState(message) {
   setText(fields.productionRoundtripState, message);
+}
+
+function setProductionTwoProfileState(message) {
+  setText(fields.productionTwoProfileState, message);
 }
 
 function setProductionProfileState(message) {
@@ -197,6 +211,7 @@ function applyProductionActionState() {
   const { profile, passphrase } = productionProfileInput();
   const pairing = productionPairingInput();
   const message = productionMessageInput();
+  const twoProfile = productionTwoProfileInput();
   const busy = productionBusyAction !== null;
   const hasProfileUnlockInput = Boolean(profile && passphrase);
   const hasPairingInput = Boolean(hasProfileUnlockInput && pairing.rendezvousEndpoint);
@@ -221,6 +236,13 @@ function applyProductionActionState() {
     hasProfileUnlockInput && validProductionMessageNumber() && message.envelopePayload,
   );
   const hasReceivedExportInput = Boolean(hasProfileUnlockInput && validProductionMessageNumber());
+  const hasTwoProfileInput = Boolean(
+    twoProfile.profileA &&
+      twoProfile.profileB &&
+      twoProfile.profileA !== twoProfile.profileB &&
+      twoProfile.passphrase &&
+      twoProfile.message,
+  );
 
   setDisabled(fields.unlockProductionProfile, busy || !hasProfileUnlockInput);
   setDisabled(fields.exportProductionPairing, busy || !hasPairingInput);
@@ -233,6 +255,7 @@ function applyProductionActionState() {
   setDisabled(fields.exportProductionMessageEnvelope, busy || !hasOutboundMessageInput);
   setDisabled(fields.importProductionMessageEnvelope, busy || !hasInboundEnvelopeInput);
   setDisabled(fields.exportProductionReceivedMessage, busy || !hasReceivedExportInput);
+  setDisabled(fields.runProductionTwoProfileRoundtrip, busy || !hasTwoProfileInput);
   setDisabled(fields.useProductionPairingPayload, busy || !hasLocalPairingPayload);
   setDisabled(fields.useProductionHandshakeInit, busy || !hasHandshakeInitPayload);
   setDisabled(fields.useProductionHandshakeReply, busy || !hasHandshakeReplyPayload);
@@ -312,6 +335,15 @@ function resetProductionRoundtripView() {
   setText(fields.productionRoundtripEnvelope, "Not checked yet");
   setText(fields.productionRoundtripReceive, "Not checked yet");
   setText(fields.productionRoundtripBoundary, "Not checked yet");
+}
+
+function resetProductionTwoProfileView() {
+  setProductionTwoProfileState("Two-profile roundtrip idle");
+  setText(fields.productionTwoProfileWarning, "Two-profile app-data harness has not run yet.");
+  setText(fields.productionTwoProfileProfiles, "Not checked yet");
+  setText(fields.productionTwoProfileSession, "Not checked yet");
+  setText(fields.productionTwoProfileMessageState, "Not checked yet");
+  setText(fields.productionTwoProfileBoundary, "Not checked yet");
 }
 
 function resetProductionProfileView() {
@@ -408,6 +440,15 @@ function localLoopMessages() {
 
 function productionRoundtripMessage() {
   return (fields.productionRoundtripMessage?.value ?? "").trim();
+}
+
+function productionTwoProfileInput() {
+  return {
+    profileA: (fields.productionTwoProfileA?.value ?? "").trim(),
+    profileB: (fields.productionTwoProfileB?.value ?? "").trim(),
+    passphrase: fields.productionProfilePassphrase?.value ?? "",
+    message: (fields.productionTwoProfileMessage?.value ?? "").trim(),
+  };
 }
 
 function productionProfileInput() {
@@ -683,6 +724,70 @@ async function runLocalLoop() {
     if (fields.runLoop) {
       fields.runLoop.disabled = false;
     }
+  }
+}
+
+async function runProductionTwoProfileRoundtrip() {
+  const { profileA, profileB, passphrase, message } = productionTwoProfileInput();
+  if (!profileA || !profileB || profileA === profileB || !passphrase || !message) {
+    setProductionTwoProfileState("Two-profile roundtrip needs input");
+    setText(
+      fields.productionTwoProfileWarning,
+      "Enter two distinct profiles, the production passphrase, and a message.",
+    );
+    return;
+  }
+
+  setProductionTwoProfileState("Two-profile roundtrip running");
+  setText(fields.productionTwoProfileWarning, "Running app-data local production harness.");
+  setText(fields.productionTwoProfileProfiles, "Waiting for profile unlock and payload export");
+  setText(fields.productionTwoProfileSession, "Waiting for session draft and handshake");
+  setText(fields.productionTwoProfileMessageState, "Waiting for encrypted envelope and receive");
+  setText(fields.productionTwoProfileBoundary, "Waiting for boundary flags");
+  productionBusyAction = "two-profile-roundtrip";
+  applyProductionActionState();
+  if (fields.runProductionTwoProfileRoundtrip) {
+    fields.runProductionTwoProfileRoundtrip.disabled = true;
+  }
+  try {
+    const result = await invoke("production_two_profile_roundtrip", {
+      profileA,
+      profileB,
+      passphrase,
+      message,
+    });
+    setProductionTwoProfileState("Two-profile roundtrip completed");
+    setText(fields.productionTwoProfileWarning, result.warning);
+    setText(
+      fields.productionTwoProfileProfiles,
+      `a=${result.profile_a_unlocked} b=${result.profile_b_unlocked} payloads=${result.pairing_payloads_exported}`,
+    );
+    setText(
+      fields.productionTwoProfileSession,
+      `drafts=${result.session_drafts_saved} handshake=${result.handshake_completed} sender=${result.sender_session_ready} receiver=${result.receiver_session_ready}`,
+    );
+    setText(
+      fields.productionTwoProfileMessageState,
+      `reserved=${result.message_number_reserved} envelope=${result.encrypted_envelope_exported} inbound=${result.inbound_message_stored} status=${result.received_status_verified} match=${result.received_export_matches_input}`,
+    );
+    setText(
+      fields.productionTwoProfileBoundary,
+      `plaintext_returned=${result.plaintext_returned_to_frontend} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+    await loadProductionProfileList();
+  } catch (error) {
+    setProductionTwoProfileState("Two-profile roundtrip failed");
+    setText(fields.productionTwoProfileWarning, String(error));
+    setText(fields.productionTwoProfileProfiles, "Failed");
+    setText(fields.productionTwoProfileSession, "Failed");
+    setText(fields.productionTwoProfileMessageState, "Failed");
+    setText(fields.productionTwoProfileBoundary, "Failed");
+  } finally {
+    productionBusyAction = null;
+    if (fields.runProductionTwoProfileRoundtrip) {
+      fields.runProductionTwoProfileRoundtrip.disabled = false;
+    }
+    applyProductionActionState();
   }
 }
 
@@ -1286,6 +1391,9 @@ for (const input of [
   fields.productionMessageNumber,
   fields.productionMessageBody,
   fields.productionRemoteMessageEnvelope,
+  fields.productionTwoProfileA,
+  fields.productionTwoProfileB,
+  fields.productionTwoProfileMessage,
 ]) {
   if (input) {
     input.addEventListener("input", applyProductionActionState);
@@ -1384,6 +1492,13 @@ if (fields.runProductionRoundtrip) {
   fields.runProductionRoundtrip.addEventListener("click", runProductionRoundtrip);
 }
 
+if (fields.runProductionTwoProfileRoundtrip) {
+  fields.runProductionTwoProfileRoundtrip.addEventListener(
+    "click",
+    runProductionTwoProfileRoundtrip,
+  );
+}
+
 if (fields.runLoop) {
   fields.runLoop.addEventListener("click", runLocalLoop);
 }
@@ -1397,6 +1512,7 @@ resetSimulationView();
 resetProductionProfileView();
 resetProductionPairingView();
 resetProductionMessageView();
+resetProductionTwoProfileView();
 resetProductionRoundtripView();
 resetLoopView();
 loadProductionProfileList();

@@ -75,6 +75,30 @@ pub struct ProductionLocalRoundtripResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionTwoProfileRoundtripResult {
+    warning: &'static str,
+    profile_a_unlocked: bool,
+    profile_b_unlocked: bool,
+    pairing_payloads_exported: bool,
+    session_drafts_saved: bool,
+    handshake_completed: bool,
+    sender_session_ready: bool,
+    receiver_session_ready: bool,
+    message_number_reserved: bool,
+    encrypted_envelope_exported: bool,
+    inbound_message_stored: bool,
+    received_status_verified: bool,
+    received_export_matches_input: bool,
+    plaintext_returned_to_frontend: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionProfileUnlockResult {
     warning: &'static str,
     storage_opened: bool,
@@ -512,6 +536,24 @@ fn production_local_roundtrip(message: String) -> Result<ProductionLocalRoundtri
         "production local roundtrip failed without exposing profile, path, or key details"
             .to_string()
     })
+}
+
+#[tauri::command]
+fn production_two_profile_roundtrip(
+    app: tauri::AppHandle,
+    profile_a: String,
+    profile_b: String,
+    passphrase: String,
+    message: String,
+) -> Result<ProductionTwoProfileRoundtripResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production two-profile roundtrip failed without exposing local path details"
+    })?;
+    run_production_two_profile_roundtrip(app_data_root, profile_a, profile_b, passphrase, message)
+        .map_err(|_| {
+            "production two-profile roundtrip failed without exposing profile, path, or key details"
+                .to_string()
+        })
 }
 
 #[tauri::command]
@@ -1497,6 +1539,238 @@ fn sanitize_envelope_payload(payload: String) -> Result<String, String> {
     Ok(payload.to_string())
 }
 
+fn run_production_two_profile_roundtrip(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile_a: String,
+    profile_b: String,
+    passphrase: String,
+    message: String,
+) -> Result<ProductionTwoProfileRoundtripResult, String> {
+    let profile_a = sanitize_production_profile(profile_a)?;
+    let profile_b = sanitize_production_profile(profile_b)?;
+    if profile_a == profile_b {
+        return Err("two-profile roundtrip requires two distinct profiles".to_string());
+    }
+    let profile_a_name = profile_a.as_str().to_string();
+    let profile_b_name = profile_b.as_str().to_string();
+    let passphrase = passphrase.trim().to_string();
+    let message = sanitize_production_roundtrip_message(message)?;
+    let message_text = String::from_utf8(message.clone())
+        .map_err(|_| "production two-profile message must be UTF-8")?;
+    let message_number = next_production_message_number()?;
+
+    let profile_a_unlock =
+        run_production_profile_unlock(&app_data_root, profile_a_name.clone(), passphrase.clone())?;
+    let profile_b_unlock =
+        run_production_profile_unlock(&app_data_root, profile_b_name.clone(), passphrase.clone())?;
+    let profile_a_payload = run_production_pairing_payload_export(
+        &app_data_root,
+        profile_a_name.clone(),
+        passphrase.clone(),
+        format!("{profile_a_name}.onion"),
+    )?;
+    let profile_b_payload = run_production_pairing_payload_export(
+        &app_data_root,
+        profile_b_name.clone(),
+        passphrase.clone(),
+        format!("{profile_b_name}.onion"),
+    )?;
+    let profile_a_draft = run_production_pairing_session_draft_save(
+        &app_data_root,
+        profile_a_name.clone(),
+        passphrase.clone(),
+        profile_a_payload.pairing_payload.clone(),
+        profile_b_payload.pairing_payload.clone(),
+    )?;
+    let profile_b_draft = run_production_pairing_session_draft_save(
+        &app_data_root,
+        profile_b_name.clone(),
+        passphrase.clone(),
+        profile_b_payload.pairing_payload,
+        profile_a_payload.pairing_payload,
+    )?;
+
+    let profile_a_init = run_production_handshake_init_export(
+        &app_data_root,
+        profile_a_name.clone(),
+        passphrase.clone(),
+    )?;
+    let mut profile_b_init = None;
+    let (sender_profile, receiver_profile, init_payload) = if profile_a_init.output_payload_created
+    {
+        (
+            profile_a_name.clone(),
+            profile_b_name.clone(),
+            profile_a_init.output_payload,
+        )
+    } else {
+        let init = run_production_handshake_init_export(
+            &app_data_root,
+            profile_b_name.clone(),
+            passphrase.clone(),
+        )?;
+        if !init.output_payload_created {
+            return Err("two-profile handshake init was not created".to_string());
+        }
+        let output_payload = init.output_payload.clone();
+        profile_b_init = Some(init);
+        (
+            profile_b_name.clone(),
+            profile_a_name.clone(),
+            output_payload,
+        )
+    };
+    let reply = run_production_handshake_reply_export(
+        &app_data_root,
+        receiver_profile.clone(),
+        passphrase.clone(),
+        init_payload,
+    )?;
+    let finish = run_production_handshake_finish_export(
+        &app_data_root,
+        sender_profile.clone(),
+        passphrase.clone(),
+        reply.output_payload,
+    )?;
+    let finish_import = run_production_handshake_finish_import(
+        &app_data_root,
+        receiver_profile.clone(),
+        passphrase.clone(),
+        finish.output_payload,
+    )?;
+    let sender_state = run_production_session_state_check(
+        &app_data_root,
+        sender_profile.clone(),
+        passphrase.clone(),
+    )?;
+    let receiver_state = run_production_session_state_check(
+        &app_data_root,
+        receiver_profile.clone(),
+        passphrase.clone(),
+    )?;
+
+    let outbound = run_production_message_envelope_export(
+        &app_data_root,
+        sender_profile,
+        passphrase.clone(),
+        message_number,
+        message_text,
+    )?;
+    let inbound = run_production_message_envelope_import(
+        &app_data_root,
+        receiver_profile.clone(),
+        passphrase.clone(),
+        message_number,
+        outbound.envelope_payload,
+    )?;
+    let received = run_production_message_received_export(
+        &app_data_root,
+        receiver_profile,
+        passphrase,
+        message_number,
+    )?;
+
+    Ok(ProductionTwoProfileRoundtripResult {
+        warning: "two-profile app-data roundtrip only; no network, Tor, or secure-release claim",
+        profile_a_unlocked: profile_a_unlock.storage_opened
+            && profile_a_unlock.profile_marker_present
+            && profile_a_unlock.identity_private_key_present,
+        profile_b_unlocked: profile_b_unlock.storage_opened
+            && profile_b_unlock.profile_marker_present
+            && profile_b_unlock.identity_private_key_present,
+        pairing_payloads_exported: profile_a_payload.pairing_payload_exported
+            && profile_b_payload.pairing_payload_exported,
+        session_drafts_saved: profile_a_draft.session_draft_present
+            && profile_b_draft.session_draft_present,
+        handshake_completed: finish.transport_state_persisted
+            && finish_import.transport_state_persisted,
+        sender_session_ready: sender_state.ready_for_message_envelope,
+        receiver_session_ready: receiver_state.session_transport_state_present
+            && receiver_state.runtime_material_reconstructable,
+        message_number_reserved: outbound.message_number_reserved,
+        encrypted_envelope_exported: outbound.encrypted_envelope_present,
+        inbound_message_stored: inbound.received_message_written,
+        received_status_verified: inbound.received_message_matches_session
+            && received.received_message_matches_session,
+        received_export_matches_input: received.received_message.as_bytes() == message.as_slice(),
+        plaintext_returned_to_frontend: false,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: profile_a_unlock.key_material_exposed
+            || profile_b_unlock.key_material_exposed
+            || profile_a_payload.key_material_exposed
+            || profile_b_payload.key_material_exposed
+            || profile_a_draft.key_material_exposed
+            || profile_b_draft.key_material_exposed
+            || profile_a_init.key_material_exposed
+            || profile_b_init
+                .as_ref()
+                .is_some_and(|result| result.key_material_exposed)
+            || reply.key_material_exposed
+            || finish.key_material_exposed
+            || finish_import.key_material_exposed
+            || sender_state.key_material_exposed
+            || receiver_state.key_material_exposed
+            || outbound.key_material_exposed
+            || inbound.key_material_exposed
+            || received.key_material_exposed,
+        network_io_attempted: profile_a_unlock.network_io_attempted
+            || profile_b_unlock.network_io_attempted
+            || profile_a_payload.network_io_attempted
+            || profile_b_payload.network_io_attempted
+            || profile_a_draft.network_io_attempted
+            || profile_b_draft.network_io_attempted
+            || profile_a_init.network_io_attempted
+            || profile_b_init
+                .as_ref()
+                .is_some_and(|result| result.network_io_attempted)
+            || reply.network_io_attempted
+            || finish.network_io_attempted
+            || finish_import.network_io_attempted
+            || sender_state.network_io_attempted
+            || receiver_state.network_io_attempted
+            || outbound.network_send_attempted
+            || inbound.network_receive_attempted
+            || received.network_receive_attempted,
+        transport_io_opened: profile_a_unlock.transport_io_opened
+            || profile_b_unlock.transport_io_opened
+            || profile_a_payload.transport_io_opened
+            || profile_b_payload.transport_io_opened
+            || profile_a_draft.transport_io_opened
+            || profile_b_draft.transport_io_opened
+            || profile_a_init.transport_io_opened
+            || profile_b_init
+                .as_ref()
+                .is_some_and(|result| result.transport_io_opened)
+            || reply.transport_io_opened
+            || finish.transport_io_opened
+            || finish_import.transport_io_opened
+            || sender_state.transport_io_opened
+            || receiver_state.transport_io_opened
+            || outbound.transport_io_opened
+            || inbound.transport_io_opened
+            || received.transport_io_opened,
+        runtime_messaging_enabled: profile_a_unlock.runtime_messaging_enabled
+            || profile_b_unlock.runtime_messaging_enabled
+            || profile_a_payload.runtime_messaging_enabled
+            || profile_b_payload.runtime_messaging_enabled
+            || profile_a_draft.runtime_messaging_enabled
+            || profile_b_draft.runtime_messaging_enabled
+            || profile_a_init.runtime_messaging_enabled
+            || profile_b_init
+                .as_ref()
+                .is_some_and(|result| result.runtime_messaging_enabled)
+            || reply.runtime_messaging_enabled
+            || finish.runtime_messaging_enabled
+            || finish_import.runtime_messaging_enabled
+            || sender_state.runtime_messaging_enabled
+            || receiver_state.runtime_messaging_enabled
+            || outbound.runtime_messaging_enabled
+            || inbound.runtime_messaging_enabled
+            || received.runtime_messaging_enabled,
+    })
+}
+
 fn run_production_local_roundtrip(
     message: String,
 ) -> Result<ProductionLocalRoundtripResult, String> {
@@ -1723,6 +1997,14 @@ fn unique_production_roundtrip_dir() -> Result<std::path::PathBuf, String> {
     )))
 }
 
+fn next_production_message_number() -> Result<u64, String> {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| "failed to create production message number")?
+        .as_nanos();
+    Ok((nanos.min(u64::MAX as u128) as u64).max(1))
+}
+
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -1740,6 +2022,7 @@ pub fn run() {
             production_message_envelope_import,
             production_message_received_export,
             production_local_roundtrip,
+            production_two_profile_roundtrip,
             dev_local_demo,
             dev_local_message_loop
         ])
@@ -1758,10 +2041,11 @@ mod tests {
         run_production_message_received_export, run_production_pairing_payload_export,
         run_production_pairing_session_draft_save, run_production_profile_list,
         run_production_profile_unlock, run_production_session_state_check,
-        sanitize_envelope_payload, sanitize_handshake_payload, sanitize_loop_messages,
-        sanitize_pairing_payload, sanitize_pairing_rendezvous_endpoint,
-        sanitize_production_message_text, sanitize_production_profile,
-        sanitize_production_roundtrip_message, unique_production_roundtrip_dir,
+        run_production_two_profile_roundtrip, sanitize_envelope_payload,
+        sanitize_handshake_payload, sanitize_loop_messages, sanitize_pairing_payload,
+        sanitize_pairing_rendezvous_endpoint, sanitize_production_message_text,
+        sanitize_production_profile, sanitize_production_roundtrip_message,
+        unique_production_roundtrip_dir,
     };
 
     #[test]
@@ -2453,5 +2737,73 @@ replay check: no replayed messages after message 2
         assert!(!serialized.contains("alice"));
         assert!(!serialized.contains("bob"));
         assert!(!serialized.contains("ADENV1"));
+    }
+
+    #[test]
+    fn production_two_profile_roundtrip_uses_app_data_profiles_without_returning_plaintext() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let result = run_production_two_profile_roundtrip(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "two profile hello".to_string(),
+        )
+        .expect("two-profile roundtrip");
+
+        assert!(result.profile_a_unlocked);
+        assert!(result.profile_b_unlocked);
+        assert!(result.pairing_payloads_exported);
+        assert!(result.session_drafts_saved);
+        assert!(result.handshake_completed);
+        assert!(result.sender_session_ready);
+        assert!(result.receiver_session_ready);
+        assert!(result.message_number_reserved);
+        assert!(result.encrypted_envelope_exported);
+        assert!(result.inbound_message_stored);
+        assert!(result.received_status_verified);
+        assert!(result.received_export_matches_input);
+        assert!(!result.plaintext_returned_to_frontend);
+        assert!(!result.store_path_returned);
+        assert!(!result.passphrase_retained);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+
+        let serialized = serde_json::to_string(&result).expect("serialize");
+        assert!(!serialized.contains("two profile hello"));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("ADENV1"));
+        assert!(!serialized.contains("ADPAIR2"));
+
+        let repeated = run_production_two_profile_roundtrip(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "two profile hello again".to_string(),
+        )
+        .expect("repeat two-profile roundtrip");
+        assert!(repeated.received_export_matches_input);
+        assert!(!repeated.key_material_exposed);
+        assert!(!repeated.network_io_attempted);
+        assert!(!repeated.transport_io_opened);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_two_profile_roundtrip_rejects_same_profile() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let result = run_production_two_profile_roundtrip(
+            &root,
+            "alice".to_string(),
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "two profile hello".to_string(),
+        );
+
+        assert!(result.is_err());
+        let _ = std::fs::remove_dir_all(root);
     }
 }

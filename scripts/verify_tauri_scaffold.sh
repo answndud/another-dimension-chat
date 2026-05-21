@@ -146,8 +146,11 @@ require_contains "$APP_DIR/src/main.js" 'invoke("production_message_envelope_exp
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_envelope_import"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_received_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_local_roundtrip"'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_two_profile_roundtrip"'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_demo")'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_message_loop"'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_two_profile_roundtrip'
+require_contains "$TAURI_DIR/src/lib.rs" 'run_production_two_profile_roundtrip'
 require_contains "$APP_DIR/src/main.js" 'unlockProductionProfile'
 require_contains "$APP_DIR/src/main.js" 'loadProductionProfileList'
 require_contains "$APP_DIR/src/main.js" 'renderProductionProfileSelector'
@@ -165,6 +168,7 @@ require_contains "$APP_DIR/src/main.js" 'importProductionHandshakeFinish'
 require_contains "$APP_DIR/src/main.js" 'exportProductionMessageEnvelope'
 require_contains "$APP_DIR/src/main.js" 'importProductionMessageEnvelope'
 require_contains "$APP_DIR/src/main.js" 'exportProductionReceivedMessage'
+require_contains "$APP_DIR/src/main.js" 'runProductionTwoProfileRoundtrip'
 require_contains "$APP_DIR/src/main.js" 'runProductionRoundtrip'
 require_contains "$APP_DIR/src/main.js" 'runLocalLoop'
 require_contains "$APP_DIR/src/main.js" 'localLoopMessages'
@@ -325,10 +329,10 @@ require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
 require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
 command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "16"
+test "$command_count" = "17"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "16"
+test "$invoke_count" = "17"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -363,6 +367,7 @@ if grep -R 'invoke(' "$APP_DIR/src" \
   | grep -v 'invoke("production_message_envelope_import"' \
   | grep -v 'invoke("production_message_received_export"' \
   | grep -v 'invoke("production_local_roundtrip"' \
+  | grep -v 'invoke("production_two_profile_roundtrip"' \
   | grep -v 'invoke("dev_local_demo")' \
   | grep -v 'invoke("dev_local_message_loop"' >/dev/null; then
   echo "unexpected frontend Tauri command invocation" >&2
@@ -408,6 +413,10 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="import-production-message-envelope" type="button">Import message envelope</button>' \
   | grep -v '<button id="export-production-received-message" type="button">Show received message</button>' \
   | grep -v '<textarea id="production-received-message" rows="3" readonly></textarea>' \
+  | grep -v '<input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />' \
+  | grep -v '<input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />' \
+  | grep -v '<textarea id="production-two-profile-message" rows="3">hello between app-data profiles</textarea>' \
+  | grep -v '<button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>' \
   | grep -v '<button id="run-production-roundtrip" type="button">Run production roundtrip</button>' \
   | grep -v '<textarea id="production-roundtrip-message" rows="3">hello from production core</textarea>' \
   | grep -v '<button id="run-loop" type="button">Run local loop</button>' \
