@@ -131,6 +131,8 @@ The first store-write check for this adapter is test-only. `session_durable_stat
 
 `session_lock_lifecycle_status_mirror()` records the lock lifecycle requirements that future unlock work must satisfy. It carries the explicit lock requirement, default 5 minute idle auto-lock, and high-risk 1 minute idle auto-lock into a status API while keeping storage unlocked state, product lock command, key erasure claim, and runtime messaging unavailable.
 
+`session_unlock_redacted_error_taxonomy()` defines safe unlock failure categories for future CLI/Tauri copy. It distinguishes disabled product unlock, passphrase-required, and OS-keystore-only rejected states without exposing raw storage errors, OS keychain errors, paths, identifiers, key material, or passphrase detail.
+
 ## Session Persistence Decision
 
 For the current v0.1 production message boundary, production session state is in-memory only.

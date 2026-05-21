@@ -41,6 +41,7 @@ The repository currently has:
 - A session unlock/lock command design gate that requires explicit lock, idle auto-lock, redacted unlock errors, and passphrase-first high-risk policy before any product command is implemented.
 - A session unlock command fail-closed skeleton that defines request/result shapes but returns disabled without opening SQLCipher storage, writing session records, exposing key material, or enabling runtime messaging.
 - A session lock lifecycle status mirror that records default 5 minute and high-risk 1 minute idle auto-lock requirements while keeping storage locked and avoiding key erasure claims.
+- A session unlock redacted error taxonomy that classifies disabled, passphrase-required, and OS-keystore-only rejected states without exposing raw storage errors, OS keychain errors, paths, identifiers, key material, or passphrase detail.
 
 The repository does not currently have:
 
@@ -361,6 +362,7 @@ Current lifecycle boundary:
 - `session_unlock_lock_command_design_gate()` captures pre-implementation command requirements while keeping product unlock, product lock, durable session persistence, and runtime messaging disabled.
 - `session_unlock_command_fail_closed()` gives future unlock callers a stable disabled result shape while keeping storage closed, session records unwritten, key material unexposed, and runtime messaging disabled.
 - `session_lock_lifecycle_status_mirror()` mirrors explicit lock and idle auto-lock requirements while keeping storage unlocked state, product lock command, key erasure claim, and runtime messaging disabled.
+- `session_unlock_redacted_error_taxonomy()` provides safe categories for future unlock failures without copying raw SQLCipher, OS keychain, path, identifier, key material, or passphrase details into CLI/Tauri copy.
 
 Non-claims:
 
