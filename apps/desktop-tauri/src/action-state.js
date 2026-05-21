@@ -278,6 +278,26 @@ export function productionSessionStateView(result) {
   };
 }
 
+export function productionTwoProfileSessionStatusView(result) {
+  const bothReady = result.both_ready_for_message_envelope;
+  return {
+    state: bothReady ? "Both profiles message-ready" : "Two-profile session needs work",
+    status:
+      `${result.profile_a}: ready=${result.profile_a_ready_for_message_envelope} ` +
+      `transport=${result.profile_a_session_transport_state_present} ` +
+      `runtime=${result.profile_a_runtime_material_reconstructable} ` +
+      `outbound=${result.profile_a_outbound_envelope_io_ready} | ` +
+      `${result.profile_b}: ready=${result.profile_b_ready_for_message_envelope} ` +
+      `transport=${result.profile_b_session_transport_state_present} ` +
+      `runtime=${result.profile_b_runtime_material_reconstructable} ` +
+      `outbound=${result.profile_b_outbound_envelope_io_ready}`,
+    boundary:
+      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} ` +
+      `key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} ` +
+      `transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+  };
+}
+
 export function productionHandshakePayloadView(result) {
   return {
     state:

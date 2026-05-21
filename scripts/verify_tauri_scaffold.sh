@@ -213,7 +213,9 @@ require_contains "$APP_DIR/src/main.js" 'setProductionFollowupActions'
 require_contains "$APP_DIR/src/main.js" 'openManualProductionTools'
 require_contains "$APP_DIR/src/main.js" 'renderManualStatus'
 require_contains "$APP_DIR/src/main.js" 'setActionButtonState'
+require_contains "$APP_DIR/src/main.js" 'checkProductionTwoProfileSessionStatus'
 require_contains "$APP_DIR/src/action-state.js" 'productionManualStatusView'
+require_contains "$APP_DIR/src/action-state.js" 'productionTwoProfileSessionStatusView'
 require_contains "$APP_DIR/src/action-state.js" 'Next: inspect manual payload tools'
 require_contains "$APP_DIR/src/action-state.js" 'Blocked: passphrase required'
 require_contains "$APP_DIR/src/action-state.js" 'Ready: local encrypted roundtrip can run'
@@ -228,6 +230,7 @@ require_contains "$APP_DIR/index.html" '<details class="advanced-panel">'
 require_contains "$APP_DIR/index.html" '<summary>Manual production payload tools</summary>'
 require_contains "$APP_DIR/index.html" 'production-manual-route'
 require_contains "$APP_DIR/index.html" 'production-manual-slots'
+require_contains "$APP_DIR/index.html" 'check-production-two-profile-session-status'
 require_contains "$APP_DIR/src/styles.css" '.manual-relay-summary'
 require_contains "$APP_DIR/src/styles.css" '.is-current-action'
 require_contains "$APP_DIR/index.html" 'use-alice-production-profile'
@@ -242,6 +245,7 @@ require_contains "$APP_DIR/index.html" 'store-production-handshake-finish'
 require_contains "$APP_DIR/index.html" 'load-production-handshake-finish'
 require_contains "$APP_DIR/index.html" 'store-production-message-envelope'
 require_contains "$APP_DIR/index.html" 'load-production-message-envelope'
+require_contains "$APP_DIR/src-tauri/src/lib.rs" 'production_two_profile_session_status'
 require_contains "$APP_DIR/src/styles.css" '.production-workflow'
 require_contains "$APP_DIR/src/styles.css" '.advanced-panel'
 require_contains "$APP_DIR/src/main.js" 'localLoopMessages'
@@ -413,10 +417,10 @@ require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
 require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
 command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "17"
+test "$command_count" = "18"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "17"
+test "$invoke_count" = "18"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -452,6 +456,7 @@ if grep -R 'invoke(' "$APP_DIR/src" \
   | grep -v 'invoke("production_message_received_export"' \
   | grep -v 'invoke("production_local_roundtrip"' \
   | grep -v 'invoke("production_two_profile_roundtrip"' \
+  | grep -v 'invoke("production_two_profile_session_status"' \
   | grep -v 'invoke("dev_local_demo")' \
   | grep -v 'invoke("dev_local_message_loop"' >/dev/null; then
   echo "unexpected frontend Tauri command invocation" >&2
@@ -499,6 +504,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="export-production-handshake-finish" type="button">Export finish</button>' \
   | grep -v '<button id="import-production-handshake-finish" type="button">Import finish</button>' \
   | grep -v '<button id="check-production-session-state" type="button">Check session</button>' \
+  | grep -v '<button id="check-production-two-profile-session-status" type="button">' \
   | grep -v '<input id="production-message-number" type="number" min="1" value="1" />' \
   | grep -v '<textarea id="production-message-body" rows="3">hello over stored transport</textarea>' \
   | grep -v '<button id="export-production-message-envelope" type="button">Export envelope</button>' \
