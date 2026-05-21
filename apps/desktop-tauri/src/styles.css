@@ -285,6 +285,11 @@ button:hover:not(:disabled) {
   background: var(--button-hover);
 }
 
+button.is-current-action:not(:disabled) {
+  border-color: var(--accent-hot);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
 button:disabled {
   cursor: wait;
   opacity: 0.58;
