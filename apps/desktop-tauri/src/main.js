@@ -49,6 +49,7 @@ const fields = {
   productionProfilePassphrase: document.querySelector("#production-profile-passphrase"),
   unlockProductionProfile: document.querySelector("#unlock-production-profile"),
   productionProfileState: document.querySelector("#production-profile-state"),
+  productionProfileNextAction: document.querySelector("#production-profile-next-action"),
   productionProfileWarning: document.querySelector("#production-profile-warning"),
   productionProfileStorage: document.querySelector("#production-profile-storage"),
   productionProfileIdentity: document.querySelector("#production-profile-identity"),
@@ -56,6 +57,7 @@ const fields = {
   productionPairingEndpoint: document.querySelector("#production-pairing-endpoint"),
   exportProductionPairing: document.querySelector("#export-production-pairing"),
   productionPairingState: document.querySelector("#production-pairing-state"),
+  productionPairingNextAction: document.querySelector("#production-pairing-next-action"),
   productionPairingWarning: document.querySelector("#production-pairing-warning"),
   productionPairingPayload: document.querySelector("#production-pairing-payload"),
   useProductionPairingPayload: document.querySelector("#use-production-pairing-payload"),
@@ -89,6 +91,7 @@ const fields = {
   productionMessageBody: document.querySelector("#production-message-body"),
   exportProductionMessageEnvelope: document.querySelector("#export-production-message-envelope"),
   productionMessageState: document.querySelector("#production-message-state"),
+  productionMessageNextAction: document.querySelector("#production-message-next-action"),
   productionMessageWarning: document.querySelector("#production-message-warning"),
   productionMessageEnvelope: document.querySelector("#production-message-envelope"),
   useProductionMessageEnvelope: document.querySelector("#use-production-message-envelope"),
@@ -263,6 +266,65 @@ function productionTwoProfileReadiness(input, busy) {
   return "Ready: local encrypted roundtrip can run";
 }
 
+function renderManualNextActions(state) {
+  const {
+    busy,
+    hasProfileUnlockInput,
+    hasPairingInput,
+    hasSessionDraftInput,
+    hasHandshakeReplyInput,
+    hasHandshakeFinishInput,
+    hasFinishImportInput,
+    hasOutboundMessageInput,
+    hasInboundEnvelopeInput,
+    hasReceivedExportInput,
+  } = state;
+
+  if (busy) {
+    setText(fields.productionProfileNextAction, "Next: wait for the active production action.");
+    setText(fields.productionPairingNextAction, "Next: wait for the active production action.");
+    setText(fields.productionMessageNextAction, "Next: wait for the active production action.");
+    return;
+  }
+
+  setText(
+    fields.productionProfileNextAction,
+    hasProfileUnlockInput ? "Next: unlock profile." : "Next: enter profile and passphrase.",
+  );
+
+  let pairingNext = "Next: unlock profile, then export pairing.";
+  if (hasPairingInput) {
+    pairingNext = "Next: export pairing.";
+  }
+  if (hasSessionDraftInput) {
+    pairingNext = "Next: save draft.";
+  }
+  if (hasHandshakeReplyInput) {
+    pairingNext = "Next: export reply.";
+  }
+  if (hasHandshakeFinishInput) {
+    pairingNext = "Next: export finish.";
+  }
+  if (hasFinishImportInput) {
+    pairingNext = "Next: import finish, then check session.";
+  }
+  setText(fields.productionPairingNextAction, pairingNext);
+
+  let messageNext = productionSessionReadyForMessages()
+    ? "Next: enter message and export envelope."
+    : "Next: complete session state, then export envelope.";
+  if (hasOutboundMessageInput) {
+    messageNext = "Next: export envelope.";
+  }
+  if (hasInboundEnvelopeInput) {
+    messageNext = "Next: import envelope.";
+  }
+  if (hasReceivedExportInput && fields.productionReceivedMessage?.value.trim()) {
+    messageNext = "Next: review received message.";
+  }
+  setText(fields.productionMessageNextAction, messageNext);
+}
+
 function twoProfileInputFingerprint(input) {
   return `${input.profileA}\n${input.profileB}\n${input.message}`;
 }
@@ -372,6 +434,18 @@ function applyProductionActionState() {
 
   setText(fields.productionTwoProfileReadiness, productionTwoProfileReadiness(twoProfile, busy));
   renderProductionTwoProfileMemory(twoProfile);
+  renderManualNextActions({
+    busy,
+    hasProfileUnlockInput,
+    hasPairingInput,
+    hasSessionDraftInput,
+    hasHandshakeReplyInput,
+    hasHandshakeFinishInput,
+    hasFinishImportInput,
+    hasOutboundMessageInput,
+    hasInboundEnvelopeInput,
+    hasReceivedExportInput,
+  });
   setDisabled(fields.unlockProductionProfile, busy || !hasProfileUnlockInput);
   setDisabled(fields.exportProductionPairing, busy || !hasPairingInput);
   setDisabled(fields.saveProductionSessionDraft, busy || !hasSessionDraftInput);
