@@ -358,6 +358,22 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionHandshakeInitImportSummary {
+        storage_opened: bool,
+        session_draft_loaded: bool,
+        safety_transcript_loaded: bool,
+        local_role_can_accept: bool,
+        handshake_message_read: bool,
+        handshake_message_decodable: bool,
+        handshake_message_len: usize,
+        handshake_message_exposed: bool,
+        responder_state_created: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionMessageSendPrepareSummary {
         storage_opened: bool,
         runtime_material_reconstructable: bool,
@@ -1006,6 +1022,56 @@ pub mod production {
         }
 
         pub fn runtime_messaging_enabled(&self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionHandshakeInitImportSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_draft_loaded(self) -> bool {
+            self.session_draft_loaded
+        }
+
+        pub fn safety_transcript_loaded(self) -> bool {
+            self.safety_transcript_loaded
+        }
+
+        pub fn local_role_can_accept(self) -> bool {
+            self.local_role_can_accept
+        }
+
+        pub fn handshake_message_read(self) -> bool {
+            self.handshake_message_read
+        }
+
+        pub fn handshake_message_decodable(self) -> bool {
+            self.handshake_message_decodable
+        }
+
+        pub fn handshake_message_len(self) -> usize {
+            self.handshake_message_len
+        }
+
+        pub fn handshake_message_exposed(self) -> bool {
+            self.handshake_message_exposed
+        }
+
+        pub fn responder_state_created(self) -> bool {
+            self.responder_state_created
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
             self.runtime_messaging_enabled
         }
     }
@@ -2781,6 +2847,36 @@ pub mod production {
         })
     }
 
+    pub fn production_pairing_session_handshake_init_import(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        import_payload: &str,
+    ) -> Result<ProductionPairingSessionHandshakeInitImportSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let draft = load_latest_session_draft(&store, &profile)?
+            .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let message = decode_handshake_init_export(import_payload)?;
+        Ok(ProductionPairingSessionHandshakeInitImportSummary {
+            storage_opened: true,
+            session_draft_loaded: true,
+            safety_transcript_loaded: draft.safety_transcript_present,
+            local_role_can_accept: draft.local_role == SessionRole::Responder,
+            handshake_message_read: !import_payload.is_empty(),
+            handshake_message_decodable: true,
+            handshake_message_len: message.len(),
+            handshake_message_exposed: false,
+            responder_state_created: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
     fn open_fail_closed_outbound_runtime(
         material: &ProductionSessionRuntimeMaterial,
     ) -> Result<(), ProductionSessionError> {
@@ -3639,6 +3735,19 @@ pub mod production {
         hasher.update(message_number.to_be_bytes());
         EncryptedRecordId::new(format!("msgidx_{}", encode_hex(&hasher.finalize())))
             .expect("domain-separated local message index record id is valid")
+    }
+
+    fn decode_handshake_init_export(value: &str) -> Result<Vec<u8>, ProductionSessionError> {
+        let trimmed = value.trim_end_matches(['\r', '\n']);
+        let encoded = trimmed
+            .strip_prefix("ADNOISEXXINIT1|")
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        let message =
+            decode_hex(encoded).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        if message.is_empty() || message.len() > 1024 {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        Ok(message)
     }
 
     fn message_type_tag(message_type: &MessageType) -> &'static str {
@@ -4859,6 +4968,43 @@ pub mod production {
             assert!(!handshake_export.key_material_exposed());
             assert!(!handshake_export.transport_io_opened());
             assert!(!handshake_export.runtime_messaging_enabled());
+
+            let handshake_import_payload = if handshake_export.handshake_message_created() {
+                handshake_export.export_payload()
+            } else {
+                "ADNOISEXXINIT1|00\n"
+            };
+            let handshake_import = production_pairing_session_handshake_init_import(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+                handshake_import_payload,
+            )
+            .expect("handshake init import");
+            assert!(handshake_import.storage_opened());
+            assert!(handshake_import.session_draft_loaded());
+            assert!(handshake_import.safety_transcript_loaded());
+            assert_eq!(
+                handshake_import.local_role_can_accept(),
+                plan.local_role == SessionRole::Responder
+            );
+            assert!(handshake_import.handshake_message_read());
+            assert!(handshake_import.handshake_message_decodable());
+            assert!(handshake_import.handshake_message_len() > 0);
+            assert!(!handshake_import.handshake_message_exposed());
+            assert!(!handshake_import.responder_state_created());
+            assert!(!handshake_import.key_material_exposed());
+            assert!(!handshake_import.transport_io_opened());
+            assert!(!handshake_import.runtime_messaging_enabled());
+            assert_eq!(
+                production_pairing_session_handshake_init_import(
+                    &alice_store,
+                    alice.clone(),
+                    &passphrase,
+                    "ADNOISEXXINIT1|not-hex\n",
+                ),
+                Err(ProductionSessionError::UnexpectedEnvelope)
+            );
 
             let pending_status_before =
                 production_message_pending_status(&alice_store, alice.clone(), &passphrase, 1)
