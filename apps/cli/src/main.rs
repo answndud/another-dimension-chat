@@ -36,6 +36,9 @@ fn production_main() -> Result<(), String> {
                 "warning: production preflight is read-only and not a secure messenger release"
             );
         }
+        [cmd, sub, _args @ ..] if cmd == "production" && sub == "unlock" => {
+            return Err(production_unlock_rejected_error());
+        }
         #[cfg(feature = "arti-manual-bootstrap")]
         [cmd, sub, args @ ..] if cmd == "transport" && sub == "bootstrap" => {
             run_manual_bootstrap_command(args)?;
@@ -54,6 +57,27 @@ fn production_main() -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn production_unlock_rejected_error() -> String {
+    use another_dimension_core::production::{
+        session_unlock_redacted_error_taxonomy, SessionUnlockCommandRequest,
+        SessionUnlockRedactedErrorKind,
+    };
+
+    let taxonomy =
+        session_unlock_redacted_error_taxonomy(&SessionUnlockCommandRequest::passphrase_only());
+    let redacted_kind = match taxonomy.kind() {
+        SessionUnlockRedactedErrorKind::ProductUnlockDisabled => "product-unlock-disabled",
+        SessionUnlockRedactedErrorKind::PassphraseRequired => "passphrase-required",
+        SessionUnlockRedactedErrorKind::OsKeystoreOnlyRejected => "os-keystore-only-rejected",
+    };
+
+    format!(
+        "production unlock is disabled: unlock_error={redacted_kind} retry_after_user_action={} storage_opened=false session_records_written=false key_material_exposed=false runtime_messaging=false",
+        taxonomy.retry_after_user_action_allowed()
+    )
 }
 
 #[cfg(not(feature = "dev-insecure"))]
