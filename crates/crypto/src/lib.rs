@@ -129,6 +129,22 @@ pub mod production {
             &self.public
         }
 
+        pub fn encrypted_storage_private_bytes(&self) -> &[u8] {
+            &self.private
+        }
+
+        pub fn from_private_public_bytes(
+            private: Vec<u8>,
+            public: Vec<u8>,
+        ) -> Result<Self, CryptoError> {
+            if private.len() != NOISE_STATIC_PUBLIC_KEY_BYTES
+                || public.len() != NOISE_STATIC_PUBLIC_KEY_BYTES
+            {
+                return Err(CryptoError::InvalidNoisePrekeyBundle);
+            }
+            Ok(Self { private, public })
+        }
+
         pub fn prekey_bundle(&self) -> Result<NoisePrekeyBundle, CryptoError> {
             NoisePrekeyBundle::from_public_key(self.public_key())
         }
