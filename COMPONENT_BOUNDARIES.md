@@ -22,6 +22,7 @@ The project currently has a working local prototype loop:
 - `SessionDurableStateEncryptedRecordAdapter` prepares allowed sealed durable-state records but does not write them to a store, open unlock commands, or persist Noise transport state.
 - `SessionDurableStateAdapterNonReadinessGuard` keeps rollback protection, store writes, durable session persistence, production E2EE readiness, durable Noise transport persistence, and runtime messaging false.
 - The session durable-state store-write spike is test-only: it round-trips a prepared sealed record through `SqlCipherRecordStore` while preserving the production non-readiness guard.
+- `SessionDurableStateStoreWriteStatusMirror` reports that store-write coverage is test-only and keeps production store write, unlock command, durable session persistence, rollback protection, and runtime messaging disabled.
 - Existing production-facing code is a set of guardrails and spikes, not a complete secure runtime.
 
 ## Boundary Inventory
@@ -42,6 +43,7 @@ The project currently has a working local prototype loop:
 | Session encrypted-record adapter spike | `SessionDurableStateEncryptedRecordAdapter` prepares allowed sealed records for session durable state and rejects session transport state. | Add actual store writes only after keeping unlock/key-management/rollback and durable session lifecycle non-claims explicit. |
 | Session adapter non-readiness guard | `SessionDurableStateAdapterNonReadinessGuard` keeps the sealed-record adapter spike from implying rollback protection, durable session persistence, production E2EE readiness, or runtime messaging. | Preserve these guards until key management, rollback, lifecycle, and protocol review are complete. |
 | Session store-write test-only spike | A `#[cfg(test)]` helper round-trips one prepared sealed durable-state record through `SqlCipherRecordStore`. | Promote no store-write path to production until unlock/key-management/rollback and session lifecycle decisions are complete. |
+| Session store-write status mirror | `SessionDurableStateStoreWriteStatusMirror` exposes test-only coverage while keeping production store-write and readiness flags false. | Keep this mirror aligned with any future store-write changes before exposing user-facing unlock or runtime messaging. |
 | Tauri UI | Prototype shell can run dev-only local demos, display structured local state, and mirror read-only production preflight blockers as static status copy. | Replace CLI-wrapper demo commands with narrow Rust-owned runtime commands only after crypto, transport, and storage boundaries are security-ready. |
 | Release and updates | Public copy and static verifiers enforce non-claims; no release signing or reproducible build story exists. | Add signing, reproducible build or equivalent verification, dependency review, and release safety copy before public high-risk use. |
 
