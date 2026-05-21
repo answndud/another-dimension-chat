@@ -46,6 +46,7 @@ pub mod production {
         MessageEnvelope,
         LocalMessageIndex,
         RendezvousEndpointState,
+        SessionDraft,
         SessionTransportState,
     }
 
@@ -61,6 +62,7 @@ pub mod production {
                 Self::MessageEnvelope => "message-envelope",
                 Self::LocalMessageIndex => "local-message-index",
                 Self::RendezvousEndpointState => "rendezvous-endpoint-state",
+                Self::SessionDraft => "session-draft",
                 Self::SessionTransportState => "session-transport-state",
             }
         }
@@ -76,6 +78,7 @@ pub mod production {
                 "message-envelope" => Ok(Self::MessageEnvelope),
                 "local-message-index" => Ok(Self::LocalMessageIndex),
                 "rendezvous-endpoint-state" => Ok(Self::RendezvousEndpointState),
+                "session-draft" => Ok(Self::SessionDraft),
                 "session-transport-state" => Ok(Self::SessionTransportState),
                 _ => Err(ProductionStoragePolicyError::InvalidEncryptedRecord),
             }
@@ -684,9 +687,8 @@ pub mod production {
             | ProductionRecordKind::ReplayWindowState
             | ProductionRecordKind::MessageEnvelope
             | ProductionRecordKind::LocalMessageIndex
-            | ProductionRecordKind::RendezvousEndpointState => {
-                StorageProtection::EncryptedAtRestRequired
-            }
+            | ProductionRecordKind::RendezvousEndpointState
+            | ProductionRecordKind::SessionDraft => StorageProtection::EncryptedAtRestRequired,
             ProductionRecordKind::SessionTransportState => StorageProtection::InMemoryOnly,
         }
     }
@@ -749,6 +751,7 @@ pub mod production {
                 ProductionRecordKind::MessageEnvelope,
                 ProductionRecordKind::LocalMessageIndex,
                 ProductionRecordKind::RendezvousEndpointState,
+                ProductionRecordKind::SessionDraft,
                 ProductionRecordKind::SessionTransportState,
             ] {
                 assert!(matches!(
@@ -769,6 +772,7 @@ pub mod production {
                 ProductionRecordKind::MessageEnvelope,
                 ProductionRecordKind::LocalMessageIndex,
                 ProductionRecordKind::RendezvousEndpointState,
+                ProductionRecordKind::SessionDraft,
             ] {
                 assert_eq!(
                     protection_for(kind),

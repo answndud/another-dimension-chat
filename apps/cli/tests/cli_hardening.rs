@@ -88,6 +88,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production identity status"));
     assert!(out.contains("production pairing payload create"));
     assert!(out.contains("production pairing session prepare"));
+    assert!(out.contains("production pairing session save-draft"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
@@ -812,6 +813,49 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!prepare_out.contains(alice_payload_arg));
     assert!(!prepare_out.contains("ed25519"));
     assert!(!prepare_error.contains("correct horse"));
+
+    let save_draft = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "session",
+            "save-draft",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--local-payload",
+            alice_payload_arg,
+            "--remote-payload",
+            bob_payload_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let save_draft_out = stdout(&save_draft);
+    let save_draft_error = stderr(&save_draft);
+    assert!(
+        save_draft.status.success(),
+        "stdout: {save_draft_out}\nstderr: {save_draft_error}"
+    );
+    assert!(save_draft_out.contains("production pairing session draft saved:"));
+    assert!(save_draft_out.contains("storage_opened=true"));
+    assert!(save_draft_out.contains("session_plan_created=true"));
+    assert!(save_draft_out.contains("local_noise_static_private_key_loaded=true"));
+    assert!(save_draft_out.contains("local_noise_static_matches_payload=true"));
+    assert!(save_draft_out.contains("session_draft_written=true"));
+    assert!(save_draft_out.contains("remote_endpoint_state_written=true"));
+    assert!(save_draft_out.contains("replay_window_written=true"));
+    assert!(save_draft_out.contains("channel_id_derivable=true"));
+    assert!(save_draft_out.contains("key_material_exposed=false"));
+    assert!(save_draft_out.contains("transport_io_opened=false"));
+    assert!(save_draft_out.contains("runtime_messaging=false"));
+    assert!(save_draft_error.contains("storage-only"));
+    assert!(!save_draft_out.contains("alice"));
+    assert!(!save_draft_out.contains(alice_store_arg));
+    assert!(!save_draft_out.contains(alice_payload_arg));
+    assert!(!save_draft_out.contains("ed25519"));
+    assert!(!save_draft_error.contains("correct horse"));
 
     let swapped = run_with_stdin(
         &[
