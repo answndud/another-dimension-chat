@@ -88,6 +88,10 @@ require_status_field 'production_self_test_status' 'CLI production boundary self
 require_contains "$TAURI_DIR/src/status.rs" 'production_session_non_readiness:'
 require_contains "$TAURI_DIR/src/status.rs" 'no production E2EE claim durable persistence Tauri messaging command or async messaging'
 require_contains "$APP_DIR/src/main.js" 'status.production_session_non_readiness'
+require_status_field 'production_preflight_status' 'read-only production skeleton blockers copy'
+require_contains "$TAURI_DIR/src/status.rs" 'production_preflight_blockers:'
+require_contains "$TAURI_DIR/src/status.rs" 'session E2EE false transport send receive false storage rollback not-provided messaging false'
+require_contains "$APP_DIR/src/main.js" 'status.production_preflight_blockers'
 require_status_field 'transport_status' 'pre-network fail-closed only'
 require_status_field 'network_execution_status' 'network execution disabled'
 require_status_field 'experimental_transport_status' 'manual bootstrap gate summary only'
@@ -143,6 +147,9 @@ require_contains "$APP_DIR/README.md" 'does not expose a Tauri production messag
 require_contains "$APP_DIR/README.md" 'production-self-test status'
 require_contains "$APP_DIR/README.md" 'does not execute from the Tauri shell or mark messaging usable'
 require_contains "$APP_DIR/README.md" 'production-session limits copy'
+require_contains "$APP_DIR/README.md" 'production-preflight'
+require_contains "$APP_DIR/README.md" 'mirrors the CLI `production preflight` blockers as static read-only copy'
+require_contains "$APP_DIR/README.md" 'does not execute the CLI command, create profiles, unlock storage, bootstrap transport, send envelopes, receive envelopes, or mark messaging usable'
 require_contains "$APP_DIR/README.md" 'network-execution'
 require_contains "$APP_DIR/README.md" 'static disabled copy'
 require_contains "$APP_DIR/README.md" 'experimental-transport'
@@ -177,6 +184,10 @@ require_contains "$APP_DIR/index.html" 'Production self-test'
 require_contains "$APP_DIR/index.html" 'CLI production boundary self-test only'
 require_contains "$APP_DIR/index.html" 'Production session limits'
 require_contains "$APP_DIR/index.html" 'No production E2EE claim durable persistence Tauri messaging command or async messaging'
+require_contains "$APP_DIR/index.html" 'Production preflight'
+require_contains "$APP_DIR/index.html" 'Read-only production skeleton blockers copy'
+require_contains "$APP_DIR/index.html" 'Preflight blockers'
+require_contains "$APP_DIR/index.html" 'session E2EE false transport send receive false storage rollback not-provided messaging false'
 require_contains "$APP_DIR/index.html" 'Repeatable local loop'
 require_contains "$APP_DIR/index.html" 'Local message loop'
 require_contains "$APP_DIR/index.html" 'Run local loop'
@@ -192,6 +203,8 @@ require_status_copy 'Pairing boundary only'
 require_status_copy 'Snow Noise XX synchronous evaluation boundary only'
 require_status_copy 'CLI production boundary self-test only'
 require_status_copy 'No production E2EE claim durable persistence Tauri messaging command or async messaging'
+require_status_copy 'Read-only production skeleton blockers copy'
+require_status_copy 'session E2EE false transport send receive false storage rollback not-provided messaging false'
 require_status_copy 'Pre-network fail-closed only'
 require_status_copy 'Network execution disabled'
 require_status_copy 'Manual bootstrap gate summary only'
@@ -219,7 +232,7 @@ if grep -n '\btrue\b' "$TAURI_DIR/src/status.rs" >/dev/null; then
   exit 1
 fi
 
-if grep -n -E 'secure_release:|usable_messaging:|core_status:|profile_status:|pairing_status:|production_session_status:|production_self_test_status:|production_session_non_readiness:|transport_status:|network_execution_status:|storage_status:|verification_status:' "$TAURI_DIR/src/lib.rs" >/dev/null; then
+if grep -n -E 'secure_release:|usable_messaging:|core_status:|profile_status:|pairing_status:|production_session_status:|production_self_test_status:|production_session_non_readiness:|production_preflight_status:|production_preflight_blockers:|transport_status:|network_execution_status:|storage_status:|verification_status:' "$TAURI_DIR/src/lib.rs" >/dev/null; then
   echo "Tauri command wrapper must delegate status construction to status.rs" >&2
   exit 1
 fi

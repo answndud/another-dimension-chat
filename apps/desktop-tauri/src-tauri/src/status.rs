@@ -8,6 +8,8 @@ pub struct PrototypeStatus {
     production_session_status: &'static str,
     production_self_test_status: &'static str,
     production_session_non_readiness: &'static str,
+    production_preflight_status: &'static str,
+    production_preflight_blockers: &'static str,
     transport_status: &'static str,
     network_execution_status: &'static str,
     experimental_transport_status: &'static str,
@@ -28,6 +30,9 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         production_self_test_status: "CLI production boundary self-test only",
         production_session_non_readiness:
             "no production E2EE claim durable persistence Tauri messaging command or async messaging",
+        production_preflight_status: "read-only production skeleton blockers copy",
+        production_preflight_blockers:
+            "session E2EE false transport send receive false storage rollback not-provided messaging false",
         transport_status: "pre-network fail-closed only",
         network_execution_status: "network execution disabled",
         experimental_transport_status: "manual bootstrap gate summary only",
