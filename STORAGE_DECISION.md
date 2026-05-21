@@ -39,6 +39,7 @@ The repository currently has:
 - A session durable-state product unlock blocker summary that keeps product unlock closed until key wrapping, backup exclusion, rollback protection, and durable session lifecycle decisions are complete.
 - A session durable-state unlock policy handoff summary that reuses the storage unlock policy to require high-risk passphrase input and reject OS-keystore-only unlock while product unlock remains unavailable.
 - A session unlock/lock command design gate that requires explicit lock, idle auto-lock, redacted unlock errors, and passphrase-first high-risk policy before any product command is implemented.
+- A session unlock command fail-closed skeleton that defines request/result shapes but returns disabled without opening SQLCipher storage, writing session records, exposing key material, or enabling runtime messaging.
 
 The repository does not currently have:
 
@@ -357,6 +358,7 @@ Current lifecycle boundary:
 - `session_durable_state_product_unlock_blocker_summary()` exposes product unlock blockers: passphrase-first storage exists, but key wrapping, backup exclusion, rollback protection, durable session persistence, and runtime messaging are not ready.
 - `session_durable_state_unlock_policy_handoff_summary()` confirms that the session durable-state blocker path is aligned with the storage unlock policy: high-risk mode requires passphrase input, OS-keystore-only unlock is rejected, and product unlock remains closed.
 - `session_unlock_lock_command_design_gate()` captures pre-implementation command requirements while keeping product unlock, product lock, durable session persistence, and runtime messaging disabled.
+- `session_unlock_command_fail_closed()` gives future unlock callers a stable disabled result shape while keeping storage closed, session records unwritten, key material unexposed, and runtime messaging disabled.
 
 Non-claims:
 
