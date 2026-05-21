@@ -14,9 +14,9 @@ grep -q 'Dependency and supply-chain review | `RELEASE_HARDENING.md` records onl
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'External or independent review readiness | `RELEASE_HARDENING.md` records only a readiness checklist skeleton' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
-grep -q 'Update and installer integrity | `RELEASE_HARDENING.md` states no updater, package-integrity, or supported update verification story exists' \
+grep -q 'Update and installer integrity | `RELEASE_HARDENING.md` records only an update/installer integrity checklist skeleton' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
-grep -q 'update and installer integrity' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
+grep -q 'Update and installer integrity' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 
 if grep -R -n -E 'v0\.1-security-ready 100% complete|release gates complete|completion audit passed|approved for high-risk release' \
   "$ROOT_DIR/README.md" \
