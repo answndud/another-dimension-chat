@@ -11,6 +11,7 @@ The repository currently has:
 - Lightweight verification through `scripts/verify_all.sh`.
 - Heavier local verification through `scripts/verify_full.sh`.
 - Static release-hygiene checks through `scripts/verify_release_hygiene.sh`.
+- Release completion audit evidence in [RELEASE_COMPLETION_AUDIT.md](RELEASE_COMPLETION_AUDIT.md) that records the current v0.1-security-ready gate status as not complete.
 - Default-build boundary checks that keep `dev-insecure` out of default feature sets and reject usable production command surfaces.
 - Tauri scaffold static checks that keep prototype status copy read-only.
 - Public non-claim copy in `README.md`, `SECURITY.md`, and `COMPONENT_BOUNDARIES.md`.
@@ -81,3 +82,5 @@ Before any security-ready claim, an external review readiness record must identi
 `scripts/verify_release_hygiene.sh` checks that this inventory exists and continues to state the missing release gates. That static check prevents accidental public wording drift, but it does not satisfy the release gates.
 
 `scripts/verify_release_artifact_gates.sh` is the current signing/reproducible-build verifier skeleton. It confirms that release signing and reproducible/equivalent binary verification are still documented as incomplete and fails if public copy starts claiming those gates are ready before implementation.
+
+`scripts/verify_release_completion_audit.sh` checks that [RELEASE_COMPLETION_AUDIT.md](RELEASE_COMPLETION_AUDIT.md) continues to record the current release-gate audit as incomplete. It is not a release approval.
