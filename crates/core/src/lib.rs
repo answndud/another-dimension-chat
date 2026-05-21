@@ -260,6 +260,20 @@ pub mod production {
         runtime_messaging_enabled: bool,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionStatusSummary {
+        storage_opened: bool,
+        session_draft_present: bool,
+        channel_id_derivable: bool,
+        local_role_available: bool,
+        remote_contact_present: bool,
+        remote_endpoint_state_present: bool,
+        replay_window_present: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
     impl ProductionProfileInitSummary {
         pub fn storage_opened(self) -> bool {
             self.storage_opened
@@ -459,6 +473,48 @@ pub mod production {
 
         pub fn channel_id_derivable(self) -> bool {
             self.channel_id_derivable
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionStatusSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_draft_present(self) -> bool {
+            self.session_draft_present
+        }
+
+        pub fn channel_id_derivable(self) -> bool {
+            self.channel_id_derivable
+        }
+
+        pub fn local_role_available(self) -> bool {
+            self.local_role_available
+        }
+
+        pub fn remote_contact_present(self) -> bool {
+            self.remote_contact_present
+        }
+
+        pub fn remote_endpoint_state_present(self) -> bool {
+            self.remote_endpoint_state_present
+        }
+
+        pub fn replay_window_present(self) -> bool {
+            self.replay_window_present
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -1881,6 +1937,58 @@ pub mod production {
         })
     }
 
+    pub fn production_pairing_session_status(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionPairingSessionStatusSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let draft = store
+            .get(&production_latest_session_draft_record_id())?
+            .map(|record| decode_production_session_draft_record(record, &profile))
+            .transpose()?;
+        let Some(draft) = draft else {
+            return Ok(ProductionPairingSessionStatusSummary {
+                storage_opened: true,
+                session_draft_present: false,
+                channel_id_derivable: false,
+                local_role_available: false,
+                remote_contact_present: false,
+                remote_endpoint_state_present: false,
+                replay_window_present: false,
+                key_material_exposed: false,
+                transport_io_opened: false,
+                runtime_messaging_enabled: false,
+            });
+        };
+        let expected_replay_id = production_replay_record_id_text(&draft.channel_id);
+        let replay_record_id = production_replay_record_id(&draft.channel_id);
+        let endpoint_record_id =
+            production_endpoint_state_record_id(&draft.channel_id, &draft.remote_contact_id);
+        let endpoint_state_present = store.get(&endpoint_record_id)?.is_some();
+        let replay_window_present = store.load_replay_window(&replay_record_id)?.is_some();
+        Ok(ProductionPairingSessionStatusSummary {
+            storage_opened: true,
+            session_draft_present: true,
+            channel_id_derivable: !draft.channel_id.is_empty()
+                && draft.replay_record_id == expected_replay_id,
+            local_role_available: matches!(
+                draft.local_role,
+                SessionRole::CanonicalDialer | SessionRole::Responder
+            ) && draft.safety_transcript_present,
+            remote_contact_present: true,
+            remote_endpoint_state_present: endpoint_state_present,
+            replay_window_present,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
     pub fn production_session_evaluation_summary() -> ProductionSessionEvaluationSummary {
         ProductionSessionEvaluationSummary {
             protocol_candidate: "snow Noise XX synchronous boundary",
@@ -2539,6 +2647,14 @@ pub mod production {
         keypair: NoiseStaticKeypair,
     }
 
+    struct ProductionStoredSessionDraft {
+        channel_id: String,
+        local_role: SessionRole,
+        remote_contact_id: ContactId,
+        replay_record_id: String,
+        safety_transcript_present: bool,
+    }
+
     fn encode_production_noise_static_private_key_record(
         profile: ProfileName,
         pairing_nonce: String,
@@ -2608,10 +2724,47 @@ pub mod production {
         .map_err(ProductionSessionError::from)
     }
 
+    fn decode_production_session_draft_record(
+        record: EncryptedRecord,
+        profile: &ProfileName,
+    ) -> Result<ProductionStoredSessionDraft, ProductionSessionError> {
+        if record.kind != ProductionRecordKind::SessionDraft
+            || record.scope.profile_name() != profile
+        {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let encoded = String::from_utf8(record.sealed_body)
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let parts = encoded.split('|').collect::<Vec<_>>();
+        if parts.len() != 6 || parts[0] != "ADSESSIONDRAFT1" {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let local_role = parse_session_role_tag(parts[2])?;
+        let remote_contact_id =
+            ContactId::new(parts[3]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let safety_transcript =
+            decode_hex(parts[5]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        Ok(ProductionStoredSessionDraft {
+            channel_id: parts[1].to_string(),
+            local_role,
+            remote_contact_id,
+            replay_record_id: parts[4].to_string(),
+            safety_transcript_present: !safety_transcript.is_empty(),
+        })
+    }
+
     fn session_role_tag(role: SessionRole) -> &'static str {
         match role {
             SessionRole::CanonicalDialer => "canonical-dialer",
             SessionRole::Responder => "responder",
+        }
+    }
+
+    fn parse_session_role_tag(value: &str) -> Result<SessionRole, ProductionSessionError> {
+        match value {
+            "canonical-dialer" => Ok(SessionRole::CanonicalDialer),
+            "responder" => Ok(SessionRole::Responder),
+            _ => Err(ProductionSessionError::UnexpectedEnvelope),
         }
     }
 
@@ -3370,6 +3523,17 @@ pub mod production {
                     .payload()
                     .clone();
 
+            let empty_status =
+                production_pairing_session_status(&alice_store, alice.clone(), &passphrase)
+                    .expect("empty session status");
+            assert!(empty_status.storage_opened());
+            assert!(!empty_status.session_draft_present());
+            assert!(!empty_status.channel_id_derivable());
+            assert!(!empty_status.remote_endpoint_state_present());
+            assert!(!empty_status.replay_window_present());
+            assert!(!empty_status.transport_io_opened());
+            assert!(!empty_status.runtime_messaging_enabled());
+
             let summary = production_pairing_session_save_draft(
                 &alice_store,
                 alice.clone(),
@@ -3417,6 +3581,20 @@ pub mod production {
                 .load_replay_window(&production_replay_record_id(&channel_id))
                 .expect("read replay")
                 .is_some());
+
+            let status =
+                production_pairing_session_status(&alice_store, alice.clone(), &passphrase)
+                    .expect("session status");
+            assert!(status.storage_opened());
+            assert!(status.session_draft_present());
+            assert!(status.channel_id_derivable());
+            assert!(status.local_role_available());
+            assert!(status.remote_contact_present());
+            assert!(status.remote_endpoint_state_present());
+            assert!(status.replay_window_present());
+            assert!(!status.key_material_exposed());
+            assert!(!status.transport_io_opened());
+            assert!(!status.runtime_messaging_enabled());
 
             let _ = std::fs::remove_dir_all(dir);
         }
