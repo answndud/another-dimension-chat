@@ -109,6 +109,8 @@ Replay-aware decrypt now uses the existing `ReplayWindow` boundary. Duplicate an
 
 `session_durable_state_connector_gate()` is the first read-only connector-gate draft for durable session state. It records that pairwise identity private keys, Noise static private keys, and replay window state require encrypted-at-rest records; Noise transport state remains in-memory only; replay commits remain after successful decrypt; rollback protection is not provided; and storage unlock commands, transport I/O, runtime messaging, and connector readiness remain false.
 
+`session_durable_state_connector_test_harness()` applies that gate to the storage policy without implementing the connector. It verifies that pairwise identity private keys, Noise static private keys, and replay windows may enter only the encrypted-record path, rejects session transport persistence, and keeps storage unlock commands, transport I/O, and runtime messaging closed.
+
 ## Session Persistence Decision
 
 For the current v0.1 production message boundary, production session state is in-memory only.
