@@ -558,6 +558,14 @@ fn onion_transport_skeleton_fails_closed_until_adapter_exists() {
     let envelope = sample_envelope();
 
     assert_eq!(transport.runtime_state(), TransportRuntimeState::Disabled);
+    let summary = transport.integration_boundary_summary();
+    assert_eq!(summary.policy_mode(), TransportMode::HighRiskOnionOnly);
+    assert_eq!(summary.runtime_state(), TransportRuntimeState::Disabled);
+    assert_eq!(
+        summary.fail_closed_blocker(),
+        Some(TransportRuntimeError::RuntimeNetworkDisabled)
+    );
+    assert!(!summary.envelope_io_available());
     assert_eq!(
         transport.send_envelope(TransportSendRequest {
             route: &onion,
@@ -588,6 +596,14 @@ fn onion_transport_can_hold_ready_runtime_state_but_still_fails_closed() {
         transport.runtime_state(),
         TransportRuntimeState::Ready(TransportRuntimeReady)
     );
+    let summary = transport.integration_boundary_summary();
+    assert_eq!(summary.policy_mode(), TransportMode::HighRiskOnionOnly);
+    assert_eq!(
+        summary.runtime_state(),
+        TransportRuntimeState::Ready(TransportRuntimeReady)
+    );
+    assert_eq!(summary.fail_closed_blocker(), None);
+    assert!(!summary.envelope_io_available());
     assert_eq!(
         transport.send_envelope(TransportSendRequest {
             route: &onion,
