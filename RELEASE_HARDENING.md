@@ -23,7 +23,7 @@ The repository does not currently have:
 - Release signing.
 - Reproducible builds or an equivalent binary verification story.
 - Installer/package integrity checks.
-- Dependency and supply-chain review records.
+- Dependency and supply-chain review evidence.
 - External security review.
 - A release candidate threat-model signoff.
 - A user-facing high-risk safety copy review.
@@ -35,7 +35,7 @@ The repository does not currently have:
 | --- | --- | --- |
 | Release signing | No release signing workflow or signed artifact verification exists; a pre-implementation signing plan, dry-run verifier, and disposable detached-signature fixture exist. | Add platform signing, verification instructions, and a checked release process. |
 | Reproducible or equivalent verification | No reproducible build evidence or equivalent binary verification evidence exists; a pre-implementation verification plan, input template, and manifest fixture verifier exist. | Add reproducible builds or an equivalent independent binary verification process. |
-| Dependency and supply-chain review | Lockfiles and static checks exist, but no review record or policy exists. | Add dependency review procedure, deny/allow policy, and release evidence. |
+| Dependency and supply-chain review | Lockfiles, static checks, and a release-candidate review template exist, but no candidate-specific review evidence exists. | Add dependency review procedure, deny/allow policy, and release evidence. |
 | Threat model and release copy alignment | Public non-claim copy exists. | Reconcile release copy, known risks, non-goals, and threat model for the exact release candidate. |
 | External or independent review readiness | No external review is recorded. | Prepare review materials and track findings before any high-risk release claim. |
 | Update and installer integrity | No updater or package-integrity story exists. | Define update verification, rollback handling, and platform package integrity. |
@@ -43,6 +43,8 @@ The repository does not currently have:
 ## Dependency Review Policy Skeleton
 
 No dependency review evidence is recorded yet.
+
+The release-candidate dependency review template is tracked in [RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md](RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md). It is not dependency review evidence, supply-chain approval, or release approval.
 
 Before any security-ready claim, a dependency review record must identify reviewed lockfiles, direct dependency changes, native/system dependencies, and denied or accepted risk decisions. At minimum, that record must cover:
 
@@ -54,6 +56,8 @@ Before any security-ready claim, a dependency review record must identify review
 - A deny/allow decision for new network, telemetry, updater, cloud, push, or account/discovery dependencies.
 
 `scripts/verify_dependency_review_gate.sh` is the current dependency review verifier skeleton. It confirms that dependency review is still documented as incomplete and fails if public copy starts claiming dependency or supply-chain review completion before evidence exists.
+
+`scripts/verify_dependency_review_template.sh` checks that the template still contains release-candidate placeholders and remains classified as `not-review-evidence`. It does not review dependencies or approve a release candidate.
 
 ## External Review Readiness Checklist Skeleton
 

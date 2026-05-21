@@ -17,8 +17,9 @@ grep -q 'Reproducible or equivalent binary verification | `RELEASE_HARDENING.md`
 grep -q 'scripts/verify_binary_verification_plan.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'scripts/verify_binary_manifest_fixture.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'scripts/verify_binary_input_template.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
-grep -q 'Dependency and supply-chain review | `RELEASE_HARDENING.md` records only a policy skeleton' \
+grep -q 'Dependency and supply-chain review | `RELEASE_HARDENING.md` records a policy skeleton and \[RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md\](RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md) records required candidate-review fields, but no candidate-specific dependency review evidence exists' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
+grep -q 'scripts/verify_dependency_review_template.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'Threat model and release copy alignment | `RELEASE_HARDENING.md` records only a release-candidate signoff skeleton' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'External or independent review readiness | `RELEASE_HARDENING.md` records only a readiness checklist skeleton' \

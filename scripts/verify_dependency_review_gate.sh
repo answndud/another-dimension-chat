@@ -3,10 +3,12 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-grep -q 'Dependency and supply-chain review | Lockfiles and static checks exist, but no review record or policy exists' \
+grep -q 'Dependency and supply-chain review | Lockfiles, static checks, and a release-candidate review template exist, but no candidate-specific review evidence exists' \
   "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'Dependency Review Policy Skeleton' "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'No dependency review evidence is recorded yet' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'scripts/verify_dependency_review_template.sh' "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'dependency review record must identify reviewed lockfiles, direct dependency changes, native/system dependencies, and denied or accepted risk decisions' \
   "$ROOT_DIR/RELEASE_HARDENING.md"
 
