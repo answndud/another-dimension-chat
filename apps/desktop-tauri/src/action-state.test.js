@@ -8,6 +8,7 @@ import {
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
   productionPairingPayloadView,
+  productionProfilePreset,
   productionProfileUnlockView,
   productionReceivedMessageExportView,
   productionSessionDraftView,
@@ -211,6 +212,18 @@ test("productionTwoProfileReadiness blocks incomplete inputs in priority order",
     productionTwoProfileReadiness({ profileA: "alice", profileB: "bob", passphrase: "p", message: "m" }, true),
     "Running: production action in progress",
   );
+});
+
+test("productionProfilePreset maps known manual peers to profile and endpoint defaults", () => {
+  assert.deepEqual(productionProfilePreset(" Alice "), {
+    profile: "alice",
+    rendezvousEndpoint: "alice.onion",
+  });
+  assert.deepEqual(productionProfilePreset("bob"), {
+    profile: "bob",
+    rendezvousEndpoint: "bob.onion",
+  });
+  assert.equal(productionProfilePreset("mallory"), null);
 });
 
 test("productionActionAvailability disables every action while busy", () => {

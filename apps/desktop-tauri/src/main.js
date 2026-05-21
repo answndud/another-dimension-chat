@@ -7,6 +7,7 @@ import {
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
   productionPairingPayloadView,
+  productionProfilePreset,
   productionProfileUnlockView,
   productionReceivedMessageExportView,
   productionSessionDraftView,
@@ -61,6 +62,8 @@ const fields = {
   simulationReplay: document.querySelector("#simulation-replay"),
   productionProfileSelector: document.querySelector("#production-profile-selector"),
   productionProfileName: document.querySelector("#production-profile-name"),
+  useAliceProductionProfile: document.querySelector("#use-alice-production-profile"),
+  useBobProductionProfile: document.querySelector("#use-bob-production-profile"),
   productionProfilePassphrase: document.querySelector("#production-profile-passphrase"),
   unlockProductionProfile: document.querySelector("#unlock-production-profile"),
   productionProfileState: document.querySelector("#production-profile-state"),
@@ -257,6 +260,25 @@ function validProductionMessageNumber() {
 
 function productionSessionReadyForMessages() {
   return latestProductionSessionState?.ready_for_message_envelope === true;
+}
+
+function applyProductionProfilePreset(peer) {
+  const preset = productionProfilePreset(peer);
+  if (!preset || !fields.productionProfileName || !fields.productionPairingEndpoint) {
+    return;
+  }
+  fields.productionProfileName.value = preset.profile;
+  fields.productionPairingEndpoint.value = preset.rendezvousEndpoint;
+  if (fields.productionProfileSelector) {
+    fields.productionProfileSelector.value = preset.profile;
+  }
+  resetProductionPairingView();
+  resetProductionMessageView();
+  applyProductionActionState();
+  setText(
+    fields.productionProfileWarning,
+    `Manual profile preset applied: ${preset.profile} / ${preset.rendezvousEndpoint}`,
+  );
 }
 
 function renderManualNextActions(state) {
@@ -1502,6 +1524,18 @@ if (fields.productionProfileSelector) {
       applyProductionActionState();
     }
   });
+}
+
+if (fields.useAliceProductionProfile) {
+  fields.useAliceProductionProfile.addEventListener("click", () =>
+    applyProductionProfilePreset("alice"),
+  );
+}
+
+if (fields.useBobProductionProfile) {
+  fields.useBobProductionProfile.addEventListener("click", () =>
+    applyProductionProfilePreset("bob"),
+  );
 }
 
 for (const input of [

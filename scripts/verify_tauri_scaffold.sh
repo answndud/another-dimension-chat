@@ -166,6 +166,7 @@ require_contains "$APP_DIR/src/main.js" 'renderProductionProfileSelector'
 require_contains "$APP_DIR/src/main.js" 'applyProductionActionState'
 require_contains "$APP_DIR/src/action-state.js" 'productionManualNextActions'
 require_contains "$APP_DIR/src/action-state.js" 'productionActionAvailability'
+require_contains "$APP_DIR/src/action-state.js" 'productionProfilePreset'
 require_contains "$APP_DIR/src/action-state.js" 'productionProfileUnlockView'
 require_contains "$APP_DIR/src/action-state.js" 'productionPairingPayloadView'
 require_contains "$APP_DIR/src/action-state.js" 'productionSessionDraftView'
@@ -178,6 +179,7 @@ require_contains "$APP_DIR/src/action-state.js" 'productionReceivedMessageExport
 require_contains "$APP_DIR/src/action-state.test.js" 'node:test'
 require_contains "$APP_DIR/package.json" 'test:state'
 require_contains "$APP_DIR/src/main.js" 'productionSessionReadyForMessages'
+require_contains "$APP_DIR/src/main.js" 'applyProductionProfilePreset'
 require_contains "$APP_DIR/src/main.js" 'moveLocalPayload'
 require_contains "$APP_DIR/src/main.js" 'moveLocalMessageEnvelope'
 require_contains "$APP_DIR/src/main.js" 'exportProductionPairingPayload'
@@ -216,6 +218,8 @@ require_contains "$APP_DIR/src/styles.css" '.followup-actions'
 require_contains "$APP_DIR/index.html" 'class="production-workflow"'
 require_contains "$APP_DIR/index.html" '<details class="advanced-panel">'
 require_contains "$APP_DIR/index.html" '<summary>Manual production payload tools</summary>'
+require_contains "$APP_DIR/index.html" 'use-alice-production-profile'
+require_contains "$APP_DIR/index.html" 'use-bob-production-profile'
 require_contains "$APP_DIR/src/styles.css" '.production-workflow'
 require_contains "$APP_DIR/src/styles.css" '.advanced-panel'
 require_contains "$APP_DIR/src/main.js" 'localLoopMessages'
@@ -442,6 +446,8 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>' \
   | grep -v '<input id="production-profile-name" type="text" value="alice" autocomplete="username" />' \
   | grep -v '<input$' \
+  | grep -v '<button id="use-alice-production-profile" type="button" class="flow-control is-secondary">' \
+  | grep -v '<button id="use-bob-production-profile" type="button" class="flow-control is-secondary">' \
   | grep -v '<button id="unlock-production-profile" type="button">Unlock profile</button>' \
   | grep -v '<input id="production-pairing-endpoint" type="text" value="alice.onion" />' \
   | grep -v '<button id="export-production-pairing" type="button">Export pairing</button>' \
