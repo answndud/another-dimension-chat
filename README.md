@@ -36,6 +36,7 @@ What exists today:
 - A release completion audit that records current v0.1-security-ready evidence as not complete and points the next slice at update/installer integrity.
 - An update integrity gate verifier skeleton that keeps update/installer integrity documented as incomplete until release artifact and package verification evidence exists.
 - A release signoff gate verifier skeleton that keeps release-candidate threat-model/release-copy signoff documented as incomplete until signoff evidence exists.
+- A release signing implementation plan that targets offline detached signatures while keeping release signing documented as unimplemented.
 - README status compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
 
 What does not exist yet:
@@ -265,6 +266,8 @@ The cross-component replacement inventory is tracked in [COMPONENT_BOUNDARIES.md
 The release hardening gap inventory is tracked in [RELEASE_HARDENING.md](RELEASE_HARDENING.md). It records missing release signing, reproducible or equivalent binary verification, dependency review, threat-model/release-copy alignment, external review readiness, and update integrity work. It is not evidence that those gates are complete.
 
 The current completion audit is tracked in [RELEASE_COMPLETION_AUDIT.md](RELEASE_COMPLETION_AUDIT.md). It records that current evidence does not prove v0.1-security-ready 100% and that release gates remain incomplete.
+
+The release signing plan is tracked in [RELEASE_SIGNING_PLAN.md](RELEASE_SIGNING_PLAN.md). It is a pre-implementation plan, not signed artifact verification.
 
 ## License
 

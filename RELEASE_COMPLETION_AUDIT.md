@@ -13,6 +13,7 @@ Current evidence does not prove v0.1-security-ready 100%. The repository has use
 - [README.md](README.md)
 - `scripts/verify_all.sh`
 - `scripts/verify_release_artifact_gates.sh`
+- `scripts/verify_release_signing_plan.sh`
 - `scripts/verify_dependency_review_gate.sh`
 - `scripts/verify_external_review_gate.sh`
 - `scripts/verify_update_integrity_gate.sh`
@@ -23,7 +24,7 @@ Current evidence does not prove v0.1-security-ready 100%. The repository has use
 
 | Requirement | Current evidence | Audit status |
 | --- | --- | --- |
-| Release signing | `RELEASE_HARDENING.md` states no signing workflow or signed artifact verification exists. `scripts/verify_release_artifact_gates.sh` confirms this gate is incomplete. | Not satisfied. |
+| Release signing | `RELEASE_HARDENING.md` records a pre-implementation signing plan, but no signing workflow or signed artifact verification exists. `scripts/verify_release_artifact_gates.sh` and `scripts/verify_release_signing_plan.sh` confirm this gate is incomplete. | Not satisfied. |
 | Reproducible or equivalent binary verification | `RELEASE_HARDENING.md` states no reproducible build story exists. `scripts/verify_release_artifact_gates.sh` confirms this gate is incomplete. | Not satisfied. |
 | Dependency and supply-chain review | `RELEASE_HARDENING.md` records only a policy skeleton. `scripts/verify_dependency_review_gate.sh` confirms review evidence is missing. | Not satisfied. |
 | Threat model and release copy alignment | `RELEASE_HARDENING.md` records only a release-candidate signoff skeleton. `scripts/verify_release_signoff_gate.sh` confirms signoff evidence is missing. | Not satisfied. |
@@ -34,4 +35,4 @@ Current evidence does not prove v0.1-security-ready 100%. The repository has use
 
 The current repository is a strong prototype and guardrail baseline, but it has not crossed the 90-100% release-hardening bar. Static verifier skeletons are useful because they block unsupported claims; they do not replace the missing signing, binary verification, dependency review, release-candidate signoff, external review readiness evidence, or update/installer integrity process.
 
-The next implementation slice should address release signing with either an implementation plan or a minimal signing verification prototype.
+The next implementation slice should address release signing with a dry-run verification prototype that uses disposable test fixtures.
