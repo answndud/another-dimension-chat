@@ -40,6 +40,7 @@ const fields = {
   simulationSafetyPhrase: document.querySelector("#simulation-safety-phrase"),
   simulationMessage: document.querySelector("#simulation-message"),
   simulationReplay: document.querySelector("#simulation-replay"),
+  productionProfileSelector: document.querySelector("#production-profile-selector"),
   productionProfileName: document.querySelector("#production-profile-name"),
   productionProfilePassphrase: document.querySelector("#production-profile-passphrase"),
   unlockProductionProfile: document.querySelector("#unlock-production-profile"),
@@ -224,6 +225,48 @@ function resetProductionProfileView() {
   setText(fields.productionProfileStorage, "Not checked yet");
   setText(fields.productionProfileIdentity, "Not checked yet");
   setText(fields.productionProfileBoundary, "Not checked yet");
+}
+
+function renderProductionProfileSelector(profiles) {
+  if (!fields.productionProfileSelector) {
+    return;
+  }
+  fields.productionProfileSelector.replaceChildren();
+  if (!profiles || profiles.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No saved profiles";
+    fields.productionProfileSelector.append(option);
+    return;
+  }
+  for (const profile of profiles) {
+    const option = document.createElement("option");
+    option.value = profile;
+    option.textContent = profile;
+    fields.productionProfileSelector.append(option);
+  }
+  const currentProfile = productionProfileInput().profile;
+  if (profiles.includes(currentProfile)) {
+    fields.productionProfileSelector.value = currentProfile;
+  } else if (!currentProfile && profiles[0]) {
+    fields.productionProfileSelector.value = profiles[0];
+    fields.productionProfileName.value = profiles[0];
+  }
+}
+
+async function loadProductionProfileList() {
+  if (!fields.productionProfileSelector) {
+    return;
+  }
+  try {
+    const result = await invoke("production_profile_list");
+    renderProductionProfileSelector(result.profiles);
+    if (result.profile_count > 0) {
+      setText(fields.productionProfileStorage, `saved_profiles=${result.profile_count}`);
+    }
+  } catch (error) {
+    renderProductionProfileSelector([]);
+  }
 }
 
 function resetProductionPairingView() {
@@ -626,6 +669,7 @@ async function unlockProductionProfile() {
       fields.productionProfileBoundary,
       `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
     );
+    await loadProductionProfileList();
   } catch (error) {
     setProductionProfileState("Profile unlock failed");
     setText(fields.productionProfileWarning, String(error));
@@ -1070,6 +1114,16 @@ if (fields.runDemo) {
   fields.runDemo.addEventListener("click", runLocalDemo);
 }
 
+if (fields.productionProfileSelector) {
+  fields.productionProfileSelector.addEventListener("change", () => {
+    if (fields.productionProfileName && fields.productionProfileSelector.value) {
+      fields.productionProfileName.value = fields.productionProfileSelector.value;
+      resetProductionPairingView();
+      resetProductionMessageView();
+    }
+  });
+}
+
 if (fields.unlockProductionProfile) {
   fields.unlockProductionProfile.addEventListener("click", unlockProductionProfile);
 }
@@ -1133,3 +1187,4 @@ resetProductionPairingView();
 resetProductionMessageView();
 resetProductionRoundtripView();
 resetLoopView();
+loadProductionProfileList();

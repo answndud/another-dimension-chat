@@ -74,7 +74,9 @@ require_contains "$TAURI_DIR/src/lib.rs" 'pub use status::PrototypeStatus;'
 require_contains "$TAURI_DIR/src/lib.rs" 'redacted_prototype_status()'
 require_contains "$TAURI_DIR/src/lib.rs" 'dev_local_message_loop'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_profile_unlock'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_profile_list'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_profile_unlock'
+require_contains "$TAURI_DIR/src/lib.rs" 'run_production_profile_list'
 require_contains "$TAURI_DIR/src/lib.rs" 'app_data_dir()'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_pairing_payload_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_pairing_payload_export'
@@ -132,6 +134,7 @@ require_status_field 'storage_status' 'ADREC1 storage spike only'
 require_status_field 'verification_status' 'lightweight checks only'
 require_contains "$APP_DIR/src/main.js" 'invoke("prototype_status")'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_profile_unlock"'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_profile_list"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_pairing_payload_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_pairing_session_draft_save"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_session_state_check"'
@@ -146,6 +149,8 @@ require_contains "$APP_DIR/src/main.js" 'invoke("production_local_roundtrip"'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_demo")'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_message_loop"'
 require_contains "$APP_DIR/src/main.js" 'unlockProductionProfile'
+require_contains "$APP_DIR/src/main.js" 'loadProductionProfileList'
+require_contains "$APP_DIR/src/main.js" 'renderProductionProfileSelector'
 require_contains "$APP_DIR/src/main.js" 'exportProductionPairingPayload'
 require_contains "$APP_DIR/src/main.js" 'saveProductionSessionDraft'
 require_contains "$APP_DIR/src/main.js" 'checkProductionSessionState'
@@ -255,6 +260,7 @@ require_contains "$APP_DIR/index.html" 'Preflight blockers'
 require_contains "$APP_DIR/index.html" 'session E2EE false transport send receive false storage rollback not-provided messaging false'
 require_contains "$APP_DIR/index.html" 'Production profile'
 require_contains "$APP_DIR/index.html" 'Persistent local store'
+require_contains "$APP_DIR/index.html" 'production-profile-selector'
 require_contains "$APP_DIR/index.html" 'Unlock production profile'
 require_contains "$APP_DIR/index.html" 'Production pairing'
 require_contains "$APP_DIR/index.html" 'Public payload export'
@@ -310,10 +316,10 @@ require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
 require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
 command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "15"
+test "$command_count" = "16"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "15"
+test "$invoke_count" = "16"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -336,6 +342,7 @@ fi
 if grep -R 'invoke(' "$APP_DIR/src" \
   | grep -v 'invoke("prototype_status")' \
   | grep -v 'invoke("production_profile_unlock"' \
+  | grep -v 'invoke("production_profile_list"' \
   | grep -v 'invoke("production_pairing_payload_export"' \
   | grep -v 'invoke("production_pairing_session_draft_save"' \
   | grep -v 'invoke("production_session_state_check"' \

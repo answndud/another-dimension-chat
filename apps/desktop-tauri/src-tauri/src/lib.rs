@@ -93,6 +93,21 @@ pub struct ProductionProfileUnlockResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionProfileListResult {
+    warning: &'static str,
+    profiles: Vec<String>,
+    profile_count: usize,
+    app_data_profile_store: bool,
+    store_path_returned: bool,
+    passphrase_required: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionPairingPayloadExportResult {
     warning: &'static str,
     storage_opened: bool,
@@ -282,6 +297,17 @@ fn production_profile_unlock(
     run_production_profile_unlock(app_data_root, profile, passphrase).map_err(|_| {
         "production profile unlock failed without exposing profile, path, or key details"
             .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_profile_list(app: tauri::AppHandle) -> Result<ProductionProfileListResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production profile list failed without exposing local path details")?;
+    run_production_profile_list(app_data_root).map_err(|_| {
+        "production profile list failed without exposing local path details".to_string()
     })
 }
 
@@ -821,6 +847,57 @@ fn production_profile_store_path(
         .as_ref()
         .join("profiles")
         .join(format!("{profile_name}.db")))
+}
+
+fn run_production_profile_list(
+    app_data_root: impl AsRef<std::path::Path>,
+) -> Result<ProductionProfileListResult, String> {
+    let profiles_dir = app_data_root.as_ref().join("profiles");
+    let mut profiles = Vec::new();
+    if profiles_dir.exists() {
+        for entry in std::fs::read_dir(&profiles_dir)
+            .map_err(|_| "failed to read production profile directory")?
+        {
+            let entry = entry.map_err(|_| "failed to read production profile entry")?;
+            let file_type = entry
+                .file_type()
+                .map_err(|_| "failed to read production profile entry type")?;
+            if !file_type.is_file() {
+                continue;
+            }
+            let file_name = entry.file_name();
+            let Some(file_name) = file_name.to_str() else {
+                continue;
+            };
+            let Some(profile_name) = file_name.strip_suffix(".db") else {
+                continue;
+            };
+            if profile_name.contains('.') {
+                continue;
+            }
+            if sanitize_production_profile(profile_name.to_string()).is_ok() {
+                profiles.push(profile_name.to_string());
+            }
+        }
+    }
+    profiles.sort();
+    profiles.dedup();
+    let profile_count = profiles.len();
+
+    Ok(ProductionProfileListResult {
+        warning:
+            "profile names loaded from app-data store filenames only; no profile store was unlocked",
+        profiles,
+        profile_count,
+        app_data_profile_store: true,
+        store_path_returned: false,
+        passphrase_required: false,
+        passphrase_retained: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
+    })
 }
 
 fn run_production_pairing_payload_export(
@@ -1651,6 +1728,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             prototype_status,
             production_profile_unlock,
+            production_profile_list,
             production_pairing_payload_export,
             production_pairing_session_draft_save,
             production_session_state_check,
@@ -1678,9 +1756,10 @@ mod tests {
         run_production_handshake_reply_export, run_production_local_roundtrip,
         run_production_message_envelope_export, run_production_message_envelope_import,
         run_production_message_received_export, run_production_pairing_payload_export,
-        run_production_pairing_session_draft_save, run_production_profile_unlock,
-        run_production_session_state_check, sanitize_envelope_payload, sanitize_handshake_payload,
-        sanitize_loop_messages, sanitize_pairing_payload, sanitize_pairing_rendezvous_endpoint,
+        run_production_pairing_session_draft_save, run_production_profile_list,
+        run_production_profile_unlock, run_production_session_state_check,
+        sanitize_envelope_payload, sanitize_handshake_payload, sanitize_loop_messages,
+        sanitize_pairing_payload, sanitize_pairing_rendezvous_endpoint,
         sanitize_production_message_text, sanitize_production_profile,
         sanitize_production_roundtrip_message, unique_production_roundtrip_dir,
     };
@@ -1845,6 +1924,46 @@ replay check: no replayed messages after message 2
         assert!(!serialized.contains("correct-passphrase"));
         assert!(!serialized.contains("/tmp"));
         assert!(!serialized.contains("profiles"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_profile_list_returns_sanitized_names_without_unlocking_stores() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let empty = run_production_profile_list(&root).expect("empty profile list");
+        assert!(empty.profiles.is_empty());
+        assert_eq!(empty.profile_count, 0);
+        assert!(empty.app_data_profile_store);
+        assert!(!empty.passphrase_required);
+        assert!(!empty.store_path_returned);
+        assert!(!empty.key_material_exposed);
+        assert!(!empty.transport_io_opened);
+        assert!(!empty.runtime_messaging_enabled);
+
+        run_production_profile_unlock(&root, "bob".to_string(), "correct-passphrase".to_string())
+            .expect("bob unlock");
+        run_production_profile_unlock(&root, "alice".to_string(), "correct-passphrase".to_string())
+            .expect("alice unlock");
+        let profiles_dir = root.join("profiles");
+        std::fs::write(profiles_dir.join("bad.name.db"), b"ignored").expect("write bad profile");
+        std::fs::write(profiles_dir.join("notes.txt"), b"ignored").expect("write ignored file");
+
+        let listed = run_production_profile_list(&root).expect("profile list");
+        assert_eq!(
+            listed.profiles,
+            vec!["alice".to_string(), "bob".to_string()]
+        );
+        assert_eq!(listed.profile_count, 2);
+        assert!(!listed.store_path_returned);
+        assert!(!listed.passphrase_retained);
+        assert!(!listed.key_material_exposed);
+        assert!(!listed.network_io_attempted);
+        assert!(!listed.transport_io_opened);
+        assert!(!listed.runtime_messaging_enabled);
+
+        let serialized = serde_json::to_string(&listed).expect("serialize list");
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains(".db"));
         let _ = std::fs::remove_dir_all(root);
     }
 
