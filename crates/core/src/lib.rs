@@ -5,14 +5,15 @@ pub mod production {
     };
     use another_dimension_crypto::CryptoError;
     use another_dimension_identity::{
-        ContactId, PairwisePublicKeyScheme, PairwiseSignatureScheme, ProfileName,
+        ContactId, IdentityError, PairwisePublicKeyScheme, PairwiseSignatureScheme,
+        ProductionKeyAlgorithm, ProductionPairwisePrivateKey, ProfileName,
     };
     use another_dimension_pairing::{
         production_pairing_draft_with_defaults, transcript, PairingError, PairingPayload,
         ProductionPairingDraft,
     };
     use another_dimension_protocol::{
-        encode_hex, Envelope, MessageType, ProtocolError, ReplayWindow,
+        decode_hex, encode_hex, Envelope, MessageType, ProtocolError, ReplayWindow,
     };
     use another_dimension_storage::production::{
         production_message_storage_boundary_summary, protection_for,
@@ -40,6 +41,7 @@ pub mod production {
         b"AD-PRODUCTION-MESSAGE-ENVELOPE-RECORD-V1";
     const PRODUCTION_LOCAL_MESSAGE_INDEX_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-LOCAL-MESSAGE-INDEX-RECORD-V1";
+    const PRODUCTION_IDENTITY_PRIVATE_KEY_RECORD_ID: &str = "pairwise_identity_private_key_v1";
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct ProductionSessionPlan {
@@ -195,6 +197,26 @@ pub mod production {
         runtime_messaging_enabled: bool,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionProfileIdentityInitSummary {
+        storage_opened: bool,
+        identity_private_key_written: bool,
+        identity_public_key_derivable: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionProfileIdentityStatusSummary {
+        storage_opened: bool,
+        identity_private_key_present: bool,
+        identity_public_key_derivable: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
     impl ProductionProfileInitSummary {
         pub fn storage_opened(self) -> bool {
             self.storage_opened
@@ -224,6 +246,58 @@ pub mod production {
 
         pub fn profile_marker_present(self) -> bool {
             self.profile_marker_present
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionProfileIdentityInitSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn identity_private_key_written(self) -> bool {
+            self.identity_private_key_written
+        }
+
+        pub fn identity_public_key_derivable(self) -> bool {
+            self.identity_public_key_derivable
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionProfileIdentityStatusSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn identity_private_key_present(self) -> bool {
+            self.identity_private_key_present
+        }
+
+        pub fn identity_public_key_derivable(self) -> bool {
+            self.identity_public_key_derivable
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -1326,10 +1400,12 @@ pub mod production {
     pub enum ProductionSessionError {
         Pairing(PairingError),
         Crypto(CryptoError),
+        Identity(IdentityError),
         Protocol(ProtocolError),
         Storage(ProductionStorageError),
         EndpointLifecycle(EndpointLifecycleError),
         NonProductionPairingPayload,
+        ProfileMarkerMissing,
         SamePairwiseIdentity,
         SameRendezvousEndpoint,
         InvalidRendezvousEndpoint,
@@ -1347,6 +1423,12 @@ pub mod production {
     impl From<CryptoError> for ProductionSessionError {
         fn from(value: CryptoError) -> Self {
             Self::Crypto(value)
+        }
+    }
+
+    impl From<IdentityError> for ProductionSessionError {
+        fn from(value: IdentityError) -> Self {
+            Self::Identity(value)
         }
     }
 
@@ -1441,6 +1523,59 @@ pub mod production {
         Ok(ProductionProfileStatusSummary {
             storage_opened: true,
             profile_marker_present,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_profile_identity_init(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionProfileIdentityInitSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let private_key = ProductionPairwisePrivateKey::generate_ed25519_dalek()?;
+        let public_key_derivable = private_key.public_key().is_ok();
+        store.put(
+            &production_identity_private_key_record_id(),
+            &encode_production_identity_private_key_record(profile, &private_key)?,
+        )?;
+        Ok(ProductionProfileIdentityInitSummary {
+            storage_opened: true,
+            identity_private_key_written: true,
+            identity_public_key_derivable: public_key_derivable,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_profile_identity_status(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionProfileIdentityStatusSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let identity = store
+            .get(&production_identity_private_key_record_id())?
+            .map(decode_production_identity_private_key_record)
+            .transpose()?;
+        let identity_public_key_derivable = identity
+            .as_ref()
+            .is_some_and(|private_key| private_key.public_key().is_ok());
+        Ok(ProductionProfileIdentityStatusSummary {
+            storage_opened: true,
+            identity_private_key_present: identity.is_some(),
+            identity_public_key_derivable,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -2018,6 +2153,48 @@ pub mod production {
         }
     }
 
+    fn production_identity_private_key_record_id() -> EncryptedRecordId {
+        EncryptedRecordId::new(PRODUCTION_IDENTITY_PRIVATE_KEY_RECORD_ID)
+            .expect("static production identity record id is valid")
+    }
+
+    fn encode_production_identity_private_key_record(
+        profile: ProfileName,
+        private_key: &ProductionPairwisePrivateKey,
+    ) -> Result<EncryptedRecord, ProductionSessionError> {
+        if private_key.algorithm() != ProductionKeyAlgorithm::Ed25519DalekV2 {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let encoded = format!(
+            "ed25519-dalek-v2:{}",
+            encode_hex(private_key.encrypted_storage_bytes())
+        );
+        EncryptedRecord::new(
+            ProductionRecordKind::PairwiseIdentityPrivateKey,
+            EncryptedRecordScope::profile(profile),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            encoded.into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)
+        .map_err(ProductionSessionError::from)
+    }
+
+    fn decode_production_identity_private_key_record(
+        record: EncryptedRecord,
+    ) -> Result<ProductionPairwisePrivateKey, ProductionSessionError> {
+        if record.kind != ProductionRecordKind::PairwiseIdentityPrivateKey {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let encoded = String::from_utf8(record.sealed_body)
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let seed_hex = encoded
+            .strip_prefix("ed25519-dalek-v2:")
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        let seed = decode_hex(seed_hex).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        ProductionPairwisePrivateKey::from_bytes(ProductionKeyAlgorithm::Ed25519DalekV2, seed)
+            .map_err(ProductionSessionError::from)
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -2510,6 +2687,58 @@ pub mod production {
 
             assert!(present.storage_opened());
             assert!(present.profile_marker_present());
+            assert!(!present.key_material_exposed());
+            assert!(!present.transport_io_opened());
+            assert!(!present.runtime_messaging_enabled());
+
+            let _ = std::fs::remove_dir_all(dir);
+        }
+
+        #[test]
+        fn production_profile_identity_init_and_status_use_encrypted_profile_store() {
+            let dir = std::env::temp_dir().join(format!(
+                "another-dimension-production-profile-identity-{}-{:?}",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+            if dir.exists() {
+                std::fs::remove_dir_all(&dir).expect("remove stale dir");
+            }
+            std::fs::create_dir_all(&dir).expect("create dir");
+            let store_path = dir.join("profile.db");
+            let profile = ProfileName::new("alice").expect("valid profile");
+            let passphrase = ProfilePassphrase::new("correct-passphrase").expect("passphrase");
+
+            assert_eq!(
+                production_profile_identity_status(&store_path, profile.clone(), &passphrase),
+                Err(ProductionSessionError::ProfileMarkerMissing)
+            );
+            production_profile_init(&store_path, profile.clone(), &passphrase)
+                .expect("profile init");
+            let missing_identity =
+                production_profile_identity_status(&store_path, profile.clone(), &passphrase)
+                    .expect("identity status before init");
+            assert!(missing_identity.storage_opened());
+            assert!(!missing_identity.identity_private_key_present());
+            assert!(!missing_identity.identity_public_key_derivable());
+            assert!(!missing_identity.key_material_exposed());
+            assert!(!missing_identity.transport_io_opened());
+            assert!(!missing_identity.runtime_messaging_enabled());
+
+            let init = production_profile_identity_init(&store_path, profile.clone(), &passphrase)
+                .expect("identity init");
+            assert!(init.storage_opened());
+            assert!(init.identity_private_key_written());
+            assert!(init.identity_public_key_derivable());
+            assert!(!init.key_material_exposed());
+            assert!(!init.transport_io_opened());
+            assert!(!init.runtime_messaging_enabled());
+
+            let present = production_profile_identity_status(&store_path, profile, &passphrase)
+                .expect("identity status after init");
+            assert!(present.storage_opened());
+            assert!(present.identity_private_key_present());
+            assert!(present.identity_public_key_derivable());
             assert!(!present.key_material_exposed());
             assert!(!present.transport_io_opened());
             assert!(!present.runtime_messaging_enabled());
