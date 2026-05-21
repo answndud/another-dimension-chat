@@ -5,6 +5,7 @@ import {
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
   productionManualNextActions,
+  productionManualStatusView,
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
   productionPairingPayloadView,
@@ -73,6 +74,9 @@ const fields = {
   productionProfileStorage: document.querySelector("#production-profile-storage"),
   productionProfileIdentity: document.querySelector("#production-profile-identity"),
   productionProfileBoundary: document.querySelector("#production-profile-boundary"),
+  productionManualRoute: document.querySelector("#production-manual-route"),
+  productionManualSlots: document.querySelector("#production-manual-slots"),
+  productionManualMode: document.querySelector("#production-manual-mode"),
   productionPairingEndpoint: document.querySelector("#production-pairing-endpoint"),
   exportProductionPairing: document.querySelector("#export-production-pairing"),
   productionPairingState: document.querySelector("#production-pairing-state"),
@@ -311,6 +315,37 @@ function renderManualNextActions(state) {
   setText(fields.productionMessageNextAction, nextActions.message);
 }
 
+function renderManualStatus() {
+  const profile = activeProductionProfileName();
+  const counterpart = productionCounterpartProfile(profile);
+  const slotState = {
+    pairing: {
+      local: productionPayloadSlots.pairing.has(profile),
+      remote: Boolean(counterpart && productionPayloadSlots.pairing.has(counterpart)),
+    },
+    handshakeInit: {
+      local: productionPayloadSlots.handshakeInit.has(profile),
+      remote: Boolean(counterpart && productionPayloadSlots.handshakeInit.has(counterpart)),
+    },
+    handshakeReply: {
+      local: productionPayloadSlots.handshakeReply.has(profile),
+      remote: Boolean(counterpart && productionPayloadSlots.handshakeReply.has(counterpart)),
+    },
+    handshakeFinish: {
+      local: productionPayloadSlots.handshakeFinish.has(profile),
+      remote: Boolean(counterpart && productionPayloadSlots.handshakeFinish.has(counterpart)),
+    },
+    messageEnvelope: {
+      local: productionPayloadSlots.messageEnvelope.has(profile),
+      remote: Boolean(counterpart && productionPayloadSlots.messageEnvelope.has(counterpart)),
+    },
+  };
+  const view = productionManualStatusView({ profile }, slotState);
+  setText(fields.productionManualRoute, view.route);
+  setText(fields.productionManualSlots, view.payloads);
+  setText(fields.productionManualMode, view.mode);
+}
+
 function twoProfileInputFingerprint(input) {
   return `${input.profileA}\n${input.profileB}\n${input.message}`;
 }
@@ -520,6 +555,7 @@ function applyProductionActionState() {
   setText(fields.productionTwoProfileReadiness, productionTwoProfileReadiness(twoProfile, busy));
   renderProductionTwoProfileMemory(twoProfile);
   renderManualNextActions(state);
+  renderManualStatus();
   setDisabled(fields.unlockProductionProfile, !availability.unlockProfile);
   setDisabled(fields.exportProductionPairing, !availability.exportPairing);
   setDisabled(fields.saveProductionSessionDraft, !availability.saveSessionDraft);
