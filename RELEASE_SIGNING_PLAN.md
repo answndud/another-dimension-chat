@@ -83,4 +83,6 @@ The release signing evidence package directory layout fixture is tracked in [REL
 
 The release signing evidence package layout coverage audit is tracked in [RELEASE_SIGNING_EVIDENCE_PACKAGE_LAYOUT_AUDIT.md](RELEASE_SIGNING_EVIDENCE_PACKAGE_LAYOUT_AUDIT.md), with audit checks in `scripts/verify_release_signing_evidence_package_layout_audit.sh`. It records fixture layout coverage, not release evidence.
 
-The next signing slice should define a release signing candidate evidence manifest consistency fixture while keeping real artifact signing and verification out of local verification until a candidate exists.
+The release signing candidate evidence manifest consistency fixture is tracked in [RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_FIXTURE.md](RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_FIXTURE.md), with fixture checks in `scripts/verify_release_signing_candidate_manifest_consistency_fixture.sh`. It checks disposable manifest digest consistency only, not candidate evidence.
+
+The next signing slice should define a release signing candidate manifest consistency coverage audit while keeping real artifact signing and verification out of local verification until a candidate exists.

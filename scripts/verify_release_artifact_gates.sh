@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-grep -q 'Release signing | No release signing workflow or signed artifact verification exists; a pre-implementation signing plan, tooling decision, ceremony dry-run record, real key ceremony requirements, artifact signing requirements, Release verification UX evidence requirements, candidate evidence index, candidate evidence collection runbook, candidate evidence fixture, candidate evidence fixture coverage audit, release-note non-claim guard, evidence package layout fixture, evidence package layout coverage audit, ceremony command harness, dry-run verifier, and disposable detached-signature fixture exist' \
+grep -q 'Release signing | No release signing workflow or signed artifact verification exists; a pre-implementation signing plan, tooling decision, ceremony dry-run record, real key ceremony requirements, artifact signing requirements, Release verification UX evidence requirements, candidate evidence index, candidate evidence collection runbook, candidate evidence fixture, candidate evidence fixture coverage audit, release-note non-claim guard, evidence package layout fixture, evidence package layout coverage audit, candidate manifest consistency fixture, ceremony command harness, dry-run verifier, and disposable detached-signature fixture exist' \
   "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'Reproducible or equivalent verification | No reproducible build evidence or equivalent binary verification evidence exists; a pre-implementation verification plan, input template, and manifest fixture verifier exist' \
   "$ROOT_DIR/RELEASE_HARDENING.md"
