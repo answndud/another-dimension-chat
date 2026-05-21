@@ -31,6 +31,17 @@ export function productionProfilePreset(peer) {
   return null;
 }
 
+export function productionCounterpartProfile(profile) {
+  const normalizedProfile = String(profile ?? "").trim().toLowerCase();
+  if (normalizedProfile === "alice") {
+    return "bob";
+  }
+  if (normalizedProfile === "bob") {
+    return "alice";
+  }
+  return null;
+}
+
 export function productionManualNextActions(state) {
   const {
     busy,

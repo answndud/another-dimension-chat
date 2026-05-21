@@ -167,6 +167,7 @@ require_contains "$APP_DIR/src/main.js" 'applyProductionActionState'
 require_contains "$APP_DIR/src/action-state.js" 'productionManualNextActions'
 require_contains "$APP_DIR/src/action-state.js" 'productionActionAvailability'
 require_contains "$APP_DIR/src/action-state.js" 'productionProfilePreset'
+require_contains "$APP_DIR/src/action-state.js" 'productionCounterpartProfile'
 require_contains "$APP_DIR/src/action-state.js" 'productionProfileUnlockView'
 require_contains "$APP_DIR/src/action-state.js" 'productionPairingPayloadView'
 require_contains "$APP_DIR/src/action-state.js" 'productionSessionDraftView'
@@ -181,6 +182,8 @@ require_contains "$APP_DIR/package.json" 'test:state'
 require_contains "$APP_DIR/src/main.js" 'productionSessionReadyForMessages'
 require_contains "$APP_DIR/src/main.js" 'applyProductionProfilePreset'
 require_contains "$APP_DIR/src/main.js" 'moveLocalPayload'
+require_contains "$APP_DIR/src/main.js" 'storeProductionPairingPayload'
+require_contains "$APP_DIR/src/main.js" 'loadProductionPairingPayload'
 require_contains "$APP_DIR/src/main.js" 'moveLocalMessageEnvelope'
 require_contains "$APP_DIR/src/main.js" 'exportProductionPairingPayload'
 require_contains "$APP_DIR/src/main.js" 'saveProductionSessionDraft'
@@ -220,6 +223,8 @@ require_contains "$APP_DIR/index.html" '<details class="advanced-panel">'
 require_contains "$APP_DIR/index.html" '<summary>Manual production payload tools</summary>'
 require_contains "$APP_DIR/index.html" 'use-alice-production-profile'
 require_contains "$APP_DIR/index.html" 'use-bob-production-profile'
+require_contains "$APP_DIR/index.html" 'store-production-pairing-payload'
+require_contains "$APP_DIR/index.html" 'load-production-pairing-payload'
 require_contains "$APP_DIR/src/styles.css" '.production-workflow'
 require_contains "$APP_DIR/src/styles.css" '.advanced-panel'
 require_contains "$APP_DIR/src/main.js" 'localLoopMessages'
@@ -452,6 +457,8 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<input id="production-pairing-endpoint" type="text" value="alice.onion" />' \
   | grep -v '<button id="export-production-pairing" type="button">Export pairing</button>' \
   | grep -v '<button id="use-production-pairing-payload" type="button">Use pairing</button>' \
+  | grep -v '<button id="store-production-pairing-payload" type="button">Store pairing</button>' \
+  | grep -v '<button id="load-production-pairing-payload" type="button">Load remote</button>' \
   | grep -v '<textarea id="production-pairing-payload" rows="5" readonly></textarea>' \
   | grep -v '<textarea id="production-remote-pairing-payload" rows="5"></textarea>' \
   | grep -v '<button id="save-production-session-draft" type="button">Save draft</button>' \
