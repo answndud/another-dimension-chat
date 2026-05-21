@@ -27,6 +27,7 @@ The repository currently has:
 - Core receive boundary that persists replay state only after successful decrypt/replay acceptance.
 - Local message index skeleton persistence through `ProductionEnvelopeSession`.
 - Local record lifecycle deletion helpers for encrypted records, replay state, message envelopes, local message indexes, and pairwise endpoint state.
+- A storage backend integration summary that reports the current SQLCipher-backed `ADREC1` spike, passphrase-first unlock boundary, encrypted record-body storage, no production key-management readiness, no replay rollback protection, no secure deletion from physical media, and no session transport persistence.
 
 The repository does not currently have:
 
@@ -333,6 +334,7 @@ Current lifecycle boundary:
 - Replay state commit ordering is tested for the current database state.
 - Opaque record ids are used for replay, message index, and endpoint state records.
 - Local record deletion helpers remove rows by opaque id only.
+- `storage_backend_integration_boundary_summary()` exposes these guardrails as integration status, while keeping production key management, replay rollback protection, secure media deletion, and session transport persistence explicitly unavailable.
 
 Non-claims:
 
