@@ -275,6 +275,41 @@ pub mod production {
         }
     }
 
+    pub struct NoiseStatelessResponderTransport {
+        remote_static: Vec<u8>,
+        transport: StatelessTransportState,
+    }
+
+    impl NoiseStatelessResponderTransport {
+        pub fn remote_static(&self) -> &[u8] {
+            &self.remote_static
+        }
+
+        pub fn decrypt_with_nonce(
+            &self,
+            nonce: u64,
+            ciphertext: &[u8],
+        ) -> Result<NoiseStatelessTransportPlaintext, CryptoError> {
+            let mut plaintext = vec![0_u8; ciphertext.len()];
+            let len = self
+                .transport
+                .read_message(nonce, ciphertext, &mut plaintext)?;
+            plaintext.truncate(len);
+            Ok(NoiseStatelessTransportPlaintext {
+                remote_static: self.remote_static.clone(),
+                plaintext,
+                key_material_exposed: false,
+            })
+        }
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct NoiseStatelessTransportPlaintext {
+        pub remote_static: Vec<u8>,
+        pub plaintext: Vec<u8>,
+        pub key_material_exposed: bool,
+    }
+
     impl fmt::Debug for NoiseTransportPair {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             f.debug_struct("NoiseTransportPair")
@@ -551,6 +586,34 @@ pub mod production {
         })
     }
 
+    pub fn create_noise_xx_stateless_responder_transport(
+        safety_transcript: &str,
+        responder_static: &NoiseStaticKeypair,
+        init_message: &[u8],
+        responder_ephemeral_private: &[u8],
+        finish_message: &[u8],
+    ) -> Result<NoiseStatelessResponderTransport, CryptoError> {
+        let mut responder = Builder::new(noise_params()?)
+            .local_private_key(&responder_static.private)?
+            .fixed_ephemeral_key_for_testing_only(responder_ephemeral_private)
+            .prologue(safety_transcript.as_bytes())?
+            .build_responder()?;
+        let mut read_buf = [0_u8; 1024];
+        responder.read_message(init_message, &mut read_buf)?;
+        let mut message = [0_u8; 1024];
+        let _reply_len = responder.write_message(&[], &mut message)?;
+        responder.read_message(finish_message, &mut read_buf)?;
+        let remote_static = responder
+            .get_remote_static()
+            .ok_or_else(|| CryptoError::Noise("missing responder remote static".to_string()))?
+            .to_vec();
+        let transport = responder.into_stateless_transport_mode()?;
+        Ok(NoiseStatelessResponderTransport {
+            remote_static,
+            transport,
+        })
+    }
+
     pub fn validate_noise_xx_handshake_finish_message(
         safety_transcript: &str,
         responder_static: &NoiseStaticKeypair,
@@ -763,6 +826,53 @@ pub mod production {
             assert_ne!(first.ciphertext, second.ciphertext);
             assert!(!first.key_material_exposed);
             assert!(!second.key_material_exposed);
+        }
+
+        #[test]
+        fn noise_xx_stateless_responder_transport_decrypts_explicit_nonce() {
+            let initiator = generate_noise_static_keypair().expect("initiator static key");
+            let responder = generate_noise_static_keypair().expect("responder static key");
+            let init =
+                create_noise_xx_handshake_init_export("ADPAIR-SAFETY-V1|alice|bob", &initiator)
+                    .expect("init export");
+            let reply = create_noise_xx_handshake_reply_export(
+                "ADPAIR-SAFETY-V1|alice|bob",
+                &responder,
+                &init.message,
+            )
+            .expect("reply export");
+            let finish = create_noise_xx_handshake_finish_export(
+                "ADPAIR-SAFETY-V1|alice|bob",
+                &initiator,
+                &init.initiator_ephemeral_private,
+                &reply.message,
+            )
+            .expect("finish export");
+            let sender = create_noise_xx_stateless_initiator_transport(
+                "ADPAIR-SAFETY-V1|alice|bob",
+                &initiator,
+                &init.initiator_ephemeral_private,
+                &reply.message,
+            )
+            .expect("sender");
+            let receiver = create_noise_xx_stateless_responder_transport(
+                "ADPAIR-SAFETY-V1|alice|bob",
+                &responder,
+                &init.message,
+                &reply.responder_ephemeral_private,
+                &finish.message,
+            )
+            .expect("receiver");
+            let ciphertext = sender
+                .encrypt_with_nonce(0, b"message one")
+                .expect("ciphertext");
+            let plaintext = receiver
+                .decrypt_with_nonce(0, &ciphertext.ciphertext)
+                .expect("plaintext");
+
+            assert_eq!(receiver.remote_static(), initiator.public_key());
+            assert_eq!(plaintext.plaintext, b"message one");
+            assert!(!plaintext.key_material_exposed);
         }
 
         #[test]

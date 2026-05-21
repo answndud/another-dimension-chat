@@ -2,10 +2,10 @@ pub mod production {
     use another_dimension_crypto::production::{
         create_noise_xx_handshake_finish_export, create_noise_xx_handshake_init_export,
         create_noise_xx_handshake_reply_export, create_noise_xx_stateless_initiator_transport,
-        establish_noise_xx_transport_pair, generate_noise_static_keypair,
-        prepare_noise_xx_handshake_init_message, run_noise_xx_handshake_smoke,
-        validate_noise_xx_handshake_finish_message, NoisePrekeyBundle, NoiseStaticKeypair,
-        NoiseTransportPair,
+        create_noise_xx_stateless_responder_transport, establish_noise_xx_transport_pair,
+        generate_noise_static_keypair, prepare_noise_xx_handshake_init_message,
+        run_noise_xx_handshake_smoke, validate_noise_xx_handshake_finish_message,
+        NoisePrekeyBundle, NoiseStaticKeypair, NoiseTransportPair,
     };
     use another_dimension_crypto::CryptoError;
     use another_dimension_identity::{
@@ -17,7 +17,8 @@ pub mod production {
         transcript, PairingError, PairingPayload, ProductionPairingDraft,
     };
     use another_dimension_protocol::{
-        decode_hex, encode_hex, pad_to_bucket, Envelope, MessageType, ProtocolError, ReplayWindow,
+        decode_hex, encode_hex, pad_to_bucket, trim_padding, Envelope, MessageType, ProtocolError,
+        ReplayWindow,
     };
     use another_dimension_storage::production::{
         production_message_storage_boundary_summary, protection_for,
@@ -490,6 +491,24 @@ pub mod production {
         envelope_encryption_ready: bool,
         encrypted_envelope_written: bool,
         network_send_attempted: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageInboundDecryptImportSummary {
+        storage_opened: bool,
+        runtime_material_reconstructable: bool,
+        envelope_read: bool,
+        envelope_decodable: bool,
+        session_transport_ready: bool,
+        replay_window_loaded: bool,
+        replay_accepted: bool,
+        plaintext_decrypted: bool,
+        plaintext_exposed: bool,
+        replay_window_committed: bool,
+        network_receive_attempted: bool,
         key_material_exposed: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
@@ -1418,6 +1437,51 @@ pub mod production {
             self.transport_io_opened
         }
 
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionMessageInboundDecryptImportSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+        pub fn runtime_material_reconstructable(self) -> bool {
+            self.runtime_material_reconstructable
+        }
+        pub fn envelope_read(self) -> bool {
+            self.envelope_read
+        }
+        pub fn envelope_decodable(self) -> bool {
+            self.envelope_decodable
+        }
+        pub fn session_transport_ready(self) -> bool {
+            self.session_transport_ready
+        }
+        pub fn replay_window_loaded(self) -> bool {
+            self.replay_window_loaded
+        }
+        pub fn replay_accepted(self) -> bool {
+            self.replay_accepted
+        }
+        pub fn plaintext_decrypted(self) -> bool {
+            self.plaintext_decrypted
+        }
+        pub fn plaintext_exposed(self) -> bool {
+            self.plaintext_exposed
+        }
+        pub fn replay_window_committed(self) -> bool {
+            self.replay_window_committed
+        }
+        pub fn network_receive_attempted(self) -> bool {
+            self.network_receive_attempted
+        }
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
         pub fn runtime_messaging_enabled(self) -> bool {
             self.runtime_messaging_enabled
         }
@@ -3804,6 +3868,105 @@ pub mod production {
             envelope_encryption_ready,
             encrypted_envelope_written,
             network_send_attempted: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_message_inbound_decrypt_import(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        envelope_payload: &str,
+    ) -> Result<ProductionMessageInboundDecryptImportSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        let draft = load_latest_session_draft(&store, &profile)?
+            .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let local_noise_static = store
+            .get(&production_latest_pairing_noise_static_record_id())?
+            .map(decode_production_noise_static_private_key_record)
+            .transpose()?
+            .ok_or(ProductionSessionError::NoiseStaticPrivateKeyMissing)?;
+        if local_noise_static.keypair.public_key() != draft.local_noise_static_public_key {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
+        let transport_state = load_session_transport_state(&store, &profile, &draft)?
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        let session_transport_ready = transport_state.channel_id == material.channel_id
+            && transport_state.local_role == SessionRole::Responder
+            && transport_state.handshake_message_kind == "finish"
+            && transport_state.remote_contact_id == material.remote_contact_id
+            && transport_state.remote_noise_static_public_key
+                == draft.remote_noise_static_public_key
+            && transport_state.transport_state_created;
+        if !session_transport_ready {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let envelope = Envelope::decode(envelope_payload)?;
+        if envelope.message_number == 0
+            || envelope.channel_id != material.channel_id
+            || envelope.message_type != MessageType::Data
+        {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let state = store
+            .get(&production_pending_handshake_initiator_state_record_id())?
+            .map(|record| {
+                decode_production_handshake_responder_state_record(
+                    record,
+                    &profile,
+                    &draft.channel_id,
+                )
+            })
+            .transpose()?
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        let transport = create_noise_xx_stateless_responder_transport(
+            &draft.safety_transcript,
+            &local_noise_static.keypair,
+            &state.init_message,
+            &state.responder_ephemeral_private,
+            &transport_state.handshake_message,
+        )
+        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        if transport.remote_static() != draft.remote_noise_static_public_key {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
+        let mut replay_window = store
+            .load_replay_window(&production_replay_record_id(&draft.channel_id))?
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        replay_window.accept(envelope.message_number)?;
+        let plaintext = transport
+            .decrypt_with_nonce(envelope.message_number - 1, &envelope.padded_ciphertext)
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        if plaintext.remote_static != draft.remote_noise_static_public_key
+            || plaintext.key_material_exposed
+            || trim_padding(&plaintext.plaintext).is_empty()
+        {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        store.save_replay_window(
+            &production_replay_record_id(&draft.channel_id),
+            EncryptedRecordScope::contact(profile, material.remote_contact_id),
+            &replay_window,
+        )?;
+        Ok(ProductionMessageInboundDecryptImportSummary {
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            envelope_read: !envelope_payload.is_empty(),
+            envelope_decodable: true,
+            session_transport_ready,
+            replay_window_loaded: true,
+            replay_accepted: true,
+            plaintext_decrypted: true,
+            plaintext_exposed: false,
+            replay_window_committed: true,
+            network_receive_attempted: false,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -6216,6 +6379,43 @@ pub mod production {
                 .padded_ciphertext
                 .windows(2)
                 .any(|window| window == b"hi"));
+            let (inbound_store, inbound_profile) = if outbound_profile == alice {
+                (&bob_store, bob.clone())
+            } else {
+                (&alice_store, alice.clone())
+            };
+            let receive = production_message_inbound_decrypt_import(
+                inbound_store,
+                inbound_profile.clone(),
+                &passphrase,
+                &envelope.encode(),
+            )
+            .expect("inbound decrypt import");
+            assert!(receive.storage_opened());
+            assert!(receive.runtime_material_reconstructable());
+            assert!(receive.envelope_read());
+            assert!(receive.envelope_decodable());
+            assert!(receive.session_transport_ready());
+            assert!(receive.replay_window_loaded());
+            assert!(receive.replay_accepted());
+            assert!(receive.plaintext_decrypted());
+            assert!(!receive.plaintext_exposed());
+            assert!(receive.replay_window_committed());
+            assert!(!receive.network_receive_attempted());
+            assert!(!receive.key_material_exposed());
+            assert!(!receive.transport_io_opened());
+            assert!(!receive.runtime_messaging_enabled());
+            assert!(matches!(
+                production_message_inbound_decrypt_import(
+                    inbound_store,
+                    inbound_profile,
+                    &passphrase,
+                    &envelope.encode(),
+                ),
+                Err(ProductionSessionError::Protocol(
+                    ProtocolError::ReplayMessage
+                ))
+            ));
             assert!(matches!(
                 production_message_send_prepare(
                     outbound_store,

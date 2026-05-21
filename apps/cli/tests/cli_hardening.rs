@@ -102,6 +102,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production message send-prepare"));
     assert!(out.contains("production message pending-status"));
     assert!(out.contains("production message outbound-encrypt-prepare"));
+    assert!(out.contains("production message inbound-decrypt-import"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
