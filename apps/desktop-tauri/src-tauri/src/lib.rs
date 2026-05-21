@@ -226,6 +226,22 @@ pub struct ProductionMessageEnvelopeImportResult {
     runtime_messaging_enabled: bool,
 }
 
+#[derive(serde::Serialize)]
+pub struct ProductionMessageReceivedExportResult {
+    warning: &'static str,
+    storage_opened: bool,
+    runtime_material_reconstructable: bool,
+    received_message_record_present: bool,
+    received_message_record_decodable: bool,
+    received_message_matches_session: bool,
+    received_message: String,
+    plaintext_returned_after_unlock: bool,
+    key_material_exposed: bool,
+    network_receive_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
 #[tauri::command]
 fn prototype_status() -> PrototypeStatus {
     status::redacted_prototype_status()
@@ -407,6 +423,23 @@ fn production_message_envelope_import(
         "production message import failed without exposing profile, path, or key details"
             .to_string()
     })
+}
+
+#[tauri::command]
+fn production_message_received_export(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+) -> Result<ProductionMessageReceivedExportResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production received message export failed without exposing local path details"
+    })?;
+    run_production_message_received_export(app_data_root, profile, passphrase, message_number)
+        .map_err(|_| {
+            "production received message export failed without exposing profile, path, or key details"
+                .to_string()
+        })
 }
 
 #[tauri::command]
@@ -1219,6 +1252,41 @@ fn run_production_message_envelope_import(
     })
 }
 
+fn run_production_message_received_export(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+) -> Result<ProductionMessageReceivedExportResult, String> {
+    use another_dimension_core::production::production_message_received_export;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let export =
+        production_message_received_export(&store_path, profile, &passphrase, message_number)
+            .map_err(|_| "received message export failed")?;
+    let received_message = String::from_utf8(export.export_payload().to_vec())
+        .map_err(|_| "received message is not displayable UTF-8")?;
+
+    Ok(ProductionMessageReceivedExportResult {
+        warning: "received message exported after local unlock; no network or transport IO opened",
+        storage_opened: export.storage_opened(),
+        runtime_material_reconstructable: export.runtime_material_reconstructable(),
+        received_message_record_present: export.received_message_record_present(),
+        received_message_record_decodable: export.received_message_record_decodable(),
+        received_message_matches_session: export.received_message_matches_session(),
+        received_message,
+        plaintext_returned_after_unlock: true,
+        key_material_exposed: export.key_material_exposed(),
+        network_receive_attempted: export.network_receive_attempted(),
+        transport_io_opened: export.transport_io_opened(),
+        runtime_messaging_enabled: export.runtime_messaging_enabled(),
+    })
+}
+
 fn sanitize_production_message_text(message: String) -> Result<Vec<u8>, String> {
     let trimmed = message.trim();
     if trimmed.is_empty() {
@@ -1483,6 +1551,7 @@ pub fn run() {
             production_handshake_finish_import,
             production_message_envelope_export,
             production_message_envelope_import,
+            production_message_received_export,
             production_local_roundtrip,
             dev_local_demo,
             dev_local_message_loop
@@ -1499,9 +1568,10 @@ mod tests {
         run_production_handshake_finish_import, run_production_handshake_init_export,
         run_production_handshake_reply_export, run_production_local_roundtrip,
         run_production_message_envelope_export, run_production_message_envelope_import,
-        run_production_pairing_payload_export, run_production_pairing_session_draft_save,
-        run_production_profile_unlock, sanitize_envelope_payload, sanitize_handshake_payload,
-        sanitize_loop_messages, sanitize_pairing_payload, sanitize_pairing_rendezvous_endpoint,
+        run_production_message_received_export, run_production_pairing_payload_export,
+        run_production_pairing_session_draft_save, run_production_profile_unlock,
+        sanitize_envelope_payload, sanitize_handshake_payload, sanitize_loop_messages,
+        sanitize_pairing_payload, sanitize_pairing_rendezvous_endpoint,
         sanitize_production_message_text, sanitize_production_profile,
         sanitize_production_roundtrip_message, unique_production_roundtrip_dir,
     };
@@ -2064,10 +2134,33 @@ replay check: no replayed messages after message 2
         assert!(!inbound.transport_io_opened);
         assert!(!inbound.runtime_messaging_enabled);
 
+        let received = run_production_message_received_export(
+            &root,
+            responder.to_string(),
+            "correct-passphrase".to_string(),
+            1,
+        )
+        .expect("received export");
+        assert!(received.storage_opened);
+        assert!(received.runtime_material_reconstructable);
+        assert!(received.received_message_record_present);
+        assert!(received.received_message_record_decodable);
+        assert!(received.received_message_matches_session);
+        assert_eq!(received.received_message, "persistent hello");
+        assert!(received.plaintext_returned_after_unlock);
+        assert!(!received.key_material_exposed);
+        assert!(!received.network_receive_attempted);
+        assert!(!received.transport_io_opened);
+        assert!(!received.runtime_messaging_enabled);
+
         let serialized = serde_json::to_string(&inbound).expect("serialize inbound");
         assert!(!serialized.contains("persistent hello"));
         assert!(!serialized.contains("ADENV1"));
         assert!(!serialized.contains("correct-passphrase"));
+        let serialized_received = serde_json::to_string(&received).expect("serialize received");
+        assert!(serialized_received.contains("persistent hello"));
+        assert!(!serialized_received.contains("ADENV1"));
+        assert!(!serialized_received.contains("correct-passphrase"));
         let _ = std::fs::remove_dir_all(root);
     }
 
