@@ -12,6 +12,9 @@ const fields = {
   productionSessionNonReadiness: document.querySelector("#production-session-non-readiness"),
   productionPreflight: document.querySelector("#production-preflight"),
   productionPreflightBlockers: document.querySelector("#production-preflight-blockers"),
+  sessionDurableState: document.querySelector("#session-durable-state"),
+  sessionUnlockPolicy: document.querySelector("#session-unlock-policy"),
+  sessionUnlockNonReadiness: document.querySelector("#session-unlock-non-readiness"),
   transport: document.querySelector("#transport"),
   networkExecution: document.querySelector("#network-execution"),
   experimentalTransport: document.querySelector("#experimental-transport"),
@@ -268,6 +271,9 @@ async function renderPrototypeStatus() {
     setText(fields.productionSessionNonReadiness, status.production_session_non_readiness);
     setText(fields.productionPreflight, status.production_preflight_status);
     setText(fields.productionPreflightBlockers, status.production_preflight_blockers);
+    setText(fields.sessionDurableState, status.session_durable_state_status);
+    setText(fields.sessionUnlockPolicy, status.session_unlock_policy_status);
+    setText(fields.sessionUnlockNonReadiness, status.session_unlock_non_readiness);
     setText(fields.transport, status.transport_status);
     setText(fields.networkExecution, status.network_execution_status);
     setText(fields.experimentalTransport, status.experimental_transport_status);
@@ -286,6 +292,17 @@ async function renderPrototypeStatus() {
     setText(
       fields.productionSessionNonReadiness,
       "No production E2EE claim durable persistence Tauri messaging command or async messaging",
+    );
+    setText(fields.productionPreflight, "Read-only production skeleton blockers copy");
+    setText(
+      fields.productionPreflightBlockers,
+      "Session E2EE false transport send receive false storage rollback not-provided messaging false",
+    );
+    setText(fields.sessionDurableState, "Read-only durable-state candidate blockers copy");
+    setText(fields.sessionUnlockPolicy, "High-risk passphrase required OS-keystore-only rejected");
+    setText(
+      fields.sessionUnlockNonReadiness,
+      "Product unlock durable persistence rollback runtime messaging disabled",
     );
     setText(fields.transport, "Pre-network fail-closed only");
     setText(fields.networkExecution, "Network execution disabled");
