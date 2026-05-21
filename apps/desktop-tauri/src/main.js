@@ -104,6 +104,7 @@ const fields = {
   productionTwoProfilePassphrase: document.querySelector("#production-two-profile-passphrase"),
   productionTwoProfileMessage: document.querySelector("#production-two-profile-message"),
   runProductionTwoProfileRoundtrip: document.querySelector("#run-production-two-profile-roundtrip"),
+  productionTwoProfileReadiness: document.querySelector("#production-two-profile-readiness"),
   productionTwoProfileState: document.querySelector("#production-two-profile-state"),
   productionTwoProfileWarning: document.querySelector("#production-two-profile-warning"),
   productionTwoProfileProfiles: document.querySelector("#production-two-profile-profiles"),
@@ -224,6 +225,28 @@ function productionSessionReadyForMessages() {
   return latestProductionSessionState?.ready_for_message_envelope === true;
 }
 
+function productionTwoProfileReadiness(input, busy) {
+  if (busy) {
+    return "Running: production action in progress";
+  }
+  if (!input.profileA) {
+    return "Blocked: Profile A required";
+  }
+  if (!input.profileB) {
+    return "Blocked: Profile B required";
+  }
+  if (input.profileA === input.profileB) {
+    return "Blocked: profiles must be distinct";
+  }
+  if (!input.passphrase) {
+    return "Blocked: passphrase required";
+  }
+  if (!input.message) {
+    return "Blocked: message required";
+  }
+  return "Ready: local encrypted roundtrip can run";
+}
+
 function moveLocalPayload(sourceField, targetField, label) {
   const value = sourceField?.value?.trim() ?? "";
   if (!value || !targetField) {
@@ -287,6 +310,7 @@ function applyProductionActionState() {
       twoProfile.message,
   );
 
+  setText(fields.productionTwoProfileReadiness, productionTwoProfileReadiness(twoProfile, busy));
   setDisabled(fields.unlockProductionProfile, busy || !hasProfileUnlockInput);
   setDisabled(fields.exportProductionPairing, busy || !hasPairingInput);
   setDisabled(fields.saveProductionSessionDraft, busy || !hasSessionDraftInput);
@@ -387,6 +411,7 @@ function resetProductionTwoProfileView() {
   setText(fields.productionTwoProfileSession, "Not checked yet");
   setText(fields.productionTwoProfileMessageState, "Not checked yet");
   setText(fields.productionTwoProfileBoundary, "Not checked yet");
+  applyProductionActionState();
 }
 
 function resetProductionProfileView() {
