@@ -351,6 +351,45 @@
               </div>
             </dl>
           </section>
+          <section class="loop-panel" aria-labelledby="production-two-profile-title">
+            <div>
+              <p class="eyebrow">Production two-profile</p>
+              <h3 id="production-two-profile-title">App-data local harness</h3>
+            </div>
+            <label class="loop-label" for="production-two-profile-a">Profile A</label>
+            <input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />
+            <label class="loop-label" for="production-two-profile-b">Profile B</label>
+            <input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />
+            <label class="loop-label" for="production-two-profile-message">Message</label>
+            <textarea id="production-two-profile-message" rows="3">hello between app-data profiles</textarea>
+            <div class="loop-actions">
+              <button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>
+            </div>
+            <p id="production-two-profile-state" class="demo-state" aria-live="polite">
+              Two-profile roundtrip idle
+            </p>
+            <p id="production-two-profile-warning" class="demo-warning">
+              Two-profile app-data harness has not run yet.
+            </p>
+            <dl class="flow-summary">
+              <div>
+                <dt>Profiles</dt>
+                <dd id="production-two-profile-profiles">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Session</dt>
+                <dd id="production-two-profile-session">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Message</dt>
+                <dd id="production-two-profile-message-state">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Boundary</dt>
+                <dd id="production-two-profile-boundary">Not checked yet</dd>
+              </div>
+            </dl>
+          </section>
           <section class="loop-panel" aria-labelledby="production-roundtrip-title">
             <div>
               <p class="eyebrow">Production core local roundtrip</p>
