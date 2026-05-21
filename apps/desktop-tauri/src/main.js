@@ -111,6 +111,8 @@ const fields = {
   productionTwoProfileSession: document.querySelector("#production-two-profile-session"),
   productionTwoProfileMessageState: document.querySelector("#production-two-profile-message-state"),
   productionTwoProfileBoundary: document.querySelector("#production-two-profile-boundary"),
+  productionTwoProfileCurrentInput: document.querySelector("#production-two-profile-current-input"),
+  productionTwoProfileLastSuccess: document.querySelector("#production-two-profile-last-success"),
   productionTwoProfileNextStep: document.querySelector("#production-two-profile-next-step"),
   openManualProductionTools: document.querySelector("#open-manual-production-tools"),
   focusLocalDiagnostic: document.querySelector("#focus-local-diagnostic"),
@@ -139,6 +141,7 @@ const fields = {
 
 let latestSimulation = null;
 let latestProductionSessionState = null;
+let latestProductionTwoProfileSuccess = null;
 let productionBusyAction = null;
 
 const themeStorageKey = "another-dimension-theme";
@@ -260,6 +263,34 @@ function productionTwoProfileReadiness(input, busy) {
   return "Ready: local encrypted roundtrip can run";
 }
 
+function twoProfileInputFingerprint(input) {
+  return `${input.profileA}\n${input.profileB}\n${input.message}`;
+}
+
+function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
+  const currentLabel =
+    input.profileA && input.profileB && input.message
+      ? `${input.profileA} -> ${input.profileB} | message_chars=${input.message.length}`
+      : "Current input incomplete";
+
+  if (!latestProductionTwoProfileSuccess) {
+    setText(fields.productionTwoProfileCurrentInput, "No successful run yet");
+    setText(fields.productionTwoProfileLastSuccess, "No successful roundtrip in this app session");
+    return;
+  }
+
+  const matchesLastSuccess =
+    twoProfileInputFingerprint(input) === latestProductionTwoProfileSuccess.fingerprint;
+  setText(
+    fields.productionTwoProfileCurrentInput,
+    `${matchesLastSuccess ? "Matches last success" : "Differs from last success"}: ${currentLabel}`,
+  );
+  setText(
+    fields.productionTwoProfileLastSuccess,
+    `${latestProductionTwoProfileSuccess.profileA} -> ${latestProductionTwoProfileSuccess.profileB} | message_chars=${latestProductionTwoProfileSuccess.messageLength}`,
+  );
+}
+
 function moveLocalPayload(sourceField, targetField, label) {
   const value = sourceField?.value?.trim() ?? "";
   if (!value || !targetField) {
@@ -340,6 +371,7 @@ function applyProductionActionState() {
   );
 
   setText(fields.productionTwoProfileReadiness, productionTwoProfileReadiness(twoProfile, busy));
+  renderProductionTwoProfileMemory(twoProfile);
   setDisabled(fields.unlockProductionProfile, busy || !hasProfileUnlockInput);
   setDisabled(fields.exportProductionPairing, busy || !hasPairingInput);
   setDisabled(fields.saveProductionSessionDraft, busy || !hasSessionDraftInput);
@@ -440,6 +472,7 @@ function resetProductionTwoProfileView() {
   setText(fields.productionTwoProfileSession, "Not checked yet");
   setText(fields.productionTwoProfileMessageState, "Not checked yet");
   setText(fields.productionTwoProfileBoundary, "Not checked yet");
+  renderProductionTwoProfileMemory();
   setProductionFollowupActions(false, "Next actions unlock after a completed local roundtrip.");
   applyProductionActionState();
 }
@@ -551,6 +584,7 @@ function productionTwoProfileInput() {
 }
 
 function renderProductionTwoProfileResult(result) {
+  const input = productionTwoProfileInput();
   const profilesReady =
     result.profile_a_unlocked &&
     result.profile_b_unlocked &&
@@ -592,6 +626,15 @@ function renderProductionTwoProfileResult(result) {
     `${boundaryContained ? "Contained" : "Review"}: no plaintext, key material, store path, network I/O, transport I/O, or runtime messaging exposure | plaintext_returned=${result.plaintext_returned_to_frontend} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
   );
   const canContinue = profilesReady && sessionReady && messageReady && boundaryContained;
+  if (canContinue) {
+    latestProductionTwoProfileSuccess = {
+      profileA: input.profileA,
+      profileB: input.profileB,
+      messageLength: input.message.length,
+      fingerprint: twoProfileInputFingerprint(input),
+    };
+    renderProductionTwoProfileMemory(input);
+  }
   setProductionFollowupActions(
     canContinue,
     canContinue
