@@ -44,7 +44,7 @@ What exists today:
 - A release signing implementation plan that targets offline detached signatures while keeping release signing documented as unimplemented.
 - A release signing dry-run verifier that uses disposable fixtures to reject missing signatures, stale checksums, stale detached signature markers, and unsigned artifacts without signing release artifacts.
 - A release detached-signature fixture verifier that uses disposable OpenSSL RSA keys to validate checksum signature behavior without creating release keys or signing release artifacts.
-- A release signing tooling decision gate that keeps final signing tooling explicitly unresolved until a separate decision record exists.
+- A release signing tooling decision gate that records the OpenSSL-compatible detached-signature path while keeping release signing documented as incomplete.
 - A reproducible/equivalent binary verification plan that records required evidence while keeping binary verification documented as incomplete.
 - A binary manifest fixture verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and build-input drift without verifying release artifacts.
 - A binary verification input template that records required release-candidate fields while remaining classified as not verification evidence.
@@ -279,6 +279,8 @@ The release hardening gap inventory is tracked in [RELEASE_HARDENING.md](RELEASE
 The current completion audit is tracked in [RELEASE_COMPLETION_AUDIT.md](RELEASE_COMPLETION_AUDIT.md). It records that current evidence does not prove v0.1-security-ready 100% and that release gates remain incomplete.
 
 The release signing plan is tracked in [RELEASE_SIGNING_PLAN.md](RELEASE_SIGNING_PLAN.md). It is a pre-implementation plan, not signed artifact verification.
+
+The release signing tooling decision is tracked in [RELEASE_SIGNING_TOOLING_DECISION.md](RELEASE_SIGNING_TOOLING_DECISION.md). It selects the detached-signature tooling path, but it is not release signing readiness.
 
 The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md). It is a pre-implementation plan, not reproducible build evidence.
 

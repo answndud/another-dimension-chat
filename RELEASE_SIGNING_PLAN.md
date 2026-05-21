@@ -8,7 +8,7 @@ The first release signing path should use offline detached signatures for releas
 
 - Build release artifacts in a documented release environment.
 - Produce a `SHA256SUMS` file that lists every release artifact.
-- Sign `SHA256SUMS` with an offline long-term signing key using minisign, signify, or an equivalent detached-signature tool.
+- Sign `SHA256SUMS` with an offline long-term signing key using the OpenSSL-compatible detached-signature path recorded in [RELEASE_SIGNING_TOOLING_DECISION.md](RELEASE_SIGNING_TOOLING_DECISION.md).
 - Publish the public signing key fingerprint through a stable release channel.
 - Document local verification steps for users and reviewers.
 
@@ -42,13 +42,13 @@ It uses disposable test fixtures to prove the planned checksum/signature verific
 
 The current fixture-only detached-signature prototype is `scripts/verify_release_detached_signature_fixture.sh`.
 
-It uses disposable OpenSSL RSA fixture keys to sign and verify `SHA256SUMS`, then confirms missing signatures, stale checksums, stale detached signatures, and unsigned artifacts are rejected. It does not create a release signing key, select final release signing tooling, or sign release artifacts.
+It uses disposable OpenSSL RSA fixture keys to sign and verify `SHA256SUMS`, then confirms missing signatures, stale checksums, stale detached signatures, and unsigned artifacts are rejected. It does not create a release signing key or sign release artifacts.
 
 ## Release Signing Tooling Decision Gate
 
-No final release signing tooling decision is recorded yet.
+The release signing tooling path is recorded in [RELEASE_SIGNING_TOOLING_DECISION.md](RELEASE_SIGNING_TOOLING_DECISION.md).
 
-Before release-candidate signing can proceed, the project must choose between a minisign/signify-first path and an OpenSSL-compatible detached-signature path. The decision record must cover:
+Before release-candidate signing can proceed, the project must still implement the selected OpenSSL-compatible detached-signature path. The implementation record must cover:
 
 - Operator tooling availability on supported maintainer platforms.
 - Public-key fingerprint format and publication instructions.
@@ -57,6 +57,6 @@ Before release-candidate signing can proceed, the project must choose between a 
 - CI and release-script behavior when the selected tool is missing.
 - How stale checksum files, missing signatures, and extra unsigned artifacts fail closed.
 
-The OpenSSL fixture does not select final release signing tooling. It only proves that a detached-signature fixture can exercise checksum/signature verification semantics without release keys.
+The OpenSSL fixture supports the selected tooling path, but it only proves that a detached-signature fixture can exercise checksum/signature verification semantics without release keys.
 
-The next signing slice should either record the final release signing tool decision or keep this gate explicitly unresolved while moving to reproducible/equivalent binary verification planning.
+The next signing slice should add a release key ceremony and signing command dry-run record that remains separate from real release signing evidence.

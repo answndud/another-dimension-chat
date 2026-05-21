@@ -6,7 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 grep -q 'Audit verdict: not complete' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'Current evidence does not prove v0.1-security-ready 100%' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
-grep -q 'Release signing | `RELEASE_HARDENING.md` records a pre-implementation signing plan, dry-run verifier, disposable detached-signature fixture, and unresolved tooling gate, but no release signing workflow or signed artifact verification exists' \
+grep -q 'Release signing | `RELEASE_HARDENING.md` records a pre-implementation signing plan, OpenSSL-compatible tooling decision, dry-run verifier, and disposable detached-signature fixture, but no release signing workflow or signed artifact verification exists' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'scripts/verify_release_signing_plan.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'scripts/verify_release_signing_dry_run.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
