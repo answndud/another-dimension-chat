@@ -23,6 +23,7 @@ run_step "dependency review template" scripts/verify_dependency_review_template.
 run_step "external review gate skeleton" scripts/verify_external_review_gate.sh
 run_step "external review template" scripts/verify_external_review_template.sh
 run_step "release completion audit" scripts/verify_release_completion_audit.sh
+run_step "release gate evidence audit" scripts/verify_release_gate_evidence_audit.sh
 run_step "update integrity gate skeleton" scripts/verify_update_integrity_gate.sh
 run_step "update integrity template" scripts/verify_update_integrity_template.sh
 run_step "release signoff gate skeleton" scripts/verify_release_signoff_gate.sh
