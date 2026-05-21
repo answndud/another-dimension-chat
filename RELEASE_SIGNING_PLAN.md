@@ -40,4 +40,8 @@ The current dry-run verification prototype is `scripts/verify_release_signing_dr
 
 It uses disposable test fixtures to prove the planned checksum/signature verification flow rejects missing signatures, stale checksums, stale detached signature markers, and unsigned artifacts. The dry-run marker is not a real release signature and must not be used as release evidence.
 
-The next signing slice should replace the dry-run marker with a real detached-signature tool in a fixture-only flow, still without creating a real release signing key or signing release artifacts.
+The current fixture-only detached-signature prototype is `scripts/verify_release_detached_signature_fixture.sh`.
+
+It uses disposable OpenSSL RSA fixture keys to sign and verify `SHA256SUMS`, then confirms missing signatures, stale checksums, stale detached signatures, and unsigned artifacts are rejected. It does not create a release signing key, select final release signing tooling, or sign release artifacts.
+
+The next signing slice should decide whether the release path stays with OpenSSL-compatible detached signatures or requires minisign/signify-specific tooling before release-candidate signing can proceed.
