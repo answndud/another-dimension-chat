@@ -95,6 +95,67 @@ pub mod production {
         pub plaintext: Vec<u8>,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionSessionEvaluationSummary {
+        protocol_candidate: &'static str,
+        production_pairing_required: bool,
+        safety_transcript_bound: bool,
+        canonical_dialer_stable: bool,
+        ciphertext_tamper_rejected: bool,
+        replay_guard_before_decrypt: bool,
+        session_state_in_memory_only: bool,
+        production_e2ee_ready: bool,
+        durable_session_persistence_ready: bool,
+        tauri_production_messaging_command_ready: bool,
+        usable_async_messaging_ready: bool,
+    }
+
+    impl ProductionSessionEvaluationSummary {
+        pub fn protocol_candidate(self) -> &'static str {
+            self.protocol_candidate
+        }
+
+        pub fn production_pairing_required(self) -> bool {
+            self.production_pairing_required
+        }
+
+        pub fn safety_transcript_bound(self) -> bool {
+            self.safety_transcript_bound
+        }
+
+        pub fn canonical_dialer_stable(self) -> bool {
+            self.canonical_dialer_stable
+        }
+
+        pub fn ciphertext_tamper_rejected(self) -> bool {
+            self.ciphertext_tamper_rejected
+        }
+
+        pub fn replay_guard_before_decrypt(self) -> bool {
+            self.replay_guard_before_decrypt
+        }
+
+        pub fn session_state_in_memory_only(self) -> bool {
+            self.session_state_in_memory_only
+        }
+
+        pub fn production_e2ee_ready(self) -> bool {
+            self.production_e2ee_ready
+        }
+
+        pub fn durable_session_persistence_ready(self) -> bool {
+            self.durable_session_persistence_ready
+        }
+
+        pub fn tauri_production_messaging_command_ready(self) -> bool {
+            self.tauri_production_messaging_command_ready
+        }
+
+        pub fn usable_async_messaging_ready(self) -> bool {
+            self.usable_async_messaging_ready
+        }
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct LocalMessageIndexEntry {
         contact_id: ContactId,
@@ -514,6 +575,22 @@ pub mod production {
         })
     }
 
+    pub fn production_session_evaluation_summary() -> ProductionSessionEvaluationSummary {
+        ProductionSessionEvaluationSummary {
+            protocol_candidate: "snow Noise XX synchronous boundary",
+            production_pairing_required: true,
+            safety_transcript_bound: true,
+            canonical_dialer_stable: true,
+            ciphertext_tamper_rejected: true,
+            replay_guard_before_decrypt: true,
+            session_state_in_memory_only: true,
+            production_e2ee_ready: false,
+            durable_session_persistence_ready: false,
+            tauri_production_messaging_command_ready: false,
+            usable_async_messaging_ready: false,
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -795,6 +872,26 @@ pub mod production {
             EndpointUpdateChannel, OnionServiceEndpoint, PairwiseRendezvousEndpoint,
             RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
         };
+
+        #[test]
+        fn production_session_evaluation_summary_keeps_readiness_false() {
+            let summary = production_session_evaluation_summary();
+
+            assert_eq!(
+                summary.protocol_candidate(),
+                "snow Noise XX synchronous boundary"
+            );
+            assert!(summary.production_pairing_required());
+            assert!(summary.safety_transcript_bound());
+            assert!(summary.canonical_dialer_stable());
+            assert!(summary.ciphertext_tamper_rejected());
+            assert!(summary.replay_guard_before_decrypt());
+            assert!(summary.session_state_in_memory_only());
+            assert!(!summary.production_e2ee_ready());
+            assert!(!summary.durable_session_persistence_ready());
+            assert!(!summary.tauri_production_messaging_command_ready());
+            assert!(!summary.usable_async_messaging_ready());
+        }
 
         #[test]
         fn production_setup_draft_signs_payload_with_noise_prekey_bundle() {
