@@ -125,6 +125,7 @@ This runs:
 - Session durable-state persistence adapter skeleton maps the allowed record policies without implementing storage unlock, transport I/O, or runtime messaging.
 - Session durable-state encrypted-record adapter spike prepares allowed sealed records without writing them to a store or enabling durable Noise transport state.
 - Session durable-state adapter non-readiness guard keeps rollback protection, durable session persistence, production E2EE readiness, store writes, and runtime messaging false.
+- Session durable-state store-write spike is test-only and round-trips a prepared sealed record through SQLCipher without adding a production unlock or messaging path.
 - Tauri scaffold static checks.
 - Public release hygiene static checks.
 

@@ -34,6 +34,7 @@ The repository currently has:
 - A session durable-state persistence adapter skeleton that maps those record kinds to storage policy without implementing unlock, transport I/O, runtime messaging, or durable Noise transport persistence.
 - A session durable-state encrypted-record adapter spike that prepares allowed sealed records without writing them to a store or opening unlock/runtime commands.
 - A session durable-state adapter non-readiness guard that keeps rollback protection, store writes, durable session persistence, production E2EE readiness, durable Noise transport persistence, and runtime messaging false.
+- A session durable-state store-write spike that is `#[cfg(test)]` only and round-trips one prepared sealed record through `SqlCipherRecordStore`.
 
 The repository does not currently have:
 
@@ -347,6 +348,7 @@ Current lifecycle boundary:
 - `session_durable_state_persistence_adapter_skeleton()` maps the allowed durable-state record policies before adding an encrypted-record adapter implementation.
 - `session_durable_state_encrypted_record_adapter_spike()` prepares allowed sealed records but does not perform store writes, unlock, or durable Noise transport persistence.
 - `session_durable_state_adapter_non_readiness_guard()` records that sealed-record preparation does not provide rollback protection, durable session persistence, production E2EE readiness, store writes, or runtime messaging.
+- `session_durable_state_store_write_test_only_round_trips_prepared_record` verifies one test-only SQLCipher round-trip for a prepared sealed durable-state record while preserving the production non-readiness guard.
 
 Non-claims:
 

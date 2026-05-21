@@ -531,6 +531,17 @@ pub mod production {
                 .map_err(ProductionStorageError::from)
                 .map_err(ProductionSessionError::from)
         }
+
+        #[cfg(test)]
+        fn test_only_put_prepared_record(
+            self,
+            store: &SqlCipherRecordStore,
+            record_id: &EncryptedRecordId,
+            record: &EncryptedRecord,
+        ) -> Result<(), ProductionSessionError> {
+            store.put(record_id, record)?;
+            Ok(())
+        }
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1695,6 +1706,40 @@ pub mod production {
             assert!(!guard.production_e2ee_ready());
             assert!(!guard.durable_noise_transport_persistence_allowed());
             assert!(!guard.runtime_messaging_enabled());
+        }
+
+        #[test]
+        fn session_durable_state_store_write_test_only_round_trips_prepared_record() {
+            let (dir, store) = production_test_store("session_durable_state_store_write_test_only");
+            let adapter = session_durable_state_encrypted_record_adapter_spike();
+            let scope =
+                EncryptedRecordScope::profile(ProfileName::new("alice").expect("valid profile"));
+            let record_id =
+                EncryptedRecordId::new("session_noise_static_test_only").expect("record id");
+            let record = adapter
+                .prepare_record(
+                    SessionDurableStateAdapterRecordKind::NoiseStaticPrivateKey,
+                    scope,
+                    b"adapter-spike-nonce".to_vec(),
+                    b"sealed-noise-static-key-record".to_vec(),
+                )
+                .expect("prepare record");
+
+            adapter
+                .test_only_put_prepared_record(&store, &record_id, &record)
+                .expect("test-only write");
+            assert_eq!(
+                store.get(&record_id).expect("load record"),
+                Some(record.clone())
+            );
+
+            let guard = session_durable_state_adapter_non_readiness_guard();
+            assert!(!guard.store_write_enabled());
+            assert!(!guard.durable_session_persistence_ready());
+            assert!(!guard.production_e2ee_ready());
+
+            drop(store);
+            std::fs::remove_dir_all(dir).expect("remove test store");
         }
 
         #[test]
