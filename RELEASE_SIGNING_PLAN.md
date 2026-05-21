@@ -89,4 +89,6 @@ The release signing candidate evidence manifest consistency coverage audit is tr
 
 The release signing candidate evidence package checksum coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_AUDIT.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_AUDIT.md), with audit checks in `scripts/verify_release_signing_candidate_evidence_package_checksum_audit.sh`. It records fixture checksum and digest coverage only, not candidate evidence.
 
-The next signing slice should define a release signing candidate evidence package checksum non-claim guard while keeping real artifact signing and verification out of local verification until a candidate exists.
+The release signing candidate evidence package checksum non-claim guard is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_NON_CLAIM_GUARD.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_NON_CLAIM_GUARD.md), with guard checks in `scripts/verify_release_signing_candidate_evidence_package_checksum_non_claim_guard.sh`. It prevents fixture checksum coverage from implying release evidence or approval.
+
+The next signing slice should define release signing candidate evidence package checksum guard coverage audit while keeping real artifact signing and verification out of local verification until a candidate exists.

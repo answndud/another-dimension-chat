@@ -47,6 +47,7 @@ run_step "release signing evidence package layout audit" scripts/verify_release_
 run_step "release signing candidate manifest consistency fixture" scripts/verify_release_signing_candidate_manifest_consistency_fixture.sh
 run_step "release signing candidate manifest consistency audit" scripts/verify_release_signing_candidate_manifest_consistency_audit.sh
 run_step "release signing candidate evidence package checksum audit" scripts/verify_release_signing_candidate_evidence_package_checksum_audit.sh
+run_step "release signing candidate evidence package checksum non-claim guard" scripts/verify_release_signing_candidate_evidence_package_checksum_non_claim_guard.sh
 run_step "binary verification plan" scripts/verify_binary_verification_plan.sh
 run_step "binary manifest fixture" scripts/verify_binary_manifest_fixture.sh
 run_step "binary input template" scripts/verify_binary_input_template.sh
