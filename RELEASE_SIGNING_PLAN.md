@@ -109,4 +109,6 @@ The release signing candidate signed-artifact verification non-claim guard is tr
 
 The release signing candidate signed-artifact verification guard coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_GUARD_AUDIT.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_GUARD_AUDIT.md), with audit checks in `scripts/verify_release_signing_candidate_signed_artifact_verification_guard_audit.sh`. It records non-claim guard coverage and limits only, not signed artifact verification evidence.
 
-The next signing slice should define release signing candidate signed-artifact verification guard audit coverage checks while keeping real artifact signing and verification out of local verification until a candidate exists.
+The release signing candidate signed-artifact verification guard audit coverage checks are tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_GUARD_AUDIT_COVERAGE_CHECKS.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_GUARD_AUDIT_COVERAGE_CHECKS.md), with coverage checks in `scripts/verify_release_signing_candidate_signed_artifact_verification_guard_audit_coverage_checks.sh`. They keep the guard audit and non-claim guard verifier anchors synchronized only, not signed artifact verification evidence.
+
+The next signing slice should define release signing candidate signed-artifact verification candidate evidence record template while keeping real artifact signing and verification out of local verification until a candidate exists.
