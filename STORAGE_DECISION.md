@@ -31,6 +31,7 @@ The repository currently has:
 - A production message storage boundary summary that keeps replay windows, message envelopes, local message indexes, and endpoint state encrypted-at-rest while keeping session transport state in-memory only.
 - A session durable-state connector gate draft that maps pairwise identity private keys, Noise static private keys, and replay window state to encrypted-at-rest records while keeping Noise/session transport state in-memory only.
 - A session durable-state connector harness that applies the gate to storage policy before connector implementation: encrypted-record paths are accepted for private-key and replay records, while session transport persistence is rejected.
+- A session durable-state persistence adapter skeleton that maps those record kinds to storage policy without implementing unlock, transport I/O, runtime messaging, or durable Noise transport persistence.
 
 The repository does not currently have:
 
@@ -341,6 +342,7 @@ Current lifecycle boundary:
 - `production_message_storage_boundary_summary()` exposes the current production message-path storage status: replay windows, message envelopes, local message indexes, and endpoint state require encrypted-at-rest records; session transport state remains in-memory only; replay commits only after decrypt; rollback protection, production key management, secure media deletion, and durable session transport persistence remain unavailable.
 - `session_durable_state_connector_gate()` records the current cross-core session persistence contract: pairwise identity private keys, Noise static private keys, and replay windows require encrypted-at-rest records; session transport state remains in-memory-only; rollback protection and runtime execution remain unavailable.
 - `session_durable_state_connector_test_harness()` verifies that contract against storage policy without adding storage unlock commands or durable Noise transport persistence.
+- `session_durable_state_persistence_adapter_skeleton()` maps the allowed durable-state record policies before adding an encrypted-record adapter implementation.
 
 Non-claims:
 

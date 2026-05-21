@@ -111,6 +111,8 @@ Replay-aware decrypt now uses the existing `ReplayWindow` boundary. Duplicate an
 
 `session_durable_state_connector_test_harness()` applies that gate to the storage policy without implementing the connector. It verifies that pairwise identity private keys, Noise static private keys, and replay windows may enter only the encrypted-record path, rejects session transport persistence, and keeps storage unlock commands, transport I/O, and runtime messaging closed.
 
+`session_durable_state_persistence_adapter_skeleton()` is the current adapter boundary before implementation. It maps pairwise identity private keys, Noise static private keys, replay windows, and session transport state to storage policy decisions, while keeping adapter implementation readiness, storage unlock commands, transport I/O, and runtime messaging false.
+
 ## Session Persistence Decision
 
 For the current v0.1 production message boundary, production session state is in-memory only.
