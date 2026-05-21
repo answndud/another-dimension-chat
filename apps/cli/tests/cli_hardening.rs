@@ -1384,7 +1384,7 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(handshake_finish_out.contains("finish_message_len="));
     assert!(handshake_finish_out.contains("finish_message_written=true"));
     assert!(handshake_finish_out.contains("finish_message_exposed=false"));
-    assert!(handshake_finish_out.contains("transport_state_persisted=false"));
+    assert!(handshake_finish_out.contains("transport_state_persisted=true"));
     assert!(handshake_finish_out.contains("key_material_exposed=false"));
     assert!(handshake_finish_out.contains("transport_io_opened=false"));
     assert!(handshake_finish_out.contains("runtime_messaging=false"));
@@ -1440,11 +1440,11 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(handshake_finish_import_out.contains("finish_message_len="));
     assert!(handshake_finish_import_out.contains("remote_static_verified=true"));
     assert!(handshake_finish_import_out.contains("transport_state_created=true"));
-    assert!(handshake_finish_import_out.contains("transport_state_persisted=false"));
+    assert!(handshake_finish_import_out.contains("transport_state_persisted=true"));
     assert!(handshake_finish_import_out.contains("key_material_exposed=false"));
     assert!(handshake_finish_import_out.contains("transport_io_opened=false"));
     assert!(handshake_finish_import_out.contains("runtime_messaging=false"));
-    assert!(handshake_finish_import_error.contains("transport state"));
+    assert!(handshake_finish_import_error.contains("transport state metadata"));
     assert!(!handshake_finish_import_out.contains("ADNOISEXXFINISH1"));
     assert!(!handshake_finish_import_out.contains(reply_profile));
     assert!(!handshake_finish_import_out.contains(reply_store_arg));
@@ -1578,7 +1578,7 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(encrypt_prepare_out.contains("local_message_index_matches_pending=true"));
     assert!(encrypt_prepare_out.contains("pending_plaintext_loaded=true"));
     assert!(encrypt_prepare_out.contains("plaintext_exposed=false"));
-    assert!(encrypt_prepare_out.contains("session_transport_ready=false"));
+    assert!(encrypt_prepare_out.contains("session_transport_ready=true"));
     assert!(encrypt_prepare_out.contains("envelope_encryption_ready=false"));
     assert!(encrypt_prepare_out.contains("encrypted_envelope_written=false"));
     assert!(encrypt_prepare_out.contains("network_send_attempted=false"));

@@ -1,6 +1,6 @@
 pub mod production {
     use another_dimension_crypto::production::{
-        create_noise_xx_handshake_finish_message, create_noise_xx_handshake_init_export,
+        create_noise_xx_handshake_finish_export, create_noise_xx_handshake_init_export,
         create_noise_xx_handshake_reply_export, establish_noise_xx_transport_pair,
         generate_noise_static_keypair, prepare_noise_xx_handshake_init_message,
         run_noise_xx_handshake_smoke, validate_noise_xx_handshake_finish_message,
@@ -47,6 +47,8 @@ pub mod production {
         b"AD-PRODUCTION-MESSAGE-ENVELOPE-RECORD-V1";
     const PRODUCTION_LOCAL_MESSAGE_INDEX_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-LOCAL-MESSAGE-INDEX-RECORD-V1";
+    const PRODUCTION_SESSION_TRANSPORT_STATE_RECORD_DOMAIN: &[u8] =
+        b"AD-PRODUCTION-SESSION-TRANSPORT-STATE-RECORD-V1";
     const PRODUCTION_IDENTITY_PRIVATE_KEY_RECORD_ID: &str = "pairwise_identity_private_key_v1";
     const PRODUCTION_LATEST_PAIRING_NOISE_STATIC_RECORD_ID: &str =
         "latest_pairing_noise_static_private_key_v1";
@@ -3293,14 +3295,35 @@ pub mod production {
             .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
         let reply_message = decode_handshake_reply_export(reply_payload)?;
         let local_role_can_finish = draft.local_role == SessionRole::CanonicalDialer;
-        let finish_message = if local_role_can_finish {
-            create_noise_xx_handshake_finish_message(
-                &draft.safety_transcript,
-                &local_noise_static.keypair,
-                &state.initiator_ephemeral_private,
-                &reply_message,
+        let finish_export = if local_role_can_finish {
+            Some(
+                create_noise_xx_handshake_finish_export(
+                    &draft.safety_transcript,
+                    &local_noise_static.keypair,
+                    &state.initiator_ephemeral_private,
+                    &reply_message,
+                )
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?,
             )
-            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
+        } else {
+            None
+        };
+        if let Some(finish_export) = &finish_export {
+            if finish_export.initiator_remote_static != draft.remote_noise_static_public_key {
+                return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+            }
+            let transport_record = encode_production_session_transport_state_record(
+                profile,
+                &draft,
+                &finish_export.initiator_remote_static,
+            )?;
+            store.put(
+                &production_session_transport_state_record_id(&draft.channel_id),
+                &transport_record,
+            )?;
+        }
+        let finish_message = if let Some(finish_export) = &finish_export {
+            finish_export.message.clone()
         } else {
             Vec::new()
         };
@@ -3324,7 +3347,9 @@ pub mod production {
             finish_message_len: finish_message.len(),
             finish_message_exposed: false,
             export_payload,
-            transport_state_persisted: false,
+            transport_state_persisted: finish_export
+                .as_ref()
+                .is_some_and(|finish_export| finish_export.transport_state_created),
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -3387,6 +3412,20 @@ pub mod production {
         if local_role_can_complete && !remote_static_verified {
             return Err(ProductionSessionError::NoiseStaticKeyMismatch);
         }
+        if let Some(complete) = &complete {
+            let transport_record = encode_production_session_transport_state_record(
+                profile,
+                &draft,
+                &complete.responder_remote_static,
+            )?;
+            store.put(
+                &production_session_transport_state_record_id(&draft.channel_id),
+                &transport_record,
+            )?;
+        }
+        let transport_state_persisted = complete
+            .as_ref()
+            .is_some_and(|complete| complete.transport_state_created);
         Ok(ProductionPairingSessionHandshakeFinishImportSummary {
             storage_opened: true,
             session_draft_loaded: true,
@@ -3402,7 +3441,7 @@ pub mod production {
             transport_state_created: complete
                 .as_ref()
                 .is_some_and(|complete| complete.transport_state_created),
-            transport_state_persisted: false,
+            transport_state_persisted,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -3624,6 +3663,9 @@ pub mod production {
             return Err(ProductionSessionError::ProfileMarkerMissing);
         }
         let material = load_session_runtime_material(&store, &profile)?;
+        let draft = load_latest_session_draft(&store, &profile)?
+            .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let transport_state = load_session_transport_state(&store, &profile, &draft)?;
         let index_record_id = production_local_message_index_record_id(
             &material.channel_id,
             &material.remote_contact_id,
@@ -3667,6 +3709,13 @@ pub mod production {
             }
             _ => false,
         };
+        let session_transport_ready = transport_state.as_ref().is_some_and(|state| {
+            state.channel_id == material.channel_id
+                && state.local_role == draft.local_role
+                && state.remote_contact_id == material.remote_contact_id
+                && state.remote_noise_static_public_key == draft.remote_noise_static_public_key
+                && state.transport_state_created
+        });
         Ok(ProductionMessageOutboundEncryptPrepareSummary {
             storage_opened: true,
             runtime_material_reconstructable: true,
@@ -3676,7 +3725,7 @@ pub mod production {
             local_message_index_matches_pending,
             pending_plaintext_loaded: pending.is_some(),
             plaintext_exposed: false,
-            session_transport_ready: false,
+            session_transport_ready,
             envelope_encryption_ready: false,
             encrypted_envelope_written: false,
             network_send_attempted: false,
@@ -4265,6 +4314,15 @@ pub mod production {
             .expect("domain-separated local message index record id is valid")
     }
 
+    fn production_session_transport_state_record_id(channel_id: &str) -> EncryptedRecordId {
+        let mut hasher = Sha256::new();
+        hasher.update(PRODUCTION_SESSION_TRANSPORT_STATE_RECORD_DOMAIN);
+        hasher.update([0]);
+        hasher.update(channel_id.as_bytes());
+        EncryptedRecordId::new(format!("transport_{}", encode_hex(&hasher.finalize())))
+            .expect("domain-separated session transport state record id is valid")
+    }
+
     fn decode_handshake_init_export(value: &str) -> Result<Vec<u8>, ProductionSessionError> {
         let trimmed = value.trim_end_matches(['\r', '\n']);
         let encoded = trimmed
@@ -4404,6 +4462,14 @@ pub mod production {
         channel_id: String,
         init_message: Vec<u8>,
         responder_ephemeral_private: Vec<u8>,
+    }
+
+    struct ProductionStoredSessionTransportState {
+        channel_id: String,
+        local_role: SessionRole,
+        remote_contact_id: ContactId,
+        remote_noise_static_public_key: Vec<u8>,
+        transport_state_created: bool,
     }
 
     struct ProductionSessionRuntimeMaterial {
@@ -4566,6 +4632,71 @@ pub mod production {
         })
     }
 
+    fn encode_production_session_transport_state_record(
+        profile: ProfileName,
+        draft: &ProductionStoredSessionDraft,
+        remote_noise_static_public_key: &[u8],
+    ) -> Result<EncryptedRecord, ProductionSessionError> {
+        if remote_noise_static_public_key != draft.remote_noise_static_public_key {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
+        let encoded = format!(
+            "ADSESSIONTRANSPORT1|{}|{}|{}|{}|{}",
+            draft.channel_id,
+            session_role_tag(draft.local_role),
+            draft.remote_contact_id.as_str(),
+            encode_hex(remote_noise_static_public_key),
+            "created"
+        );
+        EncryptedRecord::new(
+            ProductionRecordKind::SessionTransportState,
+            EncryptedRecordScope::contact(profile, draft.remote_contact_id.clone()),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            encoded.into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)
+        .map_err(ProductionSessionError::from)
+    }
+
+    fn decode_production_session_transport_state_record(
+        record: EncryptedRecord,
+        profile: &ProfileName,
+        draft: &ProductionStoredSessionDraft,
+    ) -> Result<ProductionStoredSessionTransportState, ProductionSessionError> {
+        if record.kind != ProductionRecordKind::SessionTransportState
+            || record.scope.profile_name() != profile
+            || record.scope.contact_id() != Some(&draft.remote_contact_id)
+        {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let encoded = String::from_utf8(record.sealed_body)
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let parts = encoded.split('|').collect::<Vec<_>>();
+        if parts.len() != 6 || parts[0] != "ADSESSIONTRANSPORT1" {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let local_role = parse_session_role_tag(parts[2])?;
+        let remote_contact_id =
+            ContactId::new(parts[3]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let remote_noise_static_public_key =
+            decode_hex(parts[4]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        if parts[1] != draft.channel_id
+            || local_role != draft.local_role
+            || remote_contact_id != draft.remote_contact_id
+            || remote_noise_static_public_key != draft.remote_noise_static_public_key
+            || parts[5] != "created"
+        {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        Ok(ProductionStoredSessionTransportState {
+            channel_id: parts[1].to_string(),
+            local_role,
+            remote_contact_id,
+            remote_noise_static_public_key,
+            transport_state_created: true,
+        })
+    }
+
     fn encode_production_session_draft_record(
         profile: ProfileName,
         plan: &ProductionSessionPlan,
@@ -4661,6 +4792,19 @@ pub mod production {
                 }
                 Ok(endpoint)
             })
+            .transpose()
+    }
+
+    fn load_session_transport_state(
+        store: &SqlCipherRecordStore,
+        profile: &ProfileName,
+        draft: &ProductionStoredSessionDraft,
+    ) -> Result<Option<ProductionStoredSessionTransportState>, ProductionSessionError> {
+        store
+            .get(&production_session_transport_state_record_id(
+                &draft.channel_id,
+            ))?
+            .map(|record| decode_production_session_transport_state_record(record, profile, draft))
             .transpose()
     }
 
@@ -5783,7 +5927,7 @@ pub mod production {
             assert!(finish_export
                 .export_payload()
                 .starts_with("ADNOISEXXFINISH1|"));
-            assert!(!finish_export.transport_state_persisted());
+            assert!(finish_export.transport_state_persisted());
             assert!(!finish_export.key_material_exposed());
             assert!(!finish_export.transport_io_opened());
             assert!(!finish_export.runtime_messaging_enabled());
@@ -5817,7 +5961,7 @@ pub mod production {
             assert!(finish_import.finish_message_len() > 0);
             assert!(finish_import.remote_static_verified());
             assert!(finish_import.transport_state_created());
-            assert!(!finish_import.transport_state_persisted());
+            assert!(finish_import.transport_state_persisted());
             assert!(!finish_import.key_material_exposed());
             assert!(!finish_import.transport_io_opened());
             assert!(!finish_import.runtime_messaging_enabled());
@@ -5927,7 +6071,7 @@ pub mod production {
             assert!(encrypt_prepare.local_message_index_matches_pending());
             assert!(encrypt_prepare.pending_plaintext_loaded());
             assert!(!encrypt_prepare.plaintext_exposed());
-            assert!(!encrypt_prepare.session_transport_ready());
+            assert!(encrypt_prepare.session_transport_ready());
             assert!(!encrypt_prepare.envelope_encryption_ready());
             assert!(!encrypt_prepare.encrypted_envelope_written());
             assert!(!encrypt_prepare.network_send_attempted());

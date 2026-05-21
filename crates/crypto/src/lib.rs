@@ -201,6 +201,14 @@ pub mod production {
     }
 
     #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct NoiseHandshakeFinishExport {
+        pub message: Vec<u8>,
+        pub initiator_remote_static: Vec<u8>,
+        pub key_material_exposed: bool,
+        pub transport_state_created: bool,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct NoiseHandshakeCompleteSummary {
         pub responder_remote_static: Vec<u8>,
         pub key_material_exposed: bool,
@@ -443,6 +451,21 @@ pub mod production {
         initiator_ephemeral_private: &[u8],
         reply_message: &[u8],
     ) -> Result<Vec<u8>, CryptoError> {
+        Ok(create_noise_xx_handshake_finish_export(
+            safety_transcript,
+            initiator_static,
+            initiator_ephemeral_private,
+            reply_message,
+        )?
+        .message)
+    }
+
+    pub fn create_noise_xx_handshake_finish_export(
+        safety_transcript: &str,
+        initiator_static: &NoiseStaticKeypair,
+        initiator_ephemeral_private: &[u8],
+        reply_message: &[u8],
+    ) -> Result<NoiseHandshakeFinishExport, CryptoError> {
         let mut initiator = Builder::new(noise_params()?)
             .local_private_key(&initiator_static.private)?
             .fixed_ephemeral_key_for_testing_only(initiator_ephemeral_private)
@@ -453,7 +476,17 @@ pub mod production {
         let mut read_buf = [0_u8; 1024];
         initiator.read_message(reply_message, &mut read_buf)?;
         let finish_len = initiator.write_message(&[], &mut message)?;
-        Ok(message[..finish_len].to_vec())
+        let initiator_remote_static = initiator
+            .get_remote_static()
+            .ok_or_else(|| CryptoError::Noise("missing initiator remote static".to_string()))?
+            .to_vec();
+        let _transport = initiator.into_transport_mode()?;
+        Ok(NoiseHandshakeFinishExport {
+            message: message[..finish_len].to_vec(),
+            initiator_remote_static,
+            key_material_exposed: false,
+            transport_state_created: true,
+        })
     }
 
     pub fn validate_noise_xx_handshake_finish_message(
