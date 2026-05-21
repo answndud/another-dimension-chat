@@ -36,6 +36,7 @@ run_step "release signing ceremony dry-run" scripts/verify_release_signing_cerem
 run_step "release signing ceremony harness" scripts/verify_release_signing_ceremony_harness.sh
 run_step "release key ceremony requirements" scripts/verify_release_key_ceremony_requirements.sh
 run_step "release artifact signing requirements" scripts/verify_release_artifact_signing_requirements.sh
+run_step "release verification UX requirements" scripts/verify_release_verification_ux_requirements.sh
 run_step "binary verification plan" scripts/verify_binary_verification_plan.sh
 run_step "binary manifest fixture" scripts/verify_binary_manifest_fixture.sh
 run_step "binary input template" scripts/verify_binary_input_template.sh
