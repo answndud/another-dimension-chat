@@ -37,6 +37,7 @@ What exists today:
 - An external review readiness template that records required release-candidate scope, review material, reviewer expectation, finding triage, blocker, and classification fields while remaining classified as not review readiness evidence.
 - A release completion audit that records current v0.1-security-ready evidence as not complete while release gates remain incomplete.
 - An update integrity gate verifier skeleton that keeps update/installer integrity documented as incomplete until release artifact and package verification evidence exists.
+- An update/installer integrity template that records required artifact, signature/hash, downgrade, platform package, recovery, and classification fields while remaining classified as not update integrity evidence.
 - A release signoff gate verifier skeleton that keeps release-candidate threat-model/release-copy signoff documented as incomplete until signoff evidence exists.
 - A release-candidate signoff template that records required threat-model, public-copy alignment, release-gate evidence, blocker, and classification fields while remaining classified as not signoff evidence.
 - A release signing implementation plan that targets offline detached signatures while keeping release signing documented as unimplemented.
@@ -287,6 +288,8 @@ The dependency review template is tracked in [RELEASE_DEPENDENCY_REVIEW_TEMPLATE
 The external review readiness template is tracked in [RELEASE_EXTERNAL_REVIEW_TEMPLATE.md](RELEASE_EXTERNAL_REVIEW_TEMPLATE.md). It is not external review readiness evidence or independent review evidence.
 
 The release-candidate signoff template is tracked in [RELEASE_SIGNOFF_TEMPLATE.md](RELEASE_SIGNOFF_TEMPLATE.md). It is not release-candidate signoff evidence or release-copy approval.
+
+The update and installer integrity template is tracked in [RELEASE_UPDATE_INTEGRITY_TEMPLATE.md](RELEASE_UPDATE_INTEGRITY_TEMPLATE.md). It is not update integrity evidence or installer integrity evidence.
 
 ## License
 

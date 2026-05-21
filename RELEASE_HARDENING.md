@@ -38,7 +38,7 @@ The repository does not currently have:
 | Dependency and supply-chain review | Lockfiles, static checks, and a release-candidate review template exist, but no candidate-specific review evidence exists. | Add dependency review procedure, deny/allow policy, and release evidence. |
 | Threat model and release copy alignment | Public non-claim copy and a release-candidate signoff template exist, but no candidate-specific signoff evidence exists. | Reconcile release copy, known risks, non-goals, and threat model for the exact release candidate. |
 | External or independent review readiness | A readiness template exists, but no candidate-specific external or independent review readiness evidence exists. | Prepare review materials and track findings before any high-risk release claim. |
-| Update and installer integrity | No updater or package-integrity story exists. | Define update verification, rollback handling, and platform package integrity. |
+| Update and installer integrity | An integrity template exists, but no candidate-specific update or installer integrity evidence exists. | Define update verification, rollback handling, and platform package integrity. |
 
 ## Dependency Review Policy Skeleton
 
@@ -82,6 +82,8 @@ Before any security-ready claim, an external review readiness record must identi
 
 No update or installer integrity evidence is recorded yet.
 
+The update and installer integrity template is tracked in [RELEASE_UPDATE_INTEGRITY_TEMPLATE.md](RELEASE_UPDATE_INTEGRITY_TEMPLATE.md). It is not update integrity evidence, installer integrity evidence, package integrity approval, or release approval.
+
 Before any security-ready claim, an update integrity record must identify artifact formats, signature/hash verification, downgrade or rollback handling, platform package integrity, and recovery behavior for failed updates. At minimum, that record must cover:
 
 - Platform artifact formats and package/install verification expectations.
@@ -93,6 +95,8 @@ Before any security-ready claim, an update integrity record must identify artifa
 - Explicit confirmation that no auto-update or background update check is enabled for v0.1.
 
 `scripts/verify_update_integrity_gate.sh` is the current update and installer integrity verifier skeleton. It confirms that update/installer integrity is still documented as incomplete and fails if public copy starts claiming update or package integrity completion before evidence exists.
+
+`scripts/verify_update_integrity_template.sh` checks that the template still contains release-candidate placeholders and remains classified as `not-update-integrity-evidence`. It does not verify artifacts, approve package integrity, or enable auto-update.
 
 ## Release-Candidate Threat Model and Copy Signoff Skeleton
 
