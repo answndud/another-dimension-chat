@@ -33,4 +33,8 @@ Before public copy can claim reproducible or equivalent binary verification is r
 
 ## Next Implementation Slice
 
-The next binary verification slice should add a fixture-only manifest verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and unrecorded build-input changes without claiming reproducible builds.
+The current fixture-only manifest verifier is `scripts/verify_binary_manifest_fixture.sh`.
+
+It rejects missing artifacts, extra artifacts, checksum mismatches, and unrecorded build-input changes in disposable fixtures. It does not verify release artifacts, prove reproducibility, or provide independent rebuild evidence.
+
+The next binary verification slice should add a release-candidate build input template that records the source commit, lockfiles, toolchain, build commands, and platform fields that a real verification record would require.

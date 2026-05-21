@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 grep -q 'Release signing | No release signing workflow or signed artifact verification exists; a pre-implementation signing plan, dry-run verifier, and disposable detached-signature fixture exist' \
   "$ROOT_DIR/RELEASE_HARDENING.md"
-grep -q 'Reproducible or equivalent verification | No reproducible build evidence or equivalent binary verification evidence exists; a pre-implementation verification plan exists' \
+grep -q 'Reproducible or equivalent verification | No reproducible build evidence or equivalent binary verification evidence exists; a pre-implementation verification plan and manifest fixture verifier exist' \
   "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'This inventory does not replace an external review, release signing, reproducible/equivalent verification, or dependency review' \
   "$ROOT_DIR/RELEASE_HARDENING.md"
