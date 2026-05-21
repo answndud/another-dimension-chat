@@ -8,7 +8,7 @@ grep -q 'Another Dimension Chat does not have release signing today' \
 grep -q 'pre-implementation signing design, not signed artifact evidence and not release approval' \
   "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
 grep -q 'SHA256SUMS' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
-grep -q 'minisign, signify, or an equivalent detached-signature tool' \
+grep -q 'RELEASE_SIGNING_TOOLING_DECISION.md' \
   "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
 grep -q 'dry-run release using disposable test keys' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
 grep -q 'does not make Another Dimension Chat release-ready or v0.1-security-ready' \
@@ -16,7 +16,7 @@ grep -q 'does not make Another Dimension Chat release-ready or v0.1-security-rea
 grep -q 'scripts/verify_release_signing_dry_run.sh' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
 grep -q 'The dry-run marker is not a real release signature' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
 grep -q 'scripts/verify_release_detached_signature_fixture.sh' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
-grep -q 'does not create a release signing key, select final release signing tooling, or sign release artifacts' \
+grep -q 'does not create a release signing key or sign release artifacts' \
   "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
 grep -q 'RELEASE_SIGNING_PLAN.md' "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'scripts/verify_release_signing_plan.sh' "$ROOT_DIR/RELEASE_HARDENING.md"
