@@ -9,6 +9,7 @@ import {
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
   productionPairingPayloadView,
+  productionProfileMessageReadiness,
   productionProfilePreset,
   productionProfileUnlockView,
   productionReceivedMessageExportView,
@@ -182,6 +183,7 @@ const fields = {
 
 let latestSimulation = null;
 let latestProductionSessionState = null;
+let latestProductionTwoProfileSessionStatus = null;
 let latestProductionTwoProfileSuccess = null;
 let productionBusyAction = null;
 const productionPayloadSlots = {
@@ -295,11 +297,31 @@ function validProductionMessageNumber() {
 }
 
 function productionSessionReadyForMessages() {
-  return latestProductionSessionState?.ready_for_message_envelope === true;
+  const activeProfile = activeProductionProfileName();
+  const scopedTwoProfileStatus = latestTwoProfileSessionStatusForCurrentInput();
+  return productionProfileMessageReadiness(
+    activeProfile,
+    latestProductionSessionState,
+    scopedTwoProfileStatus,
+  );
 }
 
 function activeProductionProfileName() {
   return (fields.productionProfileName?.value ?? "").trim().toLowerCase();
+}
+
+function twoProfileSessionStatusFingerprint(input = productionTwoProfileInput()) {
+  return `${input.profileA.toLowerCase()}\n${input.profileB.toLowerCase()}`;
+}
+
+function latestTwoProfileSessionStatusForCurrentInput(input = productionTwoProfileInput()) {
+  if (!latestProductionTwoProfileSessionStatus) {
+    return null;
+  }
+  const currentFingerprint = twoProfileSessionStatusFingerprint(input);
+  return latestProductionTwoProfileSessionStatus.fingerprint === currentFingerprint
+    ? latestProductionTwoProfileSessionStatus.result
+    : null;
 }
 
 function applyProductionProfilePreset(peer) {
@@ -533,7 +555,10 @@ function applyProductionActionState() {
       sessionReadyForMessages,
   );
   const hasInboundEnvelopeInput = Boolean(
-    hasProfileUnlockInput && validProductionMessageNumber() && message.envelopePayload,
+    hasProfileUnlockInput &&
+      validProductionMessageNumber() &&
+      message.envelopePayload &&
+      sessionReadyForMessages,
   );
   const hasReceivedExportInput = Boolean(hasProfileUnlockInput && validProductionMessageNumber());
   const hasReceivedMessage = Boolean(fields.productionReceivedMessage?.value.trim());
@@ -633,7 +658,7 @@ function applyProductionActionState() {
   setActionButtonState(
     fields.importProductionMessageEnvelope,
     !availability.importMessageEnvelope,
-    busy ? "Wait for the active production action." : "Load or paste a remote envelope first.",
+    busy ? "Wait for the active production action." : "Complete session state, then load or paste a remote envelope.",
     true,
   );
   setActionButtonState(
@@ -811,6 +836,7 @@ function resetProductionRoundtripView() {
 }
 
 function resetProductionTwoProfileView() {
+  latestProductionTwoProfileSessionStatus = null;
   setProductionTwoProfileState("Two-profile roundtrip idle");
   setText(fields.productionTwoProfileWarning, "Two-profile app-data harness has not run yet.");
   setText(fields.productionTwoProfileProfiles, "Not checked yet");
@@ -876,6 +902,7 @@ async function loadProductionProfileList() {
 
 function resetProductionPairingView() {
   latestProductionSessionState = null;
+  latestProductionTwoProfileSessionStatus = null;
   setProductionPairingState("Pairing payload idle");
   setText(fields.productionPairingWarning, "Pairing payload has not been exported yet.");
   if (fields.productionPairingPayload) {
@@ -1535,10 +1562,20 @@ async function checkProductionTwoProfileSessionStatus() {
       passphrase,
     });
     const view = productionTwoProfileSessionStatusView(result);
+    latestProductionTwoProfileSessionStatus = {
+      fingerprint: twoProfileSessionStatusFingerprint({
+        profileA,
+        profileB,
+        passphrase,
+        message: "",
+      }),
+      result,
+    };
     setText(fields.productionTwoProfileSessionStatus, `${view.state}: ${view.status}`);
     setText(fields.productionPairingWarning, result.warning);
     setText(fields.productionPairingBoundary, view.boundary);
   } catch (error) {
+    latestProductionTwoProfileSessionStatus = null;
     setText(fields.productionTwoProfileSessionStatus, "Two-profile session status failed");
     setText(fields.productionPairingWarning, String(error));
   } finally {

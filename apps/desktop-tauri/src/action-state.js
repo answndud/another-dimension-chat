@@ -298,6 +298,20 @@ export function productionTwoProfileSessionStatusView(result) {
   };
 }
 
+export function productionProfileMessageReadiness(profile, singleProfileState, twoProfileStatus) {
+  const normalizedProfile = String(profile ?? "").trim().toLowerCase();
+  if (!normalizedProfile) {
+    return false;
+  }
+  if (twoProfileStatus?.profile_a === normalizedProfile) {
+    return twoProfileStatus.profile_a_ready_for_message_envelope === true;
+  }
+  if (twoProfileStatus?.profile_b === normalizedProfile) {
+    return twoProfileStatus.profile_b_ready_for_message_envelope === true;
+  }
+  return singleProfileState?.ready_for_message_envelope === true;
+}
+
 export function productionHandshakePayloadView(result) {
   return {
     state:
