@@ -156,6 +156,52 @@ impl TransportAdapterIntegrationBoundarySummary {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TransportMessagePathBoundarySummary {
+    route_kind: TransportKind,
+    route_allowed_by_policy: bool,
+    runtime_state: TransportRuntimeState,
+    fail_closed_blocker: Option<TransportRuntimeError>,
+    envelope_io_available: bool,
+    send_receive_available: bool,
+    offline_mailbox_available: bool,
+    usable_messaging_enabled: bool,
+}
+
+impl TransportMessagePathBoundarySummary {
+    pub fn route_kind(self) -> TransportKind {
+        self.route_kind
+    }
+
+    pub fn route_allowed_by_policy(self) -> bool {
+        self.route_allowed_by_policy
+    }
+
+    pub fn runtime_state(self) -> TransportRuntimeState {
+        self.runtime_state
+    }
+
+    pub fn fail_closed_blocker(self) -> Option<TransportRuntimeError> {
+        self.fail_closed_blocker
+    }
+
+    pub fn envelope_io_available(self) -> bool {
+        self.envelope_io_available
+    }
+
+    pub fn send_receive_available(self) -> bool {
+        self.send_receive_available
+    }
+
+    pub fn offline_mailbox_available(self) -> bool {
+        self.offline_mailbox_available
+    }
+
+    pub fn usable_messaging_enabled(self) -> bool {
+        self.usable_messaging_enabled
+    }
+}
+
 pub trait EnvelopeTransport {
     fn send_envelope(&self, request: TransportSendRequest<'_>) -> Result<(), TransportError>;
 
@@ -202,6 +248,22 @@ impl OnionEnvelopeTransport {
             runtime_state: self.runtime_state,
             fail_closed_blocker: self.runtime_state.fail_closed_blocker(),
             envelope_io_available: false,
+        }
+    }
+
+    pub fn message_path_boundary_summary(
+        &self,
+        route: &TransportRoute,
+    ) -> TransportMessagePathBoundarySummary {
+        TransportMessagePathBoundarySummary {
+            route_kind: route.kind(),
+            route_allowed_by_policy: self.policy.require_allowed(route).is_ok(),
+            runtime_state: self.runtime_state,
+            fail_closed_blocker: self.runtime_state.fail_closed_blocker(),
+            envelope_io_available: false,
+            send_receive_available: false,
+            offline_mailbox_available: false,
+            usable_messaging_enabled: false,
         }
     }
 }
