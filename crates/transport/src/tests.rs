@@ -618,6 +618,51 @@ fn onion_transport_can_hold_ready_runtime_state_but_still_fails_closed() {
 }
 
 #[test]
+fn transport_message_path_summary_allows_onion_but_keeps_send_receive_disabled() {
+    let transport =
+        OnionEnvelopeTransport::fail_closed_after_preflight(TransportRuntimePreflight {
+            runtime_network_enabled: true,
+            state_cache_dirs_accessible: true,
+            log_redaction_ready: true,
+            bridge_or_censorship_ready: true,
+        })
+        .expect("ready runtime state");
+    let onion = TransportRoute::onion("example.onion").expect("onion route");
+    let summary = transport.message_path_boundary_summary(&onion);
+
+    assert_eq!(summary.route_kind(), TransportKind::OnionService);
+    assert!(summary.route_allowed_by_policy());
+    assert_eq!(
+        summary.runtime_state(),
+        TransportRuntimeState::Ready(TransportRuntimeReady)
+    );
+    assert_eq!(summary.fail_closed_blocker(), None);
+    assert!(!summary.envelope_io_available());
+    assert!(!summary.send_receive_available());
+    assert!(!summary.offline_mailbox_available());
+    assert!(!summary.usable_messaging_enabled());
+}
+
+#[test]
+fn transport_message_path_summary_rejects_direct_route_before_send_receive() {
+    let transport = OnionEnvelopeTransport::fail_closed_high_risk();
+    let direct = TransportRoute::direct_peer("peer.example").expect("direct route");
+    let summary = transport.message_path_boundary_summary(&direct);
+
+    assert_eq!(summary.route_kind(), TransportKind::DirectPeer);
+    assert!(!summary.route_allowed_by_policy());
+    assert_eq!(summary.runtime_state(), TransportRuntimeState::Disabled);
+    assert_eq!(
+        summary.fail_closed_blocker(),
+        Some(TransportRuntimeError::RuntimeNetworkDisabled)
+    );
+    assert!(!summary.envelope_io_available());
+    assert!(!summary.send_receive_available());
+    assert!(!summary.offline_mailbox_available());
+    assert!(!summary.usable_messaging_enabled());
+}
+
+#[test]
 fn onion_transport_rejects_runtime_state_when_preflight_fails() {
     assert_eq!(
         OnionEnvelopeTransport::fail_closed_after_preflight(

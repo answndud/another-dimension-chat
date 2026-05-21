@@ -112,8 +112,9 @@ pub use stream_session::{
 pub(crate) use transport_policy::is_safe_endpoint_token;
 pub use transport_policy::{
     DirectPeerEndpoint, EnvelopeTransport, LocalTransportEndpoint, OnionEnvelopeTransport,
-    Transport, TransportAdapterIntegrationBoundarySummary, TransportKind, TransportMode,
-    TransportPolicy, TransportReceiveRequest, TransportRoute, TransportSendRequest,
+    Transport, TransportAdapterIntegrationBoundarySummary, TransportKind,
+    TransportMessagePathBoundarySummary, TransportMode, TransportPolicy, TransportReceiveRequest,
+    TransportRoute, TransportSendRequest,
 };
 
 #[cfg(test)]

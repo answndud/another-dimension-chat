@@ -35,6 +35,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 - `TransportRuntimeState` separates disabled fail-closed state from a future runtime-ready state that can only be created from successful preflight.
 - `OnionEnvelopeTransport` stores runtime state, but send/receive remains fail-closed even when that state is ready.
 - `OnionEnvelopeTransport::integration_boundary_summary()` exposes the high-risk policy mode, runtime state, first fail-closed blocker, and a false envelope-I/O availability flag without starting bootstrap, hosting, streams, or transfer.
+- `OnionEnvelopeTransport::message_path_boundary_summary()` exposes the route kind, policy decision, runtime state, fail-closed blocker, and false envelope-I/O, send/receive, offline-mailbox, and usable-messaging flags for the future production message path.
 - `arti-adapter-spike` is an optional compile-only feature that depends on `arti-client 0.42.0` without opening network connections.
 - `arti_lifecycle_decision()` requires app-private state/cache directories, backup exclusion, log redaction, and no onion service key generation until a storage decision exists.
 - `ArtiAppPrivateDirs` and `ArtiAdapterSpike::fail_closed_app_private_config` compile-check app-private `TorClientConfigBuilder::from_directories` wiring without bootstrapping Tor.
@@ -71,6 +72,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 - Descriptor publication preparation must use `RedactedDescriptorPublicationContext`; raw descriptor contexts, descriptor bodies, endpoints, contact ids, profile names, and key material must not be passed through this boundary.
 - Inbound stream preparation must require inbound stream gate readiness and fail-closed adapter readiness before any later implementation can approach accept/read/write behavior.
 - Outbound stream preparation must require outbound stream gate readiness and fail-closed adapter readiness before any later implementation can approach dial/send behavior.
+- Production message path preparation must consult `TransportMessagePathBoundarySummary`; onion routes may pass policy, but envelope I/O, send/receive, offline mailbox, and usable messaging must remain false until a separate adapter phase explicitly changes them.
 - Stream adapter closeout must require inbound and outbound preparation readiness in addition to fail-closed adapter references.
 - Stream closeout integration ordering must start from preparation-aware closeout readiness before remote authentication and session binding can be considered.
 - Onion endpoint rotation remains a protocol/session concern and must be handled inside an authenticated encrypted session when implemented.
@@ -79,7 +81,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 
 Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts with an Arti bootstrap-to-hosting readiness audit using the existing fail-closed boundaries. Do not add more stream readiness or intent tokens, and do not implement real descriptor publication, network stream I/O, envelope send/receive, or usable messaging without a separate boundary decision.
 
-Lightweight repository boundary review is the current next step after closing the stream and desktop-status slices. The immediate finding is documentation drift only: keep public docs aligned with the read-only Tauri scaffold and completed endpoint rotation boundary before selecting another implementation phase. No real descriptor publication, network stream I/O, envelope send/receive, production messaging UI, or usable messaging may be enabled without a later explicit implementation decision.
+Transport message-path boundary cleanup is the current next step after closing the crypto/session visible status slice. Keep this step to route policy, runtime, fail-closed blocker, and false send/receive summary exposure. No real descriptor publication, network stream I/O, envelope send/receive, production messaging UI, or usable messaging may be enabled without a later explicit implementation decision.
 
 ## Arti Lifecycle Cleanup Closeout
 
