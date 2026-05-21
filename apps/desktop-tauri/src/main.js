@@ -1,4 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
+import {
+  productionActionAvailability,
+  productionManualNextActions,
+  productionTwoProfileReadiness,
+} from "./action-state.js";
 import "./styles.css";
 
 const fields = {
@@ -244,139 +249,12 @@ function productionSessionReadyForMessages() {
   return latestProductionSessionState?.ready_for_message_envelope === true;
 }
 
-function productionTwoProfileReadiness(input, busy) {
-  if (busy) {
-    return "Running: production action in progress";
-  }
-  if (!input.profileA) {
-    return "Blocked: Profile A required";
-  }
-  if (!input.profileB) {
-    return "Blocked: Profile B required";
-  }
-  if (input.profileA === input.profileB) {
-    return "Blocked: profiles must be distinct";
-  }
-  if (!input.passphrase) {
-    return "Blocked: passphrase required";
-  }
-  if (!input.message) {
-    return "Blocked: message required";
-  }
-  return "Ready: local encrypted roundtrip can run";
-}
-
 function renderManualNextActions(state) {
   const nextActions = productionManualNextActions(state);
 
   setText(fields.productionProfileNextAction, nextActions.profile);
   setText(fields.productionPairingNextAction, nextActions.pairing);
   setText(fields.productionMessageNextAction, nextActions.message);
-}
-
-function productionManualNextActions(state) {
-  const {
-    busy,
-    hasProfileUnlockInput,
-    hasPairingInput,
-    hasSessionDraftInput,
-    hasHandshakeReplyInput,
-    hasHandshakeFinishInput,
-    hasFinishImportInput,
-    sessionReadyForMessages,
-    hasOutboundMessageInput,
-    hasInboundEnvelopeInput,
-    hasReceivedMessage,
-  } = state;
-
-  if (busy) {
-    return {
-      profile: "Next: wait for the active production action.",
-      pairing: "Next: wait for the active production action.",
-      message: "Next: wait for the active production action.",
-    };
-  }
-
-  const profile = hasProfileUnlockInput
-    ? "Next: unlock profile."
-    : "Next: enter profile and passphrase.";
-
-  let pairingNext = "Next: unlock profile, then export pairing.";
-  if (hasPairingInput) {
-    pairingNext = "Next: export pairing.";
-  }
-  if (hasSessionDraftInput) {
-    pairingNext = "Next: save draft.";
-  }
-  if (hasHandshakeReplyInput) {
-    pairingNext = "Next: export reply.";
-  }
-  if (hasHandshakeFinishInput) {
-    pairingNext = "Next: export finish.";
-  }
-  if (hasFinishImportInput) {
-    pairingNext = "Next: import finish, then check session.";
-  }
-
-  let messageNext = sessionReadyForMessages
-    ? "Next: enter message and export envelope."
-    : "Next: complete session state, then export envelope.";
-  if (hasOutboundMessageInput) {
-    messageNext = "Next: export envelope.";
-  }
-  if (hasInboundEnvelopeInput) {
-    messageNext = "Next: import envelope.";
-  }
-  if (hasReceivedMessage) {
-    messageNext = "Next: review received message.";
-  }
-
-  return {
-    profile,
-    pairing: pairingNext,
-    message: messageNext,
-  };
-}
-
-function productionActionAvailability(state) {
-  const {
-    busy,
-    hasProfileUnlockInput,
-    hasPairingInput,
-    hasSessionDraftInput,
-    hasHandshakeReplyInput,
-    hasHandshakeFinishInput,
-    hasFinishImportInput,
-    hasLocalPairingPayload,
-    hasHandshakeInitPayload,
-    hasHandshakeReplyPayload,
-    hasHandshakeFinishPayload,
-    hasLocalMessageEnvelope,
-    hasOutboundMessageInput,
-    hasInboundEnvelopeInput,
-    hasReceivedExportInput,
-    hasTwoProfileInput,
-  } = state;
-
-  return {
-    unlockProfile: !busy && hasProfileUnlockInput,
-    exportPairing: !busy && hasPairingInput,
-    saveSessionDraft: !busy && hasSessionDraftInput,
-    checkSessionState: !busy && hasProfileUnlockInput,
-    exportHandshakeInit: !busy && hasProfileUnlockInput,
-    exportHandshakeReply: !busy && hasHandshakeReplyInput,
-    exportHandshakeFinish: !busy && hasHandshakeFinishInput,
-    importHandshakeFinish: !busy && hasFinishImportInput,
-    exportMessageEnvelope: !busy && hasOutboundMessageInput,
-    importMessageEnvelope: !busy && hasInboundEnvelopeInput,
-    exportReceivedMessage: !busy && hasReceivedExportInput,
-    runTwoProfileRoundtrip: !busy && hasTwoProfileInput,
-    usePairingPayload: !busy && hasLocalPairingPayload,
-    useHandshakeInit: !busy && hasHandshakeInitPayload,
-    useHandshakeReply: !busy && hasHandshakeReplyPayload,
-    useHandshakeFinish: !busy && hasHandshakeFinishPayload,
-    useMessageEnvelope: !busy && hasLocalMessageEnvelope,
-  };
 }
 
 function twoProfileInputFingerprint(input) {

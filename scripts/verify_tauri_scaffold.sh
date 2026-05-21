@@ -36,6 +36,8 @@ required_files=(
   "$APP_DIR/package-lock.json"
   "$TAURI_DIR/Cargo.lock"
   "$APP_DIR/index.html"
+  "$APP_DIR/src/action-state.js"
+  "$APP_DIR/src/action-state.test.js"
   "$APP_DIR/src/main.js"
   "$APP_DIR/src/styles.css"
   "$APP_DIR/vite.config.js"
@@ -162,8 +164,10 @@ require_contains "$APP_DIR/src/main.js" 'unlockProductionProfile'
 require_contains "$APP_DIR/src/main.js" 'loadProductionProfileList'
 require_contains "$APP_DIR/src/main.js" 'renderProductionProfileSelector'
 require_contains "$APP_DIR/src/main.js" 'applyProductionActionState'
-require_contains "$APP_DIR/src/main.js" 'productionManualNextActions'
-require_contains "$APP_DIR/src/main.js" 'productionActionAvailability'
+require_contains "$APP_DIR/src/action-state.js" 'productionManualNextActions'
+require_contains "$APP_DIR/src/action-state.js" 'productionActionAvailability'
+require_contains "$APP_DIR/src/action-state.test.js" 'node:test'
+require_contains "$APP_DIR/package.json" 'test:state'
 require_contains "$APP_DIR/src/main.js" 'productionSessionReadyForMessages'
 require_contains "$APP_DIR/src/main.js" 'moveLocalPayload'
 require_contains "$APP_DIR/src/main.js" 'moveLocalMessageEnvelope'
@@ -186,13 +190,13 @@ require_contains "$APP_DIR/src/main.js" 'themeStorageKey'
 require_contains "$APP_DIR/src/main.js" 'toggleTheme'
 require_contains "$APP_DIR/src/main.js" 'renderAppStateSummary'
 require_contains "$APP_DIR/src/main.js" 'Blocked: runtime transport disabled'
-require_contains "$APP_DIR/src/main.js" 'productionTwoProfileReadiness'
+require_contains "$APP_DIR/src/action-state.js" 'productionTwoProfileReadiness'
 require_contains "$APP_DIR/src/main.js" 'renderProductionTwoProfileResult'
 require_contains "$APP_DIR/src/main.js" 'setProductionFollowupActions'
 require_contains "$APP_DIR/src/main.js" 'openManualProductionTools'
 require_contains "$APP_DIR/src/main.js" 'Next: inspect manual payload tools'
-require_contains "$APP_DIR/src/main.js" 'Blocked: passphrase required'
-require_contains "$APP_DIR/src/main.js" 'Ready: local encrypted roundtrip can run'
+require_contains "$APP_DIR/src/action-state.js" 'Blocked: passphrase required'
+require_contains "$APP_DIR/src/action-state.js" 'Ready: local encrypted roundtrip can run'
 require_contains "$APP_DIR/src/main.js" 'no plaintext, key material, store path, network I/O, transport I/O, or runtime messaging exposure'
 require_contains "$APP_DIR/src/styles.css" '[data-theme="light"]'
 require_contains "$APP_DIR/src/styles.css" '.status-summary'

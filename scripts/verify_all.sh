@@ -16,6 +16,7 @@ cd "$ROOT_DIR"
 run_step "rustfmt" cargo fmt --all -- --check
 run_step "workspace library tests" cargo test --workspace --lib
 run_step "default build boundary checks" scripts/verify_default_boundary.sh
+run_step "tauri action state tests" npm --prefix apps/desktop-tauri run test:state
 run_step "tauri scaffold static checks" scripts/verify_tauri_scaffold.sh
 
 printf '\nlight verification steps passed\n'
