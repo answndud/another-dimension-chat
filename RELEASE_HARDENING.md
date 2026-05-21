@@ -49,3 +49,5 @@ The repository does not currently have:
 ## Verification Boundary
 
 `scripts/verify_release_hygiene.sh` checks that this inventory exists and continues to state the missing release gates. That static check prevents accidental public wording drift, but it does not satisfy the release gates.
+
+`scripts/verify_release_artifact_gates.sh` is the current signing/reproducible-build verifier skeleton. It confirms that release signing and reproducible/equivalent binary verification are still documented as incomplete and fails if public copy starts claiming those gates are ready before implementation.
