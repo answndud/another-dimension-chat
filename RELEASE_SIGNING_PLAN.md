@@ -59,4 +59,6 @@ Before release-candidate signing can proceed, the project must still implement t
 
 The OpenSSL fixture supports the selected tooling path, but it only proves that a detached-signature fixture can exercise checksum/signature verification semantics without release keys.
 
-The next signing slice should add a release key ceremony and signing command dry-run record that remains separate from real release signing evidence.
+The first dry-run ceremony and command record is tracked in [RELEASE_SIGNING_CEREMONY_DRY_RUN.md](RELEASE_SIGNING_CEREMONY_DRY_RUN.md). It is a dry-run procedure only, not release signing evidence.
+
+The next signing slice should add a disposable command harness for the ceremony record while keeping it separate from real release signing evidence.
