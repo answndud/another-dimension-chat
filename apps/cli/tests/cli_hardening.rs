@@ -102,6 +102,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production message send-prepare"));
     assert!(out.contains("production message pending-status"));
     assert!(out.contains("production message outbound-encrypt-prepare"));
+    assert!(out.contains("production message outbound-envelope-export"));
     assert!(out.contains("production message inbound-decrypt-import"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
@@ -688,6 +689,7 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     let bob_handshake_init_export = root.join("bob-handshake-init.txt");
     let handshake_reply_export = root.join("handshake-reply.txt");
     let handshake_finish_export = root.join("handshake-finish.txt");
+    let encrypted_envelope_export = root.join("encrypted-envelope.txt");
     let alice_store_arg = alice_store.to_str().expect("alice store path");
     let bob_store_arg = bob_store.to_str().expect("bob store path");
     let alice_payload_arg = alice_payload.to_str().expect("alice payload path");
@@ -705,6 +707,9 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     let handshake_finish_export_arg = handshake_finish_export
         .to_str()
         .expect("handshake finish export path");
+    let encrypted_envelope_export_arg = encrypted_envelope_export
+        .to_str()
+        .expect("encrypted envelope export path");
 
     let missing_profile = run_with_stdin(
         &[
@@ -1595,6 +1600,104 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!encrypt_prepare_error.contains("correct horse"));
     assert!(!encrypt_prepare_error.contains(finish_store_arg));
     assert!(!encrypt_prepare_error.contains("hello from canonical dialer"));
+
+    let envelope_export = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "outbound-envelope-export",
+            "--profile",
+            finish_profile,
+            "--store",
+            finish_store_arg,
+            "--message-number",
+            "1",
+            "--out",
+            encrypted_envelope_export_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let envelope_export_out = stdout(&envelope_export);
+    let envelope_export_error = stderr(&envelope_export);
+    assert!(
+        envelope_export.status.success(),
+        "stdout: {envelope_export_out}\nstderr: {envelope_export_error}"
+    );
+    assert!(envelope_export_out.contains("production message outbound envelope exported:"));
+    assert!(envelope_export_out.contains("storage_opened=true"));
+    assert!(envelope_export_out.contains("runtime_material_reconstructable=true"));
+    assert!(envelope_export_out.contains("encrypted_envelope_present=true"));
+    assert!(envelope_export_out.contains("envelope_decodable=true"));
+    assert!(envelope_export_out.contains("envelope_message_number_matches=true"));
+    assert!(envelope_export_out.contains("envelope_message_type_data=true"));
+    assert!(envelope_export_out.contains("envelope_written=true"));
+    assert!(envelope_export_out.contains("plaintext_exposed=false"));
+    assert!(envelope_export_out.contains("network_send_attempted=false"));
+    assert!(envelope_export_out.contains("key_material_exposed=false"));
+    assert!(envelope_export_out.contains("transport_io_opened=false"));
+    assert!(envelope_export_out.contains("runtime_messaging=false"));
+    assert!(envelope_export_error.contains("--out"));
+    assert!(!envelope_export_out.contains(finish_profile));
+    assert!(!envelope_export_out.contains(finish_store_arg));
+    assert!(!envelope_export_out.contains(encrypted_envelope_export_arg));
+    assert!(!envelope_export_out.contains("hello from canonical dialer"));
+    assert!(!envelope_export_out.contains("ADENV1"));
+    assert!(!envelope_export_out.contains("adchan1"));
+    assert!(!envelope_export_error.contains("correct horse"));
+    assert!(!envelope_export_error.contains(finish_store_arg));
+    assert!(!envelope_export_error.contains("hello from canonical dialer"));
+    let exported_envelope =
+        std::fs::read_to_string(&encrypted_envelope_export).expect("read encrypted envelope");
+    assert!(exported_envelope.starts_with("ADENV1|"));
+    assert!(!exported_envelope.contains("hello from canonical dialer"));
+
+    let inbound_import = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "inbound-decrypt-import",
+            "--profile",
+            reply_profile,
+            "--store",
+            reply_store_arg,
+            "--in",
+            encrypted_envelope_export_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let inbound_import_out = stdout(&inbound_import);
+    let inbound_import_error = stderr(&inbound_import);
+    assert!(
+        inbound_import.status.success(),
+        "stdout: {inbound_import_out}\nstderr: {inbound_import_error}"
+    );
+    assert!(inbound_import_out.contains("production message inbound decrypt imported:"));
+    assert!(inbound_import_out.contains("storage_opened=true"));
+    assert!(inbound_import_out.contains("runtime_material_reconstructable=true"));
+    assert!(inbound_import_out.contains("envelope_read=true"));
+    assert!(inbound_import_out.contains("envelope_decodable=true"));
+    assert!(inbound_import_out.contains("session_transport_ready=true"));
+    assert!(inbound_import_out.contains("replay_window_loaded=true"));
+    assert!(inbound_import_out.contains("replay_accepted=true"));
+    assert!(inbound_import_out.contains("plaintext_decrypted=true"));
+    assert!(inbound_import_out.contains("plaintext_exposed=false"));
+    assert!(inbound_import_out.contains("replay_window_committed=true"));
+    assert!(inbound_import_out.contains("network_receive_attempted=false"));
+    assert!(inbound_import_out.contains("key_material_exposed=false"));
+    assert!(inbound_import_out.contains("transport_io_opened=false"));
+    assert!(inbound_import_out.contains("runtime_messaging=false"));
+    assert!(inbound_import_error.contains("storage-only"));
+    assert!(!inbound_import_out.contains(reply_profile));
+    assert!(!inbound_import_out.contains(reply_store_arg));
+    assert!(!inbound_import_out.contains(encrypted_envelope_export_arg));
+    assert!(!inbound_import_out.contains("hello from canonical dialer"));
+    assert!(!inbound_import_out.contains("ADENV1"));
+    assert!(!inbound_import_out.contains("adchan1"));
+    assert!(!inbound_import_error.contains("correct horse"));
+    assert!(!inbound_import_error.contains(reply_store_arg));
+    assert!(!inbound_import_error.contains("hello from canonical dialer"));
 
     let swapped = run_with_stdin(
         &[

@@ -176,6 +176,11 @@ fn production_main() -> Result<(), String> {
             run_production_message_outbound_encrypt_prepare_command(args)?;
         }
         [cmd, sub, action, args @ ..]
+            if cmd == "production" && sub == "message" && action == "outbound-envelope-export" =>
+        {
+            run_production_message_outbound_envelope_export_command(args)?;
+        }
+        [cmd, sub, action, args @ ..]
             if cmd == "production" && sub == "message" && action == "inbound-decrypt-import" =>
         {
             run_production_message_inbound_decrypt_import_command(args)?;
@@ -249,6 +254,7 @@ fn production_help() -> String {
   another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> --passphrase-stdin
   another-dimension production message pending-status --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension production message outbound-encrypt-prepare --profile <name> --store <path> --message-number <n> --passphrase-stdin
+  another-dimension production message outbound-envelope-export --profile <name> --store <path> --message-number <n> --out <path> --passphrase-stdin
   another-dimension production message inbound-decrypt-import --profile <name> --store <path> --in <path> --passphrase-stdin
   another-dimension --help
 
@@ -277,6 +283,7 @@ boundary:
   production message send-prepare is storage-only: it validates outbound readiness and indexes a local message without network send
   production message pending-status is storage-only: it checks a queued outbound message without exposing plaintext or opening transport
   production message outbound-encrypt-prepare is storage-only: it checks pending plaintext and fails closed before envelope encryption until session transport exists
+  production message outbound-envelope-export is storage-only: it writes an encrypted envelope only to explicit --out and never prints plaintext
   production message inbound-decrypt-import is storage-only: it imports an encrypted envelope, decrypts it locally, and commits replay state without printing plaintext
   prototype profile/pairing/message commands require --features dev-insecure"
         .to_string()
@@ -1000,6 +1007,42 @@ fn run_production_message_outbound_encrypt_prepare_command(args: &[String]) -> R
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn run_production_message_outbound_envelope_export_command(args: &[String]) -> Result<(), String> {
+    let options = ProductionMessageOutboundEnvelopeExportOptions::parse(args)?;
+    let passphrase = read_production_passphrase()?;
+    let summary = another_dimension_core::production::production_message_outbound_envelope_export(
+        &options.store_path,
+        options.profile,
+        &passphrase,
+        options.message_number,
+    )
+    .map_err(redacted_production_message_outbound_envelope_export_error)?;
+    std::fs::write(&options.out_path, summary.export_payload()).map_err(|_| {
+        "production message outbound-envelope-export failed: out write failed".to_string()
+    })?;
+
+    println!(
+        "production message outbound envelope exported: storage_opened={} runtime_material_reconstructable={} encrypted_envelope_present={} envelope_decodable={} envelope_message_number_matches={} envelope_message_type_data={} envelope_written={} plaintext_exposed={} network_send_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.runtime_material_reconstructable(),
+        summary.encrypted_envelope_present(),
+        summary.envelope_decodable(),
+        summary.envelope_message_number_matches(),
+        summary.envelope_message_type_data(),
+        !summary.export_payload().is_empty(),
+        summary.plaintext_exposed(),
+        summary.network_send_attempted(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production message outbound-envelope-export writes encrypted envelope bytes only to --out and does not print plaintext"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 fn run_production_message_inbound_decrypt_import_command(args: &[String]) -> Result<(), String> {
     let options = ProductionMessageInboundDecryptImportOptions::parse(args)?;
     let passphrase = read_production_passphrase()?;
@@ -1163,6 +1206,14 @@ struct ProductionMessageInboundDecryptImportOptions {
     profile: another_dimension_identity::ProfileName,
     store_path: std::path::PathBuf,
     in_path: std::path::PathBuf,
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+struct ProductionMessageOutboundEnvelopeExportOptions {
+    profile: another_dimension_identity::ProfileName,
+    store_path: std::path::PathBuf,
+    message_number: u64,
+    out_path: std::path::PathBuf,
 }
 
 #[cfg(not(feature = "dev-insecure"))]
@@ -1748,6 +1799,76 @@ impl ProductionMessagePendingStatusOptions {
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+impl ProductionMessageOutboundEnvelopeExportOptions {
+    fn parse(args: &[String]) -> Result<Self, String> {
+        let mut profile = None;
+        let mut store_path = None;
+        let mut message_number = None;
+        let mut out_path = None;
+        let mut passphrase_stdin = false;
+        let mut index = 0;
+
+        while index < args.len() {
+            match args[index].as_str() {
+                "--profile" => {
+                    index += 1;
+                    profile = Some(
+                        args.get(index)
+                            .ok_or_else(production_message_outbound_envelope_export_help)
+                            .and_then(|value| {
+                                another_dimension_identity::ProfileName::new(value)
+                                    .map_err(|_| "invalid production profile name".to_string())
+                            })?,
+                    );
+                }
+                "--store" => {
+                    index += 1;
+                    store_path = Some(
+                        args.get(index)
+                            .map(std::path::PathBuf::from)
+                            .ok_or_else(production_message_outbound_envelope_export_help)?,
+                    );
+                }
+                "--message-number" => {
+                    index += 1;
+                    message_number = Some(
+                        args.get(index)
+                            .ok_or_else(production_message_outbound_envelope_export_help)?
+                            .parse::<u64>()
+                            .map_err(|_| production_message_outbound_envelope_export_help())?,
+                    );
+                }
+                "--out" => {
+                    index += 1;
+                    out_path = Some(
+                        args.get(index)
+                            .map(std::path::PathBuf::from)
+                            .ok_or_else(production_message_outbound_envelope_export_help)?,
+                    );
+                }
+                "--passphrase-stdin" => {
+                    passphrase_stdin = true;
+                }
+                _ => return Err(production_message_outbound_envelope_export_help()),
+            }
+            index += 1;
+        }
+
+        if !passphrase_stdin {
+            return Err(production_message_outbound_envelope_export_help());
+        }
+
+        Ok(Self {
+            profile: profile.ok_or_else(production_message_outbound_envelope_export_help)?,
+            store_path: store_path.ok_or_else(production_message_outbound_envelope_export_help)?,
+            message_number: message_number
+                .ok_or_else(production_message_outbound_envelope_export_help)?,
+            out_path: out_path.ok_or_else(production_message_outbound_envelope_export_help)?,
+        })
+    }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 impl ProductionMessageInboundDecryptImportOptions {
     fn parse(args: &[String]) -> Result<Self, String> {
         let mut profile = None;
@@ -1982,6 +2103,15 @@ fn production_message_outbound_encrypt_prepare_help() -> String {
   another-dimension production message outbound-encrypt-prepare --profile <name> --store <path> --message-number <n> --passphrase-stdin
 
 Reads the profile passphrase from stdin. Opens an encrypted local profile store, loads pending plaintext, and overwrites it with an encrypted outbound envelope when authenticated session transport metadata exists. This does not expose plaintext, open transport, or enable runtime messaging."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn production_message_outbound_envelope_export_help() -> String {
+    "usage:
+  another-dimension production message outbound-envelope-export --profile <name> --store <path> --message-number <n> --out <path> --passphrase-stdin
+
+Reads the profile passphrase from stdin and writes an encrypted outbound envelope only to --out. This does not expose plaintext, open transport, send over the network, or enable runtime messaging."
         .to_string()
 }
 
@@ -2375,6 +2505,14 @@ fn redacted_production_message_outbound_encrypt_prepare_error(
 ) -> String {
     redacted_production_message_send_prepare_error(error)
         .replace("send-prepare", "outbound-encrypt-prepare")
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_message_outbound_envelope_export_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    redacted_production_message_send_prepare_error(error)
+        .replace("send-prepare", "outbound-envelope-export")
 }
 
 #[cfg(not(feature = "dev-insecure"))]

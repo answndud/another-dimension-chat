@@ -496,6 +496,22 @@ pub mod production {
         runtime_messaging_enabled: bool,
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageOutboundEnvelopeExportSummary {
+        storage_opened: bool,
+        runtime_material_reconstructable: bool,
+        encrypted_envelope_present: bool,
+        envelope_decodable: bool,
+        envelope_message_number_matches: bool,
+        envelope_message_type_data: bool,
+        export_payload: String,
+        plaintext_exposed: bool,
+        network_send_attempted: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionMessageInboundDecryptImportSummary {
         storage_opened: bool,
@@ -1438,6 +1454,56 @@ pub mod production {
         }
 
         pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionMessageOutboundEnvelopeExportSummary {
+        pub fn storage_opened(&self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn runtime_material_reconstructable(&self) -> bool {
+            self.runtime_material_reconstructable
+        }
+
+        pub fn encrypted_envelope_present(&self) -> bool {
+            self.encrypted_envelope_present
+        }
+
+        pub fn envelope_decodable(&self) -> bool {
+            self.envelope_decodable
+        }
+
+        pub fn envelope_message_number_matches(&self) -> bool {
+            self.envelope_message_number_matches
+        }
+
+        pub fn envelope_message_type_data(&self) -> bool {
+            self.envelope_message_type_data
+        }
+
+        pub fn export_payload(&self) -> &str {
+            &self.export_payload
+        }
+
+        pub fn plaintext_exposed(&self) -> bool {
+            self.plaintext_exposed
+        }
+
+        pub fn network_send_attempted(&self) -> bool {
+            self.network_send_attempted
+        }
+
+        pub fn key_material_exposed(&self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(&self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(&self) -> bool {
             self.runtime_messaging_enabled
         }
     }
@@ -3867,6 +3933,57 @@ pub mod production {
             session_transport_ready,
             envelope_encryption_ready,
             encrypted_envelope_written,
+            network_send_attempted: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_message_outbound_envelope_export(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        message_number: u64,
+    ) -> Result<ProductionMessageOutboundEnvelopeExportSummary, ProductionSessionError> {
+        if message_number == 0 {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        let message_record_id = production_message_envelope_record_id(
+            &material.channel_id,
+            message_number,
+            MessageType::Data,
+        );
+        let record = store
+            .get(&message_record_id)?
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        if record.kind != ProductionRecordKind::MessageEnvelope {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let envelope_payload = String::from_utf8(record.sealed_body)
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let envelope = Envelope::decode(&envelope_payload)?;
+        let envelope_message_number_matches =
+            envelope.channel_id == material.channel_id && envelope.message_number == message_number;
+        let envelope_message_type_data = envelope.message_type == MessageType::Data;
+        if !envelope_message_number_matches || !envelope_message_type_data {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        Ok(ProductionMessageOutboundEnvelopeExportSummary {
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            encrypted_envelope_present: true,
+            envelope_decodable: true,
+            envelope_message_number_matches,
+            envelope_message_type_data,
+            export_payload: format!("{}\n", envelope.encode()),
+            plaintext_exposed: false,
             network_send_attempted: false,
             key_material_exposed: false,
             transport_io_opened: false,
@@ -6379,6 +6496,26 @@ pub mod production {
                 .padded_ciphertext
                 .windows(2)
                 .any(|window| window == b"hi"));
+            let export = production_message_outbound_envelope_export(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+                1,
+            )
+            .expect("outbound envelope export");
+            assert!(export.storage_opened());
+            assert!(export.runtime_material_reconstructable());
+            assert!(export.encrypted_envelope_present());
+            assert!(export.envelope_decodable());
+            assert!(export.envelope_message_number_matches());
+            assert!(export.envelope_message_type_data());
+            assert!(export.export_payload().starts_with("ADENV1|"));
+            assert!(!export.export_payload().contains("hi"));
+            assert!(!export.plaintext_exposed());
+            assert!(!export.network_send_attempted());
+            assert!(!export.key_material_exposed());
+            assert!(!export.transport_io_opened());
+            assert!(!export.runtime_messaging_enabled());
             let (inbound_store, inbound_profile) = if outbound_profile == alice {
                 (&bob_store, bob.clone())
             } else {
@@ -6388,7 +6525,7 @@ pub mod production {
                 inbound_store,
                 inbound_profile.clone(),
                 &passphrase,
-                &envelope.encode(),
+                export.export_payload(),
             )
             .expect("inbound decrypt import");
             assert!(receive.storage_opened());
