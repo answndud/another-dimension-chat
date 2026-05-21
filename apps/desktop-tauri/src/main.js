@@ -10,6 +10,8 @@ const fields = {
   productionSession: document.querySelector("#production-session"),
   productionSelfTest: document.querySelector("#production-self-test"),
   productionSessionNonReadiness: document.querySelector("#production-session-non-readiness"),
+  productionPreflight: document.querySelector("#production-preflight"),
+  productionPreflightBlockers: document.querySelector("#production-preflight-blockers"),
   transport: document.querySelector("#transport"),
   networkExecution: document.querySelector("#network-execution"),
   experimentalTransport: document.querySelector("#experimental-transport"),
@@ -264,6 +266,8 @@ async function renderPrototypeStatus() {
     setText(fields.productionSession, status.production_session_status);
     setText(fields.productionSelfTest, status.production_self_test_status);
     setText(fields.productionSessionNonReadiness, status.production_session_non_readiness);
+    setText(fields.productionPreflight, status.production_preflight_status);
+    setText(fields.productionPreflightBlockers, status.production_preflight_blockers);
     setText(fields.transport, status.transport_status);
     setText(fields.networkExecution, status.network_execution_status);
     setText(fields.experimentalTransport, status.experimental_transport_status);
