@@ -52,6 +52,21 @@ Before any security-ready claim, a dependency review record must identify review
 
 `scripts/verify_dependency_review_gate.sh` is the current dependency review verifier skeleton. It confirms that dependency review is still documented as incomplete and fails if public copy starts claiming dependency or supply-chain review completion before evidence exists.
 
+## External Review Readiness Checklist Skeleton
+
+No external or independent review readiness evidence is recorded yet.
+
+Before any security-ready claim, an external review readiness record must identify reviewed scope, reviewer independence expectations, review materials, finding triage, and release-blocking unresolved risks. At minimum, that record must cover:
+
+- Exact release-candidate commit, build profile, and platform artifacts under review.
+- Threat model, non-goals, and user-facing safety copy for the candidate.
+- Crypto/session, pairing/safety, transport/onion, storage/key lifecycle, replay/rollback, disappearing-message, Tauri IPC, update, and release-signing boundaries.
+- Reviewer access expectations, independence constraints, and any excluded areas.
+- Finding severity taxonomy, owner assignment, remediation evidence, and explicit release-blocker status.
+- Known unresolved risks that must stay visible to users and reviewers.
+
+`scripts/verify_external_review_gate.sh` is the current external review readiness verifier skeleton. It confirms that external review readiness is still documented as incomplete and fails if public copy starts claiming external or independent review completion before evidence exists.
+
 ## Non-Claims
 
 - Passing local verification does not mean the app is safe for high-risk communication.
