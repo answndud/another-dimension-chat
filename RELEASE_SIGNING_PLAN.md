@@ -71,4 +71,6 @@ The release verification UX evidence requirements are tracked in [RELEASE_VERIFI
 
 The release signing candidate evidence package index is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX.md). It ties the required release-candidate evidence records together, but it is not release signing evidence.
 
-The next signing slice should define a candidate evidence collection runbook while keeping real artifact signing and verification out of local verification until a candidate exists.
+The candidate evidence collection runbook is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_RUNBOOK.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_RUNBOOK.md). It defines collection order and fail-closed rules, but it is not candidate evidence.
+
+The next signing slice should define a disposable candidate evidence package fixture that rejects missing or template-only evidence without signing real artifacts.
