@@ -30,6 +30,12 @@ fn production_main() -> Result<(), String> {
             eprintln!("warning: production self-test is not a secure messenger release");
             println!("production boundary self-test passed");
         }
+        [cmd, sub] if cmd == "production" && sub == "preflight" => {
+            print_production_skeleton_preflight_summary();
+            eprintln!(
+                "warning: production preflight is read-only and not a secure messenger release"
+            );
+        }
         #[cfg(feature = "arti-manual-bootstrap")]
         [cmd, sub, args @ ..] if cmd == "transport" && sub == "bootstrap" => {
             run_manual_bootstrap_command(args)?;
@@ -54,12 +60,14 @@ fn production_main() -> Result<(), String> {
 fn production_help() -> String {
     "usage:
   another-dimension production self-test
+  another-dimension production preflight
   another-dimension --help
 
 boundary:
   default build is not a secure messenger release
   no usable messaging, profile creation, pairing, transport bootstrap, or storage unlock command is exposed
   production self-test performs no network I/O and opens no local storage
+  production preflight is read-only and performs no messaging, storage unlock, or transport I/O
   prototype profile/pairing/message commands require --features dev-insecure"
         .to_string()
 }
@@ -166,6 +174,37 @@ fn print_production_self_test_summary() {
         summary.durable_session_persistence_ready(),
         summary.tauri_production_messaging_command_ready(),
         summary.usable_async_messaging_ready()
+    );
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn print_production_skeleton_preflight_summary() {
+    let summary = another_dimension_core::production::production_skeleton_preflight_summary();
+
+    println!("production skeleton preflight summary:");
+    println!(
+        "session: pairing_required={} safety_transcript_bound={} production_e2ee={}",
+        summary.session_pairing_required(),
+        summary.session_safety_transcript_bound(),
+        summary.session_e2ee_ready()
+    );
+    println!(
+        "transport: route_kind={:?} route_allowed={} send_receive={}",
+        summary.transport_route_kind(),
+        summary.transport_route_allowed_by_policy(),
+        summary.transport_send_receive_available()
+    );
+    println!(
+        "storage: message_envelope={:?} session_transport={:?} replay_commit_after_decrypt={} rollback_protection={:?}",
+        summary.storage_message_envelope_protection(),
+        summary.storage_session_transport_protection(),
+        summary.storage_replay_commit_after_decrypt(),
+        summary.storage_rollback_protection()
+    );
+    println!(
+        "runtime command surface: default_closed={} production_messaging_ready={}",
+        summary.default_runtime_command_surface_closed(),
+        summary.production_messaging_ready()
     );
 }
 

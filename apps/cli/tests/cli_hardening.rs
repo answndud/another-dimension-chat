@@ -57,9 +57,11 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(stderr(&output).is_empty());
     let out = stdout(&output);
     assert!(out.contains("production self-test"));
+    assert!(out.contains("production preflight"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
+    assert!(out.contains("preflight is read-only"));
     assert!(out.contains("require --features dev-insecure"));
     assert!(!out.contains("message send"));
     assert!(!out.contains("pairing start"));
@@ -112,6 +114,36 @@ fn default_build_rejects_production_skeleton_commands() {
             "missing dev-insecure feature boundary for {args:?}: {error}"
         );
     }
+}
+
+#[test]
+#[cfg(not(feature = "dev-insecure"))]
+fn default_build_prints_read_only_production_preflight_without_secrets() {
+    let output = run(&["production", "preflight"]);
+
+    assert!(output.status.success());
+    let out = stdout(&output);
+    assert!(out.contains("production skeleton preflight summary:"));
+    assert!(out.contains("session: pairing_required=true"));
+    assert!(out.contains("safety_transcript_bound=true"));
+    assert!(out.contains("production_e2ee=false"));
+    assert!(out.contains("transport: route_kind=OnionService"));
+    assert!(out.contains("route_allowed=true"));
+    assert!(out.contains("send_receive=false"));
+    assert!(out.contains("storage: message_envelope=EncryptedAtRestRequired"));
+    assert!(out.contains("session_transport=InMemoryOnly"));
+    assert!(out.contains("replay_commit_after_decrypt=true"));
+    assert!(out.contains("rollback_protection=NotProvided"));
+    assert!(out.contains("runtime command surface: default_closed=true"));
+    assert!(out.contains("production_messaging_ready=false"));
+    let error = stderr(&output);
+    assert!(error.contains("production preflight is read-only"));
+    assert!(error.contains("not a secure messenger release"));
+    assert!(!out.contains("preflight.onion"));
+    assert!(!out.contains("ADPAIR2|"));
+    assert!(!out.contains("adnoise1:"));
+    assert!(!out.contains("ADENV1|"));
+    assert!(!error.contains("preflight.onion"));
 }
 
 #[test]
