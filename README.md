@@ -123,6 +123,7 @@ This runs:
 - Session durable-state connector gate draft records private-key and replay storage requirements while keeping Noise transport state in memory and runtime execution closed.
 - Session durable-state connector harness applies the storage policy to those records and rejects session transport persistence before any connector implementation.
 - Session durable-state persistence adapter skeleton maps the allowed record policies without implementing storage unlock, transport I/O, or runtime messaging.
+- Session durable-state encrypted-record adapter spike prepares allowed sealed records without writing them to a store or enabling durable Noise transport state.
 - Tauri scaffold static checks.
 - Public release hygiene static checks.
 

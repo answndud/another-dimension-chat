@@ -486,6 +486,53 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionDurableStateEncryptedRecordAdapter {
+        skeleton: SessionDurableStatePersistenceAdapterSkeleton,
+    }
+
+    impl SessionDurableStateEncryptedRecordAdapter {
+        pub fn new(skeleton: SessionDurableStatePersistenceAdapterSkeleton) -> Self {
+            Self { skeleton }
+        }
+
+        pub fn opens_storage_unlock_command(self) -> bool {
+            false
+        }
+
+        pub fn opens_transport_io(self) -> bool {
+            false
+        }
+
+        pub fn opens_runtime_messaging(self) -> bool {
+            false
+        }
+
+        pub fn persists_records_to_store(self) -> bool {
+            false
+        }
+
+        pub fn prepare_record(
+            self,
+            kind: SessionDurableStateAdapterRecordKind,
+            scope: EncryptedRecordScope,
+            nonce: Vec<u8>,
+            sealed_body: Vec<u8>,
+        ) -> Result<EncryptedRecord, ProductionSessionError> {
+            let policy = self.skeleton.record_policy(kind);
+            if !policy.encrypted_record_allowed() || !policy.persistence_allowed() {
+                return Err(ProductionSessionError::from(ProductionStorageError::from(
+                    ProductionStoragePolicyError::PersistenceForbidden {
+                        kind: policy.production_record_kind(),
+                    },
+                )));
+            }
+            EncryptedRecord::new(policy.production_record_kind(), scope, nonce, sealed_body)
+                .map_err(ProductionStorageError::from)
+                .map_err(ProductionSessionError::from)
+        }
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct LocalMessageIndexEntry {
         contact_id: ContactId,
@@ -1060,6 +1107,13 @@ pub mod production {
         }
     }
 
+    pub fn session_durable_state_encrypted_record_adapter_spike(
+    ) -> SessionDurableStateEncryptedRecordAdapter {
+        SessionDurableStateEncryptedRecordAdapter::new(
+            session_durable_state_persistence_adapter_skeleton(),
+        )
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -1528,6 +1582,48 @@ pub mod production {
             );
             assert!(!session_transport.encrypted_record_allowed());
             assert!(!session_transport.persistence_allowed());
+        }
+
+        #[test]
+        fn session_durable_state_encrypted_record_adapter_prepares_allowed_records_only() {
+            let adapter = session_durable_state_encrypted_record_adapter_spike();
+            assert!(!adapter.opens_storage_unlock_command());
+            assert!(!adapter.opens_transport_io());
+            assert!(!adapter.opens_runtime_messaging());
+            assert!(!adapter.persists_records_to_store());
+
+            let scope =
+                EncryptedRecordScope::profile(ProfileName::new("alice").expect("valid profile"));
+            let record = adapter
+                .prepare_record(
+                    SessionDurableStateAdapterRecordKind::NoiseStaticPrivateKey,
+                    scope.clone(),
+                    b"adapter-spike-nonce".to_vec(),
+                    b"sealed-noise-static-key-record".to_vec(),
+                )
+                .expect("noise static private key record can be prepared");
+            assert_eq!(record.kind, ProductionRecordKind::NoiseStaticPrivateKey);
+            assert_eq!(record.scope, scope);
+            assert!(record
+                .associated_data()
+                .starts_with(b"AD-ENCRYPTED-RECORD-V1|noise-static-private-key|"));
+
+            let rejected = adapter.prepare_record(
+                SessionDurableStateAdapterRecordKind::SessionTransportState,
+                EncryptedRecordScope::profile(ProfileName::new("alice").expect("valid profile")),
+                b"adapter-spike-nonce".to_vec(),
+                b"sealed-session-transport-record".to_vec(),
+            );
+            assert!(matches!(
+                rejected,
+                Err(ProductionSessionError::Storage(
+                    ProductionStorageError::Policy(
+                        ProductionStoragePolicyError::PersistenceForbidden {
+                            kind: ProductionRecordKind::SessionTransportState
+                        }
+                    )
+                ))
+            ));
         }
 
         #[test]
