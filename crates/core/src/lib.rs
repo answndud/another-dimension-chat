@@ -44,6 +44,7 @@ pub mod production {
     const PRODUCTION_IDENTITY_PRIVATE_KEY_RECORD_ID: &str = "pairwise_identity_private_key_v1";
     const PRODUCTION_LATEST_PAIRING_NOISE_STATIC_RECORD_ID: &str =
         "latest_pairing_noise_static_private_key_v1";
+    const PRODUCTION_LATEST_SESSION_DRAFT_RECORD_ID: &str = "latest_session_draft_v1";
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct ProductionSessionPlan {
@@ -244,6 +245,21 @@ pub mod production {
         runtime_messaging_enabled: bool,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionSaveDraftSummary {
+        storage_opened: bool,
+        session_plan_created: bool,
+        local_noise_static_private_key_loaded: bool,
+        local_noise_static_matches_payload: bool,
+        session_draft_written: bool,
+        remote_endpoint_state_written: bool,
+        replay_window_written: bool,
+        channel_id_derivable: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
     impl ProductionProfileInitSummary {
         pub fn storage_opened(self) -> bool {
             self.storage_opened
@@ -408,6 +424,52 @@ pub mod production {
         }
 
         pub fn runtime_messaging_enabled(&self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionSaveDraftSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_plan_created(self) -> bool {
+            self.session_plan_created
+        }
+
+        pub fn local_noise_static_private_key_loaded(self) -> bool {
+            self.local_noise_static_private_key_loaded
+        }
+
+        pub fn local_noise_static_matches_payload(self) -> bool {
+            self.local_noise_static_matches_payload
+        }
+
+        pub fn session_draft_written(self) -> bool {
+            self.session_draft_written
+        }
+
+        pub fn remote_endpoint_state_written(self) -> bool {
+            self.remote_endpoint_state_written
+        }
+
+        pub fn replay_window_written(self) -> bool {
+            self.replay_window_written
+        }
+
+        pub fn channel_id_derivable(self) -> bool {
+            self.channel_id_derivable
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
             self.runtime_messaging_enabled
         }
     }
@@ -623,6 +685,7 @@ pub mod production {
         PairwiseIdentityPrivateKey,
         NoiseStaticPrivateKey,
         ReplayWindowState,
+        SessionDraft,
         SessionTransportState,
     }
 
@@ -705,6 +768,9 @@ pub mod production {
                 }
                 SessionDurableStateAdapterRecordKind::ReplayWindowState => {
                     ProductionRecordKind::ReplayWindowState
+                }
+                SessionDurableStateAdapterRecordKind::SessionDraft => {
+                    ProductionRecordKind::SessionDraft
                 }
                 SessionDurableStateAdapterRecordKind::SessionTransportState => {
                     ProductionRecordKind::SessionTransportState
@@ -1739,22 +1805,8 @@ pub mod production {
         if !store.profile_marker_exists(&profile)? {
             return Err(ProductionSessionError::ProfileMarkerMissing);
         }
-        if local_payload.owner_profile != profile {
-            return Err(ProductionSessionError::LocalPairingPayloadMismatch);
-        }
-        let local_noise_static = store
-            .get(&production_latest_pairing_noise_static_record_id())?
-            .map(decode_production_noise_static_private_key_record)
-            .transpose()?
-            .ok_or(ProductionSessionError::NoiseStaticPrivateKeyMissing)?;
-        if local_noise_static.pairing_nonce != local_payload.pairing_nonce {
-            return Err(ProductionSessionError::LocalPairingPayloadMismatch);
-        }
-        let plan = plan_session_from_verified_pairing_payloads(local_payload, remote_payload)?;
-        require_matching_noise_static(
-            &local_noise_static.keypair,
-            &plan.local_noise_static_public_key,
-        )?;
+        let (plan, _local_noise_static) =
+            prepare_pairing_session_parts(&store, &profile, local_payload, remote_payload)?;
         Ok(ProductionPairingSessionPrepareSummary {
             storage_opened: true,
             session_plan_created: true,
@@ -1763,6 +1815,66 @@ pub mod production {
             safety_transcript_bound: !plan.safety_transcript.is_empty(),
             canonical_dialer_selected: !plan.canonical_dialer_public_key.is_empty(),
             local_role: plan.local_role,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_pairing_session_save_draft(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        local_payload: &PairingPayload,
+        remote_payload: &PairingPayload,
+    ) -> Result<ProductionPairingSessionSaveDraftSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let (plan, local_noise_static) =
+            prepare_pairing_session_parts(&store, &profile, local_payload, remote_payload)?;
+        let channel_id = production_channel_id(&plan);
+        let remote_contact_id = remote_payload.contact_id()?;
+        let replay_record_id = production_replay_record_id(&channel_id);
+        let remote_endpoint_record_id =
+            production_endpoint_state_record_id(&channel_id, &remote_contact_id);
+        let session_draft_record = encode_production_session_draft_record(
+            profile.clone(),
+            &plan,
+            &channel_id,
+            &remote_contact_id,
+        )?;
+        store.put(
+            &production_latest_session_draft_record_id(),
+            &session_draft_record,
+        )?;
+        let endpoint_record = EncryptedRecord::new(
+            ProductionRecordKind::RendezvousEndpointState,
+            EncryptedRecordScope::contact(profile.clone(), remote_contact_id.clone()),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            plan.remote_rendezvous_endpoint.encode_state().into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)?;
+        store.put(&remote_endpoint_record_id, &endpoint_record)?;
+        store.save_replay_window(
+            &replay_record_id,
+            EncryptedRecordScope::contact(profile, remote_contact_id),
+            &ReplayWindow::new(128)?,
+        )?;
+        Ok(ProductionPairingSessionSaveDraftSummary {
+            storage_opened: true,
+            session_plan_created: true,
+            local_noise_static_private_key_loaded: true,
+            local_noise_static_matches_payload: {
+                local_noise_static.pairing_nonce == local_payload.pairing_nonce
+                    && local_noise_static.keypair.public_key() == plan.local_noise_static_public_key
+            },
+            session_draft_written: true,
+            remote_endpoint_state_written: true,
+            replay_window_written: true,
+            channel_id_derivable: !channel_id.is_empty(),
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -2115,6 +2227,32 @@ pub mod production {
         })
     }
 
+    fn prepare_pairing_session_parts(
+        store: &SqlCipherRecordStore,
+        profile: &ProfileName,
+        local_payload: &PairingPayload,
+        remote_payload: &PairingPayload,
+    ) -> Result<(ProductionSessionPlan, ProductionStoredNoiseStaticKeypair), ProductionSessionError>
+    {
+        if &local_payload.owner_profile != profile {
+            return Err(ProductionSessionError::LocalPairingPayloadMismatch);
+        }
+        let local_noise_static = store
+            .get(&production_latest_pairing_noise_static_record_id())?
+            .map(decode_production_noise_static_private_key_record)
+            .transpose()?
+            .ok_or(ProductionSessionError::NoiseStaticPrivateKeyMissing)?;
+        if local_noise_static.pairing_nonce != local_payload.pairing_nonce {
+            return Err(ProductionSessionError::LocalPairingPayloadMismatch);
+        }
+        let plan = plan_session_from_verified_pairing_payloads(local_payload, remote_payload)?;
+        require_matching_noise_static(
+            &local_noise_static.keypair,
+            &plan.local_noise_static_public_key,
+        )?;
+        Ok((plan, local_noise_static))
+    }
+
     pub fn run_setup_draft_handshake_smoke(
         local: &ProductionSetupDraft,
         remote: &ProductionSetupDraft,
@@ -2262,12 +2400,16 @@ pub mod production {
     }
 
     fn production_replay_record_id(channel_id: &str) -> EncryptedRecordId {
+        EncryptedRecordId::new(production_replay_record_id_text(channel_id))
+            .expect("domain-separated replay record id is valid")
+    }
+
+    fn production_replay_record_id_text(channel_id: &str) -> String {
         let mut hasher = Sha256::new();
         hasher.update(PRODUCTION_REPLAY_RECORD_DOMAIN);
         hasher.update([0]);
         hasher.update(channel_id.as_bytes());
-        EncryptedRecordId::new(format!("replay_{}", encode_hex(&hasher.finalize())))
-            .expect("domain-separated replay record id is valid")
+        format!("replay_{}", encode_hex(&hasher.finalize()))
     }
 
     fn production_endpoint_state_record_id(
@@ -2348,6 +2490,11 @@ pub mod production {
     fn production_latest_pairing_noise_static_record_id() -> EncryptedRecordId {
         EncryptedRecordId::new(PRODUCTION_LATEST_PAIRING_NOISE_STATIC_RECORD_ID)
             .expect("static production noise static record id is valid")
+    }
+
+    fn production_latest_session_draft_record_id() -> EncryptedRecordId {
+        EncryptedRecordId::new(PRODUCTION_LATEST_SESSION_DRAFT_RECORD_ID)
+            .expect("static production session draft record id is valid")
     }
 
     fn encode_production_identity_private_key_record(
@@ -2434,6 +2581,38 @@ pub mod production {
             pairing_nonce: parts[1].to_string(),
             keypair,
         })
+    }
+
+    fn encode_production_session_draft_record(
+        profile: ProfileName,
+        plan: &ProductionSessionPlan,
+        channel_id: &str,
+        remote_contact_id: &ContactId,
+    ) -> Result<EncryptedRecord, ProductionSessionError> {
+        let replay_id = production_replay_record_id_text(channel_id);
+        let encoded = format!(
+            "ADSESSIONDRAFT1|{}|{}|{}|{}|{}",
+            channel_id,
+            session_role_tag(plan.local_role),
+            remote_contact_id.as_str(),
+            replay_id,
+            encode_hex(plan.safety_transcript.as_bytes())
+        );
+        EncryptedRecord::new(
+            ProductionRecordKind::SessionDraft,
+            EncryptedRecordScope::profile(profile),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            encoded.into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)
+        .map_err(ProductionSessionError::from)
+    }
+
+    fn session_role_tag(role: SessionRole) -> &'static str {
+        match role {
+            SessionRole::CanonicalDialer => "canonical-dialer",
+            SessionRole::Responder => "responder",
+        }
     }
 
     #[cfg(test)]
@@ -3147,6 +3326,97 @@ pub mod production {
                 ),
                 Err(ProductionSessionError::LocalPairingPayloadMismatch)
             );
+
+            let _ = std::fs::remove_dir_all(dir);
+        }
+
+        #[test]
+        fn production_pairing_session_save_draft_persists_session_records_without_transport() {
+            let dir = std::env::temp_dir().join(format!(
+                "another-dimension-production-session-save-draft-{}-{:?}",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+            if dir.exists() {
+                std::fs::remove_dir_all(&dir).expect("remove stale dir");
+            }
+            std::fs::create_dir_all(&dir).expect("create dir");
+            let alice_store = dir.join("alice.db");
+            let bob_store = dir.join("bob.db");
+            let alice = ProfileName::new("alice").expect("valid profile");
+            let bob = ProfileName::new("bob").expect("valid profile");
+            let passphrase = ProfilePassphrase::new("correct-passphrase").expect("passphrase");
+
+            production_profile_init(&alice_store, alice.clone(), &passphrase)
+                .expect("alice profile init");
+            production_profile_identity_init(&alice_store, alice.clone(), &passphrase)
+                .expect("alice identity init");
+            production_profile_init(&bob_store, bob.clone(), &passphrase)
+                .expect("bob profile init");
+            production_profile_identity_init(&bob_store, bob.clone(), &passphrase)
+                .expect("bob identity init");
+            let alice_payload = production_pairing_payload_create(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+                "alice.onion",
+            )
+            .expect("alice payload")
+            .payload()
+            .clone();
+            let bob_payload =
+                production_pairing_payload_create(&bob_store, bob, &passphrase, "bob.onion")
+                    .expect("bob payload")
+                    .payload()
+                    .clone();
+
+            let summary = production_pairing_session_save_draft(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+                &alice_payload,
+                &bob_payload,
+            )
+            .expect("save draft");
+
+            assert!(summary.storage_opened());
+            assert!(summary.session_plan_created());
+            assert!(summary.local_noise_static_private_key_loaded());
+            assert!(summary.local_noise_static_matches_payload());
+            assert!(summary.session_draft_written());
+            assert!(summary.remote_endpoint_state_written());
+            assert!(summary.replay_window_written());
+            assert!(summary.channel_id_derivable());
+            assert!(!summary.key_material_exposed());
+            assert!(!summary.transport_io_opened());
+            assert!(!summary.runtime_messaging_enabled());
+
+            let plan = plan_session_from_verified_pairing_payloads(&alice_payload, &bob_payload)
+                .expect("plan");
+            let channel_id = production_channel_id(&plan);
+            let remote_contact = bob_payload.contact_id().expect("contact id");
+            let store = LockedProfileStore::new(&alice_store)
+                .unlock(&passphrase)
+                .expect("unlock store");
+            let draft = store
+                .get(&production_latest_session_draft_record_id())
+                .expect("read draft")
+                .expect("draft");
+            assert_eq!(draft.kind, ProductionRecordKind::SessionDraft);
+            assert!(String::from_utf8(draft.sealed_body)
+                .expect("draft body")
+                .starts_with(&format!("ADSESSIONDRAFT1|{channel_id}|")));
+            assert!(store
+                .get(&production_endpoint_state_record_id(
+                    &channel_id,
+                    &remote_contact
+                ))
+                .expect("read endpoint")
+                .is_some());
+            assert!(store
+                .load_replay_window(&production_replay_record_id(&channel_id))
+                .expect("read replay")
+                .is_some());
 
             let _ = std::fs::remove_dir_all(dir);
         }

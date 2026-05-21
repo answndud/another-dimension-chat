@@ -72,6 +72,14 @@ fn production_main() -> Result<(), String> {
         {
             run_production_pairing_session_prepare_command(args)?;
         }
+        [cmd, sub, object, action, args @ ..]
+            if cmd == "production"
+                && sub == "pairing"
+                && object == "session"
+                && action == "save-draft" =>
+        {
+            run_production_pairing_session_save_draft_command(args)?;
+        }
         [cmd, sub, _args @ ..] if cmd == "production" && sub == "unlock" => {
             return Err(production_unlock_rejected_error());
         }
@@ -127,6 +135,7 @@ fn production_help() -> String {
   another-dimension production identity status --profile <name> --store <path> --passphrase-stdin
   another-dimension production pairing payload create --profile <name> --store <path> --rendezvous-endpoint <onion> --out <path> --passphrase-stdin
   another-dimension production pairing session prepare --profile <name> --store <path> --local-payload <path> --remote-payload <path> --passphrase-stdin
+  another-dimension production pairing session save-draft --profile <name> --store <path> --local-payload <path> --remote-payload <path> --passphrase-stdin
   another-dimension --help
 
 boundary:
@@ -140,6 +149,7 @@ boundary:
   production identity status is storage-only: it verifies the production pairwise identity key but opens no messaging or transport
   production pairing payload create is storage-only: it signs a QR payload from stored keys and opens no messaging or transport
   production pairing session prepare is storage-only: it verifies payloads and local Noise key readiness without opening transport
+  production pairing session save-draft is storage-only: it persists session draft records without opening transport
   prototype profile/pairing/message commands require --features dev-insecure"
         .to_string()
 }
@@ -321,6 +331,44 @@ fn run_production_pairing_session_prepare_command(args: &[String]) -> Result<(),
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn run_production_pairing_session_save_draft_command(args: &[String]) -> Result<(), String> {
+    let options = ProductionPairingSessionPrepareOptions::parse_with_help(
+        args,
+        production_pairing_session_save_draft_help,
+    )?;
+    let passphrase = read_production_passphrase()?;
+    let local_payload = read_production_pairing_payload(&options.local_payload_path)?;
+    let remote_payload = read_production_pairing_payload(&options.remote_payload_path)?;
+    let summary = another_dimension_core::production::production_pairing_session_save_draft(
+        &options.store_path,
+        options.profile,
+        &passphrase,
+        &local_payload,
+        &remote_payload,
+    )
+    .map_err(redacted_production_pairing_session_save_draft_error)?;
+
+    println!(
+        "production pairing session draft saved: storage_opened={} session_plan_created={} local_noise_static_private_key_loaded={} local_noise_static_matches_payload={} session_draft_written={} remote_endpoint_state_written={} replay_window_written={} channel_id_derivable={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.session_plan_created(),
+        summary.local_noise_static_private_key_loaded(),
+        summary.local_noise_static_matches_payload(),
+        summary.session_draft_written(),
+        summary.remote_endpoint_state_written(),
+        summary.replay_window_written(),
+        summary.channel_id_derivable(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production pairing session save-draft is storage-only and not a secure messenger release"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 struct ProductionProfileInitOptions {
     profile: another_dimension_identity::ProfileName,
     store_path: std::path::PathBuf,
@@ -462,6 +510,10 @@ impl ProductionPairingPayloadCreateOptions {
 #[cfg(not(feature = "dev-insecure"))]
 impl ProductionPairingSessionPrepareOptions {
     fn parse(args: &[String]) -> Result<Self, String> {
+        Self::parse_with_help(args, production_pairing_session_prepare_help)
+    }
+
+    fn parse_with_help(args: &[String], help: fn() -> String) -> Result<Self, String> {
         let mut profile = None;
         let mut store_path = None;
         let mut local_payload_path = None;
@@ -473,21 +525,17 @@ impl ProductionPairingSessionPrepareOptions {
             match args[index].as_str() {
                 "--profile" => {
                     index += 1;
-                    profile = Some(
-                        args.get(index)
-                            .ok_or_else(production_pairing_session_prepare_help)
-                            .and_then(|value| {
-                                another_dimension_identity::ProfileName::new(value)
-                                    .map_err(|_| "invalid production profile name".to_string())
-                            })?,
-                    );
+                    profile = Some(args.get(index).ok_or_else(help).and_then(|value| {
+                        another_dimension_identity::ProfileName::new(value)
+                            .map_err(|_| "invalid production profile name".to_string())
+                    })?);
                 }
                 "--store" => {
                     index += 1;
                     store_path = Some(
                         args.get(index)
                             .map(std::path::PathBuf::from)
-                            .ok_or_else(production_pairing_session_prepare_help)?,
+                            .ok_or_else(help)?,
                     );
                 }
                 "--local-payload" => {
@@ -495,7 +543,7 @@ impl ProductionPairingSessionPrepareOptions {
                     local_payload_path = Some(
                         args.get(index)
                             .map(std::path::PathBuf::from)
-                            .ok_or_else(production_pairing_session_prepare_help)?,
+                            .ok_or_else(help)?,
                     );
                 }
                 "--remote-payload" => {
@@ -503,28 +551,26 @@ impl ProductionPairingSessionPrepareOptions {
                     remote_payload_path = Some(
                         args.get(index)
                             .map(std::path::PathBuf::from)
-                            .ok_or_else(production_pairing_session_prepare_help)?,
+                            .ok_or_else(help)?,
                     );
                 }
                 "--passphrase-stdin" => {
                     passphrase_stdin = true;
                 }
-                _ => return Err(production_pairing_session_prepare_help()),
+                _ => return Err(help()),
             }
             index += 1;
         }
 
         if !passphrase_stdin {
-            return Err(production_pairing_session_prepare_help());
+            return Err(help());
         }
 
         Ok(Self {
-            profile: profile.ok_or_else(production_pairing_session_prepare_help)?,
-            store_path: store_path.ok_or_else(production_pairing_session_prepare_help)?,
-            local_payload_path: local_payload_path
-                .ok_or_else(production_pairing_session_prepare_help)?,
-            remote_payload_path: remote_payload_path
-                .ok_or_else(production_pairing_session_prepare_help)?,
+            profile: profile.ok_or_else(help)?,
+            store_path: store_path.ok_or_else(help)?,
+            local_payload_path: local_payload_path.ok_or_else(help)?,
+            remote_payload_path: remote_payload_path.ok_or_else(help)?,
         })
     }
 }
@@ -580,6 +626,15 @@ fn production_pairing_session_prepare_help() -> String {
   another-dimension production pairing session prepare --profile <name> --store <path> --local-payload <path> --remote-payload <path> --passphrase-stdin
 
 Reads the profile passphrase from stdin. Opens an encrypted local profile store, verifies the local and remote production pairing payloads, reloads the local Noise static private key, and checks that it matches the local payload. This does not enable messaging, transport, or a long-lived unlock session."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn production_pairing_session_save_draft_help() -> String {
+    "usage:
+  another-dimension production pairing session save-draft --profile <name> --store <path> --local-payload <path> --remote-payload <path> --passphrase-stdin
+
+Reads the profile passphrase from stdin. Opens an encrypted local profile store, verifies the local and remote production pairing payloads, reloads the local Noise static private key, and persists a session draft, remote endpoint state, and initial replay window. This does not enable messaging, transport, or a long-lived unlock session."
         .to_string()
 }
 
@@ -779,6 +834,14 @@ fn redacted_production_pairing_session_prepare_error(
         }
         _ => "production pairing session prepare failed".to_string(),
     }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_pairing_session_save_draft_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    redacted_production_pairing_session_prepare_error(error)
+        .replace("session prepare", "session save-draft")
 }
 
 #[cfg(not(feature = "dev-insecure"))]
