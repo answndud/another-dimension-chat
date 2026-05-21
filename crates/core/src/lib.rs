@@ -842,6 +842,52 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionLockLifecycleStatusMirror {
+        explicit_lock_required: bool,
+        idle_auto_lock_required: bool,
+        default_idle_auto_lock_seconds: u16,
+        high_risk_idle_auto_lock_seconds: u16,
+        storage_currently_unlocked: bool,
+        product_lock_command_enabled: bool,
+        key_erasure_claim_available: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    impl SessionLockLifecycleStatusMirror {
+        pub fn explicit_lock_required(self) -> bool {
+            self.explicit_lock_required
+        }
+
+        pub fn idle_auto_lock_required(self) -> bool {
+            self.idle_auto_lock_required
+        }
+
+        pub fn default_idle_auto_lock_seconds(self) -> u16 {
+            self.default_idle_auto_lock_seconds
+        }
+
+        pub fn high_risk_idle_auto_lock_seconds(self) -> u16 {
+            self.high_risk_idle_auto_lock_seconds
+        }
+
+        pub fn storage_currently_unlocked(self) -> bool {
+            self.storage_currently_unlocked
+        }
+
+        pub fn product_lock_command_enabled(self) -> bool {
+            self.product_lock_command_enabled
+        }
+
+        pub fn key_erasure_claim_available(self) -> bool {
+            self.key_erasure_claim_available
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct LocalMessageIndexEntry {
         contact_id: ContactId,
@@ -1528,6 +1574,23 @@ pub mod production {
         }
     }
 
+    pub fn session_lock_lifecycle_status_mirror() -> SessionLockLifecycleStatusMirror {
+        let gate = session_unlock_lock_command_design_gate();
+        let fail_closed =
+            session_unlock_command_fail_closed(&SessionUnlockCommandRequest::passphrase_only());
+
+        SessionLockLifecycleStatusMirror {
+            explicit_lock_required: gate.explicit_lock_required(),
+            idle_auto_lock_required: gate.idle_auto_lock_required(),
+            default_idle_auto_lock_seconds: 300,
+            high_risk_idle_auto_lock_seconds: 60,
+            storage_currently_unlocked: fail_closed.storage_opened(),
+            product_lock_command_enabled: gate.production_lock_command_enabled(),
+            key_erasure_claim_available: false,
+            runtime_messaging_enabled: fail_closed.runtime_messaging_enabled(),
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -2173,6 +2236,20 @@ pub mod production {
                     SessionUnlockCommandDisabledReason::ProductUnlockCommandDisabled
                 );
             }
+        }
+
+        #[test]
+        fn session_lock_lifecycle_status_mirror_keeps_lock_runtime_closed() {
+            let status = session_lock_lifecycle_status_mirror();
+
+            assert!(status.explicit_lock_required());
+            assert!(status.idle_auto_lock_required());
+            assert_eq!(status.default_idle_auto_lock_seconds(), 300);
+            assert_eq!(status.high_risk_idle_auto_lock_seconds(), 60);
+            assert!(!status.storage_currently_unlocked());
+            assert!(!status.product_lock_command_enabled());
+            assert!(!status.key_erasure_claim_available());
+            assert!(!status.runtime_messaging_enabled());
         }
 
         #[test]

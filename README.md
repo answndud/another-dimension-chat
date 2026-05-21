@@ -131,6 +131,7 @@ This runs:
 - Session durable-state unlock policy handoff confirms high-risk passphrase-first unlock policy and OS-keystore-only rejection while keeping product unlock and runtime messaging disabled.
 - Session unlock/lock command design gate requires explicit lock, idle auto-lock, redacted unlock errors, and passphrase-first high-risk policy while keeping product unlock and lock commands disabled.
 - Session unlock command fail-closed skeleton accepts request shape coverage but always returns a redacted disabled result without opening storage, writing session records, exposing key material, or enabling runtime messaging.
+- Session lock lifecycle status mirror records default/high-risk idle auto-lock requirements while keeping storage unlocked state, product lock command, key erasure claim, and runtime messaging disabled.
 - Tauri prototype status mirrors session durable-state and unlock-policy blockers as static read-only copy without adding unlock, store-write, or runtime messaging commands.
 - Tauri scaffold static checks.
 - Public release hygiene static checks.
