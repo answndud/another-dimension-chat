@@ -2,6 +2,9 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   productionActionAvailability,
   productionManualNextActions,
+  productionPairingPayloadView,
+  productionProfileUnlockView,
+  productionSessionDraftView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
 } from "./action-state.js";
@@ -1028,20 +1031,12 @@ async function unlockProductionProfile() {
   }
   try {
     const result = await invoke("production_profile_unlock", { profile, passphrase });
+    const view = productionProfileUnlockView(result);
     setProductionProfileState("Profile unlocked");
     setText(fields.productionProfileWarning, result.warning);
-    setText(
-      fields.productionProfileStorage,
-      `opened=${result.storage_opened} app_data=${result.app_data_profile_store} initialized=${result.profile_initialized} marker=${result.profile_marker_present}`,
-    );
-    setText(
-      fields.productionProfileIdentity,
-      `created=${result.identity_created} present=${result.identity_private_key_present} public_derivable=${result.identity_public_key_derivable}`,
-    );
-    setText(
-      fields.productionProfileBoundary,
-      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    setText(fields.productionProfileStorage, view.storage);
+    setText(fields.productionProfileIdentity, view.identity);
+    setText(fields.productionProfileBoundary, view.boundary);
     await loadProductionProfileList();
   } catch (error) {
     setProductionProfileState("Profile unlock failed");
@@ -1084,20 +1079,15 @@ async function exportProductionPairingPayload() {
       passphrase,
       rendezvousEndpoint,
     });
+    const view = productionPairingPayloadView(result);
     setProductionPairingState("Pairing payload exported");
     setText(fields.productionPairingWarning, result.warning);
     if (fields.productionPairingPayload) {
       fields.productionPairingPayload.value = result.pairing_payload;
     }
     applyProductionActionState();
-    setText(
-      fields.productionPairingStorage,
-      `opened=${result.storage_opened} identity_loaded=${result.identity_private_key_loaded} noise_static_written=${result.noise_static_private_key_written} exported=${result.pairing_payload_exported} format=${result.payload_format}`,
-    );
-    setText(
-      fields.productionPairingBoundary,
-      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} private_key_returned=${result.private_key_material_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    setText(fields.productionPairingStorage, view.storage);
+    setText(fields.productionPairingBoundary, view.boundary);
   } catch (error) {
     setProductionPairingState("Pairing payload export failed");
     setText(fields.productionPairingWarning, String(error));
@@ -1139,20 +1129,12 @@ async function saveProductionSessionDraft() {
       localPayload,
       remotePayload,
     });
+    const view = productionSessionDraftView(result);
     setProductionPairingState("Session draft saved");
     setText(fields.productionPairingWarning, result.warning);
-    setText(
-      fields.productionPairingSession,
-      `plan=${result.session_plan_created} draft=${result.session_draft_written} present=${result.session_draft_present} endpoint=${result.remote_endpoint_state_present} replay=${result.replay_window_present} channel=${result.channel_id_derivable}`,
-    );
-    setText(
-      fields.productionPairingStorage,
-      `opened=${result.storage_opened} local_noise_loaded=${result.local_noise_static_private_key_loaded} local_noise_match=${result.local_noise_static_matches_payload} remote_contact=${result.remote_contact_present}`,
-    );
-    setText(
-      fields.productionPairingBoundary,
-      `payloads_returned=${result.payloads_returned} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    setText(fields.productionPairingSession, view.session);
+    setText(fields.productionPairingStorage, view.storage);
+    setText(fields.productionPairingBoundary, view.boundary);
     if (result.session_draft_present) {
       await checkProductionSessionState();
     }

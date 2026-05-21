@@ -166,3 +166,49 @@ export function productionTwoProfileResultView(result) {
       : "Review result rows before continuing.",
   };
 }
+
+export function productionProfileUnlockView(result) {
+  return {
+    storage:
+      `opened=${result.storage_opened} app_data=${result.app_data_profile_store} ` +
+      `initialized=${result.profile_initialized} marker=${result.profile_marker_present}`,
+    identity:
+      `created=${result.identity_created} present=${result.identity_private_key_present} ` +
+      `public_derivable=${result.identity_public_key_derivable}`,
+    boundary:
+      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} ` +
+      `key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} ` +
+      `transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+  };
+}
+
+export function productionPairingPayloadView(result) {
+  return {
+    storage:
+      `opened=${result.storage_opened} identity_loaded=${result.identity_private_key_loaded} ` +
+      `noise_static_written=${result.noise_static_private_key_written} ` +
+      `exported=${result.pairing_payload_exported} format=${result.payload_format}`,
+    boundary:
+      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} ` +
+      `private_key_returned=${result.private_key_material_returned} ` +
+      `key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} ` +
+      `transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+  };
+}
+
+export function productionSessionDraftView(result) {
+  return {
+    session:
+      `plan=${result.session_plan_created} draft=${result.session_draft_written} ` +
+      `present=${result.session_draft_present} endpoint=${result.remote_endpoint_state_present} ` +
+      `replay=${result.replay_window_present} channel=${result.channel_id_derivable}`,
+    storage:
+      `opened=${result.storage_opened} local_noise_loaded=${result.local_noise_static_private_key_loaded} ` +
+      `local_noise_match=${result.local_noise_static_matches_payload} remote_contact=${result.remote_contact_present}`,
+    boundary:
+      `payloads_returned=${result.payloads_returned} path_returned=${result.store_path_returned} ` +
+      `passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} ` +
+      `network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} ` +
+      `runtime=${result.runtime_messaging_enabled}`,
+  };
+}
