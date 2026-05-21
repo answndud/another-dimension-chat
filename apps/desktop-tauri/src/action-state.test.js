@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   productionActionAvailability,
   productionManualNextActions,
+  productionTwoProfileResultView,
   productionTwoProfileReadiness,
 } from "./action-state.js";
 
@@ -25,6 +26,28 @@ const baseState = {
   hasReceivedExportInput: false,
   hasReceivedMessage: false,
   hasTwoProfileInput: false,
+};
+
+const completeTwoProfileResult = {
+  profile_a_unlocked: true,
+  profile_b_unlocked: true,
+  pairing_payloads_exported: true,
+  session_drafts_saved: true,
+  handshake_completed: true,
+  sender_session_ready: true,
+  receiver_session_ready: true,
+  message_number_reserved: true,
+  encrypted_envelope_exported: true,
+  inbound_message_stored: true,
+  received_status_verified: true,
+  received_export_matches_input: true,
+  plaintext_returned_to_frontend: false,
+  store_path_returned: false,
+  passphrase_retained: false,
+  key_material_exposed: false,
+  network_io_attempted: false,
+  transport_io_opened: false,
+  runtime_messaging_enabled: false,
 };
 
 test("productionTwoProfileReadiness blocks incomplete inputs in priority order", () => {
@@ -107,4 +130,32 @@ test("productionManualNextActions follows pairing and message readiness", () => 
     productionManualNextActions({ ...baseState, hasReceivedMessage: true }).message,
     "Next: review received message.",
   );
+});
+
+test("productionTwoProfileResultView unlocks followups only for complete contained results", () => {
+  const view = productionTwoProfileResultView(completeTwoProfileResult);
+
+  assert.equal(view.canContinue, true);
+  assert.match(view.profiles, /^Complete:/);
+  assert.match(view.session, /^Complete:/);
+  assert.match(view.message, /^Complete:/);
+  assert.match(view.boundary, /^Contained:/);
+  assert.equal(
+    view.nextStep,
+    "Next: inspect manual payload tools, run local diagnostic, or edit the message and run again.",
+  );
+});
+
+test("productionTwoProfileResultView blocks followups when result flags need review", () => {
+  const view = productionTwoProfileResultView({
+    ...completeTwoProfileResult,
+    received_export_matches_input: false,
+    key_material_exposed: true,
+  });
+
+  assert.equal(view.canContinue, false);
+  assert.match(view.message, /^Review:/);
+  assert.match(view.boundary, /^Review:/);
+  assert.match(view.boundary, /key_material=true/);
+  assert.equal(view.nextStep, "Review result rows before continuing.");
 });
