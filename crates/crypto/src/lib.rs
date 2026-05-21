@@ -179,6 +179,20 @@ pub mod production {
         pub key_material_exposed: bool,
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct NoiseHandshakeInitExport {
+        pub message: Vec<u8>,
+        pub initiator_ephemeral_private: Vec<u8>,
+        pub key_material_exposed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct NoiseHandshakeFinishSummary {
+        pub message_len: usize,
+        pub key_material_exposed: bool,
+        pub transport_state_created: bool,
+    }
+
     pub struct NoiseTransportPair {
         initiator_remote_static: Vec<u8>,
         responder_remote_static: Vec<u8>,
@@ -317,13 +331,26 @@ pub mod production {
         safety_transcript: &str,
         initiator_static: &NoiseStaticKeypair,
     ) -> Result<Vec<u8>, CryptoError> {
+        Ok(create_noise_xx_handshake_init_export(safety_transcript, initiator_static)?.message)
+    }
+
+    pub fn create_noise_xx_handshake_init_export(
+        safety_transcript: &str,
+        initiator_static: &NoiseStaticKeypair,
+    ) -> Result<NoiseHandshakeInitExport, CryptoError> {
+        let ephemeral = Builder::new(noise_params()?).generate_keypair()?;
         let mut initiator = Builder::new(noise_params()?)
             .local_private_key(&initiator_static.private)?
+            .fixed_ephemeral_key_for_testing_only(&ephemeral.private)
             .prologue(safety_transcript.as_bytes())?
             .build_initiator()?;
         let mut message = [0_u8; 1024];
         let message_len = initiator.write_message(&[], &mut message)?;
-        Ok(message[..message_len].to_vec())
+        Ok(NoiseHandshakeInitExport {
+            message: message[..message_len].to_vec(),
+            initiator_ephemeral_private: ephemeral.private,
+            key_material_exposed: false,
+        })
     }
 
     pub fn prepare_noise_xx_handshake_reply_message(
@@ -356,6 +383,44 @@ pub mod production {
         let mut message = [0_u8; 1024];
         let message_len = responder.write_message(&[], &mut message)?;
         Ok(message[..message_len].to_vec())
+    }
+
+    pub fn prepare_noise_xx_handshake_finish_message(
+        safety_transcript: &str,
+        initiator_static: &NoiseStaticKeypair,
+        initiator_ephemeral_private: &[u8],
+        reply_message: &[u8],
+    ) -> Result<NoiseHandshakeFinishSummary, CryptoError> {
+        let message = create_noise_xx_handshake_finish_message(
+            safety_transcript,
+            initiator_static,
+            initiator_ephemeral_private,
+            reply_message,
+        )?;
+        Ok(NoiseHandshakeFinishSummary {
+            message_len: message.len(),
+            key_material_exposed: false,
+            transport_state_created: false,
+        })
+    }
+
+    pub fn create_noise_xx_handshake_finish_message(
+        safety_transcript: &str,
+        initiator_static: &NoiseStaticKeypair,
+        initiator_ephemeral_private: &[u8],
+        reply_message: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        let mut initiator = Builder::new(noise_params()?)
+            .local_private_key(&initiator_static.private)?
+            .fixed_ephemeral_key_for_testing_only(initiator_ephemeral_private)
+            .prologue(safety_transcript.as_bytes())?
+            .build_initiator()?;
+        let mut message = [0_u8; 1024];
+        let _init_len = initiator.write_message(&[], &mut message)?;
+        let mut read_buf = [0_u8; 1024];
+        initiator.read_message(reply_message, &mut read_buf)?;
+        let finish_len = initiator.write_message(&[], &mut message)?;
+        Ok(message[..finish_len].to_vec())
     }
 
     fn establish_noise_xx_transport_pair_with_prologues(
@@ -526,14 +591,20 @@ pub mod production {
         fn noise_handshake_reply_summary_hides_message_bytes() {
             let initiator = generate_noise_static_keypair().expect("initiator");
             let responder = generate_noise_static_keypair().expect("responder");
-            let init_message = create_noise_xx_handshake_init_message("transcript", &initiator)
+            let init_export = create_noise_xx_handshake_init_export("transcript", &initiator)
                 .expect("handshake init");
-            let summary =
-                prepare_noise_xx_handshake_reply_message("transcript", &responder, &init_message)
-                    .expect("handshake reply");
-            let reply =
-                create_noise_xx_handshake_reply_message("transcript", &responder, &init_message)
-                    .expect("handshake reply");
+            let summary = prepare_noise_xx_handshake_reply_message(
+                "transcript",
+                &responder,
+                &init_export.message,
+            )
+            .expect("handshake reply");
+            let reply = create_noise_xx_handshake_reply_message(
+                "transcript",
+                &responder,
+                &init_export.message,
+            )
+            .expect("handshake reply");
 
             assert!(summary.message_len > 0);
             assert_eq!(summary.message_len, reply.len());
@@ -541,6 +612,46 @@ pub mod production {
             assert!(
                 create_noise_xx_handshake_reply_message("transcript", &responder, &[0_u8]).is_err()
             );
+        }
+
+        #[test]
+        fn noise_handshake_finish_summary_hides_message_bytes() {
+            let initiator = generate_noise_static_keypair().expect("initiator");
+            let responder = generate_noise_static_keypair().expect("responder");
+            let init_export = create_noise_xx_handshake_init_export("transcript", &initiator)
+                .expect("handshake init");
+            let reply = create_noise_xx_handshake_reply_message(
+                "transcript",
+                &responder,
+                &init_export.message,
+            )
+            .expect("handshake reply");
+            let summary = prepare_noise_xx_handshake_finish_message(
+                "transcript",
+                &initiator,
+                &init_export.initiator_ephemeral_private,
+                &reply,
+            )
+            .expect("handshake finish");
+            let finish = create_noise_xx_handshake_finish_message(
+                "transcript",
+                &initiator,
+                &init_export.initiator_ephemeral_private,
+                &reply,
+            )
+            .expect("handshake finish");
+
+            assert!(summary.message_len > 0);
+            assert_eq!(summary.message_len, finish.len());
+            assert!(!summary.key_material_exposed);
+            assert!(!summary.transport_state_created);
+            assert!(create_noise_xx_handshake_finish_message(
+                "transcript",
+                &initiator,
+                &[0_u8; 32],
+                &reply,
+            )
+            .is_err());
         }
 
         #[test]
