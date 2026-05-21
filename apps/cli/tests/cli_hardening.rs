@@ -91,6 +91,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production pairing session save-draft"));
     assert!(out.contains("production pairing session status"));
     assert!(out.contains("production pairing session load-runtime"));
+    assert!(out.contains("production pairing session open-runtime"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
@@ -965,6 +966,45 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!runtime_out.contains("adchan1"));
     assert!(!runtime_out.contains("ed25519"));
     assert!(!runtime_error.contains("correct horse"));
+
+    let open_runtime = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "session",
+            "open-runtime",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let open_runtime_out = stdout(&open_runtime);
+    let open_runtime_error = stderr(&open_runtime);
+    assert!(
+        open_runtime.status.success(),
+        "stdout: {open_runtime_out}\nstderr: {open_runtime_error}"
+    );
+    assert!(open_runtime_out.contains("production pairing session runtime opened:"));
+    assert!(open_runtime_out.contains("storage_opened=true"));
+    assert!(open_runtime_out.contains("runtime_material_reconstructable=true"));
+    assert!(open_runtime_out.contains("outbound_stream_gate_ready=true"));
+    assert!(open_runtime_out.contains("outbound_fail_closed_adapter_ready=true"));
+    assert!(open_runtime_out.contains("outbound_stream_preparation_ready=true"));
+    assert!(open_runtime_out.contains("session_binding_ready=true"));
+    assert!(open_runtime_out.contains("remote_peer_authentication_ready=true"));
+    assert!(open_runtime_out.contains("outbound_envelope_io_ready=true"));
+    assert!(open_runtime_out.contains("key_material_exposed=false"));
+    assert!(open_runtime_out.contains("transport_io_opened=false"));
+    assert!(open_runtime_out.contains("runtime_messaging=false"));
+    assert!(open_runtime_error.contains("storage-only"));
+    assert!(!open_runtime_out.contains("alice"));
+    assert!(!open_runtime_out.contains(alice_store_arg));
+    assert!(!open_runtime_out.contains("adchan1"));
+    assert!(!open_runtime_out.contains("ed25519"));
+    assert!(!open_runtime_error.contains("correct horse"));
 
     let swapped = run_with_stdin(
         &[

@@ -96,6 +96,14 @@ fn production_main() -> Result<(), String> {
         {
             run_production_pairing_session_load_runtime_command(args)?;
         }
+        [cmd, sub, object, action, args @ ..]
+            if cmd == "production"
+                && sub == "pairing"
+                && object == "session"
+                && action == "open-runtime" =>
+        {
+            run_production_pairing_session_open_runtime_command(args)?;
+        }
         [cmd, sub, _args @ ..] if cmd == "production" && sub == "unlock" => {
             return Err(production_unlock_rejected_error());
         }
@@ -154,6 +162,7 @@ fn production_help() -> String {
   another-dimension production pairing session save-draft --profile <name> --store <path> --local-payload <path> --remote-payload <path> --passphrase-stdin
   another-dimension production pairing session status --profile <name> --store <path> --passphrase-stdin
   another-dimension production pairing session load-runtime --profile <name> --store <path> --passphrase-stdin
+  another-dimension production pairing session open-runtime --profile <name> --store <path> --passphrase-stdin
   another-dimension --help
 
 boundary:
@@ -170,6 +179,7 @@ boundary:
   production pairing session save-draft is storage-only: it persists session draft records without opening transport
   production pairing session status is storage-only: it checks persisted session draft readiness without opening transport
   production pairing session load-runtime is storage-only: it rebuilds in-memory runtime material without opening transport
+  production pairing session open-runtime is storage-only: it binds runtime material to fail-closed stream gates without opening transport
   prototype profile/pairing/message commands require --features dev-insecure"
         .to_string()
 }
@@ -451,6 +461,40 @@ fn run_production_pairing_session_load_runtime_command(args: &[String]) -> Resul
     );
     eprintln!(
         "warning: production pairing session load-runtime is storage-only and not a secure messenger release"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn run_production_pairing_session_open_runtime_command(args: &[String]) -> Result<(), String> {
+    let options = ProductionProfileInitOptions::parse_with_help(
+        args,
+        production_pairing_session_open_runtime_help,
+    )?;
+    let passphrase = read_production_passphrase()?;
+    let summary = another_dimension_core::production::production_pairing_session_open_runtime(
+        &options.store_path,
+        options.profile,
+        &passphrase,
+    )
+    .map_err(redacted_production_pairing_session_open_runtime_error)?;
+
+    println!(
+        "production pairing session runtime opened: storage_opened={} runtime_material_reconstructable={} outbound_stream_gate_ready={} outbound_fail_closed_adapter_ready={} outbound_stream_preparation_ready={} session_binding_ready={} remote_peer_authentication_ready={} outbound_envelope_io_ready={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.runtime_material_reconstructable(),
+        summary.outbound_stream_gate_ready(),
+        summary.outbound_fail_closed_adapter_ready(),
+        summary.outbound_stream_preparation_ready(),
+        summary.session_binding_ready(),
+        summary.remote_peer_authentication_ready(),
+        summary.outbound_envelope_io_ready(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production pairing session open-runtime is storage-only and not a secure messenger release"
     );
     Ok(())
 }
@@ -744,6 +788,15 @@ Reads the profile passphrase from stdin. Opens an encrypted local profile store,
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn production_pairing_session_open_runtime_help() -> String {
+    "usage:
+  another-dimension production pairing session open-runtime --profile <name> --store <path> --passphrase-stdin
+
+Reads the profile passphrase from stdin. Opens an encrypted local profile store, reloads runtime material, binds it to high-risk onion outbound stream gates and fail-closed envelope I/O boundaries, and performs no dial, send, receive, or long-lived unlock session."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 fn read_production_pairing_payload(
     path: &std::path::Path,
 ) -> Result<another_dimension_pairing::PairingPayload, String> {
@@ -1010,6 +1063,14 @@ fn redacted_production_pairing_session_load_runtime_error(
         }
         _ => "production pairing session load-runtime failed".to_string(),
     }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_pairing_session_open_runtime_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    redacted_production_pairing_session_load_runtime_error(error)
+        .replace("load-runtime", "open-runtime")
 }
 
 #[cfg(not(feature = "dev-insecure"))]

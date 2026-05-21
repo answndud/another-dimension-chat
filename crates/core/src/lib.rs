@@ -24,10 +24,14 @@ pub mod production {
         UnlockMode, UnlockRequest,
     };
     use another_dimension_transport::{
-        EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
-        EndpointUpdateControlPlaintext, OnionEnvelopeTransport, OnionServiceEndpoint,
-        PairwiseEndpointUpdate, PairwiseRendezvousEndpoint, RendezvousEndpointIdentityBinding,
-        RendezvousEndpointScope, TransportKind, TransportRoute,
+        BoundOutboundStreamSession, EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
+        EndpointUpdateControlPlaintext, EnvelopeIoAdapterReady, OnionEnvelopeTransport,
+        OnionOutboundStreamBoundary, OnionServiceEndpoint, OutboundEnvelopeIoAdapterBoundary,
+        OutboundStreamGateDecision, OutboundStreamPreparationBoundary, PairwiseEndpointUpdate,
+        PairwiseRendezvousEndpoint, PairwiseStreamSessionBinding,
+        RedactedRemotePeerAuthenticationContext, RedactedStreamSessionVerificationContext,
+        RemotePeerAuthenticationReady, RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
+        TransportKind, TransportPolicy, TransportRoute,
     };
     use sha2::{Digest, Sha256};
 
@@ -284,6 +288,21 @@ pub mod production {
         remote_endpoint_state_loaded: bool,
         replay_window_loaded: bool,
         runtime_material_reconstructable: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionRuntimeOpenSummary {
+        storage_opened: bool,
+        runtime_material_reconstructable: bool,
+        outbound_stream_gate_ready: bool,
+        outbound_fail_closed_adapter_ready: bool,
+        outbound_stream_preparation_ready: bool,
+        session_binding_ready: bool,
+        remote_peer_authentication_ready: bool,
+        outbound_envelope_io_ready: bool,
         key_material_exposed: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
@@ -576,6 +595,52 @@ pub mod production {
 
         pub fn runtime_material_reconstructable(self) -> bool {
             self.runtime_material_reconstructable
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionRuntimeOpenSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn runtime_material_reconstructable(self) -> bool {
+            self.runtime_material_reconstructable
+        }
+
+        pub fn outbound_stream_gate_ready(self) -> bool {
+            self.outbound_stream_gate_ready
+        }
+
+        pub fn outbound_fail_closed_adapter_ready(self) -> bool {
+            self.outbound_fail_closed_adapter_ready
+        }
+
+        pub fn outbound_stream_preparation_ready(self) -> bool {
+            self.outbound_stream_preparation_ready
+        }
+
+        pub fn session_binding_ready(self) -> bool {
+            self.session_binding_ready
+        }
+
+        pub fn remote_peer_authentication_ready(self) -> bool {
+            self.remote_peer_authentication_ready
+        }
+
+        pub fn outbound_envelope_io_ready(self) -> bool {
+            self.outbound_envelope_io_ready
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -2091,6 +2156,78 @@ pub mod production {
         })
     }
 
+    pub fn production_pairing_session_open_runtime(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionPairingSessionRuntimeOpenSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        let policy = TransportPolicy::high_risk_default();
+        let outbound_gate_ready = OutboundStreamGateDecision::from_pairwise_endpoint_and_policy(
+            material.remote_endpoint.clone(),
+            policy.clone(),
+        )
+        .check()
+        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let outbound_adapter =
+            another_dimension_transport::OutboundStreamFailClosedAdapter::from_gate_ready(
+                outbound_gate_ready,
+                material.remote_endpoint.clone(),
+                policy.clone(),
+            )
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let outbound_preparation_ready =
+            OutboundStreamPreparationBoundary::from_fail_closed_adapter(
+                outbound_gate_ready,
+                &outbound_adapter,
+            )
+            .check()
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let session_binding = PairwiseStreamSessionBinding::from_verified_pairwise_session(
+            material.remote_contact_id.clone(),
+            RedactedStreamSessionVerificationContext::verified_pairwise_encrypted_session(),
+        )
+        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let remote_auth = RemotePeerAuthenticationReady::from_authenticated_pairwise_peer(
+            material.remote_contact_id.clone(),
+            RedactedRemotePeerAuthenticationContext::authenticated_pairwise_peer(),
+        )
+        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let outbound_boundary =
+            OnionOutboundStreamBoundary::from_pairwise_endpoint(material.remote_endpoint, policy)
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let bound = BoundOutboundStreamSession::from_outbound_stream(
+            outbound_boundary,
+            session_binding,
+            remote_auth,
+        )
+        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let _io_boundary = OutboundEnvelopeIoAdapterBoundary::from_bound_stream_session(
+            bound,
+            EnvelopeIoAdapterReady::fail_closed(),
+        )
+        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let _ = outbound_preparation_ready;
+        Ok(ProductionPairingSessionRuntimeOpenSummary {
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            outbound_stream_gate_ready: true,
+            outbound_fail_closed_adapter_ready: true,
+            outbound_stream_preparation_ready: true,
+            session_binding_ready: true,
+            remote_peer_authentication_ready: true,
+            outbound_envelope_io_ready: true,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
     pub fn production_session_evaluation_summary() -> ProductionSessionEvaluationSummary {
         ProductionSessionEvaluationSummary {
             protocol_candidate: "snow Noise XX synchronous boundary",
@@ -2759,6 +2896,11 @@ pub mod production {
         remote_noise_static_public_key: Vec<u8>,
     }
 
+    struct ProductionSessionRuntimeMaterial {
+        remote_contact_id: ContactId,
+        remote_endpoint: PairwiseRendezvousEndpoint,
+    }
+
     fn encode_production_noise_static_private_key_record(
         profile: ProfileName,
         pairing_nonce: String,
@@ -2896,6 +3038,37 @@ pub mod production {
                 Ok(endpoint)
             })
             .transpose()
+    }
+
+    fn load_session_runtime_material(
+        store: &SqlCipherRecordStore,
+        profile: &ProfileName,
+    ) -> Result<ProductionSessionRuntimeMaterial, ProductionSessionError> {
+        let draft = load_latest_session_draft(store, profile)?
+            .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let local_noise_static = store
+            .get(&production_latest_pairing_noise_static_record_id())?
+            .map(decode_production_noise_static_private_key_record)
+            .transpose()?
+            .ok_or(ProductionSessionError::NoiseStaticPrivateKeyMissing)?;
+        if local_noise_static.keypair.public_key() != draft.local_noise_static_public_key {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
+        if draft.remote_noise_static_public_key.is_empty() {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let remote_endpoint = load_remote_endpoint_state(store, &draft)?
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        if store
+            .load_replay_window(&production_replay_record_id(&draft.channel_id))?
+            .is_none()
+        {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        Ok(ProductionSessionRuntimeMaterial {
+            remote_contact_id: draft.remote_contact_id,
+            remote_endpoint,
+        })
     }
 
     fn session_role_tag(role: SessionRole) -> &'static str {
@@ -3755,6 +3928,21 @@ pub mod production {
             assert!(!runtime.key_material_exposed());
             assert!(!runtime.transport_io_opened());
             assert!(!runtime.runtime_messaging_enabled());
+
+            let opened =
+                production_pairing_session_open_runtime(&alice_store, alice.clone(), &passphrase)
+                    .expect("open runtime");
+            assert!(opened.storage_opened());
+            assert!(opened.runtime_material_reconstructable());
+            assert!(opened.outbound_stream_gate_ready());
+            assert!(opened.outbound_fail_closed_adapter_ready());
+            assert!(opened.outbound_stream_preparation_ready());
+            assert!(opened.session_binding_ready());
+            assert!(opened.remote_peer_authentication_ready());
+            assert!(opened.outbound_envelope_io_ready());
+            assert!(!opened.key_material_exposed());
+            assert!(!opened.transport_io_opened());
+            assert!(!opened.runtime_messaging_enabled());
 
             let _ = std::fs::remove_dir_all(dir);
         }
