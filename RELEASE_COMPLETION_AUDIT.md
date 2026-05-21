@@ -16,6 +16,7 @@ Current evidence does not prove v0.1-security-ready 100%. The repository has use
 - `scripts/verify_release_signing_plan.sh`
 - `scripts/verify_release_signing_dry_run.sh`
 - `scripts/verify_release_detached_signature_fixture.sh`
+- `scripts/verify_release_signing_tooling_gate.sh`
 - `scripts/verify_dependency_review_gate.sh`
 - `scripts/verify_external_review_gate.sh`
 - `scripts/verify_update_integrity_gate.sh`
@@ -26,7 +27,7 @@ Current evidence does not prove v0.1-security-ready 100%. The repository has use
 
 | Requirement | Current evidence | Audit status |
 | --- | --- | --- |
-| Release signing | `RELEASE_HARDENING.md` records a pre-implementation signing plan, dry-run verifier, and disposable detached-signature fixture, but no release signing workflow or signed artifact verification exists. `scripts/verify_release_artifact_gates.sh`, `scripts/verify_release_signing_plan.sh`, `scripts/verify_release_signing_dry_run.sh`, and `scripts/verify_release_detached_signature_fixture.sh` confirm this gate is incomplete. | Not satisfied. |
+| Release signing | `RELEASE_HARDENING.md` records a pre-implementation signing plan, dry-run verifier, disposable detached-signature fixture, and unresolved tooling gate, but no release signing workflow or signed artifact verification exists. `scripts/verify_release_artifact_gates.sh`, `scripts/verify_release_signing_plan.sh`, `scripts/verify_release_signing_dry_run.sh`, `scripts/verify_release_detached_signature_fixture.sh`, and `scripts/verify_release_signing_tooling_gate.sh` confirm this gate is incomplete. | Not satisfied. |
 | Reproducible or equivalent binary verification | `RELEASE_HARDENING.md` states no reproducible build story exists. `scripts/verify_release_artifact_gates.sh` confirms this gate is incomplete. | Not satisfied. |
 | Dependency and supply-chain review | `RELEASE_HARDENING.md` records only a policy skeleton. `scripts/verify_dependency_review_gate.sh` confirms review evidence is missing. | Not satisfied. |
 | Threat model and release copy alignment | `RELEASE_HARDENING.md` records only a release-candidate signoff skeleton. `scripts/verify_release_signoff_gate.sh` confirms signoff evidence is missing. | Not satisfied. |
@@ -37,4 +38,4 @@ Current evidence does not prove v0.1-security-ready 100%. The repository has use
 
 The current repository is a strong prototype and guardrail baseline, but it has not crossed the 90-100% release-hardening bar. Static verifier skeletons are useful because they block unsupported claims; they do not replace the missing signing, binary verification, dependency review, release-candidate signoff, external review readiness evidence, or update/installer integrity process.
 
-The next implementation slice should decide release signing tooling or add a minisign/signify-specific fixture gate before release-candidate signing can proceed.
+The next implementation slice should move to reproducible/equivalent binary verification planning while release signing tooling remains explicitly unresolved.

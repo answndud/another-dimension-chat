@@ -39,6 +39,7 @@ What exists today:
 - A release signing implementation plan that targets offline detached signatures while keeping release signing documented as unimplemented.
 - A release signing dry-run verifier that uses disposable fixtures to reject missing signatures, stale checksums, stale detached signature markers, and unsigned artifacts without signing release artifacts.
 - A release detached-signature fixture verifier that uses disposable OpenSSL RSA keys to validate checksum signature behavior without creating release keys or signing release artifacts.
+- A release signing tooling decision gate that keeps final signing tooling explicitly unresolved until a separate decision record exists.
 - README status compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
 
 What does not exist yet:
