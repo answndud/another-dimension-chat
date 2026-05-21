@@ -33,6 +33,7 @@ What exists today:
 - A release artifact gate verifier skeleton that keeps signing and reproducible/equivalent verification documented as incomplete until real implementation exists.
 - A dependency review gate verifier skeleton that keeps dependency/supply-chain review documented as incomplete until review evidence exists.
 - An external review gate verifier skeleton that keeps external/independent review readiness documented as incomplete until review readiness evidence exists.
+- A release completion audit that records current v0.1-security-ready evidence as not complete and points the next slice at update/installer integrity.
 - README status compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
 
 What does not exist yet:
@@ -260,6 +261,8 @@ The first production storage policy boundary is tracked in [STORAGE_DECISION.md]
 The cross-component replacement inventory is tracked in [COMPONENT_BOUNDARIES.md](COMPONENT_BOUNDARIES.md). It maps the current `dev-insecure` local loop and guardrail spikes to the crypto, transport, storage, Tauri runtime, and release boundaries that must be resolved before any security-ready claim.
 
 The release hardening gap inventory is tracked in [RELEASE_HARDENING.md](RELEASE_HARDENING.md). It records missing release signing, reproducible or equivalent binary verification, dependency review, threat-model/release-copy alignment, external review readiness, and update integrity work. It is not evidence that those gates are complete.
+
+The current completion audit is tracked in [RELEASE_COMPLETION_AUDIT.md](RELEASE_COMPLETION_AUDIT.md). It records that current evidence does not prove v0.1-security-ready 100% and that release gates remain incomplete.
 
 ## License
 
