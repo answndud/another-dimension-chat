@@ -142,6 +142,7 @@ Moved without enabling network behavior:
 Preserved invariants:
 
 - Disabled manual network permission still records `RuntimeNetworkDisabled` before returning.
+- Disabled manual bootstrap and lifecycle CLI summaries print `bootstrap_status=network-disabled` without exposing paths, profile names, endpoints, bridge lines, descriptors, or key material.
 - The owner remains `Unbootstrapped` and does not retain a client when manual network is disabled.
 - Persistent bootstrap remains behind `arti-manual-bootstrap`.
 - No descriptor publication, onion hosting, stream I/O, envelope I/O, or usable messaging capability was added.
@@ -164,6 +165,7 @@ Preserved invariants:
 
 - The safe/default manual bootstrap gate remains `ManualArtiBootstrapAttemptGate::disabled(...)`.
 - `RuntimeNetworkDisabled` is still recorded before returning when the gate is disabled.
+- CLI manual bootstrap summaries include a redacted `bootstrap_status` field. Current public classes are `network-disabled`, `censorship-or-bridge-required`, `timeout-or-transient-network-failure`, `cancelled`, and `failed`; they are status reporting, not transport readiness.
 - The explicit manual spike constructor remains the only path that may reach `arti_client::TorClient::create_bootstrapped(...)`.
 - The manual bootstrap path remains separate from send/receive, onion hosting, descriptor publication, stream I/O, envelope I/O, and usable messaging.
 

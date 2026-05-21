@@ -105,6 +105,7 @@ fn manual_bootstrap_cli_gate_is_disabled_without_execute_network_flag() {
     assert!(!output.status.success());
     assert!(out.contains("BootstrapFailed"));
     assert!(out.contains("RuntimeNetworkDisabled"));
+    assert!(out.contains("bootstrap_status=network-disabled"));
     assert!(out.contains("usable_transport=false"));
     assert!(error.contains("manual bootstrap attempt failed: RuntimeNetworkDisabled"));
     assert!(!out.contains("arti-state"));
@@ -133,6 +134,7 @@ fn manual_bootstrap_cli_can_use_profile_scoped_transport_dirs_without_leaking_pa
     assert!(!output.status.success());
     assert!(out.contains("BootstrapFailed"));
     assert!(out.contains("RuntimeNetworkDisabled"));
+    assert!(out.contains("bootstrap_status=network-disabled"));
     assert!(out.contains("usable_transport=false"));
     assert!(error.contains("manual bootstrap attempt failed: RuntimeNetworkDisabled"));
     assert!(!out.contains("alice"));
@@ -206,6 +208,7 @@ fn manual_lifecycle_cli_gate_is_disabled_without_execute_network_flag() {
     assert!(out.contains("BootstrapFailed"));
     assert!(out.contains("RuntimeNetworkDisabled"));
     assert!(out.contains("manual lifecycle summary"));
+    assert!(out.contains("bootstrap_status=network-disabled"));
     assert!(out.contains("state=Unbootstrapped"));
     assert!(out.contains("client_owned=false"));
     assert!(out.contains("usable_transport=false"));

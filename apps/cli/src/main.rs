@@ -178,9 +178,14 @@ fn run_manual_bootstrap_command(args: &[String]) -> Result<(), String> {
     for event in sink.events() {
         println!("{event}");
     }
+    let bootstrap_status = match &result {
+        Ok(()) => "bootstrapped",
+        Err(error) => manual_bootstrap_status(*error),
+    };
     println!(
-        "manual bootstrap attempt summary: permission={:?} timeout_seconds={} usable_transport=false",
+        "manual bootstrap attempt summary: permission={:?} bootstrap_status={} timeout_seconds={} usable_transport=false",
         gate.summary().network_permission(),
+        bootstrap_status,
         gate.summary().timeout_seconds()
     );
 
@@ -224,14 +229,55 @@ fn run_manual_lifecycle_bootstrap_command(args: &[String]) -> Result<(), String>
     for event in sink.events() {
         println!("{event}");
     }
+    let bootstrap_status = match &result {
+        Ok(()) => "bootstrapped",
+        Err(error) => manual_lifecycle_bootstrap_status(error),
+    };
     println!(
-        "manual lifecycle summary: permission={network_permission:?} state={:?} client_owned={} timeout_seconds={} usable_transport=false",
+        "manual lifecycle summary: permission={network_permission:?} bootstrap_status={} state={:?} client_owned={} timeout_seconds={} usable_transport=false",
+        bootstrap_status,
         owner.summary().state(),
         owner.summary().client_owned(),
         owner.summary().timeout_seconds()
     );
 
     result.map_err(|error| format!("manual lifecycle bootstrap failed: {error:?}"))
+}
+
+#[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
+fn manual_bootstrap_status(
+    error: another_dimension_transport::TransportRuntimeError,
+) -> &'static str {
+    match error {
+        another_dimension_transport::TransportRuntimeError::RuntimeNetworkDisabled => {
+            "network-disabled"
+        }
+        another_dimension_transport::TransportRuntimeError::CensorshipOrBridgeRequired => {
+            "censorship-or-bridge-required"
+        }
+        another_dimension_transport::TransportRuntimeError::BootstrapTimeout => {
+            "timeout-or-transient-network-failure"
+        }
+        another_dimension_transport::TransportRuntimeError::BootstrapCancelled => "cancelled",
+        _ => "failed",
+    }
+}
+
+#[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
+fn manual_lifecycle_bootstrap_status(
+    error: &another_dimension_transport::arti_adapter_spike::PersistentArtiClientLifecycleError,
+) -> &'static str {
+    use another_dimension_transport::arti_adapter_spike::PersistentArtiClientLifecycleError;
+
+    match error {
+        PersistentArtiClientLifecycleError::RuntimeNetworkDisabled => "network-disabled",
+        PersistentArtiClientLifecycleError::BootstrapFailed(error) => {
+            manual_bootstrap_status(*error)
+        }
+        PersistentArtiClientLifecycleError::AlreadyShutdown => "owner-shutdown",
+        PersistentArtiClientLifecycleError::BootstrapAlreadyInProgress => "already-bootstrapping",
+        PersistentArtiClientLifecycleError::ClientAlreadyBootstrapped => "already-bootstrapped",
+    }
 }
 
 #[cfg(all(not(feature = "dev-insecure"), feature = "arti-manual-bootstrap"))]
