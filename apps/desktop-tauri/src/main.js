@@ -54,17 +54,21 @@ const fields = {
   productionPairingState: document.querySelector("#production-pairing-state"),
   productionPairingWarning: document.querySelector("#production-pairing-warning"),
   productionPairingPayload: document.querySelector("#production-pairing-payload"),
+  useProductionPairingPayload: document.querySelector("#use-production-pairing-payload"),
   productionRemotePairingPayload: document.querySelector("#production-remote-pairing-payload"),
   saveProductionSessionDraft: document.querySelector("#save-production-session-draft"),
   productionHandshakeInitPayload: document.querySelector("#production-handshake-init-payload"),
+  useProductionHandshakeInit: document.querySelector("#use-production-handshake-init"),
   productionRemoteHandshakeInitPayload: document.querySelector(
     "#production-remote-handshake-init-payload",
   ),
   productionHandshakeReplyPayload: document.querySelector("#production-handshake-reply-payload"),
+  useProductionHandshakeReply: document.querySelector("#use-production-handshake-reply"),
   productionRemoteHandshakeReplyPayload: document.querySelector(
     "#production-remote-handshake-reply-payload",
   ),
   productionHandshakeFinishPayload: document.querySelector("#production-handshake-finish-payload"),
+  useProductionHandshakeFinish: document.querySelector("#use-production-handshake-finish"),
   productionRemoteHandshakeFinishPayload: document.querySelector(
     "#production-remote-handshake-finish-payload",
   ),
@@ -83,6 +87,7 @@ const fields = {
   productionMessageState: document.querySelector("#production-message-state"),
   productionMessageWarning: document.querySelector("#production-message-warning"),
   productionMessageEnvelope: document.querySelector("#production-message-envelope"),
+  useProductionMessageEnvelope: document.querySelector("#use-production-message-envelope"),
   productionRemoteMessageEnvelope: document.querySelector("#production-remote-message-envelope"),
   importProductionMessageEnvelope: document.querySelector("#import-production-message-envelope"),
   exportProductionReceivedMessage: document.querySelector("#export-production-received-message"),
@@ -162,6 +167,32 @@ function productionSessionReadyForMessages() {
   return latestProductionSessionState?.ready_for_message_envelope === true;
 }
 
+function moveLocalPayload(sourceField, targetField, label) {
+  const value = sourceField?.value?.trim() ?? "";
+  if (!value || !targetField) {
+    setProductionPairingState(`${label} needs payload`);
+    return;
+  }
+  targetField.value = value;
+  targetField.dispatchEvent(new Event("input", { bubbles: true }));
+  setProductionPairingState(`${label} applied`);
+  setText(fields.productionPairingWarning, "Local screen payload copied into the matching remote field.");
+  applyProductionActionState();
+}
+
+function moveLocalMessageEnvelope() {
+  const value = fields.productionMessageEnvelope?.value?.trim() ?? "";
+  if (!value || !fields.productionRemoteMessageEnvelope) {
+    setProductionMessageState("Message envelope needs payload");
+    return;
+  }
+  fields.productionRemoteMessageEnvelope.value = value;
+  fields.productionRemoteMessageEnvelope.dispatchEvent(new Event("input", { bubbles: true }));
+  setProductionMessageState("Message envelope applied");
+  setText(fields.productionMessageWarning, "Local screen envelope copied into the remote envelope field.");
+  applyProductionActionState();
+}
+
 function applyProductionActionState() {
   const { profile, passphrase } = productionProfileInput();
   const pairing = productionPairingInput();
@@ -175,6 +206,11 @@ function applyProductionActionState() {
   const hasHandshakeReplyInput = Boolean(hasProfileUnlockInput && pairing.initPayload);
   const hasHandshakeFinishInput = Boolean(hasProfileUnlockInput && pairing.replyPayload);
   const hasFinishImportInput = Boolean(hasProfileUnlockInput && pairing.finishPayload);
+  const hasLocalPairingPayload = Boolean(fields.productionPairingPayload?.value.trim());
+  const hasHandshakeInitPayload = Boolean(fields.productionHandshakeInitPayload?.value.trim());
+  const hasHandshakeReplyPayload = Boolean(fields.productionHandshakeReplyPayload?.value.trim());
+  const hasHandshakeFinishPayload = Boolean(fields.productionHandshakeFinishPayload?.value.trim());
+  const hasLocalMessageEnvelope = Boolean(fields.productionMessageEnvelope?.value.trim());
   const hasOutboundMessageInput = Boolean(
     hasProfileUnlockInput &&
       validProductionMessageNumber() &&
@@ -197,6 +233,11 @@ function applyProductionActionState() {
   setDisabled(fields.exportProductionMessageEnvelope, busy || !hasOutboundMessageInput);
   setDisabled(fields.importProductionMessageEnvelope, busy || !hasInboundEnvelopeInput);
   setDisabled(fields.exportProductionReceivedMessage, busy || !hasReceivedExportInput);
+  setDisabled(fields.useProductionPairingPayload, busy || !hasLocalPairingPayload);
+  setDisabled(fields.useProductionHandshakeInit, busy || !hasHandshakeInitPayload);
+  setDisabled(fields.useProductionHandshakeReply, busy || !hasHandshakeReplyPayload);
+  setDisabled(fields.useProductionHandshakeFinish, busy || !hasHandshakeFinishPayload);
+  setDisabled(fields.useProductionMessageEnvelope, busy || !hasLocalMessageEnvelope);
 }
 
 function renderDemoSteps(steps) {
@@ -777,6 +818,7 @@ async function exportProductionPairingPayload() {
     if (fields.productionPairingPayload) {
       fields.productionPairingPayload.value = result.pairing_payload;
     }
+    applyProductionActionState();
     setText(
       fields.productionPairingStorage,
       `opened=${result.storage_opened} identity_loaded=${result.identity_private_key_loaded} noise_static_written=${result.noise_static_private_key_written} exported=${result.pairing_payload_exported} format=${result.payload_format}`,
@@ -920,6 +962,7 @@ function renderHandshakePayloadResult(result, outputField) {
     fields.productionPairingBoundary,
     `key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
   );
+  applyProductionActionState();
 }
 
 async function exportProductionHandshakeInit() {
@@ -1094,6 +1137,7 @@ async function exportProductionMessageEnvelope() {
     if (fields.productionMessageEnvelope) {
       fields.productionMessageEnvelope.value = result.envelope_payload;
     }
+    applyProductionActionState();
     setText(
       fields.productionMessageOutbound,
       `reserved=${result.message_number_reserved} pending=${result.pending_message_record_written} indexed=${result.local_message_index_written} transport=${result.session_transport_ready} encrypted=${result.encrypted_envelope_written} export=${result.encrypted_envelope_present}`,
@@ -1256,6 +1300,16 @@ if (fields.exportProductionPairing) {
   fields.exportProductionPairing.addEventListener("click", exportProductionPairingPayload);
 }
 
+if (fields.useProductionPairingPayload) {
+  fields.useProductionPairingPayload.addEventListener("click", () =>
+    moveLocalPayload(
+      fields.productionPairingPayload,
+      fields.productionRemotePairingPayload,
+      "Pairing payload",
+    ),
+  );
+}
+
 if (fields.saveProductionSessionDraft) {
   fields.saveProductionSessionDraft.addEventListener("click", saveProductionSessionDraft);
 }
@@ -1264,12 +1318,42 @@ if (fields.exportProductionHandshakeInit) {
   fields.exportProductionHandshakeInit.addEventListener("click", exportProductionHandshakeInit);
 }
 
+if (fields.useProductionHandshakeInit) {
+  fields.useProductionHandshakeInit.addEventListener("click", () =>
+    moveLocalPayload(
+      fields.productionHandshakeInitPayload,
+      fields.productionRemoteHandshakeInitPayload,
+      "Handshake init",
+    ),
+  );
+}
+
 if (fields.exportProductionHandshakeReply) {
   fields.exportProductionHandshakeReply.addEventListener("click", exportProductionHandshakeReply);
 }
 
+if (fields.useProductionHandshakeReply) {
+  fields.useProductionHandshakeReply.addEventListener("click", () =>
+    moveLocalPayload(
+      fields.productionHandshakeReplyPayload,
+      fields.productionRemoteHandshakeReplyPayload,
+      "Handshake reply",
+    ),
+  );
+}
+
 if (fields.exportProductionHandshakeFinish) {
   fields.exportProductionHandshakeFinish.addEventListener("click", exportProductionHandshakeFinish);
+}
+
+if (fields.useProductionHandshakeFinish) {
+  fields.useProductionHandshakeFinish.addEventListener("click", () =>
+    moveLocalPayload(
+      fields.productionHandshakeFinishPayload,
+      fields.productionRemoteHandshakeFinishPayload,
+      "Handshake finish",
+    ),
+  );
 }
 
 if (fields.importProductionHandshakeFinish) {
@@ -1282,6 +1366,10 @@ if (fields.checkProductionSessionState) {
 
 if (fields.exportProductionMessageEnvelope) {
   fields.exportProductionMessageEnvelope.addEventListener("click", exportProductionMessageEnvelope);
+}
+
+if (fields.useProductionMessageEnvelope) {
+  fields.useProductionMessageEnvelope.addEventListener("click", moveLocalMessageEnvelope);
 }
 
 if (fields.importProductionMessageEnvelope) {

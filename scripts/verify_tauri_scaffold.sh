@@ -153,6 +153,8 @@ require_contains "$APP_DIR/src/main.js" 'loadProductionProfileList'
 require_contains "$APP_DIR/src/main.js" 'renderProductionProfileSelector'
 require_contains "$APP_DIR/src/main.js" 'applyProductionActionState'
 require_contains "$APP_DIR/src/main.js" 'productionSessionReadyForMessages'
+require_contains "$APP_DIR/src/main.js" 'moveLocalPayload'
+require_contains "$APP_DIR/src/main.js" 'moveLocalMessageEnvelope'
 require_contains "$APP_DIR/src/main.js" 'exportProductionPairingPayload'
 require_contains "$APP_DIR/src/main.js" 'saveProductionSessionDraft'
 require_contains "$APP_DIR/src/main.js" 'checkProductionSessionState'
@@ -267,13 +269,17 @@ require_contains "$APP_DIR/index.html" 'Unlock production profile'
 require_contains "$APP_DIR/index.html" 'Production pairing'
 require_contains "$APP_DIR/index.html" 'Public payload export'
 require_contains "$APP_DIR/index.html" 'Export pairing payload'
+require_contains "$APP_DIR/index.html" 'Use pairing payload'
 require_contains "$APP_DIR/index.html" 'Remote payload'
 require_contains "$APP_DIR/index.html" 'Save session draft'
 require_contains "$APP_DIR/index.html" 'Handshake init'
+require_contains "$APP_DIR/index.html" 'Use handshake init'
 require_contains "$APP_DIR/index.html" 'Remote handshake init'
 require_contains "$APP_DIR/index.html" 'Handshake reply'
+require_contains "$APP_DIR/index.html" 'Use handshake reply'
 require_contains "$APP_DIR/index.html" 'Remote handshake reply'
 require_contains "$APP_DIR/index.html" 'Handshake finish'
+require_contains "$APP_DIR/index.html" 'Use handshake finish'
 require_contains "$APP_DIR/index.html" 'Remote handshake finish'
 require_contains "$APP_DIR/index.html" 'Export handshake init'
 require_contains "$APP_DIR/index.html" 'Import handshake finish'
@@ -281,6 +287,7 @@ require_contains "$APP_DIR/index.html" 'Check session state'
 require_contains "$APP_DIR/index.html" 'Production message'
 require_contains "$APP_DIR/index.html" 'Encrypted envelope path'
 require_contains "$APP_DIR/index.html" 'Export message envelope'
+require_contains "$APP_DIR/index.html" 'Use message envelope'
 require_contains "$APP_DIR/index.html" 'Remote envelope'
 require_contains "$APP_DIR/index.html" 'Import message envelope'
 require_contains "$APP_DIR/index.html" 'Show received message'
@@ -374,14 +381,18 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="unlock-production-profile" type="button">Unlock production profile</button>' \
   | grep -v '<input id="production-pairing-endpoint" type="text" value="alice.onion" />' \
   | grep -v '<button id="export-production-pairing" type="button">Export pairing payload</button>' \
+  | grep -v '<button id="use-production-pairing-payload" type="button">Use pairing payload</button>' \
   | grep -v '<textarea id="production-pairing-payload" rows="5" readonly></textarea>' \
   | grep -v '<textarea id="production-remote-pairing-payload" rows="5"></textarea>' \
   | grep -v '<button id="save-production-session-draft" type="button">Save session draft</button>' \
   | grep -v '<textarea id="production-handshake-init-payload" rows="3" readonly></textarea>' \
+  | grep -v '<button id="use-production-handshake-init" type="button">Use handshake init</button>' \
   | grep -v '<textarea id="production-remote-handshake-init-payload" rows="3"></textarea>' \
   | grep -v '<textarea id="production-handshake-reply-payload" rows="3" readonly></textarea>' \
+  | grep -v '<button id="use-production-handshake-reply" type="button">Use handshake reply</button>' \
   | grep -v '<textarea id="production-remote-handshake-reply-payload" rows="3"></textarea>' \
   | grep -v '<textarea id="production-handshake-finish-payload" rows="3" readonly></textarea>' \
+  | grep -v '<button id="use-production-handshake-finish" type="button">Use handshake finish</button>' \
   | grep -v '<textarea id="production-remote-handshake-finish-payload" rows="3"></textarea>' \
   | grep -v '<button id="export-production-handshake-init" type="button">Export handshake init</button>' \
   | grep -v '<button id="export-production-handshake-reply" type="button">Export handshake reply</button>' \
@@ -392,6 +403,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<textarea id="production-message-body" rows="3">hello over stored transport</textarea>' \
   | grep -v '<button id="export-production-message-envelope" type="button">Export message envelope</button>' \
   | grep -v '<textarea id="production-message-envelope" rows="5" readonly></textarea>' \
+  | grep -v '<button id="use-production-message-envelope" type="button">Use message envelope</button>' \
   | grep -v '<textarea id="production-remote-message-envelope" rows="5"></textarea>' \
   | grep -v '<button id="import-production-message-envelope" type="button">Import message envelope</button>' \
   | grep -v '<button id="export-production-received-message" type="button">Show received message</button>' \
