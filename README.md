@@ -134,6 +134,7 @@ This runs:
 - Session lock lifecycle status mirror records default/high-risk idle auto-lock requirements while keeping storage unlocked state, product lock command, key erasure claim, and runtime messaging disabled.
 - Session unlock redacted error taxonomy classifies disabled, passphrase-required, and OS-keystore-only rejected states without exposing raw storage errors, OS keychain errors, paths, identifiers, key material, or passphrase detail.
 - Default CLI `production unlock` is a fail-closed boundary command that returns the redacted disabled taxonomy without opening storage, writing session records, exposing key material, or enabling runtime messaging.
+- Tauri prototype status mirrors the CLI production unlock redacted disabled taxonomy as static read-only copy without adding an unlock command or executing the CLI.
 - Tauri prototype status mirrors session durable-state and unlock-policy blockers as static read-only copy without adding unlock, store-write, or runtime messaging commands.
 - Tauri scaffold static checks.
 - Public release hygiene static checks.
