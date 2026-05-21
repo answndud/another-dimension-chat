@@ -15,108 +15,125 @@
           <span>Display mode</span>
           <button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>
         </div>
-        <dl id="status-list" class="status-list">
-          <div>
-            <dt>Release claim</dt>
-            <dd id="release-claim">No secure-release claim</dd>
-          </div>
-          <div>
-            <dt>Messaging surface</dt>
-            <dd id="messaging">No runtime messaging path</dd>
-          </div>
-          <div>
-            <dt>Core</dt>
-            <dd id="core">Core boundary only</dd>
-          </div>
-          <div>
-            <dt>Profile</dt>
-            <dd id="profile">Profile boundary only</dd>
-          </div>
-          <div>
-            <dt>Pairing</dt>
-            <dd id="pairing">Pairing boundary only</dd>
-          </div>
-          <div>
-            <dt>Production session</dt>
-            <dd id="production-session">Snow Noise XX synchronous evaluation boundary only</dd>
-          </div>
-          <div>
-            <dt>Production self-test</dt>
-            <dd id="production-self-test">CLI production boundary self-test only</dd>
-          </div>
-          <div>
-            <dt>Production session limits</dt>
-            <dd id="production-session-non-readiness">
-              No production E2EE claim network transport durable persistence or async messaging
-            </dd>
-          </div>
-          <div>
-            <dt>Production preflight</dt>
-            <dd id="production-preflight">Read-only production skeleton blockers copy</dd>
-          </div>
-          <div>
-            <dt>Preflight blockers</dt>
-            <dd id="production-preflight-blockers">
-              session E2EE false transport send receive false storage rollback not-provided messaging false
-            </dd>
-          </div>
-          <div>
-            <dt>Session durable state</dt>
-            <dd id="session-durable-state">Read-only durable-state candidate blockers copy</dd>
-          </div>
-          <div>
-            <dt>Session unlock policy</dt>
-            <dd id="session-unlock-policy">High-risk passphrase required OS-keystore-only rejected</dd>
-          </div>
-          <div>
-            <dt>Session unlock limits</dt>
-            <dd id="session-unlock-non-readiness">
-              Product unlock durable persistence rollback runtime messaging disabled
-            </dd>
-          </div>
-          <div>
-            <dt>Session unlock rejection</dt>
-            <dd id="session-unlock-cli-rejection">Redacted product-unlock-disabled boundary copy</dd>
-          </div>
-          <div>
-            <dt>Unlock rejection flags</dt>
-            <dd id="session-unlock-cli-rejection-flags">
-              Storage_opened=false session_records_written=false key_material_exposed=false
-              runtime_messaging=false
-            </dd>
-          </div>
-          <div>
-            <dt>Transport</dt>
-            <dd id="transport">Pre-network fail-closed only</dd>
-          </div>
-          <div>
-            <dt>Network execution</dt>
-            <dd id="network-execution">Network execution disabled</dd>
-          </div>
-          <div>
-            <dt>Experimental transport</dt>
-            <dd id="experimental-transport">Manual bootstrap gate summary only</dd>
-          </div>
-          <div>
-            <dt>bootstrap status</dt>
-            <dd id="bootstrap-status">
-              network-disabled; censorship-or-bridge-required;
-              timeout-or-transient-network-failure
-            </dd>
-          </div>
-          <div>
-            <dt>Transport I/O</dt>
-            <dd id="transport-io">Hosting stream envelope messaging disabled</dd>
-          </div>
-          <div>
-            <dt>Storage</dt>
-            <dd id="storage">ADREC1 storage spike only</dd>
-          </div>
-          <div>
-            <dt>Verification</dt>
-            <dd id="verification">Lightweight checks only</dd>
-          </div>
-        </dl>
+        <section class="status-summary" aria-label="Current app state">
+          <article>
+            <span>Release</span>
+            <strong id="app-release-summary">Blocked: secure-release claim closed</strong>
+          </article>
+          <article>
+            <span>Local capability</span>
+            <strong id="local-capability-summary">Local-only: encrypted app-data harness</strong>
+          </article>
+          <article>
+            <span>Main blocker</span>
+            <strong id="main-blocker-summary">Blocked: runtime transport disabled</strong>
+          </article>
+        </section>
+        <details class="boundary-details">
+          <summary>Boundary details</summary>
+          <dl id="status-list" class="status-list">
+            <div>
+              <dt>Release claim</dt>
+              <dd id="release-claim">No secure-release claim</dd>
+            </div>
+            <div>
+              <dt>Messaging surface</dt>
+              <dd id="messaging">No runtime messaging path</dd>
+            </div>
+            <div>
+              <dt>Core</dt>
+              <dd id="core">Core boundary only</dd>
+            </div>
+            <div>
+              <dt>Profile</dt>
+              <dd id="profile">Profile boundary only</dd>
+            </div>
+            <div>
+              <dt>Pairing</dt>
+              <dd id="pairing">Pairing boundary only</dd>
+            </div>
+            <div>
+              <dt>Production session</dt>
+              <dd id="production-session">Snow Noise XX synchronous evaluation boundary only</dd>
+            </div>
+            <div>
+              <dt>Production self-test</dt>
+              <dd id="production-self-test">CLI production boundary self-test only</dd>
+            </div>
+            <div>
+              <dt>Production session limits</dt>
+              <dd id="production-session-non-readiness">
+                No production E2EE claim network transport durable persistence or async messaging
+              </dd>
+            </div>
+            <div>
+              <dt>Production preflight</dt>
+              <dd id="production-preflight">Read-only production skeleton blockers copy</dd>
+            </div>
+            <div>
+              <dt>Preflight blockers</dt>
+              <dd id="production-preflight-blockers">
+                session E2EE false transport send receive false storage rollback not-provided messaging false
+              </dd>
+            </div>
+            <div>
+              <dt>Session durable state</dt>
+              <dd id="session-durable-state">Read-only durable-state candidate blockers copy</dd>
+            </div>
+            <div>
+              <dt>Session unlock policy</dt>
+              <dd id="session-unlock-policy">High-risk passphrase required OS-keystore-only rejected</dd>
+            </div>
+            <div>
+              <dt>Session unlock limits</dt>
+              <dd id="session-unlock-non-readiness">
+                Product unlock durable persistence rollback runtime messaging disabled
+              </dd>
+            </div>
+            <div>
+              <dt>Session unlock rejection</dt>
+              <dd id="session-unlock-cli-rejection">Redacted product-unlock-disabled boundary copy</dd>
+            </div>
+            <div>
+              <dt>Unlock rejection flags</dt>
+              <dd id="session-unlock-cli-rejection-flags">
+                Storage_opened=false session_records_written=false key_material_exposed=false
+                runtime_messaging=false
+              </dd>
+            </div>
+            <div>
+              <dt>Transport</dt>
+              <dd id="transport">Pre-network fail-closed only</dd>
+            </div>
+            <div>
+              <dt>Network execution</dt>
+              <dd id="network-execution">Network execution disabled</dd>
+            </div>
+            <div>
+              <dt>Experimental transport</dt>
+              <dd id="experimental-transport">Manual bootstrap gate summary only</dd>
+            </div>
+            <div>
+              <dt>bootstrap status</dt>
+              <dd id="bootstrap-status">
+                network-disabled; censorship-or-bridge-required;
+                timeout-or-transient-network-failure
+              </dd>
+            </div>
+            <div>
+              <dt>Transport I/O</dt>
+              <dd id="transport-io">Hosting stream envelope messaging disabled</dd>
+            </div>
+            <div>
+              <dt>Storage</dt>
+              <dd id="storage">ADREC1 storage spike only</dd>
+            </div>
+            <div>
+              <dt>Verification</dt>
+              <dd id="verification">Lightweight checks only</dd>
+            </div>
+          </dl>
+        </details>
         <section class="demo-panel" aria-labelledby="demo-title">
           <section class="production-workflow" aria-labelledby="production-two-profile-title">
             <div>
