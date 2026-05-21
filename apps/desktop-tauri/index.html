@@ -43,7 +43,7 @@
           <div>
             <dt>Production session limits</dt>
             <dd id="production-session-non-readiness">
-              No production E2EE claim durable persistence Tauri messaging command or async messaging
+              No production E2EE claim network transport durable persistence or async messaging
             </dd>
           </div>
           <div>
@@ -185,6 +185,41 @@
               <div>
                 <dt>Replay check</dt>
                 <dd id="simulation-replay">Not checked yet</dd>
+              </div>
+            </dl>
+          </section>
+          <section class="loop-panel" aria-labelledby="production-roundtrip-title">
+            <div>
+              <p class="eyebrow">Production core local roundtrip</p>
+              <h3 id="production-roundtrip-title">Encrypted message path</h3>
+            </div>
+            <label class="loop-label" for="production-roundtrip-message">Message</label>
+            <textarea id="production-roundtrip-message" rows="3">hello from production core</textarea>
+            <div class="loop-actions">
+              <button id="run-production-roundtrip" type="button">Run production roundtrip</button>
+            </div>
+            <p id="production-roundtrip-state" class="demo-state" aria-live="polite">
+              Roundtrip idle
+            </p>
+            <p id="production-roundtrip-warning" class="demo-warning">
+              Production roundtrip has not run yet.
+            </p>
+            <dl class="flow-summary">
+              <div>
+                <dt>Session</dt>
+                <dd id="production-roundtrip-session">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Envelope</dt>
+                <dd id="production-roundtrip-envelope">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Receive</dt>
+                <dd id="production-roundtrip-receive">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Boundary</dt>
+                <dd id="production-roundtrip-boundary">Not checked yet</dd>
               </div>
             </dl>
           </section>
