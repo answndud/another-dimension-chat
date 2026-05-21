@@ -29,9 +29,11 @@ grep -q 'Tauri prototype status mirrors session durable-state and unlock-policy 
 grep -q 'A public-safe release hardening gap inventory that tracks missing signing, reproducible/equivalent verification, dependency review, release-copy alignment, external review readiness, and update integrity before any security-ready claim' "$ROOT_DIR/README.md"
 grep -q 'A release artifact gate verifier skeleton that keeps signing and reproducible/equivalent verification documented as incomplete until real implementation exists' "$ROOT_DIR/README.md"
 grep -q 'A dependency review gate verifier skeleton that keeps dependency/supply-chain review documented as incomplete until review evidence exists' "$ROOT_DIR/README.md"
+grep -q 'An external review gate verifier skeleton that keeps external/independent review readiness documented as incomplete until review readiness evidence exists' "$ROOT_DIR/README.md"
 grep -q 'RELEASE_HARDENING.md' "$ROOT_DIR/README.md"
 grep -q 'run_step "release artifact gate skeleton" scripts/verify_release_artifact_gates.sh' "$ROOT_DIR/scripts/verify_all.sh"
 grep -q 'run_step "dependency review gate skeleton" scripts/verify_dependency_review_gate.sh' "$ROOT_DIR/scripts/verify_all.sh"
+grep -q 'run_step "external review gate skeleton" scripts/verify_external_review_gate.sh' "$ROOT_DIR/scripts/verify_all.sh"
 grep -q 'cargo run -q -- production preflight' "$ROOT_DIR/README.md"
 grep -q 'read-only production skeleton preflight' "$ROOT_DIR/README.md"
 grep -q 'without creating profiles, unlocking storage, bootstrapping transport, sending envelopes, receiving envelopes, or marking messaging ready' "$ROOT_DIR/README.md"
@@ -236,7 +238,8 @@ grep -q 'mirrors session durable-state and unlock-policy blockers as static read
 grep -q 'RELEASE_HARDENING.md' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'scripts/verify_release_artifact_gates.sh' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'scripts/verify_dependency_review_gate.sh' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
-grep -q 'no release signing, reproducible/equivalent verification, dependency review record, external review, or update-integrity story exists' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
+grep -q 'scripts/verify_external_review_gate.sh' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
+grep -q 'no release signing, reproducible/equivalent verification, dependency review record, external review readiness evidence, or update-integrity story exists' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'ProductionSessionEvaluationSummary' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'TransportMessagePathBoundarySummary' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'ProductionMessageStorageBoundarySummary' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
@@ -293,6 +296,11 @@ grep -q 'No dependency review evidence is recorded yet' "$ROOT_DIR/RELEASE_HARDE
 grep -q 'reviewed lockfiles, direct dependency changes, native/system dependencies, and denied or accepted risk decisions' "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'scripts/verify_dependency_review_gate.sh' "$ROOT_DIR/RELEASE_HARDENING.md"
 test -x "$ROOT_DIR/scripts/verify_dependency_review_gate.sh"
+grep -q 'External Review Readiness Checklist Skeleton' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'No external or independent review readiness evidence is recorded yet' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'reviewed scope, reviewer independence expectations, review materials, finding triage, and release-blocking unresolved risks' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'scripts/verify_external_review_gate.sh' "$ROOT_DIR/RELEASE_HARDENING.md"
+test -x "$ROOT_DIR/scripts/verify_external_review_gate.sh"
 
 if git -C "$ROOT_DIR" ls-files | grep -E '^docs/' >/dev/null; then
   echo "private docs must not be tracked" >&2
