@@ -37,6 +37,21 @@ The repository does not currently have:
 | External or independent review readiness | No external review is recorded. | Prepare review materials and track findings before any high-risk release claim. |
 | Update and installer integrity | No updater or package-integrity story exists. | Define update verification, rollback handling, and platform package integrity. |
 
+## Dependency Review Policy Skeleton
+
+No dependency review evidence is recorded yet.
+
+Before any security-ready claim, a dependency review record must identify reviewed lockfiles, direct dependency changes, native/system dependencies, and denied or accepted risk decisions. At minimum, that record must cover:
+
+- Rust workspace dependencies and lockfile changes.
+- Tauri Rust dependencies and lockfile changes.
+- Desktop frontend npm dependencies and lockfile changes.
+- Native build dependencies such as SQLCipher/OpenSSL/Tauri platform requirements.
+- Security-sensitive crypto, storage, transport, and updater dependencies.
+- A deny/allow decision for new network, telemetry, updater, cloud, push, or account/discovery dependencies.
+
+`scripts/verify_dependency_review_gate.sh` is the current dependency review verifier skeleton. It confirms that dependency review is still documented as incomplete and fails if public copy starts claiming dependency or supply-chain review completion before evidence exists.
+
 ## Non-Claims
 
 - Passing local verification does not mean the app is safe for high-risk communication.
