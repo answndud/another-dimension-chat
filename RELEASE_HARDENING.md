@@ -37,7 +37,7 @@ The repository does not currently have:
 | Reproducible or equivalent verification | No reproducible build evidence or equivalent binary verification evidence exists; a pre-implementation verification plan, input template, and manifest fixture verifier exist. | Add reproducible builds or an equivalent independent binary verification process. |
 | Dependency and supply-chain review | Lockfiles, static checks, and a release-candidate review template exist, but no candidate-specific review evidence exists. | Add dependency review procedure, deny/allow policy, and release evidence. |
 | Threat model and release copy alignment | Public non-claim copy exists. | Reconcile release copy, known risks, non-goals, and threat model for the exact release candidate. |
-| External or independent review readiness | No external review is recorded. | Prepare review materials and track findings before any high-risk release claim. |
+| External or independent review readiness | A readiness template exists, but no candidate-specific external or independent review readiness evidence exists. | Prepare review materials and track findings before any high-risk release claim. |
 | Update and installer integrity | No updater or package-integrity story exists. | Define update verification, rollback handling, and platform package integrity. |
 
 ## Dependency Review Policy Skeleton
@@ -63,6 +63,8 @@ Before any security-ready claim, a dependency review record must identify review
 
 No external or independent review readiness evidence is recorded yet.
 
+The external review readiness template is tracked in [RELEASE_EXTERNAL_REVIEW_TEMPLATE.md](RELEASE_EXTERNAL_REVIEW_TEMPLATE.md). It is not external review readiness evidence, independent review evidence, or release approval.
+
 Before any security-ready claim, an external review readiness record must identify reviewed scope, reviewer independence expectations, review materials, finding triage, and release-blocking unresolved risks. At minimum, that record must cover:
 
 - Exact release-candidate commit, build profile, and platform artifacts under review.
@@ -73,6 +75,8 @@ Before any security-ready claim, an external review readiness record must identi
 - Known unresolved risks that must stay visible to users and reviewers.
 
 `scripts/verify_external_review_gate.sh` is the current external review readiness verifier skeleton. It confirms that external review readiness is still documented as incomplete and fails if public copy starts claiming external or independent review completion before evidence exists.
+
+`scripts/verify_external_review_template.sh` checks that the template still contains release-candidate placeholders and remains classified as `not-review-readiness-evidence`. It does not prepare review materials, record findings, or approve a release candidate.
 
 ## Update and Installer Integrity Checklist Skeleton
 

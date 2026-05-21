@@ -23,6 +23,7 @@ Current evidence does not prove v0.1-security-ready 100%. The repository has use
 - `scripts/verify_dependency_review_gate.sh`
 - `scripts/verify_dependency_review_template.sh`
 - `scripts/verify_external_review_gate.sh`
+- `scripts/verify_external_review_template.sh`
 - `scripts/verify_update_integrity_gate.sh`
 - `scripts/verify_release_signoff_gate.sh`
 - `scripts/verify_release_hygiene.sh`
@@ -35,11 +36,11 @@ Current evidence does not prove v0.1-security-ready 100%. The repository has use
 | Reproducible or equivalent binary verification | `RELEASE_HARDENING.md` records a pre-implementation binary verification plan, input template, and manifest fixture verifier, but no reproducible build evidence or equivalent binary verification evidence exists. `scripts/verify_release_artifact_gates.sh`, `scripts/verify_binary_verification_plan.sh`, `scripts/verify_binary_manifest_fixture.sh`, and `scripts/verify_binary_input_template.sh` confirm this gate is incomplete. | Not satisfied. |
 | Dependency and supply-chain review | `RELEASE_HARDENING.md` records a policy skeleton and [RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md](RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md) records required candidate-review fields, but no candidate-specific dependency review evidence exists. `scripts/verify_dependency_review_gate.sh` and `scripts/verify_dependency_review_template.sh` confirm review evidence is missing. | Not satisfied. |
 | Threat model and release copy alignment | `RELEASE_HARDENING.md` records only a release-candidate signoff skeleton. `scripts/verify_release_signoff_gate.sh` confirms signoff evidence is missing. | Not satisfied. |
-| External or independent review readiness | `RELEASE_HARDENING.md` records only a readiness checklist skeleton. `scripts/verify_external_review_gate.sh` confirms readiness evidence is missing. | Not satisfied. |
+| External or independent review readiness | `RELEASE_HARDENING.md` records a readiness checklist skeleton and [RELEASE_EXTERNAL_REVIEW_TEMPLATE.md](RELEASE_EXTERNAL_REVIEW_TEMPLATE.md) records required scope/material/finding/blocker fields, but no candidate-specific external or independent review readiness evidence exists. `scripts/verify_external_review_gate.sh` and `scripts/verify_external_review_template.sh` confirm readiness evidence is missing. | Not satisfied. |
 | Update and installer integrity | `RELEASE_HARDENING.md` records only an update/installer integrity checklist skeleton. `scripts/verify_update_integrity_gate.sh` confirms integrity evidence is missing. | Not satisfied. |
 
 ## Conclusion
 
 The current repository is a strong prototype and guardrail baseline, but it has not crossed the 90-100% release-hardening bar. Static verifier skeletons and evidence templates are useful because they block unsupported claims and define future review inputs; they do not replace the missing signing, binary verification, dependency review evidence, release-candidate signoff, external review readiness evidence, or update/installer integrity process.
 
-The next implementation slice should add external review readiness evidence template coverage while keeping it clearly separate from real external or independent review evidence.
+The next implementation slice should add release-candidate signoff evidence template coverage while keeping it clearly separate from real threat-model or release-copy signoff evidence.

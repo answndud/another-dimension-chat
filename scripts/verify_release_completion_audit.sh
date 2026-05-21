@@ -22,8 +22,9 @@ grep -q 'Dependency and supply-chain review | `RELEASE_HARDENING.md` records a p
 grep -q 'scripts/verify_dependency_review_template.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'Threat model and release copy alignment | `RELEASE_HARDENING.md` records only a release-candidate signoff skeleton' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
-grep -q 'External or independent review readiness | `RELEASE_HARDENING.md` records only a readiness checklist skeleton' \
+grep -q 'External or independent review readiness | `RELEASE_HARDENING.md` records a readiness checklist skeleton and \[RELEASE_EXTERNAL_REVIEW_TEMPLATE.md\](RELEASE_EXTERNAL_REVIEW_TEMPLATE.md) records required scope/material/finding/blocker fields, but no candidate-specific external or independent review readiness evidence exists' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
+grep -q 'scripts/verify_external_review_template.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'Update and installer integrity | `RELEASE_HARDENING.md` records only an update/installer integrity checklist skeleton' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'Update and installer integrity' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
