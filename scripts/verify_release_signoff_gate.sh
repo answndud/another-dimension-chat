@@ -3,12 +3,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-grep -q 'Threat model and release copy alignment | Public non-claim copy exists' \
+grep -q 'Threat model and release copy alignment | Public non-claim copy and a release-candidate signoff template exist, but no candidate-specific signoff evidence exists' \
   "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'Release-Candidate Threat Model and Copy Signoff Skeleton' \
   "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'No release-candidate threat-model or release-copy signoff evidence is recorded yet' \
   "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'RELEASE_SIGNOFF_TEMPLATE.md' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'scripts/verify_release_signoff_template.sh' "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'release-candidate signoff record must identify the exact candidate commit, threat model revision, non-goals, known risks, user-facing safety copy, and unresolved release blockers' \
   "$ROOT_DIR/RELEASE_HARDENING.md"
 
