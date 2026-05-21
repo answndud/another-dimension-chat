@@ -186,6 +186,9 @@ require_contains "$APP_DIR/src/main.js" 'renderAppStateSummary'
 require_contains "$APP_DIR/src/main.js" 'Blocked: runtime transport disabled'
 require_contains "$APP_DIR/src/main.js" 'productionTwoProfileReadiness'
 require_contains "$APP_DIR/src/main.js" 'renderProductionTwoProfileResult'
+require_contains "$APP_DIR/src/main.js" 'setProductionFollowupActions'
+require_contains "$APP_DIR/src/main.js" 'openManualProductionTools'
+require_contains "$APP_DIR/src/main.js" 'Next: inspect manual payload tools'
 require_contains "$APP_DIR/src/main.js" 'Blocked: passphrase required'
 require_contains "$APP_DIR/src/main.js" 'Ready: local encrypted roundtrip can run'
 require_contains "$APP_DIR/src/main.js" 'no plaintext, key material, store path, network I/O, transport I/O, or runtime messaging exposure'
@@ -193,6 +196,7 @@ require_contains "$APP_DIR/src/styles.css" '[data-theme="light"]'
 require_contains "$APP_DIR/src/styles.css" '.status-summary'
 require_contains "$APP_DIR/src/styles.css" '.boundary-details'
 require_contains "$APP_DIR/src/styles.css" '.action-readiness'
+require_contains "$APP_DIR/src/styles.css" '.followup-actions'
 require_contains "$APP_DIR/index.html" 'class="production-workflow"'
 require_contains "$APP_DIR/index.html" '<details class="advanced-panel">'
 require_contains "$APP_DIR/index.html" '<summary>Manual production payload tools</summary>'
@@ -270,6 +274,9 @@ require_contains "$APP_DIR/index.html" 'app-release-summary'
 require_contains "$APP_DIR/index.html" 'local-capability-summary'
 require_contains "$APP_DIR/index.html" 'main-blocker-summary'
 require_contains "$APP_DIR/index.html" 'production-two-profile-readiness'
+require_contains "$APP_DIR/index.html" 'Post-roundtrip actions'
+require_contains "$APP_DIR/index.html" 'open-manual-production-tools'
+require_contains "$APP_DIR/index.html" 'Review diagnostic'
 require_contains "$APP_DIR/index.html" 'Safety boundary'
 require_contains "$APP_DIR/index.html" 'Boundary details'
 require_contains "$APP_DIR/index.html" 'Session durable state'
@@ -453,6 +460,9 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />' \
   | grep -v '<textarea id="production-two-profile-message" rows="3">hello between app-data profiles</textarea>' \
   | grep -v '<button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>' \
+  | grep -v '<button id="open-manual-production-tools" type="button" class="flow-control is-secondary">' \
+  | grep -v '<button id="focus-local-diagnostic" type="button" class="flow-control is-secondary">' \
+  | grep -v '<button id="edit-two-profile-message" type="button" class="flow-control is-secondary">' \
   | grep -v '<button id="run-production-roundtrip" type="button">Run production roundtrip</button>' \
   | grep -v '<textarea id="production-roundtrip-message" rows="3">hello from production core</textarea>' \
   | grep -v '<button id="run-loop" type="button">Run local loop</button>' \

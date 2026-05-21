@@ -386,6 +386,21 @@ textarea {
   font-weight: 700;
 }
 
+.followup-actions {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  padding: 12px;
+  background: var(--panel);
+}
+
+.followup-actions p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .loop-results {
   display: grid;
   gap: 8px;
