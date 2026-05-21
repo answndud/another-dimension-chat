@@ -117,6 +117,7 @@ This runs:
 - `cargo fmt --all -- --check`
 - `cargo test --workspace --lib`
 - Default build boundary checks that keep `dev-insecure` out of default feature sets and verify the default CLI exposes only boundary commands.
+- Default CLI hardening rejects production skeleton commands for profile, pairing, messaging, storage unlock, transport bootstrap, and transport send/receive unless a later phase explicitly opens them.
 - Tauri scaffold static checks.
 - Public release hygiene static checks.
 

@@ -17,6 +17,14 @@ grep -q 'default build exposes only boundary commands' \
   "$ROOT_DIR/apps/cli/tests/cli_hardening.rs"
 grep -q 'performs no network I/O and opens no local storage' \
   "$ROOT_DIR/apps/cli/tests/cli_hardening.rs"
+grep -q 'default_build_rejects_production_skeleton_commands' \
+  "$ROOT_DIR/apps/cli/tests/cli_hardening.rs"
+grep -q 'storage", "unlock"' \
+  "$ROOT_DIR/apps/cli/tests/cli_hardening.rs"
+grep -q 'transport", "send"' \
+  "$ROOT_DIR/apps/cli/tests/cli_hardening.rs"
+grep -q 'message", "send"' \
+  "$ROOT_DIR/apps/cli/tests/cli_hardening.rs"
 
 cargo test -p another-dimension --test cli_hardening default_build
 

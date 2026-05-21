@@ -11,6 +11,7 @@ The project currently has a working local prototype loop:
 - CLI and Tauri can run Alice/Bob local profile, pairing, safety material, message send/receive, replay check, expiry, and development-store plaintext guard flows.
 - The loop is `dev-insecure` and local only.
 - Default builds do not expose usable profile, pairing, messaging, storage unlock, Tor bootstrap, onion hosting, stream I/O, or production message commands.
+- Default CLI hardening rejects production skeleton commands for profile, pairing, messaging, storage unlock, transport bootstrap, and transport send/receive until a later explicit runtime-command phase.
 - Existing production-facing code is a set of guardrails and spikes, not a complete secure runtime.
 
 ## Boundary Inventory
