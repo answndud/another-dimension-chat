@@ -212,3 +212,87 @@ export function productionSessionDraftView(result) {
       `runtime=${result.runtime_messaging_enabled}`,
   };
 }
+
+export function productionSessionStateView(result) {
+  return {
+    session:
+      `draft=${result.session_draft_present} channel=${result.channel_id_derivable} ` +
+      `role=${result.local_role_available} endpoint=${result.remote_endpoint_state_present} ` +
+      `replay=${result.replay_window_present} transport=${result.session_transport_state_present} ` +
+      `runtime=${result.runtime_material_reconstructable} message=${result.ready_for_message_envelope}`,
+    pairingBoundary:
+      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} ` +
+      `key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} ` +
+      `transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    messageBoundary:
+      `session_ready=${result.ready_for_message_envelope} outbound_io=${result.outbound_envelope_io_ready} ` +
+      `network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} ` +
+      `runtime=${result.runtime_messaging_enabled}`,
+  };
+}
+
+export function productionHandshakePayloadView(result) {
+  return {
+    state:
+      `role=${result.role_allowed} input_read=${result.input_payload_read} ` +
+      `input_decodable=${result.input_payload_decodable} output=${result.output_payload_created} ` +
+      `state=${result.state_written} transport=${result.transport_state_persisted}`,
+    boundary:
+      `key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} ` +
+      `transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+  };
+}
+
+export function productionHandshakeFinishImportView(result) {
+  return {
+    state:
+      `role=${result.role_allowed} finish_read=${result.finish_payload_read} ` +
+      `decodable=${result.finish_payload_decodable} remote_static=${result.remote_static_verified} ` +
+      `transport=${result.transport_state_persisted}`,
+    boundary:
+      `payloads_returned=${result.payloads_returned} key_material=${result.key_material_exposed} ` +
+      `network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} ` +
+      `runtime=${result.runtime_messaging_enabled}`,
+  };
+}
+
+export function productionMessageEnvelopeExportView(result) {
+  return {
+    outbound:
+      `reserved=${result.message_number_reserved} pending=${result.pending_message_record_written} ` +
+      `indexed=${result.local_message_index_written} transport=${result.session_transport_ready} ` +
+      `encrypted=${result.encrypted_envelope_written} export=${result.encrypted_envelope_present}`,
+    boundary:
+      `plaintext_returned=${result.plaintext_returned} key_material=${result.key_material_exposed} ` +
+      `network_send=${result.network_send_attempted} transport_io=${result.transport_io_opened} ` +
+      `runtime=${result.runtime_messaging_enabled}`,
+  };
+}
+
+export function productionMessageEnvelopeImportView(result) {
+  return {
+    inbound:
+      `read=${result.envelope_read} decodable=${result.envelope_decodable} ` +
+      `transport=${result.session_transport_ready} replay=${result.replay_accepted} ` +
+      `decrypted=${result.plaintext_decrypted} stored=${result.received_message_written} ` +
+      `status=${result.received_message_matches_session}`,
+    boundary:
+      `plaintext_returned=${result.plaintext_returned} key_material=${result.key_material_exposed} ` +
+      `network_receive=${result.network_receive_attempted} transport_io=${result.transport_io_opened} ` +
+      `runtime=${result.runtime_messaging_enabled}`,
+  };
+}
+
+export function productionReceivedMessageExportView(result) {
+  return {
+    inbound:
+      `present=${result.received_message_record_present} ` +
+      `decodable=${result.received_message_record_decodable} ` +
+      `session=${result.received_message_matches_session} ` +
+      `displayed=${result.plaintext_returned_after_unlock}`,
+    boundary:
+      `plaintext_after_unlock=${result.plaintext_returned_after_unlock} ` +
+      `key_material=${result.key_material_exposed} network_receive=${result.network_receive_attempted} ` +
+      `transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+  };
+}
