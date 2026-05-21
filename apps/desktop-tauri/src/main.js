@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
   productionActionAvailability,
+  productionCounterpartProfile,
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
   productionManualNextActions,
@@ -79,6 +80,8 @@ const fields = {
   productionPairingWarning: document.querySelector("#production-pairing-warning"),
   productionPairingPayload: document.querySelector("#production-pairing-payload"),
   useProductionPairingPayload: document.querySelector("#use-production-pairing-payload"),
+  storeProductionPairingPayload: document.querySelector("#store-production-pairing-payload"),
+  loadProductionPairingPayload: document.querySelector("#load-production-pairing-payload"),
   productionRemotePairingPayload: document.querySelector("#production-remote-pairing-payload"),
   saveProductionSessionDraft: document.querySelector("#save-production-session-draft"),
   productionHandshakeInitPayload: document.querySelector("#production-handshake-init-payload"),
@@ -164,6 +167,7 @@ let latestSimulation = null;
 let latestProductionSessionState = null;
 let latestProductionTwoProfileSuccess = null;
 let productionBusyAction = null;
+const productionPairingPayloadSlots = new Map();
 
 const themeStorageKey = "another-dimension-theme";
 
@@ -262,6 +266,10 @@ function productionSessionReadyForMessages() {
   return latestProductionSessionState?.ready_for_message_envelope === true;
 }
 
+function activeProductionProfileName() {
+  return (fields.productionProfileName?.value ?? "").trim().toLowerCase();
+}
+
 function applyProductionProfilePreset(peer) {
   const preset = productionProfilePreset(peer);
   if (!preset || !fields.productionProfileName || !fields.productionPairingEndpoint) {
@@ -330,6 +338,36 @@ function moveLocalPayload(sourceField, targetField, label) {
   applyProductionActionState();
 }
 
+function storeProductionPairingPayload() {
+  const profile = activeProductionProfileName();
+  const value = fields.productionPairingPayload?.value?.trim() ?? "";
+  if (!profile || !value) {
+    setProductionPairingState("Pairing store needs profile and payload");
+    setText(fields.productionPairingWarning, "Export pairing before storing a local payload slot.");
+    return;
+  }
+  productionPairingPayloadSlots.set(profile, value);
+  setProductionPairingState("Pairing payload stored");
+  setText(fields.productionPairingWarning, `Stored local pairing payload slot for ${profile}.`);
+  applyProductionActionState();
+}
+
+function loadProductionPairingPayload() {
+  const profile = activeProductionProfileName();
+  const counterpart = productionCounterpartProfile(profile);
+  const value = counterpart ? productionPairingPayloadSlots.get(counterpart) : null;
+  if (!value || !fields.productionRemotePairingPayload) {
+    setProductionPairingState("Remote pairing slot empty");
+    setText(fields.productionPairingWarning, "Store Alice or Bob pairing first, then switch profile and load remote.");
+    return;
+  }
+  fields.productionRemotePairingPayload.value = value;
+  fields.productionRemotePairingPayload.dispatchEvent(new Event("input", { bubbles: true }));
+  setProductionPairingState("Remote pairing loaded");
+  setText(fields.productionPairingWarning, `Loaded ${counterpart} pairing payload into remote field.`);
+  applyProductionActionState();
+}
+
 function moveLocalMessageEnvelope() {
   const value = fields.productionMessageEnvelope?.value?.trim() ?? "";
   if (!value || !fields.productionRemoteMessageEnvelope) {
@@ -375,6 +413,10 @@ function applyProductionActionState() {
   const hasHandshakeFinishInput = Boolean(hasProfileUnlockInput && pairing.replyPayload);
   const hasFinishImportInput = Boolean(hasProfileUnlockInput && pairing.finishPayload);
   const hasLocalPairingPayload = Boolean(fields.productionPairingPayload?.value.trim());
+  const counterpartProfile = productionCounterpartProfile(activeProductionProfileName());
+  const hasRemotePairingSlot = Boolean(
+    counterpartProfile && productionPairingPayloadSlots.has(counterpartProfile),
+  );
   const hasHandshakeInitPayload = Boolean(fields.productionHandshakeInitPayload?.value.trim());
   const hasHandshakeReplyPayload = Boolean(fields.productionHandshakeReplyPayload?.value.trim());
   const hasHandshakeFinishPayload = Boolean(fields.productionHandshakeFinishPayload?.value.trim());
@@ -435,6 +477,8 @@ function applyProductionActionState() {
   setDisabled(fields.exportProductionReceivedMessage, !availability.exportReceivedMessage);
   setDisabled(fields.runProductionTwoProfileRoundtrip, !availability.runTwoProfileRoundtrip);
   setDisabled(fields.useProductionPairingPayload, !availability.usePairingPayload);
+  setDisabled(fields.storeProductionPairingPayload, busy || !hasLocalPairingPayload);
+  setDisabled(fields.loadProductionPairingPayload, busy || !hasRemotePairingSlot);
   setDisabled(fields.useProductionHandshakeInit, !availability.useHandshakeInit);
   setDisabled(fields.useProductionHandshakeReply, !availability.useHandshakeReply);
   setDisabled(fields.useProductionHandshakeFinish, !availability.useHandshakeFinish);
@@ -1576,6 +1620,14 @@ if (fields.useProductionPairingPayload) {
       "Pairing payload",
     ),
   );
+}
+
+if (fields.storeProductionPairingPayload) {
+  fields.storeProductionPairingPayload.addEventListener("click", storeProductionPairingPayload);
+}
+
+if (fields.loadProductionPairingPayload) {
+  fields.loadProductionPairingPayload.addEventListener("click", loadProductionPairingPayload);
 }
 
 if (fields.saveProductionSessionDraft) {

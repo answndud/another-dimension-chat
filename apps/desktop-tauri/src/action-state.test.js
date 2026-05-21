@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   productionActionAvailability,
+  productionCounterpartProfile,
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
   productionManualNextActions,
@@ -224,6 +225,12 @@ test("productionProfilePreset maps known manual peers to profile and endpoint de
     rendezvousEndpoint: "bob.onion",
   });
   assert.equal(productionProfilePreset("mallory"), null);
+});
+
+test("productionCounterpartProfile maps only known manual peers", () => {
+  assert.equal(productionCounterpartProfile(" Alice "), "bob");
+  assert.equal(productionCounterpartProfile("bob"), "alice");
+  assert.equal(productionCounterpartProfile("carol"), null);
 });
 
 test("productionActionAvailability disables every action while busy", () => {
