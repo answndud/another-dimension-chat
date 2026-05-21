@@ -9,8 +9,8 @@ pub mod production {
         ProductionKeyAlgorithm, ProductionPairwisePrivateKey, ProfileName,
     };
     use another_dimension_pairing::{
-        production_pairing_draft_with_defaults, transcript, PairingError, PairingPayload,
-        ProductionPairingDraft,
+        production_pairing_draft_with_defaults, production_pairing_payload_with_defaults,
+        transcript, PairingError, PairingPayload, ProductionPairingDraft,
     };
     use another_dimension_protocol::{
         decode_hex, encode_hex, Envelope, MessageType, ProtocolError, ReplayWindow,
@@ -42,6 +42,8 @@ pub mod production {
     const PRODUCTION_LOCAL_MESSAGE_INDEX_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-LOCAL-MESSAGE-INDEX-RECORD-V1";
     const PRODUCTION_IDENTITY_PRIVATE_KEY_RECORD_ID: &str = "pairwise_identity_private_key_v1";
+    const PRODUCTION_LATEST_PAIRING_NOISE_STATIC_RECORD_ID: &str =
+        "latest_pairing_noise_static_private_key_v1";
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct ProductionSessionPlan {
@@ -217,6 +219,17 @@ pub mod production {
         runtime_messaging_enabled: bool,
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingPayloadCreateSummary {
+        storage_opened: bool,
+        identity_private_key_loaded: bool,
+        noise_static_private_key_written: bool,
+        payload: PairingPayload,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
     impl ProductionProfileInitSummary {
         pub fn storage_opened(self) -> bool {
             self.storage_opened
@@ -309,6 +322,36 @@ pub mod production {
         }
 
         pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingPayloadCreateSummary {
+        pub fn storage_opened(&self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn identity_private_key_loaded(&self) -> bool {
+            self.identity_private_key_loaded
+        }
+
+        pub fn noise_static_private_key_written(&self) -> bool {
+            self.noise_static_private_key_written
+        }
+
+        pub fn payload(&self) -> &PairingPayload {
+            &self.payload
+        }
+
+        pub fn key_material_exposed(&self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(&self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(&self) -> bool {
             self.runtime_messaging_enabled
         }
     }
@@ -1406,6 +1449,7 @@ pub mod production {
         EndpointLifecycle(EndpointLifecycleError),
         NonProductionPairingPayload,
         ProfileMarkerMissing,
+        IdentityPrivateKeyMissing,
         SamePairwiseIdentity,
         SameRendezvousEndpoint,
         InvalidRendezvousEndpoint,
@@ -1576,6 +1620,49 @@ pub mod production {
             storage_opened: true,
             identity_private_key_present: identity.is_some(),
             identity_public_key_derivable,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_pairing_payload_create(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        rendezvous_endpoint: impl Into<String>,
+    ) -> Result<ProductionPairingPayloadCreateSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let identity = store
+            .get(&production_identity_private_key_record_id())?
+            .map(decode_production_identity_private_key_record)
+            .transpose()?
+            .ok_or(ProductionSessionError::IdentityPrivateKeyMissing)?;
+        let noise_static = generate_noise_static_keypair()?;
+        let prekey_bundle = noise_static.prekey_bundle()?.encode();
+        let payload = production_pairing_payload_with_defaults(
+            &profile,
+            &identity,
+            rendezvous_endpoint,
+            prekey_bundle,
+        )?;
+        store.put(
+            &production_latest_pairing_noise_static_record_id(),
+            &encode_production_noise_static_private_key_record(
+                profile,
+                payload.pairing_nonce.clone(),
+                &noise_static,
+            )?,
+        )?;
+        Ok(ProductionPairingPayloadCreateSummary {
+            storage_opened: true,
+            identity_private_key_loaded: true,
+            noise_static_private_key_written: true,
+            payload,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -2158,6 +2245,11 @@ pub mod production {
             .expect("static production identity record id is valid")
     }
 
+    fn production_latest_pairing_noise_static_record_id() -> EncryptedRecordId {
+        EncryptedRecordId::new(PRODUCTION_LATEST_PAIRING_NOISE_STATIC_RECORD_ID)
+            .expect("static production noise static record id is valid")
+    }
+
     fn encode_production_identity_private_key_record(
         profile: ProfileName,
         private_key: &ProductionPairwisePrivateKey,
@@ -2193,6 +2285,27 @@ pub mod production {
         let seed = decode_hex(seed_hex).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
         ProductionPairwisePrivateKey::from_bytes(ProductionKeyAlgorithm::Ed25519DalekV2, seed)
             .map_err(ProductionSessionError::from)
+    }
+
+    fn encode_production_noise_static_private_key_record(
+        profile: ProfileName,
+        pairing_nonce: String,
+        keypair: &NoiseStaticKeypair,
+    ) -> Result<EncryptedRecord, ProductionSessionError> {
+        let encoded = format!(
+            "noise-xx-25519-v1:{}:{}:{}",
+            pairing_nonce,
+            encode_hex(keypair.encrypted_storage_private_bytes()),
+            encode_hex(keypair.public_key())
+        );
+        EncryptedRecord::new(
+            ProductionRecordKind::NoiseStaticPrivateKey,
+            EncryptedRecordScope::profile(profile),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            encoded.into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)
+        .map_err(ProductionSessionError::from)
     }
 
     #[cfg(test)]
@@ -2742,6 +2855,80 @@ pub mod production {
             assert!(!present.key_material_exposed());
             assert!(!present.transport_io_opened());
             assert!(!present.runtime_messaging_enabled());
+
+            let _ = std::fs::remove_dir_all(dir);
+        }
+
+        #[test]
+        fn production_pairing_payload_create_uses_stored_identity_and_persists_noise_static() {
+            let dir = std::env::temp_dir().join(format!(
+                "another-dimension-production-pairing-payload-{}-{:?}",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+            if dir.exists() {
+                std::fs::remove_dir_all(&dir).expect("remove stale dir");
+            }
+            std::fs::create_dir_all(&dir).expect("create dir");
+            let store_path = dir.join("profile.db");
+            let profile = ProfileName::new("alice").expect("valid profile");
+            let passphrase = ProfilePassphrase::new("correct-passphrase").expect("passphrase");
+
+            assert_eq!(
+                production_pairing_payload_create(
+                    &store_path,
+                    profile.clone(),
+                    &passphrase,
+                    "alice.onion",
+                ),
+                Err(ProductionSessionError::ProfileMarkerMissing)
+            );
+            production_profile_init(&store_path, profile.clone(), &passphrase)
+                .expect("profile init");
+            assert_eq!(
+                production_pairing_payload_create(
+                    &store_path,
+                    profile.clone(),
+                    &passphrase,
+                    "alice.onion",
+                ),
+                Err(ProductionSessionError::IdentityPrivateKeyMissing)
+            );
+            production_profile_identity_init(&store_path, profile.clone(), &passphrase)
+                .expect("identity init");
+
+            let summary = production_pairing_payload_create(
+                &store_path,
+                profile.clone(),
+                &passphrase,
+                "alice.onion",
+            )
+            .expect("pairing payload create");
+            let encoded = summary.payload().encode().expect("payload encodes");
+            let decoded = PairingPayload::decode(&encoded).expect("payload decodes");
+            let prekey = NoisePrekeyBundle::decode(&decoded.prekey_bundle).expect("prekey");
+
+            assert!(summary.storage_opened());
+            assert!(summary.identity_private_key_loaded());
+            assert!(summary.noise_static_private_key_written());
+            assert!(!summary.key_material_exposed());
+            assert!(!summary.transport_io_opened());
+            assert!(!summary.runtime_messaging_enabled());
+            assert_eq!(decoded.owner_profile, profile);
+            assert_eq!(decoded.rendezvous_endpoint, "alice.onion");
+
+            let store = LockedProfileStore::new(&store_path)
+                .unlock(&passphrase)
+                .expect("unlock initialized store");
+            let record = store
+                .get(&production_latest_pairing_noise_static_record_id())
+                .expect("load noise static record")
+                .expect("noise static record");
+            assert_eq!(record.kind, ProductionRecordKind::NoiseStaticPrivateKey);
+            assert_eq!(record.scope.profile_name(), &profile);
+            let body = String::from_utf8(record.sealed_body).expect("noise record body");
+            assert!(body.starts_with(&format!("noise-xx-25519-v1:{}:", decoded.pairing_nonce)));
+            assert!(body.ends_with(&encode_hex(prekey.public_key())));
 
             let _ = std::fs::remove_dir_all(dir);
         }

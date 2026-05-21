@@ -86,6 +86,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production profile status"));
     assert!(out.contains("production identity init"));
     assert!(out.contains("production identity status"));
+    assert!(out.contains("production pairing payload create"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
@@ -470,6 +471,186 @@ fn production_identity_init_and_status_use_encrypted_store_without_opening_messa
     assert!(wrong_error.contains("unlock failed"));
     assert!(!wrong_error.contains("alice"));
     assert!(!wrong_error.contains(store_arg));
+    assert!(!wrong_error.contains("wrong passphrase"));
+
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+#[cfg(not(feature = "dev-insecure"))]
+fn production_pairing_payload_create_uses_stored_identity_without_opening_messaging() {
+    let root = temp_cli_path("production-pairing-payload");
+    if root.exists() {
+        std::fs::remove_dir_all(&root).expect("remove stale root");
+    }
+    std::fs::create_dir_all(&root).expect("create root");
+    let store = root.join("profile.db");
+    let payload = root.join("alice-pairing.txt");
+    let store_arg = store.to_str().expect("store path");
+    let payload_arg = payload.to_str().expect("payload path");
+
+    let missing_profile = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "payload",
+            "create",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--rendezvous-endpoint",
+            "alice.onion",
+            "--out",
+            payload_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let missing_profile_error = stderr(&missing_profile);
+    assert!(!missing_profile.status.success());
+    assert!(stdout(&missing_profile).is_empty());
+    assert!(missing_profile_error.contains("profile marker missing"));
+    assert!(!missing_profile_error.contains("alice"));
+    assert!(!missing_profile_error.contains(store_arg));
+    assert!(!missing_profile_error.contains(payload_arg));
+    assert!(!payload.exists());
+
+    let init_profile = run_with_stdin(
+        &[
+            "production",
+            "profile",
+            "init",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    assert!(init_profile.status.success());
+
+    let missing_identity = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "payload",
+            "create",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--rendezvous-endpoint",
+            "alice.onion",
+            "--out",
+            payload_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let missing_identity_error = stderr(&missing_identity);
+    assert!(!missing_identity.status.success());
+    assert!(stdout(&missing_identity).is_empty());
+    assert!(missing_identity_error.contains("identity private key missing"));
+    assert!(!missing_identity_error.contains("alice"));
+    assert!(!missing_identity_error.contains(store_arg));
+    assert!(!payload.exists());
+
+    let init_identity = run_with_stdin(
+        &[
+            "production",
+            "identity",
+            "init",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    assert!(init_identity.status.success());
+
+    let create = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "payload",
+            "create",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--rendezvous-endpoint",
+            "alice.onion",
+            "--out",
+            payload_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let create_out = stdout(&create);
+    let create_error = stderr(&create);
+    assert!(
+        create.status.success(),
+        "stdout: {create_out}\nstderr: {create_error}"
+    );
+    assert!(create_out.contains("production pairing payload created:"));
+    assert!(create_out.contains("storage_opened=true"));
+    assert!(create_out.contains("identity_private_key_loaded=true"));
+    assert!(create_out.contains("noise_static_private_key_written=true"));
+    assert!(create_out.contains("payload_written=true"));
+    assert!(create_out.contains("key_material_exposed=false"));
+    assert!(create_out.contains("transport_io_opened=false"));
+    assert!(create_out.contains("runtime_messaging=false"));
+    assert!(create_error.contains("storage-only"));
+    assert!(!create_out.contains("alice"));
+    assert!(!create_out.contains(store_arg));
+    assert!(!create_out.contains(payload_arg));
+    assert!(!create_out.contains("ed25519"));
+    assert!(!create_error.contains("correct horse"));
+
+    let encoded = std::fs::read_to_string(&payload).expect("payload file");
+    let decoded =
+        another_dimension_pairing::PairingPayload::decode(&encoded).expect("payload decodes");
+    assert_eq!(decoded.owner_profile.as_str(), "alice");
+    assert_eq!(decoded.rendezvous_endpoint, "alice.onion");
+    assert!(decoded
+        .pairwise_public_key
+        .as_str()
+        .starts_with("ed25519-dalek-v2:"));
+    assert!(decoded
+        .pairwise_signature
+        .as_str()
+        .starts_with("ed25519-dalek-v2:"));
+    assert!(decoded.prekey_bundle.starts_with("adnoise1:"));
+
+    let wrong = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "payload",
+            "create",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--rendezvous-endpoint",
+            "alice.onion",
+            "--out",
+            payload_arg,
+            "--passphrase-stdin",
+        ],
+        "wrong passphrase\n",
+    );
+    let wrong_error = stderr(&wrong);
+    assert!(!wrong.status.success());
+    assert!(stdout(&wrong).is_empty());
+    assert!(wrong_error.contains("unlock failed"));
+    assert!(!wrong_error.contains("alice"));
+    assert!(!wrong_error.contains(store_arg));
+    assert!(!wrong_error.contains(payload_arg));
     assert!(!wrong_error.contains("wrong passphrase"));
 
     let _ = std::fs::remove_dir_all(root);
