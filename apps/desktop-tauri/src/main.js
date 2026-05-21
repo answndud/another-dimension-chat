@@ -111,6 +111,12 @@ const fields = {
   productionTwoProfileSession: document.querySelector("#production-two-profile-session"),
   productionTwoProfileMessageState: document.querySelector("#production-two-profile-message-state"),
   productionTwoProfileBoundary: document.querySelector("#production-two-profile-boundary"),
+  productionTwoProfileNextStep: document.querySelector("#production-two-profile-next-step"),
+  openManualProductionTools: document.querySelector("#open-manual-production-tools"),
+  focusLocalDiagnostic: document.querySelector("#focus-local-diagnostic"),
+  editTwoProfileMessage: document.querySelector("#edit-two-profile-message"),
+  manualProductionTools: document.querySelector(".advanced-panel"),
+  localDiagnosticPanel: document.querySelector("#demo-title"),
   productionRoundtripMessage: document.querySelector("#production-roundtrip-message"),
   runProductionRoundtrip: document.querySelector("#run-production-roundtrip"),
   productionRoundtripState: document.querySelector("#production-roundtrip-state"),
@@ -200,6 +206,13 @@ function setDisabled(node, disabled) {
   }
 }
 
+function setProductionFollowupActions(enabled, message) {
+  setText(fields.productionTwoProfileNextStep, message);
+  setDisabled(fields.openManualProductionTools, !enabled);
+  setDisabled(fields.focusLocalDiagnostic, !enabled);
+  setDisabled(fields.editTwoProfileMessage, !enabled);
+}
+
 function renderAppStateSummary(status) {
   const releaseSummary = status.secure_release
     ? "Ready: secure-release claim present"
@@ -271,6 +284,22 @@ function moveLocalMessageEnvelope() {
   setProductionMessageState("Message envelope applied");
   setText(fields.productionMessageWarning, "Local screen envelope copied into the remote envelope field.");
   applyProductionActionState();
+}
+
+function openManualProductionTools() {
+  if (fields.manualProductionTools) {
+    fields.manualProductionTools.open = true;
+    fields.manualProductionTools.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+}
+
+function focusLocalDiagnostic() {
+  fields.localDiagnosticPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
+  fields.runDemo?.focus();
+}
+
+function editTwoProfileMessage() {
+  fields.productionTwoProfileMessage?.focus();
 }
 
 function applyProductionActionState() {
@@ -411,6 +440,7 @@ function resetProductionTwoProfileView() {
   setText(fields.productionTwoProfileSession, "Not checked yet");
   setText(fields.productionTwoProfileMessageState, "Not checked yet");
   setText(fields.productionTwoProfileBoundary, "Not checked yet");
+  setProductionFollowupActions(false, "Next actions unlock after a completed local roundtrip.");
   applyProductionActionState();
 }
 
@@ -560,6 +590,13 @@ function renderProductionTwoProfileResult(result) {
   setText(
     fields.productionTwoProfileBoundary,
     `${boundaryContained ? "Contained" : "Review"}: no plaintext, key material, store path, network I/O, transport I/O, or runtime messaging exposure | plaintext_returned=${result.plaintext_returned_to_frontend} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+  );
+  const canContinue = profilesReady && sessionReady && messageReady && boundaryContained;
+  setProductionFollowupActions(
+    canContinue,
+    canContinue
+      ? "Next: inspect manual payload tools, run local diagnostic, or edit the message and run again."
+      : "Review result rows before continuing.",
   );
 }
 
@@ -864,6 +901,7 @@ async function runProductionTwoProfileRoundtrip() {
   setText(fields.productionTwoProfileSession, "Waiting for session draft and handshake");
   setText(fields.productionTwoProfileMessageState, "Waiting for encrypted envelope and receive");
   setText(fields.productionTwoProfileBoundary, "Waiting for boundary flags");
+  setProductionFollowupActions(false, "Roundtrip running. Follow-up actions are locked.");
   productionBusyAction = "two-profile-roundtrip";
   applyProductionActionState();
   if (fields.runProductionTwoProfileRoundtrip) {
@@ -887,6 +925,7 @@ async function runProductionTwoProfileRoundtrip() {
     setText(fields.productionTwoProfileSession, "Failed");
     setText(fields.productionTwoProfileMessageState, "Failed");
     setText(fields.productionTwoProfileBoundary, "Failed");
+    setProductionFollowupActions(false, "Fix the failed roundtrip before continuing.");
   } finally {
     productionBusyAction = null;
     if (fields.runProductionTwoProfileRoundtrip) {
@@ -1607,6 +1646,18 @@ if (fields.runProductionTwoProfileRoundtrip) {
     "click",
     runProductionTwoProfileRoundtrip,
   );
+}
+
+if (fields.openManualProductionTools) {
+  fields.openManualProductionTools.addEventListener("click", openManualProductionTools);
+}
+
+if (fields.focusLocalDiagnostic) {
+  fields.focusLocalDiagnostic.addEventListener("click", focusLocalDiagnostic);
+}
+
+if (fields.editTwoProfileMessage) {
+  fields.editTwoProfileMessage.addEventListener("click", editTwoProfileMessage);
 }
 
 if (fields.runLoop) {
