@@ -18,6 +18,9 @@ grep -q 'The dry-run marker is not a real release signature' "$ROOT_DIR/RELEASE_
 grep -q 'scripts/verify_release_detached_signature_fixture.sh' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
 grep -q 'does not create a release signing key or sign release artifacts' \
   "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
+grep -q 'RELEASE_SIGNING_CEREMONY_DRY_RUN.md' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
+grep -q 'dry-run procedure only, not release signing evidence' \
+  "$ROOT_DIR/RELEASE_SIGNING_CEREMONY_DRY_RUN.md"
 grep -q 'RELEASE_SIGNING_PLAN.md' "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'scripts/verify_release_signing_plan.sh' "$ROOT_DIR/RELEASE_HARDENING.md"
 

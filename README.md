@@ -45,6 +45,7 @@ What exists today:
 - A release signing dry-run verifier that uses disposable fixtures to reject missing signatures, stale checksums, stale detached signature markers, and unsigned artifacts without signing release artifacts.
 - A release detached-signature fixture verifier that uses disposable OpenSSL RSA keys to validate checksum signature behavior without creating release keys or signing release artifacts.
 - A release signing tooling decision gate that records the OpenSSL-compatible detached-signature path while keeping release signing documented as incomplete.
+- A release signing ceremony dry-run record that defines key ceremony and command sequence placeholders without creating release keys or signing release artifacts.
 - A reproducible/equivalent binary verification plan that records required evidence while keeping binary verification documented as incomplete.
 - A binary manifest fixture verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and build-input drift without verifying release artifacts.
 - A binary verification input template that records required release-candidate fields while remaining classified as not verification evidence.
@@ -281,6 +282,8 @@ The current completion audit is tracked in [RELEASE_COMPLETION_AUDIT.md](RELEASE
 The release signing plan is tracked in [RELEASE_SIGNING_PLAN.md](RELEASE_SIGNING_PLAN.md). It is a pre-implementation plan, not signed artifact verification.
 
 The release signing tooling decision is tracked in [RELEASE_SIGNING_TOOLING_DECISION.md](RELEASE_SIGNING_TOOLING_DECISION.md). It selects the detached-signature tooling path, but it is not release signing readiness.
+
+The release signing ceremony dry-run is tracked in [RELEASE_SIGNING_CEREMONY_DRY_RUN.md](RELEASE_SIGNING_CEREMONY_DRY_RUN.md). It is not release signing evidence.
 
 The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md). It is a pre-implementation plan, not reproducible build evidence.
 
