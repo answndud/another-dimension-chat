@@ -62,6 +62,7 @@ What exists today:
 - A release signing candidate evidence package checksum coverage audit that records fixture checksum/digest coverage without approving release evidence.
 - A release signing candidate evidence package checksum non-claim guard that prevents fixture checksum coverage from implying release evidence or approval.
 - A release signing candidate evidence package checksum guard coverage audit that records checksum non-claim guard coverage without approving release evidence.
+- Release signing candidate evidence index checksum binding requirements that define future index/record digest fields without collecting release evidence.
 - A reproducible/equivalent binary verification plan that records required evidence while keeping binary verification documented as incomplete.
 - A binary manifest fixture verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and build-input drift without verifying release artifacts.
 - A binary verification input template that records required release-candidate fields while remaining classified as not verification evidence.
@@ -330,6 +331,8 @@ The release signing candidate evidence package checksum coverage audit is tracke
 The release signing candidate evidence package checksum non-claim guard is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_NON_CLAIM_GUARD.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_NON_CLAIM_GUARD.md). It is not release evidence or release approval.
 
 The release signing candidate evidence package checksum guard coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_GUARD_AUDIT.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_GUARD_AUDIT.md). It is not release evidence or release approval.
+
+The release signing candidate evidence index checksum binding requirements are tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_REQUIREMENTS.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_REQUIREMENTS.md). They are not candidate evidence or release approval.
 
 The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md). It is a pre-implementation plan, not reproducible build evidence.
 
