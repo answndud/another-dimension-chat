@@ -71,6 +71,7 @@ const fields = {
   exportProductionHandshakeReply: document.querySelector("#export-production-handshake-reply"),
   exportProductionHandshakeFinish: document.querySelector("#export-production-handshake-finish"),
   importProductionHandshakeFinish: document.querySelector("#import-production-handshake-finish"),
+  checkProductionSessionState: document.querySelector("#check-production-session-state"),
   productionPairingStorage: document.querySelector("#production-pairing-storage"),
   productionPairingSession: document.querySelector("#production-pairing-session"),
   productionHandshakeState: document.querySelector("#production-handshake-state"),
@@ -726,6 +727,9 @@ async function saveProductionSessionDraft() {
       fields.productionPairingBoundary,
       `payloads_returned=${result.payloads_returned} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
     );
+    if (result.session_draft_present) {
+      await checkProductionSessionState();
+    }
   } catch (error) {
     setProductionPairingState("Session draft save failed");
     setText(fields.productionPairingWarning, String(error));
@@ -734,6 +738,45 @@ async function saveProductionSessionDraft() {
   } finally {
     if (fields.saveProductionSessionDraft) {
       fields.saveProductionSessionDraft.disabled = false;
+    }
+  }
+}
+
+async function checkProductionSessionState() {
+  const { profile, passphrase } = productionPairingInput();
+  if (!profile || !passphrase) {
+    setProductionPairingState("Session state needs profile");
+    setText(fields.productionPairingWarning, "Enter profile and passphrase.");
+    return;
+  }
+
+  setProductionPairingState("Session state checking");
+  if (fields.checkProductionSessionState) {
+    fields.checkProductionSessionState.disabled = true;
+  }
+  try {
+    const result = await invoke("production_session_state_check", { profile, passphrase });
+    setProductionPairingState("Session state checked");
+    setText(fields.productionPairingWarning, result.warning);
+    setText(
+      fields.productionPairingSession,
+      `draft=${result.session_draft_present} channel=${result.channel_id_derivable} role=${result.local_role_available} endpoint=${result.remote_endpoint_state_present} replay=${result.replay_window_present} transport=${result.session_transport_state_present} runtime=${result.runtime_material_reconstructable} message=${result.ready_for_message_envelope}`,
+    );
+    setText(
+      fields.productionPairingBoundary,
+      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+    setText(
+      fields.productionMessageBoundary,
+      `session_ready=${result.ready_for_message_envelope} outbound_io=${result.outbound_envelope_io_ready} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionPairingState("Session state check failed");
+    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionPairingSession, "Failed");
+  } finally {
+    if (fields.checkProductionSessionState) {
+      fields.checkProductionSessionState.disabled = false;
     }
   }
 }
@@ -872,6 +915,7 @@ async function importProductionHandshakeFinish() {
       fields.productionPairingBoundary,
       `payloads_returned=${result.payloads_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
     );
+    await checkProductionSessionState();
   } catch (error) {
     setProductionPairingState("Handshake finish import failed");
     setText(fields.productionPairingWarning, String(error));
@@ -1052,6 +1096,10 @@ if (fields.exportProductionHandshakeFinish) {
 
 if (fields.importProductionHandshakeFinish) {
   fields.importProductionHandshakeFinish.addEventListener("click", importProductionHandshakeFinish);
+}
+
+if (fields.checkProductionSessionState) {
+  fields.checkProductionSessionState.addEventListener("click", checkProductionSessionState);
 }
 
 if (fields.exportProductionMessageEnvelope) {

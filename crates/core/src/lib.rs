@@ -283,6 +283,7 @@ pub mod production {
         remote_contact_present: bool,
         remote_endpoint_state_present: bool,
         replay_window_present: bool,
+        session_transport_state_present: bool,
         key_material_exposed: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
@@ -803,6 +804,10 @@ pub mod production {
 
         pub fn replay_window_present(self) -> bool {
             self.replay_window_present
+        }
+
+        pub fn session_transport_state_present(self) -> bool {
+            self.session_transport_state_present
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -3191,6 +3196,7 @@ pub mod production {
                 remote_contact_present: false,
                 remote_endpoint_state_present: false,
                 replay_window_present: false,
+                session_transport_state_present: false,
                 key_material_exposed: false,
                 transport_io_opened: false,
                 runtime_messaging_enabled: false,
@@ -3200,6 +3206,8 @@ pub mod production {
         let replay_record_id = production_replay_record_id(&draft.channel_id);
         let endpoint_state_present = load_remote_endpoint_state(&store, &draft)?.is_some();
         let replay_window_present = store.load_replay_window(&replay_record_id)?.is_some();
+        let session_transport_state_present =
+            load_session_transport_state(&store, &profile, &draft)?.is_some();
         Ok(ProductionPairingSessionStatusSummary {
             storage_opened: true,
             session_draft_present: true,
@@ -3212,6 +3220,7 @@ pub mod production {
             remote_contact_present: true,
             remote_endpoint_state_present: endpoint_state_present,
             replay_window_present,
+            session_transport_state_present,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
