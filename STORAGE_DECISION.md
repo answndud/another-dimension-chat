@@ -33,6 +33,7 @@ The repository currently has:
 - A session durable-state connector harness that applies the gate to storage policy before connector implementation: encrypted-record paths are accepted for private-key and replay records, while session transport persistence is rejected.
 - A session durable-state persistence adapter skeleton that maps those record kinds to storage policy without implementing unlock, transport I/O, runtime messaging, or durable Noise transport persistence.
 - A session durable-state encrypted-record adapter spike that prepares allowed sealed records without writing them to a store or opening unlock/runtime commands.
+- A session durable-state adapter non-readiness guard that keeps rollback protection, store writes, durable session persistence, production E2EE readiness, durable Noise transport persistence, and runtime messaging false.
 
 The repository does not currently have:
 
@@ -345,6 +346,7 @@ Current lifecycle boundary:
 - `session_durable_state_connector_test_harness()` verifies that contract against storage policy without adding storage unlock commands or durable Noise transport persistence.
 - `session_durable_state_persistence_adapter_skeleton()` maps the allowed durable-state record policies before adding an encrypted-record adapter implementation.
 - `session_durable_state_encrypted_record_adapter_spike()` prepares allowed sealed records but does not perform store writes, unlock, or durable Noise transport persistence.
+- `session_durable_state_adapter_non_readiness_guard()` records that sealed-record preparation does not provide rollback protection, durable session persistence, production E2EE readiness, store writes, or runtime messaging.
 
 Non-claims:
 
