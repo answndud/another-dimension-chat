@@ -7,6 +7,9 @@ const fields = {
   core: document.querySelector("#core"),
   profile: document.querySelector("#profile"),
   pairing: document.querySelector("#pairing"),
+  productionSession: document.querySelector("#production-session"),
+  productionSelfTest: document.querySelector("#production-self-test"),
+  productionSessionNonReadiness: document.querySelector("#production-session-non-readiness"),
   transport: document.querySelector("#transport"),
   networkExecution: document.querySelector("#network-execution"),
   experimentalTransport: document.querySelector("#experimental-transport"),
@@ -258,6 +261,9 @@ async function renderPrototypeStatus() {
     setText(fields.core, status.core_status);
     setText(fields.profile, status.profile_status);
     setText(fields.pairing, status.pairing_status);
+    setText(fields.productionSession, status.production_session_status);
+    setText(fields.productionSelfTest, status.production_self_test_status);
+    setText(fields.productionSessionNonReadiness, status.production_session_non_readiness);
     setText(fields.transport, status.transport_status);
     setText(fields.networkExecution, status.network_execution_status);
     setText(fields.experimentalTransport, status.experimental_transport_status);
@@ -271,6 +277,12 @@ async function renderPrototypeStatus() {
     setText(fields.core, "Core boundary only");
     setText(fields.profile, "Profile boundary only");
     setText(fields.pairing, "Pairing boundary only");
+    setText(fields.productionSession, "Snow Noise XX synchronous evaluation boundary only");
+    setText(fields.productionSelfTest, "CLI production boundary self-test only");
+    setText(
+      fields.productionSessionNonReadiness,
+      "No production E2EE claim durable persistence Tauri messaging command or async messaging",
+    );
     setText(fields.transport, "Pre-network fail-closed only");
     setText(fields.networkExecution, "Network execution disabled");
     setText(fields.experimentalTransport, "Manual bootstrap gate summary only");
