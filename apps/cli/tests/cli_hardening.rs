@@ -93,6 +93,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production pairing session load-runtime"));
     assert!(out.contains("production pairing session open-runtime"));
     assert!(out.contains("production message send-prepare"));
+    assert!(out.contains("production message pending-status"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
@@ -1056,6 +1057,50 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!send_prepare_error.contains(alice_store_arg));
     assert!(!send_prepare_error.contains(plaintext_arg));
     assert!(!send_prepare_error.contains("hello from alice"));
+
+    let pending_status = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "pending-status",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--message-number",
+            "1",
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let pending_status_out = stdout(&pending_status);
+    let pending_status_error = stderr(&pending_status);
+    assert!(
+        pending_status.status.success(),
+        "stdout: {pending_status_out}\nstderr: {pending_status_error}"
+    );
+    assert!(pending_status_out.contains("production message pending status:"));
+    assert!(pending_status_out.contains("storage_opened=true"));
+    assert!(pending_status_out.contains("runtime_material_reconstructable=true"));
+    assert!(pending_status_out.contains("local_message_index_present=true"));
+    assert!(pending_status_out.contains("pending_message_record_present=true"));
+    assert!(pending_status_out.contains("pending_message_record_decodable=true"));
+    assert!(pending_status_out.contains("local_message_index_matches_pending=true"));
+    assert!(pending_status_out.contains("plaintext_exposed=false"));
+    assert!(pending_status_out.contains("envelope_encryption_ready=false"));
+    assert!(pending_status_out.contains("network_send_attempted=false"));
+    assert!(pending_status_out.contains("key_material_exposed=false"));
+    assert!(pending_status_out.contains("transport_io_opened=false"));
+    assert!(pending_status_out.contains("runtime_messaging=false"));
+    assert!(pending_status_error.contains("storage-only"));
+    assert!(!pending_status_out.contains("alice"));
+    assert!(!pending_status_out.contains(alice_store_arg));
+    assert!(!pending_status_out.contains(plaintext_arg));
+    assert!(!pending_status_out.contains("hello from alice"));
+    assert!(!pending_status_out.contains("adchan1"));
+    assert!(!pending_status_error.contains("correct horse"));
+    assert!(!pending_status_error.contains(alice_store_arg));
+    assert!(!pending_status_error.contains("hello from alice"));
 
     let swapped = run_with_stdin(
         &[
