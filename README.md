@@ -18,65 +18,11 @@ What exists today:
 - A `dev-insecure` CLI flow for local pairing and message-flow experimentation only.
 - Pairwise profile/contact, pairing payload, safety number, pairing lifecycle, padded envelope, replay-window, endpoint update, and deterministic duplicate-connection prototypes.
 - Production-facing guardrails for Ed25519 pairwise identity material, signed pairing drafts, Noise-based session setup smoke tests, envelope encryption/decryption, replay rejection, and local storage policy checks.
-- High-risk transport policy and fail-closed Tor/onion scaffolding: onion-only default routing, direct-route rejection unless explicitly low-risk, Arti-first decisions, app-private directory checks, pre-network blocker tracking, runtime preflight, redacted runtime events, bridge/censorship configuration boundaries, onion key lifecycle policy, and descriptor/stream/envelope-I/O gates.
-- Transport pre-network docs alignment that treats blocker closeout as entry to a bounded fail-closed skeleton, not usable network execution.
-- Transport pre-network verifier guard that keeps bounded-fail-closed and no-socket/bootstrap/hosting/transfer non-claims checked in release hygiene.
-- SQLCipher-backed storage spikes for `ADREC1` record containers, passphrase unlock, high-risk unlock policy, replay-window persistence after successful decrypt, pairwise endpoint state, local message indexes, opaque record-id derivation, and internal raw database-key opening only.
-- Storage lifecycle docs alignment that separates the narrow SQLCipher spike from deferred key management, rollback, secure deletion, backup, recovery, and durable session persistence work; it is not a complete production encrypted local storage lifecycle.
-- Storage lifecycle verifier guard that keeps `ADREC1` container wording and complete-storage-lifecycle non-claims checked in release hygiene.
-- A read-only Tauri prototype status shell exposing only redacted release-claim, messaging-surface, core, profile, pairing, production preflight, transport, network-execution, storage, and verification boundary state through `prototype_status`.
-- Tauri status docs alignment that clarifies core status is static boundary copy, not a production core runtime call.
-- Tauri verification status boundary that exposes lightweight-check status without adding production commands or readiness claims.
-- Tauri scaffold verifier cleanup that keeps status field and static copy checks aligned without adding build cost.
-- Lightweight verification scripts, release-hygiene and Tauri-scaffold static verifiers, CLI hardening tests, and GitHub Actions verification.
-- A public-safe release hardening gap inventory that tracks missing signing, reproducible/equivalent verification, dependency review, release-copy alignment, external review readiness, and update integrity before any security-ready claim.
-- A release artifact gate verifier skeleton that keeps signing and reproducible/equivalent verification documented as incomplete until real implementation exists.
-- A dependency review gate verifier skeleton that keeps dependency/supply-chain review documented as incomplete until review evidence exists.
-- A dependency review template that records required release-candidate lockfile, direct dependency, native dependency, deny/allow decision, and classification fields while remaining classified as not review evidence.
-- An external review gate verifier skeleton that keeps external/independent review readiness documented as incomplete until review readiness evidence exists.
-- An external review readiness template that records required release-candidate scope, review material, reviewer expectation, finding triage, blocker, and classification fields while remaining classified as not review readiness evidence.
-- A release completion audit that records current v0.1-security-ready evidence as not complete while release gates remain incomplete.
-- An update integrity gate verifier skeleton that keeps update/installer integrity documented as incomplete until release artifact and package verification evidence exists.
-- An update/installer integrity template that records required artifact, signature/hash, downgrade, platform package, recovery, and classification fields while remaining classified as not update integrity evidence.
-- A release signoff gate verifier skeleton that keeps release-candidate threat-model/release-copy signoff documented as incomplete until signoff evidence exists.
-- A release-candidate signoff template that records required threat-model, public-copy alignment, release-gate evidence, blocker, and classification fields while remaining classified as not signoff evidence.
-- A release gate evidence audit that records why template coverage is still not v0.1-security-ready 100% without real candidate-specific gate evidence.
-- A release signing implementation plan that targets offline detached signatures while keeping release signing documented as unimplemented.
-- A release signing dry-run verifier that uses disposable fixtures to reject missing signatures, stale checksums, stale detached signature markers, and unsigned artifacts without signing release artifacts.
-- A release detached-signature fixture verifier that uses disposable OpenSSL RSA keys to validate checksum signature behavior without creating release keys or signing release artifacts.
-- A release signing tooling decision gate that records the OpenSSL-compatible detached-signature path while keeping release signing documented as incomplete.
-- A release signing ceremony dry-run record that defines key ceremony and command sequence placeholders without creating release keys or signing release artifacts.
-- A release signing ceremony harness that executes the selected OpenSSL-compatible command sequence with disposable keys only.
-- Release key ceremony evidence requirements that define the required real ceremony evidence package without creating release keys.
-- Release artifact signing evidence requirements that define the required signed artifact evidence package without signing release artifacts.
-- Release verification UX evidence requirements that define required user/reviewer verification evidence without verifying release artifacts.
-- A release signing candidate evidence index that ties release-candidate signing evidence records together without recording release evidence.
-- A release signing candidate evidence collection runbook that defines collection order and fail-closed rules without collecting release evidence.
-- A release signing candidate evidence fixture that rejects missing, template-only, placeholder, and mismatched disposable evidence states without collecting release evidence.
-- A release signing candidate evidence fixture coverage audit that records fixture coverage and limits without approving release evidence.
-- A release signing release-note non-claim guard that keeps release signing scaffold notes from implying release evidence or approval.
-- A release signing evidence package layout fixture that rejects missing, misplaced, unknown, and empty disposable evidence package paths without collecting release evidence.
-- A release signing evidence package layout coverage audit that records directory layout fixture coverage without approving release evidence.
-- A release signing candidate manifest consistency fixture that rejects stale or mismatched disposable manifest digests without collecting release evidence.
-- A release signing candidate manifest consistency coverage audit that records manifest consistency fixture coverage without approving release evidence.
-- A release signing candidate evidence package checksum coverage audit that records fixture checksum/digest coverage without approving release evidence.
-- A release signing candidate evidence package checksum non-claim guard that prevents fixture checksum coverage from implying release evidence or approval.
-- A release signing candidate evidence package checksum guard coverage audit that records checksum non-claim guard coverage without approving release evidence.
-- Release signing candidate evidence index checksum binding requirements that define future index/record digest fields without collecting release evidence.
-- A release signing candidate evidence index checksum binding fixture that rejects missing, stale, mismatched, template-only, placeholder, and empty-blocker disposable checksum states without collecting release evidence.
-- A release signing candidate evidence index checksum fixture coverage audit that records fixture coverage and limits without approving release evidence.
-- Release signing candidate signed-artifact verification requirements that define future candidate verification record fields without verifying release artifacts.
-- A release signing candidate signed-artifact verification fixture that rejects missing, stale, mismatched, template-only, placeholder, and empty-blocker disposable verification states without verifying release artifacts.
-- A release signing candidate signed-artifact verification fixture coverage audit that records fixture coverage and limits without approving release evidence.
-- A release signing candidate signed-artifact verification non-claim guard that prevents fixture verification coverage from implying signed artifact verification evidence or approval.
-- A release signing candidate signed-artifact verification guard coverage audit that records non-claim guard coverage without approving release evidence.
-- Release signing candidate signed-artifact verification guard audit coverage checks that keep the audit and guard verifier anchors synchronized without approving release evidence.
-- A release signing candidate signed-artifact verification record template that defines future candidate evidence fields while remaining classified as not signed artifact verification evidence.
-- A release signing candidate signed-artifact verification record template coverage audit that records template coverage and limits without approving release evidence.
-- A reproducible/equivalent binary verification plan that records required evidence while keeping binary verification documented as incomplete.
-- A binary manifest fixture verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and build-input drift without verifying release artifacts.
-- A binary verification input template that records required release-candidate fields while remaining classified as not verification evidence.
-- README status compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
+- High-risk transport policy and fail-closed Tor/onion scaffolding, including direct-route rejection, app-private directory checks, runtime preflight, redacted runtime events, bridge/censorship configuration boundaries, onion key lifecycle policy, and descriptor/stream/envelope-I/O gates.
+- SQLCipher-backed storage spikes for `ADREC1` record containers, passphrase unlock, high-risk unlock policy, replay-window persistence, pairwise endpoint state, local message indexes, opaque record-id derivation, and internal raw database-key opening only.
+- A read-only Tauri prototype status shell exposing redacted boundary state through `prototype_status`.
+- Lightweight verification scripts, CLI hardening tests, Tauri scaffold static checks, and GitHub Actions verification.
+- Release signing, reproducible/equivalent builds, dependency review, external review, signoff, and update integrity are not implemented. Template-only release scaffold files are intentionally not part of the active development loop.
 
 What does not exist yet:
 
@@ -135,7 +81,6 @@ scripts/
   demo_dev_cli.sh   readable Alice/Bob dev-insecure local demo
   smoke_dev_cli.sh  Alice/Bob CLI smoke flow
   verify_all.sh     canonical local verification entrypoint
-  verify_release_hygiene.sh
   verify_tauri_scaffold.sh
 ```
 
@@ -186,7 +131,6 @@ This runs:
 - Tauri prototype status mirrors the CLI production unlock redacted disabled taxonomy as static read-only copy without adding an unlock command or executing the CLI.
 - Tauri prototype status mirrors session durable-state and unlock-policy blockers as static read-only copy without adding unlock, store-write, or runtime messaging commands.
 - Tauri scaffold static checks.
-- Public release hygiene static checks.
 
 For a heavier pre-release, audit, or risky cross-cutting change pass, run:
 
@@ -301,82 +245,6 @@ The first production session establishment boundary is tracked in [SESSION_DECIS
 The first production storage policy boundary is tracked in [STORAGE_DECISION.md](STORAGE_DECISION.md).
 
 The cross-component replacement inventory is tracked in [COMPONENT_BOUNDARIES.md](COMPONENT_BOUNDARIES.md). It maps the current `dev-insecure` local loop and guardrail spikes to the crypto, transport, storage, Tauri runtime, and release boundaries that must be resolved before any security-ready claim.
-
-The release hardening gap inventory is tracked in [RELEASE_HARDENING.md](RELEASE_HARDENING.md). It records missing release signing, reproducible or equivalent binary verification, dependency review, threat-model/release-copy alignment, external review readiness, and update integrity work. It is not evidence that those gates are complete.
-
-The current completion audit is tracked in [RELEASE_COMPLETION_AUDIT.md](RELEASE_COMPLETION_AUDIT.md). It records that current evidence does not prove v0.1-security-ready 100% and that release gates remain incomplete.
-
-The release signing plan is tracked in [RELEASE_SIGNING_PLAN.md](RELEASE_SIGNING_PLAN.md). It is a pre-implementation plan, not signed artifact verification.
-
-The release signing tooling decision is tracked in [RELEASE_SIGNING_TOOLING_DECISION.md](RELEASE_SIGNING_TOOLING_DECISION.md). It selects the detached-signature tooling path, but it is not release signing readiness.
-
-The release signing ceremony dry-run is tracked in [RELEASE_SIGNING_CEREMONY_DRY_RUN.md](RELEASE_SIGNING_CEREMONY_DRY_RUN.md). It is not release signing evidence.
-
-The release key ceremony evidence requirements are tracked in [RELEASE_KEY_CEREMONY_REQUIREMENTS.md](RELEASE_KEY_CEREMONY_REQUIREMENTS.md). They are not a real key ceremony.
-
-The release artifact signing evidence requirements are tracked in [RELEASE_ARTIFACT_SIGNING_REQUIREMENTS.md](RELEASE_ARTIFACT_SIGNING_REQUIREMENTS.md). They are not signed artifact evidence.
-
-The release verification UX evidence requirements are tracked in [RELEASE_VERIFICATION_UX_REQUIREMENTS.md](RELEASE_VERIFICATION_UX_REQUIREMENTS.md). They are not signed artifact verification evidence.
-
-The release signing candidate evidence index is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX.md). It is not release signing evidence.
-
-The release signing candidate evidence collection runbook is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_RUNBOOK.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_RUNBOOK.md). It is not candidate evidence.
-
-The release signing candidate evidence fixture is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE.md). It is not candidate evidence or release approval.
-
-The release signing candidate evidence fixture coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE_AUDIT.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE_AUDIT.md). It is not release evidence or release approval.
-
-The release signing release-note non-claim guard is tracked in [RELEASE_SIGNING_RELEASE_NOTE_NON_CLAIM_GUARD.md](RELEASE_SIGNING_RELEASE_NOTE_NON_CLAIM_GUARD.md). It is not release evidence or release approval.
-
-The release signing evidence package layout fixture is tracked in [RELEASE_SIGNING_EVIDENCE_PACKAGE_LAYOUT_FIXTURE.md](RELEASE_SIGNING_EVIDENCE_PACKAGE_LAYOUT_FIXTURE.md). It is not candidate evidence or release approval.
-
-The release signing evidence package layout coverage audit is tracked in [RELEASE_SIGNING_EVIDENCE_PACKAGE_LAYOUT_AUDIT.md](RELEASE_SIGNING_EVIDENCE_PACKAGE_LAYOUT_AUDIT.md). It is not release evidence or release approval.
-
-The release signing candidate manifest consistency fixture is tracked in [RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_FIXTURE.md](RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_FIXTURE.md). It is not candidate evidence or release approval.
-
-The release signing candidate manifest consistency coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_AUDIT.md](RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_AUDIT.md). It is not release evidence or release approval.
-
-The release signing candidate evidence package checksum coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_AUDIT.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_AUDIT.md). It is not release evidence or release approval.
-
-The release signing candidate evidence package checksum non-claim guard is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_NON_CLAIM_GUARD.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_NON_CLAIM_GUARD.md). It is not release evidence or release approval.
-
-The release signing candidate evidence package checksum guard coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_GUARD_AUDIT.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_GUARD_AUDIT.md). It is not release evidence or release approval.
-
-The release signing candidate evidence index checksum binding requirements are tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_REQUIREMENTS.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_REQUIREMENTS.md). They are not candidate evidence or release approval.
-
-The release signing candidate evidence index checksum binding fixture is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_FIXTURE.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_FIXTURE.md). It is not candidate evidence or release approval.
-
-The release signing candidate evidence index checksum fixture coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_FIXTURE_AUDIT.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_FIXTURE_AUDIT.md). It is not candidate evidence or release approval.
-
-The release signing candidate signed-artifact verification requirements are tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_REQUIREMENTS.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_REQUIREMENTS.md). They are not signed artifact verification evidence or release approval.
-
-The release signing candidate signed-artifact verification fixture is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_FIXTURE.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_FIXTURE.md). It is not signed artifact verification evidence or release approval.
-
-The release signing candidate signed-artifact verification fixture coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_FIXTURE_AUDIT.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_FIXTURE_AUDIT.md). It is not signed artifact verification evidence or release approval.
-
-The release signing candidate signed-artifact verification non-claim guard is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_NON_CLAIM_GUARD.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_NON_CLAIM_GUARD.md). It is not signed artifact verification evidence or release approval.
-
-The release signing candidate signed-artifact verification guard coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_GUARD_AUDIT.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_GUARD_AUDIT.md). It is not signed artifact verification evidence or release approval.
-
-The release signing candidate signed-artifact verification guard audit coverage checks are tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_GUARD_AUDIT_COVERAGE_CHECKS.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_GUARD_AUDIT_COVERAGE_CHECKS.md). They are not signed artifact verification evidence or release approval.
-
-The release signing candidate signed-artifact verification record template is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_RECORD_TEMPLATE.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_RECORD_TEMPLATE.md). It is not signed artifact verification evidence or release approval.
-
-The release signing candidate signed-artifact verification record template coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_RECORD_TEMPLATE_COVERAGE_AUDIT.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_RECORD_TEMPLATE_COVERAGE_AUDIT.md). It is not signed artifact verification evidence or release approval.
-
-The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md). It is a pre-implementation plan, not reproducible build evidence.
-
-The binary verification input template is tracked in [RELEASE_BINARY_INPUT_TEMPLATE.md](RELEASE_BINARY_INPUT_TEMPLATE.md). It is not release-candidate evidence.
-
-The dependency review template is tracked in [RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md](RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md). It is not dependency review evidence or supply-chain approval.
-
-The external review readiness template is tracked in [RELEASE_EXTERNAL_REVIEW_TEMPLATE.md](RELEASE_EXTERNAL_REVIEW_TEMPLATE.md). It is not external review readiness evidence or independent review evidence.
-
-The release-candidate signoff template is tracked in [RELEASE_SIGNOFF_TEMPLATE.md](RELEASE_SIGNOFF_TEMPLATE.md). It is not release-candidate signoff evidence or release-copy approval.
-
-The update and installer integrity template is tracked in [RELEASE_UPDATE_INTEGRITY_TEMPLATE.md](RELEASE_UPDATE_INTEGRITY_TEMPLATE.md). It is not update integrity evidence or installer integrity evidence.
-
-The release gate evidence audit is tracked in [RELEASE_GATE_EVIDENCE_AUDIT.md](RELEASE_GATE_EVIDENCE_AUDIT.md). It records that the final release gates are still incomplete and that template coverage is not a 100% security-ready claim.
 
 ## License
 
