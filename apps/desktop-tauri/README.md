@@ -45,6 +45,8 @@ Expected local-only behavior:
 - The shell shows structured local flow steps for profile creation, pairing, safety verification material, pairing confirmation, message send/receive, replay check, and demo completion.
 - The shell maps the local demo result into Alice/Bob peer panels and local flow controls for profile creation, pairing, safety display, contact confirmation, message send/receive, replay check, and completion.
 - `Reset local view` clears the displayed simulation state; `Run local demo` can be used again to re-run the underlying dev-insecure local command.
+- The repeatable local loop accepts one local dev message per line and runs `demo local-loop` through the same dev-insecure CLI/core flow.
+- The local loop reports each send/receive result plus replay, expiry, and dev store plaintext guard summaries.
 - The transcript remains visible for debugging.
 
 Failure checks:

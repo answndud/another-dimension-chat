@@ -394,6 +394,9 @@ fn dev_main() -> Result<(), String> {
         [cmd, sub] if cmd == "demo" && sub == "local" => {
             run_dev_local_demo()?;
         }
+        [cmd, sub, args @ ..] if cmd == "demo" && sub == "local-loop" => {
+            run_dev_local_loop(parse_local_loop_messages(args)?)?;
+        }
         [cmd, sub, name] if cmd == "profile" && sub == "init" => {
             let profile = ProfileName::new(name).map_err(|_| "invalid profile name")?;
             println!("{}", app.init_profile(profile).map_err(format_error)?);
@@ -602,6 +605,202 @@ fn run_dev_local_demo() -> Result<(), String> {
 }
 
 #[cfg(feature = "dev-insecure")]
+fn parse_local_loop_messages(args: &[String]) -> Result<Vec<String>, String> {
+    let mut messages = Vec::new();
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--message" => {
+                index += 1;
+                let message = args
+                    .get(index)
+                    .ok_or_else(|| local_loop_help())?
+                    .trim()
+                    .to_string();
+                if message.is_empty() {
+                    return Err("local loop message must not be empty".to_string());
+                }
+                messages.push(message);
+            }
+            _ => return Err(local_loop_help()),
+        }
+        index += 1;
+    }
+
+    if messages.is_empty() {
+        return Err(local_loop_help());
+    }
+    Ok(messages)
+}
+
+#[cfg(feature = "dev-insecure")]
+fn run_dev_local_loop(messages: Vec<String>) -> Result<(), String> {
+    use another_dimension_core::dev_insecure::DevApp;
+    use another_dimension_identity::{ContactId, ProfileName};
+    use another_dimension_pairing::PairingPayload;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    struct LoopWorkspace {
+        root: PathBuf,
+    }
+
+    impl Drop for LoopWorkspace {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.root);
+        }
+    }
+
+    let observed_at_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| "system clock unavailable")?
+        .as_millis();
+    let root = std::env::temp_dir().join(format!(
+        "another-dimension-loop-{}-{observed_at_ms}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&root).map_err(|_| "failed to create local loop workspace")?;
+    let workspace = LoopWorkspace { root };
+    let app = DevApp::new(workspace.root.join("home"));
+    let alice = ProfileName::new("alice").map_err(|_| "invalid loop profile")?;
+    let bob = ProfileName::new("bob").map_err(|_| "invalid loop profile")?;
+    let alice_contact = ContactId::new("alice").map_err(|_| "invalid loop contact")?;
+    let bob_contact = ContactId::new("bob").map_err(|_| "invalid loop contact")?;
+
+    println!("Another Dimension Chat dev-insecure local message loop");
+    println!();
+    println!("This demonstrates repeatable local prototype messaging only.");
+    println!("It is not a secure messenger release and does not use real transport.");
+
+    println!();
+    println!("== Create local profiles ==");
+    println!("{}", app.init_profile(alice.clone()).map_err(format_error)?);
+    println!("{}", app.init_profile(bob.clone()).map_err(format_error)?);
+
+    println!();
+    println!("== Exchange pairing payloads ==");
+    let alice_payload = app.pairing_start(alice.clone()).map_err(format_error)?;
+    let bob_scan = app
+        .pairing_scan(
+            bob.clone(),
+            PairingPayload::decode(&alice_payload).map_err(|_| "invalid loop payload")?,
+        )
+        .map_err(format_error)?;
+    let alice_scan = app
+        .pairing_scan(
+            alice.clone(),
+            PairingPayload::decode(&bob_scan.response_payload)
+                .map_err(|_| "invalid loop response payload")?,
+        )
+        .map_err(format_error)?;
+
+    if bob_scan.safety_number != alice_scan.safety_number {
+        return Err("local loop safety numbers do not match".to_string());
+    }
+    if bob_scan.safety_phrase != alice_scan.safety_phrase {
+        return Err("local loop safety phrases do not match".to_string());
+    }
+    println!("safety number: {}", bob_scan.safety_number);
+    println!("safety phrase: {}", bob_scan.safety_phrase);
+
+    println!();
+    println!("== Confirm pairing ==");
+    println!(
+        "{}",
+        app.pairing_confirm(alice.clone(), bob_contact)
+            .map_err(format_error)?
+    );
+    println!(
+        "{}",
+        app.pairing_confirm(bob.clone(), alice_contact)
+            .map_err(format_error)?
+    );
+
+    for (index, message) in messages.iter().enumerate() {
+        let message_number = index + 1;
+        println!();
+        println!("== Local message {message_number} ==");
+        println!(
+            "{}",
+            app.message_send(
+                alice.clone(),
+                ContactId::new("bob").map_err(|_| "invalid loop contact")?,
+                message.clone()
+            )
+            .map_err(format_error)?
+        );
+        let received = app.message_receive(bob.clone()).map_err(format_error)?;
+        if received != [message.clone()] {
+            return Err(format!(
+                "received message {message_number} did not match local loop message"
+            ));
+        }
+        println!("received by bob: {message}");
+        let replayed = app.message_receive(bob.clone()).map_err(format_error)?;
+        if !replayed.is_empty() {
+            return Err(format!("message {message_number} replayed after receive"));
+        }
+        println!("replay check: no replayed messages after message {message_number}");
+    }
+
+    println!();
+    println!("== Expire received queue ==");
+    println!("{}", app.message_expire(bob).map_err(format_error)?);
+
+    for message in &messages {
+        if path_contains_bytes(&workspace.root, message.as_bytes()) {
+            return Err("local loop plaintext body persisted in dev store".to_string());
+        }
+    }
+    println!("dev store plaintext guard passed");
+
+    println!();
+    println!("== Loop complete ==");
+    println!(
+        "dev-insecure local message loop completed: {} messages",
+        messages.len()
+    );
+    Ok(())
+}
+
+#[cfg(feature = "dev-insecure")]
+fn path_contains_bytes(root: &std::path::Path, needle: &[u8]) -> bool {
+    if needle.is_empty() || !root.exists() {
+        return false;
+    }
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return false;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            if path_contains_bytes(&path, needle) {
+                return true;
+            }
+        } else if path.is_file() {
+            if let Ok(bytes) = std::fs::read(&path) {
+                if bytes.windows(needle.len()).any(|window| window == needle) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+#[cfg(feature = "dev-insecure")]
+fn local_loop_help() -> String {
+    "usage:
+  another-dimension demo local-loop --message <text> [--message <text> ...]
+
+boundary:
+  dev-insecure local loop only
+  no real transport, production E2EE, or secure messenger release behavior"
+        .to_string()
+}
+
+#[cfg(feature = "dev-insecure")]
 fn dev_root() -> std::path::PathBuf {
     std::env::var_os("AD_DEV_HOME")
         .map(std::path::PathBuf::from)
@@ -649,6 +848,7 @@ fn format_error(error: another_dimension_core::dev_insecure::CoreError) -> Strin
 fn help() -> String {
     "usage:
   another-dimension demo local
+  another-dimension demo local-loop --message <text> [--message <text> ...]
   another-dimension profile init <name>
   another-dimension pairing start --profile <name>
   another-dimension pairing scan --profile <name> <payload-file>
