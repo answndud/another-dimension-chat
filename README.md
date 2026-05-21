@@ -29,6 +29,7 @@ What exists today:
 - Tauri verification status boundary that exposes lightweight-check status without adding production commands or readiness claims.
 - Tauri scaffold verifier cleanup that keeps status field and static copy checks aligned without adding build cost.
 - Lightweight verification scripts, release-hygiene and Tauri-scaffold static verifiers, CLI hardening tests, and GitHub Actions verification.
+- A public-safe release hardening gap inventory that tracks missing signing, reproducible/equivalent verification, dependency review, release-copy alignment, external review readiness, and update integrity before any security-ready claim.
 - README status compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
 
 What does not exist yet:
@@ -51,6 +52,8 @@ What does not exist yet:
 - Voice or video calls.
 - Multi-device support.
 - Release signing or reproducible builds.
+- Dependency/supply-chain review evidence.
+- External security review or independent review readiness.
 
 ## Security Boundary
 
@@ -252,6 +255,8 @@ The first production session establishment boundary is tracked in [SESSION_DECIS
 The first production storage policy boundary is tracked in [STORAGE_DECISION.md](STORAGE_DECISION.md).
 
 The cross-component replacement inventory is tracked in [COMPONENT_BOUNDARIES.md](COMPONENT_BOUNDARIES.md). It maps the current `dev-insecure` local loop and guardrail spikes to the crypto, transport, storage, Tauri runtime, and release boundaries that must be resolved before any security-ready claim.
+
+The release hardening gap inventory is tracked in [RELEASE_HARDENING.md](RELEASE_HARDENING.md). It records missing release signing, reproducible or equivalent binary verification, dependency review, threat-model/release-copy alignment, external review readiness, and update integrity work. It is not evidence that those gates are complete.
 
 ## License
 

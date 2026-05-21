@@ -26,6 +26,8 @@ grep -q 'Session unlock redacted error taxonomy classifies disabled, passphrase-
 grep -q 'Default CLI `production unlock` is a fail-closed boundary command that returns the redacted disabled taxonomy without opening storage, writing session records, exposing key material, or enabling runtime messaging' "$ROOT_DIR/README.md"
 grep -q 'Tauri prototype status mirrors the CLI production unlock redacted disabled taxonomy as static read-only copy without adding an unlock command or executing the CLI' "$ROOT_DIR/README.md"
 grep -q 'Tauri prototype status mirrors session durable-state and unlock-policy blockers as static read-only copy without adding unlock, store-write, or runtime messaging commands' "$ROOT_DIR/README.md"
+grep -q 'A public-safe release hardening gap inventory that tracks missing signing, reproducible/equivalent verification, dependency review, release-copy alignment, external review readiness, and update integrity before any security-ready claim' "$ROOT_DIR/README.md"
+grep -q 'RELEASE_HARDENING.md' "$ROOT_DIR/README.md"
 grep -q 'cargo run -q -- production preflight' "$ROOT_DIR/README.md"
 grep -q 'read-only production skeleton preflight' "$ROOT_DIR/README.md"
 grep -q 'without creating profiles, unlocking storage, bootstrapping transport, sending envelopes, receiving envelopes, or marking messaging ready' "$ROOT_DIR/README.md"
@@ -227,6 +229,8 @@ grep -q 'returns the redacted disabled taxonomy and does not open storage, write
 grep -q 'Tauri `prototype_status` mirrors the CLI production unlock rejection as static copy only' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'does not add a Tauri unlock command or execute the CLI' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'mirrors session durable-state and unlock-policy blockers as static read-only copy without executing unlock, writing session records, or opening runtime messaging' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
+grep -q 'RELEASE_HARDENING.md' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
+grep -q 'no release signing, reproducible/equivalent verification, dependency review record, external review, or update-integrity story exists' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'ProductionSessionEvaluationSummary' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'TransportMessagePathBoundarySummary' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'ProductionMessageStorageBoundarySummary' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
@@ -269,6 +273,12 @@ grep -q 'session unlock-rejection status mirrors the CLI `production unlock` red
 grep -q 'production-preflight' "$ROOT_DIR/apps/desktop-tauri/README.md"
 grep -q 'mirrors the CLI `production preflight` blockers as static read-only copy' "$ROOT_DIR/apps/desktop-tauri/README.md"
 grep -q 'Release signing or reproducible builds' "$ROOT_DIR/README.md"
+grep -q 'Release Hardening Gap Inventory' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'Release signing' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'Reproducible builds or an equivalent binary verification story' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'Dependency and supply-chain review' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'External security review' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'does not satisfy the release gates' "$ROOT_DIR/RELEASE_HARDENING.md"
 
 if git -C "$ROOT_DIR" ls-files | grep -E '^docs/' >/dev/null; then
   echo "private docs must not be tracked" >&2
