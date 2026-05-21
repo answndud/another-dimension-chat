@@ -31,6 +31,7 @@ The first Phase 4 prototype path is Arti-first. Bundled C Tor daemon control rem
 - `TransportBootstrapPolicy` bounds future bootstrap timeout, retry, cancellation, and censorship classification behavior without bootstrapping Tor.
 - `TransportBootstrapExecutionSkeleton` requires runtime readiness, bounded bootstrap policy, and redacted event sink while still failing closed.
 - `TransportPreNetworkCloseout` records the remaining hard blockers before any network execution skeleton is allowed.
+- `NetworkExperimentGateProposal::summary()` exposes bootstrap-only, manual feature gate, explicit operator consent, heavy isolated verification, isolated target cache, and no hosting/stream/envelope/messaging availability before a network-capable experiment can be considered.
 - `TransportRuntimeState` separates disabled fail-closed state from a future runtime-ready state that can only be created from successful preflight.
 - `OnionEnvelopeTransport` stores runtime state, but send/receive remains fail-closed even when that state is ready.
 - `OnionEnvelopeTransport::integration_boundary_summary()` exposes the high-risk policy mode, runtime state, first fail-closed blocker, and a false envelope-I/O availability flag without starting bootstrap, hosting, streams, or transfer.
@@ -1044,12 +1045,14 @@ Current code boundary:
 
 - `NetworkExperimentGateProposal::locked_down(...)` fails closed by default.
 - `NetworkExperimentGateProposal::bootstrap_only_manual_spike(...)` requires completed pre-network closeout.
+- `NetworkExperimentGateProposal::summary()` reports whether the bootstrap-only/manual/heavy-isolated/temporary-target conditions are satisfied without exposing paths, endpoints, profile names, bridge lines, descriptors, or key material.
 - The experiment scope must be `NetworkExperimentScope::BootstrapOnly`.
 - The manual gate must be `FeatureGatedManualOnly`.
 - Operator consent must be `ExplicitForLocalManualSpike`.
 - Verification policy must be `HeavyIsolatedTargetAndManualCiExcluded`.
 - Target/cache policy must be `IsolatedTemporaryTarget`.
 - Onion hosting, stream I/O, and envelope I/O scopes are rejected with `UnsupportedExperimentScope`.
+- The summary keeps onion hosting, stream I/O, envelope I/O, and usable messaging disabled even when `can_attempt_network_bootstrap()` is true.
 
 Still not implemented:
 

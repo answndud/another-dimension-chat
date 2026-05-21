@@ -71,6 +71,21 @@ pub struct NetworkExperimentGateReady {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct NetworkExperimentGateSummary {
+    scope: NetworkExperimentScope,
+    bootstrap_only: bool,
+    manual_feature_gate: bool,
+    explicit_operator_consent: bool,
+    heavy_isolated_verification: bool,
+    isolated_target_cache: bool,
+    can_attempt_network_bootstrap: bool,
+    onion_hosting_enabled: bool,
+    stream_io_enabled: bool,
+    envelope_io_enabled: bool,
+    usable_messaging_enabled: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct NetworkExperimentGateProposal {
     pub(crate) pre_network_closeout_complete: bool,
     pub(crate) scope: NetworkExperimentScope,
@@ -148,6 +163,38 @@ impl NetworkExperimentGateProposal {
         }
     }
 
+    pub fn summary(self) -> NetworkExperimentGateSummary {
+        let bootstrap_only = self.scope == NetworkExperimentScope::BootstrapOnly;
+        let manual_feature_gate =
+            self.manual_gate == NetworkExperimentManualGate::FeatureGatedManualOnly;
+        let explicit_operator_consent =
+            self.operator_consent == NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike;
+        let heavy_isolated_verification = self.verification_policy
+            == NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded;
+        let isolated_target_cache =
+            self.target_cache_policy == NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget;
+        let can_attempt_network_bootstrap = self.pre_network_closeout_complete
+            && bootstrap_only
+            && manual_feature_gate
+            && explicit_operator_consent
+            && heavy_isolated_verification
+            && isolated_target_cache;
+
+        NetworkExperimentGateSummary {
+            scope: self.scope,
+            bootstrap_only,
+            manual_feature_gate,
+            explicit_operator_consent,
+            heavy_isolated_verification,
+            isolated_target_cache,
+            can_attempt_network_bootstrap,
+            onion_hosting_enabled: false,
+            stream_io_enabled: false,
+            envelope_io_enabled: false,
+            usable_messaging_enabled: false,
+        }
+    }
+
     pub fn check(self) -> Result<NetworkExperimentGateReady, NetworkExperimentGateError> {
         if !self.pre_network_closeout_complete {
             return Err(NetworkExperimentGateError::PreNetworkCloseoutRequired);
@@ -177,6 +224,52 @@ impl NetworkExperimentGateProposal {
 impl NetworkExperimentGateReady {
     pub fn scope(self) -> NetworkExperimentScope {
         self.scope
+    }
+}
+
+impl NetworkExperimentGateSummary {
+    pub fn scope(self) -> NetworkExperimentScope {
+        self.scope
+    }
+
+    pub fn bootstrap_only(self) -> bool {
+        self.bootstrap_only
+    }
+
+    pub fn manual_feature_gate(self) -> bool {
+        self.manual_feature_gate
+    }
+
+    pub fn explicit_operator_consent(self) -> bool {
+        self.explicit_operator_consent
+    }
+
+    pub fn heavy_isolated_verification(self) -> bool {
+        self.heavy_isolated_verification
+    }
+
+    pub fn isolated_target_cache(self) -> bool {
+        self.isolated_target_cache
+    }
+
+    pub fn can_attempt_network_bootstrap(self) -> bool {
+        self.can_attempt_network_bootstrap
+    }
+
+    pub fn onion_hosting_enabled(self) -> bool {
+        self.onion_hosting_enabled
+    }
+
+    pub fn stream_io_enabled(self) -> bool {
+        self.stream_io_enabled
+    }
+
+    pub fn envelope_io_enabled(self) -> bool {
+        self.envelope_io_enabled
+    }
+
+    pub fn usable_messaging_enabled(self) -> bool {
+        self.usable_messaging_enabled
     }
 }
 

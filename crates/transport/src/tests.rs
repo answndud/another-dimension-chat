@@ -902,6 +902,19 @@ fn pre_network_closeout_allows_bootstrap_skeleton_after_bridge_config() {
 fn network_experiment_gate_is_locked_down_by_default() {
     let proposal =
         NetworkExperimentGateProposal::locked_down(NetworkExperimentScope::BootstrapOnly);
+    let summary = proposal.summary();
+
+    assert_eq!(summary.scope(), NetworkExperimentScope::BootstrapOnly);
+    assert!(summary.bootstrap_only());
+    assert!(!summary.manual_feature_gate());
+    assert!(!summary.explicit_operator_consent());
+    assert!(!summary.heavy_isolated_verification());
+    assert!(!summary.isolated_target_cache());
+    assert!(!summary.can_attempt_network_bootstrap());
+    assert!(!summary.onion_hosting_enabled());
+    assert!(!summary.stream_io_enabled());
+    assert!(!summary.envelope_io_enabled());
+    assert!(!summary.usable_messaging_enabled());
 
     assert_eq!(
         proposal.check(),
@@ -959,9 +972,22 @@ fn network_experiment_gate_allows_only_manual_bootstrap_with_isolated_heavy_veri
         NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
         NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
         NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
-    )
-    .check()
-    .expect("network experiment gate ready");
+    );
+    let summary = ready.summary();
+
+    assert_eq!(summary.scope(), NetworkExperimentScope::BootstrapOnly);
+    assert!(summary.bootstrap_only());
+    assert!(summary.manual_feature_gate());
+    assert!(summary.explicit_operator_consent());
+    assert!(summary.heavy_isolated_verification());
+    assert!(summary.isolated_target_cache());
+    assert!(summary.can_attempt_network_bootstrap());
+    assert!(!summary.onion_hosting_enabled());
+    assert!(!summary.stream_io_enabled());
+    assert!(!summary.envelope_io_enabled());
+    assert!(!summary.usable_messaging_enabled());
+
+    let ready = ready.check().expect("network experiment gate ready");
 
     assert_eq!(ready.scope(), NetworkExperimentScope::BootstrapOnly);
 }
