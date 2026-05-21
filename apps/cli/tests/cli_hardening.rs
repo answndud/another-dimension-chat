@@ -68,6 +68,54 @@ fn default_build_help_lists_only_boundary_commands() {
 
 #[test]
 #[cfg(not(feature = "dev-insecure"))]
+fn default_build_rejects_production_skeleton_commands() {
+    let forbidden_commands = [
+        &["message", "send", "--from", "alice", "--to", "bob", "hello"][..],
+        &["message", "receive", "--profile", "bob"],
+        &["pairing", "start", "--profile", "alice"],
+        &[
+            "pairing",
+            "confirm",
+            "--profile",
+            "alice",
+            "--contact",
+            "bob",
+        ],
+        &["storage", "unlock", "--profile", "alice"],
+        &["transport", "send", "--to", "bob.onion"],
+        &["transport", "receive", "--profile", "alice"],
+        &["transport", "bootstrap"],
+        &["profile", "init", "alice"],
+    ];
+
+    for args in forbidden_commands {
+        let output = run(args);
+
+        assert!(
+            !output.status.success(),
+            "command unexpectedly succeeded: {args:?}"
+        );
+        assert!(stdout(&output).is_empty(), "command wrote stdout: {args:?}");
+        let error = stderr(&output);
+        assert!(
+            error.contains("default build exposes only boundary commands"),
+            "missing boundary error for {args:?}: {error}"
+        );
+        assert!(
+            error.contains("no usable messaging, profile creation, pairing, transport bootstrap, or storage unlock command is exposed"),
+            "missing default non-command boundary for {args:?}: {error}"
+        );
+        assert!(
+            error.contains(
+                "prototype profile/pairing/message commands require --features dev-insecure"
+            ),
+            "missing dev-insecure feature boundary for {args:?}: {error}"
+        );
+    }
+}
+
+#[test]
+#[cfg(not(feature = "dev-insecure"))]
 fn default_build_runs_production_boundary_self_test_without_secrets() {
     let output = run(&["production", "self-test"]);
 
