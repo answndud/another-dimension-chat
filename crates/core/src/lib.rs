@@ -15,9 +15,11 @@ pub mod production {
         encode_hex, Envelope, MessageType, ProtocolError, ReplayWindow,
     };
     use another_dimension_storage::production::{
-        production_message_storage_boundary_summary, protection_for, EncryptedRecord,
+        production_message_storage_boundary_summary, protection_for,
+        require_encrypted_record_allowed, require_persistence_allowed, EncryptedRecord,
         EncryptedRecordId, EncryptedRecordScope, ProductionRecordKind, ProductionStorageError,
-        ReplayRollbackProtection, SqlCipherRecordStore, StorageProtection,
+        ProductionStoragePolicyError, ReplayRollbackProtection, SqlCipherRecordStore,
+        StorageProtection,
     };
     use another_dimension_transport::{
         EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
@@ -321,6 +323,62 @@ pub mod production {
 
         pub fn connector_ready(self) -> bool {
             self.connector_ready
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionDurableStateConnectorHarness {
+        selected_connector: ProductionSkeletonConnector,
+        pairwise_identity_private_key_encrypted_record_allowed: bool,
+        noise_static_private_key_encrypted_record_allowed: bool,
+        replay_window_encrypted_record_allowed: bool,
+        session_transport_persistence_rejected: bool,
+        rollback_protection_required_before_readiness: bool,
+        opens_storage_unlock_command: bool,
+        opens_transport_io: bool,
+        opens_runtime_messaging: bool,
+        harness_ready_for_connector_implementation: bool,
+    }
+
+    impl SessionDurableStateConnectorHarness {
+        pub fn selected_connector(self) -> ProductionSkeletonConnector {
+            self.selected_connector
+        }
+
+        pub fn pairwise_identity_private_key_encrypted_record_allowed(self) -> bool {
+            self.pairwise_identity_private_key_encrypted_record_allowed
+        }
+
+        pub fn noise_static_private_key_encrypted_record_allowed(self) -> bool {
+            self.noise_static_private_key_encrypted_record_allowed
+        }
+
+        pub fn replay_window_encrypted_record_allowed(self) -> bool {
+            self.replay_window_encrypted_record_allowed
+        }
+
+        pub fn session_transport_persistence_rejected(self) -> bool {
+            self.session_transport_persistence_rejected
+        }
+
+        pub fn rollback_protection_required_before_readiness(self) -> bool {
+            self.rollback_protection_required_before_readiness
+        }
+
+        pub fn opens_storage_unlock_command(self) -> bool {
+            self.opens_storage_unlock_command
+        }
+
+        pub fn opens_transport_io(self) -> bool {
+            self.opens_transport_io
+        }
+
+        pub fn opens_runtime_messaging(self) -> bool {
+            self.opens_runtime_messaging
+        }
+
+        pub fn harness_ready_for_connector_implementation(self) -> bool {
+            self.harness_ready_for_connector_implementation
         }
     }
 
@@ -851,6 +909,38 @@ pub mod production {
         }
     }
 
+    pub fn session_durable_state_connector_test_harness() -> SessionDurableStateConnectorHarness {
+        let gate = session_durable_state_connector_gate();
+        let session_transport_persistence_rejected = matches!(
+            require_persistence_allowed(ProductionRecordKind::SessionTransportState),
+            Err(ProductionStoragePolicyError::PersistenceForbidden {
+                kind: ProductionRecordKind::SessionTransportState
+            })
+        );
+
+        SessionDurableStateConnectorHarness {
+            selected_connector: gate.selected_connector(),
+            pairwise_identity_private_key_encrypted_record_allowed:
+                require_encrypted_record_allowed(ProductionRecordKind::PairwiseIdentityPrivateKey)
+                    .is_ok(),
+            noise_static_private_key_encrypted_record_allowed: require_encrypted_record_allowed(
+                ProductionRecordKind::NoiseStaticPrivateKey,
+            )
+            .is_ok(),
+            replay_window_encrypted_record_allowed: require_encrypted_record_allowed(
+                ProductionRecordKind::ReplayWindowState,
+            )
+            .is_ok(),
+            session_transport_persistence_rejected,
+            rollback_protection_required_before_readiness: gate.rollback_protection()
+                == ReplayRollbackProtection::NotProvided,
+            opens_storage_unlock_command: false,
+            opens_transport_io: false,
+            opens_runtime_messaging: false,
+            harness_ready_for_connector_implementation: true,
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -1233,6 +1323,25 @@ pub mod production {
             assert!(!gate.opens_transport_io());
             assert!(!gate.opens_runtime_messaging());
             assert!(!gate.connector_ready());
+        }
+
+        #[test]
+        fn session_durable_state_connector_harness_applies_storage_policy() {
+            let harness = session_durable_state_connector_test_harness();
+
+            assert_eq!(
+                harness.selected_connector(),
+                ProductionSkeletonConnector::SessionProtocolAndStatePersistence
+            );
+            assert!(harness.pairwise_identity_private_key_encrypted_record_allowed());
+            assert!(harness.noise_static_private_key_encrypted_record_allowed());
+            assert!(harness.replay_window_encrypted_record_allowed());
+            assert!(harness.session_transport_persistence_rejected());
+            assert!(harness.rollback_protection_required_before_readiness());
+            assert!(!harness.opens_storage_unlock_command());
+            assert!(!harness.opens_transport_io());
+            assert!(!harness.opens_runtime_messaging());
+            assert!(harness.harness_ready_for_connector_implementation());
         }
 
         #[test]

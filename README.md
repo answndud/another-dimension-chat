@@ -121,6 +121,7 @@ This runs:
 - Production skeleton preflight summary aggregates current crypto/session, transport, storage, and command-surface blockers without exposing production messaging.
 - Production skeleton next connector selection keeps the next slice on session protocol and durable-state gates without opening runtime execution.
 - Session durable-state connector gate draft records private-key and replay storage requirements while keeping Noise transport state in memory and runtime execution closed.
+- Session durable-state connector harness applies the storage policy to those records and rejects session transport persistence before any connector implementation.
 - Tauri scaffold static checks.
 - Public release hygiene static checks.
 
