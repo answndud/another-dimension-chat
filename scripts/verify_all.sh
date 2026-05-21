@@ -53,6 +53,7 @@ run_step "release signing candidate evidence index checksum requirements" script
 run_step "release signing candidate evidence index checksum fixture" scripts/verify_release_signing_candidate_evidence_index_checksum_fixture.sh
 run_step "release signing candidate evidence index checksum fixture audit" scripts/verify_release_signing_candidate_evidence_index_checksum_fixture_audit.sh
 run_step "release signing candidate signed-artifact verification requirements" scripts/verify_release_signing_candidate_signed_artifact_verification_requirements.sh
+run_step "release signing candidate signed-artifact verification fixture" scripts/verify_release_signing_candidate_signed_artifact_verification_fixture.sh
 run_step "binary verification plan" scripts/verify_binary_verification_plan.sh
 run_step "binary manifest fixture" scripts/verify_binary_manifest_fixture.sh
 run_step "binary input template" scripts/verify_binary_input_template.sh

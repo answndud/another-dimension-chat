@@ -101,4 +101,6 @@ The release signing candidate evidence index checksum fixture coverage audit is 
 
 The release signing candidate signed-artifact verification requirements are tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_REQUIREMENTS.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_REQUIREMENTS.md), with requirements checks in `scripts/verify_release_signing_candidate_signed_artifact_verification_requirements.sh`. They define future candidate verification record fields only, not signed artifact verification evidence.
 
-The next signing slice should define release signing candidate signed-artifact verification fixture while keeping real artifact signing and verification out of local verification until a candidate exists.
+The release signing candidate signed-artifact verification fixture is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_FIXTURE.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_FIXTURE.md), with fixture checks in `scripts/verify_release_signing_candidate_signed_artifact_verification_fixture.sh`. It checks disposable signed-artifact verification record binding only, not signed artifact verification evidence.
+
+The next signing slice should define release signing candidate signed-artifact verification fixture coverage audit while keeping real artifact signing and verification out of local verification until a candidate exists.
