@@ -30,6 +30,7 @@ The project currently has a working local prototype loop:
 - `SessionLockLifecycleStatusMirror` records explicit lock and idle auto-lock requirements while keeping storage unlocked state, product lock command, key erasure claim, and runtime messaging disabled.
 - `SessionUnlockRedactedErrorTaxonomy` classifies disabled, passphrase-required, and OS-keystore-only rejected unlock states without exposing raw storage errors, OS keychain errors, paths, identifiers, key material, or passphrase detail.
 - Default CLI `production unlock` is a boundary rejection only: it returns the redacted disabled taxonomy and does not open storage, write session records, expose key material, or enable runtime messaging.
+- Tauri `prototype_status` mirrors the CLI production unlock rejection as static copy only; it does not add a Tauri unlock command or execute the CLI.
 - Tauri `prototype_status` mirrors session durable-state and unlock-policy blockers as static read-only copy without executing unlock, writing session records, or opening runtime messaging.
 - Existing production-facing code is a set of guardrails and spikes, not a complete secure runtime.
 
@@ -59,6 +60,7 @@ The project currently has a working local prototype loop:
 | Session lock lifecycle mirror | `SessionLockLifecycleStatusMirror` mirrors explicit lock and idle auto-lock requirements without claiming an active unlocked store or key erasure. | Implement actual lock/unlock lifecycle only after key handling, memory lifetime, and storage-close behavior are tested. |
 | Session unlock error taxonomy | `SessionUnlockRedactedErrorTaxonomy` provides safe unlock failure categories without raw storage, OS, path, identifier, key, or passphrase detail. | Keep taxonomy aligned with future CLI/Tauri error copy before exposing unlock commands. |
 | CLI production unlock rejection | Default CLI `production unlock` returns a redacted disabled boundary error and performs no storage or runtime action. | Replace rejection with real unlock only after key wrapping, lifecycle, storage-open, error-copy, and rollback tests are complete. |
+| Tauri unlock rejection mirror | Tauri `prototype_status` mirrors CLI unlock rejection as static read-only copy without adding a command. | Add a Tauri command only after storage/key lifecycle and error-copy tests are complete. |
 | Tauri UI | Prototype shell can run dev-only local demos, display structured local state, and mirror read-only production preflight, session durable-state, and unlock-policy blockers as static status copy. | Replace CLI-wrapper demo commands with narrow Rust-owned runtime commands only after crypto, transport, and storage boundaries are security-ready. |
 | Release and updates | Public copy and static verifiers enforce non-claims; no release signing or reproducible build story exists. | Add signing, reproducible build or equivalent verification, dependency review, and release safety copy before public high-risk use. |
 

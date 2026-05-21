@@ -13,6 +13,8 @@ pub struct PrototypeStatus {
     session_durable_state_status: &'static str,
     session_unlock_policy_status: &'static str,
     session_unlock_non_readiness: &'static str,
+    session_unlock_cli_rejection_status: &'static str,
+    session_unlock_cli_rejection_flags: &'static str,
     transport_status: &'static str,
     network_execution_status: &'static str,
     experimental_transport_status: &'static str,
@@ -39,6 +41,9 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         session_durable_state_status: "read-only durable-state candidate blockers copy",
         session_unlock_policy_status: "high-risk passphrase required OS-keystore-only rejected",
         session_unlock_non_readiness: "product unlock durable persistence rollback runtime messaging disabled",
+        session_unlock_cli_rejection_status: "redacted product-unlock-disabled boundary copy",
+        session_unlock_cli_rejection_flags:
+            "storage_opened=false session_records_written=false key_material_exposed=false runtime_messaging=false",
         transport_status: "pre-network fail-closed only",
         network_execution_status: "network execution disabled",
         experimental_transport_status: "manual bootstrap gate summary only",

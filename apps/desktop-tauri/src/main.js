@@ -15,6 +15,8 @@ const fields = {
   sessionDurableState: document.querySelector("#session-durable-state"),
   sessionUnlockPolicy: document.querySelector("#session-unlock-policy"),
   sessionUnlockNonReadiness: document.querySelector("#session-unlock-non-readiness"),
+  sessionUnlockCliRejection: document.querySelector("#session-unlock-cli-rejection"),
+  sessionUnlockCliRejectionFlags: document.querySelector("#session-unlock-cli-rejection-flags"),
   transport: document.querySelector("#transport"),
   networkExecution: document.querySelector("#network-execution"),
   experimentalTransport: document.querySelector("#experimental-transport"),
@@ -274,6 +276,8 @@ async function renderPrototypeStatus() {
     setText(fields.sessionDurableState, status.session_durable_state_status);
     setText(fields.sessionUnlockPolicy, status.session_unlock_policy_status);
     setText(fields.sessionUnlockNonReadiness, status.session_unlock_non_readiness);
+    setText(fields.sessionUnlockCliRejection, status.session_unlock_cli_rejection_status);
+    setText(fields.sessionUnlockCliRejectionFlags, status.session_unlock_cli_rejection_flags);
     setText(fields.transport, status.transport_status);
     setText(fields.networkExecution, status.network_execution_status);
     setText(fields.experimentalTransport, status.experimental_transport_status);
@@ -303,6 +307,11 @@ async function renderPrototypeStatus() {
     setText(
       fields.sessionUnlockNonReadiness,
       "Product unlock durable persistence rollback runtime messaging disabled",
+    );
+    setText(fields.sessionUnlockCliRejection, "Redacted product-unlock-disabled boundary copy");
+    setText(
+      fields.sessionUnlockCliRejectionFlags,
+      "Storage_opened=false session_records_written=false key_material_exposed=false runtime_messaging=false",
     );
     setText(fields.transport, "Pre-network fail-closed only");
     setText(fields.networkExecution, "Network execution disabled");
