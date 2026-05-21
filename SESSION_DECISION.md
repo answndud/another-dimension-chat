@@ -129,6 +129,8 @@ The first store-write check for this adapter is test-only. `session_durable_stat
 
 `session_unlock_command_fail_closed()` is the first command-shape skeleton for future product unlock. It accepts passphrase-only, OS-keystore-only, and combined request shapes, but every request returns a redacted disabled result. The skeleton does not open storage, write session records, expose key material, or enable runtime messaging.
 
+`session_lock_lifecycle_status_mirror()` records the lock lifecycle requirements that future unlock work must satisfy. It carries the explicit lock requirement, default 5 minute idle auto-lock, and high-risk 1 minute idle auto-lock into a status API while keeping storage unlocked state, product lock command, key erasure claim, and runtime messaging unavailable.
+
 ## Session Persistence Decision
 
 For the current v0.1 production message boundary, production session state is in-memory only.
