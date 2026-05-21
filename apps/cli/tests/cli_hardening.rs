@@ -92,13 +92,13 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production pairing session status"));
     assert!(out.contains("production pairing session load-runtime"));
     assert!(out.contains("production pairing session open-runtime"));
+    assert!(out.contains("production message send-prepare"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
     assert!(out.contains("preflight is read-only"));
     assert!(out.contains("storage-only"));
     assert!(out.contains("require --features dev-insecure"));
-    assert!(!out.contains("message send"));
     assert!(!out.contains("pairing start"));
 }
 
@@ -673,10 +673,12 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     let bob_store = root.join("bob.db");
     let alice_payload = root.join("alice-pairing.txt");
     let bob_payload = root.join("bob-pairing.txt");
+    let plaintext = root.join("message.txt");
     let alice_store_arg = alice_store.to_str().expect("alice store path");
     let bob_store_arg = bob_store.to_str().expect("bob store path");
     let alice_payload_arg = alice_payload.to_str().expect("alice payload path");
     let bob_payload_arg = bob_payload.to_str().expect("bob payload path");
+    let plaintext_arg = plaintext.to_str().expect("plaintext path");
 
     let missing_profile = run_with_stdin(
         &[
@@ -1005,6 +1007,54 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!open_runtime_out.contains("adchan1"));
     assert!(!open_runtime_out.contains("ed25519"));
     assert!(!open_runtime_error.contains("correct horse"));
+
+    std::fs::write(&plaintext, "hello from alice").expect("write plaintext");
+    let send_prepare = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "send-prepare",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--message-number",
+            "1",
+            "--plaintext",
+            plaintext_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let send_prepare_out = stdout(&send_prepare);
+    let send_prepare_error = stderr(&send_prepare);
+    assert!(
+        send_prepare.status.success(),
+        "stdout: {send_prepare_out}\nstderr: {send_prepare_error}"
+    );
+    assert!(send_prepare_out.contains("production message send prepared:"));
+    assert!(send_prepare_out.contains("storage_opened=true"));
+    assert!(send_prepare_out.contains("runtime_material_reconstructable=true"));
+    assert!(send_prepare_out.contains("outbound_envelope_io_ready=true"));
+    assert!(send_prepare_out.contains("plaintext_accepted=true"));
+    assert!(send_prepare_out.contains("message_number_reserved=true"));
+    assert!(send_prepare_out.contains("local_message_index_written=true"));
+    assert!(send_prepare_out.contains("envelope_encryption_ready=false"));
+    assert!(send_prepare_out.contains("network_send_attempted=false"));
+    assert!(send_prepare_out.contains("key_material_exposed=false"));
+    assert!(send_prepare_out.contains("transport_io_opened=false"));
+    assert!(send_prepare_out.contains("runtime_messaging=false"));
+    assert!(send_prepare_error.contains("storage-only"));
+    assert!(!send_prepare_out.contains("alice"));
+    assert!(!send_prepare_out.contains(alice_store_arg));
+    assert!(!send_prepare_out.contains(plaintext_arg));
+    assert!(!send_prepare_out.contains("hello from alice"));
+    assert!(!send_prepare_out.contains("adchan1"));
+    assert!(!send_prepare_out.contains("ed25519"));
+    assert!(!send_prepare_error.contains("correct horse"));
+    assert!(!send_prepare_error.contains(alice_store_arg));
+    assert!(!send_prepare_error.contains(plaintext_arg));
+    assert!(!send_prepare_error.contains("hello from alice"));
 
     let swapped = run_with_stdin(
         &[

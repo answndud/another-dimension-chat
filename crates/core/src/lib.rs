@@ -308,6 +308,21 @@ pub mod production {
         runtime_messaging_enabled: bool,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageSendPrepareSummary {
+        storage_opened: bool,
+        runtime_material_reconstructable: bool,
+        outbound_envelope_io_ready: bool,
+        plaintext_accepted: bool,
+        message_number_reserved: bool,
+        local_message_index_written: bool,
+        envelope_encryption_ready: bool,
+        network_send_attempted: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
     impl ProductionProfileInitSummary {
         pub fn storage_opened(self) -> bool {
             self.storage_opened
@@ -641,6 +656,52 @@ pub mod production {
 
         pub fn outbound_envelope_io_ready(self) -> bool {
             self.outbound_envelope_io_ready
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionMessageSendPrepareSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn runtime_material_reconstructable(self) -> bool {
+            self.runtime_material_reconstructable
+        }
+
+        pub fn outbound_envelope_io_ready(self) -> bool {
+            self.outbound_envelope_io_ready
+        }
+
+        pub fn plaintext_accepted(self) -> bool {
+            self.plaintext_accepted
+        }
+
+        pub fn message_number_reserved(self) -> bool {
+            self.message_number_reserved
+        }
+
+        pub fn local_message_index_written(self) -> bool {
+            self.local_message_index_written
+        }
+
+        pub fn envelope_encryption_ready(self) -> bool {
+            self.envelope_encryption_ready
+        }
+
+        pub fn network_send_attempted(self) -> bool {
+            self.network_send_attempted
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -2167,6 +2228,25 @@ pub mod production {
             return Err(ProductionSessionError::ProfileMarkerMissing);
         }
         let material = load_session_runtime_material(&store, &profile)?;
+        open_fail_closed_outbound_runtime(&material)?;
+        Ok(ProductionPairingSessionRuntimeOpenSummary {
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            outbound_stream_gate_ready: true,
+            outbound_fail_closed_adapter_ready: true,
+            outbound_stream_preparation_ready: true,
+            session_binding_ready: true,
+            remote_peer_authentication_ready: true,
+            outbound_envelope_io_ready: true,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    fn open_fail_closed_outbound_runtime(
+        material: &ProductionSessionRuntimeMaterial,
+    ) -> Result<(), ProductionSessionError> {
         let policy = TransportPolicy::high_risk_default();
         let outbound_gate_ready = OutboundStreamGateDecision::from_pairwise_endpoint_and_policy(
             material.remote_endpoint.clone(),
@@ -2198,9 +2278,11 @@ pub mod production {
             RedactedRemotePeerAuthenticationContext::authenticated_pairwise_peer(),
         )
         .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
-        let outbound_boundary =
-            OnionOutboundStreamBoundary::from_pairwise_endpoint(material.remote_endpoint, policy)
-                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let outbound_boundary = OnionOutboundStreamBoundary::from_pairwise_endpoint(
+            material.remote_endpoint.clone(),
+            policy,
+        )
+        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
         let bound = BoundOutboundStreamSession::from_outbound_stream(
             outbound_boundary,
             session_binding,
@@ -2213,15 +2295,56 @@ pub mod production {
         )
         .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
         let _ = outbound_preparation_ready;
-        Ok(ProductionPairingSessionRuntimeOpenSummary {
+        Ok(())
+    }
+
+    pub fn production_message_send_prepare(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        message_number: u64,
+        plaintext: &[u8],
+    ) -> Result<ProductionMessageSendPrepareSummary, ProductionSessionError> {
+        if plaintext.is_empty() {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        open_fail_closed_outbound_runtime(&material)?;
+        let entry = LocalMessageIndexEntry::new(
+            material.remote_contact_id.clone(),
+            message_number,
+            MessageType::Data,
+        )?;
+        let record_id = production_local_message_index_record_id(
+            &material.channel_id,
+            &material.remote_contact_id,
+            message_number,
+        );
+        if store.get(&record_id)?.is_some() {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let record = EncryptedRecord::new(
+            ProductionRecordKind::LocalMessageIndex,
+            EncryptedRecordScope::contact(profile, material.remote_contact_id),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            entry.encode().into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)?;
+        store.put(&record_id, &record)?;
+        Ok(ProductionMessageSendPrepareSummary {
             storage_opened: true,
             runtime_material_reconstructable: true,
-            outbound_stream_gate_ready: true,
-            outbound_fail_closed_adapter_ready: true,
-            outbound_stream_preparation_ready: true,
-            session_binding_ready: true,
-            remote_peer_authentication_ready: true,
             outbound_envelope_io_ready: true,
+            plaintext_accepted: true,
+            message_number_reserved: true,
+            local_message_index_written: true,
+            envelope_encryption_ready: false,
+            network_send_attempted: false,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -2897,6 +3020,7 @@ pub mod production {
     }
 
     struct ProductionSessionRuntimeMaterial {
+        channel_id: String,
         remote_contact_id: ContactId,
         remote_endpoint: PairwiseRendezvousEndpoint,
     }
@@ -3066,6 +3190,7 @@ pub mod production {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
         Ok(ProductionSessionRuntimeMaterial {
+            channel_id: draft.channel_id,
             remote_contact_id: draft.remote_contact_id,
             remote_endpoint,
         })
@@ -3943,6 +4068,54 @@ pub mod production {
             assert!(!opened.key_material_exposed());
             assert!(!opened.transport_io_opened());
             assert!(!opened.runtime_messaging_enabled());
+
+            let send_prepare =
+                production_message_send_prepare(&alice_store, alice.clone(), &passphrase, 1, b"hi")
+                    .expect("message send prepare");
+            assert!(send_prepare.storage_opened());
+            assert!(send_prepare.runtime_material_reconstructable());
+            assert!(send_prepare.outbound_envelope_io_ready());
+            assert!(send_prepare.plaintext_accepted());
+            assert!(send_prepare.message_number_reserved());
+            assert!(send_prepare.local_message_index_written());
+            assert!(!send_prepare.envelope_encryption_ready());
+            assert!(!send_prepare.network_send_attempted());
+            assert!(!send_prepare.key_material_exposed());
+            assert!(!send_prepare.transport_io_opened());
+            assert!(!send_prepare.runtime_messaging_enabled());
+
+            let store_after_send = LockedProfileStore::new(&alice_store)
+                .unlock(&passphrase)
+                .expect("unlock store after send prepare");
+            let message_index = store_after_send
+                .get(&production_local_message_index_record_id(
+                    &channel_id,
+                    &remote_contact,
+                    1,
+                ))
+                .expect("read local message index")
+                .expect("local message index");
+            assert_eq!(message_index.kind, ProductionRecordKind::LocalMessageIndex);
+            assert_eq!(
+                LocalMessageIndexEntry::decode(
+                    &String::from_utf8(message_index.sealed_body).expect("index body")
+                )
+                .expect("decode index"),
+                LocalMessageIndexEntry::new(remote_contact.clone(), 1, MessageType::Data)
+                    .expect("index entry")
+            );
+            assert!(matches!(
+                production_message_send_prepare(&alice_store, alice.clone(), &passphrase, 2, b""),
+                Err(ProductionSessionError::UnexpectedEnvelope)
+            ));
+            assert!(matches!(
+                production_message_send_prepare(&alice_store, alice.clone(), &passphrase, 0, b"hi"),
+                Err(ProductionSessionError::UnexpectedEnvelope)
+            ));
+            assert!(matches!(
+                production_message_send_prepare(&alice_store, alice.clone(), &passphrase, 1, b"hi"),
+                Err(ProductionSessionError::UnexpectedEnvelope)
+            ));
 
             let _ = std::fs::remove_dir_all(dir);
         }
