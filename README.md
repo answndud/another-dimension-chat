@@ -72,6 +72,7 @@ What exists today:
 - A release signing candidate signed-artifact verification guard coverage audit that records non-claim guard coverage without approving release evidence.
 - Release signing candidate signed-artifact verification guard audit coverage checks that keep the audit and guard verifier anchors synchronized without approving release evidence.
 - A release signing candidate signed-artifact verification record template that defines future candidate evidence fields while remaining classified as not signed artifact verification evidence.
+- A release signing candidate signed-artifact verification record template coverage audit that records template coverage and limits without approving release evidence.
 - A reproducible/equivalent binary verification plan that records required evidence while keeping binary verification documented as incomplete.
 - A binary manifest fixture verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and build-input drift without verifying release artifacts.
 - A binary verification input template that records required release-candidate fields while remaining classified as not verification evidence.
@@ -360,6 +361,8 @@ The release signing candidate signed-artifact verification guard coverage audit 
 The release signing candidate signed-artifact verification guard audit coverage checks are tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_GUARD_AUDIT_COVERAGE_CHECKS.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_GUARD_AUDIT_COVERAGE_CHECKS.md). They are not signed artifact verification evidence or release approval.
 
 The release signing candidate signed-artifact verification record template is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_RECORD_TEMPLATE.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_RECORD_TEMPLATE.md). It is not signed artifact verification evidence or release approval.
+
+The release signing candidate signed-artifact verification record template coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_RECORD_TEMPLATE_COVERAGE_AUDIT.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_RECORD_TEMPLATE_COVERAGE_AUDIT.md). It is not signed artifact verification evidence or release approval.
 
 The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md). It is a pre-implementation plan, not reproducible build evidence.
 
