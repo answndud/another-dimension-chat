@@ -713,6 +713,57 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionUnlockLockCommandDesignGate {
+        high_risk_requires_passphrase: bool,
+        os_keystore_only_rejected: bool,
+        explicit_lock_required: bool,
+        idle_auto_lock_required: bool,
+        redacted_unlock_errors_required: bool,
+        production_unlock_command_enabled: bool,
+        production_lock_command_enabled: bool,
+        durable_session_persistence_ready: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    impl SessionUnlockLockCommandDesignGate {
+        pub fn high_risk_requires_passphrase(self) -> bool {
+            self.high_risk_requires_passphrase
+        }
+
+        pub fn os_keystore_only_rejected(self) -> bool {
+            self.os_keystore_only_rejected
+        }
+
+        pub fn explicit_lock_required(self) -> bool {
+            self.explicit_lock_required
+        }
+
+        pub fn idle_auto_lock_required(self) -> bool {
+            self.idle_auto_lock_required
+        }
+
+        pub fn redacted_unlock_errors_required(self) -> bool {
+            self.redacted_unlock_errors_required
+        }
+
+        pub fn production_unlock_command_enabled(self) -> bool {
+            self.production_unlock_command_enabled
+        }
+
+        pub fn production_lock_command_enabled(self) -> bool {
+            self.production_lock_command_enabled
+        }
+
+        pub fn durable_session_persistence_ready(self) -> bool {
+            self.durable_session_persistence_ready
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct LocalMessageIndexEntry {
         contact_id: ContactId,
@@ -1368,6 +1419,22 @@ pub mod production {
         }
     }
 
+    pub fn session_unlock_lock_command_design_gate() -> SessionUnlockLockCommandDesignGate {
+        let handoff = session_durable_state_unlock_policy_handoff_summary();
+
+        SessionUnlockLockCommandDesignGate {
+            high_risk_requires_passphrase: handoff.high_risk_requires_passphrase(),
+            os_keystore_only_rejected: handoff.os_keystore_only_rejected(),
+            explicit_lock_required: true,
+            idle_auto_lock_required: true,
+            redacted_unlock_errors_required: true,
+            production_unlock_command_enabled: handoff.production_unlock_command_enabled(),
+            production_lock_command_enabled: false,
+            durable_session_persistence_ready: handoff.durable_session_persistence_ready(),
+            runtime_messaging_enabled: handoff.runtime_messaging_enabled(),
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -1977,6 +2044,21 @@ pub mod production {
             );
             assert!(!summary.durable_session_persistence_ready());
             assert!(!summary.runtime_messaging_enabled());
+        }
+
+        #[test]
+        fn session_unlock_lock_command_design_gate_keeps_commands_closed() {
+            let gate = session_unlock_lock_command_design_gate();
+
+            assert!(gate.high_risk_requires_passphrase());
+            assert!(gate.os_keystore_only_rejected());
+            assert!(gate.explicit_lock_required());
+            assert!(gate.idle_auto_lock_required());
+            assert!(gate.redacted_unlock_errors_required());
+            assert!(!gate.production_unlock_command_enabled());
+            assert!(!gate.production_lock_command_enabled());
+            assert!(!gate.durable_session_persistence_ready());
+            assert!(!gate.runtime_messaging_enabled());
         }
 
         #[test]

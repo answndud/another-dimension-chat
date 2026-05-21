@@ -38,6 +38,7 @@ The repository currently has:
 - A session durable-state store-write status mirror that reports the round-trip coverage as test-only while keeping production store write, unlock command, durable persistence, rollback protection, and runtime messaging unavailable.
 - A session durable-state product unlock blocker summary that keeps product unlock closed until key wrapping, backup exclusion, rollback protection, and durable session lifecycle decisions are complete.
 - A session durable-state unlock policy handoff summary that reuses the storage unlock policy to require high-risk passphrase input and reject OS-keystore-only unlock while product unlock remains unavailable.
+- A session unlock/lock command design gate that requires explicit lock, idle auto-lock, redacted unlock errors, and passphrase-first high-risk policy before any product command is implemented.
 
 The repository does not currently have:
 
@@ -355,6 +356,7 @@ Current lifecycle boundary:
 - `session_durable_state_store_write_status_mirror()` exposes that store-write coverage as test-only and keeps production store write, unlock, durable persistence, rollback protection, and runtime messaging disabled.
 - `session_durable_state_product_unlock_blocker_summary()` exposes product unlock blockers: passphrase-first storage exists, but key wrapping, backup exclusion, rollback protection, durable session persistence, and runtime messaging are not ready.
 - `session_durable_state_unlock_policy_handoff_summary()` confirms that the session durable-state blocker path is aligned with the storage unlock policy: high-risk mode requires passphrase input, OS-keystore-only unlock is rejected, and product unlock remains closed.
+- `session_unlock_lock_command_design_gate()` captures pre-implementation command requirements while keeping product unlock, product lock, durable session persistence, and runtime messaging disabled.
 
 Non-claims:
 

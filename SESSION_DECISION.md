@@ -125,6 +125,8 @@ The first store-write check for this adapter is test-only. `session_durable_stat
 
 `session_durable_state_unlock_policy_handoff_summary()` links the session durable-state blocker summary to the storage unlock policy. It confirms that high-risk mode accepts passphrase-based unlock policy, rejects OS-keystore-only unlock, and still keeps product unlock, durable session persistence, and runtime messaging unavailable.
 
+`session_unlock_lock_command_design_gate()` records the minimum command semantics before any product unlock/lock implementation. A future command must preserve passphrase-first high-risk unlock, OS-keystore-only rejection, explicit lock, idle auto-lock, and redacted unlock errors. The gate keeps production unlock command, production lock command, durable session persistence, and runtime messaging unavailable.
+
 ## Session Persistence Decision
 
 For the current v0.1 production message boundary, production session state is in-memory only.
