@@ -95,4 +95,6 @@ The release signing candidate evidence package checksum guard coverage audit is 
 
 The release signing candidate evidence index checksum binding requirements are tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_REQUIREMENTS.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_REQUIREMENTS.md), with requirements checks in `scripts/verify_release_signing_candidate_evidence_index_checksum_requirements.sh`. They define future index and record digest fields only, not candidate evidence.
 
-The next signing slice should define release signing candidate evidence index checksum binding fixture while keeping real artifact signing and verification out of local verification until a candidate exists.
+The release signing candidate evidence index checksum binding fixture is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_FIXTURE.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_FIXTURE.md), with fixture checks in `scripts/verify_release_signing_candidate_evidence_index_checksum_fixture.sh`. It checks disposable index and record checksum binding only, not candidate evidence.
+
+The next signing slice should define release signing candidate evidence index checksum fixture coverage audit while keeping real artifact signing and verification out of local verification until a candidate exists.
