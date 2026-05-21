@@ -274,6 +274,21 @@ pub mod production {
         runtime_messaging_enabled: bool,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionRuntimeLoadSummary {
+        storage_opened: bool,
+        session_draft_loaded: bool,
+        local_noise_static_private_key_loaded: bool,
+        local_noise_static_matches_draft: bool,
+        remote_noise_static_public_key_loaded: bool,
+        remote_endpoint_state_loaded: bool,
+        replay_window_loaded: bool,
+        runtime_material_reconstructable: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
     impl ProductionProfileInitSummary {
         pub fn storage_opened(self) -> bool {
             self.storage_opened
@@ -515,6 +530,52 @@ pub mod production {
 
         pub fn replay_window_present(self) -> bool {
             self.replay_window_present
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionRuntimeLoadSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_draft_loaded(self) -> bool {
+            self.session_draft_loaded
+        }
+
+        pub fn local_noise_static_private_key_loaded(self) -> bool {
+            self.local_noise_static_private_key_loaded
+        }
+
+        pub fn local_noise_static_matches_draft(self) -> bool {
+            self.local_noise_static_matches_draft
+        }
+
+        pub fn remote_noise_static_public_key_loaded(self) -> bool {
+            self.remote_noise_static_public_key_loaded
+        }
+
+        pub fn remote_endpoint_state_loaded(self) -> bool {
+            self.remote_endpoint_state_loaded
+        }
+
+        pub fn replay_window_loaded(self) -> bool {
+            self.replay_window_loaded
+        }
+
+        pub fn runtime_material_reconstructable(self) -> bool {
+            self.runtime_material_reconstructable
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -1630,6 +1691,7 @@ pub mod production {
         IdentityPrivateKeyMissing,
         NoiseStaticPrivateKeyMissing,
         LocalPairingPayloadMismatch,
+        SessionDraftMissing,
         SamePairwiseIdentity,
         SameRendezvousEndpoint,
         InvalidRendezvousEndpoint,
@@ -1947,10 +2009,7 @@ pub mod production {
         if !store.profile_marker_exists(&profile)? {
             return Err(ProductionSessionError::ProfileMarkerMissing);
         }
-        let draft = store
-            .get(&production_latest_session_draft_record_id())?
-            .map(|record| decode_production_session_draft_record(record, &profile))
-            .transpose()?;
+        let draft = load_latest_session_draft(&store, &profile)?;
         let Some(draft) = draft else {
             return Ok(ProductionPairingSessionStatusSummary {
                 storage_opened: true,
@@ -1967,9 +2026,7 @@ pub mod production {
         };
         let expected_replay_id = production_replay_record_id_text(&draft.channel_id);
         let replay_record_id = production_replay_record_id(&draft.channel_id);
-        let endpoint_record_id =
-            production_endpoint_state_record_id(&draft.channel_id, &draft.remote_contact_id);
-        let endpoint_state_present = store.get(&endpoint_record_id)?.is_some();
+        let endpoint_state_present = load_remote_endpoint_state(&store, &draft)?.is_some();
         let replay_window_present = store.load_replay_window(&replay_record_id)?.is_some();
         Ok(ProductionPairingSessionStatusSummary {
             storage_opened: true,
@@ -1983,6 +2040,51 @@ pub mod production {
             remote_contact_present: true,
             remote_endpoint_state_present: endpoint_state_present,
             replay_window_present,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_pairing_session_load_runtime(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionPairingSessionRuntimeLoadSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let draft = load_latest_session_draft(&store, &profile)?
+            .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let local_noise_static = store
+            .get(&production_latest_pairing_noise_static_record_id())?
+            .map(decode_production_noise_static_private_key_record)
+            .transpose()?
+            .ok_or(ProductionSessionError::NoiseStaticPrivateKeyMissing)?;
+        let local_matches_draft =
+            local_noise_static.keypair.public_key() == draft.local_noise_static_public_key;
+        if !local_matches_draft {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
+        let endpoint = load_remote_endpoint_state(&store, &draft)?;
+        let replay_window =
+            store.load_replay_window(&production_replay_record_id(&draft.channel_id))?;
+        let remote_noise_loaded = !draft.remote_noise_static_public_key.is_empty();
+        let endpoint_loaded = endpoint.is_some();
+        let replay_loaded = replay_window.is_some();
+        Ok(ProductionPairingSessionRuntimeLoadSummary {
+            storage_opened: true,
+            session_draft_loaded: true,
+            local_noise_static_private_key_loaded: true,
+            local_noise_static_matches_draft: true,
+            remote_noise_static_public_key_loaded: remote_noise_loaded,
+            remote_endpoint_state_loaded: endpoint_loaded,
+            replay_window_loaded: replay_loaded,
+            runtime_material_reconstructable: remote_noise_loaded
+                && endpoint_loaded
+                && replay_loaded,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -2653,6 +2755,8 @@ pub mod production {
         remote_contact_id: ContactId,
         replay_record_id: String,
         safety_transcript_present: bool,
+        local_noise_static_public_key: Vec<u8>,
+        remote_noise_static_public_key: Vec<u8>,
     }
 
     fn encode_production_noise_static_private_key_record(
@@ -2707,12 +2811,14 @@ pub mod production {
     ) -> Result<EncryptedRecord, ProductionSessionError> {
         let replay_id = production_replay_record_id_text(channel_id);
         let encoded = format!(
-            "ADSESSIONDRAFT1|{}|{}|{}|{}|{}",
+            "ADSESSIONDRAFT2|{}|{}|{}|{}|{}|{}|{}",
             channel_id,
             session_role_tag(plan.local_role),
             remote_contact_id.as_str(),
             replay_id,
-            encode_hex(plan.safety_transcript.as_bytes())
+            encode_hex(plan.safety_transcript.as_bytes()),
+            encode_hex(&plan.local_noise_static_public_key),
+            encode_hex(&plan.remote_noise_static_public_key)
         );
         EncryptedRecord::new(
             ProductionRecordKind::SessionDraft,
@@ -2736,7 +2842,7 @@ pub mod production {
         let encoded = String::from_utf8(record.sealed_body)
             .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
         let parts = encoded.split('|').collect::<Vec<_>>();
-        if parts.len() != 6 || parts[0] != "ADSESSIONDRAFT1" {
+        if parts.len() != 8 || parts[0] != "ADSESSIONDRAFT2" {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
         let local_role = parse_session_role_tag(parts[2])?;
@@ -2744,13 +2850,52 @@ pub mod production {
             ContactId::new(parts[3]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
         let safety_transcript =
             decode_hex(parts[5]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let local_noise_static_public_key =
+            decode_hex(parts[6]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let remote_noise_static_public_key =
+            decode_hex(parts[7]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
         Ok(ProductionStoredSessionDraft {
             channel_id: parts[1].to_string(),
             local_role,
             remote_contact_id,
             replay_record_id: parts[4].to_string(),
             safety_transcript_present: !safety_transcript.is_empty(),
+            local_noise_static_public_key,
+            remote_noise_static_public_key,
         })
+    }
+
+    fn load_latest_session_draft(
+        store: &SqlCipherRecordStore,
+        profile: &ProfileName,
+    ) -> Result<Option<ProductionStoredSessionDraft>, ProductionSessionError> {
+        store
+            .get(&production_latest_session_draft_record_id())?
+            .map(|record| decode_production_session_draft_record(record, profile))
+            .transpose()
+    }
+
+    fn load_remote_endpoint_state(
+        store: &SqlCipherRecordStore,
+        draft: &ProductionStoredSessionDraft,
+    ) -> Result<Option<PairwiseRendezvousEndpoint>, ProductionSessionError> {
+        let endpoint_record_id =
+            production_endpoint_state_record_id(&draft.channel_id, &draft.remote_contact_id);
+        store
+            .get(&endpoint_record_id)?
+            .map(|record| {
+                if record.kind != ProductionRecordKind::RendezvousEndpointState {
+                    return Err(ProductionSessionError::UnexpectedEnvelope);
+                }
+                let state = String::from_utf8(record.sealed_body)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                let endpoint = PairwiseRendezvousEndpoint::decode_state(&state)?;
+                if endpoint.contact_id() != &draft.remote_contact_id {
+                    return Err(ProductionSessionError::EndpointScopeMismatch);
+                }
+                Ok(endpoint)
+            })
+            .transpose()
     }
 
     fn session_role_tag(role: SessionRole) -> &'static str {
@@ -3569,7 +3714,7 @@ pub mod production {
             assert_eq!(draft.kind, ProductionRecordKind::SessionDraft);
             assert!(String::from_utf8(draft.sealed_body)
                 .expect("draft body")
-                .starts_with(&format!("ADSESSIONDRAFT1|{channel_id}|")));
+                .starts_with(&format!("ADSESSIONDRAFT2|{channel_id}|")));
             assert!(store
                 .get(&production_endpoint_state_record_id(
                     &channel_id,
@@ -3595,6 +3740,21 @@ pub mod production {
             assert!(!status.key_material_exposed());
             assert!(!status.transport_io_opened());
             assert!(!status.runtime_messaging_enabled());
+
+            let runtime =
+                production_pairing_session_load_runtime(&alice_store, alice.clone(), &passphrase)
+                    .expect("load runtime");
+            assert!(runtime.storage_opened());
+            assert!(runtime.session_draft_loaded());
+            assert!(runtime.local_noise_static_private_key_loaded());
+            assert!(runtime.local_noise_static_matches_draft());
+            assert!(runtime.remote_noise_static_public_key_loaded());
+            assert!(runtime.remote_endpoint_state_loaded());
+            assert!(runtime.replay_window_loaded());
+            assert!(runtime.runtime_material_reconstructable());
+            assert!(!runtime.key_material_exposed());
+            assert!(!runtime.transport_io_opened());
+            assert!(!runtime.runtime_messaging_enabled());
 
             let _ = std::fs::remove_dir_all(dir);
         }
