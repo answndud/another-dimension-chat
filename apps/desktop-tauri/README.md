@@ -28,6 +28,30 @@ npm run dev
 npm run build
 ```
 
+Run the visible local demo shell:
+
+```bash
+cd apps/desktop-tauri
+npm ci --workspaces=false
+npm run tauri -- dev
+```
+
+Then click `Run local demo`.
+
+Expected local-only behavior:
+
+- The first run may take longer while Cargo builds the `dev-insecure` CLI demo.
+- The shell shows a dev-insecure warning separately from the transcript.
+- The shell shows structured local flow steps for profile creation, pairing, safety verification material, pairing confirmation, message send/receive, replay check, and demo completion.
+- The transcript remains visible for debugging.
+
+Failure checks:
+
+- Confirm Rust/Cargo is installed and available on `PATH`.
+- Confirm Tauri v2 platform prerequisites are installed.
+- Run `cargo run -q --features dev-insecure -- demo local` from the repository root to isolate CLI failures.
+- Run `npm run build` from `apps/desktop-tauri` to isolate frontend build failures.
+
 From the repository root:
 
 ```bash
