@@ -225,6 +225,35 @@
               </div>
             </dl>
           </section>
+          <section class="loop-panel" aria-labelledby="production-pairing-title">
+            <div>
+              <p class="eyebrow">Production pairing</p>
+              <h3 id="production-pairing-title">Public payload export</h3>
+            </div>
+            <label class="loop-label" for="production-pairing-endpoint">Onion endpoint</label>
+            <input id="production-pairing-endpoint" type="text" value="alice.onion" />
+            <div class="loop-actions">
+              <button id="export-production-pairing" type="button">Export pairing payload</button>
+            </div>
+            <p id="production-pairing-state" class="demo-state" aria-live="polite">
+              Pairing payload idle
+            </p>
+            <p id="production-pairing-warning" class="demo-warning">
+              Pairing payload has not been exported yet.
+            </p>
+            <label class="loop-label" for="production-pairing-payload">Pairing payload</label>
+            <textarea id="production-pairing-payload" rows="5" readonly></textarea>
+            <dl class="flow-summary">
+              <div>
+                <dt>Storage</dt>
+                <dd id="production-pairing-storage">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Boundary</dt>
+                <dd id="production-pairing-boundary">Not checked yet</dd>
+              </div>
+            </dl>
+          </section>
           <section class="loop-panel" aria-labelledby="production-roundtrip-title">
             <div>
               <p class="eyebrow">Production core local roundtrip</p>
