@@ -32,8 +32,9 @@ What exists today:
 - A public-safe release hardening gap inventory that tracks missing signing, reproducible/equivalent verification, dependency review, release-copy alignment, external review readiness, and update integrity before any security-ready claim.
 - A release artifact gate verifier skeleton that keeps signing and reproducible/equivalent verification documented as incomplete until real implementation exists.
 - A dependency review gate verifier skeleton that keeps dependency/supply-chain review documented as incomplete until review evidence exists.
+- A dependency review template that records required release-candidate lockfile, direct dependency, native dependency, deny/allow decision, and classification fields while remaining classified as not review evidence.
 - An external review gate verifier skeleton that keeps external/independent review readiness documented as incomplete until review readiness evidence exists.
-- A release completion audit that records current v0.1-security-ready evidence as not complete and points the next slice at update/installer integrity.
+- A release completion audit that records current v0.1-security-ready evidence as not complete while release gates remain incomplete.
 - An update integrity gate verifier skeleton that keeps update/installer integrity documented as incomplete until release artifact and package verification evidence exists.
 - A release signoff gate verifier skeleton that keeps release-candidate threat-model/release-copy signoff documented as incomplete until signoff evidence exists.
 - A release signing implementation plan that targets offline detached signatures while keeping release signing documented as unimplemented.
@@ -278,6 +279,8 @@ The release signing plan is tracked in [RELEASE_SIGNING_PLAN.md](RELEASE_SIGNING
 The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md). It is a pre-implementation plan, not reproducible build evidence.
 
 The binary verification input template is tracked in [RELEASE_BINARY_INPUT_TEMPLATE.md](RELEASE_BINARY_INPUT_TEMPLATE.md). It is not release-candidate evidence.
+
+The dependency review template is tracked in [RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md](RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md). It is not dependency review evidence or supply-chain approval.
 
 ## License
 
