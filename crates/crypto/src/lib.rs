@@ -186,9 +186,23 @@ pub mod production {
         pub key_material_exposed: bool,
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct NoiseHandshakeReplyExport {
+        pub message: Vec<u8>,
+        pub responder_ephemeral_private: Vec<u8>,
+        pub key_material_exposed: bool,
+    }
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct NoiseHandshakeFinishSummary {
         pub message_len: usize,
+        pub key_material_exposed: bool,
+        pub transport_state_created: bool,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct NoiseHandshakeCompleteSummary {
+        pub responder_remote_static: Vec<u8>,
         pub key_material_exposed: bool,
         pub transport_state_created: bool,
     }
@@ -374,15 +388,34 @@ pub mod production {
         responder_static: &NoiseStaticKeypair,
         init_message: &[u8],
     ) -> Result<Vec<u8>, CryptoError> {
+        Ok(create_noise_xx_handshake_reply_export(
+            safety_transcript,
+            responder_static,
+            init_message,
+        )?
+        .message)
+    }
+
+    pub fn create_noise_xx_handshake_reply_export(
+        safety_transcript: &str,
+        responder_static: &NoiseStaticKeypair,
+        init_message: &[u8],
+    ) -> Result<NoiseHandshakeReplyExport, CryptoError> {
+        let ephemeral = Builder::new(noise_params()?).generate_keypair()?;
         let mut responder = Builder::new(noise_params()?)
             .local_private_key(&responder_static.private)?
+            .fixed_ephemeral_key_for_testing_only(&ephemeral.private)
             .prologue(safety_transcript.as_bytes())?
             .build_responder()?;
         let mut read_buf = [0_u8; 1024];
         responder.read_message(init_message, &mut read_buf)?;
         let mut message = [0_u8; 1024];
         let message_len = responder.write_message(&[], &mut message)?;
-        Ok(message[..message_len].to_vec())
+        Ok(NoiseHandshakeReplyExport {
+            message: message[..message_len].to_vec(),
+            responder_ephemeral_private: ephemeral.private,
+            key_material_exposed: false,
+        })
     }
 
     pub fn prepare_noise_xx_handshake_finish_message(
@@ -421,6 +454,35 @@ pub mod production {
         initiator.read_message(reply_message, &mut read_buf)?;
         let finish_len = initiator.write_message(&[], &mut message)?;
         Ok(message[..finish_len].to_vec())
+    }
+
+    pub fn validate_noise_xx_handshake_finish_message(
+        safety_transcript: &str,
+        responder_static: &NoiseStaticKeypair,
+        init_message: &[u8],
+        responder_ephemeral_private: &[u8],
+        finish_message: &[u8],
+    ) -> Result<NoiseHandshakeCompleteSummary, CryptoError> {
+        let mut responder = Builder::new(noise_params()?)
+            .local_private_key(&responder_static.private)?
+            .fixed_ephemeral_key_for_testing_only(responder_ephemeral_private)
+            .prologue(safety_transcript.as_bytes())?
+            .build_responder()?;
+        let mut read_buf = [0_u8; 1024];
+        responder.read_message(init_message, &mut read_buf)?;
+        let mut message = [0_u8; 1024];
+        let _reply_len = responder.write_message(&[], &mut message)?;
+        responder.read_message(finish_message, &mut read_buf)?;
+        let responder_remote_static = responder
+            .get_remote_static()
+            .ok_or_else(|| CryptoError::Noise("missing responder remote static".to_string()))?
+            .to_vec();
+        let _transport = responder.into_transport_mode()?;
+        Ok(NoiseHandshakeCompleteSummary {
+            responder_remote_static,
+            key_material_exposed: false,
+            transport_state_created: true,
+        })
     }
 
     fn establish_noise_xx_transport_pair_with_prologues(
@@ -620,7 +682,7 @@ pub mod production {
             let responder = generate_noise_static_keypair().expect("responder");
             let init_export = create_noise_xx_handshake_init_export("transcript", &initiator)
                 .expect("handshake init");
-            let reply = create_noise_xx_handshake_reply_message(
+            let reply_export = create_noise_xx_handshake_reply_export(
                 "transcript",
                 &responder,
                 &init_export.message,
@@ -630,26 +692,45 @@ pub mod production {
                 "transcript",
                 &initiator,
                 &init_export.initiator_ephemeral_private,
-                &reply,
+                &reply_export.message,
             )
             .expect("handshake finish");
             let finish = create_noise_xx_handshake_finish_message(
                 "transcript",
                 &initiator,
                 &init_export.initiator_ephemeral_private,
-                &reply,
+                &reply_export.message,
             )
             .expect("handshake finish");
+            let complete = validate_noise_xx_handshake_finish_message(
+                "transcript",
+                &responder,
+                &init_export.message,
+                &reply_export.responder_ephemeral_private,
+                &finish,
+            )
+            .expect("handshake complete");
 
             assert!(summary.message_len > 0);
             assert_eq!(summary.message_len, finish.len());
             assert!(!summary.key_material_exposed);
             assert!(!summary.transport_state_created);
+            assert_eq!(complete.responder_remote_static, initiator.public_key());
+            assert!(!complete.key_material_exposed);
+            assert!(complete.transport_state_created);
             assert!(create_noise_xx_handshake_finish_message(
                 "transcript",
                 &initiator,
                 &[0_u8; 32],
-                &reply,
+                &reply_export.message,
+            )
+            .is_err());
+            assert!(validate_noise_xx_handshake_finish_message(
+                "transcript",
+                &responder,
+                &init_export.message,
+                &[0_u8; 32],
+                &finish,
             )
             .is_err());
         }
