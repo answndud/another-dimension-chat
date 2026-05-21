@@ -8,7 +8,7 @@ The current public repository contains an early `dev-insecure` Rust prototype. I
 
 Default-build production code now includes narrow decision boundaries for pairing, session setup, envelope handling, replay rejection, transport policy, a fail-closed onion transport adapter skeleton, pre-network transport blockers, backup-exclusion verification boundaries, onion service key lifecycle policy boundaries, onion service launch preflight boundaries, bridge/censorship readiness policy boundaries, bootstrap execution skeleton boundaries, a bounded Arti bootstrap adapter spike boundary, a manual Arti bootstrap attempt gate, local-only manual bootstrap CLI gates, profile-scoped transport directory resolution, a persistent Arti client lifecycle owner boundary, storage policy tests, a SQLCipher-backed storage spike, passphrase unlock tests, high-risk unlock policy tests, first replay-window persistence tests, receive-flow replay commit-order tests, and session-scoped opaque replay record id derivation. These are implementation guardrails, not a secure messenger release.
 
-The public cross-component replacement inventory is tracked in `COMPONENT_BOUNDARIES.md`. It is a boundary map for future work, not a production-readiness statement.
+The public cross-component replacement inventory is tracked in `reference/COMPONENT_BOUNDARIES.md`. It is a boundary map for future work, not a production-readiness statement.
 
 Do not use this project to communicate sensitive information.
 

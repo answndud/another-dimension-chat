@@ -91,4 +91,4 @@ This document does not add or approve:
 - [CRYPTO_DECISION.md](CRYPTO_DECISION.md): keep the first evaluation path narrowed to the existing `snow` Noise XX synchronous boundary, while deferring Signal-style or ratchet adoption until deeper review.
 - [TRANSPORT_DECISION.md](TRANSPORT_DECISION.md): keep onion-first transport integration gated and fail-closed.
 - [STORAGE_DECISION.md](STORAGE_DECISION.md): move from SQLCipher spike to production key-management and rollback decisions.
-- [SECURITY.md](SECURITY.md): keep user-facing non-claims aligned with implementation.
+- [SECURITY.md](../SECURITY.md): keep user-facing non-claims aligned with implementation.
