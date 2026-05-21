@@ -122,6 +122,8 @@ const fields = {
   productionMessageWarning: document.querySelector("#production-message-warning"),
   productionMessageEnvelope: document.querySelector("#production-message-envelope"),
   useProductionMessageEnvelope: document.querySelector("#use-production-message-envelope"),
+  storeProductionMessageEnvelope: document.querySelector("#store-production-message-envelope"),
+  loadProductionMessageEnvelope: document.querySelector("#load-production-message-envelope"),
   productionRemoteMessageEnvelope: document.querySelector("#production-remote-message-envelope"),
   importProductionMessageEnvelope: document.querySelector("#import-production-message-envelope"),
   exportProductionReceivedMessage: document.querySelector("#export-production-received-message"),
@@ -178,6 +180,7 @@ const productionPayloadSlots = {
   handshakeInit: new Map(),
   handshakeReply: new Map(),
   handshakeFinish: new Map(),
+  messageEnvelope: new Map(),
 };
 
 const themeStorageKey = "another-dimension-theme";
@@ -392,6 +395,36 @@ function moveLocalMessageEnvelope() {
   applyProductionActionState();
 }
 
+function storeProductionMessageEnvelope() {
+  const profile = activeProductionProfileName();
+  const value = fields.productionMessageEnvelope?.value?.trim() ?? "";
+  if (!profile || !value) {
+    setProductionMessageState("Envelope store needs profile and envelope");
+    setText(fields.productionMessageWarning, "Export envelope before storing a local message slot.");
+    return;
+  }
+  productionPayloadSlots.messageEnvelope.set(profile, value);
+  setProductionMessageState("Message envelope stored");
+  setText(fields.productionMessageWarning, `Stored local message envelope slot for ${profile}.`);
+  applyProductionActionState();
+}
+
+function loadProductionMessageEnvelope() {
+  const profile = activeProductionProfileName();
+  const counterpart = productionCounterpartProfile(profile);
+  const value = counterpart ? productionPayloadSlots.messageEnvelope.get(counterpart) : null;
+  if (!value || !fields.productionRemoteMessageEnvelope) {
+    setProductionMessageState("Remote envelope slot empty");
+    setText(fields.productionMessageWarning, "Store Alice or Bob envelope first, then switch profile and load remote.");
+    return;
+  }
+  fields.productionRemoteMessageEnvelope.value = value;
+  fields.productionRemoteMessageEnvelope.dispatchEvent(new Event("input", { bubbles: true }));
+  setProductionMessageState("Remote envelope loaded");
+  setText(fields.productionMessageWarning, `Loaded ${counterpart} envelope into remote field.`);
+  applyProductionActionState();
+}
+
 function openManualProductionTools() {
   if (fields.manualProductionTools) {
     fields.manualProductionTools.open = true;
@@ -441,6 +474,9 @@ function applyProductionActionState() {
     counterpartProfile && productionPayloadSlots.handshakeFinish.has(counterpartProfile),
   );
   const hasLocalMessageEnvelope = Boolean(fields.productionMessageEnvelope?.value.trim());
+  const hasRemoteMessageEnvelopeSlot = Boolean(
+    counterpartProfile && productionPayloadSlots.messageEnvelope.has(counterpartProfile),
+  );
   const hasOutboundMessageInput = Boolean(
     hasProfileUnlockInput &&
       validProductionMessageNumber() &&
@@ -509,6 +545,8 @@ function applyProductionActionState() {
   setDisabled(fields.storeProductionHandshakeFinish, busy || !hasHandshakeFinishPayload);
   setDisabled(fields.loadProductionHandshakeFinish, busy || !hasRemoteHandshakeFinishSlot);
   setDisabled(fields.useProductionMessageEnvelope, !availability.useMessageEnvelope);
+  setDisabled(fields.storeProductionMessageEnvelope, busy || !hasLocalMessageEnvelope);
+  setDisabled(fields.loadProductionMessageEnvelope, busy || !hasRemoteMessageEnvelopeSlot);
 }
 
 function renderDemoSteps(steps) {
@@ -1756,6 +1794,14 @@ if (fields.exportProductionMessageEnvelope) {
 
 if (fields.useProductionMessageEnvelope) {
   fields.useProductionMessageEnvelope.addEventListener("click", moveLocalMessageEnvelope);
+}
+
+if (fields.storeProductionMessageEnvelope) {
+  fields.storeProductionMessageEnvelope.addEventListener("click", storeProductionMessageEnvelope);
+}
+
+if (fields.loadProductionMessageEnvelope) {
+  fields.loadProductionMessageEnvelope.addEventListener("click", loadProductionMessageEnvelope);
 }
 
 if (fields.importProductionMessageEnvelope) {

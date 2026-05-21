@@ -185,6 +185,8 @@ require_contains "$APP_DIR/src/main.js" 'moveLocalPayload'
 require_contains "$APP_DIR/src/main.js" 'storeProductionPayloadSlot'
 require_contains "$APP_DIR/src/main.js" 'loadProductionPayloadSlot'
 require_contains "$APP_DIR/src/main.js" 'moveLocalMessageEnvelope'
+require_contains "$APP_DIR/src/main.js" 'storeProductionMessageEnvelope'
+require_contains "$APP_DIR/src/main.js" 'loadProductionMessageEnvelope'
 require_contains "$APP_DIR/src/main.js" 'exportProductionPairingPayload'
 require_contains "$APP_DIR/src/main.js" 'saveProductionSessionDraft'
 require_contains "$APP_DIR/src/main.js" 'checkProductionSessionState'
@@ -231,6 +233,8 @@ require_contains "$APP_DIR/index.html" 'store-production-handshake-reply'
 require_contains "$APP_DIR/index.html" 'load-production-handshake-reply'
 require_contains "$APP_DIR/index.html" 'store-production-handshake-finish'
 require_contains "$APP_DIR/index.html" 'load-production-handshake-finish'
+require_contains "$APP_DIR/index.html" 'store-production-message-envelope'
+require_contains "$APP_DIR/index.html" 'load-production-message-envelope'
 require_contains "$APP_DIR/src/styles.css" '.production-workflow'
 require_contains "$APP_DIR/src/styles.css" '.advanced-panel'
 require_contains "$APP_DIR/src/main.js" 'localLoopMessages'
@@ -493,6 +497,8 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="export-production-message-envelope" type="button">Export envelope</button>' \
   | grep -v '<textarea id="production-message-envelope" rows="5" readonly></textarea>' \
   | grep -v '<button id="use-production-message-envelope" type="button">Use envelope</button>' \
+  | grep -v '<button id="store-production-message-envelope" type="button">Store envelope</button>' \
+  | grep -v '<button id="load-production-message-envelope" type="button">Load envelope</button>' \
   | grep -v '<textarea id="production-remote-message-envelope" rows="5"></textarea>' \
   | grep -v '<button id="import-production-message-envelope" type="button">Import envelope</button>' \
   | grep -v '<button id="export-production-received-message" type="button">Show received</button>' \
