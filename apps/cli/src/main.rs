@@ -41,6 +41,11 @@ fn production_main() -> Result<(), String> {
         {
             run_production_profile_init_command(args)?;
         }
+        [cmd, sub, action, args @ ..]
+            if cmd == "production" && sub == "profile" && action == "status" =>
+        {
+            run_production_profile_status_command(args)?;
+        }
         [cmd, sub, _args @ ..] if cmd == "production" && sub == "unlock" => {
             return Err(production_unlock_rejected_error());
         }
@@ -91,6 +96,7 @@ fn production_help() -> String {
   another-dimension production self-test
   another-dimension production preflight
   another-dimension production profile init --profile <name> --store <path> --passphrase-stdin
+  another-dimension production profile status --profile <name> --store <path> --passphrase-stdin
   another-dimension --help
 
 boundary:
@@ -99,6 +105,7 @@ boundary:
   production self-test performs no network I/O and opens no local storage
   production preflight is read-only and performs no messaging, storage unlock, or transport I/O
   production profile init is storage-only: it creates an encrypted local profile store but opens no messaging or transport
+  production profile status is storage-only: it verifies an encrypted local profile marker but opens no messaging or transport
   prototype profile/pairing/message commands require --features dev-insecure"
         .to_string()
 }
@@ -131,6 +138,34 @@ fn run_production_profile_init_command(args: &[String]) -> Result<(), String> {
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn run_production_profile_status_command(args: &[String]) -> Result<(), String> {
+    let options =
+        ProductionProfileInitOptions::parse_with_help(args, production_profile_status_help)?;
+    let passphrase = read_passphrase_from_stdin()?;
+    let passphrase = another_dimension_storage::production::ProfilePassphrase::new(passphrase)
+        .map_err(|_| "invalid production profile passphrase".to_string())?;
+    let summary = another_dimension_core::production::production_profile_status(
+        &options.store_path,
+        options.profile,
+        &passphrase,
+    )
+    .map_err(redacted_production_profile_status_error)?;
+
+    println!(
+        "production profile status: storage_opened={} profile_marker_present={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.profile_marker_present(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production profile status is storage-only and not a secure messenger release"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 struct ProductionProfileInitOptions {
     profile: another_dimension_identity::ProfileName,
     store_path: std::path::PathBuf,
@@ -139,6 +174,10 @@ struct ProductionProfileInitOptions {
 #[cfg(not(feature = "dev-insecure"))]
 impl ProductionProfileInitOptions {
     fn parse(args: &[String]) -> Result<Self, String> {
+        Self::parse_with_help(args, production_profile_init_help)
+    }
+
+    fn parse_with_help(args: &[String], help: fn() -> String) -> Result<Self, String> {
         let mut profile = None;
         let mut store_path = None;
         let mut passphrase_stdin = false;
@@ -148,38 +187,34 @@ impl ProductionProfileInitOptions {
             match args[index].as_str() {
                 "--profile" => {
                     index += 1;
-                    profile = Some(
-                        args.get(index)
-                            .ok_or_else(production_profile_init_help)
-                            .and_then(|value| {
-                                another_dimension_identity::ProfileName::new(value)
-                                    .map_err(|_| "invalid production profile name".to_string())
-                            })?,
-                    );
+                    profile = Some(args.get(index).ok_or_else(help).and_then(|value| {
+                        another_dimension_identity::ProfileName::new(value)
+                            .map_err(|_| "invalid production profile name".to_string())
+                    })?);
                 }
                 "--store" => {
                     index += 1;
                     store_path = Some(
                         args.get(index)
                             .map(std::path::PathBuf::from)
-                            .ok_or_else(production_profile_init_help)?,
+                            .ok_or_else(help)?,
                     );
                 }
                 "--passphrase-stdin" => {
                     passphrase_stdin = true;
                 }
-                _ => return Err(production_profile_init_help()),
+                _ => return Err(help()),
             }
             index += 1;
         }
 
         if !passphrase_stdin {
-            return Err(production_profile_init_help());
+            return Err(help());
         }
 
         Ok(Self {
-            profile: profile.ok_or_else(production_profile_init_help)?,
-            store_path: store_path.ok_or_else(production_profile_init_help)?,
+            profile: profile.ok_or_else(help)?,
+            store_path: store_path.ok_or_else(help)?,
         })
     }
 }
@@ -190,6 +225,15 @@ fn production_profile_init_help() -> String {
   another-dimension production profile init --profile <name> --store <path> --passphrase-stdin
 
 Reads the profile passphrase from stdin. Creates or unlocks an encrypted local profile store and writes a profile marker. This does not enable messaging, pairing, transport, or a long-lived unlock session."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn production_profile_status_help() -> String {
+    "usage:
+  another-dimension production profile status --profile <name> --store <path> --passphrase-stdin
+
+Reads the profile passphrase from stdin. Opens an encrypted local profile store and checks for a profile marker. This does not enable messaging, pairing, transport, or a long-lived unlock session."
         .to_string()
 }
 
@@ -224,6 +268,29 @@ fn redacted_production_profile_init_error(
             "production profile init failed: storage error".to_string()
         }
         _ => "production profile init failed".to_string(),
+    }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_profile_status_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    use another_dimension_core::production::ProductionSessionError;
+    use another_dimension_storage::production::{
+        ProductionStorageError, ProductionStoragePolicyError,
+    };
+
+    match error {
+        ProductionSessionError::Storage(ProductionStorageError::UnlockFailed) => {
+            "production profile status failed: unlock failed".to_string()
+        }
+        ProductionSessionError::Storage(ProductionStorageError::Policy(
+            ProductionStoragePolicyError::InvalidPassphrase,
+        )) => "invalid production profile passphrase".to_string(),
+        ProductionSessionError::Storage(_) => {
+            "production profile status failed: storage error".to_string()
+        }
+        _ => "production profile status failed".to_string(),
     }
 }
 

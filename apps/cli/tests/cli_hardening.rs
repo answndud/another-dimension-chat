@@ -83,6 +83,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production self-test"));
     assert!(out.contains("production preflight"));
     assert!(out.contains("production profile init"));
+    assert!(out.contains("production profile status"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
@@ -202,6 +203,114 @@ fn production_profile_init_creates_encrypted_store_without_opening_messaging() {
 
     assert!(!wrong.status.success());
     assert!(wrong_out.is_empty());
+    assert!(wrong_error.contains("unlock failed"));
+    assert!(!wrong_error.contains("alice"));
+    assert!(!wrong_error.contains(store_arg));
+    assert!(!wrong_error.contains("wrong passphrase"));
+
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+#[cfg(not(feature = "dev-insecure"))]
+fn production_profile_status_reopens_encrypted_store_without_opening_messaging() {
+    let root = temp_cli_path("production-profile-status");
+    if root.exists() {
+        std::fs::remove_dir_all(&root).expect("remove stale root");
+    }
+    std::fs::create_dir_all(&root).expect("create root");
+    let store = root.join("profile.db");
+    let store_arg = store.to_str().expect("store path");
+
+    let missing = run_with_stdin(
+        &[
+            "production",
+            "profile",
+            "status",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let missing_out = stdout(&missing);
+    let missing_error = stderr(&missing);
+
+    assert!(
+        missing.status.success(),
+        "stdout: {missing_out}\nstderr: {missing_error}"
+    );
+    assert!(missing_out.contains("production profile status:"));
+    assert!(missing_out.contains("storage_opened=true"));
+    assert!(missing_out.contains("profile_marker_present=false"));
+    assert!(missing_out.contains("key_material_exposed=false"));
+    assert!(missing_out.contains("transport_io_opened=false"));
+    assert!(missing_out.contains("runtime_messaging=false"));
+    assert!(missing_error.contains("storage-only"));
+    assert!(!missing_out.contains("alice"));
+    assert!(!missing_out.contains(store_arg));
+    assert!(!missing_error.contains("correct horse"));
+
+    let init = run_with_stdin(
+        &[
+            "production",
+            "profile",
+            "init",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    assert!(init.status.success());
+
+    let present = run_with_stdin(
+        &[
+            "production",
+            "profile",
+            "status",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let present_out = stdout(&present);
+    let present_error = stderr(&present);
+
+    assert!(
+        present.status.success(),
+        "stdout: {present_out}\nstderr: {present_error}"
+    );
+    assert!(present_out.contains("profile_marker_present=true"));
+    assert!(present_out.contains("runtime_messaging=false"));
+    assert!(!present_out.contains("alice"));
+    assert!(!present_out.contains(store_arg));
+    assert!(!present_error.contains("correct horse"));
+
+    let wrong = run_with_stdin(
+        &[
+            "production",
+            "profile",
+            "status",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "wrong passphrase\n",
+    );
+    let wrong_error = stderr(&wrong);
+
+    assert!(!wrong.status.success());
+    assert!(stdout(&wrong).is_empty());
     assert!(wrong_error.contains("unlock failed"));
     assert!(!wrong_error.contains("alice"));
     assert!(!wrong_error.contains(store_arg));

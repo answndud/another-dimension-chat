@@ -186,6 +186,15 @@ pub mod production {
         runtime_messaging_enabled: bool,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionProfileStatusSummary {
+        storage_opened: bool,
+        profile_marker_present: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
     impl ProductionProfileInitSummary {
         pub fn storage_opened(self) -> bool {
             self.storage_opened
@@ -193,6 +202,28 @@ pub mod production {
 
         pub fn profile_marker_written(self) -> bool {
             self.profile_marker_written
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionProfileStatusSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn profile_marker_present(self) -> bool {
+            self.profile_marker_present
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -1399,6 +1430,23 @@ pub mod production {
         })
     }
 
+    pub fn production_profile_status(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionProfileStatusSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        let profile_marker_present = store.profile_marker_exists(&profile)?;
+        Ok(ProductionProfileStatusSummary {
+            storage_opened: true,
+            profile_marker_present,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
     pub fn production_session_evaluation_summary() -> ProductionSessionEvaluationSummary {
         ProductionSessionEvaluationSummary {
             protocol_candidate: "snow Noise XX synchronous boundary",
@@ -2428,6 +2476,43 @@ pub mod production {
             assert!(store
                 .profile_marker_exists(&profile)
                 .expect("profile marker exists"));
+
+            let _ = std::fs::remove_dir_all(dir);
+        }
+
+        #[test]
+        fn production_profile_status_reopens_store_and_checks_marker_without_runtime() {
+            let dir = std::env::temp_dir().join(format!(
+                "another-dimension-production-profile-status-{}-{:?}",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+            if dir.exists() {
+                std::fs::remove_dir_all(&dir).expect("remove stale dir");
+            }
+            std::fs::create_dir_all(&dir).expect("create dir");
+            let store_path = dir.join("profile.db");
+            let profile = ProfileName::new("alice").expect("valid profile");
+            let passphrase = ProfilePassphrase::new("correct-passphrase").expect("passphrase");
+
+            let missing = production_profile_status(&store_path, profile.clone(), &passphrase)
+                .expect("profile status before marker");
+            assert!(missing.storage_opened());
+            assert!(!missing.profile_marker_present());
+            assert!(!missing.key_material_exposed());
+            assert!(!missing.transport_io_opened());
+            assert!(!missing.runtime_messaging_enabled());
+
+            production_profile_init(&store_path, profile.clone(), &passphrase)
+                .expect("profile init");
+            let present = production_profile_status(&store_path, profile, &passphrase)
+                .expect("profile status after marker");
+
+            assert!(present.storage_opened());
+            assert!(present.profile_marker_present());
+            assert!(!present.key_material_exposed());
+            assert!(!present.transport_io_opened());
+            assert!(!present.runtime_messaging_enabled());
 
             let _ = std::fs::remove_dir_all(dir);
         }
