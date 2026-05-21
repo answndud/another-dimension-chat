@@ -1872,7 +1872,7 @@ fn production_message_outbound_encrypt_prepare_help() -> String {
     "usage:
   another-dimension production message outbound-encrypt-prepare --profile <name> --store <path> --message-number <n> --passphrase-stdin
 
-Reads the profile passphrase from stdin. Opens an encrypted local profile store, checks whether pending plaintext can be loaded for outbound encryption, and fails closed before writing an encrypted envelope until an authenticated session transport exists. This does not expose plaintext, open transport, or enable runtime messaging."
+Reads the profile passphrase from stdin. Opens an encrypted local profile store, loads pending plaintext, and overwrites it with an encrypted outbound envelope when authenticated session transport metadata exists. This does not expose plaintext, open transport, or enable runtime messaging."
         .to_string()
 }
 

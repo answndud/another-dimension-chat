@@ -1455,16 +1455,16 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!handshake_finish_import_error.contains(reply_store_arg));
     assert!(!handshake_finish_import_error.contains(handshake_finish_export_arg));
 
-    std::fs::write(&plaintext, "hello from alice").expect("write plaintext");
+    std::fs::write(&plaintext, "hello from canonical dialer").expect("write plaintext");
     let send_prepare = run_with_stdin(
         &[
             "production",
             "message",
             "send-prepare",
             "--profile",
-            "alice",
+            finish_profile,
             "--store",
-            alice_store_arg,
+            finish_store_arg,
             "--message-number",
             "1",
             "--plaintext",
@@ -1493,16 +1493,16 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(send_prepare_out.contains("transport_io_opened=false"));
     assert!(send_prepare_out.contains("runtime_messaging=false"));
     assert!(send_prepare_error.contains("storage-only"));
-    assert!(!send_prepare_out.contains("alice"));
-    assert!(!send_prepare_out.contains(alice_store_arg));
+    assert!(!send_prepare_out.contains(finish_profile));
+    assert!(!send_prepare_out.contains(finish_store_arg));
     assert!(!send_prepare_out.contains(plaintext_arg));
-    assert!(!send_prepare_out.contains("hello from alice"));
+    assert!(!send_prepare_out.contains("hello from canonical dialer"));
     assert!(!send_prepare_out.contains("adchan1"));
     assert!(!send_prepare_out.contains("ed25519"));
     assert!(!send_prepare_error.contains("correct horse"));
-    assert!(!send_prepare_error.contains(alice_store_arg));
+    assert!(!send_prepare_error.contains(finish_store_arg));
     assert!(!send_prepare_error.contains(plaintext_arg));
-    assert!(!send_prepare_error.contains("hello from alice"));
+    assert!(!send_prepare_error.contains("hello from canonical dialer"));
 
     let pending_status = run_with_stdin(
         &[
@@ -1510,9 +1510,9 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
             "message",
             "pending-status",
             "--profile",
-            "alice",
+            finish_profile,
             "--store",
-            alice_store_arg,
+            finish_store_arg,
             "--message-number",
             "1",
             "--passphrase-stdin",
@@ -1539,14 +1539,14 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(pending_status_out.contains("transport_io_opened=false"));
     assert!(pending_status_out.contains("runtime_messaging=false"));
     assert!(pending_status_error.contains("storage-only"));
-    assert!(!pending_status_out.contains("alice"));
-    assert!(!pending_status_out.contains(alice_store_arg));
+    assert!(!pending_status_out.contains(finish_profile));
+    assert!(!pending_status_out.contains(finish_store_arg));
     assert!(!pending_status_out.contains(plaintext_arg));
-    assert!(!pending_status_out.contains("hello from alice"));
+    assert!(!pending_status_out.contains("hello from canonical dialer"));
     assert!(!pending_status_out.contains("adchan1"));
     assert!(!pending_status_error.contains("correct horse"));
-    assert!(!pending_status_error.contains(alice_store_arg));
-    assert!(!pending_status_error.contains("hello from alice"));
+    assert!(!pending_status_error.contains(finish_store_arg));
+    assert!(!pending_status_error.contains("hello from canonical dialer"));
 
     let encrypt_prepare = run_with_stdin(
         &[
@@ -1554,9 +1554,9 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
             "message",
             "outbound-encrypt-prepare",
             "--profile",
-            "alice",
+            finish_profile,
             "--store",
-            alice_store_arg,
+            finish_store_arg,
             "--message-number",
             "1",
             "--passphrase-stdin",
@@ -1579,21 +1579,21 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(encrypt_prepare_out.contains("pending_plaintext_loaded=true"));
     assert!(encrypt_prepare_out.contains("plaintext_exposed=false"));
     assert!(encrypt_prepare_out.contains("session_transport_ready=true"));
-    assert!(encrypt_prepare_out.contains("envelope_encryption_ready=false"));
-    assert!(encrypt_prepare_out.contains("encrypted_envelope_written=false"));
+    assert!(encrypt_prepare_out.contains("envelope_encryption_ready=true"));
+    assert!(encrypt_prepare_out.contains("encrypted_envelope_written=true"));
     assert!(encrypt_prepare_out.contains("network_send_attempted=false"));
     assert!(encrypt_prepare_out.contains("key_material_exposed=false"));
     assert!(encrypt_prepare_out.contains("transport_io_opened=false"));
     assert!(encrypt_prepare_out.contains("runtime_messaging=false"));
     assert!(encrypt_prepare_error.contains("storage-only"));
-    assert!(!encrypt_prepare_out.contains("alice"));
-    assert!(!encrypt_prepare_out.contains(alice_store_arg));
+    assert!(!encrypt_prepare_out.contains(finish_profile));
+    assert!(!encrypt_prepare_out.contains(finish_store_arg));
     assert!(!encrypt_prepare_out.contains(plaintext_arg));
-    assert!(!encrypt_prepare_out.contains("hello from alice"));
+    assert!(!encrypt_prepare_out.contains("hello from canonical dialer"));
     assert!(!encrypt_prepare_out.contains("adchan1"));
     assert!(!encrypt_prepare_error.contains("correct horse"));
-    assert!(!encrypt_prepare_error.contains(alice_store_arg));
-    assert!(!encrypt_prepare_error.contains("hello from alice"));
+    assert!(!encrypt_prepare_error.contains(finish_store_arg));
+    assert!(!encrypt_prepare_error.contains("hello from canonical dialer"));
 
     let swapped = run_with_stdin(
         &[
