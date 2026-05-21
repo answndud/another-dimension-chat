@@ -69,4 +69,6 @@ The release artifact signing evidence requirements are tracked in [RELEASE_ARTIF
 
 The release verification UX evidence requirements are tracked in [RELEASE_VERIFICATION_UX_REQUIREMENTS.md](RELEASE_VERIFICATION_UX_REQUIREMENTS.md). They define user and reviewer verification evidence requirements, not signed artifact verification evidence.
 
-The next signing slice should define a release signing candidate evidence package index while keeping real artifact signing and verification out of local verification until a candidate exists.
+The release signing candidate evidence package index is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX.md). It ties the required release-candidate evidence records together, but it is not release signing evidence.
+
+The next signing slice should define a candidate evidence collection runbook while keeping real artifact signing and verification out of local verification until a candidate exists.

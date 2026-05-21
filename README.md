@@ -50,6 +50,7 @@ What exists today:
 - Release key ceremony evidence requirements that define the required real ceremony evidence package without creating release keys.
 - Release artifact signing evidence requirements that define the required signed artifact evidence package without signing release artifacts.
 - Release verification UX evidence requirements that define required user/reviewer verification evidence without verifying release artifacts.
+- A release signing candidate evidence index that ties release-candidate signing evidence records together without recording release evidence.
 - A reproducible/equivalent binary verification plan that records required evidence while keeping binary verification documented as incomplete.
 - A binary manifest fixture verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and build-input drift without verifying release artifacts.
 - A binary verification input template that records required release-candidate fields while remaining classified as not verification evidence.
@@ -294,6 +295,8 @@ The release key ceremony evidence requirements are tracked in [RELEASE_KEY_CEREM
 The release artifact signing evidence requirements are tracked in [RELEASE_ARTIFACT_SIGNING_REQUIREMENTS.md](RELEASE_ARTIFACT_SIGNING_REQUIREMENTS.md). They are not signed artifact evidence.
 
 The release verification UX evidence requirements are tracked in [RELEASE_VERIFICATION_UX_REQUIREMENTS.md](RELEASE_VERIFICATION_UX_REQUIREMENTS.md). They are not signed artifact verification evidence.
+
+The release signing candidate evidence index is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX.md). It is not release signing evidence.
 
 The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md). It is a pre-implementation plan, not reproducible build evidence.
 
