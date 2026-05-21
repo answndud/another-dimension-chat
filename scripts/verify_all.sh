@@ -35,6 +35,7 @@ run_step "release signing tooling gate" scripts/verify_release_signing_tooling_g
 run_step "release signing ceremony dry-run" scripts/verify_release_signing_ceremony_dry_run.sh
 run_step "release signing ceremony harness" scripts/verify_release_signing_ceremony_harness.sh
 run_step "release key ceremony requirements" scripts/verify_release_key_ceremony_requirements.sh
+run_step "release artifact signing requirements" scripts/verify_release_artifact_signing_requirements.sh
 run_step "binary verification plan" scripts/verify_binary_verification_plan.sh
 run_step "binary manifest fixture" scripts/verify_binary_manifest_fixture.sh
 run_step "binary input template" scripts/verify_binary_input_template.sh

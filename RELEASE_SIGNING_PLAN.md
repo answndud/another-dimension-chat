@@ -65,4 +65,6 @@ The disposable command harness for the ceremony record is `scripts/verify_releas
 
 The real key ceremony evidence requirements are tracked in [RELEASE_KEY_CEREMONY_REQUIREMENTS.md](RELEASE_KEY_CEREMONY_REQUIREMENTS.md). They define the required evidence package, not a real key ceremony.
 
-The next signing slice should define release artifact signing evidence requirements while keeping real artifact signing out of local verification.
+The release artifact signing evidence requirements are tracked in [RELEASE_ARTIFACT_SIGNING_REQUIREMENTS.md](RELEASE_ARTIFACT_SIGNING_REQUIREMENTS.md). They define the required signed artifact evidence package, not signed artifact evidence.
+
+The next signing slice should define user/reviewer verification evidence requirements while keeping real artifact verification out of local verification.
