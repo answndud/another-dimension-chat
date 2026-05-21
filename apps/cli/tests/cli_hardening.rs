@@ -104,6 +104,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production message outbound-encrypt-prepare"));
     assert!(out.contains("production message outbound-envelope-export"));
     assert!(out.contains("production message inbound-decrypt-import"));
+    assert!(out.contains("production message received-status"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
@@ -1683,6 +1684,7 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(inbound_import_out.contains("replay_accepted=true"));
     assert!(inbound_import_out.contains("plaintext_decrypted=true"));
     assert!(inbound_import_out.contains("plaintext_exposed=false"));
+    assert!(inbound_import_out.contains("received_message_written=true"));
     assert!(inbound_import_out.contains("replay_window_committed=true"));
     assert!(inbound_import_out.contains("network_receive_attempted=false"));
     assert!(inbound_import_out.contains("key_material_exposed=false"));
@@ -1698,6 +1700,48 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!inbound_import_error.contains("correct horse"));
     assert!(!inbound_import_error.contains(reply_store_arg));
     assert!(!inbound_import_error.contains("hello from canonical dialer"));
+
+    let received_status = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "received-status",
+            "--profile",
+            reply_profile,
+            "--store",
+            reply_store_arg,
+            "--message-number",
+            "1",
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let received_status_out = stdout(&received_status);
+    let received_status_error = stderr(&received_status);
+    assert!(
+        received_status.status.success(),
+        "stdout: {received_status_out}\nstderr: {received_status_error}"
+    );
+    assert!(received_status_out.contains("production message received status:"));
+    assert!(received_status_out.contains("storage_opened=true"));
+    assert!(received_status_out.contains("runtime_material_reconstructable=true"));
+    assert!(received_status_out.contains("received_message_record_present=true"));
+    assert!(received_status_out.contains("received_message_record_decodable=true"));
+    assert!(received_status_out.contains("received_message_matches_session=true"));
+    assert!(received_status_out.contains("plaintext_exposed=false"));
+    assert!(received_status_out.contains("network_receive_attempted=false"));
+    assert!(received_status_out.contains("key_material_exposed=false"));
+    assert!(received_status_out.contains("transport_io_opened=false"));
+    assert!(received_status_out.contains("runtime_messaging=false"));
+    assert!(received_status_error.contains("storage-only"));
+    assert!(!received_status_out.contains(reply_profile));
+    assert!(!received_status_out.contains(reply_store_arg));
+    assert!(!received_status_out.contains("hello from canonical dialer"));
+    assert!(!received_status_out.contains("ADRECEIVEDMSG1"));
+    assert!(!received_status_out.contains("adchan1"));
+    assert!(!received_status_error.contains("correct horse"));
+    assert!(!received_status_error.contains(reply_store_arg));
+    assert!(!received_status_error.contains("hello from canonical dialer"));
 
     let swapped = run_with_stdin(
         &[
