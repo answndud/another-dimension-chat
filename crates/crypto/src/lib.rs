@@ -300,16 +300,24 @@ pub mod production {
         safety_transcript: &str,
         initiator_static: &NoiseStaticKeypair,
     ) -> Result<NoiseHandshakeInitSummary, CryptoError> {
+        let message = create_noise_xx_handshake_init_message(safety_transcript, initiator_static)?;
+        Ok(NoiseHandshakeInitSummary {
+            message_len: message.len(),
+            key_material_exposed: false,
+        })
+    }
+
+    pub fn create_noise_xx_handshake_init_message(
+        safety_transcript: &str,
+        initiator_static: &NoiseStaticKeypair,
+    ) -> Result<Vec<u8>, CryptoError> {
         let mut initiator = Builder::new(noise_params()?)
             .local_private_key(&initiator_static.private)?
             .prologue(safety_transcript.as_bytes())?
             .build_initiator()?;
         let mut message = [0_u8; 1024];
         let message_len = initiator.write_message(&[], &mut message)?;
-        Ok(NoiseHandshakeInitSummary {
-            message_len,
-            key_material_exposed: false,
-        })
+        Ok(message[..message_len].to_vec())
     }
 
     fn establish_noise_xx_transport_pair_with_prologues(
@@ -468,8 +476,11 @@ pub mod production {
             let initiator = generate_noise_static_keypair().expect("initiator");
             let summary = prepare_noise_xx_handshake_init_message("transcript", &initiator)
                 .expect("handshake init");
+            let message = create_noise_xx_handshake_init_message("transcript", &initiator)
+                .expect("handshake message");
 
             assert!(summary.message_len > 0);
+            assert_eq!(summary.message_len, message.len());
             assert!(!summary.key_material_exposed);
         }
 
