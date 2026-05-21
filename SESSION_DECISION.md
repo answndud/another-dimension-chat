@@ -121,6 +121,8 @@ The first store-write check for this adapter is test-only. `session_durable_stat
 
 `session_durable_state_store_write_status_mirror()` reports that the store-write coverage is test-only. It keeps production store write, production unlock command, durable session persistence, rollback protection, and runtime messaging unavailable.
 
+`session_durable_state_product_unlock_blocker_summary()` records the current product unlock blockers. The passphrase-first storage boundary exists, but product unlock remains closed because app key wrapping, backup exclusion, rollback protection, durable session persistence, and runtime messaging are not ready.
+
 ## Session Persistence Decision
 
 For the current v0.1 production message boundary, production session state is in-memory only.

@@ -621,6 +621,47 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionDurableStateProductUnlockBlockerSummary {
+        passphrase_first_boundary_exists: bool,
+        production_unlock_command_enabled: bool,
+        app_key_wrapping_decided: bool,
+        backup_exclusion_decided: bool,
+        rollback_protection: ReplayRollbackProtection,
+        durable_session_persistence_ready: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    impl SessionDurableStateProductUnlockBlockerSummary {
+        pub fn passphrase_first_boundary_exists(self) -> bool {
+            self.passphrase_first_boundary_exists
+        }
+
+        pub fn production_unlock_command_enabled(self) -> bool {
+            self.production_unlock_command_enabled
+        }
+
+        pub fn app_key_wrapping_decided(self) -> bool {
+            self.app_key_wrapping_decided
+        }
+
+        pub fn backup_exclusion_decided(self) -> bool {
+            self.backup_exclusion_decided
+        }
+
+        pub fn rollback_protection(self) -> ReplayRollbackProtection {
+            self.rollback_protection
+        }
+
+        pub fn durable_session_persistence_ready(self) -> bool {
+            self.durable_session_persistence_ready
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct LocalMessageIndexEntry {
         contact_id: ContactId,
@@ -1230,6 +1271,23 @@ pub mod production {
         }
     }
 
+    pub fn session_durable_state_product_unlock_blocker_summary(
+    ) -> SessionDurableStateProductUnlockBlockerSummary {
+        let storage =
+            another_dimension_storage::production::storage_backend_integration_boundary_summary();
+        let status = session_durable_state_store_write_status_mirror();
+
+        SessionDurableStateProductUnlockBlockerSummary {
+            passphrase_first_boundary_exists: storage.passphrase_first_unlock(),
+            production_unlock_command_enabled: status.production_unlock_command_enabled(),
+            app_key_wrapping_decided: storage.production_key_management_ready(),
+            backup_exclusion_decided: false,
+            rollback_protection: status.rollback_protection(),
+            durable_session_persistence_ready: status.durable_session_persistence_ready(),
+            runtime_messaging_enabled: status.runtime_messaging_enabled(),
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -1805,6 +1863,22 @@ pub mod production {
                 ReplayRollbackProtection::NotProvided
             );
             assert!(!status.runtime_messaging_enabled());
+        }
+
+        #[test]
+        fn session_durable_state_product_unlock_blocker_summary_keeps_unlock_closed() {
+            let summary = session_durable_state_product_unlock_blocker_summary();
+
+            assert!(summary.passphrase_first_boundary_exists());
+            assert!(!summary.production_unlock_command_enabled());
+            assert!(!summary.app_key_wrapping_decided());
+            assert!(!summary.backup_exclusion_decided());
+            assert_eq!(
+                summary.rollback_protection(),
+                ReplayRollbackProtection::NotProvided
+            );
+            assert!(!summary.durable_session_persistence_ready());
+            assert!(!summary.runtime_messaging_enabled());
         }
 
         #[test]
