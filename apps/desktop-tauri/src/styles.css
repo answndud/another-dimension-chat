@@ -116,6 +116,13 @@ button:disabled {
   font-weight: 700;
 }
 
+.demo-hint {
+  margin: 0;
+  color: #52606d;
+  font-size: 13px;
+  font-weight: 650;
+}
+
 .demo-warning {
   margin: 0;
   border-left: 4px solid #a33b3b;
@@ -124,6 +131,48 @@ button:disabled {
   color: #172033;
   font-size: 13px;
   font-weight: 700;
+}
+
+.demo-steps {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.demo-steps li {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #d6dbe4;
+  border-left-width: 4px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+
+.demo-steps li.is-completed {
+  border-left-color: #3b7f5a;
+}
+
+.demo-steps li.is-running {
+  border-left-color: #9aa7b8;
+}
+
+.demo-steps li.is-failed {
+  border-left-color: #a33b3b;
+}
+
+.demo-steps strong {
+  color: #172033;
+}
+
+.demo-steps span {
+  color: #52606d;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 pre {
