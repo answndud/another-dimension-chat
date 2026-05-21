@@ -87,6 +87,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production identity init"));
     assert!(out.contains("production identity status"));
     assert!(out.contains("production pairing payload create"));
+    assert!(out.contains("production pairing session prepare"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
@@ -651,6 +652,217 @@ fn production_pairing_payload_create_uses_stored_identity_without_opening_messag
     assert!(!wrong_error.contains("alice"));
     assert!(!wrong_error.contains(store_arg));
     assert!(!wrong_error.contains(payload_arg));
+    assert!(!wrong_error.contains("wrong passphrase"));
+
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+#[cfg(not(feature = "dev-insecure"))]
+fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_transport() {
+    let root = temp_cli_path("production-session-prepare");
+    if root.exists() {
+        std::fs::remove_dir_all(&root).expect("remove stale root");
+    }
+    std::fs::create_dir_all(&root).expect("create root");
+    let alice_store = root.join("alice.db");
+    let bob_store = root.join("bob.db");
+    let alice_payload = root.join("alice-pairing.txt");
+    let bob_payload = root.join("bob-pairing.txt");
+    let alice_store_arg = alice_store.to_str().expect("alice store path");
+    let bob_store_arg = bob_store.to_str().expect("bob store path");
+    let alice_payload_arg = alice_payload.to_str().expect("alice payload path");
+    let bob_payload_arg = bob_payload.to_str().expect("bob payload path");
+
+    let missing_profile = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "session",
+            "prepare",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--local-payload",
+            alice_payload_arg,
+            "--remote-payload",
+            bob_payload_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let missing_profile_error = stderr(&missing_profile);
+    assert!(!missing_profile.status.success());
+    assert!(stdout(&missing_profile).is_empty());
+    assert!(missing_profile_error.contains("payload read failed"));
+    assert!(!missing_profile_error.contains("alice"));
+    assert!(!missing_profile_error.contains(alice_store_arg));
+    assert!(!missing_profile_error.contains(alice_payload_arg));
+
+    for (profile, store_arg) in [("alice", alice_store_arg), ("bob", bob_store_arg)] {
+        let init_profile = run_with_stdin(
+            &[
+                "production",
+                "profile",
+                "init",
+                "--profile",
+                profile,
+                "--store",
+                store_arg,
+                "--passphrase-stdin",
+            ],
+            "correct horse battery staple\n",
+        );
+        assert!(init_profile.status.success());
+
+        let init_identity = run_with_stdin(
+            &[
+                "production",
+                "identity",
+                "init",
+                "--profile",
+                profile,
+                "--store",
+                store_arg,
+                "--passphrase-stdin",
+            ],
+            "correct horse battery staple\n",
+        );
+        assert!(init_identity.status.success());
+    }
+
+    let alice_create = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "payload",
+            "create",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--rendezvous-endpoint",
+            "alice.onion",
+            "--out",
+            alice_payload_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    assert!(alice_create.status.success());
+
+    let bob_create = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "payload",
+            "create",
+            "--profile",
+            "bob",
+            "--store",
+            bob_store_arg,
+            "--rendezvous-endpoint",
+            "bob.onion",
+            "--out",
+            bob_payload_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    assert!(bob_create.status.success());
+
+    let prepare = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "session",
+            "prepare",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--local-payload",
+            alice_payload_arg,
+            "--remote-payload",
+            bob_payload_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let prepare_out = stdout(&prepare);
+    let prepare_error = stderr(&prepare);
+    assert!(
+        prepare.status.success(),
+        "stdout: {prepare_out}\nstderr: {prepare_error}"
+    );
+    assert!(prepare_out.contains("production pairing session prepared:"));
+    assert!(prepare_out.contains("storage_opened=true"));
+    assert!(prepare_out.contains("session_plan_created=true"));
+    assert!(prepare_out.contains("local_noise_static_private_key_loaded=true"));
+    assert!(prepare_out.contains("local_noise_static_matches_payload=true"));
+    assert!(prepare_out.contains("safety_transcript_bound=true"));
+    assert!(prepare_out.contains("canonical_dialer_selected=true"));
+    assert!(prepare_out.contains("key_material_exposed=false"));
+    assert!(prepare_out.contains("transport_io_opened=false"));
+    assert!(prepare_out.contains("runtime_messaging=false"));
+    assert!(prepare_error.contains("storage-only"));
+    assert!(!prepare_out.contains("alice"));
+    assert!(!prepare_out.contains(alice_store_arg));
+    assert!(!prepare_out.contains(alice_payload_arg));
+    assert!(!prepare_out.contains("ed25519"));
+    assert!(!prepare_error.contains("correct horse"));
+
+    let swapped = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "session",
+            "prepare",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--local-payload",
+            bob_payload_arg,
+            "--remote-payload",
+            alice_payload_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let swapped_error = stderr(&swapped);
+    assert!(!swapped.status.success());
+    assert!(stdout(&swapped).is_empty());
+    assert!(swapped_error.contains("local payload mismatch"));
+    assert!(!swapped_error.contains("alice"));
+    assert!(!swapped_error.contains(alice_store_arg));
+    assert!(!swapped_error.contains(bob_payload_arg));
+
+    let wrong = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "session",
+            "prepare",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--local-payload",
+            alice_payload_arg,
+            "--remote-payload",
+            bob_payload_arg,
+            "--passphrase-stdin",
+        ],
+        "wrong passphrase\n",
+    );
+    let wrong_error = stderr(&wrong);
+    assert!(!wrong.status.success());
+    assert!(stdout(&wrong).is_empty());
+    assert!(wrong_error.contains("unlock failed"));
+    assert!(!wrong_error.contains("alice"));
+    assert!(!wrong_error.contains(alice_store_arg));
     assert!(!wrong_error.contains("wrong passphrase"));
 
     let _ = std::fs::remove_dir_all(root);
