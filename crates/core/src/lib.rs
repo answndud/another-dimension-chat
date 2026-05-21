@@ -15,13 +15,15 @@ pub mod production {
         encode_hex, Envelope, MessageType, ProtocolError, ReplayWindow,
     };
     use another_dimension_storage::production::{
-        EncryptedRecord, EncryptedRecordId, EncryptedRecordScope, ProductionRecordKind,
-        ProductionStorageError, SqlCipherRecordStore,
+        production_message_storage_boundary_summary, EncryptedRecord, EncryptedRecordId,
+        EncryptedRecordScope, ProductionRecordKind, ProductionStorageError,
+        ReplayRollbackProtection, SqlCipherRecordStore, StorageProtection,
     };
     use another_dimension_transport::{
         EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
-        EndpointUpdateControlPlaintext, OnionServiceEndpoint, PairwiseEndpointUpdate,
-        PairwiseRendezvousEndpoint, RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
+        EndpointUpdateControlPlaintext, OnionEnvelopeTransport, OnionServiceEndpoint,
+        PairwiseEndpointUpdate, PairwiseRendezvousEndpoint, RendezvousEndpointIdentityBinding,
+        RendezvousEndpointScope, TransportKind, TransportRoute,
     };
     use sha2::{Digest, Sha256};
 
@@ -153,6 +155,72 @@ pub mod production {
 
         pub fn usable_async_messaging_ready(self) -> bool {
             self.usable_async_messaging_ready
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionSkeletonPreflightSummary {
+        session_pairing_required: bool,
+        session_safety_transcript_bound: bool,
+        session_e2ee_ready: bool,
+        transport_route_kind: TransportKind,
+        transport_route_allowed_by_policy: bool,
+        transport_send_receive_available: bool,
+        storage_message_envelope_protection: StorageProtection,
+        storage_session_transport_protection: StorageProtection,
+        storage_replay_commit_after_decrypt: bool,
+        storage_rollback_protection: ReplayRollbackProtection,
+        default_runtime_command_surface_closed: bool,
+        production_messaging_ready: bool,
+    }
+
+    impl ProductionSkeletonPreflightSummary {
+        pub fn session_pairing_required(self) -> bool {
+            self.session_pairing_required
+        }
+
+        pub fn session_safety_transcript_bound(self) -> bool {
+            self.session_safety_transcript_bound
+        }
+
+        pub fn session_e2ee_ready(self) -> bool {
+            self.session_e2ee_ready
+        }
+
+        pub fn transport_route_kind(self) -> TransportKind {
+            self.transport_route_kind
+        }
+
+        pub fn transport_route_allowed_by_policy(self) -> bool {
+            self.transport_route_allowed_by_policy
+        }
+
+        pub fn transport_send_receive_available(self) -> bool {
+            self.transport_send_receive_available
+        }
+
+        pub fn storage_message_envelope_protection(self) -> StorageProtection {
+            self.storage_message_envelope_protection
+        }
+
+        pub fn storage_session_transport_protection(self) -> StorageProtection {
+            self.storage_session_transport_protection
+        }
+
+        pub fn storage_replay_commit_after_decrypt(self) -> bool {
+            self.storage_replay_commit_after_decrypt
+        }
+
+        pub fn storage_rollback_protection(self) -> ReplayRollbackProtection {
+            self.storage_rollback_protection
+        }
+
+        pub fn default_runtime_command_surface_closed(self) -> bool {
+            self.default_runtime_command_surface_closed
+        }
+
+        pub fn production_messaging_ready(self) -> bool {
+            self.production_messaging_ready
         }
     }
 
@@ -591,6 +659,30 @@ pub mod production {
         }
     }
 
+    pub fn production_skeleton_preflight_summary() -> ProductionSkeletonPreflightSummary {
+        let session = production_session_evaluation_summary();
+        let transport = OnionEnvelopeTransport::fail_closed_high_risk();
+        let route = TransportRoute::onion("preflight.onion")
+            .expect("static onion preflight route is valid");
+        let transport = transport.message_path_boundary_summary(&route);
+        let storage = production_message_storage_boundary_summary();
+
+        ProductionSkeletonPreflightSummary {
+            session_pairing_required: session.production_pairing_required(),
+            session_safety_transcript_bound: session.safety_transcript_bound(),
+            session_e2ee_ready: session.production_e2ee_ready(),
+            transport_route_kind: transport.route_kind(),
+            transport_route_allowed_by_policy: transport.route_allowed_by_policy(),
+            transport_send_receive_available: transport.send_receive_available(),
+            storage_message_envelope_protection: storage.message_envelope_storage(),
+            storage_session_transport_protection: storage.session_transport_storage(),
+            storage_replay_commit_after_decrypt: storage.replay_commit_after_decrypt(),
+            storage_rollback_protection: storage.rollback_protection(),
+            default_runtime_command_surface_closed: true,
+            production_messaging_ready: false,
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -891,6 +983,33 @@ pub mod production {
             assert!(!summary.durable_session_persistence_ready());
             assert!(!summary.tauri_production_messaging_command_ready());
             assert!(!summary.usable_async_messaging_ready());
+        }
+
+        #[test]
+        fn production_skeleton_preflight_aggregates_blockers_without_readiness() {
+            let summary = production_skeleton_preflight_summary();
+
+            assert!(summary.session_pairing_required());
+            assert!(summary.session_safety_transcript_bound());
+            assert!(!summary.session_e2ee_ready());
+            assert_eq!(summary.transport_route_kind(), TransportKind::OnionService);
+            assert!(summary.transport_route_allowed_by_policy());
+            assert!(!summary.transport_send_receive_available());
+            assert_eq!(
+                summary.storage_message_envelope_protection(),
+                StorageProtection::EncryptedAtRestRequired
+            );
+            assert_eq!(
+                summary.storage_session_transport_protection(),
+                StorageProtection::InMemoryOnly
+            );
+            assert!(summary.storage_replay_commit_after_decrypt());
+            assert_eq!(
+                summary.storage_rollback_protection(),
+                ReplayRollbackProtection::NotProvided
+            );
+            assert!(summary.default_runtime_command_surface_closed());
+            assert!(!summary.production_messaging_ready());
         }
 
         #[test]

@@ -12,6 +12,7 @@ The project currently has a working local prototype loop:
 - The loop is `dev-insecure` and local only.
 - Default builds do not expose usable profile, pairing, messaging, storage unlock, Tor bootstrap, onion hosting, stream I/O, or production message commands.
 - Default CLI hardening rejects production skeleton commands for profile, pairing, messaging, storage unlock, transport bootstrap, and transport send/receive until a later explicit runtime-command phase.
+- `ProductionSkeletonPreflightSummary` aggregates crypto/session, transport message-path, storage message-path, and default-command guard status without opening production messaging.
 - Existing production-facing code is a set of guardrails and spikes, not a complete secure runtime.
 
 ## Boundary Inventory
@@ -24,6 +25,7 @@ The project currently has a working local prototype loop:
 | Transport | High-risk policy, fail-closed onion transport, Arti bootstrap/lifecycle spikes, descriptor/stream/envelope-I/O gates, and `TransportMessagePathBoundarySummary` exist. | Implement bounded Tor/onion lifecycle only behind explicit phase gates, keep direct P2P out of high-risk mode, and prove no silent fallback to direct routes. |
 | Local storage | SQLCipher-backed `ADREC1` spike, record classification, passphrase unlock, replay-state persistence, deletion helpers, and `ProductionMessageStorageBoundarySummary` exist. | Define production key management, key wrapping, backup exclusion, rollback handling, migration, and durable session/message persistence before claiming storage readiness. |
 | Replay and message state | Replay window and first durable replay-state guardrails exist; local loop checks non-repeat behavior. | Persist replay/session state through the encrypted storage boundary and address rollback from restored encrypted database snapshots. |
+| Production skeleton preflight | `ProductionSkeletonPreflightSummary` aggregates current session, transport, storage, and command-surface blockers. | Convert preflight blockers into a Rust-owned runtime command only after crypto, transport, storage, and release boundaries are ready. |
 | Tauri UI | Prototype shell can run dev-only local demos and display structured local state. | Replace CLI-wrapper demo commands with narrow Rust-owned runtime commands only after crypto, transport, and storage boundaries are security-ready. |
 | Release and updates | Public copy and static verifiers enforce non-claims; no release signing or reproducible build story exists. | Add signing, reproducible build or equivalent verification, dependency review, and release safety copy before public high-risk use. |
 
