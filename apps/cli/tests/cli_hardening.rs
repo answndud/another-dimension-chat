@@ -92,6 +92,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production pairing session status"));
     assert!(out.contains("production pairing session load-runtime"));
     assert!(out.contains("production pairing session open-runtime"));
+    assert!(out.contains("production pairing session transport-prepare"));
     assert!(out.contains("production message send-prepare"));
     assert!(out.contains("production message pending-status"));
     assert!(out.contains("production message outbound-encrypt-prepare"));
@@ -1009,6 +1010,46 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!open_runtime_out.contains("adchan1"));
     assert!(!open_runtime_out.contains("ed25519"));
     assert!(!open_runtime_error.contains("correct horse"));
+
+    let transport_prepare = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "session",
+            "transport-prepare",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let transport_prepare_out = stdout(&transport_prepare);
+    let transport_prepare_error = stderr(&transport_prepare);
+    assert!(
+        transport_prepare.status.success(),
+        "stdout: {transport_prepare_out}\nstderr: {transport_prepare_error}"
+    );
+    assert!(transport_prepare_out.contains("production pairing session transport prepared:"));
+    assert!(transport_prepare_out.contains("storage_opened=true"));
+    assert!(transport_prepare_out.contains("runtime_material_reconstructable=true"));
+    assert!(transport_prepare_out.contains("local_noise_static_private_key_loaded=true"));
+    assert!(transport_prepare_out.contains("remote_noise_static_public_key_loaded=true"));
+    assert!(transport_prepare_out.contains("remote_endpoint_state_loaded=true"));
+    assert!(transport_prepare_out.contains("replay_window_loaded=true"));
+    assert!(transport_prepare_out.contains("authenticated_handshake_required=true"));
+    assert!(transport_prepare_out.contains("session_transport_state_created=false"));
+    assert!(transport_prepare_out.contains("session_transport_persistence_allowed=false"));
+    assert!(transport_prepare_out.contains("key_material_exposed=false"));
+    assert!(transport_prepare_out.contains("transport_io_opened=false"));
+    assert!(transport_prepare_out.contains("runtime_messaging=false"));
+    assert!(transport_prepare_error.contains("storage-only"));
+    assert!(!transport_prepare_out.contains("alice"));
+    assert!(!transport_prepare_out.contains(alice_store_arg));
+    assert!(!transport_prepare_out.contains("adchan1"));
+    assert!(!transport_prepare_out.contains("ed25519"));
+    assert!(!transport_prepare_error.contains("correct horse"));
 
     std::fs::write(&plaintext, "hello from alice").expect("write plaintext");
     let send_prepare = run_with_stdin(

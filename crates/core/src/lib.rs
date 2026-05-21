@@ -308,6 +308,22 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionTransportPrepareSummary {
+        storage_opened: bool,
+        runtime_material_reconstructable: bool,
+        local_noise_static_private_key_loaded: bool,
+        remote_noise_static_public_key_loaded: bool,
+        remote_endpoint_state_loaded: bool,
+        replay_window_loaded: bool,
+        authenticated_handshake_required: bool,
+        session_transport_state_created: bool,
+        session_transport_persistence_allowed: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionMessageSendPrepareSummary {
         storage_opened: bool,
         runtime_material_reconstructable: bool,
@@ -791,6 +807,56 @@ pub mod production {
 
         pub fn network_send_attempted(self) -> bool {
             self.network_send_attempted
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionTransportPrepareSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn runtime_material_reconstructable(self) -> bool {
+            self.runtime_material_reconstructable
+        }
+
+        pub fn local_noise_static_private_key_loaded(self) -> bool {
+            self.local_noise_static_private_key_loaded
+        }
+
+        pub fn remote_noise_static_public_key_loaded(self) -> bool {
+            self.remote_noise_static_public_key_loaded
+        }
+
+        pub fn remote_endpoint_state_loaded(self) -> bool {
+            self.remote_endpoint_state_loaded
+        }
+
+        pub fn replay_window_loaded(self) -> bool {
+            self.replay_window_loaded
+        }
+
+        pub fn authenticated_handshake_required(self) -> bool {
+            self.authenticated_handshake_required
+        }
+
+        pub fn session_transport_state_created(self) -> bool {
+            self.session_transport_state_created
+        }
+
+        pub fn session_transport_persistence_allowed(self) -> bool {
+            self.session_transport_persistence_allowed
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -2442,6 +2508,35 @@ pub mod production {
             session_binding_ready: true,
             remote_peer_authentication_ready: true,
             outbound_envelope_io_ready: true,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_pairing_session_transport_prepare(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionPairingSessionTransportPrepareSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let _material = load_session_runtime_material(&store, &profile)?;
+        let session_transport_persistence_allowed =
+            require_persistence_allowed(ProductionRecordKind::SessionTransportState).is_ok();
+        Ok(ProductionPairingSessionTransportPrepareSummary {
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            local_noise_static_private_key_loaded: true,
+            remote_noise_static_public_key_loaded: true,
+            remote_endpoint_state_loaded: true,
+            replay_window_loaded: true,
+            authenticated_handshake_required: true,
+            session_transport_state_created: false,
+            session_transport_persistence_allowed,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -4441,6 +4536,25 @@ pub mod production {
             assert!(!opened.key_material_exposed());
             assert!(!opened.transport_io_opened());
             assert!(!opened.runtime_messaging_enabled());
+
+            let transport_prepare = production_pairing_session_transport_prepare(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+            )
+            .expect("transport prepare");
+            assert!(transport_prepare.storage_opened());
+            assert!(transport_prepare.runtime_material_reconstructable());
+            assert!(transport_prepare.local_noise_static_private_key_loaded());
+            assert!(transport_prepare.remote_noise_static_public_key_loaded());
+            assert!(transport_prepare.remote_endpoint_state_loaded());
+            assert!(transport_prepare.replay_window_loaded());
+            assert!(transport_prepare.authenticated_handshake_required());
+            assert!(!transport_prepare.session_transport_state_created());
+            assert!(!transport_prepare.session_transport_persistence_allowed());
+            assert!(!transport_prepare.key_material_exposed());
+            assert!(!transport_prepare.transport_io_opened());
+            assert!(!transport_prepare.runtime_messaging_enabled());
 
             let pending_status_before =
                 production_message_pending_status(&alice_store, alice.clone(), &passphrase, 1)

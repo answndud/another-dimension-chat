@@ -104,6 +104,14 @@ fn production_main() -> Result<(), String> {
         {
             run_production_pairing_session_open_runtime_command(args)?;
         }
+        [cmd, sub, object, action, args @ ..]
+            if cmd == "production"
+                && sub == "pairing"
+                && object == "session"
+                && action == "transport-prepare" =>
+        {
+            run_production_pairing_session_transport_prepare_command(args)?;
+        }
         [cmd, sub, action, args @ ..]
             if cmd == "production" && sub == "message" && action == "send-prepare" =>
         {
@@ -178,6 +186,7 @@ fn production_help() -> String {
   another-dimension production pairing session status --profile <name> --store <path> --passphrase-stdin
   another-dimension production pairing session load-runtime --profile <name> --store <path> --passphrase-stdin
   another-dimension production pairing session open-runtime --profile <name> --store <path> --passphrase-stdin
+  another-dimension production pairing session transport-prepare --profile <name> --store <path> --passphrase-stdin
   another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> --passphrase-stdin
   another-dimension production message pending-status --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension production message outbound-encrypt-prepare --profile <name> --store <path> --message-number <n> --passphrase-stdin
@@ -198,6 +207,7 @@ boundary:
   production pairing session status is storage-only: it checks persisted session draft readiness without opening transport
   production pairing session load-runtime is storage-only: it rebuilds in-memory runtime material without opening transport
   production pairing session open-runtime is storage-only: it binds runtime material to fail-closed stream gates without opening transport
+  production pairing session transport-prepare is storage-only: it verifies transport inputs and keeps session transport in-memory only
   production message send-prepare is storage-only: it validates outbound readiness and indexes a local message without network send
   production message pending-status is storage-only: it checks a queued outbound message without exposing plaintext or opening transport
   production message outbound-encrypt-prepare is storage-only: it checks pending plaintext and fails closed before envelope encryption until session transport exists
@@ -516,6 +526,41 @@ fn run_production_pairing_session_open_runtime_command(args: &[String]) -> Resul
     );
     eprintln!(
         "warning: production pairing session open-runtime is storage-only and not a secure messenger release"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn run_production_pairing_session_transport_prepare_command(args: &[String]) -> Result<(), String> {
+    let options = ProductionProfileInitOptions::parse_with_help(
+        args,
+        production_pairing_session_transport_prepare_help,
+    )?;
+    let passphrase = read_production_passphrase()?;
+    let summary = another_dimension_core::production::production_pairing_session_transport_prepare(
+        &options.store_path,
+        options.profile,
+        &passphrase,
+    )
+    .map_err(redacted_production_pairing_session_transport_prepare_error)?;
+
+    println!(
+        "production pairing session transport prepared: storage_opened={} runtime_material_reconstructable={} local_noise_static_private_key_loaded={} remote_noise_static_public_key_loaded={} remote_endpoint_state_loaded={} replay_window_loaded={} authenticated_handshake_required={} session_transport_state_created={} session_transport_persistence_allowed={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.runtime_material_reconstructable(),
+        summary.local_noise_static_private_key_loaded(),
+        summary.remote_noise_static_public_key_loaded(),
+        summary.remote_endpoint_state_loaded(),
+        summary.replay_window_loaded(),
+        summary.authenticated_handshake_required(),
+        summary.session_transport_state_created(),
+        summary.session_transport_persistence_allowed(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production pairing session transport-prepare is storage-only and not a secure messenger release"
     );
     Ok(())
 }
@@ -1069,6 +1114,15 @@ Reads the profile passphrase from stdin. Opens an encrypted local profile store,
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn production_pairing_session_transport_prepare_help() -> String {
+    "usage:
+  another-dimension production pairing session transport-prepare --profile <name> --store <path> --passphrase-stdin
+
+Reads the profile passphrase from stdin. Opens an encrypted local profile store, reloads session runtime material, checks local and remote Noise static inputs, and confirms session transport state remains in-memory only until an authenticated handshake can run. This does not persist transport state, open transport, or enable runtime messaging."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 fn production_message_send_prepare_help() -> String {
     "usage:
   another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> --passphrase-stdin
@@ -1370,6 +1424,14 @@ fn redacted_production_pairing_session_open_runtime_error(
 ) -> String {
     redacted_production_pairing_session_load_runtime_error(error)
         .replace("load-runtime", "open-runtime")
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_pairing_session_transport_prepare_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    redacted_production_pairing_session_load_runtime_error(error)
+        .replace("load-runtime", "transport-prepare")
 }
 
 #[cfg(not(feature = "dev-insecure"))]
