@@ -547,6 +547,21 @@ pub mod production {
         runtime_messaging_enabled: bool,
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageReceivedExport {
+        storage_opened: bool,
+        runtime_material_reconstructable: bool,
+        received_message_record_present: bool,
+        received_message_record_decodable: bool,
+        received_message_matches_session: bool,
+        export_payload: Vec<u8>,
+        plaintext_exposed: bool,
+        network_receive_attempted: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
     impl ProductionProfileInitSummary {
         pub fn storage_opened(self) -> bool {
             self.storage_opened
@@ -1602,6 +1617,42 @@ pub mod production {
             self.transport_io_opened
         }
         pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionMessageReceivedExport {
+        pub fn storage_opened(&self) -> bool {
+            self.storage_opened
+        }
+        pub fn runtime_material_reconstructable(&self) -> bool {
+            self.runtime_material_reconstructable
+        }
+        pub fn received_message_record_present(&self) -> bool {
+            self.received_message_record_present
+        }
+        pub fn received_message_record_decodable(&self) -> bool {
+            self.received_message_record_decodable
+        }
+        pub fn received_message_matches_session(&self) -> bool {
+            self.received_message_matches_session
+        }
+        pub fn export_payload(&self) -> &[u8] {
+            &self.export_payload
+        }
+        pub fn plaintext_exposed(&self) -> bool {
+            self.plaintext_exposed
+        }
+        pub fn network_receive_attempted(&self) -> bool {
+            self.network_receive_attempted
+        }
+        pub fn key_material_exposed(&self) -> bool {
+            self.key_material_exposed
+        }
+        pub fn transport_io_opened(&self) -> bool {
+            self.transport_io_opened
+        }
+        pub fn runtime_messaging_enabled(&self) -> bool {
             self.runtime_messaging_enabled
         }
     }
@@ -4271,6 +4322,60 @@ pub mod production {
         })
     }
 
+    pub fn production_message_received_export(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        message_number: u64,
+    ) -> Result<ProductionMessageReceivedExport, ProductionSessionError> {
+        if message_number == 0 {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        let received_record_id = production_received_message_record_id(
+            &material.channel_id,
+            &material.remote_contact_id,
+            message_number,
+        );
+        let received = store
+            .get(&received_record_id)?
+            .map(|record| {
+                if record.kind != ProductionRecordKind::ReceivedMessage {
+                    return Err(ProductionSessionError::UnexpectedEnvelope);
+                }
+                let state = String::from_utf8(record.sealed_body)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                ReceivedMessageRecord::decode(&state)
+            })
+            .transpose()?
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        let received_message_matches_session = received.contact_id == material.remote_contact_id
+            && received.message_number == message_number
+            && received.message_type == MessageType::Data
+            && !received.plaintext.is_empty();
+        if !received_message_matches_session {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        Ok(ProductionMessageReceivedExport {
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            received_message_record_present: true,
+            received_message_record_decodable: true,
+            received_message_matches_session,
+            export_payload: received.plaintext,
+            plaintext_exposed: false,
+            network_receive_attempted: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
     pub fn production_session_evaluation_summary() -> ProductionSessionEvaluationSummary {
         ProductionSessionEvaluationSummary {
             protocol_candidate: "snow Noise XX synchronous boundary",
@@ -6758,6 +6863,24 @@ pub mod production {
             assert!(!received_status.key_material_exposed());
             assert!(!received_status.transport_io_opened());
             assert!(!received_status.runtime_messaging_enabled());
+            let received_export = production_message_received_export(
+                inbound_store,
+                inbound_profile.clone(),
+                &passphrase,
+                1,
+            )
+            .expect("received export");
+            assert!(received_export.storage_opened());
+            assert!(received_export.runtime_material_reconstructable());
+            assert!(received_export.received_message_record_present());
+            assert!(received_export.received_message_record_decodable());
+            assert!(received_export.received_message_matches_session());
+            assert_eq!(received_export.export_payload(), b"hi");
+            assert!(!received_export.plaintext_exposed());
+            assert!(!received_export.network_receive_attempted());
+            assert!(!received_export.key_material_exposed());
+            assert!(!received_export.transport_io_opened());
+            assert!(!received_export.runtime_messaging_enabled());
             let inbound_store_after_receive = LockedProfileStore::new(inbound_store)
                 .unlock(&passphrase)
                 .expect("unlock after receive");
