@@ -37,6 +37,7 @@ The repository currently has:
 - A session durable-state store-write spike that is `#[cfg(test)]` only and round-trips one prepared sealed record through `SqlCipherRecordStore`.
 - A session durable-state store-write status mirror that reports the round-trip coverage as test-only while keeping production store write, unlock command, durable persistence, rollback protection, and runtime messaging unavailable.
 - A session durable-state product unlock blocker summary that keeps product unlock closed until key wrapping, backup exclusion, rollback protection, and durable session lifecycle decisions are complete.
+- A session durable-state unlock policy handoff summary that reuses the storage unlock policy to require high-risk passphrase input and reject OS-keystore-only unlock while product unlock remains unavailable.
 
 The repository does not currently have:
 
@@ -353,6 +354,7 @@ Current lifecycle boundary:
 - `session_durable_state_store_write_test_only_round_trips_prepared_record` verifies one test-only SQLCipher round-trip for a prepared sealed durable-state record while preserving the production non-readiness guard.
 - `session_durable_state_store_write_status_mirror()` exposes that store-write coverage as test-only and keeps production store write, unlock, durable persistence, rollback protection, and runtime messaging disabled.
 - `session_durable_state_product_unlock_blocker_summary()` exposes product unlock blockers: passphrase-first storage exists, but key wrapping, backup exclusion, rollback protection, durable session persistence, and runtime messaging are not ready.
+- `session_durable_state_unlock_policy_handoff_summary()` confirms that the session durable-state blocker path is aligned with the storage unlock policy: high-risk mode requires passphrase input, OS-keystore-only unlock is rejected, and product unlock remains closed.
 
 Non-claims:
 

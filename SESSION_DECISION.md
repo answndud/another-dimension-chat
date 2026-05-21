@@ -123,6 +123,8 @@ The first store-write check for this adapter is test-only. `session_durable_stat
 
 `session_durable_state_product_unlock_blocker_summary()` records the current product unlock blockers. The passphrase-first storage boundary exists, but product unlock remains closed because app key wrapping, backup exclusion, rollback protection, durable session persistence, and runtime messaging are not ready.
 
+`session_durable_state_unlock_policy_handoff_summary()` links the session durable-state blocker summary to the storage unlock policy. It confirms that high-risk mode accepts passphrase-based unlock policy, rejects OS-keystore-only unlock, and still keeps product unlock, durable session persistence, and runtime messaging unavailable.
+
 ## Session Persistence Decision
 
 For the current v0.1 production message boundary, production session state is in-memory only.
