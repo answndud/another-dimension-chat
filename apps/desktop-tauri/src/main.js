@@ -623,7 +623,7 @@ async function renderPrototypeStatus() {
     );
     setText(
       fields.messaging,
-      status.usable_messaging ? "Unexpected messaging status" : "Disabled in prototype",
+      status.usable_messaging ? "Unexpected messaging status" : "No runtime messaging path",
     );
     setText(fields.core, status.core_status);
     setText(fields.profile, status.profile_status);
@@ -647,7 +647,7 @@ async function renderPrototypeStatus() {
     setText(fields.verification, status.verification_status);
   } catch (_error) {
     setText(fields.releaseClaim, "No secure-release claim");
-    setText(fields.messaging, "Disabled in prototype");
+    setText(fields.messaging, "No runtime messaging path");
     setText(fields.core, "Core boundary only");
     setText(fields.profile, "Profile boundary only");
     setText(fields.pairing, "Pairing boundary only");

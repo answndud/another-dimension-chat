@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Another Dimension Chat Prototype",
+        "title": "Another Dimension Chat",
         "width": 1000,
         "height": 700
       }

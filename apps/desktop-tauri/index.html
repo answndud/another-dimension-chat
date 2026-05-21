@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Another Dimension Chat Prototype</title>
+    <title>Another Dimension Chat</title>
     <script type="module" src="/src/main.js"></script>
   </head>
   <body>
     <main class="shell">
       <section class="status-panel" aria-labelledby="app-title">
-        <p class="eyebrow">Prototype shell only</p>
-        <h1 id="app-title">Another Dimension Chat Prototype</h1>
+        <p class="eyebrow">Local secure messaging console</p>
+        <h1 id="app-title">Another Dimension Chat</h1>
         <div class="theme-control" aria-label="Display mode">
           <span>Display mode</span>
           <button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>
@@ -22,7 +22,7 @@
           </div>
           <div>
             <dt>Messaging surface</dt>
-            <dd id="messaging">Disabled in prototype</dd>
+            <dd id="messaging">No runtime messaging path</dd>
           </div>
           <div>
             <dt>Core</dt>
@@ -118,9 +118,54 @@
           </div>
         </dl>
         <section class="demo-panel" aria-labelledby="demo-title">
+          <section class="production-workflow" aria-labelledby="production-two-profile-title">
+            <div>
+              <p class="eyebrow">Production two-profile</p>
+              <h3 id="production-two-profile-title">App-data local harness</h3>
+            </div>
+            <label class="loop-label" for="production-two-profile-a">Profile A</label>
+            <input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />
+            <label class="loop-label" for="production-two-profile-b">Profile B</label>
+            <input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />
+            <label class="loop-label" for="production-two-profile-passphrase">Passphrase</label>
+            <input
+              id="production-two-profile-passphrase"
+              type="password"
+              autocomplete="current-password"
+            />
+            <label class="loop-label" for="production-two-profile-message">Message</label>
+            <textarea id="production-two-profile-message" rows="3">hello between app-data profiles</textarea>
+            <div class="loop-actions">
+              <button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>
+            </div>
+            <p id="production-two-profile-state" class="demo-state" aria-live="polite">
+              Two-profile roundtrip idle
+            </p>
+            <p id="production-two-profile-warning" class="demo-warning">
+              Two-profile app-data harness has not run yet.
+            </p>
+            <dl class="flow-summary">
+              <div>
+                <dt>Profiles</dt>
+                <dd id="production-two-profile-profiles">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Session</dt>
+                <dd id="production-two-profile-session">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Message</dt>
+                <dd id="production-two-profile-message-state">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Boundary</dt>
+                <dd id="production-two-profile-boundary">Not checked yet</dd>
+              </div>
+            </dl>
+          </section>
           <div>
-            <p class="eyebrow">Dev-insecure local demo</p>
-            <h2 id="demo-title">Alice/Bob prototype flow</h2>
+            <p class="eyebrow">Local diagnostic only</p>
+            <h2 id="demo-title">Alice/Bob dev-insecure flow</h2>
           </div>
           <button id="run-demo" type="button">Run local demo</button>
           <p id="demo-state" class="demo-state" aria-live="polite">Demo idle</p>
@@ -189,51 +234,6 @@
               <div>
                 <dt>Replay check</dt>
                 <dd id="simulation-replay">Not checked yet</dd>
-              </div>
-            </dl>
-          </section>
-          <section class="production-workflow" aria-labelledby="production-two-profile-title">
-            <div>
-              <p class="eyebrow">Production two-profile</p>
-              <h3 id="production-two-profile-title">App-data local harness</h3>
-            </div>
-            <label class="loop-label" for="production-two-profile-a">Profile A</label>
-            <input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />
-            <label class="loop-label" for="production-two-profile-b">Profile B</label>
-            <input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />
-            <label class="loop-label" for="production-two-profile-passphrase">Passphrase</label>
-            <input
-              id="production-two-profile-passphrase"
-              type="password"
-              autocomplete="current-password"
-            />
-            <label class="loop-label" for="production-two-profile-message">Message</label>
-            <textarea id="production-two-profile-message" rows="3">hello between app-data profiles</textarea>
-            <div class="loop-actions">
-              <button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>
-            </div>
-            <p id="production-two-profile-state" class="demo-state" aria-live="polite">
-              Two-profile roundtrip idle
-            </p>
-            <p id="production-two-profile-warning" class="demo-warning">
-              Two-profile app-data harness has not run yet.
-            </p>
-            <dl class="flow-summary">
-              <div>
-                <dt>Profiles</dt>
-                <dd id="production-two-profile-profiles">Not checked yet</dd>
-              </div>
-              <div>
-                <dt>Session</dt>
-                <dd id="production-two-profile-session">Not checked yet</dd>
-              </div>
-              <div>
-                <dt>Message</dt>
-                <dd id="production-two-profile-message-state">Not checked yet</dd>
-              </div>
-              <div>
-                <dt>Boundary</dt>
-                <dd id="production-two-profile-boundary">Not checked yet</dd>
               </div>
             </dl>
           </section>
