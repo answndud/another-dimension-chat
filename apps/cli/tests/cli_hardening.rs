@@ -89,6 +89,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production pairing payload create"));
     assert!(out.contains("production pairing session prepare"));
     assert!(out.contains("production pairing session save-draft"));
+    assert!(out.contains("production pairing session status"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
@@ -814,6 +815,37 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!prepare_out.contains("ed25519"));
     assert!(!prepare_error.contains("correct horse"));
 
+    let empty_status = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "session",
+            "status",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let empty_status_out = stdout(&empty_status);
+    let empty_status_error = stderr(&empty_status);
+    assert!(
+        empty_status.status.success(),
+        "stdout: {empty_status_out}\nstderr: {empty_status_error}"
+    );
+    assert!(empty_status_out.contains("production pairing session status:"));
+    assert!(empty_status_out.contains("session_draft_present=false"));
+    assert!(empty_status_out.contains("channel_id_derivable=false"));
+    assert!(empty_status_out.contains("remote_endpoint_state_present=false"));
+    assert!(empty_status_out.contains("replay_window_present=false"));
+    assert!(empty_status_out.contains("transport_io_opened=false"));
+    assert!(empty_status_out.contains("runtime_messaging=false"));
+    assert!(!empty_status_out.contains("alice"));
+    assert!(!empty_status_out.contains(alice_store_arg));
+    assert!(!empty_status_error.contains("correct horse"));
+
     let save_draft = run_with_stdin(
         &[
             "production",
@@ -856,6 +888,43 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!save_draft_out.contains(alice_payload_arg));
     assert!(!save_draft_out.contains("ed25519"));
     assert!(!save_draft_error.contains("correct horse"));
+
+    let status = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "session",
+            "status",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let status_out = stdout(&status);
+    let status_error = stderr(&status);
+    assert!(
+        status.status.success(),
+        "stdout: {status_out}\nstderr: {status_error}"
+    );
+    assert!(status_out.contains("production pairing session status:"));
+    assert!(status_out.contains("storage_opened=true"));
+    assert!(status_out.contains("session_draft_present=true"));
+    assert!(status_out.contains("channel_id_derivable=true"));
+    assert!(status_out.contains("local_role_available=true"));
+    assert!(status_out.contains("remote_contact_present=true"));
+    assert!(status_out.contains("remote_endpoint_state_present=true"));
+    assert!(status_out.contains("replay_window_present=true"));
+    assert!(status_out.contains("key_material_exposed=false"));
+    assert!(status_out.contains("transport_io_opened=false"));
+    assert!(status_out.contains("runtime_messaging=false"));
+    assert!(status_error.contains("storage-only"));
+    assert!(!status_out.contains("alice"));
+    assert!(!status_out.contains(alice_store_arg));
+    assert!(!status_out.contains("adchan1"));
+    assert!(!status_error.contains("correct horse"));
 
     let swapped = run_with_stdin(
         &[

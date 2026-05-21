@@ -80,6 +80,14 @@ fn production_main() -> Result<(), String> {
         {
             run_production_pairing_session_save_draft_command(args)?;
         }
+        [cmd, sub, object, action, args @ ..]
+            if cmd == "production"
+                && sub == "pairing"
+                && object == "session"
+                && action == "status" =>
+        {
+            run_production_pairing_session_status_command(args)?;
+        }
         [cmd, sub, _args @ ..] if cmd == "production" && sub == "unlock" => {
             return Err(production_unlock_rejected_error());
         }
@@ -136,6 +144,7 @@ fn production_help() -> String {
   another-dimension production pairing payload create --profile <name> --store <path> --rendezvous-endpoint <onion> --out <path> --passphrase-stdin
   another-dimension production pairing session prepare --profile <name> --store <path> --local-payload <path> --remote-payload <path> --passphrase-stdin
   another-dimension production pairing session save-draft --profile <name> --store <path> --local-payload <path> --remote-payload <path> --passphrase-stdin
+  another-dimension production pairing session status --profile <name> --store <path> --passphrase-stdin
   another-dimension --help
 
 boundary:
@@ -150,6 +159,7 @@ boundary:
   production pairing payload create is storage-only: it signs a QR payload from stored keys and opens no messaging or transport
   production pairing session prepare is storage-only: it verifies payloads and local Noise key readiness without opening transport
   production pairing session save-draft is storage-only: it persists session draft records without opening transport
+  production pairing session status is storage-only: it checks persisted session draft readiness without opening transport
   prototype profile/pairing/message commands require --features dev-insecure"
         .to_string()
 }
@@ -364,6 +374,39 @@ fn run_production_pairing_session_save_draft_command(args: &[String]) -> Result<
     );
     eprintln!(
         "warning: production pairing session save-draft is storage-only and not a secure messenger release"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn run_production_pairing_session_status_command(args: &[String]) -> Result<(), String> {
+    let options = ProductionProfileInitOptions::parse_with_help(
+        args,
+        production_pairing_session_status_help,
+    )?;
+    let passphrase = read_production_passphrase()?;
+    let summary = another_dimension_core::production::production_pairing_session_status(
+        &options.store_path,
+        options.profile,
+        &passphrase,
+    )
+    .map_err(redacted_production_pairing_session_status_error)?;
+
+    println!(
+        "production pairing session status: storage_opened={} session_draft_present={} channel_id_derivable={} local_role_available={} remote_contact_present={} remote_endpoint_state_present={} replay_window_present={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.session_draft_present(),
+        summary.channel_id_derivable(),
+        summary.local_role_available(),
+        summary.remote_contact_present(),
+        summary.remote_endpoint_state_present(),
+        summary.replay_window_present(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production pairing session status is storage-only and not a secure messenger release"
     );
     Ok(())
 }
@@ -639,6 +682,15 @@ Reads the profile passphrase from stdin. Opens an encrypted local profile store,
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn production_pairing_session_status_help() -> String {
+    "usage:
+  another-dimension production pairing session status --profile <name> --store <path> --passphrase-stdin
+
+Reads the profile passphrase from stdin. Opens an encrypted local profile store and checks whether the latest persisted session draft, remote endpoint state, and replay window are present. This does not enable messaging, transport, or a long-lived unlock session."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 fn read_production_pairing_payload(
     path: &std::path::Path,
 ) -> Result<another_dimension_pairing::PairingPayload, String> {
@@ -842,6 +894,32 @@ fn redacted_production_pairing_session_save_draft_error(
 ) -> String {
     redacted_production_pairing_session_prepare_error(error)
         .replace("session prepare", "session save-draft")
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_pairing_session_status_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    use another_dimension_core::production::ProductionSessionError;
+    use another_dimension_storage::production::{
+        ProductionStorageError, ProductionStoragePolicyError,
+    };
+
+    match error {
+        ProductionSessionError::ProfileMarkerMissing => {
+            "production pairing session status failed: profile marker missing".to_string()
+        }
+        ProductionSessionError::Storage(ProductionStorageError::UnlockFailed) => {
+            "production pairing session status failed: unlock failed".to_string()
+        }
+        ProductionSessionError::Storage(ProductionStorageError::Policy(
+            ProductionStoragePolicyError::InvalidPassphrase,
+        )) => "invalid production profile passphrase".to_string(),
+        ProductionSessionError::Storage(_) => {
+            "production pairing session status failed: storage error".to_string()
+        }
+        _ => "production pairing session status failed".to_string(),
+    }
 }
 
 #[cfg(not(feature = "dev-insecure"))]
