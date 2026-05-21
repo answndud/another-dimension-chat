@@ -10,6 +10,7 @@ import {
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
   productionPairingPayloadView,
+  productionProfileMessageReadiness,
   productionProfilePreset,
   productionProfileUnlockView,
   productionReceivedMessageExportView,
@@ -439,6 +440,33 @@ test("productionTwoProfileSessionStatusView formats both profile readiness", () 
       both_ready_for_message_envelope: true,
     }).state,
     "Both profiles message-ready",
+  );
+});
+
+test("productionProfileMessageReadiness prefers matching two-profile status", () => {
+  assert.equal(
+    productionProfileMessageReadiness(
+      "alice",
+      { ready_for_message_envelope: false },
+      safeTwoProfileSessionStatusResult,
+    ),
+    true,
+  );
+  assert.equal(
+    productionProfileMessageReadiness(
+      "bob",
+      { ready_for_message_envelope: true },
+      safeTwoProfileSessionStatusResult,
+    ),
+    false,
+  );
+  assert.equal(
+    productionProfileMessageReadiness(
+      "carol",
+      { ready_for_message_envelope: true },
+      safeTwoProfileSessionStatusResult,
+    ),
+    true,
   );
 });
 
