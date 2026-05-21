@@ -38,6 +38,7 @@ pub mod production {
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum ProductionRecordKind {
         SchemaMarker,
+        ProfileState,
         PairingPayload,
         PairwiseIdentityPrivateKey,
         NoiseStaticPrivateKey,
@@ -52,6 +53,7 @@ pub mod production {
         fn as_str(&self) -> &'static str {
             match self {
                 Self::SchemaMarker => "schema-marker",
+                Self::ProfileState => "profile-state",
                 Self::PairingPayload => "pairing-payload",
                 Self::PairwiseIdentityPrivateKey => "pairwise-identity-private-key",
                 Self::NoiseStaticPrivateKey => "noise-static-private-key",
@@ -66,6 +68,7 @@ pub mod production {
         fn parse(value: &str) -> Result<Self, ProductionStoragePolicyError> {
             match value {
                 "schema-marker" => Ok(Self::SchemaMarker),
+                "profile-state" => Ok(Self::ProfileState),
                 "pairing-payload" => Ok(Self::PairingPayload),
                 "pairwise-identity-private-key" => Ok(Self::PairwiseIdentityPrivateKey),
                 "noise-static-private-key" => Ok(Self::NoiseStaticPrivateKey),
@@ -586,6 +589,31 @@ pub mod production {
             Ok(())
         }
 
+        pub fn put_profile_marker(
+            &self,
+            profile: ProfileName,
+        ) -> Result<(), ProductionStorageError> {
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::ProfileState,
+                EncryptedRecordScope::profile(profile),
+                b"sqlcipher-page-encryption-v1".to_vec(),
+                b"profile-state-v1".to_vec(),
+            )?;
+            self.put(&profile_marker_record_id(), &record)
+        }
+
+        pub fn profile_marker_exists(
+            &self,
+            profile: &ProfileName,
+        ) -> Result<bool, ProductionStorageError> {
+            let Some(record) = self.get(&profile_marker_record_id())? else {
+                return Ok(false);
+            };
+            Ok(record.kind == ProductionRecordKind::ProfileState
+                && record.scope.profile_name() == profile
+                && record.sealed_body == b"profile-state-v1")
+        }
+
         pub fn save_replay_window(
             &self,
             record_id: &EncryptedRecordId,
@@ -649,7 +677,8 @@ pub mod production {
     pub fn protection_for(kind: ProductionRecordKind) -> StorageProtection {
         match kind {
             ProductionRecordKind::SchemaMarker => StorageProtection::PlaintextAllowed,
-            ProductionRecordKind::PairingPayload
+            ProductionRecordKind::ProfileState
+            | ProductionRecordKind::PairingPayload
             | ProductionRecordKind::PairwiseIdentityPrivateKey
             | ProductionRecordKind::NoiseStaticPrivateKey
             | ProductionRecordKind::ReplayWindowState
@@ -695,6 +724,11 @@ pub mod production {
         }
     }
 
+    fn profile_marker_record_id() -> EncryptedRecordId {
+        EncryptedRecordId::new("profile_state_v1")
+            .expect("static production profile marker record id is valid")
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -708,6 +742,7 @@ pub mod production {
 
             for kind in [
                 ProductionRecordKind::PairingPayload,
+                ProductionRecordKind::ProfileState,
                 ProductionRecordKind::PairwiseIdentityPrivateKey,
                 ProductionRecordKind::NoiseStaticPrivateKey,
                 ProductionRecordKind::ReplayWindowState,
@@ -727,6 +762,7 @@ pub mod production {
         fn production_secret_and_metadata_records_require_encryption_at_rest() {
             for kind in [
                 ProductionRecordKind::PairingPayload,
+                ProductionRecordKind::ProfileState,
                 ProductionRecordKind::PairwiseIdentityPrivateKey,
                 ProductionRecordKind::NoiseStaticPrivateKey,
                 ProductionRecordKind::ReplayWindowState,
@@ -1152,6 +1188,31 @@ pub mod production {
 
             let unlocked = locked.unlock(&passphrase).expect("unlock again");
             assert_eq!(unlocked.get(&record_id).expect("get"), Some(record));
+        }
+
+        #[test]
+        fn production_profile_marker_persists_in_unlocked_store() {
+            let (_dir, path) = unique_test_database_path("profile-marker");
+            let passphrase = ProfilePassphrase::new("correct-passphrase").expect("passphrase");
+            let profile = ProfileName::new("alice").expect("profile");
+
+            {
+                let locked = LockedProfileStore::new(&path);
+                let unlocked = locked.unlock(&passphrase).expect("unlock");
+                assert!(!unlocked
+                    .profile_marker_exists(&profile)
+                    .expect("profile marker check"));
+                unlocked
+                    .put_profile_marker(profile.clone())
+                    .expect("put profile marker");
+            }
+
+            let unlocked = LockedProfileStore::new(&path)
+                .unlock(&passphrase)
+                .expect("unlock again");
+            assert!(unlocked
+                .profile_marker_exists(&profile)
+                .expect("profile marker exists"));
         }
 
         #[test]

@@ -10,6 +10,7 @@ another-dimension-crypto = { path = "../../crates/crypto" }
 another-dimension-identity = { path = "../../crates/identity" }
 another-dimension-pairing = { path = "../../crates/pairing" }
 another-dimension-protocol = { path = "../../crates/protocol" }
+another-dimension-storage = { path = "../../crates/storage" }
 another-dimension-transport = { path = "../../crates/transport" }
 tokio = { version = "1.52.3", default-features = false, features = ["rt", "time"], optional = true }
 

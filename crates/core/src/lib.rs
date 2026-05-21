@@ -17,9 +17,10 @@ pub mod production {
     use another_dimension_storage::production::{
         production_message_storage_boundary_summary, protection_for,
         require_encrypted_record_allowed, require_persistence_allowed, EncryptedRecord,
-        EncryptedRecordId, EncryptedRecordScope, ProductionRecordKind, ProductionStorageError,
-        ProductionStoragePolicyError, ReplayRollbackProtection, SqlCipherRecordStore,
-        StorageProtection, UnlockFactor, UnlockMode, UnlockRequest,
+        EncryptedRecordId, EncryptedRecordScope, LockedProfileStore, ProductionRecordKind,
+        ProductionStorageError, ProductionStoragePolicyError, ProfilePassphrase,
+        ReplayRollbackProtection, SqlCipherRecordStore, StorageProtection, UnlockFactor,
+        UnlockMode, UnlockRequest,
     };
     use another_dimension_transport::{
         EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
@@ -174,6 +175,37 @@ pub mod production {
         storage_rollback_protection: ReplayRollbackProtection,
         default_runtime_command_surface_closed: bool,
         production_messaging_ready: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionProfileInitSummary {
+        storage_opened: bool,
+        profile_marker_written: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    impl ProductionProfileInitSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn profile_marker_written(self) -> bool {
+            self.profile_marker_written
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
     }
 
     impl ProductionSkeletonPreflightSummary {
@@ -1350,6 +1382,23 @@ pub mod production {
         })
     }
 
+    pub fn production_profile_init(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionProfileInitSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        store.put_profile_marker(profile)?;
+        Ok(ProductionProfileInitSummary {
+            storage_opened: true,
+            profile_marker_written: true,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
     pub fn production_session_evaluation_summary() -> ProductionSessionEvaluationSummary {
         ProductionSessionEvaluationSummary {
             protocol_candidate: "snow Noise XX synchronous boundary",
@@ -2347,6 +2396,40 @@ pub mod production {
                 assert!(!taxonomy.exposes_key_material_or_passphrase_detail());
                 assert_eq!(taxonomy.retry_after_user_action_allowed(), retry_allowed);
             }
+        }
+
+        #[test]
+        fn production_profile_init_opens_store_and_writes_marker_without_runtime() {
+            let dir = std::env::temp_dir().join(format!(
+                "another-dimension-production-profile-init-{}-{:?}",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+            if dir.exists() {
+                std::fs::remove_dir_all(&dir).expect("remove stale dir");
+            }
+            std::fs::create_dir_all(&dir).expect("create dir");
+            let store_path = dir.join("profile.db");
+            let profile = ProfileName::new("alice").expect("valid profile");
+            let passphrase = ProfilePassphrase::new("correct-passphrase").expect("passphrase");
+
+            let summary = production_profile_init(&store_path, profile.clone(), &passphrase)
+                .expect("profile init");
+
+            assert!(summary.storage_opened());
+            assert!(summary.profile_marker_written());
+            assert!(!summary.key_material_exposed());
+            assert!(!summary.transport_io_opened());
+            assert!(!summary.runtime_messaging_enabled());
+
+            let store = LockedProfileStore::new(&store_path)
+                .unlock(&passphrase)
+                .expect("unlock initialized store");
+            assert!(store
+                .profile_marker_exists(&profile)
+                .expect("profile marker exists"));
+
+            let _ = std::fs::remove_dir_all(dir);
         }
 
         #[test]
