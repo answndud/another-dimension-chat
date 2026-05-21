@@ -93,6 +93,11 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum StorageBackendKind {
+        SqlCipherAdrec1Spike,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ReplayPersistenceGuarantees {
         pub at_rest_encrypted: bool,
         pub commit_after_decrypt: bool,
@@ -104,6 +109,60 @@ pub mod production {
             at_rest_encrypted: true,
             commit_after_decrypt: true,
             rollback_protection: ReplayRollbackProtection::NotProvided,
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct StorageBackendIntegrationBoundarySummary {
+        backend: StorageBackendKind,
+        passphrase_first_unlock: bool,
+        encrypted_record_body_store: bool,
+        production_key_management_ready: bool,
+        rollback_protection: ReplayRollbackProtection,
+        secure_deletion_from_media: bool,
+        session_transport_persistence_allowed: bool,
+    }
+
+    impl StorageBackendIntegrationBoundarySummary {
+        pub fn backend(self) -> StorageBackendKind {
+            self.backend
+        }
+
+        pub fn passphrase_first_unlock(self) -> bool {
+            self.passphrase_first_unlock
+        }
+
+        pub fn encrypted_record_body_store(self) -> bool {
+            self.encrypted_record_body_store
+        }
+
+        pub fn production_key_management_ready(self) -> bool {
+            self.production_key_management_ready
+        }
+
+        pub fn rollback_protection(self) -> ReplayRollbackProtection {
+            self.rollback_protection
+        }
+
+        pub fn secure_deletion_from_media(self) -> bool {
+            self.secure_deletion_from_media
+        }
+
+        pub fn session_transport_persistence_allowed(self) -> bool {
+            self.session_transport_persistence_allowed
+        }
+    }
+
+    pub fn storage_backend_integration_boundary_summary() -> StorageBackendIntegrationBoundarySummary
+    {
+        StorageBackendIntegrationBoundarySummary {
+            backend: StorageBackendKind::SqlCipherAdrec1Spike,
+            passphrase_first_unlock: true,
+            encrypted_record_body_store: true,
+            production_key_management_ready: false,
+            rollback_protection: replay_persistence_guarantees().rollback_protection,
+            secure_deletion_from_media: false,
+            session_transport_persistence_allowed: false,
         }
     }
 
@@ -807,6 +866,22 @@ pub mod production {
                     rollback_protection: ReplayRollbackProtection::NotProvided,
                 }
             );
+        }
+
+        #[test]
+        fn storage_backend_integration_summary_keeps_non_ready_boundaries_explicit() {
+            let summary = storage_backend_integration_boundary_summary();
+
+            assert_eq!(summary.backend(), StorageBackendKind::SqlCipherAdrec1Spike);
+            assert!(summary.passphrase_first_unlock());
+            assert!(summary.encrypted_record_body_store());
+            assert!(!summary.production_key_management_ready());
+            assert_eq!(
+                summary.rollback_protection(),
+                ReplayRollbackProtection::NotProvided
+            );
+            assert!(!summary.secure_deletion_from_media());
+            assert!(!summary.session_transport_persistence_allowed());
         }
 
         #[test]
