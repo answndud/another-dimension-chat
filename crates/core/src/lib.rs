@@ -49,6 +49,8 @@ pub mod production {
         b"AD-PRODUCTION-MESSAGE-ENVELOPE-RECORD-V1";
     const PRODUCTION_LOCAL_MESSAGE_INDEX_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-LOCAL-MESSAGE-INDEX-RECORD-V1";
+    const PRODUCTION_RECEIVED_MESSAGE_RECORD_DOMAIN: &[u8] =
+        b"AD-PRODUCTION-RECEIVED-MESSAGE-RECORD-V1";
     const PRODUCTION_SESSION_TRANSPORT_STATE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-SESSION-TRANSPORT-STATE-RECORD-V1";
     const PRODUCTION_IDENTITY_PRIVATE_KEY_RECORD_ID: &str = "pairwise_identity_private_key_v1";
@@ -523,7 +525,22 @@ pub mod production {
         replay_accepted: bool,
         plaintext_decrypted: bool,
         plaintext_exposed: bool,
+        received_message_written: bool,
         replay_window_committed: bool,
+        network_receive_attempted: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageReceivedStatusSummary {
+        storage_opened: bool,
+        runtime_material_reconstructable: bool,
+        received_message_record_present: bool,
+        received_message_record_decodable: bool,
+        received_message_matches_session: bool,
+        plaintext_exposed: bool,
         network_receive_attempted: bool,
         key_material_exposed: bool,
         transport_io_opened: bool,
@@ -1536,8 +1553,44 @@ pub mod production {
         pub fn plaintext_exposed(self) -> bool {
             self.plaintext_exposed
         }
+        pub fn received_message_written(self) -> bool {
+            self.received_message_written
+        }
         pub fn replay_window_committed(self) -> bool {
             self.replay_window_committed
+        }
+        pub fn network_receive_attempted(self) -> bool {
+            self.network_receive_attempted
+        }
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionMessageReceivedStatusSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+        pub fn runtime_material_reconstructable(self) -> bool {
+            self.runtime_material_reconstructable
+        }
+        pub fn received_message_record_present(self) -> bool {
+            self.received_message_record_present
+        }
+        pub fn received_message_record_decodable(self) -> bool {
+            self.received_message_record_decodable
+        }
+        pub fn received_message_matches_session(self) -> bool {
+            self.received_message_matches_session
+        }
+        pub fn plaintext_exposed(self) -> bool {
+            self.plaintext_exposed
         }
         pub fn network_receive_attempted(self) -> bool {
             self.network_receive_attempted
@@ -2410,6 +2463,59 @@ pub mod production {
         fn decode(value: &str) -> Result<Self, ProductionSessionError> {
             let parts = value.split('|').collect::<Vec<_>>();
             if parts.len() != 5 || parts[0] != "ADPENDINGMSG1" {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            let contact_id =
+                ContactId::new(parts[1]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let message_number = parts[2]
+                .parse::<u64>()
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let message_type = parse_message_type_tag(parts[3])?;
+            let plaintext =
+                decode_hex(parts[4]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            Self::new(contact_id, message_number, message_type, &plaintext)
+        }
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    struct ReceivedMessageRecord {
+        contact_id: ContactId,
+        message_number: u64,
+        message_type: MessageType,
+        plaintext: Vec<u8>,
+    }
+
+    impl ReceivedMessageRecord {
+        fn new(
+            contact_id: ContactId,
+            message_number: u64,
+            message_type: MessageType,
+            plaintext: &[u8],
+        ) -> Result<Self, ProductionSessionError> {
+            if message_number == 0 || plaintext.is_empty() {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            Ok(Self {
+                contact_id,
+                message_number,
+                message_type,
+                plaintext: plaintext.to_vec(),
+            })
+        }
+
+        fn encode(&self) -> String {
+            format!(
+                "ADRECEIVEDMSG1|{}|{}|{}|{}",
+                self.contact_id.as_str(),
+                self.message_number,
+                message_type_tag(&self.message_type),
+                encode_hex(&self.plaintext)
+            )
+        }
+
+        fn decode(value: &str) -> Result<Self, ProductionSessionError> {
+            let parts = value.split('|').collect::<Vec<_>>();
+            if parts.len() != 5 || parts[0] != "ADRECEIVEDMSG1" {
                 return Err(ProductionSessionError::UnexpectedEnvelope);
             }
             let contact_id =
@@ -4067,6 +4173,29 @@ pub mod production {
         {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
+        let trimmed_plaintext = trim_padding(&plaintext.plaintext);
+        let received_record_id = production_received_message_record_id(
+            &material.channel_id,
+            &material.remote_contact_id,
+            envelope.message_number,
+        );
+        if store.get(&received_record_id)?.is_some() {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let received = ReceivedMessageRecord::new(
+            material.remote_contact_id.clone(),
+            envelope.message_number,
+            MessageType::Data,
+            trimmed_plaintext,
+        )?;
+        let received_record = EncryptedRecord::new(
+            ProductionRecordKind::ReceivedMessage,
+            EncryptedRecordScope::contact(profile.clone(), material.remote_contact_id.clone()),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            received.encode().into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)?;
+        store.put(&received_record_id, &received_record)?;
         store.save_replay_window(
             &production_replay_record_id(&draft.channel_id),
             EncryptedRecordScope::contact(profile, material.remote_contact_id),
@@ -4082,7 +4211,59 @@ pub mod production {
             replay_accepted: true,
             plaintext_decrypted: true,
             plaintext_exposed: false,
+            received_message_written: true,
             replay_window_committed: true,
+            network_receive_attempted: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_message_received_status(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        message_number: u64,
+    ) -> Result<ProductionMessageReceivedStatusSummary, ProductionSessionError> {
+        if message_number == 0 {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        let received_record_id = production_received_message_record_id(
+            &material.channel_id,
+            &material.remote_contact_id,
+            message_number,
+        );
+        let received = store
+            .get(&received_record_id)?
+            .map(|record| {
+                if record.kind != ProductionRecordKind::ReceivedMessage {
+                    return Err(ProductionSessionError::UnexpectedEnvelope);
+                }
+                let state = String::from_utf8(record.sealed_body)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                ReceivedMessageRecord::decode(&state)
+            })
+            .transpose()?;
+        let received_message_matches_session = received.as_ref().is_some_and(|received| {
+            received.contact_id == material.remote_contact_id
+                && received.message_number == message_number
+                && received.message_type == MessageType::Data
+                && !received.plaintext.is_empty()
+        });
+        Ok(ProductionMessageReceivedStatusSummary {
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            received_message_record_present: received.is_some(),
+            received_message_record_decodable: received.is_some(),
+            received_message_matches_session,
+            plaintext_exposed: false,
             network_receive_attempted: false,
             key_material_exposed: false,
             transport_io_opened: false,
@@ -4667,6 +4848,23 @@ pub mod production {
         hasher.update(message_number.to_be_bytes());
         EncryptedRecordId::new(format!("msgidx_{}", encode_hex(&hasher.finalize())))
             .expect("domain-separated local message index record id is valid")
+    }
+
+    fn production_received_message_record_id(
+        channel_id: &str,
+        contact_id: &ContactId,
+        message_number: u64,
+    ) -> EncryptedRecordId {
+        let mut hasher = Sha256::new();
+        hasher.update(PRODUCTION_RECEIVED_MESSAGE_RECORD_DOMAIN);
+        hasher.update([0]);
+        hasher.update(channel_id.as_bytes());
+        hasher.update([0]);
+        hasher.update(contact_id.as_str().as_bytes());
+        hasher.update([0]);
+        hasher.update(message_number.to_be_bytes());
+        EncryptedRecordId::new(format!("received_{}", encode_hex(&hasher.finalize())))
+            .expect("domain-separated received message record id is valid")
     }
 
     fn production_session_transport_state_record_id(channel_id: &str) -> EncryptedRecordId {
@@ -6537,11 +6735,58 @@ pub mod production {
             assert!(receive.replay_accepted());
             assert!(receive.plaintext_decrypted());
             assert!(!receive.plaintext_exposed());
+            assert!(receive.received_message_written());
             assert!(receive.replay_window_committed());
             assert!(!receive.network_receive_attempted());
             assert!(!receive.key_material_exposed());
             assert!(!receive.transport_io_opened());
             assert!(!receive.runtime_messaging_enabled());
+            let received_status = production_message_received_status(
+                inbound_store,
+                inbound_profile.clone(),
+                &passphrase,
+                1,
+            )
+            .expect("received status");
+            assert!(received_status.storage_opened());
+            assert!(received_status.runtime_material_reconstructable());
+            assert!(received_status.received_message_record_present());
+            assert!(received_status.received_message_record_decodable());
+            assert!(received_status.received_message_matches_session());
+            assert!(!received_status.plaintext_exposed());
+            assert!(!received_status.network_receive_attempted());
+            assert!(!received_status.key_material_exposed());
+            assert!(!received_status.transport_io_opened());
+            assert!(!received_status.runtime_messaging_enabled());
+            let inbound_store_after_receive = LockedProfileStore::new(inbound_store)
+                .unlock(&passphrase)
+                .expect("unlock after receive");
+            let inbound_draft =
+                load_latest_session_draft(&inbound_store_after_receive, &inbound_profile)
+                    .expect("read inbound draft")
+                    .expect("inbound draft");
+            let received_message = inbound_store_after_receive
+                .get(&production_received_message_record_id(
+                    &inbound_draft.channel_id,
+                    &inbound_draft.remote_contact_id,
+                    1,
+                ))
+                .expect("read received message")
+                .expect("received message");
+            assert_eq!(received_message.kind, ProductionRecordKind::ReceivedMessage);
+            assert_eq!(
+                ReceivedMessageRecord::decode(
+                    &String::from_utf8(received_message.sealed_body).expect("received body")
+                )
+                .expect("decode received message"),
+                ReceivedMessageRecord::new(
+                    inbound_draft.remote_contact_id.clone(),
+                    1,
+                    MessageType::Data,
+                    b"hi"
+                )
+                .expect("received record")
+            );
             assert!(matches!(
                 production_message_inbound_decrypt_import(
                     inbound_store,
@@ -6958,6 +7203,10 @@ pub mod production {
             let other_session = carol_dave.message_envelope_record_id(1, MessageType::Data);
             let index_one = alice_bob.local_message_index_record_id(&contact, 1);
             let index_two = alice_bob.local_message_index_record_id(&contact, 2);
+            let received_one =
+                production_received_message_record_id(alice_bob.channel_id(), &contact, 1);
+            let received_two =
+                production_received_message_record_id(alice_bob.channel_id(), &contact, 2);
 
             assert_eq!(
                 message_one,
@@ -6967,7 +7216,10 @@ pub mod production {
             assert_ne!(message_one, control_one);
             assert_ne!(message_one, other_session);
             assert_ne!(index_one, index_two);
-            for record_id in [message_one, control_one, index_one] {
+            assert_ne!(received_one, received_two);
+            assert_ne!(received_one, index_one);
+            assert_ne!(received_one, message_one);
+            for record_id in [message_one, control_one, index_one, received_one] {
                 let debug = format!("{record_id:?}");
                 assert!(!debug.contains("adchan1"));
                 assert!(!debug.contains("bob"));

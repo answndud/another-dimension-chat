@@ -44,6 +44,7 @@ pub mod production {
         NoiseStaticPrivateKey,
         ReplayWindowState,
         MessageEnvelope,
+        ReceivedMessage,
         LocalMessageIndex,
         RendezvousEndpointState,
         SessionDraft,
@@ -61,6 +62,7 @@ pub mod production {
                 Self::NoiseStaticPrivateKey => "noise-static-private-key",
                 Self::ReplayWindowState => "replay-window-state",
                 Self::MessageEnvelope => "message-envelope",
+                Self::ReceivedMessage => "received-message",
                 Self::LocalMessageIndex => "local-message-index",
                 Self::RendezvousEndpointState => "rendezvous-endpoint-state",
                 Self::SessionDraft => "session-draft",
@@ -78,6 +80,7 @@ pub mod production {
                 "noise-static-private-key" => Ok(Self::NoiseStaticPrivateKey),
                 "replay-window-state" => Ok(Self::ReplayWindowState),
                 "message-envelope" => Ok(Self::MessageEnvelope),
+                "received-message" => Ok(Self::ReceivedMessage),
                 "local-message-index" => Ok(Self::LocalMessageIndex),
                 "rendezvous-endpoint-state" => Ok(Self::RendezvousEndpointState),
                 "session-draft" => Ok(Self::SessionDraft),
@@ -689,6 +692,7 @@ pub mod production {
             | ProductionRecordKind::NoiseStaticPrivateKey
             | ProductionRecordKind::ReplayWindowState
             | ProductionRecordKind::MessageEnvelope
+            | ProductionRecordKind::ReceivedMessage
             | ProductionRecordKind::LocalMessageIndex
             | ProductionRecordKind::RendezvousEndpointState
             | ProductionRecordKind::HandshakeState
@@ -755,6 +759,7 @@ pub mod production {
                 ProductionRecordKind::NoiseStaticPrivateKey,
                 ProductionRecordKind::ReplayWindowState,
                 ProductionRecordKind::MessageEnvelope,
+                ProductionRecordKind::ReceivedMessage,
                 ProductionRecordKind::LocalMessageIndex,
                 ProductionRecordKind::RendezvousEndpointState,
                 ProductionRecordKind::SessionDraft,
@@ -777,6 +782,7 @@ pub mod production {
                 ProductionRecordKind::NoiseStaticPrivateKey,
                 ProductionRecordKind::ReplayWindowState,
                 ProductionRecordKind::MessageEnvelope,
+                ProductionRecordKind::ReceivedMessage,
                 ProductionRecordKind::LocalMessageIndex,
                 ProductionRecordKind::RendezvousEndpointState,
                 ProductionRecordKind::SessionDraft,

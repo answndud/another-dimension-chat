@@ -185,6 +185,11 @@ fn production_main() -> Result<(), String> {
         {
             run_production_message_inbound_decrypt_import_command(args)?;
         }
+        [cmd, sub, action, args @ ..]
+            if cmd == "production" && sub == "message" && action == "received-status" =>
+        {
+            run_production_message_received_status_command(args)?;
+        }
         [cmd, sub, _args @ ..] if cmd == "production" && sub == "unlock" => {
             return Err(production_unlock_rejected_error());
         }
@@ -256,6 +261,7 @@ fn production_help() -> String {
   another-dimension production message outbound-encrypt-prepare --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension production message outbound-envelope-export --profile <name> --store <path> --message-number <n> --out <path> --passphrase-stdin
   another-dimension production message inbound-decrypt-import --profile <name> --store <path> --in <path> --passphrase-stdin
+  another-dimension production message received-status --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension --help
 
 boundary:
@@ -284,7 +290,8 @@ boundary:
   production message pending-status is storage-only: it checks a queued outbound message without exposing plaintext or opening transport
   production message outbound-encrypt-prepare is storage-only: it checks pending plaintext and fails closed before envelope encryption until session transport exists
   production message outbound-envelope-export is storage-only: it writes an encrypted envelope only to explicit --out and never prints plaintext
-  production message inbound-decrypt-import is storage-only: it imports an encrypted envelope, decrypts it locally, and commits replay state without printing plaintext
+  production message inbound-decrypt-import is storage-only: it imports an encrypted envelope, decrypts it locally, stores the received message encrypted-at-rest, and commits replay state without printing plaintext
+  production message received-status is storage-only: it checks a stored received message without exposing plaintext or opening transport
   prototype profile/pairing/message commands require --features dev-insecure"
         .to_string()
 }
@@ -1057,7 +1064,7 @@ fn run_production_message_inbound_decrypt_import_command(args: &[String]) -> Res
     )
     .map_err(redacted_production_message_inbound_decrypt_import_error)?;
     println!(
-        "production message inbound decrypt imported: storage_opened={} runtime_material_reconstructable={} envelope_read={} envelope_decodable={} session_transport_ready={} replay_window_loaded={} replay_accepted={} plaintext_decrypted={} plaintext_exposed={} replay_window_committed={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        "production message inbound decrypt imported: storage_opened={} runtime_material_reconstructable={} envelope_read={} envelope_decodable={} session_transport_ready={} replay_window_loaded={} replay_accepted={} plaintext_decrypted={} plaintext_exposed={} received_message_written={} replay_window_committed={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
         summary.storage_opened(),
         summary.runtime_material_reconstructable(),
         summary.envelope_read(),
@@ -1067,6 +1074,7 @@ fn run_production_message_inbound_decrypt_import_command(args: &[String]) -> Res
         summary.replay_accepted(),
         summary.plaintext_decrypted(),
         summary.plaintext_exposed(),
+        summary.received_message_written(),
         summary.replay_window_committed(),
         summary.network_receive_attempted(),
         summary.key_material_exposed(),
@@ -1075,6 +1083,40 @@ fn run_production_message_inbound_decrypt_import_command(args: &[String]) -> Res
     );
     eprintln!(
         "warning: production message inbound-decrypt-import is storage-only and does not print plaintext"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn run_production_message_received_status_command(args: &[String]) -> Result<(), String> {
+    let options = ProductionMessagePendingStatusOptions::parse_with_help(
+        args,
+        production_message_received_status_help,
+    )?;
+    let passphrase = read_production_passphrase()?;
+    let summary = another_dimension_core::production::production_message_received_status(
+        &options.store_path,
+        options.profile,
+        &passphrase,
+        options.message_number,
+    )
+    .map_err(redacted_production_message_received_status_error)?;
+
+    println!(
+        "production message received status: storage_opened={} runtime_material_reconstructable={} received_message_record_present={} received_message_record_decodable={} received_message_matches_session={} plaintext_exposed={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.runtime_material_reconstructable(),
+        summary.received_message_record_present(),
+        summary.received_message_record_decodable(),
+        summary.received_message_matches_session(),
+        summary.plaintext_exposed(),
+        summary.network_receive_attempted(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production message received-status is storage-only and does not print plaintext"
     );
     Ok(())
 }
@@ -2120,7 +2162,16 @@ fn production_message_inbound_decrypt_import_help() -> String {
     "usage:
   another-dimension production message inbound-decrypt-import --profile <name> --store <path> --in <path> --passphrase-stdin
 
-Reads the profile passphrase from stdin and an encrypted envelope only from --in. Opens an encrypted local profile store, decrypts the envelope using authenticated session transport metadata, and commits replay state. This does not print plaintext, open transport, or enable runtime messaging."
+Reads the profile passphrase from stdin and an encrypted envelope only from --in. Opens an encrypted local profile store, decrypts the envelope using authenticated session transport metadata, stores the received message encrypted-at-rest, and commits replay state. This does not print plaintext, open transport, or enable runtime messaging."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn production_message_received_status_help() -> String {
+    "usage:
+  another-dimension production message received-status --profile <name> --store <path> --message-number <n> --passphrase-stdin
+
+Reads the profile passphrase from stdin. Opens an encrypted local profile store and checks whether a received message is stored and decodable, without exposing plaintext, opening transport, or enabling runtime messaging."
         .to_string()
 }
 
@@ -2521,6 +2572,13 @@ fn redacted_production_message_inbound_decrypt_import_error(
 ) -> String {
     redacted_production_message_send_prepare_error(error)
         .replace("send-prepare", "inbound-decrypt-import")
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_message_received_status_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    redacted_production_message_send_prepare_error(error).replace("send-prepare", "received-status")
 }
 
 #[cfg(not(feature = "dev-insecure"))]
