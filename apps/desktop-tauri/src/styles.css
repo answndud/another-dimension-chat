@@ -19,6 +19,7 @@
   --input-border: #314044;
   --button-bg: #121a1c;
   --button-hover: #182326;
+  --button-inline-size: 260px;
   --badge-bg: #0f1516;
   --badge-border: #334144;
   --text: var(--text-primary);
@@ -261,15 +262,17 @@ h4 {
 }
 
 button {
-  width: fit-content;
+  inline-size: min(var(--button-inline-size), 100%);
   min-height: 42px;
   border: 1px solid var(--panel-border);
-  padding: 0 16px;
+  padding: 0 14px;
   background: var(--button-bg);
   color: var(--button-text);
   font: inherit;
+  font-size: 13px;
   font-weight: 750;
   cursor: pointer;
+  text-align: center;
   transition:
     border-color 140ms ease,
     background-color 140ms ease,
@@ -296,8 +299,6 @@ select:focus-visible {
 }
 
 .flow-control {
-  min-height: 36px;
-  padding: 0 12px;
   font-size: 13px;
 }
 
@@ -338,15 +339,12 @@ textarea {
 
 .demo-state,
 .action-readiness {
-  width: fit-content;
   margin: 0;
-  border: 1px solid var(--badge-border);
-  padding: 7px 10px;
-  background: var(--badge-bg);
   color: var(--text-secondary);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   font-weight: 800;
+  line-height: 1.4;
 }
 
 .action-readiness {
@@ -362,10 +360,8 @@ textarea {
 
 .demo-warning {
   margin: 0;
-  border: 1px solid var(--panel-border);
-  border-left: 4px solid var(--danger);
-  padding: 10px 12px;
-  background: var(--panel);
+  border-left: 2px solid var(--danger);
+  padding: 2px 0 2px 10px;
   color: var(--text-primary);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 12px;
@@ -559,9 +555,8 @@ pre.is-failed {
     gap: 4px;
   }
 
-  button,
-  .demo-state {
-    width: 100%;
+  button {
+    inline-size: 100%;
   }
 
   .loop-actions {
