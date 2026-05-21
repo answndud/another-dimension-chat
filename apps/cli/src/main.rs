@@ -267,7 +267,7 @@ boundary:
   production pairing session handshake-init-import reads handshake bytes only from explicit --in and never echoes them
   production pairing session handshake-reply-export reads init bytes only from --in and writes reply bytes only to --out
   production pairing session handshake-finish-export reads reply bytes only from --in and writes finish bytes only to --out
-  production pairing session handshake-finish-import reads finish bytes only from --in and does not persist transport state
+  production pairing session handshake-finish-import reads finish bytes only from --in and persists verified transport state metadata
   production message send-prepare is storage-only: it validates outbound readiness and indexes a local message without network send
   production message pending-status is storage-only: it checks a queued outbound message without exposing plaintext or opening transport
   production message outbound-encrypt-prepare is storage-only: it checks pending plaintext and fails closed before envelope encryption until session transport exists
@@ -879,7 +879,7 @@ fn run_production_pairing_session_handshake_finish_import_command(
         summary.runtime_messaging_enabled()
     );
     eprintln!(
-        "warning: production pairing session handshake-finish-import validates finish bytes without persisting transport state and is not a secure messenger release"
+        "warning: production pairing session handshake-finish-import persists verified transport state metadata without opening transport I/O and is not a secure messenger release"
     );
     Ok(())
 }
@@ -1836,7 +1836,7 @@ fn production_pairing_session_handshake_finish_export_help() -> String {
     "usage:
   another-dimension production pairing session handshake-finish-export --profile <name> --store <path> --in <path> --out <path> --passphrase-stdin
 
-Reads the profile passphrase from stdin and reply handshake bytes only from --in. Opens an encrypted local profile store, reloads pending initiator handshake state, and writes finish bytes only to --out. This does not print handshake bytes, persist transport state, open transport, or enable runtime messaging."
+Reads the profile passphrase from stdin and reply handshake bytes only from --in. Opens an encrypted local profile store, reloads pending initiator handshake state, persists verified transport state metadata, and writes finish bytes only to --out. This does not print handshake bytes, open transport, or enable runtime messaging."
         .to_string()
 }
 
@@ -1845,7 +1845,7 @@ fn production_pairing_session_handshake_finish_import_help() -> String {
     "usage:
   another-dimension production pairing session handshake-finish-import --profile <name> --store <path> --in <path> --passphrase-stdin
 
-Reads the profile passphrase from stdin and finish handshake bytes only from --in. Opens an encrypted local profile store, reloads pending responder handshake state, and validates the finished handshake without printing bytes, persisting transport state, opening transport, or enabling runtime messaging."
+Reads the profile passphrase from stdin and finish handshake bytes only from --in. Opens an encrypted local profile store, reloads pending responder handshake state, and persists verified transport state metadata without printing bytes, opening transport, or enabling runtime messaging."
         .to_string()
 }
 
