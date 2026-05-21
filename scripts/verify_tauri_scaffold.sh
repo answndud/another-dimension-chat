@@ -80,6 +80,8 @@ require_contains "$TAURI_DIR/src/lib.rs" 'production_pairing_payload_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_pairing_payload_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_pairing_session_draft_save'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_pairing_session_draft_save'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_session_state_check'
+require_contains "$TAURI_DIR/src/lib.rs" 'run_production_session_state_check'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_handshake_init_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_handshake_reply_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_handshake_finish_export'
@@ -132,6 +134,7 @@ require_contains "$APP_DIR/src/main.js" 'invoke("prototype_status")'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_profile_unlock"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_pairing_payload_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_pairing_session_draft_save"'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_session_state_check"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_handshake_init_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_handshake_reply_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_handshake_finish_export"'
@@ -145,6 +148,7 @@ require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_message_loop"'
 require_contains "$APP_DIR/src/main.js" 'unlockProductionProfile'
 require_contains "$APP_DIR/src/main.js" 'exportProductionPairingPayload'
 require_contains "$APP_DIR/src/main.js" 'saveProductionSessionDraft'
+require_contains "$APP_DIR/src/main.js" 'checkProductionSessionState'
 require_contains "$APP_DIR/src/main.js" 'exportProductionHandshakeInit'
 require_contains "$APP_DIR/src/main.js" 'exportProductionHandshakeReply'
 require_contains "$APP_DIR/src/main.js" 'exportProductionHandshakeFinish'
@@ -265,6 +269,7 @@ require_contains "$APP_DIR/index.html" 'Handshake finish'
 require_contains "$APP_DIR/index.html" 'Remote handshake finish'
 require_contains "$APP_DIR/index.html" 'Export handshake init'
 require_contains "$APP_DIR/index.html" 'Import handshake finish'
+require_contains "$APP_DIR/index.html" 'Check session state'
 require_contains "$APP_DIR/index.html" 'Production message'
 require_contains "$APP_DIR/index.html" 'Encrypted envelope path'
 require_contains "$APP_DIR/index.html" 'Export message envelope'
@@ -305,10 +310,10 @@ require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
 require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
 command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "14"
+test "$command_count" = "15"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "14"
+test "$invoke_count" = "15"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -333,6 +338,7 @@ if grep -R 'invoke(' "$APP_DIR/src" \
   | grep -v 'invoke("production_profile_unlock"' \
   | grep -v 'invoke("production_pairing_payload_export"' \
   | grep -v 'invoke("production_pairing_session_draft_save"' \
+  | grep -v 'invoke("production_session_state_check"' \
   | grep -v 'invoke("production_handshake_init_export"' \
   | grep -v 'invoke("production_handshake_reply_export"' \
   | grep -v 'invoke("production_handshake_finish_export"' \
@@ -372,6 +378,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="export-production-handshake-reply" type="button">Export handshake reply</button>' \
   | grep -v '<button id="export-production-handshake-finish" type="button">Export handshake finish</button>' \
   | grep -v '<button id="import-production-handshake-finish" type="button">Import handshake finish</button>' \
+  | grep -v '<button id="check-production-session-state" type="button">Check session state</button>' \
   | grep -v '<input id="production-message-number" type="number" min="1" value="1" />' \
   | grep -v '<textarea id="production-message-body" rows="3">hello over stored transport</textarea>' \
   | grep -v '<button id="export-production-message-envelope" type="button">Export message envelope</button>' \

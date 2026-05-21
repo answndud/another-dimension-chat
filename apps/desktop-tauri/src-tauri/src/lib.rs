@@ -135,6 +135,28 @@ pub struct ProductionPairingSessionDraftResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionSessionStateCheckResult {
+    warning: &'static str,
+    storage_opened: bool,
+    session_draft_present: bool,
+    channel_id_derivable: bool,
+    local_role_available: bool,
+    remote_contact_present: bool,
+    remote_endpoint_state_present: bool,
+    replay_window_present: bool,
+    session_transport_state_present: bool,
+    runtime_material_reconstructable: bool,
+    outbound_envelope_io_ready: bool,
+    ready_for_message_envelope: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionHandshakePayloadResult {
     warning: &'static str,
     storage_opened: bool,
@@ -300,6 +322,22 @@ fn production_pairing_session_draft_save(
     )
     .map_err(|_| {
         "production pairing session draft save failed without exposing profile, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_session_state_check(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionSessionStateCheckResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production session state check failed without exposing local path details")?;
+    run_production_session_state_check(app_data_root, profile, passphrase).map_err(|_| {
+        "production session state check failed without exposing profile, path, or key details"
             .to_string()
     })
 }
@@ -915,6 +953,76 @@ fn sanitize_pairing_payload(payload: String) -> Result<String, String> {
         return Err("pairing payload must be a single ADPAIR2 value".to_string());
     }
     Ok(payload.to_string())
+}
+
+fn run_production_session_state_check(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionSessionStateCheckResult, String> {
+    use another_dimension_core::production::{
+        production_pairing_session_open_runtime, production_pairing_session_status,
+    };
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let status = production_pairing_session_status(&store_path, profile.clone(), &passphrase)
+        .map_err(|_| "session state status failed")?;
+    let runtime =
+        production_pairing_session_open_runtime(&store_path, profile.clone(), &passphrase).ok();
+
+    let runtime_material_reconstructable = runtime
+        .as_ref()
+        .is_some_and(|runtime| runtime.runtime_material_reconstructable());
+    let outbound_envelope_io_ready = runtime
+        .as_ref()
+        .is_some_and(|runtime| runtime.outbound_envelope_io_ready());
+    let session_transport_state_present = status.session_transport_state_present();
+
+    Ok(ProductionSessionStateCheckResult {
+        warning:
+            "session state read from encrypted local store only; no network or transport IO opened",
+        storage_opened: status.storage_opened()
+            && runtime
+                .as_ref()
+                .map(|runtime| runtime.storage_opened())
+                .unwrap_or(true),
+        session_draft_present: status.session_draft_present(),
+        channel_id_derivable: status.channel_id_derivable(),
+        local_role_available: status.local_role_available(),
+        remote_contact_present: status.remote_contact_present(),
+        remote_endpoint_state_present: status.remote_endpoint_state_present(),
+        replay_window_present: status.replay_window_present(),
+        session_transport_state_present,
+        runtime_material_reconstructable,
+        outbound_envelope_io_ready,
+        ready_for_message_envelope: status.session_draft_present()
+            && status.channel_id_derivable()
+            && status.remote_contact_present()
+            && status.remote_endpoint_state_present()
+            && status.replay_window_present()
+            && runtime_material_reconstructable
+            && outbound_envelope_io_ready
+            && session_transport_state_present,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: status.key_material_exposed()
+            || runtime
+                .as_ref()
+                .is_some_and(|runtime| runtime.key_material_exposed()),
+        network_io_attempted: false,
+        transport_io_opened: status.transport_io_opened()
+            || runtime
+                .as_ref()
+                .is_some_and(|runtime| runtime.transport_io_opened()),
+        runtime_messaging_enabled: status.runtime_messaging_enabled()
+            || runtime
+                .as_ref()
+                .is_some_and(|runtime| runtime.runtime_messaging_enabled()),
+    })
 }
 
 fn run_production_handshake_init_export(
@@ -1545,6 +1653,7 @@ pub fn run() {
             production_profile_unlock,
             production_pairing_payload_export,
             production_pairing_session_draft_save,
+            production_session_state_check,
             production_handshake_init_export,
             production_handshake_reply_export,
             production_handshake_finish_export,
@@ -1570,8 +1679,8 @@ mod tests {
         run_production_message_envelope_export, run_production_message_envelope_import,
         run_production_message_received_export, run_production_pairing_payload_export,
         run_production_pairing_session_draft_save, run_production_profile_unlock,
-        sanitize_envelope_payload, sanitize_handshake_payload, sanitize_loop_messages,
-        sanitize_pairing_payload, sanitize_pairing_rendezvous_endpoint,
+        run_production_session_state_check, sanitize_envelope_payload, sanitize_handshake_payload,
+        sanitize_loop_messages, sanitize_pairing_payload, sanitize_pairing_rendezvous_endpoint,
         sanitize_production_message_text, sanitize_production_profile,
         sanitize_production_roundtrip_message, unique_production_roundtrip_dir,
     };
@@ -1927,6 +2036,29 @@ replay check: no replayed messages after message 2
             alice_payload,
         )
         .expect("bob draft");
+        let draft_state = run_production_session_state_check(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("draft state");
+        assert!(draft_state.storage_opened);
+        assert!(draft_state.session_draft_present);
+        assert!(draft_state.channel_id_derivable);
+        assert!(draft_state.local_role_available);
+        assert!(draft_state.remote_contact_present);
+        assert!(draft_state.remote_endpoint_state_present);
+        assert!(draft_state.replay_window_present);
+        assert!(!draft_state.session_transport_state_present);
+        assert!(draft_state.runtime_material_reconstructable);
+        assert!(draft_state.outbound_envelope_io_ready);
+        assert!(!draft_state.ready_for_message_envelope);
+        assert!(!draft_state.store_path_returned);
+        assert!(!draft_state.passphrase_retained);
+        assert!(!draft_state.key_material_exposed);
+        assert!(!draft_state.network_io_attempted);
+        assert!(!draft_state.transport_io_opened);
+        assert!(!draft_state.runtime_messaging_enabled);
 
         let alice_init = run_production_handshake_init_export(
             &root,
@@ -2087,6 +2219,19 @@ replay check: no replayed messages after message 2
             finish.output_payload,
         )
         .expect("finish import");
+        let ready_state = run_production_session_state_check(
+            &root,
+            initiator.to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("ready state");
+        assert!(ready_state.session_transport_state_present);
+        assert!(ready_state.runtime_material_reconstructable);
+        assert!(ready_state.outbound_envelope_io_ready);
+        assert!(ready_state.ready_for_message_envelope);
+        assert!(!ready_state.key_material_exposed);
+        assert!(!ready_state.transport_io_opened);
+        assert!(!ready_state.runtime_messaging_enabled);
 
         let outbound = run_production_message_envelope_export(
             &root,
