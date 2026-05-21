@@ -53,7 +53,10 @@ const fields = {
   productionPairingState: document.querySelector("#production-pairing-state"),
   productionPairingWarning: document.querySelector("#production-pairing-warning"),
   productionPairingPayload: document.querySelector("#production-pairing-payload"),
+  productionRemotePairingPayload: document.querySelector("#production-remote-pairing-payload"),
+  saveProductionSessionDraft: document.querySelector("#save-production-session-draft"),
   productionPairingStorage: document.querySelector("#production-pairing-storage"),
+  productionPairingSession: document.querySelector("#production-pairing-session"),
   productionPairingBoundary: document.querySelector("#production-pairing-boundary"),
   productionRoundtripMessage: document.querySelector("#production-roundtrip-message"),
   runProductionRoundtrip: document.querySelector("#run-production-roundtrip"),
@@ -195,6 +198,7 @@ function resetProductionPairingView() {
     fields.productionPairingPayload.value = "";
   }
   setText(fields.productionPairingStorage, "Not checked yet");
+  setText(fields.productionPairingSession, "Not checked yet");
   setText(fields.productionPairingBoundary, "Not checked yet");
 }
 
@@ -221,6 +225,8 @@ function productionPairingInput() {
   return {
     ...productionProfileInput(),
     rendezvousEndpoint: (fields.productionPairingEndpoint?.value ?? "").trim(),
+    localPayload: (fields.productionPairingPayload?.value ?? "").trim(),
+    remotePayload: (fields.productionRemotePairingPayload?.value ?? "").trim(),
   };
 }
 
@@ -620,6 +626,54 @@ async function exportProductionPairingPayload() {
   }
 }
 
+async function saveProductionSessionDraft() {
+  const { profile, passphrase, localPayload, remotePayload } = productionPairingInput();
+  if (!profile || !passphrase || !localPayload || !remotePayload) {
+    setProductionPairingState("Session draft needs payloads");
+    setText(fields.productionPairingWarning, "Export local payload and paste a remote payload.");
+    return;
+  }
+
+  setProductionPairingState("Session draft saving");
+  setText(fields.productionPairingWarning, "Saving production session draft.");
+  setText(fields.productionPairingSession, "Waiting for session draft, endpoint, and replay state");
+  setText(fields.productionPairingBoundary, "Waiting for boundary flags");
+  if (fields.saveProductionSessionDraft) {
+    fields.saveProductionSessionDraft.disabled = true;
+  }
+  try {
+    const result = await invoke("production_pairing_session_draft_save", {
+      profile,
+      passphrase,
+      localPayload,
+      remotePayload,
+    });
+    setProductionPairingState("Session draft saved");
+    setText(fields.productionPairingWarning, result.warning);
+    setText(
+      fields.productionPairingSession,
+      `plan=${result.session_plan_created} draft=${result.session_draft_written} present=${result.session_draft_present} endpoint=${result.remote_endpoint_state_present} replay=${result.replay_window_present} channel=${result.channel_id_derivable}`,
+    );
+    setText(
+      fields.productionPairingStorage,
+      `opened=${result.storage_opened} local_noise_loaded=${result.local_noise_static_private_key_loaded} local_noise_match=${result.local_noise_static_matches_payload} remote_contact=${result.remote_contact_present}`,
+    );
+    setText(
+      fields.productionPairingBoundary,
+      `payloads_returned=${result.payloads_returned} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionPairingState("Session draft save failed");
+    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionPairingSession, "Failed");
+    setText(fields.productionPairingBoundary, "Failed");
+  } finally {
+    if (fields.saveProductionSessionDraft) {
+      fields.saveProductionSessionDraft.disabled = false;
+    }
+  }
+}
+
 if (fields.runDemo) {
   fields.runDemo.addEventListener("click", runLocalDemo);
 }
@@ -630,6 +684,10 @@ if (fields.unlockProductionProfile) {
 
 if (fields.exportProductionPairing) {
   fields.exportProductionPairing.addEventListener("click", exportProductionPairingPayload);
+}
+
+if (fields.saveProductionSessionDraft) {
+  fields.saveProductionSessionDraft.addEventListener("click", saveProductionSessionDraft);
 }
 
 if (fields.runProductionRoundtrip) {

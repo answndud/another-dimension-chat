@@ -110,6 +110,30 @@ pub struct ProductionPairingPayloadExportResult {
     runtime_messaging_enabled: bool,
 }
 
+#[derive(serde::Serialize)]
+pub struct ProductionPairingSessionDraftResult {
+    warning: &'static str,
+    storage_opened: bool,
+    session_plan_created: bool,
+    local_noise_static_private_key_loaded: bool,
+    local_noise_static_matches_payload: bool,
+    session_draft_written: bool,
+    remote_endpoint_state_written: bool,
+    replay_window_written: bool,
+    channel_id_derivable: bool,
+    session_draft_present: bool,
+    remote_contact_present: bool,
+    remote_endpoint_state_present: bool,
+    replay_window_present: bool,
+    payloads_returned: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
 #[tauri::command]
 fn prototype_status() -> PrototypeStatus {
     status::redacted_prototype_status()
@@ -146,6 +170,30 @@ fn production_pairing_payload_export(
             "production pairing payload export failed without exposing profile, path, or key details"
                 .to_string()
         })
+}
+
+#[tauri::command]
+fn production_pairing_session_draft_save(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    local_payload: String,
+    remote_payload: String,
+) -> Result<ProductionPairingSessionDraftResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production pairing session draft save failed without exposing local path details"
+    })?;
+    run_production_pairing_session_draft_save(
+        app_data_root,
+        profile,
+        passphrase,
+        local_payload,
+        remote_payload,
+    )
+    .map_err(|_| {
+        "production pairing session draft save failed without exposing profile, path, or key details"
+            .to_string()
+    })
 }
 
 #[tauri::command]
@@ -550,6 +598,79 @@ fn sanitize_pairing_rendezvous_endpoint(endpoint: String) -> Result<String, Stri
     Ok(endpoint.to_string())
 }
 
+fn run_production_pairing_session_draft_save(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    local_payload: String,
+    remote_payload: String,
+) -> Result<ProductionPairingSessionDraftResult, String> {
+    use another_dimension_core::production::{
+        production_pairing_session_save_draft, production_pairing_session_status,
+    };
+    use another_dimension_pairing::PairingPayload;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let local_payload = PairingPayload::decode(&sanitize_pairing_payload(local_payload)?)
+        .map_err(|_| "invalid local pairing payload")?;
+    let remote_payload = PairingPayload::decode(&sanitize_pairing_payload(remote_payload)?)
+        .map_err(|_| "invalid remote pairing payload")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+
+    let save = production_pairing_session_save_draft(
+        &store_path,
+        profile.clone(),
+        &passphrase,
+        &local_payload,
+        &remote_payload,
+    )
+    .map_err(|_| "session draft save failed")?;
+    let status = production_pairing_session_status(&store_path, profile, &passphrase)
+        .map_err(|_| "session draft status failed")?;
+
+    Ok(ProductionPairingSessionDraftResult {
+        warning:
+            "session draft saved locally only; verify safety number before handshake or trust decisions",
+        storage_opened: save.storage_opened() && status.storage_opened(),
+        session_plan_created: save.session_plan_created(),
+        local_noise_static_private_key_loaded: save.local_noise_static_private_key_loaded(),
+        local_noise_static_matches_payload: save.local_noise_static_matches_payload(),
+        session_draft_written: save.session_draft_written(),
+        remote_endpoint_state_written: save.remote_endpoint_state_written(),
+        replay_window_written: save.replay_window_written(),
+        channel_id_derivable: save.channel_id_derivable() && status.channel_id_derivable(),
+        session_draft_present: status.session_draft_present(),
+        remote_contact_present: status.remote_contact_present(),
+        remote_endpoint_state_present: status.remote_endpoint_state_present(),
+        replay_window_present: status.replay_window_present(),
+        payloads_returned: false,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: save.key_material_exposed() || status.key_material_exposed(),
+        network_io_attempted: false,
+        transport_io_opened: save.transport_io_opened() || status.transport_io_opened(),
+        runtime_messaging_enabled: save.runtime_messaging_enabled()
+            || status.runtime_messaging_enabled(),
+    })
+}
+
+fn sanitize_pairing_payload(payload: String) -> Result<String, String> {
+    let payload = payload.trim();
+    if payload.is_empty() {
+        return Err("pairing payload is required".to_string());
+    }
+    if payload.len() > 1200 {
+        return Err("pairing payload is too large".to_string());
+    }
+    if !payload.starts_with("ADPAIR2|") || payload.chars().any(char::is_whitespace) {
+        return Err("pairing payload must be a single ADPAIR2 value".to_string());
+    }
+    Ok(payload.to_string())
+}
+
 fn run_production_local_roundtrip(
     message: String,
 ) -> Result<ProductionLocalRoundtripResult, String> {
@@ -782,6 +903,7 @@ pub fn run() {
             prototype_status,
             production_profile_unlock,
             production_pairing_payload_export,
+            production_pairing_session_draft_save,
             production_local_roundtrip,
             dev_local_demo,
             dev_local_message_loop
@@ -795,8 +917,9 @@ mod tests {
     use super::{
         build_demo_simulation, parse_demo_steps, parse_loop_messages,
         production_profile_store_path, run_production_local_roundtrip,
-        run_production_pairing_payload_export, run_production_profile_unlock,
-        sanitize_loop_messages, sanitize_pairing_rendezvous_endpoint, sanitize_production_profile,
+        run_production_pairing_payload_export, run_production_pairing_session_draft_save,
+        run_production_profile_unlock, sanitize_loop_messages, sanitize_pairing_payload,
+        sanitize_pairing_rendezvous_endpoint, sanitize_production_profile,
         sanitize_production_roundtrip_message, unique_production_roundtrip_dir,
     };
 
@@ -1005,6 +1128,88 @@ replay check: no replayed messages after message 2
         assert!(!serialized.contains("correct-passphrase"));
         assert!(!serialized.contains("/tmp"));
         assert!(!serialized.contains("profiles"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn pairing_payload_sanitizer_accepts_single_adpair2_value_only() {
+        assert_eq!(
+            sanitize_pairing_payload(" ADPAIR2|abc|sig ".to_string()).expect("payload"),
+            "ADPAIR2|abc|sig"
+        );
+        assert!(sanitize_pairing_payload("ADPAIR1|abc|sig".to_string()).is_err());
+        assert!(sanitize_pairing_payload("ADPAIR2|abc|sig\nADPAIR2|x|y".to_string()).is_err());
+    }
+
+    #[test]
+    fn production_pairing_session_draft_save_uses_persistent_profile_without_returning_secrets() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        for (profile, endpoint) in [("alice", "alice.onion"), ("bob", "bob.onion")] {
+            run_production_profile_unlock(
+                &root,
+                profile.to_string(),
+                "correct-passphrase".to_string(),
+            )
+            .expect("profile unlock");
+            run_production_pairing_payload_export(
+                &root,
+                profile.to_string(),
+                "correct-passphrase".to_string(),
+                endpoint.to_string(),
+            )
+            .expect("payload export");
+        }
+
+        let alice_payload = run_production_pairing_payload_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "alice.onion".to_string(),
+        )
+        .expect("alice payload")
+        .pairing_payload;
+        let bob_payload = run_production_pairing_payload_export(
+            &root,
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "bob.onion".to_string(),
+        )
+        .expect("bob payload")
+        .pairing_payload;
+
+        let result = run_production_pairing_session_draft_save(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            alice_payload,
+            bob_payload,
+        )
+        .expect("session draft save");
+
+        assert!(result.storage_opened);
+        assert!(result.session_plan_created);
+        assert!(result.local_noise_static_private_key_loaded);
+        assert!(result.local_noise_static_matches_payload);
+        assert!(result.session_draft_written);
+        assert!(result.remote_endpoint_state_written);
+        assert!(result.replay_window_written);
+        assert!(result.channel_id_derivable);
+        assert!(result.session_draft_present);
+        assert!(result.remote_contact_present);
+        assert!(result.remote_endpoint_state_present);
+        assert!(result.replay_window_present);
+        assert!(!result.payloads_returned);
+        assert!(!result.store_path_returned);
+        assert!(!result.passphrase_retained);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+
+        let serialized = serde_json::to_string(&result).expect("serialize result");
+        assert!(!serialized.contains("ADPAIR2"));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("/tmp"));
         let _ = std::fs::remove_dir_all(root);
     }
 

@@ -78,6 +78,8 @@ require_contains "$TAURI_DIR/src/lib.rs" 'run_production_profile_unlock'
 require_contains "$TAURI_DIR/src/lib.rs" 'app_data_dir()'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_pairing_payload_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_pairing_payload_export'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_pairing_session_draft_save'
+require_contains "$TAURI_DIR/src/lib.rs" 'run_production_pairing_session_draft_save'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_local_roundtrip'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_local_roundtrip'
 require_contains "$TAURI_DIR/src/lib.rs" 'cargo'
@@ -122,11 +124,13 @@ require_status_field 'verification_status' 'lightweight checks only'
 require_contains "$APP_DIR/src/main.js" 'invoke("prototype_status")'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_profile_unlock"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_pairing_payload_export"'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_pairing_session_draft_save"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_local_roundtrip"'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_demo")'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_message_loop"'
 require_contains "$APP_DIR/src/main.js" 'unlockProductionProfile'
 require_contains "$APP_DIR/src/main.js" 'exportProductionPairingPayload'
+require_contains "$APP_DIR/src/main.js" 'saveProductionSessionDraft'
 require_contains "$APP_DIR/src/main.js" 'runProductionRoundtrip'
 require_contains "$APP_DIR/src/main.js" 'runLocalLoop'
 require_contains "$APP_DIR/src/main.js" 'localLoopMessages'
@@ -230,6 +234,8 @@ require_contains "$APP_DIR/index.html" 'Unlock production profile'
 require_contains "$APP_DIR/index.html" 'Production pairing'
 require_contains "$APP_DIR/index.html" 'Public payload export'
 require_contains "$APP_DIR/index.html" 'Export pairing payload'
+require_contains "$APP_DIR/index.html" 'Remote payload'
+require_contains "$APP_DIR/index.html" 'Save session draft'
 require_contains "$APP_DIR/index.html" 'Production core local roundtrip'
 require_contains "$APP_DIR/index.html" 'Run production roundtrip'
 require_contains "$APP_DIR/index.html" 'Repeatable local loop'
@@ -263,10 +269,10 @@ require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
 require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
 command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "6"
+test "$command_count" = "7"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "6"
+test "$invoke_count" = "7"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -290,6 +296,7 @@ if grep -R 'invoke(' "$APP_DIR/src" \
   | grep -v 'invoke("prototype_status")' \
   | grep -v 'invoke("production_profile_unlock"' \
   | grep -v 'invoke("production_pairing_payload_export"' \
+  | grep -v 'invoke("production_pairing_session_draft_save"' \
   | grep -v 'invoke("production_local_roundtrip"' \
   | grep -v 'invoke("dev_local_demo")' \
   | grep -v 'invoke("dev_local_message_loop"' >/dev/null; then
@@ -310,6 +317,8 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<input id="production-pairing-endpoint" type="text" value="alice.onion" />' \
   | grep -v '<button id="export-production-pairing" type="button">Export pairing payload</button>' \
   | grep -v '<textarea id="production-pairing-payload" rows="5" readonly></textarea>' \
+  | grep -v '<textarea id="production-remote-pairing-payload" rows="5"></textarea>' \
+  | grep -v '<button id="save-production-session-draft" type="button">Save session draft</button>' \
   | grep -v '<button id="run-production-roundtrip" type="button">Run production roundtrip</button>' \
   | grep -v '<textarea id="production-roundtrip-message" rows="3">hello from production core</textarea>' \
   | grep -v '<button id="run-loop" type="button">Run local loop</button>' \
