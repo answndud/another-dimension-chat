@@ -39,6 +39,7 @@ run_step "release artifact signing requirements" scripts/verify_release_artifact
 run_step "release verification UX requirements" scripts/verify_release_verification_ux_requirements.sh
 run_step "release signing candidate evidence index" scripts/verify_release_signing_candidate_evidence_index.sh
 run_step "release signing candidate evidence runbook" scripts/verify_release_signing_candidate_evidence_runbook.sh
+run_step "release signing candidate evidence fixture" scripts/verify_release_signing_candidate_evidence_fixture.sh
 run_step "binary verification plan" scripts/verify_binary_verification_plan.sh
 run_step "binary manifest fixture" scripts/verify_binary_manifest_fixture.sh
 run_step "binary input template" scripts/verify_binary_input_template.sh
