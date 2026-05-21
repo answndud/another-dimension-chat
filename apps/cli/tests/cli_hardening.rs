@@ -95,6 +95,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production pairing session transport-prepare"));
     assert!(out.contains("production pairing session handshake-init"));
     assert!(out.contains("production pairing session handshake-init-export"));
+    assert!(out.contains("production pairing session handshake-init-import"));
     assert!(out.contains("production message send-prepare"));
     assert!(out.contains("production message pending-status"));
     assert!(out.contains("production message outbound-encrypt-prepare"));
@@ -1145,7 +1146,56 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     if handshake_export_out.contains("handshake_message_written=true") {
         let exported = std::fs::read_to_string(&handshake_init_export).expect("read export");
         assert!(exported.starts_with("ADNOISEXXINIT1|"));
+    } else {
+        std::fs::write(&handshake_init_export, "ADNOISEXXINIT1|00\n")
+            .expect("write fallback handshake init import fixture");
     }
+
+    let handshake_import = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "session",
+            "handshake-init-import",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--in",
+            handshake_init_export_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let handshake_import_out = stdout(&handshake_import);
+    let handshake_import_error = stderr(&handshake_import);
+    assert!(
+        handshake_import.status.success(),
+        "stdout: {handshake_import_out}\nstderr: {handshake_import_error}"
+    );
+    assert!(handshake_import_out.contains("production pairing session handshake init imported:"));
+    assert!(handshake_import_out.contains("storage_opened=true"));
+    assert!(handshake_import_out.contains("session_draft_loaded=true"));
+    assert!(handshake_import_out.contains("safety_transcript_loaded=true"));
+    assert!(handshake_import_out.contains("local_role_can_accept="));
+    assert!(handshake_import_out.contains("handshake_message_read=true"));
+    assert!(handshake_import_out.contains("handshake_message_decodable=true"));
+    assert!(handshake_import_out.contains("handshake_message_len="));
+    assert!(handshake_import_out.contains("handshake_message_exposed=false"));
+    assert!(handshake_import_out.contains("responder_state_created=false"));
+    assert!(handshake_import_out.contains("key_material_exposed=false"));
+    assert!(handshake_import_out.contains("transport_io_opened=false"));
+    assert!(handshake_import_out.contains("runtime_messaging=false"));
+    assert!(handshake_import_error.contains("storage-only"));
+    assert!(!handshake_import_out.contains("ADNOISEXXINIT1"));
+    assert!(!handshake_import_out.contains("alice"));
+    assert!(!handshake_import_out.contains(alice_store_arg));
+    assert!(!handshake_import_out.contains(handshake_init_export_arg));
+    assert!(!handshake_import_out.contains("adchan1"));
+    assert!(!handshake_import_out.contains("ed25519"));
+    assert!(!handshake_import_error.contains("correct horse"));
+    assert!(!handshake_import_error.contains(alice_store_arg));
+    assert!(!handshake_import_error.contains(handshake_init_export_arg));
 
     std::fs::write(&plaintext, "hello from alice").expect("write plaintext");
     let send_prepare = run_with_stdin(

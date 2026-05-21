@@ -128,6 +128,14 @@ fn production_main() -> Result<(), String> {
         {
             run_production_pairing_session_handshake_init_export_command(args)?;
         }
+        [cmd, sub, object, action, args @ ..]
+            if cmd == "production"
+                && sub == "pairing"
+                && object == "session"
+                && action == "handshake-init-import" =>
+        {
+            run_production_pairing_session_handshake_init_import_command(args)?;
+        }
         [cmd, sub, action, args @ ..]
             if cmd == "production" && sub == "message" && action == "send-prepare" =>
         {
@@ -205,6 +213,7 @@ fn production_help() -> String {
   another-dimension production pairing session transport-prepare --profile <name> --store <path> --passphrase-stdin
   another-dimension production pairing session handshake-init --profile <name> --store <path> --passphrase-stdin
   another-dimension production pairing session handshake-init-export --profile <name> --store <path> --out <path> --passphrase-stdin
+  another-dimension production pairing session handshake-init-import --profile <name> --store <path> --in <path> --passphrase-stdin
   another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> --passphrase-stdin
   another-dimension production message pending-status --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension production message outbound-encrypt-prepare --profile <name> --store <path> --message-number <n> --passphrase-stdin
@@ -228,6 +237,7 @@ boundary:
   production pairing session transport-prepare is storage-only: it verifies transport inputs and keeps session transport in-memory only
   production pairing session handshake-init is storage-only: it checks the first Noise handshake message without exposing bytes or opening transport
   production pairing session handshake-init-export writes handshake bytes only to explicit --out and never to stdout
+  production pairing session handshake-init-import reads handshake bytes only from explicit --in and never echoes them
   production message send-prepare is storage-only: it validates outbound readiness and indexes a local message without network send
   production message pending-status is storage-only: it checks a queued outbound message without exposing plaintext or opening transport
   production message outbound-encrypt-prepare is storage-only: it checks pending plaintext and fails closed before envelope encryption until session transport exists
@@ -662,6 +672,45 @@ fn run_production_pairing_session_handshake_init_export_command(
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn run_production_pairing_session_handshake_init_import_command(
+    args: &[String],
+) -> Result<(), String> {
+    let options = ProductionPairingSessionHandshakeInitImportOptions::parse(args)?;
+    let passphrase = read_production_passphrase()?;
+    let import_payload = std::fs::read_to_string(&options.in_path).map_err(|_| {
+        "production pairing session handshake-init-import failed: in read failed".to_string()
+    })?;
+    let summary =
+        another_dimension_core::production::production_pairing_session_handshake_init_import(
+            &options.store_path,
+            options.profile,
+            &passphrase,
+            &import_payload,
+        )
+        .map_err(redacted_production_pairing_session_handshake_init_import_error)?;
+
+    println!(
+        "production pairing session handshake init imported: storage_opened={} session_draft_loaded={} safety_transcript_loaded={} local_role_can_accept={} handshake_message_read={} handshake_message_decodable={} handshake_message_len={} handshake_message_exposed={} responder_state_created={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.session_draft_loaded(),
+        summary.safety_transcript_loaded(),
+        summary.local_role_can_accept(),
+        summary.handshake_message_read(),
+        summary.handshake_message_decodable(),
+        summary.handshake_message_len(),
+        summary.handshake_message_exposed(),
+        summary.responder_state_created(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production pairing session handshake-init-import is storage-only and not a secure messenger release"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 fn run_production_message_send_prepare_command(args: &[String]) -> Result<(), String> {
     let options = ProductionMessageSendPrepareOptions::parse(args)?;
     let passphrase = read_production_passphrase()?;
@@ -862,6 +911,13 @@ struct ProductionPairingSessionHandshakeInitExportOptions {
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+struct ProductionPairingSessionHandshakeInitImportOptions {
+    profile: another_dimension_identity::ProfileName,
+    store_path: std::path::PathBuf,
+    in_path: std::path::PathBuf,
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 impl ProductionPairingPayloadCreateOptions {
     fn parse(args: &[String]) -> Result<Self, String> {
         let mut profile = None;
@@ -1053,6 +1109,65 @@ impl ProductionPairingSessionHandshakeInitExportOptions {
             store_path: store_path
                 .ok_or_else(production_pairing_session_handshake_init_export_help)?,
             out_path: out_path.ok_or_else(production_pairing_session_handshake_init_export_help)?,
+        })
+    }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+impl ProductionPairingSessionHandshakeInitImportOptions {
+    fn parse(args: &[String]) -> Result<Self, String> {
+        let mut profile = None;
+        let mut store_path = None;
+        let mut in_path = None;
+        let mut passphrase_stdin = false;
+        let mut index = 0;
+
+        while index < args.len() {
+            match args[index].as_str() {
+                "--profile" => {
+                    index += 1;
+                    profile = Some(
+                        args.get(index)
+                            .ok_or_else(production_pairing_session_handshake_init_import_help)
+                            .and_then(|value| {
+                                another_dimension_identity::ProfileName::new(value)
+                                    .map_err(|_| "invalid production profile name".to_string())
+                            })?,
+                    );
+                }
+                "--store" => {
+                    index += 1;
+                    store_path = Some(
+                        args.get(index)
+                            .map(std::path::PathBuf::from)
+                            .ok_or_else(production_pairing_session_handshake_init_import_help)?,
+                    );
+                }
+                "--in" => {
+                    index += 1;
+                    in_path = Some(
+                        args.get(index)
+                            .map(std::path::PathBuf::from)
+                            .ok_or_else(production_pairing_session_handshake_init_import_help)?,
+                    );
+                }
+                "--passphrase-stdin" => {
+                    passphrase_stdin = true;
+                }
+                _ => return Err(production_pairing_session_handshake_init_import_help()),
+            }
+            index += 1;
+        }
+
+        if !passphrase_stdin {
+            return Err(production_pairing_session_handshake_init_import_help());
+        }
+
+        Ok(Self {
+            profile: profile.ok_or_else(production_pairing_session_handshake_init_import_help)?,
+            store_path: store_path
+                .ok_or_else(production_pairing_session_handshake_init_import_help)?,
+            in_path: in_path.ok_or_else(production_pairing_session_handshake_init_import_help)?,
         })
     }
 }
@@ -1299,6 +1414,15 @@ fn production_pairing_session_handshake_init_export_help() -> String {
   another-dimension production pairing session handshake-init-export --profile <name> --store <path> --out <path> --passphrase-stdin
 
 Reads the profile passphrase from stdin. Opens an encrypted local profile store, creates the first Noise handshake message when the local profile is the canonical dialer, and writes handshake bytes only to --out. This does not print handshake bytes, open transport, or enable runtime messaging."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn production_pairing_session_handshake_init_import_help() -> String {
+    "usage:
+  another-dimension production pairing session handshake-init-import --profile <name> --store <path> --in <path> --passphrase-stdin
+
+Reads the profile passphrase from stdin and handshake bytes only from --in. Opens an encrypted local profile store, reloads the session draft, and validates the imported first Noise handshake message envelope without printing bytes, creating responder state, opening transport, or enabling runtime messaging."
         .to_string()
 }
 
@@ -1628,6 +1752,14 @@ fn redacted_production_pairing_session_handshake_init_export_error(
 ) -> String {
     redacted_production_pairing_session_load_runtime_error(error)
         .replace("load-runtime", "handshake-init-export")
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_pairing_session_handshake_init_import_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    redacted_production_pairing_session_load_runtime_error(error)
+        .replace("load-runtime", "handshake-init-import")
 }
 
 #[cfg(not(feature = "dev-insecure"))]
