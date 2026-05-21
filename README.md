@@ -42,6 +42,7 @@ What exists today:
 - A release signing tooling decision gate that keeps final signing tooling explicitly unresolved until a separate decision record exists.
 - A reproducible/equivalent binary verification plan that records required evidence while keeping binary verification documented as incomplete.
 - A binary manifest fixture verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and build-input drift without verifying release artifacts.
+- A binary verification input template that records required release-candidate fields while remaining classified as not verification evidence.
 - README status compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
 
 What does not exist yet:
@@ -275,6 +276,8 @@ The current completion audit is tracked in [RELEASE_COMPLETION_AUDIT.md](RELEASE
 The release signing plan is tracked in [RELEASE_SIGNING_PLAN.md](RELEASE_SIGNING_PLAN.md). It is a pre-implementation plan, not signed artifact verification.
 
 The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md). It is a pre-implementation plan, not reproducible build evidence.
+
+The binary verification input template is tracked in [RELEASE_BINARY_INPUT_TEMPLATE.md](RELEASE_BINARY_INPUT_TEMPLATE.md). It is not release-candidate evidence.
 
 ## License
 

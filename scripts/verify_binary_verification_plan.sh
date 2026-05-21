@@ -16,6 +16,8 @@ grep -q 'does not make builds reproducible' "$ROOT_DIR/RELEASE_BINARY_VERIFICATI
 grep -q 'scripts/verify_binary_manifest_fixture.sh' "$ROOT_DIR/RELEASE_BINARY_VERIFICATION_PLAN.md"
 grep -q 'does not verify release artifacts, prove reproducibility, or provide independent rebuild evidence' \
   "$ROOT_DIR/RELEASE_BINARY_VERIFICATION_PLAN.md"
+grep -q 'RELEASE_BINARY_INPUT_TEMPLATE.md' "$ROOT_DIR/RELEASE_BINARY_VERIFICATION_PLAN.md"
+grep -q 'It is not verification evidence' "$ROOT_DIR/RELEASE_BINARY_VERIFICATION_PLAN.md"
 grep -q 'RELEASE_BINARY_VERIFICATION_PLAN.md' "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'scripts/verify_binary_verification_plan.sh' "$ROOT_DIR/RELEASE_HARDENING.md"
 

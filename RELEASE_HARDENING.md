@@ -13,7 +13,7 @@ The repository currently has:
 - Static release-hygiene checks through `scripts/verify_release_hygiene.sh`.
 - Release completion audit evidence in [RELEASE_COMPLETION_AUDIT.md](RELEASE_COMPLETION_AUDIT.md) that records the current v0.1-security-ready gate status as not complete.
 - A release signing implementation plan in [RELEASE_SIGNING_PLAN.md](RELEASE_SIGNING_PLAN.md), dry-run verifier in `scripts/verify_release_signing_dry_run.sh`, and disposable detached-signature fixture in `scripts/verify_release_detached_signature_fixture.sh` that record the intended offline detached-signature path without claiming signing readiness.
-- A binary verification plan in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md) and fixture verifier in `scripts/verify_binary_manifest_fixture.sh` that record reproducible/equivalent verification requirements without claiming build reproducibility.
+- A binary verification plan in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md), input template in [RELEASE_BINARY_INPUT_TEMPLATE.md](RELEASE_BINARY_INPUT_TEMPLATE.md), and fixture verifier in `scripts/verify_binary_manifest_fixture.sh` that record reproducible/equivalent verification requirements without claiming build reproducibility.
 - Default-build boundary checks that keep `dev-insecure` out of default feature sets and reject usable production command surfaces.
 - Tauri scaffold static checks that keep prototype status copy read-only.
 - Public non-claim copy in `README.md`, `SECURITY.md`, and `COMPONENT_BOUNDARIES.md`.
@@ -34,7 +34,7 @@ The repository does not currently have:
 | Gate | Current evidence | Required before claim |
 | --- | --- | --- |
 | Release signing | No release signing workflow or signed artifact verification exists; a pre-implementation signing plan, dry-run verifier, and disposable detached-signature fixture exist. | Add platform signing, verification instructions, and a checked release process. |
-| Reproducible or equivalent verification | No reproducible build evidence or equivalent binary verification evidence exists; a pre-implementation verification plan and manifest fixture verifier exist. | Add reproducible builds or an equivalent independent binary verification process. |
+| Reproducible or equivalent verification | No reproducible build evidence or equivalent binary verification evidence exists; a pre-implementation verification plan, input template, and manifest fixture verifier exist. | Add reproducible builds or an equivalent independent binary verification process. |
 | Dependency and supply-chain review | Lockfiles and static checks exist, but no review record or policy exists. | Add dependency review procedure, deny/allow policy, and release evidence. |
 | Threat model and release copy alignment | Public non-claim copy exists. | Reconcile release copy, known risks, non-goals, and threat model for the exact release candidate. |
 | External or independent review readiness | No external review is recorded. | Prepare review materials and track findings before any high-risk release claim. |
@@ -134,3 +134,5 @@ Before any security-ready claim, a release-candidate signoff record must identif
 `scripts/verify_binary_verification_plan.sh` checks that [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md) exists and remains a pre-implementation plan. It does not verify reproducible builds or release artifacts.
 
 `scripts/verify_binary_manifest_fixture.sh` checks disposable manifest comparison behavior for artifact checksums and build-input hashes. It does not verify release artifacts or prove reproducible builds.
+
+`scripts/verify_binary_input_template.sh` checks that [RELEASE_BINARY_INPUT_TEMPLATE.md](RELEASE_BINARY_INPUT_TEMPLATE.md) remains a template with placeholders and `not-verification-evidence` classification. It does not verify release artifacts or prove reproducible builds.

@@ -29,6 +29,7 @@ run_step "release detached-signature fixture" scripts/verify_release_detached_si
 run_step "release signing tooling gate" scripts/verify_release_signing_tooling_gate.sh
 run_step "binary verification plan" scripts/verify_binary_verification_plan.sh
 run_step "binary manifest fixture" scripts/verify_binary_manifest_fixture.sh
+run_step "binary input template" scripts/verify_binary_input_template.sh
 run_step "release hygiene static checks" scripts/verify_release_hygiene.sh
 
 printf '\nlight verification steps passed\n'

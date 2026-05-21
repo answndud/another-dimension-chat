@@ -37,4 +37,8 @@ The current fixture-only manifest verifier is `scripts/verify_binary_manifest_fi
 
 It rejects missing artifacts, extra artifacts, checksum mismatches, and unrecorded build-input changes in disposable fixtures. It does not verify release artifacts, prove reproducibility, or provide independent rebuild evidence.
 
-The next binary verification slice should add a release-candidate build input template that records the source commit, lockfiles, toolchain, build commands, and platform fields that a real verification record would require.
+The release-candidate input template is [RELEASE_BINARY_INPUT_TEMPLATE.md](RELEASE_BINARY_INPUT_TEMPLATE.md).
+
+It records the source commit, lockfiles, toolchain, build commands, platform, artifact manifest, comparison results, and verification classification fields that a real verification record would require. It is not verification evidence.
+
+The next binary verification slice should add a dry-run filled template fixture that proves the template verifier rejects placeholder evidence and accepts only explicitly marked fixture evidence.
