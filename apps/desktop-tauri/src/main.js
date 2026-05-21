@@ -520,6 +520,49 @@ function productionTwoProfileInput() {
   };
 }
 
+function renderProductionTwoProfileResult(result) {
+  const profilesReady =
+    result.profile_a_unlocked &&
+    result.profile_b_unlocked &&
+    result.pairing_payloads_exported;
+  const sessionReady =
+    result.session_drafts_saved &&
+    result.handshake_completed &&
+    result.sender_session_ready &&
+    result.receiver_session_ready;
+  const messageReady =
+    result.message_number_reserved &&
+    result.encrypted_envelope_exported &&
+    result.inbound_message_stored &&
+    result.received_status_verified &&
+    result.received_export_matches_input;
+  const boundaryContained =
+    !result.plaintext_returned_to_frontend &&
+    !result.store_path_returned &&
+    !result.passphrase_retained &&
+    !result.key_material_exposed &&
+    !result.network_io_attempted &&
+    !result.transport_io_opened &&
+    !result.runtime_messaging_enabled;
+
+  setText(
+    fields.productionTwoProfileProfiles,
+    `${profilesReady ? "Complete" : "Review"}: profiles unlocked and pairing payloads exported | a=${result.profile_a_unlocked} b=${result.profile_b_unlocked} payloads=${result.pairing_payloads_exported}`,
+  );
+  setText(
+    fields.productionTwoProfileSession,
+    `${sessionReady ? "Complete" : "Review"}: drafts saved, handshake complete, sender and receiver ready | drafts=${result.session_drafts_saved} handshake=${result.handshake_completed} sender=${result.sender_session_ready} receiver=${result.receiver_session_ready}`,
+  );
+  setText(
+    fields.productionTwoProfileMessageState,
+    `${messageReady ? "Complete" : "Review"}: encrypted envelope stored and received message verified | reserved=${result.message_number_reserved} envelope=${result.encrypted_envelope_exported} inbound=${result.inbound_message_stored} status=${result.received_status_verified} match=${result.received_export_matches_input}`,
+  );
+  setText(
+    fields.productionTwoProfileBoundary,
+    `${boundaryContained ? "Contained" : "Review"}: no plaintext, key material, store path, network I/O, transport I/O, or runtime messaging exposure | plaintext_returned=${result.plaintext_returned_to_frontend} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+  );
+}
+
 function productionProfileInput() {
   return {
     profile: (fields.productionProfileName?.value ?? "").trim(),
@@ -835,22 +878,7 @@ async function runProductionTwoProfileRoundtrip() {
     });
     setProductionTwoProfileState("Two-profile roundtrip completed");
     setText(fields.productionTwoProfileWarning, result.warning);
-    setText(
-      fields.productionTwoProfileProfiles,
-      `a=${result.profile_a_unlocked} b=${result.profile_b_unlocked} payloads=${result.pairing_payloads_exported}`,
-    );
-    setText(
-      fields.productionTwoProfileSession,
-      `drafts=${result.session_drafts_saved} handshake=${result.handshake_completed} sender=${result.sender_session_ready} receiver=${result.receiver_session_ready}`,
-    );
-    setText(
-      fields.productionTwoProfileMessageState,
-      `reserved=${result.message_number_reserved} envelope=${result.encrypted_envelope_exported} inbound=${result.inbound_message_stored} status=${result.received_status_verified} match=${result.received_export_matches_input}`,
-    );
-    setText(
-      fields.productionTwoProfileBoundary,
-      `plaintext_returned=${result.plaintext_returned_to_frontend} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    renderProductionTwoProfileResult(result);
     await loadProductionProfileList();
   } catch (error) {
     setProductionTwoProfileState("Two-profile roundtrip failed");
