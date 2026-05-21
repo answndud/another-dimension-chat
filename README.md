@@ -119,6 +119,7 @@ This runs:
 - Default build boundary checks that keep `dev-insecure` out of default feature sets and verify the default CLI exposes only boundary commands.
 - Default CLI hardening rejects production skeleton commands for profile, pairing, messaging, storage unlock, transport bootstrap, and transport send/receive unless a later phase explicitly opens them.
 - Production skeleton preflight summary aggregates current crypto/session, transport, storage, and command-surface blockers without exposing production messaging.
+- Production skeleton next connector selection keeps the next slice on session protocol and durable-state gates without opening runtime execution.
 - Tauri scaffold static checks.
 - Public release hygiene static checks.
 

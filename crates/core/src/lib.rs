@@ -224,6 +224,45 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionSkeletonConnector {
+        SessionProtocolAndStatePersistence,
+        StorageKeyManagementAndRollback,
+        TransportEnvelopeIo,
+        RuntimeCommandSurface,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionSkeletonNextConnectorSelection {
+        connector: ProductionSkeletonConnector,
+        blocker: &'static str,
+        required_gate: &'static str,
+        opens_runtime_execution: bool,
+        production_messaging_ready: bool,
+    }
+
+    impl ProductionSkeletonNextConnectorSelection {
+        pub fn connector(self) -> ProductionSkeletonConnector {
+            self.connector
+        }
+
+        pub fn blocker(self) -> &'static str {
+            self.blocker
+        }
+
+        pub fn required_gate(self) -> &'static str {
+            self.required_gate
+        }
+
+        pub fn opens_runtime_execution(self) -> bool {
+            self.opens_runtime_execution
+        }
+
+        pub fn production_messaging_ready(self) -> bool {
+            self.production_messaging_ready
+        }
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct LocalMessageIndexEntry {
         contact_id: ContactId,
@@ -683,6 +722,51 @@ pub mod production {
         }
     }
 
+    pub fn production_skeleton_next_connector_selection() -> ProductionSkeletonNextConnectorSelection
+    {
+        let preflight = production_skeleton_preflight_summary();
+
+        if !preflight.session_e2ee_ready() {
+            return ProductionSkeletonNextConnectorSelection {
+                connector: ProductionSkeletonConnector::SessionProtocolAndStatePersistence,
+                blocker: "production session E2EE and durable state are not complete",
+                required_gate:
+                    "reviewed session protocol decision plus durable state persistence plan",
+                opens_runtime_execution: false,
+                production_messaging_ready: false,
+            };
+        }
+
+        if preflight.storage_rollback_protection() == ReplayRollbackProtection::NotProvided {
+            return ProductionSkeletonNextConnectorSelection {
+                connector: ProductionSkeletonConnector::StorageKeyManagementAndRollback,
+                blocker: "storage rollback protection and key management are not complete",
+                required_gate: "key management rollback backup exclusion and migration decision",
+                opens_runtime_execution: false,
+                production_messaging_ready: false,
+            };
+        }
+
+        if !preflight.transport_send_receive_available() {
+            return ProductionSkeletonNextConnectorSelection {
+                connector: ProductionSkeletonConnector::TransportEnvelopeIo,
+                blocker: "transport send receive envelope I/O is disabled",
+                required_gate: "bounded Tor onion lifecycle adapter without direct fallback",
+                opens_runtime_execution: false,
+                production_messaging_ready: false,
+            };
+        }
+
+        ProductionSkeletonNextConnectorSelection {
+            connector: ProductionSkeletonConnector::RuntimeCommandSurface,
+            blocker: "runtime command surface remains closed",
+            required_gate:
+                "Rust-owned runtime command review after session storage transport gates",
+            opens_runtime_execution: false,
+            production_messaging_ready: false,
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -1010,6 +1094,26 @@ pub mod production {
             );
             assert!(summary.default_runtime_command_surface_closed());
             assert!(!summary.production_messaging_ready());
+        }
+
+        #[test]
+        fn production_skeleton_next_connector_selects_session_gate_without_runtime() {
+            let selection = production_skeleton_next_connector_selection();
+
+            assert_eq!(
+                selection.connector(),
+                ProductionSkeletonConnector::SessionProtocolAndStatePersistence
+            );
+            assert_eq!(
+                selection.blocker(),
+                "production session E2EE and durable state are not complete"
+            );
+            assert_eq!(
+                selection.required_gate(),
+                "reviewed session protocol decision plus durable state persistence plan"
+            );
+            assert!(!selection.opens_runtime_execution());
+            assert!(!selection.production_messaging_ready());
         }
 
         #[test]
