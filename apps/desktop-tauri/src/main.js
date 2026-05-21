@@ -55,8 +55,25 @@ const fields = {
   productionPairingPayload: document.querySelector("#production-pairing-payload"),
   productionRemotePairingPayload: document.querySelector("#production-remote-pairing-payload"),
   saveProductionSessionDraft: document.querySelector("#save-production-session-draft"),
+  productionHandshakeInitPayload: document.querySelector("#production-handshake-init-payload"),
+  productionRemoteHandshakeInitPayload: document.querySelector(
+    "#production-remote-handshake-init-payload",
+  ),
+  productionHandshakeReplyPayload: document.querySelector("#production-handshake-reply-payload"),
+  productionRemoteHandshakeReplyPayload: document.querySelector(
+    "#production-remote-handshake-reply-payload",
+  ),
+  productionHandshakeFinishPayload: document.querySelector("#production-handshake-finish-payload"),
+  productionRemoteHandshakeFinishPayload: document.querySelector(
+    "#production-remote-handshake-finish-payload",
+  ),
+  exportProductionHandshakeInit: document.querySelector("#export-production-handshake-init"),
+  exportProductionHandshakeReply: document.querySelector("#export-production-handshake-reply"),
+  exportProductionHandshakeFinish: document.querySelector("#export-production-handshake-finish"),
+  importProductionHandshakeFinish: document.querySelector("#import-production-handshake-finish"),
   productionPairingStorage: document.querySelector("#production-pairing-storage"),
   productionPairingSession: document.querySelector("#production-pairing-session"),
+  productionHandshakeState: document.querySelector("#production-handshake-state"),
   productionPairingBoundary: document.querySelector("#production-pairing-boundary"),
   productionRoundtripMessage: document.querySelector("#production-roundtrip-message"),
   runProductionRoundtrip: document.querySelector("#run-production-roundtrip"),
@@ -197,8 +214,12 @@ function resetProductionPairingView() {
   if (fields.productionPairingPayload) {
     fields.productionPairingPayload.value = "";
   }
+  setHandshakePayload(fields.productionHandshakeInitPayload, "");
+  setHandshakePayload(fields.productionHandshakeReplyPayload, "");
+  setHandshakePayload(fields.productionHandshakeFinishPayload, "");
   setText(fields.productionPairingStorage, "Not checked yet");
   setText(fields.productionPairingSession, "Not checked yet");
+  setText(fields.productionHandshakeState, "Not checked yet");
   setText(fields.productionPairingBoundary, "Not checked yet");
 }
 
@@ -227,6 +248,9 @@ function productionPairingInput() {
     rendezvousEndpoint: (fields.productionPairingEndpoint?.value ?? "").trim(),
     localPayload: (fields.productionPairingPayload?.value ?? "").trim(),
     remotePayload: (fields.productionRemotePairingPayload?.value ?? "").trim(),
+    initPayload: (fields.productionRemoteHandshakeInitPayload?.value ?? "").trim(),
+    replyPayload: (fields.productionRemoteHandshakeReplyPayload?.value ?? "").trim(),
+    finishPayload: (fields.productionRemoteHandshakeFinishPayload?.value ?? "").trim(),
   };
 }
 
@@ -674,6 +698,151 @@ async function saveProductionSessionDraft() {
   }
 }
 
+function setHandshakePayload(node, value) {
+  if (node) {
+    node.value = value ?? "";
+  }
+}
+
+function renderHandshakePayloadResult(result, outputField) {
+  setProductionPairingState("Handshake step completed");
+  setText(fields.productionPairingWarning, result.warning);
+  setHandshakePayload(outputField, result.output_payload);
+  setText(
+    fields.productionHandshakeState,
+    `role=${result.role_allowed} input_read=${result.input_payload_read} input_decodable=${result.input_payload_decodable} output=${result.output_payload_created} state=${result.state_written} transport=${result.transport_state_persisted}`,
+  );
+  setText(
+    fields.productionPairingBoundary,
+    `key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+  );
+}
+
+async function exportProductionHandshakeInit() {
+  const { profile, passphrase } = productionPairingInput();
+  if (!profile || !passphrase) {
+    setProductionPairingState("Handshake init needs profile");
+    setText(fields.productionPairingWarning, "Enter profile and passphrase.");
+    return;
+  }
+
+  setProductionPairingState("Handshake init exporting");
+  if (fields.exportProductionHandshakeInit) {
+    fields.exportProductionHandshakeInit.disabled = true;
+  }
+  try {
+    const result = await invoke("production_handshake_init_export", { profile, passphrase });
+    renderHandshakePayloadResult(result, fields.productionHandshakeInitPayload);
+  } catch (error) {
+    setProductionPairingState("Handshake init failed");
+    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionHandshakeState, "Failed");
+  } finally {
+    if (fields.exportProductionHandshakeInit) {
+      fields.exportProductionHandshakeInit.disabled = false;
+    }
+  }
+}
+
+async function exportProductionHandshakeReply() {
+  const { profile, passphrase, initPayload } = productionPairingInput();
+  if (!profile || !passphrase || !initPayload) {
+    setProductionPairingState("Handshake reply needs init");
+    setText(fields.productionPairingWarning, "Paste a remote handshake init payload.");
+    return;
+  }
+
+  setProductionPairingState("Handshake reply exporting");
+  if (fields.exportProductionHandshakeReply) {
+    fields.exportProductionHandshakeReply.disabled = true;
+  }
+  try {
+    const result = await invoke("production_handshake_reply_export", {
+      profile,
+      passphrase,
+      initPayload,
+    });
+    renderHandshakePayloadResult(result, fields.productionHandshakeReplyPayload);
+  } catch (error) {
+    setProductionPairingState("Handshake reply failed");
+    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionHandshakeState, "Failed");
+  } finally {
+    if (fields.exportProductionHandshakeReply) {
+      fields.exportProductionHandshakeReply.disabled = false;
+    }
+  }
+}
+
+async function exportProductionHandshakeFinish() {
+  const { profile, passphrase, replyPayload } = productionPairingInput();
+  if (!profile || !passphrase || !replyPayload) {
+    setProductionPairingState("Handshake finish needs reply");
+    setText(fields.productionPairingWarning, "Paste a remote handshake reply payload.");
+    return;
+  }
+
+  setProductionPairingState("Handshake finish exporting");
+  if (fields.exportProductionHandshakeFinish) {
+    fields.exportProductionHandshakeFinish.disabled = true;
+  }
+  try {
+    const result = await invoke("production_handshake_finish_export", {
+      profile,
+      passphrase,
+      replyPayload,
+    });
+    renderHandshakePayloadResult(result, fields.productionHandshakeFinishPayload);
+  } catch (error) {
+    setProductionPairingState("Handshake finish failed");
+    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionHandshakeState, "Failed");
+  } finally {
+    if (fields.exportProductionHandshakeFinish) {
+      fields.exportProductionHandshakeFinish.disabled = false;
+    }
+  }
+}
+
+async function importProductionHandshakeFinish() {
+  const { profile, passphrase, finishPayload } = productionPairingInput();
+  if (!profile || !passphrase || !finishPayload) {
+    setProductionPairingState("Handshake import needs finish");
+    setText(fields.productionPairingWarning, "Paste a remote handshake finish payload.");
+    return;
+  }
+
+  setProductionPairingState("Handshake finish importing");
+  if (fields.importProductionHandshakeFinish) {
+    fields.importProductionHandshakeFinish.disabled = true;
+  }
+  try {
+    const result = await invoke("production_handshake_finish_import", {
+      profile,
+      passphrase,
+      finishPayload,
+    });
+    setProductionPairingState("Handshake finish imported");
+    setText(fields.productionPairingWarning, result.warning);
+    setText(
+      fields.productionHandshakeState,
+      `role=${result.role_allowed} finish_read=${result.finish_payload_read} decodable=${result.finish_payload_decodable} remote_static=${result.remote_static_verified} transport=${result.transport_state_persisted}`,
+    );
+    setText(
+      fields.productionPairingBoundary,
+      `payloads_returned=${result.payloads_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionPairingState("Handshake finish import failed");
+    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionHandshakeState, "Failed");
+  } finally {
+    if (fields.importProductionHandshakeFinish) {
+      fields.importProductionHandshakeFinish.disabled = false;
+    }
+  }
+}
+
 if (fields.runDemo) {
   fields.runDemo.addEventListener("click", runLocalDemo);
 }
@@ -688,6 +857,22 @@ if (fields.exportProductionPairing) {
 
 if (fields.saveProductionSessionDraft) {
   fields.saveProductionSessionDraft.addEventListener("click", saveProductionSessionDraft);
+}
+
+if (fields.exportProductionHandshakeInit) {
+  fields.exportProductionHandshakeInit.addEventListener("click", exportProductionHandshakeInit);
+}
+
+if (fields.exportProductionHandshakeReply) {
+  fields.exportProductionHandshakeReply.addEventListener("click", exportProductionHandshakeReply);
+}
+
+if (fields.exportProductionHandshakeFinish) {
+  fields.exportProductionHandshakeFinish.addEventListener("click", exportProductionHandshakeFinish);
+}
+
+if (fields.importProductionHandshakeFinish) {
+  fields.importProductionHandshakeFinish.addEventListener("click", importProductionHandshakeFinish);
 }
 
 if (fields.runProductionRoundtrip) {
