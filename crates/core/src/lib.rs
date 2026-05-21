@@ -1,8 +1,8 @@
 pub mod production {
     use another_dimension_crypto::production::{
-        establish_noise_xx_transport_pair, generate_noise_static_keypair,
-        prepare_noise_xx_handshake_init_message, run_noise_xx_handshake_smoke, NoisePrekeyBundle,
-        NoiseStaticKeypair, NoiseTransportPair,
+        create_noise_xx_handshake_init_message, establish_noise_xx_transport_pair,
+        generate_noise_static_keypair, prepare_noise_xx_handshake_init_message,
+        run_noise_xx_handshake_smoke, NoisePrekeyBundle, NoiseStaticKeypair, NoiseTransportPair,
     };
     use another_dimension_crypto::CryptoError;
     use another_dimension_identity::{
@@ -335,6 +335,23 @@ pub mod production {
         handshake_message_created: bool,
         handshake_message_len: usize,
         handshake_message_exposed: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionHandshakeInitExport {
+        storage_opened: bool,
+        session_draft_loaded: bool,
+        local_noise_static_private_key_loaded: bool,
+        local_noise_static_matches_draft: bool,
+        safety_transcript_loaded: bool,
+        local_role_can_initiate: bool,
+        handshake_message_created: bool,
+        handshake_message_len: usize,
+        handshake_message_exposed: bool,
+        export_payload: String,
         key_material_exposed: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
@@ -935,6 +952,60 @@ pub mod production {
         }
 
         pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionHandshakeInitExport {
+        pub fn storage_opened(&self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_draft_loaded(&self) -> bool {
+            self.session_draft_loaded
+        }
+
+        pub fn local_noise_static_private_key_loaded(&self) -> bool {
+            self.local_noise_static_private_key_loaded
+        }
+
+        pub fn local_noise_static_matches_draft(&self) -> bool {
+            self.local_noise_static_matches_draft
+        }
+
+        pub fn safety_transcript_loaded(&self) -> bool {
+            self.safety_transcript_loaded
+        }
+
+        pub fn local_role_can_initiate(&self) -> bool {
+            self.local_role_can_initiate
+        }
+
+        pub fn handshake_message_created(&self) -> bool {
+            self.handshake_message_created
+        }
+
+        pub fn handshake_message_len(&self) -> usize {
+            self.handshake_message_len
+        }
+
+        pub fn handshake_message_exposed(&self) -> bool {
+            self.handshake_message_exposed
+        }
+
+        pub fn export_payload(&self) -> &str {
+            &self.export_payload
+        }
+
+        pub fn key_material_exposed(&self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(&self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(&self) -> bool {
             self.runtime_messaging_enabled
         }
     }
@@ -2651,6 +2722,59 @@ pub mod production {
             handshake_message_created: handshake.is_some(),
             handshake_message_len: handshake.map(|summary| summary.message_len).unwrap_or(0),
             handshake_message_exposed: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_pairing_session_handshake_init_export(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionPairingSessionHandshakeInitExport, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let draft = load_latest_session_draft(&store, &profile)?
+            .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let local_noise_static = store
+            .get(&production_latest_pairing_noise_static_record_id())?
+            .map(decode_production_noise_static_private_key_record)
+            .transpose()?
+            .ok_or(ProductionSessionError::NoiseStaticPrivateKeyMissing)?;
+        let local_matches_draft =
+            local_noise_static.keypair.public_key() == draft.local_noise_static_public_key;
+        if !local_matches_draft {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
+        let local_role_can_initiate = draft.local_role == SessionRole::CanonicalDialer;
+        let message = if local_role_can_initiate {
+            create_noise_xx_handshake_init_message(
+                &draft.safety_transcript,
+                &local_noise_static.keypair,
+            )?
+        } else {
+            Vec::new()
+        };
+        let export_payload = if message.is_empty() {
+            String::new()
+        } else {
+            format!("ADNOISEXXINIT1|{}\n", encode_hex(&message))
+        };
+        Ok(ProductionPairingSessionHandshakeInitExport {
+            storage_opened: true,
+            session_draft_loaded: true,
+            local_noise_static_private_key_loaded: true,
+            local_noise_static_matches_draft: true,
+            safety_transcript_loaded: draft.safety_transcript_present,
+            local_role_can_initiate,
+            handshake_message_created: !message.is_empty(),
+            handshake_message_len: message.len(),
+            handshake_message_exposed: false,
+            export_payload,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -4698,6 +4822,43 @@ pub mod production {
             assert!(!handshake_init.key_material_exposed());
             assert!(!handshake_init.transport_io_opened());
             assert!(!handshake_init.runtime_messaging_enabled());
+
+            let handshake_export = production_pairing_session_handshake_init_export(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+            )
+            .expect("handshake init export");
+            assert!(handshake_export.storage_opened());
+            assert!(handshake_export.session_draft_loaded());
+            assert!(handshake_export.local_noise_static_private_key_loaded());
+            assert!(handshake_export.local_noise_static_matches_draft());
+            assert!(handshake_export.safety_transcript_loaded());
+            assert_eq!(
+                handshake_export.local_role_can_initiate(),
+                handshake_init.local_role_can_initiate()
+            );
+            assert_eq!(
+                handshake_export.handshake_message_created(),
+                handshake_init.handshake_message_created()
+            );
+            assert_eq!(
+                handshake_export.handshake_message_len() > 0,
+                handshake_init.handshake_message_len() > 0
+            );
+            assert!(!handshake_export.handshake_message_exposed());
+            assert_eq!(
+                !handshake_export.export_payload().is_empty(),
+                handshake_export.handshake_message_created()
+            );
+            if handshake_export.handshake_message_created() {
+                assert!(handshake_export
+                    .export_payload()
+                    .starts_with("ADNOISEXXINIT1|"));
+            }
+            assert!(!handshake_export.key_material_exposed());
+            assert!(!handshake_export.transport_io_opened());
+            assert!(!handshake_export.runtime_messaging_enabled());
 
             let pending_status_before =
                 production_message_pending_status(&alice_store, alice.clone(), &passphrase, 1)

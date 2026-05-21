@@ -94,6 +94,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production pairing session open-runtime"));
     assert!(out.contains("production pairing session transport-prepare"));
     assert!(out.contains("production pairing session handshake-init"));
+    assert!(out.contains("production pairing session handshake-init-export"));
     assert!(out.contains("production message send-prepare"));
     assert!(out.contains("production message pending-status"));
     assert!(out.contains("production message outbound-encrypt-prepare"));
@@ -678,11 +679,15 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     let alice_payload = root.join("alice-pairing.txt");
     let bob_payload = root.join("bob-pairing.txt");
     let plaintext = root.join("message.txt");
+    let handshake_init_export = root.join("handshake-init.txt");
     let alice_store_arg = alice_store.to_str().expect("alice store path");
     let bob_store_arg = bob_store.to_str().expect("bob store path");
     let alice_payload_arg = alice_payload.to_str().expect("alice payload path");
     let bob_payload_arg = bob_payload.to_str().expect("bob payload path");
     let plaintext_arg = plaintext.to_str().expect("plaintext path");
+    let handshake_init_export_arg = handshake_init_export
+        .to_str()
+        .expect("handshake init export path");
 
     let missing_profile = run_with_stdin(
         &[
@@ -1091,6 +1096,56 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!handshake_init_out.contains("adchan1"));
     assert!(!handshake_init_out.contains("ed25519"));
     assert!(!handshake_init_error.contains("correct horse"));
+
+    let handshake_export = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "session",
+            "handshake-init-export",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--out",
+            handshake_init_export_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let handshake_export_out = stdout(&handshake_export);
+    let handshake_export_error = stderr(&handshake_export);
+    assert!(
+        handshake_export.status.success(),
+        "stdout: {handshake_export_out}\nstderr: {handshake_export_error}"
+    );
+    assert!(handshake_export_out.contains("production pairing session handshake init exported:"));
+    assert!(handshake_export_out.contains("storage_opened=true"));
+    assert!(handshake_export_out.contains("session_draft_loaded=true"));
+    assert!(handshake_export_out.contains("local_noise_static_private_key_loaded=true"));
+    assert!(handshake_export_out.contains("local_noise_static_matches_draft=true"));
+    assert!(handshake_export_out.contains("safety_transcript_loaded=true"));
+    assert!(handshake_export_out.contains("local_role_can_initiate="));
+    assert!(handshake_export_out.contains("handshake_message_created="));
+    assert!(handshake_export_out.contains("handshake_message_len="));
+    assert!(handshake_export_out.contains("handshake_message_written="));
+    assert!(handshake_export_out.contains("handshake_message_exposed=false"));
+    assert!(handshake_export_out.contains("key_material_exposed=false"));
+    assert!(handshake_export_out.contains("transport_io_opened=false"));
+    assert!(handshake_export_out.contains("runtime_messaging=false"));
+    assert!(handshake_export_error.contains("--out"));
+    assert!(!handshake_export_out.contains("ADNOISEXXINIT1"));
+    assert!(!handshake_export_out.contains("alice"));
+    assert!(!handshake_export_out.contains(alice_store_arg));
+    assert!(!handshake_export_out.contains(handshake_init_export_arg));
+    assert!(!handshake_export_out.contains("adchan1"));
+    assert!(!handshake_export_out.contains("ed25519"));
+    assert!(!handshake_export_error.contains("correct horse"));
+    assert!(!handshake_export_error.contains(alice_store_arg));
+    if handshake_export_out.contains("handshake_message_written=true") {
+        let exported = std::fs::read_to_string(&handshake_init_export).expect("read export");
+        assert!(exported.starts_with("ADNOISEXXINIT1|"));
+    }
 
     std::fs::write(&plaintext, "hello from alice").expect("write plaintext");
     let send_prepare = run_with_stdin(
