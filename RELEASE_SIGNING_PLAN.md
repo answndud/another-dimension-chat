@@ -75,4 +75,6 @@ The candidate evidence collection runbook is tracked in [RELEASE_SIGNING_CANDIDA
 
 The disposable candidate evidence package fixture is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE.md), with fixture behavior checked by `scripts/verify_release_signing_candidate_evidence_fixture.sh`. It rejects missing, template-only, placeholder, and mismatched fixture evidence states without creating release evidence.
 
-The next signing slice should define a candidate evidence package fixture coverage audit while keeping real artifact signing and verification out of local verification until a candidate exists.
+The candidate evidence package fixture coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE_AUDIT.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE_AUDIT.md), with audit checks in `scripts/verify_release_signing_candidate_evidence_fixture_audit.sh`. It records fixture coverage, not release evidence.
+
+The next signing slice should define a release signing evidence non-claim release-note guard while keeping real artifact signing and verification out of local verification until a candidate exists.
