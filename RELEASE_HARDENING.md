@@ -84,6 +84,22 @@ Before any security-ready claim, an update integrity record must identify artifa
 
 `scripts/verify_update_integrity_gate.sh` is the current update and installer integrity verifier skeleton. It confirms that update/installer integrity is still documented as incomplete and fails if public copy starts claiming update or package integrity completion before evidence exists.
 
+## Release-Candidate Threat Model and Copy Signoff Skeleton
+
+No release-candidate threat-model or release-copy signoff evidence is recorded yet.
+
+Before any security-ready claim, a release-candidate signoff record must identify the exact candidate commit, threat model revision, non-goals, known risks, user-facing safety copy, and unresolved release blockers. At minimum, that record must cover:
+
+- Exact candidate commit, build profile, target platforms, and artifact set.
+- Threat model document revision and any release-specific threat-model exceptions.
+- Non-goals and excluded features that must remain visible in public copy.
+- Known risks, unavailable protections, and user-facing warnings for high-risk users.
+- Release notes, README, SECURITY, component boundary, and app UI copy alignment.
+- Explicit release blockers that remain unresolved and their owner/status.
+- Decision owner, review date, and evidence links for the signoff package.
+
+`scripts/verify_release_signoff_gate.sh` is the current release-candidate signoff verifier skeleton. It confirms that threat-model/release-copy signoff is still documented as incomplete and fails if public copy starts claiming signoff or safety-copy approval before evidence exists.
+
 ## Non-Claims
 
 - Passing local verification does not mean the app is safe for high-risk communication.
@@ -102,3 +118,5 @@ Before any security-ready claim, an update integrity record must identify artifa
 `scripts/verify_release_completion_audit.sh` checks that [RELEASE_COMPLETION_AUDIT.md](RELEASE_COMPLETION_AUDIT.md) continues to record the current release-gate audit as incomplete. It is not a release approval.
 
 `scripts/verify_update_integrity_gate.sh` is the current update/installer integrity verifier skeleton. It confirms that update and package integrity evidence is still missing before any release claim.
+
+`scripts/verify_release_signoff_gate.sh` is the current release-candidate threat-model and release-copy signoff verifier skeleton. It confirms that signoff evidence is still missing before any release claim.

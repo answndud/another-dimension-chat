@@ -32,6 +32,7 @@ grep -q 'A dependency review gate verifier skeleton that keeps dependency/supply
 grep -q 'An external review gate verifier skeleton that keeps external/independent review readiness documented as incomplete until review readiness evidence exists' "$ROOT_DIR/README.md"
 grep -q 'A release completion audit that records current v0.1-security-ready evidence as not complete and points the next slice at update/installer integrity' "$ROOT_DIR/README.md"
 grep -q 'An update integrity gate verifier skeleton that keeps update/installer integrity documented as incomplete until release artifact and package verification evidence exists' "$ROOT_DIR/README.md"
+grep -q 'A release signoff gate verifier skeleton that keeps release-candidate threat-model/release-copy signoff documented as incomplete until signoff evidence exists' "$ROOT_DIR/README.md"
 grep -q 'RELEASE_HARDENING.md' "$ROOT_DIR/README.md"
 grep -q 'RELEASE_COMPLETION_AUDIT.md' "$ROOT_DIR/README.md"
 grep -q 'run_step "release artifact gate skeleton" scripts/verify_release_artifact_gates.sh' "$ROOT_DIR/scripts/verify_all.sh"
@@ -39,6 +40,7 @@ grep -q 'run_step "dependency review gate skeleton" scripts/verify_dependency_re
 grep -q 'run_step "external review gate skeleton" scripts/verify_external_review_gate.sh' "$ROOT_DIR/scripts/verify_all.sh"
 grep -q 'run_step "release completion audit" scripts/verify_release_completion_audit.sh' "$ROOT_DIR/scripts/verify_all.sh"
 grep -q 'run_step "update integrity gate skeleton" scripts/verify_update_integrity_gate.sh' "$ROOT_DIR/scripts/verify_all.sh"
+grep -q 'run_step "release signoff gate skeleton" scripts/verify_release_signoff_gate.sh' "$ROOT_DIR/scripts/verify_all.sh"
 grep -q 'cargo run -q -- production preflight' "$ROOT_DIR/README.md"
 grep -q 'read-only production skeleton preflight' "$ROOT_DIR/README.md"
 grep -q 'without creating profiles, unlocking storage, bootstrapping transport, sending envelopes, receiving envelopes, or marking messaging ready' "$ROOT_DIR/README.md"
@@ -247,7 +249,8 @@ grep -q 'scripts/verify_dependency_review_gate.sh' "$ROOT_DIR/COMPONENT_BOUNDARI
 grep -q 'scripts/verify_external_review_gate.sh' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'scripts/verify_release_completion_audit.sh' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'scripts/verify_update_integrity_gate.sh' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
-grep -q 'no release signing, reproducible/equivalent verification, dependency review record, external review readiness evidence, or update/installer integrity evidence exists' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
+grep -q 'scripts/verify_release_signoff_gate.sh' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
+grep -q 'no release signing, reproducible/equivalent verification, dependency review record, release-candidate signoff record, external review readiness evidence, or update/installer integrity evidence exists' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'ProductionSessionEvaluationSummary' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'TransportMessagePathBoundarySummary' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'ProductionMessageStorageBoundarySummary' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
@@ -322,6 +325,12 @@ grep -q 'artifact formats, signature/hash verification, downgrade or rollback ha
 grep -q 'scripts/verify_update_integrity_gate.sh' "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'scripts/verify_update_integrity_gate.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 test -x "$ROOT_DIR/scripts/verify_update_integrity_gate.sh"
+grep -q 'Release-Candidate Threat Model and Copy Signoff Skeleton' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'No release-candidate threat-model or release-copy signoff evidence is recorded yet' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'exact candidate commit, threat model revision, non-goals, known risks, user-facing safety copy, and unresolved release blockers' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'scripts/verify_release_signoff_gate.sh' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'scripts/verify_release_signoff_gate.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
+test -x "$ROOT_DIR/scripts/verify_release_signoff_gate.sh"
 
 if git -C "$ROOT_DIR" ls-files | grep -E '^docs/' >/dev/null; then
   echo "private docs must not be tracked" >&2

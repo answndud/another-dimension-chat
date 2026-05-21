@@ -35,6 +35,7 @@ What exists today:
 - An external review gate verifier skeleton that keeps external/independent review readiness documented as incomplete until review readiness evidence exists.
 - A release completion audit that records current v0.1-security-ready evidence as not complete and points the next slice at update/installer integrity.
 - An update integrity gate verifier skeleton that keeps update/installer integrity documented as incomplete until release artifact and package verification evidence exists.
+- A release signoff gate verifier skeleton that keeps release-candidate threat-model/release-copy signoff documented as incomplete until signoff evidence exists.
 - README status compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
 
 What does not exist yet:
