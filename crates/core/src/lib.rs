@@ -1,8 +1,9 @@
 pub mod production {
     use another_dimension_crypto::production::{
-        create_noise_xx_handshake_init_message, establish_noise_xx_transport_pair,
-        generate_noise_static_keypair, prepare_noise_xx_handshake_init_message,
-        run_noise_xx_handshake_smoke, NoisePrekeyBundle, NoiseStaticKeypair, NoiseTransportPair,
+        create_noise_xx_handshake_init_message, create_noise_xx_handshake_reply_message,
+        establish_noise_xx_transport_pair, generate_noise_static_keypair,
+        prepare_noise_xx_handshake_init_message, run_noise_xx_handshake_smoke, NoisePrekeyBundle,
+        NoiseStaticKeypair, NoiseTransportPair,
     };
     use another_dimension_crypto::CryptoError;
     use another_dimension_identity::{
@@ -368,6 +369,27 @@ pub mod production {
         handshake_message_len: usize,
         handshake_message_exposed: bool,
         responder_state_created: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionHandshakeReplyExport {
+        storage_opened: bool,
+        session_draft_loaded: bool,
+        local_noise_static_private_key_loaded: bool,
+        local_noise_static_matches_draft: bool,
+        safety_transcript_loaded: bool,
+        local_role_can_accept: bool,
+        init_message_read: bool,
+        init_message_decodable: bool,
+        init_message_len: usize,
+        reply_message_created: bool,
+        reply_message_len: usize,
+        reply_message_exposed: bool,
+        export_payload: String,
+        responder_state_persisted: bool,
         key_material_exposed: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
@@ -1072,6 +1094,76 @@ pub mod production {
         }
 
         pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionHandshakeReplyExport {
+        pub fn storage_opened(&self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_draft_loaded(&self) -> bool {
+            self.session_draft_loaded
+        }
+
+        pub fn local_noise_static_private_key_loaded(&self) -> bool {
+            self.local_noise_static_private_key_loaded
+        }
+
+        pub fn local_noise_static_matches_draft(&self) -> bool {
+            self.local_noise_static_matches_draft
+        }
+
+        pub fn safety_transcript_loaded(&self) -> bool {
+            self.safety_transcript_loaded
+        }
+
+        pub fn local_role_can_accept(&self) -> bool {
+            self.local_role_can_accept
+        }
+
+        pub fn init_message_read(&self) -> bool {
+            self.init_message_read
+        }
+
+        pub fn init_message_decodable(&self) -> bool {
+            self.init_message_decodable
+        }
+
+        pub fn init_message_len(&self) -> usize {
+            self.init_message_len
+        }
+
+        pub fn reply_message_created(&self) -> bool {
+            self.reply_message_created
+        }
+
+        pub fn reply_message_len(&self) -> usize {
+            self.reply_message_len
+        }
+
+        pub fn reply_message_exposed(&self) -> bool {
+            self.reply_message_exposed
+        }
+
+        pub fn export_payload(&self) -> &str {
+            &self.export_payload
+        }
+
+        pub fn responder_state_persisted(&self) -> bool {
+            self.responder_state_persisted
+        }
+
+        pub fn key_material_exposed(&self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(&self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(&self) -> bool {
             self.runtime_messaging_enabled
         }
     }
@@ -2871,6 +2963,67 @@ pub mod production {
             handshake_message_len: message.len(),
             handshake_message_exposed: false,
             responder_state_created: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_pairing_session_handshake_reply_export(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        init_payload: &str,
+    ) -> Result<ProductionPairingSessionHandshakeReplyExport, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let draft = load_latest_session_draft(&store, &profile)?
+            .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let local_noise_static = store
+            .get(&production_latest_pairing_noise_static_record_id())?
+            .map(decode_production_noise_static_private_key_record)
+            .transpose()?
+            .ok_or(ProductionSessionError::NoiseStaticPrivateKeyMissing)?;
+        let local_matches_draft =
+            local_noise_static.keypair.public_key() == draft.local_noise_static_public_key;
+        if !local_matches_draft {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
+        let init_message = decode_handshake_init_export(init_payload)?;
+        let local_role_can_accept = draft.local_role == SessionRole::Responder;
+        let reply_message = if local_role_can_accept {
+            create_noise_xx_handshake_reply_message(
+                &draft.safety_transcript,
+                &local_noise_static.keypair,
+                &init_message,
+            )
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
+        } else {
+            Vec::new()
+        };
+        let export_payload = if reply_message.is_empty() {
+            String::new()
+        } else {
+            format!("ADNOISEXXREPLY1|{}\n", encode_hex(&reply_message))
+        };
+        Ok(ProductionPairingSessionHandshakeReplyExport {
+            storage_opened: true,
+            session_draft_loaded: true,
+            local_noise_static_private_key_loaded: true,
+            local_noise_static_matches_draft: true,
+            safety_transcript_loaded: draft.safety_transcript_present,
+            local_role_can_accept,
+            init_message_read: !init_payload.is_empty(),
+            init_message_decodable: true,
+            init_message_len: init_message.len(),
+            reply_message_created: !reply_message.is_empty(),
+            reply_message_len: reply_message.len(),
+            reply_message_exposed: false,
+            export_payload,
+            responder_state_persisted: false,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -4690,11 +4843,15 @@ pub mod production {
             .expect("alice payload")
             .payload()
             .clone();
-            let bob_payload =
-                production_pairing_payload_create(&bob_store, bob, &passphrase, "bob.onion")
-                    .expect("bob payload")
-                    .payload()
-                    .clone();
+            let bob_payload = production_pairing_payload_create(
+                &bob_store,
+                bob.clone(),
+                &passphrase,
+                "bob.onion",
+            )
+            .expect("bob payload")
+            .payload()
+            .clone();
 
             let summary = production_pairing_session_prepare(
                 &alice_store,
@@ -4779,11 +4936,15 @@ pub mod production {
             .expect("alice payload")
             .payload()
             .clone();
-            let bob_payload =
-                production_pairing_payload_create(&bob_store, bob, &passphrase, "bob.onion")
-                    .expect("bob payload")
-                    .payload()
-                    .clone();
+            let bob_payload = production_pairing_payload_create(
+                &bob_store,
+                bob.clone(),
+                &passphrase,
+                "bob.onion",
+            )
+            .expect("bob payload")
+            .payload()
+            .clone();
 
             let empty_status =
                 production_pairing_session_status(&alice_store, alice.clone(), &passphrase)
@@ -4816,6 +4977,15 @@ pub mod production {
             assert!(!summary.key_material_exposed());
             assert!(!summary.transport_io_opened());
             assert!(!summary.runtime_messaging_enabled());
+
+            production_pairing_session_save_draft(
+                &bob_store,
+                bob.clone(),
+                &passphrase,
+                &bob_payload,
+                &alice_payload,
+            )
+            .expect("bob save draft");
 
             let plan = plan_session_from_verified_pairing_payloads(&alice_payload, &bob_payload)
                 .expect("plan");
@@ -5005,6 +5175,50 @@ pub mod production {
                 ),
                 Err(ProductionSessionError::UnexpectedEnvelope)
             );
+
+            let bob_handshake_export = production_pairing_session_handshake_init_export(
+                &bob_store,
+                bob.clone(),
+                &passphrase,
+            )
+            .expect("bob handshake init export");
+            let reply_export = if handshake_export.handshake_message_created() {
+                production_pairing_session_handshake_reply_export(
+                    &bob_store,
+                    bob.clone(),
+                    &passphrase,
+                    handshake_export.export_payload(),
+                )
+                .expect("bob handshake reply export")
+            } else {
+                assert!(bob_handshake_export.handshake_message_created());
+                production_pairing_session_handshake_reply_export(
+                    &alice_store,
+                    alice.clone(),
+                    &passphrase,
+                    bob_handshake_export.export_payload(),
+                )
+                .expect("alice handshake reply export")
+            };
+            assert!(reply_export.storage_opened());
+            assert!(reply_export.session_draft_loaded());
+            assert!(reply_export.local_noise_static_private_key_loaded());
+            assert!(reply_export.local_noise_static_matches_draft());
+            assert!(reply_export.safety_transcript_loaded());
+            assert!(reply_export.local_role_can_accept());
+            assert!(reply_export.init_message_read());
+            assert!(reply_export.init_message_decodable());
+            assert!(reply_export.init_message_len() > 0);
+            assert!(reply_export.reply_message_created());
+            assert!(reply_export.reply_message_len() > 0);
+            assert!(!reply_export.reply_message_exposed());
+            assert!(reply_export
+                .export_payload()
+                .starts_with("ADNOISEXXREPLY1|"));
+            assert!(!reply_export.responder_state_persisted());
+            assert!(!reply_export.key_material_exposed());
+            assert!(!reply_export.transport_io_opened());
+            assert!(!reply_export.runtime_messaging_enabled());
 
             let pending_status_before =
                 production_message_pending_status(&alice_store, alice.clone(), &passphrase, 1)

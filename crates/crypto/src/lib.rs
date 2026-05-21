@@ -173,6 +173,12 @@ pub mod production {
         pub key_material_exposed: bool,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct NoiseHandshakeReplySummary {
+        pub message_len: usize,
+        pub key_material_exposed: bool,
+    }
+
     pub struct NoiseTransportPair {
         initiator_remote_static: Vec<u8>,
         responder_remote_static: Vec<u8>,
@@ -317,6 +323,38 @@ pub mod production {
             .build_initiator()?;
         let mut message = [0_u8; 1024];
         let message_len = initiator.write_message(&[], &mut message)?;
+        Ok(message[..message_len].to_vec())
+    }
+
+    pub fn prepare_noise_xx_handshake_reply_message(
+        safety_transcript: &str,
+        responder_static: &NoiseStaticKeypair,
+        init_message: &[u8],
+    ) -> Result<NoiseHandshakeReplySummary, CryptoError> {
+        let message = create_noise_xx_handshake_reply_message(
+            safety_transcript,
+            responder_static,
+            init_message,
+        )?;
+        Ok(NoiseHandshakeReplySummary {
+            message_len: message.len(),
+            key_material_exposed: false,
+        })
+    }
+
+    pub fn create_noise_xx_handshake_reply_message(
+        safety_transcript: &str,
+        responder_static: &NoiseStaticKeypair,
+        init_message: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        let mut responder = Builder::new(noise_params()?)
+            .local_private_key(&responder_static.private)?
+            .prologue(safety_transcript.as_bytes())?
+            .build_responder()?;
+        let mut read_buf = [0_u8; 1024];
+        responder.read_message(init_message, &mut read_buf)?;
+        let mut message = [0_u8; 1024];
+        let message_len = responder.write_message(&[], &mut message)?;
         Ok(message[..message_len].to_vec())
     }
 
@@ -482,6 +520,27 @@ pub mod production {
             assert!(summary.message_len > 0);
             assert_eq!(summary.message_len, message.len());
             assert!(!summary.key_material_exposed);
+        }
+
+        #[test]
+        fn noise_handshake_reply_summary_hides_message_bytes() {
+            let initiator = generate_noise_static_keypair().expect("initiator");
+            let responder = generate_noise_static_keypair().expect("responder");
+            let init_message = create_noise_xx_handshake_init_message("transcript", &initiator)
+                .expect("handshake init");
+            let summary =
+                prepare_noise_xx_handshake_reply_message("transcript", &responder, &init_message)
+                    .expect("handshake reply");
+            let reply =
+                create_noise_xx_handshake_reply_message("transcript", &responder, &init_message)
+                    .expect("handshake reply");
+
+            assert!(summary.message_len > 0);
+            assert_eq!(summary.message_len, reply.len());
+            assert!(!summary.key_material_exposed);
+            assert!(
+                create_noise_xx_handshake_reply_message("transcript", &responder, &[0_u8]).is_err()
+            );
         }
 
         #[test]
