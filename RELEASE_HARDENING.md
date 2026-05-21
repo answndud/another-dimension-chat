@@ -68,6 +68,22 @@ Before any security-ready claim, an external review readiness record must identi
 
 `scripts/verify_external_review_gate.sh` is the current external review readiness verifier skeleton. It confirms that external review readiness is still documented as incomplete and fails if public copy starts claiming external or independent review completion before evidence exists.
 
+## Update and Installer Integrity Checklist Skeleton
+
+No update or installer integrity evidence is recorded yet.
+
+Before any security-ready claim, an update integrity record must identify artifact formats, signature/hash verification, downgrade or rollback handling, platform package integrity, and recovery behavior for failed updates. At minimum, that record must cover:
+
+- Platform artifact formats and package/install verification expectations.
+- Public signing-key distribution, fingerprint verification, rotation, and revocation expectations.
+- Local hash/signature verification flow for manual downloads.
+- Downgrade prevention or explicit downgrade warning behavior.
+- Installer, archive, and checksum publication rules for each supported platform.
+- Failed update/install recovery, partial-write handling, and user-facing safety copy.
+- Explicit confirmation that no auto-update or background update check is enabled for v0.1.
+
+`scripts/verify_update_integrity_gate.sh` is the current update and installer integrity verifier skeleton. It confirms that update/installer integrity is still documented as incomplete and fails if public copy starts claiming update or package integrity completion before evidence exists.
+
 ## Non-Claims
 
 - Passing local verification does not mean the app is safe for high-risk communication.
@@ -84,3 +100,5 @@ Before any security-ready claim, an external review readiness record must identi
 `scripts/verify_release_artifact_gates.sh` is the current signing/reproducible-build verifier skeleton. It confirms that release signing and reproducible/equivalent binary verification are still documented as incomplete and fails if public copy starts claiming those gates are ready before implementation.
 
 `scripts/verify_release_completion_audit.sh` checks that [RELEASE_COMPLETION_AUDIT.md](RELEASE_COMPLETION_AUDIT.md) continues to record the current release-gate audit as incomplete. It is not a release approval.
+
+`scripts/verify_update_integrity_gate.sh` is the current update/installer integrity verifier skeleton. It confirms that update and package integrity evidence is still missing before any release claim.
