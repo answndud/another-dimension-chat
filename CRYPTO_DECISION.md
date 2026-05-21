@@ -86,6 +86,39 @@ The current architecture points toward this first production boundary:
 
 This is a direction, not an approval to implement crypto from scratch.
 
+## Protocol/Library Shortlist
+
+Current shortlist outcome:
+
+| Candidate | Shortlist status | Reason |
+| --- | --- | --- |
+| `snow` Noise XX boundary | **Evaluate first** | Already present as a narrow transcript-bound smoke boundary. Fits the current 1:1, in-person QR, synchronous-first scope without adding mailbox, directory, group, or multi-device assumptions. |
+| Maintained Signal-style protocol implementation | **Defer until deeper review** | Potentially closer to a mature E2EE messaging model, but adoption would require a reviewed Rust integration path, prekey/session storage decisions, compatibility expectations, and stronger release review. |
+| Direct `x25519-dalek` plus custom session logic | **Do not select** | Low-level primitives are not a protocol. Building a custom session or ratchet from primitives would violate the no-custom-crypto rule. |
+| Standalone Double Ratchet crates | **Do not select first** | A ratchet crate alone does not solve identity binding, setup authentication, prekey distribution, safety material, persistence, or transport binding. |
+
+First evaluation path:
+
+1. Keep the first production message/session work on the existing Noise-based synchronous boundary.
+2. Treat `snow` as the implementation candidate for a bounded prototype only after tests are written against the production pairing/safety/session boundary.
+3. Keep `dev-insecure` fake crypto available for local prototype ergonomics.
+4. Do not claim production E2EE readiness until persistence, key management, transport binding, release review, and user-facing safety copy are resolved.
+
+This shortlist is intentionally narrow. It does not decide that Noise XX is sufficient for the final v0.1 messenger, and it does not approve a custom ratchet or custom protocol.
+
+## Implementation Gate For The Shortlist
+
+Before a production message/session implementation expands beyond the current smoke boundary, add tests that prove:
+
+- Signed production pairing payloads are required on both sides.
+- Noise setup material is bound to the canonical safety transcript.
+- A wrong identity key, changed endpoint, changed capability set, or mismatched prekey bundle prevents setup.
+- The deterministic canonical dialer role is stable across both peers.
+- Ciphertexts do not contain plaintext and tampering fails.
+- Replay rejection happens before decrypt and tampered ciphertext does not advance replay state.
+- Session state remains in-memory unless the encrypted storage/key-management boundary explicitly permits persistence.
+- No Tauri production messaging command is exposed while the crypto/session boundary is incomplete.
+
 ## Prekey Question
 
 The v0.1 product direction avoids a central identity or message server. That makes prekey distribution a first-class design decision.

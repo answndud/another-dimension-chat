@@ -69,6 +69,26 @@ Evaluate a minimal Noise-based synchronous session boundary first, likely throug
 
 This is only a candidate direction.
 
+## Shortlist Alignment
+
+The first implementation candidate is the existing `snow`-backed Noise XX smoke boundary, limited to the synchronous 1:1 session-establishment path.
+
+Selection constraints:
+
+- Use it only through production pairing payloads and the canonical safety transcript.
+- Keep the Noise prologue bound to safety material.
+- Keep deterministic canonical dialer role assignment.
+- Keep session and replay state in memory until encrypted storage/key management permits persistence.
+- Keep `dev-insecure` fake crypto behind its feature for local demo ergonomics.
+
+Explicitly not selected for the first implementation slice:
+
+- A custom protocol built from low-level X25519 primitives.
+- A standalone Double Ratchet crate without a reviewed setup, identity, persistence, and transport-binding story.
+- A Signal-style implementation wrapper without deeper dependency, storage, prekey, and release review.
+
+This alignment does not claim production E2EE readiness. It only narrows the next testable boundary.
+
 ## Current Code Boundary
 
 `crates/core` now contains a narrow `ProductionSessionPlan` boundary. It accepts only verified production pairing payloads, requires valid Noise prekey bundles, commits to the safety transcript, and selects a deterministic canonical dialer from pairwise public keys with domain-separated hashing. It still does not implement message encryption, Noise handshakes, ratchets, session secret storage, or transport authentication.
