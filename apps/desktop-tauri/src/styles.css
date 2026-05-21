@@ -104,6 +104,18 @@ button:disabled {
   opacity: 0.68;
 }
 
+.flow-control {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.flow-control.is-secondary {
+  border-color: #9aa7b8;
+  background: #ffffff;
+  color: #25324a;
+}
+
 .demo-state {
   width: fit-content;
   margin: 0;
@@ -175,6 +187,75 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.simulation-panel {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid #d6dbe4;
+  padding-top: 18px;
+}
+
+h3,
+h4 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+h3 {
+  font-size: 18px;
+  font-weight: 720;
+}
+
+h4 {
+  font-size: 16px;
+  font-weight: 720;
+}
+
+.flow-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.peer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.peer-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d6dbe4;
+  border-radius: 8px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.peer-panel dl,
+.flow-summary {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid #d6dbe4;
+  border-radius: 8px;
+  background: #d6dbe4;
+}
+
+.peer-panel dl div,
+.flow-summary div {
+  display: grid;
+  grid-template-columns: minmax(86px, 0.55fr) minmax(0, 1.45fr);
+  gap: 10px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+
+.flow-summary dd {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+}
+
 pre {
   min-height: 180px;
   margin: 0;
@@ -221,5 +302,15 @@ pre.is-failed {
 
   .demo-state {
     width: 100%;
+  }
+
+  .peer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .peer-panel dl div,
+  .flow-summary div {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 }

@@ -16,8 +16,21 @@ const fields = {
   demoHint: document.querySelector("#demo-hint"),
   demoWarning: document.querySelector("#demo-warning"),
   demoSteps: document.querySelector("#demo-steps"),
+  flowControls: document.querySelector("#flow-controls"),
+  aliceProfile: document.querySelector("#alice-profile"),
+  aliceContact: document.querySelector("#alice-contact"),
+  aliceInbox: document.querySelector("#alice-inbox"),
+  bobProfile: document.querySelector("#bob-profile"),
+  bobContact: document.querySelector("#bob-contact"),
+  bobInbox: document.querySelector("#bob-inbox"),
+  simulationSafetyNumber: document.querySelector("#simulation-safety-number"),
+  simulationSafetyPhrase: document.querySelector("#simulation-safety-phrase"),
+  simulationMessage: document.querySelector("#simulation-message"),
+  simulationReplay: document.querySelector("#simulation-replay"),
   demoOutput: document.querySelector("#demo-output"),
 };
+
+let latestSimulation = null;
 
 function setText(node, value) {
   if (node) {
@@ -63,6 +76,113 @@ function renderDemoSteps(steps) {
   }
 }
 
+function resetSimulationFields() {
+  setText(fields.aliceProfile, "Waiting for local demo");
+  setText(fields.aliceContact, "Waiting for pairing");
+  setText(fields.aliceInbox, "No local message state");
+  setText(fields.bobProfile, "Waiting for local demo");
+  setText(fields.bobContact, "Waiting for pairing");
+  setText(fields.bobInbox, "No local message state");
+  setText(fields.simulationSafetyNumber, "Not shown yet");
+  setText(fields.simulationSafetyPhrase, "Not shown yet");
+  setText(fields.simulationMessage, "Not received yet");
+  setText(fields.simulationReplay, "Not checked yet");
+}
+
+function resetSimulationView() {
+  resetSimulationFields();
+  if (fields.flowControls) {
+    fields.flowControls.replaceChildren();
+  }
+}
+
+function peerByName(simulation, name) {
+  return simulation?.peers?.find((peer) => peer.name === name);
+}
+
+function applySimulationStage(stageId) {
+  if (!latestSimulation) {
+    return;
+  }
+
+  const alice = peerByName(latestSimulation, "Alice");
+  const bob = peerByName(latestSimulation, "Bob");
+
+  if (stageId === "profiles") {
+    setText(fields.aliceProfile, alice?.profile_state ?? "local dev profile initialized");
+    setText(fields.bobProfile, bob?.profile_state ?? "local dev profile initialized");
+  }
+
+  if (stageId === "pairing") {
+    setText(fields.aliceContact, "pending Bob local pairing");
+    setText(fields.bobContact, "pending Alice local pairing");
+  }
+
+  if (stageId === "safety") {
+    setText(fields.simulationSafetyNumber, latestSimulation.safety_number);
+    setText(fields.simulationSafetyPhrase, latestSimulation.safety_phrase);
+  }
+
+  if (stageId === "confirm") {
+    setText(fields.aliceContact, alice?.contact_state ?? "Bob contact activated");
+    setText(fields.bobContact, bob?.contact_state ?? "Alice contact activated");
+  }
+
+  if (stageId === "send") {
+    setText(fields.aliceInbox, latestSimulation.queued_envelope);
+  }
+
+  if (stageId === "receive") {
+    setText(fields.bobInbox, bob?.inbox_state ?? "received one local dev message");
+    setText(fields.simulationMessage, latestSimulation.message_body);
+  }
+
+  if (stageId === "replay") {
+    setText(fields.simulationReplay, latestSimulation.replay_check);
+  }
+
+  if (stageId === "complete") {
+    setText(fields.aliceInbox, "local demo completed");
+    setText(fields.bobInbox, "local demo completed");
+  }
+}
+
+function renderFlowControls(simulation) {
+  if (!fields.flowControls) {
+    return;
+  }
+
+  fields.flowControls.replaceChildren();
+  latestSimulation = simulation;
+
+  const stages = [
+    ["profiles", "Create profiles"],
+    ["pairing", "Exchange pairing"],
+    ["safety", "Show safety"],
+    ["confirm", "Confirm contacts"],
+    ["send", "Send local message"],
+    ["receive", "Receive as Bob"],
+    ["replay", "Check replay"],
+    ["complete", "Complete"],
+  ];
+
+  for (const [stageId, label] of stages) {
+    const control = document.createElement("button");
+    control.type = "button";
+    control.className = "flow-control";
+    control.textContent = label;
+    control.addEventListener("click", () => applySimulationStage(stageId));
+    fields.flowControls.append(control);
+  }
+
+  const reset = document.createElement("button");
+  reset.type = "button";
+  reset.className = "flow-control is-secondary";
+  reset.textContent = "Reset local view";
+  reset.addEventListener("click", resetSimulationFields);
+  fields.flowControls.append(reset);
+}
+
 async function renderPrototypeStatus() {
   try {
     const status = await invoke("prototype_status");
@@ -101,6 +221,7 @@ async function runLocalDemo() {
   setText(fields.demoWarning, "Running dev-insecure local demo.");
   setText(fields.demoOutput, "Running local dev-insecure demo...");
   renderDemoSteps([{ label: "Local command", status: "running", detail: "Waiting for Cargo and the CLI demo." }]);
+  resetSimulationView();
   if (fields.runDemo) {
     fields.runDemo.disabled = true;
   }
@@ -110,12 +231,14 @@ async function runLocalDemo() {
     setText(fields.demoHint, result.first_run_hint);
     setText(fields.demoWarning, result.warning.trim());
     renderDemoSteps(result.steps);
+    renderFlowControls(result.simulation);
     setText(fields.demoOutput, result.transcript.trim());
   } catch (error) {
     setDemoState("failed", "Demo failed");
     setText(fields.demoHint, "Check Cargo, Rust, and Tauri prerequisites before running again.");
     setText(fields.demoWarning, "Local demo command failed.");
     renderDemoSteps([{ label: "Local command", status: "failed", detail: String(error) }]);
+    resetSimulationView();
     setText(fields.demoOutput, `Local demo failed:\n${error}`);
   } finally {
     if (fields.runDemo) {
@@ -129,3 +252,4 @@ if (fields.runDemo) {
 }
 
 renderPrototypeStatus();
+resetSimulationView();

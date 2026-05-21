@@ -63,6 +63,67 @@
           <ol id="demo-steps" class="demo-steps" aria-label="Local demo flow steps">
             <li>Steps have not run yet.</li>
           </ol>
+          <section class="simulation-panel" aria-labelledby="simulation-title">
+            <div>
+              <p class="eyebrow">Local peer simulation</p>
+              <h3 id="simulation-title">Alice and Bob state</h3>
+            </div>
+            <div id="flow-controls" class="flow-controls" aria-label="Local flow controls"></div>
+            <div class="peer-grid" aria-label="Local peer panels">
+              <article class="peer-panel">
+                <h4>Alice</h4>
+                <dl>
+                  <div>
+                    <dt>Profile</dt>
+                    <dd id="alice-profile">Waiting for local demo</dd>
+                  </div>
+                  <div>
+                    <dt>Contact</dt>
+                    <dd id="alice-contact">Waiting for pairing</dd>
+                  </div>
+                  <div>
+                    <dt>Inbox</dt>
+                    <dd id="alice-inbox">No local message state</dd>
+                  </div>
+                </dl>
+              </article>
+              <article class="peer-panel">
+                <h4>Bob</h4>
+                <dl>
+                  <div>
+                    <dt>Profile</dt>
+                    <dd id="bob-profile">Waiting for local demo</dd>
+                  </div>
+                  <div>
+                    <dt>Contact</dt>
+                    <dd id="bob-contact">Waiting for pairing</dd>
+                  </div>
+                  <div>
+                    <dt>Inbox</dt>
+                    <dd id="bob-inbox">No local message state</dd>
+                  </div>
+                </dl>
+              </article>
+            </div>
+            <dl class="flow-summary">
+              <div>
+                <dt>Safety number</dt>
+                <dd id="simulation-safety-number">Not shown yet</dd>
+              </div>
+              <div>
+                <dt>Safety phrase</dt>
+                <dd id="simulation-safety-phrase">Not shown yet</dd>
+              </div>
+              <div>
+                <dt>Message</dt>
+                <dd id="simulation-message">Not received yet</dd>
+              </div>
+              <div>
+                <dt>Replay check</dt>
+                <dd id="simulation-replay">Not checked yet</dd>
+              </div>
+            </dl>
+          </section>
           <pre id="demo-output" class="is-idle">Demo has not run yet.</pre>
         </section>
       </section>
