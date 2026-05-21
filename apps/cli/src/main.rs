@@ -88,6 +88,14 @@ fn production_main() -> Result<(), String> {
         {
             run_production_pairing_session_status_command(args)?;
         }
+        [cmd, sub, object, action, args @ ..]
+            if cmd == "production"
+                && sub == "pairing"
+                && object == "session"
+                && action == "load-runtime" =>
+        {
+            run_production_pairing_session_load_runtime_command(args)?;
+        }
         [cmd, sub, _args @ ..] if cmd == "production" && sub == "unlock" => {
             return Err(production_unlock_rejected_error());
         }
@@ -145,6 +153,7 @@ fn production_help() -> String {
   another-dimension production pairing session prepare --profile <name> --store <path> --local-payload <path> --remote-payload <path> --passphrase-stdin
   another-dimension production pairing session save-draft --profile <name> --store <path> --local-payload <path> --remote-payload <path> --passphrase-stdin
   another-dimension production pairing session status --profile <name> --store <path> --passphrase-stdin
+  another-dimension production pairing session load-runtime --profile <name> --store <path> --passphrase-stdin
   another-dimension --help
 
 boundary:
@@ -160,6 +169,7 @@ boundary:
   production pairing session prepare is storage-only: it verifies payloads and local Noise key readiness without opening transport
   production pairing session save-draft is storage-only: it persists session draft records without opening transport
   production pairing session status is storage-only: it checks persisted session draft readiness without opening transport
+  production pairing session load-runtime is storage-only: it rebuilds in-memory runtime material without opening transport
   prototype profile/pairing/message commands require --features dev-insecure"
         .to_string()
 }
@@ -407,6 +417,40 @@ fn run_production_pairing_session_status_command(args: &[String]) -> Result<(), 
     );
     eprintln!(
         "warning: production pairing session status is storage-only and not a secure messenger release"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn run_production_pairing_session_load_runtime_command(args: &[String]) -> Result<(), String> {
+    let options = ProductionProfileInitOptions::parse_with_help(
+        args,
+        production_pairing_session_load_runtime_help,
+    )?;
+    let passphrase = read_production_passphrase()?;
+    let summary = another_dimension_core::production::production_pairing_session_load_runtime(
+        &options.store_path,
+        options.profile,
+        &passphrase,
+    )
+    .map_err(redacted_production_pairing_session_load_runtime_error)?;
+
+    println!(
+        "production pairing session runtime loaded: storage_opened={} session_draft_loaded={} local_noise_static_private_key_loaded={} local_noise_static_matches_draft={} remote_noise_static_public_key_loaded={} remote_endpoint_state_loaded={} replay_window_loaded={} runtime_material_reconstructable={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.session_draft_loaded(),
+        summary.local_noise_static_private_key_loaded(),
+        summary.local_noise_static_matches_draft(),
+        summary.remote_noise_static_public_key_loaded(),
+        summary.remote_endpoint_state_loaded(),
+        summary.replay_window_loaded(),
+        summary.runtime_material_reconstructable(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production pairing session load-runtime is storage-only and not a secure messenger release"
     );
     Ok(())
 }
@@ -691,6 +735,15 @@ Reads the profile passphrase from stdin. Opens an encrypted local profile store 
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn production_pairing_session_load_runtime_help() -> String {
+    "usage:
+  another-dimension production pairing session load-runtime --profile <name> --store <path> --passphrase-stdin
+
+Reads the profile passphrase from stdin. Opens an encrypted local profile store, reloads the latest persisted session draft, local Noise static private key, remote endpoint state, and replay window, then checks whether in-memory runtime material can be reconstructed. This does not enable messaging, transport, or a long-lived unlock session."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 fn read_production_pairing_payload(
     path: &std::path::Path,
 ) -> Result<another_dimension_pairing::PairingPayload, String> {
@@ -919,6 +972,43 @@ fn redacted_production_pairing_session_status_error(
             "production pairing session status failed: storage error".to_string()
         }
         _ => "production pairing session status failed".to_string(),
+    }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_pairing_session_load_runtime_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    use another_dimension_core::production::ProductionSessionError;
+    use another_dimension_storage::production::{
+        ProductionStorageError, ProductionStoragePolicyError,
+    };
+
+    match error {
+        ProductionSessionError::ProfileMarkerMissing => {
+            "production pairing session load-runtime failed: profile marker missing".to_string()
+        }
+        ProductionSessionError::SessionDraftMissing => {
+            "production pairing session load-runtime failed: session draft missing".to_string()
+        }
+        ProductionSessionError::NoiseStaticPrivateKeyMissing => {
+            "production pairing session load-runtime failed: local noise static key missing"
+                .to_string()
+        }
+        ProductionSessionError::NoiseStaticKeyMismatch => {
+            "production pairing session load-runtime failed: local noise static key mismatch"
+                .to_string()
+        }
+        ProductionSessionError::Storage(ProductionStorageError::UnlockFailed) => {
+            "production pairing session load-runtime failed: unlock failed".to_string()
+        }
+        ProductionSessionError::Storage(ProductionStorageError::Policy(
+            ProductionStoragePolicyError::InvalidPassphrase,
+        )) => "invalid production profile passphrase".to_string(),
+        ProductionSessionError::Storage(_) => {
+            "production pairing session load-runtime failed: storage error".to_string()
+        }
+        _ => "production pairing session load-runtime failed".to_string(),
     }
 }
 
