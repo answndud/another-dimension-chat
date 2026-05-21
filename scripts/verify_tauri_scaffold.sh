@@ -39,6 +39,7 @@ required_files=(
   "$APP_DIR/src/main.js"
   "$APP_DIR/src/styles.css"
   "$APP_DIR/vite.config.js"
+  "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh"
   "$TAURI_DIR/Cargo.toml"
   "$TAURI_DIR/build.rs"
   "$TAURI_DIR/src/lib.rs"
@@ -151,6 +152,12 @@ require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_demo")'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_message_loop"'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_two_profile_roundtrip'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_two_profile_roundtrip'
+require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'Run two-profile roundtrip'
+require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'Tauri two-profile runtime smoke passed'
+require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'plaintext_returned=false'
+require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'key_material=false'
+require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'network_io=false'
+require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'transport_io=false'
 require_contains "$APP_DIR/src/main.js" 'unlockProductionProfile'
 require_contains "$APP_DIR/src/main.js" 'loadProductionProfileList'
 require_contains "$APP_DIR/src/main.js" 'renderProductionProfileSelector'
