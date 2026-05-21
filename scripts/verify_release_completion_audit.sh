@@ -20,8 +20,9 @@ grep -q 'scripts/verify_binary_input_template.sh' "$ROOT_DIR/RELEASE_COMPLETION_
 grep -q 'Dependency and supply-chain review | `RELEASE_HARDENING.md` records a policy skeleton and \[RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md\](RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md) records required candidate-review fields, but no candidate-specific dependency review evidence exists' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'scripts/verify_dependency_review_template.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
-grep -q 'Threat model and release copy alignment | `RELEASE_HARDENING.md` records only a release-candidate signoff skeleton' \
+grep -q 'Threat model and release copy alignment | `RELEASE_HARDENING.md` records a release-candidate signoff skeleton and \[RELEASE_SIGNOFF_TEMPLATE.md\](RELEASE_SIGNOFF_TEMPLATE.md) records required threat-model, public-copy, gate-evidence, and blocker fields, but no candidate-specific signoff evidence exists' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
+grep -q 'scripts/verify_release_signoff_template.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'External or independent review readiness | `RELEASE_HARDENING.md` records a readiness checklist skeleton and \[RELEASE_EXTERNAL_REVIEW_TEMPLATE.md\](RELEASE_EXTERNAL_REVIEW_TEMPLATE.md) records required scope/material/finding/blocker fields, but no candidate-specific external or independent review readiness evidence exists' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'scripts/verify_external_review_template.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"

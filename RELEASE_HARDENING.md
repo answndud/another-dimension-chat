@@ -36,7 +36,7 @@ The repository does not currently have:
 | Release signing | No release signing workflow or signed artifact verification exists; a pre-implementation signing plan, dry-run verifier, and disposable detached-signature fixture exist. | Add platform signing, verification instructions, and a checked release process. |
 | Reproducible or equivalent verification | No reproducible build evidence or equivalent binary verification evidence exists; a pre-implementation verification plan, input template, and manifest fixture verifier exist. | Add reproducible builds or an equivalent independent binary verification process. |
 | Dependency and supply-chain review | Lockfiles, static checks, and a release-candidate review template exist, but no candidate-specific review evidence exists. | Add dependency review procedure, deny/allow policy, and release evidence. |
-| Threat model and release copy alignment | Public non-claim copy exists. | Reconcile release copy, known risks, non-goals, and threat model for the exact release candidate. |
+| Threat model and release copy alignment | Public non-claim copy and a release-candidate signoff template exist, but no candidate-specific signoff evidence exists. | Reconcile release copy, known risks, non-goals, and threat model for the exact release candidate. |
 | External or independent review readiness | A readiness template exists, but no candidate-specific external or independent review readiness evidence exists. | Prepare review materials and track findings before any high-risk release claim. |
 | Update and installer integrity | No updater or package-integrity story exists. | Define update verification, rollback handling, and platform package integrity. |
 
@@ -98,6 +98,8 @@ Before any security-ready claim, an update integrity record must identify artifa
 
 No release-candidate threat-model or release-copy signoff evidence is recorded yet.
 
+The release-candidate signoff template is tracked in [RELEASE_SIGNOFF_TEMPLATE.md](RELEASE_SIGNOFF_TEMPLATE.md). It is not release-candidate signoff evidence, threat-model signoff evidence, release-copy approval, or release approval.
+
 Before any security-ready claim, a release-candidate signoff record must identify the exact candidate commit, threat model revision, non-goals, known risks, user-facing safety copy, and unresolved release blockers. At minimum, that record must cover:
 
 - Exact candidate commit, build profile, target platforms, and artifact set.
@@ -109,6 +111,8 @@ Before any security-ready claim, a release-candidate signoff record must identif
 - Decision owner, review date, and evidence links for the signoff package.
 
 `scripts/verify_release_signoff_gate.sh` is the current release-candidate signoff verifier skeleton. It confirms that threat-model/release-copy signoff is still documented as incomplete and fails if public copy starts claiming signoff or safety-copy approval before evidence exists.
+
+`scripts/verify_release_signoff_template.sh` checks that the template still contains release-candidate placeholders and remains classified as `not-signoff-evidence`. It does not sign off a release candidate or approve release copy.
 
 ## Non-Claims
 
