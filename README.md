@@ -31,6 +31,7 @@ What exists today:
 - Lightweight verification scripts, release-hygiene and Tauri-scaffold static verifiers, CLI hardening tests, and GitHub Actions verification.
 - A public-safe release hardening gap inventory that tracks missing signing, reproducible/equivalent verification, dependency review, release-copy alignment, external review readiness, and update integrity before any security-ready claim.
 - A release artifact gate verifier skeleton that keeps signing and reproducible/equivalent verification documented as incomplete until real implementation exists.
+- A dependency review gate verifier skeleton that keeps dependency/supply-chain review documented as incomplete until review evidence exists.
 - README status compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
 
 What does not exist yet:
