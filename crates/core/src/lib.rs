@@ -1,10 +1,11 @@
 pub mod production {
     use another_dimension_crypto::production::{
         create_noise_xx_handshake_finish_export, create_noise_xx_handshake_init_export,
-        create_noise_xx_handshake_reply_export, establish_noise_xx_transport_pair,
-        generate_noise_static_keypair, prepare_noise_xx_handshake_init_message,
-        run_noise_xx_handshake_smoke, validate_noise_xx_handshake_finish_message,
-        NoisePrekeyBundle, NoiseStaticKeypair, NoiseTransportPair,
+        create_noise_xx_handshake_reply_export, create_noise_xx_stateless_initiator_transport,
+        establish_noise_xx_transport_pair, generate_noise_static_keypair,
+        prepare_noise_xx_handshake_init_message, run_noise_xx_handshake_smoke,
+        validate_noise_xx_handshake_finish_message, NoisePrekeyBundle, NoiseStaticKeypair,
+        NoiseTransportPair,
     };
     use another_dimension_crypto::CryptoError;
     use another_dimension_identity::{
@@ -16,7 +17,7 @@ pub mod production {
         transcript, PairingError, PairingPayload, ProductionPairingDraft,
     };
     use another_dimension_protocol::{
-        decode_hex, encode_hex, Envelope, MessageType, ProtocolError, ReplayWindow,
+        decode_hex, encode_hex, pad_to_bucket, Envelope, MessageType, ProtocolError, ReplayWindow,
     };
     use another_dimension_storage::production::{
         production_message_storage_boundary_summary, protection_for,
@@ -3316,6 +3317,8 @@ pub mod production {
                 profile,
                 &draft,
                 &finish_export.initiator_remote_static,
+                "reply",
+                &reply_message,
             )?;
             store.put(
                 &production_session_transport_state_record_id(&draft.channel_id),
@@ -3417,6 +3420,8 @@ pub mod production {
                 profile,
                 &draft,
                 &complete.responder_remote_static,
+                "finish",
+                &finish_message,
             )?;
             store.put(
                 &production_session_transport_state_record_id(&draft.channel_id),
@@ -3665,6 +3670,14 @@ pub mod production {
         let material = load_session_runtime_material(&store, &profile)?;
         let draft = load_latest_session_draft(&store, &profile)?
             .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let local_noise_static = store
+            .get(&production_latest_pairing_noise_static_record_id())?
+            .map(decode_production_noise_static_private_key_record)
+            .transpose()?
+            .ok_or(ProductionSessionError::NoiseStaticPrivateKeyMissing)?;
+        if local_noise_static.keypair.public_key() != draft.local_noise_static_public_key {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
         let transport_state = load_session_transport_state(&store, &profile, &draft)?;
         let index_record_id = production_local_message_index_record_id(
             &material.channel_id,
@@ -3716,6 +3729,68 @@ pub mod production {
                 && state.remote_noise_static_public_key == draft.remote_noise_static_public_key
                 && state.transport_state_created
         });
+        let envelope_encryption_ready = local_message_index_matches_pending
+            && session_transport_ready
+            && draft.local_role == SessionRole::CanonicalDialer
+            && transport_state
+                .as_ref()
+                .is_some_and(|state| state.handshake_message_kind == "reply");
+        let encrypted_envelope_written = if envelope_encryption_ready {
+            let pending = pending
+                .as_ref()
+                .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+            let state = store
+                .get(&production_pending_handshake_initiator_state_record_id())?
+                .map(|record| {
+                    decode_production_handshake_initiator_state_record(
+                        record,
+                        &profile,
+                        &draft.channel_id,
+                    )
+                })
+                .transpose()?
+                .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+            let transport_state = transport_state
+                .as_ref()
+                .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+            let transport = create_noise_xx_stateless_initiator_transport(
+                &draft.safety_transcript,
+                &local_noise_static.keypair,
+                &state.initiator_ephemeral_private,
+                &transport_state.handshake_message,
+            )
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            if transport.remote_static() != draft.remote_noise_static_public_key {
+                return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+            }
+            let padded = pad_to_bucket(&pending.plaintext)?;
+            let ciphertext = transport
+                .encrypt_with_nonce(message_number - 1, &padded)
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            if ciphertext.remote_static != draft.remote_noise_static_public_key
+                || ciphertext.key_material_exposed
+            {
+                return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+            }
+            let envelope = Envelope {
+                protocol_version: 1,
+                channel_id: material.channel_id.clone(),
+                message_number,
+                message_type: MessageType::Data,
+                padded_ciphertext: ciphertext.ciphertext,
+            };
+            let envelope_record = EncryptedRecord::new(
+                ProductionRecordKind::MessageEnvelope,
+                EncryptedRecordScope::contact(profile, material.remote_contact_id.clone()),
+                b"sqlcipher-page-encryption-v1".to_vec(),
+                envelope.encode().into_bytes(),
+            )
+            .map_err(ProductionStorageError::from)?;
+            store.put(&message_record_id, &envelope_record)?;
+            true
+        } else {
+            false
+        };
         Ok(ProductionMessageOutboundEncryptPrepareSummary {
             storage_opened: true,
             runtime_material_reconstructable: true,
@@ -3726,8 +3801,8 @@ pub mod production {
             pending_plaintext_loaded: pending.is_some(),
             plaintext_exposed: false,
             session_transport_ready,
-            envelope_encryption_ready: false,
-            encrypted_envelope_written: false,
+            envelope_encryption_ready,
+            encrypted_envelope_written,
             network_send_attempted: false,
             key_material_exposed: false,
             transport_io_opened: false,
@@ -4469,6 +4544,8 @@ pub mod production {
         local_role: SessionRole,
         remote_contact_id: ContactId,
         remote_noise_static_public_key: Vec<u8>,
+        handshake_message_kind: String,
+        handshake_message: Vec<u8>,
         transport_state_created: bool,
     }
 
@@ -4636,16 +4713,23 @@ pub mod production {
         profile: ProfileName,
         draft: &ProductionStoredSessionDraft,
         remote_noise_static_public_key: &[u8],
+        handshake_message_kind: &str,
+        handshake_message: &[u8],
     ) -> Result<EncryptedRecord, ProductionSessionError> {
         if remote_noise_static_public_key != draft.remote_noise_static_public_key {
             return Err(ProductionSessionError::NoiseStaticKeyMismatch);
         }
+        if !matches!(handshake_message_kind, "reply" | "finish") || handshake_message.is_empty() {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
         let encoded = format!(
-            "ADSESSIONTRANSPORT1|{}|{}|{}|{}|{}",
+            "ADSESSIONTRANSPORT2|{}|{}|{}|{}|{}|{}|{}",
             draft.channel_id,
             session_role_tag(draft.local_role),
             draft.remote_contact_id.as_str(),
             encode_hex(remote_noise_static_public_key),
+            handshake_message_kind,
+            encode_hex(handshake_message),
             "created"
         );
         EncryptedRecord::new(
@@ -4672,7 +4756,7 @@ pub mod production {
         let encoded = String::from_utf8(record.sealed_body)
             .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
         let parts = encoded.split('|').collect::<Vec<_>>();
-        if parts.len() != 6 || parts[0] != "ADSESSIONTRANSPORT1" {
+        if parts.len() != 8 || parts[0] != "ADSESSIONTRANSPORT2" {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
         let local_role = parse_session_role_tag(parts[2])?;
@@ -4680,11 +4764,16 @@ pub mod production {
             ContactId::new(parts[3]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
         let remote_noise_static_public_key =
             decode_hex(parts[4]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let handshake_message_kind = parts[5].to_string();
+        let handshake_message =
+            decode_hex(parts[6]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
         if parts[1] != draft.channel_id
             || local_role != draft.local_role
             || remote_contact_id != draft.remote_contact_id
             || remote_noise_static_public_key != draft.remote_noise_static_public_key
-            || parts[5] != "created"
+            || !matches!(handshake_message_kind.as_str(), "reply" | "finish")
+            || handshake_message.is_empty()
+            || parts[7] != "created"
         {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
@@ -4693,6 +4782,8 @@ pub mod production {
             local_role,
             remote_contact_id,
             remote_noise_static_public_key,
+            handshake_message_kind,
+            handshake_message,
             transport_state_created: true,
         })
     }
@@ -5966,9 +6057,19 @@ pub mod production {
             assert!(!finish_import.transport_io_opened());
             assert!(!finish_import.runtime_messaging_enabled());
 
-            let pending_status_before =
-                production_message_pending_status(&alice_store, alice.clone(), &passphrase, 1)
-                    .expect("pending status before send prepare");
+            let (outbound_store, outbound_profile) = if handshake_export.handshake_message_created()
+            {
+                (&alice_store, alice.clone())
+            } else {
+                (&bob_store, bob.clone())
+            };
+            let pending_status_before = production_message_pending_status(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+                1,
+            )
+            .expect("pending status before send prepare");
             assert!(pending_status_before.storage_opened());
             assert!(pending_status_before.runtime_material_reconstructable());
             assert!(!pending_status_before.local_message_index_present());
@@ -5982,9 +6083,14 @@ pub mod production {
             assert!(!pending_status_before.transport_io_opened());
             assert!(!pending_status_before.runtime_messaging_enabled());
 
-            let send_prepare =
-                production_message_send_prepare(&alice_store, alice.clone(), &passphrase, 1, b"hi")
-                    .expect("message send prepare");
+            let send_prepare = production_message_send_prepare(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+                1,
+                b"hi",
+            )
+            .expect("message send prepare");
             assert!(send_prepare.storage_opened());
             assert!(send_prepare.runtime_material_reconstructable());
             assert!(send_prepare.outbound_envelope_io_ready());
@@ -5998,13 +6104,16 @@ pub mod production {
             assert!(!send_prepare.transport_io_opened());
             assert!(!send_prepare.runtime_messaging_enabled());
 
-            let store_after_send = LockedProfileStore::new(&alice_store)
+            let store_after_send = LockedProfileStore::new(outbound_store)
                 .unlock(&passphrase)
                 .expect("unlock store after send prepare");
+            let outbound_draft = load_latest_session_draft(&store_after_send, &outbound_profile)
+                .expect("read outbound draft")
+                .expect("outbound draft");
             let message_index = store_after_send
                 .get(&production_local_message_index_record_id(
-                    &channel_id,
-                    &remote_contact,
+                    &outbound_draft.channel_id,
+                    &outbound_draft.remote_contact_id,
                     1,
                 ))
                 .expect("read local message index")
@@ -6015,12 +6124,16 @@ pub mod production {
                     &String::from_utf8(message_index.sealed_body).expect("index body")
                 )
                 .expect("decode index"),
-                LocalMessageIndexEntry::new(remote_contact.clone(), 1, MessageType::Data)
-                    .expect("index entry")
+                LocalMessageIndexEntry::new(
+                    outbound_draft.remote_contact_id.clone(),
+                    1,
+                    MessageType::Data
+                )
+                .expect("index entry")
             );
             let pending_message = store_after_send
                 .get(&production_message_envelope_record_id(
-                    &channel_id,
+                    &outbound_draft.channel_id,
                     1,
                     MessageType::Data,
                 ))
@@ -6033,16 +6146,20 @@ pub mod production {
                 )
                 .expect("decode pending"),
                 PendingOutboundMessageRecord::new(
-                    remote_contact.clone(),
+                    outbound_draft.remote_contact_id.clone(),
                     1,
                     MessageType::Data,
                     b"hi"
                 )
                 .expect("pending")
             );
-            let pending_status =
-                production_message_pending_status(&alice_store, alice.clone(), &passphrase, 1)
-                    .expect("pending status");
+            let pending_status = production_message_pending_status(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+                1,
+            )
+            .expect("pending status");
             assert!(pending_status.storage_opened());
             assert!(pending_status.runtime_material_reconstructable());
             assert!(pending_status.local_message_index_present());
@@ -6057,8 +6174,8 @@ pub mod production {
             assert!(!pending_status.runtime_messaging_enabled());
 
             let encrypt_prepare = production_message_outbound_encrypt_prepare(
-                &alice_store,
-                alice.clone(),
+                outbound_store,
+                outbound_profile.clone(),
                 &passphrase,
                 1,
             )
@@ -6072,22 +6189,61 @@ pub mod production {
             assert!(encrypt_prepare.pending_plaintext_loaded());
             assert!(!encrypt_prepare.plaintext_exposed());
             assert!(encrypt_prepare.session_transport_ready());
-            assert!(!encrypt_prepare.envelope_encryption_ready());
-            assert!(!encrypt_prepare.encrypted_envelope_written());
+            assert!(encrypt_prepare.envelope_encryption_ready());
+            assert!(encrypt_prepare.encrypted_envelope_written());
             assert!(!encrypt_prepare.network_send_attempted());
             assert!(!encrypt_prepare.key_material_exposed());
             assert!(!encrypt_prepare.transport_io_opened());
             assert!(!encrypt_prepare.runtime_messaging_enabled());
+            let encrypted_message = LockedProfileStore::new(outbound_store)
+                .unlock(&passphrase)
+                .expect("unlock after encrypt prepare")
+                .get(&production_message_envelope_record_id(
+                    &outbound_draft.channel_id,
+                    1,
+                    MessageType::Data,
+                ))
+                .expect("read encrypted message")
+                .expect("encrypted message");
+            let envelope = Envelope::decode(
+                &String::from_utf8(encrypted_message.sealed_body).expect("envelope body"),
+            )
+            .expect("decode envelope");
+            assert_eq!(envelope.channel_id, outbound_draft.channel_id);
+            assert_eq!(envelope.message_number, 1);
+            assert_eq!(envelope.message_type, MessageType::Data);
+            assert!(!envelope
+                .padded_ciphertext
+                .windows(2)
+                .any(|window| window == b"hi"));
             assert!(matches!(
-                production_message_send_prepare(&alice_store, alice.clone(), &passphrase, 2, b""),
+                production_message_send_prepare(
+                    outbound_store,
+                    outbound_profile.clone(),
+                    &passphrase,
+                    2,
+                    b""
+                ),
                 Err(ProductionSessionError::UnexpectedEnvelope)
             ));
             assert!(matches!(
-                production_message_send_prepare(&alice_store, alice.clone(), &passphrase, 0, b"hi"),
+                production_message_send_prepare(
+                    outbound_store,
+                    outbound_profile.clone(),
+                    &passphrase,
+                    0,
+                    b"hi"
+                ),
                 Err(ProductionSessionError::UnexpectedEnvelope)
             ));
             assert!(matches!(
-                production_message_send_prepare(&alice_store, alice.clone(), &passphrase, 1, b"hi"),
+                production_message_send_prepare(
+                    outbound_store,
+                    outbound_profile,
+                    &passphrase,
+                    1,
+                    b"hi"
+                ),
                 Err(ProductionSessionError::UnexpectedEnvelope)
             ));
 
