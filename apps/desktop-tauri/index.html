@@ -248,6 +248,30 @@
             <div class="loop-actions">
               <button id="save-production-session-draft" type="button">Save session draft</button>
             </div>
+            <label class="loop-label" for="production-handshake-init-payload">Handshake init</label>
+            <textarea id="production-handshake-init-payload" rows="3" readonly></textarea>
+            <label class="loop-label" for="production-remote-handshake-init-payload">
+              Remote handshake init
+            </label>
+            <textarea id="production-remote-handshake-init-payload" rows="3"></textarea>
+            <label class="loop-label" for="production-handshake-reply-payload">Handshake reply</label>
+            <textarea id="production-handshake-reply-payload" rows="3" readonly></textarea>
+            <label class="loop-label" for="production-remote-handshake-reply-payload">
+              Remote handshake reply
+            </label>
+            <textarea id="production-remote-handshake-reply-payload" rows="3"></textarea>
+            <label class="loop-label" for="production-handshake-finish-payload">Handshake finish</label>
+            <textarea id="production-handshake-finish-payload" rows="3" readonly></textarea>
+            <label class="loop-label" for="production-remote-handshake-finish-payload">
+              Remote handshake finish
+            </label>
+            <textarea id="production-remote-handshake-finish-payload" rows="3"></textarea>
+            <div class="loop-actions">
+              <button id="export-production-handshake-init" type="button">Export handshake init</button>
+              <button id="export-production-handshake-reply" type="button">Export handshake reply</button>
+              <button id="export-production-handshake-finish" type="button">Export handshake finish</button>
+              <button id="import-production-handshake-finish" type="button">Import handshake finish</button>
+            </div>
             <dl class="flow-summary">
               <div>
                 <dt>Storage</dt>
@@ -256,6 +280,10 @@
               <div>
                 <dt>Session</dt>
                 <dd id="production-pairing-session">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Handshake</dt>
+                <dd id="production-handshake-state">Not checked yet</dd>
               </div>
               <div>
                 <dt>Boundary</dt>

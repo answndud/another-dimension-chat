@@ -134,6 +134,49 @@ pub struct ProductionPairingSessionDraftResult {
     runtime_messaging_enabled: bool,
 }
 
+#[derive(serde::Serialize)]
+pub struct ProductionHandshakePayloadResult {
+    warning: &'static str,
+    storage_opened: bool,
+    session_draft_loaded: bool,
+    local_noise_static_private_key_loaded: bool,
+    local_noise_static_matches_draft: bool,
+    safety_transcript_loaded: bool,
+    role_allowed: bool,
+    input_payload_read: bool,
+    input_payload_decodable: bool,
+    output_payload_created: bool,
+    output_payload: String,
+    output_payload_format: &'static str,
+    state_written: bool,
+    transport_state_persisted: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionHandshakeFinishImportResult {
+    warning: &'static str,
+    storage_opened: bool,
+    session_draft_loaded: bool,
+    local_noise_static_private_key_loaded: bool,
+    local_noise_static_matches_draft: bool,
+    safety_transcript_loaded: bool,
+    role_allowed: bool,
+    finish_payload_read: bool,
+    finish_payload_decodable: bool,
+    remote_static_verified: bool,
+    transport_state_created: bool,
+    transport_state_persisted: bool,
+    payloads_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
 #[tauri::command]
 fn prototype_status() -> PrototypeStatus {
     status::redacted_prototype_status()
@@ -194,6 +237,77 @@ fn production_pairing_session_draft_save(
         "production pairing session draft save failed without exposing profile, path, or key details"
             .to_string()
     })
+}
+
+#[tauri::command]
+fn production_handshake_init_export(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionHandshakePayloadResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production handshake init failed without exposing local path details")?;
+    run_production_handshake_init_export(app_data_root, profile, passphrase).map_err(|_| {
+        "production handshake init failed without exposing profile, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_handshake_reply_export(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    init_payload: String,
+) -> Result<ProductionHandshakePayloadResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production handshake reply failed without exposing local path details")?;
+    run_production_handshake_reply_export(app_data_root, profile, passphrase, init_payload).map_err(
+        |_| {
+            "production handshake reply failed without exposing profile, path, or key details"
+                .to_string()
+        },
+    )
+}
+
+#[tauri::command]
+fn production_handshake_finish_export(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    reply_payload: String,
+) -> Result<ProductionHandshakePayloadResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production handshake finish failed without exposing local path details")?;
+    run_production_handshake_finish_export(app_data_root, profile, passphrase, reply_payload)
+        .map_err(|_| {
+            "production handshake finish failed without exposing profile, path, or key details"
+                .to_string()
+        })
+}
+
+#[tauri::command]
+fn production_handshake_finish_import(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    finish_payload: String,
+) -> Result<ProductionHandshakeFinishImportResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production handshake import failed without exposing local path details")?;
+    run_production_handshake_finish_import(app_data_root, profile, passphrase, finish_payload)
+        .map_err(|_| {
+            "production handshake import failed without exposing profile, path, or key details"
+                .to_string()
+        })
 }
 
 #[tauri::command]
@@ -671,6 +785,189 @@ fn sanitize_pairing_payload(payload: String) -> Result<String, String> {
     Ok(payload.to_string())
 }
 
+fn run_production_handshake_init_export(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionHandshakePayloadResult, String> {
+    use another_dimension_core::production::production_pairing_session_handshake_init_export;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let init = production_pairing_session_handshake_init_export(&store_path, profile, &passphrase)
+        .map_err(|_| "handshake init export failed")?;
+
+    Ok(ProductionHandshakePayloadResult {
+        warning: "handshake init payload export only; send out-of-band to paired contact",
+        storage_opened: init.storage_opened(),
+        session_draft_loaded: init.session_draft_loaded(),
+        local_noise_static_private_key_loaded: init.local_noise_static_private_key_loaded(),
+        local_noise_static_matches_draft: init.local_noise_static_matches_draft(),
+        safety_transcript_loaded: init.safety_transcript_loaded(),
+        role_allowed: init.local_role_can_initiate(),
+        input_payload_read: false,
+        input_payload_decodable: false,
+        output_payload_created: init.handshake_message_created(),
+        output_payload: init.export_payload().trim().to_string(),
+        output_payload_format: "ADNOISEXXINIT1",
+        state_written: init.initiator_state_written(),
+        transport_state_persisted: false,
+        key_material_exposed: init.key_material_exposed(),
+        network_io_attempted: false,
+        transport_io_opened: init.transport_io_opened(),
+        runtime_messaging_enabled: init.runtime_messaging_enabled(),
+    })
+}
+
+fn run_production_handshake_reply_export(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    init_payload: String,
+) -> Result<ProductionHandshakePayloadResult, String> {
+    use another_dimension_core::production::production_pairing_session_handshake_reply_export;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let init_payload = sanitize_handshake_payload(init_payload, "ADNOISEXXINIT1")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let reply = production_pairing_session_handshake_reply_export(
+        &store_path,
+        profile,
+        &passphrase,
+        &init_payload,
+    )
+    .map_err(|_| "handshake reply export failed")?;
+
+    Ok(ProductionHandshakePayloadResult {
+        warning: "handshake reply payload export only; send out-of-band to initiator",
+        storage_opened: reply.storage_opened(),
+        session_draft_loaded: reply.session_draft_loaded(),
+        local_noise_static_private_key_loaded: reply.local_noise_static_private_key_loaded(),
+        local_noise_static_matches_draft: reply.local_noise_static_matches_draft(),
+        safety_transcript_loaded: reply.safety_transcript_loaded(),
+        role_allowed: reply.local_role_can_accept(),
+        input_payload_read: reply.init_message_read(),
+        input_payload_decodable: reply.init_message_decodable(),
+        output_payload_created: reply.reply_message_created(),
+        output_payload: reply.export_payload().trim().to_string(),
+        output_payload_format: "ADNOISEXXREPLY1",
+        state_written: reply.responder_state_persisted(),
+        transport_state_persisted: false,
+        key_material_exposed: reply.key_material_exposed(),
+        network_io_attempted: false,
+        transport_io_opened: reply.transport_io_opened(),
+        runtime_messaging_enabled: reply.runtime_messaging_enabled(),
+    })
+}
+
+fn run_production_handshake_finish_export(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    reply_payload: String,
+) -> Result<ProductionHandshakePayloadResult, String> {
+    use another_dimension_core::production::production_pairing_session_handshake_finish_export;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let reply_payload = sanitize_handshake_payload(reply_payload, "ADNOISEXXREPLY1")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let finish = production_pairing_session_handshake_finish_export(
+        &store_path,
+        profile,
+        &passphrase,
+        &reply_payload,
+    )
+    .map_err(|_| "handshake finish export failed")?;
+
+    Ok(ProductionHandshakePayloadResult {
+        warning: "handshake finish payload export only; transport state persisted locally",
+        storage_opened: finish.storage_opened(),
+        session_draft_loaded: finish.session_draft_loaded(),
+        local_noise_static_private_key_loaded: finish.local_noise_static_private_key_loaded(),
+        local_noise_static_matches_draft: finish.local_noise_static_matches_draft(),
+        safety_transcript_loaded: finish.safety_transcript_loaded(),
+        role_allowed: finish.local_role_can_finish(),
+        input_payload_read: finish.reply_message_read(),
+        input_payload_decodable: finish.reply_message_decodable(),
+        output_payload_created: finish.finish_message_created(),
+        output_payload: finish.export_payload().trim().to_string(),
+        output_payload_format: "ADNOISEXXFINISH1",
+        state_written: finish.initiator_state_loaded(),
+        transport_state_persisted: finish.transport_state_persisted(),
+        key_material_exposed: finish.key_material_exposed(),
+        network_io_attempted: false,
+        transport_io_opened: finish.transport_io_opened(),
+        runtime_messaging_enabled: finish.runtime_messaging_enabled(),
+    })
+}
+
+fn run_production_handshake_finish_import(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    finish_payload: String,
+) -> Result<ProductionHandshakeFinishImportResult, String> {
+    use another_dimension_core::production::production_pairing_session_handshake_finish_import;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let finish_payload = sanitize_handshake_payload(finish_payload, "ADNOISEXXFINISH1")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let finish = production_pairing_session_handshake_finish_import(
+        &store_path,
+        profile,
+        &passphrase,
+        &finish_payload,
+    )
+    .map_err(|_| "handshake finish import failed")?;
+
+    Ok(ProductionHandshakeFinishImportResult {
+        warning: "handshake finish imported locally; transport state persisted",
+        storage_opened: finish.storage_opened(),
+        session_draft_loaded: finish.session_draft_loaded(),
+        local_noise_static_private_key_loaded: finish.local_noise_static_private_key_loaded(),
+        local_noise_static_matches_draft: finish.local_noise_static_matches_draft(),
+        safety_transcript_loaded: finish.safety_transcript_loaded(),
+        role_allowed: finish.local_role_can_complete(),
+        finish_payload_read: finish.finish_message_read(),
+        finish_payload_decodable: finish.finish_message_decodable(),
+        remote_static_verified: finish.remote_static_verified(),
+        transport_state_created: finish.transport_state_created(),
+        transport_state_persisted: finish.transport_state_persisted(),
+        payloads_returned: false,
+        key_material_exposed: finish.key_material_exposed(),
+        network_io_attempted: false,
+        transport_io_opened: finish.transport_io_opened(),
+        runtime_messaging_enabled: finish.runtime_messaging_enabled(),
+    })
+}
+
+fn sanitize_handshake_payload(payload: String, expected_prefix: &str) -> Result<String, String> {
+    let payload = payload.trim();
+    if payload.is_empty() {
+        return Err("handshake payload is required".to_string());
+    }
+    if payload.len() > 4096 {
+        return Err("handshake payload is too large".to_string());
+    }
+    let expected = format!("{expected_prefix}|");
+    if !payload.starts_with(&expected) || payload.chars().any(char::is_whitespace) {
+        return Err("handshake payload must be a single expected handshake value".to_string());
+    }
+    Ok(payload.to_string())
+}
+
 fn run_production_local_roundtrip(
     message: String,
 ) -> Result<ProductionLocalRoundtripResult, String> {
@@ -904,6 +1201,10 @@ pub fn run() {
             production_profile_unlock,
             production_pairing_payload_export,
             production_pairing_session_draft_save,
+            production_handshake_init_export,
+            production_handshake_reply_export,
+            production_handshake_finish_export,
+            production_handshake_finish_import,
             production_local_roundtrip,
             dev_local_demo,
             dev_local_message_loop
@@ -916,11 +1217,14 @@ pub fn run() {
 mod tests {
     use super::{
         build_demo_simulation, parse_demo_steps, parse_loop_messages,
-        production_profile_store_path, run_production_local_roundtrip,
+        production_profile_store_path, run_production_handshake_finish_export,
+        run_production_handshake_finish_import, run_production_handshake_init_export,
+        run_production_handshake_reply_export, run_production_local_roundtrip,
         run_production_pairing_payload_export, run_production_pairing_session_draft_save,
-        run_production_profile_unlock, sanitize_loop_messages, sanitize_pairing_payload,
-        sanitize_pairing_rendezvous_endpoint, sanitize_production_profile,
-        sanitize_production_roundtrip_message, unique_production_roundtrip_dir,
+        run_production_profile_unlock, sanitize_handshake_payload, sanitize_loop_messages,
+        sanitize_pairing_payload, sanitize_pairing_rendezvous_endpoint,
+        sanitize_production_profile, sanitize_production_roundtrip_message,
+        unique_production_roundtrip_dir,
     };
 
     #[test]
@@ -1208,6 +1512,130 @@ replay check: no replayed messages after message 2
 
         let serialized = serde_json::to_string(&result).expect("serialize result");
         assert!(!serialized.contains("ADPAIR2"));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("/tmp"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn handshake_payload_sanitizer_accepts_expected_single_value_only() {
+        assert_eq!(
+            sanitize_handshake_payload(" ADNOISEXXINIT1|abc ".to_string(), "ADNOISEXXINIT1")
+                .expect("payload"),
+            "ADNOISEXXINIT1|abc"
+        );
+        assert!(
+            sanitize_handshake_payload("ADNOISEXXREPLY1|abc".to_string(), "ADNOISEXXINIT1")
+                .is_err()
+        );
+        assert!(sanitize_handshake_payload(
+            "ADNOISEXXINIT1|abc\nADNOISEXXINIT1|def".to_string(),
+            "ADNOISEXXINIT1"
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn production_handshake_commands_persist_transport_without_returning_secrets() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        for profile in ["alice", "bob"] {
+            run_production_profile_unlock(
+                &root,
+                profile.to_string(),
+                "correct-passphrase".to_string(),
+            )
+            .expect("profile unlock");
+        }
+        let alice_payload = run_production_pairing_payload_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "alice.onion".to_string(),
+        )
+        .expect("alice payload")
+        .pairing_payload;
+        let bob_payload = run_production_pairing_payload_export(
+            &root,
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "bob.onion".to_string(),
+        )
+        .expect("bob payload")
+        .pairing_payload;
+        run_production_pairing_session_draft_save(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            alice_payload.clone(),
+            bob_payload.clone(),
+        )
+        .expect("alice draft");
+        run_production_pairing_session_draft_save(
+            &root,
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            bob_payload,
+            alice_payload,
+        )
+        .expect("bob draft");
+
+        let alice_init = run_production_handshake_init_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("alice init");
+        let (initiator, responder, init_payload) = if alice_init.output_payload_created {
+            ("alice", "bob", alice_init.output_payload)
+        } else {
+            let bob_init = run_production_handshake_init_export(
+                &root,
+                "bob".to_string(),
+                "correct-passphrase".to_string(),
+            )
+            .expect("bob init");
+            assert!(bob_init.output_payload_created);
+            ("bob", "alice", bob_init.output_payload)
+        };
+
+        let reply = run_production_handshake_reply_export(
+            &root,
+            responder.to_string(),
+            "correct-passphrase".to_string(),
+            init_payload,
+        )
+        .expect("reply");
+        assert!(reply.output_payload_created);
+        assert!(reply.state_written);
+
+        let finish = run_production_handshake_finish_export(
+            &root,
+            initiator.to_string(),
+            "correct-passphrase".to_string(),
+            reply.output_payload,
+        )
+        .expect("finish");
+        assert!(finish.output_payload_created);
+        assert!(finish.transport_state_persisted);
+
+        let import = run_production_handshake_finish_import(
+            &root,
+            responder.to_string(),
+            "correct-passphrase".to_string(),
+            finish.output_payload,
+        )
+        .expect("finish import");
+        assert!(import.remote_static_verified);
+        assert!(import.transport_state_created);
+        assert!(import.transport_state_persisted);
+        assert!(!import.payloads_returned);
+        assert!(!import.key_material_exposed);
+        assert!(!import.network_io_attempted);
+        assert!(!import.transport_io_opened);
+        assert!(!import.runtime_messaging_enabled);
+
+        let serialized = serde_json::to_string(&import).expect("serialize import");
+        assert!(!serialized.contains("ADNOISEXX"));
         assert!(!serialized.contains("correct-passphrase"));
         assert!(!serialized.contains("/tmp"));
         let _ = std::fs::remove_dir_all(root);
