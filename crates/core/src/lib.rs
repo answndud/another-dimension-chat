@@ -888,6 +888,49 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum SessionUnlockRedactedErrorKind {
+        ProductUnlockDisabled,
+        PassphraseRequired,
+        OsKeystoreOnlyRejected,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionUnlockRedactedErrorTaxonomy {
+        kind: SessionUnlockRedactedErrorKind,
+        exposes_raw_storage_error: bool,
+        exposes_os_keychain_error: bool,
+        exposes_path_or_identifier: bool,
+        exposes_key_material_or_passphrase_detail: bool,
+        retry_after_user_action_allowed: bool,
+    }
+
+    impl SessionUnlockRedactedErrorTaxonomy {
+        pub fn kind(self) -> SessionUnlockRedactedErrorKind {
+            self.kind
+        }
+
+        pub fn exposes_raw_storage_error(self) -> bool {
+            self.exposes_raw_storage_error
+        }
+
+        pub fn exposes_os_keychain_error(self) -> bool {
+            self.exposes_os_keychain_error
+        }
+
+        pub fn exposes_path_or_identifier(self) -> bool {
+            self.exposes_path_or_identifier
+        }
+
+        pub fn exposes_key_material_or_passphrase_detail(self) -> bool {
+            self.exposes_key_material_or_passphrase_detail
+        }
+
+        pub fn retry_after_user_action_allowed(self) -> bool {
+            self.retry_after_user_action_allowed
+        }
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct LocalMessageIndexEntry {
         contact_id: ContactId,
@@ -1591,6 +1634,28 @@ pub mod production {
         }
     }
 
+    pub fn session_unlock_redacted_error_taxonomy(
+        request: &SessionUnlockCommandRequest,
+    ) -> SessionUnlockRedactedErrorTaxonomy {
+        let kind = if request.os_keystore_wrapped_key_provided() && !request.passphrase_provided() {
+            SessionUnlockRedactedErrorKind::OsKeystoreOnlyRejected
+        } else if !request.passphrase_provided() {
+            SessionUnlockRedactedErrorKind::PassphraseRequired
+        } else {
+            SessionUnlockRedactedErrorKind::ProductUnlockDisabled
+        };
+
+        SessionUnlockRedactedErrorTaxonomy {
+            kind,
+            exposes_raw_storage_error: false,
+            exposes_os_keychain_error: false,
+            exposes_path_or_identifier: false,
+            exposes_key_material_or_passphrase_detail: false,
+            retry_after_user_action_allowed: kind
+                != SessionUnlockRedactedErrorKind::ProductUnlockDisabled,
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -2250,6 +2315,38 @@ pub mod production {
             assert!(!status.product_lock_command_enabled());
             assert!(!status.key_erasure_claim_available());
             assert!(!status.runtime_messaging_enabled());
+        }
+
+        #[test]
+        fn session_unlock_redacted_error_taxonomy_hides_sensitive_details() {
+            let cases = [
+                (
+                    SessionUnlockCommandRequest::passphrase_only(),
+                    SessionUnlockRedactedErrorKind::ProductUnlockDisabled,
+                    false,
+                ),
+                (
+                    SessionUnlockCommandRequest::os_keystore_only(),
+                    SessionUnlockRedactedErrorKind::OsKeystoreOnlyRejected,
+                    true,
+                ),
+                (
+                    SessionUnlockCommandRequest::passphrase_and_os_keystore(),
+                    SessionUnlockRedactedErrorKind::ProductUnlockDisabled,
+                    false,
+                ),
+            ];
+
+            for (request, expected_kind, retry_allowed) in cases {
+                let taxonomy = session_unlock_redacted_error_taxonomy(&request);
+
+                assert_eq!(taxonomy.kind(), expected_kind);
+                assert!(!taxonomy.exposes_raw_storage_error());
+                assert!(!taxonomy.exposes_os_keychain_error());
+                assert!(!taxonomy.exposes_path_or_identifier());
+                assert!(!taxonomy.exposes_key_material_or_passphrase_detail());
+                assert_eq!(taxonomy.retry_after_user_action_allowed(), retry_allowed);
+            }
         }
 
         #[test]
