@@ -3,6 +3,9 @@ import "./styles.css";
 
 const fields = {
   themeToggle: document.querySelector("#theme-toggle"),
+  appReleaseSummary: document.querySelector("#app-release-summary"),
+  localCapabilitySummary: document.querySelector("#local-capability-summary"),
+  mainBlockerSummary: document.querySelector("#main-blocker-summary"),
   releaseClaim: document.querySelector("#release-claim"),
   messaging: document.querySelector("#messaging"),
   core: document.querySelector("#core"),
@@ -194,6 +197,22 @@ function setDisabled(node, disabled) {
   if (node) {
     node.disabled = disabled;
   }
+}
+
+function renderAppStateSummary(status) {
+  const releaseSummary = status.secure_release
+    ? "Ready: secure-release claim present"
+    : "Blocked: secure-release claim closed";
+  const localCapabilitySummary = status.usable_messaging
+    ? "Ready: runtime messaging path enabled"
+    : "Local-only: encrypted app-data harness";
+  const mainBlockerSummary = status.network_execution_status?.includes("disabled")
+    ? "Blocked: runtime transport disabled"
+    : status.production_preflight_blockers;
+
+  setText(fields.appReleaseSummary, releaseSummary);
+  setText(fields.localCapabilitySummary, localCapabilitySummary);
+  setText(fields.mainBlockerSummary, mainBlockerSummary);
 }
 
 function validProductionMessageNumber() {
@@ -616,6 +635,7 @@ function renderFlowControls(simulation) {
 async function renderPrototypeStatus() {
   try {
     const status = await invoke("prototype_status");
+    renderAppStateSummary(status);
 
     setText(
       fields.releaseClaim,
@@ -646,6 +666,13 @@ async function renderPrototypeStatus() {
     setText(fields.storage, status.storage_status);
     setText(fields.verification, status.verification_status);
   } catch (_error) {
+    renderAppStateSummary({
+      secure_release: false,
+      usable_messaging: false,
+      network_execution_status: "network execution disabled",
+      production_preflight_blockers:
+        "session E2EE false transport send receive false storage rollback not-provided messaging false",
+    });
     setText(fields.releaseClaim, "No secure-release claim");
     setText(fields.messaging, "No runtime messaging path");
     setText(fields.core, "Core boundary only");
