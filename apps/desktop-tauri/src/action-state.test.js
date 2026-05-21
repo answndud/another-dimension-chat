@@ -3,6 +3,9 @@ import test from "node:test";
 import {
   productionActionAvailability,
   productionManualNextActions,
+  productionPairingPayloadView,
+  productionProfileUnlockView,
+  productionSessionDraftView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
 } from "./action-state.js";
@@ -42,6 +45,57 @@ const completeTwoProfileResult = {
   received_status_verified: true,
   received_export_matches_input: true,
   plaintext_returned_to_frontend: false,
+  store_path_returned: false,
+  passphrase_retained: false,
+  key_material_exposed: false,
+  network_io_attempted: false,
+  transport_io_opened: false,
+  runtime_messaging_enabled: false,
+};
+
+const safeProfileUnlockResult = {
+  storage_opened: true,
+  app_data_profile_store: true,
+  profile_initialized: true,
+  profile_marker_present: true,
+  identity_created: true,
+  identity_private_key_present: true,
+  identity_public_key_derivable: true,
+  store_path_returned: false,
+  passphrase_retained: false,
+  key_material_exposed: false,
+  network_io_attempted: false,
+  transport_io_opened: false,
+  runtime_messaging_enabled: false,
+};
+
+const safePairingPayloadResult = {
+  storage_opened: true,
+  identity_private_key_loaded: true,
+  noise_static_private_key_written: true,
+  pairing_payload_exported: true,
+  payload_format: "ADPAIR2",
+  store_path_returned: false,
+  passphrase_retained: false,
+  private_key_material_returned: false,
+  key_material_exposed: false,
+  network_io_attempted: false,
+  transport_io_opened: false,
+  runtime_messaging_enabled: false,
+};
+
+const safeSessionDraftResult = {
+  session_plan_created: true,
+  session_draft_written: true,
+  session_draft_present: true,
+  remote_endpoint_state_present: true,
+  replay_window_present: true,
+  channel_id_derivable: true,
+  storage_opened: true,
+  local_noise_static_private_key_loaded: true,
+  local_noise_static_matches_payload: true,
+  remote_contact_present: true,
+  payloads_returned: false,
   store_path_returned: false,
   passphrase_retained: false,
   key_material_exposed: false,
@@ -158,4 +212,45 @@ test("productionTwoProfileResultView blocks followups when result flags need rev
   assert.match(view.boundary, /^Review:/);
   assert.match(view.boundary, /key_material=true/);
   assert.equal(view.nextStep, "Review result rows before continuing.");
+});
+
+test("productionProfileUnlockView formats storage identity and boundary flags", () => {
+  const view = productionProfileUnlockView(safeProfileUnlockResult);
+
+  assert.equal(
+    view.storage,
+    "opened=true app_data=true initialized=true marker=true",
+  );
+  assert.equal(
+    view.identity,
+    "created=true present=true public_derivable=true",
+  );
+  assert.match(view.boundary, /path_returned=false/);
+  assert.match(view.boundary, /key_material=false/);
+  assert.match(view.boundary, /runtime=false/);
+});
+
+test("productionPairingPayloadView formats payload export and private key boundary flags", () => {
+  const view = productionPairingPayloadView({
+    ...safePairingPayloadResult,
+    private_key_material_returned: true,
+  });
+
+  assert.match(view.storage, /identity_loaded=true/);
+  assert.match(view.storage, /format=ADPAIR2/);
+  assert.match(view.boundary, /private_key_returned=true/);
+  assert.match(view.boundary, /key_material=false/);
+});
+
+test("productionSessionDraftView formats session draft storage and boundary flags", () => {
+  const view = productionSessionDraftView({
+    ...safeSessionDraftResult,
+    payloads_returned: true,
+  });
+
+  assert.match(view.session, /draft=true/);
+  assert.match(view.session, /channel=true/);
+  assert.match(view.storage, /local_noise_match=true/);
+  assert.match(view.boundary, /payloads_returned=true/);
+  assert.match(view.boundary, /network_io=false/);
 });
