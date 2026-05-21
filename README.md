@@ -40,6 +40,7 @@ What exists today:
 - An update/installer integrity template that records required artifact, signature/hash, downgrade, platform package, recovery, and classification fields while remaining classified as not update integrity evidence.
 - A release signoff gate verifier skeleton that keeps release-candidate threat-model/release-copy signoff documented as incomplete until signoff evidence exists.
 - A release-candidate signoff template that records required threat-model, public-copy alignment, release-gate evidence, blocker, and classification fields while remaining classified as not signoff evidence.
+- A release gate evidence audit that records why template coverage is still not v0.1-security-ready 100% without real candidate-specific gate evidence.
 - A release signing implementation plan that targets offline detached signatures while keeping release signing documented as unimplemented.
 - A release signing dry-run verifier that uses disposable fixtures to reject missing signatures, stale checksums, stale detached signature markers, and unsigned artifacts without signing release artifacts.
 - A release detached-signature fixture verifier that uses disposable OpenSSL RSA keys to validate checksum signature behavior without creating release keys or signing release artifacts.
@@ -290,6 +291,8 @@ The external review readiness template is tracked in [RELEASE_EXTERNAL_REVIEW_TE
 The release-candidate signoff template is tracked in [RELEASE_SIGNOFF_TEMPLATE.md](RELEASE_SIGNOFF_TEMPLATE.md). It is not release-candidate signoff evidence or release-copy approval.
 
 The update and installer integrity template is tracked in [RELEASE_UPDATE_INTEGRITY_TEMPLATE.md](RELEASE_UPDATE_INTEGRITY_TEMPLATE.md). It is not update integrity evidence or installer integrity evidence.
+
+The release gate evidence audit is tracked in [RELEASE_GATE_EVIDENCE_AUDIT.md](RELEASE_GATE_EVIDENCE_AUDIT.md). It records that the final release gates are still incomplete and that template coverage is not a 100% security-ready claim.
 
 ## License
 

@@ -28,6 +28,7 @@ Current evidence does not prove v0.1-security-ready 100%. The repository has use
 - `scripts/verify_update_integrity_template.sh`
 - `scripts/verify_release_signoff_gate.sh`
 - `scripts/verify_release_signoff_template.sh`
+- `scripts/verify_release_gate_evidence_audit.sh`
 - `scripts/verify_release_hygiene.sh`
 
 ## Gate Status
@@ -45,4 +46,4 @@ Current evidence does not prove v0.1-security-ready 100%. The repository has use
 
 The current repository is a strong prototype and guardrail baseline, but it has not crossed the 90-100% release-hardening bar. Static verifier skeletons and evidence templates are useful because they block unsupported claims and define future review inputs; they do not replace the missing signing, binary verification, dependency review evidence, release-candidate signoff, external review readiness evidence, or update/installer integrity process.
 
-The next implementation slice should reconcile the remaining release evidence gaps and keep the final audit below 100% unless real gate evidence exists.
+The release gate evidence reconciliation is tracked in [RELEASE_GATE_EVIDENCE_AUDIT.md](RELEASE_GATE_EVIDENCE_AUDIT.md). It keeps the final audit below 100% unless real candidate-specific gate evidence exists.
