@@ -61,4 +61,6 @@ The OpenSSL fixture supports the selected tooling path, but it only proves that 
 
 The first dry-run ceremony and command record is tracked in [RELEASE_SIGNING_CEREMONY_DRY_RUN.md](RELEASE_SIGNING_CEREMONY_DRY_RUN.md). It is a dry-run procedure only, not release signing evidence.
 
-The next signing slice should add a disposable command harness for the ceremony record while keeping it separate from real release signing evidence.
+The disposable command harness for the ceremony record is `scripts/verify_release_signing_ceremony_harness.sh`. It uses temporary keys only and is not release signing evidence.
+
+The next signing slice should define real release-key ceremony evidence requirements while keeping real key generation out of local verification.

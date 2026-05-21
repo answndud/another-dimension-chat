@@ -52,6 +52,9 @@ The dry-run command record must reject:
 - Missing listed artifacts.
 - Extra unsigned artifacts.
 - Absolute, parent-directory, blank, or whitespace-containing artifact paths.
+- Stale public-key fingerprint records.
+
+The disposable command harness is `scripts/verify_release_signing_ceremony_harness.sh`. It executes the selected OpenSSL-compatible command family with temporary keys only and checks the fail-closed states above. It is not release signing evidence.
 
 ## Promotion Requirements
 
