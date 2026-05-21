@@ -20,6 +20,7 @@ The project currently has a working local prototype loop:
 - `SessionDurableStateConnectorHarness` applies that contract to the storage policy before a connector implementation exists: private-key and replay records are accepted only as encrypted records, and session transport persistence is rejected.
 - `SessionDurableStatePersistenceAdapterSkeleton` maps those durable-state kinds to storage policy without implementing storage unlock, transport I/O, runtime messaging, or durable Noise transport persistence.
 - `SessionDurableStateEncryptedRecordAdapter` prepares allowed sealed durable-state records but does not write them to a store, open unlock commands, or persist Noise transport state.
+- `SessionDurableStateAdapterNonReadinessGuard` keeps rollback protection, store writes, durable session persistence, production E2EE readiness, durable Noise transport persistence, and runtime messaging false.
 - Existing production-facing code is a set of guardrails and spikes, not a complete secure runtime.
 
 ## Boundary Inventory
@@ -38,6 +39,7 @@ The project currently has a working local prototype loop:
 | Session durable-state harness | `SessionDurableStateConnectorHarness` checks the gate against storage policy while keeping connector implementation, storage unlock, transport I/O, and runtime messaging closed. | Replace the harness with a narrow connector implementation only after rollback/key-management and session lifecycle decisions are ready. |
 | Session persistence adapter skeleton | `SessionDurableStatePersistenceAdapterSkeleton` maps allowed durable-state record policies before any encrypted-record adapter implementation exists. | Implement a narrow encrypted-record adapter only after preserving session-transport in-memory and non-readiness invariants. |
 | Session encrypted-record adapter spike | `SessionDurableStateEncryptedRecordAdapter` prepares allowed sealed records for session durable state and rejects session transport state. | Add actual store writes only after keeping unlock/key-management/rollback and durable session lifecycle non-claims explicit. |
+| Session adapter non-readiness guard | `SessionDurableStateAdapterNonReadinessGuard` keeps the sealed-record adapter spike from implying rollback protection, durable session persistence, production E2EE readiness, or runtime messaging. | Preserve these guards until key management, rollback, lifecycle, and protocol review are complete. |
 | Tauri UI | Prototype shell can run dev-only local demos, display structured local state, and mirror read-only production preflight blockers as static status copy. | Replace CLI-wrapper demo commands with narrow Rust-owned runtime commands only after crypto, transport, and storage boundaries are security-ready. |
 | Release and updates | Public copy and static verifiers enforce non-claims; no release signing or reproducible build story exists. | Add signing, reproducible build or equivalent verification, dependency review, and release safety copy before public high-risk use. |
 

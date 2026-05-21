@@ -115,6 +115,8 @@ Replay-aware decrypt now uses the existing `ReplayWindow` boundary. Duplicate an
 
 `session_durable_state_encrypted_record_adapter_spike()` is the first narrow adapter spike. It can prepare sealed `EncryptedRecord` containers for allowed session durable-state kinds, rejects session transport state, and does not write records to a store or mark durable session persistence ready.
 
+`session_durable_state_adapter_non_readiness_guard()` keeps the adapter spike from being interpreted as readiness. It records that rollback protection is not provided and that prepared records are not persisted; store writes, durable session persistence, production E2EE readiness, durable Noise transport persistence, and runtime messaging remain false.
+
 ## Session Persistence Decision
 
 For the current v0.1 production message boundary, production session state is in-memory only.

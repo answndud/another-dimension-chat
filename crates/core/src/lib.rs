@@ -533,6 +533,47 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionDurableStateAdapterNonReadinessGuard {
+        rollback_protection: ReplayRollbackProtection,
+        prepared_records_persisted: bool,
+        store_write_enabled: bool,
+        durable_session_persistence_ready: bool,
+        production_e2ee_ready: bool,
+        durable_noise_transport_persistence_allowed: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    impl SessionDurableStateAdapterNonReadinessGuard {
+        pub fn rollback_protection(self) -> ReplayRollbackProtection {
+            self.rollback_protection
+        }
+
+        pub fn prepared_records_persisted(self) -> bool {
+            self.prepared_records_persisted
+        }
+
+        pub fn store_write_enabled(self) -> bool {
+            self.store_write_enabled
+        }
+
+        pub fn durable_session_persistence_ready(self) -> bool {
+            self.durable_session_persistence_ready
+        }
+
+        pub fn production_e2ee_ready(self) -> bool {
+            self.production_e2ee_ready
+        }
+
+        pub fn durable_noise_transport_persistence_allowed(self) -> bool {
+            self.durable_noise_transport_persistence_allowed
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct LocalMessageIndexEntry {
         contact_id: ContactId,
@@ -1114,6 +1155,20 @@ pub mod production {
         )
     }
 
+    pub fn session_durable_state_adapter_non_readiness_guard(
+    ) -> SessionDurableStateAdapterNonReadinessGuard {
+        SessionDurableStateAdapterNonReadinessGuard {
+            rollback_protection: session_durable_state_connector_gate().rollback_protection(),
+            prepared_records_persisted: session_durable_state_encrypted_record_adapter_spike()
+                .persists_records_to_store(),
+            store_write_enabled: false,
+            durable_session_persistence_ready: false,
+            production_e2ee_ready: production_session_evaluation_summary().production_e2ee_ready(),
+            durable_noise_transport_persistence_allowed: false,
+            runtime_messaging_enabled: false,
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -1624,6 +1679,22 @@ pub mod production {
                     )
                 ))
             ));
+        }
+
+        #[test]
+        fn session_durable_state_adapter_non_readiness_guard_blocks_claims() {
+            let guard = session_durable_state_adapter_non_readiness_guard();
+
+            assert_eq!(
+                guard.rollback_protection(),
+                ReplayRollbackProtection::NotProvided
+            );
+            assert!(!guard.prepared_records_persisted());
+            assert!(!guard.store_write_enabled());
+            assert!(!guard.durable_session_persistence_ready());
+            assert!(!guard.production_e2ee_ready());
+            assert!(!guard.durable_noise_transport_persistence_allowed());
+            assert!(!guard.runtime_messaging_enabled());
         }
 
         #[test]
