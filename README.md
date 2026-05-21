@@ -147,6 +147,12 @@ cargo run -q -- production self-test
 
 The self-test prints a redacted production-session summary for the current `snow` Noise XX synchronous evaluation boundary. The summary keeps production E2EE, durable session persistence, Tauri production messaging commands, and usable async messaging false.
 
+The default build also exposes a read-only production skeleton preflight. It prints the current session, transport, storage, and command-surface blockers without creating profiles, unlocking storage, bootstrapping transport, sending envelopes, receiving envelopes, or marking messaging ready:
+
+```bash
+cargo run -q -- production preflight
+```
+
 Manual Arti bootstrap spike, local only:
 
 ```bash

@@ -13,6 +13,7 @@ The project currently has a working local prototype loop:
 - Default builds do not expose usable profile, pairing, messaging, storage unlock, Tor bootstrap, onion hosting, stream I/O, or production message commands.
 - Default CLI hardening rejects production skeleton commands for profile, pairing, messaging, storage unlock, transport bootstrap, and transport send/receive until a later explicit runtime-command phase.
 - `ProductionSkeletonPreflightSummary` aggregates crypto/session, transport message-path, storage message-path, and default-command guard status without opening production messaging.
+- Default CLI `production preflight` prints that aggregate preflight status as read-only redacted copy; it does not create profiles, unlock storage, bootstrap transport, send envelopes, receive envelopes, or mark messaging ready.
 - Existing production-facing code is a set of guardrails and spikes, not a complete secure runtime.
 
 ## Boundary Inventory
