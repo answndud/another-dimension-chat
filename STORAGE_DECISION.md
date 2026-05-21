@@ -36,6 +36,7 @@ The repository currently has:
 - A session durable-state adapter non-readiness guard that keeps rollback protection, store writes, durable session persistence, production E2EE readiness, durable Noise transport persistence, and runtime messaging false.
 - A session durable-state store-write spike that is `#[cfg(test)]` only and round-trips one prepared sealed record through `SqlCipherRecordStore`.
 - A session durable-state store-write status mirror that reports the round-trip coverage as test-only while keeping production store write, unlock command, durable persistence, rollback protection, and runtime messaging unavailable.
+- A session durable-state product unlock blocker summary that keeps product unlock closed until key wrapping, backup exclusion, rollback protection, and durable session lifecycle decisions are complete.
 
 The repository does not currently have:
 
@@ -351,6 +352,7 @@ Current lifecycle boundary:
 - `session_durable_state_adapter_non_readiness_guard()` records that sealed-record preparation does not provide rollback protection, durable session persistence, production E2EE readiness, store writes, or runtime messaging.
 - `session_durable_state_store_write_test_only_round_trips_prepared_record` verifies one test-only SQLCipher round-trip for a prepared sealed durable-state record while preserving the production non-readiness guard.
 - `session_durable_state_store_write_status_mirror()` exposes that store-write coverage as test-only and keeps production store write, unlock, durable persistence, rollback protection, and runtime messaging disabled.
+- `session_durable_state_product_unlock_blocker_summary()` exposes product unlock blockers: passphrase-first storage exists, but key wrapping, backup exclusion, rollback protection, durable session persistence, and runtime messaging are not ready.
 
 Non-claims:
 
