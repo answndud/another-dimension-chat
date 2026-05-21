@@ -17,6 +17,7 @@ import {
   productionSessionStateView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
+  productionTwoProfileSessionStatusView,
 } from "./action-state.js";
 
 const baseState = {
@@ -123,6 +124,26 @@ const safeSessionStateResult = {
   runtime_material_reconstructable: true,
   ready_for_message_envelope: true,
   outbound_envelope_io_ready: false,
+  store_path_returned: false,
+  passphrase_retained: false,
+  key_material_exposed: false,
+  network_io_attempted: false,
+  transport_io_opened: false,
+  runtime_messaging_enabled: false,
+};
+
+const safeTwoProfileSessionStatusResult = {
+  profile_a: "alice",
+  profile_b: "bob",
+  profile_a_ready_for_message_envelope: true,
+  profile_b_ready_for_message_envelope: false,
+  both_ready_for_message_envelope: false,
+  profile_a_session_transport_state_present: true,
+  profile_b_session_transport_state_present: false,
+  profile_a_runtime_material_reconstructable: true,
+  profile_b_runtime_material_reconstructable: true,
+  profile_a_outbound_envelope_io_ready: true,
+  profile_b_outbound_envelope_io_ready: true,
   store_path_returned: false,
   passphrase_retained: false,
   key_material_exposed: false,
@@ -400,6 +421,25 @@ test("productionSessionStateView formats pairing and message readiness boundarie
   assert.match(view.pairingBoundary, /path_returned=false/);
   assert.match(view.messageBoundary, /session_ready=true/);
   assert.match(view.messageBoundary, /outbound_io=false/);
+});
+
+test("productionTwoProfileSessionStatusView formats both profile readiness", () => {
+  const view = productionTwoProfileSessionStatusView(safeTwoProfileSessionStatusResult);
+
+  assert.equal(view.state, "Two-profile session needs work");
+  assert.match(view.status, /alice: ready=true transport=true/);
+  assert.match(view.status, /bob: ready=false transport=false/);
+  assert.match(view.boundary, /network_io=false/);
+
+  assert.equal(
+    productionTwoProfileSessionStatusView({
+      ...safeTwoProfileSessionStatusResult,
+      profile_b_ready_for_message_envelope: true,
+      profile_b_session_transport_state_present: true,
+      both_ready_for_message_envelope: true,
+    }).state,
+    "Both profiles message-ready",
+  );
 });
 
 test("productionHandshakePayloadView formats shared handshake export results", () => {

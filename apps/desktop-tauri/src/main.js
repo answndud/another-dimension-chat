@@ -16,6 +16,7 @@ import {
   productionSessionStateView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
+  productionTwoProfileSessionStatusView,
 } from "./action-state.js";
 import "./styles.css";
 
@@ -77,6 +78,10 @@ const fields = {
   productionManualRoute: document.querySelector("#production-manual-route"),
   productionManualSlots: document.querySelector("#production-manual-slots"),
   productionManualMode: document.querySelector("#production-manual-mode"),
+  productionTwoProfileSessionStatus: document.querySelector("#production-two-profile-session-status"),
+  checkProductionTwoProfileSessionStatus: document.querySelector(
+    "#check-production-two-profile-session-status",
+  ),
   productionPairingEndpoint: document.querySelector("#production-pairing-endpoint"),
   exportProductionPairing: document.querySelector("#export-production-pairing"),
   productionPairingState: document.querySelector("#production-pairing-state"),
@@ -539,6 +544,12 @@ function applyProductionActionState() {
       twoProfile.passphrase &&
       twoProfile.message,
   );
+  const hasTwoProfileSessionStatusInput = Boolean(
+    twoProfile.profileA &&
+      twoProfile.profileB &&
+      twoProfile.profileA !== twoProfile.profileB &&
+      twoProfile.passphrase,
+  );
   const state = {
     busy,
     hasProfileUnlockInput,
@@ -630,6 +641,12 @@ function applyProductionActionState() {
     !availability.exportReceivedMessage,
     busy ? "Wait for the active production action." : "Enter profile, passphrase, and message number first.",
     hasReceivedMessage,
+  );
+  setActionButtonState(
+    fields.checkProductionTwoProfileSessionStatus,
+    busy || !hasTwoProfileSessionStatusInput,
+    busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
+    false,
   );
   setDisabled(fields.runProductionTwoProfileRoundtrip, !availability.runTwoProfileRoundtrip);
   setActionButtonState(
@@ -1495,6 +1512,44 @@ async function checkProductionSessionState() {
   }
 }
 
+async function checkProductionTwoProfileSessionStatus() {
+  const { profileA, profileB, passphrase } = productionTwoProfileInput();
+  if (!profileA || !profileB || profileA === profileB || !passphrase) {
+    setText(
+      fields.productionTwoProfileSessionStatus,
+      "Enter distinct Profile A, Profile B, and passphrase first.",
+    );
+    return;
+  }
+
+  setText(fields.productionTwoProfileSessionStatus, "Checking encrypted local stores");
+  productionBusyAction = "two-profile-session-status";
+  applyProductionActionState();
+  if (fields.checkProductionTwoProfileSessionStatus) {
+    fields.checkProductionTwoProfileSessionStatus.disabled = true;
+  }
+  try {
+    const result = await invoke("production_two_profile_session_status", {
+      profileA,
+      profileB,
+      passphrase,
+    });
+    const view = productionTwoProfileSessionStatusView(result);
+    setText(fields.productionTwoProfileSessionStatus, `${view.state}: ${view.status}`);
+    setText(fields.productionPairingWarning, result.warning);
+    setText(fields.productionPairingBoundary, view.boundary);
+  } catch (error) {
+    setText(fields.productionTwoProfileSessionStatus, "Two-profile session status failed");
+    setText(fields.productionPairingWarning, String(error));
+  } finally {
+    productionBusyAction = null;
+    if (fields.checkProductionTwoProfileSessionStatus) {
+      fields.checkProductionTwoProfileSessionStatus.disabled = false;
+    }
+    applyProductionActionState();
+  }
+}
+
 function setHandshakePayload(node, value) {
   if (node) {
     node.value = value ?? "";
@@ -1956,6 +2011,13 @@ if (fields.importProductionHandshakeFinish) {
 
 if (fields.checkProductionSessionState) {
   fields.checkProductionSessionState.addEventListener("click", checkProductionSessionState);
+}
+
+if (fields.checkProductionTwoProfileSessionStatus) {
+  fields.checkProductionTwoProfileSessionStatus.addEventListener(
+    "click",
+    checkProductionTwoProfileSessionStatus,
+  );
 }
 
 if (fields.exportProductionMessageEnvelope) {

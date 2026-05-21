@@ -196,6 +196,28 @@ pub struct ProductionSessionStateCheckResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionTwoProfileSessionStatusResult {
+    warning: &'static str,
+    profile_a: String,
+    profile_b: String,
+    profile_a_ready_for_message_envelope: bool,
+    profile_b_ready_for_message_envelope: bool,
+    both_ready_for_message_envelope: bool,
+    profile_a_session_transport_state_present: bool,
+    profile_b_session_transport_state_present: bool,
+    profile_a_runtime_material_reconstructable: bool,
+    profile_b_runtime_material_reconstructable: bool,
+    profile_a_outbound_envelope_io_ready: bool,
+    profile_b_outbound_envelope_io_ready: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionHandshakePayloadResult {
     warning: &'static str,
     storage_opened: bool,
@@ -390,6 +412,23 @@ fn production_session_state_check(
         "production session state check failed without exposing profile, path, or key details"
             .to_string()
     })
+}
+
+#[tauri::command]
+fn production_two_profile_session_status(
+    app: tauri::AppHandle,
+    profile_a: String,
+    profile_b: String,
+    passphrase: String,
+) -> Result<ProductionTwoProfileSessionStatusResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production two-profile session status failed without exposing local path details"
+    })?;
+    run_production_two_profile_session_status(app_data_root, profile_a, profile_b, passphrase)
+        .map_err(|_| {
+            "production two-profile session status failed without exposing profile, path, or key details"
+                .to_string()
+        })
 }
 
 #[tauri::command]
@@ -1141,6 +1180,57 @@ fn run_production_session_state_check(
             || runtime
                 .as_ref()
                 .is_some_and(|runtime| runtime.runtime_messaging_enabled()),
+    })
+}
+
+fn run_production_two_profile_session_status(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile_a: String,
+    profile_b: String,
+    passphrase: String,
+) -> Result<ProductionTwoProfileSessionStatusResult, String> {
+    let profile_a = sanitize_production_profile(profile_a)?;
+    let profile_b = sanitize_production_profile(profile_b)?;
+    if profile_a == profile_b {
+        return Err("production two-profile session status requires distinct profiles".to_string());
+    }
+    let profile_a_name = profile_a.as_str().to_string();
+    let profile_b_name = profile_b.as_str().to_string();
+
+    let app_data_root = app_data_root.as_ref();
+    let profile_a_state =
+        run_production_session_state_check(app_data_root, profile_a_name.clone(), passphrase.clone())?;
+    let profile_b_state =
+        run_production_session_state_check(app_data_root, profile_b_name.clone(), passphrase)?;
+    let key_material_exposed =
+        profile_a_state.key_material_exposed || profile_b_state.key_material_exposed;
+    let transport_io_opened =
+        profile_a_state.transport_io_opened || profile_b_state.transport_io_opened;
+    let runtime_messaging_enabled =
+        profile_a_state.runtime_messaging_enabled || profile_b_state.runtime_messaging_enabled;
+
+    Ok(ProductionTwoProfileSessionStatusResult {
+        warning: "two-profile session status read from encrypted local stores only; no network or transport IO opened",
+        profile_a: profile_a_name,
+        profile_b: profile_b_name,
+        profile_a_ready_for_message_envelope: profile_a_state.ready_for_message_envelope,
+        profile_b_ready_for_message_envelope: profile_b_state.ready_for_message_envelope,
+        both_ready_for_message_envelope: profile_a_state.ready_for_message_envelope
+            && profile_b_state.ready_for_message_envelope,
+        profile_a_session_transport_state_present: profile_a_state.session_transport_state_present,
+        profile_b_session_transport_state_present: profile_b_state.session_transport_state_present,
+        profile_a_runtime_material_reconstructable: profile_a_state
+            .runtime_material_reconstructable,
+        profile_b_runtime_material_reconstructable: profile_b_state
+            .runtime_material_reconstructable,
+        profile_a_outbound_envelope_io_ready: profile_a_state.outbound_envelope_io_ready,
+        profile_b_outbound_envelope_io_ready: profile_b_state.outbound_envelope_io_ready,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed,
+        network_io_attempted: false,
+        transport_io_opened,
+        runtime_messaging_enabled,
     })
 }
 
@@ -2014,6 +2104,7 @@ pub fn run() {
             production_pairing_payload_export,
             production_pairing_session_draft_save,
             production_session_state_check,
+            production_two_profile_session_status,
             production_handshake_init_export,
             production_handshake_reply_export,
             production_handshake_finish_export,
@@ -2041,7 +2132,8 @@ mod tests {
         run_production_message_received_export, run_production_pairing_payload_export,
         run_production_pairing_session_draft_save, run_production_profile_list,
         run_production_profile_unlock, run_production_session_state_check,
-        run_production_two_profile_roundtrip, sanitize_envelope_payload,
+        run_production_two_profile_roundtrip, run_production_two_profile_session_status,
+        sanitize_envelope_payload,
         sanitize_handshake_payload, sanitize_loop_messages, sanitize_pairing_payload,
         sanitize_pairing_rendezvous_endpoint, sanitize_production_message_text,
         sanitize_production_profile, sanitize_production_roundtrip_message,
@@ -2520,6 +2612,124 @@ replay check: no replayed messages after message 2
 
         let serialized = serde_json::to_string(&import).expect("serialize import");
         assert!(!serialized.contains("ADNOISEXX"));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("/tmp"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_two_profile_session_status_reads_both_profiles_without_transport_io() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        for profile in ["alice", "bob"] {
+            run_production_profile_unlock(
+                &root,
+                profile.to_string(),
+                "correct-passphrase".to_string(),
+            )
+            .expect("profile unlock");
+        }
+        let alice_payload = run_production_pairing_payload_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "alice.onion".to_string(),
+        )
+        .expect("alice payload")
+        .pairing_payload;
+        let bob_payload = run_production_pairing_payload_export(
+            &root,
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "bob.onion".to_string(),
+        )
+        .expect("bob payload")
+        .pairing_payload;
+        run_production_pairing_session_draft_save(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            alice_payload.clone(),
+            bob_payload.clone(),
+        )
+        .expect("alice draft");
+        run_production_pairing_session_draft_save(
+            &root,
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            bob_payload,
+            alice_payload,
+        )
+        .expect("bob draft");
+
+        let draft_status = run_production_two_profile_session_status(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("draft status");
+        assert_eq!(draft_status.profile_a, "alice");
+        assert_eq!(draft_status.profile_b, "bob");
+        assert!(!draft_status.both_ready_for_message_envelope);
+        assert!(!draft_status.profile_a_session_transport_state_present);
+        assert!(!draft_status.profile_b_session_transport_state_present);
+
+        let alice_init = run_production_handshake_init_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("alice init");
+        let (initiator, responder, init_payload) = if alice_init.output_payload_created {
+            ("alice", "bob", alice_init.output_payload)
+        } else {
+            let bob_init = run_production_handshake_init_export(
+                &root,
+                "bob".to_string(),
+                "correct-passphrase".to_string(),
+            )
+            .expect("bob init");
+            ("bob", "alice", bob_init.output_payload)
+        };
+        let reply = run_production_handshake_reply_export(
+            &root,
+            responder.to_string(),
+            "correct-passphrase".to_string(),
+            init_payload,
+        )
+        .expect("reply");
+        let finish = run_production_handshake_finish_export(
+            &root,
+            initiator.to_string(),
+            "correct-passphrase".to_string(),
+            reply.output_payload,
+        )
+        .expect("finish");
+        run_production_handshake_finish_import(
+            &root,
+            responder.to_string(),
+            "correct-passphrase".to_string(),
+            finish.output_payload,
+        )
+        .expect("finish import");
+
+        let ready_status = run_production_two_profile_session_status(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("ready status");
+        assert!(ready_status.profile_a_ready_for_message_envelope);
+        assert!(ready_status.profile_b_ready_for_message_envelope);
+        assert!(ready_status.both_ready_for_message_envelope);
+        assert!(!ready_status.store_path_returned);
+        assert!(!ready_status.passphrase_retained);
+        assert!(!ready_status.key_material_exposed);
+        assert!(!ready_status.network_io_attempted);
+        assert!(!ready_status.transport_io_opened);
+        assert!(!ready_status.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&ready_status).expect("serialize status");
         assert!(!serialized.contains("correct-passphrase"));
         assert!(!serialized.contains("/tmp"));
         let _ = std::fs::remove_dir_all(root);
