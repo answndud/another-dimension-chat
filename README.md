@@ -41,6 +41,7 @@ What exists today:
 - A release detached-signature fixture verifier that uses disposable OpenSSL RSA keys to validate checksum signature behavior without creating release keys or signing release artifacts.
 - A release signing tooling decision gate that keeps final signing tooling explicitly unresolved until a separate decision record exists.
 - A reproducible/equivalent binary verification plan that records required evidence while keeping binary verification documented as incomplete.
+- A binary manifest fixture verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and build-input drift without verifying release artifacts.
 - README status compaction that keeps public status focused on current guardrails and non-claims instead of accumulated phase history.
 
 What does not exist yet:
