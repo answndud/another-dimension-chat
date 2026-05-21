@@ -98,6 +98,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production pairing session handshake-init-import"));
     assert!(out.contains("production pairing session handshake-reply-export"));
     assert!(out.contains("production pairing session handshake-finish-export"));
+    assert!(out.contains("production pairing session handshake-finish-import"));
     assert!(out.contains("production message send-prepare"));
     assert!(out.contains("production message pending-status"));
     assert!(out.contains("production message outbound-encrypt-prepare"));
@@ -1324,7 +1325,7 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(handshake_reply_out.contains("reply_message_len="));
     assert!(handshake_reply_out.contains("reply_message_written=true"));
     assert!(handshake_reply_out.contains("reply_message_exposed=false"));
-    assert!(handshake_reply_out.contains("responder_state_persisted=false"));
+    assert!(handshake_reply_out.contains("responder_state_persisted=true"));
     assert!(handshake_reply_out.contains("key_material_exposed=false"));
     assert!(handshake_reply_out.contains("transport_io_opened=false"));
     assert!(handshake_reply_out.contains("runtime_messaging=false"));
@@ -1402,6 +1403,57 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!handshake_finish_error.contains(finish_store_arg));
     assert!(!handshake_finish_error.contains(handshake_reply_export_arg));
     assert!(!handshake_finish_error.contains(handshake_finish_export_arg));
+
+    let handshake_finish_import = run_with_stdin(
+        &[
+            "production",
+            "pairing",
+            "session",
+            "handshake-finish-import",
+            "--profile",
+            reply_profile,
+            "--store",
+            reply_store_arg,
+            "--in",
+            handshake_finish_export_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let handshake_finish_import_out = stdout(&handshake_finish_import);
+    let handshake_finish_import_error = stderr(&handshake_finish_import);
+    assert!(
+        handshake_finish_import.status.success(),
+        "stdout: {handshake_finish_import_out}\nstderr: {handshake_finish_import_error}"
+    );
+    assert!(handshake_finish_import_out
+        .contains("production pairing session handshake finish imported:"));
+    assert!(handshake_finish_import_out.contains("storage_opened=true"));
+    assert!(handshake_finish_import_out.contains("session_draft_loaded=true"));
+    assert!(handshake_finish_import_out.contains("local_noise_static_private_key_loaded=true"));
+    assert!(handshake_finish_import_out.contains("local_noise_static_matches_draft=true"));
+    assert!(handshake_finish_import_out.contains("safety_transcript_loaded=true"));
+    assert!(handshake_finish_import_out.contains("local_role_can_complete=true"));
+    assert!(handshake_finish_import_out.contains("responder_state_loaded=true"));
+    assert!(handshake_finish_import_out.contains("finish_message_read=true"));
+    assert!(handshake_finish_import_out.contains("finish_message_decodable=true"));
+    assert!(handshake_finish_import_out.contains("finish_message_len="));
+    assert!(handshake_finish_import_out.contains("remote_static_verified=true"));
+    assert!(handshake_finish_import_out.contains("transport_state_created=true"));
+    assert!(handshake_finish_import_out.contains("transport_state_persisted=false"));
+    assert!(handshake_finish_import_out.contains("key_material_exposed=false"));
+    assert!(handshake_finish_import_out.contains("transport_io_opened=false"));
+    assert!(handshake_finish_import_out.contains("runtime_messaging=false"));
+    assert!(handshake_finish_import_error.contains("transport state"));
+    assert!(!handshake_finish_import_out.contains("ADNOISEXXFINISH1"));
+    assert!(!handshake_finish_import_out.contains(reply_profile));
+    assert!(!handshake_finish_import_out.contains(reply_store_arg));
+    assert!(!handshake_finish_import_out.contains(handshake_finish_export_arg));
+    assert!(!handshake_finish_import_out.contains("adchan1"));
+    assert!(!handshake_finish_import_out.contains("ed25519"));
+    assert!(!handshake_finish_import_error.contains("correct horse"));
+    assert!(!handshake_finish_import_error.contains(reply_store_arg));
+    assert!(!handshake_finish_import_error.contains(handshake_finish_export_arg));
 
     std::fs::write(&plaintext, "hello from alice").expect("write plaintext");
     let send_prepare = run_with_stdin(
