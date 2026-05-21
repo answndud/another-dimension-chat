@@ -1039,6 +1039,7 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(send_prepare_out.contains("plaintext_accepted=true"));
     assert!(send_prepare_out.contains("message_number_reserved=true"));
     assert!(send_prepare_out.contains("local_message_index_written=true"));
+    assert!(send_prepare_out.contains("pending_message_record_written=true"));
     assert!(send_prepare_out.contains("envelope_encryption_ready=false"));
     assert!(send_prepare_out.contains("network_send_attempted=false"));
     assert!(send_prepare_out.contains("key_material_exposed=false"));
