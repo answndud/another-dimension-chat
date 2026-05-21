@@ -53,11 +53,11 @@ pub use errors::{
 pub use hosting_phase::{
     BootstrapOnlyExperimentDecision, BootstrapOnlyExperimentExpansion,
     BootstrapOnlyExperimentFeatureState, BootstrapOnlyExperimentReady,
-    NetworkExperimentGateProposal, NetworkExperimentGateReady, NetworkExperimentManualGate,
-    NetworkExperimentOperatorConsent, NetworkExperimentScope, NetworkExperimentTargetCachePolicy,
-    NetworkExperimentVerificationPolicy, OnionHostingGateDecision, OnionHostingGateFeatureState,
-    OnionHostingGateReady, TransportNextRiskBoundary, TransportPhaseCloseoutDecision,
-    TransportPhaseCloseoutReady,
+    NetworkExperimentGateProposal, NetworkExperimentGateReady, NetworkExperimentGateSummary,
+    NetworkExperimentManualGate, NetworkExperimentOperatorConsent, NetworkExperimentScope,
+    NetworkExperimentTargetCachePolicy, NetworkExperimentVerificationPolicy,
+    OnionHostingGateDecision, OnionHostingGateFeatureState, OnionHostingGateReady,
+    TransportNextRiskBoundary, TransportPhaseCloseoutDecision, TransportPhaseCloseoutReady,
 };
 #[cfg(feature = "arti-adapter-spike")]
 pub mod arti_adapter_spike;
