@@ -47,6 +47,7 @@ What exists today:
 - A release signing tooling decision gate that records the OpenSSL-compatible detached-signature path while keeping release signing documented as incomplete.
 - A release signing ceremony dry-run record that defines key ceremony and command sequence placeholders without creating release keys or signing release artifacts.
 - A release signing ceremony harness that executes the selected OpenSSL-compatible command sequence with disposable keys only.
+- Release key ceremony evidence requirements that define the required real ceremony evidence package without creating release keys.
 - A reproducible/equivalent binary verification plan that records required evidence while keeping binary verification documented as incomplete.
 - A binary manifest fixture verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and build-input drift without verifying release artifacts.
 - A binary verification input template that records required release-candidate fields while remaining classified as not verification evidence.
@@ -285,6 +286,8 @@ The release signing plan is tracked in [RELEASE_SIGNING_PLAN.md](RELEASE_SIGNING
 The release signing tooling decision is tracked in [RELEASE_SIGNING_TOOLING_DECISION.md](RELEASE_SIGNING_TOOLING_DECISION.md). It selects the detached-signature tooling path, but it is not release signing readiness.
 
 The release signing ceremony dry-run is tracked in [RELEASE_SIGNING_CEREMONY_DRY_RUN.md](RELEASE_SIGNING_CEREMONY_DRY_RUN.md). It is not release signing evidence.
+
+The release key ceremony evidence requirements are tracked in [RELEASE_KEY_CEREMONY_REQUIREMENTS.md](RELEASE_KEY_CEREMONY_REQUIREMENTS.md). They are not a real key ceremony.
 
 The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md). It is a pre-implementation plan, not reproducible build evidence.
 

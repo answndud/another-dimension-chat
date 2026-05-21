@@ -63,4 +63,6 @@ The first dry-run ceremony and command record is tracked in [RELEASE_SIGNING_CER
 
 The disposable command harness for the ceremony record is `scripts/verify_release_signing_ceremony_harness.sh`. It uses temporary keys only and is not release signing evidence.
 
-The next signing slice should define real release-key ceremony evidence requirements while keeping real key generation out of local verification.
+The real key ceremony evidence requirements are tracked in [RELEASE_KEY_CEREMONY_REQUIREMENTS.md](RELEASE_KEY_CEREMONY_REQUIREMENTS.md). They define the required evidence package, not a real key ceremony.
+
+The next signing slice should define release artifact signing evidence requirements while keeping real artifact signing out of local verification.
