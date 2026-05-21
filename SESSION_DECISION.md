@@ -127,6 +127,8 @@ The first store-write check for this adapter is test-only. `session_durable_stat
 
 `session_unlock_lock_command_design_gate()` records the minimum command semantics before any product unlock/lock implementation. A future command must preserve passphrase-first high-risk unlock, OS-keystore-only rejection, explicit lock, idle auto-lock, and redacted unlock errors. The gate keeps production unlock command, production lock command, durable session persistence, and runtime messaging unavailable.
 
+`session_unlock_command_fail_closed()` is the first command-shape skeleton for future product unlock. It accepts passphrase-only, OS-keystore-only, and combined request shapes, but every request returns a redacted disabled result. The skeleton does not open storage, write session records, expose key material, or enable runtime messaging.
+
 ## Session Persistence Decision
 
 For the current v0.1 production message boundary, production session state is in-memory only.

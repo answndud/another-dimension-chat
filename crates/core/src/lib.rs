@@ -765,6 +765,84 @@ pub mod production {
     }
 
     #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct SessionUnlockCommandRequest {
+        passphrase_provided: bool,
+        os_keystore_wrapped_key_provided: bool,
+    }
+
+    impl SessionUnlockCommandRequest {
+        pub fn passphrase_only() -> Self {
+            Self {
+                passphrase_provided: true,
+                os_keystore_wrapped_key_provided: false,
+            }
+        }
+
+        pub fn os_keystore_only() -> Self {
+            Self {
+                passphrase_provided: false,
+                os_keystore_wrapped_key_provided: true,
+            }
+        }
+
+        pub fn passphrase_and_os_keystore() -> Self {
+            Self {
+                passphrase_provided: true,
+                os_keystore_wrapped_key_provided: true,
+            }
+        }
+
+        pub fn passphrase_provided(&self) -> bool {
+            self.passphrase_provided
+        }
+
+        pub fn os_keystore_wrapped_key_provided(&self) -> bool {
+            self.os_keystore_wrapped_key_provided
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum SessionUnlockCommandDisabledReason {
+        ProductUnlockCommandDisabled,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionUnlockCommandFailClosedResult {
+        command_accepted: bool,
+        storage_opened: bool,
+        session_records_written: bool,
+        key_material_exposed: bool,
+        runtime_messaging_enabled: bool,
+        redacted_reason: SessionUnlockCommandDisabledReason,
+    }
+
+    impl SessionUnlockCommandFailClosedResult {
+        pub fn command_accepted(self) -> bool {
+            self.command_accepted
+        }
+
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_records_written(self) -> bool {
+            self.session_records_written
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+
+        pub fn redacted_reason(self) -> SessionUnlockCommandDisabledReason {
+            self.redacted_reason
+        }
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct LocalMessageIndexEntry {
         contact_id: ContactId,
         message_number: u64,
@@ -1435,6 +1513,21 @@ pub mod production {
         }
     }
 
+    pub fn session_unlock_command_fail_closed(
+        _request: &SessionUnlockCommandRequest,
+    ) -> SessionUnlockCommandFailClosedResult {
+        let gate = session_unlock_lock_command_design_gate();
+
+        SessionUnlockCommandFailClosedResult {
+            command_accepted: gate.production_unlock_command_enabled(),
+            storage_opened: false,
+            session_records_written: false,
+            key_material_exposed: false,
+            runtime_messaging_enabled: gate.runtime_messaging_enabled(),
+            redacted_reason: SessionUnlockCommandDisabledReason::ProductUnlockCommandDisabled,
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -2059,6 +2152,27 @@ pub mod production {
             assert!(!gate.production_lock_command_enabled());
             assert!(!gate.durable_session_persistence_ready());
             assert!(!gate.runtime_messaging_enabled());
+        }
+
+        #[test]
+        fn session_unlock_command_fail_closed_skeleton_rejects_all_requests() {
+            for request in [
+                SessionUnlockCommandRequest::passphrase_only(),
+                SessionUnlockCommandRequest::os_keystore_only(),
+                SessionUnlockCommandRequest::passphrase_and_os_keystore(),
+            ] {
+                let result = session_unlock_command_fail_closed(&request);
+
+                assert!(!result.command_accepted());
+                assert!(!result.storage_opened());
+                assert!(!result.session_records_written());
+                assert!(!result.key_material_exposed());
+                assert!(!result.runtime_messaging_enabled());
+                assert_eq!(
+                    result.redacted_reason(),
+                    SessionUnlockCommandDisabledReason::ProductUnlockCommandDisabled
+                );
+            }
         }
 
         #[test]
