@@ -1091,7 +1091,7 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(transport_prepare_out.contains("replay_window_loaded=true"));
     assert!(transport_prepare_out.contains("authenticated_handshake_required=true"));
     assert!(transport_prepare_out.contains("session_transport_state_created=false"));
-    assert!(transport_prepare_out.contains("session_transport_persistence_allowed=false"));
+    assert!(transport_prepare_out.contains("session_transport_persistence_allowed=true"));
     assert!(transport_prepare_out.contains("key_material_exposed=false"));
     assert!(transport_prepare_out.contains("transport_io_opened=false"));
     assert!(transport_prepare_out.contains("runtime_messaging=false"));
@@ -1693,7 +1693,7 @@ fn default_build_prints_read_only_production_preflight_without_secrets() {
     assert!(out.contains("route_allowed=true"));
     assert!(out.contains("send_receive=false"));
     assert!(out.contains("storage: message_envelope=EncryptedAtRestRequired"));
-    assert!(out.contains("session_transport=InMemoryOnly"));
+    assert!(out.contains("session_transport=EncryptedAtRestRequired"));
     assert!(out.contains("replay_commit_after_decrypt=true"));
     assert!(out.contains("rollback_protection=NotProvided"));
     assert!(out.contains("runtime command surface: default_closed=true"));
