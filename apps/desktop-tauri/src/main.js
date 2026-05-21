@@ -10,6 +10,7 @@ const fields = {
   transport: document.querySelector("#transport"),
   networkExecution: document.querySelector("#network-execution"),
   experimentalTransport: document.querySelector("#experimental-transport"),
+  bootstrapStatus: document.querySelector("#bootstrap-status"),
   transportIo: document.querySelector("#transport-io"),
   storage: document.querySelector("#storage"),
   verification: document.querySelector("#verification"),
@@ -260,6 +261,7 @@ async function renderPrototypeStatus() {
     setText(fields.transport, status.transport_status);
     setText(fields.networkExecution, status.network_execution_status);
     setText(fields.experimentalTransport, status.experimental_transport_status);
+    setText(fields.bootstrapStatus, status.bootstrap_status_classification);
     setText(fields.transportIo, status.transport_io_status);
     setText(fields.storage, status.storage_status);
     setText(fields.verification, status.verification_status);
@@ -272,6 +274,10 @@ async function renderPrototypeStatus() {
     setText(fields.transport, "Pre-network fail-closed only");
     setText(fields.networkExecution, "Network execution disabled");
     setText(fields.experimentalTransport, "Manual bootstrap gate summary only");
+    setText(
+      fields.bootstrapStatus,
+      "Network-disabled; censorship-or-bridge-required; timeout-or-transient-network-failure",
+    );
     setText(fields.transportIo, "Hosting stream envelope messaging disabled");
     setText(fields.storage, "ADREC1 storage spike only");
     setText(fields.verification, "Lightweight checks only");
