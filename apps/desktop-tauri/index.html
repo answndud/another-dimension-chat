@@ -188,6 +188,43 @@
               </div>
             </dl>
           </section>
+          <section class="loop-panel" aria-labelledby="production-profile-title">
+            <div>
+              <p class="eyebrow">Production profile</p>
+              <h3 id="production-profile-title">Persistent local store</h3>
+            </div>
+            <label class="loop-label" for="production-profile-name">Profile</label>
+            <input id="production-profile-name" type="text" value="alice" autocomplete="username" />
+            <label class="loop-label" for="production-profile-passphrase">Passphrase</label>
+            <input
+              id="production-profile-passphrase"
+              type="password"
+              autocomplete="current-password"
+            />
+            <div class="loop-actions">
+              <button id="unlock-production-profile" type="button">Unlock production profile</button>
+            </div>
+            <p id="production-profile-state" class="demo-state" aria-live="polite">
+              Profile locked
+            </p>
+            <p id="production-profile-warning" class="demo-warning">
+              Production profile has not been unlocked yet.
+            </p>
+            <dl class="flow-summary">
+              <div>
+                <dt>Storage</dt>
+                <dd id="production-profile-storage">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Identity</dt>
+                <dd id="production-profile-identity">Not checked yet</dd>
+              </div>
+              <div>
+                <dt>Boundary</dt>
+                <dd id="production-profile-boundary">Not checked yet</dd>
+              </div>
+            </dl>
+          </section>
           <section class="loop-panel" aria-labelledby="production-roundtrip-title">
             <div>
               <p class="eyebrow">Production core local roundtrip</p>

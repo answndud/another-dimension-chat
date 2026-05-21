@@ -40,6 +40,14 @@ const fields = {
   simulationSafetyPhrase: document.querySelector("#simulation-safety-phrase"),
   simulationMessage: document.querySelector("#simulation-message"),
   simulationReplay: document.querySelector("#simulation-replay"),
+  productionProfileName: document.querySelector("#production-profile-name"),
+  productionProfilePassphrase: document.querySelector("#production-profile-passphrase"),
+  unlockProductionProfile: document.querySelector("#unlock-production-profile"),
+  productionProfileState: document.querySelector("#production-profile-state"),
+  productionProfileWarning: document.querySelector("#production-profile-warning"),
+  productionProfileStorage: document.querySelector("#production-profile-storage"),
+  productionProfileIdentity: document.querySelector("#production-profile-identity"),
+  productionProfileBoundary: document.querySelector("#production-profile-boundary"),
   productionRoundtripMessage: document.querySelector("#production-roundtrip-message"),
   runProductionRoundtrip: document.querySelector("#run-production-roundtrip"),
   productionRoundtripState: document.querySelector("#production-roundtrip-state"),
@@ -81,6 +89,10 @@ function setLoopState(message) {
 
 function setProductionRoundtripState(message) {
   setText(fields.productionRoundtripState, message);
+}
+
+function setProductionProfileState(message) {
+  setText(fields.productionProfileState, message);
 }
 
 function renderDemoSteps(steps) {
@@ -157,6 +169,14 @@ function resetProductionRoundtripView() {
   setText(fields.productionRoundtripBoundary, "Not checked yet");
 }
 
+function resetProductionProfileView() {
+  setProductionProfileState("Profile locked");
+  setText(fields.productionProfileWarning, "Production profile has not been unlocked yet.");
+  setText(fields.productionProfileStorage, "Not checked yet");
+  setText(fields.productionProfileIdentity, "Not checked yet");
+  setText(fields.productionProfileBoundary, "Not checked yet");
+}
+
 function localLoopMessages() {
   return (fields.loopMessages?.value ?? "")
     .split("\n")
@@ -167,6 +187,13 @@ function localLoopMessages() {
 
 function productionRoundtripMessage() {
   return (fields.productionRoundtripMessage?.value ?? "").trim();
+}
+
+function productionProfileInput() {
+  return {
+    profile: (fields.productionProfileName?.value ?? "").trim(),
+    passphrase: fields.productionProfilePassphrase?.value ?? "",
+  };
 }
 
 function renderLoopResults(messages) {
@@ -468,8 +495,57 @@ async function runProductionRoundtrip() {
   }
 }
 
+async function unlockProductionProfile() {
+  const { profile, passphrase } = productionProfileInput();
+  if (!profile || !passphrase) {
+    setProductionProfileState("Profile unlock needs input");
+    setText(fields.productionProfileWarning, "Enter a profile name and passphrase.");
+    return;
+  }
+
+  setProductionProfileState("Profile unlock running");
+  setText(fields.productionProfileWarning, "Opening production profile store.");
+  setText(fields.productionProfileStorage, "Waiting for app-data encrypted store");
+  setText(fields.productionProfileIdentity, "Waiting for identity status");
+  setText(fields.productionProfileBoundary, "Waiting for boundary flags");
+  if (fields.unlockProductionProfile) {
+    fields.unlockProductionProfile.disabled = true;
+  }
+  try {
+    const result = await invoke("production_profile_unlock", { profile, passphrase });
+    setProductionProfileState("Profile unlocked");
+    setText(fields.productionProfileWarning, result.warning);
+    setText(
+      fields.productionProfileStorage,
+      `opened=${result.storage_opened} app_data=${result.app_data_profile_store} initialized=${result.profile_initialized} marker=${result.profile_marker_present}`,
+    );
+    setText(
+      fields.productionProfileIdentity,
+      `created=${result.identity_created} present=${result.identity_private_key_present} public_derivable=${result.identity_public_key_derivable}`,
+    );
+    setText(
+      fields.productionProfileBoundary,
+      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionProfileState("Profile unlock failed");
+    setText(fields.productionProfileWarning, String(error));
+    setText(fields.productionProfileStorage, "Failed");
+    setText(fields.productionProfileIdentity, "Failed");
+    setText(fields.productionProfileBoundary, "Failed");
+  } finally {
+    if (fields.unlockProductionProfile) {
+      fields.unlockProductionProfile.disabled = false;
+    }
+  }
+}
+
 if (fields.runDemo) {
   fields.runDemo.addEventListener("click", runLocalDemo);
+}
+
+if (fields.unlockProductionProfile) {
+  fields.unlockProductionProfile.addEventListener("click", unlockProductionProfile);
 }
 
 if (fields.runProductionRoundtrip) {
@@ -486,5 +562,6 @@ if (fields.resetLoop) {
 
 renderPrototypeStatus();
 resetSimulationView();
+resetProductionProfileView();
 resetProductionRoundtripView();
 resetLoopView();

@@ -116,16 +116,24 @@ button:disabled {
   color: #25324a;
 }
 
+input,
 textarea {
   width: 100%;
-  min-height: 108px;
-  resize: vertical;
   border: 1px solid #d6dbe4;
   border-radius: 8px;
   padding: 12px;
   background: #ffffff;
   color: #172033;
   font: inherit;
+}
+
+input {
+  min-height: 44px;
+}
+
+textarea {
+  min-height: 108px;
+  resize: vertical;
 }
 
 .demo-state {

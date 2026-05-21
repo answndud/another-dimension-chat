@@ -73,6 +73,9 @@ require_contains "$TAURI_DIR/src/lib.rs" 'mod status;'
 require_contains "$TAURI_DIR/src/lib.rs" 'pub use status::PrototypeStatus;'
 require_contains "$TAURI_DIR/src/lib.rs" 'redacted_prototype_status()'
 require_contains "$TAURI_DIR/src/lib.rs" 'dev_local_message_loop'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_profile_unlock'
+require_contains "$TAURI_DIR/src/lib.rs" 'run_production_profile_unlock'
+require_contains "$TAURI_DIR/src/lib.rs" 'app_data_dir()'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_local_roundtrip'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_local_roundtrip'
 require_contains "$TAURI_DIR/src/lib.rs" 'cargo'
@@ -115,9 +118,11 @@ require_status_field 'transport_io_status' 'hosting stream envelope messaging di
 require_status_field 'storage_status' 'ADREC1 storage spike only'
 require_status_field 'verification_status' 'lightweight checks only'
 require_contains "$APP_DIR/src/main.js" 'invoke("prototype_status")'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_profile_unlock"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_local_roundtrip"'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_demo")'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_message_loop"'
+require_contains "$APP_DIR/src/main.js" 'unlockProductionProfile'
 require_contains "$APP_DIR/src/main.js" 'runProductionRoundtrip'
 require_contains "$APP_DIR/src/main.js" 'runLocalLoop'
 require_contains "$APP_DIR/src/main.js" 'localLoopMessages'
@@ -215,6 +220,9 @@ require_contains "$APP_DIR/index.html" 'Production preflight'
 require_contains "$APP_DIR/index.html" 'Read-only production skeleton blockers copy'
 require_contains "$APP_DIR/index.html" 'Preflight blockers'
 require_contains "$APP_DIR/index.html" 'session E2EE false transport send receive false storage rollback not-provided messaging false'
+require_contains "$APP_DIR/index.html" 'Production profile'
+require_contains "$APP_DIR/index.html" 'Persistent local store'
+require_contains "$APP_DIR/index.html" 'Unlock production profile'
 require_contains "$APP_DIR/index.html" 'Production core local roundtrip'
 require_contains "$APP_DIR/index.html" 'Run production roundtrip'
 require_contains "$APP_DIR/index.html" 'Repeatable local loop'
@@ -248,10 +256,10 @@ require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
 require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
 command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "4"
+test "$command_count" = "5"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "4"
+test "$invoke_count" = "5"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -273,6 +281,7 @@ fi
 
 if grep -R 'invoke(' "$APP_DIR/src" \
   | grep -v 'invoke("prototype_status")' \
+  | grep -v 'invoke("production_profile_unlock"' \
   | grep -v 'invoke("production_local_roundtrip"' \
   | grep -v 'invoke("dev_local_demo")' \
   | grep -v 'invoke("dev_local_message_loop"' >/dev/null; then
@@ -287,6 +296,9 @@ fi
 
 if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Send message|Connect|Pair contact|Bootstrap|Launch onion|Not a secure release|Not available' "$APP_DIR/index.html" "$APP_DIR/src" \
   | grep -v '<button id="run-demo" type="button">Run local demo</button>' \
+  | grep -v '<input id="production-profile-name" type="text" value="alice" autocomplete="username" />' \
+  | grep -v '<input$' \
+  | grep -v '<button id="unlock-production-profile" type="button">Unlock production profile</button>' \
   | grep -v '<button id="run-production-roundtrip" type="button">Run production roundtrip</button>' \
   | grep -v '<textarea id="production-roundtrip-message" rows="3">hello from production core</textarea>' \
   | grep -v '<button id="run-loop" type="button">Run local loop</button>' \
