@@ -92,6 +92,24 @@ pub struct ProductionProfileUnlockResult {
     runtime_messaging_enabled: bool,
 }
 
+#[derive(serde::Serialize)]
+pub struct ProductionPairingPayloadExportResult {
+    warning: &'static str,
+    storage_opened: bool,
+    identity_private_key_loaded: bool,
+    noise_static_private_key_written: bool,
+    pairing_payload_exported: bool,
+    pairing_payload: String,
+    payload_format: &'static str,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    private_key_material_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
 #[tauri::command]
 fn prototype_status() -> PrototypeStatus {
     status::redacted_prototype_status()
@@ -111,6 +129,23 @@ fn production_profile_unlock(
         "production profile unlock failed without exposing profile, path, or key details"
             .to_string()
     })
+}
+
+#[tauri::command]
+fn production_pairing_payload_export(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    rendezvous_endpoint: String,
+) -> Result<ProductionPairingPayloadExportResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production pairing payload export failed without exposing local path details"
+    })?;
+    run_production_pairing_payload_export(app_data_root, profile, passphrase, rendezvous_endpoint)
+        .map_err(|_| {
+            "production pairing payload export failed without exposing profile, path, or key details"
+                .to_string()
+        })
 }
 
 #[tauri::command]
@@ -456,6 +491,65 @@ fn production_profile_store_path(
         .join(format!("{profile_name}.db")))
 }
 
+fn run_production_pairing_payload_export(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    rendezvous_endpoint: String,
+) -> Result<ProductionPairingPayloadExportResult, String> {
+    use another_dimension_core::production::production_pairing_payload_create;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let rendezvous_endpoint = sanitize_pairing_rendezvous_endpoint(rendezvous_endpoint)?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let summary =
+        production_pairing_payload_create(&store_path, profile, &passphrase, rendezvous_endpoint)
+            .map_err(|_| "pairing payload export failed")?;
+    let pairing_payload = summary
+        .payload()
+        .encode()
+        .map_err(|_| "pairing payload encoding failed")?;
+
+    Ok(ProductionPairingPayloadExportResult {
+        warning:
+            "public pairing payload export only; verify safety number out-of-band before trusting a contact",
+        storage_opened: summary.storage_opened(),
+        identity_private_key_loaded: summary.identity_private_key_loaded(),
+        noise_static_private_key_written: summary.noise_static_private_key_written(),
+        pairing_payload_exported: !pairing_payload.is_empty(),
+        pairing_payload,
+        payload_format: "ADPAIR2",
+        store_path_returned: false,
+        passphrase_retained: false,
+        private_key_material_returned: false,
+        key_material_exposed: summary.key_material_exposed(),
+        network_io_attempted: false,
+        transport_io_opened: summary.transport_io_opened(),
+        runtime_messaging_enabled: summary.runtime_messaging_enabled(),
+    })
+}
+
+fn sanitize_pairing_rendezvous_endpoint(endpoint: String) -> Result<String, String> {
+    let endpoint = endpoint.trim();
+    if endpoint.is_empty() {
+        return Err("pairing rendezvous endpoint is required".to_string());
+    }
+    if endpoint.len() > 128 {
+        return Err("pairing rendezvous endpoint must be 128 bytes or fewer".to_string());
+    }
+    if !endpoint.ends_with(".onion")
+        || endpoint.contains('/')
+        || endpoint.contains('\\')
+        || endpoint.chars().any(char::is_whitespace)
+    {
+        return Err("pairing rendezvous endpoint must be a single onion host".to_string());
+    }
+    Ok(endpoint.to_string())
+}
+
 fn run_production_local_roundtrip(
     message: String,
 ) -> Result<ProductionLocalRoundtripResult, String> {
@@ -687,6 +781,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             prototype_status,
             production_profile_unlock,
+            production_pairing_payload_export,
             production_local_roundtrip,
             dev_local_demo,
             dev_local_message_loop
@@ -700,7 +795,8 @@ mod tests {
     use super::{
         build_demo_simulation, parse_demo_steps, parse_loop_messages,
         production_profile_store_path, run_production_local_roundtrip,
-        run_production_profile_unlock, sanitize_loop_messages, sanitize_production_profile,
+        run_production_pairing_payload_export, run_production_profile_unlock,
+        sanitize_loop_messages, sanitize_pairing_rendezvous_endpoint, sanitize_production_profile,
         sanitize_production_roundtrip_message, unique_production_roundtrip_dir,
     };
 
@@ -859,6 +955,51 @@ replay check: no replayed messages after message 2
         .expect("second profile unlock");
         assert!(!second.profile_initialized);
         assert!(!second.identity_created);
+
+        let serialized = serde_json::to_string(&result).expect("serialize result");
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("/tmp"));
+        assert!(!serialized.contains("profiles"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn pairing_rendezvous_endpoint_sanitizer_accepts_onion_host_only() {
+        assert_eq!(
+            sanitize_pairing_rendezvous_endpoint(" alice.onion ".to_string()).expect("endpoint"),
+            "alice.onion"
+        );
+        assert!(sanitize_pairing_rendezvous_endpoint("alice.onion/path".to_string()).is_err());
+        assert!(sanitize_pairing_rendezvous_endpoint("alice.example".to_string()).is_err());
+        assert!(sanitize_pairing_rendezvous_endpoint("alice onion".to_string()).is_err());
+    }
+
+    #[test]
+    fn production_pairing_payload_export_uses_persistent_profile_without_returning_secrets() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        run_production_profile_unlock(&root, "alice".to_string(), "correct-passphrase".to_string())
+            .expect("profile unlock");
+        let result = run_production_pairing_payload_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "alice.onion".to_string(),
+        )
+        .expect("payload export");
+
+        assert!(result.storage_opened);
+        assert!(result.identity_private_key_loaded);
+        assert!(result.noise_static_private_key_written);
+        assert!(result.pairing_payload_exported);
+        assert!(result.pairing_payload.starts_with("ADPAIR2|"));
+        assert_eq!(result.payload_format, "ADPAIR2");
+        assert!(!result.store_path_returned);
+        assert!(!result.passphrase_retained);
+        assert!(!result.private_key_material_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
 
         let serialized = serde_json::to_string(&result).expect("serialize result");
         assert!(!serialized.contains("correct-passphrase"));

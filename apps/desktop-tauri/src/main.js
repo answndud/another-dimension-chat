@@ -48,6 +48,13 @@ const fields = {
   productionProfileStorage: document.querySelector("#production-profile-storage"),
   productionProfileIdentity: document.querySelector("#production-profile-identity"),
   productionProfileBoundary: document.querySelector("#production-profile-boundary"),
+  productionPairingEndpoint: document.querySelector("#production-pairing-endpoint"),
+  exportProductionPairing: document.querySelector("#export-production-pairing"),
+  productionPairingState: document.querySelector("#production-pairing-state"),
+  productionPairingWarning: document.querySelector("#production-pairing-warning"),
+  productionPairingPayload: document.querySelector("#production-pairing-payload"),
+  productionPairingStorage: document.querySelector("#production-pairing-storage"),
+  productionPairingBoundary: document.querySelector("#production-pairing-boundary"),
   productionRoundtripMessage: document.querySelector("#production-roundtrip-message"),
   runProductionRoundtrip: document.querySelector("#run-production-roundtrip"),
   productionRoundtripState: document.querySelector("#production-roundtrip-state"),
@@ -93,6 +100,10 @@ function setProductionRoundtripState(message) {
 
 function setProductionProfileState(message) {
   setText(fields.productionProfileState, message);
+}
+
+function setProductionPairingState(message) {
+  setText(fields.productionPairingState, message);
 }
 
 function renderDemoSteps(steps) {
@@ -177,6 +188,16 @@ function resetProductionProfileView() {
   setText(fields.productionProfileBoundary, "Not checked yet");
 }
 
+function resetProductionPairingView() {
+  setProductionPairingState("Pairing payload idle");
+  setText(fields.productionPairingWarning, "Pairing payload has not been exported yet.");
+  if (fields.productionPairingPayload) {
+    fields.productionPairingPayload.value = "";
+  }
+  setText(fields.productionPairingStorage, "Not checked yet");
+  setText(fields.productionPairingBoundary, "Not checked yet");
+}
+
 function localLoopMessages() {
   return (fields.loopMessages?.value ?? "")
     .split("\n")
@@ -193,6 +214,13 @@ function productionProfileInput() {
   return {
     profile: (fields.productionProfileName?.value ?? "").trim(),
     passphrase: fields.productionProfilePassphrase?.value ?? "",
+  };
+}
+
+function productionPairingInput() {
+  return {
+    ...productionProfileInput(),
+    rendezvousEndpoint: (fields.productionPairingEndpoint?.value ?? "").trim(),
   };
 }
 
@@ -540,12 +568,68 @@ async function unlockProductionProfile() {
   }
 }
 
+async function exportProductionPairingPayload() {
+  const { profile, passphrase, rendezvousEndpoint } = productionPairingInput();
+  if (!profile || !passphrase || !rendezvousEndpoint) {
+    setProductionPairingState("Pairing payload needs input");
+    setText(fields.productionPairingWarning, "Enter profile, passphrase, and onion endpoint.");
+    return;
+  }
+
+  setProductionPairingState("Pairing payload exporting");
+  setText(fields.productionPairingWarning, "Creating public production pairing payload.");
+  if (fields.productionPairingPayload) {
+    fields.productionPairingPayload.value = "";
+  }
+  setText(fields.productionPairingStorage, "Waiting for profile identity and pairing key state");
+  setText(fields.productionPairingBoundary, "Waiting for boundary flags");
+  if (fields.exportProductionPairing) {
+    fields.exportProductionPairing.disabled = true;
+  }
+  try {
+    const result = await invoke("production_pairing_payload_export", {
+      profile,
+      passphrase,
+      rendezvousEndpoint,
+    });
+    setProductionPairingState("Pairing payload exported");
+    setText(fields.productionPairingWarning, result.warning);
+    if (fields.productionPairingPayload) {
+      fields.productionPairingPayload.value = result.pairing_payload;
+    }
+    setText(
+      fields.productionPairingStorage,
+      `opened=${result.storage_opened} identity_loaded=${result.identity_private_key_loaded} noise_static_written=${result.noise_static_private_key_written} exported=${result.pairing_payload_exported} format=${result.payload_format}`,
+    );
+    setText(
+      fields.productionPairingBoundary,
+      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} private_key_returned=${result.private_key_material_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionPairingState("Pairing payload export failed");
+    setText(fields.productionPairingWarning, String(error));
+    if (fields.productionPairingPayload) {
+      fields.productionPairingPayload.value = "";
+    }
+    setText(fields.productionPairingStorage, "Failed");
+    setText(fields.productionPairingBoundary, "Failed");
+  } finally {
+    if (fields.exportProductionPairing) {
+      fields.exportProductionPairing.disabled = false;
+    }
+  }
+}
+
 if (fields.runDemo) {
   fields.runDemo.addEventListener("click", runLocalDemo);
 }
 
 if (fields.unlockProductionProfile) {
   fields.unlockProductionProfile.addEventListener("click", unlockProductionProfile);
+}
+
+if (fields.exportProductionPairing) {
+  fields.exportProductionPairing.addEventListener("click", exportProductionPairingPayload);
 }
 
 if (fields.runProductionRoundtrip) {
@@ -563,5 +647,6 @@ if (fields.resetLoop) {
 renderPrototypeStatus();
 resetSimulationView();
 resetProductionProfileView();
+resetProductionPairingView();
 resetProductionRoundtripView();
 resetLoopView();
