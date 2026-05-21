@@ -12,11 +12,14 @@ grep -q 'Reproducible or equivalent binary verification | `RELEASE_HARDENING.md`
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'Dependency and supply-chain review | `RELEASE_HARDENING.md` records only a policy skeleton' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
+grep -q 'Threat model and release copy alignment | `RELEASE_HARDENING.md` records only a release-candidate signoff skeleton' \
+  "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'External or independent review readiness | `RELEASE_HARDENING.md` records only a readiness checklist skeleton' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'Update and installer integrity | `RELEASE_HARDENING.md` records only an update/installer integrity checklist skeleton' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'Update and installer integrity' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
+grep -q 'scripts/verify_release_signoff_gate.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 
 if grep -R -n -E 'v0\.1-security-ready 100% complete|release gates complete|completion audit passed|approved for high-risk release' \
   "$ROOT_DIR/README.md" \
