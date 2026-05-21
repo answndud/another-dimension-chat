@@ -105,4 +105,6 @@ The release signing candidate signed-artifact verification fixture is tracked in
 
 The release signing candidate signed-artifact verification fixture coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_FIXTURE_AUDIT.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_FIXTURE_AUDIT.md), with audit checks in `scripts/verify_release_signing_candidate_signed_artifact_verification_fixture_audit.sh`. It records fixture coverage and limits only, not signed artifact verification evidence.
 
-The next signing slice should define a release signing candidate signed-artifact verification non-claim guard while keeping real artifact signing and verification out of local verification until a candidate exists.
+The release signing candidate signed-artifact verification non-claim guard is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_NON_CLAIM_GUARD.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_NON_CLAIM_GUARD.md), with guard checks in `scripts/verify_release_signing_candidate_signed_artifact_verification_non_claim_guard.sh`. It prevents fixture signed-artifact verification coverage from implying signed artifact verification evidence or approval.
+
+The next signing slice should define a release signing candidate signed-artifact verification guard coverage audit while keeping real artifact signing and verification out of local verification until a candidate exists.
