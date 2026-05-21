@@ -60,6 +60,7 @@ What exists today:
 - A release signing candidate manifest consistency fixture that rejects stale or mismatched disposable manifest digests without collecting release evidence.
 - A release signing candidate manifest consistency coverage audit that records manifest consistency fixture coverage without approving release evidence.
 - A release signing candidate evidence package checksum coverage audit that records fixture checksum/digest coverage without approving release evidence.
+- A release signing candidate evidence package checksum non-claim guard that prevents fixture checksum coverage from implying release evidence or approval.
 - A reproducible/equivalent binary verification plan that records required evidence while keeping binary verification documented as incomplete.
 - A binary manifest fixture verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and build-input drift without verifying release artifacts.
 - A binary verification input template that records required release-candidate fields while remaining classified as not verification evidence.
@@ -324,6 +325,8 @@ The release signing candidate manifest consistency fixture is tracked in [RELEAS
 The release signing candidate manifest consistency coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_AUDIT.md](RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_AUDIT.md). It is not release evidence or release approval.
 
 The release signing candidate evidence package checksum coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_AUDIT.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_AUDIT.md). It is not release evidence or release approval.
+
+The release signing candidate evidence package checksum non-claim guard is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_NON_CLAIM_GUARD.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_NON_CLAIM_GUARD.md). It is not release evidence or release approval.
 
 The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md). It is a pre-implementation plan, not reproducible build evidence.
 
