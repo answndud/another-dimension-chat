@@ -75,6 +75,17 @@ const fields = {
   productionPairingSession: document.querySelector("#production-pairing-session"),
   productionHandshakeState: document.querySelector("#production-handshake-state"),
   productionPairingBoundary: document.querySelector("#production-pairing-boundary"),
+  productionMessageNumber: document.querySelector("#production-message-number"),
+  productionMessageBody: document.querySelector("#production-message-body"),
+  exportProductionMessageEnvelope: document.querySelector("#export-production-message-envelope"),
+  productionMessageState: document.querySelector("#production-message-state"),
+  productionMessageWarning: document.querySelector("#production-message-warning"),
+  productionMessageEnvelope: document.querySelector("#production-message-envelope"),
+  productionRemoteMessageEnvelope: document.querySelector("#production-remote-message-envelope"),
+  importProductionMessageEnvelope: document.querySelector("#import-production-message-envelope"),
+  productionMessageOutbound: document.querySelector("#production-message-outbound"),
+  productionMessageInbound: document.querySelector("#production-message-inbound"),
+  productionMessageBoundary: document.querySelector("#production-message-boundary"),
   productionRoundtripMessage: document.querySelector("#production-roundtrip-message"),
   runProductionRoundtrip: document.querySelector("#run-production-roundtrip"),
   productionRoundtripState: document.querySelector("#production-roundtrip-state"),
@@ -124,6 +135,10 @@ function setProductionProfileState(message) {
 
 function setProductionPairingState(message) {
   setText(fields.productionPairingState, message);
+}
+
+function setProductionMessageState(message) {
+  setText(fields.productionMessageState, message);
 }
 
 function renderDemoSteps(steps) {
@@ -223,6 +238,17 @@ function resetProductionPairingView() {
   setText(fields.productionPairingBoundary, "Not checked yet");
 }
 
+function resetProductionMessageView() {
+  setProductionMessageState("Message flow idle");
+  setText(fields.productionMessageWarning, "Message envelope has not been exported yet.");
+  if (fields.productionMessageEnvelope) {
+    fields.productionMessageEnvelope.value = "";
+  }
+  setText(fields.productionMessageOutbound, "Not checked yet");
+  setText(fields.productionMessageInbound, "Not checked yet");
+  setText(fields.productionMessageBoundary, "Not checked yet");
+}
+
 function localLoopMessages() {
   return (fields.loopMessages?.value ?? "")
     .split("\n")
@@ -251,6 +277,15 @@ function productionPairingInput() {
     initPayload: (fields.productionRemoteHandshakeInitPayload?.value ?? "").trim(),
     replyPayload: (fields.productionRemoteHandshakeReplyPayload?.value ?? "").trim(),
     finishPayload: (fields.productionRemoteHandshakeFinishPayload?.value ?? "").trim(),
+  };
+}
+
+function productionMessageInput() {
+  return {
+    ...productionProfileInput(),
+    messageNumber: Number.parseInt(fields.productionMessageNumber?.value ?? "1", 10),
+    message: (fields.productionMessageBody?.value ?? "").trim(),
+    envelopePayload: (fields.productionRemoteMessageEnvelope?.value ?? "").trim(),
   };
 }
 
@@ -843,6 +878,102 @@ async function importProductionHandshakeFinish() {
   }
 }
 
+async function exportProductionMessageEnvelope() {
+  const { profile, passphrase, messageNumber, message } = productionMessageInput();
+  if (!profile || !passphrase || !Number.isInteger(messageNumber) || messageNumber < 1 || !message) {
+    setProductionMessageState("Message export needs input");
+    setText(fields.productionMessageWarning, "Enter profile, passphrase, number, and message.");
+    return;
+  }
+
+  setProductionMessageState("Message envelope exporting");
+  setText(fields.productionMessageWarning, "Preparing and encrypting production message.");
+  if (fields.productionMessageEnvelope) {
+    fields.productionMessageEnvelope.value = "";
+  }
+  if (fields.exportProductionMessageEnvelope) {
+    fields.exportProductionMessageEnvelope.disabled = true;
+  }
+  try {
+    const result = await invoke("production_message_envelope_export", {
+      profile,
+      passphrase,
+      messageNumber,
+      message,
+    });
+    setProductionMessageState("Message envelope exported");
+    setText(fields.productionMessageWarning, result.warning);
+    if (fields.productionMessageEnvelope) {
+      fields.productionMessageEnvelope.value = result.envelope_payload;
+    }
+    setText(
+      fields.productionMessageOutbound,
+      `reserved=${result.message_number_reserved} pending=${result.pending_message_record_written} indexed=${result.local_message_index_written} transport=${result.session_transport_ready} encrypted=${result.encrypted_envelope_written} export=${result.encrypted_envelope_present}`,
+    );
+    setText(fields.productionMessageInbound, "Not imported yet");
+    setText(
+      fields.productionMessageBoundary,
+      `plaintext_returned=${result.plaintext_returned} key_material=${result.key_material_exposed} network_send=${result.network_send_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionMessageState("Message envelope export failed");
+    setText(fields.productionMessageWarning, String(error));
+    setText(fields.productionMessageOutbound, "Failed");
+  } finally {
+    if (fields.exportProductionMessageEnvelope) {
+      fields.exportProductionMessageEnvelope.disabled = false;
+    }
+  }
+}
+
+async function importProductionMessageEnvelope() {
+  const { profile, passphrase, messageNumber, envelopePayload } = productionMessageInput();
+  if (
+    !profile ||
+    !passphrase ||
+    !Number.isInteger(messageNumber) ||
+    messageNumber < 1 ||
+    !envelopePayload
+  ) {
+    setProductionMessageState("Message import needs envelope");
+    setText(fields.productionMessageWarning, "Enter profile, passphrase, number, and envelope.");
+    return;
+  }
+
+  setProductionMessageState("Message envelope importing");
+  setText(fields.productionMessageWarning, "Importing and decrypting production envelope.");
+  if (fields.importProductionMessageEnvelope) {
+    fields.importProductionMessageEnvelope.disabled = true;
+  }
+  try {
+    const result = await invoke("production_message_envelope_import", {
+      profile,
+      passphrase,
+      messageNumber,
+      envelopePayload,
+    });
+    setProductionMessageState("Message envelope imported");
+    setText(fields.productionMessageWarning, result.warning);
+    setText(fields.productionMessageOutbound, "Not exported in this profile");
+    setText(
+      fields.productionMessageInbound,
+      `read=${result.envelope_read} decodable=${result.envelope_decodable} transport=${result.session_transport_ready} replay=${result.replay_accepted} decrypted=${result.plaintext_decrypted} stored=${result.received_message_written} status=${result.received_message_matches_session}`,
+    );
+    setText(
+      fields.productionMessageBoundary,
+      `plaintext_returned=${result.plaintext_returned} key_material=${result.key_material_exposed} network_receive=${result.network_receive_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionMessageState("Message envelope import failed");
+    setText(fields.productionMessageWarning, String(error));
+    setText(fields.productionMessageInbound, "Failed");
+  } finally {
+    if (fields.importProductionMessageEnvelope) {
+      fields.importProductionMessageEnvelope.disabled = false;
+    }
+  }
+}
+
 if (fields.runDemo) {
   fields.runDemo.addEventListener("click", runLocalDemo);
 }
@@ -875,6 +1006,14 @@ if (fields.importProductionHandshakeFinish) {
   fields.importProductionHandshakeFinish.addEventListener("click", importProductionHandshakeFinish);
 }
 
+if (fields.exportProductionMessageEnvelope) {
+  fields.exportProductionMessageEnvelope.addEventListener("click", exportProductionMessageEnvelope);
+}
+
+if (fields.importProductionMessageEnvelope) {
+  fields.importProductionMessageEnvelope.addEventListener("click", importProductionMessageEnvelope);
+}
+
 if (fields.runProductionRoundtrip) {
   fields.runProductionRoundtrip.addEventListener("click", runProductionRoundtrip);
 }
@@ -891,5 +1030,6 @@ renderPrototypeStatus();
 resetSimulationView();
 resetProductionProfileView();
 resetProductionPairingView();
+resetProductionMessageView();
 resetProductionRoundtripView();
 resetLoopView();

@@ -177,6 +177,55 @@ pub struct ProductionHandshakeFinishImportResult {
     runtime_messaging_enabled: bool,
 }
 
+#[derive(serde::Serialize)]
+pub struct ProductionMessageEnvelopeExportResult {
+    warning: &'static str,
+    storage_opened: bool,
+    runtime_material_reconstructable: bool,
+    outbound_envelope_io_ready: bool,
+    plaintext_accepted: bool,
+    message_number_reserved: bool,
+    local_message_index_written: bool,
+    pending_message_record_written: bool,
+    pending_message_record_present: bool,
+    local_message_index_matches_pending: bool,
+    session_transport_ready: bool,
+    envelope_encryption_ready: bool,
+    encrypted_envelope_written: bool,
+    encrypted_envelope_present: bool,
+    envelope_decodable: bool,
+    envelope_message_number_matches: bool,
+    envelope_payload: String,
+    plaintext_returned: bool,
+    key_material_exposed: bool,
+    network_send_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionMessageEnvelopeImportResult {
+    warning: &'static str,
+    storage_opened: bool,
+    runtime_material_reconstructable: bool,
+    envelope_read: bool,
+    envelope_decodable: bool,
+    session_transport_ready: bool,
+    replay_window_loaded: bool,
+    replay_accepted: bool,
+    plaintext_decrypted: bool,
+    plaintext_returned: bool,
+    received_message_written: bool,
+    replay_window_committed: bool,
+    received_message_record_present: bool,
+    received_message_record_decodable: bool,
+    received_message_matches_session: bool,
+    key_material_exposed: bool,
+    network_receive_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
 #[tauri::command]
 fn prototype_status() -> PrototypeStatus {
     status::redacted_prototype_status()
@@ -308,6 +357,56 @@ fn production_handshake_finish_import(
             "production handshake import failed without exposing profile, path, or key details"
                 .to_string()
         })
+}
+
+#[tauri::command]
+fn production_message_envelope_export(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+    message: String,
+) -> Result<ProductionMessageEnvelopeExportResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production message export failed without exposing local path details")?;
+    run_production_message_envelope_export(
+        app_data_root,
+        profile,
+        passphrase,
+        message_number,
+        message,
+    )
+    .map_err(|_| {
+        "production message export failed without exposing profile, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_message_envelope_import(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+    envelope_payload: String,
+) -> Result<ProductionMessageEnvelopeImportResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production message import failed without exposing local path details")?;
+    run_production_message_envelope_import(
+        app_data_root,
+        profile,
+        passphrase,
+        message_number,
+        envelope_payload,
+    )
+    .map_err(|_| {
+        "production message import failed without exposing profile, path, or key details"
+            .to_string()
+    })
 }
 
 #[tauri::command]
@@ -968,6 +1067,183 @@ fn sanitize_handshake_payload(payload: String, expected_prefix: &str) -> Result<
     Ok(payload.to_string())
 }
 
+fn run_production_message_envelope_export(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+    message: String,
+) -> Result<ProductionMessageEnvelopeExportResult, String> {
+    use another_dimension_core::production::{
+        production_message_outbound_encrypt_prepare, production_message_outbound_envelope_export,
+        production_message_pending_status, production_message_send_prepare,
+    };
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let message = sanitize_production_message_text(message)?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+
+    let send = production_message_send_prepare(
+        &store_path,
+        profile.clone(),
+        &passphrase,
+        message_number,
+        &message,
+    )
+    .map_err(|_| "message send prepare failed")?;
+    let pending = production_message_pending_status(
+        &store_path,
+        profile.clone(),
+        &passphrase,
+        message_number,
+    )
+    .map_err(|_| "message pending status failed")?;
+    let encrypt = production_message_outbound_encrypt_prepare(
+        &store_path,
+        profile.clone(),
+        &passphrase,
+        message_number,
+    )
+    .map_err(|_| "message encrypt prepare failed")?;
+    let envelope = production_message_outbound_envelope_export(
+        &store_path,
+        profile,
+        &passphrase,
+        message_number,
+    )
+    .map_err(|_| "message envelope export failed")?;
+
+    Ok(ProductionMessageEnvelopeExportResult {
+        warning:
+            "encrypted envelope exported locally; deliver it out-of-band to the paired contact",
+        storage_opened: send.storage_opened()
+            && pending.storage_opened()
+            && encrypt.storage_opened()
+            && envelope.storage_opened(),
+        runtime_material_reconstructable: send.runtime_material_reconstructable()
+            && pending.runtime_material_reconstructable()
+            && encrypt.runtime_material_reconstructable()
+            && envelope.runtime_material_reconstructable(),
+        outbound_envelope_io_ready: send.outbound_envelope_io_ready(),
+        plaintext_accepted: send.plaintext_accepted(),
+        message_number_reserved: send.message_number_reserved(),
+        local_message_index_written: send.local_message_index_written(),
+        pending_message_record_written: send.pending_message_record_written(),
+        pending_message_record_present: pending.pending_message_record_present()
+            && encrypt.pending_message_record_present(),
+        local_message_index_matches_pending: pending.local_message_index_matches_pending()
+            && encrypt.local_message_index_matches_pending(),
+        session_transport_ready: encrypt.session_transport_ready(),
+        envelope_encryption_ready: encrypt.envelope_encryption_ready(),
+        encrypted_envelope_written: encrypt.encrypted_envelope_written(),
+        encrypted_envelope_present: envelope.encrypted_envelope_present(),
+        envelope_decodable: envelope.envelope_decodable(),
+        envelope_message_number_matches: envelope.envelope_message_number_matches(),
+        envelope_payload: envelope.export_payload().trim().to_string(),
+        plaintext_returned: false,
+        key_material_exposed: send.key_material_exposed()
+            || pending.key_material_exposed()
+            || encrypt.key_material_exposed()
+            || envelope.key_material_exposed(),
+        network_send_attempted: send.network_send_attempted()
+            || pending.network_send_attempted()
+            || encrypt.network_send_attempted()
+            || envelope.network_send_attempted(),
+        transport_io_opened: send.transport_io_opened()
+            || pending.transport_io_opened()
+            || encrypt.transport_io_opened()
+            || envelope.transport_io_opened(),
+        runtime_messaging_enabled: send.runtime_messaging_enabled()
+            || pending.runtime_messaging_enabled()
+            || encrypt.runtime_messaging_enabled()
+            || envelope.runtime_messaging_enabled(),
+    })
+}
+
+fn run_production_message_envelope_import(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+    envelope_payload: String,
+) -> Result<ProductionMessageEnvelopeImportResult, String> {
+    use another_dimension_core::production::{
+        production_message_inbound_decrypt_import, production_message_received_status,
+    };
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let envelope_payload = sanitize_envelope_payload(envelope_payload)?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+
+    let import = production_message_inbound_decrypt_import(
+        &store_path,
+        profile.clone(),
+        &passphrase,
+        &envelope_payload,
+    )
+    .map_err(|_| "message envelope import failed")?;
+    let status =
+        production_message_received_status(&store_path, profile, &passphrase, message_number)
+            .map_err(|_| "message received status failed")?;
+
+    Ok(ProductionMessageEnvelopeImportResult {
+        warning:
+            "encrypted envelope imported locally; received plaintext remains in encrypted store",
+        storage_opened: import.storage_opened() && status.storage_opened(),
+        runtime_material_reconstructable: import.runtime_material_reconstructable()
+            && status.runtime_material_reconstructable(),
+        envelope_read: import.envelope_read(),
+        envelope_decodable: import.envelope_decodable(),
+        session_transport_ready: import.session_transport_ready(),
+        replay_window_loaded: import.replay_window_loaded(),
+        replay_accepted: import.replay_accepted(),
+        plaintext_decrypted: import.plaintext_decrypted(),
+        plaintext_returned: false,
+        received_message_written: import.received_message_written(),
+        replay_window_committed: import.replay_window_committed(),
+        received_message_record_present: status.received_message_record_present(),
+        received_message_record_decodable: status.received_message_record_decodable(),
+        received_message_matches_session: status.received_message_matches_session(),
+        key_material_exposed: import.key_material_exposed() || status.key_material_exposed(),
+        network_receive_attempted: import.network_receive_attempted()
+            || status.network_receive_attempted(),
+        transport_io_opened: import.transport_io_opened() || status.transport_io_opened(),
+        runtime_messaging_enabled: import.runtime_messaging_enabled()
+            || status.runtime_messaging_enabled(),
+    })
+}
+
+fn sanitize_production_message_text(message: String) -> Result<Vec<u8>, String> {
+    let trimmed = message.trim();
+    if trimmed.is_empty() {
+        return Err("production message requires text".to_string());
+    }
+    if trimmed.len() > 240 {
+        return Err("production message must be 240 bytes or fewer".to_string());
+    }
+    Ok(trimmed.as_bytes().to_vec())
+}
+
+fn sanitize_envelope_payload(payload: String) -> Result<String, String> {
+    let payload = payload.trim();
+    if payload.is_empty() {
+        return Err("encrypted envelope payload is required".to_string());
+    }
+    if payload.len() > 4096 {
+        return Err("encrypted envelope payload is too large".to_string());
+    }
+    if !payload.starts_with("ADENV1|") || payload.chars().any(char::is_whitespace) {
+        return Err("encrypted envelope payload must be a single ADENV1 value".to_string());
+    }
+    Ok(payload.to_string())
+}
+
 fn run_production_local_roundtrip(
     message: String,
 ) -> Result<ProductionLocalRoundtripResult, String> {
@@ -1205,6 +1481,8 @@ pub fn run() {
             production_handshake_reply_export,
             production_handshake_finish_export,
             production_handshake_finish_import,
+            production_message_envelope_export,
+            production_message_envelope_import,
             production_local_roundtrip,
             dev_local_demo,
             dev_local_message_loop
@@ -1220,11 +1498,12 @@ mod tests {
         production_profile_store_path, run_production_handshake_finish_export,
         run_production_handshake_finish_import, run_production_handshake_init_export,
         run_production_handshake_reply_export, run_production_local_roundtrip,
+        run_production_message_envelope_export, run_production_message_envelope_import,
         run_production_pairing_payload_export, run_production_pairing_session_draft_save,
-        run_production_profile_unlock, sanitize_handshake_payload, sanitize_loop_messages,
-        sanitize_pairing_payload, sanitize_pairing_rendezvous_endpoint,
-        sanitize_production_profile, sanitize_production_roundtrip_message,
-        unique_production_roundtrip_dir,
+        run_production_profile_unlock, sanitize_envelope_payload, sanitize_handshake_payload,
+        sanitize_loop_messages, sanitize_pairing_payload, sanitize_pairing_rendezvous_endpoint,
+        sanitize_production_message_text, sanitize_production_profile,
+        sanitize_production_roundtrip_message, unique_production_roundtrip_dir,
     };
 
     #[test]
@@ -1638,6 +1917,157 @@ replay check: no replayed messages after message 2
         assert!(!serialized.contains("ADNOISEXX"));
         assert!(!serialized.contains("correct-passphrase"));
         assert!(!serialized.contains("/tmp"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_message_sanitizers_reject_empty_or_wrong_payloads() {
+        assert_eq!(
+            sanitize_production_message_text(" hello ".to_string()).expect("message"),
+            b"hello"
+        );
+        assert!(sanitize_production_message_text(" ".to_string()).is_err());
+        assert_eq!(
+            sanitize_envelope_payload(" ADENV1|abc ".to_string()).expect("envelope"),
+            "ADENV1|abc"
+        );
+        assert!(sanitize_envelope_payload("ADENV2|abc".to_string()).is_err());
+        assert!(sanitize_envelope_payload("ADENV1|abc\nADENV1|def".to_string()).is_err());
+    }
+
+    #[test]
+    fn production_message_envelope_commands_use_persistent_transport_without_returning_plaintext() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        for profile in ["alice", "bob"] {
+            run_production_profile_unlock(
+                &root,
+                profile.to_string(),
+                "correct-passphrase".to_string(),
+            )
+            .expect("profile unlock");
+        }
+        let alice_payload = run_production_pairing_payload_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "alice.onion".to_string(),
+        )
+        .expect("alice payload")
+        .pairing_payload;
+        let bob_payload = run_production_pairing_payload_export(
+            &root,
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "bob.onion".to_string(),
+        )
+        .expect("bob payload")
+        .pairing_payload;
+        run_production_pairing_session_draft_save(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            alice_payload.clone(),
+            bob_payload.clone(),
+        )
+        .expect("alice draft");
+        run_production_pairing_session_draft_save(
+            &root,
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            bob_payload,
+            alice_payload,
+        )
+        .expect("bob draft");
+
+        let alice_init = run_production_handshake_init_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("alice init");
+        let (initiator, responder, init_payload) = if alice_init.output_payload_created {
+            ("alice", "bob", alice_init.output_payload)
+        } else {
+            let bob_init = run_production_handshake_init_export(
+                &root,
+                "bob".to_string(),
+                "correct-passphrase".to_string(),
+            )
+            .expect("bob init");
+            ("bob", "alice", bob_init.output_payload)
+        };
+        let reply = run_production_handshake_reply_export(
+            &root,
+            responder.to_string(),
+            "correct-passphrase".to_string(),
+            init_payload,
+        )
+        .expect("reply");
+        let finish = run_production_handshake_finish_export(
+            &root,
+            initiator.to_string(),
+            "correct-passphrase".to_string(),
+            reply.output_payload,
+        )
+        .expect("finish");
+        run_production_handshake_finish_import(
+            &root,
+            responder.to_string(),
+            "correct-passphrase".to_string(),
+            finish.output_payload,
+        )
+        .expect("finish import");
+
+        let outbound = run_production_message_envelope_export(
+            &root,
+            initiator.to_string(),
+            "correct-passphrase".to_string(),
+            1,
+            "persistent hello".to_string(),
+        )
+        .expect("outbound");
+        assert!(outbound.storage_opened);
+        assert!(outbound.runtime_material_reconstructable);
+        assert!(outbound.message_number_reserved);
+        assert!(outbound.pending_message_record_written);
+        assert!(outbound.session_transport_ready);
+        assert!(outbound.encrypted_envelope_written);
+        assert!(outbound.encrypted_envelope_present);
+        assert!(outbound.envelope_payload.starts_with("ADENV1|"));
+        assert!(!outbound.plaintext_returned);
+        assert!(!outbound.key_material_exposed);
+        assert!(!outbound.network_send_attempted);
+        assert!(!outbound.transport_io_opened);
+        assert!(!outbound.runtime_messaging_enabled);
+
+        let inbound = run_production_message_envelope_import(
+            &root,
+            responder.to_string(),
+            "correct-passphrase".to_string(),
+            1,
+            outbound.envelope_payload,
+        )
+        .expect("inbound");
+        assert!(inbound.storage_opened);
+        assert!(inbound.runtime_material_reconstructable);
+        assert!(inbound.envelope_read);
+        assert!(inbound.envelope_decodable);
+        assert!(inbound.session_transport_ready);
+        assert!(inbound.replay_accepted);
+        assert!(inbound.plaintext_decrypted);
+        assert!(inbound.received_message_written);
+        assert!(inbound.replay_window_committed);
+        assert!(inbound.received_message_matches_session);
+        assert!(!inbound.plaintext_returned);
+        assert!(!inbound.key_material_exposed);
+        assert!(!inbound.network_receive_attempted);
+        assert!(!inbound.transport_io_opened);
+        assert!(!inbound.runtime_messaging_enabled);
+
+        let serialized = serde_json::to_string(&inbound).expect("serialize inbound");
+        assert!(!serialized.contains("persistent hello"));
+        assert!(!serialized.contains("ADENV1"));
+        assert!(!serialized.contains("correct-passphrase"));
         let _ = std::fs::remove_dir_all(root);
     }
 
