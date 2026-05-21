@@ -382,6 +382,110 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum SessionDurableStateAdapterRecordKind {
+        PairwiseIdentityPrivateKey,
+        NoiseStaticPrivateKey,
+        ReplayWindowState,
+        SessionTransportState,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionDurableStateAdapterRecordPolicy {
+        kind: SessionDurableStateAdapterRecordKind,
+        production_record_kind: ProductionRecordKind,
+        storage_protection: StorageProtection,
+        encrypted_record_allowed: bool,
+        persistence_allowed: bool,
+    }
+
+    impl SessionDurableStateAdapterRecordPolicy {
+        pub fn kind(self) -> SessionDurableStateAdapterRecordKind {
+            self.kind
+        }
+
+        pub fn production_record_kind(self) -> ProductionRecordKind {
+            self.production_record_kind
+        }
+
+        pub fn storage_protection(self) -> StorageProtection {
+            self.storage_protection
+        }
+
+        pub fn encrypted_record_allowed(self) -> bool {
+            self.encrypted_record_allowed
+        }
+
+        pub fn persistence_allowed(self) -> bool {
+            self.persistence_allowed
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionDurableStatePersistenceAdapterSkeleton {
+        selected_connector: ProductionSkeletonConnector,
+        opens_storage_unlock_command: bool,
+        opens_transport_io: bool,
+        opens_runtime_messaging: bool,
+        adapter_implementation_ready: bool,
+        ready_for_encrypted_record_adapter_spike: bool,
+    }
+
+    impl SessionDurableStatePersistenceAdapterSkeleton {
+        pub fn selected_connector(self) -> ProductionSkeletonConnector {
+            self.selected_connector
+        }
+
+        pub fn opens_storage_unlock_command(self) -> bool {
+            self.opens_storage_unlock_command
+        }
+
+        pub fn opens_transport_io(self) -> bool {
+            self.opens_transport_io
+        }
+
+        pub fn opens_runtime_messaging(self) -> bool {
+            self.opens_runtime_messaging
+        }
+
+        pub fn adapter_implementation_ready(self) -> bool {
+            self.adapter_implementation_ready
+        }
+
+        pub fn ready_for_encrypted_record_adapter_spike(self) -> bool {
+            self.ready_for_encrypted_record_adapter_spike
+        }
+
+        pub fn record_policy(
+            self,
+            kind: SessionDurableStateAdapterRecordKind,
+        ) -> SessionDurableStateAdapterRecordPolicy {
+            let production_record_kind = match kind {
+                SessionDurableStateAdapterRecordKind::PairwiseIdentityPrivateKey => {
+                    ProductionRecordKind::PairwiseIdentityPrivateKey
+                }
+                SessionDurableStateAdapterRecordKind::NoiseStaticPrivateKey => {
+                    ProductionRecordKind::NoiseStaticPrivateKey
+                }
+                SessionDurableStateAdapterRecordKind::ReplayWindowState => {
+                    ProductionRecordKind::ReplayWindowState
+                }
+                SessionDurableStateAdapterRecordKind::SessionTransportState => {
+                    ProductionRecordKind::SessionTransportState
+                }
+            };
+
+            SessionDurableStateAdapterRecordPolicy {
+                kind,
+                production_record_kind,
+                storage_protection: protection_for(production_record_kind),
+                encrypted_record_allowed: require_encrypted_record_allowed(production_record_kind)
+                    .is_ok(),
+                persistence_allowed: require_persistence_allowed(production_record_kind).is_ok(),
+            }
+        }
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct LocalMessageIndexEntry {
         contact_id: ContactId,
@@ -941,6 +1045,21 @@ pub mod production {
         }
     }
 
+    pub fn session_durable_state_persistence_adapter_skeleton(
+    ) -> SessionDurableStatePersistenceAdapterSkeleton {
+        let harness = session_durable_state_connector_test_harness();
+
+        SessionDurableStatePersistenceAdapterSkeleton {
+            selected_connector: harness.selected_connector(),
+            opens_storage_unlock_command: false,
+            opens_transport_io: false,
+            opens_runtime_messaging: false,
+            adapter_implementation_ready: false,
+            ready_for_encrypted_record_adapter_spike: harness
+                .harness_ready_for_connector_implementation(),
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -1342,6 +1461,73 @@ pub mod production {
             assert!(!harness.opens_transport_io());
             assert!(!harness.opens_runtime_messaging());
             assert!(harness.harness_ready_for_connector_implementation());
+        }
+
+        #[test]
+        fn session_durable_state_persistence_adapter_skeleton_maps_record_policies() {
+            let skeleton = session_durable_state_persistence_adapter_skeleton();
+
+            assert_eq!(
+                skeleton.selected_connector(),
+                ProductionSkeletonConnector::SessionProtocolAndStatePersistence
+            );
+            assert!(!skeleton.opens_storage_unlock_command());
+            assert!(!skeleton.opens_transport_io());
+            assert!(!skeleton.opens_runtime_messaging());
+            assert!(!skeleton.adapter_implementation_ready());
+            assert!(skeleton.ready_for_encrypted_record_adapter_spike());
+
+            let pairwise_private = skeleton
+                .record_policy(SessionDurableStateAdapterRecordKind::PairwiseIdentityPrivateKey);
+            assert_eq!(
+                pairwise_private.production_record_kind(),
+                ProductionRecordKind::PairwiseIdentityPrivateKey
+            );
+            assert_eq!(
+                pairwise_private.storage_protection(),
+                StorageProtection::EncryptedAtRestRequired
+            );
+            assert!(pairwise_private.encrypted_record_allowed());
+            assert!(pairwise_private.persistence_allowed());
+
+            let noise_static =
+                skeleton.record_policy(SessionDurableStateAdapterRecordKind::NoiseStaticPrivateKey);
+            assert_eq!(
+                noise_static.production_record_kind(),
+                ProductionRecordKind::NoiseStaticPrivateKey
+            );
+            assert_eq!(
+                noise_static.storage_protection(),
+                StorageProtection::EncryptedAtRestRequired
+            );
+            assert!(noise_static.encrypted_record_allowed());
+            assert!(noise_static.persistence_allowed());
+
+            let replay =
+                skeleton.record_policy(SessionDurableStateAdapterRecordKind::ReplayWindowState);
+            assert_eq!(
+                replay.production_record_kind(),
+                ProductionRecordKind::ReplayWindowState
+            );
+            assert_eq!(
+                replay.storage_protection(),
+                StorageProtection::EncryptedAtRestRequired
+            );
+            assert!(replay.encrypted_record_allowed());
+            assert!(replay.persistence_allowed());
+
+            let session_transport =
+                skeleton.record_policy(SessionDurableStateAdapterRecordKind::SessionTransportState);
+            assert_eq!(
+                session_transport.production_record_kind(),
+                ProductionRecordKind::SessionTransportState
+            );
+            assert_eq!(
+                session_transport.storage_protection(),
+                StorageProtection::InMemoryOnly
+            );
+            assert!(!session_transport.encrypted_record_allowed());
+            assert!(!session_transport.persistence_allowed());
         }
 
         #[test]
