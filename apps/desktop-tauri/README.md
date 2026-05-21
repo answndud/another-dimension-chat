@@ -43,6 +43,8 @@ Expected local-only behavior:
 - The first run may take longer while Cargo builds the `dev-insecure` CLI demo.
 - The shell shows a dev-insecure warning separately from the transcript.
 - The shell shows structured local flow steps for profile creation, pairing, safety verification material, pairing confirmation, message send/receive, replay check, and demo completion.
+- The shell maps the local demo result into Alice/Bob peer panels and local flow controls for profile creation, pairing, safety display, contact confirmation, message send/receive, replay check, and completion.
+- `Reset local view` clears the displayed simulation state; `Run local demo` can be used again to re-run the underlying dev-insecure local command.
 - The transcript remains visible for debugging.
 
 Failure checks:

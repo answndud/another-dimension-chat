@@ -7,6 +7,7 @@ pub struct DevLocalDemoTranscript {
     warning: String,
     transcript: String,
     steps: Vec<DevLocalDemoStep>,
+    simulation: DevLocalSimulation,
     first_run_hint: String,
 }
 
@@ -15,6 +16,24 @@ pub struct DevLocalDemoStep {
     label: String,
     status: &'static str,
     detail: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct DevLocalSimulation {
+    peers: Vec<DevLocalPeer>,
+    safety_number: String,
+    safety_phrase: String,
+    message_body: String,
+    queued_envelope: String,
+    replay_check: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct DevLocalPeer {
+    name: &'static str,
+    profile_state: &'static str,
+    contact_state: &'static str,
+    inbox_state: &'static str,
 }
 
 #[tauri::command]
@@ -46,10 +65,12 @@ fn dev_local_demo() -> Result<DevLocalDemoTranscript, String> {
 
     if output.status.success() {
         let steps = parse_demo_steps(&transcript);
+        let simulation = build_demo_simulation(&steps);
         Ok(DevLocalDemoTranscript {
             warning,
             transcript,
             steps,
+            simulation,
             first_run_hint:
                 "First run may take longer while Cargo builds the dev-insecure local demo."
                     .to_string(),
@@ -97,6 +118,48 @@ fn parse_demo_steps(transcript: &str) -> Vec<DevLocalDemoStep> {
     steps
 }
 
+fn build_demo_simulation(steps: &[DevLocalDemoStep]) -> DevLocalSimulation {
+    DevLocalSimulation {
+        peers: vec![
+            DevLocalPeer {
+                name: "Alice",
+                profile_state: "local dev profile initialized",
+                contact_state: "Bob contact activated",
+                inbox_state: "sender in local dev flow",
+            },
+            DevLocalPeer {
+                name: "Bob",
+                profile_state: "local dev profile initialized",
+                contact_state: "Alice contact activated",
+                inbox_state: "received one local dev message",
+            },
+        ],
+        safety_number: extract_prefixed_value(steps, "safety number:"),
+        safety_phrase: extract_prefixed_value(steps, "safety phrase:"),
+        message_body: extract_step_detail(steps, "Receive as Bob"),
+        queued_envelope: extract_step_detail(steps, "Send message"),
+        replay_check: extract_step_detail(steps, "Replay check"),
+    }
+}
+
+fn extract_step_detail(steps: &[DevLocalDemoStep], label: &str) -> String {
+    steps
+        .iter()
+        .find(|step| step.label == label)
+        .map(|step| step.detail.clone())
+        .unwrap_or_else(|| "not observed in local demo transcript".to_string())
+}
+
+fn extract_prefixed_value(steps: &[DevLocalDemoStep], prefix: &str) -> String {
+    steps
+        .iter()
+        .flat_map(|step| step.detail.lines())
+        .find_map(|line| line.strip_prefix(prefix).map(str::trim))
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string)
+        .unwrap_or_else(|| "not observed in local demo transcript".to_string())
+}
+
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![prototype_status, dev_local_demo])
@@ -106,7 +169,7 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_demo_steps;
+    use super::{build_demo_simulation, parse_demo_steps};
 
     #[test]
     fn demo_step_parser_extracts_cli_sections() {
@@ -134,5 +197,43 @@ dev-insecure local CLI flow completed
         assert_eq!(steps[1].label, "Exchange pairing payloads");
         assert!(steps[1].detail.contains("safety number"));
         assert_eq!(steps[2].label, "Demo complete");
+    }
+
+    #[test]
+    fn demo_simulation_model_extracts_peer_state() {
+        let transcript = "\
+== Create local profiles ==
+profile initialized: alice
+profile initialized: bob
+
+== Exchange pairing payloads ==
+safety number: 013 859 357 798
+safety phrase: copper-harbor-orbit
+
+== Send message ==
+queued envelope for bob: 256 bytes
+
+== Receive as Bob ==
+hello from the dev-insecure local demo
+
+== Replay check ==
+second receive returned no replayed messages
+";
+
+        let steps = parse_demo_steps(transcript);
+        let simulation = build_demo_simulation(&steps);
+
+        assert_eq!(simulation.peers.len(), 2);
+        assert_eq!(simulation.peers[0].name, "Alice");
+        assert_eq!(simulation.safety_number, "013 859 357 798");
+        assert_eq!(simulation.safety_phrase, "copper-harbor-orbit");
+        assert_eq!(
+            simulation.message_body,
+            "hello from the dev-insecure local demo"
+        );
+        assert!(simulation
+            .queued_envelope
+            .contains("queued envelope for bob"));
+        assert!(simulation.replay_check.contains("no replayed messages"));
     }
 }
