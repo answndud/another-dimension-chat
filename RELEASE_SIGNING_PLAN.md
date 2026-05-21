@@ -73,4 +73,6 @@ The release signing candidate evidence package index is tracked in [RELEASE_SIGN
 
 The candidate evidence collection runbook is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_RUNBOOK.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_RUNBOOK.md). It defines collection order and fail-closed rules, but it is not candidate evidence.
 
-The next signing slice should define a disposable candidate evidence package fixture that rejects missing or template-only evidence without signing real artifacts.
+The disposable candidate evidence package fixture is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE.md), with fixture behavior checked by `scripts/verify_release_signing_candidate_evidence_fixture.sh`. It rejects missing, template-only, placeholder, and mismatched fixture evidence states without creating release evidence.
+
+The next signing slice should define a candidate evidence package fixture coverage audit while keeping real artifact signing and verification out of local verification until a candidate exists.

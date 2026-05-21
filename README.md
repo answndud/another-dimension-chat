@@ -52,6 +52,7 @@ What exists today:
 - Release verification UX evidence requirements that define required user/reviewer verification evidence without verifying release artifacts.
 - A release signing candidate evidence index that ties release-candidate signing evidence records together without recording release evidence.
 - A release signing candidate evidence collection runbook that defines collection order and fail-closed rules without collecting release evidence.
+- A release signing candidate evidence fixture that rejects missing, template-only, placeholder, and mismatched disposable evidence states without collecting release evidence.
 - A reproducible/equivalent binary verification plan that records required evidence while keeping binary verification documented as incomplete.
 - A binary manifest fixture verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and build-input drift without verifying release artifacts.
 - A binary verification input template that records required release-candidate fields while remaining classified as not verification evidence.
@@ -300,6 +301,8 @@ The release verification UX evidence requirements are tracked in [RELEASE_VERIFI
 The release signing candidate evidence index is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX.md). It is not release signing evidence.
 
 The release signing candidate evidence collection runbook is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_RUNBOOK.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_RUNBOOK.md). It is not candidate evidence.
+
+The release signing candidate evidence fixture is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE.md). It is not candidate evidence or release approval.
 
 The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md). It is a pre-implementation plan, not reproducible build evidence.
 
