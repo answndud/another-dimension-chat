@@ -79,6 +79,7 @@ version = "0.1.0"
 dependencies = [
  "another-dimension-core",
  "another-dimension-identity",
+ "another-dimension-pairing",
  "another-dimension-storage",
  "serde",
  "serde_json",
