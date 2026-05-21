@@ -77,4 +77,6 @@ The disposable candidate evidence package fixture is tracked in [RELEASE_SIGNING
 
 The candidate evidence package fixture coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE_AUDIT.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_FIXTURE_AUDIT.md), with audit checks in `scripts/verify_release_signing_candidate_evidence_fixture_audit.sh`. It records fixture coverage, not release evidence.
 
-The next signing slice should define a release signing evidence non-claim release-note guard while keeping real artifact signing and verification out of local verification until a candidate exists.
+The release-note non-claim guard is tracked in [RELEASE_SIGNING_RELEASE_NOTE_NON_CLAIM_GUARD.md](RELEASE_SIGNING_RELEASE_NOTE_NON_CLAIM_GUARD.md), with static checks in `scripts/verify_release_signing_release_note_non_claim_guard.sh`. It constrains release-note wording while signing remains incomplete.
+
+The next signing slice should define a release signing evidence package directory layout fixture while keeping real artifact signing and verification out of local verification until a candidate exists.
