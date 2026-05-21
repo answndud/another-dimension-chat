@@ -69,6 +69,7 @@ What exists today:
 - A release signing candidate signed-artifact verification fixture that rejects missing, stale, mismatched, template-only, placeholder, and empty-blocker disposable verification states without verifying release artifacts.
 - A release signing candidate signed-artifact verification fixture coverage audit that records fixture coverage and limits without approving release evidence.
 - A release signing candidate signed-artifact verification non-claim guard that prevents fixture verification coverage from implying signed artifact verification evidence or approval.
+- A release signing candidate signed-artifact verification guard coverage audit that records non-claim guard coverage without approving release evidence.
 - A reproducible/equivalent binary verification plan that records required evidence while keeping binary verification documented as incomplete.
 - A binary manifest fixture verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and build-input drift without verifying release artifacts.
 - A binary verification input template that records required release-candidate fields while remaining classified as not verification evidence.
@@ -351,6 +352,8 @@ The release signing candidate signed-artifact verification fixture is tracked in
 The release signing candidate signed-artifact verification fixture coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_FIXTURE_AUDIT.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_FIXTURE_AUDIT.md). It is not signed artifact verification evidence or release approval.
 
 The release signing candidate signed-artifact verification non-claim guard is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_NON_CLAIM_GUARD.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_NON_CLAIM_GUARD.md). It is not signed artifact verification evidence or release approval.
+
+The release signing candidate signed-artifact verification guard coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_GUARD_AUDIT.md](RELEASE_SIGNING_CANDIDATE_SIGNED_ARTIFACT_VERIFICATION_GUARD_AUDIT.md). It is not signed artifact verification evidence or release approval.
 
 The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md). It is a pre-implementation plan, not reproducible build evidence.
 
