@@ -36,4 +36,8 @@ Before public copy can claim release signing is ready, the repository needs:
 
 ## Next Implementation Slice
 
-The next signing slice should add a dry-run verification script that uses disposable test fixtures to prove the planned verification flow rejects missing signatures, stale checksums, and unsigned artifacts.
+The current dry-run verification prototype is `scripts/verify_release_signing_dry_run.sh`.
+
+It uses disposable test fixtures to prove the planned checksum/signature verification flow rejects missing signatures, stale checksums, stale detached signature markers, and unsigned artifacts. The dry-run marker is not a real release signature and must not be used as release evidence.
+
+The next signing slice should replace the dry-run marker with a real detached-signature tool in a fixture-only flow, still without creating a real release signing key or signing release artifacts.

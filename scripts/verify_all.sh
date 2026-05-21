@@ -24,6 +24,7 @@ run_step "release completion audit" scripts/verify_release_completion_audit.sh
 run_step "update integrity gate skeleton" scripts/verify_update_integrity_gate.sh
 run_step "release signoff gate skeleton" scripts/verify_release_signoff_gate.sh
 run_step "release signing plan" scripts/verify_release_signing_plan.sh
+run_step "release signing dry-run" scripts/verify_release_signing_dry_run.sh
 run_step "release hygiene static checks" scripts/verify_release_hygiene.sh
 
 printf '\nlight verification steps passed\n'

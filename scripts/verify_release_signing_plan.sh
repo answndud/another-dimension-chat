@@ -13,6 +13,8 @@ grep -q 'minisign, signify, or an equivalent detached-signature tool' \
 grep -q 'dry-run release using disposable test keys' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
 grep -q 'does not make Another Dimension Chat release-ready or v0.1-security-ready' \
   "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
+grep -q 'scripts/verify_release_signing_dry_run.sh' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
+grep -q 'The dry-run marker is not a real release signature' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
 grep -q 'RELEASE_SIGNING_PLAN.md' "$ROOT_DIR/RELEASE_HARDENING.md"
 grep -q 'scripts/verify_release_signing_plan.sh' "$ROOT_DIR/RELEASE_HARDENING.md"
 
