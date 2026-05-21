@@ -9,6 +9,8 @@ const fields = {
   pairing: document.querySelector("#pairing"),
   transport: document.querySelector("#transport"),
   networkExecution: document.querySelector("#network-execution"),
+  experimentalTransport: document.querySelector("#experimental-transport"),
+  transportIo: document.querySelector("#transport-io"),
   storage: document.querySelector("#storage"),
   verification: document.querySelector("#verification"),
   runDemo: document.querySelector("#run-demo"),
@@ -257,6 +259,8 @@ async function renderPrototypeStatus() {
     setText(fields.pairing, status.pairing_status);
     setText(fields.transport, status.transport_status);
     setText(fields.networkExecution, status.network_execution_status);
+    setText(fields.experimentalTransport, status.experimental_transport_status);
+    setText(fields.transportIo, status.transport_io_status);
     setText(fields.storage, status.storage_status);
     setText(fields.verification, status.verification_status);
   } catch (_error) {
@@ -267,6 +271,8 @@ async function renderPrototypeStatus() {
     setText(fields.pairing, "Pairing boundary only");
     setText(fields.transport, "Pre-network fail-closed only");
     setText(fields.networkExecution, "Network execution disabled");
+    setText(fields.experimentalTransport, "Manual bootstrap gate summary only");
+    setText(fields.transportIo, "Hosting stream envelope messaging disabled");
     setText(fields.storage, "ADREC1 storage spike only");
     setText(fields.verification, "Lightweight checks only");
   }
