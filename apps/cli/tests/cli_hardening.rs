@@ -105,6 +105,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production message outbound-envelope-export"));
     assert!(out.contains("production message inbound-decrypt-import"));
     assert!(out.contains("production message received-status"));
+    assert!(out.contains("production message received-export"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
@@ -691,6 +692,7 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     let handshake_reply_export = root.join("handshake-reply.txt");
     let handshake_finish_export = root.join("handshake-finish.txt");
     let encrypted_envelope_export = root.join("encrypted-envelope.txt");
+    let received_plaintext_export = root.join("received-message.txt");
     let alice_store_arg = alice_store.to_str().expect("alice store path");
     let bob_store_arg = bob_store.to_str().expect("bob store path");
     let alice_payload_arg = alice_payload.to_str().expect("alice payload path");
@@ -711,6 +713,9 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     let encrypted_envelope_export_arg = encrypted_envelope_export
         .to_str()
         .expect("encrypted envelope export path");
+    let received_plaintext_export_arg = received_plaintext_export
+        .to_str()
+        .expect("received plaintext export path");
 
     let missing_profile = run_with_stdin(
         &[
@@ -1742,6 +1747,56 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!received_status_error.contains("correct horse"));
     assert!(!received_status_error.contains(reply_store_arg));
     assert!(!received_status_error.contains("hello from canonical dialer"));
+
+    let received_export = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "received-export",
+            "--profile",
+            reply_profile,
+            "--store",
+            reply_store_arg,
+            "--message-number",
+            "1",
+            "--out",
+            received_plaintext_export_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let received_export_out = stdout(&received_export);
+    let received_export_error = stderr(&received_export);
+    assert!(
+        received_export.status.success(),
+        "stdout: {received_export_out}\nstderr: {received_export_error}"
+    );
+    assert!(received_export_out.contains("production message received exported:"));
+    assert!(received_export_out.contains("storage_opened=true"));
+    assert!(received_export_out.contains("runtime_material_reconstructable=true"));
+    assert!(received_export_out.contains("received_message_record_present=true"));
+    assert!(received_export_out.contains("received_message_record_decodable=true"));
+    assert!(received_export_out.contains("received_message_matches_session=true"));
+    assert!(received_export_out.contains("plaintext_written=true"));
+    assert!(received_export_out.contains("plaintext_exposed=false"));
+    assert!(received_export_out.contains("network_receive_attempted=false"));
+    assert!(received_export_out.contains("key_material_exposed=false"));
+    assert!(received_export_out.contains("transport_io_opened=false"));
+    assert!(received_export_out.contains("runtime_messaging=false"));
+    assert!(received_export_error.contains("--out"));
+    assert_eq!(
+        std::fs::read_to_string(&received_plaintext_export).expect("read received plaintext"),
+        "hello from canonical dialer"
+    );
+    assert!(!received_export_out.contains(reply_profile));
+    assert!(!received_export_out.contains(reply_store_arg));
+    assert!(!received_export_out.contains(received_plaintext_export_arg));
+    assert!(!received_export_out.contains("hello from canonical dialer"));
+    assert!(!received_export_out.contains("ADRECEIVEDMSG1"));
+    assert!(!received_export_out.contains("adchan1"));
+    assert!(!received_export_error.contains("correct horse"));
+    assert!(!received_export_error.contains(reply_store_arg));
+    assert!(!received_export_error.contains("hello from canonical dialer"));
 
     let swapped = run_with_stdin(
         &[
