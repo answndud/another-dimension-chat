@@ -6,6 +6,7 @@ import {
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
   productionManualNextActions,
+  productionManualStatusView,
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
   productionPairingPayloadView,
@@ -293,6 +294,33 @@ test("productionManualNextActions follows pairing and message readiness", () => 
   assert.equal(
     productionManualNextActions({ ...baseState, hasReceivedMessage: true }).message,
     "Next: review received message.",
+  );
+});
+
+test("productionManualStatusView summarizes active manual relay slots", () => {
+  assert.deepEqual(
+    productionManualStatusView(
+      { profile: "alice" },
+      {
+        pairing: { local: true, remote: false },
+        handshakeInit: { local: false, remote: true },
+        handshakeReply: { local: false, remote: false },
+        handshakeFinish: { local: true, remote: true },
+        messageEnvelope: { local: false, remote: true },
+      },
+    ),
+    {
+      route: "Active=alice Remote=bob",
+      payloads:
+        "pairing: local=stored remote=empty | init: local=empty remote=ready | " +
+        "reply: local=empty remote=empty | finish: local=stored remote=ready | envelope: local=empty remote=ready",
+      mode: "Manual relay uses local memory slots only; switch profile to load remote payloads.",
+    },
+  );
+
+  assert.equal(
+    productionManualStatusView({ profile: "carol" }, {}).mode,
+    "Use Alice or Bob preset for automatic remote slot lookup.",
   );
 });
 

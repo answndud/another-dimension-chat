@@ -212,6 +212,7 @@ button:hover:not(:disabled) {
 
 .status-list div:hover,
 .flow-summary div:hover,
+.manual-relay-summary div:hover,
 .peer-panel dl div:hover {
   background: var(--panel-strong);
 }
@@ -402,7 +403,8 @@ textarea {
 
 .demo-steps span,
 .loop-results span,
-.flow-summary dd {
+.flow-summary dd,
+.manual-relay-summary dd {
   color: var(--text-secondary);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 12px;
@@ -499,7 +501,8 @@ textarea {
 }
 
 .peer-panel dl,
-.flow-summary {
+.flow-summary,
+.manual-relay-summary {
   display: grid;
   gap: 1px;
   overflow: hidden;
@@ -509,12 +512,21 @@ textarea {
 }
 
 .peer-panel dl div,
-.flow-summary div {
+.flow-summary div,
+.manual-relay-summary div {
   display: grid;
   grid-template-columns: minmax(112px, 0.52fr) minmax(0, 1.48fr);
   gap: 10px;
   padding: 11px 12px;
   background: var(--panel);
+}
+
+.manual-relay-summary {
+  border-color: var(--accent);
+}
+
+.manual-relay-summary div {
+  background: var(--panel-strong);
 }
 
 pre {
@@ -563,7 +575,8 @@ pre.is-failed {
 
   .status-list div,
   .peer-panel dl div,
-  .flow-summary div {
+  .flow-summary div,
+  .manual-relay-summary div {
     grid-template-columns: 1fr;
     gap: 4px;
   }

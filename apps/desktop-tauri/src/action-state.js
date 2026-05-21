@@ -102,6 +102,31 @@ export function productionManualNextActions(state) {
   return { profile, pairing, message };
 }
 
+export function productionManualStatusView(input, slots) {
+  const profile = String(input?.profile ?? "").trim() || "No profile";
+  const counterpart = productionCounterpartProfile(profile);
+  const remoteProfile = counterpart ?? "Manual counterpart unavailable";
+  const formatSlot = (kind, label) => {
+    const localReady = Boolean(slots?.[kind]?.local);
+    const remoteReady = Boolean(slots?.[kind]?.remote);
+    return `${label}: local=${localReady ? "stored" : "empty"} remote=${remoteReady ? "ready" : "empty"}`;
+  };
+
+  return {
+    route: `Active=${profile} Remote=${remoteProfile}`,
+    payloads: [
+      formatSlot("pairing", "pairing"),
+      formatSlot("handshakeInit", "init"),
+      formatSlot("handshakeReply", "reply"),
+      formatSlot("handshakeFinish", "finish"),
+      formatSlot("messageEnvelope", "envelope"),
+    ].join(" | "),
+    mode: counterpart
+      ? "Manual relay uses local memory slots only; switch profile to load remote payloads."
+      : "Use Alice or Bob preset for automatic remote slot lookup.",
+  };
+}
+
 export function productionActionAvailability(state) {
   const {
     busy,
