@@ -266,6 +266,49 @@ fn local_demo_runs_complete_flow() {
 
 #[test]
 #[cfg(feature = "dev-insecure")]
+fn local_loop_demo_runs_multiple_messages() {
+    let output = run(&[
+        "demo",
+        "local-loop",
+        "--message",
+        "first local loop message",
+        "--message",
+        "second local loop message",
+    ]);
+    let out = stdout(&output);
+    let error = stderr(&output);
+
+    assert!(output.status.success());
+    assert!(error.contains("WARNING: dev-insecure build. Not for real communication."));
+    assert!(out.contains("Another Dimension Chat dev-insecure local message loop"));
+    assert!(out.contains("not a secure messenger release"));
+    assert!(out.contains("does not use real transport"));
+    assert!(out.contains("== Local message 1 =="));
+    assert!(out.contains("== Local message 2 =="));
+    assert!(out.contains("received by bob: first local loop message"));
+    assert!(out.contains("received by bob: second local loop message"));
+    assert!(out.contains("replay check: no replayed messages after message 1"));
+    assert!(out.contains("replay check: no replayed messages after message 2"));
+    assert!(out.contains("expired envelopes: 2"));
+    assert!(out.contains("dev store plaintext guard passed"));
+    assert!(out.contains("dev-insecure local message loop completed: 2 messages"));
+}
+
+#[test]
+#[cfg(feature = "dev-insecure")]
+fn local_loop_demo_requires_messages() {
+    let output = run(&["demo", "local-loop"]);
+    let error = stderr(&output);
+
+    assert!(!output.status.success());
+    assert!(stdout(&output).is_empty());
+    assert!(error.contains("WARNING: dev-insecure build. Not for real communication."));
+    assert!(error.contains("demo local-loop --message <text>"));
+    assert!(error.contains("dev-insecure local loop only"));
+}
+
+#[test]
+#[cfg(feature = "dev-insecure")]
 fn message_send_without_text_fails() {
     let output = run(&["message", "send", "--from", "alice", "--to", "bob"]);
     let error = stderr(&output);

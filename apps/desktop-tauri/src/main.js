@@ -27,6 +27,15 @@ const fields = {
   simulationSafetyPhrase: document.querySelector("#simulation-safety-phrase"),
   simulationMessage: document.querySelector("#simulation-message"),
   simulationReplay: document.querySelector("#simulation-replay"),
+  loopMessages: document.querySelector("#loop-messages"),
+  runLoop: document.querySelector("#run-loop"),
+  resetLoop: document.querySelector("#reset-loop"),
+  loopState: document.querySelector("#loop-state"),
+  loopWarning: document.querySelector("#loop-warning"),
+  loopResults: document.querySelector("#loop-results"),
+  loopReplay: document.querySelector("#loop-replay"),
+  loopExpiry: document.querySelector("#loop-expiry"),
+  loopStorage: document.querySelector("#loop-storage"),
   demoOutput: document.querySelector("#demo-output"),
 };
 
@@ -43,6 +52,10 @@ function setDemoState(state, message) {
   if (fields.demoOutput) {
     fields.demoOutput.className = `is-${state}`;
   }
+}
+
+function setLoopState(message) {
+  setText(fields.loopState, message);
 }
 
 function renderDemoSteps(steps) {
@@ -93,6 +106,50 @@ function resetSimulationView() {
   resetSimulationFields();
   if (fields.flowControls) {
     fields.flowControls.replaceChildren();
+  }
+}
+
+function resetLoopView() {
+  setLoopState("Loop idle");
+  setText(fields.loopWarning, "Loop has not run yet.");
+  setText(fields.loopReplay, "Not checked yet");
+  setText(fields.loopExpiry, "Not checked yet");
+  setText(fields.loopStorage, "Not checked yet");
+  if (fields.loopResults) {
+    fields.loopResults.replaceChildren();
+    const item = document.createElement("li");
+    item.textContent = "Messages have not run yet.";
+    fields.loopResults.append(item);
+  }
+}
+
+function localLoopMessages() {
+  return (fields.loopMessages?.value ?? "")
+    .split("\n")
+    .map((message) => message.trim())
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
+function renderLoopResults(messages) {
+  if (!fields.loopResults) {
+    return;
+  }
+  fields.loopResults.replaceChildren();
+  if (!messages || messages.length === 0) {
+    const item = document.createElement("li");
+    item.textContent = "No local loop messages returned.";
+    fields.loopResults.append(item);
+    return;
+  }
+  for (const message of messages) {
+    const item = document.createElement("li");
+    const label = document.createElement("strong");
+    label.textContent = `Message ${message.index}`;
+    const body = document.createElement("span");
+    body.textContent = `sent: ${message.sent}\nreceived by Bob: ${message.received}\n${message.replay_check}`;
+    item.append(label, body);
+    fields.loopResults.append(item);
   }
 }
 
@@ -247,9 +304,52 @@ async function runLocalDemo() {
   }
 }
 
+async function runLocalLoop() {
+  const messages = localLoopMessages();
+  if (messages.length === 0) {
+    setLoopState("Loop needs messages");
+    setText(fields.loopWarning, "Enter one local dev message per line.");
+    return;
+  }
+
+  setLoopState("Loop running");
+  setText(fields.loopWarning, "Running dev-insecure local message loop.");
+  renderLoopResults([{ index: 1, sent: "waiting", received: "waiting", replay_check: "waiting for local loop" }]);
+  if (fields.runLoop) {
+    fields.runLoop.disabled = true;
+  }
+  try {
+    const result = await invoke("dev_local_message_loop", { messages });
+    setLoopState("Loop completed");
+    setText(fields.loopWarning, result.warning.trim());
+    renderLoopResults(result.messages);
+    setText(fields.loopReplay, result.replay_summary);
+    setText(fields.loopExpiry, result.expiry_summary);
+    setText(fields.loopStorage, result.storage_guard);
+    setText(fields.demoOutput, result.transcript.trim());
+  } catch (error) {
+    setLoopState("Loop failed");
+    setText(fields.loopWarning, "Local message loop command failed.");
+    renderLoopResults([{ index: 1, sent: "failed", received: "failed", replay_check: String(error) }]);
+  } finally {
+    if (fields.runLoop) {
+      fields.runLoop.disabled = false;
+    }
+  }
+}
+
 if (fields.runDemo) {
   fields.runDemo.addEventListener("click", runLocalDemo);
 }
 
+if (fields.runLoop) {
+  fields.runLoop.addEventListener("click", runLocalLoop);
+}
+
+if (fields.resetLoop) {
+  fields.resetLoop.addEventListener("click", resetLoopView);
+}
+
 renderPrototypeStatus();
 resetSimulationView();
+resetLoopView();

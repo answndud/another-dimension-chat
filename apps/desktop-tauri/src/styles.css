@@ -116,6 +116,18 @@ button:disabled {
   color: #25324a;
 }
 
+textarea {
+  width: 100%;
+  min-height: 108px;
+  resize: vertical;
+  border: 1px solid #d6dbe4;
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+}
+
 .demo-state {
   width: fit-content;
   margin: 0;
@@ -192,6 +204,55 @@ button:disabled {
   gap: 14px;
   border-top: 1px solid #d6dbe4;
   padding-top: 18px;
+}
+
+.loop-panel {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid #d6dbe4;
+  padding-top: 18px;
+}
+
+.loop-label {
+  color: #52606d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.loop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.loop-results {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.loop-results li {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #d6dbe4;
+  border-left: 4px solid #3b7f5a;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+
+.loop-results strong {
+  color: #172033;
+}
+
+.loop-results span {
+  color: #52606d;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 h3,
@@ -312,5 +373,9 @@ pre.is-failed {
   .flow-summary div {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .loop-actions {
+    display: grid;
   }
 }

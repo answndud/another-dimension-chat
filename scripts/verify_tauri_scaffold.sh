@@ -56,6 +56,10 @@ require_contains "$TAURI_DIR/tauri.conf.json" '"frontendDist": "../dist"'
 require_contains "$TAURI_DIR/tauri.conf.json" '"devUrl": "http://localhost:1420"'
 require_contains "$TAURI_DIR/src/lib.rs" 'prototype_status'
 require_contains "$TAURI_DIR/src/lib.rs" 'dev_local_demo'
+require_contains "$TAURI_DIR/src/lib.rs" 'dev_local_message_loop'
+require_contains "$TAURI_DIR/src/lib.rs" 'DevLocalMessageLoopResult'
+require_contains "$TAURI_DIR/src/lib.rs" 'parse_loop_messages'
+require_contains "$TAURI_DIR/src/lib.rs" 'sanitize_loop_messages'
 require_contains "$TAURI_DIR/src/lib.rs" 'steps: Vec<DevLocalDemoStep>'
 require_contains "$TAURI_DIR/src/lib.rs" 'simulation: DevLocalSimulation'
 require_contains "$TAURI_DIR/src/lib.rs" 'build_demo_simulation'
@@ -68,10 +72,11 @@ require_contains "$TAURI_DIR/src/lib.rs" 'status: "completed"'
 require_contains "$TAURI_DIR/src/lib.rs" 'mod status;'
 require_contains "$TAURI_DIR/src/lib.rs" 'pub use status::PrototypeStatus;'
 require_contains "$TAURI_DIR/src/lib.rs" 'redacted_prototype_status()'
-require_contains "$TAURI_DIR/src/lib.rs" 'generate_handler!\[prototype_status, dev_local_demo\]'
+require_contains "$TAURI_DIR/src/lib.rs" 'dev_local_message_loop'
 require_contains "$TAURI_DIR/src/lib.rs" 'cargo'
 require_contains "$TAURI_DIR/src/lib.rs" 'demo'
 require_contains "$TAURI_DIR/src/lib.rs" 'local'
+require_contains "$TAURI_DIR/src/lib.rs" 'local-loop'
 require_contains "$TAURI_DIR/src/status.rs" 'pub fn redacted_prototype_status() -> PrototypeStatus'
 require_contains "$TAURI_DIR/src/status.rs" 'secure_release: false'
 require_contains "$TAURI_DIR/src/status.rs" 'usable_messaging: false'
@@ -84,6 +89,13 @@ require_status_field 'storage_status' 'ADREC1 storage spike only'
 require_status_field 'verification_status' 'lightweight checks only'
 require_contains "$APP_DIR/src/main.js" 'invoke("prototype_status")'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_demo")'
+require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_message_loop"'
+require_contains "$APP_DIR/src/main.js" 'runLocalLoop'
+require_contains "$APP_DIR/src/main.js" 'localLoopMessages'
+require_contains "$APP_DIR/src/main.js" 'renderLoopResults'
+require_contains "$APP_DIR/src/main.js" 'Loop completed'
+require_contains "$APP_DIR/src/main.js" 'result.replay_summary'
+require_contains "$APP_DIR/src/main.js" 'result.storage_guard'
 require_contains "$APP_DIR/src/main.js" 'Demo running'
 require_contains "$APP_DIR/src/main.js" 'Demo completed'
 require_contains "$APP_DIR/src/main.js" 'Demo failed'
@@ -107,6 +119,9 @@ require_contains "$APP_DIR/README.md" 'first run may take longer while Cargo bui
 require_contains "$APP_DIR/README.md" 'structured local flow steps'
 require_contains "$APP_DIR/README.md" 'Alice/Bob peer panels'
 require_contains "$APP_DIR/README.md" 'Reset local view'
+require_contains "$APP_DIR/README.md" 'repeatable local loop'
+require_contains "$APP_DIR/README.md" 'demo local-loop'
+require_contains "$APP_DIR/README.md" 'dev store plaintext guard'
 require_contains "$APP_DIR/README.md" 'core, profile'
 require_contains "$APP_DIR/README.md" 'does not link or call production core protocol'
 require_contains "$APP_DIR/README.md" 'static pre-network fail-closed copy'
@@ -130,6 +145,12 @@ require_contains "$APP_DIR/index.html" 'Local flow controls'
 require_contains "$APP_DIR/index.html" 'Local peer panels'
 require_contains "$APP_DIR/index.html" 'Safety number'
 require_contains "$APP_DIR/index.html" 'Replay check'
+require_contains "$APP_DIR/index.html" 'Repeatable local loop'
+require_contains "$APP_DIR/index.html" 'Local message loop'
+require_contains "$APP_DIR/index.html" 'Run local loop'
+require_contains "$APP_DIR/index.html" 'Reset loop view'
+require_contains "$APP_DIR/index.html" 'Local loop message results'
+require_contains "$APP_DIR/index.html" 'Storage guard'
 require_contains "$APP_DIR/index.html" 'Release claim'
 require_status_copy 'No secure-release claim'
 require_status_copy 'Disabled in prototype'
@@ -146,10 +167,10 @@ require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
 require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
 command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "2"
+test "$command_count" = "3"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "2"
+test "$invoke_count" = "3"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -171,7 +192,8 @@ fi
 
 if grep -R 'invoke(' "$APP_DIR/src" \
   | grep -v 'invoke("prototype_status")' \
-  | grep -v 'invoke("dev_local_demo")' >/dev/null; then
+  | grep -v 'invoke("dev_local_demo")' \
+  | grep -v 'invoke("dev_local_message_loop"' >/dev/null; then
   echo "unexpected frontend Tauri command invocation" >&2
   exit 1
 fi
@@ -182,7 +204,10 @@ if grep -R -E 'send_message|receive_message|transport_bootstrap|bootstrap_transp
 fi
 
 if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Send message|Connect|Pair contact|Bootstrap|Launch onion|Not a secure release|Not available' "$APP_DIR/index.html" "$APP_DIR/src" \
-  | grep -v '<button id="run-demo" type="button">Run local demo</button>' >/dev/null; then
+  | grep -v '<button id="run-demo" type="button">Run local demo</button>' \
+  | grep -v '<button id="run-loop" type="button">Run local loop</button>' \
+  | grep -v '<button id="reset-loop" type="button" class="flow-control is-secondary">' \
+  | grep -v '<textarea id="loop-messages" rows="4">first local loop message' >/dev/null; then
   echo "unexpected interactive or readiness-implying UI copy in Tauri scaffold" >&2
   exit 1
 fi
