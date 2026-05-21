@@ -1,6 +1,7 @@
 mod status;
 
 pub use status::PrototypeStatus;
+use tauri::Manager;
 
 #[derive(serde::Serialize)]
 pub struct DevLocalDemoTranscript {
@@ -73,9 +74,43 @@ pub struct ProductionLocalRoundtripResult {
     runtime_messaging_enabled: bool,
 }
 
+#[derive(serde::Serialize)]
+pub struct ProductionProfileUnlockResult {
+    warning: &'static str,
+    storage_opened: bool,
+    app_data_profile_store: bool,
+    profile_initialized: bool,
+    profile_marker_present: bool,
+    identity_created: bool,
+    identity_private_key_present: bool,
+    identity_public_key_derivable: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
 #[tauri::command]
 fn prototype_status() -> PrototypeStatus {
     status::redacted_prototype_status()
+}
+
+#[tauri::command]
+fn production_profile_unlock(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionProfileUnlockResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production profile unlock failed without exposing local path details")?;
+    run_production_profile_unlock(app_data_root, profile, passphrase).map_err(|_| {
+        "production profile unlock failed without exposing profile, path, or key details"
+            .to_string()
+    })
 }
 
 #[tauri::command]
@@ -319,6 +354,108 @@ fn extract_line_containing(transcript: &str, needle: &str) -> Option<String> {
         .map(ToString::to_string)
 }
 
+fn run_production_profile_unlock(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionProfileUnlockResult, String> {
+    use another_dimension_core::production::{
+        production_profile_identity_init, production_profile_identity_status,
+        production_profile_init, production_profile_status,
+    };
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+
+    if let Some(parent) = store_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|_| "failed to create production profile store directory")?;
+    }
+
+    let initial_profile = production_profile_status(&store_path, profile.clone(), &passphrase)
+        .map_err(|_| "profile unlock failed")?;
+    let profile_initialized = if initial_profile.profile_marker_present() {
+        false
+    } else {
+        let init = production_profile_init(&store_path, profile.clone(), &passphrase)
+            .map_err(|_| "profile init failed")?;
+        init.profile_marker_written()
+    };
+    let profile_status = production_profile_status(&store_path, profile.clone(), &passphrase)
+        .map_err(|_| "profile status failed")?;
+    let profile_storage_opened = profile_status.storage_opened();
+    let profile_marker_present = profile_status.profile_marker_present();
+    let profile_key_material_exposed = profile_status.key_material_exposed();
+    let profile_transport_io_opened = profile_status.transport_io_opened();
+    let profile_runtime_messaging_enabled = profile_status.runtime_messaging_enabled();
+
+    let initial_identity =
+        production_profile_identity_status(&store_path, profile.clone(), &passphrase)
+            .map_err(|_| "identity status failed")?;
+    let identity_created = if initial_identity.identity_private_key_present() {
+        false
+    } else {
+        let init = production_profile_identity_init(&store_path, profile.clone(), &passphrase)
+            .map_err(|_| "identity init failed")?;
+        init.identity_private_key_written()
+    };
+    let identity_status = production_profile_identity_status(&store_path, profile, &passphrase)
+        .map_err(|_| "identity status failed")?;
+    let identity_storage_opened = identity_status.storage_opened();
+    let identity_private_key_present = identity_status.identity_private_key_present();
+    let identity_public_key_derivable = identity_status.identity_public_key_derivable();
+    let identity_key_material_exposed = identity_status.key_material_exposed();
+    let identity_transport_io_opened = identity_status.transport_io_opened();
+    let identity_runtime_messaging_enabled = identity_status.runtime_messaging_enabled();
+
+    Ok(ProductionProfileUnlockResult {
+        warning:
+            "app-data production profile unlock only; no session, network, Tor, or secure-release claim",
+        storage_opened: profile_storage_opened && identity_storage_opened,
+        app_data_profile_store: true,
+        profile_initialized,
+        profile_marker_present,
+        identity_created,
+        identity_private_key_present,
+        identity_public_key_derivable,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: profile_key_material_exposed || identity_key_material_exposed,
+        network_io_attempted: false,
+        transport_io_opened: profile_transport_io_opened || identity_transport_io_opened,
+        runtime_messaging_enabled: profile_runtime_messaging_enabled
+            || identity_runtime_messaging_enabled,
+    })
+}
+
+fn sanitize_production_profile(
+    profile: String,
+) -> Result<another_dimension_identity::ProfileName, String> {
+    let trimmed = profile.trim();
+    if trimmed.len() > 64 {
+        return Err("production profile name must be 64 bytes or fewer".to_string());
+    }
+    another_dimension_identity::ProfileName::new(trimmed)
+        .map_err(|_| "invalid production profile name".to_string())
+}
+
+fn production_profile_store_path(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: &another_dimension_identity::ProfileName,
+) -> Result<std::path::PathBuf, String> {
+    let profile_name = profile.as_str();
+    if profile_name.contains('.') {
+        return Err("production profile name cannot contain path-like segments".to_string());
+    }
+    Ok(app_data_root
+        .as_ref()
+        .join("profiles")
+        .join(format!("{profile_name}.db")))
+}
+
 fn run_production_local_roundtrip(
     message: String,
 ) -> Result<ProductionLocalRoundtripResult, String> {
@@ -532,12 +669,15 @@ fn sanitize_production_roundtrip_message(message: String) -> Result<Vec<u8>, Str
 }
 
 fn unique_production_roundtrip_dir() -> Result<std::path::PathBuf, String> {
-    let millis = std::time::SystemTime::now()
+    static TEMP_DIR_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+    let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|_| "failed to create local roundtrip directory name")?
-        .as_millis();
+        .as_nanos();
+    let counter = TEMP_DIR_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     Ok(std::env::temp_dir().join(format!(
-        "another-dimension-production-roundtrip-{}-{millis}",
+        "another-dimension-production-roundtrip-{}-{nanos}-{counter}",
         std::process::id()
     )))
 }
@@ -546,6 +686,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             prototype_status,
+            production_profile_unlock,
             production_local_roundtrip,
             dev_local_demo,
             dev_local_message_loop
@@ -558,8 +699,9 @@ pub fn run() {
 mod tests {
     use super::{
         build_demo_simulation, parse_demo_steps, parse_loop_messages,
-        run_production_local_roundtrip, sanitize_loop_messages,
-        sanitize_production_roundtrip_message,
+        production_profile_store_path, run_production_local_roundtrip,
+        run_production_profile_unlock, sanitize_loop_messages, sanitize_production_profile,
+        sanitize_production_roundtrip_message, unique_production_roundtrip_dir,
     };
 
     #[test]
@@ -668,6 +810,61 @@ replay check: no replayed messages after message 2
                 .expect("message"),
             b"production local"
         );
+    }
+
+    #[test]
+    fn production_profile_sanitizer_rejects_path_like_input() {
+        assert!(sanitize_production_profile("../alice".to_string()).is_err());
+        assert!(sanitize_production_profile("alice.db".to_string()).is_err());
+        let profile = sanitize_production_profile(" alice_1 ".to_string()).expect("profile");
+        assert_eq!(profile.as_str(), "alice_1");
+    }
+
+    #[test]
+    fn production_profile_store_path_stays_under_profiles_dir() {
+        let profile = sanitize_production_profile("alice".to_string()).expect("profile");
+        let path = production_profile_store_path("/tmp/app-data", &profile).expect("path");
+        assert!(path.ends_with("profiles/alice.db"));
+    }
+
+    #[test]
+    fn production_profile_unlock_uses_app_data_store_without_returning_secrets() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let result = run_production_profile_unlock(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+
+        assert!(result.storage_opened);
+        assert!(result.app_data_profile_store);
+        assert!(result.profile_initialized);
+        assert!(result.profile_marker_present);
+        assert!(result.identity_created);
+        assert!(result.identity_private_key_present);
+        assert!(result.identity_public_key_derivable);
+        assert!(!result.store_path_returned);
+        assert!(!result.passphrase_retained);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+
+        let second = run_production_profile_unlock(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("second profile unlock");
+        assert!(!second.profile_initialized);
+        assert!(!second.identity_created);
+
+        let serialized = serde_json::to_string(&result).expect("serialize result");
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("/tmp"));
+        assert!(!serialized.contains("profiles"));
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]
