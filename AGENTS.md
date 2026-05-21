@@ -22,14 +22,13 @@
 
 ## 작업 상태 문서
 
-- 세션은 작업 전 `docs/PLAN.md`와 `docs/PROGRESS.md`를 읽는다.
-- `docs/COMPLETED.md`는 완료 archive이며, 과거 맥락이 필요할 때만 읽는다.
-- 범위, 우선순위, 신규 작업은 `docs/PLAN.md`에 기록한다.
-- 진행 상태, 변경 파일, 검증 결과, blocker, 다음 액션은 `docs/PROGRESS.md`에 기록한다.
-- 완료된 작업은 `docs/COMPLETED.md`에 append한 뒤 `docs/PLAN.md`와 `docs/PROGRESS.md`에서 제거한다.
-- `PLAN.md`와 `PROGRESS.md`에 `completed` 상태의 작업, closeout 로그, 완료 phase archive를 남기지 않는다.
-- active 작업이 없으면 `PLAN.md`와 `PROGRESS.md`는 `현재 active 작업 없음`만 명확히 표시한다.
-- 코드와 문서 변경은 같은 작업 단위 안에서 정렬한다.
+- 장기/다단계 작업을 이어받을 때만 `docs/PLAN.md`와 `docs/PROGRESS.md`를 읽는다. 단일 코드 수정이나 명확한 질문 답변을 문서 갱신 작업으로 확장하지 않는다.
+- `docs/COMPLETED.md`는 완료 archive이며, 과거 맥락이 실제로 필요할 때만 읽는다.
+- `docs/PLAN.md`에는 현재 active 작업, 범위 변경, 우선순위 변경처럼 다음 세션이 알아야 할 내용만 기록한다.
+- `docs/PROGRESS.md`에는 장기 작업의 blocker, 검증 결과, 다음 액션처럼 handoff에 필요한 진행 상태만 기록한다.
+- `docs/COMPLETED.md` append는 의미 있는 milestone이나 장기 작업 종료 때만 수행한다. 작은 코드 수정, 단순 문서 정리, 일반 검증 통과를 매번 archive하지 않는다.
+- active 작업이 없으면 `PLAN.md`와 `PROGRESS.md`는 `현재 active 작업 없음`만 표시한다.
+- 코드 변경이 우선이며, 상태 문서는 코드 개발을 대체하거나 지연시키지 않는다.
 
 ## 보안 원칙
 
@@ -52,6 +51,7 @@
 - `docs/`는 public repository에서 제외한다.
 - `.gitignore`는 version-control baseline이고, `.ignore`는 git 초기화 전에도 `rg` 검색을 깨끗하게 유지하기 위한 local search baseline이다.
 - 생성 산출물이나 로컬 dev data를 문서나 source에 섞지 않는다.
+- 새 Markdown 파일은 명시적 사용자 요청, durable public contract, 또는 실제 decision record가 있을 때만 만든다. 기존 문서를 고치는 것으로 충분하면 새 문서를 만들지 않는다.
 - 루트에 release scaffold Markdown을 새로 만들지 않는다. 특히 `RELEASE_*`, `*_TEMPLATE`, `*_AUDIT`, `*_FIXTURE`, `*_GUARD`, `*_REQUIREMENTS` 계열 파일을 작업 slice마다 추가하는 방식은 금지한다.
 - 문서 전용 verifier를 새로 만들지 않는다. `scripts/verify_all.sh`는 기능 코드와 직접 연결된 fmt/test/boundary 검증만 포함한다.
 - release readiness는 실제 release 후보가 생겼을 때 소수의 기존 public 문서나 GitHub release checklist에서 다루며, 기능 개발 루프의 다음 작업으로 문서 scaffold를 반복 생성하지 않는다.
@@ -69,4 +69,4 @@
   - `cargo test --workspace --lib`
 - CLI flow, pairing lifecycle, storage lifecycle, replay behavior를 건드리면 `scripts/smoke_dev_cli.sh`도 실행한다.
 - `dev-insecure` 검증은 prototype flow 검증이며 실제 보안 검증이 아니다.
-- 문서 변경은 관련 파일 존재와 핵심 섹션을 확인하고, 작업 상태가 바뀌면 `docs/PLAN.md`, `docs/PROGRESS.md`, `docs/COMPLETED.md`를 함께 갱신한다.
+- 문서 변경 검증은 변경한 문서의 링크, 명령, 핵심 주장만 확인한다. 상태 문서 갱신은 위 작업 상태 문서 기준에 해당할 때만 수행한다.
