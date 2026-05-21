@@ -19,7 +19,7 @@
   --input-border: #314044;
   --button-bg: #121a1c;
   --button-hover: #182326;
-  --button-inline-size: 260px;
+  --button-inline-size: 230px;
   --badge-bg: #0f1516;
   --badge-border: #334144;
   --text: var(--text-primary);
@@ -273,6 +273,7 @@ button {
   font-weight: 750;
   cursor: pointer;
   text-align: center;
+  overflow-wrap: anywhere;
   transition:
     border-color 140ms ease,
     background-color 140ms ease,
