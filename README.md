@@ -34,6 +34,7 @@ What exists today:
 - A dependency review gate verifier skeleton that keeps dependency/supply-chain review documented as incomplete until review evidence exists.
 - A dependency review template that records required release-candidate lockfile, direct dependency, native dependency, deny/allow decision, and classification fields while remaining classified as not review evidence.
 - An external review gate verifier skeleton that keeps external/independent review readiness documented as incomplete until review readiness evidence exists.
+- An external review readiness template that records required release-candidate scope, review material, reviewer expectation, finding triage, blocker, and classification fields while remaining classified as not review readiness evidence.
 - A release completion audit that records current v0.1-security-ready evidence as not complete while release gates remain incomplete.
 - An update integrity gate verifier skeleton that keeps update/installer integrity documented as incomplete until release artifact and package verification evidence exists.
 - A release signoff gate verifier skeleton that keeps release-candidate threat-model/release-copy signoff documented as incomplete until signoff evidence exists.
@@ -281,6 +282,8 @@ The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md]
 The binary verification input template is tracked in [RELEASE_BINARY_INPUT_TEMPLATE.md](RELEASE_BINARY_INPUT_TEMPLATE.md). It is not release-candidate evidence.
 
 The dependency review template is tracked in [RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md](RELEASE_DEPENDENCY_REVIEW_TEMPLATE.md). It is not dependency review evidence or supply-chain approval.
+
+The external review readiness template is tracked in [RELEASE_EXTERNAL_REVIEW_TEMPLATE.md](RELEASE_EXTERNAL_REVIEW_TEMPLATE.md). It is not external review readiness evidence or independent review evidence.
 
 ## License
 
