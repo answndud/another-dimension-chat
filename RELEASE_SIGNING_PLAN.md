@@ -87,4 +87,6 @@ The release signing candidate evidence manifest consistency fixture is tracked i
 
 The release signing candidate evidence manifest consistency coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_AUDIT.md](RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_AUDIT.md), with audit checks in `scripts/verify_release_signing_candidate_manifest_consistency_audit.sh`. It records fixture coverage and limits only, not candidate evidence.
 
-The next signing slice should define a release signing candidate evidence package checksum coverage audit while keeping real artifact signing and verification out of local verification until a candidate exists.
+The release signing candidate evidence package checksum coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_AUDIT.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_AUDIT.md), with audit checks in `scripts/verify_release_signing_candidate_evidence_package_checksum_audit.sh`. It records fixture checksum and digest coverage only, not candidate evidence.
+
+The next signing slice should define a release signing candidate evidence package checksum non-claim guard while keeping real artifact signing and verification out of local verification until a candidate exists.

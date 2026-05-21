@@ -59,6 +59,7 @@ What exists today:
 - A release signing evidence package layout coverage audit that records directory layout fixture coverage without approving release evidence.
 - A release signing candidate manifest consistency fixture that rejects stale or mismatched disposable manifest digests without collecting release evidence.
 - A release signing candidate manifest consistency coverage audit that records manifest consistency fixture coverage without approving release evidence.
+- A release signing candidate evidence package checksum coverage audit that records fixture checksum/digest coverage without approving release evidence.
 - A reproducible/equivalent binary verification plan that records required evidence while keeping binary verification documented as incomplete.
 - A binary manifest fixture verifier that rejects missing artifacts, extra artifacts, checksum mismatches, and build-input drift without verifying release artifacts.
 - A binary verification input template that records required release-candidate fields while remaining classified as not verification evidence.
@@ -321,6 +322,8 @@ The release signing evidence package layout coverage audit is tracked in [RELEAS
 The release signing candidate manifest consistency fixture is tracked in [RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_FIXTURE.md](RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_FIXTURE.md). It is not candidate evidence or release approval.
 
 The release signing candidate manifest consistency coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_AUDIT.md](RELEASE_SIGNING_CANDIDATE_MANIFEST_CONSISTENCY_AUDIT.md). It is not release evidence or release approval.
+
+The release signing candidate evidence package checksum coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_AUDIT.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_PACKAGE_CHECKSUM_AUDIT.md). It is not release evidence or release approval.
 
 The binary verification plan is tracked in [RELEASE_BINARY_VERIFICATION_PLAN.md](RELEASE_BINARY_VERIFICATION_PLAN.md). It is a pre-implementation plan, not reproducible build evidence.
 
