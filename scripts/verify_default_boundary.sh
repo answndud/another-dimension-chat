@@ -19,6 +19,8 @@ grep -q 'performs no network I/O and opens no local storage' \
   "$ROOT_DIR/apps/cli/tests/cli_hardening.rs"
 grep -q 'default_build_rejects_production_skeleton_commands' \
   "$ROOT_DIR/apps/cli/tests/cli_hardening.rs"
+grep -q 'default_build_rejects_production_unlock_with_redacted_error' \
+  "$ROOT_DIR/apps/cli/tests/cli_hardening.rs"
 grep -q 'default_build_prints_read_only_production_preflight_without_secrets' \
   "$ROOT_DIR/apps/cli/tests/cli_hardening.rs"
 grep -q 'production preflight is read-only' \

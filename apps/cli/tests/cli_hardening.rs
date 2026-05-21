@@ -118,6 +118,34 @@ fn default_build_rejects_production_skeleton_commands() {
 
 #[test]
 #[cfg(not(feature = "dev-insecure"))]
+fn default_build_rejects_production_unlock_with_redacted_error() {
+    let output = run(&[
+        "production",
+        "unlock",
+        "--profile",
+        "alice",
+        "--passphrase",
+        "correct horse battery staple",
+    ]);
+
+    assert!(!output.status.success());
+    assert!(stdout(&output).is_empty());
+    let error = stderr(&output);
+    assert!(error.contains("production unlock is disabled"));
+    assert!(error.contains("unlock_error=product-unlock-disabled"));
+    assert!(error.contains("retry_after_user_action=false"));
+    assert!(error.contains("storage_opened=false"));
+    assert!(error.contains("session_records_written=false"));
+    assert!(error.contains("key_material_exposed=false"));
+    assert!(error.contains("runtime_messaging=false"));
+    assert!(!error.contains("alice"));
+    assert!(!error.contains("correct horse battery staple"));
+    assert!(!error.contains("SQLCipher"));
+    assert!(!error.contains("keychain"));
+}
+
+#[test]
+#[cfg(not(feature = "dev-insecure"))]
 fn default_build_prints_read_only_production_preflight_without_secrets() {
     let output = run(&["production", "preflight"]);
 

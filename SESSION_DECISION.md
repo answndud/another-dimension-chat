@@ -133,6 +133,8 @@ The first store-write check for this adapter is test-only. `session_durable_stat
 
 `session_unlock_redacted_error_taxonomy()` defines safe unlock failure categories for future CLI/Tauri copy. It distinguishes disabled product unlock, passphrase-required, and OS-keystore-only rejected states without exposing raw storage errors, OS keychain errors, paths, identifiers, key material, or passphrase detail.
 
+Default CLI `production unlock` currently uses that taxonomy only as a fail-closed boundary rejection. It ignores profile/passphrase details, returns `product-unlock-disabled`, and keeps storage open, session record writes, key material exposure, and runtime messaging false.
+
 ## Session Persistence Decision
 
 For the current v0.1 production message boundary, production session state is in-memory only.
