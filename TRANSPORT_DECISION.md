@@ -1055,6 +1055,7 @@ Current code boundary:
 - Target/cache policy must be `IsolatedTemporaryTarget`.
 - Onion hosting, stream I/O, and envelope I/O scopes are rejected with `UnsupportedExperimentScope`.
 - The summary keeps onion hosting, stream I/O, envelope I/O, and usable messaging disabled even when `can_attempt_network_bootstrap()` is true.
+- `TRANSPORT_EXPERIMENT_RUNBOOK.md` is the required operator runbook before using `--execute-network`; it requires isolated target/cache roots, cleanup of generated artifacts, no CI/default execution, and rollback to fail-closed defaults if redaction or non-claim boundaries are violated.
 
 Still not implemented:
 
@@ -1753,6 +1754,7 @@ Rules:
 - The profile-scoped form is preferred because it centralizes transport directory layout.
 - Without `--execute-network`, the command uses `ManualArtiBootstrapAttemptGate::disabled(...)`, performs no network bootstrap, and prints only redacted event/summary output.
 - With `--execute-network`, the command is allowed to call the manual bootstrap gate and may touch the network.
+- The public runbook must be followed before using `--execute-network`; manual runs require isolated temporary `CARGO_TARGET_DIR`, isolated app-private Arti state/cache roots, cleanup, and no CI/default automation.
 - Output must not include local state/cache paths, onion endpoints, bridge lines, contact identifiers, plaintext, or private key material.
 - Success still means only that the one-shot Arti bootstrap attempt completed; the Arti client is dropped and there is no usable transport.
 
