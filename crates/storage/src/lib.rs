@@ -47,6 +47,7 @@ pub mod production {
         LocalMessageIndex,
         RendezvousEndpointState,
         SessionDraft,
+        HandshakeState,
         SessionTransportState,
     }
 
@@ -63,6 +64,7 @@ pub mod production {
                 Self::LocalMessageIndex => "local-message-index",
                 Self::RendezvousEndpointState => "rendezvous-endpoint-state",
                 Self::SessionDraft => "session-draft",
+                Self::HandshakeState => "handshake-state",
                 Self::SessionTransportState => "session-transport-state",
             }
         }
@@ -79,6 +81,7 @@ pub mod production {
                 "local-message-index" => Ok(Self::LocalMessageIndex),
                 "rendezvous-endpoint-state" => Ok(Self::RendezvousEndpointState),
                 "session-draft" => Ok(Self::SessionDraft),
+                "handshake-state" => Ok(Self::HandshakeState),
                 "session-transport-state" => Ok(Self::SessionTransportState),
                 _ => Err(ProductionStoragePolicyError::InvalidEncryptedRecord),
             }
@@ -688,6 +691,7 @@ pub mod production {
             | ProductionRecordKind::MessageEnvelope
             | ProductionRecordKind::LocalMessageIndex
             | ProductionRecordKind::RendezvousEndpointState
+            | ProductionRecordKind::HandshakeState
             | ProductionRecordKind::SessionDraft => StorageProtection::EncryptedAtRestRequired,
             ProductionRecordKind::SessionTransportState => StorageProtection::InMemoryOnly,
         }
@@ -752,6 +756,7 @@ pub mod production {
                 ProductionRecordKind::LocalMessageIndex,
                 ProductionRecordKind::RendezvousEndpointState,
                 ProductionRecordKind::SessionDraft,
+                ProductionRecordKind::HandshakeState,
                 ProductionRecordKind::SessionTransportState,
             ] {
                 assert!(matches!(
@@ -773,6 +778,7 @@ pub mod production {
                 ProductionRecordKind::LocalMessageIndex,
                 ProductionRecordKind::RendezvousEndpointState,
                 ProductionRecordKind::SessionDraft,
+                ProductionRecordKind::HandshakeState,
             ] {
                 assert_eq!(
                     protection_for(kind),
