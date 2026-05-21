@@ -111,6 +111,8 @@ const fields = {
 };
 
 let latestSimulation = null;
+let latestProductionSessionState = null;
+let productionBusyAction = null;
 
 function setText(node, value) {
   if (node) {
@@ -143,6 +145,58 @@ function setProductionPairingState(message) {
 
 function setProductionMessageState(message) {
   setText(fields.productionMessageState, message);
+}
+
+function setDisabled(node, disabled) {
+  if (node) {
+    node.disabled = disabled;
+  }
+}
+
+function validProductionMessageNumber() {
+  const messageNumber = Number.parseInt(fields.productionMessageNumber?.value ?? "1", 10);
+  return Number.isInteger(messageNumber) && messageNumber >= 1;
+}
+
+function productionSessionReadyForMessages() {
+  return latestProductionSessionState?.ready_for_message_envelope === true;
+}
+
+function applyProductionActionState() {
+  const { profile, passphrase } = productionProfileInput();
+  const pairing = productionPairingInput();
+  const message = productionMessageInput();
+  const busy = productionBusyAction !== null;
+  const hasProfileUnlockInput = Boolean(profile && passphrase);
+  const hasPairingInput = Boolean(hasProfileUnlockInput && pairing.rendezvousEndpoint);
+  const hasSessionDraftInput = Boolean(
+    hasProfileUnlockInput && pairing.localPayload && pairing.remotePayload,
+  );
+  const hasHandshakeReplyInput = Boolean(hasProfileUnlockInput && pairing.initPayload);
+  const hasHandshakeFinishInput = Boolean(hasProfileUnlockInput && pairing.replyPayload);
+  const hasFinishImportInput = Boolean(hasProfileUnlockInput && pairing.finishPayload);
+  const hasOutboundMessageInput = Boolean(
+    hasProfileUnlockInput &&
+      validProductionMessageNumber() &&
+      message.message &&
+      productionSessionReadyForMessages(),
+  );
+  const hasInboundEnvelopeInput = Boolean(
+    hasProfileUnlockInput && validProductionMessageNumber() && message.envelopePayload,
+  );
+  const hasReceivedExportInput = Boolean(hasProfileUnlockInput && validProductionMessageNumber());
+
+  setDisabled(fields.unlockProductionProfile, busy || !hasProfileUnlockInput);
+  setDisabled(fields.exportProductionPairing, busy || !hasPairingInput);
+  setDisabled(fields.saveProductionSessionDraft, busy || !hasSessionDraftInput);
+  setDisabled(fields.checkProductionSessionState, busy || !hasProfileUnlockInput);
+  setDisabled(fields.exportProductionHandshakeInit, busy || !hasProfileUnlockInput);
+  setDisabled(fields.exportProductionHandshakeReply, busy || !hasHandshakeReplyInput);
+  setDisabled(fields.exportProductionHandshakeFinish, busy || !hasHandshakeFinishInput);
+  setDisabled(fields.importProductionHandshakeFinish, busy || !hasFinishImportInput);
+  setDisabled(fields.exportProductionMessageEnvelope, busy || !hasOutboundMessageInput);
+  setDisabled(fields.importProductionMessageEnvelope, busy || !hasInboundEnvelopeInput);
+  setDisabled(fields.exportProductionReceivedMessage, busy || !hasReceivedExportInput);
 }
 
 function renderDemoSteps(steps) {
@@ -225,6 +279,7 @@ function resetProductionProfileView() {
   setText(fields.productionProfileStorage, "Not checked yet");
   setText(fields.productionProfileIdentity, "Not checked yet");
   setText(fields.productionProfileBoundary, "Not checked yet");
+  applyProductionActionState();
 }
 
 function renderProductionProfileSelector(profiles) {
@@ -252,6 +307,7 @@ function renderProductionProfileSelector(profiles) {
     fields.productionProfileSelector.value = profiles[0];
     fields.productionProfileName.value = profiles[0];
   }
+  applyProductionActionState();
 }
 
 async function loadProductionProfileList() {
@@ -270,6 +326,7 @@ async function loadProductionProfileList() {
 }
 
 function resetProductionPairingView() {
+  latestProductionSessionState = null;
   setProductionPairingState("Pairing payload idle");
   setText(fields.productionPairingWarning, "Pairing payload has not been exported yet.");
   if (fields.productionPairingPayload) {
@@ -282,6 +339,7 @@ function resetProductionPairingView() {
   setText(fields.productionPairingSession, "Not checked yet");
   setText(fields.productionHandshakeState, "Not checked yet");
   setText(fields.productionPairingBoundary, "Not checked yet");
+  applyProductionActionState();
 }
 
 function resetProductionMessageView() {
@@ -296,6 +354,7 @@ function resetProductionMessageView() {
   setText(fields.productionMessageOutbound, "Not checked yet");
   setText(fields.productionMessageInbound, "Not checked yet");
   setText(fields.productionMessageBoundary, "Not checked yet");
+  applyProductionActionState();
 }
 
 function localLoopMessages() {
@@ -650,6 +709,8 @@ async function unlockProductionProfile() {
   setText(fields.productionProfileStorage, "Waiting for app-data encrypted store");
   setText(fields.productionProfileIdentity, "Waiting for identity status");
   setText(fields.productionProfileBoundary, "Waiting for boundary flags");
+  productionBusyAction = "profile-unlock";
+  applyProductionActionState();
   if (fields.unlockProductionProfile) {
     fields.unlockProductionProfile.disabled = true;
   }
@@ -677,9 +738,11 @@ async function unlockProductionProfile() {
     setText(fields.productionProfileIdentity, "Failed");
     setText(fields.productionProfileBoundary, "Failed");
   } finally {
+    productionBusyAction = null;
     if (fields.unlockProductionProfile) {
       fields.unlockProductionProfile.disabled = false;
     }
+    applyProductionActionState();
   }
 }
 
@@ -698,6 +761,8 @@ async function exportProductionPairingPayload() {
   }
   setText(fields.productionPairingStorage, "Waiting for profile identity and pairing key state");
   setText(fields.productionPairingBoundary, "Waiting for boundary flags");
+  productionBusyAction = "pairing-payload";
+  applyProductionActionState();
   if (fields.exportProductionPairing) {
     fields.exportProductionPairing.disabled = true;
   }
@@ -729,9 +794,11 @@ async function exportProductionPairingPayload() {
     setText(fields.productionPairingStorage, "Failed");
     setText(fields.productionPairingBoundary, "Failed");
   } finally {
+    productionBusyAction = null;
     if (fields.exportProductionPairing) {
       fields.exportProductionPairing.disabled = false;
     }
+    applyProductionActionState();
   }
 }
 
@@ -747,6 +814,8 @@ async function saveProductionSessionDraft() {
   setText(fields.productionPairingWarning, "Saving production session draft.");
   setText(fields.productionPairingSession, "Waiting for session draft, endpoint, and replay state");
   setText(fields.productionPairingBoundary, "Waiting for boundary flags");
+  productionBusyAction = "session-draft";
+  applyProductionActionState();
   if (fields.saveProductionSessionDraft) {
     fields.saveProductionSessionDraft.disabled = true;
   }
@@ -780,9 +849,11 @@ async function saveProductionSessionDraft() {
     setText(fields.productionPairingSession, "Failed");
     setText(fields.productionPairingBoundary, "Failed");
   } finally {
+    productionBusyAction = null;
     if (fields.saveProductionSessionDraft) {
       fields.saveProductionSessionDraft.disabled = false;
     }
+    applyProductionActionState();
   }
 }
 
@@ -795,11 +866,14 @@ async function checkProductionSessionState() {
   }
 
   setProductionPairingState("Session state checking");
+  productionBusyAction = "session-state";
+  applyProductionActionState();
   if (fields.checkProductionSessionState) {
     fields.checkProductionSessionState.disabled = true;
   }
   try {
     const result = await invoke("production_session_state_check", { profile, passphrase });
+    latestProductionSessionState = result;
     setProductionPairingState("Session state checked");
     setText(fields.productionPairingWarning, result.warning);
     setText(
@@ -815,13 +889,16 @@ async function checkProductionSessionState() {
       `session_ready=${result.ready_for_message_envelope} outbound_io=${result.outbound_envelope_io_ready} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
     );
   } catch (error) {
+    latestProductionSessionState = null;
     setProductionPairingState("Session state check failed");
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionPairingSession, "Failed");
   } finally {
+    productionBusyAction = null;
     if (fields.checkProductionSessionState) {
       fields.checkProductionSessionState.disabled = false;
     }
+    applyProductionActionState();
   }
 }
 
@@ -854,6 +931,8 @@ async function exportProductionHandshakeInit() {
   }
 
   setProductionPairingState("Handshake init exporting");
+  productionBusyAction = "handshake-init";
+  applyProductionActionState();
   if (fields.exportProductionHandshakeInit) {
     fields.exportProductionHandshakeInit.disabled = true;
   }
@@ -865,9 +944,11 @@ async function exportProductionHandshakeInit() {
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionHandshakeState, "Failed");
   } finally {
+    productionBusyAction = null;
     if (fields.exportProductionHandshakeInit) {
       fields.exportProductionHandshakeInit.disabled = false;
     }
+    applyProductionActionState();
   }
 }
 
@@ -880,6 +961,8 @@ async function exportProductionHandshakeReply() {
   }
 
   setProductionPairingState("Handshake reply exporting");
+  productionBusyAction = "handshake-reply";
+  applyProductionActionState();
   if (fields.exportProductionHandshakeReply) {
     fields.exportProductionHandshakeReply.disabled = true;
   }
@@ -895,9 +978,11 @@ async function exportProductionHandshakeReply() {
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionHandshakeState, "Failed");
   } finally {
+    productionBusyAction = null;
     if (fields.exportProductionHandshakeReply) {
       fields.exportProductionHandshakeReply.disabled = false;
     }
+    applyProductionActionState();
   }
 }
 
@@ -910,6 +995,8 @@ async function exportProductionHandshakeFinish() {
   }
 
   setProductionPairingState("Handshake finish exporting");
+  productionBusyAction = "handshake-finish";
+  applyProductionActionState();
   if (fields.exportProductionHandshakeFinish) {
     fields.exportProductionHandshakeFinish.disabled = true;
   }
@@ -925,9 +1012,11 @@ async function exportProductionHandshakeFinish() {
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionHandshakeState, "Failed");
   } finally {
+    productionBusyAction = null;
     if (fields.exportProductionHandshakeFinish) {
       fields.exportProductionHandshakeFinish.disabled = false;
     }
+    applyProductionActionState();
   }
 }
 
@@ -940,6 +1029,8 @@ async function importProductionHandshakeFinish() {
   }
 
   setProductionPairingState("Handshake finish importing");
+  productionBusyAction = "handshake-finish-import";
+  applyProductionActionState();
   if (fields.importProductionHandshakeFinish) {
     fields.importProductionHandshakeFinish.disabled = true;
   }
@@ -965,9 +1056,11 @@ async function importProductionHandshakeFinish() {
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionHandshakeState, "Failed");
   } finally {
+    productionBusyAction = null;
     if (fields.importProductionHandshakeFinish) {
       fields.importProductionHandshakeFinish.disabled = false;
     }
+    applyProductionActionState();
   }
 }
 
@@ -984,6 +1077,8 @@ async function exportProductionMessageEnvelope() {
   if (fields.productionMessageEnvelope) {
     fields.productionMessageEnvelope.value = "";
   }
+  productionBusyAction = "message-export";
+  applyProductionActionState();
   if (fields.exportProductionMessageEnvelope) {
     fields.exportProductionMessageEnvelope.disabled = true;
   }
@@ -1013,9 +1108,11 @@ async function exportProductionMessageEnvelope() {
     setText(fields.productionMessageWarning, String(error));
     setText(fields.productionMessageOutbound, "Failed");
   } finally {
+    productionBusyAction = null;
     if (fields.exportProductionMessageEnvelope) {
       fields.exportProductionMessageEnvelope.disabled = false;
     }
+    applyProductionActionState();
   }
 }
 
@@ -1035,6 +1132,8 @@ async function importProductionMessageEnvelope() {
 
   setProductionMessageState("Message envelope importing");
   setText(fields.productionMessageWarning, "Importing and decrypting production envelope.");
+  productionBusyAction = "message-import";
+  applyProductionActionState();
   if (fields.importProductionMessageEnvelope) {
     fields.importProductionMessageEnvelope.disabled = true;
   }
@@ -1061,9 +1160,11 @@ async function importProductionMessageEnvelope() {
     setText(fields.productionMessageWarning, String(error));
     setText(fields.productionMessageInbound, "Failed");
   } finally {
+    productionBusyAction = null;
     if (fields.importProductionMessageEnvelope) {
       fields.importProductionMessageEnvelope.disabled = false;
     }
+    applyProductionActionState();
   }
 }
 
@@ -1077,6 +1178,8 @@ async function exportProductionReceivedMessage() {
 
   setProductionMessageState("Received message exporting");
   setText(fields.productionMessageWarning, "Reading received message after local unlock.");
+  productionBusyAction = "received-export";
+  applyProductionActionState();
   if (fields.exportProductionReceivedMessage) {
     fields.exportProductionReceivedMessage.disabled = true;
   }
@@ -1104,9 +1207,11 @@ async function exportProductionReceivedMessage() {
     setText(fields.productionMessageWarning, String(error));
     setText(fields.productionMessageInbound, "Failed");
   } finally {
+    productionBusyAction = null;
     if (fields.exportProductionReceivedMessage) {
       fields.exportProductionReceivedMessage.disabled = false;
     }
+    applyProductionActionState();
   }
 }
 
@@ -1120,8 +1225,27 @@ if (fields.productionProfileSelector) {
       fields.productionProfileName.value = fields.productionProfileSelector.value;
       resetProductionPairingView();
       resetProductionMessageView();
+      applyProductionActionState();
     }
   });
+}
+
+for (const input of [
+  fields.productionProfileName,
+  fields.productionProfilePassphrase,
+  fields.productionPairingEndpoint,
+  fields.productionPairingPayload,
+  fields.productionRemotePairingPayload,
+  fields.productionRemoteHandshakeInitPayload,
+  fields.productionRemoteHandshakeReplyPayload,
+  fields.productionRemoteHandshakeFinishPayload,
+  fields.productionMessageNumber,
+  fields.productionMessageBody,
+  fields.productionRemoteMessageEnvelope,
+]) {
+  if (input) {
+    input.addEventListener("input", applyProductionActionState);
+  }
 }
 
 if (fields.unlockProductionProfile) {
