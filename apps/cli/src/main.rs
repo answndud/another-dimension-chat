@@ -104,6 +104,11 @@ fn production_main() -> Result<(), String> {
         {
             run_production_pairing_session_open_runtime_command(args)?;
         }
+        [cmd, sub, action, args @ ..]
+            if cmd == "production" && sub == "message" && action == "send-prepare" =>
+        {
+            run_production_message_send_prepare_command(args)?;
+        }
         [cmd, sub, _args @ ..] if cmd == "production" && sub == "unlock" => {
             return Err(production_unlock_rejected_error());
         }
@@ -163,6 +168,7 @@ fn production_help() -> String {
   another-dimension production pairing session status --profile <name> --store <path> --passphrase-stdin
   another-dimension production pairing session load-runtime --profile <name> --store <path> --passphrase-stdin
   another-dimension production pairing session open-runtime --profile <name> --store <path> --passphrase-stdin
+  another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> --passphrase-stdin
   another-dimension --help
 
 boundary:
@@ -180,6 +186,7 @@ boundary:
   production pairing session status is storage-only: it checks persisted session draft readiness without opening transport
   production pairing session load-runtime is storage-only: it rebuilds in-memory runtime material without opening transport
   production pairing session open-runtime is storage-only: it binds runtime material to fail-closed stream gates without opening transport
+  production message send-prepare is storage-only: it validates outbound readiness and indexes a local message without network send
   prototype profile/pairing/message commands require --features dev-insecure"
         .to_string()
 }
@@ -500,6 +507,41 @@ fn run_production_pairing_session_open_runtime_command(args: &[String]) -> Resul
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn run_production_message_send_prepare_command(args: &[String]) -> Result<(), String> {
+    let options = ProductionMessageSendPrepareOptions::parse(args)?;
+    let passphrase = read_production_passphrase()?;
+    let plaintext = std::fs::read(&options.plaintext_path)
+        .map_err(|_| "production message send-prepare failed: plaintext read failed".to_string())?;
+    let summary = another_dimension_core::production::production_message_send_prepare(
+        &options.store_path,
+        options.profile,
+        &passphrase,
+        options.message_number,
+        &plaintext,
+    )
+    .map_err(redacted_production_message_send_prepare_error)?;
+
+    println!(
+        "production message send prepared: storage_opened={} runtime_material_reconstructable={} outbound_envelope_io_ready={} plaintext_accepted={} message_number_reserved={} local_message_index_written={} envelope_encryption_ready={} network_send_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.runtime_material_reconstructable(),
+        summary.outbound_envelope_io_ready(),
+        summary.plaintext_accepted(),
+        summary.message_number_reserved(),
+        summary.local_message_index_written(),
+        summary.envelope_encryption_ready(),
+        summary.network_send_attempted(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production message send-prepare is storage-only and not a secure messenger release"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 struct ProductionProfileInitOptions {
     profile: another_dimension_identity::ProfileName,
     store_path: std::path::PathBuf,
@@ -567,6 +609,14 @@ struct ProductionPairingSessionPrepareOptions {
     store_path: std::path::PathBuf,
     local_payload_path: std::path::PathBuf,
     remote_payload_path: std::path::PathBuf,
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+struct ProductionMessageSendPrepareOptions {
+    profile: another_dimension_identity::ProfileName,
+    store_path: std::path::PathBuf,
+    message_number: u64,
+    plaintext_path: std::path::PathBuf,
 }
 
 #[cfg(not(feature = "dev-insecure"))]
@@ -707,6 +757,75 @@ impl ProductionPairingSessionPrepareOptions {
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+impl ProductionMessageSendPrepareOptions {
+    fn parse(args: &[String]) -> Result<Self, String> {
+        let mut profile = None;
+        let mut store_path = None;
+        let mut message_number = None;
+        let mut plaintext_path = None;
+        let mut passphrase_stdin = false;
+        let mut index = 0;
+
+        while index < args.len() {
+            match args[index].as_str() {
+                "--profile" => {
+                    index += 1;
+                    profile = Some(
+                        args.get(index)
+                            .ok_or_else(production_message_send_prepare_help)
+                            .and_then(|value| {
+                                another_dimension_identity::ProfileName::new(value)
+                                    .map_err(|_| "invalid production profile name".to_string())
+                            })?,
+                    );
+                }
+                "--store" => {
+                    index += 1;
+                    store_path = Some(
+                        args.get(index)
+                            .map(std::path::PathBuf::from)
+                            .ok_or_else(production_message_send_prepare_help)?,
+                    );
+                }
+                "--message-number" => {
+                    index += 1;
+                    message_number = Some(
+                        args.get(index)
+                            .ok_or_else(production_message_send_prepare_help)?
+                            .parse::<u64>()
+                            .map_err(|_| production_message_send_prepare_help())?,
+                    );
+                }
+                "--plaintext" => {
+                    index += 1;
+                    plaintext_path = Some(
+                        args.get(index)
+                            .map(std::path::PathBuf::from)
+                            .ok_or_else(production_message_send_prepare_help)?,
+                    );
+                }
+                "--passphrase-stdin" => {
+                    passphrase_stdin = true;
+                }
+                _ => return Err(production_message_send_prepare_help()),
+            }
+            index += 1;
+        }
+
+        if !passphrase_stdin {
+            return Err(production_message_send_prepare_help());
+        }
+
+        Ok(Self {
+            profile: profile.ok_or_else(production_message_send_prepare_help)?,
+            store_path: store_path.ok_or_else(production_message_send_prepare_help)?,
+            message_number: message_number.ok_or_else(production_message_send_prepare_help)?,
+            plaintext_path: plaintext_path.ok_or_else(production_message_send_prepare_help)?,
+        })
+    }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 fn production_profile_init_help() -> String {
     "usage:
   another-dimension production profile init --profile <name> --store <path> --passphrase-stdin
@@ -793,6 +912,15 @@ fn production_pairing_session_open_runtime_help() -> String {
   another-dimension production pairing session open-runtime --profile <name> --store <path> --passphrase-stdin
 
 Reads the profile passphrase from stdin. Opens an encrypted local profile store, reloads runtime material, binds it to high-risk onion outbound stream gates and fail-closed envelope I/O boundaries, and performs no dial, send, receive, or long-lived unlock session."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn production_message_send_prepare_help() -> String {
+    "usage:
+  another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> --passphrase-stdin
+
+Reads the profile passphrase from stdin and plaintext from --plaintext. Opens an encrypted local profile store, reloads production session runtime material, validates fail-closed outbound readiness, and records a local message index without encrypting an envelope, opening transport, or enabling runtime messaging."
         .to_string()
 }
 
@@ -1071,6 +1199,41 @@ fn redacted_production_pairing_session_open_runtime_error(
 ) -> String {
     redacted_production_pairing_session_load_runtime_error(error)
         .replace("load-runtime", "open-runtime")
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_message_send_prepare_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    use another_dimension_core::production::ProductionSessionError;
+    use another_dimension_storage::production::{
+        ProductionStorageError, ProductionStoragePolicyError,
+    };
+
+    match error {
+        ProductionSessionError::ProfileMarkerMissing => {
+            "production message send-prepare failed: profile marker missing".to_string()
+        }
+        ProductionSessionError::SessionDraftMissing => {
+            "production message send-prepare failed: session draft missing".to_string()
+        }
+        ProductionSessionError::NoiseStaticPrivateKeyMissing => {
+            "production message send-prepare failed: local noise static key missing".to_string()
+        }
+        ProductionSessionError::NoiseStaticKeyMismatch => {
+            "production message send-prepare failed: local noise static key mismatch".to_string()
+        }
+        ProductionSessionError::Storage(ProductionStorageError::UnlockFailed) => {
+            "production message send-prepare failed: unlock failed".to_string()
+        }
+        ProductionSessionError::Storage(ProductionStorageError::Policy(
+            ProductionStoragePolicyError::InvalidPassphrase,
+        )) => "invalid production profile passphrase".to_string(),
+        ProductionSessionError::Storage(_) => {
+            "production message send-prepare failed: storage error".to_string()
+        }
+        _ => "production message send-prepare failed".to_string(),
+    }
 }
 
 #[cfg(not(feature = "dev-insecure"))]
