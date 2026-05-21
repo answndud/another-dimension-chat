@@ -20,6 +20,17 @@ export function productionTwoProfileReadiness(input, busy) {
   return "Ready: local encrypted roundtrip can run";
 }
 
+export function productionProfilePreset(peer) {
+  const normalizedPeer = String(peer ?? "").trim().toLowerCase();
+  if (normalizedPeer === "alice") {
+    return { profile: "alice", rendezvousEndpoint: "alice.onion" };
+  }
+  if (normalizedPeer === "bob") {
+    return { profile: "bob", rendezvousEndpoint: "bob.onion" };
+  }
+  return null;
+}
+
 export function productionManualNextActions(state) {
   const {
     busy,
