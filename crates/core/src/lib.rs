@@ -585,6 +585,42 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionDurableStateStoreWriteStatusMirror {
+        test_only_store_write_covered: bool,
+        production_store_write_enabled: bool,
+        production_unlock_command_enabled: bool,
+        durable_session_persistence_ready: bool,
+        rollback_protection: ReplayRollbackProtection,
+        runtime_messaging_enabled: bool,
+    }
+
+    impl SessionDurableStateStoreWriteStatusMirror {
+        pub fn test_only_store_write_covered(self) -> bool {
+            self.test_only_store_write_covered
+        }
+
+        pub fn production_store_write_enabled(self) -> bool {
+            self.production_store_write_enabled
+        }
+
+        pub fn production_unlock_command_enabled(self) -> bool {
+            self.production_unlock_command_enabled
+        }
+
+        pub fn durable_session_persistence_ready(self) -> bool {
+            self.durable_session_persistence_ready
+        }
+
+        pub fn rollback_protection(self) -> ReplayRollbackProtection {
+            self.rollback_protection
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct LocalMessageIndexEntry {
         contact_id: ContactId,
@@ -1180,6 +1216,20 @@ pub mod production {
         }
     }
 
+    pub fn session_durable_state_store_write_status_mirror(
+    ) -> SessionDurableStateStoreWriteStatusMirror {
+        let guard = session_durable_state_adapter_non_readiness_guard();
+
+        SessionDurableStateStoreWriteStatusMirror {
+            test_only_store_write_covered: true,
+            production_store_write_enabled: guard.store_write_enabled(),
+            production_unlock_command_enabled: false,
+            durable_session_persistence_ready: guard.durable_session_persistence_ready(),
+            rollback_protection: guard.rollback_protection(),
+            runtime_messaging_enabled: guard.runtime_messaging_enabled(),
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -1740,6 +1790,21 @@ pub mod production {
 
             drop(store);
             std::fs::remove_dir_all(dir).expect("remove test store");
+        }
+
+        #[test]
+        fn session_durable_state_store_write_status_mirror_keeps_production_closed() {
+            let status = session_durable_state_store_write_status_mirror();
+
+            assert!(status.test_only_store_write_covered());
+            assert!(!status.production_store_write_enabled());
+            assert!(!status.production_unlock_command_enabled());
+            assert!(!status.durable_session_persistence_ready());
+            assert_eq!(
+                status.rollback_protection(),
+                ReplayRollbackProtection::NotProvided
+            );
+            assert!(!status.runtime_messaging_enabled());
         }
 
         #[test]

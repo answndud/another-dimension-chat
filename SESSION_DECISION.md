@@ -119,6 +119,8 @@ Replay-aware decrypt now uses the existing `ReplayWindow` boundary. Duplicate an
 
 The first store-write check for this adapter is test-only. `session_durable_state_store_write_test_only_round_trips_prepared_record` writes one prepared sealed Noise static private key record through `SqlCipherRecordStore` and immediately checks that the non-readiness guard still keeps store-write readiness, durable session persistence, and production E2EE readiness false.
 
+`session_durable_state_store_write_status_mirror()` reports that the store-write coverage is test-only. It keeps production store write, production unlock command, durable session persistence, rollback protection, and runtime messaging unavailable.
+
 ## Session Persistence Decision
 
 For the current v0.1 production message boundary, production session state is in-memory only.

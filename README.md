@@ -126,6 +126,7 @@ This runs:
 - Session durable-state encrypted-record adapter spike prepares allowed sealed records without writing them to a store or enabling durable Noise transport state.
 - Session durable-state adapter non-readiness guard keeps rollback protection, durable session persistence, production E2EE readiness, store writes, and runtime messaging false.
 - Session durable-state store-write spike is test-only and round-trips a prepared sealed record through SQLCipher without adding a production unlock or messaging path.
+- Session durable-state store-write status mirror marks that coverage as test-only while keeping production store write, unlock, durable persistence, rollback protection, and runtime messaging disabled.
 - Tauri scaffold static checks.
 - Public release hygiene static checks.
 
