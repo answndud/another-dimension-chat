@@ -299,7 +299,7 @@
               autocomplete="current-password"
             />
             <div class="loop-actions">
-              <button id="unlock-production-profile" type="button">Unlock production profile</button>
+              <button id="unlock-production-profile" type="button">Unlock profile</button>
             </div>
             <p id="production-profile-state" class="demo-state" aria-live="polite">
               Profile locked
@@ -330,7 +330,7 @@
             <label class="loop-label" for="production-pairing-endpoint">Onion endpoint</label>
             <input id="production-pairing-endpoint" type="text" value="alice.onion" />
             <div class="loop-actions">
-              <button id="export-production-pairing" type="button">Export pairing payload</button>
+              <button id="export-production-pairing" type="button">Export pairing</button>
             </div>
             <p id="production-pairing-state" class="demo-state" aria-live="polite">
               Pairing payload idle
@@ -341,17 +341,17 @@
             <label class="loop-label" for="production-pairing-payload">Pairing payload</label>
             <textarea id="production-pairing-payload" rows="5" readonly></textarea>
             <div class="loop-actions">
-              <button id="use-production-pairing-payload" type="button">Use pairing payload</button>
+              <button id="use-production-pairing-payload" type="button">Use pairing</button>
             </div>
             <label class="loop-label" for="production-remote-pairing-payload">Remote payload</label>
             <textarea id="production-remote-pairing-payload" rows="5"></textarea>
             <div class="loop-actions">
-              <button id="save-production-session-draft" type="button">Save session draft</button>
+              <button id="save-production-session-draft" type="button">Save draft</button>
             </div>
             <label class="loop-label" for="production-handshake-init-payload">Handshake init</label>
             <textarea id="production-handshake-init-payload" rows="3" readonly></textarea>
             <div class="loop-actions">
-              <button id="use-production-handshake-init" type="button">Use handshake init</button>
+              <button id="use-production-handshake-init" type="button">Use init</button>
             </div>
             <label class="loop-label" for="production-remote-handshake-init-payload">
               Remote handshake init
@@ -360,7 +360,7 @@
             <label class="loop-label" for="production-handshake-reply-payload">Handshake reply</label>
             <textarea id="production-handshake-reply-payload" rows="3" readonly></textarea>
             <div class="loop-actions">
-              <button id="use-production-handshake-reply" type="button">Use handshake reply</button>
+              <button id="use-production-handshake-reply" type="button">Use reply</button>
             </div>
             <label class="loop-label" for="production-remote-handshake-reply-payload">
               Remote handshake reply
@@ -369,18 +369,18 @@
             <label class="loop-label" for="production-handshake-finish-payload">Handshake finish</label>
             <textarea id="production-handshake-finish-payload" rows="3" readonly></textarea>
             <div class="loop-actions">
-              <button id="use-production-handshake-finish" type="button">Use handshake finish</button>
+              <button id="use-production-handshake-finish" type="button">Use finish</button>
             </div>
             <label class="loop-label" for="production-remote-handshake-finish-payload">
               Remote handshake finish
             </label>
             <textarea id="production-remote-handshake-finish-payload" rows="3"></textarea>
             <div class="loop-actions">
-              <button id="export-production-handshake-init" type="button">Export handshake init</button>
-              <button id="export-production-handshake-reply" type="button">Export handshake reply</button>
-              <button id="export-production-handshake-finish" type="button">Export handshake finish</button>
-              <button id="import-production-handshake-finish" type="button">Import handshake finish</button>
-              <button id="check-production-session-state" type="button">Check session state</button>
+              <button id="export-production-handshake-init" type="button">Export init</button>
+              <button id="export-production-handshake-reply" type="button">Export reply</button>
+              <button id="export-production-handshake-finish" type="button">Export finish</button>
+              <button id="import-production-handshake-finish" type="button">Import finish</button>
+              <button id="check-production-session-state" type="button">Check session</button>
             </div>
             <dl class="flow-summary">
               <div>
@@ -411,7 +411,7 @@
             <label class="loop-label" for="production-message-body">Message</label>
             <textarea id="production-message-body" rows="3">hello over stored transport</textarea>
             <div class="loop-actions">
-              <button id="export-production-message-envelope" type="button">Export message envelope</button>
+              <button id="export-production-message-envelope" type="button">Export envelope</button>
             </div>
             <p id="production-message-state" class="demo-state" aria-live="polite">
               Message flow idle
@@ -422,13 +422,13 @@
             <label class="loop-label" for="production-message-envelope">Envelope</label>
             <textarea id="production-message-envelope" rows="5" readonly></textarea>
             <div class="loop-actions">
-              <button id="use-production-message-envelope" type="button">Use message envelope</button>
+              <button id="use-production-message-envelope" type="button">Use envelope</button>
             </div>
             <label class="loop-label" for="production-remote-message-envelope">Remote envelope</label>
             <textarea id="production-remote-message-envelope" rows="5"></textarea>
             <div class="loop-actions">
-              <button id="import-production-message-envelope" type="button">Import message envelope</button>
-              <button id="export-production-received-message" type="button">Show received message</button>
+              <button id="import-production-message-envelope" type="button">Import envelope</button>
+              <button id="export-production-received-message" type="button">Show received</button>
             </div>
             <label class="loop-label" for="production-received-message">Received message</label>
             <textarea id="production-received-message" rows="3" readonly></textarea>
@@ -455,7 +455,7 @@
             <label class="loop-label" for="production-roundtrip-message">Message</label>
             <textarea id="production-roundtrip-message" rows="3">hello from production core</textarea>
             <div class="loop-actions">
-              <button id="run-production-roundtrip" type="button">Run production roundtrip</button>
+              <button id="run-production-roundtrip" type="button">Run core roundtrip</button>
             </div>
             <p id="production-roundtrip-state" class="demo-state" aria-live="polite">
               Roundtrip idle

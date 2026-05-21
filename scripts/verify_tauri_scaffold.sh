@@ -311,35 +311,35 @@ require_contains "$APP_DIR/index.html" 'session E2EE false transport send receiv
 require_contains "$APP_DIR/index.html" 'Production profile'
 require_contains "$APP_DIR/index.html" 'Persistent local store'
 require_contains "$APP_DIR/index.html" 'production-profile-selector'
-require_contains "$APP_DIR/index.html" 'Unlock production profile'
+require_contains "$APP_DIR/index.html" 'Unlock profile'
 require_contains "$APP_DIR/index.html" 'Production pairing'
 require_contains "$APP_DIR/index.html" 'Public payload export'
-require_contains "$APP_DIR/index.html" 'Export pairing payload'
-require_contains "$APP_DIR/index.html" 'Use pairing payload'
+require_contains "$APP_DIR/index.html" 'Export pairing'
+require_contains "$APP_DIR/index.html" 'Use pairing'
 require_contains "$APP_DIR/index.html" 'Remote payload'
-require_contains "$APP_DIR/index.html" 'Save session draft'
+require_contains "$APP_DIR/index.html" 'Save draft'
 require_contains "$APP_DIR/index.html" 'Handshake init'
-require_contains "$APP_DIR/index.html" 'Use handshake init'
+require_contains "$APP_DIR/index.html" 'Use init'
 require_contains "$APP_DIR/index.html" 'Remote handshake init'
 require_contains "$APP_DIR/index.html" 'Handshake reply'
-require_contains "$APP_DIR/index.html" 'Use handshake reply'
+require_contains "$APP_DIR/index.html" 'Use reply'
 require_contains "$APP_DIR/index.html" 'Remote handshake reply'
 require_contains "$APP_DIR/index.html" 'Handshake finish'
-require_contains "$APP_DIR/index.html" 'Use handshake finish'
+require_contains "$APP_DIR/index.html" 'Use finish'
 require_contains "$APP_DIR/index.html" 'Remote handshake finish'
-require_contains "$APP_DIR/index.html" 'Export handshake init'
-require_contains "$APP_DIR/index.html" 'Import handshake finish'
-require_contains "$APP_DIR/index.html" 'Check session state'
+require_contains "$APP_DIR/index.html" 'Export init'
+require_contains "$APP_DIR/index.html" 'Import finish'
+require_contains "$APP_DIR/index.html" 'Check session'
 require_contains "$APP_DIR/index.html" 'Production message'
 require_contains "$APP_DIR/index.html" 'Encrypted envelope path'
-require_contains "$APP_DIR/index.html" 'Export message envelope'
-require_contains "$APP_DIR/index.html" 'Use message envelope'
+require_contains "$APP_DIR/index.html" 'Export envelope'
+require_contains "$APP_DIR/index.html" 'Use envelope'
 require_contains "$APP_DIR/index.html" 'Remote envelope'
-require_contains "$APP_DIR/index.html" 'Import message envelope'
-require_contains "$APP_DIR/index.html" 'Show received message'
+require_contains "$APP_DIR/index.html" 'Import envelope'
+require_contains "$APP_DIR/index.html" 'Show received'
 require_contains "$APP_DIR/index.html" 'Received message'
 require_contains "$APP_DIR/index.html" 'Production core local roundtrip'
-require_contains "$APP_DIR/index.html" 'Run production roundtrip'
+require_contains "$APP_DIR/index.html" 'Run core roundtrip'
 require_contains "$APP_DIR/index.html" 'Repeatable local loop'
 require_contains "$APP_DIR/index.html" 'Local message loop'
 require_contains "$APP_DIR/index.html" 'Run local loop'
@@ -426,35 +426,35 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>' \
   | grep -v '<input id="production-profile-name" type="text" value="alice" autocomplete="username" />' \
   | grep -v '<input$' \
-  | grep -v '<button id="unlock-production-profile" type="button">Unlock production profile</button>' \
+  | grep -v '<button id="unlock-production-profile" type="button">Unlock profile</button>' \
   | grep -v '<input id="production-pairing-endpoint" type="text" value="alice.onion" />' \
-  | grep -v '<button id="export-production-pairing" type="button">Export pairing payload</button>' \
-  | grep -v '<button id="use-production-pairing-payload" type="button">Use pairing payload</button>' \
+  | grep -v '<button id="export-production-pairing" type="button">Export pairing</button>' \
+  | grep -v '<button id="use-production-pairing-payload" type="button">Use pairing</button>' \
   | grep -v '<textarea id="production-pairing-payload" rows="5" readonly></textarea>' \
   | grep -v '<textarea id="production-remote-pairing-payload" rows="5"></textarea>' \
-  | grep -v '<button id="save-production-session-draft" type="button">Save session draft</button>' \
+  | grep -v '<button id="save-production-session-draft" type="button">Save draft</button>' \
   | grep -v '<textarea id="production-handshake-init-payload" rows="3" readonly></textarea>' \
-  | grep -v '<button id="use-production-handshake-init" type="button">Use handshake init</button>' \
+  | grep -v '<button id="use-production-handshake-init" type="button">Use init</button>' \
   | grep -v '<textarea id="production-remote-handshake-init-payload" rows="3"></textarea>' \
   | grep -v '<textarea id="production-handshake-reply-payload" rows="3" readonly></textarea>' \
-  | grep -v '<button id="use-production-handshake-reply" type="button">Use handshake reply</button>' \
+  | grep -v '<button id="use-production-handshake-reply" type="button">Use reply</button>' \
   | grep -v '<textarea id="production-remote-handshake-reply-payload" rows="3"></textarea>' \
   | grep -v '<textarea id="production-handshake-finish-payload" rows="3" readonly></textarea>' \
-  | grep -v '<button id="use-production-handshake-finish" type="button">Use handshake finish</button>' \
+  | grep -v '<button id="use-production-handshake-finish" type="button">Use finish</button>' \
   | grep -v '<textarea id="production-remote-handshake-finish-payload" rows="3"></textarea>' \
-  | grep -v '<button id="export-production-handshake-init" type="button">Export handshake init</button>' \
-  | grep -v '<button id="export-production-handshake-reply" type="button">Export handshake reply</button>' \
-  | grep -v '<button id="export-production-handshake-finish" type="button">Export handshake finish</button>' \
-  | grep -v '<button id="import-production-handshake-finish" type="button">Import handshake finish</button>' \
-  | grep -v '<button id="check-production-session-state" type="button">Check session state</button>' \
+  | grep -v '<button id="export-production-handshake-init" type="button">Export init</button>' \
+  | grep -v '<button id="export-production-handshake-reply" type="button">Export reply</button>' \
+  | grep -v '<button id="export-production-handshake-finish" type="button">Export finish</button>' \
+  | grep -v '<button id="import-production-handshake-finish" type="button">Import finish</button>' \
+  | grep -v '<button id="check-production-session-state" type="button">Check session</button>' \
   | grep -v '<input id="production-message-number" type="number" min="1" value="1" />' \
   | grep -v '<textarea id="production-message-body" rows="3">hello over stored transport</textarea>' \
-  | grep -v '<button id="export-production-message-envelope" type="button">Export message envelope</button>' \
+  | grep -v '<button id="export-production-message-envelope" type="button">Export envelope</button>' \
   | grep -v '<textarea id="production-message-envelope" rows="5" readonly></textarea>' \
-  | grep -v '<button id="use-production-message-envelope" type="button">Use message envelope</button>' \
+  | grep -v '<button id="use-production-message-envelope" type="button">Use envelope</button>' \
   | grep -v '<textarea id="production-remote-message-envelope" rows="5"></textarea>' \
-  | grep -v '<button id="import-production-message-envelope" type="button">Import message envelope</button>' \
-  | grep -v '<button id="export-production-received-message" type="button">Show received message</button>' \
+  | grep -v '<button id="import-production-message-envelope" type="button">Import envelope</button>' \
+  | grep -v '<button id="export-production-received-message" type="button">Show received</button>' \
   | grep -v '<textarea id="production-received-message" rows="3" readonly></textarea>' \
   | grep -v '<input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />' \
   | grep -v '<input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />' \
@@ -463,7 +463,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="open-manual-production-tools" type="button" class="flow-control is-secondary">' \
   | grep -v '<button id="focus-local-diagnostic" type="button" class="flow-control is-secondary">' \
   | grep -v '<button id="edit-two-profile-message" type="button" class="flow-control is-secondary">' \
-  | grep -v '<button id="run-production-roundtrip" type="button">Run production roundtrip</button>' \
+  | grep -v '<button id="run-production-roundtrip" type="button">Run core roundtrip</button>' \
   | grep -v '<textarea id="production-roundtrip-message" rows="3">hello from production core</textarea>' \
   | grep -v '<button id="run-loop" type="button">Run local loop</button>' \
   | grep -v '<button id="reset-loop" type="button" class="flow-control is-secondary">' \
