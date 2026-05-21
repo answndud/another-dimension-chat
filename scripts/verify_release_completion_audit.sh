@@ -26,8 +26,9 @@ grep -q 'scripts/verify_release_signoff_template.sh' "$ROOT_DIR/RELEASE_COMPLETI
 grep -q 'External or independent review readiness | `RELEASE_HARDENING.md` records a readiness checklist skeleton and \[RELEASE_EXTERNAL_REVIEW_TEMPLATE.md\](RELEASE_EXTERNAL_REVIEW_TEMPLATE.md) records required scope/material/finding/blocker fields, but no candidate-specific external or independent review readiness evidence exists' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'scripts/verify_external_review_template.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
-grep -q 'Update and installer integrity | `RELEASE_HARDENING.md` records only an update/installer integrity checklist skeleton' \
+grep -q 'Update and installer integrity | `RELEASE_HARDENING.md` records an update/installer integrity checklist skeleton and \[RELEASE_UPDATE_INTEGRITY_TEMPLATE.md\](RELEASE_UPDATE_INTEGRITY_TEMPLATE.md) records required artifact, signature/hash, downgrade, package, and recovery fields, but no candidate-specific update or installer integrity evidence exists' \
   "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
+grep -q 'scripts/verify_update_integrity_template.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'Update and installer integrity' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 grep -q 'scripts/verify_release_signoff_gate.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
 
