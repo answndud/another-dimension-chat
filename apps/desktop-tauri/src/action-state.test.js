@@ -2,10 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   productionActionAvailability,
+  productionHandshakeFinishImportView,
+  productionHandshakePayloadView,
   productionManualNextActions,
+  productionMessageEnvelopeExportView,
+  productionMessageEnvelopeImportView,
   productionPairingPayloadView,
   productionProfileUnlockView,
+  productionReceivedMessageExportView,
   productionSessionDraftView,
+  productionSessionStateView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
 } from "./action-state.js";
@@ -100,6 +106,90 @@ const safeSessionDraftResult = {
   passphrase_retained: false,
   key_material_exposed: false,
   network_io_attempted: false,
+  transport_io_opened: false,
+  runtime_messaging_enabled: false,
+};
+
+const safeSessionStateResult = {
+  session_draft_present: true,
+  channel_id_derivable: true,
+  local_role_available: true,
+  remote_endpoint_state_present: true,
+  replay_window_present: true,
+  session_transport_state_present: true,
+  runtime_material_reconstructable: true,
+  ready_for_message_envelope: true,
+  outbound_envelope_io_ready: false,
+  store_path_returned: false,
+  passphrase_retained: false,
+  key_material_exposed: false,
+  network_io_attempted: false,
+  transport_io_opened: false,
+  runtime_messaging_enabled: false,
+};
+
+const safeHandshakePayloadResult = {
+  role_allowed: true,
+  input_payload_read: true,
+  input_payload_decodable: true,
+  output_payload_created: true,
+  state_written: true,
+  transport_state_persisted: true,
+  key_material_exposed: false,
+  network_io_attempted: false,
+  transport_io_opened: false,
+  runtime_messaging_enabled: false,
+};
+
+const safeHandshakeFinishImportResult = {
+  role_allowed: true,
+  finish_payload_read: true,
+  finish_payload_decodable: true,
+  remote_static_verified: true,
+  transport_state_persisted: true,
+  payloads_returned: false,
+  key_material_exposed: false,
+  network_io_attempted: false,
+  transport_io_opened: false,
+  runtime_messaging_enabled: false,
+};
+
+const safeMessageEnvelopeExportResult = {
+  message_number_reserved: true,
+  pending_message_record_written: true,
+  local_message_index_written: true,
+  session_transport_ready: true,
+  encrypted_envelope_written: true,
+  encrypted_envelope_present: true,
+  plaintext_returned: false,
+  key_material_exposed: false,
+  network_send_attempted: false,
+  transport_io_opened: false,
+  runtime_messaging_enabled: false,
+};
+
+const safeMessageEnvelopeImportResult = {
+  envelope_read: true,
+  envelope_decodable: true,
+  session_transport_ready: true,
+  replay_accepted: true,
+  plaintext_decrypted: true,
+  received_message_written: true,
+  received_message_matches_session: true,
+  plaintext_returned: false,
+  key_material_exposed: false,
+  network_receive_attempted: false,
+  transport_io_opened: false,
+  runtime_messaging_enabled: false,
+};
+
+const safeReceivedMessageExportResult = {
+  received_message_record_present: true,
+  received_message_record_decodable: true,
+  received_message_matches_session: true,
+  plaintext_returned_after_unlock: true,
+  key_material_exposed: false,
+  network_receive_attempted: false,
   transport_io_opened: false,
   runtime_messaging_enabled: false,
 };
@@ -253,4 +343,57 @@ test("productionSessionDraftView formats session draft storage and boundary flag
   assert.match(view.storage, /local_noise_match=true/);
   assert.match(view.boundary, /payloads_returned=true/);
   assert.match(view.boundary, /network_io=false/);
+});
+
+test("productionSessionStateView formats pairing and message readiness boundaries", () => {
+  const view = productionSessionStateView(safeSessionStateResult);
+
+  assert.match(view.session, /message=true/);
+  assert.match(view.pairingBoundary, /path_returned=false/);
+  assert.match(view.messageBoundary, /session_ready=true/);
+  assert.match(view.messageBoundary, /outbound_io=false/);
+});
+
+test("productionHandshakePayloadView formats shared handshake export results", () => {
+  const view = productionHandshakePayloadView(safeHandshakePayloadResult);
+
+  assert.match(view.state, /input_decodable=true/);
+  assert.match(view.state, /transport=true/);
+  assert.match(view.boundary, /key_material=false/);
+});
+
+test("productionHandshakeFinishImportView formats finish import result", () => {
+  const view = productionHandshakeFinishImportView({
+    ...safeHandshakeFinishImportResult,
+    payloads_returned: true,
+  });
+
+  assert.match(view.state, /remote_static=true/);
+  assert.match(view.boundary, /payloads_returned=true/);
+  assert.match(view.boundary, /runtime=false/);
+});
+
+test("productionMessageEnvelopeExportView formats outbound message result", () => {
+  const view = productionMessageEnvelopeExportView(safeMessageEnvelopeExportResult);
+
+  assert.match(view.outbound, /reserved=true/);
+  assert.match(view.outbound, /encrypted=true/);
+  assert.match(view.boundary, /network_send=false/);
+});
+
+test("productionMessageEnvelopeImportView formats inbound message result", () => {
+  const view = productionMessageEnvelopeImportView(safeMessageEnvelopeImportResult);
+
+  assert.match(view.inbound, /replay=true/);
+  assert.match(view.inbound, /stored=true/);
+  assert.match(view.boundary, /network_receive=false/);
+});
+
+test("productionReceivedMessageExportView formats received export result", () => {
+  const view = productionReceivedMessageExportView(safeReceivedMessageExportResult);
+
+  assert.match(view.inbound, /present=true/);
+  assert.match(view.inbound, /displayed=true/);
+  assert.match(view.boundary, /plaintext_after_unlock=true/);
+  assert.match(view.boundary, /key_material=false/);
 });

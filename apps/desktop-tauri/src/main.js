@@ -1,10 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
   productionActionAvailability,
+  productionHandshakeFinishImportView,
+  productionHandshakePayloadView,
   productionManualNextActions,
+  productionMessageEnvelopeExportView,
+  productionMessageEnvelopeImportView,
   productionPairingPayloadView,
   productionProfileUnlockView,
+  productionReceivedMessageExportView,
   productionSessionDraftView,
+  productionSessionStateView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
 } from "./action-state.js";
@@ -1168,21 +1174,13 @@ async function checkProductionSessionState() {
   }
   try {
     const result = await invoke("production_session_state_check", { profile, passphrase });
+    const view = productionSessionStateView(result);
     latestProductionSessionState = result;
     setProductionPairingState("Session state checked");
     setText(fields.productionPairingWarning, result.warning);
-    setText(
-      fields.productionPairingSession,
-      `draft=${result.session_draft_present} channel=${result.channel_id_derivable} role=${result.local_role_available} endpoint=${result.remote_endpoint_state_present} replay=${result.replay_window_present} transport=${result.session_transport_state_present} runtime=${result.runtime_material_reconstructable} message=${result.ready_for_message_envelope}`,
-    );
-    setText(
-      fields.productionPairingBoundary,
-      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
-    setText(
-      fields.productionMessageBoundary,
-      `session_ready=${result.ready_for_message_envelope} outbound_io=${result.outbound_envelope_io_ready} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    setText(fields.productionPairingSession, view.session);
+    setText(fields.productionPairingBoundary, view.pairingBoundary);
+    setText(fields.productionMessageBoundary, view.messageBoundary);
   } catch (error) {
     latestProductionSessionState = null;
     setProductionPairingState("Session state check failed");
@@ -1204,17 +1202,12 @@ function setHandshakePayload(node, value) {
 }
 
 function renderHandshakePayloadResult(result, outputField) {
+  const view = productionHandshakePayloadView(result);
   setProductionPairingState("Handshake step completed");
   setText(fields.productionPairingWarning, result.warning);
   setHandshakePayload(outputField, result.output_payload);
-  setText(
-    fields.productionHandshakeState,
-    `role=${result.role_allowed} input_read=${result.input_payload_read} input_decodable=${result.input_payload_decodable} output=${result.output_payload_created} state=${result.state_written} transport=${result.transport_state_persisted}`,
-  );
-  setText(
-    fields.productionPairingBoundary,
-    `key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-  );
+  setText(fields.productionHandshakeState, view.state);
+  setText(fields.productionPairingBoundary, view.boundary);
   applyProductionActionState();
 }
 
@@ -1336,16 +1329,11 @@ async function importProductionHandshakeFinish() {
       passphrase,
       finishPayload,
     });
+    const view = productionHandshakeFinishImportView(result);
     setProductionPairingState("Handshake finish imported");
     setText(fields.productionPairingWarning, result.warning);
-    setText(
-      fields.productionHandshakeState,
-      `role=${result.role_allowed} finish_read=${result.finish_payload_read} decodable=${result.finish_payload_decodable} remote_static=${result.remote_static_verified} transport=${result.transport_state_persisted}`,
-    );
-    setText(
-      fields.productionPairingBoundary,
-      `payloads_returned=${result.payloads_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    setText(fields.productionHandshakeState, view.state);
+    setText(fields.productionPairingBoundary, view.boundary);
     await checkProductionSessionState();
   } catch (error) {
     setProductionPairingState("Handshake finish import failed");
@@ -1385,21 +1373,16 @@ async function exportProductionMessageEnvelope() {
       messageNumber,
       message,
     });
+    const view = productionMessageEnvelopeExportView(result);
     setProductionMessageState("Message envelope exported");
     setText(fields.productionMessageWarning, result.warning);
     if (fields.productionMessageEnvelope) {
       fields.productionMessageEnvelope.value = result.envelope_payload;
     }
     applyProductionActionState();
-    setText(
-      fields.productionMessageOutbound,
-      `reserved=${result.message_number_reserved} pending=${result.pending_message_record_written} indexed=${result.local_message_index_written} transport=${result.session_transport_ready} encrypted=${result.encrypted_envelope_written} export=${result.encrypted_envelope_present}`,
-    );
+    setText(fields.productionMessageOutbound, view.outbound);
     setText(fields.productionMessageInbound, "Not imported yet");
-    setText(
-      fields.productionMessageBoundary,
-      `plaintext_returned=${result.plaintext_returned} key_material=${result.key_material_exposed} network_send=${result.network_send_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    setText(fields.productionMessageBoundary, view.boundary);
   } catch (error) {
     setProductionMessageState("Message envelope export failed");
     setText(fields.productionMessageWarning, String(error));
@@ -1441,17 +1424,12 @@ async function importProductionMessageEnvelope() {
       messageNumber,
       envelopePayload,
     });
+    const view = productionMessageEnvelopeImportView(result);
     setProductionMessageState("Message envelope imported");
     setText(fields.productionMessageWarning, result.warning);
     setText(fields.productionMessageOutbound, "Not exported in this profile");
-    setText(
-      fields.productionMessageInbound,
-      `read=${result.envelope_read} decodable=${result.envelope_decodable} transport=${result.session_transport_ready} replay=${result.replay_accepted} decrypted=${result.plaintext_decrypted} stored=${result.received_message_written} status=${result.received_message_matches_session}`,
-    );
-    setText(
-      fields.productionMessageBoundary,
-      `plaintext_returned=${result.plaintext_returned} key_material=${result.key_material_exposed} network_receive=${result.network_receive_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    setText(fields.productionMessageInbound, view.inbound);
+    setText(fields.productionMessageBoundary, view.boundary);
   } catch (error) {
     setProductionMessageState("Message envelope import failed");
     setText(fields.productionMessageWarning, String(error));
@@ -1486,19 +1464,14 @@ async function exportProductionReceivedMessage() {
       passphrase,
       messageNumber,
     });
+    const view = productionReceivedMessageExportView(result);
     setProductionMessageState("Received message exported");
     setText(fields.productionMessageWarning, result.warning);
     if (fields.productionReceivedMessage) {
       fields.productionReceivedMessage.value = result.received_message;
     }
-    setText(
-      fields.productionMessageInbound,
-      `present=${result.received_message_record_present} decodable=${result.received_message_record_decodable} session=${result.received_message_matches_session} displayed=${result.plaintext_returned_after_unlock}`,
-    );
-    setText(
-      fields.productionMessageBoundary,
-      `plaintext_after_unlock=${result.plaintext_returned_after_unlock} key_material=${result.key_material_exposed} network_receive=${result.network_receive_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    setText(fields.productionMessageInbound, view.inbound);
+    setText(fields.productionMessageBoundary, view.boundary);
   } catch (error) {
     setProductionMessageState("Received message export failed");
     setText(fields.productionMessageWarning, String(error));
