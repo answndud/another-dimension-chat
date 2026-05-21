@@ -339,6 +339,25 @@ pub mod production {
         runtime_messaging_enabled: bool,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageOutboundEncryptPrepareSummary {
+        storage_opened: bool,
+        runtime_material_reconstructable: bool,
+        local_message_index_present: bool,
+        pending_message_record_present: bool,
+        pending_message_record_decodable: bool,
+        local_message_index_matches_pending: bool,
+        pending_plaintext_loaded: bool,
+        plaintext_exposed: bool,
+        session_transport_ready: bool,
+        envelope_encryption_ready: bool,
+        encrypted_envelope_written: bool,
+        network_send_attempted: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
     impl ProductionProfileInitSummary {
         pub fn storage_opened(self) -> bool {
             self.storage_opened
@@ -768,6 +787,68 @@ pub mod production {
 
         pub fn envelope_encryption_ready(self) -> bool {
             self.envelope_encryption_ready
+        }
+
+        pub fn network_send_attempted(self) -> bool {
+            self.network_send_attempted
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionMessageOutboundEncryptPrepareSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn runtime_material_reconstructable(self) -> bool {
+            self.runtime_material_reconstructable
+        }
+
+        pub fn local_message_index_present(self) -> bool {
+            self.local_message_index_present
+        }
+
+        pub fn pending_message_record_present(self) -> bool {
+            self.pending_message_record_present
+        }
+
+        pub fn pending_message_record_decodable(self) -> bool {
+            self.pending_message_record_decodable
+        }
+
+        pub fn local_message_index_matches_pending(self) -> bool {
+            self.local_message_index_matches_pending
+        }
+
+        pub fn pending_plaintext_loaded(self) -> bool {
+            self.pending_plaintext_loaded
+        }
+
+        pub fn plaintext_exposed(self) -> bool {
+            self.plaintext_exposed
+        }
+
+        pub fn session_transport_ready(self) -> bool {
+            self.session_transport_ready
+        }
+
+        pub fn envelope_encryption_ready(self) -> bool {
+            self.envelope_encryption_ready
+        }
+
+        pub fn encrypted_envelope_written(self) -> bool {
+            self.encrypted_envelope_written
         }
 
         pub fn network_send_attempted(self) -> bool {
@@ -2560,6 +2641,83 @@ pub mod production {
             local_message_index_matches_pending,
             plaintext_exposed: false,
             envelope_encryption_ready: false,
+            network_send_attempted: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_message_outbound_encrypt_prepare(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        message_number: u64,
+    ) -> Result<ProductionMessageOutboundEncryptPrepareSummary, ProductionSessionError> {
+        if message_number == 0 {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        let index_record_id = production_local_message_index_record_id(
+            &material.channel_id,
+            &material.remote_contact_id,
+            message_number,
+        );
+        let message_record_id = production_message_envelope_record_id(
+            &material.channel_id,
+            message_number,
+            MessageType::Data,
+        );
+        let index = store
+            .get(&index_record_id)?
+            .map(|record| {
+                if record.kind != ProductionRecordKind::LocalMessageIndex {
+                    return Err(ProductionSessionError::UnexpectedEnvelope);
+                }
+                let state = String::from_utf8(record.sealed_body)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                LocalMessageIndexEntry::decode(&state)
+            })
+            .transpose()?;
+        let pending = store
+            .get(&message_record_id)?
+            .map(|record| {
+                if record.kind != ProductionRecordKind::MessageEnvelope {
+                    return Err(ProductionSessionError::UnexpectedEnvelope);
+                }
+                let state = String::from_utf8(record.sealed_body)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                PendingOutboundMessageRecord::decode(&state)
+            })
+            .transpose()?;
+        let local_message_index_matches_pending = match (&index, &pending) {
+            (Some(index), Some(pending)) => {
+                index.contact_id() == &material.remote_contact_id
+                    && pending.contact_id == material.remote_contact_id
+                    && index.message_number() == message_number
+                    && pending.message_number == message_number
+                    && index.message_type() == pending.message_type
+                    && !pending.plaintext.is_empty()
+            }
+            _ => false,
+        };
+        Ok(ProductionMessageOutboundEncryptPrepareSummary {
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            local_message_index_present: index.is_some(),
+            pending_message_record_present: pending.is_some(),
+            pending_message_record_decodable: pending.is_some(),
+            local_message_index_matches_pending,
+            pending_plaintext_loaded: pending.is_some(),
+            plaintext_exposed: false,
+            session_transport_ready: false,
+            envelope_encryption_ready: false,
+            encrypted_envelope_written: false,
             network_send_attempted: false,
             key_material_exposed: false,
             transport_io_opened: false,
@@ -4373,6 +4531,29 @@ pub mod production {
             assert!(!pending_status.key_material_exposed());
             assert!(!pending_status.transport_io_opened());
             assert!(!pending_status.runtime_messaging_enabled());
+
+            let encrypt_prepare = production_message_outbound_encrypt_prepare(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+                1,
+            )
+            .expect("outbound encrypt prepare");
+            assert!(encrypt_prepare.storage_opened());
+            assert!(encrypt_prepare.runtime_material_reconstructable());
+            assert!(encrypt_prepare.local_message_index_present());
+            assert!(encrypt_prepare.pending_message_record_present());
+            assert!(encrypt_prepare.pending_message_record_decodable());
+            assert!(encrypt_prepare.local_message_index_matches_pending());
+            assert!(encrypt_prepare.pending_plaintext_loaded());
+            assert!(!encrypt_prepare.plaintext_exposed());
+            assert!(!encrypt_prepare.session_transport_ready());
+            assert!(!encrypt_prepare.envelope_encryption_ready());
+            assert!(!encrypt_prepare.encrypted_envelope_written());
+            assert!(!encrypt_prepare.network_send_attempted());
+            assert!(!encrypt_prepare.key_material_exposed());
+            assert!(!encrypt_prepare.transport_io_opened());
+            assert!(!encrypt_prepare.runtime_messaging_enabled());
             assert!(matches!(
                 production_message_send_prepare(&alice_store, alice.clone(), &passphrase, 2, b""),
                 Err(ProductionSessionError::UnexpectedEnvelope)

@@ -94,6 +94,7 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production pairing session open-runtime"));
     assert!(out.contains("production message send-prepare"));
     assert!(out.contains("production message pending-status"));
+    assert!(out.contains("production message outbound-encrypt-prepare"));
     assert!(out.contains("not a secure messenger release"));
     assert!(out.contains("no usable messaging"));
     assert!(out.contains("performs no network I/O and opens no local storage"));
@@ -1101,6 +1102,53 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!pending_status_error.contains("correct horse"));
     assert!(!pending_status_error.contains(alice_store_arg));
     assert!(!pending_status_error.contains("hello from alice"));
+
+    let encrypt_prepare = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "outbound-encrypt-prepare",
+            "--profile",
+            "alice",
+            "--store",
+            alice_store_arg,
+            "--message-number",
+            "1",
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let encrypt_prepare_out = stdout(&encrypt_prepare);
+    let encrypt_prepare_error = stderr(&encrypt_prepare);
+    assert!(
+        encrypt_prepare.status.success(),
+        "stdout: {encrypt_prepare_out}\nstderr: {encrypt_prepare_error}"
+    );
+    assert!(encrypt_prepare_out.contains("production message outbound encrypt prepared:"));
+    assert!(encrypt_prepare_out.contains("storage_opened=true"));
+    assert!(encrypt_prepare_out.contains("runtime_material_reconstructable=true"));
+    assert!(encrypt_prepare_out.contains("local_message_index_present=true"));
+    assert!(encrypt_prepare_out.contains("pending_message_record_present=true"));
+    assert!(encrypt_prepare_out.contains("pending_message_record_decodable=true"));
+    assert!(encrypt_prepare_out.contains("local_message_index_matches_pending=true"));
+    assert!(encrypt_prepare_out.contains("pending_plaintext_loaded=true"));
+    assert!(encrypt_prepare_out.contains("plaintext_exposed=false"));
+    assert!(encrypt_prepare_out.contains("session_transport_ready=false"));
+    assert!(encrypt_prepare_out.contains("envelope_encryption_ready=false"));
+    assert!(encrypt_prepare_out.contains("encrypted_envelope_written=false"));
+    assert!(encrypt_prepare_out.contains("network_send_attempted=false"));
+    assert!(encrypt_prepare_out.contains("key_material_exposed=false"));
+    assert!(encrypt_prepare_out.contains("transport_io_opened=false"));
+    assert!(encrypt_prepare_out.contains("runtime_messaging=false"));
+    assert!(encrypt_prepare_error.contains("storage-only"));
+    assert!(!encrypt_prepare_out.contains("alice"));
+    assert!(!encrypt_prepare_out.contains(alice_store_arg));
+    assert!(!encrypt_prepare_out.contains(plaintext_arg));
+    assert!(!encrypt_prepare_out.contains("hello from alice"));
+    assert!(!encrypt_prepare_out.contains("adchan1"));
+    assert!(!encrypt_prepare_error.contains("correct horse"));
+    assert!(!encrypt_prepare_error.contains(alice_store_arg));
+    assert!(!encrypt_prepare_error.contains("hello from alice"));
 
     let swapped = run_with_stdin(
         &[

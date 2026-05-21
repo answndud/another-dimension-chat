@@ -114,6 +114,11 @@ fn production_main() -> Result<(), String> {
         {
             run_production_message_pending_status_command(args)?;
         }
+        [cmd, sub, action, args @ ..]
+            if cmd == "production" && sub == "message" && action == "outbound-encrypt-prepare" =>
+        {
+            run_production_message_outbound_encrypt_prepare_command(args)?;
+        }
         [cmd, sub, _args @ ..] if cmd == "production" && sub == "unlock" => {
             return Err(production_unlock_rejected_error());
         }
@@ -175,6 +180,7 @@ fn production_help() -> String {
   another-dimension production pairing session open-runtime --profile <name> --store <path> --passphrase-stdin
   another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> --passphrase-stdin
   another-dimension production message pending-status --profile <name> --store <path> --message-number <n> --passphrase-stdin
+  another-dimension production message outbound-encrypt-prepare --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension --help
 
 boundary:
@@ -194,6 +200,7 @@ boundary:
   production pairing session open-runtime is storage-only: it binds runtime material to fail-closed stream gates without opening transport
   production message send-prepare is storage-only: it validates outbound readiness and indexes a local message without network send
   production message pending-status is storage-only: it checks a queued outbound message without exposing plaintext or opening transport
+  production message outbound-encrypt-prepare is storage-only: it checks pending plaintext and fails closed before envelope encryption until session transport exists
   prototype profile/pairing/message commands require --features dev-insecure"
         .to_string()
 }
@@ -583,6 +590,45 @@ fn run_production_message_pending_status_command(args: &[String]) -> Result<(), 
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn run_production_message_outbound_encrypt_prepare_command(args: &[String]) -> Result<(), String> {
+    let options = ProductionMessagePendingStatusOptions::parse_with_help(
+        args,
+        production_message_outbound_encrypt_prepare_help,
+    )?;
+    let passphrase = read_production_passphrase()?;
+    let summary = another_dimension_core::production::production_message_outbound_encrypt_prepare(
+        &options.store_path,
+        options.profile,
+        &passphrase,
+        options.message_number,
+    )
+    .map_err(redacted_production_message_outbound_encrypt_prepare_error)?;
+
+    println!(
+        "production message outbound encrypt prepared: storage_opened={} runtime_material_reconstructable={} local_message_index_present={} pending_message_record_present={} pending_message_record_decodable={} local_message_index_matches_pending={} pending_plaintext_loaded={} plaintext_exposed={} session_transport_ready={} envelope_encryption_ready={} encrypted_envelope_written={} network_send_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.runtime_material_reconstructable(),
+        summary.local_message_index_present(),
+        summary.pending_message_record_present(),
+        summary.pending_message_record_decodable(),
+        summary.local_message_index_matches_pending(),
+        summary.pending_plaintext_loaded(),
+        summary.plaintext_exposed(),
+        summary.session_transport_ready(),
+        summary.envelope_encryption_ready(),
+        summary.encrypted_envelope_written(),
+        summary.network_send_attempted(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production message outbound-encrypt-prepare is storage-only and not a secure messenger release"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 struct ProductionProfileInitOptions {
     profile: another_dimension_identity::ProfileName,
     store_path: std::path::PathBuf,
@@ -876,6 +922,10 @@ impl ProductionMessageSendPrepareOptions {
 #[cfg(not(feature = "dev-insecure"))]
 impl ProductionMessagePendingStatusOptions {
     fn parse(args: &[String]) -> Result<Self, String> {
+        Self::parse_with_help(args, production_message_pending_status_help)
+    }
+
+    fn parse_with_help(args: &[String], help: fn() -> String) -> Result<Self, String> {
         let mut profile = None;
         let mut store_path = None;
         let mut message_number = None;
@@ -886,48 +936,44 @@ impl ProductionMessagePendingStatusOptions {
             match args[index].as_str() {
                 "--profile" => {
                     index += 1;
-                    profile = Some(
-                        args.get(index)
-                            .ok_or_else(production_message_pending_status_help)
-                            .and_then(|value| {
-                                another_dimension_identity::ProfileName::new(value)
-                                    .map_err(|_| "invalid production profile name".to_string())
-                            })?,
-                    );
+                    profile = Some(args.get(index).ok_or_else(help).and_then(|value| {
+                        another_dimension_identity::ProfileName::new(value)
+                            .map_err(|_| "invalid production profile name".to_string())
+                    })?);
                 }
                 "--store" => {
                     index += 1;
                     store_path = Some(
                         args.get(index)
                             .map(std::path::PathBuf::from)
-                            .ok_or_else(production_message_pending_status_help)?,
+                            .ok_or_else(help)?,
                     );
                 }
                 "--message-number" => {
                     index += 1;
                     message_number = Some(
                         args.get(index)
-                            .ok_or_else(production_message_pending_status_help)?
+                            .ok_or_else(help)?
                             .parse::<u64>()
-                            .map_err(|_| production_message_pending_status_help())?,
+                            .map_err(|_| help())?,
                     );
                 }
                 "--passphrase-stdin" => {
                     passphrase_stdin = true;
                 }
-                _ => return Err(production_message_pending_status_help()),
+                _ => return Err(help()),
             }
             index += 1;
         }
 
         if !passphrase_stdin {
-            return Err(production_message_pending_status_help());
+            return Err(help());
         }
 
         Ok(Self {
-            profile: profile.ok_or_else(production_message_pending_status_help)?,
-            store_path: store_path.ok_or_else(production_message_pending_status_help)?,
-            message_number: message_number.ok_or_else(production_message_pending_status_help)?,
+            profile: profile.ok_or_else(help)?,
+            store_path: store_path.ok_or_else(help)?,
+            message_number: message_number.ok_or_else(help)?,
         })
     }
 }
@@ -1037,6 +1083,15 @@ fn production_message_pending_status_help() -> String {
   another-dimension production message pending-status --profile <name> --store <path> --message-number <n> --passphrase-stdin
 
 Reads the profile passphrase from stdin. Opens an encrypted local profile store and checks whether a queued outbound message record and local message index exist and match, without exposing plaintext, opening transport, or enabling runtime messaging."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn production_message_outbound_encrypt_prepare_help() -> String {
+    "usage:
+  another-dimension production message outbound-encrypt-prepare --profile <name> --store <path> --message-number <n> --passphrase-stdin
+
+Reads the profile passphrase from stdin. Opens an encrypted local profile store, checks whether pending plaintext can be loaded for outbound encryption, and fails closed before writing an encrypted envelope until an authenticated session transport exists. This does not expose plaintext, open transport, or enable runtime messaging."
         .to_string()
 }
 
@@ -1357,6 +1412,14 @@ fn redacted_production_message_pending_status_error(
     error: another_dimension_core::production::ProductionSessionError,
 ) -> String {
     redacted_production_message_send_prepare_error(error).replace("send-prepare", "pending-status")
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_message_outbound_encrypt_prepare_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    redacted_production_message_send_prepare_error(error)
+        .replace("send-prepare", "outbound-encrypt-prepare")
 }
 
 #[cfg(not(feature = "dev-insecure"))]
