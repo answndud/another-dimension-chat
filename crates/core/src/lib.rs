@@ -230,6 +230,20 @@ pub mod production {
         runtime_messaging_enabled: bool,
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionPrepareSummary {
+        storage_opened: bool,
+        session_plan_created: bool,
+        local_noise_static_private_key_loaded: bool,
+        local_noise_static_matches_payload: bool,
+        safety_transcript_bound: bool,
+        canonical_dialer_selected: bool,
+        local_role: SessionRole,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
     impl ProductionProfileInitSummary {
         pub fn storage_opened(self) -> bool {
             self.storage_opened
@@ -341,6 +355,48 @@ pub mod production {
 
         pub fn payload(&self) -> &PairingPayload {
             &self.payload
+        }
+
+        pub fn key_material_exposed(&self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(&self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(&self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionPrepareSummary {
+        pub fn storage_opened(&self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_plan_created(&self) -> bool {
+            self.session_plan_created
+        }
+
+        pub fn local_noise_static_private_key_loaded(&self) -> bool {
+            self.local_noise_static_private_key_loaded
+        }
+
+        pub fn local_noise_static_matches_payload(&self) -> bool {
+            self.local_noise_static_matches_payload
+        }
+
+        pub fn safety_transcript_bound(&self) -> bool {
+            self.safety_transcript_bound
+        }
+
+        pub fn canonical_dialer_selected(&self) -> bool {
+            self.canonical_dialer_selected
+        }
+
+        pub fn local_role(&self) -> SessionRole {
+            self.local_role
         }
 
         pub fn key_material_exposed(&self) -> bool {
@@ -1450,6 +1506,8 @@ pub mod production {
         NonProductionPairingPayload,
         ProfileMarkerMissing,
         IdentityPrivateKeyMissing,
+        NoiseStaticPrivateKeyMissing,
+        LocalPairingPayloadMismatch,
         SamePairwiseIdentity,
         SameRendezvousEndpoint,
         InvalidRendezvousEndpoint,
@@ -1663,6 +1721,48 @@ pub mod production {
             identity_private_key_loaded: true,
             noise_static_private_key_written: true,
             payload,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_pairing_session_prepare(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        local_payload: &PairingPayload,
+        remote_payload: &PairingPayload,
+    ) -> Result<ProductionPairingSessionPrepareSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        if local_payload.owner_profile != profile {
+            return Err(ProductionSessionError::LocalPairingPayloadMismatch);
+        }
+        let local_noise_static = store
+            .get(&production_latest_pairing_noise_static_record_id())?
+            .map(decode_production_noise_static_private_key_record)
+            .transpose()?
+            .ok_or(ProductionSessionError::NoiseStaticPrivateKeyMissing)?;
+        if local_noise_static.pairing_nonce != local_payload.pairing_nonce {
+            return Err(ProductionSessionError::LocalPairingPayloadMismatch);
+        }
+        let plan = plan_session_from_verified_pairing_payloads(local_payload, remote_payload)?;
+        require_matching_noise_static(
+            &local_noise_static.keypair,
+            &plan.local_noise_static_public_key,
+        )?;
+        Ok(ProductionPairingSessionPrepareSummary {
+            storage_opened: true,
+            session_plan_created: true,
+            local_noise_static_private_key_loaded: true,
+            local_noise_static_matches_payload: true,
+            safety_transcript_bound: !plan.safety_transcript.is_empty(),
+            canonical_dialer_selected: !plan.canonical_dialer_public_key.is_empty(),
+            local_role: plan.local_role,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -2287,6 +2387,11 @@ pub mod production {
             .map_err(ProductionSessionError::from)
     }
 
+    struct ProductionStoredNoiseStaticKeypair {
+        pairing_nonce: String,
+        keypair: NoiseStaticKeypair,
+    }
+
     fn encode_production_noise_static_private_key_record(
         profile: ProfileName,
         pairing_nonce: String,
@@ -2306,6 +2411,29 @@ pub mod production {
         )
         .map_err(ProductionStorageError::from)
         .map_err(ProductionSessionError::from)
+    }
+
+    fn decode_production_noise_static_private_key_record(
+        record: EncryptedRecord,
+    ) -> Result<ProductionStoredNoiseStaticKeypair, ProductionSessionError> {
+        if record.kind != ProductionRecordKind::NoiseStaticPrivateKey {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let encoded = String::from_utf8(record.sealed_body)
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let parts = encoded.split(':').collect::<Vec<_>>();
+        if parts.len() != 4 || parts[0] != "noise-xx-25519-v1" {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let private =
+            decode_hex(parts[2]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let public =
+            decode_hex(parts[3]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let keypair = NoiseStaticKeypair::from_private_public_bytes(private, public)?;
+        Ok(ProductionStoredNoiseStaticKeypair {
+            pairing_nonce: parts[1].to_string(),
+            keypair,
+        })
     }
 
     #[cfg(test)]
@@ -2929,6 +3057,96 @@ pub mod production {
             let body = String::from_utf8(record.sealed_body).expect("noise record body");
             assert!(body.starts_with(&format!("noise-xx-25519-v1:{}:", decoded.pairing_nonce)));
             assert!(body.ends_with(&encode_hex(prekey.public_key())));
+
+            let _ = std::fs::remove_dir_all(dir);
+        }
+
+        #[test]
+        fn production_pairing_session_prepare_loads_stored_noise_static_for_local_payload() {
+            let dir = std::env::temp_dir().join(format!(
+                "another-dimension-production-session-prepare-{}-{:?}",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+            if dir.exists() {
+                std::fs::remove_dir_all(&dir).expect("remove stale dir");
+            }
+            std::fs::create_dir_all(&dir).expect("create dir");
+            let alice_store = dir.join("alice.db");
+            let bob_store = dir.join("bob.db");
+            let alice = ProfileName::new("alice").expect("valid profile");
+            let bob = ProfileName::new("bob").expect("valid profile");
+            let passphrase = ProfilePassphrase::new("correct-passphrase").expect("passphrase");
+
+            production_profile_init(&alice_store, alice.clone(), &passphrase)
+                .expect("alice profile init");
+            production_profile_identity_init(&alice_store, alice.clone(), &passphrase)
+                .expect("alice identity init");
+            production_profile_init(&bob_store, bob.clone(), &passphrase)
+                .expect("bob profile init");
+            production_profile_identity_init(&bob_store, bob.clone(), &passphrase)
+                .expect("bob identity init");
+
+            let alice_payload = production_pairing_payload_create(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+                "alice.onion",
+            )
+            .expect("alice payload")
+            .payload()
+            .clone();
+            let bob_payload =
+                production_pairing_payload_create(&bob_store, bob, &passphrase, "bob.onion")
+                    .expect("bob payload")
+                    .payload()
+                    .clone();
+
+            let summary = production_pairing_session_prepare(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+                &alice_payload,
+                &bob_payload,
+            )
+            .expect("session prepare");
+
+            assert!(summary.storage_opened());
+            assert!(summary.session_plan_created());
+            assert!(summary.local_noise_static_private_key_loaded());
+            assert!(summary.local_noise_static_matches_payload());
+            assert!(summary.safety_transcript_bound());
+            assert!(summary.canonical_dialer_selected());
+            assert!(!summary.key_material_exposed());
+            assert!(!summary.transport_io_opened());
+            assert!(!summary.runtime_messaging_enabled());
+
+            assert_eq!(
+                production_pairing_session_prepare(
+                    &alice_store,
+                    alice.clone(),
+                    &passphrase,
+                    &bob_payload,
+                    &alice_payload,
+                ),
+                Err(ProductionSessionError::LocalPairingPayloadMismatch)
+            );
+
+            let carol = production_setup_draft_with_defaults(
+                &ProfileName::new("carol").expect("valid profile"),
+                "carol.onion",
+            )
+            .expect("carol setup");
+            assert_eq!(
+                production_pairing_session_prepare(
+                    &alice_store,
+                    alice,
+                    &passphrase,
+                    &carol.pairing.payload,
+                    &bob_payload,
+                ),
+                Err(ProductionSessionError::LocalPairingPayloadMismatch)
+            );
 
             let _ = std::fs::remove_dir_all(dir);
         }
