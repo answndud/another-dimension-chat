@@ -284,155 +284,165 @@
           <details class="advanced-panel">
             <summary>Manual production payload tools</summary>
             <div class="advanced-stack">
-          <section class="loop-panel" aria-labelledby="production-profile-title">
-            <div>
-              <p class="eyebrow">Production profile</p>
-              <h3 id="production-profile-title">Persistent local store</h3>
-            </div>
-            <label class="loop-label" for="production-profile-name">Profile</label>
-            <select id="production-profile-selector"></select>
-            <input id="production-profile-name" type="text" value="alice" autocomplete="username" />
-            <label class="loop-label" for="production-profile-passphrase">Passphrase</label>
-            <input
-              id="production-profile-passphrase"
-              type="password"
-              autocomplete="current-password"
-            />
-            <div class="loop-actions">
-              <button id="unlock-production-profile" type="button">Unlock profile</button>
-            </div>
-            <p id="production-profile-state" class="demo-state" aria-live="polite">
-              Profile locked
-            </p>
-            <p id="production-profile-warning" class="demo-warning">
-              Production profile has not been unlocked yet.
-            </p>
-            <dl class="flow-summary">
-              <div>
-                <dt>Storage</dt>
-                <dd id="production-profile-storage">Not checked yet</dd>
-              </div>
-              <div>
-                <dt>Identity</dt>
-                <dd id="production-profile-identity">Not checked yet</dd>
-              </div>
-              <div>
-                <dt>Boundary</dt>
-                <dd id="production-profile-boundary">Not checked yet</dd>
-              </div>
-            </dl>
-          </section>
-          <section class="loop-panel" aria-labelledby="production-pairing-title">
-            <div>
-              <p class="eyebrow">Production pairing</p>
-              <h3 id="production-pairing-title">Public payload export</h3>
-            </div>
-            <label class="loop-label" for="production-pairing-endpoint">Onion endpoint</label>
-            <input id="production-pairing-endpoint" type="text" value="alice.onion" />
-            <div class="loop-actions">
-              <button id="export-production-pairing" type="button">Export pairing</button>
-            </div>
-            <p id="production-pairing-state" class="demo-state" aria-live="polite">
-              Pairing payload idle
-            </p>
-            <p id="production-pairing-warning" class="demo-warning">
-              Pairing payload has not been exported yet.
-            </p>
-            <label class="loop-label" for="production-pairing-payload">Pairing payload</label>
-            <textarea id="production-pairing-payload" rows="5" readonly></textarea>
-            <div class="loop-actions">
-              <button id="use-production-pairing-payload" type="button">Use pairing</button>
-            </div>
-            <label class="loop-label" for="production-remote-pairing-payload">Remote payload</label>
-            <textarea id="production-remote-pairing-payload" rows="5"></textarea>
-            <div class="loop-actions">
-              <button id="save-production-session-draft" type="button">Save draft</button>
-            </div>
-            <label class="loop-label" for="production-handshake-init-payload">Handshake init</label>
-            <textarea id="production-handshake-init-payload" rows="3" readonly></textarea>
-            <div class="loop-actions">
-              <button id="use-production-handshake-init" type="button">Use init</button>
-            </div>
-            <label class="loop-label" for="production-remote-handshake-init-payload">
-              Remote handshake init
-            </label>
-            <textarea id="production-remote-handshake-init-payload" rows="3"></textarea>
-            <label class="loop-label" for="production-handshake-reply-payload">Handshake reply</label>
-            <textarea id="production-handshake-reply-payload" rows="3" readonly></textarea>
-            <div class="loop-actions">
-              <button id="use-production-handshake-reply" type="button">Use reply</button>
-            </div>
-            <label class="loop-label" for="production-remote-handshake-reply-payload">
-              Remote handshake reply
-            </label>
-            <textarea id="production-remote-handshake-reply-payload" rows="3"></textarea>
-            <label class="loop-label" for="production-handshake-finish-payload">Handshake finish</label>
-            <textarea id="production-handshake-finish-payload" rows="3" readonly></textarea>
-            <div class="loop-actions">
-              <button id="use-production-handshake-finish" type="button">Use finish</button>
-            </div>
-            <label class="loop-label" for="production-remote-handshake-finish-payload">
-              Remote handshake finish
-            </label>
-            <textarea id="production-remote-handshake-finish-payload" rows="3"></textarea>
-            <div class="loop-actions">
-              <button id="export-production-handshake-init" type="button">Export init</button>
-              <button id="export-production-handshake-reply" type="button">Export reply</button>
-              <button id="export-production-handshake-finish" type="button">Export finish</button>
-              <button id="import-production-handshake-finish" type="button">Import finish</button>
-              <button id="check-production-session-state" type="button">Check session</button>
-            </div>
-            <dl class="flow-summary">
-              <div>
-                <dt>Storage</dt>
-                <dd id="production-pairing-storage">Not checked yet</dd>
-              </div>
-              <div>
-                <dt>Session</dt>
-                <dd id="production-pairing-session">Not checked yet</dd>
-              </div>
-              <div>
-                <dt>Handshake</dt>
-                <dd id="production-handshake-state">Not checked yet</dd>
-              </div>
-              <div>
-                <dt>Boundary</dt>
-                <dd id="production-pairing-boundary">Not checked yet</dd>
-              </div>
-            </dl>
-          </section>
-          <section class="loop-panel" aria-labelledby="production-message-title">
-            <div>
-              <p class="eyebrow">Production message</p>
-              <h3 id="production-message-title">Encrypted envelope path</h3>
-            </div>
-            <label class="loop-label" for="production-message-number">Message number</label>
-            <input id="production-message-number" type="number" min="1" value="1" />
-            <label class="loop-label" for="production-message-body">Message</label>
-            <textarea id="production-message-body" rows="3">hello over stored transport</textarea>
-            <div class="loop-actions">
-              <button id="export-production-message-envelope" type="button">Export envelope</button>
-            </div>
-            <p id="production-message-state" class="demo-state" aria-live="polite">
-              Message flow idle
-            </p>
-            <p id="production-message-warning" class="demo-warning">
-              Message envelope has not been exported yet.
-            </p>
-            <label class="loop-label" for="production-message-envelope">Envelope</label>
-            <textarea id="production-message-envelope" rows="5" readonly></textarea>
-            <div class="loop-actions">
-              <button id="use-production-message-envelope" type="button">Use envelope</button>
-            </div>
-            <label class="loop-label" for="production-remote-message-envelope">Remote envelope</label>
-            <textarea id="production-remote-message-envelope" rows="5"></textarea>
-            <div class="loop-actions">
-              <button id="import-production-message-envelope" type="button">Import envelope</button>
-              <button id="export-production-received-message" type="button">Show received</button>
-            </div>
-            <label class="loop-label" for="production-received-message">Received message</label>
-            <textarea id="production-received-message" rows="3" readonly></textarea>
-            <dl class="flow-summary">
+              <section class="loop-panel" aria-labelledby="production-profile-title">
+                <div>
+                  <p class="eyebrow">Production profile</p>
+                  <h3 id="production-profile-title">Persistent local store</h3>
+                </div>
+                <label class="loop-label" for="production-profile-name">Profile</label>
+                <select id="production-profile-selector"></select>
+                <input id="production-profile-name" type="text" value="alice" autocomplete="username" />
+                <label class="loop-label" for="production-profile-passphrase">Passphrase</label>
+                <input
+                  id="production-profile-passphrase"
+                  type="password"
+                  autocomplete="current-password"
+                />
+                <div class="loop-actions">
+                  <button id="unlock-production-profile" type="button">Unlock profile</button>
+                </div>
+                <p id="production-profile-state" class="demo-state" aria-live="polite">
+                  Profile locked
+                </p>
+                <p id="production-profile-warning" class="demo-warning">
+                  Production profile has not been unlocked yet.
+                </p>
+                <dl class="flow-summary">
+                  <div>
+                    <dt>Storage</dt>
+                    <dd id="production-profile-storage">Not checked yet</dd>
+                  </div>
+                  <div>
+                    <dt>Identity</dt>
+                    <dd id="production-profile-identity">Not checked yet</dd>
+                  </div>
+                  <div>
+                    <dt>Boundary</dt>
+                    <dd id="production-profile-boundary">Not checked yet</dd>
+                  </div>
+                </dl>
+              </section>
+              <section class="loop-panel" aria-labelledby="production-pairing-title">
+                <div>
+                  <p class="eyebrow">Production pairing</p>
+                  <h3 id="production-pairing-title">Public payload export</h3>
+                </div>
+                <div class="tool-step">
+                  <label class="loop-label" for="production-pairing-endpoint">Onion endpoint</label>
+                  <input id="production-pairing-endpoint" type="text" value="alice.onion" />
+                  <div class="loop-actions">
+                    <button id="export-production-pairing" type="button">Export pairing</button>
+                  </div>
+                  <p id="production-pairing-state" class="demo-state" aria-live="polite">
+                    Pairing payload idle
+                  </p>
+                  <p id="production-pairing-warning" class="demo-warning">
+                    Pairing payload has not been exported yet.
+                  </p>
+                </div>
+                <div class="tool-step">
+                  <label class="loop-label" for="production-pairing-payload">Pairing payload</label>
+                  <textarea id="production-pairing-payload" rows="5" readonly></textarea>
+                  <div class="loop-actions">
+                    <button id="use-production-pairing-payload" type="button">Use pairing</button>
+                  </div>
+                  <label class="loop-label" for="production-remote-pairing-payload">Remote payload</label>
+                  <textarea id="production-remote-pairing-payload" rows="5"></textarea>
+                  <div class="loop-actions">
+                    <button id="save-production-session-draft" type="button">Save draft</button>
+                  </div>
+                </div>
+                <div class="tool-step">
+                  <label class="loop-label" for="production-handshake-init-payload">Handshake init</label>
+                  <textarea id="production-handshake-init-payload" rows="3" readonly></textarea>
+                  <div class="loop-actions">
+                    <button id="use-production-handshake-init" type="button">Use init</button>
+                  </div>
+                  <label class="loop-label" for="production-remote-handshake-init-payload">
+                    Remote handshake init
+                  </label>
+                  <textarea id="production-remote-handshake-init-payload" rows="3"></textarea>
+                  <label class="loop-label" for="production-handshake-reply-payload">Handshake reply</label>
+                  <textarea id="production-handshake-reply-payload" rows="3" readonly></textarea>
+                  <div class="loop-actions">
+                    <button id="use-production-handshake-reply" type="button">Use reply</button>
+                  </div>
+                  <label class="loop-label" for="production-remote-handshake-reply-payload">
+                    Remote handshake reply
+                  </label>
+                  <textarea id="production-remote-handshake-reply-payload" rows="3"></textarea>
+                  <label class="loop-label" for="production-handshake-finish-payload">Handshake finish</label>
+                  <textarea id="production-handshake-finish-payload" rows="3" readonly></textarea>
+                  <div class="loop-actions">
+                    <button id="use-production-handshake-finish" type="button">Use finish</button>
+                  </div>
+                  <label class="loop-label" for="production-remote-handshake-finish-payload">
+                    Remote handshake finish
+                  </label>
+                  <textarea id="production-remote-handshake-finish-payload" rows="3"></textarea>
+                  <div class="loop-actions">
+                    <button id="export-production-handshake-init" type="button">Export init</button>
+                    <button id="export-production-handshake-reply" type="button">Export reply</button>
+                    <button id="export-production-handshake-finish" type="button">Export finish</button>
+                    <button id="import-production-handshake-finish" type="button">Import finish</button>
+                    <button id="check-production-session-state" type="button">Check session</button>
+                  </div>
+                </div>
+                <dl class="flow-summary">
+                  <div>
+                    <dt>Storage</dt>
+                    <dd id="production-pairing-storage">Not checked yet</dd>
+                  </div>
+                  <div>
+                    <dt>Session</dt>
+                    <dd id="production-pairing-session">Not checked yet</dd>
+                  </div>
+                  <div>
+                    <dt>Handshake</dt>
+                    <dd id="production-handshake-state">Not checked yet</dd>
+                  </div>
+                  <div>
+                    <dt>Boundary</dt>
+                    <dd id="production-pairing-boundary">Not checked yet</dd>
+                  </div>
+                </dl>
+              </section>
+              <section class="loop-panel" aria-labelledby="production-message-title">
+                <div>
+                  <p class="eyebrow">Production message</p>
+                  <h3 id="production-message-title">Encrypted envelope path</h3>
+                </div>
+                <div class="tool-step">
+                  <label class="loop-label" for="production-message-number">Message number</label>
+                  <input id="production-message-number" type="number" min="1" value="1" />
+                  <label class="loop-label" for="production-message-body">Message</label>
+                  <textarea id="production-message-body" rows="3">hello over stored transport</textarea>
+                  <div class="loop-actions">
+                    <button id="export-production-message-envelope" type="button">Export envelope</button>
+                  </div>
+                  <p id="production-message-state" class="demo-state" aria-live="polite">
+                    Message flow idle
+                  </p>
+                  <p id="production-message-warning" class="demo-warning">
+                    Message envelope has not been exported yet.
+                  </p>
+                </div>
+                <div class="tool-step">
+                  <label class="loop-label" for="production-message-envelope">Envelope</label>
+                  <textarea id="production-message-envelope" rows="5" readonly></textarea>
+                  <div class="loop-actions">
+                    <button id="use-production-message-envelope" type="button">Use envelope</button>
+                  </div>
+                  <label class="loop-label" for="production-remote-message-envelope">Remote envelope</label>
+                  <textarea id="production-remote-message-envelope" rows="5"></textarea>
+                  <div class="loop-actions">
+                    <button id="import-production-message-envelope" type="button">Import envelope</button>
+                    <button id="export-production-received-message" type="button">Show received</button>
+                  </div>
+                  <label class="loop-label" for="production-received-message">Received message</label>
+                  <textarea id="production-received-message" rows="3" readonly></textarea>
+                </div>
+                <dl class="flow-summary">
               <div>
                 <dt>Outbound</dt>
                 <dd id="production-message-outbound">Not checked yet</dd>
