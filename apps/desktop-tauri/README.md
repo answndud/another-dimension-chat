@@ -9,11 +9,12 @@ Current boundary:
 - Tauri shell only.
 - Rust owns security-sensitive state and future protocol/storage/transport behavior.
 - Frontend may request redacted prototype status and run the local `dev-insecure` demo transcript command only.
-- Redacted status separates release-claim, messaging-surface, core, profile, pairing, transport, network-execution, experimental-transport, transport-I/O, storage, and verification boundaries without exposing profile/contact/endpoint data.
+- Redacted status separates release-claim, messaging-surface, core, profile, pairing, transport, network-execution, experimental-transport, bootstrap-status classification, transport-I/O, storage, and verification boundaries without exposing profile/contact/endpoint data.
 - The core status is static boundary copy in this scaffold; it does not link or call production core protocol, storage, or transport code.
 - The transport status is static pre-network fail-closed copy; it does not bootstrap Tor, host onion services, publish descriptors, open streams, or transfer envelopes.
 - The network-execution status is static disabled copy; it does not grant socket, Tor bootstrap, onion hosting, stream, or envelope transfer permission.
 - The experimental-transport status is static manual-gate summary copy; it does not execute bootstrap or mark transport usable.
+- The bootstrap-status classification mirrors CLI status classes such as `network-disabled`, `censorship-or-bridge-required`, and `timeout-or-transient-network-failure`; it does not expose raw Arti errors, paths, endpoints, bridge lines, descriptors, profile names, contact ids, or key material.
 - The transport-I/O status is static disabled copy for onion hosting, stream I/O, envelope I/O, and messaging.
 - The storage status is static `ADREC1` spike copy; it does not claim complete production key management, rollback protection, secure deletion, backup, recovery, or durable session persistence.
 - Status copy must describe boundary-only or disabled prototype states, not readiness, availability, or secure-release claims.
