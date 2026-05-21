@@ -51,6 +51,7 @@
 - `docs/`는 public repository에서 제외한다.
 - `.gitignore`는 version-control baseline이고, `.ignore`는 git 초기화 전에도 `rg` 검색을 깨끗하게 유지하기 위한 local search baseline이다.
 - 생성 산출물이나 로컬 dev data를 문서나 source에 섞지 않는다.
+- 루트 Markdown은 `README.md`, `AGENTS.md`, `SECURITY.md`만 유지한다. public-safe decision/runbook/boundary 문서가 꼭 필요하면 `reference/` 아래에 둔다.
 - 새 Markdown 파일은 명시적 사용자 요청, durable public contract, 또는 실제 decision record가 있을 때만 만든다. 기존 문서를 고치는 것으로 충분하면 새 문서를 만들지 않는다.
 - 루트에 release scaffold Markdown을 새로 만들지 않는다. 특히 `RELEASE_*`, `*_TEMPLATE`, `*_AUDIT`, `*_FIXTURE`, `*_GUARD`, `*_REQUIREMENTS` 계열 파일을 작업 slice마다 추가하는 방식은 금지한다.
 - 문서 전용 verifier를 새로 만들지 않는다. `scripts/verify_all.sh`는 기능 코드와 직접 연결된 fmt/test/boundary 검증만 포함한다.

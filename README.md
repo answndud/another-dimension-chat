@@ -82,6 +82,9 @@ scripts/
   smoke_dev_cli.sh  Alice/Bob CLI smoke flow
   verify_all.sh     canonical local verification entrypoint
   verify_tauri_scaffold.sh
+
+reference/
+  public-safe roadmap, decision, runbook, and boundary notes
 ```
 
 Private planning and security notes live outside the public repository scope and are ignored under `docs/`.
@@ -174,7 +177,7 @@ cargo run -q --features arti-manual-bootstrap -- \
 
 Without `--execute-network`, this command exercises only the disabled gate and records a redacted `RuntimeNetworkDisabled` event. With `--execute-network`, it may attempt a real Arti bootstrap, still without send/receive, onion hosting, or usable messaging. The lower-level transport crate now has a persistent client owner boundary, but the CLI command remains a local manual bootstrap spike rather than a messenger runtime.
 
-Before using `--execute-network`, follow [TRANSPORT_EXPERIMENT_RUNBOOK.md](TRANSPORT_EXPERIMENT_RUNBOOK.md). Manual network experiments require an isolated temporary `CARGO_TARGET_DIR`, an isolated app-private data root or explicit Arti state/cache root, cleanup of generated artifacts, and preservation of the no hosting/stream/envelope/messaging boundary.
+Before using `--execute-network`, follow [TRANSPORT_EXPERIMENT_RUNBOOK.md](reference/TRANSPORT_EXPERIMENT_RUNBOOK.md). Manual network experiments require an isolated temporary `CARGO_TARGET_DIR`, an isolated app-private data root or explicit Arti state/cache root, cleanup of generated artifacts, and preservation of the no hosting/stream/envelope/messaging boundary.
 
 Manual persistent lifecycle spike, local only:
 
@@ -230,21 +233,21 @@ scripts/demo_dev_cli.sh
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the public development roadmap.
+See [ROADMAP.md](reference/ROADMAP.md) for the public development roadmap.
 
-Phase 2 crypto planning is tracked in [CRYPTO_DECISION.md](CRYPTO_DECISION.md). That document is not a security claim; it is the decision boundary that must be resolved before placeholder crypto is replaced.
+Phase 2 crypto planning is tracked in [CRYPTO_DECISION.md](reference/CRYPTO_DECISION.md). That document is not a security claim; it is the decision boundary that must be resolved before placeholder crypto is replaced.
 
-The first identity signature dependency decision is tracked in [SIGNATURE_DECISION.md](SIGNATURE_DECISION.md).
+The first identity signature dependency decision is tracked in [SIGNATURE_DECISION.md](reference/SIGNATURE_DECISION.md).
 
-The first production pairing nonce randomness boundary is tracked in [RANDOMNESS_DECISION.md](RANDOMNESS_DECISION.md).
+The first production pairing nonce randomness boundary is tracked in [RANDOMNESS_DECISION.md](reference/RANDOMNESS_DECISION.md).
 
-The first production safety material display boundary is tracked in [SAFETY_MATERIAL_DECISION.md](SAFETY_MATERIAL_DECISION.md).
+The first production safety material display boundary is tracked in [SAFETY_MATERIAL_DECISION.md](reference/SAFETY_MATERIAL_DECISION.md).
 
-The first production session establishment boundary is tracked in [SESSION_DECISION.md](SESSION_DECISION.md).
+The first production session establishment boundary is tracked in [SESSION_DECISION.md](reference/SESSION_DECISION.md).
 
-The first production storage policy boundary is tracked in [STORAGE_DECISION.md](STORAGE_DECISION.md).
+The first production storage policy boundary is tracked in [STORAGE_DECISION.md](reference/STORAGE_DECISION.md).
 
-The cross-component replacement inventory is tracked in [COMPONENT_BOUNDARIES.md](COMPONENT_BOUNDARIES.md). It maps the current `dev-insecure` local loop and guardrail spikes to the crypto, transport, storage, Tauri runtime, and release boundaries that must be resolved before any security-ready claim.
+The cross-component replacement inventory is tracked in [COMPONENT_BOUNDARIES.md](reference/COMPONENT_BOUNDARIES.md). It maps the current `dev-insecure` local loop and guardrail spikes to the crypto, transport, storage, Tauri runtime, and release boundaries that must be resolved before any security-ready claim.
 
 ## License
 
