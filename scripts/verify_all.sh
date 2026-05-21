@@ -51,6 +51,7 @@ run_step "release signing candidate evidence package checksum non-claim guard" s
 run_step "release signing candidate evidence package checksum guard audit" scripts/verify_release_signing_candidate_evidence_package_checksum_guard_audit.sh
 run_step "release signing candidate evidence index checksum requirements" scripts/verify_release_signing_candidate_evidence_index_checksum_requirements.sh
 run_step "release signing candidate evidence index checksum fixture" scripts/verify_release_signing_candidate_evidence_index_checksum_fixture.sh
+run_step "release signing candidate evidence index checksum fixture audit" scripts/verify_release_signing_candidate_evidence_index_checksum_fixture_audit.sh
 run_step "binary verification plan" scripts/verify_binary_verification_plan.sh
 run_step "binary manifest fixture" scripts/verify_binary_manifest_fixture.sh
 run_step "binary input template" scripts/verify_binary_input_template.sh

@@ -97,4 +97,6 @@ The release signing candidate evidence index checksum binding requirements are t
 
 The release signing candidate evidence index checksum binding fixture is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_FIXTURE.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_FIXTURE.md), with fixture checks in `scripts/verify_release_signing_candidate_evidence_index_checksum_fixture.sh`. It checks disposable index and record checksum binding only, not candidate evidence.
 
-The next signing slice should define release signing candidate evidence index checksum fixture coverage audit while keeping real artifact signing and verification out of local verification until a candidate exists.
+The release signing candidate evidence index checksum fixture coverage audit is tracked in [RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_FIXTURE_AUDIT.md](RELEASE_SIGNING_CANDIDATE_EVIDENCE_INDEX_CHECKSUM_FIXTURE_AUDIT.md), with audit checks in `scripts/verify_release_signing_candidate_evidence_index_checksum_fixture_audit.sh`. It records fixture coverage and limits only, not candidate evidence.
+
+The next signing slice should define release signing candidate evidence package signed-artifact verification requirements while keeping real artifact signing and verification out of local verification until a candidate exists.
