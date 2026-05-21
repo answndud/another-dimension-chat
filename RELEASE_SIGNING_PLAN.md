@@ -67,4 +67,6 @@ The real key ceremony evidence requirements are tracked in [RELEASE_KEY_CEREMONY
 
 The release artifact signing evidence requirements are tracked in [RELEASE_ARTIFACT_SIGNING_REQUIREMENTS.md](RELEASE_ARTIFACT_SIGNING_REQUIREMENTS.md). They define the required signed artifact evidence package, not signed artifact evidence.
 
-The next signing slice should define user/reviewer verification evidence requirements while keeping real artifact verification out of local verification.
+The release verification UX evidence requirements are tracked in [RELEASE_VERIFICATION_UX_REQUIREMENTS.md](RELEASE_VERIFICATION_UX_REQUIREMENTS.md). They define user and reviewer verification evidence requirements, not signed artifact verification evidence.
+
+The next signing slice should define a release signing candidate evidence package index while keeping real artifact signing and verification out of local verification until a candidate exists.
