@@ -44,4 +44,19 @@ The current fixture-only detached-signature prototype is `scripts/verify_release
 
 It uses disposable OpenSSL RSA fixture keys to sign and verify `SHA256SUMS`, then confirms missing signatures, stale checksums, stale detached signatures, and unsigned artifacts are rejected. It does not create a release signing key, select final release signing tooling, or sign release artifacts.
 
-The next signing slice should decide whether the release path stays with OpenSSL-compatible detached signatures or requires minisign/signify-specific tooling before release-candidate signing can proceed.
+## Release Signing Tooling Decision Gate
+
+No final release signing tooling decision is recorded yet.
+
+Before release-candidate signing can proceed, the project must choose between a minisign/signify-first path and an OpenSSL-compatible detached-signature path. The decision record must cover:
+
+- Operator tooling availability on supported maintainer platforms.
+- Public-key fingerprint format and publication instructions.
+- Verification command UX for users and external reviewers.
+- Key generation, offline storage, backup, rotation, and revocation procedure.
+- CI and release-script behavior when the selected tool is missing.
+- How stale checksum files, missing signatures, and extra unsigned artifacts fail closed.
+
+The OpenSSL fixture does not select final release signing tooling. It only proves that a detached-signature fixture can exercise checksum/signature verification semantics without release keys.
+
+The next signing slice should either record the final release signing tool decision or keep this gate explicitly unresolved while moving to reproducible/equivalent binary verification planning.

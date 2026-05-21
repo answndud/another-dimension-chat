@@ -36,6 +36,7 @@ grep -q 'A release signoff gate verifier skeleton that keeps release-candidate t
 grep -q 'A release signing implementation plan that targets offline detached signatures while keeping release signing documented as unimplemented' "$ROOT_DIR/README.md"
 grep -q 'A release signing dry-run verifier that uses disposable fixtures to reject missing signatures, stale checksums, stale detached signature markers, and unsigned artifacts without signing release artifacts' "$ROOT_DIR/README.md"
 grep -q 'A release detached-signature fixture verifier that uses disposable OpenSSL RSA keys to validate checksum signature behavior without creating release keys or signing release artifacts' "$ROOT_DIR/README.md"
+grep -q 'A release signing tooling decision gate that keeps final signing tooling explicitly unresolved until a separate decision record exists' "$ROOT_DIR/README.md"
 grep -q 'RELEASE_HARDENING.md' "$ROOT_DIR/README.md"
 grep -q 'RELEASE_COMPLETION_AUDIT.md' "$ROOT_DIR/README.md"
 grep -q 'RELEASE_SIGNING_PLAN.md' "$ROOT_DIR/README.md"
@@ -48,6 +49,7 @@ grep -q 'run_step "release signoff gate skeleton" scripts/verify_release_signoff
 grep -q 'run_step "release signing plan" scripts/verify_release_signing_plan.sh' "$ROOT_DIR/scripts/verify_all.sh"
 grep -q 'run_step "release signing dry-run" scripts/verify_release_signing_dry_run.sh' "$ROOT_DIR/scripts/verify_all.sh"
 grep -q 'run_step "release detached-signature fixture" scripts/verify_release_detached_signature_fixture.sh' "$ROOT_DIR/scripts/verify_all.sh"
+grep -q 'run_step "release signing tooling gate" scripts/verify_release_signing_tooling_gate.sh' "$ROOT_DIR/scripts/verify_all.sh"
 grep -q 'cargo run -q -- production preflight' "$ROOT_DIR/README.md"
 grep -q 'read-only production skeleton preflight' "$ROOT_DIR/README.md"
 grep -q 'without creating profiles, unlocking storage, bootstrapping transport, sending envelopes, receiving envelopes, or marking messaging ready' "$ROOT_DIR/README.md"
@@ -261,7 +263,8 @@ grep -q 'scripts/verify_release_signoff_gate.sh' "$ROOT_DIR/COMPONENT_BOUNDARIES
 grep -q 'scripts/verify_release_signing_plan.sh' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'scripts/verify_release_signing_dry_run.sh' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'scripts/verify_release_detached_signature_fixture.sh' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
-grep -q 'no release signing workflow, signed artifact verification, reproducible/equivalent verification, dependency review record, release-candidate signoff record, external review readiness evidence, or update/installer integrity evidence exists' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
+grep -q 'scripts/verify_release_signing_tooling_gate.sh' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
+grep -q 'no release signing workflow, final signing-tool decision, signed artifact verification, reproducible/equivalent verification, dependency review record, release-candidate signoff record, external review readiness evidence, or update/installer integrity evidence exists' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'ProductionSessionEvaluationSummary' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'TransportMessagePathBoundarySummary' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
 grep -q 'ProductionMessageStorageBoundarySummary' "$ROOT_DIR/COMPONENT_BOUNDARIES.md"
@@ -361,6 +364,11 @@ grep -q 'scripts/verify_release_detached_signature_fixture.sh' "$ROOT_DIR/RELEAS
 grep -q 'scripts/verify_release_detached_signature_fixture.sh' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
 grep -q 'disposable OpenSSL RSA fixture keys' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
 test -x "$ROOT_DIR/scripts/verify_release_detached_signature_fixture.sh"
+grep -q 'Release Signing Tooling Decision Gate' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
+grep -q 'No final release signing tooling decision is recorded yet' "$ROOT_DIR/RELEASE_SIGNING_PLAN.md"
+grep -q 'scripts/verify_release_signing_tooling_gate.sh' "$ROOT_DIR/RELEASE_HARDENING.md"
+grep -q 'scripts/verify_release_signing_tooling_gate.sh' "$ROOT_DIR/RELEASE_COMPLETION_AUDIT.md"
+test -x "$ROOT_DIR/scripts/verify_release_signing_tooling_gate.sh"
 
 if git -C "$ROOT_DIR" ls-files | grep -E '^docs/' >/dev/null; then
   echo "private docs must not be tracked" >&2

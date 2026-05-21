@@ -127,3 +127,5 @@ Before any security-ready claim, a release-candidate signoff record must identif
 `scripts/verify_release_signing_dry_run.sh` checks disposable fixture behavior for the planned checksum/signature verification flow. It rejects missing signatures, stale checksums, stale dry-run signature markers, and unsigned artifacts, but it does not create release keys or verify real signed artifacts.
 
 `scripts/verify_release_detached_signature_fixture.sh` checks disposable OpenSSL detached-signature fixture behavior for `SHA256SUMS`. It uses temporary keys only and does not create release keys, select final release tooling, or verify real signed artifacts.
+
+`scripts/verify_release_signing_tooling_gate.sh` checks that final release signing tooling remains undecided. It blocks public copy from treating the OpenSSL fixture or signing plan as a selected release signing tool.
