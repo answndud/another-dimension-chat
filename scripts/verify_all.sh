@@ -58,6 +58,7 @@ run_step "release signing candidate signed-artifact verification fixture audit" 
 run_step "release signing candidate signed-artifact verification non-claim guard" scripts/verify_release_signing_candidate_signed_artifact_verification_non_claim_guard.sh
 run_step "release signing candidate signed-artifact verification guard audit" scripts/verify_release_signing_candidate_signed_artifact_verification_guard_audit.sh
 run_step "release signing candidate signed-artifact verification guard audit coverage checks" scripts/verify_release_signing_candidate_signed_artifact_verification_guard_audit_coverage_checks.sh
+run_step "release signing candidate signed-artifact verification record template" scripts/verify_release_signing_candidate_signed_artifact_verification_record_template.sh
 run_step "binary verification plan" scripts/verify_binary_verification_plan.sh
 run_step "binary manifest fixture" scripts/verify_binary_manifest_fixture.sh
 run_step "binary input template" scripts/verify_binary_input_template.sh
