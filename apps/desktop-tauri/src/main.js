@@ -469,7 +469,7 @@ function loadProductionPayloadSlot(kind, targetField, label) {
     setProductionPairingState(`Remote ${label.toLowerCase()} slot empty`);
     setText(
       fields.productionPairingWarning,
-      `Store Alice or Bob ${label.toLowerCase()} first, then manually select the counterpart profile and fill remote.`,
+      `No stored ${label.toLowerCase()} for active=${profile} expected_counterpart=${counterpart ?? "Alice or Bob"}; manually select the counterpart profile after storing it.`,
     );
     return;
   }
@@ -515,7 +515,7 @@ function loadProductionMessageEnvelope() {
     setProductionMessageState("Remote envelope slot empty");
     setText(
       fields.productionMessageWarning,
-      "Store Alice or Bob envelope first, then manually select the counterpart profile and fill remote.",
+      `No stored envelope for active=${profile} expected_counterpart=${counterpart ?? "Alice or Bob"}; manually select the counterpart profile after storing it.`,
     );
     return;
   }
