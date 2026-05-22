@@ -146,6 +146,7 @@ const fields = {
   importProductionMessageEnvelope: document.querySelector("#import-production-message-envelope"),
   exportProductionReceivedMessage: document.querySelector("#export-production-received-message"),
   productionReceivedMessage: document.querySelector("#production-received-message"),
+  productionMessageTranscript: document.querySelector("#production-message-transcript"),
   productionMessageActiveStatus: document.querySelector("#production-message-active-status"),
   productionMessageManualCheck: document.querySelector("#production-message-manual-check"),
   productionMessageOutbound: document.querySelector("#production-message-outbound"),
@@ -200,6 +201,7 @@ let latestProductionTwoProfileSessionStatus = null;
 let latestProductionTwoProfileSuccess = null;
 let latestProductionMessageImport = null;
 let productionBusyAction = null;
+const productionTranscriptEntryKeys = new Set();
 const productionPayloadSlots = {
   pairing: new Map(),
   handshakeInit: new Map(),
@@ -400,6 +402,42 @@ function resetProductionMessageImportState() {
   if (fields.productionReceivedMessage) {
     fields.productionReceivedMessage.value = "";
   }
+}
+
+function resetProductionMessageTranscript() {
+  productionTranscriptEntryKeys.clear();
+  if (!fields.productionMessageTranscript) {
+    return;
+  }
+  fields.productionMessageTranscript.replaceChildren();
+  const empty = document.createElement("li");
+  empty.className = "is-empty";
+  empty.textContent = "No messages yet.";
+  fields.productionMessageTranscript.append(empty);
+}
+
+function appendProductionTranscriptEntry(kind, profile, messageNumber, message) {
+  const normalizedProfile = String(profile ?? "").trim().toLowerCase() || "unknown";
+  const normalizedNumber = Number.isInteger(messageNumber) ? messageNumber : "unknown";
+  const text = String(message ?? "").trim();
+  if (!text || !fields.productionMessageTranscript) {
+    return;
+  }
+  const key = `${kind}\n${normalizedProfile}\n${normalizedNumber}\n${text}`;
+  if (productionTranscriptEntryKeys.has(key)) {
+    return;
+  }
+  productionTranscriptEntryKeys.add(key);
+  fields.productionMessageTranscript.querySelector(".is-empty")?.remove();
+
+  const item = document.createElement("li");
+  item.className = kind === "received" ? "is-received" : "is-sent";
+  const meta = document.createElement("strong");
+  meta.textContent = `${kind === "received" ? "Received" : "Sent"} / ${normalizedProfile} / #${normalizedNumber}`;
+  const body = document.createElement("span");
+  body.textContent = text;
+  item.append(meta, body);
+  fields.productionMessageTranscript.append(item);
 }
 
 function renderManualStatus() {
@@ -1075,6 +1113,7 @@ function resetProductionPairingView(options = {}) {
 
 function resetProductionMessageView() {
   resetProductionMessageImportState();
+  resetProductionMessageTranscript();
   setProductionMessageState("Message flow idle");
   setText(fields.productionMessageWarning, "Message envelope has not been exported yet.");
   if (fields.productionMessageEnvelope) {
@@ -2006,6 +2045,7 @@ async function exportProductionMessageEnvelope() {
     if (fields.productionMessageEnvelope) {
       fields.productionMessageEnvelope.value = result.envelope_payload;
     }
+    appendProductionTranscriptEntry("sent", profile, result.selected_message_number, message);
     applyProductionActionState();
     setText(fields.productionMessageOutbound, view.outbound);
     setText(fields.productionMessageInbound, "Not imported yet");
@@ -2099,6 +2139,7 @@ async function exportProductionReceivedMessage() {
     if (fields.productionReceivedMessage) {
       fields.productionReceivedMessage.value = result.received_message;
     }
+    appendProductionTranscriptEntry("received", profile, messageNumber, result.received_message);
     setText(fields.productionMessageInbound, view.inbound);
     setText(fields.productionMessageBoundary, view.boundary);
   } catch (error) {
