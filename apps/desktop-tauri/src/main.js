@@ -588,12 +588,15 @@ function applyProductionActionState() {
     hasHandshakeReplyPayload,
     hasHandshakeFinishPayload,
     hasLocalMessageEnvelope,
+    hasRemoteMessageEnvelopeSlot,
     sessionReadyForMessages,
     hasOutboundMessageInput,
     hasInboundEnvelopeInput,
     hasReceivedExportInput,
     hasReceivedMessage,
     hasTwoProfileInput,
+    activeProfile: activeProductionProfileName(),
+    counterpartProfile,
   };
   const availability = productionActionAvailability(state);
 

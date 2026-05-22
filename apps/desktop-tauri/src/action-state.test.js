@@ -302,20 +302,35 @@ test("productionManualNextActions follows pairing and message readiness", () => 
   assert.deepEqual(productionManualNextActions(baseState), {
     profile: "Next: enter profile and passphrase.",
     pairing: "Next: unlock profile, then export pairing.",
-    message: "Next: complete session state, then export envelope.",
+    message: "Next: check both sessions, or complete active profile session state.",
   });
   assert.equal(
     productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasFinishImportInput: true }).pairing,
     "Next: import finish, then check session.",
   );
   assert.equal(
-    productionManualNextActions({ ...baseState, sessionReadyForMessages: true, hasOutboundMessageInput: true })
-      .message,
-    "Next: export envelope.",
+    productionManualNextActions({
+      ...baseState,
+      activeProfile: "alice",
+      counterpartProfile: "bob",
+      sessionReadyForMessages: true,
+      hasOutboundMessageInput: true,
+    }).message,
+    "Next: export envelope from alice, then store it and switch to bob.",
   );
   assert.equal(
-    productionManualNextActions({ ...baseState, hasReceivedMessage: true }).message,
-    "Next: review received message.",
+    productionManualNextActions({
+      ...baseState,
+      activeProfile: "bob",
+      counterpartProfile: "alice",
+      sessionReadyForMessages: true,
+      hasRemoteMessageEnvelopeSlot: true,
+    }).message,
+    "Next: load alice envelope, then import for bob.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, activeProfile: "bob", hasReceivedMessage: true }).message,
+    "Next: review received message for bob.",
   );
 });
 
