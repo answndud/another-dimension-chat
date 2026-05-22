@@ -1839,6 +1839,10 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
         "stdout: {local_roundtrip_out}\nstderr: {local_roundtrip_error}"
     );
     assert!(local_roundtrip_out.contains("production message local roundtrip completed:"));
+    assert!(local_roundtrip_out.contains("selected_message_number=2"));
+    assert!(local_roundtrip_out.contains("auto_message_number=false"));
+    assert!(local_roundtrip_out.contains("auto_counter_written=false"));
+    assert!(local_roundtrip_out.contains("existing_message_slot_skipped=false"));
     assert!(local_roundtrip_out.contains("sender_runtime_material_reconstructable=true"));
     assert!(local_roundtrip_out.contains("sender_message_number_reserved=true"));
     assert!(local_roundtrip_out.contains("sender_pending_record_present=true"));
@@ -1871,6 +1875,75 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!local_roundtrip_error.contains(finish_store_arg));
     assert!(!local_roundtrip_error.contains(reply_store_arg));
     assert!(!local_roundtrip_error.contains("hello via local roundtrip"));
+
+    let auto_roundtrip_plaintext = root.join("auto-roundtrip-message.txt");
+    let auto_roundtrip_received = root.join("auto-roundtrip-received.txt");
+    std::fs::write(&auto_roundtrip_plaintext, "hello via auto local roundtrip")
+        .expect("write auto local roundtrip plaintext");
+    let auto_roundtrip_plaintext_arg = auto_roundtrip_plaintext
+        .to_str()
+        .expect("auto roundtrip plaintext path");
+    let auto_roundtrip_received_arg = auto_roundtrip_received
+        .to_str()
+        .expect("auto roundtrip received path");
+    let auto_local_roundtrip = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "local-roundtrip",
+            "--sender-profile",
+            finish_profile,
+            "--sender-store",
+            finish_store_arg,
+            "--receiver-profile",
+            reply_profile,
+            "--receiver-store",
+            reply_store_arg,
+            "--auto-message-number",
+            "--plaintext",
+            auto_roundtrip_plaintext_arg,
+            "--received-out",
+            auto_roundtrip_received_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let auto_local_roundtrip_out = stdout(&auto_local_roundtrip);
+    let auto_local_roundtrip_error = stderr(&auto_local_roundtrip);
+    assert!(
+        auto_local_roundtrip.status.success(),
+        "stdout: {auto_local_roundtrip_out}\nstderr: {auto_local_roundtrip_error}"
+    );
+    assert!(auto_local_roundtrip_out.contains("production message local roundtrip completed:"));
+    assert!(auto_local_roundtrip_out.contains("selected_message_number=3"));
+    assert!(auto_local_roundtrip_out.contains("auto_message_number=true"));
+    assert!(auto_local_roundtrip_out.contains("auto_counter_written=true"));
+    assert!(auto_local_roundtrip_out.contains("existing_message_slot_skipped=true"));
+    assert!(auto_local_roundtrip_out.contains("sender_message_number_reserved=true"));
+    assert!(auto_local_roundtrip_out.contains("receiver_inbound_message_stored=true"));
+    assert!(auto_local_roundtrip_out.contains("received_export_matches_input=true"));
+    assert!(auto_local_roundtrip_out.contains("network_send_attempted=false"));
+    assert!(auto_local_roundtrip_out.contains("network_receive_attempted=false"));
+    assert!(auto_local_roundtrip_out.contains("transport_io_opened=false"));
+    assert!(auto_local_roundtrip_out.contains("runtime_messaging=false"));
+    assert!(auto_local_roundtrip_error.contains("encrypted local stores only"));
+    assert_eq!(
+        std::fs::read_to_string(&auto_roundtrip_received)
+            .expect("read auto local roundtrip received"),
+        "hello via auto local roundtrip"
+    );
+    assert!(!auto_local_roundtrip_out.contains(finish_profile));
+    assert!(!auto_local_roundtrip_out.contains(finish_store_arg));
+    assert!(!auto_local_roundtrip_out.contains(reply_profile));
+    assert!(!auto_local_roundtrip_out.contains(reply_store_arg));
+    assert!(!auto_local_roundtrip_out.contains(auto_roundtrip_plaintext_arg));
+    assert!(!auto_local_roundtrip_out.contains(auto_roundtrip_received_arg));
+    assert!(!auto_local_roundtrip_out.contains("hello via auto local roundtrip"));
+    assert!(!auto_local_roundtrip_out.contains("ADENV1"));
+    assert!(!auto_local_roundtrip_error.contains("correct horse"));
+    assert!(!auto_local_roundtrip_error.contains(finish_store_arg));
+    assert!(!auto_local_roundtrip_error.contains(reply_store_arg));
+    assert!(!auto_local_roundtrip_error.contains("hello via auto local roundtrip"));
 
     let swapped = run_with_stdin(
         &[
