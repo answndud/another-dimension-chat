@@ -345,19 +345,19 @@ export function productionManualMessageStatusView(state) {
 }
 
 export function productionManualMessageCheckView(state) {
-  let check = "manual-verify";
+  let check = "Manual check: verify active profile, message number, and envelope source.";
   if (!state?.counterpartProfile) {
-    check = "select-alice-or-bob";
+    check = "Manual check: select Alice or Bob before using stored remote payloads.";
   } else if (!Number.isInteger(state?.messageNumber)) {
-    check = "message-number-required";
+    check = "Manual check: enter the message number before export or import.";
   } else if (state?.hasInboundEnvelopeInput && !state?.hasRemoteMessageEnvelopeSlot) {
-    check = "manual-pasted-envelope-verify-source";
+    check = "Manual check: pasted envelope is not from the stored remote slot; verify source.";
   } else if (state?.hasLocalMessageEnvelope && !state?.hasRemoteMessageEnvelopeSlot) {
-    check = "store-local-envelope-before-switch";
+    check = "Manual check: store the local envelope before switching profile.";
   } else if (state?.hasRemoteMessageEnvelopeSlot && !state?.hasInboundEnvelopeInput) {
-    check = "load-remote-envelope-manually";
+    check = "Manual check: load the remote envelope manually before import.";
   }
-  return `check=${check}`;
+  return check;
 }
 
 export function productionHandshakePayloadView(result) {
