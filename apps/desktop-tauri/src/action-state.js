@@ -171,6 +171,7 @@ export function productionActionAvailability(state) {
     hasInboundEnvelopeInput,
     hasReceivedExportInput,
     hasTwoProfileInput,
+    hasTwoProfileSessionsReady,
   } = state;
 
   return {
@@ -185,8 +186,8 @@ export function productionActionAvailability(state) {
     exportMessageEnvelope: !busy && hasOutboundMessageInput,
     importMessageEnvelope: !busy && hasInboundEnvelopeInput,
     exportReceivedMessage: !busy && hasReceivedExportInput,
-    runTwoProfileRoundtrip: !busy && hasTwoProfileInput,
-    runTwoProfileMessageRoundtrip: !busy && hasTwoProfileInput,
+    runTwoProfileRoundtrip: !busy && hasTwoProfileInput && !hasTwoProfileSessionsReady,
+    runTwoProfileMessageRoundtrip: !busy && hasTwoProfileInput && hasTwoProfileSessionsReady,
     usePairingPayload: !busy && hasLocalPairingPayload,
     useHandshakeInit: !busy && hasHandshakeInitPayload,
     useHandshakeReply: !busy && hasHandshakeReplyPayload,

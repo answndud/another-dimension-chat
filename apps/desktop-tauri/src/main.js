@@ -1153,6 +1153,7 @@ function applyProductionActionState() {
     hasReceivedExportInput,
     hasReceivedMessage,
     hasTwoProfileInput,
+    hasTwoProfileSessionsReady: twoProfileSessionsReadyForInput(twoProfile),
     activeProfile: activeProductionProfileName(),
     counterpartProfile,
     messageNumber: message.messageNumber,
@@ -1160,7 +1161,7 @@ function applyProductionActionState() {
   };
   const availability = productionActionAvailability(state);
   const manualAvailability = productionManualRelayAvailability(state);
-  const twoProfileSessionsReady = twoProfileSessionsReadyForInput(twoProfile);
+  const twoProfileSessionsReady = state.hasTwoProfileSessionsReady;
   const twoProfileNeedsSetup = hasTwoProfileInput && !twoProfileSessionsReady;
   const twoProfileCanSendStoredMessage = hasTwoProfileInput && twoProfileSessionsReady;
   const twoProfileNeedsSessionCheck =
@@ -1274,13 +1275,21 @@ function applyProductionActionState() {
   setActionButtonState(
     fields.runProductionTwoProfileRoundtrip,
     !availability.runTwoProfileRoundtrip,
-    busy ? "Wait for the active production action." : "Enter two profiles, passphrase, and message first.",
+    busy
+      ? "Wait for the active production action."
+      : twoProfileSessionsReady
+        ? "Stored sessions are ready; send a stored-session message instead."
+        : "Enter two profiles, passphrase, and message first.",
     twoProfileNeedsSetup,
   );
   setActionButtonState(
     fields.runProductionTwoProfileMessageRoundtrip,
     !availability.runTwoProfileMessageRoundtrip,
-    busy ? "Wait for the active production action." : "Enter two profiles, passphrase, and message first.",
+    busy
+      ? "Wait for the active production action."
+      : hasTwoProfileInput
+        ? "Run full setup once before sending with stored sessions."
+        : "Enter two profiles, passphrase, and message first.",
     twoProfileCanSendStoredMessage,
   );
   setActionButtonState(
