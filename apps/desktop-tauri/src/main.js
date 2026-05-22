@@ -435,6 +435,7 @@ function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
 }
 
 function moveLocalPayload(sourceField, targetField, label) {
+  const profile = activeProductionProfileName();
   const value = sourceField?.value?.trim() ?? "";
   if (!value || !targetField) {
     setProductionPairingState(`${label} needs payload`);
@@ -443,7 +444,10 @@ function moveLocalPayload(sourceField, targetField, label) {
   targetField.value = value;
   targetField.dispatchEvent(new Event("input", { bubbles: true }));
   setProductionPairingState(`${label} applied`);
-  setText(fields.productionPairingWarning, "Local screen payload copied into the matching remote field.");
+  setText(
+    fields.productionPairingWarning,
+    `Filled remote field from active=${profile} source=${label.toLowerCase()}.`,
+  );
   applyProductionActionState();
 }
 
@@ -484,6 +488,7 @@ function loadProductionPayloadSlot(kind, targetField, label) {
 }
 
 function moveLocalMessageEnvelope() {
+  const profile = activeProductionProfileName();
   const value = fields.productionMessageEnvelope?.value?.trim() ?? "";
   if (!value || !fields.productionRemoteMessageEnvelope) {
     setProductionMessageState("Message envelope needs payload");
@@ -492,7 +497,10 @@ function moveLocalMessageEnvelope() {
   fields.productionRemoteMessageEnvelope.value = value;
   fields.productionRemoteMessageEnvelope.dispatchEvent(new Event("input", { bubbles: true }));
   setProductionMessageState("Message envelope applied");
-  setText(fields.productionMessageWarning, "Local screen envelope copied into the remote envelope field.");
+  setText(
+    fields.productionMessageWarning,
+    `Filled remote envelope field from active=${profile}.`,
+  );
   applyProductionActionState();
 }
 

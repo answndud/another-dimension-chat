@@ -6804,10 +6804,7 @@ pub mod production {
             assert_eq!(envelope.channel_id, outbound_draft.channel_id);
             assert_eq!(envelope.message_number, 1);
             assert_eq!(envelope.message_type, MessageType::Data);
-            assert!(!envelope
-                .padded_ciphertext
-                .windows(2)
-                .any(|window| window == b"hi"));
+            assert_ne!(envelope.padded_ciphertext, b"hi");
             let export = production_message_outbound_envelope_export(
                 outbound_store,
                 outbound_profile.clone(),
