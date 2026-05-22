@@ -385,6 +385,31 @@ function latestTwoProfileSessionStatusForCurrentInput(input = productionTwoProfi
     : null;
 }
 
+function latestTwoProfileSuccessMatchesDirection(input = productionTwoProfileInput()) {
+  return Boolean(
+    latestProductionTwoProfileSuccess &&
+      latestProductionTwoProfileSuccess.profileA === input.profileA &&
+      latestProductionTwoProfileSuccess.profileB === input.profileB,
+  );
+}
+
+function latestTwoProfileSuccessMatchesOppositeDirection(input = productionTwoProfileInput()) {
+  return Boolean(
+    latestProductionTwoProfileSuccess &&
+      latestProductionTwoProfileSuccess.profileA === input.profileB &&
+      latestProductionTwoProfileSuccess.profileB === input.profileA,
+  );
+}
+
+function twoProfileSessionsReadyForInput(input = productionTwoProfileInput()) {
+  const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
+  return (
+    Boolean(sessionStatus?.both_ready_for_message_envelope) ||
+    latestTwoProfileSuccessMatchesDirection(input) ||
+    latestTwoProfileSuccessMatchesOppositeDirection(input)
+  );
+}
+
 function applyProductionProfilePreset(peer) {
   const preset = productionProfilePreset(peer);
   if (!preset || !fields.productionProfileName || !fields.productionPairingEndpoint) {
@@ -595,13 +620,9 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   const hasMessage = Boolean(input.message);
   const lastSuccess = latestProductionTwoProfileSuccess;
-  const lastSuccessDirection =
-    lastSuccess && lastSuccess.profileA === input.profileA && lastSuccess.profileB === input.profileB;
-  const lastSuccessOppositeDirection =
-    lastSuccess && lastSuccess.profileA === input.profileB && lastSuccess.profileB === input.profileA;
-  const sessionsReady =
-    Boolean(sessionStatus?.both_ready_for_message_envelope) ||
-    Boolean(lastSuccessDirection || lastSuccessOppositeDirection);
+  const lastSuccessDirection = latestTwoProfileSuccessMatchesDirection(input);
+  const lastSuccessOppositeDirection = latestTwoProfileSuccessMatchesOppositeDirection(input);
+  const sessionsReady = twoProfileSessionsReadyForInput(input);
 
   if (!profilesReady) {
     setTwoProfileFlowStep(
@@ -994,6 +1015,14 @@ function applyProductionActionState() {
   };
   const availability = productionActionAvailability(state);
   const manualAvailability = productionManualRelayAvailability(state);
+  const twoProfileSessionsReady = twoProfileSessionsReadyForInput(twoProfile);
+  const twoProfileNeedsSetup = hasTwoProfileInput && !twoProfileSessionsReady;
+  const twoProfileCanSendStoredMessage = hasTwoProfileInput && twoProfileSessionsReady;
+  const twoProfileNeedsSessionCheck =
+    hasTwoProfileSessionStatusInput && !twoProfile.message && !twoProfileSessionsReady;
+  const twoProfileCanReply = Boolean(
+    !busy && latestProductionTwoProfileSuccess && hasTwoProfileSessionStatusInput && !twoProfile.message,
+  );
 
   if (fields.productionMessageNumber) {
     fields.productionMessageNumber.disabled = message.autoMessageNumber;
@@ -1080,19 +1109,24 @@ function applyProductionActionState() {
     fields.checkProductionTwoProfileSessionStatus,
     busy || !hasTwoProfileSessionStatusInput,
     busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
-    false,
+    twoProfileNeedsSessionCheck,
   );
   setActionButtonState(
     fields.loadProductionTwoProfileTranscript,
     busy || !hasTwoProfileSessionStatusInput,
     busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
   );
-  setDisabled(fields.runProductionTwoProfileRoundtrip, !availability.runTwoProfileRoundtrip);
+  setActionButtonState(
+    fields.runProductionTwoProfileRoundtrip,
+    !availability.runTwoProfileRoundtrip,
+    busy ? "Wait for the active production action." : "Enter two profiles, passphrase, and message first.",
+    twoProfileNeedsSetup,
+  );
   setActionButtonState(
     fields.runProductionTwoProfileMessageRoundtrip,
     !availability.runTwoProfileMessageRoundtrip,
     busy ? "Wait for the active production action." : "Enter two profiles, passphrase, and message first.",
-    false,
+    twoProfileCanSendStoredMessage,
   );
   setActionButtonState(
     fields.useProductionPairingPayload,
@@ -1184,6 +1218,18 @@ function applyProductionActionState() {
     !manualAvailability.relayMessageEnvelope,
     busy ? "Wait for the active production action." : "Export local message envelope first.",
     manualAvailability.relayMessageEnvelope,
+  );
+  setActionButtonState(
+    fields.swapTwoProfileDirection,
+    fields.swapTwoProfileDirection?.disabled ?? true,
+    "Complete a local roundtrip before swapping direction.",
+    twoProfileCanReply && !latestTwoProfileSuccessMatchesOppositeDirection(twoProfile),
+  );
+  setActionButtonState(
+    fields.editTwoProfileMessage,
+    fields.editTwoProfileMessage?.disabled ?? true,
+    "Complete a local roundtrip before editing the next message.",
+    twoProfileCanReply && latestTwoProfileSuccessMatchesOppositeDirection(twoProfile),
   );
 }
 
