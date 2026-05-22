@@ -38,7 +38,7 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         production_preflight_status: "read-only production skeleton blockers copy",
         production_preflight_blockers:
             "session E2EE false transport send receive false storage rollback not-provided messaging false",
-        session_durable_state_status: "read-only durable-state candidate blockers copy",
+        session_durable_state_status: "store-write adapter boundary; product unlock disabled",
         session_unlock_policy_status: "high-risk passphrase required OS-keystore-only rejected",
         session_unlock_non_readiness: "product unlock durable persistence rollback runtime messaging disabled",
         session_unlock_cli_rejection_status: "redacted product-unlock-disabled boundary copy",
