@@ -173,6 +173,9 @@ const fields = {
   productionTwoProfilePassphrase: document.querySelector("#production-two-profile-passphrase"),
   productionTwoProfileMessage: document.querySelector("#production-two-profile-message"),
   runProductionTwoProfileRoundtrip: document.querySelector("#run-production-two-profile-roundtrip"),
+  checkProductionTwoProfileSessionStatusInline: document.querySelector(
+    "#check-production-two-profile-session-status-inline",
+  ),
   runProductionTwoProfileMessageRoundtrip: document.querySelector(
     "#run-production-two-profile-message-roundtrip",
   ),
@@ -751,7 +754,7 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
       fields.productionTwoProfileStepSession,
       fields.productionTwoProfileStepSessionDetail,
       "running",
-      "Run full setup or check both sessions.",
+      hasMessage ? "Run full setup, or check sessions first." : "Check sessions, or write a first message.",
     );
   }
 
@@ -1223,6 +1226,12 @@ function applyProductionActionState() {
   );
   setActionButtonState(
     fields.checkProductionTwoProfileSessionStatus,
+    busy || !hasTwoProfileSessionStatusInput,
+    busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
+    twoProfileNeedsSessionCheck,
+  );
+  setActionButtonState(
+    fields.checkProductionTwoProfileSessionStatusInline,
     busy || !hasTwoProfileSessionStatusInput,
     busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
     twoProfileNeedsSessionCheck,
@@ -2345,6 +2354,9 @@ async function checkProductionTwoProfileSessionStatus() {
   if (fields.checkProductionTwoProfileSessionStatus) {
     fields.checkProductionTwoProfileSessionStatus.disabled = true;
   }
+  if (fields.checkProductionTwoProfileSessionStatusInline) {
+    fields.checkProductionTwoProfileSessionStatusInline.disabled = true;
+  }
   try {
     const result = await invoke("production_two_profile_session_status", {
       profileA,
@@ -2375,6 +2387,9 @@ async function checkProductionTwoProfileSessionStatus() {
     productionBusyAction = null;
     if (fields.checkProductionTwoProfileSessionStatus) {
       fields.checkProductionTwoProfileSessionStatus.disabled = false;
+    }
+    if (fields.checkProductionTwoProfileSessionStatusInline) {
+      fields.checkProductionTwoProfileSessionStatusInline.disabled = false;
     }
     applyProductionActionState();
   }
@@ -2978,6 +2993,13 @@ if (fields.checkProductionSessionState) {
 
 if (fields.checkProductionTwoProfileSessionStatus) {
   fields.checkProductionTwoProfileSessionStatus.addEventListener(
+    "click",
+    checkProductionTwoProfileSessionStatus,
+  );
+}
+
+if (fields.checkProductionTwoProfileSessionStatusInline) {
+  fields.checkProductionTwoProfileSessionStatusInline.addEventListener(
     "click",
     checkProductionTwoProfileSessionStatus,
   );
