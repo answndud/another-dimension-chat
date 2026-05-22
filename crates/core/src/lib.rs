@@ -51,6 +51,7 @@ pub mod production {
         b"AD-PRODUCTION-LOCAL-MESSAGE-INDEX-RECORD-V1";
     const PRODUCTION_MESSAGE_COUNTER_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-MESSAGE-COUNTER-RECORD-V1";
+    const PRODUCTION_SENT_MESSAGE_RECORD_DOMAIN: &[u8] = b"AD-PRODUCTION-SENT-MESSAGE-RECORD-V1";
     const PRODUCTION_RECEIVED_MESSAGE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-RECEIVED-MESSAGE-RECORD-V1";
     const PRODUCTION_SESSION_TRANSPORT_STATE_RECORD_DOMAIN: &[u8] =
@@ -573,6 +574,25 @@ pub mod production {
         export_payload: Vec<u8>,
         plaintext_exposed: bool,
         network_receive_attempted: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageTranscriptEntry {
+        direction: &'static str,
+        message_number: u64,
+        plaintext: Vec<u8>,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageTranscriptExport {
+        storage_opened: bool,
+        runtime_material_reconstructable: bool,
+        entries: Vec<ProductionMessageTranscriptEntry>,
+        plaintext_exposed: bool,
+        network_io_attempted: bool,
         key_material_exposed: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
@@ -2204,6 +2224,54 @@ pub mod production {
         }
     }
 
+    impl ProductionMessageTranscriptEntry {
+        pub fn direction(&self) -> &'static str {
+            self.direction
+        }
+
+        pub fn message_number(&self) -> u64 {
+            self.message_number
+        }
+
+        pub fn plaintext(&self) -> &[u8] {
+            &self.plaintext
+        }
+    }
+
+    impl ProductionMessageTranscriptExport {
+        pub fn storage_opened(&self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn runtime_material_reconstructable(&self) -> bool {
+            self.runtime_material_reconstructable
+        }
+
+        pub fn entries(&self) -> &[ProductionMessageTranscriptEntry] {
+            &self.entries
+        }
+
+        pub fn plaintext_exposed(&self) -> bool {
+            self.plaintext_exposed
+        }
+
+        pub fn network_io_attempted(&self) -> bool {
+            self.network_io_attempted
+        }
+
+        pub fn key_material_exposed(&self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(&self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(&self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct SessionDurableStateStoreWriteStatusMirror {
         store_write_adapter_round_trip_covered: bool,
@@ -2658,6 +2726,59 @@ pub mod production {
         fn decode(value: &str) -> Result<Self, ProductionSessionError> {
             let parts = value.split('|').collect::<Vec<_>>();
             if parts.len() != 5 || parts[0] != "ADPENDINGMSG1" {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            let contact_id =
+                ContactId::new(parts[1]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let message_number = parts[2]
+                .parse::<u64>()
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let message_type = parse_message_type_tag(parts[3])?;
+            let plaintext =
+                decode_hex(parts[4]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            Self::new(contact_id, message_number, message_type, &plaintext)
+        }
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    struct SentMessageRecord {
+        contact_id: ContactId,
+        message_number: u64,
+        message_type: MessageType,
+        plaintext: Vec<u8>,
+    }
+
+    impl SentMessageRecord {
+        fn new(
+            contact_id: ContactId,
+            message_number: u64,
+            message_type: MessageType,
+            plaintext: &[u8],
+        ) -> Result<Self, ProductionSessionError> {
+            if message_number == 0 || plaintext.is_empty() {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            Ok(Self {
+                contact_id,
+                message_number,
+                message_type,
+                plaintext: plaintext.to_vec(),
+            })
+        }
+
+        fn encode(&self) -> String {
+            format!(
+                "ADSENTMSG1|{}|{}|{}|{}",
+                self.contact_id.as_str(),
+                self.message_number,
+                message_type_tag(&self.message_type),
+                encode_hex(&self.plaintext)
+            )
+        }
+
+        fn decode(value: &str) -> Result<Self, ProductionSessionError> {
+            let parts = value.split('|').collect::<Vec<_>>();
+            if parts.len() != 5 || parts[0] != "ADSENTMSG1" {
                 return Err(ProductionSessionError::UnexpectedEnvelope);
             }
             let contact_id =
@@ -4016,7 +4137,15 @@ pub mod production {
             message_number,
             MessageType::Data,
         );
-        if store.get(&record_id)?.is_some() || store.get(&message_record_id)?.is_some() {
+        let sent_record_id = production_sent_message_record_id(
+            &material.channel_id,
+            &material.remote_contact_id,
+            message_number,
+        );
+        if store.get(&record_id)?.is_some()
+            || store.get(&message_record_id)?.is_some()
+            || store.get(&sent_record_id)?.is_some()
+        {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
         let record = EncryptedRecord::new(
@@ -4035,12 +4164,26 @@ pub mod production {
         )?;
         let message_record = EncryptedRecord::new(
             ProductionRecordKind::MessageEnvelope,
-            EncryptedRecordScope::contact(profile, material.remote_contact_id),
+            EncryptedRecordScope::contact(profile.clone(), material.remote_contact_id.clone()),
             b"sqlcipher-page-encryption-v1".to_vec(),
             pending.encode().into_bytes(),
         )
         .map_err(ProductionStorageError::from)?;
         store.put(&message_record_id, &message_record)?;
+        let sent = SentMessageRecord::new(
+            material.remote_contact_id.clone(),
+            message_number,
+            MessageType::Data,
+            plaintext,
+        )?;
+        let sent_record = EncryptedRecord::new(
+            ProductionRecordKind::SentMessage,
+            EncryptedRecordScope::contact(profile, material.remote_contact_id),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            sent.encode().into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)?;
+        store.put(&sent_record_id, &sent_record)?;
         Ok(ProductionMessageSendPrepareSummary {
             storage_opened: true,
             runtime_material_reconstructable: true,
@@ -4109,7 +4252,15 @@ pub mod production {
                 candidate,
                 MessageType::Data,
             );
-            if store.get(&local_index_id)?.is_none() && store.get(&message_record_id)?.is_none() {
+            let sent_record_id = production_sent_message_record_id(
+                &material.channel_id,
+                &material.remote_contact_id,
+                candidate,
+            );
+            if store.get(&local_index_id)?.is_none()
+                && store.get(&message_record_id)?.is_none()
+                && store.get(&sent_record_id)?.is_none()
+            {
                 break;
             }
             existing_message_slot_skipped = true;
@@ -4643,6 +4794,87 @@ pub mod production {
             export_payload: received.plaintext,
             plaintext_exposed: false,
             network_receive_attempted: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_message_transcript_export(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionMessageTranscriptExport, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        let mut entries = Vec::new();
+
+        for (record_id, record) in store.records_with_id_prefix("sent_")? {
+            if record.kind != ProductionRecordKind::SentMessage {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            let state = String::from_utf8(record.sealed_body)
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let sent = SentMessageRecord::decode(&state)?;
+            if sent.contact_id == material.remote_contact_id
+                && sent.message_type == MessageType::Data
+                && !sent.plaintext.is_empty()
+                && record_id
+                    == production_sent_message_record_id(
+                        &material.channel_id,
+                        &material.remote_contact_id,
+                        sent.message_number,
+                    )
+            {
+                entries.push(ProductionMessageTranscriptEntry {
+                    direction: "sent",
+                    message_number: sent.message_number,
+                    plaintext: sent.plaintext,
+                });
+            }
+        }
+
+        for (record_id, record) in store.records_with_id_prefix("received_")? {
+            if record.kind != ProductionRecordKind::ReceivedMessage {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            let state = String::from_utf8(record.sealed_body)
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let received = ReceivedMessageRecord::decode(&state)?;
+            if received.contact_id == material.remote_contact_id
+                && received.message_type == MessageType::Data
+                && !received.plaintext.is_empty()
+                && record_id
+                    == production_received_message_record_id(
+                        &material.channel_id,
+                        &material.remote_contact_id,
+                        received.message_number,
+                    )
+            {
+                entries.push(ProductionMessageTranscriptEntry {
+                    direction: "received",
+                    message_number: received.message_number,
+                    plaintext: received.plaintext,
+                });
+            }
+        }
+
+        entries.sort_by_key(|entry| {
+            (
+                entry.message_number,
+                if entry.direction == "sent" { 0 } else { 1 },
+            )
+        });
+        Ok(ProductionMessageTranscriptExport {
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            entries,
+            plaintext_exposed: false,
+            network_io_attempted: false,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -5277,6 +5509,23 @@ pub mod production {
         hasher.update(contact_id.as_str().as_bytes());
         EncryptedRecordId::new(format!("msgcounter_{}", encode_hex(&hasher.finalize())))
             .expect("domain-separated message counter record id is valid")
+    }
+
+    fn production_sent_message_record_id(
+        channel_id: &str,
+        contact_id: &ContactId,
+        message_number: u64,
+    ) -> EncryptedRecordId {
+        let mut hasher = Sha256::new();
+        hasher.update(PRODUCTION_SENT_MESSAGE_RECORD_DOMAIN);
+        hasher.update([0]);
+        hasher.update(channel_id.as_bytes());
+        hasher.update([0]);
+        hasher.update(contact_id.as_str().as_bytes());
+        hasher.update([0]);
+        hasher.update(message_number.to_be_bytes());
+        EncryptedRecordId::new(format!("sent_{}", encode_hex(&hasher.finalize())))
+            .expect("domain-separated sent message record id is valid")
     }
 
     fn production_received_message_record_id(
@@ -7303,6 +7552,40 @@ pub mod production {
             assert!(!received_export.key_material_exposed());
             assert!(!received_export.transport_io_opened());
             assert!(!received_export.runtime_messaging_enabled());
+            let outbound_transcript = production_message_transcript_export(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+            )
+            .expect("outbound transcript export");
+            assert!(outbound_transcript.storage_opened());
+            assert!(outbound_transcript.runtime_material_reconstructable());
+            assert_eq!(outbound_transcript.entries().len(), 1);
+            assert_eq!(outbound_transcript.entries()[0].direction(), "sent");
+            assert_eq!(outbound_transcript.entries()[0].message_number(), 1);
+            assert_eq!(outbound_transcript.entries()[0].plaintext(), b"hi");
+            assert!(!outbound_transcript.plaintext_exposed());
+            assert!(!outbound_transcript.network_io_attempted());
+            assert!(!outbound_transcript.key_material_exposed());
+            assert!(!outbound_transcript.transport_io_opened());
+            assert!(!outbound_transcript.runtime_messaging_enabled());
+            let inbound_transcript = production_message_transcript_export(
+                inbound_store,
+                inbound_profile.clone(),
+                &passphrase,
+            )
+            .expect("inbound transcript export");
+            assert!(inbound_transcript.storage_opened());
+            assert!(inbound_transcript.runtime_material_reconstructable());
+            assert_eq!(inbound_transcript.entries().len(), 1);
+            assert_eq!(inbound_transcript.entries()[0].direction(), "received");
+            assert_eq!(inbound_transcript.entries()[0].message_number(), 1);
+            assert_eq!(inbound_transcript.entries()[0].plaintext(), b"hi");
+            assert!(!inbound_transcript.plaintext_exposed());
+            assert!(!inbound_transcript.network_io_attempted());
+            assert!(!inbound_transcript.key_material_exposed());
+            assert!(!inbound_transcript.transport_io_opened());
+            assert!(!inbound_transcript.runtime_messaging_enabled());
             let second_reservation = production_message_next_number_reserve(
                 outbound_store,
                 outbound_profile.clone(),
