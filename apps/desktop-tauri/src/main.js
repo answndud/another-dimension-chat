@@ -2345,11 +2345,19 @@ async function checkProductionTwoProfileSessionStatus() {
       fields.productionTwoProfileSessionStatus,
       "Enter distinct Profile A, Profile B, and passphrase first.",
     );
+    setProductionTwoProfileState("Session check needs input");
+    setText(
+      fields.productionTwoProfileWarning,
+      "Enter distinct Profile A, Profile B, and passphrase before checking stored sessions.",
+    );
     return;
   }
 
   setText(fields.productionTwoProfileSessionStatus, "Checking encrypted local stores");
+  setProductionTwoProfileState("Sessions checking");
+  setText(fields.productionTwoProfileWarning, "Checking stored sessions after explicit local unlock.");
   productionBusyAction = "two-profile-session-status";
+  let postCheckFocus = null;
   applyProductionActionState();
   if (fields.checkProductionTwoProfileSessionStatus) {
     fields.checkProductionTwoProfileSessionStatus.disabled = true;
@@ -2378,10 +2386,36 @@ async function checkProductionTwoProfileSessionStatus() {
     setText(fields.productionPairingBoundary, view.boundary);
     if (result.both_ready_for_message_envelope) {
       await loadProductionTwoProfileTranscript({ quiet: true });
+      const currentInput = productionTwoProfileInput();
+      const hasDraft = Boolean(currentInput.message);
+      setProductionTwoProfileState("Sessions ready");
+      setText(
+        fields.productionTwoProfileWarning,
+        hasDraft
+          ? `Stored sessions ready for ${currentInput.profileA} -> ${currentInput.profileB}. Run stored-session message.`
+          : `Stored sessions ready for ${currentInput.profileA} -> ${currentInput.profileB}. Write a message to continue.`,
+      );
+      postCheckFocus = hasDraft
+        ? fields.runProductionTwoProfileMessageRoundtrip
+        : fields.productionTwoProfileMessage;
+    } else {
+      const currentInput = productionTwoProfileInput();
+      setProductionTwoProfileState("Sessions incomplete");
+      setText(
+        fields.productionTwoProfileWarning,
+        currentInput.message
+          ? "Stored sessions are incomplete. Run full two-profile roundtrip to create session state."
+          : "Stored sessions are incomplete. Write a first message, then run full two-profile roundtrip.",
+      );
+      postCheckFocus = currentInput.message
+        ? fields.runProductionTwoProfileRoundtrip
+        : fields.productionTwoProfileMessage;
     }
   } catch (error) {
     latestProductionTwoProfileSessionStatus = null;
+    setProductionTwoProfileState("Session check failed");
     setText(fields.productionTwoProfileSessionStatus, "Two-profile session status failed");
+    setText(fields.productionTwoProfileWarning, String(error));
     setText(fields.productionPairingWarning, String(error));
   } finally {
     productionBusyAction = null;
@@ -2392,6 +2426,7 @@ async function checkProductionTwoProfileSessionStatus() {
       fields.checkProductionTwoProfileSessionStatusInline.disabled = false;
     }
     applyProductionActionState();
+    postCheckFocus?.focus();
   }
 }
 
