@@ -56,6 +56,7 @@ export function productionManualNextActions(state) {
     hasInboundEnvelopeInput,
     hasLocalMessageEnvelope,
     hasRemoteMessageEnvelopeSlot,
+    hasImportedMessage,
     hasReceivedMessage,
     activeProfile,
     counterpartProfile,
@@ -109,6 +110,9 @@ export function productionManualNextActions(state) {
   }
   if (hasInboundEnvelopeInput) {
     message = `Next: import envelope for ${activeLabel}.`;
+  }
+  if (hasImportedMessage) {
+    message = `Next: show received message for ${activeLabel}.`;
   }
   if (hasReceivedMessage) {
     message = `Next: review received message for ${activeLabel}.`;

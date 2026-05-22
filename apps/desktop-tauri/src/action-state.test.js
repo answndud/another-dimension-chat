@@ -41,6 +41,7 @@ const baseState = {
   sessionReadyForMessages: false,
   hasOutboundMessageInput: false,
   hasInboundEnvelopeInput: false,
+  hasImportedMessage: false,
   hasReceivedExportInput: false,
   hasReceivedMessage: false,
   hasTwoProfileInput: false,
@@ -353,6 +354,16 @@ test("productionManualNextActions follows pairing and message readiness", () => 
       hasRemoteMessageEnvelopeSlot: true,
     }).message,
     "Next: load alice envelope, then import for bob.",
+  );
+  assert.equal(
+    productionManualNextActions({
+      ...baseState,
+      activeProfile: "bob",
+      sessionReadyForMessages: true,
+      hasInboundEnvelopeInput: true,
+      hasImportedMessage: true,
+    }).message,
+    "Next: show received message for bob.",
   );
   assert.equal(
     productionManualNextActions({ ...baseState, activeProfile: "bob", hasReceivedMessage: true }).message,
