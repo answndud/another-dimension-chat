@@ -670,15 +670,25 @@ function twoProfileDirectionLabel(input) {
   return `Direction: ${input.profileA} -> ${input.profileB}`;
 }
 
+function twoProfileComposePrompt(input = productionTwoProfileInput()) {
+  if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
+    return "Write a stored-session message";
+  }
+  if (latestTwoProfileSuccessMatchesOppositeDirection(input)) {
+    return `Reply from ${input.profileA} to ${input.profileB}`;
+  }
+  if (latestTwoProfileSuccessMatchesDirection(input)) {
+    return `Next message from ${input.profileA} to ${input.profileB}`;
+  }
+  return `Message from ${input.profileA} to ${input.profileB}`;
+}
+
 function renderProductionTwoProfileDirection(input = productionTwoProfileInput()) {
   setText(fields.productionTwoProfileDirection, twoProfileDirectionLabel(input));
   if (!fields.productionTwoProfileMessage) {
     return;
   }
-  fields.productionTwoProfileMessage.placeholder =
-    input.profileA && input.profileB && input.profileA !== input.profileB
-      ? `Message from ${input.profileA} to ${input.profileB}`
-      : "Write a stored-session message";
+  fields.productionTwoProfileMessage.placeholder = twoProfileComposePrompt(input);
 }
 
 function setTwoProfileFlowStep(item, detail, state, message) {
@@ -744,7 +754,7 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
       ? "Waiting for profiles and passphrase."
       : hasMessage
         ? `Draft ready: ${input.message.length} chars.`
-        : `Write message from ${input.profileA} to ${input.profileB}.`,
+        : `${twoProfileComposePrompt(input)}.`,
   );
 
   const sendRunning = productionBusyAction === "two-profile-message-roundtrip";
@@ -967,6 +977,14 @@ function focusLocalDiagnostic() {
 }
 
 function editTwoProfileMessage() {
+  const input = productionTwoProfileInput();
+  if (latestTwoProfileSuccessMatchesOppositeDirection(input) && !input.message) {
+    setProductionTwoProfileState("Reply draft ready");
+    setText(
+      fields.productionTwoProfileWarning,
+      `Write reply from ${input.profileA} to ${input.profileB}, then run stored-session message.`,
+    );
+  }
   fields.productionTwoProfileMessage?.focus();
 }
 
@@ -980,12 +998,22 @@ function swapTwoProfileDirection() {
   }
   fields.productionTwoProfileA.value = profileB;
   fields.productionTwoProfileB.value = profileA;
-  renderProductionTwoProfileDirection();
-  renderProductionTwoProfileMemory();
-  setProductionTwoProfileState("Direction swapped");
+  const input = productionTwoProfileInput();
+  const replyDirection = latestTwoProfileSuccessMatchesOppositeDirection(input);
+  renderProductionTwoProfileDirection(input);
+  renderProductionTwoProfileMemory(input);
+  setProductionTwoProfileState(replyDirection ? "Reply direction ready" : "Direction swapped");
   setText(
     fields.productionTwoProfileWarning,
-    `Stored-session direction swapped: ${profileB} -> ${profileA}. Run stored-session message to reply.`,
+    replyDirection
+      ? `Reply direction selected: ${input.profileA} -> ${input.profileB}. Write the reply, then run stored-session message.`
+      : `Stored-session direction swapped: ${input.profileA} -> ${input.profileB}. Run stored-session message when ready.`,
+  );
+  setProductionFollowupActions(
+    true,
+    replyDirection
+      ? `Next: write reply from ${input.profileA} to ${input.profileB}.`
+      : `Next: write message from ${input.profileA} to ${input.profileB}.`,
   );
   applyProductionActionState();
   fields.productionTwoProfileMessage?.focus();
