@@ -113,13 +113,13 @@ Replay-aware decrypt now uses the existing `ReplayWindow` boundary. Duplicate an
 
 `session_durable_state_persistence_adapter_skeleton()` is the current adapter boundary before implementation. It maps pairwise identity private keys, Noise static private keys, replay windows, and session transport state to storage policy decisions, while keeping adapter implementation readiness, storage unlock commands, transport I/O, and runtime messaging false.
 
-`session_durable_state_encrypted_record_adapter_spike()` is the first narrow adapter spike. It can prepare sealed `EncryptedRecord` containers for allowed session durable-state kinds, rejects session transport state, and does not write records to a store or mark durable session persistence ready.
+`session_durable_state_encrypted_record_adapter_spike()` is the first narrow adapter spike. It can prepare sealed `EncryptedRecord` containers for allowed session durable-state kinds and does not mark durable session persistence ready.
 
-`session_durable_state_adapter_non_readiness_guard()` keeps the adapter spike from being interpreted as readiness. It records that rollback protection is not provided and that prepared records are not persisted; store writes, durable session persistence, production E2EE readiness, durable Noise transport persistence, and runtime messaging remain false.
+`session_durable_state_adapter_non_readiness_guard()` keeps the adapter spike from being interpreted as readiness. It records that rollback protection is not provided and that product store writes, durable session persistence, production E2EE readiness, durable Noise transport persistence, and runtime messaging remain false.
 
-The first store-write check for this adapter is test-only. `session_durable_state_store_write_test_only_round_trips_prepared_record` writes one prepared sealed Noise static private key record through `SqlCipherRecordStore` and immediately checks that the non-readiness guard still keeps store-write readiness, durable session persistence, and production E2EE readiness false.
+`session_durable_state_store_write_adapter()` is the first narrow store-write boundary. It writes caller-supplied prepared sealed records through an already-unlocked `SqlCipherRecordStore`, but does not open an unlock command, transport I/O, runtime messaging, rollback protection, or durable session readiness.
 
-`session_durable_state_store_write_status_mirror()` reports that the store-write coverage is test-only. It keeps production store write, production unlock command, durable session persistence, rollback protection, and runtime messaging unavailable.
+`session_durable_state_store_write_status_mirror()` reports that the store-write adapter boundary exists and requires a caller-supplied unlocked store. It keeps production store write, production unlock command, durable session persistence, rollback protection, and runtime messaging unavailable.
 
 `session_durable_state_product_unlock_blocker_summary()` records the current product unlock blockers. The passphrase-first storage boundary exists, but product unlock remains closed because app key wrapping, backup exclusion, rollback protection, durable session persistence, and runtime messaging are not ready.
 

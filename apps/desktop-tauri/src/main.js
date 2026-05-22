@@ -1232,7 +1232,7 @@ async function renderPrototypeStatus() {
       fields.productionPreflightBlockers,
       "Session E2EE false transport send receive false storage rollback not-provided messaging false",
     );
-    setText(fields.sessionDurableState, "Read-only durable-state candidate blockers copy");
+    setText(fields.sessionDurableState, "Store-write adapter boundary; product unlock disabled");
     setText(fields.sessionUnlockPolicy, "High-risk passphrase required OS-keystore-only rejected");
     setText(
       fields.sessionUnlockNonReadiness,

@@ -2021,9 +2021,56 @@ pub mod production {
                 .map_err(ProductionStorageError::from)
                 .map_err(ProductionSessionError::from)
         }
+    }
 
-        #[cfg(test)]
-        fn test_only_put_prepared_record(
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct SessionDurableStateStoreWriteAdapter {
+        encrypted_record_adapter: SessionDurableStateEncryptedRecordAdapter,
+    }
+
+    impl SessionDurableStateStoreWriteAdapter {
+        pub fn new(encrypted_record_adapter: SessionDurableStateEncryptedRecordAdapter) -> Self {
+            Self {
+                encrypted_record_adapter,
+            }
+        }
+
+        pub fn opens_storage_unlock_command(self) -> bool {
+            false
+        }
+
+        pub fn requires_caller_unlocked_store(self) -> bool {
+            true
+        }
+
+        pub fn opens_transport_io(self) -> bool {
+            false
+        }
+
+        pub fn opens_runtime_messaging(self) -> bool {
+            false
+        }
+
+        pub fn writes_prepared_records_to_store(self) -> bool {
+            true
+        }
+
+        pub fn durable_session_persistence_ready(self) -> bool {
+            false
+        }
+
+        pub fn prepare_record(
+            self,
+            kind: SessionDurableStateAdapterRecordKind,
+            scope: EncryptedRecordScope,
+            nonce: Vec<u8>,
+            sealed_body: Vec<u8>,
+        ) -> Result<EncryptedRecord, ProductionSessionError> {
+            self.encrypted_record_adapter
+                .prepare_record(kind, scope, nonce, sealed_body)
+        }
+
+        pub fn put_prepared_record(
             self,
             store: &SqlCipherRecordStore,
             record_id: &EncryptedRecordId,
@@ -2077,7 +2124,9 @@ pub mod production {
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct SessionDurableStateStoreWriteStatusMirror {
-        test_only_store_write_covered: bool,
+        store_write_adapter_round_trip_covered: bool,
+        store_write_adapter_available: bool,
+        store_write_requires_caller_unlocked_store: bool,
         production_store_write_enabled: bool,
         production_unlock_command_enabled: bool,
         durable_session_persistence_ready: bool,
@@ -2086,8 +2135,16 @@ pub mod production {
     }
 
     impl SessionDurableStateStoreWriteStatusMirror {
-        pub fn test_only_store_write_covered(self) -> bool {
-            self.test_only_store_write_covered
+        pub fn store_write_adapter_round_trip_covered(self) -> bool {
+            self.store_write_adapter_round_trip_covered
+        }
+
+        pub fn store_write_adapter_available(self) -> bool {
+            self.store_write_adapter_available
+        }
+
+        pub fn store_write_requires_caller_unlocked_store(self) -> bool {
+            self.store_write_requires_caller_unlocked_store
         }
 
         pub fn production_store_write_enabled(self) -> bool {
@@ -4543,6 +4600,12 @@ pub mod production {
         )
     }
 
+    pub fn session_durable_state_store_write_adapter() -> SessionDurableStateStoreWriteAdapter {
+        SessionDurableStateStoreWriteAdapter::new(
+            session_durable_state_encrypted_record_adapter_spike(),
+        )
+    }
+
     pub fn session_durable_state_adapter_non_readiness_guard(
     ) -> SessionDurableStateAdapterNonReadinessGuard {
         SessionDurableStateAdapterNonReadinessGuard {
@@ -4560,9 +4623,12 @@ pub mod production {
     pub fn session_durable_state_store_write_status_mirror(
     ) -> SessionDurableStateStoreWriteStatusMirror {
         let guard = session_durable_state_adapter_non_readiness_guard();
+        let adapter = session_durable_state_store_write_adapter();
 
         SessionDurableStateStoreWriteStatusMirror {
-            test_only_store_write_covered: true,
+            store_write_adapter_round_trip_covered: true,
+            store_write_adapter_available: adapter.writes_prepared_records_to_store(),
+            store_write_requires_caller_unlocked_store: adapter.requires_caller_unlocked_store(),
             production_store_write_enabled: guard.store_write_enabled(),
             production_unlock_command_enabled: false,
             durable_session_persistence_ready: guard.durable_session_persistence_ready(),
@@ -5800,9 +5866,16 @@ pub mod production {
         }
 
         #[test]
-        fn session_durable_state_store_write_test_only_round_trips_prepared_record() {
-            let (dir, store) = production_test_store("session_durable_state_store_write_test_only");
-            let adapter = session_durable_state_encrypted_record_adapter_spike();
+        fn session_durable_state_store_write_adapter_round_trips_prepared_record() {
+            let (dir, store) = production_test_store("session_durable_state_store_write_adapter");
+            let adapter = session_durable_state_store_write_adapter();
+            assert!(!adapter.opens_storage_unlock_command());
+            assert!(adapter.requires_caller_unlocked_store());
+            assert!(!adapter.opens_transport_io());
+            assert!(!adapter.opens_runtime_messaging());
+            assert!(adapter.writes_prepared_records_to_store());
+            assert!(!adapter.durable_session_persistence_ready());
+
             let scope =
                 EncryptedRecordScope::profile(ProfileName::new("alice").expect("valid profile"));
             let record_id =
@@ -5817,8 +5890,8 @@ pub mod production {
                 .expect("prepare record");
 
             adapter
-                .test_only_put_prepared_record(&store, &record_id, &record)
-                .expect("test-only write");
+                .put_prepared_record(&store, &record_id, &record)
+                .expect("store-write adapter writes prepared record");
             assert_eq!(
                 store.get(&record_id).expect("load record"),
                 Some(record.clone())
@@ -5837,7 +5910,9 @@ pub mod production {
         fn session_durable_state_store_write_status_mirror_keeps_production_closed() {
             let status = session_durable_state_store_write_status_mirror();
 
-            assert!(status.test_only_store_write_covered());
+            assert!(status.store_write_adapter_round_trip_covered());
+            assert!(status.store_write_adapter_available());
+            assert!(status.store_write_requires_caller_unlocked_store());
             assert!(!status.production_store_write_enabled());
             assert!(!status.production_unlock_command_enabled());
             assert!(!status.durable_session_persistence_ready());

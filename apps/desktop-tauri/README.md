@@ -15,7 +15,7 @@ Current boundary:
 - The production-self-test status points to the CLI `production self-test` boundary only; it does not execute from the Tauri shell or mark messaging usable.
 - The production-session limits copy keeps production E2EE claim, durable session persistence, Tauri production messaging command, and async messaging out of scope.
 - The production-preflight status mirrors the CLI `production preflight` blockers as static read-only copy; it does not execute the CLI command, create profiles, unlock storage, bootstrap transport, send envelopes, receive envelopes, or mark messaging usable.
-- The session durable-state status is static blocker copy for the current v0.1 candidate boundary; it does not execute unlock, write session records, persist Noise transport state, or mark durable session persistence ready.
+- The session durable-state status mirrors the store-write adapter boundary as static copy; it does not execute unlock, expose a shell write command, persist Noise transport state, or mark durable session persistence ready.
 - The session unlock-policy status mirrors the high-risk passphrase-required and OS-keystore-only-rejected policy as static copy; it does not expose a product unlock command.
 - The session unlock-limits copy keeps product unlock, durable session persistence, rollback protection, and runtime messaging disabled.
 - The session unlock-rejection status mirrors the CLI `production unlock` redacted disabled taxonomy as static copy; it does not execute the CLI command, expose profile/passphrase input, open storage, write session records, expose key material, or enable runtime messaging.
