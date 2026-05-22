@@ -354,8 +354,8 @@ test("productionManualStatusView summarizes active manual relay slots", () => {
         "Fill local copies the active output field into the matching local input; " +
         "Fill remote copies the stored counterpart payload into the matching remote input.",
       payloads:
-        "pairing: active_slot=stored counterpart_slot=empty | init: active_slot=empty counterpart_slot=ready | " +
-        "reply: active_slot=empty counterpart_slot=empty | finish: active_slot=stored counterpart_slot=ready | envelope: active_slot=empty counterpart_slot=ready",
+        "pairing: active_slot(alice)=stored counterpart_slot(bob)=empty | init: active_slot(alice)=empty counterpart_slot(bob)=ready | " +
+        "reply: active_slot(alice)=empty counterpart_slot(bob)=empty | finish: active_slot(alice)=stored counterpart_slot(bob)=ready | envelope: active_slot(alice)=empty counterpart_slot(bob)=ready",
       mode:
         "Manual relay uses local memory slots only; manually select the counterpart profile to fill remote payloads.",
       policy:
