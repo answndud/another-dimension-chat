@@ -5,6 +5,7 @@ import {
   productionCounterpartProfile,
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
+  productionManualMessageCheckView,
   productionManualNextActions,
   productionManualMessageStatusView,
   productionManualStatusView,
@@ -376,7 +377,7 @@ test("productionManualMessageStatusView summarizes active message path", () => {
       hasInboundEnvelopeInput: false,
       hasReceivedMessage: false,
     }),
-    "active=alice remote=bob number=7 session=ready local_envelope=present remote_slot=empty remote_envelope=empty received=empty check=store-local-envelope-before-switch",
+    "active=alice remote=bob number=7 session=ready local_envelope=present remote_slot=empty remote_envelope=empty received=empty",
   );
   assert.match(
     productionManualMessageStatusView({
@@ -388,10 +389,38 @@ test("productionManualMessageStatusView summarizes active message path", () => {
       hasInboundEnvelopeInput: true,
       hasReceivedMessage: true,
     }),
-    /active=bob remote=alice number=invalid session=not-ready .*remote_slot=ready remote_envelope=loaded received=present check=message-number-required/,
+    /active=bob remote=alice number=invalid session=not-ready .*remote_slot=ready remote_envelope=loaded received=present/,
+  );
+});
+
+test("productionManualMessageCheckView separates manual verification guidance", () => {
+  assert.equal(
+    productionManualMessageCheckView({
+      activeProfile: "alice",
+      counterpartProfile: "bob",
+      messageNumber: 7,
+      sessionReadyForMessages: true,
+      hasLocalMessageEnvelope: true,
+      hasRemoteMessageEnvelopeSlot: false,
+      hasInboundEnvelopeInput: false,
+      hasReceivedMessage: false,
+    }),
+    "check=store-local-envelope-before-switch",
+  );
+  assert.equal(
+    productionManualMessageCheckView({
+      activeProfile: "bob",
+      counterpartProfile: "alice",
+      messageNumber: Number.NaN,
+      sessionReadyForMessages: false,
+      hasRemoteMessageEnvelopeSlot: true,
+      hasInboundEnvelopeInput: true,
+      hasReceivedMessage: true,
+    }),
+    "check=message-number-required",
   );
   assert.match(
-    productionManualMessageStatusView({
+    productionManualMessageCheckView({
       activeProfile: "alice",
       counterpartProfile: "bob",
       messageNumber: 1,
@@ -402,7 +431,7 @@ test("productionManualMessageStatusView summarizes active message path", () => {
     /check=manual-pasted-envelope-verify-source/,
   );
   assert.match(
-    productionManualMessageStatusView({
+    productionManualMessageCheckView({
       activeProfile: "alice",
       counterpartProfile: "bob",
       messageNumber: 1,

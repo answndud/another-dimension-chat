@@ -4,6 +4,7 @@ import {
   productionCounterpartProfile,
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
+  productionManualMessageCheckView,
   productionManualNextActions,
   productionManualMessageStatusView,
   productionManualStatusView,
@@ -141,6 +142,7 @@ const fields = {
   exportProductionReceivedMessage: document.querySelector("#export-production-received-message"),
   productionReceivedMessage: document.querySelector("#production-received-message"),
   productionMessageActiveStatus: document.querySelector("#production-message-active-status"),
+  productionMessageManualCheck: document.querySelector("#production-message-manual-check"),
   productionMessageOutbound: document.querySelector("#production-message-outbound"),
   productionMessageInbound: document.querySelector("#production-message-inbound"),
   productionMessageBoundary: document.querySelector("#production-message-boundary"),
@@ -367,6 +369,7 @@ function renderManualNextActions(state) {
 
 function renderManualMessageStatus(state) {
   setText(fields.productionMessageActiveStatus, productionManualMessageStatusView(state));
+  setText(fields.productionMessageManualCheck, productionManualMessageCheckView(state));
 }
 
 function renderManualStatus() {
@@ -954,6 +957,7 @@ function resetProductionMessageView() {
     fields.productionReceivedMessage.value = "";
   }
   setText(fields.productionMessageActiveStatus, "Not checked yet");
+  setText(fields.productionMessageManualCheck, "check=manual-verify");
   setText(fields.productionMessageOutbound, "Not checked yet");
   setText(fields.productionMessageInbound, "Not checked yet");
   setText(fields.productionMessageBoundary, "Not checked yet");
