@@ -337,6 +337,14 @@ export function productionManualMessageStatusView(state) {
   const remoteSlot = state?.hasRemoteMessageEnvelopeSlot ? "ready" : "empty";
   const remoteEnvelope = state?.hasInboundEnvelopeInput ? "loaded" : "empty";
   const received = state?.hasReceivedMessage ? "present" : "empty";
+  return (
+    `active=${active} remote=${counterpart} number=${messageNumber} session=${session} ` +
+    `local_envelope=${localEnvelope} remote_slot=${remoteSlot} remote_envelope=${remoteEnvelope} ` +
+    `received=${received}`
+  );
+}
+
+export function productionManualMessageCheckView(state) {
   let check = "manual-verify";
   if (!state?.counterpartProfile) {
     check = "select-alice-or-bob";
@@ -349,11 +357,7 @@ export function productionManualMessageStatusView(state) {
   } else if (state?.hasRemoteMessageEnvelopeSlot && !state?.hasInboundEnvelopeInput) {
     check = "load-remote-envelope-manually";
   }
-  return (
-    `active=${active} remote=${counterpart} number=${messageNumber} session=${session} ` +
-    `local_envelope=${localEnvelope} remote_slot=${remoteSlot} remote_envelope=${remoteEnvelope} ` +
-    `received=${received} check=${check}`
-  );
+  return `check=${check}`;
 }
 
 export function productionHandshakePayloadView(result) {
