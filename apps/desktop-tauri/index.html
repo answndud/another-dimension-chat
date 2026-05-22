@@ -147,6 +147,24 @@
             <p id="production-two-profile-direction" class="demo-state" aria-live="polite">
               Direction: alice -> bob
             </p>
+            <ol id="production-two-profile-flow" class="demo-steps compact-flow" aria-label="Two-profile guided flow">
+              <li id="production-two-profile-step-session" class="is-running">
+                <strong>1 Session</strong>
+                <span id="production-two-profile-step-session-detail">Enter passphrase, then run full setup or check sessions.</span>
+              </li>
+              <li id="production-two-profile-step-compose" class="is-pending">
+                <strong>2 Compose</strong>
+                <span id="production-two-profile-step-compose-detail">Write a message for the current direction.</span>
+              </li>
+              <li id="production-two-profile-step-send" class="is-pending">
+                <strong>3 Send</strong>
+                <span id="production-two-profile-step-send-detail">Run stored-session message after the session and draft are ready.</span>
+              </li>
+              <li id="production-two-profile-step-reply" class="is-pending">
+                <strong>4 Reply</strong>
+                <span id="production-two-profile-step-reply-detail">After send, swap direction and write the reply.</span>
+              </li>
+            </ol>
             <label class="loop-label" for="production-two-profile-passphrase">Passphrase</label>
             <input
               id="production-two-profile-passphrase"

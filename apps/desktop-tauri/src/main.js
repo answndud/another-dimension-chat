@@ -156,6 +156,20 @@ const fields = {
   productionTwoProfileA: document.querySelector("#production-two-profile-a"),
   productionTwoProfileB: document.querySelector("#production-two-profile-b"),
   productionTwoProfileDirection: document.querySelector("#production-two-profile-direction"),
+  productionTwoProfileStepSession: document.querySelector("#production-two-profile-step-session"),
+  productionTwoProfileStepSessionDetail: document.querySelector(
+    "#production-two-profile-step-session-detail",
+  ),
+  productionTwoProfileStepCompose: document.querySelector("#production-two-profile-step-compose"),
+  productionTwoProfileStepComposeDetail: document.querySelector(
+    "#production-two-profile-step-compose-detail",
+  ),
+  productionTwoProfileStepSend: document.querySelector("#production-two-profile-step-send"),
+  productionTwoProfileStepSendDetail: document.querySelector("#production-two-profile-step-send-detail"),
+  productionTwoProfileStepReply: document.querySelector("#production-two-profile-step-reply"),
+  productionTwoProfileStepReplyDetail: document.querySelector(
+    "#production-two-profile-step-reply-detail",
+  ),
   productionTwoProfilePassphrase: document.querySelector("#production-two-profile-passphrase"),
   productionTwoProfileMessage: document.querySelector("#production-two-profile-message"),
   runProductionTwoProfileRoundtrip: document.querySelector("#run-production-two-profile-roundtrip"),
@@ -567,6 +581,104 @@ function renderProductionTwoProfileDirection(input = productionTwoProfileInput()
       : "Write a stored-session message";
 }
 
+function setTwoProfileFlowStep(item, detail, state, message) {
+  if (item) {
+    item.classList.remove("is-pending", "is-running", "is-complete", "is-failed");
+    item.classList.add(`is-${state}`);
+  }
+  setText(detail, message);
+}
+
+function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
+  const profilesReady = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB);
+  const authReady = Boolean(profilesReady && input.passphrase);
+  const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
+  const hasMessage = Boolean(input.message);
+  const lastSuccess = latestProductionTwoProfileSuccess;
+  const lastSuccessDirection =
+    lastSuccess && lastSuccess.profileA === input.profileA && lastSuccess.profileB === input.profileB;
+  const lastSuccessOppositeDirection =
+    lastSuccess && lastSuccess.profileA === input.profileB && lastSuccess.profileB === input.profileA;
+  const sessionsReady =
+    Boolean(sessionStatus?.both_ready_for_message_envelope) ||
+    Boolean(lastSuccessDirection || lastSuccessOppositeDirection);
+
+  if (!profilesReady) {
+    setTwoProfileFlowStep(
+      fields.productionTwoProfileStepSession,
+      fields.productionTwoProfileStepSessionDetail,
+      "running",
+      "Enter two distinct local profiles.",
+    );
+  } else if (!input.passphrase) {
+    setTwoProfileFlowStep(
+      fields.productionTwoProfileStepSession,
+      fields.productionTwoProfileStepSessionDetail,
+      "running",
+      "Enter passphrase to unlock both local stores.",
+    );
+  } else if (sessionsReady) {
+    setTwoProfileFlowStep(
+      fields.productionTwoProfileStepSession,
+      fields.productionTwoProfileStepSessionDetail,
+      "complete",
+      `Stored sessions ready for ${input.profileA} -> ${input.profileB}.`,
+    );
+  } else if (sessionStatus) {
+    setTwoProfileFlowStep(
+      fields.productionTwoProfileStepSession,
+      fields.productionTwoProfileStepSessionDetail,
+      "failed",
+      "Stored sessions are incomplete. Run full two-profile setup.",
+    );
+  } else {
+    setTwoProfileFlowStep(
+      fields.productionTwoProfileStepSession,
+      fields.productionTwoProfileStepSessionDetail,
+      "running",
+      "Run full setup or check both sessions.",
+    );
+  }
+
+  setTwoProfileFlowStep(
+    fields.productionTwoProfileStepCompose,
+    fields.productionTwoProfileStepComposeDetail,
+    !authReady ? "pending" : hasMessage ? "complete" : "running",
+    !authReady
+      ? "Waiting for profiles and passphrase."
+      : hasMessage
+        ? `Draft ready: ${input.message.length} chars.`
+        : `Write message from ${input.profileA} to ${input.profileB}.`,
+  );
+
+  const sendRunning = productionBusyAction === "two-profile-message-roundtrip";
+  const sendReady = hasMessage && sessionsReady;
+  const sendComplete = Boolean(lastSuccessDirection && !hasMessage);
+  setTwoProfileFlowStep(
+    fields.productionTwoProfileStepSend,
+    fields.productionTwoProfileStepSendDetail,
+    sendRunning || sendReady ? "running" : sendComplete ? "complete" : "pending",
+    sendRunning
+      ? "Stored-session message is running."
+      : sendComplete
+        ? `Sent ${lastSuccess.messageLength} chars; compose buffer cleared.`
+        : sendReady
+          ? "Run stored-session message."
+          : "Waiting for ready session and draft.",
+  );
+
+  setTwoProfileFlowStep(
+    fields.productionTwoProfileStepReply,
+    fields.productionTwoProfileStepReplyDetail,
+    lastSuccessOppositeDirection ? "running" : lastSuccess ? "complete" : "pending",
+    lastSuccessOppositeDirection
+      ? `Reply direction selected: ${input.profileA} -> ${input.profileB}.`
+      : lastSuccess
+        ? "Swap direction to reply."
+        : "Complete one sent message first.",
+  );
+}
+
 function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
   const currentLabel =
     input.profileA && input.profileB && input.message
@@ -887,6 +999,7 @@ function applyProductionActionState() {
     fields.productionMessageNumber.disabled = message.autoMessageNumber;
   }
   renderProductionTwoProfileDirection(twoProfile);
+  renderProductionTwoProfileFlow(twoProfile);
   setText(fields.productionTwoProfileReadiness, productionTwoProfileReadiness(twoProfile, busy));
   renderProductionTwoProfileMemory(twoProfile);
   renderManualNextActions(state);

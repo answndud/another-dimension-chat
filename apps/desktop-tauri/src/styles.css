@@ -397,8 +397,25 @@ textarea {
   border-left-color: var(--accent-cyan);
 }
 
+.demo-steps li.is-pending {
+  border-left-color: var(--panel-border);
+}
+
+.demo-steps li.is-complete {
+  border-left-color: var(--success);
+}
+
 .demo-steps li.is-failed {
   border-left-color: var(--danger);
+}
+
+.compact-flow {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.compact-flow li {
+  min-height: 82px;
+  padding: 9px 10px;
 }
 
 .demo-steps strong,
@@ -627,6 +644,10 @@ pre.is-failed {
   .manual-relay-summary div {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .compact-flow {
+    grid-template-columns: 1fr;
   }
 
   .loop-actions {
