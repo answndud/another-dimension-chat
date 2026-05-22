@@ -49,6 +49,8 @@ pub mod production {
         b"AD-PRODUCTION-MESSAGE-ENVELOPE-RECORD-V1";
     const PRODUCTION_LOCAL_MESSAGE_INDEX_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-LOCAL-MESSAGE-INDEX-RECORD-V1";
+    const PRODUCTION_MESSAGE_COUNTER_RECORD_DOMAIN: &[u8] =
+        b"AD-PRODUCTION-MESSAGE-COUNTER-RECORD-V1";
     const PRODUCTION_RECEIVED_MESSAGE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-RECEIVED-MESSAGE-RECORD-V1";
     const PRODUCTION_SESSION_TRANSPORT_STATE_RECORD_DOMAIN: &[u8] =
@@ -459,6 +461,19 @@ pub mod production {
         pending_message_record_written: bool,
         envelope_encryption_ready: bool,
         network_send_attempted: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageNextNumberReservation {
+        storage_opened: bool,
+        runtime_material_reconstructable: bool,
+        previous_last_reserved: Option<u64>,
+        reserved_message_number: u64,
+        counter_record_written: bool,
+        existing_message_slot_skipped: bool,
         key_material_exposed: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
@@ -950,6 +965,44 @@ pub mod production {
 
         pub fn network_send_attempted(self) -> bool {
             self.network_send_attempted
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionMessageNextNumberReservation {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn runtime_material_reconstructable(self) -> bool {
+            self.runtime_material_reconstructable
+        }
+
+        pub fn previous_last_reserved(self) -> Option<u64> {
+            self.previous_last_reserved
+        }
+
+        pub fn reserved_message_number(self) -> u64 {
+            self.reserved_message_number
+        }
+
+        pub fn counter_record_written(self) -> bool {
+            self.counter_record_written
+        }
+
+        pub fn existing_message_slot_skipped(self) -> bool {
+            self.existing_message_slot_skipped
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -2672,6 +2725,48 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    struct MessageCounterRecord {
+        contact_id: ContactId,
+        last_reserved_message_number: u64,
+    }
+
+    impl MessageCounterRecord {
+        fn new(
+            contact_id: ContactId,
+            last_reserved_message_number: u64,
+        ) -> Result<Self, ProductionSessionError> {
+            if last_reserved_message_number == 0 {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            Ok(Self {
+                contact_id,
+                last_reserved_message_number,
+            })
+        }
+
+        fn encode(&self) -> String {
+            format!(
+                "ADMSGCOUNTER1|{}|{}",
+                self.contact_id.as_str(),
+                self.last_reserved_message_number
+            )
+        }
+
+        fn decode(value: &str) -> Result<Self, ProductionSessionError> {
+            let parts = value.split('|').collect::<Vec<_>>();
+            if parts.len() != 3 || parts[0] != "ADMSGCOUNTER1" {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            let contact_id =
+                ContactId::new(parts[1]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let last_reserved_message_number = parts[2]
+                .parse::<u64>()
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            Self::new(contact_id, last_reserved_message_number)
+        }
+    }
+
     #[derive(Debug)]
     pub struct ProductionEnvelopeSession {
         plan: ProductionSessionPlan,
@@ -3962,6 +4057,89 @@ pub mod production {
         })
     }
 
+    pub fn production_message_next_number_reserve(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionMessageNextNumberReservation, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        open_fail_closed_outbound_runtime(&material)?;
+        let record_id =
+            production_message_counter_record_id(&material.channel_id, &material.remote_contact_id);
+        let previous = store
+            .get(&record_id)?
+            .map(|record| {
+                if record.kind != ProductionRecordKind::MessageCounter {
+                    return Err(ProductionSessionError::UnexpectedEnvelope);
+                }
+                let state = String::from_utf8(record.sealed_body)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                MessageCounterRecord::decode(&state)
+            })
+            .transpose()?;
+        let previous_last_reserved = previous
+            .as_ref()
+            .map(|counter| counter.last_reserved_message_number);
+        if previous
+            .as_ref()
+            .is_some_and(|counter| counter.contact_id != material.remote_contact_id)
+        {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let mut candidate = match previous_last_reserved {
+            Some(value) => value
+                .checked_add(1)
+                .ok_or(ProductionSessionError::UnexpectedEnvelope)?,
+            None => 1,
+        };
+        let mut existing_message_slot_skipped = false;
+        loop {
+            let local_index_id = production_local_message_index_record_id(
+                &material.channel_id,
+                &material.remote_contact_id,
+                candidate,
+            );
+            let message_record_id = production_message_envelope_record_id(
+                &material.channel_id,
+                candidate,
+                MessageType::Data,
+            );
+            if store.get(&local_index_id)?.is_none() && store.get(&message_record_id)?.is_none() {
+                break;
+            }
+            existing_message_slot_skipped = true;
+            candidate = candidate
+                .checked_add(1)
+                .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        }
+        let counter = MessageCounterRecord::new(material.remote_contact_id.clone(), candidate)?;
+        let record = EncryptedRecord::new(
+            ProductionRecordKind::MessageCounter,
+            EncryptedRecordScope::contact(profile, material.remote_contact_id),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            counter.encode().into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)?;
+        store.put(&record_id, &record)?;
+
+        Ok(ProductionMessageNextNumberReservation {
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            previous_last_reserved,
+            reserved_message_number: candidate,
+            counter_record_written: true,
+            existing_message_slot_skipped,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
     pub fn production_message_pending_status(
         store_path: impl AsRef<std::path::Path>,
         profile: ProfileName,
@@ -5085,6 +5263,20 @@ pub mod production {
         hasher.update(message_number.to_be_bytes());
         EncryptedRecordId::new(format!("msgidx_{}", encode_hex(&hasher.finalize())))
             .expect("domain-separated local message index record id is valid")
+    }
+
+    fn production_message_counter_record_id(
+        channel_id: &str,
+        contact_id: &ContactId,
+    ) -> EncryptedRecordId {
+        let mut hasher = Sha256::new();
+        hasher.update(PRODUCTION_MESSAGE_COUNTER_RECORD_DOMAIN);
+        hasher.update([0]);
+        hasher.update(channel_id.as_bytes());
+        hasher.update([0]);
+        hasher.update(contact_id.as_str().as_bytes());
+        EncryptedRecordId::new(format!("msgcounter_{}", encode_hex(&hasher.finalize())))
+            .expect("domain-separated message counter record id is valid")
     }
 
     fn production_received_message_record_id(
@@ -6864,6 +7056,21 @@ pub mod production {
             } else {
                 (&bob_store, bob.clone())
             };
+            let first_reservation = production_message_next_number_reserve(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+            )
+            .expect("first message number reservation");
+            assert!(first_reservation.storage_opened());
+            assert!(first_reservation.runtime_material_reconstructable());
+            assert_eq!(first_reservation.previous_last_reserved(), None);
+            assert_eq!(first_reservation.reserved_message_number(), 1);
+            assert!(first_reservation.counter_record_written());
+            assert!(!first_reservation.existing_message_slot_skipped());
+            assert!(!first_reservation.key_material_exposed());
+            assert!(!first_reservation.transport_io_opened());
+            assert!(!first_reservation.runtime_messaging_enabled());
             let pending_status_before = production_message_pending_status(
                 outbound_store,
                 outbound_profile.clone(),
@@ -7096,6 +7303,19 @@ pub mod production {
             assert!(!received_export.key_material_exposed());
             assert!(!received_export.transport_io_opened());
             assert!(!received_export.runtime_messaging_enabled());
+            let second_reservation = production_message_next_number_reserve(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+            )
+            .expect("second message number reservation");
+            assert_eq!(second_reservation.previous_last_reserved(), Some(1));
+            assert_eq!(second_reservation.reserved_message_number(), 2);
+            assert!(second_reservation.counter_record_written());
+            assert!(!second_reservation.existing_message_slot_skipped());
+            assert!(!second_reservation.key_material_exposed());
+            assert!(!second_reservation.transport_io_opened());
+            assert!(!second_reservation.runtime_messaging_enabled());
             let inbound_store_after_receive = LockedProfileStore::new(inbound_store)
                 .unlock(&passphrase)
                 .expect("unlock after receive");
