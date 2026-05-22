@@ -357,7 +357,7 @@ export function productionTwoProfileMessageResultView(result) {
       `${boundaryContained ? "Contained" : "Review"}: no plaintext, key material, store path, network I/O, transport I/O, or runtime messaging exposure | ` +
       `plaintext_returned=${result.plaintext_returned_to_frontend} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
     nextStep: canContinue
-      ? "Next: continue with another stored-session message, or switch to manual envelope tools."
+      ? "Next: continue with another Profile A to Profile B message, or swap A/B to reply."
       : "Review stored-session result rows before continuing.",
   };
 }

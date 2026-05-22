@@ -2041,9 +2041,6 @@ fn run_production_two_profile_message_roundtrip(
     passphrase: String,
     message: String,
 ) -> Result<ProductionTwoProfileMessageRoundtripResult, String> {
-    use another_dimension_core::production::production_pairing_session_handshake_init;
-    use another_dimension_storage::production::ProfilePassphrase;
-
     let profile_a = sanitize_production_profile(profile_a)?;
     let profile_b = sanitize_production_profile(profile_b)?;
     if profile_a == profile_b {
@@ -2053,27 +2050,12 @@ fn run_production_two_profile_message_roundtrip(
     let profile_a_name = profile_a.as_str().to_string();
     let profile_b_name = profile_b.as_str().to_string();
     let passphrase = passphrase.trim().to_string();
-    let profile_passphrase =
-        ProfilePassphrase::new(&passphrase).map_err(|_| "invalid production profile passphrase")?;
     let message = sanitize_production_roundtrip_message(message)?;
     let message_text = String::from_utf8(message.clone())
         .map_err(|_| "production stored-session message must be UTF-8")?;
 
-    let profile_a_store = production_profile_store_path(&app_data_root, &profile_a)?;
-    let profile_b_store = production_profile_store_path(&app_data_root, &profile_b)?;
-    let profile_a_can_send =
-        production_pairing_session_handshake_init(&profile_a_store, profile_a.clone(), &profile_passphrase)
-            .map_err(|_| "stored-session sender role check failed")?
-            .local_role_can_initiate();
-    let profile_b_can_send =
-        production_pairing_session_handshake_init(&profile_b_store, profile_b.clone(), &profile_passphrase)
-            .map_err(|_| "stored-session receiver role check failed")?
-            .local_role_can_initiate();
-    let (sender_profile, receiver_profile) = match (profile_a_can_send, profile_b_can_send) {
-        (true, false) => (profile_a_name.clone(), profile_b_name.clone()),
-        (false, true) => (profile_b_name.clone(), profile_a_name.clone()),
-        _ => return Err("stored-session message roundtrip requires exactly one canonical sender".to_string()),
-    };
+    let sender_profile = profile_a_name.clone();
+    let receiver_profile = profile_b_name.clone();
 
     let sender_state =
         run_production_session_state_check(&app_data_root, sender_profile.clone(), passphrase.clone())?;
@@ -2110,7 +2092,7 @@ fn run_production_two_profile_message_roundtrip(
 
     Ok(ProductionTwoProfileMessageRoundtripResult {
         warning:
-            "stored-session message roundtrip only; existing encrypted stores are reused without network, Tor, or secure-release claim",
+            "stored-session directed message roundtrip only; Profile A sends to Profile B without network, Tor, or secure-release claim",
         sender_profile: sender_profile_result,
         receiver_profile: receiver_profile_result,
         message_number,
@@ -3350,6 +3332,30 @@ replay check: no replayed messages after message 2
         assert!(!serialized.contains("stored session hello"));
         assert!(!serialized.contains("correct-passphrase"));
         assert!(!serialized.contains("ADENV1"));
+
+        let reply_message = run_production_two_profile_message_roundtrip(
+            &root,
+            "bob".to_string(),
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "stored session reply".to_string(),
+        )
+        .expect("stored-session reply roundtrip");
+        assert_eq!(reply_message.sender_profile, "bob");
+        assert_eq!(reply_message.receiver_profile, "alice");
+        assert!(reply_message.message_number >= 1);
+        assert!(reply_message.sender_session_ready);
+        assert!(reply_message.receiver_session_ready);
+        assert!(reply_message.message_number_reserved);
+        assert!(reply_message.encrypted_envelope_exported);
+        assert!(reply_message.inbound_message_stored);
+        assert!(reply_message.received_status_verified);
+        assert!(reply_message.received_export_matches_input);
+        assert!(!reply_message.plaintext_returned_to_frontend);
+        assert!(!reply_message.key_material_exposed);
+        assert!(!reply_message.network_io_attempted);
+        assert!(!reply_message.transport_io_opened);
+        assert!(!reply_message.runtime_messaging_enabled);
         let _ = std::fs::remove_dir_all(root);
     }
 
