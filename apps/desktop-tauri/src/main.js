@@ -221,7 +221,7 @@ let latestProductionTwoProfileSuccess = null;
 let latestProductionMessageImport = null;
 let productionBusyAction = null;
 const productionTranscriptEntryKeys = new Set();
-const productionTwoProfileTranscriptEntryKeys = new Set();
+const productionTwoProfileConversationEntries = new Map();
 const productionPayloadSlots = {
   pairing: new Map(),
   handshakeInit: new Map(),
@@ -456,7 +456,7 @@ function resetProductionMessageTranscript() {
 }
 
 function resetProductionTwoProfileTranscript() {
-  productionTwoProfileTranscriptEntryKeys.clear();
+  productionTwoProfileConversationEntries.clear();
   resetTranscriptList(fields.productionTwoProfileTranscript, "No two-profile messages yet.");
 }
 
@@ -506,15 +506,89 @@ function appendProductionTranscriptEntry(kind, profile, messageNumber, message) 
   );
 }
 
-function appendProductionTwoProfileTranscriptEntry(kind, profile, messageNumber, message) {
-  appendTranscriptEntry(
-    fields.productionTwoProfileTranscript,
-    productionTwoProfileTranscriptEntryKeys,
-    kind,
-    profile,
-    messageNumber,
-    message,
-  );
+function twoProfileConversationKey(entry) {
+  return [
+    String(entry.sender ?? "").trim().toLowerCase(),
+    String(entry.receiver ?? "").trim().toLowerCase(),
+    entry.messageNumber,
+    String(entry.message ?? "").trim(),
+  ].join("\n");
+}
+
+function appendProductionTwoProfileConversationStatus(
+  kind,
+  ownerProfile,
+  counterpartProfile,
+  messageNumber,
+  message,
+) {
+  const normalizedKind = kind === "received" ? "received" : "sent";
+  const owner = String(ownerProfile ?? "").trim().toLowerCase() || "unknown";
+  const counterpart = String(counterpartProfile ?? "").trim().toLowerCase() || "peer";
+  const normalizedNumber = Number.parseInt(messageNumber, 10);
+  const text = String(message ?? "").trim();
+  if (!Number.isInteger(normalizedNumber) || normalizedNumber < 1 || !text || !fields.productionTwoProfileTranscript) {
+    return;
+  }
+
+  const entry = {
+    sender: normalizedKind === "sent" ? owner : counterpart,
+    receiver: normalizedKind === "sent" ? counterpart : owner,
+    messageNumber: normalizedNumber,
+    message: text,
+  };
+  const key = twoProfileConversationKey(entry);
+  const existing = productionTwoProfileConversationEntries.get(key) ?? {
+    ...entry,
+    statuses: new Set(),
+  };
+  existing.statuses.add(normalizedKind);
+  productionTwoProfileConversationEntries.set(key, existing);
+  renderProductionTwoProfileConversationList();
+}
+
+function renderProductionTwoProfileConversationList() {
+  const target = fields.productionTwoProfileTranscript;
+  if (!target) {
+    return;
+  }
+  target.replaceChildren();
+  const entries = [...productionTwoProfileConversationEntries.values()].sort((left, right) => {
+    const numberDelta = left.messageNumber - right.messageNumber;
+    if (numberDelta !== 0) {
+      return numberDelta;
+    }
+    return `${left.sender}:${left.receiver}`.localeCompare(`${right.sender}:${right.receiver}`);
+  });
+  if (entries.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "is-empty";
+    empty.textContent = "No two-profile messages yet.";
+    target.append(empty);
+    return;
+  }
+  for (const entry of entries) {
+    const item = document.createElement("li");
+    const delivered = entry.statuses.has("sent") && entry.statuses.has("received");
+    item.className = delivered ? "is-delivered" : "is-sent";
+
+    const meta = document.createElement("strong");
+    meta.textContent = `${entry.sender} -> ${entry.receiver} / #${entry.messageNumber}`;
+
+    const status = document.createElement("span");
+    status.className = "transcript-status";
+    status.textContent = delivered
+      ? "local sent + peer received"
+      : entry.statuses.has("received")
+        ? "received copy only"
+        : "sent copy only";
+
+    const body = document.createElement("span");
+    body.textContent = entry.message;
+
+    item.append(meta, status, body);
+    target.append(item);
+  }
 }
 
 function renderProductionTwoProfileTranscriptEntries(entries) {
@@ -527,9 +601,10 @@ function renderProductionTwoProfileTranscriptEntries(entries) {
     return `${left.profile}:${left.kind}`.localeCompare(`${right.profile}:${right.kind}`);
   });
   for (const entry of orderedEntries) {
-    appendProductionTwoProfileTranscriptEntry(
+    appendProductionTwoProfileConversationStatus(
       entry.kind,
       entry.profile,
+      entry.counterpartProfile,
       entry.messageNumber,
       entry.message,
     );
@@ -1500,8 +1575,8 @@ function applyStoredSessionMessageResultToManualFlow(result, message) {
   if (text) {
     appendProductionTranscriptEntry("sent", sender, messageNumber, text);
     appendProductionTranscriptEntry("received", receiver, messageNumber, text);
-    appendProductionTwoProfileTranscriptEntry("sent", sender, messageNumber, text);
-    appendProductionTwoProfileTranscriptEntry("received", receiver, messageNumber, text);
+    appendProductionTwoProfileConversationStatus("sent", sender, receiver, messageNumber, text);
+    appendProductionTwoProfileConversationStatus("received", receiver, sender, messageNumber, text);
   }
   latestProductionMessageImport = null;
   setProductionMessageState("Stored-session message synced");
@@ -2254,8 +2329,8 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       invoke("production_message_transcript_export", { profile: profileB, passphrase }),
     ]);
     const entries = [
-      ...twoProfileTranscriptEntriesFromProfile(profileA, profileAResult.entries),
-      ...twoProfileTranscriptEntriesFromProfile(profileB, profileBResult.entries),
+      ...twoProfileTranscriptEntriesFromProfile(profileA, profileB, profileAResult.entries),
+      ...twoProfileTranscriptEntriesFromProfile(profileB, profileA, profileBResult.entries),
     ];
     renderProductionTwoProfileTranscriptEntries(entries);
     setProductionTwoProfileState("Conversation loaded");
@@ -2276,9 +2351,10 @@ async function loadProductionTwoProfileTranscript(options = {}) {
   }
 }
 
-function twoProfileTranscriptEntriesFromProfile(profile, entries) {
+function twoProfileTranscriptEntriesFromProfile(profile, counterpartProfile, entries) {
   return (entries ?? []).map((entry) => ({
     profile,
+    counterpartProfile,
     kind: entry.direction === "received" ? "received" : "sent",
     messageNumber: entry.message_number,
     message: entry.message,

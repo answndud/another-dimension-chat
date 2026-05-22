@@ -537,6 +537,10 @@ textarea {
   border-left-color: var(--success);
 }
 
+.message-transcript li.is-delivered {
+  border-left-color: var(--success);
+}
+
 .message-transcript li.is-empty {
   border-left-color: var(--panel-border);
   color: var(--text-muted);
@@ -548,6 +552,12 @@ textarea {
 }
 
 .message-transcript strong {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.message-transcript .transcript-status {
   color: var(--text-muted);
   font-size: 11px;
   text-transform: uppercase;
