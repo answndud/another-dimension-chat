@@ -1669,6 +1669,7 @@ async function unlockProductionProfile() {
     setText(fields.productionProfileIdentity, view.identity);
     setText(fields.productionProfileBoundary, view.boundary);
     await loadProductionProfileList();
+    await restoreProductionSessionAfterUnlock(profile, passphrase);
   } catch (error) {
     setProductionProfileState("Profile unlock failed");
     setText(fields.productionProfileWarning, String(error));
@@ -1681,6 +1682,60 @@ async function unlockProductionProfile() {
       fields.unlockProductionProfile.disabled = false;
     }
     applyProductionActionState();
+  }
+}
+
+async function restoreProductionSessionAfterUnlock(profile, passphrase) {
+  let session;
+  try {
+    session = await invoke("production_session_state_check", { profile, passphrase });
+  } catch {
+    latestProductionSessionState = null;
+    setProductionPairingState("No stored session");
+    setText(fields.productionPairingSession, "No message-ready stored session for this profile yet");
+    setText(fields.productionPairingBoundary, "Not checked yet");
+    setProductionMessageState("Message flow idle");
+    setText(
+      fields.productionMessageWarning,
+      "Profile unlocked. No stored message session was recovered.",
+    );
+    setText(fields.productionMessageBoundary, "Not checked yet");
+    return;
+  }
+
+  const view = productionSessionStateView(session);
+  latestProductionSessionState = session;
+  setProductionPairingState(
+    session.ready_for_message_envelope ? "Stored session recovered" : "Stored session incomplete",
+  );
+  setText(fields.productionPairingWarning, session.warning);
+  setText(fields.productionPairingSession, view.session);
+  setText(fields.productionPairingBoundary, view.pairingBoundary);
+  setText(fields.productionMessageBoundary, view.messageBoundary);
+  if (!session.ready_for_message_envelope) {
+    setProductionMessageState("Message flow idle");
+    setText(
+      fields.productionMessageWarning,
+      "Profile unlocked. Complete pairing and handshake before message recovery.",
+    );
+    return;
+  }
+
+  try {
+    const transcript = await invoke("production_message_transcript_export", { profile, passphrase });
+    renderProductionTranscriptEntries(profile, transcript.entries);
+    setProductionMessageState("Stored transcript recovered");
+    setText(fields.productionMessageWarning, transcript.warning);
+    setText(
+      fields.productionMessageBoundary,
+      `plaintext_after_unlock=${transcript.plaintext_returned_after_unlock} key_material=${transcript.key_material_exposed} network_io=${transcript.network_io_attempted} transport_io=${transcript.transport_io_opened} runtime=${transcript.runtime_messaging_enabled}`,
+    );
+  } catch {
+    setProductionMessageState("Transcript recovery unavailable");
+    setText(
+      fields.productionMessageWarning,
+      "Stored session recovered. Transcript can be loaded after message records exist.",
+    );
   }
 }
 
