@@ -70,6 +70,9 @@ const completeTwoProfileResult = {
 };
 
 const completeTwoProfileMessageResult = {
+  sender_profile: "alice",
+  receiver_profile: "bob",
+  message_number: 3,
   sender_session_ready: true,
   receiver_session_ready: true,
   message_number_reserved: true,
@@ -595,8 +598,10 @@ test("productionTwoProfileMessageResultView formats stored-session message round
 
   assert.equal(view.canContinue, true);
   assert.match(view.profiles, /existing encrypted profile stores/);
+  assert.match(view.profiles, /sender=alice receiver=bob/);
   assert.match(view.session, /^Complete:/);
   assert.match(view.message, /^Complete:/);
+  assert.match(view.message, /number=3 reserved=true/);
   assert.match(view.boundary, /^Contained:/);
 
   const blocked = productionTwoProfileMessageResultView({

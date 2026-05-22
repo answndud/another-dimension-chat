@@ -1206,8 +1206,39 @@ function renderProductionTwoProfileMessageResult(result) {
       fingerprint: twoProfileInputFingerprint(input),
     };
     renderProductionTwoProfileMemory(input);
+    applyStoredSessionMessageResultToManualFlow(result, input.message);
   }
   setProductionFollowupActions(view.canContinue, view.nextStep);
+}
+
+function applyStoredSessionMessageResultToManualFlow(result, message) {
+  const sender = String(result.sender_profile ?? "").trim().toLowerCase();
+  const receiver = String(result.receiver_profile ?? "").trim().toLowerCase();
+  const messageNumber = Number.parseInt(result.message_number, 10);
+  const text = String(message ?? "").trim();
+  if (!sender || !receiver || !Number.isInteger(messageNumber) || messageNumber < 1) {
+    return;
+  }
+
+  if (fields.productionProfileName) {
+    fields.productionProfileName.value = sender;
+  }
+  if (fields.productionProfileSelector) {
+    fields.productionProfileSelector.value = sender;
+  }
+  if (fields.productionMessageNumber) {
+    fields.productionMessageNumber.value = String(messageNumber);
+  }
+  if (text) {
+    appendProductionTranscriptEntry("sent", sender, messageNumber, text);
+    appendProductionTranscriptEntry("received", receiver, messageNumber, text);
+  }
+  latestProductionMessageImport = null;
+  setProductionMessageState("Stored-session message synced");
+  setText(
+    fields.productionMessageWarning,
+    `Stored-session message #${messageNumber} synced to manual view. Active sender=${sender}; receiver=${receiver}.`,
+  );
 }
 
 function productionProfileInput() {
