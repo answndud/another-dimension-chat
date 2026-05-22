@@ -273,6 +273,23 @@ pub mod production {
                 key_material_exposed: false,
             })
         }
+
+        pub fn decrypt_with_nonce(
+            &self,
+            nonce: u64,
+            ciphertext: &[u8],
+        ) -> Result<NoiseStatelessTransportPlaintext, CryptoError> {
+            let mut plaintext = vec![0_u8; ciphertext.len()];
+            let len = self
+                .transport
+                .read_message(nonce, ciphertext, &mut plaintext)?;
+            plaintext.truncate(len);
+            Ok(NoiseStatelessTransportPlaintext {
+                remote_static: self.remote_static.clone(),
+                plaintext,
+                key_material_exposed: false,
+            })
+        }
     }
 
     pub struct NoiseStatelessResponderTransport {
@@ -283,6 +300,23 @@ pub mod production {
     impl NoiseStatelessResponderTransport {
         pub fn remote_static(&self) -> &[u8] {
             &self.remote_static
+        }
+
+        pub fn encrypt_with_nonce(
+            &self,
+            nonce: u64,
+            plaintext: &[u8],
+        ) -> Result<NoiseStatelessTransportCiphertext, CryptoError> {
+            let mut ciphertext = vec![0_u8; plaintext.len() + 16];
+            let len = self
+                .transport
+                .write_message(nonce, plaintext, &mut ciphertext)?;
+            ciphertext.truncate(len);
+            Ok(NoiseStatelessTransportCiphertext {
+                remote_static: self.remote_static.clone(),
+                ciphertext,
+                key_material_exposed: false,
+            })
         }
 
         pub fn decrypt_with_nonce(
@@ -872,6 +906,53 @@ pub mod production {
 
             assert_eq!(receiver.remote_static(), initiator.public_key());
             assert_eq!(plaintext.plaintext, b"message one");
+            assert!(!plaintext.key_material_exposed);
+        }
+
+        #[test]
+        fn noise_xx_stateless_responder_transport_encrypts_reply_with_explicit_nonce() {
+            let initiator = generate_noise_static_keypair().expect("initiator static key");
+            let responder = generate_noise_static_keypair().expect("responder static key");
+            let init =
+                create_noise_xx_handshake_init_export("ADPAIR-SAFETY-V1|alice|bob", &initiator)
+                    .expect("init export");
+            let reply = create_noise_xx_handshake_reply_export(
+                "ADPAIR-SAFETY-V1|alice|bob",
+                &responder,
+                &init.message,
+            )
+            .expect("reply export");
+            let finish = create_noise_xx_handshake_finish_export(
+                "ADPAIR-SAFETY-V1|alice|bob",
+                &initiator,
+                &init.initiator_ephemeral_private,
+                &reply.message,
+            )
+            .expect("finish export");
+            let receiver = create_noise_xx_stateless_responder_transport(
+                "ADPAIR-SAFETY-V1|alice|bob",
+                &responder,
+                &init.message,
+                &reply.responder_ephemeral_private,
+                &finish.message,
+            )
+            .expect("receiver");
+            let sender = create_noise_xx_stateless_initiator_transport(
+                "ADPAIR-SAFETY-V1|alice|bob",
+                &initiator,
+                &init.initiator_ephemeral_private,
+                &reply.message,
+            )
+            .expect("sender");
+            let ciphertext = receiver
+                .encrypt_with_nonce(0, b"reply one")
+                .expect("ciphertext");
+            let plaintext = sender
+                .decrypt_with_nonce(0, &ciphertext.ciphertext)
+                .expect("plaintext");
+
+            assert_eq!(sender.remote_static(), responder.public_key());
+            assert_eq!(plaintext.plaintext, b"reply one");
             assert!(!plaintext.key_material_exposed);
         }
 

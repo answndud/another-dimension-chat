@@ -603,6 +603,10 @@ test("productionTwoProfileMessageResultView formats stored-session message round
   assert.match(view.message, /^Complete:/);
   assert.match(view.message, /number=3 reserved=true/);
   assert.match(view.boundary, /^Contained:/);
+  assert.equal(
+    view.nextStep,
+    "Next: continue with another Profile A to Profile B message, or swap A/B to reply.",
+  );
 
   const blocked = productionTwoProfileMessageResultView({
     ...completeTwoProfileMessageResult,

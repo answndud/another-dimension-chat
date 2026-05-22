@@ -4442,42 +4442,75 @@ pub mod production {
         });
         let envelope_encryption_ready = local_message_index_matches_pending
             && session_transport_ready
-            && draft.local_role == SessionRole::CanonicalDialer
-            && transport_state
-                .as_ref()
-                .is_some_and(|state| state.handshake_message_kind == "reply");
+            && transport_state.as_ref().is_some_and(|state| {
+                matches!(
+                    (draft.local_role, state.handshake_message_kind.as_str()),
+                    (SessionRole::CanonicalDialer, "reply") | (SessionRole::Responder, "finish")
+                )
+            });
         let encrypted_envelope_written = if envelope_encryption_ready {
             let pending = pending
                 .as_ref()
                 .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
-            let state = store
-                .get(&production_pending_handshake_initiator_state_record_id())?
-                .map(|record| {
-                    decode_production_handshake_initiator_state_record(
-                        record,
-                        &profile,
-                        &draft.channel_id,
-                    )
-                })
-                .transpose()?
-                .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
             let transport_state = transport_state
                 .as_ref()
                 .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
-            let transport = create_noise_xx_stateless_initiator_transport(
-                &draft.safety_transcript,
-                &local_noise_static.keypair,
-                &state.initiator_ephemeral_private,
-                &transport_state.handshake_message,
-            )
-            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
-            if transport.remote_static() != draft.remote_noise_static_public_key {
-                return Err(ProductionSessionError::NoiseStaticKeyMismatch);
-            }
             let padded = pad_to_bucket(&pending.plaintext)?;
-            let ciphertext = transport
-                .encrypt_with_nonce(message_number - 1, &padded)
-                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let ciphertext = match draft.local_role {
+                SessionRole::CanonicalDialer => {
+                    let state = store
+                        .get(&production_pending_handshake_initiator_state_record_id())?
+                        .map(|record| {
+                            decode_production_handshake_initiator_state_record(
+                                record,
+                                &profile,
+                                &draft.channel_id,
+                            )
+                        })
+                        .transpose()?
+                        .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+                    let transport = create_noise_xx_stateless_initiator_transport(
+                        &draft.safety_transcript,
+                        &local_noise_static.keypair,
+                        &state.initiator_ephemeral_private,
+                        &transport_state.handshake_message,
+                    )
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    if transport.remote_static() != draft.remote_noise_static_public_key {
+                        return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+                    }
+                    transport
+                        .encrypt_with_nonce(message_number - 1, &padded)
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
+                }
+                SessionRole::Responder => {
+                    let state = store
+                        .get(&production_pending_handshake_initiator_state_record_id())?
+                        .map(|record| {
+                            decode_production_handshake_responder_state_record(
+                                record,
+                                &profile,
+                                &draft.channel_id,
+                            )
+                        })
+                        .transpose()?
+                        .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+                    let transport = create_noise_xx_stateless_responder_transport(
+                        &draft.safety_transcript,
+                        &local_noise_static.keypair,
+                        &state.init_message,
+                        &state.responder_ephemeral_private,
+                        &transport_state.handshake_message,
+                    )
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    if transport.remote_static() != draft.remote_noise_static_public_key {
+                        return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+                    }
+                    transport
+                        .encrypt_with_nonce(message_number - 1, &padded)
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
+                }
+            };
             if ciphertext.remote_static != draft.remote_noise_static_public_key
                 || ciphertext.key_material_exposed
             {
@@ -4597,12 +4630,18 @@ pub mod production {
         let transport_state = load_session_transport_state(&store, &profile, &draft)?
             .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
         let session_transport_ready = transport_state.channel_id == material.channel_id
-            && transport_state.local_role == SessionRole::Responder
-            && transport_state.handshake_message_kind == "finish"
+            && transport_state.local_role == draft.local_role
             && transport_state.remote_contact_id == material.remote_contact_id
             && transport_state.remote_noise_static_public_key
                 == draft.remote_noise_static_public_key
-            && transport_state.transport_state_created;
+            && transport_state.transport_state_created
+            && matches!(
+                (
+                    draft.local_role,
+                    transport_state.handshake_message_kind.as_str()
+                ),
+                (SessionRole::CanonicalDialer, "reply") | (SessionRole::Responder, "finish")
+            );
         if !session_transport_ready {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
@@ -4613,35 +4652,65 @@ pub mod production {
         {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
-        let state = store
-            .get(&production_pending_handshake_initiator_state_record_id())?
-            .map(|record| {
-                decode_production_handshake_responder_state_record(
-                    record,
-                    &profile,
-                    &draft.channel_id,
-                )
-            })
-            .transpose()?
-            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
-        let transport = create_noise_xx_stateless_responder_transport(
-            &draft.safety_transcript,
-            &local_noise_static.keypair,
-            &state.init_message,
-            &state.responder_ephemeral_private,
-            &transport_state.handshake_message,
-        )
-        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
-        if transport.remote_static() != draft.remote_noise_static_public_key {
-            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
-        }
         let mut replay_window = store
             .load_replay_window(&production_replay_record_id(&draft.channel_id))?
             .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
         replay_window.accept(envelope.message_number)?;
-        let plaintext = transport
-            .decrypt_with_nonce(envelope.message_number - 1, &envelope.padded_ciphertext)
-            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let plaintext = match draft.local_role {
+            SessionRole::CanonicalDialer => {
+                let state = store
+                    .get(&production_pending_handshake_initiator_state_record_id())?
+                    .map(|record| {
+                        decode_production_handshake_initiator_state_record(
+                            record,
+                            &profile,
+                            &draft.channel_id,
+                        )
+                    })
+                    .transpose()?
+                    .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+                let transport = create_noise_xx_stateless_initiator_transport(
+                    &draft.safety_transcript,
+                    &local_noise_static.keypair,
+                    &state.initiator_ephemeral_private,
+                    &transport_state.handshake_message,
+                )
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                if transport.remote_static() != draft.remote_noise_static_public_key {
+                    return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+                }
+                transport
+                    .decrypt_with_nonce(envelope.message_number - 1, &envelope.padded_ciphertext)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
+            }
+            SessionRole::Responder => {
+                let state = store
+                    .get(&production_pending_handshake_initiator_state_record_id())?
+                    .map(|record| {
+                        decode_production_handshake_responder_state_record(
+                            record,
+                            &profile,
+                            &draft.channel_id,
+                        )
+                    })
+                    .transpose()?
+                    .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+                let transport = create_noise_xx_stateless_responder_transport(
+                    &draft.safety_transcript,
+                    &local_noise_static.keypair,
+                    &state.init_message,
+                    &state.responder_ephemeral_private,
+                    &transport_state.handshake_message,
+                )
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                if transport.remote_static() != draft.remote_noise_static_public_key {
+                    return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+                }
+                transport
+                    .decrypt_with_nonce(envelope.message_number - 1, &envelope.padded_ciphertext)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
+            }
+        };
         if plaintext.remote_static != draft.remote_noise_static_public_key
             || plaintext.key_material_exposed
             || trim_padding(&plaintext.plaintext).is_empty()
