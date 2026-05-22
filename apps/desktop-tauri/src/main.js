@@ -5,6 +5,7 @@ import {
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
   productionManualNextActions,
+  productionManualMessageStatusView,
   productionManualStatusView,
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
@@ -138,6 +139,7 @@ const fields = {
   importProductionMessageEnvelope: document.querySelector("#import-production-message-envelope"),
   exportProductionReceivedMessage: document.querySelector("#export-production-received-message"),
   productionReceivedMessage: document.querySelector("#production-received-message"),
+  productionMessageActiveStatus: document.querySelector("#production-message-active-status"),
   productionMessageOutbound: document.querySelector("#production-message-outbound"),
   productionMessageInbound: document.querySelector("#production-message-inbound"),
   productionMessageBoundary: document.querySelector("#production-message-boundary"),
@@ -360,6 +362,10 @@ function renderManualNextActions(state) {
   setText(fields.productionProfileNextAction, nextActions.profile);
   setText(fields.productionPairingNextAction, nextActions.pairing);
   setText(fields.productionMessageNextAction, nextActions.message);
+}
+
+function renderManualMessageStatus(state) {
+  setText(fields.productionMessageActiveStatus, productionManualMessageStatusView(state));
 }
 
 function renderManualStatus() {
@@ -608,12 +614,14 @@ function applyProductionActionState() {
     hasTwoProfileInput,
     activeProfile: activeProductionProfileName(),
     counterpartProfile,
+    messageNumber: message.messageNumber,
   };
   const availability = productionActionAvailability(state);
 
   setText(fields.productionTwoProfileReadiness, productionTwoProfileReadiness(twoProfile, busy));
   renderProductionTwoProfileMemory(twoProfile);
   renderManualNextActions(state);
+  renderManualMessageStatus(state);
   renderManualStatus();
   setActionButtonState(
     fields.unlockProductionProfile,
@@ -943,6 +951,7 @@ function resetProductionMessageView() {
   if (fields.productionReceivedMessage) {
     fields.productionReceivedMessage.value = "";
   }
+  setText(fields.productionMessageActiveStatus, "Not checked yet");
   setText(fields.productionMessageOutbound, "Not checked yet");
   setText(fields.productionMessageInbound, "Not checked yet");
   setText(fields.productionMessageBoundary, "Not checked yet");

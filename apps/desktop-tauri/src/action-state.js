@@ -327,6 +327,21 @@ export function productionProfileMessageReadiness(profile, singleProfileState, t
   return singleProfileState?.ready_for_message_envelope === true;
 }
 
+export function productionManualMessageStatusView(state) {
+  const active = state?.activeProfile || "active profile";
+  const counterpart = state?.counterpartProfile || "counterpart";
+  const messageNumber = Number.isInteger(state?.messageNumber) ? state.messageNumber : "invalid";
+  const session = state?.sessionReadyForMessages ? "ready" : "not-ready";
+  const localEnvelope = state?.hasLocalMessageEnvelope ? "present" : "empty";
+  const remoteSlot = state?.hasRemoteMessageEnvelopeSlot ? "ready" : "empty";
+  const remoteEnvelope = state?.hasInboundEnvelopeInput ? "loaded" : "empty";
+  const received = state?.hasReceivedMessage ? "present" : "empty";
+  return (
+    `active=${active} remote=${counterpart} number=${messageNumber} session=${session} ` +
+    `local_envelope=${localEnvelope} remote_slot=${remoteSlot} remote_envelope=${remoteEnvelope} received=${received}`
+  );
+}
+
 export function productionHandshakePayloadView(result) {
   return {
     state:
