@@ -155,6 +155,7 @@ const fields = {
   productionMessageBoundary: document.querySelector("#production-message-boundary"),
   productionTwoProfileA: document.querySelector("#production-two-profile-a"),
   productionTwoProfileB: document.querySelector("#production-two-profile-b"),
+  productionTwoProfileDirection: document.querySelector("#production-two-profile-direction"),
   productionTwoProfilePassphrase: document.querySelector("#production-two-profile-passphrase"),
   productionTwoProfileMessage: document.querySelector("#production-two-profile-message"),
   runProductionTwoProfileRoundtrip: document.querySelector("#run-production-two-profile-roundtrip"),
@@ -545,6 +546,27 @@ function twoProfileInputFingerprint(input) {
   return `${input.profileA}\n${input.profileB}\n${input.message}`;
 }
 
+function twoProfileDirectionLabel(input) {
+  if (!input.profileA || !input.profileB) {
+    return "Direction: enter Profile A and Profile B";
+  }
+  if (input.profileA === input.profileB) {
+    return "Direction blocked: profiles must be distinct";
+  }
+  return `Direction: ${input.profileA} -> ${input.profileB}`;
+}
+
+function renderProductionTwoProfileDirection(input = productionTwoProfileInput()) {
+  setText(fields.productionTwoProfileDirection, twoProfileDirectionLabel(input));
+  if (!fields.productionTwoProfileMessage) {
+    return;
+  }
+  fields.productionTwoProfileMessage.placeholder =
+    input.profileA && input.profileB && input.profileA !== input.profileB
+      ? `Message from ${input.profileA} to ${input.profileB}`
+      : "Write a stored-session message";
+}
+
 function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
   const currentLabel =
     input.profileA && input.profileB && input.message
@@ -750,6 +772,7 @@ function swapTwoProfileDirection() {
   }
   fields.productionTwoProfileA.value = profileB;
   fields.productionTwoProfileB.value = profileA;
+  renderProductionTwoProfileDirection();
   renderProductionTwoProfileMemory();
   setProductionTwoProfileState("Direction swapped");
   setText(
@@ -863,6 +886,7 @@ function applyProductionActionState() {
   if (fields.productionMessageNumber) {
     fields.productionMessageNumber.disabled = message.autoMessageNumber;
   }
+  renderProductionTwoProfileDirection(twoProfile);
   setText(fields.productionTwoProfileReadiness, productionTwoProfileReadiness(twoProfile, busy));
   renderProductionTwoProfileMemory(twoProfile);
   renderManualNextActions(state);
@@ -1288,6 +1312,10 @@ function renderProductionTwoProfileMessageResult(result) {
     };
     renderProductionTwoProfileMemory(input);
     applyStoredSessionMessageResultToManualFlow(result, input.message);
+    if (fields.productionTwoProfileMessage) {
+      fields.productionTwoProfileMessage.value = "";
+      renderProductionTwoProfileDirection(productionTwoProfileInput());
+    }
   }
   setProductionFollowupActions(view.canContinue, view.nextStep);
 }

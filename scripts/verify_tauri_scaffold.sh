@@ -344,6 +344,7 @@ require_contains "$APP_DIR/index.html" 'Current app state'
 require_contains "$APP_DIR/index.html" 'app-release-summary'
 require_contains "$APP_DIR/index.html" 'local-capability-summary'
 require_contains "$APP_DIR/index.html" 'main-blocker-summary'
+require_contains "$APP_DIR/index.html" 'production-two-profile-direction'
 require_contains "$APP_DIR/index.html" 'production-two-profile-readiness'
 require_contains "$APP_DIR/index.html" 'Post-roundtrip actions'
 require_contains "$APP_DIR/index.html" 'open-manual-production-tools'
@@ -554,7 +555,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="load-production-two-profile-transcript" type="button">Load conversation</button>' \
   | grep -v '<input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />' \
   | grep -v '<input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />' \
-  | grep -v '<textarea id="production-two-profile-message" rows="3">hello between app-data profiles</textarea>' \
+  | grep -v '<textarea id="production-two-profile-message" rows="3" placeholder="Message from alice to bob">hello between app-data profiles</textarea>' \
   | grep -v '<button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>' \
   | grep -v '<button id="run-production-two-profile-message-roundtrip" type="button">' \
   | grep -v '<button id="open-manual-production-tools" type="button" class="flow-control is-secondary">' \
