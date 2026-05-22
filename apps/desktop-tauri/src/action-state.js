@@ -344,13 +344,15 @@ export function productionTwoProfileMessageResultView(result) {
 
   return {
     canContinue,
-    profiles: "Using existing encrypted profile stores; no pairing payloads exported in this action.",
+    profiles:
+      `Using existing encrypted profile stores; no pairing payloads exported in this action. ` +
+      `sender=${result.sender_profile ?? "unknown"} receiver=${result.receiver_profile ?? "unknown"}`,
     session:
       `${sessionReady ? "Complete" : "Review"}: stored sender and receiver sessions are message-ready | ` +
       `sender=${result.sender_session_ready} receiver=${result.receiver_session_ready}`,
     message:
       `${messageReady ? "Complete" : "Review"}: stored-session envelope imported and received message verified | ` +
-      `reserved=${result.message_number_reserved} envelope=${result.encrypted_envelope_exported} inbound=${result.inbound_message_stored} status=${result.received_status_verified} match=${result.received_export_matches_input}`,
+      `number=${result.message_number ?? "unknown"} reserved=${result.message_number_reserved} envelope=${result.encrypted_envelope_exported} inbound=${result.inbound_message_stored} status=${result.received_status_verified} match=${result.received_export_matches_input}`,
     boundary:
       `${boundaryContained ? "Contained" : "Review"}: no plaintext, key material, store path, network I/O, transport I/O, or runtime messaging exposure | ` +
       `plaintext_returned=${result.plaintext_returned_to_frontend} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,

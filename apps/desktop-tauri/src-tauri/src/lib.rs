@@ -101,6 +101,9 @@ pub struct ProductionTwoProfileRoundtripResult {
 #[derive(serde::Serialize)]
 pub struct ProductionTwoProfileMessageRoundtripResult {
     warning: &'static str,
+    sender_profile: String,
+    receiver_profile: String,
+    message_number: u64,
     sender_session_ready: bool,
     receiver_session_ready: bool,
     message_number_reserved: bool,
@@ -2079,6 +2082,8 @@ fn run_production_two_profile_message_roundtrip(
     if !sender_state.ready_for_message_envelope || !receiver_state.ready_for_message_envelope {
         return Err("stored-session message roundtrip requires both profiles message-ready".to_string());
     }
+    let sender_profile_result = sender_profile.clone();
+    let receiver_profile_result = receiver_profile.clone();
     let message_number = run_production_message_number_reserve(
         &app_data_root,
         sender_profile.clone(),
@@ -2106,6 +2111,9 @@ fn run_production_two_profile_message_roundtrip(
     Ok(ProductionTwoProfileMessageRoundtripResult {
         warning:
             "stored-session message roundtrip only; existing encrypted stores are reused without network, Tor, or secure-release claim",
+        sender_profile: sender_profile_result,
+        receiver_profile: receiver_profile_result,
+        message_number,
         sender_session_ready: sender_state.ready_for_message_envelope,
         receiver_session_ready: receiver_state.ready_for_message_envelope,
         message_number_reserved: outbound.message_number_reserved,
@@ -3320,6 +3328,10 @@ replay check: no replayed messages after message 2
             "stored session hello".to_string(),
         )
         .expect("stored-session message roundtrip");
+        assert_ne!(stored_message.sender_profile, stored_message.receiver_profile);
+        assert!(["alice", "bob"].contains(&stored_message.sender_profile.as_str()));
+        assert!(["alice", "bob"].contains(&stored_message.receiver_profile.as_str()));
+        assert!(stored_message.message_number >= 2);
         assert!(stored_message.sender_session_ready);
         assert!(stored_message.receiver_session_ready);
         assert!(stored_message.message_number_reserved);
