@@ -499,6 +499,49 @@ textarea {
   list-style: none;
 }
 
+.message-transcript {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.message-transcript li {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--panel-border);
+  border-left: 2px solid var(--accent);
+  padding: 10px 12px;
+  background: var(--panel);
+}
+
+.message-transcript li.is-received {
+  border-left-color: var(--success);
+}
+
+.message-transcript li.is-empty {
+  border-left-color: var(--panel-border);
+  color: var(--text-muted);
+}
+
+.message-transcript strong,
+.message-transcript span {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.message-transcript strong {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.message-transcript span {
+  color: var(--text-primary);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 .peer-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
