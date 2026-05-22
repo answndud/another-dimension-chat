@@ -385,6 +385,7 @@ require_contains "$APP_DIR/src/action-state.js" 'manually select the counterpart
 require_contains "$APP_DIR/src/action-state.js" 'manually select Alice or Bob'
 require_contains "$APP_DIR/src/main.js" 'expected_counterpart='
 require_contains "$APP_DIR/src/main.js" 'loaded_from='
+require_contains "$APP_DIR/src/main.js" 'Filled remote field from active='
 require_contains "$APP_DIR/index.html" 'Remote payload'
 require_contains "$APP_DIR/index.html" 'Save draft'
 require_contains "$APP_DIR/index.html" 'Handshake init'
