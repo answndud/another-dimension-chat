@@ -486,13 +486,13 @@ function loadProductionPayloadSlot(kind, targetField, label) {
   const counterpart = productionCounterpartProfile(profile);
   const value = counterpart ? productionPayloadSlots[kind].get(counterpart) : null;
   if (!value || !targetField) {
-    setProductionPairingState(`Remote ${label.toLowerCase()} slot empty`);
+    setProductionPairingState(`Remote ${payloadLabel(label)} slot empty`);
     setText(fields.productionPairingWarning, manualMissingCounterpartWarning(profile, counterpart, label));
     return;
   }
   targetField.value = value;
   targetField.dispatchEvent(new Event("input", { bubbles: true }));
-  setProductionPairingState(`Remote ${label.toLowerCase()} loaded`);
+  setProductionPairingState(`Remote ${payloadLabel(label)} loaded`);
   setText(fields.productionPairingWarning, manualLoadedCounterpartWarning(profile, counterpart, label));
   applyProductionActionState();
 }
@@ -507,10 +507,7 @@ function moveLocalMessageEnvelope() {
   fields.productionRemoteMessageEnvelope.value = value;
   fields.productionRemoteMessageEnvelope.dispatchEvent(new Event("input", { bubbles: true }));
   setProductionMessageState("Message envelope applied");
-  setText(
-    fields.productionMessageWarning,
-    `Filled remote envelope field from active=${profile}.`,
-  );
+  setText(fields.productionMessageWarning, manualFilledRemoteFieldWarning(profile, "envelope"));
   applyProductionActionState();
 }
 
