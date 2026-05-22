@@ -222,6 +222,7 @@ require_contains "$APP_DIR/src/main.js" 'syncProductionProfilePassphraseFromTwoP
 require_contains "$APP_DIR/src/main.js" 'preserveTwoProfileStatus'
 require_contains "$APP_DIR/src/action-state.js" 'productionManualStatusView'
 require_contains "$APP_DIR/src/action-state.js" 'productionManualMessageStatusView'
+require_contains "$APP_DIR/src/action-state.js" 'productionManualRelayAvailability'
 require_contains "$APP_DIR/src/action-state.js" 'productionTwoProfileSessionStatusView'
 require_contains "$APP_DIR/src/action-state.js" 'productionProfileMessageReadiness'
 require_contains "$APP_DIR/src/action-state.js" 'Next: inspect manual payload tools'

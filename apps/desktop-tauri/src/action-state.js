@@ -190,6 +190,41 @@ export function productionActionAvailability(state) {
   };
 }
 
+export function productionManualRelayAvailability(state) {
+  const {
+    busy,
+    hasLocalPairingPayload,
+    hasRemotePairingSlot,
+    hasHandshakeInitPayload,
+    hasRemoteHandshakeInitSlot,
+    hasHandshakeReplyPayload,
+    hasRemoteHandshakeReplySlot,
+    hasHandshakeFinishPayload,
+    hasRemoteHandshakeFinishSlot,
+    hasLocalMessageEnvelope,
+    hasRemoteMessageEnvelopeSlot,
+  } = state;
+  const enabled = (ready) => !busy && Boolean(ready);
+
+  return {
+    usePairingPayload: enabled(hasLocalPairingPayload),
+    storePairingPayload: enabled(hasLocalPairingPayload),
+    loadPairingPayload: enabled(hasRemotePairingSlot),
+    useHandshakeInit: enabled(hasHandshakeInitPayload),
+    storeHandshakeInit: enabled(hasHandshakeInitPayload),
+    loadHandshakeInit: enabled(hasRemoteHandshakeInitSlot),
+    useHandshakeReply: enabled(hasHandshakeReplyPayload),
+    storeHandshakeReply: enabled(hasHandshakeReplyPayload),
+    loadHandshakeReply: enabled(hasRemoteHandshakeReplySlot),
+    useHandshakeFinish: enabled(hasHandshakeFinishPayload),
+    storeHandshakeFinish: enabled(hasHandshakeFinishPayload),
+    loadHandshakeFinish: enabled(hasRemoteHandshakeFinishSlot),
+    useMessageEnvelope: enabled(hasLocalMessageEnvelope),
+    storeMessageEnvelope: enabled(hasLocalMessageEnvelope),
+    loadMessageEnvelope: enabled(hasRemoteMessageEnvelopeSlot),
+  };
+}
+
 export function productionTwoProfileResultView(result) {
   const profilesReady =
     result.profile_a_unlocked &&
