@@ -6,6 +6,7 @@ import {
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
   productionManualNextActions,
+  productionManualMessageStatusView,
   productionManualStatusView,
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
@@ -358,6 +359,34 @@ test("productionManualStatusView summarizes active manual relay slots", () => {
   assert.equal(
     productionManualStatusView({ profile: "carol" }, {}).mode,
     "Use Alice or Bob preset for automatic remote slot lookup.",
+  );
+});
+
+test("productionManualMessageStatusView summarizes active message path", () => {
+  assert.equal(
+    productionManualMessageStatusView({
+      activeProfile: "alice",
+      counterpartProfile: "bob",
+      messageNumber: 7,
+      sessionReadyForMessages: true,
+      hasLocalMessageEnvelope: true,
+      hasRemoteMessageEnvelopeSlot: false,
+      hasInboundEnvelopeInput: false,
+      hasReceivedMessage: false,
+    }),
+    "active=alice remote=bob number=7 session=ready local_envelope=present remote_slot=empty remote_envelope=empty received=empty",
+  );
+  assert.match(
+    productionManualMessageStatusView({
+      activeProfile: "bob",
+      counterpartProfile: "alice",
+      messageNumber: Number.NaN,
+      sessionReadyForMessages: false,
+      hasRemoteMessageEnvelopeSlot: true,
+      hasInboundEnvelopeInput: true,
+      hasReceivedMessage: true,
+    }),
+    /active=bob remote=alice number=invalid session=not-ready .*remote_slot=ready remote_envelope=loaded received=present/,
   );
 });
 
