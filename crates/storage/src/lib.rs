@@ -46,6 +46,7 @@ pub mod production {
         MessageEnvelope,
         ReceivedMessage,
         LocalMessageIndex,
+        MessageCounter,
         RendezvousEndpointState,
         SessionDraft,
         HandshakeState,
@@ -64,6 +65,7 @@ pub mod production {
                 Self::MessageEnvelope => "message-envelope",
                 Self::ReceivedMessage => "received-message",
                 Self::LocalMessageIndex => "local-message-index",
+                Self::MessageCounter => "message-counter",
                 Self::RendezvousEndpointState => "rendezvous-endpoint-state",
                 Self::SessionDraft => "session-draft",
                 Self::HandshakeState => "handshake-state",
@@ -82,6 +84,7 @@ pub mod production {
                 "message-envelope" => Ok(Self::MessageEnvelope),
                 "received-message" => Ok(Self::ReceivedMessage),
                 "local-message-index" => Ok(Self::LocalMessageIndex),
+                "message-counter" => Ok(Self::MessageCounter),
                 "rendezvous-endpoint-state" => Ok(Self::RendezvousEndpointState),
                 "session-draft" => Ok(Self::SessionDraft),
                 "handshake-state" => Ok(Self::HandshakeState),
@@ -694,6 +697,7 @@ pub mod production {
             | ProductionRecordKind::MessageEnvelope
             | ProductionRecordKind::ReceivedMessage
             | ProductionRecordKind::LocalMessageIndex
+            | ProductionRecordKind::MessageCounter
             | ProductionRecordKind::RendezvousEndpointState
             | ProductionRecordKind::HandshakeState
             | ProductionRecordKind::SessionDraft
@@ -761,6 +765,7 @@ pub mod production {
                 ProductionRecordKind::MessageEnvelope,
                 ProductionRecordKind::ReceivedMessage,
                 ProductionRecordKind::LocalMessageIndex,
+                ProductionRecordKind::MessageCounter,
                 ProductionRecordKind::RendezvousEndpointState,
                 ProductionRecordKind::SessionDraft,
                 ProductionRecordKind::HandshakeState,
@@ -784,6 +789,7 @@ pub mod production {
                 ProductionRecordKind::MessageEnvelope,
                 ProductionRecordKind::ReceivedMessage,
                 ProductionRecordKind::LocalMessageIndex,
+                ProductionRecordKind::MessageCounter,
                 ProductionRecordKind::RendezvousEndpointState,
                 ProductionRecordKind::SessionDraft,
                 ProductionRecordKind::HandshakeState,

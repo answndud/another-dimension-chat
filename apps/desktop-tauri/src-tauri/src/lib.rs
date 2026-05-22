@@ -1647,6 +1647,23 @@ fn run_production_message_received_export(
     })
 }
 
+fn run_production_message_number_reserve(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+) -> Result<u64, String> {
+    use another_dimension_core::production::production_message_next_number_reserve;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let reservation = production_message_next_number_reserve(&store_path, profile, &passphrase)
+        .map_err(|_| "message number reservation failed")?;
+    Ok(reservation.reserved_message_number())
+}
+
 fn sanitize_production_message_text(message: String) -> Result<Vec<u8>, String> {
     let trimmed = message.trim();
     if trimmed.is_empty() {
@@ -1690,7 +1707,6 @@ fn run_production_two_profile_roundtrip(
     let message = sanitize_production_roundtrip_message(message)?;
     let message_text = String::from_utf8(message.clone())
         .map_err(|_| "production two-profile message must be UTF-8")?;
-    let message_number = next_production_message_number()?;
 
     let profile_a_unlock =
         run_production_profile_unlock(&app_data_root, profile_a_name.clone(), passphrase.clone())?;
@@ -1779,6 +1795,11 @@ fn run_production_two_profile_roundtrip(
     let receiver_state = run_production_session_state_check(
         &app_data_root,
         receiver_profile.clone(),
+        passphrase.clone(),
+    )?;
+    let message_number = run_production_message_number_reserve(
+        &app_data_root,
+        sender_profile.clone(),
         passphrase.clone(),
     )?;
 
@@ -1928,7 +1949,6 @@ fn run_production_two_profile_message_roundtrip(
     let message = sanitize_production_roundtrip_message(message)?;
     let message_text = String::from_utf8(message.clone())
         .map_err(|_| "production stored-session message must be UTF-8")?;
-    let message_number = next_production_message_number()?;
 
     let profile_a_store = production_profile_store_path(&app_data_root, &profile_a)?;
     let profile_b_store = production_profile_store_path(&app_data_root, &profile_b)?;
@@ -1953,6 +1973,11 @@ fn run_production_two_profile_message_roundtrip(
     if !sender_state.ready_for_message_envelope || !receiver_state.ready_for_message_envelope {
         return Err("stored-session message roundtrip requires both profiles message-ready".to_string());
     }
+    let message_number = run_production_message_number_reserve(
+        &app_data_root,
+        sender_profile.clone(),
+        passphrase.clone(),
+    )?;
 
     let outbound = run_production_message_envelope_export(
         &app_data_root,
@@ -2230,14 +2255,6 @@ fn unique_production_roundtrip_dir() -> Result<std::path::PathBuf, String> {
         "another-dimension-production-roundtrip-{}-{nanos}-{counter}",
         std::process::id()
     )))
-}
-
-fn next_production_message_number() -> Result<u64, String> {
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_err(|_| "failed to create production message number")?
-        .as_nanos();
-    Ok((nanos.min(u64::MAX as u128) as u64).max(1))
 }
 
 pub fn run() {
