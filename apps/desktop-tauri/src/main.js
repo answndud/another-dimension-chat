@@ -173,6 +173,7 @@ const fields = {
   productionTwoProfileNextStep: document.querySelector("#production-two-profile-next-step"),
   openManualProductionTools: document.querySelector("#open-manual-production-tools"),
   focusLocalDiagnostic: document.querySelector("#focus-local-diagnostic"),
+  swapTwoProfileDirection: document.querySelector("#swap-two-profile-direction"),
   editTwoProfileMessage: document.querySelector("#edit-two-profile-message"),
   manualProductionTools: document.querySelector(".advanced-panel"),
   localDiagnosticPanel: document.querySelector("#demo-title"),
@@ -289,6 +290,7 @@ function setProductionFollowupActions(enabled, message) {
   setText(fields.productionTwoProfileNextStep, message);
   setDisabled(fields.openManualProductionTools, !enabled);
   setDisabled(fields.focusLocalDiagnostic, !enabled);
+  setDisabled(fields.swapTwoProfileDirection, !enabled);
   setDisabled(fields.editTwoProfileMessage, !enabled);
 }
 
@@ -682,6 +684,26 @@ function focusLocalDiagnostic() {
 }
 
 function editTwoProfileMessage() {
+  fields.productionTwoProfileMessage?.focus();
+}
+
+function swapTwoProfileDirection() {
+  const profileA = fields.productionTwoProfileA?.value ?? "";
+  const profileB = fields.productionTwoProfileB?.value ?? "";
+  if (!fields.productionTwoProfileA || !fields.productionTwoProfileB || !profileA || !profileB) {
+    setProductionTwoProfileState("Swap needs profiles");
+    setText(fields.productionTwoProfileWarning, "Enter both profiles before swapping direction.");
+    return;
+  }
+  fields.productionTwoProfileA.value = profileB;
+  fields.productionTwoProfileB.value = profileA;
+  renderProductionTwoProfileMemory();
+  setProductionTwoProfileState("Direction swapped");
+  setText(
+    fields.productionTwoProfileWarning,
+    `Stored-session direction swapped: ${profileB} -> ${profileA}. Run stored-session message to reply.`,
+  );
+  applyProductionActionState();
   fields.productionTwoProfileMessage?.focus();
 }
 
@@ -2548,6 +2570,10 @@ if (fields.openManualProductionTools) {
 
 if (fields.focusLocalDiagnostic) {
   fields.focusLocalDiagnostic.addEventListener("click", focusLocalDiagnostic);
+}
+
+if (fields.swapTwoProfileDirection) {
+  fields.swapTwoProfileDirection.addEventListener("click", swapTwoProfileDirection);
 }
 
 if (fields.editTwoProfileMessage) {

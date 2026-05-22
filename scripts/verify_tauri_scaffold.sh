@@ -217,6 +217,7 @@ require_contains "$APP_DIR/src/action-state.js" 'productionTwoProfileReadiness'
 require_contains "$APP_DIR/src/main.js" 'renderProductionTwoProfileResult'
 require_contains "$APP_DIR/src/action-state.js" 'productionTwoProfileResultView'
 require_contains "$APP_DIR/src/main.js" 'setProductionFollowupActions'
+require_contains "$APP_DIR/src/main.js" 'swapTwoProfileDirection'
 require_contains "$APP_DIR/src/main.js" 'openManualProductionTools'
 require_contains "$APP_DIR/src/main.js" 'renderManualStatus'
 require_contains "$APP_DIR/src/main.js" 'renderManualMessageStatus'
@@ -556,6 +557,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="run-production-two-profile-message-roundtrip" type="button">' \
   | grep -v '<button id="open-manual-production-tools" type="button" class="flow-control is-secondary">' \
   | grep -v '<button id="focus-local-diagnostic" type="button" class="flow-control is-secondary">' \
+  | grep -v '<button id="swap-two-profile-direction" type="button" class="flow-control is-secondary">' \
   | grep -v '<button id="edit-two-profile-message" type="button" class="flow-control is-secondary">' \
   | grep -v '<button id="run-production-roundtrip" type="button">Run core roundtrip</button>' \
   | grep -v '<textarea id="production-roundtrip-message" rows="3">hello from production core</textarea>' \
