@@ -348,6 +348,26 @@ pub struct ProductionMessageReceivedExportResult {
     runtime_messaging_enabled: bool,
 }
 
+#[derive(serde::Serialize)]
+pub struct ProductionMessageTranscriptEntryResult {
+    direction: String,
+    message_number: u64,
+    message: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionMessageTranscriptExportResult {
+    warning: &'static str,
+    storage_opened: bool,
+    runtime_material_reconstructable: bool,
+    entries: Vec<ProductionMessageTranscriptEntryResult>,
+    plaintext_returned_after_unlock: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
 #[tauri::command]
 fn prototype_status() -> PrototypeStatus {
     status::redacted_prototype_status()
@@ -592,6 +612,21 @@ fn production_message_received_export(
             "production received message export failed without exposing profile, path, or key details"
                 .to_string()
         })
+}
+
+#[tauri::command]
+fn production_message_transcript_export(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionMessageTranscriptExportResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production message transcript export failed without exposing local path details"
+    })?;
+    run_production_message_transcript_export(app_data_root, profile, passphrase).map_err(|_| {
+        "production message transcript export failed without exposing profile, path, or key details"
+            .to_string()
+    })
 }
 
 #[tauri::command]
@@ -1676,6 +1711,47 @@ fn run_production_message_received_export(
     })
 }
 
+fn run_production_message_transcript_export(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionMessageTranscriptExportResult, String> {
+    use another_dimension_core::production::production_message_transcript_export;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let export = production_message_transcript_export(&store_path, profile, &passphrase)
+        .map_err(|_| "message transcript export failed")?;
+    let entries = export
+        .entries()
+        .iter()
+        .map(|entry| {
+            let message = String::from_utf8(entry.plaintext().to_vec())
+                .map_err(|_| "transcript message is not displayable UTF-8")?;
+            Ok(ProductionMessageTranscriptEntryResult {
+                direction: entry.direction().to_string(),
+                message_number: entry.message_number(),
+                message,
+            })
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+
+    Ok(ProductionMessageTranscriptExportResult {
+        warning: "message transcript exported after local unlock; no network or transport IO opened",
+        storage_opened: export.storage_opened(),
+        runtime_material_reconstructable: export.runtime_material_reconstructable(),
+        entries,
+        plaintext_returned_after_unlock: true,
+        key_material_exposed: export.key_material_exposed(),
+        network_io_attempted: export.network_io_attempted(),
+        transport_io_opened: export.transport_io_opened(),
+        runtime_messaging_enabled: export.runtime_messaging_enabled(),
+    })
+}
+
 fn run_production_message_number_reserve(
     app_data_root: impl AsRef<std::path::Path>,
     profile: String,
@@ -2305,6 +2381,7 @@ pub fn run() {
             production_message_envelope_export,
             production_message_envelope_import,
             production_message_received_export,
+            production_message_transcript_export,
             production_local_roundtrip,
             production_two_profile_roundtrip,
             production_two_profile_message_roundtrip,
@@ -2323,7 +2400,8 @@ mod tests {
         run_production_handshake_finish_import, run_production_handshake_init_export,
         run_production_handshake_reply_export, run_production_local_roundtrip,
         run_production_message_envelope_export, run_production_message_envelope_import,
-        run_production_message_received_export, run_production_pairing_payload_export,
+        run_production_message_received_export, run_production_message_transcript_export,
+        run_production_pairing_payload_export,
         run_production_pairing_session_draft_save, run_production_profile_list,
         run_production_profile_unlock, run_production_session_state_check,
         run_production_two_profile_message_roundtrip, run_production_two_profile_roundtrip,
@@ -3109,6 +3187,41 @@ replay check: no replayed messages after message 2
         assert!(!received.network_receive_attempted);
         assert!(!received.transport_io_opened);
         assert!(!received.runtime_messaging_enabled);
+
+        let sender_transcript = run_production_message_transcript_export(
+            &root,
+            initiator.to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("sender transcript");
+        assert!(sender_transcript.storage_opened);
+        assert!(sender_transcript.runtime_material_reconstructable);
+        assert_eq!(sender_transcript.entries.len(), 1);
+        assert_eq!(sender_transcript.entries[0].direction, "sent");
+        assert_eq!(sender_transcript.entries[0].message_number, 1);
+        assert_eq!(sender_transcript.entries[0].message, "persistent hello");
+        assert!(sender_transcript.plaintext_returned_after_unlock);
+        assert!(!sender_transcript.key_material_exposed);
+        assert!(!sender_transcript.network_io_attempted);
+        assert!(!sender_transcript.transport_io_opened);
+        assert!(!sender_transcript.runtime_messaging_enabled);
+        let receiver_transcript = run_production_message_transcript_export(
+            &root,
+            responder.to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("receiver transcript");
+        assert!(receiver_transcript.storage_opened);
+        assert!(receiver_transcript.runtime_material_reconstructable);
+        assert_eq!(receiver_transcript.entries.len(), 1);
+        assert_eq!(receiver_transcript.entries[0].direction, "received");
+        assert_eq!(receiver_transcript.entries[0].message_number, 1);
+        assert_eq!(receiver_transcript.entries[0].message, "persistent hello");
+        assert!(receiver_transcript.plaintext_returned_after_unlock);
+        assert!(!receiver_transcript.key_material_exposed);
+        assert!(!receiver_transcript.network_io_attempted);
+        assert!(!receiver_transcript.transport_io_opened);
+        assert!(!receiver_transcript.runtime_messaging_enabled);
 
         let serialized = serde_json::to_string(&inbound).expect("serialize inbound");
         assert!(!serialized.contains("persistent hello"));

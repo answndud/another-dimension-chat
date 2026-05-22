@@ -146,6 +146,7 @@ const fields = {
   importProductionMessageEnvelope: document.querySelector("#import-production-message-envelope"),
   exportProductionReceivedMessage: document.querySelector("#export-production-received-message"),
   productionReceivedMessage: document.querySelector("#production-received-message"),
+  loadProductionMessageTranscript: document.querySelector("#load-production-message-transcript"),
   productionMessageTranscript: document.querySelector("#production-message-transcript"),
   productionMessageActiveStatus: document.querySelector("#production-message-active-status"),
   productionMessageManualCheck: document.querySelector("#production-message-manual-check"),
@@ -438,6 +439,18 @@ function appendProductionTranscriptEntry(kind, profile, messageNumber, message) 
   body.textContent = text;
   item.append(meta, body);
   fields.productionMessageTranscript.append(item);
+}
+
+function renderProductionTranscriptEntries(profile, entries) {
+  resetProductionMessageTranscript();
+  for (const entry of entries ?? []) {
+    appendProductionTranscriptEntry(
+      entry.direction === "received" ? "received" : "sent",
+      profile,
+      entry.message_number,
+      entry.message,
+    );
+  }
 }
 
 function renderManualStatus() {
@@ -845,6 +858,11 @@ function applyProductionActionState() {
     !availability.exportReceivedMessage,
     busy ? "Wait for the active production action." : "Enter profile, passphrase, and message number first.",
     hasImportedMessage && !hasReceivedMessage,
+  );
+  setActionButtonState(
+    fields.loadProductionMessageTranscript,
+    !hasProfileUnlockInput || busy,
+    busy ? "Wait for the active production action." : "Enter profile and passphrase first.",
   );
   setActionButtonState(
     fields.checkProductionTwoProfileSessionStatus,
@@ -2155,6 +2173,45 @@ async function exportProductionReceivedMessage() {
   }
 }
 
+async function loadProductionMessageTranscript() {
+  const { profile, passphrase } = productionProfileInput();
+  if (!profile || !passphrase) {
+    setProductionMessageState("Transcript load needs profile");
+    setText(fields.productionMessageWarning, "Enter profile and passphrase before loading transcript.");
+    return;
+  }
+
+  setProductionMessageState("Transcript loading");
+  setText(fields.productionMessageWarning, "Reading stored transcript after local unlock.");
+  productionBusyAction = "transcript-load";
+  applyProductionActionState();
+  if (fields.loadProductionMessageTranscript) {
+    fields.loadProductionMessageTranscript.disabled = true;
+  }
+  try {
+    const result = await invoke("production_message_transcript_export", {
+      profile,
+      passphrase,
+    });
+    renderProductionTranscriptEntries(profile, result.entries);
+    setProductionMessageState("Transcript loaded");
+    setText(fields.productionMessageWarning, result.warning);
+    setText(
+      fields.productionMessageBoundary,
+      `plaintext_after_unlock=${result.plaintext_returned_after_unlock} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionMessageState("Transcript load failed");
+    setText(fields.productionMessageWarning, String(error));
+  } finally {
+    productionBusyAction = null;
+    if (fields.loadProductionMessageTranscript) {
+      fields.loadProductionMessageTranscript.disabled = false;
+    }
+    applyProductionActionState();
+  }
+}
+
 if (fields.runDemo) {
   fields.runDemo.addEventListener("click", runLocalDemo);
 }
@@ -2375,6 +2432,10 @@ if (fields.importProductionMessageEnvelope) {
 
 if (fields.exportProductionReceivedMessage) {
   fields.exportProductionReceivedMessage.addEventListener("click", exportProductionReceivedMessage);
+}
+
+if (fields.loadProductionMessageTranscript) {
+  fields.loadProductionMessageTranscript.addEventListener("click", loadProductionMessageTranscript);
 }
 
 if (fields.runProductionRoundtrip) {

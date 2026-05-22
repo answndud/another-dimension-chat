@@ -94,6 +94,7 @@ require_contains "$TAURI_DIR/src/lib.rs" 'production_handshake_finish_import'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_message_envelope_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_message_envelope_import'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_message_received_export'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_message_transcript_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_local_roundtrip'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_local_roundtrip'
 require_contains "$TAURI_DIR/src/lib.rs" 'cargo'
@@ -148,6 +149,7 @@ require_contains "$APP_DIR/src/main.js" 'invoke("production_handshake_finish_imp
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_envelope_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_envelope_import"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_received_export"'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_message_transcript_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_local_roundtrip"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_two_profile_roundtrip"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_two_profile_message_roundtrip"'
@@ -443,10 +445,10 @@ require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
 require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
 command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "19"
+test "$command_count" = "20"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "19"
+test "$invoke_count" = "20"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -480,6 +482,7 @@ if grep -R 'invoke(' "$APP_DIR/src" \
   | grep -v 'invoke("production_message_envelope_export"' \
   | grep -v 'invoke("production_message_envelope_import"' \
   | grep -v 'invoke("production_message_received_export"' \
+  | grep -v 'invoke("production_message_transcript_export"' \
   | grep -v 'invoke("production_local_roundtrip"' \
   | grep -v 'invoke("production_two_profile_roundtrip"' \
   | grep -v 'invoke("production_two_profile_message_roundtrip"' \
@@ -545,6 +548,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="import-production-message-envelope" type="button">Import envelope</button>' \
   | grep -v '<button id="export-production-received-message" type="button">Show received</button>' \
   | grep -v '<textarea id="production-received-message" rows="3" readonly></textarea>' \
+  | grep -v '<button id="load-production-message-transcript" type="button">Load transcript</button>' \
   | grep -v '<input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />' \
   | grep -v '<input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />' \
   | grep -v '<textarea id="production-two-profile-message" rows="3">hello between app-data profiles</textarea>' \

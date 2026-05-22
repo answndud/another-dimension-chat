@@ -44,6 +44,7 @@ pub mod production {
         NoiseStaticPrivateKey,
         ReplayWindowState,
         MessageEnvelope,
+        SentMessage,
         ReceivedMessage,
         LocalMessageIndex,
         MessageCounter,
@@ -63,6 +64,7 @@ pub mod production {
                 Self::NoiseStaticPrivateKey => "noise-static-private-key",
                 Self::ReplayWindowState => "replay-window-state",
                 Self::MessageEnvelope => "message-envelope",
+                Self::SentMessage => "sent-message",
                 Self::ReceivedMessage => "received-message",
                 Self::LocalMessageIndex => "local-message-index",
                 Self::MessageCounter => "message-counter",
@@ -82,6 +84,7 @@ pub mod production {
                 "noise-static-private-key" => Ok(Self::NoiseStaticPrivateKey),
                 "replay-window-state" => Ok(Self::ReplayWindowState),
                 "message-envelope" => Ok(Self::MessageEnvelope),
+                "sent-message" => Ok(Self::SentMessage),
                 "received-message" => Ok(Self::ReceivedMessage),
                 "local-message-index" => Ok(Self::LocalMessageIndex),
                 "message-counter" => Ok(Self::MessageCounter),
@@ -601,6 +604,39 @@ pub mod production {
             Ok(())
         }
 
+        pub fn records_with_id_prefix(
+            &self,
+            prefix: &str,
+        ) -> Result<Vec<(EncryptedRecordId, EncryptedRecord)>, ProductionStorageError> {
+            if prefix.is_empty()
+                || !prefix
+                    .chars()
+                    .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_')
+            {
+                return Err(ProductionStorageError::InvalidRecord);
+            }
+            let mut statement = self.connection.prepare(
+                "SELECT record_id, encoded_record FROM encrypted_records
+                 WHERE substr(record_id, 1, ?2) = ?1
+                 ORDER BY record_id",
+            )?;
+            let prefix_len =
+                i64::try_from(prefix.len()).map_err(|_| ProductionStorageError::InvalidRecord)?;
+            let rows = statement.query_map(params![prefix, prefix_len], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })?;
+            let mut records = Vec::new();
+            for row in rows {
+                let (record_id, encoded_record) = row?;
+                records.push((
+                    EncryptedRecordId::new(record_id).map_err(ProductionStorageError::from)?,
+                    EncryptedRecord::decode(&encoded_record)
+                        .map_err(ProductionStorageError::from)?,
+                ));
+            }
+            Ok(records)
+        }
+
         pub fn put_profile_marker(
             &self,
             profile: ProfileName,
@@ -695,6 +731,7 @@ pub mod production {
             | ProductionRecordKind::NoiseStaticPrivateKey
             | ProductionRecordKind::ReplayWindowState
             | ProductionRecordKind::MessageEnvelope
+            | ProductionRecordKind::SentMessage
             | ProductionRecordKind::ReceivedMessage
             | ProductionRecordKind::LocalMessageIndex
             | ProductionRecordKind::MessageCounter
@@ -763,6 +800,7 @@ pub mod production {
                 ProductionRecordKind::NoiseStaticPrivateKey,
                 ProductionRecordKind::ReplayWindowState,
                 ProductionRecordKind::MessageEnvelope,
+                ProductionRecordKind::SentMessage,
                 ProductionRecordKind::ReceivedMessage,
                 ProductionRecordKind::LocalMessageIndex,
                 ProductionRecordKind::MessageCounter,
@@ -787,6 +825,7 @@ pub mod production {
                 ProductionRecordKind::NoiseStaticPrivateKey,
                 ProductionRecordKind::ReplayWindowState,
                 ProductionRecordKind::MessageEnvelope,
+                ProductionRecordKind::SentMessage,
                 ProductionRecordKind::ReceivedMessage,
                 ProductionRecordKind::LocalMessageIndex,
                 ProductionRecordKind::MessageCounter,
