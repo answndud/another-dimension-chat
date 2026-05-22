@@ -365,7 +365,11 @@ test("productionManualStatusView summarizes active manual relay slots", () => {
 
   assert.equal(
     productionManualStatusView({ profile: "carol" }, {}).mode,
-    "Use Alice or Bob preset for explicit remote slot lookup.",
+    "Manual relay needs a supported active profile; manually select Alice or Bob before filling remote payloads.",
+  );
+  assert.equal(
+    productionManualStatusView({ profile: "carol" }, {}).route,
+    "Active=carol Remote=No counterpart; manually select Alice or Bob",
   );
 });
 

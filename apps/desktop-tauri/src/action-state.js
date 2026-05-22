@@ -120,7 +120,7 @@ export function productionManualNextActions(state) {
 export function productionManualStatusView(input, slots) {
   const profile = String(input?.profile ?? "").trim() || "No profile";
   const counterpart = productionCounterpartProfile(profile);
-  const remoteProfile = counterpart ?? "Manual counterpart unavailable";
+  const remoteProfile = counterpart ?? "No counterpart; manually select Alice or Bob";
   const formatSlot = (kind, label) => {
     const localReady = Boolean(slots?.[kind]?.local);
     const remoteReady = Boolean(slots?.[kind]?.remote);
@@ -145,7 +145,7 @@ export function productionManualStatusView(input, slots) {
     policy: "manual_only=true auto_send=false auto_import=false auto_profile_switch=false network_io=false",
     mode: counterpart
       ? "Manual relay uses local memory slots only; manually select the counterpart profile to fill remote payloads."
-      : "Use Alice or Bob preset for explicit remote slot lookup.",
+      : "Manual relay needs a supported active profile; manually select Alice or Bob before filling remote payloads.",
   };
 }
 
