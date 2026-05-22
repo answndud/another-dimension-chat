@@ -375,17 +375,15 @@ require_contains "$APP_DIR/index.html" 'Unlock profile'
 require_contains "$APP_DIR/index.html" 'Production pairing'
 require_contains "$APP_DIR/index.html" 'Public payload export'
 require_contains "$APP_DIR/index.html" 'Export pairing'
-require_contains "$APP_DIR/index.html" 'Use pairing'
+require_contains "$APP_DIR/index.html" 'Fill local'
+require_contains "$APP_DIR/index.html" 'Fill remote'
 require_contains "$APP_DIR/index.html" 'Remote payload'
 require_contains "$APP_DIR/index.html" 'Save draft'
 require_contains "$APP_DIR/index.html" 'Handshake init'
-require_contains "$APP_DIR/index.html" 'Use init'
 require_contains "$APP_DIR/index.html" 'Remote handshake init'
 require_contains "$APP_DIR/index.html" 'Handshake reply'
-require_contains "$APP_DIR/index.html" 'Use reply'
 require_contains "$APP_DIR/index.html" 'Remote handshake reply'
 require_contains "$APP_DIR/index.html" 'Handshake finish'
-require_contains "$APP_DIR/index.html" 'Use finish'
 require_contains "$APP_DIR/index.html" 'Remote handshake finish'
 require_contains "$APP_DIR/index.html" 'Export init'
 require_contains "$APP_DIR/index.html" 'Import finish'
@@ -393,7 +391,6 @@ require_contains "$APP_DIR/index.html" 'Check session'
 require_contains "$APP_DIR/index.html" 'Production message'
 require_contains "$APP_DIR/index.html" 'Encrypted envelope path'
 require_contains "$APP_DIR/index.html" 'Export envelope'
-require_contains "$APP_DIR/index.html" 'Use envelope'
 require_contains "$APP_DIR/index.html" 'Remote envelope'
 require_contains "$APP_DIR/index.html" 'Import envelope'
 require_contains "$APP_DIR/index.html" 'Show received'
@@ -492,26 +489,26 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="unlock-production-profile" type="button">Unlock profile</button>' \
   | grep -v '<input id="production-pairing-endpoint" type="text" value="alice.onion" />' \
   | grep -v '<button id="export-production-pairing" type="button">Export pairing</button>' \
-  | grep -v '<button id="use-production-pairing-payload" type="button">Use pairing</button>' \
+  | grep -v '<button id="use-production-pairing-payload" type="button">Fill local</button>' \
   | grep -v '<button id="store-production-pairing-payload" type="button">Store pairing</button>' \
-  | grep -v '<button id="load-production-pairing-payload" type="button">Load remote</button>' \
+  | grep -v '<button id="load-production-pairing-payload" type="button">Fill remote</button>' \
   | grep -v '<textarea id="production-pairing-payload" rows="5" readonly></textarea>' \
   | grep -v '<textarea id="production-remote-pairing-payload" rows="5"></textarea>' \
   | grep -v '<button id="save-production-session-draft" type="button">Save draft</button>' \
   | grep -v '<textarea id="production-handshake-init-payload" rows="3" readonly></textarea>' \
-  | grep -v '<button id="use-production-handshake-init" type="button">Use init</button>' \
+  | grep -v '<button id="use-production-handshake-init" type="button">Fill local</button>' \
   | grep -v '<button id="store-production-handshake-init" type="button">Store init</button>' \
-  | grep -v '<button id="load-production-handshake-init" type="button">Load init</button>' \
+  | grep -v '<button id="load-production-handshake-init" type="button">Fill remote</button>' \
   | grep -v '<textarea id="production-remote-handshake-init-payload" rows="3"></textarea>' \
   | grep -v '<textarea id="production-handshake-reply-payload" rows="3" readonly></textarea>' \
-  | grep -v '<button id="use-production-handshake-reply" type="button">Use reply</button>' \
+  | grep -v '<button id="use-production-handshake-reply" type="button">Fill local</button>' \
   | grep -v '<button id="store-production-handshake-reply" type="button">Store reply</button>' \
-  | grep -v '<button id="load-production-handshake-reply" type="button">Load reply</button>' \
+  | grep -v '<button id="load-production-handshake-reply" type="button">Fill remote</button>' \
   | grep -v '<textarea id="production-remote-handshake-reply-payload" rows="3"></textarea>' \
   | grep -v '<textarea id="production-handshake-finish-payload" rows="3" readonly></textarea>' \
-  | grep -v '<button id="use-production-handshake-finish" type="button">Use finish</button>' \
+  | grep -v '<button id="use-production-handshake-finish" type="button">Fill local</button>' \
   | grep -v '<button id="store-production-handshake-finish" type="button">Store finish</button>' \
-  | grep -v '<button id="load-production-handshake-finish" type="button">Load finish</button>' \
+  | grep -v '<button id="load-production-handshake-finish" type="button">Fill remote</button>' \
   | grep -v '<textarea id="production-remote-handshake-finish-payload" rows="3"></textarea>' \
   | grep -v '<button id="export-production-handshake-init" type="button">Export init</button>' \
   | grep -v '<button id="export-production-handshake-reply" type="button">Export reply</button>' \
@@ -523,9 +520,9 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<textarea id="production-message-body" rows="3">hello over stored transport</textarea>' \
   | grep -v '<button id="export-production-message-envelope" type="button">Export envelope</button>' \
   | grep -v '<textarea id="production-message-envelope" rows="5" readonly></textarea>' \
-  | grep -v '<button id="use-production-message-envelope" type="button">Use envelope</button>' \
+  | grep -v '<button id="use-production-message-envelope" type="button">Fill local</button>' \
   | grep -v '<button id="store-production-message-envelope" type="button">Store envelope</button>' \
-  | grep -v '<button id="load-production-message-envelope" type="button">Load envelope</button>' \
+  | grep -v '<button id="load-production-message-envelope" type="button">Fill remote</button>' \
   | grep -v '<textarea id="production-remote-message-envelope" rows="5"></textarea>' \
   | grep -v '<button id="import-production-message-envelope" type="button">Import envelope</button>' \
   | grep -v '<button id="export-production-received-message" type="button">Show received</button>' \
