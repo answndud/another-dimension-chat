@@ -310,6 +310,16 @@ function activeProductionProfileName() {
   return (fields.productionProfileName?.value ?? "").trim().toLowerCase();
 }
 
+function syncProductionProfilePassphraseFromTwoProfile() {
+  if (
+    fields.productionProfilePassphrase &&
+    !fields.productionProfilePassphrase.value &&
+    fields.productionTwoProfilePassphrase?.value
+  ) {
+    fields.productionProfilePassphrase.value = fields.productionTwoProfilePassphrase.value;
+  }
+}
+
 function twoProfileSessionStatusFingerprint(input = productionTwoProfileInput()) {
   return `${input.profileA.toLowerCase()}\n${input.profileB.toLowerCase()}`;
 }
@@ -331,10 +341,11 @@ function applyProductionProfilePreset(peer) {
   }
   fields.productionProfileName.value = preset.profile;
   fields.productionPairingEndpoint.value = preset.rendezvousEndpoint;
+  syncProductionProfilePassphraseFromTwoProfile();
   if (fields.productionProfileSelector) {
     fields.productionProfileSelector.value = preset.profile;
   }
-  resetProductionPairingView();
+  resetProductionPairingView({ preserveTwoProfileStatus: true });
   resetProductionMessageView();
   applyProductionActionState();
   setText(
@@ -903,9 +914,11 @@ async function loadProductionProfileList() {
   }
 }
 
-function resetProductionPairingView() {
+function resetProductionPairingView(options = {}) {
   latestProductionSessionState = null;
-  latestProductionTwoProfileSessionStatus = null;
+  if (!options.preserveTwoProfileStatus) {
+    latestProductionTwoProfileSessionStatus = null;
+  }
   setProductionPairingState("Pairing payload idle");
   setText(fields.productionPairingWarning, "Pairing payload has not been exported yet.");
   if (fields.productionPairingPayload) {
@@ -1891,8 +1904,14 @@ if (fields.themeToggle) {
 if (fields.productionProfileSelector) {
   fields.productionProfileSelector.addEventListener("change", () => {
     if (fields.productionProfileName && fields.productionProfileSelector.value) {
-      fields.productionProfileName.value = fields.productionProfileSelector.value;
-      resetProductionPairingView();
+      const selectedProfile = fields.productionProfileSelector.value;
+      const preset = productionProfilePreset(selectedProfile);
+      fields.productionProfileName.value = selectedProfile;
+      if (preset && fields.productionPairingEndpoint) {
+        fields.productionPairingEndpoint.value = preset.rendezvousEndpoint;
+      }
+      syncProductionProfilePassphraseFromTwoProfile();
+      resetProductionPairingView({ preserveTwoProfileStatus: true });
       resetProductionMessageView();
       applyProductionActionState();
     }
