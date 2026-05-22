@@ -170,6 +170,7 @@ const fields = {
   productionTwoProfileBoundary: document.querySelector("#production-two-profile-boundary"),
   productionTwoProfileCurrentInput: document.querySelector("#production-two-profile-current-input"),
   productionTwoProfileLastSuccess: document.querySelector("#production-two-profile-last-success"),
+  loadProductionTwoProfileTranscript: document.querySelector("#load-production-two-profile-transcript"),
   productionTwoProfileTranscript: document.querySelector("#production-two-profile-transcript"),
   productionTwoProfileNextStep: document.querySelector("#production-two-profile-next-step"),
   openManualProductionTools: document.querySelector("#open-manual-production-tools"),
@@ -474,6 +475,25 @@ function appendProductionTwoProfileTranscriptEntry(kind, profile, messageNumber,
     messageNumber,
     message,
   );
+}
+
+function renderProductionTwoProfileTranscriptEntries(entries) {
+  resetProductionTwoProfileTranscript();
+  const orderedEntries = [...(entries ?? [])].sort((left, right) => {
+    const numberDelta = left.messageNumber - right.messageNumber;
+    if (numberDelta !== 0) {
+      return numberDelta;
+    }
+    return `${left.profile}:${left.kind}`.localeCompare(`${right.profile}:${right.kind}`);
+  });
+  for (const entry of orderedEntries) {
+    appendProductionTwoProfileTranscriptEntry(
+      entry.kind,
+      entry.profile,
+      entry.messageNumber,
+      entry.message,
+    );
+  }
 }
 
 function renderProductionTranscriptEntries(profile, entries) {
@@ -924,6 +944,11 @@ function applyProductionActionState() {
     busy || !hasTwoProfileSessionStatusInput,
     busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
     false,
+  );
+  setActionButtonState(
+    fields.loadProductionTwoProfileTranscript,
+    busy || !hasTwoProfileSessionStatusInput,
+    busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
   );
   setDisabled(fields.runProductionTwoProfileRoundtrip, !availability.runTwoProfileRoundtrip);
   setActionButtonState(
@@ -1999,6 +2024,9 @@ async function checkProductionTwoProfileSessionStatus() {
     setText(fields.productionTwoProfileSessionStatus, `${view.state}: ${view.status}`);
     setText(fields.productionPairingWarning, result.warning);
     setText(fields.productionPairingBoundary, view.boundary);
+    if (result.both_ready_for_message_envelope) {
+      await loadProductionTwoProfileTranscript({ quiet: true });
+    }
   } catch (error) {
     latestProductionTwoProfileSessionStatus = null;
     setText(fields.productionTwoProfileSessionStatus, "Two-profile session status failed");
@@ -2010,6 +2038,64 @@ async function checkProductionTwoProfileSessionStatus() {
     }
     applyProductionActionState();
   }
+}
+
+async function loadProductionTwoProfileTranscript(options = {}) {
+  const { profileA, profileB, passphrase } = productionTwoProfileInput();
+  const quiet = options.quiet === true;
+  if (!profileA || !profileB || profileA === profileB || !passphrase) {
+    if (!quiet) {
+      setProductionTwoProfileState("Conversation load needs profiles");
+      setText(
+        fields.productionTwoProfileWarning,
+        "Enter distinct Profile A, Profile B, and passphrase before loading conversation.",
+      );
+    }
+    return;
+  }
+
+  if (!quiet) {
+    setProductionTwoProfileState("Conversation loading");
+    setText(fields.productionTwoProfileWarning, "Reading stored two-profile transcript after local unlock.");
+    productionBusyAction = "two-profile-transcript-load";
+    applyProductionActionState();
+  }
+
+  try {
+    const [profileAResult, profileBResult] = await Promise.all([
+      invoke("production_message_transcript_export", { profile: profileA, passphrase }),
+      invoke("production_message_transcript_export", { profile: profileB, passphrase }),
+    ]);
+    const entries = [
+      ...twoProfileTranscriptEntriesFromProfile(profileA, profileAResult.entries),
+      ...twoProfileTranscriptEntriesFromProfile(profileB, profileBResult.entries),
+    ];
+    renderProductionTwoProfileTranscriptEntries(entries);
+    setProductionTwoProfileState("Conversation loaded");
+    setText(
+      fields.productionTwoProfileWarning,
+      "Stored two-profile conversation loaded after local unlock; no network or transport IO opened.",
+    );
+  } catch (error) {
+    if (!quiet) {
+      setProductionTwoProfileState("Conversation load failed");
+      setText(fields.productionTwoProfileWarning, String(error));
+    }
+  } finally {
+    if (!quiet) {
+      productionBusyAction = null;
+      applyProductionActionState();
+    }
+  }
+}
+
+function twoProfileTranscriptEntriesFromProfile(profile, entries) {
+  return (entries ?? []).map((entry) => ({
+    profile,
+    kind: entry.direction === "received" ? "received" : "sent",
+    messageNumber: entry.message_number,
+    message: entry.message,
+  }));
 }
 
 function setHandshakePayload(node, value) {
@@ -2597,6 +2683,12 @@ if (fields.runProductionTwoProfileMessageRoundtrip) {
   fields.runProductionTwoProfileMessageRoundtrip.addEventListener(
     "click",
     runProductionTwoProfileMessageRoundtrip,
+  );
+}
+
+if (fields.loadProductionTwoProfileTranscript) {
+  fields.loadProductionTwoProfileTranscript.addEventListener("click", () =>
+    loadProductionTwoProfileTranscript(),
   );
 }
 

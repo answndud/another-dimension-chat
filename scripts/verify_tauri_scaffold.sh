@@ -150,6 +150,7 @@ require_contains "$APP_DIR/src/main.js" 'invoke("production_message_envelope_exp
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_envelope_import"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_received_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_transcript_export"'
+require_contains "$APP_DIR/src/main.js" 'loadProductionTwoProfileTranscript'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_local_roundtrip"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_two_profile_roundtrip"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_two_profile_message_roundtrip"'
@@ -449,7 +450,7 @@ command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr
 test "$command_count" = "20"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "22"
+test "$invoke_count" = "24"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -550,6 +551,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="export-production-received-message" type="button">Show received</button>' \
   | grep -v '<textarea id="production-received-message" rows="3" readonly></textarea>' \
   | grep -v '<button id="load-production-message-transcript" type="button">Load transcript</button>' \
+  | grep -v '<button id="load-production-two-profile-transcript" type="button">Load conversation</button>' \
   | grep -v '<input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />' \
   | grep -v '<input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />' \
   | grep -v '<textarea id="production-two-profile-message" rows="3">hello between app-data profiles</textarea>' \
