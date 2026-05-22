@@ -124,7 +124,10 @@ export function productionManualStatusView(input, slots) {
   const formatSlot = (kind, label) => {
     const localReady = Boolean(slots?.[kind]?.local);
     const remoteReady = Boolean(slots?.[kind]?.remote);
-    return `${label}: active_slot=${localReady ? "stored" : "empty"} counterpart_slot=${remoteReady ? "ready" : "empty"}`;
+    return (
+      `${label}: active_slot(${profile})=${localReady ? "stored" : "empty"} ` +
+      `counterpart_slot(${remoteProfile})=${remoteReady ? "ready" : "empty"}`
+    );
   };
 
   return {
