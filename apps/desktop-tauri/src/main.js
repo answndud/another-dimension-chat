@@ -695,6 +695,36 @@ function twoProfileComposePrompt(input = productionTwoProfileInput()) {
   return `Message from ${input.profileA} to ${input.profileB}`;
 }
 
+function twoProfileRecoveryMessage(action, error, input = productionTwoProfileInput()) {
+  const detail = String(error ?? "").trim();
+  const suffix = detail ? ` Boundary detail: ${detail}` : "";
+  if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
+    return "Enter two distinct profiles before continuing.";
+  }
+  if (!input.passphrase) {
+    return "Enter the local passphrase before continuing.";
+  }
+  if (action === "session-status") {
+    return (
+      "Session check did not complete. Verify the passphrase and that both profiles exist locally, " +
+      `or write a first message and run full two-profile setup.${suffix}`
+    );
+  }
+  if (action === "stored-message") {
+    return (
+      "Stored-session message could not run. Check sessions to distinguish missing local session state " +
+      `from an unlock failure, or run full two-profile setup again.${suffix}`
+    );
+  }
+  if (action === "roundtrip") {
+    return (
+      "Full two-profile setup did not complete. Verify both profile names and passphrase, then retry setup. " +
+      `No network or transport send was attempted.${suffix}`
+    );
+  }
+  return `Two-profile action failed.${suffix}`;
+}
+
 function renderProductionTwoProfileDirection(input = productionTwoProfileInput()) {
   setText(fields.productionTwoProfileDirection, twoProfileDirectionLabel(input));
   if (!fields.productionTwoProfileMessage) {
@@ -1957,12 +1987,12 @@ async function runProductionTwoProfileRoundtrip() {
     await loadProductionProfileList();
   } catch (error) {
     setProductionTwoProfileState("Two-profile roundtrip failed");
-    setText(fields.productionTwoProfileWarning, String(error));
+    setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("roundtrip", error));
     setText(fields.productionTwoProfileProfiles, "Failed");
     setText(fields.productionTwoProfileSession, "Failed");
     setText(fields.productionTwoProfileMessageState, "Failed");
     setText(fields.productionTwoProfileBoundary, "Failed");
-    setProductionFollowupActions(false, "Fix the failed roundtrip before continuing.");
+    setProductionFollowupActions(false, "Verify profiles/passphrase, then retry full setup.");
   } finally {
     productionBusyAction = null;
     if (fields.runProductionTwoProfileRoundtrip) {
@@ -2010,12 +2040,12 @@ async function runProductionTwoProfileMessageRoundtrip() {
     await loadProductionProfileList();
   } catch (error) {
     setProductionTwoProfileState("Stored-session message failed");
-    setText(fields.productionTwoProfileWarning, String(error));
+    setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("stored-message", error));
     setText(fields.productionTwoProfileProfiles, "Existing profiles not usable");
     setText(fields.productionTwoProfileSession, "Stored session check failed");
     setText(fields.productionTwoProfileMessageState, "Message not sent");
     setText(fields.productionTwoProfileBoundary, "Failed without returning local path details");
-    setProductionFollowupActions(false, "Run full two-profile setup first, or check both sessions.");
+    setProductionFollowupActions(false, "Check sessions, verify passphrase, or run full setup.");
   } finally {
     productionBusyAction = null;
     applyProductionActionState();
@@ -2415,8 +2445,9 @@ async function checkProductionTwoProfileSessionStatus() {
     latestProductionTwoProfileSessionStatus = null;
     setProductionTwoProfileState("Session check failed");
     setText(fields.productionTwoProfileSessionStatus, "Two-profile session status failed");
-    setText(fields.productionTwoProfileWarning, String(error));
+    setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("session-status", error));
     setText(fields.productionPairingWarning, String(error));
+    postCheckFocus = fields.checkProductionTwoProfileSessionStatusInline;
   } finally {
     productionBusyAction = null;
     if (fields.checkProductionTwoProfileSessionStatus) {
