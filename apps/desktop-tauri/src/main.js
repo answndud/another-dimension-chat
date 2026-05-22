@@ -198,6 +198,7 @@ let latestSimulation = null;
 let latestProductionSessionState = null;
 let latestProductionTwoProfileSessionStatus = null;
 let latestProductionTwoProfileSuccess = null;
+let latestProductionMessageImport = null;
 let productionBusyAction = null;
 const productionPayloadSlots = {
   pairing: new Map(),
@@ -313,6 +314,16 @@ function productionMessageUsesAutoNumber() {
   return fields.productionMessageAutoNumber?.checked ?? true;
 }
 
+function productionMessageImportFingerprint(input = productionMessageInput()) {
+  const profile = String(input.profile ?? "").trim().toLowerCase();
+  const messageNumber = Number.isInteger(input.messageNumber) ? input.messageNumber : "invalid";
+  return `${profile}\n${messageNumber}`;
+}
+
+function latestProductionMessageImportMatches(input = productionMessageInput()) {
+  return latestProductionMessageImport === productionMessageImportFingerprint(input);
+}
+
 function productionSessionReadyForMessages() {
   const activeProfile = activeProductionProfileName();
   const scopedTwoProfileStatus = latestTwoProfileSessionStatusForCurrentInput();
@@ -382,6 +393,13 @@ function renderManualNextActions(state) {
 function renderManualMessageStatus(state) {
   setText(fields.productionMessageActiveStatus, productionManualMessageStatusView(state));
   setText(fields.productionMessageManualCheck, productionManualMessageCheckView(state));
+}
+
+function resetProductionMessageImportState() {
+  latestProductionMessageImport = null;
+  if (fields.productionReceivedMessage) {
+    fields.productionReceivedMessage.value = "";
+  }
 }
 
 function renderManualStatus() {
@@ -580,6 +598,7 @@ function relayProductionMessageEnvelopeToPeer() {
     );
     return;
   }
+  resetProductionMessageImportState();
   productionPayloadSlots.messageEnvelope.set(profile, value);
   if (!selectProductionProfileForManualRelay(counterpart)) {
     setProductionMessageState("Envelope relay needs supported peer");
@@ -666,6 +685,7 @@ function applyProductionActionState() {
       message.envelopePayload &&
       sessionReadyForMessages,
   );
+  const hasImportedMessage = latestProductionMessageImportMatches(message);
   const hasReceivedExportInput = Boolean(hasProfileUnlockInput && hasMessageNumberForImport);
   const hasReceivedMessage = Boolean(fields.productionReceivedMessage?.value.trim());
   const hasTwoProfileInput = Boolean(
@@ -702,6 +722,7 @@ function applyProductionActionState() {
     sessionReadyForMessages,
     hasOutboundMessageInput,
     hasInboundEnvelopeInput,
+    hasImportedMessage,
     hasReceivedExportInput,
     hasReceivedMessage,
     hasTwoProfileInput,
@@ -779,13 +800,13 @@ function applyProductionActionState() {
     fields.importProductionMessageEnvelope,
     !availability.importMessageEnvelope,
     busy ? "Wait for the active production action." : "Complete session state, then load or paste a remote envelope.",
-    true,
+    hasInboundEnvelopeInput && !hasImportedMessage,
   );
   setActionButtonState(
     fields.exportProductionReceivedMessage,
     !availability.exportReceivedMessage,
     busy ? "Wait for the active production action." : "Enter profile, passphrase, and message number first.",
-    hasReceivedMessage,
+    hasImportedMessage && !hasReceivedMessage,
   );
   setActionButtonState(
     fields.checkProductionTwoProfileSessionStatus,
@@ -1053,13 +1074,11 @@ function resetProductionPairingView(options = {}) {
 }
 
 function resetProductionMessageView() {
+  resetProductionMessageImportState();
   setProductionMessageState("Message flow idle");
   setText(fields.productionMessageWarning, "Message envelope has not been exported yet.");
   if (fields.productionMessageEnvelope) {
     fields.productionMessageEnvelope.value = "";
-  }
-  if (fields.productionReceivedMessage) {
-    fields.productionReceivedMessage.value = "";
   }
   setText(fields.productionMessageActiveStatus, "Not checked yet");
   setText(
@@ -1961,6 +1980,7 @@ async function exportProductionMessageEnvelope() {
 
   setProductionMessageState("Message envelope exporting");
   setText(fields.productionMessageWarning, "Preparing and encrypting production message.");
+  resetProductionMessageImportState();
   if (fields.productionMessageEnvelope) {
     fields.productionMessageEnvelope.value = "";
   }
@@ -2019,6 +2039,7 @@ async function importProductionMessageEnvelope() {
 
   setProductionMessageState("Message envelope importing");
   setText(fields.productionMessageWarning, "Importing and decrypting production envelope.");
+  resetProductionMessageImportState();
   productionBusyAction = "message-import";
   applyProductionActionState();
   if (fields.importProductionMessageEnvelope) {
@@ -2032,6 +2053,7 @@ async function importProductionMessageEnvelope() {
       envelopePayload,
     });
     const view = productionMessageEnvelopeImportView(result);
+    latestProductionMessageImport = productionMessageImportFingerprint({ profile, messageNumber });
     setProductionMessageState("Message envelope imported");
     setText(fields.productionMessageWarning, result.warning);
     setText(fields.productionMessageOutbound, "Not exported in this profile");
@@ -2150,6 +2172,13 @@ for (const input of [
   if (input) {
     input.addEventListener("input", applyProductionActionState);
   }
+}
+
+if (fields.productionRemoteMessageEnvelope) {
+  fields.productionRemoteMessageEnvelope.addEventListener("input", () => {
+    resetProductionMessageImportState();
+    applyProductionActionState();
+  });
 }
 
 if (fields.unlockProductionProfile) {
