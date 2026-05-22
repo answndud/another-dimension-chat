@@ -34,7 +34,7 @@ The repository currently has:
 - A session durable-state persistence adapter skeleton that maps those record kinds to storage policy without implementing unlock, transport I/O, runtime messaging, or durable Noise transport persistence.
 - A session durable-state encrypted-record adapter spike that prepares allowed sealed records without opening unlock/runtime commands.
 - A session durable-state adapter non-readiness guard that keeps rollback protection, product store writes, durable session persistence, production E2EE readiness, durable Noise transport persistence, and runtime messaging false.
-- A session durable-state store-write adapter that writes caller-supplied prepared sealed records through an already-unlocked `SqlCipherRecordStore`.
+- A session durable-state store-write adapter that writes caller-supplied prepared sealed records through an already-unlocked `SqlCipherRecordStore` only after kind, scope, and record-id prefix binding checks.
 - A session durable-state store-write status mirror that reports the adapter boundary while keeping production store write, unlock command, durable persistence, rollback protection, and runtime messaging unavailable.
 - A session durable-state product unlock blocker summary that keeps product unlock closed until key wrapping, backup exclusion, rollback protection, and durable session lifecycle decisions are complete.
 - A session durable-state unlock policy handoff summary that reuses the storage unlock policy to require high-risk passphrase input and reject OS-keystore-only unlock while product unlock remains unavailable.
@@ -356,7 +356,7 @@ Current lifecycle boundary:
 - `session_durable_state_persistence_adapter_skeleton()` maps the allowed durable-state record policies before adding an encrypted-record adapter implementation.
 - `session_durable_state_encrypted_record_adapter_spike()` prepares allowed sealed records but does not perform unlock or durable Noise transport persistence.
 - `session_durable_state_adapter_non_readiness_guard()` records that sealed-record preparation does not provide rollback protection, durable session persistence, production E2EE readiness, product store writes, or runtime messaging.
-- `session_durable_state_store_write_adapter()` writes caller-supplied prepared sealed records through an already-unlocked SQLCipher store while preserving the production non-readiness guard.
+- `session_durable_state_store_write_adapter()` writes caller-supplied prepared sealed records through an already-unlocked SQLCipher store after kind, scope, and record-id prefix binding checks while preserving the production non-readiness guard.
 - `session_durable_state_store_write_status_mirror()` exposes that store-write adapter boundary and keeps production store write, unlock, durable persistence, rollback protection, and runtime messaging disabled.
 - `session_durable_state_product_unlock_blocker_summary()` exposes product unlock blockers: passphrase-first storage exists, but key wrapping, backup exclusion, rollback protection, durable session persistence, and runtime messaging are not ready.
 - `session_durable_state_unlock_policy_handoff_summary()` confirms that the session durable-state blocker path is aligned with the storage unlock policy: high-risk mode requires passphrase input, OS-keystore-only unlock is rejected, and product unlock remains closed.

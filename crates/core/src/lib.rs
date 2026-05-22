@@ -2074,9 +2074,38 @@ pub mod production {
             self,
             store: &SqlCipherRecordStore,
             record_id: &EncryptedRecordId,
+            expected_kind: SessionDurableStateAdapterRecordKind,
+            expected_scope: &EncryptedRecordScope,
             record: &EncryptedRecord,
         ) -> Result<(), ProductionSessionError> {
+            self.require_prepared_record_binding(record_id, expected_kind, expected_scope, record)?;
             store.put(record_id, record)?;
+            Ok(())
+        }
+
+        fn require_prepared_record_binding(
+            self,
+            record_id: &EncryptedRecordId,
+            expected_kind: SessionDurableStateAdapterRecordKind,
+            expected_scope: &EncryptedRecordScope,
+            record: &EncryptedRecord,
+        ) -> Result<(), ProductionSessionError> {
+            let policy = self
+                .encrypted_record_adapter
+                .skeleton
+                .record_policy(expected_kind);
+            if record.kind != policy.production_record_kind() || &record.scope != expected_scope {
+                return Err(ProductionSessionError::from(ProductionStorageError::from(
+                    ProductionStoragePolicyError::InvalidEncryptedRecord,
+                )));
+            }
+            let expected_record_id_prefix =
+                session_durable_state_record_id_prefix(expected_kind, expected_scope);
+            if !record_id.as_str().starts_with(&expected_record_id_prefix) {
+                return Err(ProductionSessionError::from(ProductionStorageError::from(
+                    ProductionStoragePolicyError::InvalidRecordId,
+                )));
+            }
             Ok(())
         }
     }
@@ -4606,6 +4635,34 @@ pub mod production {
         )
     }
 
+    fn session_durable_state_record_id_prefix(
+        kind: SessionDurableStateAdapterRecordKind,
+        scope: &EncryptedRecordScope,
+    ) -> String {
+        let kind_prefix = match kind {
+            SessionDurableStateAdapterRecordKind::PairwiseIdentityPrivateKey => {
+                "pairwise_identity_private_key_"
+            }
+            SessionDurableStateAdapterRecordKind::NoiseStaticPrivateKey => {
+                "noise_static_private_key_"
+            }
+            SessionDurableStateAdapterRecordKind::ReplayWindowState => "replay_window_state_",
+            SessionDurableStateAdapterRecordKind::SessionDraft => "session_draft_",
+            SessionDurableStateAdapterRecordKind::SessionTransportState => {
+                "session_transport_state_"
+            }
+        };
+        let scope_prefix = match scope.contact_id() {
+            Some(contact) => format!(
+                "{}_contact_{}",
+                scope.profile_name().as_str(),
+                contact.as_str()
+            ),
+            None => scope.profile_name().as_str().to_string(),
+        };
+        format!("{kind_prefix}{scope_prefix}")
+    }
+
     pub fn session_durable_state_adapter_non_readiness_guard(
     ) -> SessionDurableStateAdapterNonReadinessGuard {
         SessionDurableStateAdapterNonReadinessGuard {
@@ -5879,18 +5936,24 @@ pub mod production {
             let scope =
                 EncryptedRecordScope::profile(ProfileName::new("alice").expect("valid profile"));
             let record_id =
-                EncryptedRecordId::new("session_noise_static_test_only").expect("record id");
+                EncryptedRecordId::new("noise_static_private_key_alice").expect("record id");
             let record = adapter
                 .prepare_record(
                     SessionDurableStateAdapterRecordKind::NoiseStaticPrivateKey,
-                    scope,
+                    scope.clone(),
                     b"adapter-spike-nonce".to_vec(),
                     b"sealed-noise-static-key-record".to_vec(),
                 )
                 .expect("prepare record");
 
             adapter
-                .put_prepared_record(&store, &record_id, &record)
+                .put_prepared_record(
+                    &store,
+                    &record_id,
+                    SessionDurableStateAdapterRecordKind::NoiseStaticPrivateKey,
+                    &scope,
+                    &record,
+                )
                 .expect("store-write adapter writes prepared record");
             assert_eq!(
                 store.get(&record_id).expect("load record"),
@@ -5901,6 +5964,77 @@ pub mod production {
             assert!(!guard.store_write_enabled());
             assert!(!guard.durable_session_persistence_ready());
             assert!(!guard.production_e2ee_ready());
+
+            drop(store);
+            std::fs::remove_dir_all(dir).expect("remove test store");
+        }
+
+        #[test]
+        fn session_durable_state_store_write_adapter_rejects_binding_mismatch() {
+            let (dir, store) =
+                production_test_store("session_durable_state_store_write_binding_mismatch");
+            let adapter = session_durable_state_store_write_adapter();
+            let scope =
+                EncryptedRecordScope::profile(ProfileName::new("alice").expect("valid profile"));
+            let other_scope =
+                EncryptedRecordScope::profile(ProfileName::new("bob").expect("valid profile"));
+            let record_id =
+                EncryptedRecordId::new("noise_static_private_key_alice").expect("record id");
+            let wrong_record_id = EncryptedRecordId::new("session_draft_alice").expect("record id");
+            let wrong_profile_record_id =
+                EncryptedRecordId::new("noise_static_private_key_bob").expect("record id");
+            let record = adapter
+                .prepare_record(
+                    SessionDurableStateAdapterRecordKind::NoiseStaticPrivateKey,
+                    scope.clone(),
+                    b"adapter-spike-nonce".to_vec(),
+                    b"sealed-noise-static-key-record".to_vec(),
+                )
+                .expect("prepare record");
+
+            assert!(adapter
+                .put_prepared_record(
+                    &store,
+                    &record_id,
+                    SessionDurableStateAdapterRecordKind::SessionDraft,
+                    &scope,
+                    &record,
+                )
+                .is_err());
+            assert!(adapter
+                .put_prepared_record(
+                    &store,
+                    &record_id,
+                    SessionDurableStateAdapterRecordKind::NoiseStaticPrivateKey,
+                    &other_scope,
+                    &record,
+                )
+                .is_err());
+            assert!(adapter
+                .put_prepared_record(
+                    &store,
+                    &wrong_record_id,
+                    SessionDurableStateAdapterRecordKind::NoiseStaticPrivateKey,
+                    &scope,
+                    &record,
+                )
+                .is_err());
+            assert!(adapter
+                .put_prepared_record(
+                    &store,
+                    &wrong_profile_record_id,
+                    SessionDurableStateAdapterRecordKind::NoiseStaticPrivateKey,
+                    &scope,
+                    &record,
+                )
+                .is_err());
+
+            assert_eq!(store.get(&record_id).expect("load record"), None);
+            assert_eq!(store.get(&wrong_record_id).expect("load record"), None);
+            assert_eq!(
+                store.get(&wrong_profile_record_id).expect("load record"),
+                None
+            );
 
             drop(store);
             std::fs::remove_dir_all(dir).expect("remove test store");
