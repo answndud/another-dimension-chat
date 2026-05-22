@@ -141,6 +141,7 @@ const fields = {
   useProductionMessageEnvelope: document.querySelector("#use-production-message-envelope"),
   storeProductionMessageEnvelope: document.querySelector("#store-production-message-envelope"),
   loadProductionMessageEnvelope: document.querySelector("#load-production-message-envelope"),
+  relayProductionMessageEnvelope: document.querySelector("#relay-production-message-envelope"),
   productionRemoteMessageEnvelope: document.querySelector("#production-remote-message-envelope"),
   importProductionMessageEnvelope: document.querySelector("#import-production-message-envelope"),
   exportProductionReceivedMessage: document.querySelector("#export-production-received-message"),
@@ -551,6 +552,53 @@ function loadProductionMessageEnvelope() {
   applyProductionActionState();
 }
 
+function selectProductionProfileForManualRelay(profile) {
+  const preset = productionProfilePreset(profile);
+  if (!preset || !fields.productionProfileName) {
+    return false;
+  }
+  fields.productionProfileName.value = preset.profile;
+  if (fields.productionProfileSelector) {
+    fields.productionProfileSelector.value = preset.profile;
+  }
+  if (fields.productionPairingEndpoint) {
+    fields.productionPairingEndpoint.value = preset.rendezvousEndpoint;
+  }
+  syncProductionProfilePassphraseFromTwoProfile();
+  return true;
+}
+
+function relayProductionMessageEnvelopeToPeer() {
+  const profile = activeProductionProfileName();
+  const counterpart = productionCounterpartProfile(profile);
+  const value = fields.productionMessageEnvelope?.value?.trim() ?? "";
+  if (!profile || !counterpart || !value || !fields.productionRemoteMessageEnvelope) {
+    setProductionMessageState("Envelope relay needs profile and envelope");
+    setText(
+      fields.productionMessageWarning,
+      "Export a local envelope from Alice or Bob before relaying to the peer.",
+    );
+    return;
+  }
+  productionPayloadSlots.messageEnvelope.set(profile, value);
+  if (!selectProductionProfileForManualRelay(counterpart)) {
+    setProductionMessageState("Envelope relay needs supported peer");
+    setText(fields.productionMessageWarning, "Relay supports the local Alice/Bob manual pair only.");
+    return;
+  }
+  fields.productionRemoteMessageEnvelope.value = value;
+  if (fields.productionMessageEnvelope) {
+    fields.productionMessageEnvelope.value = "";
+  }
+  fields.productionRemoteMessageEnvelope.dispatchEvent(new Event("input", { bubbles: true }));
+  setProductionMessageState(`Envelope relayed to ${counterpart}`);
+  setText(
+    fields.productionMessageWarning,
+    `Stored ${profile} envelope, selected ${counterpart}, and loaded remote envelope. Import remains explicit.`,
+  );
+  applyProductionActionState();
+}
+
 function openManualProductionTools() {
   if (fields.manualProductionTools) {
     fields.manualProductionTools.open = true;
@@ -836,6 +884,12 @@ function applyProductionActionState() {
     !manualAvailability.loadMessageEnvelope,
     busy ? "Wait for the active production action." : "Store counterpart message envelope first.",
     manualAvailability.loadMessageEnvelope,
+  );
+  setActionButtonState(
+    fields.relayProductionMessageEnvelope,
+    !manualAvailability.relayMessageEnvelope,
+    busy ? "Wait for the active production action." : "Export local message envelope first.",
+    manualAvailability.relayMessageEnvelope,
   );
 }
 
@@ -2239,6 +2293,10 @@ if (fields.storeProductionMessageEnvelope) {
 
 if (fields.loadProductionMessageEnvelope) {
   fields.loadProductionMessageEnvelope.addEventListener("click", loadProductionMessageEnvelope);
+}
+
+if (fields.relayProductionMessageEnvelope) {
+  fields.relayProductionMessageEnvelope.addEventListener("click", relayProductionMessageEnvelopeToPeer);
 }
 
 if (fields.importProductionMessageEnvelope) {

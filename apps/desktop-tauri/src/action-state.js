@@ -204,6 +204,7 @@ export function productionManualRelayAvailability(state) {
     hasRemoteHandshakeFinishSlot,
     hasLocalMessageEnvelope,
     hasRemoteMessageEnvelopeSlot,
+    counterpartProfile,
   } = state;
   const enabled = (ready) => !busy && Boolean(ready);
 
@@ -223,6 +224,7 @@ export function productionManualRelayAvailability(state) {
     useMessageEnvelope: enabled(hasLocalMessageEnvelope),
     storeMessageEnvelope: enabled(hasLocalMessageEnvelope),
     loadMessageEnvelope: enabled(hasRemoteMessageEnvelopeSlot),
+    relayMessageEnvelope: enabled(hasLocalMessageEnvelope && counterpartProfile),
   };
 }
 
