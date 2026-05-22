@@ -384,6 +384,7 @@ require_contains "$APP_DIR/src/action-state.js" 'Fill local copies the active ou
 require_contains "$APP_DIR/src/action-state.js" 'manually select the counterpart profile'
 require_contains "$APP_DIR/src/action-state.js" 'manually select Alice or Bob'
 require_contains "$APP_DIR/src/main.js" 'expected_counterpart='
+require_contains "$APP_DIR/src/main.js" 'loaded_from='
 require_contains "$APP_DIR/index.html" 'Remote payload'
 require_contains "$APP_DIR/index.html" 'Save draft'
 require_contains "$APP_DIR/index.html" 'Handshake init'

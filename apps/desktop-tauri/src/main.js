@@ -476,7 +476,10 @@ function loadProductionPayloadSlot(kind, targetField, label) {
   targetField.value = value;
   targetField.dispatchEvent(new Event("input", { bubbles: true }));
   setProductionPairingState(`Remote ${label.toLowerCase()} loaded`);
-  setText(fields.productionPairingWarning, `Loaded ${counterpart} ${label.toLowerCase()} into remote field.`);
+  setText(
+    fields.productionPairingWarning,
+    `Filled remote ${label.toLowerCase()} for active=${profile} loaded_from=${counterpart}.`,
+  );
   applyProductionActionState();
 }
 
@@ -522,7 +525,10 @@ function loadProductionMessageEnvelope() {
   fields.productionRemoteMessageEnvelope.value = value;
   fields.productionRemoteMessageEnvelope.dispatchEvent(new Event("input", { bubbles: true }));
   setProductionMessageState("Remote envelope loaded");
-  setText(fields.productionMessageWarning, `Loaded ${counterpart} envelope into remote field.`);
+  setText(
+    fields.productionMessageWarning,
+    `Filled remote envelope for active=${profile} loaded_from=${counterpart}.`,
+  );
   applyProductionActionState();
 }
 
