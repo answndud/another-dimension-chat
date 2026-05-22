@@ -122,7 +122,7 @@ This runs:
 - Session durable-state persistence adapter skeleton maps the allowed record policies without implementing storage unlock, transport I/O, or runtime messaging.
 - Session durable-state encrypted-record adapter spike prepares allowed sealed records without enabling durable Noise transport state.
 - Session durable-state adapter non-readiness guard keeps rollback protection, durable session persistence, production E2EE readiness, product store writes, and runtime messaging false.
-- Session durable-state store-write adapter writes caller-supplied prepared sealed records through an already-unlocked SQLCipher store without adding a production unlock, transport I/O, or messaging path.
+- Session durable-state store-write adapter writes caller-supplied prepared sealed records through an already-unlocked SQLCipher store only after kind, scope, and record-id prefix binding checks, without adding a production unlock, transport I/O, or messaging path.
 - Session durable-state store-write status mirror marks the adapter boundary available while keeping production store write, unlock, durable persistence, rollback protection, and runtime messaging disabled.
 - Session durable-state product unlock blocker summary keeps product unlock closed until key wrapping, backup exclusion, rollback, and durable session lifecycle decisions are complete.
 - Session durable-state unlock policy handoff confirms high-risk passphrase-first unlock policy and OS-keystore-only rejection while keeping product unlock and runtime messaging disabled.

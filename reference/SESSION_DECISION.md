@@ -117,7 +117,7 @@ Replay-aware decrypt now uses the existing `ReplayWindow` boundary. Duplicate an
 
 `session_durable_state_adapter_non_readiness_guard()` keeps the adapter spike from being interpreted as readiness. It records that rollback protection is not provided and that product store writes, durable session persistence, production E2EE readiness, durable Noise transport persistence, and runtime messaging remain false.
 
-`session_durable_state_store_write_adapter()` is the first narrow store-write boundary. It writes caller-supplied prepared sealed records through an already-unlocked `SqlCipherRecordStore`, but does not open an unlock command, transport I/O, runtime messaging, rollback protection, or durable session readiness.
+`session_durable_state_store_write_adapter()` is the first narrow store-write boundary. It writes caller-supplied prepared sealed records through an already-unlocked `SqlCipherRecordStore` only after the expected durable-state kind, encrypted-record scope, and record-id prefix match. It does not open an unlock command, transport I/O, runtime messaging, rollback protection, or durable session readiness.
 
 `session_durable_state_store_write_status_mirror()` reports that the store-write adapter boundary exists and requires a caller-supplied unlocked store. It keeps production store write, production unlock command, durable session persistence, rollback protection, and runtime messaging unavailable.
 
