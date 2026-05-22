@@ -1952,6 +1952,11 @@ async function runProductionTwoProfileMessageRoundtrip() {
     setProductionTwoProfileState("Stored-session message completed");
     setText(fields.productionTwoProfileWarning, result.warning);
     renderProductionTwoProfileMessageResult(result);
+    await loadProductionTwoProfileTranscript({ quiet: true });
+    setText(
+      fields.productionTwoProfileWarning,
+      "Stored-session message completed and conversation refreshed from encrypted local stores.",
+    );
     await loadProductionProfileList();
   } catch (error) {
     setProductionTwoProfileState("Stored-session message failed");
@@ -2333,11 +2338,13 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       ...twoProfileTranscriptEntriesFromProfile(profileB, profileA, profileBResult.entries),
     ];
     renderProductionTwoProfileTranscriptEntries(entries);
-    setProductionTwoProfileState("Conversation loaded");
-    setText(
-      fields.productionTwoProfileWarning,
-      "Stored two-profile conversation loaded after local unlock; no network or transport IO opened.",
-    );
+    if (!quiet) {
+      setProductionTwoProfileState("Conversation loaded");
+      setText(
+        fields.productionTwoProfileWarning,
+        "Stored two-profile conversation loaded after local unlock; no network or transport IO opened.",
+      );
+    }
   } catch (error) {
     if (!quiet) {
       setProductionTwoProfileState("Conversation load failed");
