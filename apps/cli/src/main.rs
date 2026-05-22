@@ -267,7 +267,7 @@ fn production_help() -> String {
   another-dimension production pairing session handshake-finish-export --profile <name> --store <path> --in <path> --out <path> --passphrase-stdin
   another-dimension production pairing session handshake-finish-import --profile <name> --store <path> --in <path> --passphrase-stdin
   another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> --passphrase-stdin
-  another-dimension production message local-roundtrip --sender-profile <name> --sender-store <path> --receiver-profile <name> --receiver-store <path> --message-number <n> --plaintext <path> --received-out <path> --passphrase-stdin
+  another-dimension production message local-roundtrip --sender-profile <name> --sender-store <path> --receiver-profile <name> --receiver-store <path> (--message-number <n>|--auto-message-number) --plaintext <path> --received-out <path> --passphrase-stdin
   another-dimension production message pending-status --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension production message outbound-encrypt-prepare --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension production message outbound-envelope-export --profile <name> --store <path> --message-number <n> --out <path> --passphrase-stdin
@@ -299,7 +299,7 @@ boundary:
   production pairing session handshake-finish-export reads reply bytes only from --in and writes finish bytes only to --out
   production pairing session handshake-finish-import reads finish bytes only from --in and persists verified transport state metadata
   production message send-prepare is storage-only: it validates outbound readiness and indexes a local message without network send
-  production message local-roundtrip is storage-only: it reuses stored sender/receiver session state to encrypt, import, and export one local message without network I/O
+  production message local-roundtrip is storage-only: it reuses stored sender/receiver session state to encrypt, import, and export one local message without network I/O; --auto-message-number reserves the next sender-scoped number in the encrypted store
   production message pending-status is storage-only: it checks a queued outbound message without exposing plaintext or opening transport
   production message outbound-encrypt-prepare is storage-only: it checks pending plaintext and fails closed before envelope encryption until session transport exists
   production message outbound-envelope-export is storage-only: it writes an encrypted envelope only to explicit --out and never prints plaintext
@@ -962,12 +962,29 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
     let plaintext = std::fs::read(&options.plaintext_path).map_err(|_| {
         "production message local-roundtrip failed: plaintext read failed".to_string()
     })?;
+    let reservation_summary = if options.auto_message_number {
+        Some(
+            another_dimension_core::production::production_message_next_number_reserve(
+                &options.sender_store_path,
+                options.sender_profile.clone(),
+                &passphrase,
+            )
+            .map_err(redacted_production_message_local_roundtrip_error)?,
+        )
+    } else {
+        None
+    };
+    let message_number = reservation_summary
+        .as_ref()
+        .map(|summary| summary.reserved_message_number())
+        .or(options.message_number)
+        .ok_or_else(production_message_local_roundtrip_help)?;
 
     let send_summary = another_dimension_core::production::production_message_send_prepare(
         &options.sender_store_path,
         options.sender_profile.clone(),
         &passphrase,
-        options.message_number,
+        message_number,
         &plaintext,
     )
     .map_err(redacted_production_message_local_roundtrip_error)?;
@@ -975,7 +992,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
         &options.sender_store_path,
         options.sender_profile.clone(),
         &passphrase,
-        options.message_number,
+        message_number,
     )
     .map_err(redacted_production_message_local_roundtrip_error)?;
     let encrypt_summary =
@@ -983,7 +1000,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
             &options.sender_store_path,
             options.sender_profile.clone(),
             &passphrase,
-            options.message_number,
+            message_number,
         )
         .map_err(redacted_production_message_local_roundtrip_error)?;
     let envelope_summary =
@@ -991,7 +1008,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
             &options.sender_store_path,
             options.sender_profile,
             &passphrase,
-            options.message_number,
+            message_number,
         )
         .map_err(redacted_production_message_local_roundtrip_error)?;
     let import_summary =
@@ -1007,14 +1024,14 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
             &options.receiver_store_path,
             options.receiver_profile.clone(),
             &passphrase,
-            options.message_number,
+            message_number,
         )
         .map_err(redacted_production_message_local_roundtrip_error)?;
     let received_export = another_dimension_core::production::production_message_received_export(
         &options.receiver_store_path,
         options.receiver_profile,
         &passphrase,
-        options.message_number,
+        message_number,
     )
     .map_err(redacted_production_message_local_roundtrip_error)?;
 
@@ -1023,7 +1040,15 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
     })?;
 
     println!(
-        "production message local roundtrip completed: sender_runtime_material_reconstructable={} sender_message_number_reserved={} sender_pending_record_present={} sender_session_transport_ready={} encrypted_envelope_exported={} receiver_inbound_message_stored={} receiver_received_status_verified={} received_written={} received_export_matches_input={} plaintext_exposed=false network_send_attempted={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        "production message local roundtrip completed: selected_message_number={} auto_message_number={} auto_counter_written={} existing_message_slot_skipped={} sender_runtime_material_reconstructable={} sender_message_number_reserved={} sender_pending_record_present={} sender_session_transport_ready={} encrypted_envelope_exported={} receiver_inbound_message_stored={} receiver_received_status_verified={} received_written={} received_export_matches_input={} plaintext_exposed=false network_send_attempted={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        message_number,
+        options.auto_message_number,
+        reservation_summary
+            .as_ref()
+            .is_some_and(|summary| summary.counter_record_written()),
+        reservation_summary
+            .as_ref()
+            .is_some_and(|summary| summary.existing_message_slot_skipped()),
         send_summary.runtime_material_reconstructable(),
         send_summary.message_number_reserved(),
         pending_summary.pending_message_record_present(),
@@ -1369,7 +1394,8 @@ struct ProductionMessageLocalRoundtripOptions {
     sender_store_path: std::path::PathBuf,
     receiver_profile: another_dimension_identity::ProfileName,
     receiver_store_path: std::path::PathBuf,
-    message_number: u64,
+    message_number: Option<u64>,
+    auto_message_number: bool,
     plaintext_path: std::path::PathBuf,
     received_out_path: std::path::PathBuf,
 }
@@ -1964,6 +1990,7 @@ impl ProductionMessageLocalRoundtripOptions {
         let mut receiver_profile = None;
         let mut receiver_store_path = None;
         let mut message_number = None;
+        let mut auto_message_number = false;
         let mut plaintext_path = None;
         let mut received_out_path = None;
         let mut passphrase_stdin = false;
@@ -2018,6 +2045,9 @@ impl ProductionMessageLocalRoundtripOptions {
                             .map_err(|_| production_message_local_roundtrip_help())?,
                     );
                 }
+                "--auto-message-number" => {
+                    auto_message_number = true;
+                }
                 "--plaintext" => {
                     index += 1;
                     plaintext_path = Some(
@@ -2045,6 +2075,9 @@ impl ProductionMessageLocalRoundtripOptions {
         if !passphrase_stdin {
             return Err(production_message_local_roundtrip_help());
         }
+        if auto_message_number == message_number.is_some() {
+            return Err(production_message_local_roundtrip_help());
+        }
 
         Ok(Self {
             sender_profile: sender_profile.ok_or_else(production_message_local_roundtrip_help)?,
@@ -2054,7 +2087,8 @@ impl ProductionMessageLocalRoundtripOptions {
                 .ok_or_else(production_message_local_roundtrip_help)?,
             receiver_store_path: receiver_store_path
                 .ok_or_else(production_message_local_roundtrip_help)?,
-            message_number: message_number.ok_or_else(production_message_local_roundtrip_help)?,
+            message_number,
+            auto_message_number,
             plaintext_path: plaintext_path.ok_or_else(production_message_local_roundtrip_help)?,
             received_out_path: received_out_path
                 .ok_or_else(production_message_local_roundtrip_help)?,
@@ -2413,9 +2447,9 @@ Reads the profile passphrase from stdin and plaintext from --plaintext. Opens an
 #[cfg(not(feature = "dev-insecure"))]
 fn production_message_local_roundtrip_help() -> String {
     "usage:
-  another-dimension production message local-roundtrip --sender-profile <name> --sender-store <path> --receiver-profile <name> --receiver-store <path> --message-number <n> --plaintext <path> --received-out <path> --passphrase-stdin
+  another-dimension production message local-roundtrip --sender-profile <name> --sender-store <path> --receiver-profile <name> --receiver-store <path> (--message-number <n>|--auto-message-number) --plaintext <path> --received-out <path> --passphrase-stdin
 
-Reads one profile passphrase from stdin and plaintext from --plaintext. Reuses existing encrypted sender and receiver profile stores with authenticated session transport metadata, encrypts one outbound envelope, imports it into the receiver store, and writes received plaintext only to --received-out. This does not print plaintext, open transport, perform network I/O, or enable runtime messaging."
+Reads one profile passphrase from stdin and plaintext from --plaintext. Reuses existing encrypted sender and receiver profile stores with authenticated session transport metadata, encrypts one outbound envelope, imports it into the receiver store, and writes received plaintext only to --received-out. Use --auto-message-number to reserve the next sender-scoped message number in the encrypted store. This does not print plaintext, open transport, perform network I/O, or enable runtime messaging."
         .to_string()
 }
 
