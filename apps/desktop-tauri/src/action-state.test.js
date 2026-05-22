@@ -411,6 +411,7 @@ test("productionManualRelayAvailability keeps manual copy store and load actions
       hasRemoteHandshakeFinishSlot: true,
       hasLocalMessageEnvelope: false,
       hasRemoteMessageEnvelopeSlot: true,
+      counterpartProfile: "bob",
     }),
     {
       usePairingPayload: true,
@@ -428,7 +429,26 @@ test("productionManualRelayAvailability keeps manual copy store and load actions
       useMessageEnvelope: false,
       storeMessageEnvelope: false,
       loadMessageEnvelope: true,
+      relayMessageEnvelope: false,
     },
+  );
+
+  assert.equal(
+    productionManualRelayAvailability({
+      ...baseState,
+      hasLocalMessageEnvelope: true,
+      counterpartProfile: "bob",
+    }).relayMessageEnvelope,
+    true,
+  );
+
+  assert.equal(
+    productionManualRelayAvailability({
+      ...baseState,
+      hasLocalMessageEnvelope: true,
+      counterpartProfile: null,
+    }).relayMessageEnvelope,
+    false,
   );
 
   assert.equal(

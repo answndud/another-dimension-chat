@@ -540,6 +540,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="use-production-message-envelope" type="button">Fill local</button>' \
   | grep -v '<button id="store-production-message-envelope" type="button">Store envelope</button>' \
   | grep -v '<button id="load-production-message-envelope" type="button">Fill remote</button>' \
+  | grep -v '<button id="relay-production-message-envelope" type="button">Relay to peer</button>' \
   | grep -v '<textarea id="production-remote-message-envelope" rows="5"></textarea>' \
   | grep -v '<button id="import-production-message-envelope" type="button">Import envelope</button>' \
   | grep -v '<button id="export-production-received-message" type="button">Show received</button>' \
