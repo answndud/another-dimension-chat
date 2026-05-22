@@ -166,6 +166,11 @@ fn production_main() -> Result<(), String> {
             run_production_message_send_prepare_command(args)?;
         }
         [cmd, sub, action, args @ ..]
+            if cmd == "production" && sub == "message" && action == "local-roundtrip" =>
+        {
+            run_production_message_local_roundtrip_command(args)?;
+        }
+        [cmd, sub, action, args @ ..]
             if cmd == "production" && sub == "message" && action == "pending-status" =>
         {
             run_production_message_pending_status_command(args)?;
@@ -262,6 +267,7 @@ fn production_help() -> String {
   another-dimension production pairing session handshake-finish-export --profile <name> --store <path> --in <path> --out <path> --passphrase-stdin
   another-dimension production pairing session handshake-finish-import --profile <name> --store <path> --in <path> --passphrase-stdin
   another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> --passphrase-stdin
+  another-dimension production message local-roundtrip --sender-profile <name> --sender-store <path> --receiver-profile <name> --receiver-store <path> --message-number <n> --plaintext <path> --received-out <path> --passphrase-stdin
   another-dimension production message pending-status --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension production message outbound-encrypt-prepare --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension production message outbound-envelope-export --profile <name> --store <path> --message-number <n> --out <path> --passphrase-stdin
@@ -293,6 +299,7 @@ boundary:
   production pairing session handshake-finish-export reads reply bytes only from --in and writes finish bytes only to --out
   production pairing session handshake-finish-import reads finish bytes only from --in and persists verified transport state metadata
   production message send-prepare is storage-only: it validates outbound readiness and indexes a local message without network send
+  production message local-roundtrip is storage-only: it reuses stored sender/receiver session state to encrypt, import, and export one local message without network I/O
   production message pending-status is storage-only: it checks a queued outbound message without exposing plaintext or opening transport
   production message outbound-encrypt-prepare is storage-only: it checks pending plaintext and fails closed before envelope encryption until session transport exists
   production message outbound-envelope-export is storage-only: it writes an encrypted envelope only to explicit --out and never prints plaintext
@@ -949,6 +956,119 @@ fn run_production_message_send_prepare_command(args: &[String]) -> Result<(), St
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(), String> {
+    let options = ProductionMessageLocalRoundtripOptions::parse(args)?;
+    let passphrase = read_production_passphrase()?;
+    let plaintext = std::fs::read(&options.plaintext_path).map_err(|_| {
+        "production message local-roundtrip failed: plaintext read failed".to_string()
+    })?;
+
+    let send_summary = another_dimension_core::production::production_message_send_prepare(
+        &options.sender_store_path,
+        options.sender_profile.clone(),
+        &passphrase,
+        options.message_number,
+        &plaintext,
+    )
+    .map_err(redacted_production_message_local_roundtrip_error)?;
+    let pending_summary = another_dimension_core::production::production_message_pending_status(
+        &options.sender_store_path,
+        options.sender_profile.clone(),
+        &passphrase,
+        options.message_number,
+    )
+    .map_err(redacted_production_message_local_roundtrip_error)?;
+    let encrypt_summary =
+        another_dimension_core::production::production_message_outbound_encrypt_prepare(
+            &options.sender_store_path,
+            options.sender_profile.clone(),
+            &passphrase,
+            options.message_number,
+        )
+        .map_err(redacted_production_message_local_roundtrip_error)?;
+    let envelope_summary =
+        another_dimension_core::production::production_message_outbound_envelope_export(
+            &options.sender_store_path,
+            options.sender_profile,
+            &passphrase,
+            options.message_number,
+        )
+        .map_err(redacted_production_message_local_roundtrip_error)?;
+    let import_summary =
+        another_dimension_core::production::production_message_inbound_decrypt_import(
+            &options.receiver_store_path,
+            options.receiver_profile.clone(),
+            &passphrase,
+            envelope_summary.export_payload(),
+        )
+        .map_err(redacted_production_message_local_roundtrip_error)?;
+    let received_status_summary =
+        another_dimension_core::production::production_message_received_status(
+            &options.receiver_store_path,
+            options.receiver_profile.clone(),
+            &passphrase,
+            options.message_number,
+        )
+        .map_err(redacted_production_message_local_roundtrip_error)?;
+    let received_export = another_dimension_core::production::production_message_received_export(
+        &options.receiver_store_path,
+        options.receiver_profile,
+        &passphrase,
+        options.message_number,
+    )
+    .map_err(redacted_production_message_local_roundtrip_error)?;
+
+    std::fs::write(&options.received_out_path, received_export.export_payload()).map_err(|_| {
+        "production message local-roundtrip failed: received-out write failed".to_string()
+    })?;
+
+    println!(
+        "production message local roundtrip completed: sender_runtime_material_reconstructable={} sender_message_number_reserved={} sender_pending_record_present={} sender_session_transport_ready={} encrypted_envelope_exported={} receiver_inbound_message_stored={} receiver_received_status_verified={} received_written={} received_export_matches_input={} plaintext_exposed=false network_send_attempted={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        send_summary.runtime_material_reconstructable(),
+        send_summary.message_number_reserved(),
+        pending_summary.pending_message_record_present(),
+        encrypt_summary.session_transport_ready(),
+        !envelope_summary.export_payload().is_empty(),
+        import_summary.received_message_written(),
+        received_status_summary.received_message_record_present(),
+        !received_export.export_payload().is_empty(),
+        received_export.export_payload() == plaintext.as_slice(),
+        send_summary.network_send_attempted()
+            || pending_summary.network_send_attempted()
+            || encrypt_summary.network_send_attempted()
+            || envelope_summary.network_send_attempted(),
+        import_summary.network_receive_attempted()
+            || received_status_summary.network_receive_attempted()
+            || received_export.network_receive_attempted(),
+        send_summary.key_material_exposed()
+            || pending_summary.key_material_exposed()
+            || encrypt_summary.key_material_exposed()
+            || envelope_summary.key_material_exposed()
+            || import_summary.key_material_exposed()
+            || received_status_summary.key_material_exposed()
+            || received_export.key_material_exposed(),
+        send_summary.transport_io_opened()
+            || pending_summary.transport_io_opened()
+            || encrypt_summary.transport_io_opened()
+            || envelope_summary.transport_io_opened()
+            || import_summary.transport_io_opened()
+            || received_status_summary.transport_io_opened()
+            || received_export.transport_io_opened(),
+        send_summary.runtime_messaging_enabled()
+            || pending_summary.runtime_messaging_enabled()
+            || encrypt_summary.runtime_messaging_enabled()
+            || envelope_summary.runtime_messaging_enabled()
+            || import_summary.runtime_messaging_enabled()
+            || received_status_summary.runtime_messaging_enabled()
+            || received_export.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production message local-roundtrip reuses encrypted local stores only; no network, transport I/O, secure-release claim, or stdout plaintext"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 fn run_production_message_pending_status_command(args: &[String]) -> Result<(), String> {
     let options = ProductionMessagePendingStatusOptions::parse(args)?;
     let passphrase = read_production_passphrase()?;
@@ -1241,6 +1361,17 @@ struct ProductionMessageSendPrepareOptions {
     store_path: std::path::PathBuf,
     message_number: u64,
     plaintext_path: std::path::PathBuf,
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+struct ProductionMessageLocalRoundtripOptions {
+    sender_profile: another_dimension_identity::ProfileName,
+    sender_store_path: std::path::PathBuf,
+    receiver_profile: another_dimension_identity::ProfileName,
+    receiver_store_path: std::path::PathBuf,
+    message_number: u64,
+    plaintext_path: std::path::PathBuf,
+    received_out_path: std::path::PathBuf,
 }
 
 #[cfg(not(feature = "dev-insecure"))]
@@ -1826,6 +1957,112 @@ impl ProductionMessageSendPrepareOptions {
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+impl ProductionMessageLocalRoundtripOptions {
+    fn parse(args: &[String]) -> Result<Self, String> {
+        let mut sender_profile = None;
+        let mut sender_store_path = None;
+        let mut receiver_profile = None;
+        let mut receiver_store_path = None;
+        let mut message_number = None;
+        let mut plaintext_path = None;
+        let mut received_out_path = None;
+        let mut passphrase_stdin = false;
+        let mut index = 0;
+
+        while index < args.len() {
+            match args[index].as_str() {
+                "--sender-profile" => {
+                    index += 1;
+                    sender_profile = Some(
+                        args.get(index)
+                            .ok_or_else(production_message_local_roundtrip_help)
+                            .and_then(|value| {
+                                another_dimension_identity::ProfileName::new(value)
+                                    .map_err(|_| "invalid production profile name".to_string())
+                            })?,
+                    );
+                }
+                "--sender-store" => {
+                    index += 1;
+                    sender_store_path = Some(
+                        args.get(index)
+                            .map(std::path::PathBuf::from)
+                            .ok_or_else(production_message_local_roundtrip_help)?,
+                    );
+                }
+                "--receiver-profile" => {
+                    index += 1;
+                    receiver_profile = Some(
+                        args.get(index)
+                            .ok_or_else(production_message_local_roundtrip_help)
+                            .and_then(|value| {
+                                another_dimension_identity::ProfileName::new(value)
+                                    .map_err(|_| "invalid production profile name".to_string())
+                            })?,
+                    );
+                }
+                "--receiver-store" => {
+                    index += 1;
+                    receiver_store_path = Some(
+                        args.get(index)
+                            .map(std::path::PathBuf::from)
+                            .ok_or_else(production_message_local_roundtrip_help)?,
+                    );
+                }
+                "--message-number" => {
+                    index += 1;
+                    message_number = Some(
+                        args.get(index)
+                            .ok_or_else(production_message_local_roundtrip_help)?
+                            .parse::<u64>()
+                            .map_err(|_| production_message_local_roundtrip_help())?,
+                    );
+                }
+                "--plaintext" => {
+                    index += 1;
+                    plaintext_path = Some(
+                        args.get(index)
+                            .map(std::path::PathBuf::from)
+                            .ok_or_else(production_message_local_roundtrip_help)?,
+                    );
+                }
+                "--received-out" => {
+                    index += 1;
+                    received_out_path = Some(
+                        args.get(index)
+                            .map(std::path::PathBuf::from)
+                            .ok_or_else(production_message_local_roundtrip_help)?,
+                    );
+                }
+                "--passphrase-stdin" => {
+                    passphrase_stdin = true;
+                }
+                _ => return Err(production_message_local_roundtrip_help()),
+            }
+            index += 1;
+        }
+
+        if !passphrase_stdin {
+            return Err(production_message_local_roundtrip_help());
+        }
+
+        Ok(Self {
+            sender_profile: sender_profile.ok_or_else(production_message_local_roundtrip_help)?,
+            sender_store_path: sender_store_path
+                .ok_or_else(production_message_local_roundtrip_help)?,
+            receiver_profile: receiver_profile
+                .ok_or_else(production_message_local_roundtrip_help)?,
+            receiver_store_path: receiver_store_path
+                .ok_or_else(production_message_local_roundtrip_help)?,
+            message_number: message_number.ok_or_else(production_message_local_roundtrip_help)?,
+            plaintext_path: plaintext_path.ok_or_else(production_message_local_roundtrip_help)?,
+            received_out_path: received_out_path
+                .ok_or_else(production_message_local_roundtrip_help)?,
+        })
+    }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 impl ProductionMessagePendingStatusOptions {
     fn parse(args: &[String]) -> Result<Self, String> {
         Self::parse_with_help(args, production_message_pending_status_help)
@@ -2170,6 +2407,15 @@ fn production_message_send_prepare_help() -> String {
   another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> --passphrase-stdin
 
 Reads the profile passphrase from stdin and plaintext from --plaintext. Opens an encrypted local profile store, reloads production session runtime material, validates fail-closed outbound readiness, and records a local message index without encrypting an envelope, opening transport, or enabling runtime messaging."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn production_message_local_roundtrip_help() -> String {
+    "usage:
+  another-dimension production message local-roundtrip --sender-profile <name> --sender-store <path> --receiver-profile <name> --receiver-store <path> --message-number <n> --plaintext <path> --received-out <path> --passphrase-stdin
+
+Reads one profile passphrase from stdin and plaintext from --plaintext. Reuses existing encrypted sender and receiver profile stores with authenticated session transport metadata, encrypts one outbound envelope, imports it into the receiver store, and writes received plaintext only to --received-out. This does not print plaintext, open transport, perform network I/O, or enable runtime messaging."
         .to_string()
 }
 
@@ -2593,6 +2839,13 @@ fn redacted_production_message_send_prepare_error(
         }
         _ => "production message send-prepare failed".to_string(),
     }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_message_local_roundtrip_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    redacted_production_message_send_prepare_error(error).replace("send-prepare", "local-roundtrip")
 }
 
 #[cfg(not(feature = "dev-insecure"))]
