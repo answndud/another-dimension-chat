@@ -54,7 +54,11 @@ export function productionManualNextActions(state) {
     sessionReadyForMessages,
     hasOutboundMessageInput,
     hasInboundEnvelopeInput,
+    hasLocalMessageEnvelope,
+    hasRemoteMessageEnvelopeSlot,
     hasReceivedMessage,
+    activeProfile,
+    counterpartProfile,
   } = state;
 
   if (busy) {
@@ -86,17 +90,28 @@ export function productionManualNextActions(state) {
     pairing = "Next: import finish, then check session.";
   }
 
+  const active = activeProfile ? String(activeProfile).trim().toLowerCase() : "";
+  const counterpart = counterpartProfile ? String(counterpartProfile).trim().toLowerCase() : "";
+  const activeLabel = active || "active profile";
+  const counterpartLabel = counterpart || "counterpart";
+
   let message = sessionReadyForMessages
-    ? "Next: enter message and export envelope."
-    : "Next: complete session state, then export envelope.";
+    ? `Next: enter message for ${activeLabel} and export envelope.`
+    : `Next: check both sessions, or complete ${activeLabel} session state.`;
   if (hasOutboundMessageInput) {
-    message = "Next: export envelope.";
+    message = `Next: export envelope from ${activeLabel}, then store it and switch to ${counterpartLabel}.`;
+  }
+  if (hasLocalMessageEnvelope) {
+    message = `Next: store ${activeLabel} envelope, switch to ${counterpartLabel}, then load envelope.`;
+  }
+  if (hasRemoteMessageEnvelopeSlot) {
+    message = `Next: load ${counterpartLabel} envelope, then import for ${activeLabel}.`;
   }
   if (hasInboundEnvelopeInput) {
-    message = "Next: import envelope.";
+    message = `Next: import envelope for ${activeLabel}.`;
   }
   if (hasReceivedMessage) {
-    message = "Next: review received message.";
+    message = `Next: review received message for ${activeLabel}.`;
   }
 
   return { profile, pairing, message };
