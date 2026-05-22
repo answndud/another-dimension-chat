@@ -957,7 +957,10 @@ function resetProductionMessageView() {
     fields.productionReceivedMessage.value = "";
   }
   setText(fields.productionMessageActiveStatus, "Not checked yet");
-  setText(fields.productionMessageManualCheck, "check=manual-verify");
+  setText(
+    fields.productionMessageManualCheck,
+    "Manual check: verify active profile, message number, and envelope source.",
+  );
   setText(fields.productionMessageOutbound, "Not checked yet");
   setText(fields.productionMessageInbound, "Not checked yet");
   setText(fields.productionMessageBoundary, "Not checked yet");

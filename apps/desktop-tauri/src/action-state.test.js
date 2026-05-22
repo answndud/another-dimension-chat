@@ -405,7 +405,7 @@ test("productionManualMessageCheckView separates manual verification guidance", 
       hasInboundEnvelopeInput: false,
       hasReceivedMessage: false,
     }),
-    "check=store-local-envelope-before-switch",
+    "Manual check: store the local envelope before switching profile.",
   );
   assert.equal(
     productionManualMessageCheckView({
@@ -417,7 +417,7 @@ test("productionManualMessageCheckView separates manual verification guidance", 
       hasInboundEnvelopeInput: true,
       hasReceivedMessage: true,
     }),
-    "check=message-number-required",
+    "Manual check: enter the message number before export or import.",
   );
   assert.match(
     productionManualMessageCheckView({
@@ -428,7 +428,7 @@ test("productionManualMessageCheckView separates manual verification guidance", 
       hasRemoteMessageEnvelopeSlot: false,
       hasInboundEnvelopeInput: true,
     }),
-    /check=manual-pasted-envelope-verify-source/,
+    /pasted envelope is not from the stored remote slot/,
   );
   assert.match(
     productionManualMessageCheckView({
@@ -439,7 +439,7 @@ test("productionManualMessageCheckView separates manual verification guidance", 
       hasRemoteMessageEnvelopeSlot: true,
       hasInboundEnvelopeInput: false,
     }),
-    /check=load-remote-envelope-manually/,
+    /load the remote envelope manually before import/,
   );
 });
 
