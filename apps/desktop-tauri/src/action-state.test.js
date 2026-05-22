@@ -201,6 +201,10 @@ const safeHandshakeFinishImportResult = {
 };
 
 const safeMessageEnvelopeExportResult = {
+  selected_message_number: 7,
+  auto_message_number: true,
+  auto_counter_written: true,
+  existing_message_slot_skipped: false,
   message_number_reserved: true,
   pending_message_record_written: true,
   local_message_index_written: true,
@@ -454,13 +458,14 @@ test("productionManualMessageStatusView summarizes active message path", () => {
       activeProfile: "alice",
       counterpartProfile: "bob",
       messageNumber: 7,
+      autoMessageNumber: true,
       sessionReadyForMessages: true,
       hasLocalMessageEnvelope: true,
       hasRemoteMessageEnvelopeSlot: false,
       hasInboundEnvelopeInput: false,
       hasReceivedMessage: false,
     }),
-    "active=alice remote=bob number=7 session=ready local_envelope=present remote_slot=empty remote_envelope=empty received=empty",
+    "active=alice remote=bob number=7 mode=auto session=ready local_envelope=present remote_slot=empty remote_envelope=empty received=empty",
   );
   assert.match(
     productionManualMessageStatusView({
@@ -472,7 +477,7 @@ test("productionManualMessageStatusView summarizes active message path", () => {
       hasInboundEnvelopeInput: true,
       hasReceivedMessage: true,
     }),
-    /active=bob remote=alice number=invalid session=not-ready .*remote_slot=ready remote_envelope=loaded received=present/,
+    /active=bob remote=alice number=invalid mode=manual session=not-ready .*remote_slot=ready remote_envelope=loaded received=present/,
   );
 });
 
@@ -692,6 +697,8 @@ test("productionMessageEnvelopeExportView formats outbound message result", () =
   const view = productionMessageEnvelopeExportView(safeMessageEnvelopeExportResult);
 
   assert.match(view.outbound, /reserved=true/);
+  assert.match(view.outbound, /number=7/);
+  assert.match(view.outbound, /auto=true/);
   assert.match(view.outbound, /encrypted=true/);
   assert.match(view.boundary, /network_send=false/);
 });

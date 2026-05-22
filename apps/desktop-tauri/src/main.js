@@ -130,6 +130,7 @@ const fields = {
   productionPairingSession: document.querySelector("#production-pairing-session"),
   productionHandshakeState: document.querySelector("#production-handshake-state"),
   productionPairingBoundary: document.querySelector("#production-pairing-boundary"),
+  productionMessageAutoNumber: document.querySelector("#production-message-auto-number"),
   productionMessageNumber: document.querySelector("#production-message-number"),
   productionMessageBody: document.querySelector("#production-message-body"),
   exportProductionMessageEnvelope: document.querySelector("#export-production-message-envelope"),
@@ -305,6 +306,10 @@ function renderAppStateSummary(status) {
 function validProductionMessageNumber() {
   const messageNumber = Number.parseInt(fields.productionMessageNumber?.value ?? "1", 10);
   return Number.isInteger(messageNumber) && messageNumber >= 1;
+}
+
+function productionMessageUsesAutoNumber() {
+  return fields.productionMessageAutoNumber?.checked ?? true;
 }
 
 function productionSessionReadyForMessages() {
@@ -598,19 +603,22 @@ function applyProductionActionState() {
   const hasRemoteMessageEnvelopeSlot = Boolean(
     counterpartProfile && productionPayloadSlots.messageEnvelope.has(counterpartProfile),
   );
+  const hasMessageNumberForExport =
+    productionMessageUsesAutoNumber() || validProductionMessageNumber();
+  const hasMessageNumberForImport = validProductionMessageNumber();
   const hasOutboundMessageInput = Boolean(
     hasProfileUnlockInput &&
-      validProductionMessageNumber() &&
+      hasMessageNumberForExport &&
       message.message &&
       sessionReadyForMessages,
   );
   const hasInboundEnvelopeInput = Boolean(
     hasProfileUnlockInput &&
-      validProductionMessageNumber() &&
+      hasMessageNumberForImport &&
       message.envelopePayload &&
       sessionReadyForMessages,
   );
-  const hasReceivedExportInput = Boolean(hasProfileUnlockInput && validProductionMessageNumber());
+  const hasReceivedExportInput = Boolean(hasProfileUnlockInput && hasMessageNumberForImport);
   const hasReceivedMessage = Boolean(fields.productionReceivedMessage?.value.trim());
   const hasTwoProfileInput = Boolean(
     twoProfile.profileA &&
@@ -652,10 +660,14 @@ function applyProductionActionState() {
     activeProfile: activeProductionProfileName(),
     counterpartProfile,
     messageNumber: message.messageNumber,
+    autoMessageNumber: message.autoMessageNumber,
   };
   const availability = productionActionAvailability(state);
   const manualAvailability = productionManualRelayAvailability(state);
 
+  if (fields.productionMessageNumber) {
+    fields.productionMessageNumber.disabled = message.autoMessageNumber;
+  }
   setText(fields.productionTwoProfileReadiness, productionTwoProfileReadiness(twoProfile, busy));
   renderProductionTwoProfileMemory(twoProfile);
   renderManualNextActions(state);
@@ -1090,6 +1102,7 @@ function productionPairingInput() {
 function productionMessageInput() {
   return {
     ...productionProfileInput(),
+    autoMessageNumber: productionMessageUsesAutoNumber(),
     messageNumber: Number.parseInt(fields.productionMessageNumber?.value ?? "1", 10),
     message: (fields.productionMessageBody?.value ?? "").trim(),
     envelopePayload: (fields.productionRemoteMessageEnvelope?.value ?? "").trim(),
@@ -1879,10 +1892,16 @@ async function importProductionHandshakeFinish() {
 }
 
 async function exportProductionMessageEnvelope() {
-  const { profile, passphrase, messageNumber, message } = productionMessageInput();
-  if (!profile || !passphrase || !Number.isInteger(messageNumber) || messageNumber < 1 || !message) {
+  const { profile, passphrase, autoMessageNumber, messageNumber, message } =
+    productionMessageInput();
+  if (
+    !profile ||
+    !passphrase ||
+    (!autoMessageNumber && (!Number.isInteger(messageNumber) || messageNumber < 1)) ||
+    !message
+  ) {
     setProductionMessageState("Message export needs input");
-    setText(fields.productionMessageWarning, "Enter profile, passphrase, number, and message.");
+    setText(fields.productionMessageWarning, "Enter profile, passphrase, and message.");
     return;
   }
 
@@ -1900,12 +1919,16 @@ async function exportProductionMessageEnvelope() {
     const result = await invoke("production_message_envelope_export", {
       profile,
       passphrase,
-      messageNumber,
+      messageNumber: autoMessageNumber ? 0 : messageNumber,
+      autoMessageNumber,
       message,
     });
     const view = productionMessageEnvelopeExportView(result);
     setProductionMessageState("Message envelope exported");
     setText(fields.productionMessageWarning, result.warning);
+    if (fields.productionMessageNumber) {
+      fields.productionMessageNumber.value = String(result.selected_message_number);
+    }
     if (fields.productionMessageEnvelope) {
       fields.productionMessageEnvelope.value = result.envelope_payload;
     }
@@ -2061,6 +2084,7 @@ for (const input of [
   fields.productionRemoteHandshakeInitPayload,
   fields.productionRemoteHandshakeReplyPayload,
   fields.productionRemoteHandshakeFinishPayload,
+  fields.productionMessageAutoNumber,
   fields.productionMessageNumber,
   fields.productionMessageBody,
   fields.productionRemoteMessageEnvelope,

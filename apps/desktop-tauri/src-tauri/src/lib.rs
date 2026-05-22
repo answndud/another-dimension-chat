@@ -282,6 +282,10 @@ pub struct ProductionHandshakeFinishImportResult {
 #[derive(serde::Serialize)]
 pub struct ProductionMessageEnvelopeExportResult {
     warning: &'static str,
+    selected_message_number: u64,
+    auto_message_number: bool,
+    auto_counter_written: bool,
+    existing_message_slot_skipped: bool,
     storage_opened: bool,
     runtime_material_reconstructable: bool,
     outbound_envelope_io_ready: bool,
@@ -527,6 +531,7 @@ fn production_message_envelope_export(
     profile: String,
     passphrase: String,
     message_number: u64,
+    auto_message_number: bool,
     message: String,
 ) -> Result<ProductionMessageEnvelopeExportResult, String> {
     let app_data_root = app
@@ -538,6 +543,7 @@ fn production_message_envelope_export(
         profile,
         passphrase,
         message_number,
+        auto_message_number,
         message,
     )
     .map_err(|_| {
@@ -1465,9 +1471,11 @@ fn run_production_message_envelope_export(
     profile: String,
     passphrase: String,
     message_number: u64,
+    auto_message_number: bool,
     message: String,
 ) -> Result<ProductionMessageEnvelopeExportResult, String> {
     use another_dimension_core::production::{
+        production_message_next_number_reserve,
         production_message_outbound_encrypt_prepare, production_message_outbound_envelope_export,
         production_message_pending_status, production_message_send_prepare,
     };
@@ -1478,12 +1486,26 @@ fn run_production_message_envelope_export(
         .map_err(|_| "invalid production profile passphrase")?;
     let message = sanitize_production_message_text(message)?;
     let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let reservation = if auto_message_number {
+        Some(
+            production_message_next_number_reserve(&store_path, profile.clone(), &passphrase)
+                .map_err(|_| "message number reservation failed")?,
+        )
+    } else {
+        None
+    };
+    let selected_message_number = reservation
+        .map(|summary| summary.reserved_message_number())
+        .unwrap_or(message_number);
+    if selected_message_number == 0 {
+        return Err("message number is required".to_string());
+    }
 
     let send = production_message_send_prepare(
         &store_path,
         profile.clone(),
         &passphrase,
-        message_number,
+        selected_message_number,
         &message,
     )
     .map_err(|_| "message send prepare failed")?;
@@ -1491,27 +1513,34 @@ fn run_production_message_envelope_export(
         &store_path,
         profile.clone(),
         &passphrase,
-        message_number,
+        selected_message_number,
     )
     .map_err(|_| "message pending status failed")?;
     let encrypt = production_message_outbound_encrypt_prepare(
         &store_path,
         profile.clone(),
         &passphrase,
-        message_number,
+        selected_message_number,
     )
     .map_err(|_| "message encrypt prepare failed")?;
     let envelope = production_message_outbound_envelope_export(
         &store_path,
         profile,
         &passphrase,
-        message_number,
+        selected_message_number,
     )
     .map_err(|_| "message envelope export failed")?;
+    let auto_counter_written = reservation.is_some_and(|summary| summary.counter_record_written());
+    let existing_message_slot_skipped =
+        reservation.is_some_and(|summary| summary.existing_message_slot_skipped());
 
     Ok(ProductionMessageEnvelopeExportResult {
         warning:
             "encrypted envelope exported locally; deliver it out-of-band to the paired contact",
+        selected_message_number,
+        auto_message_number,
+        auto_counter_written,
+        existing_message_slot_skipped,
         storage_opened: send.storage_opened()
             && pending.storage_opened()
             && encrypt.storage_opened()
@@ -1808,6 +1837,7 @@ fn run_production_two_profile_roundtrip(
         sender_profile,
         passphrase.clone(),
         message_number,
+        false,
         message_text,
     )?;
     let inbound = run_production_message_envelope_import(
@@ -1984,6 +2014,7 @@ fn run_production_two_profile_message_roundtrip(
         sender_profile,
         passphrase.clone(),
         message_number,
+        false,
         message_text,
     )?;
     let inbound = run_production_message_envelope_import(
@@ -3013,10 +3044,15 @@ replay check: no replayed messages after message 2
             &root,
             initiator.to_string(),
             "correct-passphrase".to_string(),
-            1,
+            0,
+            true,
             "persistent hello".to_string(),
         )
         .expect("outbound");
+        assert_eq!(outbound.selected_message_number, 1);
+        assert!(outbound.auto_message_number);
+        assert!(outbound.auto_counter_written);
+        assert!(!outbound.existing_message_slot_skipped);
         assert!(outbound.storage_opened);
         assert!(outbound.runtime_material_reconstructable);
         assert!(outbound.message_number_reserved);
@@ -3035,7 +3071,7 @@ replay check: no replayed messages after message 2
             &root,
             responder.to_string(),
             "correct-passphrase".to_string(),
-            1,
+            outbound.selected_message_number,
             outbound.envelope_payload,
         )
         .expect("inbound");
@@ -3059,7 +3095,7 @@ replay check: no replayed messages after message 2
             &root,
             responder.to_string(),
             "correct-passphrase".to_string(),
-            1,
+            outbound.selected_message_number,
         )
         .expect("received export");
         assert!(received.storage_opened);

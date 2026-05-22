@@ -410,13 +410,14 @@ export function productionManualMessageStatusView(state) {
   const active = state?.activeProfile || "active profile";
   const counterpart = state?.counterpartProfile || "counterpart";
   const messageNumber = Number.isInteger(state?.messageNumber) ? state.messageNumber : "invalid";
+  const numberMode = state?.autoMessageNumber ? "auto" : "manual";
   const session = state?.sessionReadyForMessages ? "ready" : "not-ready";
   const localEnvelope = state?.hasLocalMessageEnvelope ? "present" : "empty";
   const remoteSlot = state?.hasRemoteMessageEnvelopeSlot ? "ready" : "empty";
   const remoteEnvelope = state?.hasInboundEnvelopeInput ? "loaded" : "empty";
   const received = state?.hasReceivedMessage ? "present" : "empty";
   return (
-    `active=${active} remote=${counterpart} number=${messageNumber} session=${session} ` +
+    `active=${active} remote=${counterpart} number=${messageNumber} mode=${numberMode} session=${session} ` +
     `local_envelope=${localEnvelope} remote_slot=${remoteSlot} remote_envelope=${remoteEnvelope} ` +
     `received=${received}`
   );
@@ -466,6 +467,8 @@ export function productionHandshakeFinishImportView(result) {
 export function productionMessageEnvelopeExportView(result) {
   return {
     outbound:
+      `number=${result.selected_message_number} auto=${result.auto_message_number} ` +
+      `counter=${result.auto_counter_written} skipped=${result.existing_message_slot_skipped} ` +
       `reserved=${result.message_number_reserved} pending=${result.pending_message_record_written} ` +
       `indexed=${result.local_message_index_written} transport=${result.session_transport_ready} ` +
       `encrypted=${result.encrypted_envelope_written} export=${result.encrypted_envelope_present}`,

@@ -532,6 +532,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="import-production-handshake-finish" type="button">Import finish</button>' \
   | grep -v '<button id="check-production-session-state" type="button">Check session</button>' \
   | grep -v '<button id="check-production-two-profile-session-status" type="button">' \
+  | grep -v '<input id="production-message-auto-number" type="checkbox" checked />' \
   | grep -v '<input id="production-message-number" type="number" min="1" value="1" />' \
   | grep -v '<textarea id="production-message-body" rows="3">hello over stored transport</textarea>' \
   | grep -v '<button id="export-production-message-envelope" type="button">Export envelope</button>' \
