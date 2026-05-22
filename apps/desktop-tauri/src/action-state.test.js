@@ -350,6 +350,9 @@ test("productionManualStatusView summarizes active manual relay slots", () => {
     ),
     {
       route: "Active=alice Remote=bob",
+      direction:
+        "Fill local copies the active output field into the matching local input; " +
+        "Fill remote copies the stored counterpart payload into the matching remote input.",
       payloads:
         "pairing: local=stored remote=empty | init: local=empty remote=ready | " +
         "reply: local=empty remote=empty | finish: local=stored remote=ready | envelope: local=empty remote=ready",
