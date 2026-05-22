@@ -344,6 +344,11 @@ textarea {
   font-size: 13px;
 }
 
+textarea[readonly] {
+  color: var(--text-muted);
+  cursor: wait;
+}
+
 .demo-state,
 .action-readiness {
   margin: 0;

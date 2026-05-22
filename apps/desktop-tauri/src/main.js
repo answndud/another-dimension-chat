@@ -304,6 +304,15 @@ function setActionButtonState(node, disabled, reason, current = false) {
   node.classList.toggle("is-current-action", !disabled && current);
 }
 
+function setTwoProfileComposeLocked(locked) {
+  if (!fields.productionTwoProfileMessage) {
+    return;
+  }
+  fields.productionTwoProfileMessage.readOnly = locked;
+  fields.productionTwoProfileMessage.setAttribute("aria-busy", String(locked));
+  fields.productionTwoProfileMessage.title = locked ? "Two-profile action is running." : "";
+}
+
 function setProductionFollowupActions(enabled, message) {
   setText(fields.productionTwoProfileNextStep, message);
   setDisabled(fields.openManualProductionTools, !enabled);
@@ -1126,10 +1135,14 @@ function applyProductionActionState() {
   const twoProfileCanReply = Boolean(
     !busy && latestProductionTwoProfileSuccess && hasTwoProfileSessionStatusInput && !twoProfile.message,
   );
+  const twoProfileComposeLocked =
+    productionBusyAction === "two-profile-roundtrip" ||
+    productionBusyAction === "two-profile-message-roundtrip";
 
   if (fields.productionMessageNumber) {
     fields.productionMessageNumber.disabled = message.autoMessageNumber;
   }
+  setTwoProfileComposeLocked(twoProfileComposeLocked);
   renderProductionTwoProfileDirection(twoProfile);
   renderProductionTwoProfileFlow(twoProfile);
   setText(fields.productionTwoProfileReadiness, productionTwoProfileReadiness(twoProfile, busy));
@@ -2000,6 +2013,38 @@ async function runProductionTwoProfileMessageRoundtrip() {
   }
 }
 
+async function runTwoProfilePrimaryActionFromCompose() {
+  if (productionBusyAction !== null) {
+    setProductionTwoProfileState("Two-profile action already running");
+    setText(fields.productionTwoProfileWarning, "Wait for the active production action before sending again.");
+    return;
+  }
+
+  applyProductionActionState();
+  if (fields.runProductionTwoProfileMessageRoundtrip && !fields.runProductionTwoProfileMessageRoundtrip.disabled) {
+    await runProductionTwoProfileMessageRoundtrip();
+    return;
+  }
+  if (fields.runProductionTwoProfileRoundtrip && !fields.runProductionTwoProfileRoundtrip.disabled) {
+    await runProductionTwoProfileRoundtrip();
+    return;
+  }
+
+  setProductionTwoProfileState("Two-profile send needs input");
+  setText(
+    fields.productionTwoProfileWarning,
+    productionTwoProfileReadiness(productionTwoProfileInput(), productionBusyAction !== null),
+  );
+}
+
+function handleTwoProfileMessageKeydown(event) {
+  if (event.key !== "Enter" || (!event.metaKey && !event.ctrlKey) || event.shiftKey) {
+    return;
+  }
+  event.preventDefault();
+  runTwoProfilePrimaryActionFromCompose();
+}
+
 async function runProductionRoundtrip() {
   const message = productionRoundtripMessage();
   if (!message) {
@@ -2798,6 +2843,10 @@ for (const input of [
   if (input) {
     input.addEventListener("input", applyProductionActionState);
   }
+}
+
+if (fields.productionTwoProfileMessage) {
+  fields.productionTwoProfileMessage.addEventListener("keydown", handleTwoProfileMessageKeydown);
 }
 
 if (fields.productionRemoteMessageEnvelope) {
