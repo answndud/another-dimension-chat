@@ -318,7 +318,7 @@ test("productionManualNextActions follows pairing and message readiness", () => 
       sessionReadyForMessages: true,
       hasOutboundMessageInput: true,
     }).message,
-    "Next: export envelope from alice, then store it and switch to bob.",
+    "Next: export envelope from alice, store it, then manually select bob.",
   );
   assert.equal(
     productionManualNextActions({
@@ -356,7 +356,8 @@ test("productionManualStatusView summarizes active manual relay slots", () => {
       payloads:
         "pairing: active_slot=stored counterpart_slot=empty | init: active_slot=empty counterpart_slot=ready | " +
         "reply: active_slot=empty counterpart_slot=empty | finish: active_slot=stored counterpart_slot=ready | envelope: active_slot=empty counterpart_slot=ready",
-      mode: "Manual relay uses local memory slots only; switch profile to load remote payloads.",
+      mode:
+        "Manual relay uses local memory slots only; manually select the counterpart profile to fill remote payloads.",
       policy:
         "manual_only=true auto_send=false auto_import=false auto_profile_switch=false network_io=false",
     },

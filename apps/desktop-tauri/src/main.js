@@ -467,7 +467,10 @@ function loadProductionPayloadSlot(kind, targetField, label) {
   const value = counterpart ? productionPayloadSlots[kind].get(counterpart) : null;
   if (!value || !targetField) {
     setProductionPairingState(`Remote ${label.toLowerCase()} slot empty`);
-    setText(fields.productionPairingWarning, `Store Alice or Bob ${label.toLowerCase()} first, then switch profile and load remote.`);
+    setText(
+      fields.productionPairingWarning,
+      `Store Alice or Bob ${label.toLowerCase()} first, then manually select the counterpart profile and fill remote.`,
+    );
     return;
   }
   targetField.value = value;
@@ -510,7 +513,10 @@ function loadProductionMessageEnvelope() {
   const value = counterpart ? productionPayloadSlots.messageEnvelope.get(counterpart) : null;
   if (!value || !fields.productionRemoteMessageEnvelope) {
     setProductionMessageState("Remote envelope slot empty");
-    setText(fields.productionMessageWarning, "Store Alice or Bob envelope first, then switch profile and load remote.");
+    setText(
+      fields.productionMessageWarning,
+      "Store Alice or Bob envelope first, then manually select the counterpart profile and fill remote.",
+    );
     return;
   }
   fields.productionRemoteMessageEnvelope.value = value;

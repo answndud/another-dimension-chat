@@ -99,10 +99,10 @@ export function productionManualNextActions(state) {
     ? `Next: enter message for ${activeLabel} and export envelope.`
     : `Next: check both sessions, or complete ${activeLabel} session state.`;
   if (hasOutboundMessageInput) {
-    message = `Next: export envelope from ${activeLabel}, then store it and switch to ${counterpartLabel}.`;
+    message = `Next: export envelope from ${activeLabel}, store it, then manually select ${counterpartLabel}.`;
   }
   if (hasLocalMessageEnvelope) {
-    message = `Next: store ${activeLabel} envelope, switch to ${counterpartLabel}, then load envelope.`;
+    message = `Next: store ${activeLabel} envelope, manually select ${counterpartLabel}, then fill remote envelope.`;
   }
   if (hasRemoteMessageEnvelopeSlot) {
     message = `Next: load ${counterpartLabel} envelope, then import for ${activeLabel}.`;
@@ -141,7 +141,7 @@ export function productionManualStatusView(input, slots) {
     ].join(" | "),
     policy: "manual_only=true auto_send=false auto_import=false auto_profile_switch=false network_io=false",
     mode: counterpart
-      ? "Manual relay uses local memory slots only; switch profile to load remote payloads."
+      ? "Manual relay uses local memory slots only; manually select the counterpart profile to fill remote payloads."
       : "Use Alice or Bob preset for explicit remote slot lookup.",
   };
 }
