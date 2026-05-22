@@ -170,6 +170,7 @@ const fields = {
   productionTwoProfileBoundary: document.querySelector("#production-two-profile-boundary"),
   productionTwoProfileCurrentInput: document.querySelector("#production-two-profile-current-input"),
   productionTwoProfileLastSuccess: document.querySelector("#production-two-profile-last-success"),
+  productionTwoProfileTranscript: document.querySelector("#production-two-profile-transcript"),
   productionTwoProfileNextStep: document.querySelector("#production-two-profile-next-step"),
   openManualProductionTools: document.querySelector("#open-manual-production-tools"),
   focusLocalDiagnostic: document.querySelector("#focus-local-diagnostic"),
@@ -204,6 +205,7 @@ let latestProductionTwoProfileSuccess = null;
 let latestProductionMessageImport = null;
 let productionBusyAction = null;
 const productionTranscriptEntryKeys = new Set();
+const productionTwoProfileTranscriptEntryKeys = new Set();
 const productionPayloadSlots = {
   pairing: new Map(),
   handshakeInit: new Map(),
@@ -409,29 +411,38 @@ function resetProductionMessageImportState() {
 
 function resetProductionMessageTranscript() {
   productionTranscriptEntryKeys.clear();
-  if (!fields.productionMessageTranscript) {
-    return;
-  }
-  fields.productionMessageTranscript.replaceChildren();
-  const empty = document.createElement("li");
-  empty.className = "is-empty";
-  empty.textContent = "No messages yet.";
-  fields.productionMessageTranscript.append(empty);
+  resetTranscriptList(fields.productionMessageTranscript, "No messages yet.");
 }
 
-function appendProductionTranscriptEntry(kind, profile, messageNumber, message) {
+function resetProductionTwoProfileTranscript() {
+  productionTwoProfileTranscriptEntryKeys.clear();
+  resetTranscriptList(fields.productionTwoProfileTranscript, "No two-profile messages yet.");
+}
+
+function resetTranscriptList(target, emptyText) {
+  if (!target) {
+    return;
+  }
+  target.replaceChildren();
+  const empty = document.createElement("li");
+  empty.className = "is-empty";
+  empty.textContent = emptyText;
+  target.append(empty);
+}
+
+function appendTranscriptEntry(target, keySet, kind, profile, messageNumber, message) {
   const normalizedProfile = String(profile ?? "").trim().toLowerCase() || "unknown";
   const normalizedNumber = Number.isInteger(messageNumber) ? messageNumber : "unknown";
   const text = String(message ?? "").trim();
-  if (!text || !fields.productionMessageTranscript) {
+  if (!text || !target) {
     return;
   }
   const key = `${kind}\n${normalizedProfile}\n${normalizedNumber}\n${text}`;
-  if (productionTranscriptEntryKeys.has(key)) {
+  if (keySet.has(key)) {
     return;
   }
-  productionTranscriptEntryKeys.add(key);
-  fields.productionMessageTranscript.querySelector(".is-empty")?.remove();
+  keySet.add(key);
+  target.querySelector(".is-empty")?.remove();
 
   const item = document.createElement("li");
   item.className = kind === "received" ? "is-received" : "is-sent";
@@ -440,7 +451,29 @@ function appendProductionTranscriptEntry(kind, profile, messageNumber, message) 
   const body = document.createElement("span");
   body.textContent = text;
   item.append(meta, body);
-  fields.productionMessageTranscript.append(item);
+  target.append(item);
+}
+
+function appendProductionTranscriptEntry(kind, profile, messageNumber, message) {
+  appendTranscriptEntry(
+    fields.productionMessageTranscript,
+    productionTranscriptEntryKeys,
+    kind,
+    profile,
+    messageNumber,
+    message,
+  );
+}
+
+function appendProductionTwoProfileTranscriptEntry(kind, profile, messageNumber, message) {
+  appendTranscriptEntry(
+    fields.productionTwoProfileTranscript,
+    productionTwoProfileTranscriptEntryKeys,
+    kind,
+    profile,
+    messageNumber,
+    message,
+  );
 }
 
 function renderProductionTranscriptEntries(profile, entries) {
@@ -1074,6 +1107,7 @@ function resetProductionTwoProfileView() {
   setText(fields.productionTwoProfileSession, "Not checked yet");
   setText(fields.productionTwoProfileMessageState, "Not checked yet");
   setText(fields.productionTwoProfileBoundary, "Not checked yet");
+  resetProductionTwoProfileTranscript();
   renderProductionTwoProfileMemory();
   setProductionFollowupActions(false, "Next actions unlock after a completed local roundtrip.");
   applyProductionActionState();
@@ -1254,6 +1288,8 @@ function applyStoredSessionMessageResultToManualFlow(result, message) {
   if (text) {
     appendProductionTranscriptEntry("sent", sender, messageNumber, text);
     appendProductionTranscriptEntry("received", receiver, messageNumber, text);
+    appendProductionTwoProfileTranscriptEntry("sent", sender, messageNumber, text);
+    appendProductionTwoProfileTranscriptEntry("received", receiver, messageNumber, text);
   }
   latestProductionMessageImport = null;
   setProductionMessageState("Stored-session message synced");
