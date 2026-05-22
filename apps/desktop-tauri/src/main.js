@@ -434,6 +434,25 @@ function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
   );
 }
 
+function payloadLabel(label) {
+  return String(label ?? "payload").toLowerCase();
+}
+
+function manualFilledRemoteFieldWarning(profile, label) {
+  return `Filled remote field from active=${profile} source=${payloadLabel(label)}.`;
+}
+
+function manualMissingCounterpartWarning(profile, counterpart, label) {
+  return (
+    `No stored ${payloadLabel(label)} for active=${profile} ` +
+    `expected_counterpart=${counterpart ?? "Alice or Bob"}; manually select the counterpart profile after storing it.`
+  );
+}
+
+function manualLoadedCounterpartWarning(profile, counterpart, label) {
+  return `Filled remote ${payloadLabel(label)} for active=${profile} loaded_from=${counterpart}.`;
+}
+
 function moveLocalPayload(sourceField, targetField, label) {
   const profile = activeProductionProfileName();
   const value = sourceField?.value?.trim() ?? "";
@@ -444,10 +463,7 @@ function moveLocalPayload(sourceField, targetField, label) {
   targetField.value = value;
   targetField.dispatchEvent(new Event("input", { bubbles: true }));
   setProductionPairingState(`${label} applied`);
-  setText(
-    fields.productionPairingWarning,
-    `Filled remote field from active=${profile} source=${label.toLowerCase()}.`,
-  );
+  setText(fields.productionPairingWarning, manualFilledRemoteFieldWarning(profile, label));
   applyProductionActionState();
 }
 
@@ -456,12 +472,12 @@ function storeProductionPayloadSlot(kind, sourceField, label) {
   const value = sourceField?.value?.trim() ?? "";
   if (!profile || !value) {
     setProductionPairingState(`${label} store needs profile and payload`);
-    setText(fields.productionPairingWarning, `Export ${label.toLowerCase()} before storing a local payload slot.`);
+    setText(fields.productionPairingWarning, `Export ${payloadLabel(label)} before storing a local payload slot.`);
     return;
   }
   productionPayloadSlots[kind].set(profile, value);
   setProductionPairingState(`${label} stored`);
-  setText(fields.productionPairingWarning, `Stored local ${label.toLowerCase()} slot for ${profile}.`);
+  setText(fields.productionPairingWarning, `Stored local ${payloadLabel(label)} slot for ${profile}.`);
   applyProductionActionState();
 }
 
@@ -471,19 +487,13 @@ function loadProductionPayloadSlot(kind, targetField, label) {
   const value = counterpart ? productionPayloadSlots[kind].get(counterpart) : null;
   if (!value || !targetField) {
     setProductionPairingState(`Remote ${label.toLowerCase()} slot empty`);
-    setText(
-      fields.productionPairingWarning,
-      `No stored ${label.toLowerCase()} for active=${profile} expected_counterpart=${counterpart ?? "Alice or Bob"}; manually select the counterpart profile after storing it.`,
-    );
+    setText(fields.productionPairingWarning, manualMissingCounterpartWarning(profile, counterpart, label));
     return;
   }
   targetField.value = value;
   targetField.dispatchEvent(new Event("input", { bubbles: true }));
   setProductionPairingState(`Remote ${label.toLowerCase()} loaded`);
-  setText(
-    fields.productionPairingWarning,
-    `Filled remote ${label.toLowerCase()} for active=${profile} loaded_from=${counterpart}.`,
-  );
+  setText(fields.productionPairingWarning, manualLoadedCounterpartWarning(profile, counterpart, label));
   applyProductionActionState();
 }
 
@@ -524,19 +534,13 @@ function loadProductionMessageEnvelope() {
   const value = counterpart ? productionPayloadSlots.messageEnvelope.get(counterpart) : null;
   if (!value || !fields.productionRemoteMessageEnvelope) {
     setProductionMessageState("Remote envelope slot empty");
-    setText(
-      fields.productionMessageWarning,
-      `No stored envelope for active=${profile} expected_counterpart=${counterpart ?? "Alice or Bob"}; manually select the counterpart profile after storing it.`,
-    );
+    setText(fields.productionMessageWarning, manualMissingCounterpartWarning(profile, counterpart, "envelope"));
     return;
   }
   fields.productionRemoteMessageEnvelope.value = value;
   fields.productionRemoteMessageEnvelope.dispatchEvent(new Event("input", { bubbles: true }));
   setProductionMessageState("Remote envelope loaded");
-  setText(
-    fields.productionMessageWarning,
-    `Filled remote envelope for active=${profile} loaded_from=${counterpart}.`,
-  );
+  setText(fields.productionMessageWarning, manualLoadedCounterpartWarning(profile, counterpart, "envelope"));
   applyProductionActionState();
 }
 
