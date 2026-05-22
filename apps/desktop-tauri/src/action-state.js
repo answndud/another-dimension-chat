@@ -182,6 +182,7 @@ export function productionActionAvailability(state) {
     importMessageEnvelope: !busy && hasInboundEnvelopeInput,
     exportReceivedMessage: !busy && hasReceivedExportInput,
     runTwoProfileRoundtrip: !busy && hasTwoProfileInput,
+    runTwoProfileMessageRoundtrip: !busy && hasTwoProfileInput,
     usePairingPayload: !busy && hasLocalPairingPayload,
     useHandshakeInit: !busy && hasHandshakeInitPayload,
     useHandshakeReply: !busy && hasHandshakeReplyPayload,
@@ -314,6 +315,42 @@ export function productionSessionDraftView(result) {
       `passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} ` +
       `network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} ` +
       `runtime=${result.runtime_messaging_enabled}`,
+  };
+}
+
+export function productionTwoProfileMessageResultView(result) {
+  const sessionReady = result.sender_session_ready && result.receiver_session_ready;
+  const messageReady =
+    result.message_number_reserved &&
+    result.encrypted_envelope_exported &&
+    result.inbound_message_stored &&
+    result.received_status_verified &&
+    result.received_export_matches_input;
+  const boundaryContained =
+    !result.plaintext_returned_to_frontend &&
+    !result.store_path_returned &&
+    !result.passphrase_retained &&
+    !result.key_material_exposed &&
+    !result.network_io_attempted &&
+    !result.transport_io_opened &&
+    !result.runtime_messaging_enabled;
+  const canContinue = sessionReady && messageReady && boundaryContained;
+
+  return {
+    canContinue,
+    profiles: "Using existing encrypted profile stores; no pairing payloads exported in this action.",
+    session:
+      `${sessionReady ? "Complete" : "Review"}: stored sender and receiver sessions are message-ready | ` +
+      `sender=${result.sender_session_ready} receiver=${result.receiver_session_ready}`,
+    message:
+      `${messageReady ? "Complete" : "Review"}: stored-session envelope imported and received message verified | ` +
+      `reserved=${result.message_number_reserved} envelope=${result.encrypted_envelope_exported} inbound=${result.inbound_message_stored} status=${result.received_status_verified} match=${result.received_export_matches_input}`,
+    boundary:
+      `${boundaryContained ? "Contained" : "Review"}: no plaintext, key material, store path, network I/O, transport I/O, or runtime messaging exposure | ` +
+      `plaintext_returned=${result.plaintext_returned_to_frontend} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    nextStep: canContinue
+      ? "Next: continue with another stored-session message, or switch to manual envelope tools."
+      : "Review stored-session result rows before continuing.",
   };
 }
 

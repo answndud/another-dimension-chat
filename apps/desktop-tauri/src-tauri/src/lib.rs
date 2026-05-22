@@ -99,6 +99,25 @@ pub struct ProductionTwoProfileRoundtripResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionTwoProfileMessageRoundtripResult {
+    warning: &'static str,
+    sender_session_ready: bool,
+    receiver_session_ready: bool,
+    message_number_reserved: bool,
+    encrypted_envelope_exported: bool,
+    inbound_message_stored: bool,
+    received_status_verified: bool,
+    received_export_matches_input: bool,
+    plaintext_returned_to_frontend: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionProfileUnlockResult {
     warning: &'static str,
     storage_opened: bool,
@@ -593,6 +612,30 @@ fn production_two_profile_roundtrip(
             "production two-profile roundtrip failed without exposing profile, path, or key details"
                 .to_string()
         })
+}
+
+#[tauri::command]
+fn production_two_profile_message_roundtrip(
+    app: tauri::AppHandle,
+    profile_a: String,
+    profile_b: String,
+    passphrase: String,
+    message: String,
+) -> Result<ProductionTwoProfileMessageRoundtripResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production stored-session message roundtrip failed without exposing local path details"
+    })?;
+    run_production_two_profile_message_roundtrip(
+        app_data_root,
+        profile_a,
+        profile_b,
+        passphrase,
+        message,
+    )
+    .map_err(|_| {
+        "production stored-session message roundtrip failed without exposing profile, path, or key details"
+            .to_string()
+    })
 }
 
 #[tauri::command]
@@ -1861,6 +1904,108 @@ fn run_production_two_profile_roundtrip(
     })
 }
 
+fn run_production_two_profile_message_roundtrip(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile_a: String,
+    profile_b: String,
+    passphrase: String,
+    message: String,
+) -> Result<ProductionTwoProfileMessageRoundtripResult, String> {
+    use another_dimension_core::production::production_pairing_session_handshake_init;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile_a = sanitize_production_profile(profile_a)?;
+    let profile_b = sanitize_production_profile(profile_b)?;
+    if profile_a == profile_b {
+        return Err("stored-session message roundtrip requires two distinct profiles".to_string());
+    }
+
+    let profile_a_name = profile_a.as_str().to_string();
+    let profile_b_name = profile_b.as_str().to_string();
+    let passphrase = passphrase.trim().to_string();
+    let profile_passphrase =
+        ProfilePassphrase::new(&passphrase).map_err(|_| "invalid production profile passphrase")?;
+    let message = sanitize_production_roundtrip_message(message)?;
+    let message_text = String::from_utf8(message.clone())
+        .map_err(|_| "production stored-session message must be UTF-8")?;
+    let message_number = next_production_message_number()?;
+
+    let profile_a_store = production_profile_store_path(&app_data_root, &profile_a)?;
+    let profile_b_store = production_profile_store_path(&app_data_root, &profile_b)?;
+    let profile_a_can_send =
+        production_pairing_session_handshake_init(&profile_a_store, profile_a.clone(), &profile_passphrase)
+            .map_err(|_| "stored-session sender role check failed")?
+            .local_role_can_initiate();
+    let profile_b_can_send =
+        production_pairing_session_handshake_init(&profile_b_store, profile_b.clone(), &profile_passphrase)
+            .map_err(|_| "stored-session receiver role check failed")?
+            .local_role_can_initiate();
+    let (sender_profile, receiver_profile) = match (profile_a_can_send, profile_b_can_send) {
+        (true, false) => (profile_a_name.clone(), profile_b_name.clone()),
+        (false, true) => (profile_b_name.clone(), profile_a_name.clone()),
+        _ => return Err("stored-session message roundtrip requires exactly one canonical sender".to_string()),
+    };
+
+    let sender_state =
+        run_production_session_state_check(&app_data_root, sender_profile.clone(), passphrase.clone())?;
+    let receiver_state =
+        run_production_session_state_check(&app_data_root, receiver_profile.clone(), passphrase.clone())?;
+    if !sender_state.ready_for_message_envelope || !receiver_state.ready_for_message_envelope {
+        return Err("stored-session message roundtrip requires both profiles message-ready".to_string());
+    }
+
+    let outbound = run_production_message_envelope_export(
+        &app_data_root,
+        sender_profile,
+        passphrase.clone(),
+        message_number,
+        message_text,
+    )?;
+    let inbound = run_production_message_envelope_import(
+        &app_data_root,
+        receiver_profile.clone(),
+        passphrase.clone(),
+        message_number,
+        outbound.envelope_payload,
+    )?;
+    let received =
+        run_production_message_received_export(&app_data_root, receiver_profile, passphrase, message_number)?;
+
+    Ok(ProductionTwoProfileMessageRoundtripResult {
+        warning:
+            "stored-session message roundtrip only; existing encrypted stores are reused without network, Tor, or secure-release claim",
+        sender_session_ready: sender_state.ready_for_message_envelope,
+        receiver_session_ready: receiver_state.ready_for_message_envelope,
+        message_number_reserved: outbound.message_number_reserved,
+        encrypted_envelope_exported: outbound.encrypted_envelope_present,
+        inbound_message_stored: inbound.received_message_written,
+        received_status_verified: inbound.received_message_matches_session
+            && received.received_message_matches_session,
+        received_export_matches_input: received.received_message.as_bytes() == message.as_slice(),
+        plaintext_returned_to_frontend: false,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: sender_state.key_material_exposed
+            || receiver_state.key_material_exposed
+            || outbound.key_material_exposed
+            || inbound.key_material_exposed
+            || received.key_material_exposed,
+        network_io_attempted: outbound.network_send_attempted
+            || inbound.network_receive_attempted
+            || received.network_receive_attempted,
+        transport_io_opened: sender_state.transport_io_opened
+            || receiver_state.transport_io_opened
+            || outbound.transport_io_opened
+            || inbound.transport_io_opened
+            || received.transport_io_opened,
+        runtime_messaging_enabled: sender_state.runtime_messaging_enabled
+            || receiver_state.runtime_messaging_enabled
+            || outbound.runtime_messaging_enabled
+            || inbound.runtime_messaging_enabled
+            || received.runtime_messaging_enabled,
+    })
+}
+
 fn run_production_local_roundtrip(
     message: String,
 ) -> Result<ProductionLocalRoundtripResult, String> {
@@ -2114,6 +2259,7 @@ pub fn run() {
             production_message_received_export,
             production_local_roundtrip,
             production_two_profile_roundtrip,
+            production_two_profile_message_roundtrip,
             dev_local_demo,
             dev_local_message_loop
         ])
@@ -2132,8 +2278,8 @@ mod tests {
         run_production_message_received_export, run_production_pairing_payload_export,
         run_production_pairing_session_draft_save, run_production_profile_list,
         run_production_profile_unlock, run_production_session_state_check,
-        run_production_two_profile_roundtrip, run_production_two_profile_session_status,
-        sanitize_envelope_payload,
+        run_production_two_profile_message_roundtrip, run_production_two_profile_roundtrip,
+        run_production_two_profile_session_status, sanitize_envelope_payload,
         sanitize_handshake_payload, sanitize_loop_messages, sanitize_pairing_payload,
         sanitize_pairing_rendezvous_endpoint, sanitize_production_message_text,
         sanitize_production_profile, sanitize_production_roundtrip_message,
@@ -2999,6 +3145,33 @@ replay check: no replayed messages after message 2
         assert!(!repeated.key_material_exposed);
         assert!(!repeated.network_io_attempted);
         assert!(!repeated.transport_io_opened);
+
+        let stored_message = run_production_two_profile_message_roundtrip(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "stored session hello".to_string(),
+        )
+        .expect("stored-session message roundtrip");
+        assert!(stored_message.sender_session_ready);
+        assert!(stored_message.receiver_session_ready);
+        assert!(stored_message.message_number_reserved);
+        assert!(stored_message.encrypted_envelope_exported);
+        assert!(stored_message.inbound_message_stored);
+        assert!(stored_message.received_status_verified);
+        assert!(stored_message.received_export_matches_input);
+        assert!(!stored_message.plaintext_returned_to_frontend);
+        assert!(!stored_message.store_path_returned);
+        assert!(!stored_message.passphrase_retained);
+        assert!(!stored_message.key_material_exposed);
+        assert!(!stored_message.network_io_attempted);
+        assert!(!stored_message.transport_io_opened);
+        assert!(!stored_message.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&stored_message).expect("serialize stored message");
+        assert!(!serialized.contains("stored session hello"));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("ADENV1"));
         let _ = std::fs::remove_dir_all(root);
     }
 

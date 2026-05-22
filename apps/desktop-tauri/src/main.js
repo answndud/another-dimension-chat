@@ -18,6 +18,7 @@ import {
   productionReceivedMessageExportView,
   productionSessionDraftView,
   productionSessionStateView,
+  productionTwoProfileMessageResultView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
   productionTwoProfileSessionStatusView,
@@ -153,6 +154,9 @@ const fields = {
   productionTwoProfilePassphrase: document.querySelector("#production-two-profile-passphrase"),
   productionTwoProfileMessage: document.querySelector("#production-two-profile-message"),
   runProductionTwoProfileRoundtrip: document.querySelector("#run-production-two-profile-roundtrip"),
+  runProductionTwoProfileMessageRoundtrip: document.querySelector(
+    "#run-production-two-profile-message-roundtrip",
+  ),
   productionTwoProfileReadiness: document.querySelector("#production-two-profile-readiness"),
   productionTwoProfileState: document.querySelector("#production-two-profile-state"),
   productionTwoProfileWarning: document.querySelector("#production-two-profile-warning"),
@@ -731,6 +735,12 @@ function applyProductionActionState() {
   );
   setDisabled(fields.runProductionTwoProfileRoundtrip, !availability.runTwoProfileRoundtrip);
   setActionButtonState(
+    fields.runProductionTwoProfileMessageRoundtrip,
+    !availability.runTwoProfileMessageRoundtrip,
+    busy ? "Wait for the active production action." : "Enter two profiles, passphrase, and message first.",
+    false,
+  );
+  setActionButtonState(
     fields.useProductionPairingPayload,
     !manualAvailability.usePairingPayload,
     busy ? "Wait for the active production action." : "Export local pairing payload first.",
@@ -1021,6 +1031,26 @@ function productionTwoProfileInput() {
 function renderProductionTwoProfileResult(result) {
   const input = productionTwoProfileInput();
   const view = productionTwoProfileResultView(result);
+
+  setText(fields.productionTwoProfileProfiles, view.profiles);
+  setText(fields.productionTwoProfileSession, view.session);
+  setText(fields.productionTwoProfileMessageState, view.message);
+  setText(fields.productionTwoProfileBoundary, view.boundary);
+  if (view.canContinue) {
+    latestProductionTwoProfileSuccess = {
+      profileA: input.profileA,
+      profileB: input.profileB,
+      messageLength: input.message.length,
+      fingerprint: twoProfileInputFingerprint(input),
+    };
+    renderProductionTwoProfileMemory(input);
+  }
+  setProductionFollowupActions(view.canContinue, view.nextStep);
+}
+
+function renderProductionTwoProfileMessageResult(result) {
+  const input = productionTwoProfileInput();
+  const view = productionTwoProfileMessageResultView(result);
 
   setText(fields.productionTwoProfileProfiles, view.profiles);
   setText(fields.productionTwoProfileSession, view.session);
@@ -1369,6 +1399,51 @@ async function runProductionTwoProfileRoundtrip() {
     if (fields.runProductionTwoProfileRoundtrip) {
       fields.runProductionTwoProfileRoundtrip.disabled = false;
     }
+    applyProductionActionState();
+  }
+}
+
+async function runProductionTwoProfileMessageRoundtrip() {
+  const { profileA, profileB, passphrase, message } = productionTwoProfileInput();
+  if (!profileA || !profileB || profileA === profileB || !passphrase || !message) {
+    setProductionTwoProfileState("Stored-session message needs input");
+    setText(
+      fields.productionTwoProfileWarning,
+      "Enter two distinct profiles with existing sessions, the production passphrase, and a message.",
+    );
+    return;
+  }
+
+  setProductionTwoProfileState("Stored-session message running");
+  setText(fields.productionTwoProfileWarning, "Reusing existing encrypted session state.");
+  setText(fields.productionTwoProfileProfiles, "Using existing encrypted profile stores");
+  setText(fields.productionTwoProfileSession, "Checking stored sender and receiver sessions");
+  setText(fields.productionTwoProfileMessageState, "Waiting for encrypted envelope and receive");
+  setText(fields.productionTwoProfileBoundary, "Waiting for boundary flags");
+  setProductionFollowupActions(false, "Stored-session message running. Follow-up actions are locked.");
+  productionBusyAction = "two-profile-message-roundtrip";
+  applyProductionActionState();
+  try {
+    const result = await invoke("production_two_profile_message_roundtrip", {
+      profileA,
+      profileB,
+      passphrase,
+      message,
+    });
+    setProductionTwoProfileState("Stored-session message completed");
+    setText(fields.productionTwoProfileWarning, result.warning);
+    renderProductionTwoProfileMessageResult(result);
+    await loadProductionProfileList();
+  } catch (error) {
+    setProductionTwoProfileState("Stored-session message failed");
+    setText(fields.productionTwoProfileWarning, String(error));
+    setText(fields.productionTwoProfileProfiles, "Existing profiles not usable");
+    setText(fields.productionTwoProfileSession, "Stored session check failed");
+    setText(fields.productionTwoProfileMessageState, "Message not sent");
+    setText(fields.productionTwoProfileBoundary, "Failed without returning local path details");
+    setProductionFollowupActions(false, "Run full two-profile setup first, or check both sessions.");
+  } finally {
+    productionBusyAction = null;
     applyProductionActionState();
   }
 }
@@ -2158,6 +2233,13 @@ if (fields.runProductionTwoProfileRoundtrip) {
   fields.runProductionTwoProfileRoundtrip.addEventListener(
     "click",
     runProductionTwoProfileRoundtrip,
+  );
+}
+
+if (fields.runProductionTwoProfileMessageRoundtrip) {
+  fields.runProductionTwoProfileMessageRoundtrip.addEventListener(
+    "click",
+    runProductionTwoProfileMessageRoundtrip,
   );
 }
 

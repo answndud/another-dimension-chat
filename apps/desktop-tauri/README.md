@@ -2,19 +2,19 @@
 
 This directory is the first desktop shell scaffold for Another Dimension Chat.
 
-It is intentionally not a production messaging UI.
+It is intentionally not a secure-release messaging UI.
 
 Current boundary:
 
 - Tauri shell only.
 - Rust owns security-sensitive state and future protocol/storage/transport behavior.
-- Frontend may request redacted prototype status and run the local `dev-insecure` demo transcript command only.
+- Frontend may request redacted status, run local `dev-insecure` diagnostics, and call explicit local encrypted-store production harness commands.
 - Redacted status separates release-claim, messaging-surface, core, profile, pairing, production-session, production-self-test, production-session limits, production-preflight, preflight-blockers, session durable-state, session unlock-policy, session unlock-limits, session unlock-rejection, transport, network-execution, experimental-transport, bootstrap-status classification, transport-I/O, storage, and verification boundaries without exposing profile/contact/endpoint data.
 - The core status is static boundary copy in this scaffold; it does not link or call production core protocol, storage, or transport code.
-- The production-session status is static evaluation copy for the `snow` Noise XX synchronous boundary; it does not expose a Tauri production messaging command.
+- The production-session status is static evaluation copy for the `snow` Noise XX synchronous boundary; message actions stay local encrypted-store harnesses and do not open transport.
 - The production-self-test status points to the CLI `production self-test` boundary only; it does not execute from the Tauri shell or mark messaging usable.
 - The production-session limits copy keeps production E2EE claim, durable session persistence, Tauri production messaging command, and async messaging out of scope.
-- The production-preflight status mirrors the CLI `production preflight` blockers as static read-only copy; it does not execute the CLI command, create profiles, unlock storage, bootstrap transport, send envelopes, receive envelopes, or mark messaging usable.
+- The production-preflight status mirrors the CLI `production preflight` blockers as static read-only copy; it does not execute the CLI command, bootstrap transport, or mark messaging usable.
 - The session durable-state status mirrors the store-write adapter boundary as static copy; it does not execute unlock, expose a shell write command, persist Noise transport state, or mark durable session persistence ready.
 - The session unlock-policy status mirrors the high-risk passphrase-required and OS-keystore-only-rejected policy as static copy; it does not expose a product unlock command.
 - The session unlock-limits copy keeps product unlock, durable session persistence, rollback protection, and runtime messaging disabled.
@@ -26,7 +26,7 @@ Current boundary:
 - The transport-I/O status is static disabled copy for onion hosting, stream I/O, envelope I/O, and messaging.
 - The storage status is static `ADREC1` spike copy; it does not claim complete production key management, rollback protection, secure deletion, backup, recovery, or durable session persistence.
 - Status copy must describe boundary-only or disabled prototype states, not readiness, availability, or secure-release claims.
-- The allowed Tauri commands in this scaffold are `prototype_status`, `dev_local_demo`, and `dev_local_message_loop`.
+- The allowed Tauri commands are the explicit local demo, status, encrypted profile/pairing/session/message harness commands, and no network transport commands.
 - `dev_local_demo` runs `cargo run -q --features dev-insecure -- demo local` from a temporary local workspace and returns its warning/transcript; it is not production messaging.
 - No Tor bootstrap, onion hosting, descriptor publication, stream I/O, envelope I/O, push notifications, cloud backup, groups, file transfer, or multi-device support.
 - `src-tauri` is excluded from the root Cargo workspace until the Tauri dependency and platform build costs are accepted as a separate phase.
@@ -88,7 +88,7 @@ Dependency/build gate:
 - `.npmrc` sets `workspaces=false` so local commands run as an isolated package even when the parent environment enables npm workspaces.
 - Lightweight CI checks the scaffold shape and lockfile metadata only.
 - Full Tauri install/build is local-only until a separate heavy workflow decision.
-- Do not add production messaging UI or security-sensitive logic to the frontend.
+- Do not add network messaging, secure-release claims, or security-sensitive protocol logic to the frontend.
 
 Platform prerequisites:
 

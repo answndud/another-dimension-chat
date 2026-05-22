@@ -150,10 +150,13 @@ require_contains "$APP_DIR/src/main.js" 'invoke("production_message_envelope_imp
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_received_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_local_roundtrip"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_two_profile_roundtrip"'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_two_profile_message_roundtrip"'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_demo")'
 require_contains "$APP_DIR/src/main.js" 'invoke("dev_local_message_loop"'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_two_profile_roundtrip'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_two_profile_roundtrip'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_two_profile_message_roundtrip'
+require_contains "$TAURI_DIR/src/lib.rs" 'run_production_two_profile_message_roundtrip'
 require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'Run two-profile roundtrip'
 require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'Tauri two-profile runtime smoke passed'
 require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'plaintext_returned=false'
@@ -286,7 +289,7 @@ require_contains "$APP_DIR/src/main.js" 'result.warning.trim()'
 require_contains "$APP_DIR/src/main.js" 'result.transcript.trim()'
 require_contains "$APP_DIR/src/main.js" 'Unexpected release claim'
 require_contains "$APP_DIR/src/main.js" 'Unexpected messaging status'
-require_contains "$APP_DIR/README.md" 'not a production messaging UI'
+require_contains "$APP_DIR/README.md" 'not a secure-release messaging UI'
 require_contains "$APP_DIR/README.md" 'dev_local_demo'
 require_contains "$APP_DIR/README.md" 'not production messaging'
 require_contains "$APP_DIR/README.md" 'Run the visible local demo shell'
@@ -302,13 +305,13 @@ require_contains "$APP_DIR/README.md" 'does not link or call production core pro
 require_contains "$APP_DIR/README.md" 'static pre-network fail-closed copy'
 require_contains "$APP_DIR/README.md" 'production-session status'
 require_contains "$APP_DIR/README.md" 'static evaluation copy for the `snow` Noise XX synchronous boundary'
-require_contains "$APP_DIR/README.md" 'does not expose a Tauri production messaging command'
+require_contains "$APP_DIR/README.md" 'message actions stay local encrypted-store harnesses and do not open transport'
 require_contains "$APP_DIR/README.md" 'production-self-test status'
 require_contains "$APP_DIR/README.md" 'does not execute from the Tauri shell or mark messaging usable'
 require_contains "$APP_DIR/README.md" 'production-session limits copy'
 require_contains "$APP_DIR/README.md" 'production-preflight'
 require_contains "$APP_DIR/README.md" 'mirrors the CLI `production preflight` blockers as static read-only copy'
-require_contains "$APP_DIR/README.md" 'does not execute the CLI command, create profiles, unlock storage, bootstrap transport, send envelopes, receive envelopes, or mark messaging usable'
+require_contains "$APP_DIR/README.md" 'does not execute the CLI command, bootstrap transport, or mark messaging usable'
 require_contains "$APP_DIR/README.md" 'session durable-state status'
 require_contains "$APP_DIR/README.md" 'store-write adapter boundary as static copy'
 require_contains "$APP_DIR/README.md" 'session unlock-policy status'
@@ -440,10 +443,10 @@ require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
 require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
 command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "18"
+test "$command_count" = "19"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "18"
+test "$invoke_count" = "19"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -479,6 +482,7 @@ if grep -R 'invoke(' "$APP_DIR/src" \
   | grep -v 'invoke("production_message_received_export"' \
   | grep -v 'invoke("production_local_roundtrip"' \
   | grep -v 'invoke("production_two_profile_roundtrip"' \
+  | grep -v 'invoke("production_two_profile_message_roundtrip"' \
   | grep -v 'invoke("production_two_profile_session_status"' \
   | grep -v 'invoke("dev_local_demo")' \
   | grep -v 'invoke("dev_local_message_loop"' >/dev/null; then
@@ -543,6 +547,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />' \
   | grep -v '<textarea id="production-two-profile-message" rows="3">hello between app-data profiles</textarea>' \
   | grep -v '<button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>' \
+  | grep -v '<button id="run-production-two-profile-message-roundtrip" type="button">' \
   | grep -v '<button id="open-manual-production-tools" type="button" class="flow-control is-secondary">' \
   | grep -v '<button id="focus-local-diagnostic" type="button" class="flow-control is-secondary">' \
   | grep -v '<button id="edit-two-profile-message" type="button" class="flow-control is-secondary">' \

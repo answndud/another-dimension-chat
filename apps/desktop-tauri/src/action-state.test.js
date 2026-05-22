@@ -19,6 +19,7 @@ import {
   productionReceivedMessageExportView,
   productionSessionDraftView,
   productionSessionStateView,
+  productionTwoProfileMessageResultView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
   productionTwoProfileSessionStatusView,
@@ -51,6 +52,23 @@ const completeTwoProfileResult = {
   pairing_payloads_exported: true,
   session_drafts_saved: true,
   handshake_completed: true,
+  sender_session_ready: true,
+  receiver_session_ready: true,
+  message_number_reserved: true,
+  encrypted_envelope_exported: true,
+  inbound_message_stored: true,
+  received_status_verified: true,
+  received_export_matches_input: true,
+  plaintext_returned_to_frontend: false,
+  store_path_returned: false,
+  passphrase_retained: false,
+  key_material_exposed: false,
+  network_io_attempted: false,
+  transport_io_opened: false,
+  runtime_messaging_enabled: false,
+};
+
+const completeTwoProfileMessageResult = {
   sender_session_ready: true,
   receiver_session_ready: true,
   message_number_reserved: true,
@@ -292,6 +310,7 @@ test("productionActionAvailability enables only actions whose inputs are ready",
       importMessageEnvelope: false,
       exportReceivedMessage: false,
       runTwoProfileRoundtrip: false,
+      runTwoProfileMessageRoundtrip: false,
       usePairingPayload: true,
       useHandshakeInit: false,
       useHandshakeReply: false,
@@ -533,6 +552,25 @@ test("productionTwoProfileResultView blocks followups when result flags need rev
   assert.match(view.boundary, /^Review:/);
   assert.match(view.boundary, /key_material=true/);
   assert.equal(view.nextStep, "Review result rows before continuing.");
+});
+
+test("productionTwoProfileMessageResultView formats stored-session message roundtrip", () => {
+  const view = productionTwoProfileMessageResultView(completeTwoProfileMessageResult);
+
+  assert.equal(view.canContinue, true);
+  assert.match(view.profiles, /existing encrypted profile stores/);
+  assert.match(view.session, /^Complete:/);
+  assert.match(view.message, /^Complete:/);
+  assert.match(view.boundary, /^Contained:/);
+
+  const blocked = productionTwoProfileMessageResultView({
+    ...completeTwoProfileMessageResult,
+    receiver_session_ready: false,
+    network_io_attempted: true,
+  });
+  assert.equal(blocked.canContinue, false);
+  assert.match(blocked.session, /^Review:/);
+  assert.match(blocked.boundary, /^Review:/);
 });
 
 test("productionProfileUnlockView formats storage identity and boundary flags", () => {
