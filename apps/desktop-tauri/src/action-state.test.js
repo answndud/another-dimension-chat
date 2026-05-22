@@ -376,7 +376,7 @@ test("productionManualMessageStatusView summarizes active message path", () => {
       hasInboundEnvelopeInput: false,
       hasReceivedMessage: false,
     }),
-    "active=alice remote=bob number=7 session=ready local_envelope=present remote_slot=empty remote_envelope=empty received=empty",
+    "active=alice remote=bob number=7 session=ready local_envelope=present remote_slot=empty remote_envelope=empty received=empty check=store-local-envelope-before-switch",
   );
   assert.match(
     productionManualMessageStatusView({
@@ -388,7 +388,29 @@ test("productionManualMessageStatusView summarizes active message path", () => {
       hasInboundEnvelopeInput: true,
       hasReceivedMessage: true,
     }),
-    /active=bob remote=alice number=invalid session=not-ready .*remote_slot=ready remote_envelope=loaded received=present/,
+    /active=bob remote=alice number=invalid session=not-ready .*remote_slot=ready remote_envelope=loaded received=present check=message-number-required/,
+  );
+  assert.match(
+    productionManualMessageStatusView({
+      activeProfile: "alice",
+      counterpartProfile: "bob",
+      messageNumber: 1,
+      sessionReadyForMessages: true,
+      hasRemoteMessageEnvelopeSlot: false,
+      hasInboundEnvelopeInput: true,
+    }),
+    /check=manual-pasted-envelope-verify-source/,
+  );
+  assert.match(
+    productionManualMessageStatusView({
+      activeProfile: "alice",
+      counterpartProfile: "bob",
+      messageNumber: 1,
+      sessionReadyForMessages: true,
+      hasRemoteMessageEnvelopeSlot: true,
+      hasInboundEnvelopeInput: false,
+    }),
+    /check=load-remote-envelope-manually/,
   );
 });
 

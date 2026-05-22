@@ -337,9 +337,22 @@ export function productionManualMessageStatusView(state) {
   const remoteSlot = state?.hasRemoteMessageEnvelopeSlot ? "ready" : "empty";
   const remoteEnvelope = state?.hasInboundEnvelopeInput ? "loaded" : "empty";
   const received = state?.hasReceivedMessage ? "present" : "empty";
+  let check = "manual-verify";
+  if (!state?.counterpartProfile) {
+    check = "select-alice-or-bob";
+  } else if (!Number.isInteger(state?.messageNumber)) {
+    check = "message-number-required";
+  } else if (state?.hasInboundEnvelopeInput && !state?.hasRemoteMessageEnvelopeSlot) {
+    check = "manual-pasted-envelope-verify-source";
+  } else if (state?.hasLocalMessageEnvelope && !state?.hasRemoteMessageEnvelopeSlot) {
+    check = "store-local-envelope-before-switch";
+  } else if (state?.hasRemoteMessageEnvelopeSlot && !state?.hasInboundEnvelopeInput) {
+    check = "load-remote-envelope-manually";
+  }
   return (
     `active=${active} remote=${counterpart} number=${messageNumber} session=${session} ` +
-    `local_envelope=${localEnvelope} remote_slot=${remoteSlot} remote_envelope=${remoteEnvelope} received=${received}`
+    `local_envelope=${localEnvelope} remote_slot=${remoteSlot} remote_envelope=${remoteEnvelope} ` +
+    `received=${received} check=${check}`
   );
 }
 
