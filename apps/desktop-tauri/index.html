@@ -144,6 +144,9 @@
             <input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />
             <label class="loop-label" for="production-two-profile-b">Profile B</label>
             <input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />
+            <p id="production-two-profile-direction" class="demo-state" aria-live="polite">
+              Direction: alice -> bob
+            </p>
             <label class="loop-label" for="production-two-profile-passphrase">Passphrase</label>
             <input
               id="production-two-profile-passphrase"
@@ -151,7 +154,7 @@
               autocomplete="current-password"
             />
             <label class="loop-label" for="production-two-profile-message">Message</label>
-            <textarea id="production-two-profile-message" rows="3">hello between app-data profiles</textarea>
+            <textarea id="production-two-profile-message" rows="3" placeholder="Message from alice to bob">hello between app-data profiles</textarea>
             <div class="loop-actions">
               <button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>
               <button id="run-production-two-profile-message-roundtrip" type="button">
