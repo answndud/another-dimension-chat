@@ -80,6 +80,7 @@ const fields = {
   productionManualRoute: document.querySelector("#production-manual-route"),
   productionManualSlots: document.querySelector("#production-manual-slots"),
   productionManualMode: document.querySelector("#production-manual-mode"),
+  productionManualPolicy: document.querySelector("#production-manual-policy"),
   productionTwoProfileSessionStatus: document.querySelector("#production-two-profile-session-status"),
   checkProductionTwoProfileSessionStatus: document.querySelector(
     "#check-production-two-profile-session-status",
@@ -397,6 +398,7 @@ function renderManualStatus() {
   setText(fields.productionManualRoute, view.route);
   setText(fields.productionManualSlots, view.payloads);
   setText(fields.productionManualMode, view.mode);
+  setText(fields.productionManualPolicy, view.policy);
 }
 
 function twoProfileInputFingerprint(input) {

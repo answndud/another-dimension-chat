@@ -353,12 +353,14 @@ test("productionManualStatusView summarizes active manual relay slots", () => {
         "pairing: local=stored remote=empty | init: local=empty remote=ready | " +
         "reply: local=empty remote=empty | finish: local=stored remote=ready | envelope: local=empty remote=ready",
       mode: "Manual relay uses local memory slots only; switch profile to load remote payloads.",
+      policy:
+        "manual_only=true auto_send=false auto_import=false auto_profile_switch=false network_io=false",
     },
   );
 
   assert.equal(
     productionManualStatusView({ profile: "carol" }, {}).mode,
-    "Use Alice or Bob preset for automatic remote slot lookup.",
+    "Use Alice or Bob preset for explicit remote slot lookup.",
   );
 });
 

@@ -136,9 +136,10 @@ export function productionManualStatusView(input, slots) {
       formatSlot("handshakeFinish", "finish"),
       formatSlot("messageEnvelope", "envelope"),
     ].join(" | "),
+    policy: "manual_only=true auto_send=false auto_import=false auto_profile_switch=false network_io=false",
     mode: counterpart
       ? "Manual relay uses local memory slots only; switch profile to load remote payloads."
-      : "Use Alice or Bob preset for automatic remote slot lookup.",
+      : "Use Alice or Bob preset for explicit remote slot lookup.",
   };
 }
 
