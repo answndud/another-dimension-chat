@@ -129,6 +129,9 @@ export function productionManualStatusView(input, slots) {
 
   return {
     route: `Active=${profile} Remote=${remoteProfile}`,
+    direction:
+      "Fill local copies the active output field into the matching local input; " +
+      "Fill remote copies the stored counterpart payload into the matching remote input.",
     payloads: [
       formatSlot("pairing", "pairing"),
       formatSlot("handshakeInit", "init"),

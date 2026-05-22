@@ -79,6 +79,7 @@ const fields = {
   productionProfileIdentity: document.querySelector("#production-profile-identity"),
   productionProfileBoundary: document.querySelector("#production-profile-boundary"),
   productionManualRoute: document.querySelector("#production-manual-route"),
+  productionManualDirection: document.querySelector("#production-manual-direction"),
   productionManualSlots: document.querySelector("#production-manual-slots"),
   productionManualMode: document.querySelector("#production-manual-mode"),
   productionManualPolicy: document.querySelector("#production-manual-policy"),
@@ -399,6 +400,7 @@ function renderManualStatus() {
   };
   const view = productionManualStatusView({ profile }, slotState);
   setText(fields.productionManualRoute, view.route);
+  setText(fields.productionManualDirection, view.direction);
   setText(fields.productionManualSlots, view.payloads);
   setText(fields.productionManualMode, view.mode);
   setText(fields.productionManualPolicy, view.policy);
