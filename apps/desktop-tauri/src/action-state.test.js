@@ -7,6 +7,7 @@ import {
   productionHandshakePayloadView,
   productionManualMessageCheckView,
   productionManualNextActions,
+  productionManualRelayAvailability,
   productionManualMessageStatusView,
   productionManualStatusView,
   productionMessageEnvelopeExportView,
@@ -370,6 +371,61 @@ test("productionManualStatusView summarizes active manual relay slots", () => {
   assert.equal(
     productionManualStatusView({ profile: "carol" }, {}).route,
     "Active=carol Remote=No counterpart; manually select Alice or Bob",
+  );
+});
+
+test("productionManualRelayAvailability keeps manual copy store and load actions explicit", () => {
+  assert.deepEqual(
+    productionManualRelayAvailability({
+      ...baseState,
+      hasLocalPairingPayload: true,
+      hasRemotePairingSlot: true,
+      hasHandshakeInitPayload: true,
+      hasRemoteHandshakeInitSlot: false,
+      hasHandshakeReplyPayload: false,
+      hasRemoteHandshakeReplySlot: true,
+      hasHandshakeFinishPayload: true,
+      hasRemoteHandshakeFinishSlot: true,
+      hasLocalMessageEnvelope: false,
+      hasRemoteMessageEnvelopeSlot: true,
+    }),
+    {
+      usePairingPayload: true,
+      storePairingPayload: true,
+      loadPairingPayload: true,
+      useHandshakeInit: true,
+      storeHandshakeInit: true,
+      loadHandshakeInit: false,
+      useHandshakeReply: false,
+      storeHandshakeReply: false,
+      loadHandshakeReply: true,
+      useHandshakeFinish: true,
+      storeHandshakeFinish: true,
+      loadHandshakeFinish: true,
+      useMessageEnvelope: false,
+      storeMessageEnvelope: false,
+      loadMessageEnvelope: true,
+    },
+  );
+
+  assert.equal(
+    Object.values(
+      productionManualRelayAvailability({
+        ...baseState,
+        busy: true,
+        hasLocalPairingPayload: true,
+        hasRemotePairingSlot: true,
+        hasHandshakeInitPayload: true,
+        hasRemoteHandshakeInitSlot: true,
+        hasHandshakeReplyPayload: true,
+        hasRemoteHandshakeReplySlot: true,
+        hasHandshakeFinishPayload: true,
+        hasRemoteHandshakeFinishSlot: true,
+        hasLocalMessageEnvelope: true,
+        hasRemoteMessageEnvelopeSlot: true,
+      }),
+    ).every((enabled) => enabled === false),
+    true,
   );
 });
 
