@@ -1677,6 +1677,9 @@ function applyProductionActionState() {
   const selectedNeedsPeerImport = Boolean(
     selectedConversation && selectedHasSentCopy && !selectedHasReceivedCopy,
   );
+  const selectedConversationDelivered = Boolean(
+    selectedConversation && selectedHasSentCopy && selectedHasReceivedCopy,
+  );
   const twoProfileComposeLocked =
     productionBusyAction === "two-profile-roundtrip" ||
     productionBusyAction === "two-profile-message-roundtrip";
@@ -1692,7 +1695,7 @@ function applyProductionActionState() {
   renderProductionTwoProfileMemory(twoProfile);
   renderManualNextActions(state);
   renderManualMessageStatus(state);
-  if (selectedConversation) {
+  if (selectedConversation && !selectedConversationDelivered) {
     const selectedActionView = twoProfileConversationActionView(selectedConversation);
     setText(fields.productionMessageNextAction, selectedActionView.nextAction);
     setOpenManualProductionToolsLabel(selectedActionView.manualButtonLabel);
@@ -1793,6 +1796,11 @@ function applyProductionActionState() {
       twoProfile.profileA === latestConversation.receiver &&
       twoProfile.profileB === latestConversation.sender,
   );
+  const selectedDeliveredReplyReady = Boolean(
+    selectedConversationDelivered &&
+      twoProfile.profileA === selectedConversation.receiver &&
+      twoProfile.profileB === selectedConversation.sender,
+  );
   const pendingConversation = latestTwoProfilePendingConversationEntry();
   const selectedPendingConversation = selectedTwoProfilePendingConversationEntry();
   const pendingSelected = Boolean(selectedPendingConversation);
@@ -1801,7 +1809,7 @@ function applyProductionActionState() {
     fields.replyLatestTwoProfileMessage,
     busy || !latestConversation,
     busy ? "Wait for the active production action." : "Load a stored conversation first.",
-    latestReplySelected,
+    selectedDeliveredReplyReady || latestReplySelected,
   );
   setActionButtonState(
     fields.reviewPendingTwoProfileMessage,
