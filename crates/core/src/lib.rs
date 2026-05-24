@@ -55,6 +55,7 @@ pub mod production {
     const PRODUCTION_SENT_MESSAGE_RECORD_DOMAIN: &[u8] = b"AD-PRODUCTION-SENT-MESSAGE-RECORD-V1";
     const PRODUCTION_RECEIVED_MESSAGE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-RECEIVED-MESSAGE-RECORD-V1";
+    #[cfg(test)]
     const PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
     const PRODUCTION_SESSION_TRANSPORT_STATE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-SESSION-TRANSPORT-STATE-RECORD-V1";
@@ -4284,8 +4285,9 @@ pub mod production {
         passphrase: &ProfilePassphrase,
         message_number: u64,
         plaintext: &[u8],
+        ttl_seconds: u64,
     ) -> Result<ProductionMessageSendPrepareSummary, ProductionSessionError> {
-        if plaintext.is_empty() {
+        if plaintext.is_empty() || ttl_seconds == 0 {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
         let locked = LockedProfileStore::new(store_path.as_ref());
@@ -4349,7 +4351,7 @@ pub mod production {
             MessageType::Data,
             plaintext,
             production_now_ms(),
-            PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+            ttl_seconds,
         )?;
         let sent_record = EncryptedRecord::new(
             ProductionRecordKind::SentMessage,
@@ -4785,7 +4787,11 @@ pub mod production {
         profile: ProfileName,
         passphrase: &ProfilePassphrase,
         envelope_payload: &str,
+        ttl_seconds: u64,
     ) -> Result<ProductionMessageInboundDecryptImportSummary, ProductionSessionError> {
+        if ttl_seconds == 0 {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
         let locked = LockedProfileStore::new(store_path.as_ref());
         let store = locked.unlock(passphrase)?;
         if !store.profile_marker_exists(&profile)? {
@@ -4907,7 +4913,7 @@ pub mod production {
             MessageType::Data,
             trimmed_plaintext,
             production_now_ms(),
-            PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+            ttl_seconds,
         )?;
         let received_record = EncryptedRecord::new(
             ProductionRecordKind::ReceivedMessage,
@@ -7630,6 +7636,7 @@ pub mod production {
                 &passphrase,
                 1,
                 b"hi",
+                PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
             )
             .expect("message send prepare");
             assert!(send_prepare.storage_opened());
@@ -7784,6 +7791,7 @@ pub mod production {
                 inbound_profile.clone(),
                 &passphrase,
                 export.export_payload(),
+                PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
             )
             .expect("inbound decrypt import");
             assert!(receive.storage_opened());
@@ -8056,6 +8064,7 @@ pub mod production {
                     inbound_profile,
                     &passphrase,
                     &envelope.encode(),
+                    PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
                 ),
                 Err(ProductionSessionError::Protocol(
                     ProtocolError::ReplayMessage
@@ -8067,7 +8076,8 @@ pub mod production {
                     outbound_profile.clone(),
                     &passphrase,
                     2,
-                    b""
+                    b"",
+                    PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS
                 ),
                 Err(ProductionSessionError::UnexpectedEnvelope)
             ));
@@ -8077,7 +8087,8 @@ pub mod production {
                     outbound_profile.clone(),
                     &passphrase,
                     0,
-                    b"hi"
+                    b"hi",
+                    PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS
                 ),
                 Err(ProductionSessionError::UnexpectedEnvelope)
             ));
@@ -8087,7 +8098,8 @@ pub mod production {
                     outbound_profile,
                     &passphrase,
                     1,
-                    b"hi"
+                    b"hi",
+                    PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS
                 ),
                 Err(ProductionSessionError::UnexpectedEnvelope)
             ));

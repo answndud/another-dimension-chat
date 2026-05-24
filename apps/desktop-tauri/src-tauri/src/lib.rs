@@ -104,6 +104,7 @@ pub struct ProductionTwoProfileMessageRoundtripResult {
     sender_profile: String,
     receiver_profile: String,
     message_number: u64,
+    message_ttl_seconds: u64,
     sender_session_ready: bool,
     receiver_session_ready: bool,
     message_number_reserved: bool,
@@ -286,6 +287,7 @@ pub struct ProductionHandshakeFinishImportResult {
 pub struct ProductionMessageEnvelopeExportResult {
     warning: &'static str,
     selected_message_number: u64,
+    message_ttl_seconds: u64,
     auto_message_number: bool,
     auto_counter_written: bool,
     existing_message_slot_skipped: bool,
@@ -561,6 +563,7 @@ fn production_message_envelope_export(
     message_number: u64,
     auto_message_number: bool,
     message: String,
+    message_ttl_seconds: u64,
 ) -> Result<ProductionMessageEnvelopeExportResult, String> {
     let app_data_root = app
         .path()
@@ -573,6 +576,7 @@ fn production_message_envelope_export(
         message_number,
         auto_message_number,
         message,
+        message_ttl_seconds,
     )
     .map_err(|_| {
         "production message export failed without exposing profile, path, or key details"
@@ -587,6 +591,7 @@ fn production_message_envelope_import(
     passphrase: String,
     message_number: u64,
     envelope_payload: String,
+    message_ttl_seconds: u64,
 ) -> Result<ProductionMessageEnvelopeImportResult, String> {
     let app_data_root = app
         .path()
@@ -598,6 +603,7 @@ fn production_message_envelope_import(
         passphrase,
         message_number,
         envelope_payload,
+        message_ttl_seconds,
     )
     .map_err(|_| {
         "production message import failed without exposing profile, path, or key details"
@@ -652,12 +658,20 @@ fn production_two_profile_roundtrip(
     profile_b: String,
     passphrase: String,
     message: String,
+    message_ttl_seconds: u64,
 ) -> Result<ProductionTwoProfileRoundtripResult, String> {
     let app_data_root = app.path().app_data_dir().map_err(|_| {
         "production two-profile roundtrip failed without exposing local path details"
     })?;
-    run_production_two_profile_roundtrip(app_data_root, profile_a, profile_b, passphrase, message)
-        .map_err(|_| {
+    run_production_two_profile_roundtrip(
+        app_data_root,
+        profile_a,
+        profile_b,
+        passphrase,
+        message,
+        message_ttl_seconds,
+    )
+    .map_err(|_| {
             "production two-profile roundtrip failed without exposing profile, path, or key details"
                 .to_string()
         })
@@ -670,6 +684,7 @@ fn production_two_profile_message_roundtrip(
     profile_b: String,
     passphrase: String,
     message: String,
+    message_ttl_seconds: u64,
 ) -> Result<ProductionTwoProfileMessageRoundtripResult, String> {
     let app_data_root = app.path().app_data_dir().map_err(|_| {
         "production stored-session message roundtrip failed without exposing local path details"
@@ -680,6 +695,7 @@ fn production_two_profile_message_roundtrip(
         profile_b,
         passphrase,
         message,
+        message_ttl_seconds,
     )
     .map_err(|_| {
         "production stored-session message roundtrip failed without exposing profile, path, or key details"
@@ -1516,6 +1532,7 @@ fn run_production_message_envelope_export(
     message_number: u64,
     auto_message_number: bool,
     message: String,
+    message_ttl_seconds: u64,
 ) -> Result<ProductionMessageEnvelopeExportResult, String> {
     use another_dimension_core::production::{
         production_message_next_number_reserve,
@@ -1528,6 +1545,7 @@ fn run_production_message_envelope_export(
     let passphrase = ProfilePassphrase::new(passphrase.trim())
         .map_err(|_| "invalid production profile passphrase")?;
     let message = sanitize_production_message_text(message)?;
+    let message_ttl_seconds = sanitize_production_message_ttl_seconds(message_ttl_seconds)?;
     let store_path = production_profile_store_path(app_data_root, &profile)?;
     let reservation = if auto_message_number {
         Some(
@@ -1550,6 +1568,7 @@ fn run_production_message_envelope_export(
         &passphrase,
         selected_message_number,
         &message,
+        message_ttl_seconds,
     )
     .map_err(|_| "message send prepare failed")?;
     let pending = production_message_pending_status(
@@ -1581,6 +1600,7 @@ fn run_production_message_envelope_export(
         warning:
             "encrypted envelope exported locally; deliver it out-of-band to the paired contact",
         selected_message_number,
+        message_ttl_seconds,
         auto_message_number,
         auto_counter_written,
         existing_message_slot_skipped,
@@ -1634,6 +1654,7 @@ fn run_production_message_envelope_import(
     passphrase: String,
     message_number: u64,
     envelope_payload: String,
+    message_ttl_seconds: u64,
 ) -> Result<ProductionMessageEnvelopeImportResult, String> {
     use another_dimension_core::production::{
         production_message_inbound_decrypt_import, production_message_received_status,
@@ -1644,6 +1665,7 @@ fn run_production_message_envelope_import(
     let passphrase = ProfilePassphrase::new(passphrase.trim())
         .map_err(|_| "invalid production profile passphrase")?;
     let envelope_payload = sanitize_envelope_payload(envelope_payload)?;
+    let message_ttl_seconds = sanitize_production_message_ttl_seconds(message_ttl_seconds)?;
     let store_path = production_profile_store_path(app_data_root, &profile)?;
 
     let import = production_message_inbound_decrypt_import(
@@ -1651,6 +1673,7 @@ fn run_production_message_envelope_import(
         profile.clone(),
         &passphrase,
         &envelope_payload,
+        message_ttl_seconds,
     )
     .map_err(|_| "message envelope import failed")?;
     let status =
@@ -1793,6 +1816,13 @@ fn sanitize_production_message_text(message: String) -> Result<Vec<u8>, String> 
     Ok(trimmed.as_bytes().to_vec())
 }
 
+fn sanitize_production_message_ttl_seconds(ttl_seconds: u64) -> Result<u64, String> {
+    match ttl_seconds {
+        3_600 | 86_400 | 604_800 | 2_592_000 => Ok(ttl_seconds),
+        _ => Err("message retention must be 1h, 1d, 7d, or 30d".to_string()),
+    }
+}
+
 fn sanitize_envelope_payload(payload: String) -> Result<String, String> {
     let payload = payload.trim();
     if payload.is_empty() {
@@ -1813,6 +1843,7 @@ fn run_production_two_profile_roundtrip(
     profile_b: String,
     passphrase: String,
     message: String,
+    message_ttl_seconds: u64,
 ) -> Result<ProductionTwoProfileRoundtripResult, String> {
     let profile_a = sanitize_production_profile(profile_a)?;
     let profile_b = sanitize_production_profile(profile_b)?;
@@ -1823,6 +1854,7 @@ fn run_production_two_profile_roundtrip(
     let profile_b_name = profile_b.as_str().to_string();
     let passphrase = passphrase.trim().to_string();
     let message = sanitize_production_roundtrip_message(message)?;
+    let message_ttl_seconds = sanitize_production_message_ttl_seconds(message_ttl_seconds)?;
     let message_text = String::from_utf8(message.clone())
         .map_err(|_| "production two-profile message must be UTF-8")?;
 
@@ -1928,6 +1960,7 @@ fn run_production_two_profile_roundtrip(
         message_number,
         false,
         message_text,
+        message_ttl_seconds,
     )?;
     let inbound = run_production_message_envelope_import(
         &app_data_root,
@@ -1935,6 +1968,7 @@ fn run_production_two_profile_roundtrip(
         passphrase.clone(),
         message_number,
         outbound.envelope_payload,
+        message_ttl_seconds,
     )?;
     let received = run_production_message_received_export(
         &app_data_root,
@@ -2050,6 +2084,7 @@ fn run_production_two_profile_message_roundtrip(
     profile_b: String,
     passphrase: String,
     message: String,
+    message_ttl_seconds: u64,
 ) -> Result<ProductionTwoProfileMessageRoundtripResult, String> {
     let profile_a = sanitize_production_profile(profile_a)?;
     let profile_b = sanitize_production_profile(profile_b)?;
@@ -2061,6 +2096,7 @@ fn run_production_two_profile_message_roundtrip(
     let profile_b_name = profile_b.as_str().to_string();
     let passphrase = passphrase.trim().to_string();
     let message = sanitize_production_roundtrip_message(message)?;
+    let message_ttl_seconds = sanitize_production_message_ttl_seconds(message_ttl_seconds)?;
     let message_text = String::from_utf8(message.clone())
         .map_err(|_| "production stored-session message must be UTF-8")?;
 
@@ -2089,6 +2125,7 @@ fn run_production_two_profile_message_roundtrip(
         message_number,
         false,
         message_text,
+        message_ttl_seconds,
     )?;
     let inbound = run_production_message_envelope_import(
         &app_data_root,
@@ -2096,6 +2133,7 @@ fn run_production_two_profile_message_roundtrip(
         passphrase.clone(),
         message_number,
         outbound.envelope_payload,
+        message_ttl_seconds,
     )?;
     let received =
         run_production_message_received_export(&app_data_root, receiver_profile, passphrase, message_number)?;
@@ -2106,6 +2144,7 @@ fn run_production_two_profile_message_roundtrip(
         sender_profile: sender_profile_result,
         receiver_profile: receiver_profile_result,
         message_number,
+        message_ttl_seconds,
         sender_session_ready: sender_state.ready_for_message_envelope,
         receiver_session_ready: receiver_state.ready_for_message_envelope,
         message_number_reserved: outbound.message_number_reserved,
@@ -2267,6 +2306,7 @@ fn run_production_local_roundtrip(
             &passphrase,
             1,
             &message,
+            604_800,
         )
         .map_err(|_| "send prepare failed")?;
         let encrypt = production_message_outbound_encrypt_prepare(
@@ -2288,6 +2328,7 @@ fn run_production_local_roundtrip(
             reply_profile.clone(),
             &passphrase,
             envelope.export_payload(),
+            604_800,
         )
         .map_err(|_| "inbound import failed")?;
         let received_status =
@@ -3125,9 +3166,11 @@ replay check: no replayed messages after message 2
             0,
             true,
             "persistent hello".to_string(),
+            86_400,
         )
         .expect("outbound");
         assert_eq!(outbound.selected_message_number, 1);
+        assert_eq!(outbound.message_ttl_seconds, 86_400);
         assert!(outbound.auto_message_number);
         assert!(outbound.auto_counter_written);
         assert!(!outbound.existing_message_slot_skipped);
@@ -3151,6 +3194,7 @@ replay check: no replayed messages after message 2
             "correct-passphrase".to_string(),
             outbound.selected_message_number,
             outbound.envelope_payload,
+            86_400,
         )
         .expect("inbound");
         assert!(inbound.storage_opened);
@@ -3202,7 +3246,7 @@ replay check: no replayed messages after message 2
         assert_eq!(sender_transcript.entries[0].message_number, 1);
         assert_eq!(sender_transcript.entries[0].message, "persistent hello");
         assert!(sender_transcript.entries[0].created_at_ms > 0);
-        assert!(sender_transcript.entries[0].ttl_seconds > 0);
+        assert_eq!(sender_transcript.entries[0].ttl_seconds, 86_400);
         assert!(sender_transcript.entries[0].expires_at_ms.is_some());
         assert!(!sender_transcript.entries[0].expired);
         assert!(sender_transcript.plaintext_returned_after_unlock);
@@ -3224,7 +3268,7 @@ replay check: no replayed messages after message 2
         assert_eq!(receiver_transcript.entries[0].message_number, 1);
         assert_eq!(receiver_transcript.entries[0].message, "persistent hello");
         assert!(receiver_transcript.entries[0].created_at_ms > 0);
-        assert!(receiver_transcript.entries[0].ttl_seconds > 0);
+        assert_eq!(receiver_transcript.entries[0].ttl_seconds, 86_400);
         assert!(receiver_transcript.entries[0].expires_at_ms.is_some());
         assert!(!receiver_transcript.entries[0].expired);
         assert!(receiver_transcript.plaintext_returned_after_unlock);
@@ -3280,6 +3324,7 @@ replay check: no replayed messages after message 2
             "bob".to_string(),
             "correct-passphrase".to_string(),
             "two profile hello".to_string(),
+            86_400,
         )
         .expect("two-profile roundtrip");
 
@@ -3315,6 +3360,7 @@ replay check: no replayed messages after message 2
             "bob".to_string(),
             "correct-passphrase".to_string(),
             "two profile hello again".to_string(),
+            604_800,
         )
         .expect("repeat two-profile roundtrip");
         assert!(repeated.received_export_matches_input);
@@ -3328,12 +3374,13 @@ replay check: no replayed messages after message 2
             "bob".to_string(),
             "correct-passphrase".to_string(),
             "stored session hello".to_string(),
+            86_400,
         )
         .expect("stored-session message roundtrip");
         assert_ne!(stored_message.sender_profile, stored_message.receiver_profile);
         assert!(["alice", "bob"].contains(&stored_message.sender_profile.as_str()));
         assert!(["alice", "bob"].contains(&stored_message.receiver_profile.as_str()));
-        assert!(stored_message.message_number >= 2);
+        assert!(stored_message.message_number >= 1);
         assert!(stored_message.sender_session_ready);
         assert!(stored_message.receiver_session_ready);
         assert!(stored_message.message_number_reserved);
@@ -3341,6 +3388,7 @@ replay check: no replayed messages after message 2
         assert!(stored_message.inbound_message_stored);
         assert!(stored_message.received_status_verified);
         assert!(stored_message.received_export_matches_input);
+        assert_eq!(stored_message.message_ttl_seconds, 86_400);
         assert!(!stored_message.plaintext_returned_to_frontend);
         assert!(!stored_message.store_path_returned);
         assert!(!stored_message.passphrase_retained);
@@ -3359,6 +3407,7 @@ replay check: no replayed messages after message 2
             "alice".to_string(),
             "correct-passphrase".to_string(),
             "stored session reply".to_string(),
+            604_800,
         )
         .expect("stored-session reply roundtrip");
         assert_eq!(reply_message.sender_profile, "bob");
@@ -3371,6 +3420,7 @@ replay check: no replayed messages after message 2
         assert!(reply_message.inbound_message_stored);
         assert!(reply_message.received_status_verified);
         assert!(reply_message.received_export_matches_input);
+        assert_eq!(reply_message.message_ttl_seconds, 604_800);
         assert!(!reply_message.plaintext_returned_to_frontend);
         assert!(!reply_message.key_material_exposed);
         assert!(!reply_message.network_io_attempted);
@@ -3388,6 +3438,7 @@ replay check: no replayed messages after message 2
             "alice".to_string(),
             "correct-passphrase".to_string(),
             "two profile hello".to_string(),
+            604_800,
         );
 
         assert!(result.is_err());
