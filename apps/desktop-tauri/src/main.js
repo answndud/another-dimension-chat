@@ -319,6 +319,10 @@ function setReviewPendingTwoProfileLabel(label = "Review pending") {
   setText(fields.reviewPendingTwoProfileMessage, label);
 }
 
+function setReplyLatestTwoProfileLabel(label = "Reply to latest") {
+  setText(fields.replyLatestTwoProfileMessage, label);
+}
+
 function setProductionMessageManualCurrent(target) {
   fields.productionMessageManualCheck?.classList.toggle("is-current-manual", target === "check");
   fields.productionMessageOutbound?.classList.toggle("is-current-manual", target === "outbound");
@@ -1804,6 +1808,7 @@ function applyProductionActionState() {
   const pendingConversation = latestTwoProfilePendingConversationEntry();
   const selectedPendingConversation = selectedTwoProfilePendingConversationEntry();
   const pendingSelected = Boolean(selectedPendingConversation);
+  setReplyLatestTwoProfileLabel(selectedDeliveredReplyReady ? "Reply selected" : "Reply to latest");
   setReviewPendingTwoProfileLabel(pendingSelected ? "Review selected" : "Review pending");
   setActionButtonState(
     fields.replyLatestTwoProfileMessage,
