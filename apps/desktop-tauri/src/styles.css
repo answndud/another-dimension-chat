@@ -594,7 +594,21 @@ textarea[readonly] {
   color: var(--warning);
 }
 
-.message-transcript span {
+.message-transcript .transcript-slot {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.message-transcript .transcript-slot.is-present {
+  color: var(--accent);
+}
+
+.message-transcript .transcript-slot.is-missing {
+  color: var(--warning);
+}
+
+.message-transcript span:not(.transcript-status):not(.transcript-slot) {
   color: var(--text-primary);
   font-size: 13px;
   overflow-wrap: anywhere;

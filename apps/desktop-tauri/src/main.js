@@ -675,6 +675,7 @@ function renderProductionTwoProfileConversationList() {
     const item = document.createElement("li");
     const delivered = entry.statuses.has("sent") && entry.statuses.has("received");
     const inboundOnly = !entry.statuses.has("sent") && entry.statuses.has("received");
+    const senderEnvelopeSlotPresent = productionPayloadSlots.messageEnvelope.has(entry.sender);
     item.className = delivered ? "is-delivered" : inboundOnly ? "is-inbound-only" : "is-pending-receive";
 
     const meta = document.createElement("strong");
@@ -688,10 +689,16 @@ function renderProductionTwoProfileConversationList() {
         ? "inbound-only: local sent copy missing"
         : "pending: peer received copy missing";
 
+    const slot = document.createElement("span");
+    slot.className = `transcript-slot ${senderEnvelopeSlotPresent ? "is-present" : "is-missing"}`;
+    slot.textContent = senderEnvelopeSlotPresent
+      ? `sender envelope slot: ready (${entry.sender})`
+      : `sender envelope slot: missing (${entry.sender})`;
+
     const body = document.createElement("span");
     body.textContent = entry.message;
 
-    item.append(meta, status, body);
+    item.append(meta, status, slot, body);
     target.append(item);
   }
 }
@@ -1108,6 +1115,7 @@ function storeProductionMessageEnvelope() {
   productionPayloadSlots.messageEnvelope.set(profile, value);
   setProductionMessageState("Message envelope stored");
   setText(fields.productionMessageWarning, `Stored local message envelope slot for ${profile}.`);
+  renderProductionTwoProfileConversationList();
   applyProductionActionState();
 }
 
@@ -1157,6 +1165,7 @@ function relayProductionMessageEnvelopeToPeer() {
   }
   resetProductionMessageImportState();
   productionPayloadSlots.messageEnvelope.set(profile, value);
+  renderProductionTwoProfileConversationList();
   if (!selectProductionProfileForManualRelay(counterpart)) {
     setProductionMessageState("Envelope relay needs supported peer");
     setText(fields.productionMessageWarning, "Relay supports the local Alice/Bob manual pair only.");
