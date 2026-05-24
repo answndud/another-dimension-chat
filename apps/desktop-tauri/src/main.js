@@ -711,10 +711,16 @@ function renderProductionTwoProfileConversationList() {
       ? `sender envelope slot: ready (${entry.sender})`
       : `sender envelope slot: missing (${entry.sender})`;
 
+    const action = document.createElement("span");
+    action.className = `transcript-action ${
+      delivered ? "is-reply" : senderEnvelopeSlotPresent || inboundOnly ? "is-ready" : "is-waiting"
+    }`;
+    action.textContent = twoProfileConversationActionLabel(entry);
+
     const body = document.createElement("span");
     body.textContent = entry.message;
 
-    item.append(meta, status, slot);
+    item.append(meta, status, slot, action);
     if (selected) {
       const review = document.createElement("span");
       review.className = "transcript-review is-selected";
@@ -775,6 +781,25 @@ function selectedTwoProfileNextActionMessage(entry) {
     return `Next: load or paste sender envelope for message #${entry.messageNumber}.`;
   }
   return `Next: review missing local sent copy for message #${entry.messageNumber}.`;
+}
+
+function twoProfileConversationActionLabel(entry) {
+  if (!entry) {
+    return "action: unavailable";
+  }
+  const sentCopyPresent = entry.statuses.has("sent");
+  const receivedCopyPresent = entry.statuses.has("received");
+  const senderEnvelopeSlotPresent = productionPayloadSlots.messageEnvelope.has(entry.sender);
+  if (sentCopyPresent && receivedCopyPresent) {
+    return `action: reply from ${entry.receiver}`;
+  }
+  if (sentCopyPresent && senderEnvelopeSlotPresent) {
+    return `action: import envelope into ${entry.receiver}`;
+  }
+  if (sentCopyPresent) {
+    return `action: load envelope for ${entry.receiver}`;
+  }
+  return `action: export sender copy from ${entry.sender}`;
 }
 
 function selectedTwoProfileManualFocusTarget(entry) {
