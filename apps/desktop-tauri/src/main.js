@@ -3139,6 +3139,13 @@ async function loadProductionTwoProfileTranscript(options = {}) {
         fields.productionTwoProfileWarning,
         "Stored conversation and message-ready sessions recovered after local unlock.",
       );
+      const pendingSelected = autoSelectPendingTwoProfileConversation();
+      if (!pendingSelected) {
+        setText(
+          fields.productionTwoProfileWarning,
+          "Stored conversation and message-ready sessions recovered after local unlock. Write a message to continue.",
+        );
+      }
     }
   } catch (error) {
     if (!quiet) {
