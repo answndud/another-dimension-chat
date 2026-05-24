@@ -1338,16 +1338,26 @@ function applyPendingConversationToManualMessageReview(entry) {
     reviewState = "Manual import review selected";
     reviewWarning = `Selected ${reviewProfile} to import pending message #${entry.messageNumber}. Load or paste the sender envelope, then import explicitly.`;
   }
+  let manualCheck = `Needs sender review: local sent copy is missing for ${entry.sender} message #${entry.messageNumber}.`;
+  let inboundReadiness = receivedCopyPresent
+    ? "Received copy present in transcript"
+    : "Pending peer received copy";
+  let outboundReadiness = "Local sent copy missing";
+  if (canPrepareImport) {
+    manualCheck = `Ready: import envelope for ${reviewProfile} message #${entry.messageNumber}.`;
+    inboundReadiness = "Ready to import explicit remote envelope";
+    outboundReadiness = `Sender envelope slot ready for ${entry.sender}`;
+  } else if (sentCopyPresent && !receivedCopyPresent) {
+    manualCheck = `Needs envelope: load or paste sender envelope for ${entry.sender} message #${entry.messageNumber}.`;
+    outboundReadiness = senderEnvelopeSlot
+      ? `Sender envelope slot ready for ${entry.sender}`
+      : "Local sent copy present; sender envelope slot missing";
+  }
   setProductionMessageState(reviewState);
   setText(fields.productionMessageWarning, reviewWarning);
-  setText(
-    fields.productionMessageInbound,
-    receivedCopyPresent ? "Received copy present in transcript" : "Pending peer received copy",
-  );
-  setText(
-    fields.productionMessageOutbound,
-    sentCopyPresent ? "Local sent copy present in transcript" : "Local sent copy missing",
-  );
+  setText(fields.productionMessageManualCheck, manualCheck);
+  setText(fields.productionMessageInbound, inboundReadiness);
+  setText(fields.productionMessageOutbound, outboundReadiness);
   (canPrepareImport ? fields.importProductionMessageEnvelope : fields.productionRemoteMessageEnvelope)?.focus();
   return true;
 }
