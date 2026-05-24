@@ -911,6 +911,22 @@ function renderProductionTranscriptEntries(profile, entries) {
   }
 }
 
+function transcriptRetentionWarning(result) {
+  const purged = Number.parseInt(result?.expired_messages_purged ?? 0, 10);
+  if (Number.isInteger(purged) && purged > 0) {
+    return `${result.warning} Expired messages purged: ${purged}.`;
+  }
+  return result?.warning ?? "";
+}
+
+function transcriptBoundarySummary(result) {
+  return `plaintext_after_unlock=${result.plaintext_returned_after_unlock} expired_purged=${result.expired_messages_purged ?? 0} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`;
+}
+
+function appendExpiredMessagesPurged(message, purged) {
+  return purged > 0 ? `${message} Expired messages purged: ${purged}.` : message;
+}
+
 function renderManualStatus() {
   const profile = activeProductionProfileName();
   const counterpart = productionCounterpartProfile(profile);
@@ -2895,11 +2911,8 @@ async function restoreProductionSessionAfterUnlock(profile, passphrase) {
     const transcript = await invoke("production_message_transcript_export", { profile, passphrase });
     renderProductionTranscriptEntries(profile, transcript.entries);
     setProductionMessageState("Stored transcript recovered");
-    setText(fields.productionMessageWarning, transcript.warning);
-    setText(
-      fields.productionMessageBoundary,
-      `plaintext_after_unlock=${transcript.plaintext_returned_after_unlock} key_material=${transcript.key_material_exposed} network_io=${transcript.network_io_attempted} transport_io=${transcript.transport_io_opened} runtime=${transcript.runtime_messaging_enabled}`,
-    );
+    setText(fields.productionMessageWarning, transcriptRetentionWarning(transcript));
+    setText(fields.productionMessageBoundary, transcriptBoundarySummary(transcript));
   } catch {
     setProductionMessageState("Transcript recovery unavailable");
     setText(
@@ -3172,6 +3185,17 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       ...twoProfileTranscriptEntriesFromProfile(profileA, profileB, profileAResult.entries),
       ...twoProfileTranscriptEntriesFromProfile(profileB, profileA, profileBResult.entries),
     ];
+    const expiredMessagesPurged =
+      Number.parseInt(profileAResult.expired_messages_purged ?? 0, 10) +
+      Number.parseInt(profileBResult.expired_messages_purged ?? 0, 10);
+    const resumeWarning = appendExpiredMessagesPurged(
+      "Stored conversation and message-ready sessions recovered after local unlock.",
+      expiredMessagesPurged,
+    );
+    const loadedWarning = appendExpiredMessagesPurged(
+      "Stored conversation loaded, but sessions are not ready for stored-message send.",
+      expiredMessagesPurged,
+    );
     renderProductionTwoProfileTranscriptEntries(entries);
     let sessionStatus = latestTwoProfileSessionStatusForCurrentInput({ profileA, profileB });
     if (refreshSessionStatus) {
@@ -3186,22 +3210,23 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       setProductionTwoProfileState(ready ? "Conversation resumed" : "Conversation loaded");
       setText(
         fields.productionTwoProfileWarning,
-        ready
-          ? "Stored conversation and message-ready sessions recovered after local unlock."
-          : "Stored conversation loaded, but sessions are not ready for stored-message send.",
+        ready ? resumeWarning : loadedWarning,
       );
       autoSelectPendingTwoProfileConversation();
     } else if (autoResume && sessionStatus?.both_ready_for_message_envelope) {
       setProductionTwoProfileState("Conversation resumed");
       setText(
         fields.productionTwoProfileWarning,
-        "Stored conversation and message-ready sessions recovered after local unlock.",
+        resumeWarning,
       );
       const pendingSelected = autoSelectPendingTwoProfileConversation();
       if (!pendingSelected) {
         setText(
           fields.productionTwoProfileWarning,
-          "Stored conversation and message-ready sessions recovered after local unlock. Write a message to continue.",
+          appendExpiredMessagesPurged(
+            "Stored conversation and message-ready sessions recovered after local unlock. Write a message to continue.",
+            expiredMessagesPurged,
+          ),
         );
       }
     } else if (autoResume) {
@@ -3688,11 +3713,8 @@ async function loadProductionMessageTranscript() {
     });
     renderProductionTranscriptEntries(profile, result.entries);
     setProductionMessageState("Transcript loaded");
-    setText(fields.productionMessageWarning, result.warning);
-    setText(
-      fields.productionMessageBoundary,
-      `plaintext_after_unlock=${result.plaintext_returned_after_unlock} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    setText(fields.productionMessageWarning, transcriptRetentionWarning(result));
+    setText(fields.productionMessageBoundary, transcriptBoundarySummary(result));
   } catch (error) {
     setProductionMessageState("Transcript load failed");
     setText(fields.productionMessageWarning, String(error));

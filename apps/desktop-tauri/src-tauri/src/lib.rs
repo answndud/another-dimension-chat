@@ -368,6 +368,7 @@ pub struct ProductionMessageTranscriptExportResult {
     storage_opened: bool,
     runtime_material_reconstructable: bool,
     entries: Vec<ProductionMessageTranscriptEntryResult>,
+    expired_messages_purged: usize,
     plaintext_returned_after_unlock: bool,
     key_material_exposed: bool,
     network_io_attempted: bool,
@@ -1755,6 +1756,7 @@ fn run_production_message_transcript_export(
         storage_opened: export.storage_opened(),
         runtime_material_reconstructable: export.runtime_material_reconstructable(),
         entries,
+        expired_messages_purged: export.expired_messages_purged(),
         plaintext_returned_after_unlock: true,
         key_material_exposed: export.key_material_exposed(),
         network_io_attempted: export.network_io_attempted(),
@@ -3195,6 +3197,7 @@ replay check: no replayed messages after message 2
         assert!(sender_transcript.storage_opened);
         assert!(sender_transcript.runtime_material_reconstructable);
         assert_eq!(sender_transcript.entries.len(), 1);
+        assert_eq!(sender_transcript.expired_messages_purged, 0);
         assert_eq!(sender_transcript.entries[0].direction, "sent");
         assert_eq!(sender_transcript.entries[0].message_number, 1);
         assert_eq!(sender_transcript.entries[0].message, "persistent hello");
@@ -3216,6 +3219,7 @@ replay check: no replayed messages after message 2
         assert!(receiver_transcript.storage_opened);
         assert!(receiver_transcript.runtime_material_reconstructable);
         assert_eq!(receiver_transcript.entries.len(), 1);
+        assert_eq!(receiver_transcript.expired_messages_purged, 0);
         assert_eq!(receiver_transcript.entries[0].direction, "received");
         assert_eq!(receiver_transcript.entries[0].message_number, 1);
         assert_eq!(receiver_transcript.entries[0].message, "persistent hello");
