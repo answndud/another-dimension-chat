@@ -356,6 +356,10 @@ pub struct ProductionMessageTranscriptEntryResult {
     direction: String,
     message_number: u64,
     message: String,
+    created_at_ms: u128,
+    ttl_seconds: u64,
+    expires_at_ms: Option<u128>,
+    expired: bool,
 }
 
 #[derive(serde::Serialize)]
@@ -1738,6 +1742,10 @@ fn run_production_message_transcript_export(
                 direction: entry.direction().to_string(),
                 message_number: entry.message_number(),
                 message,
+                created_at_ms: entry.created_at_ms(),
+                ttl_seconds: entry.ttl_seconds(),
+                expires_at_ms: entry.expires_at_ms(),
+                expired: entry.expired(),
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
@@ -3190,6 +3198,10 @@ replay check: no replayed messages after message 2
         assert_eq!(sender_transcript.entries[0].direction, "sent");
         assert_eq!(sender_transcript.entries[0].message_number, 1);
         assert_eq!(sender_transcript.entries[0].message, "persistent hello");
+        assert!(sender_transcript.entries[0].created_at_ms > 0);
+        assert!(sender_transcript.entries[0].ttl_seconds > 0);
+        assert!(sender_transcript.entries[0].expires_at_ms.is_some());
+        assert!(!sender_transcript.entries[0].expired);
         assert!(sender_transcript.plaintext_returned_after_unlock);
         assert!(!sender_transcript.key_material_exposed);
         assert!(!sender_transcript.network_io_attempted);
@@ -3207,6 +3219,10 @@ replay check: no replayed messages after message 2
         assert_eq!(receiver_transcript.entries[0].direction, "received");
         assert_eq!(receiver_transcript.entries[0].message_number, 1);
         assert_eq!(receiver_transcript.entries[0].message, "persistent hello");
+        assert!(receiver_transcript.entries[0].created_at_ms > 0);
+        assert!(receiver_transcript.entries[0].ttl_seconds > 0);
+        assert!(receiver_transcript.entries[0].expires_at_ms.is_some());
+        assert!(!receiver_transcript.entries[0].expired);
         assert!(receiver_transcript.plaintext_returned_after_unlock);
         assert!(!receiver_transcript.key_material_exposed);
         assert!(!receiver_transcript.network_io_attempted);
