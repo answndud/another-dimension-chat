@@ -19,6 +19,7 @@ import {
   productionReceivedMessageExportView,
   productionSessionDraftView,
   productionSessionStateView,
+  productionTwoProfileConversationActionView,
   productionTwoProfileMessageResultView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
@@ -751,6 +752,77 @@ test("productionProfileMessageReadiness prefers matching two-profile status", ()
       safeTwoProfileSessionStatusResult,
     ),
     true,
+  );
+});
+
+test("productionTwoProfileConversationActionView maps row status to next action", () => {
+  assert.deepEqual(
+    productionTwoProfileConversationActionView(null),
+    {
+      nextAction: "Next actions unlock after a completed local roundtrip.",
+      rowLabel: "action: unavailable",
+      state: "is-waiting",
+      focusTarget: null,
+      manualTarget: null,
+      manualButtonLabel: "Open manual tools",
+    },
+  );
+
+  const entry = {
+    sender: "alice",
+    receiver: "bob",
+    messageNumber: 9,
+    statuses: new Set(),
+  };
+
+  assert.deepEqual(
+    productionTwoProfileConversationActionView(entry),
+    {
+      nextAction: "Next: review missing local sent copy for message #9.",
+      rowLabel: "action: export sender copy from alice",
+      state: "is-ready",
+      focusTarget: "export-envelope",
+      manualTarget: "outbound",
+      manualButtonLabel: "Open export tools",
+    },
+  );
+
+  entry.statuses.add("sent");
+  assert.deepEqual(
+    productionTwoProfileConversationActionView(entry),
+    {
+      nextAction: "Next: load or paste sender envelope for message #9.",
+      rowLabel: "action: load envelope for bob",
+      state: "is-waiting",
+      focusTarget: "remote-envelope",
+      manualTarget: "inbound",
+      manualButtonLabel: "Open envelope input",
+    },
+  );
+
+  assert.deepEqual(
+    productionTwoProfileConversationActionView(entry, true),
+    {
+      nextAction: "Next: import envelope for message #9 into bob.",
+      rowLabel: "action: import envelope into bob",
+      state: "is-ready",
+      focusTarget: "import-envelope",
+      manualTarget: "inbound",
+      manualButtonLabel: "Open import tools",
+    },
+  );
+
+  entry.statuses.add("received");
+  assert.deepEqual(
+    productionTwoProfileConversationActionView(entry, true),
+    {
+      nextAction: "Complete: message #9 delivered. Next: write reply from bob to alice.",
+      rowLabel: "action: reply from bob",
+      state: "is-reply",
+      focusTarget: "reply-message",
+      manualTarget: null,
+      manualButtonLabel: "Open manual tools",
+    },
   );
 });
 

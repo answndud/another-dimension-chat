@@ -42,6 +42,59 @@ export function productionCounterpartProfile(profile) {
   return null;
 }
 
+export function productionTwoProfileConversationActionView(entry, senderEnvelopeSlotPresent = false) {
+  if (!entry) {
+    return {
+      nextAction: "Next actions unlock after a completed local roundtrip.",
+      rowLabel: "action: unavailable",
+      state: "is-waiting",
+      focusTarget: null,
+      manualTarget: null,
+      manualButtonLabel: "Open manual tools",
+    };
+  }
+  const sentCopyPresent = entry.statuses?.has("sent") ?? false;
+  const receivedCopyPresent = entry.statuses?.has("received") ?? false;
+  if (sentCopyPresent && receivedCopyPresent) {
+    return {
+      nextAction: `Complete: message #${entry.messageNumber} delivered. Next: write reply from ${entry.receiver} to ${entry.sender}.`,
+      rowLabel: `action: reply from ${entry.receiver}`,
+      state: "is-reply",
+      focusTarget: "reply-message",
+      manualTarget: null,
+      manualButtonLabel: "Open manual tools",
+    };
+  }
+  if (sentCopyPresent && senderEnvelopeSlotPresent) {
+    return {
+      nextAction: `Next: import envelope for message #${entry.messageNumber} into ${entry.receiver}.`,
+      rowLabel: `action: import envelope into ${entry.receiver}`,
+      state: "is-ready",
+      focusTarget: "import-envelope",
+      manualTarget: "inbound",
+      manualButtonLabel: "Open import tools",
+    };
+  }
+  if (sentCopyPresent) {
+    return {
+      nextAction: `Next: load or paste sender envelope for message #${entry.messageNumber}.`,
+      rowLabel: `action: load envelope for ${entry.receiver}`,
+      state: "is-waiting",
+      focusTarget: "remote-envelope",
+      manualTarget: "inbound",
+      manualButtonLabel: "Open envelope input",
+    };
+  }
+  return {
+    nextAction: `Next: review missing local sent copy for message #${entry.messageNumber}.`,
+    rowLabel: `action: export sender copy from ${entry.sender}`,
+    state: "is-ready",
+    focusTarget: "export-envelope",
+    manualTarget: "outbound",
+    manualButtonLabel: "Open export tools",
+  };
+}
+
 export function productionManualNextActions(state) {
   const {
     busy,

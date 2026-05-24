@@ -18,6 +18,7 @@ import {
   productionReceivedMessageExportView,
   productionSessionDraftView,
   productionSessionStateView,
+  productionTwoProfileConversationActionView,
   productionTwoProfileMessageResultView,
   productionTwoProfileResultView,
   productionTwoProfileSessionStatusView,
@@ -791,56 +792,19 @@ function selectedTwoProfilePendingConversationEntry() {
 }
 
 function twoProfileConversationActionView(entry) {
-  if (!entry) {
-    return {
-      nextAction: "Next actions unlock after a completed local roundtrip.",
-      rowLabel: "action: unavailable",
-      state: "is-waiting",
-      focusTarget: null,
-      manualTarget: null,
-      manualButtonLabel: "Open manual tools",
-    };
-  }
-  const sentCopyPresent = entry.statuses.has("sent");
-  const receivedCopyPresent = entry.statuses.has("received");
-  const senderEnvelopeSlotPresent = productionPayloadSlots.messageEnvelope.has(entry.sender);
-  if (sentCopyPresent && receivedCopyPresent) {
-    return {
-      nextAction: `Complete: message #${entry.messageNumber} delivered. Next: write reply from ${entry.receiver} to ${entry.sender}.`,
-      rowLabel: `action: reply from ${entry.receiver}`,
-      state: "is-reply",
-      focusTarget: fields.productionTwoProfileMessage,
-      manualTarget: null,
-      manualButtonLabel: "Open manual tools",
-    };
-  }
-  if (sentCopyPresent && senderEnvelopeSlotPresent) {
-    return {
-      nextAction: `Next: import envelope for message #${entry.messageNumber} into ${entry.receiver}.`,
-      rowLabel: `action: import envelope into ${entry.receiver}`,
-      state: "is-ready",
-      focusTarget: fields.importProductionMessageEnvelope,
-      manualTarget: "inbound",
-      manualButtonLabel: "Open import tools",
-    };
-  }
-  if (sentCopyPresent) {
-    return {
-      nextAction: `Next: load or paste sender envelope for message #${entry.messageNumber}.`,
-      rowLabel: `action: load envelope for ${entry.receiver}`,
-      state: "is-waiting",
-      focusTarget: fields.productionRemoteMessageEnvelope,
-      manualTarget: "inbound",
-      manualButtonLabel: "Open envelope input",
-    };
-  }
+  const senderEnvelopeSlotPresent = entry
+    ? productionPayloadSlots.messageEnvelope.has(entry.sender)
+    : false;
+  const actionView = productionTwoProfileConversationActionView(entry, senderEnvelopeSlotPresent);
+  const focusTargets = {
+    "reply-message": fields.productionTwoProfileMessage,
+    "import-envelope": fields.importProductionMessageEnvelope,
+    "remote-envelope": fields.productionRemoteMessageEnvelope,
+    "export-envelope": fields.exportProductionMessageEnvelope,
+  };
   return {
-    nextAction: `Next: review missing local sent copy for message #${entry.messageNumber}.`,
-    rowLabel: `action: export sender copy from ${entry.sender}`,
-    state: "is-ready",
-    focusTarget: fields.exportProductionMessageEnvelope,
-    manualTarget: "outbound",
-    manualButtonLabel: "Open export tools",
+    ...actionView,
+    focusTarget: focusTargets[actionView.focusTarget] ?? null,
   };
 }
 
