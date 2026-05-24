@@ -274,7 +274,7 @@ export function productionTwoProfileResultView(result) {
       `${boundaryContained ? "Contained" : "Review"}: no plaintext, key material, store path, network I/O, transport I/O, or runtime messaging exposure | ` +
       `plaintext_returned=${result.plaintext_returned_to_frontend} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
     nextStep: canContinue
-      ? "Next: inspect manual payload tools, run local diagnostic, or edit the message and run again."
+      ? "Next: write the next stored-session message."
       : "Review result rows before continuing.",
   };
 }
