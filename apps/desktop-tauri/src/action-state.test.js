@@ -615,7 +615,7 @@ test("productionTwoProfileResultView unlocks followups only for complete contain
   assert.match(view.boundary, /^Contained:/);
   assert.equal(
     view.nextStep,
-    "Next: inspect manual payload tools, run local diagnostic, or edit the message and run again.",
+    "Next: write the next stored-session message.",
   );
 });
 

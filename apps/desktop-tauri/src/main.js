@@ -422,6 +422,34 @@ function twoProfileSessionsReadyForInput(input = productionTwoProfileInput()) {
   );
 }
 
+function rememberTwoProfileReadySessionFromRoundtrip(input, result) {
+  if (!input.profileA || !input.profileB) {
+    return;
+  }
+  latestProductionTwoProfileSessionStatus = {
+    fingerprint: twoProfileSessionStatusFingerprint(input),
+    result: {
+      profile_a: input.profileA,
+      profile_b: input.profileB,
+      profile_a_ready_for_message_envelope: Boolean(result.sender_session_ready),
+      profile_b_ready_for_message_envelope: Boolean(result.receiver_session_ready),
+      both_ready_for_message_envelope: Boolean(result.sender_session_ready && result.receiver_session_ready),
+      profile_a_session_transport_state_present: Boolean(result.sender_session_ready),
+      profile_b_session_transport_state_present: Boolean(result.receiver_session_ready),
+      profile_a_runtime_material_reconstructable: Boolean(result.sender_session_ready),
+      profile_b_runtime_material_reconstructable: Boolean(result.receiver_session_ready),
+      profile_a_outbound_envelope_io_ready: false,
+      profile_b_outbound_envelope_io_ready: false,
+      store_path_returned: Boolean(result.store_path_returned),
+      passphrase_retained: Boolean(result.passphrase_retained),
+      key_material_exposed: Boolean(result.key_material_exposed),
+      network_io_attempted: Boolean(result.network_io_attempted),
+      transport_io_opened: Boolean(result.transport_io_opened),
+      runtime_messaging_enabled: Boolean(result.runtime_messaging_enabled),
+    },
+  };
+}
+
 function applyProductionProfilePreset(peer) {
   const preset = productionProfilePreset(peer);
   if (!preset || !fields.productionProfileName || !fields.productionPairingEndpoint) {
@@ -1613,9 +1641,15 @@ function renderProductionTwoProfileResult(result) {
       messageLength: input.message.length,
       fingerprint: twoProfileInputFingerprint(input),
     };
+    rememberTwoProfileReadySessionFromRoundtrip(input, result);
     renderProductionTwoProfileMemory(input);
+    if (fields.productionTwoProfileMessage) {
+      fields.productionTwoProfileMessage.value = "";
+      renderProductionTwoProfileDirection(productionTwoProfileInput());
+    }
   }
   setProductionFollowupActions(view.canContinue, view.nextStep);
+  return view;
 }
 
 function renderProductionTwoProfileMessageResult(result) {
@@ -1991,8 +2025,17 @@ async function runProductionTwoProfileRoundtrip() {
       message,
     });
     setProductionTwoProfileState("Two-profile roundtrip completed");
-    setText(fields.productionTwoProfileWarning, result.warning);
-    renderProductionTwoProfileResult(result);
+    const view = renderProductionTwoProfileResult(result);
+    if (view.canContinue) {
+      await loadProductionTwoProfileTranscript({ quiet: true });
+      setText(
+        fields.productionTwoProfileWarning,
+        "First message stored and conversation refreshed. Write the next stored-session message.",
+      );
+      fields.productionTwoProfileMessage?.focus();
+    } else {
+      setText(fields.productionTwoProfileWarning, result.warning);
+    }
     await loadProductionProfileList();
   } catch (error) {
     setProductionTwoProfileState("Two-profile roundtrip failed");
