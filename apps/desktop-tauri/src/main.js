@@ -752,6 +752,12 @@ function latestTwoProfilePendingConversationEntry() {
   return entries[0] ?? null;
 }
 
+function selectedTwoProfileConversationEntry() {
+  return selectedTwoProfileConversationKey
+    ? productionTwoProfileConversationEntries.get(selectedTwoProfileConversationKey) ?? null
+    : null;
+}
+
 function renderProductionTwoProfileTranscriptEntries(entries) {
   resetProductionTwoProfileTranscript();
   const orderedEntries = [...(entries ?? [])].sort((left, right) => {
@@ -1404,6 +1410,35 @@ function selectTwoProfileReplyDirection(sentInput) {
     true,
     `Next: write reply from ${receiver} to ${sender}.`,
   );
+  fields.productionTwoProfileMessage?.focus();
+  return true;
+}
+
+function selectReplyAfterDeliveredReview(entry) {
+  if (
+    !entry ||
+    !entry.statuses.has("sent") ||
+    !entry.statuses.has("received") ||
+    !fields.productionTwoProfileA ||
+    !fields.productionTwoProfileB
+  ) {
+    return false;
+  }
+  fields.productionTwoProfileA.value = entry.receiver;
+  fields.productionTwoProfileB.value = entry.sender;
+  if (fields.productionTwoProfileMessage) {
+    fields.productionTwoProfileMessage.value = "";
+  }
+  const input = productionTwoProfileInput();
+  renderProductionTwoProfileDirection(input);
+  renderProductionTwoProfileMemory(input);
+  setProductionTwoProfileState("Reply direction ready");
+  setText(
+    fields.productionTwoProfileWarning,
+    `Message #${entry.messageNumber} delivered; reply direction selected: ${input.profileA} -> ${input.profileB}.`,
+  );
+  setProductionFollowupActions(true, `Next: write reply from ${input.profileA} to ${input.profileB}.`);
+  applyProductionActionState();
   fields.productionTwoProfileMessage?.focus();
   return true;
 }
@@ -2976,11 +3011,14 @@ async function refreshTwoProfileConversationAfterManualImport(profile, passphras
     return false;
   }
   setProductionTwoProfileState("Conversation updated after import");
-  setText(
-    fields.productionTwoProfileWarning,
-    `Manual import for ${importedProfile} completed; conversation transcript was reloaded from encrypted local stores.`,
-  );
-  renderProductionTwoProfileMemory(input);
+  const selectedEntry = selectedTwoProfileConversationEntry();
+  if (!selectReplyAfterDeliveredReview(selectedEntry)) {
+    setText(
+      fields.productionTwoProfileWarning,
+      `Manual import for ${importedProfile} completed; conversation transcript was reloaded from encrypted local stores.`,
+    );
+    renderProductionTwoProfileMemory(input);
+  }
   return true;
 }
 
