@@ -2062,6 +2062,7 @@ function resetProductionMessageView() {
   setText(fields.productionMessageOutbound, "Not checked yet");
   setText(fields.productionMessageInbound, "Not checked yet");
   setText(fields.productionMessageBoundary, "Not checked yet");
+  setProductionMessageManualCurrent(null);
   applyProductionActionState();
 }
 
@@ -3110,6 +3111,42 @@ async function refreshTwoProfileConversationAfterManualImport(profile, passphras
   return true;
 }
 
+function syncTwoProfileConversationAfterManualExport(profile, messageNumber, message) {
+  const exportedProfile = String(profile ?? "").trim().toLowerCase();
+  const selectedEntry = selectedTwoProfileConversationEntry();
+  const selectedNumber = Number.parseInt(selectedEntry?.messageNumber, 10);
+  const exportedNumber = Number.parseInt(messageNumber, 10);
+  const text = String(message ?? "").trim();
+  if (
+    !selectedEntry ||
+    !exportedProfile ||
+    selectedEntry.sender !== exportedProfile ||
+    !Number.isInteger(selectedNumber) ||
+    selectedNumber !== exportedNumber ||
+    selectedEntry.message !== text
+  ) {
+    return false;
+  }
+
+  appendProductionTwoProfileConversationStatus(
+    "sent",
+    exportedProfile,
+    selectedEntry.receiver,
+    exportedNumber,
+    text,
+  );
+  setProductionTwoProfileState("Conversation updated after export");
+  const refreshedEntry = selectedTwoProfileConversationEntry();
+  if (!selectReplyAfterDeliveredReview(refreshedEntry)) {
+    setText(
+      fields.productionTwoProfileWarning,
+      `Manual export for ${exportedProfile} completed; selected conversation row was updated.`,
+    );
+    applyProductionActionState();
+  }
+  return true;
+}
+
 function scheduleTwoProfileAutoResume() {
   const input = productionTwoProfileInput();
   if (
@@ -3354,6 +3391,7 @@ async function exportProductionMessageEnvelope() {
       fields.productionMessageEnvelope.value = result.envelope_payload;
     }
     appendProductionTranscriptEntry("sent", profile, result.selected_message_number, message);
+    syncTwoProfileConversationAfterManualExport(profile, result.selected_message_number, message);
     applyProductionActionState();
     setText(fields.productionMessageOutbound, view.outbound);
     setText(fields.productionMessageInbound, "Not imported yet");
