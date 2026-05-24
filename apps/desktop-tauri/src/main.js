@@ -373,14 +373,32 @@ function activeProductionProfileName() {
   return (fields.productionProfileName?.value ?? "").trim().toLowerCase();
 }
 
-function syncProductionProfilePassphraseFromTwoProfile() {
-  if (
-    fields.productionProfilePassphrase &&
-    !fields.productionProfilePassphrase.value &&
-    fields.productionTwoProfilePassphrase?.value
-  ) {
-    fields.productionProfilePassphrase.value = fields.productionTwoProfilePassphrase.value;
+function syncProductionPassphrases(source) {
+  const profilePassphrase = fields.productionProfilePassphrase;
+  const twoProfilePassphrase = fields.productionTwoProfilePassphrase;
+  if (!profilePassphrase || !twoProfilePassphrase) {
+    return;
   }
+  const value =
+    source === "profile"
+      ? profilePassphrase.value
+      : source === "two-profile"
+        ? twoProfilePassphrase.value
+        : twoProfilePassphrase.value || profilePassphrase.value;
+  if (profilePassphrase.value !== value) {
+    profilePassphrase.value = value;
+  }
+  if (twoProfilePassphrase.value !== value) {
+    twoProfilePassphrase.value = value;
+  }
+}
+
+function syncProductionProfilePassphraseFromTwoProfile() {
+  syncProductionPassphrases("two-profile");
+}
+
+function syncProductionTwoProfilePassphraseFromProfile() {
+  syncProductionPassphrases("profile");
 }
 
 function twoProfileSessionStatusFingerprint(input = productionTwoProfileInput()) {
@@ -3000,7 +3018,6 @@ if (fields.useBobProductionProfile) {
 
 for (const input of [
   fields.productionProfileName,
-  fields.productionProfilePassphrase,
   fields.productionPairingEndpoint,
   fields.productionPairingPayload,
   fields.productionRemotePairingPayload,
@@ -3013,12 +3030,25 @@ for (const input of [
   fields.productionRemoteMessageEnvelope,
   fields.productionTwoProfileA,
   fields.productionTwoProfileB,
-  fields.productionTwoProfilePassphrase,
   fields.productionTwoProfileMessage,
 ]) {
   if (input) {
     input.addEventListener("input", applyProductionActionState);
   }
+}
+
+if (fields.productionProfilePassphrase) {
+  fields.productionProfilePassphrase.addEventListener("input", () => {
+    syncProductionTwoProfilePassphraseFromProfile();
+    applyProductionActionState();
+  });
+}
+
+if (fields.productionTwoProfilePassphrase) {
+  fields.productionTwoProfilePassphrase.addEventListener("input", () => {
+    syncProductionProfilePassphraseFromTwoProfile();
+    applyProductionActionState();
+  });
 }
 
 if (fields.productionTwoProfileMessage) {
