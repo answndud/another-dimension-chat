@@ -597,6 +597,7 @@ pub mod production {
         storage_opened: bool,
         runtime_material_reconstructable: bool,
         entries: Vec<ProductionMessageTranscriptEntry>,
+        expired_messages_purged: usize,
         plaintext_exposed: bool,
         network_io_attempted: bool,
         key_material_exposed: bool,
@@ -2271,6 +2272,10 @@ pub mod production {
 
         pub fn entries(&self) -> &[ProductionMessageTranscriptEntry] {
             &self.entries
+        }
+
+        pub fn expired_messages_purged(&self) -> usize {
+            self.expired_messages_purged
         }
 
         pub fn plaintext_exposed(&self) -> bool {
@@ -5053,6 +5058,7 @@ pub mod production {
         }
         let material = load_session_runtime_material(&store, &profile)?;
         let mut entries = Vec::new();
+        let mut expired_messages_purged = 0;
         let observed_at_ms = production_now_ms();
 
         for (record_id, record) in store.records_with_id_prefix("sent_")? {
@@ -5072,6 +5078,21 @@ pub mod production {
                         sent.message_number,
                     )
             {
+                if sent.is_expired_at(observed_at_ms) {
+                    store.delete(&record_id)?;
+                    store.delete(&production_local_message_index_record_id(
+                        &material.channel_id,
+                        &material.remote_contact_id,
+                        sent.message_number,
+                    ))?;
+                    store.delete(&production_message_envelope_record_id(
+                        &material.channel_id,
+                        sent.message_number,
+                        MessageType::Data,
+                    ))?;
+                    expired_messages_purged += 1;
+                    continue;
+                }
                 entries.push(ProductionMessageTranscriptEntry {
                     direction: "sent",
                     message_number: sent.message_number,
@@ -5101,6 +5122,11 @@ pub mod production {
                         received.message_number,
                     )
             {
+                if received.is_expired_at(observed_at_ms) {
+                    store.delete(&record_id)?;
+                    expired_messages_purged += 1;
+                    continue;
+                }
                 entries.push(ProductionMessageTranscriptEntry {
                     direction: "received",
                     message_number: received.message_number,
@@ -5123,6 +5149,7 @@ pub mod production {
             storage_opened: true,
             runtime_material_reconstructable: true,
             entries,
+            expired_messages_purged,
             plaintext_exposed: false,
             network_io_attempted: false,
             key_material_exposed: false,
@@ -7821,6 +7848,7 @@ pub mod production {
             assert_eq!(outbound_transcript.entries()[0].direction(), "sent");
             assert_eq!(outbound_transcript.entries()[0].message_number(), 1);
             assert_eq!(outbound_transcript.entries()[0].plaintext(), b"hi");
+            assert_eq!(outbound_transcript.expired_messages_purged(), 0);
             assert!(outbound_transcript.entries()[0].created_at_ms() > 0);
             assert_eq!(
                 outbound_transcript.entries()[0].ttl_seconds(),
@@ -7845,6 +7873,7 @@ pub mod production {
             assert_eq!(inbound_transcript.entries()[0].direction(), "received");
             assert_eq!(inbound_transcript.entries()[0].message_number(), 1);
             assert_eq!(inbound_transcript.entries()[0].plaintext(), b"hi");
+            assert_eq!(inbound_transcript.expired_messages_purged(), 0);
             assert!(inbound_transcript.entries()[0].created_at_ms() > 0);
             assert_eq!(
                 inbound_transcript.entries()[0].ttl_seconds(),
@@ -7857,6 +7886,124 @@ pub mod production {
             assert!(!inbound_transcript.key_material_exposed());
             assert!(!inbound_transcript.transport_io_opened());
             assert!(!inbound_transcript.runtime_messaging_enabled());
+            let expired_message_number = 42;
+            let expired_created_at_ms = 1;
+            let expired_ttl_seconds = 1;
+            let outbound_store_for_expiry = LockedProfileStore::new(outbound_store)
+                .unlock(&passphrase)
+                .expect("unlock outbound for expiry");
+            let outbound_material =
+                load_session_runtime_material(&outbound_store_for_expiry, &outbound_profile)
+                    .expect("outbound material for expiry");
+            let expired_index_id = production_local_message_index_record_id(
+                &outbound_material.channel_id,
+                &outbound_material.remote_contact_id,
+                expired_message_number,
+            );
+            let expired_pending_id = production_message_envelope_record_id(
+                &outbound_material.channel_id,
+                expired_message_number,
+                MessageType::Data,
+            );
+            let expired_sent_id = production_sent_message_record_id(
+                &outbound_material.channel_id,
+                &outbound_material.remote_contact_id,
+                expired_message_number,
+            );
+            outbound_store_for_expiry
+                .put(
+                    &expired_index_id,
+                    &EncryptedRecord::new(
+                        ProductionRecordKind::LocalMessageIndex,
+                        EncryptedRecordScope::contact(
+                            outbound_profile.clone(),
+                            outbound_material.remote_contact_id.clone(),
+                        ),
+                        b"sqlcipher-page-encryption-v1".to_vec(),
+                        LocalMessageIndexEntry::new(
+                            outbound_material.remote_contact_id.clone(),
+                            expired_message_number,
+                            MessageType::Data,
+                        )
+                        .expect("expired index")
+                        .encode()
+                        .into_bytes(),
+                    )
+                    .expect("expired index record"),
+                )
+                .expect("write expired index");
+            outbound_store_for_expiry
+                .put(
+                    &expired_pending_id,
+                    &EncryptedRecord::new(
+                        ProductionRecordKind::MessageEnvelope,
+                        EncryptedRecordScope::contact(
+                            outbound_profile.clone(),
+                            outbound_material.remote_contact_id.clone(),
+                        ),
+                        b"sqlcipher-page-encryption-v1".to_vec(),
+                        PendingOutboundMessageRecord::new(
+                            outbound_material.remote_contact_id.clone(),
+                            expired_message_number,
+                            MessageType::Data,
+                            b"expired",
+                        )
+                        .expect("expired pending")
+                        .encode()
+                        .into_bytes(),
+                    )
+                    .expect("expired pending record"),
+                )
+                .expect("write expired pending");
+            outbound_store_for_expiry
+                .put(
+                    &expired_sent_id,
+                    &EncryptedRecord::new(
+                        ProductionRecordKind::SentMessage,
+                        EncryptedRecordScope::contact(
+                            outbound_profile.clone(),
+                            outbound_material.remote_contact_id.clone(),
+                        ),
+                        b"sqlcipher-page-encryption-v1".to_vec(),
+                        SentMessageRecord::new_with_retention(
+                            outbound_material.remote_contact_id.clone(),
+                            expired_message_number,
+                            MessageType::Data,
+                            b"expired",
+                            expired_created_at_ms,
+                            expired_ttl_seconds,
+                        )
+                        .expect("expired sent")
+                        .encode()
+                        .into_bytes(),
+                    )
+                    .expect("expired sent record"),
+                )
+                .expect("write expired sent");
+            drop(outbound_store_for_expiry);
+            let purged_transcript = production_message_transcript_export(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+            )
+            .expect("purge expired transcript export");
+            assert_eq!(purged_transcript.expired_messages_purged(), 1);
+            assert_eq!(purged_transcript.entries().len(), 1);
+            let outbound_store_after_expiry = LockedProfileStore::new(outbound_store)
+                .unlock(&passphrase)
+                .expect("unlock outbound after expiry");
+            assert!(outbound_store_after_expiry
+                .get(&expired_sent_id)
+                .expect("read expired sent")
+                .is_none());
+            assert!(outbound_store_after_expiry
+                .get(&expired_pending_id)
+                .expect("read expired pending")
+                .is_none());
+            assert!(outbound_store_after_expiry
+                .get(&expired_index_id)
+                .expect("read expired index")
+                .is_none());
             let second_reservation = production_message_next_number_reserve(
                 outbound_store,
                 outbound_profile.clone(),
