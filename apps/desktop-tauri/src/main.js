@@ -1679,10 +1679,15 @@ function applyProductionActionState() {
   const availability = productionActionAvailability(state);
   const manualAvailability = productionManualRelayAvailability(state);
   const twoProfileSessionsReady = state.hasTwoProfileSessionsReady;
-  const twoProfileNeedsSetup = hasTwoProfileInput && !twoProfileSessionsReady;
-  const twoProfileCanSendStoredMessage = hasTwoProfileInput && twoProfileSessionsReady;
+  const latestConversation = latestTwoProfileConversationEntry();
+  const knownTwoProfileSessionStatus = Boolean(latestTwoProfileSessionStatusForCurrentInput(twoProfile));
   const twoProfileNeedsSessionCheck =
-    hasTwoProfileSessionStatusInput && !twoProfile.message && !twoProfileSessionsReady;
+    hasTwoProfileSessionStatusInput &&
+    !twoProfileSessionsReady &&
+    !knownTwoProfileSessionStatus &&
+    (!twoProfile.message || latestConversation);
+  const twoProfileNeedsSetup = hasTwoProfileInput && !twoProfileSessionsReady && !twoProfileNeedsSessionCheck;
+  const twoProfileCanSendStoredMessage = hasTwoProfileInput && twoProfileSessionsReady;
   const twoProfileCanReply = Boolean(
     !busy && latestProductionTwoProfileSuccess && hasTwoProfileSessionStatusInput && !twoProfile.message,
   );
@@ -1806,7 +1811,6 @@ function applyProductionActionState() {
     busy || !hasTwoProfileSessionStatusInput,
     busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
   );
-  const latestConversation = latestTwoProfileConversationEntry();
   const latestReplySelected = Boolean(
     latestConversation &&
       twoProfile.profileA === latestConversation.receiver &&
@@ -1840,6 +1844,8 @@ function applyProductionActionState() {
     !availability.runTwoProfileRoundtrip,
     busy
       ? "Wait for the active production action."
+      : twoProfileNeedsSessionCheck
+        ? "Check recovered sessions before running full setup."
       : twoProfileSessionsReady
         ? "Stored sessions are ready; send a stored-session message instead."
         : "Enter two profiles, passphrase, and message first.",
