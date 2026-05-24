@@ -467,11 +467,31 @@ function applyProductionProfilePreset(peer) {
   }
   resetProductionPairingView({ preserveTwoProfileStatus: true });
   resetProductionMessageView();
+  applyTwoProfilePairFromProfile(preset.profile);
   applyProductionActionState();
   setText(
     fields.productionProfileWarning,
     `Manual profile preset applied: ${preset.profile} / ${preset.rendezvousEndpoint}`,
   );
+}
+
+function applyTwoProfilePairFromProfile(profile) {
+  const preset = productionProfilePreset(profile);
+  const counterpart = productionCounterpartProfile(profile);
+  if (!preset || !counterpart || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
+    return false;
+  }
+  fields.productionTwoProfileA.value = preset.profile;
+  fields.productionTwoProfileB.value = counterpart;
+  latestProductionTwoProfileSessionStatus = null;
+  setProductionTwoProfileState("Two-profile pair selected");
+  setText(
+    fields.productionTwoProfileWarning,
+    `Selected local pair ${preset.profile} -> ${counterpart}. Enter passphrase, then load conversation or check sessions.`,
+  );
+  renderProductionTwoProfileDirection(productionTwoProfileInput());
+  renderProductionTwoProfileMemory(productionTwoProfileInput());
+  return true;
 }
 
 function renderManualNextActions(state) {
@@ -2960,6 +2980,7 @@ if (fields.productionProfileSelector) {
       syncProductionProfilePassphraseFromTwoProfile();
       resetProductionPairingView({ preserveTwoProfileStatus: true });
       resetProductionMessageView();
+      applyTwoProfilePairFromProfile(selectedProfile);
       applyProductionActionState();
     }
   });
