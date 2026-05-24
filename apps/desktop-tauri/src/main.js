@@ -2893,6 +2893,40 @@ async function loadProductionTwoProfileTranscript(options = {}) {
   }
 }
 
+async function refreshTwoProfileConversationAfterManualImport(profile, passphrase) {
+  const importedProfile = String(profile ?? "").trim().toLowerCase();
+  const input = productionTwoProfileInput();
+  if (
+    !importedProfile ||
+    !passphrase ||
+    !input.profileA ||
+    !input.profileB ||
+    input.profileA === input.profileB ||
+    !input.passphrase ||
+    (input.profileA !== importedProfile && input.profileB !== importedProfile)
+  ) {
+    return false;
+  }
+
+  try {
+    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+  } catch (error) {
+    setProductionTwoProfileState("Conversation reload skipped");
+    setText(
+      fields.productionTwoProfileWarning,
+      `Manual import for ${importedProfile} completed, but conversation reload failed: ${String(error)}`,
+    );
+    return false;
+  }
+  setProductionTwoProfileState("Conversation updated after import");
+  setText(
+    fields.productionTwoProfileWarning,
+    `Manual import for ${importedProfile} completed; conversation transcript was reloaded from encrypted local stores.`,
+  );
+  renderProductionTwoProfileMemory(input);
+  return true;
+}
+
 function scheduleTwoProfileAutoResume() {
   const input = productionTwoProfileInput();
   if (
@@ -3190,6 +3224,7 @@ async function importProductionMessageEnvelope() {
     setText(fields.productionMessageOutbound, "Not exported in this profile");
     setText(fields.productionMessageInbound, view.inbound);
     setText(fields.productionMessageBoundary, view.boundary);
+    await refreshTwoProfileConversationAfterManualImport(profile, passphrase);
   } catch (error) {
     setProductionMessageState("Message envelope import failed");
     setText(fields.productionMessageWarning, String(error));
