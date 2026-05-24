@@ -702,18 +702,21 @@ function renderProductionTwoProfileConversationList() {
     const selected = key === selectedTwoProfileConversationKey;
     item.className = delivered ? "is-delivered" : inboundOnly ? "is-inbound-only" : "is-pending-receive";
     item.classList.toggle("is-selected", selected);
-    if (!delivered) {
-      item.tabIndex = 0;
-      item.setAttribute("role", "button");
-      item.setAttribute("aria-label", `Review pending message ${entry.sender} to ${entry.receiver} number ${entry.messageNumber}`);
-      item.addEventListener("click", () => selectTwoProfileConversationEntryForReview(entry));
-      item.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          selectTwoProfileConversationEntryForReview(entry);
-        }
-      });
-    }
+    item.tabIndex = 0;
+    item.setAttribute("role", "button");
+    item.setAttribute(
+      "aria-label",
+      delivered
+        ? `Reply to delivered message ${entry.sender} to ${entry.receiver} number ${entry.messageNumber}`
+        : `Review pending message ${entry.sender} to ${entry.receiver} number ${entry.messageNumber}`,
+    );
+    item.addEventListener("click", () => selectTwoProfileConversationEntry(entry));
+    item.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        selectTwoProfileConversationEntry(entry);
+      }
+    });
 
     const meta = document.createElement("strong");
     meta.textContent = `${entry.sender} -> ${entry.receiver} / #${entry.messageNumber}`;
@@ -1342,14 +1345,20 @@ function swapTwoProfileDirection() {
 }
 
 function replyToLatestTwoProfileMessage() {
-  const latest = latestTwoProfileConversationEntry();
-  if (!latest || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
+  const selectedEntry = selectedTwoProfileConversationEntry();
+  const selectedDelivered =
+    selectedEntry?.statuses.has("sent") && selectedEntry.statuses.has("received")
+      ? selectedEntry
+      : null;
+  const target = selectedDelivered ?? latestTwoProfileConversationEntry();
+  if (!target || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
     setProductionTwoProfileState("Reply needs conversation");
     setText(fields.productionTwoProfileWarning, "Load a stored conversation before selecting a reply direction.");
     return false;
   }
-  fields.productionTwoProfileA.value = latest.receiver;
-  fields.productionTwoProfileB.value = latest.sender;
+  selectedTwoProfileConversationKey = twoProfileConversationKey(target);
+  fields.productionTwoProfileA.value = target.receiver;
+  fields.productionTwoProfileB.value = target.sender;
   if (fields.productionTwoProfileMessage) {
     fields.productionTwoProfileMessage.value = "";
   }
@@ -1357,14 +1366,25 @@ function replyToLatestTwoProfileMessage() {
   renderProductionTwoProfileDirection(input);
   renderProductionTwoProfileMemory(input);
   setProductionTwoProfileState("Reply direction ready");
+  const targetSource = selectedDelivered ? "Reply target selected" : "Reply target selected from latest message";
   setText(
     fields.productionTwoProfileWarning,
-    `Reply target selected from latest message #${latest.messageNumber}: ${input.profileA} -> ${input.profileB}.`,
+    `${targetSource} #${target.messageNumber}: ${input.profileA} -> ${input.profileB}.`,
   );
   setProductionFollowupActions(true, `Next: write reply from ${input.profileA} to ${input.profileB}.`);
   applyProductionActionState();
   fields.productionTwoProfileMessage?.focus();
   return true;
+}
+
+function selectTwoProfileConversationEntry(entry) {
+  if (!entry) {
+    return false;
+  }
+  const delivered = entry.statuses.has("sent") && entry.statuses.has("received");
+  return delivered
+    ? selectReplyAfterDeliveredReview(entry)
+    : selectTwoProfileConversationEntryForReview(entry);
 }
 
 function selectTwoProfileConversationEntryForReview(entry, options = {}) {
@@ -1511,6 +1531,7 @@ function selectReplyAfterDeliveredReview(entry) {
   ) {
     return false;
   }
+  selectedTwoProfileConversationKey = twoProfileConversationKey(entry);
   fields.productionTwoProfileA.value = entry.receiver;
   fields.productionTwoProfileB.value = entry.sender;
   if (fields.productionTwoProfileMessage) {
