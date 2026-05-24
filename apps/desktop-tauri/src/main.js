@@ -787,6 +787,18 @@ function selectedTwoProfileConversationEntry() {
     : null;
 }
 
+function setSelectedTwoProfileConversationEntry(entry, options = {}) {
+  if (!entry) {
+    selectedTwoProfileConversationKey = null;
+    return false;
+  }
+  selectedTwoProfileConversationKey = twoProfileConversationKey(entry);
+  if (options.render !== false) {
+    renderProductionTwoProfileConversationList();
+  }
+  return true;
+}
+
 function selectedTwoProfilePendingConversationEntry() {
   const selectedEntry = selectedTwoProfileConversationEntry();
   return selectedEntry && !(selectedEntry.statuses.has("sent") && selectedEntry.statuses.has("received"))
@@ -1356,7 +1368,7 @@ function replyToLatestTwoProfileMessage() {
     setText(fields.productionTwoProfileWarning, "Load a stored conversation before selecting a reply direction.");
     return false;
   }
-  selectedTwoProfileConversationKey = twoProfileConversationKey(target);
+  setSelectedTwoProfileConversationEntry(target);
   fields.productionTwoProfileA.value = target.receiver;
   fields.productionTwoProfileB.value = target.sender;
   if (fields.productionTwoProfileMessage) {
@@ -1397,7 +1409,7 @@ function selectTwoProfileConversationEntryForReview(entry, options = {}) {
     setText(fields.productionTwoProfileWarning, `Message #${entry.messageNumber} is already delivered.`);
     return false;
   }
-  selectedTwoProfileConversationKey = twoProfileConversationKey(entry);
+  setSelectedTwoProfileConversationEntry(entry);
   fields.productionTwoProfileA.value = entry.sender;
   fields.productionTwoProfileB.value = entry.receiver;
   if (fields.productionTwoProfileMessage) {
@@ -1531,7 +1543,7 @@ function selectReplyAfterDeliveredReview(entry) {
   ) {
     return false;
   }
-  selectedTwoProfileConversationKey = twoProfileConversationKey(entry);
+  setSelectedTwoProfileConversationEntry(entry);
   fields.productionTwoProfileA.value = entry.receiver;
   fields.productionTwoProfileB.value = entry.sender;
   if (fields.productionTwoProfileMessage) {
@@ -1790,6 +1802,7 @@ function applyProductionActionState() {
       twoProfile.profileA === selectedConversation.receiver &&
       twoProfile.profileB === selectedConversation.sender,
   );
+  const selectedDeliveredReplyDraftReady = Boolean(selectedDeliveredReplyReady && twoProfile.message);
   const pendingConversation = latestTwoProfilePendingConversationEntry();
   const selectedPendingConversation = selectedTwoProfilePendingConversationEntry();
   const pendingSelected = Boolean(selectedPendingConversation);
@@ -1822,10 +1835,12 @@ function applyProductionActionState() {
     !availability.runTwoProfileMessageRoundtrip,
     busy
       ? "Wait for the active production action."
+      : selectedDeliveredReplyDraftReady
+        ? `Send reply to selected message #${selectedConversation.messageNumber}.`
       : hasTwoProfileInput
         ? "Run full setup once before sending with stored sessions."
         : "Enter two profiles, passphrase, and message first.",
-    twoProfileCanSendStoredMessage,
+    selectedDeliveredReplyDraftReady || twoProfileCanSendStoredMessage,
   );
   setActionButtonState(
     fields.useProductionPairingPayload,
