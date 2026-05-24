@@ -799,6 +799,21 @@ function setSelectedTwoProfileConversationEntry(entry, options = {}) {
   return true;
 }
 
+function selectTwoProfileConversationMessage(sender, receiver, messageNumber, message, options = {}) {
+  const normalizedNumber = Number.parseInt(messageNumber, 10);
+  const text = String(message ?? "").trim();
+  if (!sender || !receiver || !Number.isInteger(normalizedNumber) || normalizedNumber < 1 || !text) {
+    return null;
+  }
+  const entry = {
+    sender,
+    receiver,
+    messageNumber: normalizedNumber,
+    message: text,
+  };
+  return setSelectedTwoProfileConversationEntry(entry, options) ? entry : null;
+}
+
 function selectedTwoProfilePendingConversationEntry() {
   const selectedEntry = selectedTwoProfileConversationEntry();
   return selectedEntry && !(selectedEntry.statuses.has("sent") && selectedEntry.statuses.has("received"))
@@ -2207,7 +2222,7 @@ function applyStoredSessionMessageResultToManualFlow(result, message) {
   const messageNumber = Number.parseInt(result.message_number, 10);
   const text = String(message ?? "").trim();
   if (!sender || !receiver || !Number.isInteger(messageNumber) || messageNumber < 1) {
-    return;
+    return null;
   }
 
   if (fields.productionProfileName) {
@@ -2220,16 +2235,11 @@ function applyStoredSessionMessageResultToManualFlow(result, message) {
     fields.productionMessageNumber.value = String(messageNumber);
   }
   if (text) {
-    selectedTwoProfileConversationKey = twoProfileConversationKey({
-      sender,
-      receiver,
-      messageNumber,
-      message: text,
-    });
     appendProductionTranscriptEntry("sent", sender, messageNumber, text);
     appendProductionTranscriptEntry("received", receiver, messageNumber, text);
     appendProductionTwoProfileConversationStatus("sent", sender, receiver, messageNumber, text);
     appendProductionTwoProfileConversationStatus("received", receiver, sender, messageNumber, text);
+    selectTwoProfileConversationMessage(sender, receiver, messageNumber, text);
   }
   latestProductionMessageImport = null;
   setProductionMessageState("Stored-session message synced");
@@ -2237,6 +2247,7 @@ function applyStoredSessionMessageResultToManualFlow(result, message) {
     fields.productionMessageWarning,
     `Stored-session message #${messageNumber} synced to manual view. Active sender=${sender}; receiver=${receiver}.`,
   );
+  return { sender, receiver, messageNumber, message: text };
 }
 
 function productionProfileInput() {
@@ -2619,10 +2630,18 @@ async function runProductionTwoProfileMessageRoundtrip() {
     const view = renderProductionTwoProfileMessageResult(result);
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
     if (view.canContinue) {
+      const sentMessage = selectTwoProfileConversationMessage(
+        String(result.sender_profile ?? profileA).trim().toLowerCase(),
+        String(result.receiver_profile ?? profileB).trim().toLowerCase(),
+        Number.parseInt(result.message_number, 10),
+        message,
+      );
       selectTwoProfileReplyDirection(sentInput);
       setText(
         fields.productionTwoProfileWarning,
-        `Stored-session message completed. Reply direction selected: ${profileB} -> ${profileA}.`,
+        sentMessage
+          ? `Stored-session message #${sentMessage.messageNumber} completed. Reply direction selected: ${profileB} -> ${profileA}.`
+          : `Stored-session message completed. Reply direction selected: ${profileB} -> ${profileA}.`,
       );
     } else {
       setText(
