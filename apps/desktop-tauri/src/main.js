@@ -977,6 +977,12 @@ function twoProfileRecoveryMessage(action, error, input = productionTwoProfileIn
   return `Two-profile action failed.${suffix}`;
 }
 
+function twoProfileSessionRebuildMessage(input = productionTwoProfileInput()) {
+  return input.message
+    ? "Stored sessions are incomplete. Run full setup to rebuild session state."
+    : "Stored sessions are incomplete. Write a setup message, then run full setup to rebuild session state.";
+}
+
 function renderProductionTwoProfileDirection(input = productionTwoProfileInput()) {
   setText(fields.productionTwoProfileDirection, twoProfileDirectionLabel(input));
   if (!fields.productionTwoProfileMessage) {
@@ -1029,7 +1035,7 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
       fields.productionTwoProfileStepSession,
       fields.productionTwoProfileStepSessionDetail,
       "failed",
-      "Stored sessions are incomplete. Run full two-profile setup.",
+      twoProfileSessionRebuildMessage(input),
     );
   } else {
     setTwoProfileFlowStep(
@@ -1080,6 +1086,7 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
 }
 
 function twoProfilePrimaryReadiness(input, busy, sessionsReady) {
+  const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   if (busy) {
     return { message: "Running: production action in progress", state: "blocked" };
   }
@@ -1099,7 +1106,9 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady) {
     return {
       message: sessionsReady
         ? "Ready: stored session recovered; write a message"
-        : "Ready: write first message, then run full setup",
+        : sessionStatus
+          ? "Ready: write setup message to rebuild sessions"
+          : "Ready: write first message, then run full setup",
       state: "compose",
     };
   }
@@ -1110,7 +1119,9 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady) {
     };
   }
   return {
-    message: `Ready: run full setup for ${input.profileA} -> ${input.profileB}`,
+    message: sessionStatus
+      ? `Ready: run full setup to rebuild sessions for ${input.profileA} -> ${input.profileB}`
+      : `Ready: run full setup for ${input.profileA} -> ${input.profileB}`,
     state: "setup",
   };
 }
@@ -1690,6 +1701,7 @@ function applyProductionActionState() {
   const twoProfileSessionsReady = state.hasTwoProfileSessionsReady;
   const latestConversation = latestTwoProfileConversationEntry();
   const knownTwoProfileSessionStatus = Boolean(latestTwoProfileSessionStatusForCurrentInput(twoProfile));
+  const twoProfileSessionsIncomplete = Boolean(knownTwoProfileSessionStatus && !twoProfileSessionsReady);
   const twoProfileNeedsSessionCheck =
     hasTwoProfileSessionStatusInput &&
     !twoProfileSessionsReady &&
@@ -1857,6 +1869,8 @@ function applyProductionActionState() {
         ? "Check recovered sessions before running full setup."
       : twoProfileSessionsReady
         ? "Stored sessions are ready; send a stored-session message instead."
+        : twoProfileSessionsIncomplete
+          ? twoProfileSessionRebuildMessage(twoProfile)
         : "Enter two profiles, passphrase, and message first.",
     twoProfileNeedsSetup,
   );
@@ -3053,12 +3067,8 @@ async function checkProductionTwoProfileSessionStatus() {
     } else {
       const currentInput = productionTwoProfileInput();
       setProductionTwoProfileState("Sessions incomplete");
-      setText(
-        fields.productionTwoProfileWarning,
-        currentInput.message
-          ? "Stored sessions are incomplete. Run full two-profile roundtrip to create session state."
-          : "Stored sessions are incomplete. Write a first message, then run full two-profile roundtrip.",
-      );
+      setText(fields.productionTwoProfileWarning, twoProfileSessionRebuildMessage(currentInput));
+      setProductionFollowupActions(true, `Next: ${twoProfileSessionRebuildMessage(currentInput)}`);
       postCheckFocus = currentInput.message
         ? fields.runProductionTwoProfileRoundtrip
         : fields.productionTwoProfileMessage;
