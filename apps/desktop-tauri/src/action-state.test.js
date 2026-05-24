@@ -615,7 +615,7 @@ test("productionTwoProfileResultView unlocks followups only for complete contain
   assert.match(view.boundary, /^Contained:/);
   assert.equal(
     view.nextStep,
-    "Next: write the next stored-session message.",
+    "Next: reply direction is selected; write a stored-session reply.",
   );
 });
 
@@ -645,7 +645,7 @@ test("productionTwoProfileMessageResultView formats stored-session message round
   assert.match(view.boundary, /^Contained:/);
   assert.equal(
     view.nextStep,
-    "Next: continue with another Profile A to Profile B message, or swap A/B to reply.",
+    "Next: reply direction is selected; write a stored-session reply.",
   );
 
   const blocked = productionTwoProfileMessageResultView({
