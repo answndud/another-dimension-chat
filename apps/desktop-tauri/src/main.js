@@ -693,6 +693,17 @@ function renderProductionTwoProfileConversationList() {
   }
 }
 
+function latestTwoProfileConversationEntry() {
+  const entries = [...productionTwoProfileConversationEntries.values()].sort((left, right) => {
+    const numberDelta = right.messageNumber - left.messageNumber;
+    if (numberDelta !== 0) {
+      return numberDelta;
+    }
+    return `${right.sender}:${right.receiver}`.localeCompare(`${left.sender}:${left.receiver}`);
+  });
+  return entries[0] ?? null;
+}
+
 function renderProductionTwoProfileTranscriptEntries(entries) {
   resetProductionTwoProfileTranscript();
   const orderedEntries = [...(entries ?? [])].sort((left, right) => {
@@ -954,22 +965,38 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady) {
 }
 
 function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
-  const currentLabel =
-    input.profileA && input.profileB && input.message
-      ? `${input.profileA} -> ${input.profileB} | message_chars=${input.message.length}`
-      : "Current input incomplete";
+  const currentDirection =
+    input.profileA && input.profileB && input.profileA !== input.profileB
+      ? `${input.profileA} -> ${input.profileB}`
+      : "Current direction incomplete";
+  const currentLabel = input.message
+    ? `${currentDirection} | draft_chars=${input.message.length}`
+    : `${currentDirection} | no draft`;
+  const latestConversation = latestTwoProfileConversationEntry();
 
   if (!latestProductionTwoProfileSuccess) {
-    setText(fields.productionTwoProfileCurrentInput, "No successful run yet");
+    setText(
+      fields.productionTwoProfileCurrentInput,
+      latestConversation
+        ? `Compose: ${currentLabel}; last message ${latestConversation.sender} -> ${latestConversation.receiver} #${latestConversation.messageNumber}`
+        : "No successful run yet",
+    );
     setText(fields.productionTwoProfileLastSuccess, "No successful roundtrip in this app session");
     return;
   }
 
   const matchesLastSuccess =
     twoProfileInputFingerprint(input) === latestProductionTwoProfileSuccess.fingerprint;
+  const repliesToTail = Boolean(
+    latestConversation &&
+      input.profileA === latestConversation.receiver &&
+      input.profileB === latestConversation.sender,
+  );
   setText(
     fields.productionTwoProfileCurrentInput,
-    `${matchesLastSuccess ? "Matches last success" : "Differs from last success"}: ${currentLabel}`,
+    latestConversation
+      ? `${repliesToTail ? "Replying to latest" : "Direction differs from latest"}: ${currentLabel}; latest ${latestConversation.sender} -> ${latestConversation.receiver} #${latestConversation.messageNumber}`
+      : `${matchesLastSuccess ? "Matches last success" : "Differs from last success"}: ${currentLabel}`,
   );
   setText(
     fields.productionTwoProfileLastSuccess,
