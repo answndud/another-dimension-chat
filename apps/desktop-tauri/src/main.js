@@ -711,11 +711,10 @@ function renderProductionTwoProfileConversationList() {
       ? `sender envelope slot: ready (${entry.sender})`
       : `sender envelope slot: missing (${entry.sender})`;
 
+    const actionView = twoProfileConversationActionView(entry);
     const action = document.createElement("span");
-    action.className = `transcript-action ${
-      delivered ? "is-reply" : senderEnvelopeSlotPresent || inboundOnly ? "is-ready" : "is-waiting"
-    }`;
-    action.textContent = twoProfileConversationActionLabel(entry);
+    action.className = `transcript-action ${actionView.state}`;
+    action.textContent = actionView.rowLabel;
 
     const body = document.createElement("span");
     body.textContent = entry.message;
@@ -764,59 +763,56 @@ function selectedTwoProfileConversationEntry() {
     : null;
 }
 
-function selectedTwoProfileNextActionMessage(entry) {
+function twoProfileConversationActionView(entry) {
   if (!entry) {
-    return "Next actions unlock after a completed local roundtrip.";
+    return {
+      nextAction: "Next actions unlock after a completed local roundtrip.",
+      rowLabel: "action: unavailable",
+      state: "is-waiting",
+      focusTarget: null,
+    };
   }
   const sentCopyPresent = entry.statuses.has("sent");
   const receivedCopyPresent = entry.statuses.has("received");
   const senderEnvelopeSlotPresent = productionPayloadSlots.messageEnvelope.has(entry.sender);
   if (sentCopyPresent && receivedCopyPresent) {
-    return `Complete: message #${entry.messageNumber} delivered. Next: write reply from ${entry.receiver} to ${entry.sender}.`;
+    return {
+      nextAction: `Complete: message #${entry.messageNumber} delivered. Next: write reply from ${entry.receiver} to ${entry.sender}.`,
+      rowLabel: `action: reply from ${entry.receiver}`,
+      state: "is-reply",
+      focusTarget: fields.productionTwoProfileMessage,
+    };
   }
   if (sentCopyPresent && senderEnvelopeSlotPresent) {
-    return `Next: import envelope for message #${entry.messageNumber} into ${entry.receiver}.`;
+    return {
+      nextAction: `Next: import envelope for message #${entry.messageNumber} into ${entry.receiver}.`,
+      rowLabel: `action: import envelope into ${entry.receiver}`,
+      state: "is-ready",
+      focusTarget: fields.importProductionMessageEnvelope,
+    };
   }
   if (sentCopyPresent) {
-    return `Next: load or paste sender envelope for message #${entry.messageNumber}.`;
+    return {
+      nextAction: `Next: load or paste sender envelope for message #${entry.messageNumber}.`,
+      rowLabel: `action: load envelope for ${entry.receiver}`,
+      state: "is-waiting",
+      focusTarget: fields.productionRemoteMessageEnvelope,
+    };
   }
-  return `Next: review missing local sent copy for message #${entry.messageNumber}.`;
+  return {
+    nextAction: `Next: review missing local sent copy for message #${entry.messageNumber}.`,
+    rowLabel: `action: export sender copy from ${entry.sender}`,
+    state: "is-ready",
+    focusTarget: fields.exportProductionMessageEnvelope,
+  };
 }
 
-function twoProfileConversationActionLabel(entry) {
-  if (!entry) {
-    return "action: unavailable";
-  }
-  const sentCopyPresent = entry.statuses.has("sent");
-  const receivedCopyPresent = entry.statuses.has("received");
-  const senderEnvelopeSlotPresent = productionPayloadSlots.messageEnvelope.has(entry.sender);
-  if (sentCopyPresent && receivedCopyPresent) {
-    return `action: reply from ${entry.receiver}`;
-  }
-  if (sentCopyPresent && senderEnvelopeSlotPresent) {
-    return `action: import envelope into ${entry.receiver}`;
-  }
-  if (sentCopyPresent) {
-    return `action: load envelope for ${entry.receiver}`;
-  }
-  return `action: export sender copy from ${entry.sender}`;
+function selectedTwoProfileNextActionMessage(entry) {
+  return twoProfileConversationActionView(entry).nextAction;
 }
 
 function selectedTwoProfileManualFocusTarget(entry) {
-  if (!entry) {
-    return null;
-  }
-  const sentCopyPresent = entry.statuses.has("sent");
-  const receivedCopyPresent = entry.statuses.has("received");
-  if (sentCopyPresent && !receivedCopyPresent) {
-    return productionPayloadSlots.messageEnvelope.has(entry.sender)
-      ? fields.importProductionMessageEnvelope
-      : fields.productionRemoteMessageEnvelope;
-  }
-  if (!sentCopyPresent) {
-    return fields.exportProductionMessageEnvelope;
-  }
-  return fields.productionTwoProfileMessage;
+  return twoProfileConversationActionView(entry).focusTarget;
 }
 
 function renderProductionTwoProfileTranscriptEntries(entries) {
