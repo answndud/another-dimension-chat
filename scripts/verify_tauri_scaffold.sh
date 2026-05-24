@@ -232,7 +232,7 @@ require_contains "$APP_DIR/src/action-state.js" 'productionManualMessageStatusVi
 require_contains "$APP_DIR/src/action-state.js" 'productionManualRelayAvailability'
 require_contains "$APP_DIR/src/action-state.js" 'productionTwoProfileSessionStatusView'
 require_contains "$APP_DIR/src/action-state.js" 'productionProfileMessageReadiness'
-require_contains "$APP_DIR/src/action-state.js" 'Next: write the next stored-session message'
+require_contains "$APP_DIR/src/action-state.js" 'Next: reply direction is selected'
 require_contains "$APP_DIR/src/action-state.js" 'Blocked: passphrase required'
 require_contains "$APP_DIR/src/action-state.js" 'Ready: local encrypted roundtrip can run'
 require_contains "$APP_DIR/src/action-state.js" 'no plaintext, key material, store path, network I/O, transport I/O, or runtime messaging exposure'

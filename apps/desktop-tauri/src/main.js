@@ -1187,6 +1187,28 @@ function swapTwoProfileDirection() {
   fields.productionTwoProfileMessage?.focus();
 }
 
+function selectTwoProfileReplyDirection(sentInput) {
+  const sender = String(sentInput?.profileA ?? "").trim();
+  const receiver = String(sentInput?.profileB ?? "").trim();
+  if (!sender || !receiver || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
+    return false;
+  }
+  fields.productionTwoProfileA.value = receiver;
+  fields.productionTwoProfileB.value = sender;
+  if (fields.productionTwoProfileMessage) {
+    fields.productionTwoProfileMessage.value = "";
+  }
+  renderProductionTwoProfileDirection(productionTwoProfileInput());
+  renderProductionTwoProfileMemory(productionTwoProfileInput());
+  setProductionTwoProfileState("Reply direction ready");
+  setProductionFollowupActions(
+    true,
+    `Next: write reply from ${receiver} to ${sender}.`,
+  );
+  fields.productionTwoProfileMessage?.focus();
+  return true;
+}
+
 function applyProductionActionState() {
   const { profile, passphrase } = productionProfileInput();
   const pairing = productionPairingInput();
@@ -1774,6 +1796,7 @@ function renderProductionTwoProfileMessageResult(result) {
     }
   }
   setProductionFollowupActions(view.canContinue, view.nextStep);
+  return view;
 }
 
 function applyStoredSessionMessageResultToManualFlow(result, message) {
@@ -2124,12 +2147,14 @@ async function runProductionTwoProfileRoundtrip() {
       message,
     });
     setProductionTwoProfileState("Two-profile roundtrip completed");
+    const sentInput = { profileA, profileB };
     const view = renderProductionTwoProfileResult(result);
     if (view.canContinue) {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+      selectTwoProfileReplyDirection(sentInput);
       setText(
         fields.productionTwoProfileWarning,
-        "First message stored and conversation refreshed. Write the next stored-session message.",
+        `First message stored. Reply direction selected: ${profileB} -> ${profileA}.`,
       );
       fields.productionTwoProfileMessage?.focus();
     } else {
@@ -2182,12 +2207,21 @@ async function runProductionTwoProfileMessageRoundtrip() {
     });
     setProductionTwoProfileState("Stored-session message completed");
     setText(fields.productionTwoProfileWarning, result.warning);
-    renderProductionTwoProfileMessageResult(result);
+    const sentInput = { profileA, profileB };
+    const view = renderProductionTwoProfileMessageResult(result);
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
-    setText(
-      fields.productionTwoProfileWarning,
-      "Stored-session message completed and conversation refreshed from encrypted local stores.",
-    );
+    if (view.canContinue) {
+      selectTwoProfileReplyDirection(sentInput);
+      setText(
+        fields.productionTwoProfileWarning,
+        `Stored-session message completed. Reply direction selected: ${profileB} -> ${profileA}.`,
+      );
+    } else {
+      setText(
+        fields.productionTwoProfileWarning,
+        "Stored-session message completed and conversation refreshed from encrypted local stores.",
+      );
+    }
     await loadProductionProfileList();
   } catch (error) {
     setProductionTwoProfileState("Stored-session message failed");
