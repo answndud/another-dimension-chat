@@ -929,6 +929,15 @@ function twoProfileComposePrompt(input = productionTwoProfileInput()) {
   if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
     return "Write a stored-session message";
   }
+  const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
+  const sessionsReady = twoProfileSessionsReadyForInput(input);
+  const hasRecoveredConversation = Boolean(latestTwoProfileConversationEntry());
+  if (!sessionsReady && !sessionStatus && hasRecoveredConversation) {
+    return "Check recovered sessions before writing";
+  }
+  if (!sessionsReady && sessionStatus) {
+    return "Write setup message to rebuild sessions";
+  }
   if (latestTwoProfileSuccessMatchesOppositeDirection(input)) {
     return `Reply from ${input.profileA} to ${input.profileB}`;
   }
