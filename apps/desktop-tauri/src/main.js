@@ -226,6 +226,7 @@ let latestProductionMessageImport = null;
 let productionBusyAction = null;
 let twoProfileAutoResumeTimer = null;
 let latestTwoProfileAutoResumeFingerprint = null;
+let selectedTwoProfileConversationKey = null;
 const productionTranscriptEntryKeys = new Set();
 const productionTwoProfileConversationEntries = new Map();
 const productionPayloadSlots = {
@@ -673,10 +674,13 @@ function renderProductionTwoProfileConversationList() {
   }
   for (const entry of entries) {
     const item = document.createElement("li");
+    const key = twoProfileConversationKey(entry);
     const delivered = entry.statuses.has("sent") && entry.statuses.has("received");
     const inboundOnly = !entry.statuses.has("sent") && entry.statuses.has("received");
     const senderEnvelopeSlotPresent = productionPayloadSlots.messageEnvelope.has(entry.sender);
+    const selected = key === selectedTwoProfileConversationKey;
     item.className = delivered ? "is-delivered" : inboundOnly ? "is-inbound-only" : "is-pending-receive";
+    item.classList.toggle("is-selected", selected);
     if (!delivered) {
       item.tabIndex = 0;
       item.setAttribute("role", "button");
@@ -710,7 +714,16 @@ function renderProductionTwoProfileConversationList() {
     const body = document.createElement("span");
     body.textContent = entry.message;
 
-    item.append(meta, status, slot, body);
+    item.append(meta, status, slot);
+    if (selected) {
+      const review = document.createElement("span");
+      review.className = "transcript-review is-selected";
+      review.textContent = delivered
+        ? "selected review target: delivered"
+        : "selected review target: pending";
+      item.append(review);
+    }
+    item.append(body);
     target.append(item);
   }
 }
@@ -1286,6 +1299,7 @@ function selectTwoProfileConversationEntryForReview(entry) {
     setText(fields.productionTwoProfileWarning, `Message #${entry.messageNumber} is already delivered.`);
     return false;
   }
+  selectedTwoProfileConversationKey = twoProfileConversationKey(entry);
   fields.productionTwoProfileA.value = entry.sender;
   fields.productionTwoProfileB.value = entry.receiver;
   if (fields.productionTwoProfileMessage) {
