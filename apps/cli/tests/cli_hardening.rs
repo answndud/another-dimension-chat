@@ -1482,6 +1482,8 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
             "1",
             "--plaintext",
             plaintext_arg,
+            "--message-ttl-seconds",
+            "86400",
             "--passphrase-stdin",
         ],
         "correct horse battery staple\n",
@@ -1498,6 +1500,7 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(send_prepare_out.contains("outbound_envelope_io_ready=true"));
     assert!(send_prepare_out.contains("plaintext_accepted=true"));
     assert!(send_prepare_out.contains("message_number_reserved=true"));
+    assert!(send_prepare_out.contains("message_ttl_seconds=86400"));
     assert!(send_prepare_out.contains("local_message_index_written=true"));
     assert!(send_prepare_out.contains("pending_message_record_written=true"));
     assert!(send_prepare_out.contains("envelope_encryption_ready=false"));
@@ -1516,6 +1519,32 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!send_prepare_error.contains(finish_store_arg));
     assert!(!send_prepare_error.contains(plaintext_arg));
     assert!(!send_prepare_error.contains("hello from canonical dialer"));
+
+    let invalid_ttl = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "send-prepare",
+            "--profile",
+            finish_profile,
+            "--store",
+            finish_store_arg,
+            "--message-number",
+            "99",
+            "--plaintext",
+            plaintext_arg,
+            "--message-ttl-seconds",
+            "0",
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let invalid_ttl_error = stderr(&invalid_ttl);
+    assert!(!invalid_ttl.status.success());
+    assert!(stdout(&invalid_ttl).is_empty());
+    assert!(invalid_ttl_error.contains("--message-ttl-seconds"));
+    assert!(!invalid_ttl_error.contains(finish_store_arg));
+    assert!(!invalid_ttl_error.contains("correct horse"));
 
     let pending_status = run_with_stdin(
         &[
@@ -1670,6 +1699,8 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
             reply_store_arg,
             "--in",
             encrypted_envelope_export_arg,
+            "--message-ttl-seconds",
+            "3600",
             "--passphrase-stdin",
         ],
         "correct horse battery staple\n",
@@ -1690,6 +1721,7 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(inbound_import_out.contains("replay_accepted=true"));
     assert!(inbound_import_out.contains("plaintext_decrypted=true"));
     assert!(inbound_import_out.contains("plaintext_exposed=false"));
+    assert!(inbound_import_out.contains("message_ttl_seconds=3600"));
     assert!(inbound_import_out.contains("received_message_written=true"));
     assert!(inbound_import_out.contains("replay_window_committed=true"));
     assert!(inbound_import_out.contains("network_receive_attempted=false"));
@@ -1828,6 +1860,8 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
             roundtrip_plaintext_arg,
             "--received-out",
             roundtrip_received_arg,
+            "--message-ttl-seconds",
+            "2592000",
             "--passphrase-stdin",
         ],
         "correct horse battery staple\n",
@@ -1843,6 +1877,7 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(local_roundtrip_out.contains("auto_message_number=false"));
     assert!(local_roundtrip_out.contains("auto_counter_written=false"));
     assert!(local_roundtrip_out.contains("existing_message_slot_skipped=false"));
+    assert!(local_roundtrip_out.contains("message_ttl_seconds=2592000"));
     assert!(local_roundtrip_out.contains("sender_runtime_material_reconstructable=true"));
     assert!(local_roundtrip_out.contains("sender_message_number_reserved=true"));
     assert!(local_roundtrip_out.contains("sender_pending_record_present=true"));
@@ -1919,6 +1954,7 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(auto_local_roundtrip_out.contains("auto_message_number=true"));
     assert!(auto_local_roundtrip_out.contains("auto_counter_written=true"));
     assert!(auto_local_roundtrip_out.contains("existing_message_slot_skipped=true"));
+    assert!(auto_local_roundtrip_out.contains("message_ttl_seconds=604800"));
     assert!(auto_local_roundtrip_out.contains("sender_message_number_reserved=true"));
     assert!(auto_local_roundtrip_out.contains("receiver_inbound_message_stored=true"));
     assert!(auto_local_roundtrip_out.contains("received_export_matches_input=true"));
