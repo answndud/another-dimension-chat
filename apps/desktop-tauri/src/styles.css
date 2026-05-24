@@ -363,6 +363,19 @@ textarea[readonly] {
   color: var(--warning);
 }
 
+.action-readiness.is-ready {
+  color: var(--success);
+}
+
+.action-readiness.is-setup,
+.action-readiness.is-compose {
+  color: var(--accent-cyan);
+}
+
+.action-readiness.is-blocked {
+  color: var(--warning);
+}
+
 .demo-hint {
   margin: 0;
   color: var(--text-muted);

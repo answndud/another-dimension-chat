@@ -20,7 +20,6 @@ import {
   productionSessionStateView,
   productionTwoProfileMessageResultView,
   productionTwoProfileResultView,
-  productionTwoProfileReadiness,
   productionTwoProfileSessionStatusView,
 } from "./action-state.js";
 import "./styles.css";
@@ -324,6 +323,16 @@ function setProductionFollowupActions(enabled, message) {
   setDisabled(fields.focusLocalDiagnostic, !enabled);
   setDisabled(fields.swapTwoProfileDirection, !enabled);
   setDisabled(fields.editTwoProfileMessage, !enabled);
+}
+
+function setProductionTwoProfileReadiness(message, state = "blocked") {
+  const node = fields.productionTwoProfileReadiness;
+  if (!node) {
+    return;
+  }
+  node.textContent = message;
+  node.classList.remove("is-ready", "is-setup", "is-compose", "is-blocked");
+  node.classList.add(`is-${state}`);
 }
 
 function renderAppStateSummary(status) {
@@ -908,6 +917,42 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
   );
 }
 
+function twoProfilePrimaryReadiness(input, busy, sessionsReady) {
+  if (busy) {
+    return { message: "Running: production action in progress", state: "blocked" };
+  }
+  if (!input.profileA) {
+    return { message: "Blocked: Profile A required", state: "blocked" };
+  }
+  if (!input.profileB) {
+    return { message: "Blocked: Profile B required", state: "blocked" };
+  }
+  if (input.profileA === input.profileB) {
+    return { message: "Blocked: profiles must be distinct", state: "blocked" };
+  }
+  if (!input.passphrase) {
+    return { message: "Blocked: passphrase required", state: "blocked" };
+  }
+  if (!input.message) {
+    return {
+      message: sessionsReady
+        ? "Ready: stored session recovered; write a message"
+        : "Ready: write first message, then run full setup",
+      state: "compose",
+    };
+  }
+  if (sessionsReady) {
+    return {
+      message: `Ready: send stored-session message ${input.profileA} -> ${input.profileB}`,
+      state: "ready",
+    };
+  }
+  return {
+    message: `Ready: run full setup for ${input.profileA} -> ${input.profileB}`,
+    state: "setup",
+  };
+}
+
 function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
   const currentLabel =
     input.profileA && input.profileB && input.message
@@ -1260,7 +1305,8 @@ function applyProductionActionState() {
   setTwoProfileComposeLocked(twoProfileComposeLocked);
   renderProductionTwoProfileDirection(twoProfile);
   renderProductionTwoProfileFlow(twoProfile);
-  setText(fields.productionTwoProfileReadiness, productionTwoProfileReadiness(twoProfile, busy));
+  const twoProfileReadiness = twoProfilePrimaryReadiness(twoProfile, busy, twoProfileSessionsReady);
+  setProductionTwoProfileReadiness(twoProfileReadiness.message, twoProfileReadiness.state);
   renderProductionTwoProfileMemory(twoProfile);
   renderManualNextActions(state);
   renderManualMessageStatus(state);
@@ -2175,10 +2221,13 @@ async function runTwoProfilePrimaryActionFromCompose() {
   }
 
   setProductionTwoProfileState("Two-profile send needs input");
-  setText(
-    fields.productionTwoProfileWarning,
-    productionTwoProfileReadiness(productionTwoProfileInput(), productionBusyAction !== null),
+  const input = productionTwoProfileInput();
+  const readiness = twoProfilePrimaryReadiness(
+    input,
+    productionBusyAction !== null,
+    twoProfileSessionsReadyForInput(input),
   );
+  setText(fields.productionTwoProfileWarning, readiness.message);
 }
 
 function handleTwoProfileMessageKeydown(event) {
