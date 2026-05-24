@@ -406,7 +406,7 @@ export function productionTwoProfileMessageResultView(result) {
       `sender=${result.sender_session_ready} receiver=${result.receiver_session_ready}`,
     message:
       `${messageReady ? "Complete" : "Review"}: stored-session envelope imported and received message verified | ` +
-      `number=${result.message_number ?? "unknown"} reserved=${result.message_number_reserved} envelope=${result.encrypted_envelope_exported} inbound=${result.inbound_message_stored} status=${result.received_status_verified} match=${result.received_export_matches_input}`,
+      `number=${result.message_number ?? "unknown"} reserved=${result.message_number_reserved} ttl=${result.message_ttl_seconds ?? "unknown"} envelope=${result.encrypted_envelope_exported} inbound=${result.inbound_message_stored} status=${result.received_status_verified} match=${result.received_export_matches_input}`,
     boundary:
       `${boundaryContained ? "Contained" : "Review"}: no plaintext, key material, store path, network I/O, transport I/O, or runtime messaging exposure | ` +
       `plaintext_returned=${result.plaintext_returned_to_frontend} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
@@ -530,6 +530,7 @@ export function productionMessageEnvelopeExportView(result) {
   return {
     outbound:
       `number=${result.selected_message_number} auto=${result.auto_message_number} ` +
+      `ttl=${result.message_ttl_seconds ?? "unknown"} ` +
       `counter=${result.auto_counter_written} skipped=${result.existing_message_slot_skipped} ` +
       `reserved=${result.message_number_reserved} pending=${result.pending_message_record_written} ` +
       `indexed=${result.local_message_index_written} transport=${result.session_transport_ready} ` +

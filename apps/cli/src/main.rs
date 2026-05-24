@@ -15,6 +15,9 @@ fn main() {
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+const PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
+
+#[cfg(not(feature = "dev-insecure"))]
 fn production_main() -> Result<(), String> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     match args.as_slice() {
@@ -931,6 +934,7 @@ fn run_production_message_send_prepare_command(args: &[String]) -> Result<(), St
         &passphrase,
         options.message_number,
         &plaintext,
+        PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
     )
     .map_err(redacted_production_message_send_prepare_error)?;
 
@@ -986,6 +990,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
         &passphrase,
         message_number,
         &plaintext,
+        PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
     )
     .map_err(redacted_production_message_local_roundtrip_error)?;
     let pending_summary = another_dimension_core::production::production_message_pending_status(
@@ -1017,6 +1022,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
             options.receiver_profile.clone(),
             &passphrase,
             envelope_summary.export_payload(),
+            PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
         )
         .map_err(redacted_production_message_local_roundtrip_error)?;
     let received_status_summary =
@@ -1213,6 +1219,7 @@ fn run_production_message_inbound_decrypt_import_command(args: &[String]) -> Res
         options.profile,
         &passphrase,
         &envelope_payload,
+        PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
     )
     .map_err(redacted_production_message_inbound_decrypt_import_error)?;
     println!(

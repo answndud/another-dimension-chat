@@ -132,6 +132,7 @@ const fields = {
   productionPairingBoundary: document.querySelector("#production-pairing-boundary"),
   productionMessageAutoNumber: document.querySelector("#production-message-auto-number"),
   productionMessageNumber: document.querySelector("#production-message-number"),
+  productionMessageTtl: document.querySelector("#production-message-ttl"),
   productionMessageBody: document.querySelector("#production-message-body"),
   exportProductionMessageEnvelope: document.querySelector("#export-production-message-envelope"),
   productionMessageState: document.querySelector("#production-message-state"),
@@ -171,6 +172,7 @@ const fields = {
     "#production-two-profile-step-reply-detail",
   ),
   productionTwoProfilePassphrase: document.querySelector("#production-two-profile-passphrase"),
+  productionTwoProfileMessageTtl: document.querySelector("#production-two-profile-message-ttl"),
   productionTwoProfileMessage: document.querySelector("#production-two-profile-message"),
   runProductionTwoProfileRoundtrip: document.querySelector("#run-production-two-profile-roundtrip"),
   checkProductionTwoProfileSessionStatusInline: document.querySelector(
@@ -961,7 +963,12 @@ function renderManualStatus() {
 }
 
 function twoProfileInputFingerprint(input) {
-  return `${input.profileA}\n${input.profileB}\n${input.message}`;
+  return `${input.profileA}\n${input.profileB}\n${input.messageTtlSeconds}\n${input.message}`;
+}
+
+function selectedMessageTtlSeconds(node, fallback = 604800) {
+  const value = Number.parseInt(node?.value ?? String(fallback), 10);
+  return [3600, 86400, 604800, 2592000].includes(value) ? value : fallback;
 }
 
 function twoProfileDirectionLabel(input) {
@@ -1181,7 +1188,7 @@ function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
       ? `${input.profileA} -> ${input.profileB}`
       : "Current direction incomplete";
   const currentLabel = input.message
-    ? `${currentDirection} | draft_chars=${input.message.length}`
+    ? `${currentDirection} | retention=${twoProfileRetentionLabel({ ttlSeconds: input.messageTtlSeconds }).replace("retention: ", "")} | draft_chars=${input.message.length}`
     : `${currentDirection} | no draft`;
   const latestConversation = latestTwoProfileConversationEntry();
 
@@ -2238,6 +2245,7 @@ function productionTwoProfileInput() {
     profileB: (fields.productionTwoProfileB?.value ?? "").trim(),
     passphrase:
       fields.productionTwoProfilePassphrase?.value || fields.productionProfilePassphrase?.value || "",
+    messageTtlSeconds: selectedMessageTtlSeconds(fields.productionTwoProfileMessageTtl),
     message: (fields.productionTwoProfileMessage?.value ?? "").trim(),
   };
 }
@@ -2352,6 +2360,7 @@ function productionMessageInput() {
     ...productionProfileInput(),
     autoMessageNumber: productionMessageUsesAutoNumber(),
     messageNumber: Number.parseInt(fields.productionMessageNumber?.value ?? "1", 10),
+    messageTtlSeconds: selectedMessageTtlSeconds(fields.productionMessageTtl),
     message: (fields.productionMessageBody?.value ?? "").trim(),
     envelopePayload: (fields.productionRemoteMessageEnvelope?.value ?? "").trim(),
   };
@@ -2614,7 +2623,7 @@ async function runLocalLoop() {
 }
 
 async function runProductionTwoProfileRoundtrip() {
-  const { profileA, profileB, passphrase, message } = productionTwoProfileInput();
+  const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
   if (!profileA || !profileB || profileA === profileB || !passphrase || !message) {
     setProductionTwoProfileState("Two-profile roundtrip needs input");
     setText(
@@ -2642,6 +2651,7 @@ async function runProductionTwoProfileRoundtrip() {
       profileB,
       passphrase,
       message,
+      messageTtlSeconds,
     });
     setProductionTwoProfileState("Two-profile roundtrip completed");
     const sentInput = { profileA, profileB };
@@ -2676,7 +2686,7 @@ async function runProductionTwoProfileRoundtrip() {
 }
 
 async function runProductionTwoProfileMessageRoundtrip() {
-  const { profileA, profileB, passphrase, message } = productionTwoProfileInput();
+  const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
   if (!profileA || !profileB || profileA === profileB || !passphrase || !message) {
     setProductionTwoProfileState("Stored-session message needs input");
     setText(
@@ -2701,6 +2711,7 @@ async function runProductionTwoProfileMessageRoundtrip() {
       profileB,
       passphrase,
       message,
+      messageTtlSeconds,
     });
     setProductionTwoProfileState("Stored-session message completed");
     setText(fields.productionTwoProfileWarning, result.warning);
@@ -3290,7 +3301,7 @@ async function refreshTwoProfileConversationAfterManualImport(profile, passphras
   return true;
 }
 
-function syncTwoProfileConversationAfterManualExport(profile, messageNumber, message) {
+function syncTwoProfileConversationAfterManualExport(profile, messageNumber, message, messageTtlSeconds) {
   const exportedProfile = String(profile ?? "").trim().toLowerCase();
   const selectedEntry = selectedTwoProfileConversationEntry();
   const selectedNumber = Number.parseInt(selectedEntry?.messageNumber, 10);
@@ -3313,6 +3324,7 @@ function syncTwoProfileConversationAfterManualExport(profile, messageNumber, mes
     selectedEntry.receiver,
     exportedNumber,
     text,
+    { ttlSeconds: messageTtlSeconds },
   );
   setProductionTwoProfileState("Conversation updated after export");
   const refreshedEntry = selectedTwoProfileConversationEntry();
@@ -3532,7 +3544,7 @@ async function importProductionHandshakeFinish() {
 }
 
 async function exportProductionMessageEnvelope() {
-  const { profile, passphrase, autoMessageNumber, messageNumber, message } =
+  const { profile, passphrase, autoMessageNumber, messageNumber, message, messageTtlSeconds } =
     productionMessageInput();
   if (
     !profile ||
@@ -3563,6 +3575,7 @@ async function exportProductionMessageEnvelope() {
       messageNumber: autoMessageNumber ? 0 : messageNumber,
       autoMessageNumber,
       message,
+      messageTtlSeconds,
     });
     const view = productionMessageEnvelopeExportView(result);
     setProductionMessageState("Message envelope exported");
@@ -3574,7 +3587,12 @@ async function exportProductionMessageEnvelope() {
       fields.productionMessageEnvelope.value = result.envelope_payload;
     }
     appendProductionTranscriptEntry("sent", profile, result.selected_message_number, message);
-    syncTwoProfileConversationAfterManualExport(profile, result.selected_message_number, message);
+    syncTwoProfileConversationAfterManualExport(
+      profile,
+      result.selected_message_number,
+      message,
+      result.message_ttl_seconds,
+    );
     applyProductionActionState();
     setText(fields.productionMessageOutbound, view.outbound);
     setText(fields.productionMessageInbound, "Not imported yet");
@@ -3593,7 +3611,7 @@ async function exportProductionMessageEnvelope() {
 }
 
 async function importProductionMessageEnvelope() {
-  const { profile, passphrase, messageNumber, envelopePayload } = productionMessageInput();
+  const { profile, passphrase, messageNumber, envelopePayload, messageTtlSeconds } = productionMessageInput();
   if (
     !profile ||
     !passphrase ||
@@ -3620,6 +3638,7 @@ async function importProductionMessageEnvelope() {
       passphrase,
       messageNumber,
       envelopePayload,
+      messageTtlSeconds,
     });
     const view = productionMessageEnvelopeImportView(result);
     latestProductionMessageImport = productionMessageImportFingerprint({ profile, messageNumber });
@@ -3775,14 +3794,20 @@ for (const input of [
   fields.productionRemoteHandshakeFinishPayload,
   fields.productionMessageAutoNumber,
   fields.productionMessageNumber,
+  fields.productionMessageTtl,
   fields.productionMessageBody,
   fields.productionRemoteMessageEnvelope,
   fields.productionTwoProfileA,
   fields.productionTwoProfileB,
+  fields.productionTwoProfileMessageTtl,
   fields.productionTwoProfileMessage,
 ]) {
   if (input) {
     input.addEventListener("input", () => {
+      applyProductionActionState();
+      scheduleTwoProfileAutoResume();
+    });
+    input.addEventListener("change", () => {
       applyProductionActionState();
       scheduleTwoProfileAutoResume();
     });
