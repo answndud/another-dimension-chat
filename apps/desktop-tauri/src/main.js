@@ -2076,6 +2076,12 @@ function applyStoredSessionMessageResultToManualFlow(result, message) {
     fields.productionMessageNumber.value = String(messageNumber);
   }
   if (text) {
+    selectedTwoProfileConversationKey = twoProfileConversationKey({
+      sender,
+      receiver,
+      messageNumber,
+      message: text,
+    });
     appendProductionTranscriptEntry("sent", sender, messageNumber, text);
     appendProductionTranscriptEntry("received", receiver, messageNumber, text);
     appendProductionTwoProfileConversationStatus("sent", sender, receiver, messageNumber, text);
