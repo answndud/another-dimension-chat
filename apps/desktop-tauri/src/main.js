@@ -397,6 +397,13 @@ function latestTwoProfileSessionStatusForCurrentInput(input = productionTwoProfi
     : null;
 }
 
+function rememberTwoProfileSessionStatus(input, result) {
+  latestProductionTwoProfileSessionStatus = {
+    fingerprint: twoProfileSessionStatusFingerprint(input),
+    result,
+  };
+}
+
 function latestTwoProfileSuccessMatchesDirection(input = productionTwoProfileInput()) {
   return Boolean(
     latestProductionTwoProfileSuccess &&
@@ -426,28 +433,25 @@ function rememberTwoProfileReadySessionFromRoundtrip(input, result) {
   if (!input.profileA || !input.profileB) {
     return;
   }
-  latestProductionTwoProfileSessionStatus = {
-    fingerprint: twoProfileSessionStatusFingerprint(input),
-    result: {
-      profile_a: input.profileA,
-      profile_b: input.profileB,
-      profile_a_ready_for_message_envelope: Boolean(result.sender_session_ready),
-      profile_b_ready_for_message_envelope: Boolean(result.receiver_session_ready),
-      both_ready_for_message_envelope: Boolean(result.sender_session_ready && result.receiver_session_ready),
-      profile_a_session_transport_state_present: Boolean(result.sender_session_ready),
-      profile_b_session_transport_state_present: Boolean(result.receiver_session_ready),
-      profile_a_runtime_material_reconstructable: Boolean(result.sender_session_ready),
-      profile_b_runtime_material_reconstructable: Boolean(result.receiver_session_ready),
-      profile_a_outbound_envelope_io_ready: false,
-      profile_b_outbound_envelope_io_ready: false,
-      store_path_returned: Boolean(result.store_path_returned),
-      passphrase_retained: Boolean(result.passphrase_retained),
-      key_material_exposed: Boolean(result.key_material_exposed),
-      network_io_attempted: Boolean(result.network_io_attempted),
-      transport_io_opened: Boolean(result.transport_io_opened),
-      runtime_messaging_enabled: Boolean(result.runtime_messaging_enabled),
-    },
-  };
+  rememberTwoProfileSessionStatus(input, {
+    profile_a: input.profileA,
+    profile_b: input.profileB,
+    profile_a_ready_for_message_envelope: Boolean(result.sender_session_ready),
+    profile_b_ready_for_message_envelope: Boolean(result.receiver_session_ready),
+    both_ready_for_message_envelope: Boolean(result.sender_session_ready && result.receiver_session_ready),
+    profile_a_session_transport_state_present: Boolean(result.sender_session_ready),
+    profile_b_session_transport_state_present: Boolean(result.receiver_session_ready),
+    profile_a_runtime_material_reconstructable: Boolean(result.sender_session_ready),
+    profile_b_runtime_material_reconstructable: Boolean(result.receiver_session_ready),
+    profile_a_outbound_envelope_io_ready: false,
+    profile_b_outbound_envelope_io_ready: false,
+    store_path_returned: Boolean(result.store_path_returned),
+    passphrase_retained: Boolean(result.passphrase_retained),
+    key_material_exposed: Boolean(result.key_material_exposed),
+    network_io_attempted: Boolean(result.network_io_attempted),
+    transport_io_opened: Boolean(result.transport_io_opened),
+    runtime_messaging_enabled: Boolean(result.runtime_messaging_enabled),
+  });
 }
 
 function applyProductionProfilePreset(peer) {
@@ -2027,7 +2031,7 @@ async function runProductionTwoProfileRoundtrip() {
     setProductionTwoProfileState("Two-profile roundtrip completed");
     const view = renderProductionTwoProfileResult(result);
     if (view.canContinue) {
-      await loadProductionTwoProfileTranscript({ quiet: true });
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
       setText(
         fields.productionTwoProfileWarning,
         "First message stored and conversation refreshed. Write the next stored-session message.",
@@ -2084,7 +2088,7 @@ async function runProductionTwoProfileMessageRoundtrip() {
     setProductionTwoProfileState("Stored-session message completed");
     setText(fields.productionTwoProfileWarning, result.warning);
     renderProductionTwoProfileMessageResult(result);
-    await loadProductionTwoProfileTranscript({ quiet: true });
+    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
     setText(
       fields.productionTwoProfileWarning,
       "Stored-session message completed and conversation refreshed from encrypted local stores.",
@@ -2454,20 +2458,12 @@ async function checkProductionTwoProfileSessionStatus() {
       passphrase,
     });
     const view = productionTwoProfileSessionStatusView(result);
-    latestProductionTwoProfileSessionStatus = {
-      fingerprint: twoProfileSessionStatusFingerprint({
-        profileA,
-        profileB,
-        passphrase,
-        message: "",
-      }),
-      result,
-    };
+    rememberTwoProfileSessionStatus({ profileA, profileB }, result);
     setText(fields.productionTwoProfileSessionStatus, `${view.state}: ${view.status}`);
     setText(fields.productionPairingWarning, result.warning);
     setText(fields.productionPairingBoundary, view.boundary);
     if (result.both_ready_for_message_envelope) {
-      await loadProductionTwoProfileTranscript({ quiet: true });
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
       const currentInput = productionTwoProfileInput();
       const hasDraft = Boolean(currentInput.message);
       setProductionTwoProfileState("Sessions ready");
@@ -2513,9 +2509,24 @@ async function checkProductionTwoProfileSessionStatus() {
   }
 }
 
+async function refreshTwoProfileSessionStatusAfterTranscript(input) {
+  const result = await invoke("production_two_profile_session_status", {
+    profileA: input.profileA,
+    profileB: input.profileB,
+    passphrase: input.passphrase,
+  });
+  const view = productionTwoProfileSessionStatusView(result);
+  rememberTwoProfileSessionStatus(input, result);
+  setText(fields.productionTwoProfileSessionStatus, `${view.state}: ${view.status}`);
+  setText(fields.productionPairingWarning, result.warning);
+  setText(fields.productionPairingBoundary, view.boundary);
+  return result;
+}
+
 async function loadProductionTwoProfileTranscript(options = {}) {
   const { profileA, profileB, passphrase } = productionTwoProfileInput();
   const quiet = options.quiet === true;
+  const refreshSessionStatus = options.refreshSessionStatus !== false;
   if (!profileA || !profileB || profileA === profileB || !passphrase) {
     if (!quiet) {
       setProductionTwoProfileState("Conversation load needs profiles");
@@ -2544,11 +2555,22 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       ...twoProfileTranscriptEntriesFromProfile(profileB, profileA, profileBResult.entries),
     ];
     renderProductionTwoProfileTranscriptEntries(entries);
+    let sessionStatus = latestTwoProfileSessionStatusForCurrentInput({ profileA, profileB });
+    if (refreshSessionStatus) {
+      sessionStatus = await refreshTwoProfileSessionStatusAfterTranscript({
+        profileA,
+        profileB,
+        passphrase,
+      });
+    }
     if (!quiet) {
-      setProductionTwoProfileState("Conversation loaded");
+      const ready = Boolean(sessionStatus?.both_ready_for_message_envelope);
+      setProductionTwoProfileState(ready ? "Conversation resumed" : "Conversation loaded");
       setText(
         fields.productionTwoProfileWarning,
-        "Stored two-profile conversation loaded after local unlock; no network or transport IO opened.",
+        ready
+          ? "Stored conversation and message-ready sessions recovered after local unlock."
+          : "Stored conversation loaded, but sessions are not ready for stored-message send.",
       );
     }
   } catch (error) {
