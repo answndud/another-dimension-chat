@@ -155,6 +155,7 @@ require_contains "$APP_DIR/src/main.js" 'refreshTwoProfileConversationAfterManua
 require_contains "$APP_DIR/src/main.js" 'replyToLatestTwoProfileMessage'
 require_contains "$APP_DIR/src/main.js" 'selectTwoProfileConversationEntryForReview'
 require_contains "$APP_DIR/src/main.js" 'selectReplyAfterDeliveredReview'
+require_contains "$APP_DIR/src/main.js" 'selectedTwoProfileNextActionMessage'
 require_contains "$APP_DIR/src/main.js" 'reviewPendingTwoProfileMessage'
 require_contains "$APP_DIR/src/main.js" 'applyPendingConversationToManualMessageReview'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_local_roundtrip"'
