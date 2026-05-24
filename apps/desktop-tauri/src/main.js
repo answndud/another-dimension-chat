@@ -315,6 +315,10 @@ function setOpenManualProductionToolsLabel(label = "Open manual tools") {
   setText(fields.openManualProductionTools, label);
 }
 
+function setReviewPendingTwoProfileLabel(label = "Review pending") {
+  setText(fields.reviewPendingTwoProfileMessage, label);
+}
+
 function setProductionMessageManualCurrent(target) {
   fields.productionMessageManualCheck?.classList.toggle("is-current-manual", target === "check");
   fields.productionMessageOutbound?.classList.toggle("is-current-manual", target === "outbound");
@@ -772,6 +776,13 @@ function latestTwoProfilePendingConversationEntry() {
 function selectedTwoProfileConversationEntry() {
   return selectedTwoProfileConversationKey
     ? productionTwoProfileConversationEntries.get(selectedTwoProfileConversationKey) ?? null
+    : null;
+}
+
+function selectedTwoProfilePendingConversationEntry() {
+  const selectedEntry = selectedTwoProfileConversationEntry();
+  return selectedEntry && !(selectedEntry.statuses.has("sent") && selectedEntry.statuses.has("received"))
+    ? selectedEntry
     : null;
 }
 
@@ -1482,7 +1493,7 @@ function applyPendingConversationToManualMessageReview(entry, options = {}) {
 }
 
 function reviewPendingTwoProfileMessage() {
-  const pending = latestTwoProfilePendingConversationEntry();
+  const pending = selectedTwoProfilePendingConversationEntry() ?? latestTwoProfilePendingConversationEntry();
   if (!pending || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
     setProductionTwoProfileState("No pending conversation item");
     setText(fields.productionTwoProfileWarning, "Loaded conversation has no pending sent/received status gap.");
@@ -1492,8 +1503,8 @@ function reviewPendingTwoProfileMessage() {
 }
 
 function autoSelectPendingTwoProfileConversation() {
-  const selectedEntry = selectedTwoProfileConversationEntry();
-  if (selectedEntry && !(selectedEntry.statuses.has("sent") && selectedEntry.statuses.has("received"))) {
+  const selectedEntry = selectedTwoProfilePendingConversationEntry();
+  if (selectedEntry) {
     return selectTwoProfileConversationEntryForReview(selectedEntry, { focusManual: false });
   }
   const pending = latestTwoProfilePendingConversationEntry();
@@ -1783,11 +1794,9 @@ function applyProductionActionState() {
       twoProfile.profileB === latestConversation.sender,
   );
   const pendingConversation = latestTwoProfilePendingConversationEntry();
-  const pendingSelected = Boolean(
-    pendingConversation &&
-      twoProfile.profileA === pendingConversation.sender &&
-      twoProfile.profileB === pendingConversation.receiver,
-  );
+  const selectedPendingConversation = selectedTwoProfilePendingConversationEntry();
+  const pendingSelected = Boolean(selectedPendingConversation);
+  setReviewPendingTwoProfileLabel(pendingSelected ? "Review selected" : "Review pending");
   setActionButtonState(
     fields.replyLatestTwoProfileMessage,
     busy || !latestConversation,
