@@ -311,6 +311,10 @@ function setActionButtonState(node, disabled, reason, current = false) {
   node.classList.toggle("is-current-action", !disabled && current);
 }
 
+function setOpenManualProductionToolsLabel(label = "Open manual tools") {
+  setText(fields.openManualProductionTools, label);
+}
+
 function setProductionMessageManualCurrent(target) {
   fields.productionMessageManualCheck?.classList.toggle("is-current-manual", target === "check");
   fields.productionMessageOutbound?.classList.toggle("is-current-manual", target === "outbound");
@@ -328,6 +332,7 @@ function setTwoProfileComposeLocked(locked) {
 
 function setProductionFollowupActions(enabled, message) {
   setText(fields.productionTwoProfileNextStep, message);
+  setOpenManualProductionToolsLabel();
   setDisabled(fields.openManualProductionTools, !enabled);
   setDisabled(fields.focusLocalDiagnostic, !enabled);
   setDisabled(fields.swapTwoProfileDirection, !enabled);
@@ -778,6 +783,7 @@ function twoProfileConversationActionView(entry) {
       state: "is-waiting",
       focusTarget: null,
       manualTarget: null,
+      manualButtonLabel: "Open manual tools",
     };
   }
   const sentCopyPresent = entry.statuses.has("sent");
@@ -790,6 +796,7 @@ function twoProfileConversationActionView(entry) {
       state: "is-reply",
       focusTarget: fields.productionTwoProfileMessage,
       manualTarget: null,
+      manualButtonLabel: "Open manual tools",
     };
   }
   if (sentCopyPresent && senderEnvelopeSlotPresent) {
@@ -799,6 +806,7 @@ function twoProfileConversationActionView(entry) {
       state: "is-ready",
       focusTarget: fields.importProductionMessageEnvelope,
       manualTarget: "inbound",
+      manualButtonLabel: "Open import tools",
     };
   }
   if (sentCopyPresent) {
@@ -808,6 +816,7 @@ function twoProfileConversationActionView(entry) {
       state: "is-waiting",
       focusTarget: fields.productionRemoteMessageEnvelope,
       manualTarget: "inbound",
+      manualButtonLabel: "Open envelope input",
     };
   }
   return {
@@ -816,6 +825,7 @@ function twoProfileConversationActionView(entry) {
     state: "is-ready",
     focusTarget: fields.exportProductionMessageEnvelope,
     manualTarget: "outbound",
+    manualButtonLabel: "Open export tools",
   };
 }
 
@@ -1674,6 +1684,7 @@ function applyProductionActionState() {
   if (selectedConversation) {
     const selectedActionView = twoProfileConversationActionView(selectedConversation);
     setText(fields.productionMessageNextAction, selectedActionView.nextAction);
+    setOpenManualProductionToolsLabel(selectedActionView.manualButtonLabel);
     setProductionMessageManualCurrent(selectedActionView.manualTarget);
   }
   renderManualStatus();

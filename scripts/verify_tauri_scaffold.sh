@@ -158,6 +158,7 @@ require_contains "$APP_DIR/src/main.js" 'selectTwoProfileConversationEntryForRev
 require_contains "$APP_DIR/src/main.js" 'selectReplyAfterDeliveredReview'
 require_contains "$APP_DIR/src/main.js" 'twoProfileConversationActionView'
 require_contains "$APP_DIR/src/main.js" 'setProductionMessageManualCurrent'
+require_contains "$APP_DIR/src/main.js" 'setOpenManualProductionToolsLabel'
 require_contains "$APP_DIR/src/main.js" 'selectedTwoProfileNextActionMessage'
 require_contains "$APP_DIR/src/main.js" 'selectedTwoProfileManualFocusTarget'
 require_contains "$APP_DIR/src/main.js" 'reviewPendingTwoProfileMessage'
