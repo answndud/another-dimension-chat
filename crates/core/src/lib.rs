@@ -39,6 +39,7 @@ pub mod production {
         TransportKind, TransportPolicy, TransportRoute,
     };
     use sha2::{Digest, Sha256};
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     const CANONICAL_DIALER_DOMAIN: &[u8] = b"AD-SESSION-CANONICAL-DIALER-V1";
     const PRODUCTION_CHANNEL_DOMAIN: &[u8] = b"AD-PRODUCTION-CHANNEL-V1";
@@ -54,6 +55,7 @@ pub mod production {
     const PRODUCTION_SENT_MESSAGE_RECORD_DOMAIN: &[u8] = b"AD-PRODUCTION-SENT-MESSAGE-RECORD-V1";
     const PRODUCTION_RECEIVED_MESSAGE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-RECEIVED-MESSAGE-RECORD-V1";
+    const PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
     const PRODUCTION_SESSION_TRANSPORT_STATE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-SESSION-TRANSPORT-STATE-RECORD-V1";
     const PRODUCTION_IDENTITY_PRIVATE_KEY_RECORD_ID: &str = "pairwise_identity_private_key_v1";
@@ -584,6 +586,10 @@ pub mod production {
         direction: &'static str,
         message_number: u64,
         plaintext: Vec<u8>,
+        created_at_ms: u128,
+        ttl_seconds: u64,
+        expires_at_ms: Option<u128>,
+        expired: bool,
     }
 
     #[derive(Clone, Debug, Eq, PartialEq)]
@@ -2236,6 +2242,22 @@ pub mod production {
         pub fn plaintext(&self) -> &[u8] {
             &self.plaintext
         }
+
+        pub fn created_at_ms(&self) -> u128 {
+            self.created_at_ms
+        }
+
+        pub fn ttl_seconds(&self) -> u64 {
+            self.ttl_seconds
+        }
+
+        pub fn expires_at_ms(&self) -> Option<u128> {
+            self.expires_at_ms
+        }
+
+        pub fn expired(&self) -> bool {
+            self.expired
+        }
     }
 
     impl ProductionMessageTranscriptExport {
@@ -2746,6 +2768,8 @@ pub mod production {
         message_number: u64,
         message_type: MessageType,
         plaintext: Vec<u8>,
+        created_at_ms: u128,
+        ttl_seconds: u64,
     }
 
     impl SentMessageRecord {
@@ -2755,7 +2779,21 @@ pub mod production {
             message_type: MessageType,
             plaintext: &[u8],
         ) -> Result<Self, ProductionSessionError> {
+            Self::new_with_retention(contact_id, message_number, message_type, plaintext, 0, 0)
+        }
+
+        fn new_with_retention(
+            contact_id: ContactId,
+            message_number: u64,
+            message_type: MessageType,
+            plaintext: &[u8],
+            created_at_ms: u128,
+            ttl_seconds: u64,
+        ) -> Result<Self, ProductionSessionError> {
             if message_number == 0 || plaintext.is_empty() {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            if (created_at_ms == 0) != (ttl_seconds == 0) {
                 return Err(ProductionSessionError::UnexpectedEnvelope);
             }
             Ok(Self {
@@ -2763,33 +2801,90 @@ pub mod production {
                 message_number,
                 message_type,
                 plaintext: plaintext.to_vec(),
+                created_at_ms,
+                ttl_seconds,
             })
         }
 
         fn encode(&self) -> String {
-            format!(
-                "ADSENTMSG1|{}|{}|{}|{}",
-                self.contact_id.as_str(),
-                self.message_number,
-                message_type_tag(&self.message_type),
-                encode_hex(&self.plaintext)
-            )
+            if self.created_at_ms == 0 && self.ttl_seconds == 0 {
+                format!(
+                    "ADSENTMSG1|{}|{}|{}|{}",
+                    self.contact_id.as_str(),
+                    self.message_number,
+                    message_type_tag(&self.message_type),
+                    encode_hex(&self.plaintext)
+                )
+            } else {
+                format!(
+                    "ADSENTMSG2|{}|{}|{}|{}|{}|{}",
+                    self.contact_id.as_str(),
+                    self.message_number,
+                    message_type_tag(&self.message_type),
+                    self.created_at_ms,
+                    self.ttl_seconds,
+                    encode_hex(&self.plaintext)
+                )
+            }
         }
 
         fn decode(value: &str) -> Result<Self, ProductionSessionError> {
             let parts = value.split('|').collect::<Vec<_>>();
-            if parts.len() != 5 || parts[0] != "ADSENTMSG1" {
-                return Err(ProductionSessionError::UnexpectedEnvelope);
+            match parts.first().copied() {
+                Some("ADSENTMSG1") if parts.len() == 5 => {
+                    let contact_id = ContactId::new(parts[1])
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let message_number = parts[2]
+                        .parse::<u64>()
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let message_type = parse_message_type_tag(parts[3])?;
+                    let plaintext = decode_hex(parts[4])
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    Self::new(contact_id, message_number, message_type, &plaintext)
+                }
+                Some("ADSENTMSG2") if parts.len() == 7 => {
+                    let contact_id = ContactId::new(parts[1])
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let message_number = parts[2]
+                        .parse::<u64>()
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let message_type = parse_message_type_tag(parts[3])?;
+                    let created_at_ms = parts[4]
+                        .parse::<u128>()
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let ttl_seconds = parts[5]
+                        .parse::<u64>()
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let plaintext = decode_hex(parts[6])
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    Self::new_with_retention(
+                        contact_id,
+                        message_number,
+                        message_type,
+                        &plaintext,
+                        created_at_ms,
+                        ttl_seconds,
+                    )
+                }
+                _ => Err(ProductionSessionError::UnexpectedEnvelope),
             }
-            let contact_id =
-                ContactId::new(parts[1]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
-            let message_number = parts[2]
-                .parse::<u64>()
-                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
-            let message_type = parse_message_type_tag(parts[3])?;
-            let plaintext =
-                decode_hex(parts[4]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
-            Self::new(contact_id, message_number, message_type, &plaintext)
+        }
+
+        fn expires_at_ms(&self) -> Option<u128> {
+            if self.created_at_ms == 0 || self.ttl_seconds == 0 {
+                None
+            } else {
+                Some(
+                    self.created_at_ms
+                        .saturating_add(u128::from(self.ttl_seconds).saturating_mul(1000)),
+                )
+            }
+        }
+
+        fn is_expired_at(&self, observed_at_ms: u128) -> bool {
+            self.expires_at_ms()
+                .map(|expires_at_ms| observed_at_ms >= expires_at_ms)
+                .unwrap_or(false)
         }
     }
 
@@ -2799,6 +2894,8 @@ pub mod production {
         message_number: u64,
         message_type: MessageType,
         plaintext: Vec<u8>,
+        created_at_ms: u128,
+        ttl_seconds: u64,
     }
 
     impl ReceivedMessageRecord {
@@ -2808,7 +2905,21 @@ pub mod production {
             message_type: MessageType,
             plaintext: &[u8],
         ) -> Result<Self, ProductionSessionError> {
+            Self::new_with_retention(contact_id, message_number, message_type, plaintext, 0, 0)
+        }
+
+        fn new_with_retention(
+            contact_id: ContactId,
+            message_number: u64,
+            message_type: MessageType,
+            plaintext: &[u8],
+            created_at_ms: u128,
+            ttl_seconds: u64,
+        ) -> Result<Self, ProductionSessionError> {
             if message_number == 0 || plaintext.is_empty() {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            if (created_at_ms == 0) != (ttl_seconds == 0) {
                 return Err(ProductionSessionError::UnexpectedEnvelope);
             }
             Ok(Self {
@@ -2816,33 +2927,90 @@ pub mod production {
                 message_number,
                 message_type,
                 plaintext: plaintext.to_vec(),
+                created_at_ms,
+                ttl_seconds,
             })
         }
 
         fn encode(&self) -> String {
-            format!(
-                "ADRECEIVEDMSG1|{}|{}|{}|{}",
-                self.contact_id.as_str(),
-                self.message_number,
-                message_type_tag(&self.message_type),
-                encode_hex(&self.plaintext)
-            )
+            if self.created_at_ms == 0 && self.ttl_seconds == 0 {
+                format!(
+                    "ADRECEIVEDMSG1|{}|{}|{}|{}",
+                    self.contact_id.as_str(),
+                    self.message_number,
+                    message_type_tag(&self.message_type),
+                    encode_hex(&self.plaintext)
+                )
+            } else {
+                format!(
+                    "ADRECEIVEDMSG2|{}|{}|{}|{}|{}|{}",
+                    self.contact_id.as_str(),
+                    self.message_number,
+                    message_type_tag(&self.message_type),
+                    self.created_at_ms,
+                    self.ttl_seconds,
+                    encode_hex(&self.plaintext)
+                )
+            }
         }
 
         fn decode(value: &str) -> Result<Self, ProductionSessionError> {
             let parts = value.split('|').collect::<Vec<_>>();
-            if parts.len() != 5 || parts[0] != "ADRECEIVEDMSG1" {
-                return Err(ProductionSessionError::UnexpectedEnvelope);
+            match parts.first().copied() {
+                Some("ADRECEIVEDMSG1") if parts.len() == 5 => {
+                    let contact_id = ContactId::new(parts[1])
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let message_number = parts[2]
+                        .parse::<u64>()
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let message_type = parse_message_type_tag(parts[3])?;
+                    let plaintext = decode_hex(parts[4])
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    Self::new(contact_id, message_number, message_type, &plaintext)
+                }
+                Some("ADRECEIVEDMSG2") if parts.len() == 7 => {
+                    let contact_id = ContactId::new(parts[1])
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let message_number = parts[2]
+                        .parse::<u64>()
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let message_type = parse_message_type_tag(parts[3])?;
+                    let created_at_ms = parts[4]
+                        .parse::<u128>()
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let ttl_seconds = parts[5]
+                        .parse::<u64>()
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let plaintext = decode_hex(parts[6])
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    Self::new_with_retention(
+                        contact_id,
+                        message_number,
+                        message_type,
+                        &plaintext,
+                        created_at_ms,
+                        ttl_seconds,
+                    )
+                }
+                _ => Err(ProductionSessionError::UnexpectedEnvelope),
             }
-            let contact_id =
-                ContactId::new(parts[1]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
-            let message_number = parts[2]
-                .parse::<u64>()
-                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
-            let message_type = parse_message_type_tag(parts[3])?;
-            let plaintext =
-                decode_hex(parts[4]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
-            Self::new(contact_id, message_number, message_type, &plaintext)
+        }
+
+        fn expires_at_ms(&self) -> Option<u128> {
+            if self.created_at_ms == 0 || self.ttl_seconds == 0 {
+                None
+            } else {
+                Some(
+                    self.created_at_ms
+                        .saturating_add(u128::from(self.ttl_seconds).saturating_mul(1000)),
+                )
+            }
+        }
+
+        fn is_expired_at(&self, observed_at_ms: u128) -> bool {
+            self.expires_at_ms()
+                .map(|expires_at_ms| observed_at_ms >= expires_at_ms)
+                .unwrap_or(false)
         }
     }
 
@@ -4170,11 +4338,13 @@ pub mod production {
         )
         .map_err(ProductionStorageError::from)?;
         store.put(&message_record_id, &message_record)?;
-        let sent = SentMessageRecord::new(
+        let sent = SentMessageRecord::new_with_retention(
             material.remote_contact_id.clone(),
             message_number,
             MessageType::Data,
             plaintext,
+            production_now_ms(),
+            PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
         )?;
         let sent_record = EncryptedRecord::new(
             ProductionRecordKind::SentMessage,
@@ -4726,11 +4896,13 @@ pub mod production {
         if store.get(&received_record_id)?.is_some() {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
-        let received = ReceivedMessageRecord::new(
+        let received = ReceivedMessageRecord::new_with_retention(
             material.remote_contact_id.clone(),
             envelope.message_number,
             MessageType::Data,
             trimmed_plaintext,
+            production_now_ms(),
+            PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
         )?;
         let received_record = EncryptedRecord::new(
             ProductionRecordKind::ReceivedMessage,
@@ -4881,6 +5053,7 @@ pub mod production {
         }
         let material = load_session_runtime_material(&store, &profile)?;
         let mut entries = Vec::new();
+        let observed_at_ms = production_now_ms();
 
         for (record_id, record) in store.records_with_id_prefix("sent_")? {
             if record.kind != ProductionRecordKind::SentMessage {
@@ -4902,6 +5075,10 @@ pub mod production {
                 entries.push(ProductionMessageTranscriptEntry {
                     direction: "sent",
                     message_number: sent.message_number,
+                    created_at_ms: sent.created_at_ms,
+                    ttl_seconds: sent.ttl_seconds,
+                    expires_at_ms: sent.expires_at_ms(),
+                    expired: sent.is_expired_at(observed_at_ms),
                     plaintext: sent.plaintext,
                 });
             }
@@ -4927,6 +5104,10 @@ pub mod production {
                 entries.push(ProductionMessageTranscriptEntry {
                     direction: "received",
                     message_number: received.message_number,
+                    created_at_ms: received.created_at_ms,
+                    ttl_seconds: received.ttl_seconds,
+                    expires_at_ms: received.expires_at_ms(),
+                    expired: received.is_expired_at(observed_at_ms),
                     plaintext: received.plaintext,
                 });
             }
@@ -5677,6 +5858,13 @@ pub mod production {
             "control" => Ok(MessageType::Control),
             _ => Err(ProductionSessionError::UnexpectedEnvelope),
         }
+    }
+
+    fn production_now_ms() -> u128 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_millis())
+            .unwrap_or_default()
     }
 
     fn production_identity_private_key_record_id() -> EncryptedRecordId {
@@ -7633,6 +7821,13 @@ pub mod production {
             assert_eq!(outbound_transcript.entries()[0].direction(), "sent");
             assert_eq!(outbound_transcript.entries()[0].message_number(), 1);
             assert_eq!(outbound_transcript.entries()[0].plaintext(), b"hi");
+            assert!(outbound_transcript.entries()[0].created_at_ms() > 0);
+            assert_eq!(
+                outbound_transcript.entries()[0].ttl_seconds(),
+                PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS
+            );
+            assert!(outbound_transcript.entries()[0].expires_at_ms().is_some());
+            assert!(!outbound_transcript.entries()[0].expired());
             assert!(!outbound_transcript.plaintext_exposed());
             assert!(!outbound_transcript.network_io_attempted());
             assert!(!outbound_transcript.key_material_exposed());
@@ -7650,6 +7845,13 @@ pub mod production {
             assert_eq!(inbound_transcript.entries()[0].direction(), "received");
             assert_eq!(inbound_transcript.entries()[0].message_number(), 1);
             assert_eq!(inbound_transcript.entries()[0].plaintext(), b"hi");
+            assert!(inbound_transcript.entries()[0].created_at_ms() > 0);
+            assert_eq!(
+                inbound_transcript.entries()[0].ttl_seconds(),
+                PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS
+            );
+            assert!(inbound_transcript.entries()[0].expires_at_ms().is_some());
+            assert!(!inbound_transcript.entries()[0].expired());
             assert!(!inbound_transcript.plaintext_exposed());
             assert!(!inbound_transcript.network_io_attempted());
             assert!(!inbound_transcript.key_material_exposed());
@@ -7684,19 +7886,23 @@ pub mod production {
                 .expect("read received message")
                 .expect("received message");
             assert_eq!(received_message.kind, ProductionRecordKind::ReceivedMessage);
+            let received_message_record = ReceivedMessageRecord::decode(
+                &String::from_utf8(received_message.sealed_body).expect("received body"),
+            )
+            .expect("decode received message");
             assert_eq!(
-                ReceivedMessageRecord::decode(
-                    &String::from_utf8(received_message.sealed_body).expect("received body")
-                )
-                .expect("decode received message"),
-                ReceivedMessageRecord::new(
-                    inbound_draft.remote_contact_id.clone(),
-                    1,
-                    MessageType::Data,
-                    b"hi"
-                )
-                .expect("received record")
+                received_message_record.contact_id,
+                inbound_draft.remote_contact_id
             );
+            assert_eq!(received_message_record.message_number, 1);
+            assert_eq!(received_message_record.message_type, MessageType::Data);
+            assert_eq!(received_message_record.plaintext, b"hi");
+            assert!(received_message_record.created_at_ms > 0);
+            assert_eq!(
+                received_message_record.ttl_seconds,
+                PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS
+            );
+            assert!(received_message_record.expires_at_ms().is_some());
             assert!(matches!(
                 production_message_inbound_decrypt_import(
                     inbound_store,

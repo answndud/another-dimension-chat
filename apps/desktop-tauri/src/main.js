@@ -647,6 +647,7 @@ function appendProductionTwoProfileConversationStatus(
   counterpartProfile,
   messageNumber,
   message,
+  retention = {},
 ) {
   const normalizedKind = kind === "received" ? "received" : "sent";
   const owner = String(ownerProfile ?? "").trim().toLowerCase() || "unknown";
@@ -662,6 +663,10 @@ function appendProductionTwoProfileConversationStatus(
     receiver: normalizedKind === "sent" ? counterpart : owner,
     messageNumber: normalizedNumber,
     message: text,
+    createdAtMs: retention.createdAtMs,
+    ttlSeconds: retention.ttlSeconds,
+    expiresAtMs: retention.expiresAtMs,
+    expired: retention.expired === true,
   };
   const key = twoProfileConversationKey(entry);
   const existing = productionTwoProfileConversationEntries.get(key) ?? {
@@ -669,8 +674,26 @@ function appendProductionTwoProfileConversationStatus(
     statuses: new Set(),
   };
   existing.statuses.add(normalizedKind);
+  if (entry.createdAtMs || entry.ttlSeconds || entry.expiresAtMs || entry.expired) {
+    existing.createdAtMs = entry.createdAtMs;
+    existing.ttlSeconds = entry.ttlSeconds;
+    existing.expiresAtMs = entry.expiresAtMs;
+    existing.expired = entry.expired;
+  }
   productionTwoProfileConversationEntries.set(key, existing);
   renderProductionTwoProfileConversationList();
+}
+
+function twoProfileRetentionLabel(entry) {
+  const ttlSeconds = Number.parseInt(entry?.ttlSeconds ?? 0, 10);
+  if (entry?.expired === true) {
+    return "retention: expired";
+  }
+  if (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0) {
+    return "retention: legacy";
+  }
+  const days = ttlSeconds / 86400;
+  return Number.isInteger(days) ? `retention: ${days}d active` : `retention: ${ttlSeconds}s active`;
 }
 
 function renderProductionTwoProfileConversationList() {
@@ -735,6 +758,10 @@ function renderProductionTwoProfileConversationList() {
       ? `sender envelope slot: ready (${entry.sender})`
       : `sender envelope slot: missing (${entry.sender})`;
 
+    const retention = document.createElement("span");
+    retention.className = `transcript-retention ${entry.expired ? "is-expired" : "is-active"}`;
+    retention.textContent = twoProfileRetentionLabel(entry);
+
     const actionView = twoProfileConversationActionView(entry);
     const action = document.createElement("span");
     action.className = `transcript-action ${actionView.state}`;
@@ -743,7 +770,7 @@ function renderProductionTwoProfileConversationList() {
     const body = document.createElement("span");
     body.textContent = entry.message;
 
-    item.append(meta, status, slot, action);
+    item.append(meta, status, slot, retention, action);
     if (selected) {
       const review = document.createElement("span");
       review.className = "transcript-review is-selected";
@@ -862,6 +889,12 @@ function renderProductionTwoProfileTranscriptEntries(entries) {
       entry.counterpartProfile,
       entry.messageNumber,
       entry.message,
+      {
+        createdAtMs: entry.createdAtMs,
+        ttlSeconds: entry.ttlSeconds,
+        expiresAtMs: entry.expiresAtMs,
+        expired: entry.expired,
+      },
     );
   }
 }
@@ -3313,6 +3346,10 @@ function twoProfileTranscriptEntriesFromProfile(profile, counterpartProfile, ent
     kind: entry.direction === "received" ? "received" : "sent",
     messageNumber: entry.message_number,
     message: entry.message,
+    createdAtMs: entry.created_at_ms,
+    ttlSeconds: entry.ttl_seconds,
+    expiresAtMs: entry.expires_at_ms,
+    expired: entry.expired,
   }));
 }
 

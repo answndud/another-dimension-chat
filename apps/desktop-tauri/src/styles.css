@@ -612,6 +612,7 @@ textarea[readonly] {
 }
 
 .message-transcript .transcript-slot,
+.message-transcript .transcript-retention,
 .message-transcript .transcript-action,
 .message-transcript .transcript-review {
   color: var(--text-muted);
@@ -627,6 +628,14 @@ textarea[readonly] {
   color: var(--warning);
 }
 
+.message-transcript .transcript-retention.is-active {
+  color: var(--text-muted);
+}
+
+.message-transcript .transcript-retention.is-expired {
+  color: var(--danger);
+}
+
 .message-transcript .transcript-action.is-ready,
 .message-transcript .transcript-action.is-reply {
   color: var(--accent);
@@ -640,7 +649,7 @@ textarea[readonly] {
   color: var(--accent);
 }
 
-.message-transcript span:not(.transcript-status):not(.transcript-slot):not(.transcript-action):not(.transcript-review) {
+.message-transcript span:not(.transcript-status):not(.transcript-slot):not(.transcript-retention):not(.transcript-action):not(.transcript-review) {
   color: var(--text-primary);
   font-size: 13px;
   overflow-wrap: anywhere;
