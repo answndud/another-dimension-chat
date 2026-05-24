@@ -240,6 +240,11 @@ const productionPayloadSlots = {
   messageEnvelope: new Map(),
 };
 
+const productionMessageRetentionPolicy = {
+  defaultTtlSeconds: null,
+  allowedTtlSeconds: [],
+};
+
 const themeStorageKey = "another-dimension-theme";
 
 function applyTheme(theme) {
@@ -966,13 +971,82 @@ function twoProfileInputFingerprint(input) {
   return `${input.profileA}\n${input.profileB}\n${input.messageTtlSeconds}\n${input.message}`;
 }
 
-function selectedMessageTtlSeconds(node, fallback = 604800) {
+function messageTtlOptionsFromControls() {
+  const values = new Set();
+  for (const control of [fields.productionMessageTtl, fields.productionTwoProfileMessageTtl]) {
+    for (const option of Array.from(control?.options ?? [])) {
+      const value = Number.parseInt(option.value, 10);
+      if (Number.isFinite(value) && value > 0) {
+        values.add(value);
+      }
+    }
+  }
+  return Array.from(values);
+}
+
+function defaultMessageTtlSeconds() {
+  if (productionMessageRetentionPolicy.defaultTtlSeconds) {
+    return productionMessageRetentionPolicy.defaultTtlSeconds;
+  }
+  const selected = Number.parseInt(fields.productionMessageTtl?.value ?? "", 10);
+  return Number.isFinite(selected) && selected > 0 ? selected : messageTtlOptionsFromControls()[0];
+}
+
+function allowedMessageTtlSeconds() {
+  return productionMessageRetentionPolicy.allowedTtlSeconds.length > 0
+    ? productionMessageRetentionPolicy.allowedTtlSeconds
+    : messageTtlOptionsFromControls();
+}
+
+function selectedMessageTtlSeconds(node, fallback = defaultMessageTtlSeconds()) {
   const value = Number.parseInt(node?.value ?? String(fallback), 10);
-  return [3600, 86400, 604800, 2592000].includes(value) ? value : fallback;
+  return allowedMessageTtlSeconds().includes(value) ? value : fallback;
+}
+
+function retentionOptionLabel(ttlSeconds) {
+  const days = ttlSeconds / 86400;
+  if (Number.isInteger(days) && days >= 1) {
+    return days === 1 ? "1 day" : `${days} days`;
+  }
+  const hours = ttlSeconds / 3600;
+  return Number.isInteger(hours) ? `${hours} hour${hours === 1 ? "" : "s"}` : `${ttlSeconds}s`;
+}
+
+function renderMessageTtlControlOptions() {
+  const allowed = allowedMessageTtlSeconds();
+  const fallback = defaultMessageTtlSeconds();
+  for (const control of [fields.productionMessageTtl, fields.productionTwoProfileMessageTtl]) {
+    if (!control || allowed.length === 0) {
+      continue;
+    }
+    const selected = selectedMessageTtlSeconds(control, fallback);
+    control.replaceChildren(
+      ...allowed.map((ttlSeconds) => {
+        const option = document.createElement("option");
+        option.value = String(ttlSeconds);
+        option.textContent = retentionOptionLabel(ttlSeconds);
+        option.selected = ttlSeconds === selected;
+        return option;
+      }),
+    );
+  }
+}
+
+async function loadProductionMessageRetentionPolicy() {
+  try {
+    const policy = await invoke("production_message_retention_policy");
+    productionMessageRetentionPolicy.defaultTtlSeconds = policy.default_ttl_seconds;
+    productionMessageRetentionPolicy.allowedTtlSeconds = Array.isArray(policy.allowed_ttl_seconds)
+      ? policy.allowed_ttl_seconds.filter((ttlSeconds) => Number.isFinite(ttlSeconds))
+      : [];
+    renderMessageTtlControlOptions();
+  } catch (_error) {
+    renderMessageTtlControlOptions();
+  }
 }
 
 function setMessageTtlControls(ttlSeconds) {
-  const value = String(selectedMessageTtlSeconds({ value: ttlSeconds }, 604800));
+  const value = String(selectedMessageTtlSeconds({ value: ttlSeconds }, defaultMessageTtlSeconds()));
   if (fields.productionMessageTtl) {
     fields.productionMessageTtl.value = value;
   }
@@ -4114,6 +4188,7 @@ if (fields.resetLoop) {
 }
 
 initializeTheme();
+loadProductionMessageRetentionPolicy();
 renderPrototypeStatus();
 resetSimulationView();
 resetProductionProfileView();

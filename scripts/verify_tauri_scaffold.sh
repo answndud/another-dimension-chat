@@ -76,6 +76,7 @@ require_contains "$TAURI_DIR/src/lib.rs" 'mod status;'
 require_contains "$TAURI_DIR/src/lib.rs" 'pub use status::PrototypeStatus;'
 require_contains "$TAURI_DIR/src/lib.rs" 'redacted_prototype_status()'
 require_contains "$TAURI_DIR/src/lib.rs" 'dev_local_message_loop'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_message_retention_policy'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_profile_unlock'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_profile_list'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_message_retention_preference_get'
@@ -145,6 +146,7 @@ require_status_field 'transport_io_status' 'hosting stream envelope messaging di
 require_status_field 'storage_status' 'ADREC1 storage spike only'
 require_status_field 'verification_status' 'lightweight checks only'
 require_contains "$APP_DIR/src/main.js" 'invoke("prototype_status")'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_message_retention_policy")'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_profile_unlock"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_profile_list"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_pairing_payload_export"'
@@ -511,10 +513,10 @@ require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
 require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
 command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "22"
+test "$command_count" = "23"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "27"
+test "$invoke_count" = "28"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -536,6 +538,7 @@ fi
 
 if grep -R 'invoke(' "$APP_DIR/src" \
   | grep -v 'invoke("prototype_status")' \
+  | grep -v 'invoke("production_message_retention_policy")' \
   | grep -v 'invoke("production_profile_unlock"' \
   | grep -v 'invoke("production_profile_list"' \
   | grep -v 'invoke("production_message_retention_preference_get"' \
