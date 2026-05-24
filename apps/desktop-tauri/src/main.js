@@ -1260,6 +1260,7 @@ function applyPendingConversationToManualMessageReview(entry) {
   const sentCopyPresent = entry.statuses.has("sent");
   const receivedCopyPresent = entry.statuses.has("received");
   const reviewProfile = sentCopyPresent && !receivedCopyPresent ? entry.receiver : entry.sender;
+  const senderEnvelopeSlot = productionPayloadSlots.messageEnvelope.get(entry.sender) ?? "";
   if (!selectProductionProfileForManualRelay(reviewProfile)) {
     return false;
   }
@@ -1272,22 +1273,24 @@ function applyPendingConversationToManualMessageReview(entry) {
   if (fields.productionMessageBody) {
     fields.productionMessageBody.value = entry.message;
   }
+  const canPrepareImport = Boolean(sentCopyPresent && !receivedCopyPresent && senderEnvelopeSlot);
   if (fields.productionRemoteMessageEnvelope && !receivedCopyPresent) {
-    fields.productionRemoteMessageEnvelope.value = "";
+    fields.productionRemoteMessageEnvelope.value = canPrepareImport ? senderEnvelopeSlot : "";
+    fields.productionRemoteMessageEnvelope.dispatchEvent(new Event("input", { bubbles: true }));
   }
   resetProductionMessageImportState();
   openManualProductionTools();
-  setProductionMessageState(
-    sentCopyPresent && !receivedCopyPresent
-      ? "Manual import review selected"
-      : "Manual sender review selected",
-  );
-  setText(
-    fields.productionMessageWarning,
-    sentCopyPresent && !receivedCopyPresent
-      ? `Selected ${reviewProfile} to import pending message #${entry.messageNumber}. Load or paste the sender envelope, then import explicitly.`
-      : `Selected ${reviewProfile} to review missing local sent copy for message #${entry.messageNumber}.`,
-  );
+  let reviewState = "Manual sender review selected";
+  let reviewWarning = `Selected ${reviewProfile} to review missing local sent copy for message #${entry.messageNumber}.`;
+  if (canPrepareImport) {
+    reviewState = "Manual import ready";
+    reviewWarning = `Loaded sender envelope slot for message #${entry.messageNumber}. Import remains explicit.`;
+  } else if (sentCopyPresent && !receivedCopyPresent) {
+    reviewState = "Manual import review selected";
+    reviewWarning = `Selected ${reviewProfile} to import pending message #${entry.messageNumber}. Load or paste the sender envelope, then import explicitly.`;
+  }
+  setProductionMessageState(reviewState);
+  setText(fields.productionMessageWarning, reviewWarning);
   setText(
     fields.productionMessageInbound,
     receivedCopyPresent ? "Received copy present in transcript" : "Pending peer received copy",
@@ -1296,7 +1299,7 @@ function applyPendingConversationToManualMessageReview(entry) {
     fields.productionMessageOutbound,
     sentCopyPresent ? "Local sent copy present in transcript" : "Local sent copy missing",
   );
-  fields.productionRemoteMessageEnvelope?.focus();
+  (canPrepareImport ? fields.importProductionMessageEnvelope : fields.productionRemoteMessageEnvelope)?.focus();
   return true;
 }
 
