@@ -55,8 +55,9 @@ pub mod production {
     const PRODUCTION_SENT_MESSAGE_RECORD_DOMAIN: &[u8] = b"AD-PRODUCTION-SENT-MESSAGE-RECORD-V1";
     const PRODUCTION_RECEIVED_MESSAGE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-RECEIVED-MESSAGE-RECORD-V1";
-    #[cfg(test)]
-    const PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
+    pub const PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
+    pub const PRODUCTION_ALLOWED_MESSAGE_TTL_SECONDS: [u64; 4] =
+        [3_600, 86_400, 604_800, 2_592_000];
     const PRODUCTION_SESSION_TRANSPORT_STATE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-SESSION-TRANSPORT-STATE-RECORD-V1";
     const PRODUCTION_IDENTITY_PRIVATE_KEY_RECORD_ID: &str = "pairwise_identity_private_key_v1";
@@ -67,6 +68,16 @@ pub mod production {
         "message_retention_preference_v1";
     const PRODUCTION_PENDING_HANDSHAKE_INITIATOR_STATE_RECORD_ID: &str =
         "pending_noise_xx_initiator_handshake_state_v1";
+
+    pub fn production_message_ttl_seconds_validate(
+        ttl_seconds: u64,
+    ) -> Result<u64, ProductionSessionError> {
+        if PRODUCTION_ALLOWED_MESSAGE_TTL_SECONDS.contains(&ttl_seconds) {
+            Ok(ttl_seconds)
+        } else {
+            Err(ProductionSessionError::UnexpectedEnvelope)
+        }
+    }
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct ProductionSessionPlan {
@@ -2959,9 +2970,7 @@ pub mod production {
 
     impl MessageRetentionPreferenceRecord {
         fn new(ttl_seconds: u64) -> Result<Self, ProductionSessionError> {
-            if ttl_seconds == 0 {
-                return Err(ProductionSessionError::UnexpectedEnvelope);
-            }
+            let ttl_seconds = production_message_ttl_seconds_validate(ttl_seconds)?;
             Ok(Self { ttl_seconds })
         }
 
@@ -3551,9 +3560,7 @@ pub mod production {
         passphrase: &ProfilePassphrase,
         fallback_ttl_seconds: u64,
     ) -> Result<ProductionMessageRetentionPreferenceSummary, ProductionSessionError> {
-        if fallback_ttl_seconds == 0 {
-            return Err(ProductionSessionError::UnexpectedEnvelope);
-        }
+        let fallback_ttl_seconds = production_message_ttl_seconds_validate(fallback_ttl_seconds)?;
         let locked = LockedProfileStore::new(store_path.as_ref());
         let store = locked.unlock(passphrase)?;
         let profile_marker_present = store.profile_marker_exists(&profile)?;
@@ -4443,7 +4450,8 @@ pub mod production {
         plaintext: &[u8],
         ttl_seconds: u64,
     ) -> Result<ProductionMessageSendPrepareSummary, ProductionSessionError> {
-        if plaintext.is_empty() || ttl_seconds == 0 {
+        let ttl_seconds = production_message_ttl_seconds_validate(ttl_seconds)?;
+        if plaintext.is_empty() {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
         let locked = LockedProfileStore::new(store_path.as_ref());
@@ -4945,9 +4953,7 @@ pub mod production {
         envelope_payload: &str,
         ttl_seconds: u64,
     ) -> Result<ProductionMessageInboundDecryptImportSummary, ProductionSessionError> {
-        if ttl_seconds == 0 {
-            return Err(ProductionSessionError::UnexpectedEnvelope);
-        }
+        let ttl_seconds = production_message_ttl_seconds_validate(ttl_seconds)?;
         let locked = LockedProfileStore::new(store_path.as_ref());
         let store = locked.unlock(passphrase)?;
         if !store.profile_marker_exists(&profile)? {
@@ -7195,6 +7201,31 @@ pub mod production {
             assert!(!loaded.runtime_messaging_enabled());
 
             let _ = std::fs::remove_dir_all(dir);
+        }
+
+        #[test]
+        fn production_message_ttl_policy_accepts_only_supported_values() {
+            assert_eq!(
+                PRODUCTION_ALLOWED_MESSAGE_TTL_SECONDS,
+                [3_600, 86_400, 604_800, 2_592_000]
+            );
+            assert_eq!(
+                production_message_ttl_seconds_validate(PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS)
+                    .expect("default ttl is supported"),
+                604_800
+            );
+            for ttl_seconds in PRODUCTION_ALLOWED_MESSAGE_TTL_SECONDS {
+                assert_eq!(
+                    production_message_ttl_seconds_validate(ttl_seconds).expect("supported ttl"),
+                    ttl_seconds
+                );
+            }
+            for ttl_seconds in [0, 1, 60, 7_200, 999_999] {
+                assert_eq!(
+                    production_message_ttl_seconds_validate(ttl_seconds),
+                    Err(ProductionSessionError::UnexpectedEnvelope)
+                );
+            }
         }
 
         #[test]

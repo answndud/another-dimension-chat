@@ -15,7 +15,7 @@ fn main() {
 }
 
 #[cfg(not(feature = "dev-insecure"))]
-const PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
+use another_dimension_core::production::PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS;
 
 #[cfg(not(feature = "dev-insecure"))]
 fn production_main() -> Result<(), String> {
@@ -2773,10 +2773,8 @@ fn parse_production_message_ttl_seconds(value: &str) -> Result<u64, String> {
     let ttl_seconds = value
         .parse::<u64>()
         .map_err(|_| "invalid production message ttl".to_string())?;
-    match ttl_seconds {
-        3_600 | 86_400 | 604_800 | 2_592_000 => Ok(ttl_seconds),
-        _ => Err("invalid production message ttl".to_string()),
-    }
+    another_dimension_core::production::production_message_ttl_seconds_validate(ttl_seconds)
+        .map_err(|_| "invalid production message ttl".to_string())
 }
 
 #[cfg(not(feature = "dev-insecure"))]
