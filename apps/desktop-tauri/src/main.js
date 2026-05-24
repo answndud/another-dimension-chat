@@ -1475,6 +1475,15 @@ function reviewPendingTwoProfileMessage() {
   return selectTwoProfileConversationEntryForReview(pending);
 }
 
+function autoSelectPendingTwoProfileConversation() {
+  const selectedEntry = selectedTwoProfileConversationEntry();
+  if (selectedEntry && !(selectedEntry.statuses.has("sent") && selectedEntry.statuses.has("received"))) {
+    return selectTwoProfileConversationEntryForReview(selectedEntry);
+  }
+  const pending = latestTwoProfilePendingConversationEntry();
+  return pending ? selectTwoProfileConversationEntryForReview(pending) : false;
+}
+
 function selectTwoProfileReplyDirection(sentInput) {
   const sender = String(sentInput?.profileA ?? "").trim();
   const receiver = String(sentInput?.profileB ?? "").trim();
@@ -3065,6 +3074,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
           ? "Stored conversation and message-ready sessions recovered after local unlock."
           : "Stored conversation loaded, but sessions are not ready for stored-message send.",
       );
+      autoSelectPendingTwoProfileConversation();
     } else if (autoResume && sessionStatus?.both_ready_for_message_envelope) {
       setProductionTwoProfileState("Conversation resumed");
       setText(
