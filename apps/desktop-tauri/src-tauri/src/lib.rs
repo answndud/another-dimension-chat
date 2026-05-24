@@ -378,6 +378,19 @@ pub struct ProductionMessageTranscriptExportResult {
     runtime_messaging_enabled: bool,
 }
 
+#[derive(serde::Serialize)]
+pub struct ProductionMessageRetentionPreferenceResult {
+    warning: &'static str,
+    storage_opened: bool,
+    profile_marker_present: bool,
+    preference_present: bool,
+    message_ttl_seconds: u64,
+    preference_written: bool,
+    key_material_exposed: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
 #[tauri::command]
 fn prototype_status() -> PrototypeStatus {
     status::redacted_prototype_status()
@@ -407,6 +420,45 @@ fn production_profile_list(app: tauri::AppHandle) -> Result<ProductionProfileLis
         .map_err(|_| "production profile list failed without exposing local path details")?;
     run_production_profile_list(app_data_root).map_err(|_| {
         "production profile list failed without exposing local path details".to_string()
+    })
+}
+
+#[tauri::command]
+fn production_message_retention_preference_get(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionMessageRetentionPreferenceResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production message retention preference load failed without exposing local path details"
+    })?;
+    run_production_message_retention_preference_get(app_data_root, profile, passphrase).map_err(
+        |_| {
+            "production message retention preference load failed without exposing profile, path, or key details"
+                .to_string()
+        },
+    )
+}
+
+#[tauri::command]
+fn production_message_retention_preference_set(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    message_ttl_seconds: u64,
+) -> Result<ProductionMessageRetentionPreferenceResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production message retention preference save failed without exposing local path details"
+    })?;
+    run_production_message_retention_preference_set(
+        app_data_root,
+        profile,
+        passphrase,
+        message_ttl_seconds,
+    )
+    .map_err(|_| {
+        "production message retention preference save failed without exposing profile, path, or key details"
+            .to_string()
     })
 }
 
@@ -1010,6 +1062,68 @@ fn run_production_profile_unlock(
         transport_io_opened: profile_transport_io_opened || identity_transport_io_opened,
         runtime_messaging_enabled: profile_runtime_messaging_enabled
             || identity_runtime_messaging_enabled,
+    })
+}
+
+fn run_production_message_retention_preference_get(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionMessageRetentionPreferenceResult, String> {
+    use another_dimension_core::production::production_message_retention_preference_get;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let preference =
+        production_message_retention_preference_get(&store_path, profile, &passphrase, 604_800)
+            .map_err(|_| "message retention preference load failed")?;
+    Ok(ProductionMessageRetentionPreferenceResult {
+        warning: "message retention preference loaded after local profile unlock",
+        storage_opened: preference.storage_opened(),
+        profile_marker_present: preference.profile_marker_present(),
+        preference_present: preference.preference_present(),
+        message_ttl_seconds: preference.message_ttl_seconds(),
+        preference_written: preference.preference_written(),
+        key_material_exposed: preference.key_material_exposed(),
+        transport_io_opened: preference.transport_io_opened(),
+        runtime_messaging_enabled: preference.runtime_messaging_enabled(),
+    })
+}
+
+fn run_production_message_retention_preference_set(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    message_ttl_seconds: u64,
+) -> Result<ProductionMessageRetentionPreferenceResult, String> {
+    use another_dimension_core::production::production_message_retention_preference_set;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let message_ttl_seconds = sanitize_production_message_ttl_seconds(message_ttl_seconds)?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let preference = production_message_retention_preference_set(
+        &store_path,
+        profile,
+        &passphrase,
+        message_ttl_seconds,
+    )
+    .map_err(|_| "message retention preference save failed")?;
+    Ok(ProductionMessageRetentionPreferenceResult {
+        warning: "message retention preference saved in encrypted local profile store",
+        storage_opened: preference.storage_opened(),
+        profile_marker_present: preference.profile_marker_present(),
+        preference_present: preference.preference_present(),
+        message_ttl_seconds: preference.message_ttl_seconds(),
+        preference_written: preference.preference_written(),
+        key_material_exposed: preference.key_material_exposed(),
+        transport_io_opened: preference.transport_io_opened(),
+        runtime_messaging_enabled: preference.runtime_messaging_enabled(),
     })
 }
 
@@ -2411,6 +2525,8 @@ pub fn run() {
             prototype_status,
             production_profile_unlock,
             production_profile_list,
+            production_message_retention_preference_get,
+            production_message_retention_preference_set,
             production_pairing_payload_export,
             production_pairing_session_draft_save,
             production_session_state_check,
@@ -2441,6 +2557,8 @@ mod tests {
         run_production_handshake_finish_import, run_production_handshake_init_export,
         run_production_handshake_reply_export, run_production_local_roundtrip,
         run_production_message_envelope_export, run_production_message_envelope_import,
+        run_production_message_retention_preference_get,
+        run_production_message_retention_preference_set,
         run_production_message_received_export, run_production_message_transcript_export,
         run_production_pairing_payload_export,
         run_production_pairing_session_draft_save, run_production_profile_list,
@@ -2608,6 +2726,42 @@ replay check: no replayed messages after message 2
         .expect("second profile unlock");
         assert!(!second.profile_initialized);
         assert!(!second.identity_created);
+
+        let default_preference = run_production_message_retention_preference_get(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("default retention preference");
+        assert!(default_preference.storage_opened);
+        assert!(default_preference.profile_marker_present);
+        assert!(!default_preference.preference_present);
+        assert_eq!(default_preference.message_ttl_seconds, 604_800);
+        assert!(!default_preference.preference_written);
+
+        let saved_preference = run_production_message_retention_preference_set(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            86_400,
+        )
+        .expect("save retention preference");
+        assert!(saved_preference.preference_present);
+        assert!(saved_preference.preference_written);
+        assert_eq!(saved_preference.message_ttl_seconds, 86_400);
+        assert!(!saved_preference.key_material_exposed);
+        assert!(!saved_preference.transport_io_opened);
+        assert!(!saved_preference.runtime_messaging_enabled);
+
+        let loaded_preference = run_production_message_retention_preference_get(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("loaded retention preference");
+        assert!(loaded_preference.preference_present);
+        assert_eq!(loaded_preference.message_ttl_seconds, 86_400);
+        assert!(!loaded_preference.preference_written);
 
         let serialized = serde_json::to_string(&result).expect("serialize result");
         assert!(!serialized.contains("correct-passphrase"));

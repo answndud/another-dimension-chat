@@ -971,6 +971,49 @@ function selectedMessageTtlSeconds(node, fallback = 604800) {
   return [3600, 86400, 604800, 2592000].includes(value) ? value : fallback;
 }
 
+function setMessageTtlControls(ttlSeconds) {
+  const value = String(selectedMessageTtlSeconds({ value: ttlSeconds }, 604800));
+  if (fields.productionMessageTtl) {
+    fields.productionMessageTtl.value = value;
+  }
+  if (fields.productionTwoProfileMessageTtl) {
+    fields.productionTwoProfileMessageTtl.value = value;
+  }
+}
+
+async function loadProductionMessageRetentionPreference(profile, passphrase, options = {}) {
+  const normalizedProfile = String(profile ?? "").trim();
+  if (!normalizedProfile || !passphrase) {
+    return null;
+  }
+  try {
+    const result = await invoke("production_message_retention_preference_get", {
+      profile: normalizedProfile,
+      passphrase,
+    });
+    setMessageTtlControls(result.message_ttl_seconds);
+    applyProductionActionState();
+    return result;
+  } catch (error) {
+    if (options.quiet !== true) {
+      setText(fields.productionMessageWarning, String(error));
+    }
+    return null;
+  }
+}
+
+async function saveProductionMessageRetentionPreference(profile, passphrase, ttlSeconds) {
+  const normalizedProfile = String(profile ?? "").trim();
+  if (!normalizedProfile || !passphrase) {
+    return null;
+  }
+  return invoke("production_message_retention_preference_set", {
+    profile: normalizedProfile,
+    passphrase,
+    messageTtlSeconds: selectedMessageTtlSeconds({ value: ttlSeconds }),
+  });
+}
+
 function twoProfileDirectionLabel(input) {
   if (!input.profileA || !input.profileB) {
     return "Direction: enter Profile A and Profile B";
@@ -2646,6 +2689,7 @@ async function runProductionTwoProfileRoundtrip() {
     fields.runProductionTwoProfileRoundtrip.disabled = true;
   }
   try {
+    await saveProductionMessageRetentionPreference(profileA, passphrase, messageTtlSeconds);
     const result = await invoke("production_two_profile_roundtrip", {
       profileA,
       profileB,
@@ -2706,6 +2750,7 @@ async function runProductionTwoProfileMessageRoundtrip() {
   productionBusyAction = "two-profile-message-roundtrip";
   applyProductionActionState();
   try {
+    await saveProductionMessageRetentionPreference(profileA, passphrase, messageTtlSeconds);
     const result = await invoke("production_two_profile_message_roundtrip", {
       profileA,
       profileB,
@@ -2865,6 +2910,7 @@ async function unlockProductionProfile() {
     setText(fields.productionProfileStorage, view.storage);
     setText(fields.productionProfileIdentity, view.identity);
     setText(fields.productionProfileBoundary, view.boundary);
+    await loadProductionMessageRetentionPreference(profile, passphrase, { quiet: true });
     await loadProductionProfileList();
     await restoreProductionSessionAfterUnlock(profile, passphrase);
   } catch (error) {
@@ -3569,6 +3615,7 @@ async function exportProductionMessageEnvelope() {
     fields.exportProductionMessageEnvelope.disabled = true;
   }
   try {
+    await saveProductionMessageRetentionPreference(profile, passphrase, messageTtlSeconds);
     const result = await invoke("production_message_envelope_export", {
       profile,
       passphrase,
@@ -3633,6 +3680,7 @@ async function importProductionMessageEnvelope() {
     fields.importProductionMessageEnvelope.disabled = true;
   }
   try {
+    await saveProductionMessageRetentionPreference(profile, passphrase, messageTtlSeconds);
     const result = await invoke("production_message_envelope_import", {
       profile,
       passphrase,

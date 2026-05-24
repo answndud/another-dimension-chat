@@ -63,6 +63,8 @@ pub mod production {
     const PRODUCTION_LATEST_PAIRING_NOISE_STATIC_RECORD_ID: &str =
         "latest_pairing_noise_static_private_key_v1";
     const PRODUCTION_LATEST_SESSION_DRAFT_RECORD_ID: &str = "latest_session_draft_v1";
+    const PRODUCTION_MESSAGE_RETENTION_PREFERENCE_RECORD_ID: &str =
+        "message_retention_preference_v1";
     const PRODUCTION_PENDING_HANDSHAKE_INITIATOR_STATE_RECORD_ID: &str =
         "pending_noise_xx_initiator_handshake_state_v1";
 
@@ -235,6 +237,18 @@ pub mod production {
         storage_opened: bool,
         identity_private_key_present: bool,
         identity_public_key_derivable: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageRetentionPreferenceSummary {
+        storage_opened: bool,
+        profile_marker_present: bool,
+        preference_present: bool,
+        message_ttl_seconds: u64,
+        preference_written: bool,
         key_material_exposed: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
@@ -698,6 +712,40 @@ pub mod production {
         }
 
         pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionMessageRetentionPreferenceSummary {
+        pub fn storage_opened(&self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn profile_marker_present(&self) -> bool {
+            self.profile_marker_present
+        }
+
+        pub fn preference_present(&self) -> bool {
+            self.preference_present
+        }
+
+        pub fn message_ttl_seconds(&self) -> u64 {
+            self.message_ttl_seconds
+        }
+
+        pub fn preference_written(&self) -> bool {
+            self.preference_written
+        }
+
+        pub fn key_material_exposed(&self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(&self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(&self) -> bool {
             self.runtime_messaging_enabled
         }
     }
@@ -2904,6 +2952,35 @@ pub mod production {
         ttl_seconds: u64,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    struct MessageRetentionPreferenceRecord {
+        ttl_seconds: u64,
+    }
+
+    impl MessageRetentionPreferenceRecord {
+        fn new(ttl_seconds: u64) -> Result<Self, ProductionSessionError> {
+            if ttl_seconds == 0 {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            Ok(Self { ttl_seconds })
+        }
+
+        fn encode(&self) -> String {
+            format!("ADMSGPREF1|{}", self.ttl_seconds)
+        }
+
+        fn decode(value: &str) -> Result<Self, ProductionSessionError> {
+            let parts = value.split('|').collect::<Vec<_>>();
+            if parts.len() != 2 || parts[0] != "ADMSGPREF1" {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            let ttl_seconds = parts[1]
+                .parse::<u64>()
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            Self::new(ttl_seconds)
+        }
+    }
+
     impl ReceivedMessageRecord {
         fn new(
             contact_id: ContactId,
@@ -3462,6 +3539,85 @@ pub mod production {
         Ok(ProductionProfileStatusSummary {
             storage_opened: true,
             profile_marker_present,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_message_retention_preference_get(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        fallback_ttl_seconds: u64,
+    ) -> Result<ProductionMessageRetentionPreferenceSummary, ProductionSessionError> {
+        if fallback_ttl_seconds == 0 {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        let profile_marker_present = store.profile_marker_exists(&profile)?;
+        if !profile_marker_present {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let preference = store
+            .get(&production_message_retention_preference_record_id())?
+            .map(|record| {
+                if record.kind != ProductionRecordKind::ProfileState
+                    || record.scope.profile_name() != &profile
+                {
+                    return Err(ProductionSessionError::UnexpectedEnvelope);
+                }
+                let state = String::from_utf8(record.sealed_body)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                MessageRetentionPreferenceRecord::decode(&state)
+            })
+            .transpose()?;
+
+        Ok(ProductionMessageRetentionPreferenceSummary {
+            storage_opened: true,
+            profile_marker_present,
+            preference_present: preference.is_some(),
+            message_ttl_seconds: preference
+                .map(|preference| preference.ttl_seconds)
+                .unwrap_or(fallback_ttl_seconds),
+            preference_written: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_message_retention_preference_set(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        ttl_seconds: u64,
+    ) -> Result<ProductionMessageRetentionPreferenceSummary, ProductionSessionError> {
+        let preference = MessageRetentionPreferenceRecord::new(ttl_seconds)?;
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        let profile_marker_present = store.profile_marker_exists(&profile)?;
+        if !profile_marker_present {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let record = EncryptedRecord::new(
+            ProductionRecordKind::ProfileState,
+            EncryptedRecordScope::profile(profile),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            preference.encode().into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)?;
+        store.put(
+            &production_message_retention_preference_record_id(),
+            &record,
+        )?;
+        Ok(ProductionMessageRetentionPreferenceSummary {
+            storage_opened: true,
+            profile_marker_present,
+            preference_present: true,
+            message_ttl_seconds: ttl_seconds,
+            preference_written: true,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -5915,6 +6071,11 @@ pub mod production {
             .expect("static production session draft record id is valid")
     }
 
+    fn production_message_retention_preference_record_id() -> EncryptedRecordId {
+        EncryptedRecordId::new(PRODUCTION_MESSAGE_RETENTION_PREFERENCE_RECORD_ID)
+            .expect("static production message retention preference record id is valid")
+    }
+
     fn production_pending_handshake_initiator_state_record_id() -> EncryptedRecordId {
         EncryptedRecordId::new(PRODUCTION_PENDING_HANDSHAKE_INITIATOR_STATE_RECORD_ID)
             .expect("static production pending handshake state record id is valid")
@@ -6971,6 +7132,67 @@ pub mod production {
             assert!(!present.key_material_exposed());
             assert!(!present.transport_io_opened());
             assert!(!present.runtime_messaging_enabled());
+
+            let _ = std::fs::remove_dir_all(dir);
+        }
+
+        #[test]
+        fn production_message_retention_preference_round_trips_in_profile_store() {
+            let dir = std::env::temp_dir().join(format!(
+                "another-dimension-production-retention-pref-{}-{:?}",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+            if dir.exists() {
+                std::fs::remove_dir_all(&dir).expect("remove stale dir");
+            }
+            std::fs::create_dir_all(&dir).expect("create dir");
+            let store_path = dir.join("profile.db");
+            let profile = ProfileName::new("alice").expect("valid profile");
+            let passphrase = ProfilePassphrase::new("correct-passphrase").expect("passphrase");
+            production_profile_init(&store_path, profile.clone(), &passphrase)
+                .expect("profile init");
+
+            let missing = production_message_retention_preference_get(
+                &store_path,
+                profile.clone(),
+                &passphrase,
+                PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+            )
+            .expect("missing preference");
+            assert!(missing.storage_opened());
+            assert!(missing.profile_marker_present());
+            assert!(!missing.preference_present());
+            assert_eq!(
+                missing.message_ttl_seconds(),
+                PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS
+            );
+            assert!(!missing.preference_written());
+
+            let saved = production_message_retention_preference_set(
+                &store_path,
+                profile.clone(),
+                &passphrase,
+                86_400,
+            )
+            .expect("save preference");
+            assert!(saved.preference_present());
+            assert!(saved.preference_written());
+            assert_eq!(saved.message_ttl_seconds(), 86_400);
+            assert!(!saved.key_material_exposed());
+            assert!(!saved.transport_io_opened());
+
+            let loaded = production_message_retention_preference_get(
+                &store_path,
+                profile,
+                &passphrase,
+                PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+            )
+            .expect("load preference");
+            assert!(loaded.preference_present());
+            assert_eq!(loaded.message_ttl_seconds(), 86_400);
+            assert!(!loaded.preference_written());
+            assert!(!loaded.runtime_messaging_enabled());
 
             let _ = std::fs::remove_dir_all(dir);
         }

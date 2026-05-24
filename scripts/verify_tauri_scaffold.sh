@@ -78,6 +78,8 @@ require_contains "$TAURI_DIR/src/lib.rs" 'redacted_prototype_status()'
 require_contains "$TAURI_DIR/src/lib.rs" 'dev_local_message_loop'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_profile_unlock'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_profile_list'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_message_retention_preference_get'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_message_retention_preference_set'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_profile_unlock'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_profile_list'
 require_contains "$TAURI_DIR/src/lib.rs" 'app_data_dir()'
@@ -221,6 +223,10 @@ require_contains "$APP_DIR/index.html" 'production-message-ttl'
 require_contains "$APP_DIR/index.html" 'production-two-profile-message-ttl'
 require_contains "$APP_DIR/src/main.js" 'messageTtlSeconds'
 require_contains "$APP_DIR/src/main.js" 'selectedMessageTtlSeconds'
+require_contains "$APP_DIR/src/main.js" 'loadProductionMessageRetentionPreference'
+require_contains "$APP_DIR/src/main.js" 'saveProductionMessageRetentionPreference'
+require_contains "$APP_DIR/src/main.js" 'production_message_retention_preference_get'
+require_contains "$APP_DIR/src/main.js" 'production_message_retention_preference_set'
 require_contains "$TAURI_DIR/src/lib.rs" 'sanitize_production_message_ttl_seconds'
 require_contains "$TAURI_DIR/src/lib.rs" 'message_ttl_seconds'
 require_contains "$APP_DIR/src/action-state.test.js" 'node:test'
@@ -505,10 +511,10 @@ require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
 require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
 command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "20"
+test "$command_count" = "22"
 
 invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "25"
+test "$invoke_count" = "27"
 
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
@@ -532,6 +538,8 @@ if grep -R 'invoke(' "$APP_DIR/src" \
   | grep -v 'invoke("prototype_status")' \
   | grep -v 'invoke("production_profile_unlock"' \
   | grep -v 'invoke("production_profile_list"' \
+  | grep -v 'invoke("production_message_retention_preference_get"' \
+  | grep -v 'invoke("production_message_retention_preference_set"' \
   | grep -v 'invoke("production_pairing_payload_export"' \
   | grep -v 'invoke("production_pairing_session_draft_save"' \
   | grep -v 'invoke("production_session_state_check"' \
