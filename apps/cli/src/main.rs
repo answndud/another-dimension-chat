@@ -168,6 +168,22 @@ fn production_main() -> Result<(), String> {
         {
             run_production_message_send_prepare_command(args)?;
         }
+        [cmd, sub, object, action, args @ ..]
+            if cmd == "production"
+                && sub == "message"
+                && object == "retention"
+                && action == "get" =>
+        {
+            run_production_message_retention_get_command(args)?;
+        }
+        [cmd, sub, object, action, args @ ..]
+            if cmd == "production"
+                && sub == "message"
+                && object == "retention"
+                && action == "set" =>
+        {
+            run_production_message_retention_set_command(args)?;
+        }
         [cmd, sub, action, args @ ..]
             if cmd == "production" && sub == "message" && action == "local-roundtrip" =>
         {
@@ -269,6 +285,8 @@ fn production_help() -> String {
   another-dimension production pairing session handshake-reply-export --profile <name> --store <path> --in <path> --out <path> --passphrase-stdin
   another-dimension production pairing session handshake-finish-export --profile <name> --store <path> --in <path> --out <path> --passphrase-stdin
   another-dimension production pairing session handshake-finish-import --profile <name> --store <path> --in <path> --passphrase-stdin
+  another-dimension production message retention get --profile <name> --store <path> --passphrase-stdin
+  another-dimension production message retention set --profile <name> --store <path> --message-ttl-seconds <3600|86400|604800|2592000> --passphrase-stdin
   another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> --passphrase-stdin
   another-dimension production message local-roundtrip --sender-profile <name> --sender-store <path> --receiver-profile <name> --receiver-store <path> (--message-number <n>|--auto-message-number) --plaintext <path> --received-out <path> --passphrase-stdin
   another-dimension production message pending-status --profile <name> --store <path> --message-number <n> --passphrase-stdin
@@ -301,6 +319,7 @@ boundary:
   production pairing session handshake-reply-export reads init bytes only from --in and writes reply bytes only to --out
   production pairing session handshake-finish-export reads reply bytes only from --in and writes finish bytes only to --out
   production pairing session handshake-finish-import reads finish bytes only from --in and persists verified transport state metadata
+  production message retention get/set is storage-only: it reads or writes the encrypted local profile default message TTL without opening transport
   production message send-prepare is storage-only: it validates outbound readiness and indexes a local message without network send
   production message local-roundtrip is storage-only: it reuses stored sender/receiver session state to encrypt, import, and export one local message without network I/O; --auto-message-number reserves the next sender-scoped number in the encrypted store
   production message pending-status is storage-only: it checks a queued outbound message without exposing plaintext or opening transport
@@ -961,6 +980,65 @@ fn run_production_message_send_prepare_command(args: &[String]) -> Result<(), St
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn run_production_message_retention_get_command(args: &[String]) -> Result<(), String> {
+    let options =
+        ProductionProfileInitOptions::parse_with_help(args, production_message_retention_get_help)?;
+    let passphrase = read_production_passphrase()?;
+    let summary = another_dimension_core::production::production_message_retention_preference_get(
+        &options.store_path,
+        options.profile,
+        &passphrase,
+        PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+    )
+    .map_err(redacted_production_message_retention_error)?;
+
+    println!(
+        "production message retention preference: storage_opened={} profile_marker_present={} preference_present={} message_ttl_seconds={} preference_written={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.profile_marker_present(),
+        summary.preference_present(),
+        summary.message_ttl_seconds(),
+        summary.preference_written(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production message retention get is storage-only and not a secure messenger release"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn run_production_message_retention_set_command(args: &[String]) -> Result<(), String> {
+    let options = ProductionMessageRetentionSetOptions::parse(args)?;
+    let passphrase = read_production_passphrase()?;
+    let summary = another_dimension_core::production::production_message_retention_preference_set(
+        &options.store_path,
+        options.profile,
+        &passphrase,
+        options.message_ttl_seconds,
+    )
+    .map_err(redacted_production_message_retention_error)?;
+
+    println!(
+        "production message retention preference saved: storage_opened={} profile_marker_present={} preference_present={} message_ttl_seconds={} preference_written={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.profile_marker_present(),
+        summary.preference_present(),
+        summary.message_ttl_seconds(),
+        summary.preference_written(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production message retention set is storage-only and not a secure messenger release"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(), String> {
     let options = ProductionMessageLocalRoundtripOptions::parse(args)?;
     let passphrase = read_production_passphrase()?;
@@ -1327,6 +1405,13 @@ struct ProductionProfileInitOptions {
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+struct ProductionMessageRetentionSetOptions {
+    profile: another_dimension_identity::ProfileName,
+    store_path: std::path::PathBuf,
+    message_ttl_seconds: u64,
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 impl ProductionProfileInitOptions {
     fn parse(args: &[String]) -> Result<Self, String> {
         Self::parse_with_help(args, production_profile_init_help)
@@ -1370,6 +1455,64 @@ impl ProductionProfileInitOptions {
         Ok(Self {
             profile: profile.ok_or_else(help)?,
             store_path: store_path.ok_or_else(help)?,
+        })
+    }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+impl ProductionMessageRetentionSetOptions {
+    fn parse(args: &[String]) -> Result<Self, String> {
+        let mut profile = None;
+        let mut store_path = None;
+        let mut message_ttl_seconds = None;
+        let mut passphrase_stdin = false;
+        let mut index = 0;
+
+        while index < args.len() {
+            match args[index].as_str() {
+                "--profile" => {
+                    index += 1;
+                    profile = Some(
+                        args.get(index)
+                            .ok_or_else(production_message_retention_set_help)
+                            .and_then(|value| {
+                                another_dimension_identity::ProfileName::new(value)
+                                    .map_err(|_| "invalid production profile name".to_string())
+                            })?,
+                    );
+                }
+                "--store" => {
+                    index += 1;
+                    store_path = Some(
+                        args.get(index)
+                            .map(std::path::PathBuf::from)
+                            .ok_or_else(production_message_retention_set_help)?,
+                    );
+                }
+                "--message-ttl-seconds" => {
+                    index += 1;
+                    message_ttl_seconds = Some(parse_production_message_ttl_seconds(
+                        args.get(index)
+                            .ok_or_else(production_message_retention_set_help)?,
+                    )?);
+                }
+                "--passphrase-stdin" => {
+                    passphrase_stdin = true;
+                }
+                _ => return Err(production_message_retention_set_help()),
+            }
+            index += 1;
+        }
+
+        if !passphrase_stdin {
+            return Err(production_message_retention_set_help());
+        }
+
+        Ok(Self {
+            profile: profile.ok_or_else(production_message_retention_set_help)?,
+            store_path: store_path.ok_or_else(production_message_retention_set_help)?,
+            message_ttl_seconds: message_ttl_seconds
+                .ok_or_else(production_message_retention_set_help)?,
         })
     }
 }
@@ -2488,6 +2631,24 @@ Reads the profile passphrase from stdin and plaintext from --plaintext. Opens an
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn production_message_retention_get_help() -> String {
+    "usage:
+  another-dimension production message retention get --profile <name> --store <path> --passphrase-stdin
+
+Reads the profile passphrase from stdin. Opens an encrypted local profile store and reads the stored default message TTL, falling back to 604800 seconds when unset. This does not open transport, expose keys, or enable runtime messaging."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn production_message_retention_set_help() -> String {
+    "usage:
+  another-dimension production message retention set --profile <name> --store <path> --message-ttl-seconds <3600|86400|604800|2592000> --passphrase-stdin
+
+Reads the profile passphrase from stdin. Opens an encrypted local profile store and saves the profile default message TTL. This does not open transport, expose keys, or enable runtime messaging."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 fn production_message_local_roundtrip_help() -> String {
     "usage:
   another-dimension production message local-roundtrip --sender-profile <name> --sender-store <path> --receiver-profile <name> --receiver-store <path> (--message-number <n>|--auto-message-number) --plaintext <path> --received-out <path> [--message-ttl-seconds <3600|86400|604800|2592000>] --passphrase-stdin
@@ -2927,6 +3088,13 @@ fn redacted_production_message_send_prepare_error(
         }
         _ => "production message send-prepare failed".to_string(),
     }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_message_retention_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    redacted_production_message_send_prepare_error(error).replace("send-prepare", "retention")
 }
 
 #[cfg(not(feature = "dev-insecure"))]

@@ -99,6 +99,8 @@ fn default_build_help_lists_only_boundary_commands() {
     assert!(out.contains("production pairing session handshake-reply-export"));
     assert!(out.contains("production pairing session handshake-finish-export"));
     assert!(out.contains("production pairing session handshake-finish-import"));
+    assert!(out.contains("production message retention get"));
+    assert!(out.contains("production message retention set"));
     assert!(out.contains("production message send-prepare"));
     assert!(out.contains("production message local-roundtrip"));
     assert!(out.contains("production message pending-status"));
@@ -315,6 +317,100 @@ fn production_profile_status_reopens_encrypted_store_without_opening_messaging()
     assert!(!present_out.contains("alice"));
     assert!(!present_out.contains(store_arg));
     assert!(!present_error.contains("correct horse"));
+
+    let default_retention = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "retention",
+            "get",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let default_retention_out = stdout(&default_retention);
+    let default_retention_error = stderr(&default_retention);
+    assert!(
+        default_retention.status.success(),
+        "stdout: {default_retention_out}\nstderr: {default_retention_error}"
+    );
+    assert!(default_retention_out.contains("production message retention preference:"));
+    assert!(default_retention_out.contains("storage_opened=true"));
+    assert!(default_retention_out.contains("profile_marker_present=true"));
+    assert!(default_retention_out.contains("preference_present=false"));
+    assert!(default_retention_out.contains("message_ttl_seconds=604800"));
+    assert!(default_retention_out.contains("preference_written=false"));
+    assert!(default_retention_out.contains("key_material_exposed=false"));
+    assert!(default_retention_out.contains("transport_io_opened=false"));
+    assert!(default_retention_out.contains("runtime_messaging=false"));
+    assert!(default_retention_error.contains("storage-only"));
+    assert!(!default_retention_out.contains("alice"));
+    assert!(!default_retention_out.contains(store_arg));
+    assert!(!default_retention_error.contains("correct horse"));
+
+    let saved_retention = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "retention",
+            "set",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--message-ttl-seconds",
+            "86400",
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let saved_retention_out = stdout(&saved_retention);
+    let saved_retention_error = stderr(&saved_retention);
+    assert!(
+        saved_retention.status.success(),
+        "stdout: {saved_retention_out}\nstderr: {saved_retention_error}"
+    );
+    assert!(saved_retention_out.contains("production message retention preference saved:"));
+    assert!(saved_retention_out.contains("preference_present=true"));
+    assert!(saved_retention_out.contains("message_ttl_seconds=86400"));
+    assert!(saved_retention_out.contains("preference_written=true"));
+    assert!(saved_retention_out.contains("transport_io_opened=false"));
+    assert!(saved_retention_out.contains("runtime_messaging=false"));
+    assert!(saved_retention_error.contains("storage-only"));
+    assert!(!saved_retention_out.contains("alice"));
+    assert!(!saved_retention_out.contains(store_arg));
+    assert!(!saved_retention_error.contains("correct horse"));
+
+    let loaded_retention = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "retention",
+            "get",
+            "--profile",
+            "alice",
+            "--store",
+            store_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let loaded_retention_out = stdout(&loaded_retention);
+    let loaded_retention_error = stderr(&loaded_retention);
+    assert!(
+        loaded_retention.status.success(),
+        "stdout: {loaded_retention_out}\nstderr: {loaded_retention_error}"
+    );
+    assert!(loaded_retention_out.contains("preference_present=true"));
+    assert!(loaded_retention_out.contains("message_ttl_seconds=86400"));
+    assert!(loaded_retention_out.contains("preference_written=false"));
+    assert!(!loaded_retention_out.contains("alice"));
+    assert!(!loaded_retention_out.contains(store_arg));
+    assert!(!loaded_retention_error.contains("correct horse"));
 
     let wrong = run_with_stdin(
         &[
