@@ -1256,6 +1256,50 @@ function replyToLatestTwoProfileMessage() {
   return true;
 }
 
+function applyPendingConversationToManualMessageReview(entry) {
+  const sentCopyPresent = entry.statuses.has("sent");
+  const receivedCopyPresent = entry.statuses.has("received");
+  const reviewProfile = sentCopyPresent && !receivedCopyPresent ? entry.receiver : entry.sender;
+  if (!selectProductionProfileForManualRelay(reviewProfile)) {
+    return false;
+  }
+  if (fields.productionMessageAutoNumber) {
+    fields.productionMessageAutoNumber.checked = false;
+  }
+  if (fields.productionMessageNumber) {
+    fields.productionMessageNumber.value = String(entry.messageNumber);
+  }
+  if (fields.productionMessageBody) {
+    fields.productionMessageBody.value = entry.message;
+  }
+  if (fields.productionRemoteMessageEnvelope && !receivedCopyPresent) {
+    fields.productionRemoteMessageEnvelope.value = "";
+  }
+  resetProductionMessageImportState();
+  openManualProductionTools();
+  setProductionMessageState(
+    sentCopyPresent && !receivedCopyPresent
+      ? "Manual import review selected"
+      : "Manual sender review selected",
+  );
+  setText(
+    fields.productionMessageWarning,
+    sentCopyPresent && !receivedCopyPresent
+      ? `Selected ${reviewProfile} to import pending message #${entry.messageNumber}. Load or paste the sender envelope, then import explicitly.`
+      : `Selected ${reviewProfile} to review missing local sent copy for message #${entry.messageNumber}.`,
+  );
+  setText(
+    fields.productionMessageInbound,
+    receivedCopyPresent ? "Received copy present in transcript" : "Pending peer received copy",
+  );
+  setText(
+    fields.productionMessageOutbound,
+    sentCopyPresent ? "Local sent copy present in transcript" : "Local sent copy missing",
+  );
+  fields.productionRemoteMessageEnvelope?.focus();
+  return true;
+}
+
 function reviewPendingTwoProfileMessage() {
   const pending = latestTwoProfilePendingConversationEntry();
   if (!pending || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
@@ -1274,11 +1318,11 @@ function reviewPendingTwoProfileMessage() {
   setProductionTwoProfileState("Pending message selected");
   setText(
     fields.productionTwoProfileWarning,
-    `Pending message #${pending.messageNumber} selected: ${input.profileA} -> ${input.profileB}. Review relay/import state before sending more.`,
+    `Pending message #${pending.messageNumber} selected: ${input.profileA} -> ${input.profileB}. Manual relay/import review is prepared below.`,
   );
   setProductionFollowupActions(true, `Next: review pending message #${pending.messageNumber} before continuing.`);
+  applyPendingConversationToManualMessageReview(pending);
   applyProductionActionState();
-  fields.loadProductionTwoProfileTranscript?.focus();
   return true;
 }
 
