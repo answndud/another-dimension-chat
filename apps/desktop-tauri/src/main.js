@@ -677,6 +677,18 @@ function renderProductionTwoProfileConversationList() {
     const inboundOnly = !entry.statuses.has("sent") && entry.statuses.has("received");
     const senderEnvelopeSlotPresent = productionPayloadSlots.messageEnvelope.has(entry.sender);
     item.className = delivered ? "is-delivered" : inboundOnly ? "is-inbound-only" : "is-pending-receive";
+    if (!delivered) {
+      item.tabIndex = 0;
+      item.setAttribute("role", "button");
+      item.setAttribute("aria-label", `Review pending message ${entry.sender} to ${entry.receiver} number ${entry.messageNumber}`);
+      item.addEventListener("click", () => selectTwoProfileConversationEntryForReview(entry));
+      item.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          selectTwoProfileConversationEntryForReview(entry);
+        }
+      });
+    }
 
     const meta = document.createElement("strong");
     meta.textContent = `${entry.sender} -> ${entry.receiver} / #${entry.messageNumber}`;
@@ -1265,6 +1277,34 @@ function replyToLatestTwoProfileMessage() {
   return true;
 }
 
+function selectTwoProfileConversationEntryForReview(entry) {
+  if (!entry || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
+    return false;
+  }
+  if (entry.statuses.has("sent") && entry.statuses.has("received")) {
+    setProductionTwoProfileState("Conversation item delivered");
+    setText(fields.productionTwoProfileWarning, `Message #${entry.messageNumber} is already delivered.`);
+    return false;
+  }
+  fields.productionTwoProfileA.value = entry.sender;
+  fields.productionTwoProfileB.value = entry.receiver;
+  if (fields.productionTwoProfileMessage) {
+    fields.productionTwoProfileMessage.value = "";
+  }
+  const input = productionTwoProfileInput();
+  renderProductionTwoProfileDirection(input);
+  renderProductionTwoProfileMemory(input);
+  setProductionTwoProfileState("Pending message selected");
+  setText(
+    fields.productionTwoProfileWarning,
+    `Pending message #${entry.messageNumber} selected: ${input.profileA} -> ${input.profileB}. Manual relay/import review is prepared below.`,
+  );
+  setProductionFollowupActions(true, `Next: review pending message #${entry.messageNumber} before continuing.`);
+  applyPendingConversationToManualMessageReview(entry);
+  applyProductionActionState();
+  return true;
+}
+
 function applyPendingConversationToManualMessageReview(entry) {
   const sentCopyPresent = entry.statuses.has("sent");
   const receivedCopyPresent = entry.statuses.has("received");
@@ -1319,23 +1359,7 @@ function reviewPendingTwoProfileMessage() {
     setText(fields.productionTwoProfileWarning, "Loaded conversation has no pending sent/received status gap.");
     return false;
   }
-  fields.productionTwoProfileA.value = pending.sender;
-  fields.productionTwoProfileB.value = pending.receiver;
-  if (fields.productionTwoProfileMessage) {
-    fields.productionTwoProfileMessage.value = "";
-  }
-  const input = productionTwoProfileInput();
-  renderProductionTwoProfileDirection(input);
-  renderProductionTwoProfileMemory(input);
-  setProductionTwoProfileState("Pending message selected");
-  setText(
-    fields.productionTwoProfileWarning,
-    `Pending message #${pending.messageNumber} selected: ${input.profileA} -> ${input.profileB}. Manual relay/import review is prepared below.`,
-  );
-  setProductionFollowupActions(true, `Next: review pending message #${pending.messageNumber} before continuing.`);
-  applyPendingConversationToManualMessageReview(pending);
-  applyProductionActionState();
-  return true;
+  return selectTwoProfileConversationEntryForReview(pending);
 }
 
 function selectTwoProfileReplyDirection(sentInput) {
