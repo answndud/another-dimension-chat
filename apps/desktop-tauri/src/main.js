@@ -989,7 +989,7 @@ function defaultMessageTtlSeconds() {
     return productionMessageRetentionPolicy.defaultTtlSeconds;
   }
   const selected = Number.parseInt(fields.productionMessageTtl?.value ?? "", 10);
-  return Number.isFinite(selected) && selected > 0 ? selected : messageTtlOptionsFromControls()[0];
+  return Number.isFinite(selected) && selected > 0 ? selected : (messageTtlOptionsFromControls()[0] ?? 0);
 }
 
 function allowedMessageTtlSeconds() {
@@ -1000,7 +1000,11 @@ function allowedMessageTtlSeconds() {
 
 function selectedMessageTtlSeconds(node, fallback = defaultMessageTtlSeconds()) {
   const value = Number.parseInt(node?.value ?? String(fallback), 10);
-  return allowedMessageTtlSeconds().includes(value) ? value : fallback;
+  const allowed = allowedMessageTtlSeconds();
+  if (allowed.length === 0) {
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+  }
+  return allowed.includes(value) ? value : fallback;
 }
 
 function retentionOptionLabel(ttlSeconds) {
