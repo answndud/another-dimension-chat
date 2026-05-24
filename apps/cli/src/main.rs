@@ -934,17 +934,18 @@ fn run_production_message_send_prepare_command(args: &[String]) -> Result<(), St
         &passphrase,
         options.message_number,
         &plaintext,
-        PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+        options.message_ttl_seconds,
     )
     .map_err(redacted_production_message_send_prepare_error)?;
 
     println!(
-        "production message send prepared: storage_opened={} runtime_material_reconstructable={} outbound_envelope_io_ready={} plaintext_accepted={} message_number_reserved={} local_message_index_written={} pending_message_record_written={} envelope_encryption_ready={} network_send_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        "production message send prepared: storage_opened={} runtime_material_reconstructable={} outbound_envelope_io_ready={} plaintext_accepted={} message_number_reserved={} message_ttl_seconds={} local_message_index_written={} pending_message_record_written={} envelope_encryption_ready={} network_send_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
         summary.storage_opened(),
         summary.runtime_material_reconstructable(),
         summary.outbound_envelope_io_ready(),
         summary.plaintext_accepted(),
         summary.message_number_reserved(),
+        options.message_ttl_seconds,
         summary.local_message_index_written(),
         summary.pending_message_record_written(),
         summary.envelope_encryption_ready(),
@@ -990,7 +991,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
         &passphrase,
         message_number,
         &plaintext,
-        PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+        options.message_ttl_seconds,
     )
     .map_err(redacted_production_message_local_roundtrip_error)?;
     let pending_summary = another_dimension_core::production::production_message_pending_status(
@@ -1022,7 +1023,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
             options.receiver_profile.clone(),
             &passphrase,
             envelope_summary.export_payload(),
-            PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+            options.message_ttl_seconds,
         )
         .map_err(redacted_production_message_local_roundtrip_error)?;
     let received_status_summary =
@@ -1046,7 +1047,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
     })?;
 
     println!(
-        "production message local roundtrip completed: selected_message_number={} auto_message_number={} auto_counter_written={} existing_message_slot_skipped={} sender_runtime_material_reconstructable={} sender_message_number_reserved={} sender_pending_record_present={} sender_session_transport_ready={} encrypted_envelope_exported={} receiver_inbound_message_stored={} receiver_received_status_verified={} received_written={} received_export_matches_input={} plaintext_exposed=false network_send_attempted={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        "production message local roundtrip completed: selected_message_number={} auto_message_number={} auto_counter_written={} existing_message_slot_skipped={} message_ttl_seconds={} sender_runtime_material_reconstructable={} sender_message_number_reserved={} sender_pending_record_present={} sender_session_transport_ready={} encrypted_envelope_exported={} receiver_inbound_message_stored={} receiver_received_status_verified={} received_written={} received_export_matches_input={} plaintext_exposed=false network_send_attempted={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
         message_number,
         options.auto_message_number,
         reservation_summary
@@ -1055,6 +1056,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
         reservation_summary
             .as_ref()
             .is_some_and(|summary| summary.existing_message_slot_skipped()),
+        options.message_ttl_seconds,
         send_summary.runtime_material_reconstructable(),
         send_summary.message_number_reserved(),
         pending_summary.pending_message_record_present(),
@@ -1219,11 +1221,11 @@ fn run_production_message_inbound_decrypt_import_command(args: &[String]) -> Res
         options.profile,
         &passphrase,
         &envelope_payload,
-        PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+        options.message_ttl_seconds,
     )
     .map_err(redacted_production_message_inbound_decrypt_import_error)?;
     println!(
-        "production message inbound decrypt imported: storage_opened={} runtime_material_reconstructable={} envelope_read={} envelope_decodable={} session_transport_ready={} replay_window_loaded={} replay_accepted={} plaintext_decrypted={} plaintext_exposed={} received_message_written={} replay_window_committed={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        "production message inbound decrypt imported: storage_opened={} runtime_material_reconstructable={} envelope_read={} envelope_decodable={} session_transport_ready={} replay_window_loaded={} replay_accepted={} plaintext_decrypted={} plaintext_exposed={} message_ttl_seconds={} received_message_written={} replay_window_committed={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
         summary.storage_opened(),
         summary.runtime_material_reconstructable(),
         summary.envelope_read(),
@@ -1233,6 +1235,7 @@ fn run_production_message_inbound_decrypt_import_command(args: &[String]) -> Res
         summary.replay_accepted(),
         summary.plaintext_decrypted(),
         summary.plaintext_exposed(),
+        options.message_ttl_seconds,
         summary.received_message_written(),
         summary.replay_window_committed(),
         summary.network_receive_attempted(),
@@ -1393,6 +1396,7 @@ struct ProductionMessageSendPrepareOptions {
     store_path: std::path::PathBuf,
     message_number: u64,
     plaintext_path: std::path::PathBuf,
+    message_ttl_seconds: u64,
 }
 
 #[cfg(not(feature = "dev-insecure"))]
@@ -1405,6 +1409,7 @@ struct ProductionMessageLocalRoundtripOptions {
     auto_message_number: bool,
     plaintext_path: std::path::PathBuf,
     received_out_path: std::path::PathBuf,
+    message_ttl_seconds: u64,
 }
 
 #[cfg(not(feature = "dev-insecure"))]
@@ -1456,6 +1461,7 @@ struct ProductionMessageInboundDecryptImportOptions {
     profile: another_dimension_identity::ProfileName,
     store_path: std::path::PathBuf,
     in_path: std::path::PathBuf,
+    message_ttl_seconds: u64,
 }
 
 #[cfg(not(feature = "dev-insecure"))]
@@ -1927,6 +1933,7 @@ impl ProductionMessageSendPrepareOptions {
         let mut store_path = None;
         let mut message_number = None;
         let mut plaintext_path = None;
+        let mut message_ttl_seconds = PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS;
         let mut passphrase_stdin = false;
         let mut index = 0;
 
@@ -1968,6 +1975,14 @@ impl ProductionMessageSendPrepareOptions {
                             .ok_or_else(production_message_send_prepare_help)?,
                     );
                 }
+                "--message-ttl-seconds" => {
+                    index += 1;
+                    message_ttl_seconds = parse_production_message_ttl_seconds(
+                        args.get(index)
+                            .ok_or_else(production_message_send_prepare_help)?,
+                    )
+                    .map_err(|_| production_message_send_prepare_help())?;
+                }
                 "--passphrase-stdin" => {
                     passphrase_stdin = true;
                 }
@@ -1985,6 +2000,7 @@ impl ProductionMessageSendPrepareOptions {
             store_path: store_path.ok_or_else(production_message_send_prepare_help)?,
             message_number: message_number.ok_or_else(production_message_send_prepare_help)?,
             plaintext_path: plaintext_path.ok_or_else(production_message_send_prepare_help)?,
+            message_ttl_seconds,
         })
     }
 }
@@ -2000,6 +2016,7 @@ impl ProductionMessageLocalRoundtripOptions {
         let mut auto_message_number = false;
         let mut plaintext_path = None;
         let mut received_out_path = None;
+        let mut message_ttl_seconds = PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS;
         let mut passphrase_stdin = false;
         let mut index = 0;
 
@@ -2071,6 +2088,14 @@ impl ProductionMessageLocalRoundtripOptions {
                             .ok_or_else(production_message_local_roundtrip_help)?,
                     );
                 }
+                "--message-ttl-seconds" => {
+                    index += 1;
+                    message_ttl_seconds = parse_production_message_ttl_seconds(
+                        args.get(index)
+                            .ok_or_else(production_message_local_roundtrip_help)?,
+                    )
+                    .map_err(|_| production_message_local_roundtrip_help())?;
+                }
                 "--passphrase-stdin" => {
                     passphrase_stdin = true;
                 }
@@ -2099,6 +2124,7 @@ impl ProductionMessageLocalRoundtripOptions {
             plaintext_path: plaintext_path.ok_or_else(production_message_local_roundtrip_help)?,
             received_out_path: received_out_path
                 .ok_or_else(production_message_local_roundtrip_help)?,
+            message_ttl_seconds,
         })
     }
 }
@@ -2237,6 +2263,7 @@ impl ProductionMessageInboundDecryptImportOptions {
         let mut profile = None;
         let mut store_path = None;
         let mut in_path = None;
+        let mut message_ttl_seconds = PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS;
         let mut passphrase_stdin = false;
         let mut index = 0;
 
@@ -2269,6 +2296,14 @@ impl ProductionMessageInboundDecryptImportOptions {
                             .ok_or_else(production_message_inbound_decrypt_import_help)?,
                     );
                 }
+                "--message-ttl-seconds" => {
+                    index += 1;
+                    message_ttl_seconds = parse_production_message_ttl_seconds(
+                        args.get(index)
+                            .ok_or_else(production_message_inbound_decrypt_import_help)?,
+                    )
+                    .map_err(|_| production_message_inbound_decrypt_import_help())?;
+                }
                 "--passphrase-stdin" => {
                     passphrase_stdin = true;
                 }
@@ -2285,6 +2320,7 @@ impl ProductionMessageInboundDecryptImportOptions {
             profile: profile.ok_or_else(production_message_inbound_decrypt_import_help)?,
             store_path: store_path.ok_or_else(production_message_inbound_decrypt_import_help)?,
             in_path: in_path.ok_or_else(production_message_inbound_decrypt_import_help)?,
+            message_ttl_seconds,
         })
     }
 }
@@ -2445,18 +2481,18 @@ Reads the profile passphrase from stdin and finish handshake bytes only from --i
 #[cfg(not(feature = "dev-insecure"))]
 fn production_message_send_prepare_help() -> String {
     "usage:
-  another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> --passphrase-stdin
+  another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> [--message-ttl-seconds <3600|86400|604800|2592000>] --passphrase-stdin
 
-Reads the profile passphrase from stdin and plaintext from --plaintext. Opens an encrypted local profile store, reloads production session runtime material, validates fail-closed outbound readiness, and records a local message index without encrypting an envelope, opening transport, or enabling runtime messaging."
+Reads the profile passphrase from stdin and plaintext from --plaintext. Opens an encrypted local profile store, reloads production session runtime material, validates fail-closed outbound readiness, and records a local message index without encrypting an envelope, opening transport, or enabling runtime messaging. Message TTL defaults to 604800 seconds."
         .to_string()
 }
 
 #[cfg(not(feature = "dev-insecure"))]
 fn production_message_local_roundtrip_help() -> String {
     "usage:
-  another-dimension production message local-roundtrip --sender-profile <name> --sender-store <path> --receiver-profile <name> --receiver-store <path> (--message-number <n>|--auto-message-number) --plaintext <path> --received-out <path> --passphrase-stdin
+  another-dimension production message local-roundtrip --sender-profile <name> --sender-store <path> --receiver-profile <name> --receiver-store <path> (--message-number <n>|--auto-message-number) --plaintext <path> --received-out <path> [--message-ttl-seconds <3600|86400|604800|2592000>] --passphrase-stdin
 
-Reads one profile passphrase from stdin and plaintext from --plaintext. Reuses existing encrypted sender and receiver profile stores with authenticated session transport metadata, encrypts one outbound envelope, imports it into the receiver store, and writes received plaintext only to --received-out. Use --auto-message-number to reserve the next sender-scoped message number in the encrypted store. This does not print plaintext, open transport, perform network I/O, or enable runtime messaging."
+Reads one profile passphrase from stdin and plaintext from --plaintext. Reuses existing encrypted sender and receiver profile stores with authenticated session transport metadata, encrypts one outbound envelope, imports it into the receiver store, and writes received plaintext only to --received-out. Use --auto-message-number to reserve the next sender-scoped message number in the encrypted store. Message TTL defaults to 604800 seconds. This does not print plaintext, open transport, perform network I/O, or enable runtime messaging."
         .to_string()
 }
 
@@ -2490,9 +2526,9 @@ Reads the profile passphrase from stdin and writes an encrypted outbound envelop
 #[cfg(not(feature = "dev-insecure"))]
 fn production_message_inbound_decrypt_import_help() -> String {
     "usage:
-  another-dimension production message inbound-decrypt-import --profile <name> --store <path> --in <path> --passphrase-stdin
+  another-dimension production message inbound-decrypt-import --profile <name> --store <path> --in <path> [--message-ttl-seconds <3600|86400|604800|2592000>] --passphrase-stdin
 
-Reads the profile passphrase from stdin and an encrypted envelope only from --in. Opens an encrypted local profile store, decrypts the envelope using authenticated session transport metadata, stores the received message encrypted-at-rest, and commits replay state. This does not print plaintext, open transport, or enable runtime messaging."
+Reads the profile passphrase from stdin and an encrypted envelope only from --in. Opens an encrypted local profile store, decrypts the envelope using authenticated session transport metadata, stores the received message encrypted-at-rest, and commits replay state. Message TTL defaults to 604800 seconds. This does not print plaintext, open transport, or enable runtime messaging."
         .to_string()
 }
 
@@ -2542,6 +2578,17 @@ fn read_passphrase_from_stdin() -> Result<String, String> {
         .read_to_string(&mut passphrase)
         .map_err(|_| "failed to read production profile passphrase".to_string())?;
     Ok(passphrase.trim_end_matches(['\r', '\n']).to_string())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn parse_production_message_ttl_seconds(value: &str) -> Result<u64, String> {
+    let ttl_seconds = value
+        .parse::<u64>()
+        .map_err(|_| "invalid production message ttl".to_string())?;
+    match ttl_seconds {
+        3_600 | 86_400 | 604_800 | 2_592_000 => Ok(ttl_seconds),
+        _ => Err("invalid production message ttl".to_string()),
+    }
 }
 
 #[cfg(not(feature = "dev-insecure"))]
