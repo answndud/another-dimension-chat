@@ -189,6 +189,7 @@ const fields = {
   productionTwoProfileLastSuccess: document.querySelector("#production-two-profile-last-success"),
   loadProductionTwoProfileTranscript: document.querySelector("#load-production-two-profile-transcript"),
   replyLatestTwoProfileMessage: document.querySelector("#reply-latest-two-profile-message"),
+  reviewPendingTwoProfileMessage: document.querySelector("#review-pending-two-profile-message"),
   productionTwoProfileTranscript: document.querySelector("#production-two-profile-transcript"),
   productionTwoProfileNextStep: document.querySelector("#production-two-profile-next-step"),
   openManualProductionTools: document.querySelector("#open-manual-production-tools"),
@@ -673,18 +674,19 @@ function renderProductionTwoProfileConversationList() {
   for (const entry of entries) {
     const item = document.createElement("li");
     const delivered = entry.statuses.has("sent") && entry.statuses.has("received");
-    item.className = delivered ? "is-delivered" : "is-sent";
+    const inboundOnly = !entry.statuses.has("sent") && entry.statuses.has("received");
+    item.className = delivered ? "is-delivered" : inboundOnly ? "is-inbound-only" : "is-pending-receive";
 
     const meta = document.createElement("strong");
     meta.textContent = `${entry.sender} -> ${entry.receiver} / #${entry.messageNumber}`;
 
     const status = document.createElement("span");
-    status.className = "transcript-status";
+    status.className = `transcript-status ${delivered ? "is-delivered" : inboundOnly ? "is-inbound-only" : "is-pending-receive"}`;
     status.textContent = delivered
-      ? "local sent + peer received"
-      : entry.statuses.has("received")
-        ? "received copy only"
-        : "sent copy only";
+      ? "delivered: local sent + peer received"
+      : inboundOnly
+        ? "inbound-only: local sent copy missing"
+        : "pending: peer received copy missing";
 
     const body = document.createElement("span");
     body.textContent = entry.message;
@@ -702,6 +704,19 @@ function latestTwoProfileConversationEntry() {
     }
     return `${right.sender}:${right.receiver}`.localeCompare(`${left.sender}:${left.receiver}`);
   });
+  return entries[0] ?? null;
+}
+
+function latestTwoProfilePendingConversationEntry() {
+  const entries = [...productionTwoProfileConversationEntries.values()]
+    .filter((entry) => !(entry.statuses.has("sent") && entry.statuses.has("received")))
+    .sort((left, right) => {
+      const numberDelta = right.messageNumber - left.messageNumber;
+      if (numberDelta !== 0) {
+        return numberDelta;
+      }
+      return `${right.sender}:${right.receiver}`.localeCompare(`${left.sender}:${left.receiver}`);
+    });
   return entries[0] ?? null;
 }
 
@@ -1241,6 +1256,32 @@ function replyToLatestTwoProfileMessage() {
   return true;
 }
 
+function reviewPendingTwoProfileMessage() {
+  const pending = latestTwoProfilePendingConversationEntry();
+  if (!pending || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
+    setProductionTwoProfileState("No pending conversation item");
+    setText(fields.productionTwoProfileWarning, "Loaded conversation has no pending sent/received status gap.");
+    return false;
+  }
+  fields.productionTwoProfileA.value = pending.sender;
+  fields.productionTwoProfileB.value = pending.receiver;
+  if (fields.productionTwoProfileMessage) {
+    fields.productionTwoProfileMessage.value = "";
+  }
+  const input = productionTwoProfileInput();
+  renderProductionTwoProfileDirection(input);
+  renderProductionTwoProfileMemory(input);
+  setProductionTwoProfileState("Pending message selected");
+  setText(
+    fields.productionTwoProfileWarning,
+    `Pending message #${pending.messageNumber} selected: ${input.profileA} -> ${input.profileB}. Review relay/import state before sending more.`,
+  );
+  setProductionFollowupActions(true, `Next: review pending message #${pending.messageNumber} before continuing.`);
+  applyProductionActionState();
+  fields.loadProductionTwoProfileTranscript?.focus();
+  return true;
+}
+
 function selectTwoProfileReplyDirection(sentInput) {
   const sender = String(sentInput?.profileA ?? "").trim();
   const receiver = String(sentInput?.profileB ?? "").trim();
@@ -1481,11 +1522,23 @@ function applyProductionActionState() {
       twoProfile.profileA === latestConversation.receiver &&
       twoProfile.profileB === latestConversation.sender,
   );
+  const pendingConversation = latestTwoProfilePendingConversationEntry();
+  const pendingSelected = Boolean(
+    pendingConversation &&
+      twoProfile.profileA === pendingConversation.sender &&
+      twoProfile.profileB === pendingConversation.receiver,
+  );
   setActionButtonState(
     fields.replyLatestTwoProfileMessage,
     busy || !latestConversation,
     busy ? "Wait for the active production action." : "Load a stored conversation first.",
     latestReplySelected,
+  );
+  setActionButtonState(
+    fields.reviewPendingTwoProfileMessage,
+    busy || !pendingConversation,
+    busy ? "Wait for the active production action." : "No pending sent/received gap in loaded conversation.",
+    pendingSelected,
   );
   setActionButtonState(
     fields.runProductionTwoProfileRoundtrip,
@@ -3468,6 +3521,10 @@ if (fields.loadProductionTwoProfileTranscript) {
 
 if (fields.replyLatestTwoProfileMessage) {
   fields.replyLatestTwoProfileMessage.addEventListener("click", replyToLatestTwoProfileMessage);
+}
+
+if (fields.reviewPendingTwoProfileMessage) {
+  fields.reviewPendingTwoProfileMessage.addEventListener("click", reviewPendingTwoProfileMessage);
 }
 
 if (fields.openManualProductionTools) {
