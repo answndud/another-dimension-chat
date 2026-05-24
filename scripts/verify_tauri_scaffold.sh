@@ -151,6 +151,7 @@ require_contains "$APP_DIR/src/main.js" 'invoke("production_message_envelope_imp
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_received_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_transcript_export"'
 require_contains "$APP_DIR/src/main.js" 'loadProductionTwoProfileTranscript'
+require_contains "$APP_DIR/src/main.js" 'replyToLatestTwoProfileMessage'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_local_roundtrip"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_two_profile_roundtrip"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_two_profile_message_roundtrip"'
@@ -555,6 +556,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<textarea id="production-received-message" rows="3" readonly></textarea>' \
   | grep -v '<button id="load-production-message-transcript" type="button">Load transcript</button>' \
   | grep -v '<button id="load-production-two-profile-transcript" type="button">Load conversation</button>' \
+  | grep -v '<button id="reply-latest-two-profile-message" type="button">Reply to latest</button>' \
   | grep -v '<input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />' \
   | grep -v '<input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />' \
   | grep -v '<textarea id="production-two-profile-message" rows="3" placeholder="Message from alice to bob">hello between app-data profiles</textarea>' \

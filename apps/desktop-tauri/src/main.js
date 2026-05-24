@@ -188,6 +188,7 @@ const fields = {
   productionTwoProfileCurrentInput: document.querySelector("#production-two-profile-current-input"),
   productionTwoProfileLastSuccess: document.querySelector("#production-two-profile-last-success"),
   loadProductionTwoProfileTranscript: document.querySelector("#load-production-two-profile-transcript"),
+  replyLatestTwoProfileMessage: document.querySelector("#reply-latest-two-profile-message"),
   productionTwoProfileTranscript: document.querySelector("#production-two-profile-transcript"),
   productionTwoProfileNextStep: document.querySelector("#production-two-profile-next-step"),
   openManualProductionTools: document.querySelector("#open-manual-production-tools"),
@@ -1214,6 +1215,32 @@ function swapTwoProfileDirection() {
   fields.productionTwoProfileMessage?.focus();
 }
 
+function replyToLatestTwoProfileMessage() {
+  const latest = latestTwoProfileConversationEntry();
+  if (!latest || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
+    setProductionTwoProfileState("Reply needs conversation");
+    setText(fields.productionTwoProfileWarning, "Load a stored conversation before selecting a reply direction.");
+    return false;
+  }
+  fields.productionTwoProfileA.value = latest.receiver;
+  fields.productionTwoProfileB.value = latest.sender;
+  if (fields.productionTwoProfileMessage) {
+    fields.productionTwoProfileMessage.value = "";
+  }
+  const input = productionTwoProfileInput();
+  renderProductionTwoProfileDirection(input);
+  renderProductionTwoProfileMemory(input);
+  setProductionTwoProfileState("Reply direction ready");
+  setText(
+    fields.productionTwoProfileWarning,
+    `Reply target selected from latest message #${latest.messageNumber}: ${input.profileA} -> ${input.profileB}.`,
+  );
+  setProductionFollowupActions(true, `Next: write reply from ${input.profileA} to ${input.profileB}.`);
+  applyProductionActionState();
+  fields.productionTwoProfileMessage?.focus();
+  return true;
+}
+
 function selectTwoProfileReplyDirection(sentInput) {
   const sender = String(sentInput?.profileA ?? "").trim();
   const receiver = String(sentInput?.profileB ?? "").trim();
@@ -1447,6 +1474,18 @@ function applyProductionActionState() {
     fields.loadProductionTwoProfileTranscript,
     busy || !hasTwoProfileSessionStatusInput,
     busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
+  );
+  const latestConversation = latestTwoProfileConversationEntry();
+  const latestReplySelected = Boolean(
+    latestConversation &&
+      twoProfile.profileA === latestConversation.receiver &&
+      twoProfile.profileB === latestConversation.sender,
+  );
+  setActionButtonState(
+    fields.replyLatestTwoProfileMessage,
+    busy || !latestConversation,
+    busy ? "Wait for the active production action." : "Load a stored conversation first.",
+    latestReplySelected,
   );
   setActionButtonState(
     fields.runProductionTwoProfileRoundtrip,
@@ -3425,6 +3464,10 @@ if (fields.loadProductionTwoProfileTranscript) {
   fields.loadProductionTwoProfileTranscript.addEventListener("click", () =>
     loadProductionTwoProfileTranscript(),
   );
+}
+
+if (fields.replyLatestTwoProfileMessage) {
+  fields.replyLatestTwoProfileMessage.addEventListener("click", replyToLatestTwoProfileMessage);
 }
 
 if (fields.openManualProductionTools) {
