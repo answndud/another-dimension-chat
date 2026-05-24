@@ -391,9 +391,24 @@ pub struct ProductionMessageRetentionPreferenceResult {
     runtime_messaging_enabled: bool,
 }
 
+#[derive(serde::Serialize)]
+pub struct ProductionMessageRetentionPolicyResult {
+    default_ttl_seconds: u64,
+    allowed_ttl_seconds: Vec<u64>,
+}
+
 #[tauri::command]
 fn prototype_status() -> PrototypeStatus {
     status::redacted_prototype_status()
+}
+
+#[tauri::command]
+fn production_message_retention_policy() -> ProductionMessageRetentionPolicyResult {
+    ProductionMessageRetentionPolicyResult {
+        default_ttl_seconds: another_dimension_core::production::PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+        allowed_ttl_seconds: another_dimension_core::production::PRODUCTION_ALLOWED_MESSAGE_TTL_SECONDS
+            .to_vec(),
+    }
 }
 
 #[tauri::command]
@@ -2525,6 +2540,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             prototype_status,
+            production_message_retention_policy,
             production_profile_unlock,
             production_profile_list,
             production_message_retention_preference_get,
@@ -2555,6 +2571,7 @@ pub fn run() {
 mod tests {
     use super::{
         build_demo_simulation, parse_demo_steps, parse_loop_messages,
+        production_message_retention_policy,
         production_profile_store_path, run_production_handshake_finish_export,
         run_production_handshake_finish_import, run_production_handshake_init_export,
         run_production_handshake_reply_export, run_production_local_roundtrip,
@@ -2728,6 +2745,13 @@ replay check: no replayed messages after message 2
         .expect("second profile unlock");
         assert!(!second.profile_initialized);
         assert!(!second.identity_created);
+
+        let policy = production_message_retention_policy();
+        assert_eq!(policy.default_ttl_seconds, 604_800);
+        assert_eq!(
+            policy.allowed_ttl_seconds,
+            vec![3_600, 86_400, 604_800, 2_592_000]
+        );
 
         let default_preference = run_production_message_retention_preference_get(
             &root,
