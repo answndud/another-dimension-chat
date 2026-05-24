@@ -551,12 +551,17 @@ textarea[readonly] {
   background: var(--panel);
 }
 
-.message-transcript li.is-received {
+.message-transcript li.is-received,
+.message-transcript li.is-inbound-only {
   border-left-color: var(--success);
 }
 
 .message-transcript li.is-delivered {
   border-left-color: var(--success);
+}
+
+.message-transcript li.is-pending-receive {
+  border-left-color: var(--warning);
 }
 
 .message-transcript li.is-empty {
@@ -579,6 +584,14 @@ textarea[readonly] {
   color: var(--text-muted);
   font-size: 11px;
   text-transform: uppercase;
+}
+
+.message-transcript .transcript-status.is-delivered {
+  color: var(--success);
+}
+
+.message-transcript .transcript-status.is-pending-receive {
+  color: var(--warning);
 }
 
 .message-transcript span {
