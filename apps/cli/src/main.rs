@@ -287,12 +287,12 @@ fn production_help() -> String {
   another-dimension production pairing session handshake-finish-import --profile <name> --store <path> --in <path> --passphrase-stdin
   another-dimension production message retention get --profile <name> --store <path> --passphrase-stdin
   another-dimension production message retention set --profile <name> --store <path> --message-ttl-seconds <3600|86400|604800|2592000> --passphrase-stdin
-  another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> --passphrase-stdin
-  another-dimension production message local-roundtrip --sender-profile <name> --sender-store <path> --receiver-profile <name> --receiver-store <path> (--message-number <n>|--auto-message-number) --plaintext <path> --received-out <path> --passphrase-stdin
+  another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> [--message-ttl-seconds <3600|86400|604800|2592000>] --passphrase-stdin
+  another-dimension production message local-roundtrip --sender-profile <name> --sender-store <path> --receiver-profile <name> --receiver-store <path> (--message-number <n>|--auto-message-number) --plaintext <path> --received-out <path> [--message-ttl-seconds <3600|86400|604800|2592000>] --passphrase-stdin
   another-dimension production message pending-status --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension production message outbound-encrypt-prepare --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension production message outbound-envelope-export --profile <name> --store <path> --message-number <n> --out <path> --passphrase-stdin
-  another-dimension production message inbound-decrypt-import --profile <name> --store <path> --in <path> --passphrase-stdin
+  another-dimension production message inbound-decrypt-import --profile <name> --store <path> --in <path> [--message-ttl-seconds <3600|86400|604800|2592000>] --passphrase-stdin
   another-dimension production message received-status --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension production message received-export --profile <name> --store <path> --message-number <n> --out <path> --passphrase-stdin
   another-dimension --help
@@ -947,13 +947,20 @@ fn run_production_message_send_prepare_command(args: &[String]) -> Result<(), St
     let passphrase = read_production_passphrase()?;
     let plaintext = std::fs::read(&options.plaintext_path)
         .map_err(|_| "production message send-prepare failed: plaintext read failed".to_string())?;
+    let message_ttl_seconds = resolve_production_message_ttl_seconds(
+        &options.store_path,
+        &options.profile,
+        &passphrase,
+        options.message_ttl_seconds,
+        redacted_production_message_send_prepare_error,
+    )?;
     let summary = another_dimension_core::production::production_message_send_prepare(
         &options.store_path,
         options.profile,
         &passphrase,
         options.message_number,
         &plaintext,
-        options.message_ttl_seconds,
+        message_ttl_seconds,
     )
     .map_err(redacted_production_message_send_prepare_error)?;
 
@@ -964,7 +971,7 @@ fn run_production_message_send_prepare_command(args: &[String]) -> Result<(), St
         summary.outbound_envelope_io_ready(),
         summary.plaintext_accepted(),
         summary.message_number_reserved(),
-        options.message_ttl_seconds,
+        message_ttl_seconds,
         summary.local_message_index_written(),
         summary.pending_message_record_written(),
         summary.envelope_encryption_ready(),
@@ -1045,6 +1052,13 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
     let plaintext = std::fs::read(&options.plaintext_path).map_err(|_| {
         "production message local-roundtrip failed: plaintext read failed".to_string()
     })?;
+    let message_ttl_seconds = resolve_production_message_ttl_seconds(
+        &options.sender_store_path,
+        &options.sender_profile,
+        &passphrase,
+        options.message_ttl_seconds,
+        redacted_production_message_local_roundtrip_error,
+    )?;
     let reservation_summary = if options.auto_message_number {
         Some(
             another_dimension_core::production::production_message_next_number_reserve(
@@ -1069,7 +1083,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
         &passphrase,
         message_number,
         &plaintext,
-        options.message_ttl_seconds,
+        message_ttl_seconds,
     )
     .map_err(redacted_production_message_local_roundtrip_error)?;
     let pending_summary = another_dimension_core::production::production_message_pending_status(
@@ -1101,7 +1115,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
             options.receiver_profile.clone(),
             &passphrase,
             envelope_summary.export_payload(),
-            options.message_ttl_seconds,
+            message_ttl_seconds,
         )
         .map_err(redacted_production_message_local_roundtrip_error)?;
     let received_status_summary =
@@ -1134,7 +1148,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
         reservation_summary
             .as_ref()
             .is_some_and(|summary| summary.existing_message_slot_skipped()),
-        options.message_ttl_seconds,
+        message_ttl_seconds,
         send_summary.runtime_material_reconstructable(),
         send_summary.message_number_reserved(),
         pending_summary.pending_message_record_present(),
@@ -1294,12 +1308,19 @@ fn run_production_message_inbound_decrypt_import_command(args: &[String]) -> Res
     let envelope_payload = std::fs::read_to_string(&options.in_path).map_err(|_| {
         "production message inbound-decrypt-import failed: in read failed".to_string()
     })?;
+    let message_ttl_seconds = resolve_production_message_ttl_seconds(
+        &options.store_path,
+        &options.profile,
+        &passphrase,
+        options.message_ttl_seconds,
+        redacted_production_message_inbound_decrypt_import_error,
+    )?;
     let summary = another_dimension_core::production::production_message_inbound_decrypt_import(
         &options.store_path,
         options.profile,
         &passphrase,
         &envelope_payload,
-        options.message_ttl_seconds,
+        message_ttl_seconds,
     )
     .map_err(redacted_production_message_inbound_decrypt_import_error)?;
     println!(
@@ -1313,7 +1334,7 @@ fn run_production_message_inbound_decrypt_import_command(args: &[String]) -> Res
         summary.replay_accepted(),
         summary.plaintext_decrypted(),
         summary.plaintext_exposed(),
-        options.message_ttl_seconds,
+        message_ttl_seconds,
         summary.received_message_written(),
         summary.replay_window_committed(),
         summary.network_receive_attempted(),
@@ -1539,7 +1560,7 @@ struct ProductionMessageSendPrepareOptions {
     store_path: std::path::PathBuf,
     message_number: u64,
     plaintext_path: std::path::PathBuf,
-    message_ttl_seconds: u64,
+    message_ttl_seconds: Option<u64>,
 }
 
 #[cfg(not(feature = "dev-insecure"))]
@@ -1552,7 +1573,7 @@ struct ProductionMessageLocalRoundtripOptions {
     auto_message_number: bool,
     plaintext_path: std::path::PathBuf,
     received_out_path: std::path::PathBuf,
-    message_ttl_seconds: u64,
+    message_ttl_seconds: Option<u64>,
 }
 
 #[cfg(not(feature = "dev-insecure"))]
@@ -1604,7 +1625,7 @@ struct ProductionMessageInboundDecryptImportOptions {
     profile: another_dimension_identity::ProfileName,
     store_path: std::path::PathBuf,
     in_path: std::path::PathBuf,
-    message_ttl_seconds: u64,
+    message_ttl_seconds: Option<u64>,
 }
 
 #[cfg(not(feature = "dev-insecure"))]
@@ -2076,7 +2097,7 @@ impl ProductionMessageSendPrepareOptions {
         let mut store_path = None;
         let mut message_number = None;
         let mut plaintext_path = None;
-        let mut message_ttl_seconds = PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS;
+        let mut message_ttl_seconds = None;
         let mut passphrase_stdin = false;
         let mut index = 0;
 
@@ -2120,11 +2141,13 @@ impl ProductionMessageSendPrepareOptions {
                 }
                 "--message-ttl-seconds" => {
                     index += 1;
-                    message_ttl_seconds = parse_production_message_ttl_seconds(
-                        args.get(index)
-                            .ok_or_else(production_message_send_prepare_help)?,
-                    )
-                    .map_err(|_| production_message_send_prepare_help())?;
+                    message_ttl_seconds = Some(
+                        parse_production_message_ttl_seconds(
+                            args.get(index)
+                                .ok_or_else(production_message_send_prepare_help)?,
+                        )
+                        .map_err(|_| production_message_send_prepare_help())?,
+                    );
                 }
                 "--passphrase-stdin" => {
                     passphrase_stdin = true;
@@ -2159,7 +2182,7 @@ impl ProductionMessageLocalRoundtripOptions {
         let mut auto_message_number = false;
         let mut plaintext_path = None;
         let mut received_out_path = None;
-        let mut message_ttl_seconds = PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS;
+        let mut message_ttl_seconds = None;
         let mut passphrase_stdin = false;
         let mut index = 0;
 
@@ -2233,11 +2256,13 @@ impl ProductionMessageLocalRoundtripOptions {
                 }
                 "--message-ttl-seconds" => {
                     index += 1;
-                    message_ttl_seconds = parse_production_message_ttl_seconds(
-                        args.get(index)
-                            .ok_or_else(production_message_local_roundtrip_help)?,
-                    )
-                    .map_err(|_| production_message_local_roundtrip_help())?;
+                    message_ttl_seconds = Some(
+                        parse_production_message_ttl_seconds(
+                            args.get(index)
+                                .ok_or_else(production_message_local_roundtrip_help)?,
+                        )
+                        .map_err(|_| production_message_local_roundtrip_help())?,
+                    );
                 }
                 "--passphrase-stdin" => {
                     passphrase_stdin = true;
@@ -2406,7 +2431,7 @@ impl ProductionMessageInboundDecryptImportOptions {
         let mut profile = None;
         let mut store_path = None;
         let mut in_path = None;
-        let mut message_ttl_seconds = PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS;
+        let mut message_ttl_seconds = None;
         let mut passphrase_stdin = false;
         let mut index = 0;
 
@@ -2441,11 +2466,13 @@ impl ProductionMessageInboundDecryptImportOptions {
                 }
                 "--message-ttl-seconds" => {
                     index += 1;
-                    message_ttl_seconds = parse_production_message_ttl_seconds(
-                        args.get(index)
-                            .ok_or_else(production_message_inbound_decrypt_import_help)?,
-                    )
-                    .map_err(|_| production_message_inbound_decrypt_import_help())?;
+                    message_ttl_seconds = Some(
+                        parse_production_message_ttl_seconds(
+                            args.get(index)
+                                .ok_or_else(production_message_inbound_decrypt_import_help)?,
+                        )
+                        .map_err(|_| production_message_inbound_decrypt_import_help())?,
+                    );
                 }
                 "--passphrase-stdin" => {
                     passphrase_stdin = true;
@@ -2626,7 +2653,7 @@ fn production_message_send_prepare_help() -> String {
     "usage:
   another-dimension production message send-prepare --profile <name> --store <path> --message-number <n> --plaintext <path> [--message-ttl-seconds <3600|86400|604800|2592000>] --passphrase-stdin
 
-Reads the profile passphrase from stdin and plaintext from --plaintext. Opens an encrypted local profile store, reloads production session runtime material, validates fail-closed outbound readiness, and records a local message index without encrypting an envelope, opening transport, or enabling runtime messaging. Message TTL defaults to 604800 seconds."
+Reads the profile passphrase from stdin and plaintext from --plaintext. Opens an encrypted local profile store, reloads production session runtime material, validates fail-closed outbound readiness, and records a local message index without encrypting an envelope, opening transport, or enabling runtime messaging. Message TTL defaults to the stored profile preference, then 604800 seconds."
         .to_string()
 }
 
@@ -2653,7 +2680,7 @@ fn production_message_local_roundtrip_help() -> String {
     "usage:
   another-dimension production message local-roundtrip --sender-profile <name> --sender-store <path> --receiver-profile <name> --receiver-store <path> (--message-number <n>|--auto-message-number) --plaintext <path> --received-out <path> [--message-ttl-seconds <3600|86400|604800|2592000>] --passphrase-stdin
 
-Reads one profile passphrase from stdin and plaintext from --plaintext. Reuses existing encrypted sender and receiver profile stores with authenticated session transport metadata, encrypts one outbound envelope, imports it into the receiver store, and writes received plaintext only to --received-out. Use --auto-message-number to reserve the next sender-scoped message number in the encrypted store. Message TTL defaults to 604800 seconds. This does not print plaintext, open transport, perform network I/O, or enable runtime messaging."
+Reads one profile passphrase from stdin and plaintext from --plaintext. Reuses existing encrypted sender and receiver profile stores with authenticated session transport metadata, encrypts one outbound envelope, imports it into the receiver store, and writes received plaintext only to --received-out. Use --auto-message-number to reserve the next sender-scoped message number in the encrypted store. Message TTL defaults to the sender profile preference, then 604800 seconds. This does not print plaintext, open transport, perform network I/O, or enable runtime messaging."
         .to_string()
 }
 
@@ -2689,7 +2716,7 @@ fn production_message_inbound_decrypt_import_help() -> String {
     "usage:
   another-dimension production message inbound-decrypt-import --profile <name> --store <path> --in <path> [--message-ttl-seconds <3600|86400|604800|2592000>] --passphrase-stdin
 
-Reads the profile passphrase from stdin and an encrypted envelope only from --in. Opens an encrypted local profile store, decrypts the envelope using authenticated session transport metadata, stores the received message encrypted-at-rest, and commits replay state. Message TTL defaults to 604800 seconds. This does not print plaintext, open transport, or enable runtime messaging."
+Reads the profile passphrase from stdin and an encrypted envelope only from --in. Opens an encrypted local profile store, decrypts the envelope using authenticated session transport metadata, stores the received message encrypted-at-rest, and commits replay state. Message TTL defaults to the stored profile preference, then 604800 seconds. This does not print plaintext, open transport, or enable runtime messaging."
         .to_string()
 }
 
@@ -2750,6 +2777,27 @@ fn parse_production_message_ttl_seconds(value: &str) -> Result<u64, String> {
         3_600 | 86_400 | 604_800 | 2_592_000 => Ok(ttl_seconds),
         _ => Err("invalid production message ttl".to_string()),
     }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn resolve_production_message_ttl_seconds(
+    store_path: impl AsRef<std::path::Path>,
+    profile: &another_dimension_identity::ProfileName,
+    passphrase: &another_dimension_storage::production::ProfilePassphrase,
+    explicit_ttl_seconds: Option<u64>,
+    map_error: fn(another_dimension_core::production::ProductionSessionError) -> String,
+) -> Result<u64, String> {
+    if let Some(ttl_seconds) = explicit_ttl_seconds {
+        return Ok(ttl_seconds);
+    }
+    let summary = another_dimension_core::production::production_message_retention_preference_get(
+        store_path,
+        profile.clone(),
+        passphrase,
+        PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+    )
+    .map_err(map_error)?;
+    Ok(summary.message_ttl_seconds())
 }
 
 #[cfg(not(feature = "dev-insecure"))]

@@ -1564,6 +1564,35 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!handshake_finish_import_error.contains(reply_store_arg));
     assert!(!handshake_finish_import_error.contains(handshake_finish_export_arg));
 
+    let sender_retention = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "retention",
+            "set",
+            "--profile",
+            finish_profile,
+            "--store",
+            finish_store_arg,
+            "--message-ttl-seconds",
+            "86400",
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let sender_retention_out = stdout(&sender_retention);
+    let sender_retention_error = stderr(&sender_retention);
+    assert!(
+        sender_retention.status.success(),
+        "stdout: {sender_retention_out}\nstderr: {sender_retention_error}"
+    );
+    assert!(sender_retention_out.contains("message_ttl_seconds=86400"));
+    assert!(sender_retention_out.contains("preference_written=true"));
+    assert!(sender_retention_out.contains("runtime_messaging=false"));
+    assert!(!sender_retention_out.contains(finish_profile));
+    assert!(!sender_retention_out.contains(finish_store_arg));
+    assert!(!sender_retention_error.contains("correct horse"));
+
     std::fs::write(&plaintext, "hello from canonical dialer").expect("write plaintext");
     let send_prepare = run_with_stdin(
         &[
@@ -1578,8 +1607,6 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
             "1",
             "--plaintext",
             plaintext_arg,
-            "--message-ttl-seconds",
-            "86400",
             "--passphrase-stdin",
         ],
         "correct horse battery staple\n",
@@ -1784,6 +1811,35 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(exported_envelope.starts_with("ADENV1|"));
     assert!(!exported_envelope.contains("hello from canonical dialer"));
 
+    let receiver_retention = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "retention",
+            "set",
+            "--profile",
+            reply_profile,
+            "--store",
+            reply_store_arg,
+            "--message-ttl-seconds",
+            "3600",
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let receiver_retention_out = stdout(&receiver_retention);
+    let receiver_retention_error = stderr(&receiver_retention);
+    assert!(
+        receiver_retention.status.success(),
+        "stdout: {receiver_retention_out}\nstderr: {receiver_retention_error}"
+    );
+    assert!(receiver_retention_out.contains("message_ttl_seconds=3600"));
+    assert!(receiver_retention_out.contains("preference_written=true"));
+    assert!(receiver_retention_out.contains("runtime_messaging=false"));
+    assert!(!receiver_retention_out.contains(reply_profile));
+    assert!(!receiver_retention_out.contains(reply_store_arg));
+    assert!(!receiver_retention_error.contains("correct horse"));
+
     let inbound_import = run_with_stdin(
         &[
             "production",
@@ -1795,8 +1851,6 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
             reply_store_arg,
             "--in",
             encrypted_envelope_export_arg,
-            "--message-ttl-seconds",
-            "3600",
             "--passphrase-stdin",
         ],
         "correct horse battery staple\n",
@@ -2050,7 +2104,7 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(auto_local_roundtrip_out.contains("auto_message_number=true"));
     assert!(auto_local_roundtrip_out.contains("auto_counter_written=true"));
     assert!(auto_local_roundtrip_out.contains("existing_message_slot_skipped=true"));
-    assert!(auto_local_roundtrip_out.contains("message_ttl_seconds=604800"));
+    assert!(auto_local_roundtrip_out.contains("message_ttl_seconds=86400"));
     assert!(auto_local_roundtrip_out.contains("sender_message_number_reserved=true"));
     assert!(auto_local_roundtrip_out.contains("receiver_inbound_message_stored=true"));
     assert!(auto_local_roundtrip_out.contains("received_export_matches_input=true"));
