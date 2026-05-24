@@ -3146,6 +3146,12 @@ async function loadProductionTwoProfileTranscript(options = {}) {
           "Stored conversation and message-ready sessions recovered after local unlock. Write a message to continue.",
         );
       }
+    } else if (autoResume) {
+      setProductionTwoProfileState("Resume needs session check");
+      setText(
+        fields.productionTwoProfileWarning,
+        "Stored conversation was found, but message-ready sessions were not confirmed. Check sessions or run full setup.",
+      );
     }
   } catch (error) {
     if (!quiet) {
@@ -3153,6 +3159,8 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       setText(fields.productionTwoProfileWarning, String(error));
     } else if (autoResume) {
       latestProductionTwoProfileSessionStatus = null;
+      setProductionTwoProfileState("Resume needs review");
+      setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("session-status", error));
     }
   } finally {
     if (!quiet) {
