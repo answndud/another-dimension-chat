@@ -777,6 +777,23 @@ function selectedTwoProfileNextActionMessage(entry) {
   return `Next: review missing local sent copy for message #${entry.messageNumber}.`;
 }
 
+function selectedTwoProfileManualFocusTarget(entry) {
+  if (!entry) {
+    return null;
+  }
+  const sentCopyPresent = entry.statuses.has("sent");
+  const receivedCopyPresent = entry.statuses.has("received");
+  if (sentCopyPresent && !receivedCopyPresent) {
+    return productionPayloadSlots.messageEnvelope.has(entry.sender)
+      ? fields.importProductionMessageEnvelope
+      : fields.productionRemoteMessageEnvelope;
+  }
+  if (!sentCopyPresent) {
+    return fields.exportProductionMessageEnvelope;
+  }
+  return fields.productionTwoProfileMessage;
+}
+
 function renderProductionTwoProfileTranscriptEntries(entries) {
   resetProductionTwoProfileTranscript();
   const orderedEntries = [...(entries ?? [])].sort((left, right) => {
@@ -1398,7 +1415,7 @@ function applyPendingConversationToManualMessageReview(entry) {
   setText(fields.productionMessageManualCheck, manualCheck);
   setText(fields.productionMessageInbound, inboundReadiness);
   setText(fields.productionMessageOutbound, outboundReadiness);
-  (canPrepareImport ? fields.importProductionMessageEnvelope : fields.productionRemoteMessageEnvelope)?.focus();
+  selectedTwoProfileManualFocusTarget(entry)?.focus();
   return true;
 }
 
@@ -1571,6 +1588,13 @@ function applyProductionActionState() {
   const twoProfileCanReply = Boolean(
     !busy && latestProductionTwoProfileSuccess && hasTwoProfileSessionStatusInput && !twoProfile.message,
   );
+  const selectedConversation = selectedTwoProfileConversationEntry();
+  const selectedHasSentCopy = Boolean(selectedConversation?.statuses.has("sent"));
+  const selectedHasReceivedCopy = Boolean(selectedConversation?.statuses.has("received"));
+  const selectedNeedsSenderExport = Boolean(selectedConversation && !selectedHasSentCopy);
+  const selectedNeedsPeerImport = Boolean(
+    selectedConversation && selectedHasSentCopy && !selectedHasReceivedCopy,
+  );
   const twoProfileComposeLocked =
     productionBusyAction === "two-profile-roundtrip" ||
     productionBusyAction === "two-profile-message-roundtrip";
@@ -1639,13 +1663,13 @@ function applyProductionActionState() {
     fields.exportProductionMessageEnvelope,
     !availability.exportMessageEnvelope,
     busy ? "Wait for the active production action." : "Complete session state, then enter message number and message.",
-    true,
+    selectedNeedsSenderExport || (!selectedConversation && availability.exportMessageEnvelope),
   );
   setActionButtonState(
     fields.importProductionMessageEnvelope,
     !availability.importMessageEnvelope,
     busy ? "Wait for the active production action." : "Complete session state, then load or paste a remote envelope.",
-    hasInboundEnvelopeInput && !hasImportedMessage,
+    hasInboundEnvelopeInput && !hasImportedMessage && (!selectedConversation || selectedNeedsPeerImport),
   );
   setActionButtonState(
     fields.exportProductionReceivedMessage,
@@ -1802,7 +1826,7 @@ function applyProductionActionState() {
     fields.loadProductionMessageEnvelope,
     !manualAvailability.loadMessageEnvelope,
     busy ? "Wait for the active production action." : "Store counterpart message envelope first.",
-    manualAvailability.loadMessageEnvelope,
+    manualAvailability.loadMessageEnvelope && selectedNeedsPeerImport && !hasInboundEnvelopeInput,
   );
   setActionButtonState(
     fields.relayProductionMessageEnvelope,
