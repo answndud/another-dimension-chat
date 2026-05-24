@@ -151,6 +151,7 @@ require_contains "$APP_DIR/src/main.js" 'invoke("production_message_envelope_imp
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_received_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_transcript_export"'
 require_contains "$APP_DIR/src/main.js" 'loadProductionTwoProfileTranscript'
+require_contains "$APP_DIR/src/main.js" 'refreshTwoProfileConversationAfterManualImport'
 require_contains "$APP_DIR/src/main.js" 'replyToLatestTwoProfileMessage'
 require_contains "$APP_DIR/src/main.js" 'reviewPendingTwoProfileMessage'
 require_contains "$APP_DIR/src/main.js" 'applyPendingConversationToManualMessageReview'
