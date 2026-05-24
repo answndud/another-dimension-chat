@@ -311,6 +311,12 @@ function setActionButtonState(node, disabled, reason, current = false) {
   node.classList.toggle("is-current-action", !disabled && current);
 }
 
+function setProductionMessageManualCurrent(target) {
+  fields.productionMessageManualCheck?.classList.toggle("is-current-manual", target === "check");
+  fields.productionMessageOutbound?.classList.toggle("is-current-manual", target === "outbound");
+  fields.productionMessageInbound?.classList.toggle("is-current-manual", target === "inbound");
+}
+
 function setTwoProfileComposeLocked(locked) {
   if (!fields.productionTwoProfileMessage) {
     return;
@@ -546,6 +552,7 @@ function renderManualNextActions(state) {
 function renderManualMessageStatus(state) {
   setText(fields.productionMessageActiveStatus, productionManualMessageStatusView(state));
   setText(fields.productionMessageManualCheck, productionManualMessageCheckView(state));
+  setProductionMessageManualCurrent(null);
 }
 
 function resetProductionMessageImportState() {
@@ -770,6 +777,7 @@ function twoProfileConversationActionView(entry) {
       rowLabel: "action: unavailable",
       state: "is-waiting",
       focusTarget: null,
+      manualTarget: null,
     };
   }
   const sentCopyPresent = entry.statuses.has("sent");
@@ -781,6 +789,7 @@ function twoProfileConversationActionView(entry) {
       rowLabel: `action: reply from ${entry.receiver}`,
       state: "is-reply",
       focusTarget: fields.productionTwoProfileMessage,
+      manualTarget: null,
     };
   }
   if (sentCopyPresent && senderEnvelopeSlotPresent) {
@@ -789,6 +798,7 @@ function twoProfileConversationActionView(entry) {
       rowLabel: `action: import envelope into ${entry.receiver}`,
       state: "is-ready",
       focusTarget: fields.importProductionMessageEnvelope,
+      manualTarget: "inbound",
     };
   }
   if (sentCopyPresent) {
@@ -797,6 +807,7 @@ function twoProfileConversationActionView(entry) {
       rowLabel: `action: load envelope for ${entry.receiver}`,
       state: "is-waiting",
       focusTarget: fields.productionRemoteMessageEnvelope,
+      manualTarget: "inbound",
     };
   }
   return {
@@ -804,6 +815,7 @@ function twoProfileConversationActionView(entry) {
     rowLabel: `action: export sender copy from ${entry.sender}`,
     state: "is-ready",
     focusTarget: fields.exportProductionMessageEnvelope,
+    manualTarget: "outbound",
   };
 }
 
@@ -1631,6 +1643,11 @@ function applyProductionActionState() {
   renderProductionTwoProfileMemory(twoProfile);
   renderManualNextActions(state);
   renderManualMessageStatus(state);
+  if (selectedConversation) {
+    const selectedActionView = twoProfileConversationActionView(selectedConversation);
+    setText(fields.productionMessageNextAction, selectedActionView.nextAction);
+    setProductionMessageManualCurrent(selectedActionView.manualTarget);
+  }
   renderManualStatus();
   setActionButtonState(
     fields.unlockProductionProfile,
