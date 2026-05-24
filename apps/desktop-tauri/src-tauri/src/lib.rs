@@ -1077,9 +1077,13 @@ fn run_production_message_retention_preference_get(
     let passphrase = ProfilePassphrase::new(passphrase.trim())
         .map_err(|_| "invalid production profile passphrase")?;
     let store_path = production_profile_store_path(app_data_root, &profile)?;
-    let preference =
-        production_message_retention_preference_get(&store_path, profile, &passphrase, 604_800)
-            .map_err(|_| "message retention preference load failed")?;
+    let preference = production_message_retention_preference_get(
+        &store_path,
+        profile,
+        &passphrase,
+        another_dimension_core::production::PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+    )
+    .map_err(|_| "message retention preference load failed")?;
     Ok(ProductionMessageRetentionPreferenceResult {
         warning: "message retention preference loaded after local profile unlock",
         storage_opened: preference.storage_opened(),
@@ -1931,10 +1935,8 @@ fn sanitize_production_message_text(message: String) -> Result<Vec<u8>, String> 
 }
 
 fn sanitize_production_message_ttl_seconds(ttl_seconds: u64) -> Result<u64, String> {
-    match ttl_seconds {
-        3_600 | 86_400 | 604_800 | 2_592_000 => Ok(ttl_seconds),
-        _ => Err("message retention must be 1h, 1d, 7d, or 30d".to_string()),
-    }
+    another_dimension_core::production::production_message_ttl_seconds_validate(ttl_seconds)
+        .map_err(|_| "message retention must be 1h, 1d, 7d, or 30d".to_string())
 }
 
 fn sanitize_envelope_payload(payload: String) -> Result<String, String> {
