@@ -1378,10 +1378,11 @@ function replyToLatestTwoProfileMessage() {
   return true;
 }
 
-function selectTwoProfileConversationEntryForReview(entry) {
+function selectTwoProfileConversationEntryForReview(entry, options = {}) {
   if (!entry || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
     return false;
   }
+  const focusManual = options.focusManual !== false;
   if (entry.statuses.has("sent") && entry.statuses.has("received")) {
     setProductionTwoProfileState("Conversation item delivered");
     setText(fields.productionTwoProfileWarning, `Message #${entry.messageNumber} is already delivered.`);
@@ -1403,12 +1404,13 @@ function selectTwoProfileConversationEntryForReview(entry) {
     `Pending message #${entry.messageNumber} selected: ${input.profileA} -> ${input.profileB}. Manual relay/import review is prepared below.`,
   );
   setProductionFollowupActions(true, nextAction);
-  applyPendingConversationToManualMessageReview(entry);
+  applyPendingConversationToManualMessageReview(entry, { focusManual });
   applyProductionActionState();
   return true;
 }
 
-function applyPendingConversationToManualMessageReview(entry) {
+function applyPendingConversationToManualMessageReview(entry, options = {}) {
+  const focusManual = options.focusManual !== false;
   const sentCopyPresent = entry.statuses.has("sent");
   const receivedCopyPresent = entry.statuses.has("received");
   const reviewProfile = sentCopyPresent && !receivedCopyPresent ? entry.receiver : entry.sender;
@@ -1431,7 +1433,9 @@ function applyPendingConversationToManualMessageReview(entry) {
     fields.productionRemoteMessageEnvelope.dispatchEvent(new Event("input", { bubbles: true }));
   }
   resetProductionMessageImportState();
-  openManualProductionTools();
+  if (focusManual) {
+    openManualProductionTools();
+  }
   let reviewState = "Manual sender review selected";
   let reviewWarning = `Selected ${reviewProfile} to review missing local sent copy for message #${entry.messageNumber}.`;
   if (canPrepareImport) {
@@ -1461,7 +1465,9 @@ function applyPendingConversationToManualMessageReview(entry) {
   setText(fields.productionMessageManualCheck, manualCheck);
   setText(fields.productionMessageInbound, inboundReadiness);
   setText(fields.productionMessageOutbound, outboundReadiness);
-  selectedTwoProfileManualFocusTarget(entry)?.focus();
+  if (focusManual) {
+    selectedTwoProfileManualFocusTarget(entry)?.focus();
+  }
   return true;
 }
 
@@ -1478,10 +1484,10 @@ function reviewPendingTwoProfileMessage() {
 function autoSelectPendingTwoProfileConversation() {
   const selectedEntry = selectedTwoProfileConversationEntry();
   if (selectedEntry && !(selectedEntry.statuses.has("sent") && selectedEntry.statuses.has("received"))) {
-    return selectTwoProfileConversationEntryForReview(selectedEntry);
+    return selectTwoProfileConversationEntryForReview(selectedEntry, { focusManual: false });
   }
   const pending = latestTwoProfilePendingConversationEntry();
-  return pending ? selectTwoProfileConversationEntryForReview(pending) : false;
+  return pending ? selectTwoProfileConversationEntryForReview(pending, { focusManual: false }) : false;
 }
 
 function selectTwoProfileReplyDirection(sentInput) {
