@@ -223,6 +223,8 @@ let latestProductionTwoProfileSessionStatus = null;
 let latestProductionTwoProfileSuccess = null;
 let latestProductionMessageImport = null;
 let productionBusyAction = null;
+let twoProfileAutoResumeTimer = null;
+let latestTwoProfileAutoResumeFingerprint = null;
 const productionTranscriptEntryKeys = new Set();
 const productionTwoProfileConversationEntries = new Map();
 const productionPayloadSlots = {
@@ -405,6 +407,14 @@ function twoProfileSessionStatusFingerprint(input = productionTwoProfileInput())
   return `${input.profileA.toLowerCase()}\n${input.profileB.toLowerCase()}`;
 }
 
+function twoProfileAutoResumeFingerprint(input = productionTwoProfileInput()) {
+  return `${twoProfileSessionStatusFingerprint(input)}\n${input.passphrase ? "passphrase-present" : "passphrase-missing"}`;
+}
+
+function resetTwoProfileAutoResumeAttempt() {
+  latestTwoProfileAutoResumeFingerprint = null;
+}
+
 function latestTwoProfileSessionStatusForCurrentInput(input = productionTwoProfileInput()) {
   if (!latestProductionTwoProfileSessionStatus) {
     return null;
@@ -509,6 +519,7 @@ function applyTwoProfilePairFromProfile(profile) {
   );
   renderProductionTwoProfileDirection(productionTwoProfileInput());
   renderProductionTwoProfileMemory(productionTwoProfileInput());
+  scheduleTwoProfileAutoResume();
   return true;
 }
 
@@ -2565,6 +2576,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
   const { profileA, profileB, passphrase } = productionTwoProfileInput();
   const quiet = options.quiet === true;
   const refreshSessionStatus = options.refreshSessionStatus !== false;
+  const autoResume = options.autoResume === true;
   if (!profileA || !profileB || profileA === profileB || !passphrase) {
     if (!quiet) {
       setProductionTwoProfileState("Conversation load needs profiles");
@@ -2610,11 +2622,19 @@ async function loadProductionTwoProfileTranscript(options = {}) {
           ? "Stored conversation and message-ready sessions recovered after local unlock."
           : "Stored conversation loaded, but sessions are not ready for stored-message send.",
       );
+    } else if (autoResume && sessionStatus?.both_ready_for_message_envelope) {
+      setProductionTwoProfileState("Conversation resumed");
+      setText(
+        fields.productionTwoProfileWarning,
+        "Stored conversation and message-ready sessions recovered after local unlock.",
+      );
     }
   } catch (error) {
     if (!quiet) {
       setProductionTwoProfileState("Conversation load failed");
       setText(fields.productionTwoProfileWarning, String(error));
+    } else if (autoResume) {
+      latestProductionTwoProfileSessionStatus = null;
     }
   } finally {
     if (!quiet) {
@@ -2622,6 +2642,44 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       applyProductionActionState();
     }
   }
+}
+
+function scheduleTwoProfileAutoResume() {
+  const input = productionTwoProfileInput();
+  if (
+    productionBusyAction !== null ||
+    !input.profileA ||
+    !input.profileB ||
+    input.profileA === input.profileB ||
+    !input.passphrase ||
+    latestTwoProfileSessionStatusForCurrentInput(input)
+  ) {
+    return;
+  }
+
+  const fingerprint = twoProfileAutoResumeFingerprint(input);
+  if (latestTwoProfileAutoResumeFingerprint === fingerprint) {
+    return;
+  }
+  latestTwoProfileAutoResumeFingerprint = fingerprint;
+  if (twoProfileAutoResumeTimer) {
+    clearTimeout(twoProfileAutoResumeTimer);
+  }
+  twoProfileAutoResumeTimer = setTimeout(async () => {
+    twoProfileAutoResumeTimer = null;
+    if (productionBusyAction !== null) {
+      return;
+    }
+    const currentInput = productionTwoProfileInput();
+    if (
+      twoProfileAutoResumeFingerprint(currentInput) !== fingerprint ||
+      latestTwoProfileSessionStatusForCurrentInput(currentInput)
+    ) {
+      return;
+    }
+    await loadProductionTwoProfileTranscript({ quiet: true, autoResume: true });
+    applyProductionActionState();
+  }, 450);
 }
 
 function twoProfileTranscriptEntriesFromProfile(profile, counterpartProfile, entries) {
@@ -3033,21 +3091,28 @@ for (const input of [
   fields.productionTwoProfileMessage,
 ]) {
   if (input) {
-    input.addEventListener("input", applyProductionActionState);
+    input.addEventListener("input", () => {
+      applyProductionActionState();
+      scheduleTwoProfileAutoResume();
+    });
   }
 }
 
 if (fields.productionProfilePassphrase) {
   fields.productionProfilePassphrase.addEventListener("input", () => {
     syncProductionTwoProfilePassphraseFromProfile();
+    resetTwoProfileAutoResumeAttempt();
     applyProductionActionState();
+    scheduleTwoProfileAutoResume();
   });
 }
 
 if (fields.productionTwoProfilePassphrase) {
   fields.productionTwoProfilePassphrase.addEventListener("input", () => {
     syncProductionProfilePassphraseFromTwoProfile();
+    resetTwoProfileAutoResumeAttempt();
     applyProductionActionState();
+    scheduleTwoProfileAutoResume();
   });
 }
 
