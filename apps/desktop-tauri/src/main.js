@@ -758,6 +758,25 @@ function selectedTwoProfileConversationEntry() {
     : null;
 }
 
+function selectedTwoProfileNextActionMessage(entry) {
+  if (!entry) {
+    return "Next actions unlock after a completed local roundtrip.";
+  }
+  const sentCopyPresent = entry.statuses.has("sent");
+  const receivedCopyPresent = entry.statuses.has("received");
+  const senderEnvelopeSlotPresent = productionPayloadSlots.messageEnvelope.has(entry.sender);
+  if (sentCopyPresent && receivedCopyPresent) {
+    return `Complete: message #${entry.messageNumber} delivered. Next: write reply from ${entry.receiver} to ${entry.sender}.`;
+  }
+  if (sentCopyPresent && senderEnvelopeSlotPresent) {
+    return `Next: import envelope for message #${entry.messageNumber} into ${entry.receiver}.`;
+  }
+  if (sentCopyPresent) {
+    return `Next: load or paste sender envelope for message #${entry.messageNumber}.`;
+  }
+  return `Next: review missing local sent copy for message #${entry.messageNumber}.`;
+}
+
 function renderProductionTwoProfileTranscriptEntries(entries) {
   resetProductionTwoProfileTranscript();
   const orderedEntries = [...(entries ?? [])].sort((left, right) => {
@@ -1315,11 +1334,12 @@ function selectTwoProfileConversationEntryForReview(entry) {
   renderProductionTwoProfileDirection(input);
   renderProductionTwoProfileMemory(input);
   setProductionTwoProfileState("Pending message selected");
+  const nextAction = selectedTwoProfileNextActionMessage(entry);
   setText(
     fields.productionTwoProfileWarning,
     `Pending message #${entry.messageNumber} selected: ${input.profileA} -> ${input.profileB}. Manual relay/import review is prepared below.`,
   );
-  setProductionFollowupActions(true, `Next: review pending message #${entry.messageNumber} before continuing.`);
+  setProductionFollowupActions(true, nextAction);
   applyPendingConversationToManualMessageReview(entry);
   applyProductionActionState();
   return true;
@@ -1437,7 +1457,7 @@ function selectReplyAfterDeliveredReview(entry) {
     fields.productionTwoProfileWarning,
     `Message #${entry.messageNumber} delivered; reply direction selected: ${input.profileA} -> ${input.profileB}.`,
   );
-  setProductionFollowupActions(true, `Next: write reply from ${input.profileA} to ${input.profileB}.`);
+  setProductionFollowupActions(true, selectedTwoProfileNextActionMessage(entry));
   applyProductionActionState();
   fields.productionTwoProfileMessage?.focus();
   return true;
