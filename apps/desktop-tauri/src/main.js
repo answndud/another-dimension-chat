@@ -2048,6 +2048,9 @@ function applyProductionActionState() {
     selectedConversation && selectedHasSentCopy && !selectedHasReceivedCopy,
   );
   const manualCurrentActions = productionManualRelayCurrentActions(manualAvailability, {
+    hasFinishImportInput,
+    hasHandshakeFinishInput,
+    hasHandshakeReplyInput,
     hasInboundEnvelopeInput,
     hasRemotePairingInput,
     selectedNeedsPeerImport,
