@@ -3633,6 +3633,33 @@ function syncTwoProfileConversationAfterManualExport(
   return true;
 }
 
+function syncTwoProfileConversationAfterReceivedExport(profile, messageNumber, message) {
+  const receivedProfile = String(profile ?? "").trim().toLowerCase();
+  const counterpart = productionCounterpartProfile(receivedProfile);
+  const normalizedNumber = Number.parseInt(messageNumber, 10);
+  const text = String(message ?? "").trim();
+  if (!receivedProfile || !counterpart || !Number.isInteger(normalizedNumber) || normalizedNumber < 1 || !text) {
+    return false;
+  }
+
+  appendProductionTwoProfileConversationStatus(
+    "received",
+    receivedProfile,
+    counterpart,
+    normalizedNumber,
+    text,
+  );
+  const refreshedEntry = selectedTwoProfileConversationEntry();
+  if (refreshedEntry?.statuses.has("sent") && refreshedEntry.statuses.has("received")) {
+    setProductionTwoProfileState("Received message verified");
+    setText(
+      fields.productionTwoProfileWarning,
+      `Received message #${normalizedNumber} verified for ${receivedProfile}; reply direction remains ${fields.productionTwoProfileA?.value ?? "unknown"} -> ${fields.productionTwoProfileB?.value ?? "unknown"}.`,
+    );
+  }
+  return true;
+}
+
 function scheduleTwoProfileAutoResume() {
   const input = productionTwoProfileInput();
   if (
@@ -4018,6 +4045,7 @@ async function exportProductionReceivedMessage() {
       fields.productionReceivedMessage.value = result.received_message;
     }
     appendProductionTranscriptEntry("received", profile, messageNumber, result.received_message);
+    syncTwoProfileConversationAfterReceivedExport(profile, messageNumber, result.received_message);
     setText(fields.productionMessageInbound, view.inbound);
     setText(fields.productionMessageBoundary, view.boundary);
   } catch (error) {
