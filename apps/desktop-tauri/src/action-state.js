@@ -159,7 +159,7 @@ export function productionManualNextActions(state) {
     pairing = "Next: click Export pairing.";
   }
   if (hasLocalPairingPayload) {
-    pairing = "Next: click Store pairing.";
+    pairing = counterpartProfile ? "Next: click Relay pairing to peer." : "Next: click Store pairing.";
   }
   if (hasRemotePairingSlot) {
     pairing = "Next: click Fill remote pairing.";
@@ -168,7 +168,7 @@ export function productionManualNextActions(state) {
     pairing = "Next: click Save draft.";
   }
   if (hasHandshakeInitPayload) {
-    pairing = "Next: click Store init.";
+    pairing = counterpartProfile ? "Next: click Relay init to peer." : "Next: click Store init.";
   }
   if (hasRemoteHandshakeInitSlot) {
     pairing = "Next: click Fill remote init.";
@@ -177,7 +177,7 @@ export function productionManualNextActions(state) {
     pairing = "Next: click Export reply.";
   }
   if (hasHandshakeReplyPayload) {
-    pairing = "Next: click Store reply.";
+    pairing = counterpartProfile ? "Next: click Relay reply to peer." : "Next: click Store reply.";
   }
   if (hasRemoteHandshakeReplySlot) {
     pairing = "Next: click Fill remote reply.";
@@ -186,7 +186,7 @@ export function productionManualNextActions(state) {
     pairing = "Next: click Export finish.";
   }
   if (hasHandshakeFinishPayload) {
-    pairing = "Next: click Store finish.";
+    pairing = counterpartProfile ? "Next: click Relay finish to peer." : "Next: click Store finish.";
   }
   if (hasRemoteHandshakeFinishSlot) {
     pairing = "Next: click Fill remote finish.";
@@ -250,7 +250,9 @@ export function productionManualStatusView(input, slots) {
       formatSlot("handshakeFinish", "finish"),
       formatSlot("messageEnvelope", "envelope"),
     ].join(" | "),
-    policy: "manual_only=true auto_send=false auto_import=false auto_profile_switch=false network_io=false",
+    policy:
+      "manual_only=true auto_send=false auto_import=false " +
+      "button_confirmed_profile_switch=true background_profile_switch=false network_io=false",
     mode: counterpart
       ? "Manual relay uses local memory slots only; manually select the counterpart profile to fill remote payloads."
       : "Manual relay needs a supported active profile; manually select Alice or Bob before filling remote payloads.",
@@ -324,15 +326,19 @@ export function productionManualRelayAvailability(state) {
     usePairingPayload: enabled(hasLocalPairingPayload),
     storePairingPayload: enabled(hasLocalPairingPayload),
     loadPairingPayload: enabled(hasRemotePairingSlot),
+    relayPairingPayload: enabled(hasLocalPairingPayload && counterpartProfile),
     useHandshakeInit: enabled(hasHandshakeInitPayload),
     storeHandshakeInit: enabled(hasHandshakeInitPayload),
     loadHandshakeInit: enabled(hasRemoteHandshakeInitSlot),
+    relayHandshakeInit: enabled(hasHandshakeInitPayload && counterpartProfile),
     useHandshakeReply: enabled(hasHandshakeReplyPayload),
     storeHandshakeReply: enabled(hasHandshakeReplyPayload),
     loadHandshakeReply: enabled(hasRemoteHandshakeReplySlot),
+    relayHandshakeReply: enabled(hasHandshakeReplyPayload && counterpartProfile),
     useHandshakeFinish: enabled(hasHandshakeFinishPayload),
     storeHandshakeFinish: enabled(hasHandshakeFinishPayload),
     loadHandshakeFinish: enabled(hasRemoteHandshakeFinishSlot),
+    relayHandshakeFinish: enabled(hasHandshakeFinishPayload && counterpartProfile),
     useMessageEnvelope: enabled(hasLocalMessageEnvelope),
     storeMessageEnvelope: enabled(hasLocalMessageEnvelope),
     loadMessageEnvelope: enabled(hasRemoteMessageEnvelopeSlot),
@@ -346,15 +352,19 @@ export function productionManualRelayDisabledReasons(state) {
       usePairingPayload: "Wait for the active production action.",
       storePairingPayload: "Wait for the active production action.",
       loadPairingPayload: "Wait for the active production action.",
+      relayPairingPayload: "Wait for the active production action.",
       useHandshakeInit: "Wait for the active production action.",
       storeHandshakeInit: "Wait for the active production action.",
       loadHandshakeInit: "Wait for the active production action.",
+      relayHandshakeInit: "Wait for the active production action.",
       useHandshakeReply: "Wait for the active production action.",
       storeHandshakeReply: "Wait for the active production action.",
       loadHandshakeReply: "Wait for the active production action.",
+      relayHandshakeReply: "Wait for the active production action.",
       useHandshakeFinish: "Wait for the active production action.",
       storeHandshakeFinish: "Wait for the active production action.",
       loadHandshakeFinish: "Wait for the active production action.",
+      relayHandshakeFinish: "Wait for the active production action.",
       useMessageEnvelope: "Wait for the active production action.",
       storeMessageEnvelope: "Wait for the active production action.",
       loadMessageEnvelope: "Wait for the active production action.",
@@ -370,15 +380,19 @@ export function productionManualRelayDisabledReasons(state) {
     usePairingPayload: "Export pairing first.",
     storePairingPayload: "Export pairing first.",
     loadPairingPayload: remoteReason("pairing"),
+    relayPairingPayload: counterpart ? "Export pairing first." : "Select Alice or Bob before relaying.",
     useHandshakeInit: "Export init first.",
     storeHandshakeInit: "Export init first.",
     loadHandshakeInit: remoteReason("init"),
+    relayHandshakeInit: counterpart ? "Export init first." : "Select Alice or Bob before relaying.",
     useHandshakeReply: "Export reply first.",
     storeHandshakeReply: "Export reply first.",
     loadHandshakeReply: remoteReason("reply"),
+    relayHandshakeReply: counterpart ? "Export reply first." : "Select Alice or Bob before relaying.",
     useHandshakeFinish: "Export finish first.",
     storeHandshakeFinish: "Export finish first.",
     loadHandshakeFinish: remoteReason("finish"),
+    relayHandshakeFinish: counterpart ? "Export finish first." : "Select Alice or Bob before relaying.",
     useMessageEnvelope: "Export envelope first.",
     storeMessageEnvelope: "Export envelope first.",
     loadMessageEnvelope: remoteReason("envelope"),

@@ -433,8 +433,22 @@ test("productionManualNextActions follows pairing and message readiness", () => 
     "Next: click Export pairing.",
   );
   assert.equal(
-    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasLocalPairingPayload: true }).pairing,
+    productionManualNextActions({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasLocalPairingPayload: true,
+      counterpartProfile: null,
+    }).pairing,
     "Next: click Store pairing.",
+  );
+  assert.equal(
+    productionManualNextActions({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasLocalPairingPayload: true,
+      counterpartProfile: "bob",
+    }).pairing,
+    "Next: click Relay pairing to peer.",
   );
   assert.equal(
     productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasRemotePairingSlot: true }).pairing,
@@ -445,7 +459,21 @@ test("productionManualNextActions follows pairing and message readiness", () => 
     "Next: click Save draft.",
   );
   assert.equal(
-    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasHandshakeInitPayload: true }).pairing,
+    productionManualNextActions({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasHandshakeInitPayload: true,
+      counterpartProfile: "bob",
+    }).pairing,
+    "Next: click Relay init to peer.",
+  );
+  assert.equal(
+    productionManualNextActions({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasHandshakeInitPayload: true,
+      counterpartProfile: null,
+    }).pairing,
     "Next: click Store init.",
   );
   assert.equal(
@@ -457,7 +485,21 @@ test("productionManualNextActions follows pairing and message readiness", () => 
     "Next: click Export reply.",
   );
   assert.equal(
-    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasHandshakeReplyPayload: true }).pairing,
+    productionManualNextActions({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasHandshakeReplyPayload: true,
+      counterpartProfile: "bob",
+    }).pairing,
+    "Next: click Relay reply to peer.",
+  );
+  assert.equal(
+    productionManualNextActions({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasHandshakeReplyPayload: true,
+      counterpartProfile: null,
+    }).pairing,
     "Next: click Store reply.",
   );
   assert.equal(
@@ -469,7 +511,21 @@ test("productionManualNextActions follows pairing and message readiness", () => 
     "Next: click Export finish.",
   );
   assert.equal(
-    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasHandshakeFinishPayload: true }).pairing,
+    productionManualNextActions({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasHandshakeFinishPayload: true,
+      counterpartProfile: "bob",
+    }).pairing,
+    "Next: click Relay finish to peer.",
+  );
+  assert.equal(
+    productionManualNextActions({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasHandshakeFinishPayload: true,
+      counterpartProfile: null,
+    }).pairing,
     "Next: click Store finish.",
   );
   assert.equal(
@@ -545,7 +601,8 @@ test("productionManualStatusView summarizes active manual relay slots", () => {
       mode:
         "Manual relay uses local memory slots only; manually select the counterpart profile to fill remote payloads.",
       policy:
-        "manual_only=true auto_send=false auto_import=false auto_profile_switch=false network_io=false",
+        "manual_only=true auto_send=false auto_import=false " +
+        "button_confirmed_profile_switch=true background_profile_switch=false network_io=false",
     },
   );
 
@@ -579,15 +636,19 @@ test("productionManualRelayAvailability keeps manual copy store and load actions
       usePairingPayload: true,
       storePairingPayload: true,
       loadPairingPayload: true,
+      relayPairingPayload: true,
       useHandshakeInit: true,
       storeHandshakeInit: true,
       loadHandshakeInit: false,
+      relayHandshakeInit: true,
       useHandshakeReply: false,
       storeHandshakeReply: false,
       loadHandshakeReply: true,
+      relayHandshakeReply: false,
       useHandshakeFinish: true,
       storeHandshakeFinish: true,
       loadHandshakeFinish: true,
+      relayHandshakeFinish: true,
       useMessageEnvelope: false,
       storeMessageEnvelope: false,
       loadMessageEnvelope: true,
@@ -628,6 +689,7 @@ test("productionManualRelayAvailability keeps manual copy store and load actions
         hasRemoteHandshakeFinishSlot: true,
         hasLocalMessageEnvelope: true,
         hasRemoteMessageEnvelopeSlot: true,
+        counterpartProfile: "bob",
       }),
     ).every((enabled) => enabled === false),
     true,
@@ -641,15 +703,19 @@ test("productionManualRelayDisabledReasons explain the missing payload or route"
       usePairingPayload: "Wait for the active production action.",
       storePairingPayload: "Wait for the active production action.",
       loadPairingPayload: "Wait for the active production action.",
+      relayPairingPayload: "Wait for the active production action.",
       useHandshakeInit: "Wait for the active production action.",
       storeHandshakeInit: "Wait for the active production action.",
       loadHandshakeInit: "Wait for the active production action.",
+      relayHandshakeInit: "Wait for the active production action.",
       useHandshakeReply: "Wait for the active production action.",
       storeHandshakeReply: "Wait for the active production action.",
       loadHandshakeReply: "Wait for the active production action.",
+      relayHandshakeReply: "Wait for the active production action.",
       useHandshakeFinish: "Wait for the active production action.",
       storeHandshakeFinish: "Wait for the active production action.",
       loadHandshakeFinish: "Wait for the active production action.",
+      relayHandshakeFinish: "Wait for the active production action.",
       useMessageEnvelope: "Wait for the active production action.",
       storeMessageEnvelope: "Wait for the active production action.",
       loadMessageEnvelope: "Wait for the active production action.",
@@ -671,6 +737,14 @@ test("productionManualRelayDisabledReasons explain the missing payload or route"
   assert.equal(
     productionManualRelayDisabledReasons({ counterpartProfile: "" }).relayMessageEnvelope,
     "Select Alice or Bob before relaying.",
+  );
+  assert.equal(
+    productionManualRelayDisabledReasons({ counterpartProfile: "" }).relayPairingPayload,
+    "Select Alice or Bob before relaying.",
+  );
+  assert.equal(
+    productionManualRelayDisabledReasons({ counterpartProfile: "bob" }).relayHandshakeReply,
+    "Export reply first.",
   );
   assert.equal(
     productionManualRelayDisabledReasons({ counterpartProfile: "alice" }).relayMessageEnvelope,

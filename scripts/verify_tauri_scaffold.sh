@@ -313,7 +313,7 @@ require_contains "$APP_DIR/index.html" 'production-manual-slots'
 require_contains "$APP_DIR/src/action-state.js" 'active_slot(${profile})'
 require_contains "$APP_DIR/src/action-state.js" 'counterpart_slot(${remoteProfile})'
 require_contains "$APP_DIR/index.html" 'production-manual-policy'
-require_contains "$APP_DIR/src/action-state.js" 'manual_only=true auto_send=false auto_import=false auto_profile_switch=false network_io=false'
+require_contains "$APP_DIR/src/action-state.js" 'button_confirmed_profile_switch=true background_profile_switch=false network_io=false'
 require_contains "$APP_DIR/index.html" 'production-message-active-status'
 require_contains "$APP_DIR/index.html" 'production-message-manual-check'
 require_contains "$APP_DIR/index.html" 'check-production-two-profile-session-status'
@@ -582,6 +582,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="use-production-pairing-payload" type="button">Fill local</button>' \
   | grep -v '<button id="store-production-pairing-payload" type="button">Store pairing</button>' \
   | grep -v '<button id="load-production-pairing-payload" type="button">Fill remote</button>' \
+  | grep -v '<button id="relay-production-pairing-payload" type="button">Relay to peer</button>' \
   | grep -v '<textarea id="production-pairing-payload" rows="5" readonly></textarea>' \
   | grep -v '<textarea id="production-remote-pairing-payload" rows="5"></textarea>' \
   | grep -v '<button id="save-production-session-draft" type="button">Save draft</button>' \
@@ -589,16 +590,19 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="use-production-handshake-init" type="button">Fill local</button>' \
   | grep -v '<button id="store-production-handshake-init" type="button">Store init</button>' \
   | grep -v '<button id="load-production-handshake-init" type="button">Fill remote</button>' \
+  | grep -v '<button id="relay-production-handshake-init" type="button">Relay to peer</button>' \
   | grep -v '<textarea id="production-remote-handshake-init-payload" rows="3"></textarea>' \
   | grep -v '<textarea id="production-handshake-reply-payload" rows="3" readonly></textarea>' \
   | grep -v '<button id="use-production-handshake-reply" type="button">Fill local</button>' \
   | grep -v '<button id="store-production-handshake-reply" type="button">Store reply</button>' \
   | grep -v '<button id="load-production-handshake-reply" type="button">Fill remote</button>' \
+  | grep -v '<button id="relay-production-handshake-reply" type="button">Relay to peer</button>' \
   | grep -v '<textarea id="production-remote-handshake-reply-payload" rows="3"></textarea>' \
   | grep -v '<textarea id="production-handshake-finish-payload" rows="3" readonly></textarea>' \
   | grep -v '<button id="use-production-handshake-finish" type="button">Fill local</button>' \
   | grep -v '<button id="store-production-handshake-finish" type="button">Store finish</button>' \
   | grep -v '<button id="load-production-handshake-finish" type="button">Fill remote</button>' \
+  | grep -v '<button id="relay-production-handshake-finish" type="button">Relay to peer</button>' \
   | grep -v '<textarea id="production-remote-handshake-finish-payload" rows="3"></textarea>' \
   | grep -v '<button id="export-production-handshake-init" type="button">Export init</button>' \
   | grep -v '<button id="export-production-handshake-reply" type="button">Export reply</button>' \
