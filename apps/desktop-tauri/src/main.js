@@ -6,6 +6,7 @@ import {
   productionHandshakePayloadView,
   productionManualMessageCheckView,
   productionManualNextActions,
+  productionManualRelayDisabledReasons,
   productionManualRelayAvailability,
   productionManualMessageStatusView,
   productionManualStatusView,
@@ -1987,6 +1988,7 @@ function applyProductionActionState() {
   };
   const availability = productionActionAvailability(state);
   const manualAvailability = productionManualRelayAvailability(state);
+  const manualDisabledReasons = productionManualRelayDisabledReasons(state);
   const twoProfileSessionsReady = state.hasTwoProfileSessionsReady;
   const latestConversation = latestTwoProfileConversationEntry();
   const knownTwoProfileSessionStatus = Boolean(latestTwoProfileSessionStatusForCurrentInput(twoProfile));
@@ -2201,92 +2203,92 @@ function applyProductionActionState() {
   setActionButtonState(
     fields.useProductionPairingPayload,
     !manualAvailability.usePairingPayload,
-    busy ? "Wait for the active production action." : "Export local pairing payload first.",
+    manualDisabledReasons.usePairingPayload,
   );
   setActionButtonState(
     fields.storeProductionPairingPayload,
     !manualAvailability.storePairingPayload,
-    busy ? "Wait for the active production action." : "Export local pairing payload first.",
+    manualDisabledReasons.storePairingPayload,
     manualAvailability.storePairingPayload,
   );
   setActionButtonState(
     fields.loadProductionPairingPayload,
     !manualAvailability.loadPairingPayload,
-    busy ? "Wait for the active production action." : "Store counterpart pairing payload first.",
+    manualDisabledReasons.loadPairingPayload,
     manualAvailability.loadPairingPayload,
   );
   setActionButtonState(
     fields.useProductionHandshakeInit,
     !manualAvailability.useHandshakeInit,
-    busy ? "Wait for the active production action." : "Export handshake init first.",
+    manualDisabledReasons.useHandshakeInit,
   );
   setActionButtonState(
     fields.storeProductionHandshakeInit,
     !manualAvailability.storeHandshakeInit,
-    busy ? "Wait for the active production action." : "Export handshake init first.",
+    manualDisabledReasons.storeHandshakeInit,
     manualAvailability.storeHandshakeInit,
   );
   setActionButtonState(
     fields.loadProductionHandshakeInit,
     !manualAvailability.loadHandshakeInit,
-    busy ? "Wait for the active production action." : "Store counterpart handshake init first.",
+    manualDisabledReasons.loadHandshakeInit,
     manualAvailability.loadHandshakeInit,
   );
   setActionButtonState(
     fields.useProductionHandshakeReply,
     !manualAvailability.useHandshakeReply,
-    busy ? "Wait for the active production action." : "Export handshake reply first.",
+    manualDisabledReasons.useHandshakeReply,
   );
   setActionButtonState(
     fields.storeProductionHandshakeReply,
     !manualAvailability.storeHandshakeReply,
-    busy ? "Wait for the active production action." : "Export handshake reply first.",
+    manualDisabledReasons.storeHandshakeReply,
     manualAvailability.storeHandshakeReply,
   );
   setActionButtonState(
     fields.loadProductionHandshakeReply,
     !manualAvailability.loadHandshakeReply,
-    busy ? "Wait for the active production action." : "Store counterpart handshake reply first.",
+    manualDisabledReasons.loadHandshakeReply,
     manualAvailability.loadHandshakeReply,
   );
   setActionButtonState(
     fields.useProductionHandshakeFinish,
     !manualAvailability.useHandshakeFinish,
-    busy ? "Wait for the active production action." : "Export handshake finish first.",
+    manualDisabledReasons.useHandshakeFinish,
   );
   setActionButtonState(
     fields.storeProductionHandshakeFinish,
     !manualAvailability.storeHandshakeFinish,
-    busy ? "Wait for the active production action." : "Export handshake finish first.",
+    manualDisabledReasons.storeHandshakeFinish,
     manualAvailability.storeHandshakeFinish,
   );
   setActionButtonState(
     fields.loadProductionHandshakeFinish,
     !manualAvailability.loadHandshakeFinish,
-    busy ? "Wait for the active production action." : "Store counterpart handshake finish first.",
+    manualDisabledReasons.loadHandshakeFinish,
     manualAvailability.loadHandshakeFinish,
   );
   setActionButtonState(
     fields.useProductionMessageEnvelope,
     !manualAvailability.useMessageEnvelope,
-    busy ? "Wait for the active production action." : "Export local message envelope first.",
+    manualDisabledReasons.useMessageEnvelope,
   );
   setActionButtonState(
     fields.storeProductionMessageEnvelope,
     !manualAvailability.storeMessageEnvelope,
-    busy ? "Wait for the active production action." : "Export local message envelope first.",
+    manualDisabledReasons.storeMessageEnvelope,
     manualAvailability.storeMessageEnvelope,
   );
   setActionButtonState(
     fields.loadProductionMessageEnvelope,
     !manualAvailability.loadMessageEnvelope,
-    busy ? "Wait for the active production action." : "Store counterpart message envelope first.",
+    manualDisabledReasons.loadMessageEnvelope,
     manualAvailability.loadMessageEnvelope && selectedNeedsPeerImport && !hasInboundEnvelopeInput,
   );
   setActionButtonState(
     fields.relayProductionMessageEnvelope,
     !manualAvailability.relayMessageEnvelope,
-    busy ? "Wait for the active production action." : "Export local message envelope first.",
+    manualDisabledReasons.relayMessageEnvelope,
     manualAvailability.relayMessageEnvelope,
   );
   setActionButtonState(
