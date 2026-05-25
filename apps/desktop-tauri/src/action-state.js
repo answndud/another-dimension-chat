@@ -340,6 +340,52 @@ export function productionManualRelayAvailability(state) {
   };
 }
 
+export function productionManualRelayDisabledReasons(state) {
+  if (state?.busy) {
+    return {
+      usePairingPayload: "Wait for the active production action.",
+      storePairingPayload: "Wait for the active production action.",
+      loadPairingPayload: "Wait for the active production action.",
+      useHandshakeInit: "Wait for the active production action.",
+      storeHandshakeInit: "Wait for the active production action.",
+      loadHandshakeInit: "Wait for the active production action.",
+      useHandshakeReply: "Wait for the active production action.",
+      storeHandshakeReply: "Wait for the active production action.",
+      loadHandshakeReply: "Wait for the active production action.",
+      useHandshakeFinish: "Wait for the active production action.",
+      storeHandshakeFinish: "Wait for the active production action.",
+      loadHandshakeFinish: "Wait for the active production action.",
+      useMessageEnvelope: "Wait for the active production action.",
+      storeMessageEnvelope: "Wait for the active production action.",
+      loadMessageEnvelope: "Wait for the active production action.",
+      relayMessageEnvelope: "Wait for the active production action.",
+    };
+  }
+
+  const counterpart = String(state?.counterpartProfile ?? "").trim().toLowerCase();
+  const remoteReason = (label) =>
+    counterpart ? `Store ${counterpart} ${label} first.` : "Select Alice or Bob before filling remote payloads.";
+
+  return {
+    usePairingPayload: "Export pairing first.",
+    storePairingPayload: "Export pairing first.",
+    loadPairingPayload: remoteReason("pairing"),
+    useHandshakeInit: "Export init first.",
+    storeHandshakeInit: "Export init first.",
+    loadHandshakeInit: remoteReason("init"),
+    useHandshakeReply: "Export reply first.",
+    storeHandshakeReply: "Export reply first.",
+    loadHandshakeReply: remoteReason("reply"),
+    useHandshakeFinish: "Export finish first.",
+    storeHandshakeFinish: "Export finish first.",
+    loadHandshakeFinish: remoteReason("finish"),
+    useMessageEnvelope: "Export envelope first.",
+    storeMessageEnvelope: "Export envelope first.",
+    loadMessageEnvelope: remoteReason("envelope"),
+    relayMessageEnvelope: counterpart ? "Export envelope first." : "Select Alice or Bob before relaying.",
+  };
+}
+
 export function productionTwoProfileResultView(result) {
   const profilesReady =
     result.profile_a_unlocked &&

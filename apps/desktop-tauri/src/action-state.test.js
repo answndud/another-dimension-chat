@@ -7,6 +7,7 @@ import {
   productionHandshakePayloadView,
   productionManualMessageCheckView,
   productionManualNextActions,
+  productionManualRelayDisabledReasons,
   productionManualRelayAvailability,
   productionManualMessageStatusView,
   productionManualStatusView,
@@ -630,6 +631,50 @@ test("productionManualRelayAvailability keeps manual copy store and load actions
       }),
     ).every((enabled) => enabled === false),
     true,
+  );
+});
+
+test("productionManualRelayDisabledReasons explain the missing payload or route", () => {
+  assert.deepEqual(
+    productionManualRelayDisabledReasons({ busy: true }),
+    {
+      usePairingPayload: "Wait for the active production action.",
+      storePairingPayload: "Wait for the active production action.",
+      loadPairingPayload: "Wait for the active production action.",
+      useHandshakeInit: "Wait for the active production action.",
+      storeHandshakeInit: "Wait for the active production action.",
+      loadHandshakeInit: "Wait for the active production action.",
+      useHandshakeReply: "Wait for the active production action.",
+      storeHandshakeReply: "Wait for the active production action.",
+      loadHandshakeReply: "Wait for the active production action.",
+      useHandshakeFinish: "Wait for the active production action.",
+      storeHandshakeFinish: "Wait for the active production action.",
+      loadHandshakeFinish: "Wait for the active production action.",
+      useMessageEnvelope: "Wait for the active production action.",
+      storeMessageEnvelope: "Wait for the active production action.",
+      loadMessageEnvelope: "Wait for the active production action.",
+      relayMessageEnvelope: "Wait for the active production action.",
+    },
+  );
+  assert.equal(
+    productionManualRelayDisabledReasons({ counterpartProfile: "bob" }).loadPairingPayload,
+    "Store bob pairing first.",
+  );
+  assert.equal(
+    productionManualRelayDisabledReasons({ counterpartProfile: "bob" }).loadMessageEnvelope,
+    "Store bob envelope first.",
+  );
+  assert.equal(
+    productionManualRelayDisabledReasons({ counterpartProfile: "" }).loadHandshakeInit,
+    "Select Alice or Bob before filling remote payloads.",
+  );
+  assert.equal(
+    productionManualRelayDisabledReasons({ counterpartProfile: "" }).relayMessageEnvelope,
+    "Select Alice or Bob before relaying.",
+  );
+  assert.equal(
+    productionManualRelayDisabledReasons({ counterpartProfile: "alice" }).relayMessageEnvelope,
+    "Export envelope first.",
   );
 });
 
