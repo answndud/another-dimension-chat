@@ -140,6 +140,8 @@ export function productionManualNextActions(state) {
     hasRemoteMessageEnvelopeSlot,
     hasImportedMessage,
     hasReceivedMessage,
+    hasTwoProfileReplyDraftInput,
+    hasTwoProfileReplySelected,
     activeProfile,
     counterpartProfile,
   } = state;
@@ -226,6 +228,12 @@ export function productionManualNextActions(state) {
   if (hasReceivedMessage) {
     message = `Next: review received message for ${activeLabel}.`;
   }
+  if (hasTwoProfileReplySelected) {
+    message = `Next: write reply from ${activeLabel} to ${counterpartLabel}.`;
+  }
+  if (hasTwoProfileReplyDraftInput) {
+    message = `Next: send stored-session reply from ${activeLabel} to ${counterpartLabel}.`;
+  }
 
   return { profile, pairing, message };
 }
@@ -237,6 +245,9 @@ export function productionManualCurrentStepView(state) {
   }
   if (!state?.hasProfileUnlockInput) {
     return `Profile | ${nextActions.profile}`;
+  }
+  if (state.hasTwoProfileReplyDraftInput || state.hasTwoProfileReplySelected) {
+    return `Reply | ${nextActions.message}`;
   }
 
   const messageActive = Boolean(
@@ -263,6 +274,12 @@ export function productionManualCurrentFocusTarget(state) {
     return state?.activeProfile ? "profile-passphrase" : "profile-name";
   }
 
+  if (state.hasTwoProfileReplyDraftInput) {
+    return "send-two-profile-message";
+  }
+  if (state.hasTwoProfileReplySelected) {
+    return "two-profile-message";
+  }
   if (state.hasReceivedMessage) {
     return "received-message";
   }
