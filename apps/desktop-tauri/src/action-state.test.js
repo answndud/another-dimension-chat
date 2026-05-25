@@ -626,6 +626,25 @@ test("productionManualNextActions follows pairing and message readiness", () => 
     productionManualNextActions({ ...baseState, activeProfile: "bob", hasReceivedMessage: true }).message,
     "Next: review received message for bob.",
   );
+  assert.equal(
+    productionManualNextActions({
+      ...baseState,
+      activeProfile: "bob",
+      counterpartProfile: "alice",
+      hasTwoProfileReplySelected: true,
+    }).message,
+    "Next: write reply from bob to alice.",
+  );
+  assert.equal(
+    productionManualNextActions({
+      ...baseState,
+      activeProfile: "bob",
+      counterpartProfile: "alice",
+      hasTwoProfileReplyDraftInput: true,
+      hasTwoProfileReplySelected: true,
+    }).message,
+    "Next: send stored-session reply from bob to alice.",
+  );
 });
 
 test("productionManualCurrentStepView summarizes the active manual phase", () => {
@@ -657,6 +676,16 @@ test("productionManualCurrentStepView summarizes the active manual phase", () =>
     }),
     "Message | Next: click Relay to peer for bob.",
   );
+  assert.equal(
+    productionManualCurrentStepView({
+      ...baseState,
+      activeProfile: "bob",
+      counterpartProfile: "alice",
+      hasProfileUnlockInput: true,
+      hasTwoProfileReplySelected: true,
+    }),
+    "Reply | Next: write reply from bob to alice.",
+  );
 });
 
 test("productionManualCurrentFocusTarget resolves the next manual control", () => {
@@ -682,6 +711,23 @@ test("productionManualCurrentFocusTarget resolves the next manual control", () =
       hasSessionDraftSaved: true,
     }),
     "export-init",
+  );
+  assert.equal(
+    productionManualCurrentFocusTarget({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasTwoProfileReplySelected: true,
+    }),
+    "two-profile-message",
+  );
+  assert.equal(
+    productionManualCurrentFocusTarget({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasTwoProfileReplyDraftInput: true,
+      hasTwoProfileReplySelected: true,
+    }),
+    "send-two-profile-message",
   );
   assert.equal(
     productionManualCurrentFocusTarget({

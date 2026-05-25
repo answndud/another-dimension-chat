@@ -1700,6 +1700,8 @@ function productionManualFocusNode(target) {
     "import-envelope": fields.importProductionMessageEnvelope,
     "show-received": fields.exportProductionReceivedMessage,
     "received-message": fields.productionReceivedMessage,
+    "two-profile-message": fields.productionTwoProfileMessage,
+    "send-two-profile-message": fields.runProductionTwoProfileMessageRoundtrip,
   };
   return targets[target] ?? null;
 }
@@ -2118,6 +2120,22 @@ function applyProductionActionState() {
   const selectedNeedsPeerImport = Boolean(
     selectedConversation && selectedHasSentCopy && !selectedHasReceivedCopy,
   );
+  const selectedConversationDelivered = Boolean(
+    selectedConversation && selectedHasSentCopy && selectedHasReceivedCopy,
+  );
+  const latestReplySelected = Boolean(
+    latestConversation &&
+      twoProfile.profileA === latestConversation.receiver &&
+      twoProfile.profileB === latestConversation.sender,
+  );
+  const selectedDeliveredReplyReady = Boolean(
+    selectedConversationDelivered &&
+      twoProfile.profileA === selectedConversation.receiver &&
+      twoProfile.profileB === selectedConversation.sender,
+  );
+  const selectedDeliveredReplyDraftReady = Boolean(selectedDeliveredReplyReady && twoProfile.message);
+  state.hasTwoProfileReplySelected = selectedDeliveredReplyReady || latestReplySelected;
+  state.hasTwoProfileReplyDraftInput = selectedDeliveredReplyDraftReady;
   const manualCurrentActions = productionManualRelayCurrentActions(manualAvailability, {
     hasFinishImportInput,
     hasHandshakeFinishInput,
@@ -2126,9 +2144,6 @@ function applyProductionActionState() {
     hasRemotePairingInput,
     selectedNeedsPeerImport,
   });
-  const selectedConversationDelivered = Boolean(
-    selectedConversation && selectedHasSentCopy && selectedHasReceivedCopy,
-  );
   const twoProfileComposeLocked =
     productionBusyAction === "two-profile-roundtrip" ||
     productionBusyAction === "two-profile-message-roundtrip";
@@ -2258,17 +2273,6 @@ function applyProductionActionState() {
     busy || !hasTwoProfileSessionStatusInput,
     busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
   );
-  const latestReplySelected = Boolean(
-    latestConversation &&
-      twoProfile.profileA === latestConversation.receiver &&
-      twoProfile.profileB === latestConversation.sender,
-  );
-  const selectedDeliveredReplyReady = Boolean(
-    selectedConversationDelivered &&
-      twoProfile.profileA === selectedConversation.receiver &&
-      twoProfile.profileB === selectedConversation.sender,
-  );
-  const selectedDeliveredReplyDraftReady = Boolean(selectedDeliveredReplyReady && twoProfile.message);
   const pendingConversation = latestTwoProfilePendingConversationEntry();
   const selectedPendingConversation = selectedTwoProfilePendingConversationEntry();
   const pendingSelected = Boolean(selectedPendingConversation);
