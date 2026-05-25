@@ -1667,6 +1667,7 @@ function productionManualFocusNode(target) {
     "load-pairing": fields.loadProductionPairingPayload,
     "relay-pairing": fields.relayProductionPairingPayload,
     "save-draft": fields.saveProductionSessionDraft,
+    "export-init": fields.exportProductionHandshakeInit,
     "store-handshake-init": fields.storeProductionHandshakeInit,
     "load-handshake-init": fields.loadProductionHandshakeInit,
     "relay-handshake-init": fields.relayProductionHandshakeInit,
@@ -1987,6 +1988,7 @@ function applyProductionActionState() {
   const hasSessionDraftInput = Boolean(
     hasProfileUnlockInput && pairing.localPayload && pairing.remotePayload,
   );
+  const hasSessionDraftSaved = Boolean(latestProductionSessionState?.session_draft_present);
   const hasHandshakeReplyInput = Boolean(hasProfileUnlockInput && pairing.initPayload);
   const hasHandshakeFinishInput = Boolean(hasProfileUnlockInput && pairing.replyPayload);
   const hasFinishImportInput = Boolean(hasProfileUnlockInput && pairing.finishPayload);
@@ -2052,6 +2054,7 @@ function applyProductionActionState() {
     hasProfileUnlockInput,
     hasPairingInput,
     hasSessionDraftInput,
+    hasSessionDraftSaved,
     hasHandshakeReplyInput,
     hasHandshakeFinishInput,
     hasFinishImportInput,

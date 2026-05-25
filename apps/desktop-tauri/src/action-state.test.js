@@ -476,6 +476,15 @@ test("productionManualNextActions follows pairing and message readiness", () => 
     productionManualNextActions({
       ...baseState,
       hasProfileUnlockInput: true,
+      hasSessionDraftInput: true,
+      hasSessionDraftSaved: true,
+    }).pairing,
+    "Next: click Export init.",
+  );
+  assert.equal(
+    productionManualNextActions({
+      ...baseState,
+      hasProfileUnlockInput: true,
       hasHandshakeInitPayload: true,
       counterpartProfile: "bob",
     }).pairing,
@@ -657,6 +666,23 @@ test("productionManualCurrentFocusTarget resolves the next manual control", () =
     "profile-passphrase",
   );
   assert.equal(productionManualCurrentFocusTarget({ ...baseState, busy: true }), null);
+  assert.equal(
+    productionManualCurrentFocusTarget({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasSessionDraftInput: true,
+    }),
+    "save-draft",
+  );
+  assert.equal(
+    productionManualCurrentFocusTarget({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasSessionDraftInput: true,
+      hasSessionDraftSaved: true,
+    }),
+    "export-init",
+  );
   assert.equal(
     productionManualCurrentFocusTarget({
       ...baseState,

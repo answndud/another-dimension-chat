@@ -120,6 +120,7 @@ export function productionManualNextActions(state) {
     hasProfileUnlockInput,
     hasPairingInput,
     hasSessionDraftInput,
+    hasSessionDraftSaved,
     hasHandshakeReplyInput,
     hasHandshakeFinishInput,
     hasFinishImportInput,
@@ -165,8 +166,11 @@ export function productionManualNextActions(state) {
   if (hasRemotePairingSlot && !hasRemotePairingInput) {
     pairing = "Next: click Fill remote pairing.";
   }
-  if (hasSessionDraftInput) {
+  if (hasSessionDraftInput && !hasSessionDraftSaved) {
     pairing = "Next: click Save draft.";
+  }
+  if (hasSessionDraftSaved) {
+    pairing = "Next: click Export init.";
   }
   if (hasHandshakeInitPayload) {
     pairing = counterpartProfile ? "Next: click Relay init to peer." : "Next: click Store init.";
@@ -307,6 +311,9 @@ export function productionManualCurrentFocusTarget(state) {
   }
   if (state.hasHandshakeInitPayload) {
     return state.counterpartProfile ? "relay-handshake-init" : "store-handshake-init";
+  }
+  if (state.hasSessionDraftSaved) {
+    return "export-init";
   }
   if (state.hasSessionDraftInput) {
     return "save-draft";
