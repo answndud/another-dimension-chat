@@ -493,6 +493,15 @@ test("productionManualNextActions follows pairing and message readiness", () => 
     "Next: click Fill remote init.",
   );
   assert.equal(
+    productionManualNextActions({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasRemoteHandshakeInitSlot: true,
+      hasHandshakeReplyInput: true,
+    }).pairing,
+    "Next: click Export reply.",
+  );
+  assert.equal(
     productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasHandshakeReplyInput: true }).pairing,
     "Next: click Export reply.",
   );
@@ -519,6 +528,15 @@ test("productionManualNextActions follows pairing and message readiness", () => 
     "Next: click Fill remote reply.",
   );
   assert.equal(
+    productionManualNextActions({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasRemoteHandshakeReplySlot: true,
+      hasHandshakeFinishInput: true,
+    }).pairing,
+    "Next: click Export finish.",
+  );
+  assert.equal(
     productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasHandshakeFinishInput: true }).pairing,
     "Next: click Export finish.",
   );
@@ -543,6 +561,15 @@ test("productionManualNextActions follows pairing and message readiness", () => 
   assert.equal(
     productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasRemoteHandshakeFinishSlot: true }).pairing,
     "Next: click Fill remote finish.",
+  );
+  assert.equal(
+    productionManualNextActions({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasRemoteHandshakeFinishSlot: true,
+      hasFinishImportInput: true,
+    }).pairing,
+    "Next: click Import finish.",
   );
   assert.equal(
     productionManualNextActions({
@@ -756,12 +783,48 @@ test("productionManualRelayCurrentActions prefer one relay action for the manual
     ...baseState,
     hasRemotePairingSlot: true,
   });
+  const loadedInit = productionManualRelayAvailability({
+    ...baseState,
+    hasRemoteHandshakeInitSlot: true,
+  });
+  const loadedReply = productionManualRelayAvailability({
+    ...baseState,
+    hasRemoteHandshakeReplySlot: true,
+  });
+  const loadedFinish = productionManualRelayAvailability({
+    ...baseState,
+    hasRemoteHandshakeFinishSlot: true,
+  });
   assert.equal(
     productionManualRelayCurrentActions(loadedPairing, { hasRemotePairingInput: false }).loadPairingPayload,
     true,
   );
   assert.equal(
     productionManualRelayCurrentActions(loadedPairing, { hasRemotePairingInput: true }).loadPairingPayload,
+    false,
+  );
+  assert.equal(
+    productionManualRelayCurrentActions(loadedInit, { hasHandshakeReplyInput: false }).loadHandshakeInit,
+    true,
+  );
+  assert.equal(
+    productionManualRelayCurrentActions(loadedInit, { hasHandshakeReplyInput: true }).loadHandshakeInit,
+    false,
+  );
+  assert.equal(
+    productionManualRelayCurrentActions(loadedReply, { hasHandshakeFinishInput: false }).loadHandshakeReply,
+    true,
+  );
+  assert.equal(
+    productionManualRelayCurrentActions(loadedReply, { hasHandshakeFinishInput: true }).loadHandshakeReply,
+    false,
+  );
+  assert.equal(
+    productionManualRelayCurrentActions(loadedFinish, { hasFinishImportInput: false }).loadHandshakeFinish,
+    true,
+  );
+  assert.equal(
+    productionManualRelayCurrentActions(loadedFinish, { hasFinishImportInput: true }).loadHandshakeFinish,
     false,
   );
   assert.equal(
