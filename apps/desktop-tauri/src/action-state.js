@@ -184,7 +184,7 @@ export function productionManualNextActions(state) {
     message = `Next: import envelope for ${activeLabel}.`;
   }
   if (hasImportedMessage) {
-    message = `Next: show received message for ${activeLabel}.`;
+    message = `Next: click Show received for ${activeLabel}.`;
   }
   if (hasReceivedMessage) {
     message = `Next: review received message for ${activeLabel}.`;
