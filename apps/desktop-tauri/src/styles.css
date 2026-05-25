@@ -452,7 +452,8 @@ textarea[readonly] {
   overflow-wrap: anywhere;
 }
 
-.flow-summary dd.is-current-manual {
+.flow-summary dd.is-current-manual,
+.manual-relay-summary dd.is-current-manual {
   color: var(--accent);
 }
 
