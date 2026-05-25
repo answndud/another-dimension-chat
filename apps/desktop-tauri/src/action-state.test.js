@@ -6,6 +6,7 @@ import {
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
   productionManualMessageCheckView,
+  productionManualCurrentStepView,
   productionManualNextActions,
   productionManualRelayCurrentActions,
   productionManualRelayDisabledReasons,
@@ -614,6 +615,37 @@ test("productionManualNextActions follows pairing and message readiness", () => 
   assert.equal(
     productionManualNextActions({ ...baseState, activeProfile: "bob", hasReceivedMessage: true }).message,
     "Next: review received message for bob.",
+  );
+});
+
+test("productionManualCurrentStepView summarizes the active manual phase", () => {
+  assert.equal(
+    productionManualCurrentStepView(baseState),
+    "Profile | Next: enter profile and passphrase.",
+  );
+  assert.equal(
+    productionManualCurrentStepView({ ...baseState, busy: true }),
+    "Running | wait for the active production action.",
+  );
+  assert.equal(
+    productionManualCurrentStepView({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasRemoteHandshakeInitSlot: true,
+      hasHandshakeReplyInput: true,
+    }),
+    "Pairing | Next: click Export reply.",
+  );
+  assert.equal(
+    productionManualCurrentStepView({
+      ...baseState,
+      activeProfile: "alice",
+      counterpartProfile: "bob",
+      hasProfileUnlockInput: true,
+      sessionReadyForMessages: true,
+      hasLocalMessageEnvelope: true,
+    }),
+    "Message | Next: click Relay to peer for bob.",
   );
 });
 

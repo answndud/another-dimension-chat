@@ -226,6 +226,31 @@ export function productionManualNextActions(state) {
   return { profile, pairing, message };
 }
 
+export function productionManualCurrentStepView(state) {
+  const nextActions = productionManualNextActions(state ?? {});
+  if (state?.busy) {
+    return "Running | wait for the active production action.";
+  }
+  if (!state?.hasProfileUnlockInput) {
+    return `Profile | ${nextActions.profile}`;
+  }
+
+  const messageActive = Boolean(
+    state.sessionReadyForMessages ||
+      state.hasOutboundMessageInput ||
+      state.hasLocalMessageEnvelope ||
+      state.hasRemoteMessageEnvelopeSlot ||
+      state.hasInboundEnvelopeInput ||
+      state.hasImportedMessage ||
+      state.hasReceivedMessage,
+  );
+  if (messageActive) {
+    return `Message | ${nextActions.message}`;
+  }
+
+  return `Pairing | ${nextActions.pairing}`;
+}
+
 export function productionManualStatusView(input, slots) {
   const profile = String(input?.profile ?? "").trim() || "No profile";
   const counterpart = productionCounterpartProfile(profile);

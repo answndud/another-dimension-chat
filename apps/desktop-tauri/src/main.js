@@ -5,6 +5,7 @@ import {
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
   productionManualMessageCheckView,
+  productionManualCurrentStepView,
   productionManualNextActions,
   productionManualRelayCurrentActions,
   productionManualRelayDisabledReasons,
@@ -89,6 +90,7 @@ const fields = {
   productionManualSlots: document.querySelector("#production-manual-slots"),
   productionManualMode: document.querySelector("#production-manual-mode"),
   productionManualPolicy: document.querySelector("#production-manual-policy"),
+  productionManualCurrent: document.querySelector("#production-manual-current"),
   productionTwoProfileSessionStatus: document.querySelector("#production-two-profile-session-status"),
   checkProductionTwoProfileSessionStatus: document.querySelector(
     "#check-production-two-profile-session-status",
@@ -602,6 +604,7 @@ function renderManualNextActions(state) {
   setText(fields.productionProfileNextAction, nextActions.profile);
   setText(fields.productionPairingNextAction, nextActions.pairing);
   setText(fields.productionMessageNextAction, nextActions.message);
+  setText(fields.productionManualCurrent, productionManualCurrentStepView(state));
 }
 
 function renderManualMessageStatus(state) {
