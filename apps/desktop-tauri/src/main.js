@@ -3793,11 +3793,7 @@ function syncTwoProfileConversationAfterReceivedExport(profile, messageNumber, m
   );
   const refreshedEntry = selectedTwoProfileConversationEntry();
   if (refreshedEntry?.statuses.has("sent") && refreshedEntry.statuses.has("received")) {
-    setProductionTwoProfileState("Received message verified");
-    setText(
-      fields.productionTwoProfileWarning,
-      `Received message #${normalizedNumber} verified for ${receivedProfile}; reply direction remains ${fields.productionTwoProfileA?.value ?? "unknown"} -> ${fields.productionTwoProfileB?.value ?? "unknown"}.`,
-    );
+    return selectReplyAfterDeliveredReview(refreshedEntry, { importProfile: receivedProfile });
   }
   return true;
 }
