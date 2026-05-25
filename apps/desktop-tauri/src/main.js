@@ -6,6 +6,7 @@ import {
   productionHandshakePayloadView,
   productionManualMessageCheckView,
   productionManualNextActions,
+  productionManualRelayCurrentActions,
   productionManualRelayDisabledReasons,
   productionManualRelayAvailability,
   productionManualMessageStatusView,
@@ -2043,6 +2044,10 @@ function applyProductionActionState() {
   const selectedNeedsPeerImport = Boolean(
     selectedConversation && selectedHasSentCopy && !selectedHasReceivedCopy,
   );
+  const manualCurrentActions = productionManualRelayCurrentActions(manualAvailability, {
+    hasInboundEnvelopeInput,
+    selectedNeedsPeerImport,
+  });
   const selectedConversationDelivered = Boolean(
     selectedConversation && selectedHasSentCopy && selectedHasReceivedCopy,
   );
@@ -2242,19 +2247,19 @@ function applyProductionActionState() {
     fields.storeProductionPairingPayload,
     !manualAvailability.storePairingPayload,
     manualDisabledReasons.storePairingPayload,
-    manualAvailability.storePairingPayload,
+    manualCurrentActions.storePairingPayload,
   );
   setActionButtonState(
     fields.loadProductionPairingPayload,
     !manualAvailability.loadPairingPayload,
     manualDisabledReasons.loadPairingPayload,
-    manualAvailability.loadPairingPayload,
+    manualCurrentActions.loadPairingPayload,
   );
   setActionButtonState(
     fields.relayProductionPairingPayload,
     !manualAvailability.relayPairingPayload,
     manualDisabledReasons.relayPairingPayload,
-    manualAvailability.relayPairingPayload,
+    manualCurrentActions.relayPairingPayload,
   );
   setActionButtonState(
     fields.useProductionHandshakeInit,
@@ -2265,19 +2270,19 @@ function applyProductionActionState() {
     fields.storeProductionHandshakeInit,
     !manualAvailability.storeHandshakeInit,
     manualDisabledReasons.storeHandshakeInit,
-    manualAvailability.storeHandshakeInit,
+    manualCurrentActions.storeHandshakeInit,
   );
   setActionButtonState(
     fields.loadProductionHandshakeInit,
     !manualAvailability.loadHandshakeInit,
     manualDisabledReasons.loadHandshakeInit,
-    manualAvailability.loadHandshakeInit,
+    manualCurrentActions.loadHandshakeInit,
   );
   setActionButtonState(
     fields.relayProductionHandshakeInit,
     !manualAvailability.relayHandshakeInit,
     manualDisabledReasons.relayHandshakeInit,
-    manualAvailability.relayHandshakeInit,
+    manualCurrentActions.relayHandshakeInit,
   );
   setActionButtonState(
     fields.useProductionHandshakeReply,
@@ -2288,19 +2293,19 @@ function applyProductionActionState() {
     fields.storeProductionHandshakeReply,
     !manualAvailability.storeHandshakeReply,
     manualDisabledReasons.storeHandshakeReply,
-    manualAvailability.storeHandshakeReply,
+    manualCurrentActions.storeHandshakeReply,
   );
   setActionButtonState(
     fields.loadProductionHandshakeReply,
     !manualAvailability.loadHandshakeReply,
     manualDisabledReasons.loadHandshakeReply,
-    manualAvailability.loadHandshakeReply,
+    manualCurrentActions.loadHandshakeReply,
   );
   setActionButtonState(
     fields.relayProductionHandshakeReply,
     !manualAvailability.relayHandshakeReply,
     manualDisabledReasons.relayHandshakeReply,
-    manualAvailability.relayHandshakeReply,
+    manualCurrentActions.relayHandshakeReply,
   );
   setActionButtonState(
     fields.useProductionHandshakeFinish,
@@ -2311,19 +2316,19 @@ function applyProductionActionState() {
     fields.storeProductionHandshakeFinish,
     !manualAvailability.storeHandshakeFinish,
     manualDisabledReasons.storeHandshakeFinish,
-    manualAvailability.storeHandshakeFinish,
+    manualCurrentActions.storeHandshakeFinish,
   );
   setActionButtonState(
     fields.loadProductionHandshakeFinish,
     !manualAvailability.loadHandshakeFinish,
     manualDisabledReasons.loadHandshakeFinish,
-    manualAvailability.loadHandshakeFinish,
+    manualCurrentActions.loadHandshakeFinish,
   );
   setActionButtonState(
     fields.relayProductionHandshakeFinish,
     !manualAvailability.relayHandshakeFinish,
     manualDisabledReasons.relayHandshakeFinish,
-    manualAvailability.relayHandshakeFinish,
+    manualCurrentActions.relayHandshakeFinish,
   );
   setActionButtonState(
     fields.useProductionMessageEnvelope,
@@ -2334,19 +2339,19 @@ function applyProductionActionState() {
     fields.storeProductionMessageEnvelope,
     !manualAvailability.storeMessageEnvelope,
     manualDisabledReasons.storeMessageEnvelope,
-    manualAvailability.storeMessageEnvelope,
+    manualCurrentActions.storeMessageEnvelope,
   );
   setActionButtonState(
     fields.loadProductionMessageEnvelope,
     !manualAvailability.loadMessageEnvelope,
     manualDisabledReasons.loadMessageEnvelope,
-    manualAvailability.loadMessageEnvelope && selectedNeedsPeerImport && !hasInboundEnvelopeInput,
+    manualCurrentActions.loadMessageEnvelope,
   );
   setActionButtonState(
     fields.relayProductionMessageEnvelope,
     !manualAvailability.relayMessageEnvelope,
     manualDisabledReasons.relayMessageEnvelope,
-    manualAvailability.relayMessageEnvelope,
+    manualCurrentActions.relayMessageEnvelope,
   );
   setActionButtonState(
     fields.swapTwoProfileDirection,

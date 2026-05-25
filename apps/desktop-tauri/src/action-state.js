@@ -346,6 +346,33 @@ export function productionManualRelayAvailability(state) {
   };
 }
 
+export function productionManualRelayCurrentActions(availability, context = {}) {
+  const relayPreferred = (storeKey, relayKey) =>
+    Boolean(availability?.[storeKey]) && !availability?.[relayKey];
+
+  return {
+    storePairingPayload: relayPreferred("storePairingPayload", "relayPairingPayload"),
+    loadPairingPayload: Boolean(availability?.loadPairingPayload),
+    relayPairingPayload: Boolean(availability?.relayPairingPayload),
+    storeHandshakeInit: relayPreferred("storeHandshakeInit", "relayHandshakeInit"),
+    loadHandshakeInit: Boolean(availability?.loadHandshakeInit),
+    relayHandshakeInit: Boolean(availability?.relayHandshakeInit),
+    storeHandshakeReply: relayPreferred("storeHandshakeReply", "relayHandshakeReply"),
+    loadHandshakeReply: Boolean(availability?.loadHandshakeReply),
+    relayHandshakeReply: Boolean(availability?.relayHandshakeReply),
+    storeHandshakeFinish: relayPreferred("storeHandshakeFinish", "relayHandshakeFinish"),
+    loadHandshakeFinish: Boolean(availability?.loadHandshakeFinish),
+    relayHandshakeFinish: Boolean(availability?.relayHandshakeFinish),
+    storeMessageEnvelope: relayPreferred("storeMessageEnvelope", "relayMessageEnvelope"),
+    loadMessageEnvelope: Boolean(
+      availability?.loadMessageEnvelope &&
+        context.selectedNeedsPeerImport &&
+        !context.hasInboundEnvelopeInput,
+    ),
+    relayMessageEnvelope: Boolean(availability?.relayMessageEnvelope),
+  };
+}
+
 export function productionManualRelayDisabledReasons(state) {
   if (state?.busy) {
     return {
