@@ -3971,7 +3971,7 @@ async function importProductionMessageEnvelope() {
       fields.productionMessageWarning,
       `${result.warning}${
         clearedEnvelopeSlot ? " Consumed matching stored sender envelope slot." : ""
-      }${clearedEnvelopeInput ? " Cleared imported remote envelope input." : ""}`,
+      }${clearedEnvelopeInput ? " Cleared imported remote envelope input." : ""} Click Show received to verify the decrypted message.`,
     );
     setText(fields.productionMessageOutbound, "Not exported in this profile");
     setText(fields.productionMessageInbound, view.inbound);

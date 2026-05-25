@@ -451,7 +451,7 @@ test("productionManualNextActions follows pairing and message readiness", () => 
       hasInboundEnvelopeInput: true,
       hasImportedMessage: true,
     }).message,
-    "Next: show received message for bob.",
+    "Next: click Show received for bob.",
   );
   assert.equal(
     productionManualNextActions({ ...baseState, activeProfile: "bob", hasReceivedMessage: true }).message,
