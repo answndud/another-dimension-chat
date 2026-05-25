@@ -125,6 +125,7 @@ export function productionManualNextActions(state) {
     hasFinishImportInput,
     hasLocalPairingPayload,
     hasRemotePairingSlot,
+    hasRemotePairingInput,
     hasHandshakeInitPayload,
     hasRemoteHandshakeInitSlot,
     hasHandshakeReplyPayload,
@@ -161,7 +162,7 @@ export function productionManualNextActions(state) {
   if (hasLocalPairingPayload) {
     pairing = counterpartProfile ? "Next: click Relay pairing to peer." : "Next: click Store pairing.";
   }
-  if (hasRemotePairingSlot) {
+  if (hasRemotePairingSlot && !hasRemotePairingInput) {
     pairing = "Next: click Fill remote pairing.";
   }
   if (hasSessionDraftInput) {
@@ -352,7 +353,7 @@ export function productionManualRelayCurrentActions(availability, context = {}) 
 
   return {
     storePairingPayload: relayPreferred("storePairingPayload", "relayPairingPayload"),
-    loadPairingPayload: Boolean(availability?.loadPairingPayload),
+    loadPairingPayload: Boolean(availability?.loadPairingPayload && !context.hasRemotePairingInput),
     relayPairingPayload: Boolean(availability?.relayPairingPayload),
     storeHandshakeInit: relayPreferred("storeHandshakeInit", "relayHandshakeInit"),
     loadHandshakeInit: Boolean(availability?.loadHandshakeInit),
