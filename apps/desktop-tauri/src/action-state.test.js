@@ -6,6 +6,7 @@ import {
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
   productionManualMessageCheckView,
+  productionManualCurrentFocusTarget,
   productionManualCurrentStepView,
   productionManualNextActions,
   productionManualRelayCurrentActions,
@@ -646,6 +647,42 @@ test("productionManualCurrentStepView summarizes the active manual phase", () =>
       hasLocalMessageEnvelope: true,
     }),
     "Message | Next: click Relay to peer for bob.",
+  );
+});
+
+test("productionManualCurrentFocusTarget resolves the next manual control", () => {
+  assert.equal(productionManualCurrentFocusTarget(baseState), "profile-name");
+  assert.equal(
+    productionManualCurrentFocusTarget({ ...baseState, activeProfile: "alice" }),
+    "profile-passphrase",
+  );
+  assert.equal(productionManualCurrentFocusTarget({ ...baseState, busy: true }), null);
+  assert.equal(
+    productionManualCurrentFocusTarget({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasRemoteHandshakeInitSlot: true,
+      hasHandshakeReplyInput: true,
+    }),
+    "export-reply",
+  );
+  assert.equal(
+    productionManualCurrentFocusTarget({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasHandshakeFinishPayload: true,
+      counterpartProfile: "alice",
+    }),
+    "relay-handshake-finish",
+  );
+  assert.equal(
+    productionManualCurrentFocusTarget({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      sessionReadyForMessages: true,
+      hasRemoteMessageEnvelopeSlot: true,
+    }),
+    "load-message-envelope",
   );
 });
 

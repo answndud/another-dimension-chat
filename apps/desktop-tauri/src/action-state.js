@@ -251,6 +251,79 @@ export function productionManualCurrentStepView(state) {
   return `Pairing | ${nextActions.pairing}`;
 }
 
+export function productionManualCurrentFocusTarget(state) {
+  if (state?.busy) {
+    return null;
+  }
+  if (!state?.hasProfileUnlockInput) {
+    return state?.activeProfile ? "profile-passphrase" : "profile-name";
+  }
+
+  if (state.hasReceivedMessage) {
+    return "received-message";
+  }
+  if (state.hasImportedMessage) {
+    return "show-received";
+  }
+  if (state.hasInboundEnvelopeInput) {
+    return "import-envelope";
+  }
+  if (state.hasRemoteMessageEnvelopeSlot) {
+    return "load-message-envelope";
+  }
+  if (state.hasLocalMessageEnvelope) {
+    return state.counterpartProfile ? "relay-message-envelope" : "store-message-envelope";
+  }
+  if (state.hasOutboundMessageInput) {
+    return "export-message-envelope";
+  }
+  if (state.sessionReadyForMessages) {
+    return "message-body";
+  }
+
+  if (state.hasFinishImportInput) {
+    return "import-finish";
+  }
+  if (state.hasRemoteHandshakeFinishSlot) {
+    return state.hasFinishImportInput ? "import-finish" : "load-handshake-finish";
+  }
+  if (state.hasHandshakeFinishPayload) {
+    return state.counterpartProfile ? "relay-handshake-finish" : "store-handshake-finish";
+  }
+  if (state.hasHandshakeFinishInput) {
+    return "export-finish";
+  }
+  if (state.hasRemoteHandshakeReplySlot) {
+    return state.hasHandshakeFinishInput ? "export-finish" : "load-handshake-reply";
+  }
+  if (state.hasHandshakeReplyPayload) {
+    return state.counterpartProfile ? "relay-handshake-reply" : "store-handshake-reply";
+  }
+  if (state.hasHandshakeReplyInput) {
+    return "export-reply";
+  }
+  if (state.hasRemoteHandshakeInitSlot) {
+    return state.hasHandshakeReplyInput ? "export-reply" : "load-handshake-init";
+  }
+  if (state.hasHandshakeInitPayload) {
+    return state.counterpartProfile ? "relay-handshake-init" : "store-handshake-init";
+  }
+  if (state.hasSessionDraftInput) {
+    return "save-draft";
+  }
+  if (state.hasRemotePairingSlot) {
+    return state.hasRemotePairingInput ? "save-draft" : "load-pairing";
+  }
+  if (state.hasLocalPairingPayload) {
+    return state.counterpartProfile ? "relay-pairing" : "store-pairing";
+  }
+  if (state.hasPairingInput) {
+    return "export-pairing";
+  }
+
+  return "unlock-profile";
+}
+
 export function productionManualStatusView(input, slots) {
   const profile = String(input?.profile ?? "").trim() || "No profile";
   const counterpart = productionCounterpartProfile(profile);
