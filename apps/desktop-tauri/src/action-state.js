@@ -172,13 +172,13 @@ export function productionManualNextActions(state) {
     ? `Next: enter message for ${activeLabel} and export envelope.`
     : `Next: check both sessions, or complete ${activeLabel} session state.`;
   if (hasOutboundMessageInput) {
-    message = `Next: export envelope from ${activeLabel}, store it, then manually select ${counterpartLabel}.`;
+    message = `Next: export envelope from ${activeLabel}.`;
   }
   if (hasLocalMessageEnvelope) {
-    message = `Next: store ${activeLabel} envelope, manually select ${counterpartLabel}, then fill remote envelope.`;
+    message = `Next: click Relay to peer for ${counterpartLabel}.`;
   }
   if (hasRemoteMessageEnvelopeSlot) {
-    message = `Next: load ${counterpartLabel} envelope, then import for ${activeLabel}.`;
+    message = `Next: click Fill remote for ${activeLabel}.`;
   }
   if (hasInboundEnvelopeInput) {
     message = `Next: import envelope for ${activeLabel}.`;

@@ -431,7 +431,17 @@ test("productionManualNextActions follows pairing and message readiness", () => 
       sessionReadyForMessages: true,
       hasOutboundMessageInput: true,
     }).message,
-    "Next: export envelope from alice, store it, then manually select bob.",
+    "Next: export envelope from alice.",
+  );
+  assert.equal(
+    productionManualNextActions({
+      ...baseState,
+      activeProfile: "alice",
+      counterpartProfile: "bob",
+      sessionReadyForMessages: true,
+      hasLocalMessageEnvelope: true,
+    }).message,
+    "Next: click Relay to peer for bob.",
   );
   assert.equal(
     productionManualNextActions({
@@ -441,7 +451,7 @@ test("productionManualNextActions follows pairing and message readiness", () => 
       sessionReadyForMessages: true,
       hasRemoteMessageEnvelopeSlot: true,
     }).message,
-    "Next: load alice envelope, then import for bob.",
+    "Next: click Fill remote for bob.",
   );
   assert.equal(
     productionManualNextActions({
