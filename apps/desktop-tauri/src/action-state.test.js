@@ -12,6 +12,7 @@ import {
   productionManualStatusView,
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
+  productionMessageTtlInputValue,
   productionPairingPayloadView,
   productionProfileMessageReadiness,
   productionProfilePreset,
@@ -402,6 +403,14 @@ test("productionActionAvailability blocks message actions until retention policy
       storedSend: false,
     },
   );
+});
+
+test("productionMessageTtlInputValue accepts only explicit policy values", () => {
+  assert.equal(productionMessageTtlInputValue("86400", [3600, 86400, 604800], 604800), 86400);
+  assert.equal(productionMessageTtlInputValue("", [3600, 86400, 604800], 604800), 604800);
+  assert.equal(productionMessageTtlInputValue("999", [3600, 86400, 604800], 604800), null);
+  assert.equal(productionMessageTtlInputValue("86400", [], 604800), null);
+  assert.equal(productionMessageTtlInputValue("86400", [3600], 604800), null);
 });
 
 test("productionManualNextActions follows pairing and message readiness", () => {
