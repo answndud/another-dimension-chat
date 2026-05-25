@@ -100,12 +100,14 @@ const fields = {
   useProductionPairingPayload: document.querySelector("#use-production-pairing-payload"),
   storeProductionPairingPayload: document.querySelector("#store-production-pairing-payload"),
   loadProductionPairingPayload: document.querySelector("#load-production-pairing-payload"),
+  relayProductionPairingPayload: document.querySelector("#relay-production-pairing-payload"),
   productionRemotePairingPayload: document.querySelector("#production-remote-pairing-payload"),
   saveProductionSessionDraft: document.querySelector("#save-production-session-draft"),
   productionHandshakeInitPayload: document.querySelector("#production-handshake-init-payload"),
   useProductionHandshakeInit: document.querySelector("#use-production-handshake-init"),
   storeProductionHandshakeInit: document.querySelector("#store-production-handshake-init"),
   loadProductionHandshakeInit: document.querySelector("#load-production-handshake-init"),
+  relayProductionHandshakeInit: document.querySelector("#relay-production-handshake-init"),
   productionRemoteHandshakeInitPayload: document.querySelector(
     "#production-remote-handshake-init-payload",
   ),
@@ -113,6 +115,7 @@ const fields = {
   useProductionHandshakeReply: document.querySelector("#use-production-handshake-reply"),
   storeProductionHandshakeReply: document.querySelector("#store-production-handshake-reply"),
   loadProductionHandshakeReply: document.querySelector("#load-production-handshake-reply"),
+  relayProductionHandshakeReply: document.querySelector("#relay-production-handshake-reply"),
   productionRemoteHandshakeReplyPayload: document.querySelector(
     "#production-remote-handshake-reply-payload",
   ),
@@ -120,6 +123,7 @@ const fields = {
   useProductionHandshakeFinish: document.querySelector("#use-production-handshake-finish"),
   storeProductionHandshakeFinish: document.querySelector("#store-production-handshake-finish"),
   loadProductionHandshakeFinish: document.querySelector("#load-production-handshake-finish"),
+  relayProductionHandshakeFinish: document.querySelector("#relay-production-handshake-finish"),
   productionRemoteHandshakeFinishPayload: document.querySelector(
     "#production-remote-handshake-finish-payload",
   ),
@@ -1484,6 +1488,35 @@ function loadProductionPayloadSlot(kind, targetField, label) {
   applyProductionActionState();
 }
 
+function relayProductionPayloadSlotToPeer(kind, sourceField, targetField, label) {
+  const profile = activeProductionProfileName();
+  const counterpart = productionCounterpartProfile(profile);
+  const value = sourceField?.value?.trim() ?? "";
+  if (!profile || !counterpart || !value || !targetField) {
+    setProductionPairingState(`${label} relay needs profile and payload`);
+    setText(
+      fields.productionPairingWarning,
+      `Export a local ${payloadLabel(label)} from Alice or Bob before relaying to the peer.`,
+    );
+    return;
+  }
+  productionPayloadSlots[kind].set(profile, value);
+  if (!selectProductionProfileForManualRelay(counterpart)) {
+    setProductionPairingState(`${label} relay needs supported peer`);
+    setText(fields.productionPairingWarning, "Relay supports the local Alice/Bob manual pair only.");
+    return;
+  }
+  targetField.value = value;
+  sourceField.value = "";
+  targetField.dispatchEvent(new Event("input", { bubbles: true }));
+  setProductionPairingState(`${label} relayed to ${counterpart}`);
+  setText(
+    fields.productionPairingWarning,
+    `Stored ${profile} ${payloadLabel(label)}, selected ${counterpart}, and loaded remote ${payloadLabel(label)}.`,
+  );
+  applyProductionActionState();
+}
+
 function moveLocalMessageEnvelope() {
   const profile = activeProductionProfileName();
   const value = fields.productionMessageEnvelope?.value?.trim() ?? "";
@@ -2218,6 +2251,12 @@ function applyProductionActionState() {
     manualAvailability.loadPairingPayload,
   );
   setActionButtonState(
+    fields.relayProductionPairingPayload,
+    !manualAvailability.relayPairingPayload,
+    manualDisabledReasons.relayPairingPayload,
+    manualAvailability.relayPairingPayload,
+  );
+  setActionButtonState(
     fields.useProductionHandshakeInit,
     !manualAvailability.useHandshakeInit,
     manualDisabledReasons.useHandshakeInit,
@@ -2233,6 +2272,12 @@ function applyProductionActionState() {
     !manualAvailability.loadHandshakeInit,
     manualDisabledReasons.loadHandshakeInit,
     manualAvailability.loadHandshakeInit,
+  );
+  setActionButtonState(
+    fields.relayProductionHandshakeInit,
+    !manualAvailability.relayHandshakeInit,
+    manualDisabledReasons.relayHandshakeInit,
+    manualAvailability.relayHandshakeInit,
   );
   setActionButtonState(
     fields.useProductionHandshakeReply,
@@ -2252,6 +2297,12 @@ function applyProductionActionState() {
     manualAvailability.loadHandshakeReply,
   );
   setActionButtonState(
+    fields.relayProductionHandshakeReply,
+    !manualAvailability.relayHandshakeReply,
+    manualDisabledReasons.relayHandshakeReply,
+    manualAvailability.relayHandshakeReply,
+  );
+  setActionButtonState(
     fields.useProductionHandshakeFinish,
     !manualAvailability.useHandshakeFinish,
     manualDisabledReasons.useHandshakeFinish,
@@ -2267,6 +2318,12 @@ function applyProductionActionState() {
     !manualAvailability.loadHandshakeFinish,
     manualDisabledReasons.loadHandshakeFinish,
     manualAvailability.loadHandshakeFinish,
+  );
+  setActionButtonState(
+    fields.relayProductionHandshakeFinish,
+    !manualAvailability.relayHandshakeFinish,
+    manualDisabledReasons.relayHandshakeFinish,
+    manualAvailability.relayHandshakeFinish,
   );
   setActionButtonState(
     fields.useProductionMessageEnvelope,
@@ -4226,6 +4283,17 @@ if (fields.loadProductionPairingPayload) {
   );
 }
 
+if (fields.relayProductionPairingPayload) {
+  fields.relayProductionPairingPayload.addEventListener("click", () =>
+    relayProductionPayloadSlotToPeer(
+      "pairing",
+      fields.productionPairingPayload,
+      fields.productionRemotePairingPayload,
+      "Pairing payload",
+    ),
+  );
+}
+
 if (fields.saveProductionSessionDraft) {
   fields.saveProductionSessionDraft.addEventListener("click", saveProductionSessionDraft);
 }
@@ -4256,6 +4324,17 @@ if (fields.loadProductionHandshakeInit) {
   );
 }
 
+if (fields.relayProductionHandshakeInit) {
+  fields.relayProductionHandshakeInit.addEventListener("click", () =>
+    relayProductionPayloadSlotToPeer(
+      "handshakeInit",
+      fields.productionHandshakeInitPayload,
+      fields.productionRemoteHandshakeInitPayload,
+      "Handshake init",
+    ),
+  );
+}
+
 if (fields.exportProductionHandshakeReply) {
   fields.exportProductionHandshakeReply.addEventListener("click", exportProductionHandshakeReply);
 }
@@ -4282,6 +4361,17 @@ if (fields.loadProductionHandshakeReply) {
   );
 }
 
+if (fields.relayProductionHandshakeReply) {
+  fields.relayProductionHandshakeReply.addEventListener("click", () =>
+    relayProductionPayloadSlotToPeer(
+      "handshakeReply",
+      fields.productionHandshakeReplyPayload,
+      fields.productionRemoteHandshakeReplyPayload,
+      "Handshake reply",
+    ),
+  );
+}
+
 if (fields.exportProductionHandshakeFinish) {
   fields.exportProductionHandshakeFinish.addEventListener("click", exportProductionHandshakeFinish);
 }
@@ -4305,6 +4395,17 @@ if (fields.storeProductionHandshakeFinish) {
 if (fields.loadProductionHandshakeFinish) {
   fields.loadProductionHandshakeFinish.addEventListener("click", () =>
     loadProductionPayloadSlot("handshakeFinish", fields.productionRemoteHandshakeFinishPayload, "Handshake finish"),
+  );
+}
+
+if (fields.relayProductionHandshakeFinish) {
+  fields.relayProductionHandshakeFinish.addEventListener("click", () =>
+    relayProductionPayloadSlotToPeer(
+      "handshakeFinish",
+      fields.productionHandshakeFinishPayload,
+      fields.productionRemoteHandshakeFinishPayload,
+      "Handshake finish",
+    ),
   );
 }
 
