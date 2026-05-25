@@ -416,12 +416,64 @@ test("productionMessageTtlInputValue accepts only explicit policy values", () =>
 test("productionManualNextActions follows pairing and message readiness", () => {
   assert.deepEqual(productionManualNextActions(baseState), {
     profile: "Next: enter profile and passphrase.",
-    pairing: "Next: unlock profile, then export pairing.",
+    pairing: "Next: enter profile and passphrase.",
     message: "Next: check both sessions, or complete active profile session state.",
   });
   assert.equal(
     productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasFinishImportInput: true }).pairing,
-    "Next: import finish, then check session.",
+    "Next: click Import finish.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true }).pairing,
+    "Next: click Unlock profile.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasPairingInput: true }).pairing,
+    "Next: click Export pairing.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasLocalPairingPayload: true }).pairing,
+    "Next: click Store pairing.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasRemotePairingSlot: true }).pairing,
+    "Next: click Fill remote pairing.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasSessionDraftInput: true }).pairing,
+    "Next: click Save draft.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasHandshakeInitPayload: true }).pairing,
+    "Next: click Store init.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasRemoteHandshakeInitSlot: true }).pairing,
+    "Next: click Fill remote init.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasHandshakeReplyInput: true }).pairing,
+    "Next: click Export reply.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasHandshakeReplyPayload: true }).pairing,
+    "Next: click Store reply.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasRemoteHandshakeReplySlot: true }).pairing,
+    "Next: click Fill remote reply.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasHandshakeFinishInput: true }).pairing,
+    "Next: click Export finish.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasHandshakeFinishPayload: true }).pairing,
+    "Next: click Store finish.",
+  );
+  assert.equal(
+    productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasRemoteHandshakeFinishSlot: true }).pairing,
+    "Next: click Fill remote finish.",
   );
   assert.equal(
     productionManualNextActions({
