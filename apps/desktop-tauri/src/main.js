@@ -3153,7 +3153,9 @@ async function runProductionTwoProfileMessageRoundtrip() {
         Number.parseInt(result.message_number, 10),
         message,
       );
-      selectTwoProfileReplyDirection(sentInput);
+      if (!selectReplyAfterDeliveredReview(sentMessage)) {
+        selectTwoProfileReplyDirection(sentInput);
+      }
       setText(
         fields.productionTwoProfileWarning,
         sentMessage
