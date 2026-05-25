@@ -373,6 +373,16 @@ export function productionManualRelayCurrentActions(availability, context = {}) 
   };
 }
 
+export function productionManualRelaySuccessWarning(profile, counterpart, label) {
+  const source = String(profile ?? "").trim().toLowerCase() || "active profile";
+  const target = String(counterpart ?? "").trim().toLowerCase() || "peer";
+  const payload = String(label ?? "payload").trim().toLowerCase();
+  return (
+    `Stored ${source} ${payload} slot, selected ${target}, and loaded ${payload} into the remote field. ` +
+    "The local output field was cleared; the stored relay slot remains available."
+  );
+}
+
 export function productionManualRelayDisabledReasons(state) {
   if (state?.busy) {
     return {

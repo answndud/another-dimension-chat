@@ -9,6 +9,7 @@ import {
   productionManualRelayCurrentActions,
   productionManualRelayDisabledReasons,
   productionManualRelayAvailability,
+  productionManualRelaySuccessWarning,
   productionManualMessageStatusView,
   productionManualStatusView,
   productionMessageEnvelopeExportView,
@@ -1513,7 +1514,7 @@ function relayProductionPayloadSlotToPeer(kind, sourceField, targetField, label)
   setProductionPairingState(`${label} relayed to ${counterpart}`);
   setText(
     fields.productionPairingWarning,
-    `Stored ${profile} ${payloadLabel(label)}, selected ${counterpart}, and loaded remote ${payloadLabel(label)}.`,
+    productionManualRelaySuccessWarning(profile, counterpart, label),
   );
   applyProductionActionState();
 }
@@ -1632,7 +1633,7 @@ function relayProductionMessageEnvelopeToPeer() {
   setProductionMessageState(`Envelope relayed to ${counterpart}`);
   setText(
     fields.productionMessageWarning,
-    `Stored ${profile} envelope, selected ${counterpart}, and loaded remote envelope. Import remains explicit.`,
+    `${productionManualRelaySuccessWarning(profile, counterpart, "envelope")} Import remains explicit.`,
   );
   applyProductionActionState();
 }
