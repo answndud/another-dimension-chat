@@ -1838,7 +1838,7 @@ function selectTwoProfileReplyDirection(sentInput) {
   return true;
 }
 
-function selectReplyAfterDeliveredReview(entry) {
+function selectReplyAfterDeliveredReview(entry, options = {}) {
   if (
     !entry ||
     !entry.statuses.has("sent") ||
@@ -1858,9 +1858,12 @@ function selectReplyAfterDeliveredReview(entry) {
   renderProductionTwoProfileDirection(input);
   renderProductionTwoProfileMemory(input);
   setProductionTwoProfileState("Reply direction ready");
+  const importProfile = String(options.importProfile ?? "").trim().toLowerCase();
   setText(
     fields.productionTwoProfileWarning,
-    `Message #${entry.messageNumber} delivered; reply direction selected: ${input.profileA} -> ${input.profileB}.`,
+    importProfile
+      ? `Manual import for ${importProfile} completed. Reply direction selected: ${input.profileA} -> ${input.profileB}; write the reply next.`
+      : `Message #${entry.messageNumber} delivered; reply direction selected: ${input.profileA} -> ${input.profileB}.`,
   );
   setProductionFollowupActions(true, selectedTwoProfileNextActionMessage(entry));
   applyProductionActionState();
@@ -3560,7 +3563,7 @@ async function refreshTwoProfileConversationAfterManualImport(profile, passphras
   }
   setProductionTwoProfileState("Conversation updated after import");
   const selectedEntry = selectedTwoProfileConversationEntry();
-  if (!selectReplyAfterDeliveredReview(selectedEntry)) {
+  if (!selectReplyAfterDeliveredReview(selectedEntry, { importProfile: importedProfile })) {
     setText(
       fields.productionTwoProfileWarning,
       `Manual import for ${importedProfile} completed; conversation transcript was reloaded from encrypted local stores.`,
