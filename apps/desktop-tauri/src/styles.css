@@ -457,6 +457,17 @@ textarea[readonly] {
   color: var(--accent);
 }
 
+.manual-current-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.manual-current-action .flow-control {
+  flex: 0 0 auto;
+}
+
 .simulation-panel,
 .loop-panel,
 .production-workflow,

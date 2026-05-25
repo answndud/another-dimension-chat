@@ -636,6 +636,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="check-production-two-profile-session-status-inline" type="button">' \
   | grep -v '<button id="run-production-two-profile-message-roundtrip" type="button">' \
   | grep -v '<button id="open-manual-production-tools" type="button" class="flow-control is-secondary">' \
+  | grep -v '<button id="focus-production-current-action" type="button" class="flow-control is-secondary">Focus</button>' \
   | grep -v '<button id="focus-local-diagnostic" type="button" class="flow-control is-secondary">' \
   | grep -v '<button id="swap-two-profile-direction" type="button" class="flow-control is-secondary">' \
   | grep -v '<button id="edit-two-profile-message" type="button" class="flow-control is-secondary">' \

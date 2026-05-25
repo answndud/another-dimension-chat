@@ -5,6 +5,7 @@ import {
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
   productionManualMessageCheckView,
+  productionManualCurrentFocusTarget,
   productionManualCurrentStepView,
   productionManualNextActions,
   productionManualRelayCurrentActions,
@@ -91,6 +92,7 @@ const fields = {
   productionManualMode: document.querySelector("#production-manual-mode"),
   productionManualPolicy: document.querySelector("#production-manual-policy"),
   productionManualCurrent: document.querySelector("#production-manual-current"),
+  focusProductionCurrentAction: document.querySelector("#focus-production-current-action"),
   productionTwoProfileSessionStatus: document.querySelector("#production-two-profile-session-status"),
   checkProductionTwoProfileSessionStatus: document.querySelector(
     "#check-production-two-profile-session-status",
@@ -237,6 +239,7 @@ let latestProductionTwoProfileSessionStatus = null;
 let latestProductionTwoProfileSuccess = null;
 let latestProductionMessageImport = null;
 let productionBusyAction = null;
+let latestProductionManualFocusTarget = null;
 let twoProfileAutoResumeTimer = null;
 let latestTwoProfileAutoResumeFingerprint = null;
 let selectedTwoProfileConversationKey = null;
@@ -600,11 +603,17 @@ function applyTwoProfilePairFromProfile(profile) {
 
 function renderManualNextActions(state) {
   const nextActions = productionManualNextActions(state);
+  latestProductionManualFocusTarget = productionManualCurrentFocusTarget(state);
 
   setText(fields.productionProfileNextAction, nextActions.profile);
   setText(fields.productionPairingNextAction, nextActions.pairing);
   setText(fields.productionMessageNextAction, nextActions.message);
   setText(fields.productionManualCurrent, productionManualCurrentStepView(state));
+  setActionButtonState(
+    fields.focusProductionCurrentAction,
+    !latestProductionManualFocusTarget,
+    "No current manual action while another action is running.",
+  );
 }
 
 function renderManualMessageStatus(state) {
@@ -1646,6 +1655,50 @@ function openManualProductionTools() {
     fields.manualProductionTools.open = true;
     fields.manualProductionTools.scrollIntoView({ block: "start", behavior: "smooth" });
   }
+}
+
+function productionManualFocusNode(target) {
+  const targets = {
+    "profile-name": fields.productionProfileName,
+    "profile-passphrase": fields.productionProfilePassphrase,
+    "unlock-profile": fields.unlockProductionProfile,
+    "export-pairing": fields.exportProductionPairing,
+    "store-pairing": fields.storeProductionPairingPayload,
+    "load-pairing": fields.loadProductionPairingPayload,
+    "relay-pairing": fields.relayProductionPairingPayload,
+    "save-draft": fields.saveProductionSessionDraft,
+    "store-handshake-init": fields.storeProductionHandshakeInit,
+    "load-handshake-init": fields.loadProductionHandshakeInit,
+    "relay-handshake-init": fields.relayProductionHandshakeInit,
+    "export-reply": fields.exportProductionHandshakeReply,
+    "store-handshake-reply": fields.storeProductionHandshakeReply,
+    "load-handshake-reply": fields.loadProductionHandshakeReply,
+    "relay-handshake-reply": fields.relayProductionHandshakeReply,
+    "export-finish": fields.exportProductionHandshakeFinish,
+    "store-handshake-finish": fields.storeProductionHandshakeFinish,
+    "load-handshake-finish": fields.loadProductionHandshakeFinish,
+    "relay-handshake-finish": fields.relayProductionHandshakeFinish,
+    "import-finish": fields.importProductionHandshakeFinish,
+    "message-body": fields.productionMessageBody,
+    "export-message-envelope": fields.exportProductionMessageEnvelope,
+    "store-message-envelope": fields.storeProductionMessageEnvelope,
+    "load-message-envelope": fields.loadProductionMessageEnvelope,
+    "relay-message-envelope": fields.relayProductionMessageEnvelope,
+    "import-envelope": fields.importProductionMessageEnvelope,
+    "show-received": fields.exportProductionReceivedMessage,
+    "received-message": fields.productionReceivedMessage,
+  };
+  return targets[target] ?? null;
+}
+
+function focusProductionCurrentAction() {
+  openManualProductionTools();
+  const node = productionManualFocusNode(latestProductionManualFocusTarget);
+  if (!node) {
+    return;
+  }
+  node.scrollIntoView({ block: "center", behavior: "smooth" });
+  node.focus();
 }
 
 function focusLocalDiagnostic() {
@@ -4512,6 +4565,10 @@ if (fields.reviewPendingTwoProfileMessage) {
 
 if (fields.openManualProductionTools) {
   fields.openManualProductionTools.addEventListener("click", openManualProductionTools);
+}
+
+if (fields.focusProductionCurrentAction) {
+  fields.focusProductionCurrentAction.addEventListener("click", focusProductionCurrentAction);
 }
 
 if (fields.focusLocalDiagnostic) {
