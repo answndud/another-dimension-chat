@@ -7,6 +7,7 @@ import {
   productionHandshakePayloadView,
   productionManualMessageCheckView,
   productionManualNextActions,
+  productionManualRelayCurrentActions,
   productionManualRelayDisabledReasons,
   productionManualRelayAvailability,
   productionManualMessageStatusView,
@@ -693,6 +694,66 @@ test("productionManualRelayAvailability keeps manual copy store and load actions
       }),
     ).every((enabled) => enabled === false),
     true,
+  );
+});
+
+test("productionManualRelayCurrentActions prefer one relay action for the manual path", () => {
+  const aliceToBobPairing = productionManualRelayAvailability({
+    ...baseState,
+    hasLocalPairingPayload: true,
+    counterpartProfile: "bob",
+  });
+  assert.deepEqual(
+    {
+      store: productionManualRelayCurrentActions(aliceToBobPairing).storePairingPayload,
+      relay: productionManualRelayCurrentActions(aliceToBobPairing).relayPairingPayload,
+    },
+    { store: false, relay: true },
+  );
+
+  const unsupportedPairing = productionManualRelayAvailability({
+    ...baseState,
+    hasLocalPairingPayload: true,
+    counterpartProfile: null,
+  });
+  assert.deepEqual(
+    {
+      store: productionManualRelayCurrentActions(unsupportedPairing).storePairingPayload,
+      relay: productionManualRelayCurrentActions(unsupportedPairing).relayPairingPayload,
+    },
+    { store: true, relay: false },
+  );
+
+  const bobReply = productionManualRelayAvailability({
+    ...baseState,
+    hasHandshakeReplyPayload: true,
+    counterpartProfile: "alice",
+  });
+  assert.deepEqual(
+    {
+      store: productionManualRelayCurrentActions(bobReply).storeHandshakeReply,
+      relay: productionManualRelayCurrentActions(bobReply).relayHandshakeReply,
+    },
+    { store: false, relay: true },
+  );
+
+  const pendingImport = productionManualRelayAvailability({
+    ...baseState,
+    hasRemoteMessageEnvelopeSlot: true,
+  });
+  assert.equal(
+    productionManualRelayCurrentActions(pendingImport, {
+      selectedNeedsPeerImport: true,
+      hasInboundEnvelopeInput: false,
+    }).loadMessageEnvelope,
+    true,
+  );
+  assert.equal(
+    productionManualRelayCurrentActions(pendingImport, {
+      selectedNeedsPeerImport: true,
+      hasInboundEnvelopeInput: true,
+    }).loadMessageEnvelope,
+    false,
   );
 });
 
