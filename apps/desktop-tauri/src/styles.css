@@ -464,8 +464,15 @@ textarea[readonly] {
   gap: 10px;
 }
 
+.manual-current-action span {
+  min-width: 0;
+}
+
 .manual-current-action .flow-control {
   flex: 0 0 auto;
+  inline-size: auto;
+  min-inline-size: 64px;
+  padding-inline: 10px;
 }
 
 .simulation-panel,
