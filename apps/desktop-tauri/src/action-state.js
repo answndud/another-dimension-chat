@@ -123,6 +123,14 @@ export function productionManualNextActions(state) {
     hasHandshakeReplyInput,
     hasHandshakeFinishInput,
     hasFinishImportInput,
+    hasLocalPairingPayload,
+    hasRemotePairingSlot,
+    hasHandshakeInitPayload,
+    hasRemoteHandshakeInitSlot,
+    hasHandshakeReplyPayload,
+    hasRemoteHandshakeReplySlot,
+    hasHandshakeFinishPayload,
+    hasRemoteHandshakeFinishSlot,
     sessionReadyForMessages,
     hasOutboundMessageInput,
     hasInboundEnvelopeInput,
@@ -146,21 +154,45 @@ export function productionManualNextActions(state) {
     ? "Next: unlock profile."
     : "Next: enter profile and passphrase.";
 
-  let pairing = "Next: unlock profile, then export pairing.";
+  let pairing = hasProfileUnlockInput ? "Next: click Unlock profile." : "Next: enter profile and passphrase.";
   if (hasPairingInput) {
-    pairing = "Next: export pairing.";
+    pairing = "Next: click Export pairing.";
+  }
+  if (hasLocalPairingPayload) {
+    pairing = "Next: click Store pairing.";
+  }
+  if (hasRemotePairingSlot) {
+    pairing = "Next: click Fill remote pairing.";
   }
   if (hasSessionDraftInput) {
-    pairing = "Next: save draft.";
+    pairing = "Next: click Save draft.";
+  }
+  if (hasHandshakeInitPayload) {
+    pairing = "Next: click Store init.";
+  }
+  if (hasRemoteHandshakeInitSlot) {
+    pairing = "Next: click Fill remote init.";
   }
   if (hasHandshakeReplyInput) {
-    pairing = "Next: export reply.";
+    pairing = "Next: click Export reply.";
+  }
+  if (hasHandshakeReplyPayload) {
+    pairing = "Next: click Store reply.";
+  }
+  if (hasRemoteHandshakeReplySlot) {
+    pairing = "Next: click Fill remote reply.";
   }
   if (hasHandshakeFinishInput) {
-    pairing = "Next: export finish.";
+    pairing = "Next: click Export finish.";
+  }
+  if (hasHandshakeFinishPayload) {
+    pairing = "Next: click Store finish.";
+  }
+  if (hasRemoteHandshakeFinishSlot) {
+    pairing = "Next: click Fill remote finish.";
   }
   if (hasFinishImportInput) {
-    pairing = "Next: import finish, then check session.";
+    pairing = "Next: click Import finish.";
   }
 
   const active = activeProfile ? String(activeProfile).trim().toLowerCase() : "";
