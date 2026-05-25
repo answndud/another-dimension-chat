@@ -3977,8 +3977,17 @@ async function importProductionHandshakeFinish() {
       finishPayload,
     });
     const view = productionHandshakeFinishImportView(result);
+    const clearedFinishInput =
+      Boolean(finishPayload) &&
+      fields.productionRemoteHandshakeFinishPayload?.value.trim() === finishPayload;
+    if (clearedFinishInput) {
+      fields.productionRemoteHandshakeFinishPayload.value = "";
+    }
     setProductionPairingState("Handshake finish imported");
-    setText(fields.productionPairingWarning, result.warning);
+    setText(
+      fields.productionPairingWarning,
+      `${result.warning}${clearedFinishInput ? " Cleared imported remote finish input." : ""}`,
+    );
     setText(fields.productionHandshakeState, view.state);
     setText(fields.productionPairingBoundary, view.boundary);
     await checkProductionSessionState();
