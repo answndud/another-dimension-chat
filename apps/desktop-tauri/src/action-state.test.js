@@ -369,6 +369,41 @@ test("productionActionAvailability routes two-profile send by stored session rea
   );
 });
 
+test("productionActionAvailability blocks message actions until retention policy is ready", () => {
+  assert.deepEqual(
+    {
+      exportMessageEnvelope: productionActionAvailability({
+        ...baseState,
+        hasMessageRetentionPolicy: false,
+        hasOutboundMessageInput: true,
+      }).exportMessageEnvelope,
+      importMessageEnvelope: productionActionAvailability({
+        ...baseState,
+        hasMessageRetentionPolicy: false,
+        hasInboundEnvelopeInput: true,
+      }).importMessageEnvelope,
+      setup: productionActionAvailability({
+        ...baseState,
+        hasMessageRetentionPolicy: false,
+        hasTwoProfileInput: true,
+        hasTwoProfileSessionsReady: false,
+      }).runTwoProfileRoundtrip,
+      storedSend: productionActionAvailability({
+        ...baseState,
+        hasMessageRetentionPolicy: false,
+        hasTwoProfileInput: true,
+        hasTwoProfileSessionsReady: true,
+      }).runTwoProfileMessageRoundtrip,
+    },
+    {
+      exportMessageEnvelope: false,
+      importMessageEnvelope: false,
+      setup: false,
+      storedSend: false,
+    },
+  );
+});
+
 test("productionManualNextActions follows pairing and message readiness", () => {
   assert.deepEqual(productionManualNextActions(baseState), {
     profile: "Next: enter profile and passphrase.",

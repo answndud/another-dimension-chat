@@ -241,6 +241,8 @@ const productionPayloadSlots = {
 };
 
 const productionMessageRetentionPolicy = {
+  status: "loading",
+  error: null,
   defaultTtlSeconds: null,
   allowedTtlSeconds: [],
 };
@@ -317,6 +319,24 @@ function setActionButtonState(node, disabled, reason, current = false) {
   node.disabled = disabled;
   node.title = disabled ? reason : "";
   node.classList.toggle("is-current-action", !disabled && current);
+}
+
+function messageRetentionPolicyReady() {
+  return (
+    productionMessageRetentionPolicy.status === "loaded" &&
+    Number.isFinite(productionMessageRetentionPolicy.defaultTtlSeconds) &&
+    productionMessageRetentionPolicy.allowedTtlSeconds.length > 0
+  );
+}
+
+function messageRetentionPolicyBlocker() {
+  if (messageRetentionPolicyReady()) {
+    return "";
+  }
+  if (productionMessageRetentionPolicy.status === "failed") {
+    return `Message retention policy unavailable: ${productionMessageRetentionPolicy.error ?? "load failed"}`;
+  }
+  return "Message retention policy loading; message actions are disabled.";
 }
 
 function setOpenManualProductionToolsLabel(label = "Open manual tools") {
@@ -985,7 +1005,7 @@ function messageTtlOptionsFromControls() {
 }
 
 function defaultMessageTtlSeconds() {
-  if (productionMessageRetentionPolicy.defaultTtlSeconds) {
+  if (messageRetentionPolicyReady()) {
     return productionMessageRetentionPolicy.defaultTtlSeconds;
   }
   const selected = Number.parseInt(fields.productionMessageTtl?.value ?? "", 10);
@@ -1020,7 +1040,17 @@ function renderMessageTtlControlOptions() {
   const allowed = allowedMessageTtlSeconds();
   const fallback = defaultMessageTtlSeconds();
   for (const control of [fields.productionMessageTtl, fields.productionTwoProfileMessageTtl]) {
-    if (!control || allowed.length === 0) {
+    if (!control) {
+      continue;
+    }
+    if (allowed.length === 0) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent =
+        productionMessageRetentionPolicy.status === "failed"
+          ? "Retention policy unavailable"
+          : "Loading retention policy";
+      control.replaceChildren(option);
       continue;
     }
     const selected = selectedMessageTtlSeconds(control, fallback);
@@ -1037,16 +1067,34 @@ function renderMessageTtlControlOptions() {
 }
 
 async function loadProductionMessageRetentionPolicy() {
+  productionMessageRetentionPolicy.status = "loading";
+  productionMessageRetentionPolicy.error = null;
+  renderMessageTtlControlOptions();
+  applyProductionActionState();
   try {
     const policy = await invoke("production_message_retention_policy");
-    productionMessageRetentionPolicy.defaultTtlSeconds = policy.default_ttl_seconds;
-    productionMessageRetentionPolicy.allowedTtlSeconds = Array.isArray(policy.allowed_ttl_seconds)
-      ? policy.allowed_ttl_seconds.filter((ttlSeconds) => Number.isFinite(ttlSeconds))
+    const defaultTtlSeconds = Number.parseInt(policy.default_ttl_seconds, 10);
+    const allowedTtlSeconds = Array.isArray(policy.allowed_ttl_seconds)
+      ? policy.allowed_ttl_seconds
+          .map((ttlSeconds) => Number.parseInt(ttlSeconds, 10))
+          .filter((ttlSeconds) => Number.isFinite(ttlSeconds) && ttlSeconds > 0)
       : [];
+    if (!Number.isFinite(defaultTtlSeconds) || !allowedTtlSeconds.includes(defaultTtlSeconds)) {
+      throw new Error("retention policy did not include a valid default TTL");
+    }
+    productionMessageRetentionPolicy.status = "loaded";
+    productionMessageRetentionPolicy.error = null;
+    productionMessageRetentionPolicy.defaultTtlSeconds = defaultTtlSeconds;
+    productionMessageRetentionPolicy.allowedTtlSeconds = allowedTtlSeconds;
     renderMessageTtlControlOptions();
-  } catch (_error) {
+  } catch (error) {
+    productionMessageRetentionPolicy.status = "failed";
+    productionMessageRetentionPolicy.error = String(error);
+    productionMessageRetentionPolicy.defaultTtlSeconds = null;
+    productionMessageRetentionPolicy.allowedTtlSeconds = [];
     renderMessageTtlControlOptions();
   }
+  applyProductionActionState();
 }
 
 function setMessageTtlControls(ttlSeconds) {
@@ -1262,10 +1310,13 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
   );
 }
 
-function twoProfilePrimaryReadiness(input, busy, sessionsReady) {
+function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetentionPolicy = true) {
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   if (busy) {
     return { message: "Running: production action in progress", state: "blocked" };
+  }
+  if (!hasMessageRetentionPolicy) {
+    return { message: messageRetentionPolicyBlocker(), state: "blocked" };
   }
   if (!input.profileA) {
     return { message: "Blocked: Profile A required", state: "blocked" };
@@ -1842,8 +1893,11 @@ function applyProductionActionState() {
       twoProfile.profileA !== twoProfile.profileB &&
       twoProfile.passphrase,
   );
+  const hasMessageRetentionPolicy = messageRetentionPolicyReady();
+  const retentionPolicyBlocker = messageRetentionPolicyBlocker();
   const state = {
     busy,
+    hasMessageRetentionPolicy,
     hasProfileUnlockInput,
     hasPairingInput,
     hasSessionDraftInput,
@@ -1906,10 +1960,21 @@ function applyProductionActionState() {
   if (fields.productionMessageNumber) {
     fields.productionMessageNumber.disabled = message.autoMessageNumber;
   }
+  setDisabled(fields.productionMessageTtl, !hasMessageRetentionPolicy || busy);
+  setDisabled(fields.productionTwoProfileMessageTtl, !hasMessageRetentionPolicy || busy);
+  if (!hasMessageRetentionPolicy) {
+    setText(fields.productionMessageWarning, retentionPolicyBlocker);
+    setText(fields.productionTwoProfileWarning, retentionPolicyBlocker);
+  }
   setTwoProfileComposeLocked(twoProfileComposeLocked);
   renderProductionTwoProfileDirection(twoProfile);
   renderProductionTwoProfileFlow(twoProfile);
-  const twoProfileReadiness = twoProfilePrimaryReadiness(twoProfile, busy, twoProfileSessionsReady);
+  const twoProfileReadiness = twoProfilePrimaryReadiness(
+    twoProfile,
+    busy,
+    twoProfileSessionsReady,
+    hasMessageRetentionPolicy,
+  );
   setProductionTwoProfileReadiness(twoProfileReadiness.message, twoProfileReadiness.state);
   renderProductionTwoProfileMemory(twoProfile);
   renderManualNextActions(state);
@@ -1972,13 +2037,21 @@ function applyProductionActionState() {
   setActionButtonState(
     fields.exportProductionMessageEnvelope,
     !availability.exportMessageEnvelope,
-    busy ? "Wait for the active production action." : "Complete session state, then enter message number and message.",
+    busy
+      ? "Wait for the active production action."
+      : !hasMessageRetentionPolicy
+        ? retentionPolicyBlocker
+        : "Complete session state, then enter message number and message.",
     selectedNeedsSenderExport || (!selectedConversation && availability.exportMessageEnvelope),
   );
   setActionButtonState(
     fields.importProductionMessageEnvelope,
     !availability.importMessageEnvelope,
-    busy ? "Wait for the active production action." : "Complete session state, then load or paste a remote envelope.",
+    busy
+      ? "Wait for the active production action."
+      : !hasMessageRetentionPolicy
+        ? retentionPolicyBlocker
+        : "Complete session state, then load or paste a remote envelope.",
     hasInboundEnvelopeInput && !hasImportedMessage && (!selectedConversation || selectedNeedsPeerImport),
   );
   setActionButtonState(
@@ -2042,6 +2115,8 @@ function applyProductionActionState() {
     !availability.runTwoProfileRoundtrip,
     busy
       ? "Wait for the active production action."
+      : !hasMessageRetentionPolicy
+        ? retentionPolicyBlocker
       : twoProfileNeedsSessionCheck
         ? "Check recovered sessions before running full setup."
       : twoProfileSessionsReady
@@ -2056,6 +2131,8 @@ function applyProductionActionState() {
     !availability.runTwoProfileMessageRoundtrip,
     busy
       ? "Wait for the active production action."
+      : !hasMessageRetentionPolicy
+        ? retentionPolicyBlocker
       : selectedDeliveredReplyDraftReady
         ? `Send reply to selected message #${selectedConversation.messageNumber}.`
       : hasTwoProfileInput
@@ -2745,6 +2822,12 @@ async function runLocalLoop() {
 
 async function runProductionTwoProfileRoundtrip() {
   const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
+  if (!messageRetentionPolicyReady()) {
+    setProductionTwoProfileState("Two-profile roundtrip blocked");
+    setText(fields.productionTwoProfileWarning, messageRetentionPolicyBlocker());
+    applyProductionActionState();
+    return;
+  }
   if (!profileA || !profileB || profileA === profileB || !passphrase || !message) {
     setProductionTwoProfileState("Two-profile roundtrip needs input");
     setText(
@@ -2809,6 +2892,12 @@ async function runProductionTwoProfileRoundtrip() {
 
 async function runProductionTwoProfileMessageRoundtrip() {
   const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
+  if (!messageRetentionPolicyReady()) {
+    setProductionTwoProfileState("Stored-session message blocked");
+    setText(fields.productionTwoProfileWarning, messageRetentionPolicyBlocker());
+    applyProductionActionState();
+    return;
+  }
   if (!profileA || !profileB || profileA === profileB || !passphrase || !message) {
     setProductionTwoProfileState("Stored-session message needs input");
     setText(
@@ -2899,6 +2988,7 @@ async function runTwoProfilePrimaryActionFromCompose() {
     input,
     productionBusyAction !== null,
     twoProfileSessionsReadyForInput(input),
+    messageRetentionPolicyReady(),
   );
   setText(fields.productionTwoProfileWarning, readiness.message);
 }
@@ -3670,6 +3760,12 @@ async function importProductionHandshakeFinish() {
 async function exportProductionMessageEnvelope() {
   const { profile, passphrase, autoMessageNumber, messageNumber, message, messageTtlSeconds } =
     productionMessageInput();
+  if (!messageRetentionPolicyReady()) {
+    setProductionMessageState("Message export blocked");
+    setText(fields.productionMessageWarning, messageRetentionPolicyBlocker());
+    applyProductionActionState();
+    return;
+  }
   if (
     !profile ||
     !passphrase ||
@@ -3737,6 +3833,12 @@ async function exportProductionMessageEnvelope() {
 
 async function importProductionMessageEnvelope() {
   const { profile, passphrase, messageNumber, envelopePayload, messageTtlSeconds } = productionMessageInput();
+  if (!messageRetentionPolicyReady()) {
+    setProductionMessageState("Message import blocked");
+    setText(fields.productionMessageWarning, messageRetentionPolicyBlocker());
+    applyProductionActionState();
+    return;
+  }
   if (
     !profile ||
     !passphrase ||

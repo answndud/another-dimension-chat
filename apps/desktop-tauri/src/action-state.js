@@ -225,6 +225,7 @@ export function productionActionAvailability(state) {
     hasReceivedExportInput,
     hasTwoProfileInput,
     hasTwoProfileSessionsReady,
+    hasMessageRetentionPolicy = true,
   } = state;
 
   return {
@@ -236,11 +237,13 @@ export function productionActionAvailability(state) {
     exportHandshakeReply: !busy && hasHandshakeReplyInput,
     exportHandshakeFinish: !busy && hasHandshakeFinishInput,
     importHandshakeFinish: !busy && hasFinishImportInput,
-    exportMessageEnvelope: !busy && hasOutboundMessageInput,
-    importMessageEnvelope: !busy && hasInboundEnvelopeInput,
+    exportMessageEnvelope: !busy && hasMessageRetentionPolicy && hasOutboundMessageInput,
+    importMessageEnvelope: !busy && hasMessageRetentionPolicy && hasInboundEnvelopeInput,
     exportReceivedMessage: !busy && hasReceivedExportInput,
-    runTwoProfileRoundtrip: !busy && hasTwoProfileInput && !hasTwoProfileSessionsReady,
-    runTwoProfileMessageRoundtrip: !busy && hasTwoProfileInput && hasTwoProfileSessionsReady,
+    runTwoProfileRoundtrip:
+      !busy && hasMessageRetentionPolicy && hasTwoProfileInput && !hasTwoProfileSessionsReady,
+    runTwoProfileMessageRoundtrip:
+      !busy && hasMessageRetentionPolicy && hasTwoProfileInput && hasTwoProfileSessionsReady,
     usePairingPayload: !busy && hasLocalPairingPayload,
     useHandshakeInit: !busy && hasHandshakeInitPayload,
     useHandshakeReply: !busy && hasHandshakeReplyPayload,
