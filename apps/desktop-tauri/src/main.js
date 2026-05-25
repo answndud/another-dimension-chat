@@ -3554,12 +3554,23 @@ async function refreshTwoProfileConversationAfterManualImport(profile, passphras
   return true;
 }
 
-function syncTwoProfileConversationAfterManualExport(profile, messageNumber, message, messageTtlSeconds) {
+function syncTwoProfileConversationAfterManualExport(
+  profile,
+  messageNumber,
+  message,
+  messageTtlSeconds,
+  envelopePayload,
+) {
   const exportedProfile = String(profile ?? "").trim().toLowerCase();
   const selectedEntry = selectedTwoProfileConversationEntry();
   const selectedNumber = Number.parseInt(selectedEntry?.messageNumber, 10);
   const exportedNumber = Number.parseInt(messageNumber, 10);
   const text = String(message ?? "").trim();
+  const envelope = String(envelopePayload ?? "").trim();
+  if (exportedProfile && envelope) {
+    productionPayloadSlots.messageEnvelope.set(exportedProfile, envelope);
+    renderProductionTwoProfileConversationList();
+  }
   if (
     !selectedEntry ||
     !exportedProfile ||
@@ -3584,7 +3595,7 @@ function syncTwoProfileConversationAfterManualExport(profile, messageNumber, mes
   if (!selectReplyAfterDeliveredReview(refreshedEntry)) {
     setText(
       fields.productionTwoProfileWarning,
-      `Manual export for ${exportedProfile} completed; selected conversation row was updated.`,
+      `Manual export for ${exportedProfile} completed; sender envelope slot is stored for explicit peer import.`,
     );
     applyProductionActionState();
   }
@@ -3858,6 +3869,7 @@ async function exportProductionMessageEnvelope() {
       result.selected_message_number,
       message,
       result.message_ttl_seconds,
+      result.envelope_payload,
     );
     applyProductionActionState();
     setText(fields.productionMessageOutbound, view.outbound);
