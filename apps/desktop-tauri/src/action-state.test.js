@@ -10,6 +10,7 @@ import {
   productionManualRelayCurrentActions,
   productionManualRelayDisabledReasons,
   productionManualRelayAvailability,
+  productionManualRelaySuccessWarning,
   productionManualMessageStatusView,
   productionManualStatusView,
   productionMessageEnvelopeExportView,
@@ -754,6 +755,14 @@ test("productionManualRelayCurrentActions prefer one relay action for the manual
       hasInboundEnvelopeInput: true,
     }).loadMessageEnvelope,
     false,
+  );
+});
+
+test("productionManualRelaySuccessWarning explains cleared output and retained slot", () => {
+  assert.equal(
+    productionManualRelaySuccessWarning("alice", "bob", "Pairing payload"),
+    "Stored alice pairing payload slot, selected bob, and loaded pairing payload into the remote field. " +
+      "The local output field was cleared; the stored relay slot remains available.",
   );
 });
 
