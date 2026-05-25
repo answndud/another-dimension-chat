@@ -867,6 +867,22 @@ function selectedTwoProfileConversationEntry() {
     : null;
 }
 
+function selectedTwoProfileDeliveredReplyTarget(input = productionTwoProfileInput()) {
+  const entry = selectedTwoProfileConversationEntry();
+  if (
+    !entry ||
+    !entry.statuses.has("sent") ||
+    !entry.statuses.has("received") ||
+    !input.profileA ||
+    !input.profileB ||
+    input.profileA !== entry.receiver ||
+    input.profileB !== entry.sender
+  ) {
+    return null;
+  }
+  return entry;
+}
+
 function setSelectedTwoProfileConversationEntry(entry, options = {}) {
   if (!entry) {
     selectedTwoProfileConversationKey = null;
@@ -1196,6 +1212,7 @@ function twoProfileComposePrompt(input = productionTwoProfileInput()) {
   if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
     return "Write a stored-session message";
   }
+  const selectedReplyTarget = selectedTwoProfileDeliveredReplyTarget(input);
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   const sessionsReady = twoProfileSessionsReadyForInput(input);
   const hasRecoveredConversation = Boolean(latestTwoProfileConversationEntry());
@@ -1204,6 +1221,9 @@ function twoProfileComposePrompt(input = productionTwoProfileInput()) {
   }
   if (!sessionsReady && sessionStatus) {
     return "Write setup message to rebuild sessions";
+  }
+  if (selectedReplyTarget) {
+    return `Reply to message #${selectedReplyTarget.messageNumber} from ${input.profileA} to ${input.profileB}`;
   }
   if (latestTwoProfileSuccessMatchesOppositeDirection(input)) {
     return `Reply from ${input.profileA} to ${input.profileB}`;
@@ -1274,6 +1294,7 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
   const lastSuccess = latestProductionTwoProfileSuccess;
   const lastSuccessDirection = latestTwoProfileSuccessMatchesDirection(input);
   const lastSuccessOppositeDirection = latestTwoProfileSuccessMatchesOppositeDirection(input);
+  const selectedReplyTarget = selectedTwoProfileDeliveredReplyTarget(input);
   const sessionsReady = twoProfileSessionsReadyForInput(input);
 
   if (!profilesReady) {
@@ -1336,15 +1357,19 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
       : sendComplete
         ? `Sent ${lastSuccess.messageLength} chars; compose buffer cleared.`
         : sendReady
-          ? "Run stored-session message."
+          ? selectedReplyTarget
+            ? `Send reply to message #${selectedReplyTarget.messageNumber}.`
+            : "Run stored-session message."
           : "Waiting for ready session and draft.",
   );
 
   setTwoProfileFlowStep(
     fields.productionTwoProfileStepReply,
     fields.productionTwoProfileStepReplyDetail,
-    lastSuccessOppositeDirection ? "running" : lastSuccess ? "complete" : "pending",
-    lastSuccessOppositeDirection
+    selectedReplyTarget || lastSuccessOppositeDirection ? "running" : lastSuccess ? "complete" : "pending",
+    selectedReplyTarget
+      ? `Reply target selected: message #${selectedReplyTarget.messageNumber} ${input.profileA} -> ${input.profileB}.`
+      : lastSuccessOppositeDirection
       ? `Reply direction selected: ${input.profileA} -> ${input.profileB}.`
       : lastSuccess
         ? "Swap direction to reply."
@@ -1376,9 +1401,12 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
     return { message: messageTtlInputBlocker(), state: "blocked" };
   }
   if (!input.message) {
+    const selectedReplyTarget = selectedTwoProfileDeliveredReplyTarget(input);
     return {
       message: sessionsReady
-        ? "Ready: stored session recovered; write a message"
+        ? selectedReplyTarget
+          ? `Ready: write reply to message #${selectedReplyTarget.messageNumber}`
+          : "Ready: stored session recovered; write a message"
         : sessionStatus
           ? "Ready: write setup message to rebuild sessions"
           : "Ready: write first message, then run full setup",
@@ -1408,11 +1436,14 @@ function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
     ? `${currentDirection} | retention=${twoProfileRetentionLabel({ ttlSeconds: input.messageTtlSeconds }).replace("retention: ", "")} | draft_chars=${input.message.length}`
     : `${currentDirection} | no draft`;
   const latestConversation = latestTwoProfileConversationEntry();
+  const selectedReplyTarget = selectedTwoProfileDeliveredReplyTarget(input);
 
   if (!latestProductionTwoProfileSuccess) {
     setText(
       fields.productionTwoProfileCurrentInput,
-      latestConversation
+      selectedReplyTarget
+        ? `Replying to selected #${selectedReplyTarget.messageNumber}: ${currentLabel}`
+        : latestConversation
         ? `Compose: ${currentLabel}; last message ${latestConversation.sender} -> ${latestConversation.receiver} #${latestConversation.messageNumber}`
         : "No successful run yet",
     );
@@ -1429,7 +1460,9 @@ function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
   );
   setText(
     fields.productionTwoProfileCurrentInput,
-    latestConversation
+    selectedReplyTarget
+      ? `Replying to selected #${selectedReplyTarget.messageNumber}: ${currentLabel}`
+      : latestConversation
       ? `${repliesToTail ? "Replying to latest" : "Direction differs from latest"}: ${currentLabel}; latest ${latestConversation.sender} -> ${latestConversation.receiver} #${latestConversation.messageNumber}`
       : `${matchesLastSuccess ? "Matches last success" : "Differs from last success"}: ${currentLabel}`,
   );
