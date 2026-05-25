@@ -11,6 +11,7 @@ import {
   productionManualStatusView,
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
+  productionMessageTtlInputValue,
   productionPairingPayloadView,
   productionProfileMessageReadiness,
   productionProfilePreset,
@@ -337,6 +338,12 @@ function messageRetentionPolicyBlocker() {
     return `Message retention policy unavailable: ${productionMessageRetentionPolicy.error ?? "load failed"}`;
   }
   return "Message retention policy loading; message actions are disabled.";
+}
+
+function messageTtlInputBlocker() {
+  return messageRetentionPolicyReady()
+    ? "Select a supported message retention value before continuing."
+    : messageRetentionPolicyBlocker();
 }
 
 function setOpenManualProductionToolsLabel(label = "Open manual tools") {
@@ -1027,6 +1034,14 @@ function selectedMessageTtlSeconds(node, fallback = defaultMessageTtlSeconds()) 
   return allowed.includes(value) ? value : fallback;
 }
 
+function messageTtlInputValue(node) {
+  return productionMessageTtlInputValue(
+    node?.value,
+    productionMessageRetentionPolicy.allowedTtlSeconds,
+    productionMessageRetentionPolicy.defaultTtlSeconds,
+  );
+}
+
 function retentionOptionLabel(ttlSeconds) {
   const days = ttlSeconds / 86400;
   if (Number.isInteger(days) && days >= 1) {
@@ -1133,10 +1148,18 @@ async function saveProductionMessageRetentionPreference(profile, passphrase, ttl
   if (!normalizedProfile || !passphrase) {
     return null;
   }
+  const messageTtlSeconds = productionMessageTtlInputValue(
+    ttlSeconds,
+    productionMessageRetentionPolicy.allowedTtlSeconds,
+    productionMessageRetentionPolicy.defaultTtlSeconds,
+  );
+  if (!messageTtlSeconds) {
+    throw new Error(messageTtlInputBlocker());
+  }
   return invoke("production_message_retention_preference_set", {
     profile: normalizedProfile,
     passphrase,
-    messageTtlSeconds: selectedMessageTtlSeconds({ value: ttlSeconds }),
+    messageTtlSeconds,
   });
 }
 
@@ -1329,6 +1352,9 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
   }
   if (!input.passphrase) {
     return { message: "Blocked: passphrase required", state: "blocked" };
+  }
+  if (!input.messageTtlSeconds) {
+    return { message: messageTtlInputBlocker(), state: "blocked" };
   }
   if (!input.message) {
     return {
@@ -1885,6 +1911,7 @@ function applyProductionActionState() {
       twoProfile.profileB &&
       twoProfile.profileA !== twoProfile.profileB &&
       twoProfile.passphrase &&
+      twoProfile.messageTtlSeconds &&
       twoProfile.message,
   );
   const hasTwoProfileSessionStatusInput = Boolean(
@@ -2443,7 +2470,7 @@ function productionTwoProfileInput() {
     profileB: (fields.productionTwoProfileB?.value ?? "").trim(),
     passphrase:
       fields.productionTwoProfilePassphrase?.value || fields.productionProfilePassphrase?.value || "",
-    messageTtlSeconds: selectedMessageTtlSeconds(fields.productionTwoProfileMessageTtl),
+    messageTtlSeconds: messageTtlInputValue(fields.productionTwoProfileMessageTtl),
     message: (fields.productionTwoProfileMessage?.value ?? "").trim(),
   };
 }
@@ -2558,7 +2585,7 @@ function productionMessageInput() {
     ...productionProfileInput(),
     autoMessageNumber: productionMessageUsesAutoNumber(),
     messageNumber: Number.parseInt(fields.productionMessageNumber?.value ?? "1", 10),
-    messageTtlSeconds: selectedMessageTtlSeconds(fields.productionMessageTtl),
+    messageTtlSeconds: messageTtlInputValue(fields.productionMessageTtl),
     message: (fields.productionMessageBody?.value ?? "").trim(),
     envelopePayload: (fields.productionRemoteMessageEnvelope?.value ?? "").trim(),
   };
@@ -2828,6 +2855,12 @@ async function runProductionTwoProfileRoundtrip() {
     applyProductionActionState();
     return;
   }
+  if (!messageTtlSeconds) {
+    setProductionTwoProfileState("Two-profile roundtrip blocked");
+    setText(fields.productionTwoProfileWarning, messageTtlInputBlocker());
+    applyProductionActionState();
+    return;
+  }
   if (!profileA || !profileB || profileA === profileB || !passphrase || !message) {
     setProductionTwoProfileState("Two-profile roundtrip needs input");
     setText(
@@ -2895,6 +2928,12 @@ async function runProductionTwoProfileMessageRoundtrip() {
   if (!messageRetentionPolicyReady()) {
     setProductionTwoProfileState("Stored-session message blocked");
     setText(fields.productionTwoProfileWarning, messageRetentionPolicyBlocker());
+    applyProductionActionState();
+    return;
+  }
+  if (!messageTtlSeconds) {
+    setProductionTwoProfileState("Stored-session message blocked");
+    setText(fields.productionTwoProfileWarning, messageTtlInputBlocker());
     applyProductionActionState();
     return;
   }
@@ -3766,6 +3805,12 @@ async function exportProductionMessageEnvelope() {
     applyProductionActionState();
     return;
   }
+  if (!messageTtlSeconds) {
+    setProductionMessageState("Message export blocked");
+    setText(fields.productionMessageWarning, messageTtlInputBlocker());
+    applyProductionActionState();
+    return;
+  }
   if (
     !profile ||
     !passphrase ||
@@ -3836,6 +3881,12 @@ async function importProductionMessageEnvelope() {
   if (!messageRetentionPolicyReady()) {
     setProductionMessageState("Message import blocked");
     setText(fields.productionMessageWarning, messageRetentionPolicyBlocker());
+    applyProductionActionState();
+    return;
+  }
+  if (!messageTtlSeconds) {
+    setProductionMessageState("Message import blocked");
+    setText(fields.productionMessageWarning, messageTtlInputBlocker());
     applyProductionActionState();
     return;
   }

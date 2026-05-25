@@ -42,6 +42,25 @@ export function productionCounterpartProfile(profile) {
   return null;
 }
 
+export function productionMessageTtlInputValue(value, allowedTtlSeconds, fallbackTtlSeconds) {
+  const allowed = Array.isArray(allowedTtlSeconds)
+    ? allowedTtlSeconds.filter((ttlSeconds) => Number.isFinite(ttlSeconds) && ttlSeconds > 0)
+    : [];
+  if (allowed.length === 0) {
+    return null;
+  }
+  const fallback = Number.parseInt(fallbackTtlSeconds, 10);
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue) {
+    return Number.isFinite(fallback) && allowed.includes(fallback) ? fallback : null;
+  }
+  const selected = Number.parseInt(rawValue, 10);
+  if (Number.isFinite(selected) && allowed.includes(selected)) {
+    return selected;
+  }
+  return null;
+}
+
 export function productionTwoProfileConversationActionView(entry, senderEnvelopeSlotPresent = false) {
   if (!entry) {
     return {
