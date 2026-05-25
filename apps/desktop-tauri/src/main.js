@@ -1541,6 +1541,18 @@ function clearImportedMessageEnvelopeSlot(profile, envelopePayload) {
   return true;
 }
 
+function clearImportedRemoteMessageEnvelopeInput(envelopePayload) {
+  const importedEnvelope = String(envelopePayload ?? "").trim();
+  if (
+    importedEnvelope &&
+    fields.productionRemoteMessageEnvelope?.value.trim() === importedEnvelope
+  ) {
+    fields.productionRemoteMessageEnvelope.value = "";
+    return true;
+  }
+  return false;
+}
+
 function selectProductionProfileForManualRelay(profile) {
   const preset = productionProfilePreset(profile);
   if (!preset || !fields.productionProfileName) {
@@ -3953,12 +3965,13 @@ async function importProductionMessageEnvelope() {
     const view = productionMessageEnvelopeImportView(result);
     latestProductionMessageImport = productionMessageImportFingerprint({ profile, messageNumber });
     const clearedEnvelopeSlot = clearImportedMessageEnvelopeSlot(profile, envelopePayload);
+    const clearedEnvelopeInput = clearImportedRemoteMessageEnvelopeInput(envelopePayload);
     setProductionMessageState("Message envelope imported");
     setText(
       fields.productionMessageWarning,
-      clearedEnvelopeSlot
-        ? `${result.warning} Consumed matching stored sender envelope slot.`
-        : result.warning,
+      `${result.warning}${
+        clearedEnvelopeSlot ? " Consumed matching stored sender envelope slot." : ""
+      }${clearedEnvelopeInput ? " Cleared imported remote envelope input." : ""}`,
     );
     setText(fields.productionMessageOutbound, "Not exported in this profile");
     setText(fields.productionMessageInbound, view.inbound);
