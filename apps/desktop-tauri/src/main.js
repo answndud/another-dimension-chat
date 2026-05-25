@@ -1935,6 +1935,7 @@ function applyProductionActionState() {
   const hasHandshakeFinishInput = Boolean(hasProfileUnlockInput && pairing.replyPayload);
   const hasFinishImportInput = Boolean(hasProfileUnlockInput && pairing.finishPayload);
   const hasLocalPairingPayload = Boolean(fields.productionPairingPayload?.value.trim());
+  const hasRemotePairingInput = Boolean(pairing.remotePayload);
   const counterpartProfile = productionCounterpartProfile(activeProductionProfileName());
   const hasRemotePairingSlot = Boolean(
     counterpartProfile && productionPayloadSlots.pairing.has(counterpartProfile),
@@ -2000,6 +2001,7 @@ function applyProductionActionState() {
     hasFinishImportInput,
     hasLocalPairingPayload,
     hasRemotePairingSlot,
+    hasRemotePairingInput,
     hasHandshakeInitPayload,
     hasRemoteHandshakeInitSlot,
     hasHandshakeReplyPayload,
@@ -2047,6 +2049,7 @@ function applyProductionActionState() {
   );
   const manualCurrentActions = productionManualRelayCurrentActions(manualAvailability, {
     hasInboundEnvelopeInput,
+    hasRemotePairingInput,
     selectedNeedsPeerImport,
   });
   const selectedConversationDelivered = Boolean(

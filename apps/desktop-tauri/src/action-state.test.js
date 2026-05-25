@@ -457,6 +457,16 @@ test("productionManualNextActions follows pairing and message readiness", () => 
     "Next: click Fill remote pairing.",
   );
   assert.equal(
+    productionManualNextActions({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasPairingInput: true,
+      hasRemotePairingSlot: true,
+      hasRemotePairingInput: true,
+    }).pairing,
+    "Next: click Export pairing.",
+  );
+  assert.equal(
     productionManualNextActions({ ...baseState, hasProfileUnlockInput: true, hasSessionDraftInput: true }).pairing,
     "Next: click Save draft.",
   );
@@ -742,6 +752,18 @@ test("productionManualRelayCurrentActions prefer one relay action for the manual
     ...baseState,
     hasRemoteMessageEnvelopeSlot: true,
   });
+  const loadedPairing = productionManualRelayAvailability({
+    ...baseState,
+    hasRemotePairingSlot: true,
+  });
+  assert.equal(
+    productionManualRelayCurrentActions(loadedPairing, { hasRemotePairingInput: false }).loadPairingPayload,
+    true,
+  );
+  assert.equal(
+    productionManualRelayCurrentActions(loadedPairing, { hasRemotePairingInput: true }).loadPairingPayload,
+    false,
+  );
   assert.equal(
     productionManualRelayCurrentActions(pendingImport, {
       selectedNeedsPeerImport: true,
