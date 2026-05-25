@@ -1714,7 +1714,10 @@ function selectTwoProfileConversationEntryForReview(entry, options = {}) {
     `Pending message #${entry.messageNumber} selected: ${input.profileA} -> ${input.profileB}. Manual relay/import review is prepared below.`,
   );
   setProductionFollowupActions(true, nextAction);
-  applyPendingConversationToManualMessageReview(entry, { focusManual });
+  const review = applyPendingConversationToManualMessageReview(entry, { focusManual });
+  if (review?.twoProfileWarning) {
+    setText(fields.productionTwoProfileWarning, review.twoProfileWarning);
+  }
   applyProductionActionState();
   return true;
 }
@@ -1748,12 +1751,25 @@ function applyPendingConversationToManualMessageReview(entry, options = {}) {
   }
   let reviewState = "Manual sender review selected";
   let reviewWarning = `Selected ${reviewProfile} to review missing local sent copy for message #${entry.messageNumber}.`;
+  let twoProfileWarning =
+    `Pending message #${entry.messageNumber} selected: ${entry.sender} -> ${entry.receiver}. ` +
+    `Review missing sender export in manual tools.`;
   if (canPrepareImport) {
     reviewState = "Manual import ready";
-    reviewWarning = `Loaded sender envelope slot for message #${entry.messageNumber}. Import remains explicit.`;
+    reviewWarning =
+      `Loaded ${entry.sender} envelope slot for message #${entry.messageNumber} into ${reviewProfile}. ` +
+      "Click Import envelope to finish the explicit peer receive step.";
+    twoProfileWarning =
+      `Pending message #${entry.messageNumber} selected for ${reviewProfile}. ` +
+      "Remote envelope is loaded; click Import envelope in manual tools.";
   } else if (sentCopyPresent && !receivedCopyPresent) {
     reviewState = "Manual import review selected";
-    reviewWarning = `Selected ${reviewProfile} to import pending message #${entry.messageNumber}. Load or paste the sender envelope, then import explicitly.`;
+    reviewWarning =
+      `Selected ${reviewProfile} to import pending message #${entry.messageNumber}. ` +
+      `Load or paste ${entry.sender}'s envelope, then click Import envelope.`;
+    twoProfileWarning =
+      `Pending message #${entry.messageNumber} selected for ${reviewProfile}. ` +
+      `Sender envelope slot is missing; load or paste ${entry.sender}'s envelope first.`;
   }
   let manualCheck = `Needs sender review: local sent copy is missing for ${entry.sender} message #${entry.messageNumber}.`;
   let inboundReadiness = receivedCopyPresent
@@ -1778,7 +1794,7 @@ function applyPendingConversationToManualMessageReview(entry, options = {}) {
   if (focusManual) {
     selectedTwoProfileManualFocusTarget(entry)?.focus();
   }
-  return true;
+  return { canPrepareImport, reviewProfile, twoProfileWarning };
 }
 
 function reviewPendingTwoProfileMessage() {
