@@ -28,6 +28,7 @@ import {
   productionSessionStateView,
   productionTwoProfileConversationActionView,
   productionTwoProfileMessageResultView,
+  productionTwoProfileReplySelectionView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
   productionTwoProfileSessionStatusView,
@@ -1429,6 +1430,47 @@ test("productionTwoProfileConversationActionView maps row status to next action"
       focusTarget: "reply-message",
       manualTarget: null,
       manualButtonLabel: "Open manual tools",
+    },
+  );
+});
+
+test("productionTwoProfileReplySelectionView keeps selected delivered rows replyable", () => {
+  assert.deepEqual(
+    productionTwoProfileReplySelectionView({
+      latestConversationDelivered: false,
+      selectedConversationDelivered: false,
+      selectedDeliveredReplyReady: false,
+    }),
+    {
+      canSelect: false,
+      label: "Reply to latest",
+      disabledReason: "Load a delivered conversation first.",
+    },
+  );
+
+  assert.deepEqual(
+    productionTwoProfileReplySelectionView({
+      latestConversationDelivered: false,
+      selectedConversationDelivered: true,
+      selectedDeliveredReplyReady: false,
+    }),
+    {
+      canSelect: true,
+      label: "Reply selected",
+      disabledReason: "",
+    },
+  );
+
+  assert.deepEqual(
+    productionTwoProfileReplySelectionView({
+      latestConversationDelivered: true,
+      selectedConversationDelivered: false,
+      selectedDeliveredReplyReady: false,
+    }),
+    {
+      canSelect: true,
+      label: "Reply to latest",
+      disabledReason: "",
     },
   );
 });

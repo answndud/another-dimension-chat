@@ -114,6 +114,18 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
   };
 }
 
+export function productionTwoProfileReplySelectionView(state) {
+  const selectedDelivered = Boolean(state?.selectedConversationDelivered);
+  const latestDelivered = Boolean(state?.latestConversationDelivered);
+  const selectedReplyReady = Boolean(state?.selectedDeliveredReplyReady);
+  const canSelect = selectedDelivered || latestDelivered;
+  return {
+    canSelect,
+    label: selectedDelivered || selectedReplyReady ? "Reply selected" : "Reply to latest",
+    disabledReason: canSelect ? "" : "Load a delivered conversation first.",
+  };
+}
+
 export function productionManualNextActions(state) {
   const {
     busy,
