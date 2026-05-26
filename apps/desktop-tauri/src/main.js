@@ -43,6 +43,7 @@ import {
   messageEnvelopeSlotReadyForEntry as envelopeSlotReadyForEntry,
 } from "./message-envelope-slots.js";
 import { combinedTwoProfileTranscriptTsv } from "./transcript-export.js";
+import { transcriptRetentionView } from "./transcript-retention.js";
 import "./styles.css";
 
 const fields = {
@@ -739,7 +740,7 @@ function resetTranscriptList(target, emptyText) {
   target.append(empty);
 }
 
-function appendTranscriptEntry(target, keySet, kind, profile, messageNumber, message) {
+function appendTranscriptEntry(target, keySet, kind, profile, messageNumber, message, retentionMetadata = null) {
   const normalizedProfile = String(profile ?? "").trim().toLowerCase() || "unknown";
   const normalizedNumber = Number.isInteger(messageNumber) ? messageNumber : "unknown";
   const text = String(message ?? "").trim();
@@ -757,13 +758,17 @@ function appendTranscriptEntry(target, keySet, kind, profile, messageNumber, mes
   item.className = kind === "received" ? "is-received" : "is-sent";
   const meta = document.createElement("strong");
   meta.textContent = `${kind === "received" ? "Received" : "Sent"} / ${normalizedProfile} / #${normalizedNumber}`;
+  const retentionView = transcriptRetentionView(retentionMetadata);
+  const retention = document.createElement("span");
+  retention.className = `transcript-retention ${retentionView.state}`;
+  retention.textContent = retentionView.label;
   const body = document.createElement("span");
   body.textContent = text;
-  item.append(meta, body);
+  item.append(meta, retention, body);
   target.append(item);
 }
 
-function appendProductionTranscriptEntry(kind, profile, messageNumber, message) {
+function appendProductionTranscriptEntry(kind, profile, messageNumber, message, retentionMetadata = null) {
   appendTranscriptEntry(
     fields.productionMessageTranscript,
     productionTranscriptEntryKeys,
@@ -771,6 +776,7 @@ function appendProductionTranscriptEntry(kind, profile, messageNumber, message) 
     profile,
     messageNumber,
     message,
+    retentionMetadata,
   );
 }
 
@@ -866,15 +872,7 @@ function appendProductionTwoProfileConversationStatus(
 }
 
 function twoProfileRetentionLabel(entry) {
-  const ttlSeconds = Number.parseInt(entry?.ttlSeconds ?? 0, 10);
-  if (entry?.expired === true) {
-    return "retention: expired";
-  }
-  if (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0) {
-    return "retention: legacy";
-  }
-  const days = ttlSeconds / 86400;
-  return Number.isInteger(days) ? `retention: ${days}d active` : `retention: ${ttlSeconds}s active`;
+  return transcriptRetentionView(entry).label;
 }
 
 function renderProductionTwoProfileConversationList() {
@@ -952,7 +950,8 @@ function renderProductionTwoProfileConversationList() {
       : `sender envelope slot: missing (${entry.sender})`;
 
     const retention = document.createElement("span");
-    retention.className = `transcript-retention ${entry.expired ? "is-expired" : "is-active"}`;
+    const retentionView = transcriptRetentionView(entry);
+    retention.className = `transcript-retention ${retentionView.state}`;
     retention.textContent = twoProfileRetentionLabel(entry);
 
     const actionView = twoProfileConversationActionView(entry);
@@ -1144,6 +1143,11 @@ function renderProductionTranscriptEntries(profile, entries) {
       profile,
       entry.message_number,
       entry.message,
+      {
+        ttlSeconds: entry.ttl_seconds,
+        expiresAtMs: entry.expires_at_ms,
+        expired: entry.expired,
+      },
     );
   }
 }
@@ -3175,8 +3179,9 @@ function applyStoredSessionMessageResultToManualFlow(result, message) {
     fields.productionMessageNumber.value = String(messageNumber);
   }
   if (text) {
-    appendProductionTranscriptEntry("sent", sender, messageNumber, text);
-    appendProductionTranscriptEntry("received", receiver, messageNumber, text);
+    const retentionMetadata = { ttlSeconds: result.message_ttl_seconds };
+    appendProductionTranscriptEntry("sent", sender, messageNumber, text, retentionMetadata);
+    appendProductionTranscriptEntry("received", receiver, messageNumber, text, retentionMetadata);
     appendProductionTwoProfileConversationStatus("sent", sender, receiver, messageNumber, text);
     appendProductionTwoProfileConversationStatus("received", receiver, sender, messageNumber, text);
     selectTwoProfileConversationMessage(sender, receiver, messageNumber, text);
@@ -4585,7 +4590,9 @@ async function exportProductionMessageEnvelope() {
     if (fields.productionMessageEnvelope) {
       fields.productionMessageEnvelope.value = result.envelope_payload;
     }
-    appendProductionTranscriptEntry("sent", profile, result.selected_message_number, message);
+    appendProductionTranscriptEntry("sent", profile, result.selected_message_number, message, {
+      ttlSeconds: result.message_ttl_seconds,
+    });
     const conversationSync = syncTwoProfileConversationAfterManualExport(
       profile,
       result.selected_message_number,
