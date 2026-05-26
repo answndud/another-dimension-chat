@@ -1798,10 +1798,15 @@ function relayProductionMessageEnvelopeToPeer() {
   applyProductionActionState();
 }
 
-function openManualProductionTools() {
+function openManualProductionTools(options = {}) {
   if (fields.manualProductionTools) {
     fields.manualProductionTools.open = true;
     fields.manualProductionTools.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+  if (options.focusCurrent === true) {
+    const node = productionManualFocusNode(latestProductionManualFocusTarget);
+    node?.scrollIntoView({ block: "center", behavior: "smooth" });
+    node?.focus();
   }
 }
 
@@ -4789,7 +4794,9 @@ if (fields.reviewPendingTwoProfileMessage) {
 }
 
 if (fields.openManualProductionTools) {
-  fields.openManualProductionTools.addEventListener("click", openManualProductionTools);
+  fields.openManualProductionTools.addEventListener("click", () =>
+    openManualProductionTools({ focusCurrent: true }),
+  );
 }
 
 if (fields.focusProductionCurrentAction) {
