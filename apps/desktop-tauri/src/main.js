@@ -2579,19 +2579,19 @@ function applyProductionActionState() {
     fields.unlockProductionProfile,
     !availability.unlockProfile,
     busy ? "Wait for the active production action." : "Enter profile and passphrase first.",
-    true,
+    latestProductionManualFocusTarget === "unlock-profile",
   );
   setActionButtonState(
     fields.exportProductionPairing,
     !availability.exportPairing,
     busy ? "Wait for the active production action." : "Enter profile, passphrase, and onion endpoint first.",
-    hasProfileUnlockInput,
+    latestProductionManualFocusTarget === "export-pairing",
   );
   setActionButtonState(
     fields.saveProductionSessionDraft,
     !availability.saveSessionDraft,
     busy ? "Wait for the active production action." : "Load or paste both local and remote pairing payloads first.",
-    true,
+    latestProductionManualFocusTarget === "save-draft",
   );
   setActionButtonState(
     fields.checkProductionSessionState,
@@ -2603,25 +2603,25 @@ function applyProductionActionState() {
     fields.exportProductionHandshakeInit,
     !availability.exportHandshakeInit,
     busy ? "Wait for the active production action." : "Enter profile and passphrase first.",
-    false,
+    latestProductionManualFocusTarget === "export-init",
   );
   setActionButtonState(
     fields.exportProductionHandshakeReply,
     !availability.exportHandshakeReply,
     busy ? "Wait for the active production action." : "Load or paste remote handshake init first.",
-    true,
+    latestProductionManualFocusTarget === "export-reply",
   );
   setActionButtonState(
     fields.exportProductionHandshakeFinish,
     !availability.exportHandshakeFinish,
     busy ? "Wait for the active production action." : "Load or paste remote handshake reply first.",
-    true,
+    latestProductionManualFocusTarget === "export-finish",
   );
   setActionButtonState(
     fields.importProductionHandshakeFinish,
     !availability.importHandshakeFinish,
     busy ? "Wait for the active production action." : "Load or paste remote handshake finish first.",
-    true,
+    latestProductionManualFocusTarget === "import-finish",
   );
   setActionButtonState(
     fields.exportProductionMessageEnvelope,
@@ -2635,7 +2635,7 @@ function applyProductionActionState() {
         : !selectedMessageInputMatches
           ? "Reselect the pending row before exporting; manual number/body no longer match the selected message."
         : "Complete session state, then enter message number and message.",
-    selectedNeedsSenderExport || (!selectedConversation && availability.exportMessageEnvelope),
+    latestProductionManualFocusTarget === "export-message-envelope",
   );
   setActionButtonState(
     fields.importProductionMessageEnvelope,
@@ -2649,7 +2649,7 @@ function applyProductionActionState() {
         : !selectedMessageInputMatches
           ? "Reselect the pending row before importing; manual number/body no longer match the selected message."
         : "Complete session state, then load or paste a remote envelope.",
-    hasInboundEnvelopeInput && !hasImportedMessage && (!selectedConversation || selectedNeedsPeerImport),
+    latestProductionManualFocusTarget === "import-envelope",
   );
   setActionButtonState(
     fields.exportProductionReceivedMessage,
