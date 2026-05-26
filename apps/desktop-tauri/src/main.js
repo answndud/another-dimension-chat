@@ -2007,16 +2007,20 @@ function selectTwoProfileConversationEntryForReview(entry, options = {}) {
     `Pending message #${entry.messageNumber} selected: ${input.profileA} -> ${input.profileB}. Manual relay/import review is prepared below.`,
   );
   setProductionFollowupActions(true, nextAction);
-  const review = applyPendingConversationToManualMessageReview(entry, { focusManual });
+  const review = applyPendingConversationToManualMessageReview(entry, { focusManual, deferFocus: true });
   if (review?.twoProfileWarning) {
     setText(fields.productionTwoProfileWarning, review.twoProfileWarning);
   }
   applyProductionActionState();
+  if (focusManual) {
+    focusProductionCurrentAction();
+  }
   return true;
 }
 
 function applyPendingConversationToManualMessageReview(entry, options = {}) {
   const focusManual = options.focusManual !== false;
+  const deferFocus = options.deferFocus === true;
   const sentCopyPresent = entry.statuses.has("sent");
   const receivedCopyPresent = entry.statuses.has("received");
   const reviewProfile = sentCopyPresent && !receivedCopyPresent ? entry.receiver : entry.sender;
@@ -2088,7 +2092,7 @@ function applyPendingConversationToManualMessageReview(entry, options = {}) {
   setText(fields.productionMessageManualCheck, manualCheck);
   setText(fields.productionMessageInbound, inboundReadiness);
   setText(fields.productionMessageOutbound, outboundReadiness);
-  if (focusManual) {
+  if (focusManual && !deferFocus) {
     selectedTwoProfileManualFocusTarget(entry)?.focus();
   }
   return { canPrepareImport, reviewProfile, twoProfileWarning };
