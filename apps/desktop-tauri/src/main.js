@@ -908,10 +908,14 @@ function renderProductionTwoProfileConversationList() {
     item.setAttribute(
       "aria-label",
       currentReplyTarget
-        ? `Current reply target message ${entry.messageNumber}: compose ${entry.receiver} to ${entry.sender}`
+        ? `Reply target set for message ${entry.messageNumber}: write reply from ${entry.receiver} to ${entry.sender}`
+      : delivered && selected
+        ? `Selected delivered message ${entry.messageNumber}: use selected reply from ${entry.receiver} to ${entry.sender}`
         : delivered
-        ? `Reply to delivered message ${entry.sender} to ${entry.receiver} number ${entry.messageNumber}`
-        : `Review pending message ${entry.sender} to ${entry.receiver} number ${entry.messageNumber}`,
+        ? `Delivered message ${entry.messageNumber}: select to reply from ${entry.receiver} to ${entry.sender}`
+      : currentReviewTarget
+        ? `Review target set for pending message ${entry.messageNumber}: continue manual relay for ${entry.sender} to ${entry.receiver}`
+        : `Pending message ${entry.messageNumber}: select to review manual relay for ${entry.sender} to ${entry.receiver}`,
     );
     item.addEventListener("click", () => selectTwoProfileConversationEntry(entry));
     item.addEventListener("keydown", (event) => {
@@ -957,10 +961,10 @@ function renderProductionTwoProfileConversationList() {
         currentReplyTarget ? "is-reply-target" : currentReviewTarget ? "is-review-target" : "is-selected"
       }`;
       review.textContent = currentReplyTarget
-        ? `current reply target: ${entry.receiver} -> ${entry.sender} for message #${entry.messageNumber}`
+        ? `reply target set: ${entry.receiver} -> ${entry.sender} for message #${entry.messageNumber}`
         : delivered
-        ? `selected delivered message: #${entry.messageNumber}`
-        : `selected review target: message #${entry.messageNumber}`;
+        ? `selected reply candidate: ${entry.receiver} -> ${entry.sender} for message #${entry.messageNumber}`
+        : `review target set: message #${entry.messageNumber}`;
       item.append(review);
     }
     item.append(body);
