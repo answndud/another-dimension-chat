@@ -1283,7 +1283,7 @@ test("productionManualMessageStatusView summarizes active message path", () => {
       hasInboundEnvelopeInput: false,
       hasReceivedMessage: false,
     }),
-    "selected=none active=alice remote=bob number=7 mode=auto session=ready local_envelope=present remote_slot=empty remote_envelope=empty received=empty reply=none",
+    "selected=none selected_input=matched active=alice remote=bob number=7 mode=auto session=ready local_envelope=present remote_slot=empty remote_envelope=empty received=empty reply=none",
   );
   assert.match(
     productionManualMessageStatusView({
@@ -1291,13 +1291,14 @@ test("productionManualMessageStatusView summarizes active message path", () => {
       counterpartProfile: "alice",
       selectedMessageLabel: "alice->bob#7",
       messageNumber: Number.NaN,
+      selectedMessageInputMatches: false,
       sessionReadyForMessages: false,
       hasRemoteMessageEnvelopeSlot: true,
       hasInboundEnvelopeInput: true,
       hasReceivedMessage: true,
       hasTwoProfileReplySelected: true,
     }),
-    /selected=alice->bob#7 active=bob remote=alice number=invalid mode=manual session=not-ready .*remote_slot=ready remote_envelope=loaded received=present reply=selected/,
+    /selected=alice->bob#7 selected_input=stale active=bob remote=alice number=invalid mode=manual session=not-ready .*remote_slot=ready remote_envelope=loaded received=present reply=selected/,
   );
   assert.match(
     productionManualMessageStatusView({
@@ -1335,6 +1336,16 @@ test("productionManualMessageCheckView separates manual verification guidance", 
       hasReceivedMessage: true,
     }),
     "Manual check: enter the message number before export or import.",
+  );
+  assert.match(
+    productionManualMessageCheckView({
+      activeProfile: "alice",
+      counterpartProfile: "bob",
+      messageNumber: 1,
+      selectedMessageInputMatches: false,
+      sessionReadyForMessages: true,
+    }),
+    /selected message and manual number\/body differ/,
   );
   assert.match(
     productionManualMessageCheckView({

@@ -2372,6 +2372,10 @@ function applyProductionActionState() {
   const selectedMessageLabel = selectedConversation
     ? `${selectedConversation.sender}->${selectedConversation.receiver}#${selectedConversation.messageNumber}`
     : "";
+  const selectedMessageInputMatches = selectedConversation
+    ? Number.parseInt(selectedConversation.messageNumber, 10) === message.messageNumber &&
+      String(selectedConversation.message ?? "").trim() === message.message
+    : true;
   const selectedHasSentCopy = Boolean(selectedConversation?.statuses?.has("sent"));
   const selectedHasReceivedCopy = Boolean(selectedConversation?.statuses?.has("received"));
   const selectedNeedsSenderExport = Boolean(selectedConversation && !selectedHasSentCopy);
@@ -2462,6 +2466,7 @@ function applyProductionActionState() {
     selectedManualExportProfile,
     selectedManualImportProfile,
     selectedMessageLabel,
+    selectedMessageInputMatches,
     messageNumber: message.messageNumber,
     autoMessageNumber: message.autoMessageNumber,
   };
