@@ -828,8 +828,8 @@ function renderProductionTwoProfileConversationList() {
       const review = document.createElement("span");
       review.className = "transcript-review is-selected";
       review.textContent = delivered
-        ? "selected review target: delivered"
-        : "selected review target: pending";
+        ? `selected reply target: message #${entry.messageNumber}`
+        : `selected review target: message #${entry.messageNumber}`;
       item.append(review);
     }
     item.append(body);

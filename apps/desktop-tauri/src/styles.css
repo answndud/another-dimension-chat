@@ -589,6 +589,9 @@ textarea[readonly] {
 
 .message-transcript li.is-selected {
   border-color: var(--accent);
+  border-left-color: var(--accent-hot);
+  background: var(--panel-strong);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .message-transcript li[role="button"] {
@@ -666,6 +669,7 @@ textarea[readonly] {
 
 .message-transcript .transcript-review.is-selected {
   color: var(--accent);
+  font-weight: 750;
 }
 
 .message-transcript span:not(.transcript-status):not(.transcript-slot):not(.transcript-retention):not(.transcript-action):not(.transcript-review) {
