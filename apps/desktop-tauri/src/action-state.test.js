@@ -1061,7 +1061,7 @@ test("productionManualMessageStatusView summarizes active message path", () => {
       hasInboundEnvelopeInput: false,
       hasReceivedMessage: false,
     }),
-    "active=alice remote=bob number=7 mode=auto session=ready local_envelope=present remote_slot=empty remote_envelope=empty received=empty",
+    "active=alice remote=bob number=7 mode=auto session=ready local_envelope=present remote_slot=empty remote_envelope=empty received=empty reply=none",
   );
   assert.match(
     productionManualMessageStatusView({
@@ -1072,8 +1072,18 @@ test("productionManualMessageStatusView summarizes active message path", () => {
       hasRemoteMessageEnvelopeSlot: true,
       hasInboundEnvelopeInput: true,
       hasReceivedMessage: true,
+      hasTwoProfileReplySelected: true,
     }),
-    /active=bob remote=alice number=invalid mode=manual session=not-ready .*remote_slot=ready remote_envelope=loaded received=present/,
+    /active=bob remote=alice number=invalid mode=manual session=not-ready .*remote_slot=ready remote_envelope=loaded received=present reply=selected/,
+  );
+  assert.match(
+    productionManualMessageStatusView({
+      activeProfile: "bob",
+      counterpartProfile: "alice",
+      messageNumber: 7,
+      hasTwoProfileReplyDraftInput: true,
+    }),
+    /reply=draft/,
   );
 });
 
@@ -1124,6 +1134,26 @@ test("productionManualMessageCheckView separates manual verification guidance", 
       hasInboundEnvelopeInput: false,
     }),
     /load the remote envelope manually before import/,
+  );
+  assert.equal(
+    productionManualMessageCheckView({
+      activeProfile: "bob",
+      counterpartProfile: "alice",
+      messageNumber: 7,
+      hasInboundEnvelopeInput: true,
+      hasTwoProfileReplySelected: true,
+    }),
+    "Manual check: reply target is selected; write the reply or show received for local review.",
+  );
+  assert.equal(
+    productionManualMessageCheckView({
+      activeProfile: "bob",
+      counterpartProfile: "alice",
+      messageNumber: 7,
+      hasTwoProfileReplyDraftInput: true,
+      hasTwoProfileReplySelected: true,
+    }),
+    "Manual check: reply draft is ready; send the stored-session reply.",
   );
 });
 
