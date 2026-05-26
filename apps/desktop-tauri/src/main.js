@@ -2960,10 +2960,13 @@ function applyStoredSessionMessageResultToManualFlow(result, message) {
     selectTwoProfileConversationMessage(sender, receiver, messageNumber, text);
   }
   latestProductionMessageImport = null;
+  if (fields.productionReceivedMessage) {
+    fields.productionReceivedMessage.value = "";
+  }
   setProductionMessageState("Stored-session message synced");
   setText(
     fields.productionMessageWarning,
-    `Stored-session message #${messageNumber} synced to manual view. Active sender=${sender}; receiver=${receiver}.`,
+    `Stored-session message #${messageNumber} synced to manual view. Active sender=${sender}; receiver=${receiver}; previous received preview cleared.`,
   );
   return { sender, receiver, messageNumber, message: text };
 }
