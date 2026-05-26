@@ -772,7 +772,7 @@ function renderProductionTwoProfileConversationList() {
   for (const entry of entries) {
     const item = document.createElement("li");
     const key = twoProfileConversationKey(entry);
-    const delivered = entry.statuses.has("sent") && entry.statuses.has("received");
+    const delivered = twoProfileConversationDelivered(entry);
     const inboundOnly = !entry.statuses.has("sent") && entry.statuses.has("received");
     const senderEnvelopeSlotPresent = productionPayloadSlots.messageEnvelope.has(entry.sender);
     const selected = key === selectedTwoProfileConversationKey;
@@ -848,9 +848,26 @@ function latestTwoProfileConversationEntry() {
   return entries[0] ?? null;
 }
 
+function twoProfileConversationDelivered(entry) {
+  return Boolean(entry?.statuses?.has("sent") && entry.statuses?.has("received"));
+}
+
 function latestTwoProfilePendingConversationEntry() {
   const entries = [...productionTwoProfileConversationEntries.values()]
-    .filter((entry) => !(entry.statuses.has("sent") && entry.statuses.has("received")))
+    .filter((entry) => !twoProfileConversationDelivered(entry))
+    .sort((left, right) => {
+      const numberDelta = right.messageNumber - left.messageNumber;
+      if (numberDelta !== 0) {
+        return numberDelta;
+      }
+      return `${right.sender}:${right.receiver}`.localeCompare(`${left.sender}:${left.receiver}`);
+    });
+  return entries[0] ?? null;
+}
+
+function latestTwoProfileDeliveredConversationEntry() {
+  const entries = [...productionTwoProfileConversationEntries.values()]
+    .filter((entry) => twoProfileConversationDelivered(entry))
     .sort((left, right) => {
       const numberDelta = right.messageNumber - left.messageNumber;
       if (numberDelta !== 0) {
@@ -915,7 +932,7 @@ function selectTwoProfileConversationMessage(sender, receiver, messageNumber, me
 
 function selectedTwoProfilePendingConversationEntry() {
   const selectedEntry = selectedTwoProfileConversationEntry();
-  return selectedEntry && !(selectedEntry.statuses.has("sent") && selectedEntry.statuses.has("received"))
+  return selectedEntry && !twoProfileConversationDelivered(selectedEntry)
     ? selectedEntry
     : null;
 }
@@ -1802,11 +1819,8 @@ function swapTwoProfileDirection() {
 
 function replyToLatestTwoProfileMessage() {
   const selectedEntry = selectedTwoProfileConversationEntry();
-  const selectedDelivered =
-    selectedEntry?.statuses.has("sent") && selectedEntry.statuses.has("received")
-      ? selectedEntry
-      : null;
-  const target = selectedDelivered ?? latestTwoProfileConversationEntry();
+  const selectedDelivered = twoProfileConversationDelivered(selectedEntry) ? selectedEntry : null;
+  const target = selectedDelivered ?? latestTwoProfileDeliveredConversationEntry();
   if (!target || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
     setProductionTwoProfileState("Reply needs conversation");
     setText(fields.productionTwoProfileWarning, "Load a stored conversation before selecting a reply direction.");
@@ -1837,7 +1851,7 @@ function selectTwoProfileConversationEntry(entry) {
   if (!entry) {
     return false;
   }
-  const delivered = entry.statuses.has("sent") && entry.statuses.has("received");
+  const delivered = twoProfileConversationDelivered(entry);
   return delivered
     ? selectReplyAfterDeliveredReview(entry)
     : selectTwoProfileConversationEntryForReview(entry);
@@ -1848,7 +1862,7 @@ function selectTwoProfileConversationEntryForReview(entry, options = {}) {
     return false;
   }
   const focusManual = options.focusManual !== false;
-  if (entry.statuses.has("sent") && entry.statuses.has("received")) {
+  if (twoProfileConversationDelivered(entry)) {
     setProductionTwoProfileState("Conversation item delivered");
     setText(fields.productionTwoProfileWarning, `Message #${entry.messageNumber} is already delivered.`);
     return false;
@@ -2137,6 +2151,7 @@ function applyProductionActionState() {
   const manualDisabledReasons = productionManualRelayDisabledReasons(state);
   const twoProfileSessionsReady = state.hasTwoProfileSessionsReady;
   const latestConversation = latestTwoProfileConversationEntry();
+  const latestConversationDelivered = twoProfileConversationDelivered(latestConversation);
   const knownTwoProfileSessionStatus = Boolean(latestTwoProfileSessionStatusForCurrentInput(twoProfile));
   const twoProfileSessionsIncomplete = Boolean(knownTwoProfileSessionStatus && !twoProfileSessionsReady);
   const twoProfileNeedsSessionCheck =
@@ -2150,17 +2165,15 @@ function applyProductionActionState() {
     !busy && latestProductionTwoProfileSuccess && hasTwoProfileSessionStatusInput && !twoProfile.message,
   );
   const selectedConversation = selectedTwoProfileConversationEntry();
-  const selectedHasSentCopy = Boolean(selectedConversation?.statuses.has("sent"));
-  const selectedHasReceivedCopy = Boolean(selectedConversation?.statuses.has("received"));
+  const selectedHasSentCopy = Boolean(selectedConversation?.statuses?.has("sent"));
+  const selectedHasReceivedCopy = Boolean(selectedConversation?.statuses?.has("received"));
   const selectedNeedsSenderExport = Boolean(selectedConversation && !selectedHasSentCopy);
   const selectedNeedsPeerImport = Boolean(
     selectedConversation && selectedHasSentCopy && !selectedHasReceivedCopy,
   );
-  const selectedConversationDelivered = Boolean(
-    selectedConversation && selectedHasSentCopy && selectedHasReceivedCopy,
-  );
+  const selectedConversationDelivered = twoProfileConversationDelivered(selectedConversation);
   const latestReplySelected = Boolean(
-    latestConversation &&
+    latestConversationDelivered &&
       twoProfile.profileA === latestConversation.receiver &&
       twoProfile.profileB === latestConversation.sender,
   );
@@ -2316,8 +2329,8 @@ function applyProductionActionState() {
   setReviewPendingTwoProfileLabel(pendingSelected ? "Review selected" : "Review pending");
   setActionButtonState(
     fields.replyLatestTwoProfileMessage,
-    busy || !latestConversation,
-    busy ? "Wait for the active production action." : "Load a stored conversation first.",
+    busy || !latestConversationDelivered,
+    busy ? "Wait for the active production action." : "Load a delivered conversation first.",
     selectedDeliveredReplyReady || latestReplySelected,
   );
   setActionButtonState(
@@ -3844,7 +3857,7 @@ function syncTwoProfileConversationAfterReceivedExport(profile, messageNumber, m
     text,
   );
   const refreshedEntry = selectedTwoProfileConversationEntry();
-  if (refreshedEntry?.statuses.has("sent") && refreshedEntry.statuses.has("received")) {
+  if (twoProfileConversationDelivered(refreshedEntry)) {
     return selectReplyAfterDeliveredReview(refreshedEntry, { importProfile: receivedProfile });
   }
   return true;
