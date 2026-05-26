@@ -2512,6 +2512,10 @@ function applyProductionActionState() {
   state.hasTwoProfileReplySelected = selectedDeliveredReplyReady || latestReplySelected;
   state.hasTwoProfileReplyDraftInput = selectedDeliveredReplyDraftReady;
   const manualPrimaryActions = productionManualPrimaryActions(state);
+  const replyComposerCurrent = Boolean(
+    twoProfileCurrentAction === "compose" ||
+      (state.hasTwoProfileReplySelected && !state.hasTwoProfileReplyDraftInput),
+  );
   const manualCurrentActions = productionManualRelayCurrentActions(manualAvailability, {
     hasFinishImportInput,
     hasHandshakeFinishInput,
@@ -2545,7 +2549,7 @@ function applyProductionActionState() {
   setProductionTwoProfileReadiness(twoProfileReadiness.message, twoProfileReadiness.state);
   renderProductionTwoProfileMemory(twoProfile);
   renderManualNextActions(state);
-  setTwoProfileComposeCurrent(twoProfileCurrentAction === "compose");
+  setTwoProfileComposeCurrent(replyComposerCurrent);
   renderManualMessageStatus(state);
   let selectedPendingActionView = null;
   if (selectedConversation && !selectedConversationDelivered) {
@@ -2691,7 +2695,7 @@ function applyProductionActionState() {
     fields.replyLatestTwoProfileMessage,
     busy || !replySelection.canSelect,
     busy ? "Wait for the active production action." : replySelection.disabledReason,
-    manualPrimaryActions.selectReply,
+    manualPrimaryActions.selectReply && !replyComposerCurrent,
   );
   setActionButtonState(
     fields.reviewPendingTwoProfileMessage,
