@@ -871,8 +871,8 @@ function selectedTwoProfileDeliveredReplyTarget(input = productionTwoProfileInpu
   const entry = selectedTwoProfileConversationEntry();
   if (
     !entry ||
-    !entry.statuses.has("sent") ||
-    !entry.statuses.has("received") ||
+    !entry.statuses?.has("sent") ||
+    !entry.statuses?.has("received") ||
     !input.profileA ||
     !input.profileB ||
     input.profileA !== entry.receiver ||
@@ -907,7 +907,10 @@ function selectTwoProfileConversationMessage(sender, receiver, messageNumber, me
     messageNumber: normalizedNumber,
     message: text,
   };
-  return setSelectedTwoProfileConversationEntry(entry, options) ? entry : null;
+  if (!setSelectedTwoProfileConversationEntry(entry, options)) {
+    return null;
+  }
+  return selectedTwoProfileConversationEntry() ?? entry;
 }
 
 function selectedTwoProfilePendingConversationEntry() {
@@ -1993,8 +1996,8 @@ function selectTwoProfileReplyDirection(sentInput) {
 function selectReplyAfterDeliveredReview(entry, options = {}) {
   if (
     !entry ||
-    !entry.statuses.has("sent") ||
-    !entry.statuses.has("received") ||
+    !entry.statuses?.has("sent") ||
+    !entry.statuses?.has("received") ||
     !fields.productionTwoProfileA ||
     !fields.productionTwoProfileB
   ) {
