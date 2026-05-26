@@ -405,6 +405,12 @@ function setProductionMessageManualCurrent(target) {
   fields.productionMessageInbound?.classList.toggle("is-current-manual", target === "inbound");
 }
 
+function revealManualProductionTools() {
+  if (fields.manualProductionTools) {
+    fields.manualProductionTools.open = true;
+  }
+}
+
 function setProductionManualFocusCurrent(target) {
   for (const node of document.querySelectorAll(".is-current-input")) {
     node?.classList.remove("is-current-input");
@@ -1888,7 +1894,7 @@ function relayProductionMessageEnvelopeToPeer() {
 
 function openManualProductionTools(options = {}) {
   if (fields.manualProductionTools) {
-    fields.manualProductionTools.open = true;
+    revealManualProductionTools();
     fields.manualProductionTools.scrollIntoView({ block: "start", behavior: "smooth" });
   }
   if (options.focusCurrent === true) {
@@ -2536,9 +2542,13 @@ function applyProductionActionState() {
     latestProductionManualFocusTarget = selectedPendingActionView.focusTargetKey;
     setProductionManualFocusCurrent(latestProductionManualFocusTarget);
     setText(fields.productionMessageNextAction, selectedPendingActionView.nextAction);
+    setText(fields.productionManualCurrent, selectedPendingActionView.nextAction);
     setOpenManualProductionToolsLabel(selectedPendingActionView.manualButtonLabel);
     setActionButtonState(fields.openManualProductionTools, false, "", true);
     setProductionMessageManualCurrent(selectedPendingActionView.manualTarget);
+    if (selectedPendingActionView.manualTarget) {
+      revealManualProductionTools();
+    }
   }
   renderManualStatus();
   setActionButtonState(
