@@ -121,9 +121,13 @@ require_status_field 'production_self_test_status' 'CLI production boundary self
 require_contains "$TAURI_DIR/src/status.rs" 'production_session_non_readiness:'
 require_contains "$TAURI_DIR/src/status.rs" 'no production E2EE claim network transport durable persistence or async messaging'
 require_contains "$APP_DIR/src/main.js" 'status.production_session_non_readiness'
-require_status_field 'production_preflight_status' 'read-only production skeleton blockers copy'
+require_contains "$TAURI_DIR/src/status.rs" 'production_skeleton_preflight_summary'
+require_contains "$TAURI_DIR/src/status.rs" 'production_skeleton_next_connector_selection'
+require_contains "$TAURI_DIR/src/status.rs" 'production_preflight_status: format!'
 require_contains "$TAURI_DIR/src/status.rs" 'production_preflight_blockers:'
-require_contains "$TAURI_DIR/src/status.rs" 'session E2EE false transport send receive false storage rollback not-provided messaging false'
+require_contains "$TAURI_DIR/src/status.rs" 'preflight.session_e2ee_ready()'
+require_contains "$TAURI_DIR/src/status.rs" 'preflight.transport_send_receive_available()'
+require_contains "$TAURI_DIR/src/status.rs" 'preflight.storage_rollback_protection()'
 require_contains "$APP_DIR/src/main.js" 'status.production_preflight_blockers'
 require_status_field 'session_durable_state_status' 'store-write adapter boundary; product unlock disabled'
 require_status_field 'session_unlock_policy_status' 'high-risk passphrase required OS-keystore-only rejected'
@@ -134,15 +138,20 @@ require_status_field 'session_unlock_cli_rejection_status' 'redacted product-unl
 require_contains "$TAURI_DIR/src/status.rs" 'session_unlock_cli_rejection_flags:'
 require_contains "$TAURI_DIR/src/status.rs" 'storage_opened=false session_records_written=false key_material_exposed=false runtime_messaging=false'
 require_contains "$APP_DIR/src/main.js" 'status.session_unlock_cli_rejection_flags'
-require_status_field 'transport_status' 'pre-network fail-closed only'
-require_status_field 'network_execution_status' 'network execution disabled'
+require_contains "$TAURI_DIR/src/status.rs" 'transport_status: format!'
+require_contains "$APP_DIR/src/main.js" 'status.transport_status'
+require_contains "$TAURI_DIR/src/status.rs" 'network_execution_status: format!'
+require_contains "$TAURI_DIR/src/status.rs" 'next_connector.opens_runtime_execution()'
+require_contains "$APP_DIR/src/main.js" 'status.network_execution_status'
 require_status_field 'experimental_transport_status' 'manual bootstrap gate summary only'
 require_contains "$TAURI_DIR/src/status.rs" 'bootstrap_status_classification:'
 require_contains "$TAURI_DIR/src/status.rs" 'network-disabled; censorship-or-bridge-required; timeout-or-transient-network-failure'
 require_contains "$APP_DIR/src/main.js" 'status.bootstrap_status_classification'
 require_contains "$APP_DIR/src/main.js" 'status.production_session_status'
 require_contains "$APP_DIR/src/main.js" 'status.production_self_test_status'
-require_status_field 'transport_io_status' 'hosting stream envelope messaging disabled'
+require_contains "$TAURI_DIR/src/status.rs" 'transport_io_status: format!'
+require_contains "$TAURI_DIR/src/status.rs" 'next_connector.required_gate()'
+require_contains "$APP_DIR/src/main.js" 'status.transport_io_status'
 require_status_field 'storage_status' 'ADREC1 storage spike only'
 require_status_field 'verification_status' 'lightweight checks only'
 require_contains "$APP_DIR/src/main.js" 'invoke("prototype_status")'
@@ -533,7 +542,7 @@ if grep -n -E 'secure_release:|usable_messaging:|core_status:|profile_status:|pa
   exit 1
 fi
 
-if grep -n -E '"available"|"ready"|"connected"|"bootstrapped"|"secure release"|"usable messaging"' "$TAURI_DIR/src/status.rs" >/dev/null; then
+if grep -n -E '"[^"]*(available|ready|connected|bootstrapped|secure release|usable messaging)[^"]*"' "$TAURI_DIR/src/status.rs" >/dev/null; then
   echo "status adapter must not imply readiness or secure-release state" >&2
   exit 1
 fi
