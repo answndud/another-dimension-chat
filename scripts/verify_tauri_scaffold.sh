@@ -177,6 +177,7 @@ require_contains "$APP_DIR/src/main.js" 'expired'
 require_contains "$APP_DIR/src/main.js" 'twoProfileRetentionLabel'
 require_contains "$APP_DIR/src/main.js" 'transcriptRetentionWarning'
 require_contains "$APP_DIR/src/main.js" 'transcriptBoundarySummary'
+require_contains "$APP_DIR/src/main.js" 'combinedTwoProfileTranscriptTsv'
 require_contains "$APP_DIR/src/main.js" 'appendExpiredMessagesPurged'
 require_contains "$APP_DIR/src/main.js" 'expired_messages_purged'
 require_contains "$APP_DIR/src/styles.css" 'transcript-retention'
@@ -640,6 +641,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="load-production-two-profile-transcript" type="button">Load conversation</button>' \
   | grep -v '<button id="reply-latest-two-profile-message" type="button">Reply to latest</button>' \
   | grep -v '<button id="review-pending-two-profile-message" type="button">Review pending</button>' \
+  | grep -v '<textarea id="production-two-profile-transcript-export" rows="5" readonly></textarea>' \
   | grep -v '<input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />' \
   | grep -v '<input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />' \
   | grep -v '<textarea id="production-two-profile-message" rows="3" placeholder="Message from alice to bob">hello between app-data profiles</textarea>' \
