@@ -1258,6 +1258,19 @@ function setMessageTtlControls(ttlSeconds) {
   }
 }
 
+function setProductionMessageTtlFromEntry(entry) {
+  const ttlSeconds = Number.parseInt(entry?.ttlSeconds ?? "", 10);
+  if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0 || !fields.productionMessageTtl) {
+    return false;
+  }
+  if (!allowedMessageTtlSeconds().includes(ttlSeconds)) {
+    return false;
+  }
+  fields.productionMessageTtl.value = String(ttlSeconds);
+  fields.productionMessageTtl.dispatchEvent(new Event("change", { bubbles: true }));
+  return true;
+}
+
 async function loadProductionMessageRetentionPreference(profile, passphrase, options = {}) {
   const normalizedProfile = String(profile ?? "").trim();
   if (!normalizedProfile || !passphrase) {
@@ -2023,6 +2036,7 @@ function applyPendingConversationToManualMessageReview(entry, options = {}) {
   if (fields.productionMessageBody) {
     fields.productionMessageBody.value = entry.message;
   }
+  setProductionMessageTtlFromEntry(entry);
   const canPrepareImport = Boolean(sentCopyPresent && !receivedCopyPresent && senderEnvelopeSlot);
   if (fields.productionRemoteMessageEnvelope && !receivedCopyPresent) {
     fields.productionRemoteMessageEnvelope.value = canPrepareImport ? senderEnvelopeSlot : "";
