@@ -2162,15 +2162,28 @@ function selectReplyAfterDeliveredReview(entry, options = {}) {
   renderProductionTwoProfileMemory(input);
   setProductionTwoProfileState("Reply direction ready");
   const importProfile = String(options.importProfile ?? "").trim().toLowerCase();
+  const deferReplyUntilReceivedReview = options.deferReplyUntilReceivedReview === true;
+  const focusReply = options.focusReply !== false;
   setText(
     fields.productionTwoProfileWarning,
-    importProfile
+    importProfile && deferReplyUntilReceivedReview
+      ? `Manual import for ${importProfile} completed. Click Show received to verify the message, then write the reply from ${input.profileA} to ${input.profileB}.`
+      : importProfile
       ? `Manual import for ${importProfile} completed. Reply direction selected: ${input.profileA} -> ${input.profileB}; write the reply next.`
       : `Message #${entry.messageNumber} delivered; reply direction selected: ${input.profileA} -> ${input.profileB}.`,
   );
-  setProductionFollowupActions(true, selectedTwoProfileNextActionMessage(entry));
+  setProductionFollowupActions(
+    true,
+    deferReplyUntilReceivedReview
+      ? `Next: click Show received for ${importProfile}, then write the reply.`
+      : selectedTwoProfileNextActionMessage(entry),
+  );
   applyProductionActionState();
-  fields.productionTwoProfileMessage?.focus();
+  if (focusReply) {
+    fields.productionTwoProfileMessage?.focus();
+  } else {
+    focusProductionCurrentAction();
+  }
   return true;
 }
 
@@ -3943,7 +3956,13 @@ async function refreshTwoProfileConversationAfterManualImport(profile, passphras
   }
   setProductionTwoProfileState("Conversation updated after import");
   const selectedEntry = selectedTwoProfileConversationEntry();
-  if (selectReplyAfterDeliveredReview(selectedEntry, { importProfile: importedProfile })) {
+  if (
+    selectReplyAfterDeliveredReview(selectedEntry, {
+      importProfile: importedProfile,
+      deferReplyUntilReceivedReview: true,
+      focusReply: false,
+    })
+  ) {
     return { conversationReloaded: true, replySelected: true };
   }
   setText(
