@@ -27,6 +27,7 @@ import {
   productionSessionStateView,
   productionTwoProfilePairFromProfiles,
   productionTwoProfileConversationActionView,
+  productionTwoProfileCurrentAction,
   productionTwoProfileMessageResultView,
   productionTwoProfileReplySelectionView,
   productionTwoProfileResultView,
@@ -416,6 +417,10 @@ function setTwoProfileComposeLocked(locked) {
   fields.productionTwoProfileMessage.readOnly = locked;
   fields.productionTwoProfileMessage.setAttribute("aria-busy", String(locked));
   fields.productionTwoProfileMessage.title = locked ? "Two-profile action is running." : "";
+}
+
+function setTwoProfileComposeCurrent(current) {
+  fields.productionTwoProfileMessage?.classList.toggle("is-current-input", Boolean(current));
 }
 
 function setProductionFollowupActions(enabled, message) {
@@ -2359,7 +2364,14 @@ function applyProductionActionState() {
     !knownTwoProfileSessionStatus &&
     (!twoProfile.message || latestConversation);
   const twoProfileNeedsSetup = hasTwoProfileInput && !twoProfileSessionsReady && !twoProfileNeedsSessionCheck;
-  const twoProfileCanSendStoredMessage = hasTwoProfileInput && twoProfileSessionsReady;
+  const twoProfileCurrentAction = productionTwoProfileCurrentAction({
+    input: twoProfile,
+    busy,
+    sessionsReady: twoProfileSessionsReady,
+    hasKnownSessionStatus: knownTwoProfileSessionStatus,
+    hasRecoveredConversation: Boolean(latestConversation),
+    hasMessageRetentionPolicy,
+  });
   const twoProfileCanReply = Boolean(
     !busy && latestProductionTwoProfileSuccess && hasTwoProfileSessionStatusInput && !twoProfile.message,
   );
@@ -2411,6 +2423,7 @@ function applyProductionActionState() {
   setProductionTwoProfileReadiness(twoProfileReadiness.message, twoProfileReadiness.state);
   renderProductionTwoProfileMemory(twoProfile);
   renderManualNextActions(state);
+  setTwoProfileComposeCurrent(twoProfileCurrentAction === "compose");
   renderManualMessageStatus(state);
   if (selectedConversation && !selectedConversationDelivered) {
     const selectedActionView = twoProfileConversationActionView(selectedConversation);
@@ -2509,13 +2522,13 @@ function applyProductionActionState() {
     fields.checkProductionTwoProfileSessionStatus,
     busy || !hasTwoProfileSessionStatusInput,
     busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
-    twoProfileNeedsSessionCheck,
+    twoProfileCurrentAction === "check-session",
   );
   setActionButtonState(
     fields.checkProductionTwoProfileSessionStatusInline,
     busy || !hasTwoProfileSessionStatusInput,
     busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
-    twoProfileNeedsSessionCheck,
+    twoProfileCurrentAction === "check-session",
   );
   setActionButtonState(
     fields.loadProductionTwoProfileTranscript,
@@ -2558,7 +2571,7 @@ function applyProductionActionState() {
         : twoProfileSessionsIncomplete
           ? twoProfileSessionRebuildMessage(twoProfile)
         : "Enter two profiles, passphrase, and message first.",
-    twoProfileNeedsSetup,
+    twoProfileCurrentAction === "full-setup",
   );
   setActionButtonState(
     fields.runProductionTwoProfileMessageRoundtrip,
@@ -2572,7 +2585,8 @@ function applyProductionActionState() {
       : hasTwoProfileInput
         ? "Run full setup once before sending with stored sessions."
         : "Enter two profiles, passphrase, and message first.",
-    manualPrimaryActions.sendReply || (!state.hasTwoProfileReplySelected && twoProfileCanSendStoredMessage),
+    manualPrimaryActions.sendReply ||
+      (!state.hasTwoProfileReplySelected && twoProfileCurrentAction === "stored-message"),
   );
   setActionButtonState(
     fields.useProductionPairingPayload,

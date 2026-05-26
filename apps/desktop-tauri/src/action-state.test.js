@@ -28,6 +28,7 @@ import {
   productionSessionStateView,
   productionTwoProfilePairFromProfiles,
   productionTwoProfileConversationActionView,
+  productionTwoProfileCurrentAction,
   productionTwoProfileMessageResultView,
   productionTwoProfileReplySelectionView,
   productionTwoProfileResultView,
@@ -275,6 +276,50 @@ test("productionTwoProfileReadiness blocks incomplete inputs in priority order",
   assert.equal(
     productionTwoProfileReadiness({ profileA: "alice", profileB: "bob", passphrase: "p", message: "m" }, true),
     "Running: production action in progress",
+  );
+});
+
+test("productionTwoProfileCurrentAction selects the next top-level control", () => {
+  const input = {
+    profileA: "alice",
+    profileB: "bob",
+    passphrase: "p",
+    messageTtlSeconds: 86400,
+    message: "",
+  };
+  assert.equal(
+    productionTwoProfileCurrentAction({
+      input,
+      hasMessageRetentionPolicy: true,
+      sessionsReady: true,
+    }),
+    "compose",
+  );
+  assert.equal(
+    productionTwoProfileCurrentAction({
+      input: { ...input, message: "hello" },
+      hasMessageRetentionPolicy: true,
+      sessionsReady: true,
+    }),
+    "stored-message",
+  );
+  assert.equal(
+    productionTwoProfileCurrentAction({
+      input: { ...input, message: "hello" },
+      hasMessageRetentionPolicy: true,
+      sessionsReady: false,
+      hasRecoveredConversation: true,
+    }),
+    "check-session",
+  );
+  assert.equal(
+    productionTwoProfileCurrentAction({
+      input: { ...input, message: "hello" },
+      hasMessageRetentionPolicy: true,
+      sessionsReady: false,
+      hasKnownSessionStatus: true,
+    }),
+    "full-setup",
   );
 });
 
