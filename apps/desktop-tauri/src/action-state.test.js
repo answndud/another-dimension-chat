@@ -1464,7 +1464,7 @@ test("productionTwoProfileMessageResultView formats stored-session message round
   assert.match(view.boundary, /^Contained:/);
   assert.equal(
     view.nextStep,
-    "Next: reply direction is selected; write a stored-session reply.",
+    "Next: continue from the delivered message and write a stored-session reply.",
   );
 
   const blocked = productionTwoProfileMessageResultView({
