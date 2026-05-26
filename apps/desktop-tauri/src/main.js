@@ -685,6 +685,47 @@ function appendProductionTranscriptEntry(kind, profile, messageNumber, message) 
   );
 }
 
+function messageEnvelopeSlotPayload(slot) {
+  return typeof slot === "string" ? slot : String(slot?.payload ?? "").trim();
+}
+
+function messageEnvelopeSlotMatchesEntry(slot, entry) {
+  if (!slot || !entry) {
+    return false;
+  }
+  if (typeof slot === "string") {
+    return true;
+  }
+  return (
+    Number.parseInt(slot.messageNumber, 10) === Number.parseInt(entry.messageNumber, 10) &&
+    String(slot.sender ?? "").trim().toLowerCase() === String(entry.sender ?? "").trim().toLowerCase() &&
+    String(slot.receiver ?? "").trim().toLowerCase() === String(entry.receiver ?? "").trim().toLowerCase() &&
+    String(slot.message ?? "").trim() === String(entry.message ?? "").trim()
+  );
+}
+
+function messageEnvelopeSlotReadyForEntry(profile, entry) {
+  const normalizedProfile = String(profile ?? "").trim().toLowerCase();
+  const slot = normalizedProfile ? productionPayloadSlots.messageEnvelope.get(normalizedProfile) : null;
+  return Boolean(messageEnvelopeSlotPayload(slot) && messageEnvelopeSlotMatchesEntry(slot, entry));
+}
+
+function storeMessageEnvelopeSlot(profile, payload, metadata = {}) {
+  const normalizedProfile = String(profile ?? "").trim().toLowerCase();
+  const envelope = String(payload ?? "").trim();
+  if (!normalizedProfile || !envelope) {
+    return false;
+  }
+  productionPayloadSlots.messageEnvelope.set(normalizedProfile, {
+    payload: envelope,
+    sender: normalizedProfile,
+    receiver: String(metadata.receiver ?? "").trim().toLowerCase(),
+    messageNumber: Number.parseInt(metadata.messageNumber, 10),
+    message: String(metadata.message ?? "").trim(),
+  });
+  return true;
+}
+
 function twoProfileConversationKey(entry) {
   return [
     String(entry.sender ?? "").trim().toLowerCase(),
@@ -774,7 +815,7 @@ function renderProductionTwoProfileConversationList() {
     const key = twoProfileConversationKey(entry);
     const delivered = twoProfileConversationDelivered(entry);
     const inboundOnly = !entry.statuses.has("sent") && entry.statuses.has("received");
-    const senderEnvelopeSlotPresent = productionPayloadSlots.messageEnvelope.has(entry.sender);
+    const senderEnvelopeSlotPresent = messageEnvelopeSlotReadyForEntry(entry.sender, entry);
     const selected = key === selectedTwoProfileConversationKey;
     item.className = delivered ? "is-delivered" : inboundOnly ? "is-inbound-only" : "is-pending-receive";
     item.classList.toggle("is-selected", selected);
@@ -939,7 +980,7 @@ function selectedTwoProfilePendingConversationEntry() {
 
 function twoProfileConversationActionView(entry) {
   const senderEnvelopeSlotPresent = entry
-    ? productionPayloadSlots.messageEnvelope.has(entry.sender)
+    ? messageEnvelopeSlotReadyForEntry(entry.sender, entry)
     : false;
   const actionView = productionTwoProfileConversationActionView(entry, senderEnvelopeSlotPresent);
   const focusTargets = {
@@ -1606,7 +1647,7 @@ function storeProductionMessageEnvelope() {
     setText(fields.productionMessageWarning, "Export envelope before storing a local message slot.");
     return;
   }
-  productionPayloadSlots.messageEnvelope.set(profile, value);
+  storeMessageEnvelopeSlot(profile, value);
   setProductionMessageState("Message envelope stored");
   setText(fields.productionMessageWarning, `Stored local message envelope slot for ${profile}.`);
   renderProductionTwoProfileConversationList();
@@ -1616,7 +1657,22 @@ function storeProductionMessageEnvelope() {
 function loadProductionMessageEnvelope() {
   const profile = activeProductionProfileName();
   const counterpart = productionCounterpartProfile(profile);
-  const value = counterpart ? productionPayloadSlots.messageEnvelope.get(counterpart) : null;
+  const slot = counterpart ? productionPayloadSlots.messageEnvelope.get(counterpart) : null;
+  const value = messageEnvelopeSlotPayload(slot);
+  const selectedEntry = selectedTwoProfilePendingConversationEntry();
+  if (
+    selectedEntry &&
+    selectedEntry.sender === counterpart &&
+    selectedEntry.receiver === profile &&
+    !messageEnvelopeSlotMatchesEntry(slot, selectedEntry)
+  ) {
+    setProductionMessageState("Remote envelope slot stale");
+    setText(
+      fields.productionMessageWarning,
+      `Stored ${counterpart} envelope does not match selected message #${selectedEntry.messageNumber}. Export that message again before importing.`,
+    );
+    return;
+  }
   if (!value || !fields.productionRemoteMessageEnvelope) {
     setProductionMessageState("Remote envelope slot empty");
     setText(fields.productionMessageWarning, manualMissingCounterpartWarning(profile, counterpart, "envelope"));
@@ -1633,7 +1689,7 @@ function clearImportedMessageEnvelopeSlot(profile, envelopePayload) {
   const importedProfile = String(profile ?? "").trim().toLowerCase();
   const counterpart = productionCounterpartProfile(importedProfile);
   const importedEnvelope = String(envelopePayload ?? "").trim();
-  const storedEnvelope = counterpart ? productionPayloadSlots.messageEnvelope.get(counterpart) : null;
+  const storedEnvelope = counterpart ? messageEnvelopeSlotPayload(productionPayloadSlots.messageEnvelope.get(counterpart)) : "";
   if (!counterpart || !importedEnvelope || storedEnvelope !== importedEnvelope) {
     return false;
   }
@@ -1695,7 +1751,7 @@ function relayProductionMessageEnvelopeToPeer() {
     return;
   }
   resetProductionMessageImportState();
-  productionPayloadSlots.messageEnvelope.set(profile, value);
+  storeMessageEnvelopeSlot(profile, value);
   renderProductionTwoProfileConversationList();
   if (!selectProductionProfileForManualRelay(counterpart)) {
     setProductionMessageState("Envelope relay needs supported peer");
@@ -1896,7 +1952,10 @@ function applyPendingConversationToManualMessageReview(entry, options = {}) {
   const sentCopyPresent = entry.statuses.has("sent");
   const receivedCopyPresent = entry.statuses.has("received");
   const reviewProfile = sentCopyPresent && !receivedCopyPresent ? entry.receiver : entry.sender;
-  const senderEnvelopeSlot = productionPayloadSlots.messageEnvelope.get(entry.sender) ?? "";
+  const senderEnvelopeSlotRecord = productionPayloadSlots.messageEnvelope.get(entry.sender);
+  const senderEnvelopeSlot = messageEnvelopeSlotMatchesEntry(senderEnvelopeSlotRecord, entry)
+    ? messageEnvelopeSlotPayload(senderEnvelopeSlotRecord)
+    : "";
   if (!selectProductionProfileForManualRelay(reviewProfile)) {
     return false;
   }
@@ -3807,7 +3866,11 @@ function syncTwoProfileConversationAfterManualExport(
   const text = String(message ?? "").trim();
   const envelope = String(envelopePayload ?? "").trim();
   if (exportedProfile && envelope) {
-    productionPayloadSlots.messageEnvelope.set(exportedProfile, envelope);
+    storeMessageEnvelopeSlot(exportedProfile, envelope, {
+      receiver: selectedEntry?.receiver,
+      messageNumber: exportedNumber,
+      message: text,
+    });
     renderProductionTwoProfileConversationList();
   }
   if (
