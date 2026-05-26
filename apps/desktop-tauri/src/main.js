@@ -1922,6 +1922,9 @@ function productionManualFocusNode(target) {
     "relay-handshake-finish": fields.relayProductionHandshakeFinish,
     "import-finish": fields.importProductionHandshakeFinish,
     "message-body": fields.productionMessageBody,
+    "export-envelope": fields.exportProductionMessageEnvelope,
+    "remote-envelope": fields.productionRemoteMessageEnvelope,
+    "reply-message": fields.productionTwoProfileMessage,
     "export-message-envelope": fields.exportProductionMessageEnvelope,
     "store-message-envelope": fields.storeProductionMessageEnvelope,
     "load-message-envelope": fields.loadProductionMessageEnvelope,
@@ -1936,7 +1939,10 @@ function productionManualFocusNode(target) {
 }
 
 function focusTargetNeedsManualTools(target) {
-  return Boolean(target && !["two-profile-message", "send-two-profile-message"].includes(target));
+  return Boolean(
+    target &&
+      !["reply-message", "two-profile-message", "send-two-profile-message"].includes(target),
+  );
 }
 
 function focusProductionCurrentAction() {
