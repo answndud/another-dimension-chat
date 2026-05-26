@@ -752,10 +752,15 @@ export function productionManualMessageStatusView(state) {
   const remoteSlot = state?.hasRemoteMessageEnvelopeSlot ? "ready" : "empty";
   const remoteEnvelope = state?.hasInboundEnvelopeInput ? "loaded" : "empty";
   const received = state?.hasReceivedMessage ? "present" : "empty";
+  const reply = state?.hasTwoProfileReplyDraftInput
+    ? "draft"
+    : state?.hasTwoProfileReplySelected
+      ? "selected"
+      : "none";
   return (
     `active=${active} remote=${counterpart} number=${messageNumber} mode=${numberMode} session=${session} ` +
     `local_envelope=${localEnvelope} remote_slot=${remoteSlot} remote_envelope=${remoteEnvelope} ` +
-    `received=${received}`
+    `received=${received} reply=${reply}`
   );
 }
 
@@ -765,6 +770,10 @@ export function productionManualMessageCheckView(state) {
     check = "Manual check: select Alice or Bob before using stored remote payloads.";
   } else if (!Number.isInteger(state?.messageNumber)) {
     check = "Manual check: enter the message number before export or import.";
+  } else if (state?.hasTwoProfileReplyDraftInput) {
+    check = "Manual check: reply draft is ready; send the stored-session reply.";
+  } else if (state?.hasTwoProfileReplySelected) {
+    check = "Manual check: reply target is selected; write the reply or show received for local review.";
   } else if (state?.hasInboundEnvelopeInput && !state?.hasRemoteMessageEnvelopeSlot) {
     check = "Manual check: pasted envelope is not from the stored remote slot; verify source.";
   } else if (state?.hasLocalMessageEnvelope && !state?.hasRemoteMessageEnvelopeSlot) {
