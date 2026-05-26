@@ -3467,14 +3467,117 @@ replay check: no replayed messages after message 2
         assert!(!receiver_transcript.transport_io_opened);
         assert!(!receiver_transcript.runtime_messaging_enabled);
 
+        let reply_outbound = run_production_message_envelope_export(
+            &root,
+            responder.to_string(),
+            "correct-passphrase".to_string(),
+            0,
+            true,
+            "manual reply after import".to_string(),
+            604_800,
+        )
+        .expect("reply outbound");
+        assert_eq!(reply_outbound.message_ttl_seconds, 604_800);
+        assert!(reply_outbound.auto_message_number);
+        assert!(reply_outbound.message_number_reserved);
+        assert!(reply_outbound.encrypted_envelope_written);
+        assert!(reply_outbound.encrypted_envelope_present);
+        assert!(reply_outbound.envelope_payload.starts_with("ADENV1|"));
+        assert!(!reply_outbound.plaintext_returned);
+        assert!(!reply_outbound.key_material_exposed);
+        assert!(!reply_outbound.network_send_attempted);
+        assert!(!reply_outbound.transport_io_opened);
+        assert!(!reply_outbound.runtime_messaging_enabled);
+
+        let reply_inbound = run_production_message_envelope_import(
+            &root,
+            initiator.to_string(),
+            "correct-passphrase".to_string(),
+            reply_outbound.selected_message_number,
+            reply_outbound.envelope_payload,
+            604_800,
+        )
+        .expect("reply inbound");
+        assert!(reply_inbound.envelope_read);
+        assert!(reply_inbound.envelope_decodable);
+        assert!(reply_inbound.session_transport_ready);
+        assert!(reply_inbound.replay_accepted);
+        assert!(reply_inbound.plaintext_decrypted);
+        assert!(reply_inbound.received_message_written);
+        assert!(reply_inbound.received_message_matches_session);
+        assert!(!reply_inbound.plaintext_returned);
+        assert!(!reply_inbound.key_material_exposed);
+        assert!(!reply_inbound.network_receive_attempted);
+        assert!(!reply_inbound.transport_io_opened);
+        assert!(!reply_inbound.runtime_messaging_enabled);
+
+        let reply_received = run_production_message_received_export(
+            &root,
+            initiator.to_string(),
+            "correct-passphrase".to_string(),
+            reply_outbound.selected_message_number,
+        )
+        .expect("reply received export");
+        assert_eq!(reply_received.received_message, "manual reply after import");
+        assert!(reply_received.received_message_matches_session);
+        assert!(reply_received.plaintext_returned_after_unlock);
+        assert!(!reply_received.key_material_exposed);
+        assert!(!reply_received.network_receive_attempted);
+        assert!(!reply_received.transport_io_opened);
+        assert!(!reply_received.runtime_messaging_enabled);
+
+        let initiator_reply_transcript = run_production_message_transcript_export(
+            &root,
+            initiator.to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("initiator transcript after reply");
+        assert!(initiator_reply_transcript.entries.iter().any(|entry| {
+            entry.direction == "received"
+                && entry.message_number == reply_outbound.selected_message_number
+                && entry.message == "manual reply after import"
+        }));
+        assert!(initiator_reply_transcript.plaintext_returned_after_unlock);
+        assert!(!initiator_reply_transcript.key_material_exposed);
+        assert!(!initiator_reply_transcript.network_io_attempted);
+        assert!(!initiator_reply_transcript.transport_io_opened);
+        assert!(!initiator_reply_transcript.runtime_messaging_enabled);
+
+        let responder_reply_transcript = run_production_message_transcript_export(
+            &root,
+            responder.to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("responder transcript after reply");
+        assert!(responder_reply_transcript.entries.iter().any(|entry| {
+            entry.direction == "sent"
+                && entry.message_number == reply_outbound.selected_message_number
+                && entry.message == "manual reply after import"
+        }));
+        assert!(responder_reply_transcript.plaintext_returned_after_unlock);
+        assert!(!responder_reply_transcript.key_material_exposed);
+        assert!(!responder_reply_transcript.network_io_attempted);
+        assert!(!responder_reply_transcript.transport_io_opened);
+        assert!(!responder_reply_transcript.runtime_messaging_enabled);
+
         let serialized = serde_json::to_string(&inbound).expect("serialize inbound");
         assert!(!serialized.contains("persistent hello"));
         assert!(!serialized.contains("ADENV1"));
         assert!(!serialized.contains("correct-passphrase"));
+        let serialized_reply_inbound =
+            serde_json::to_string(&reply_inbound).expect("serialize reply inbound");
+        assert!(!serialized_reply_inbound.contains("manual reply after import"));
+        assert!(!serialized_reply_inbound.contains("ADENV1"));
+        assert!(!serialized_reply_inbound.contains("correct-passphrase"));
         let serialized_received = serde_json::to_string(&received).expect("serialize received");
         assert!(serialized_received.contains("persistent hello"));
         assert!(!serialized_received.contains("ADENV1"));
         assert!(!serialized_received.contains("correct-passphrase"));
+        let serialized_reply_received =
+            serde_json::to_string(&reply_received).expect("serialize reply received");
+        assert!(serialized_reply_received.contains("manual reply after import"));
+        assert!(!serialized_reply_received.contains("ADENV1"));
+        assert!(!serialized_reply_received.contains("correct-passphrase"));
         let _ = std::fs::remove_dir_all(root);
     }
 
