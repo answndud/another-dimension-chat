@@ -3525,6 +3525,10 @@ replay check: no replayed messages after message 2
         assert!(result.handshake_completed);
         assert!(result.sender_session_ready);
         assert!(result.receiver_session_ready);
+        assert_eq!(result.sender_profile, "alice");
+        assert_eq!(result.receiver_profile, "bob");
+        assert_eq!(result.message_number, 1);
+        assert_eq!(result.message_ttl_seconds, 86_400);
         assert!(result.message_number_reserved);
         assert!(result.encrypted_envelope_exported);
         assert!(result.inbound_message_stored);
