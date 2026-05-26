@@ -2061,6 +2061,99 @@ fn production_pairing_session_prepare_uses_stored_noise_key_without_opening_tran
     assert!(!local_roundtrip_error.contains(reply_store_arg));
     assert!(!local_roundtrip_error.contains("hello via local roundtrip"));
 
+    let sender_transcript = root.join("sender-transcript.tsv");
+    let receiver_transcript = root.join("receiver-transcript.tsv");
+    let sender_transcript_arg = sender_transcript.to_str().expect("sender transcript path");
+    let receiver_transcript_arg = receiver_transcript
+        .to_str()
+        .expect("receiver transcript path");
+    let sender_transcript_export = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "transcript-export",
+            "--profile",
+            finish_profile,
+            "--store",
+            finish_store_arg,
+            "--out",
+            sender_transcript_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let sender_transcript_out = stdout(&sender_transcript_export);
+    let sender_transcript_error = stderr(&sender_transcript_export);
+    assert!(
+        sender_transcript_export.status.success(),
+        "stdout: {sender_transcript_out}\nstderr: {sender_transcript_error}"
+    );
+    assert!(sender_transcript_out.contains("production message transcript exported:"));
+    assert!(sender_transcript_out.contains("entries_exported=2"));
+    assert!(sender_transcript_out.contains("expired_messages_purged=0"));
+    assert!(sender_transcript_out.contains("plaintext_written=true"));
+    assert!(sender_transcript_out.contains("plaintext_exposed=false"));
+    assert!(sender_transcript_out.contains("network_io_attempted=false"));
+    assert!(sender_transcript_out.contains("key_material_exposed=false"));
+    assert!(sender_transcript_out.contains("transport_io_opened=false"));
+    assert!(sender_transcript_out.contains("runtime_messaging=false"));
+    assert!(sender_transcript_error.contains("writes recovered plaintext only to --out"));
+    assert!(!sender_transcript_out.contains(finish_profile));
+    assert!(!sender_transcript_out.contains(finish_store_arg));
+    assert!(!sender_transcript_out.contains(sender_transcript_arg));
+    assert!(!sender_transcript_out.contains("hello from canonical dialer"));
+    assert!(!sender_transcript_out.contains("hello via local roundtrip"));
+    assert!(!sender_transcript_out.contains("correct horse"));
+    assert!(!sender_transcript_error.contains("hello from canonical dialer"));
+    assert!(!sender_transcript_error.contains("hello via local roundtrip"));
+    assert!(!sender_transcript_error.contains("correct horse"));
+    let sender_transcript_text =
+        std::fs::read_to_string(&sender_transcript).expect("read sender transcript");
+    assert!(sender_transcript_text.starts_with(
+        "direction\tmessage_number\tcreated_at_ms\tttl_seconds\texpires_at_ms\tmessage\n"
+    ));
+    assert!(sender_transcript_text.contains("sent\t1\t"));
+    assert!(sender_transcript_text.contains("sent\t2\t"));
+    assert!(sender_transcript_text.contains("hello from canonical dialer"));
+    assert!(sender_transcript_text.contains("hello via local roundtrip"));
+
+    let receiver_transcript_export = run_with_stdin(
+        &[
+            "production",
+            "message",
+            "transcript-export",
+            "--profile",
+            reply_profile,
+            "--store",
+            reply_store_arg,
+            "--out",
+            receiver_transcript_arg,
+            "--passphrase-stdin",
+        ],
+        "correct horse battery staple\n",
+    );
+    let receiver_transcript_out = stdout(&receiver_transcript_export);
+    let receiver_transcript_error = stderr(&receiver_transcript_export);
+    assert!(
+        receiver_transcript_export.status.success(),
+        "stdout: {receiver_transcript_out}\nstderr: {receiver_transcript_error}"
+    );
+    assert!(receiver_transcript_out.contains("entries_exported=2"));
+    assert!(receiver_transcript_out.contains("plaintext_exposed=false"));
+    assert!(!receiver_transcript_out.contains(reply_profile));
+    assert!(!receiver_transcript_out.contains(reply_store_arg));
+    assert!(!receiver_transcript_out.contains(receiver_transcript_arg));
+    assert!(!receiver_transcript_out.contains("hello from canonical dialer"));
+    assert!(!receiver_transcript_out.contains("hello via local roundtrip"));
+    assert!(!receiver_transcript_error.contains("hello from canonical dialer"));
+    assert!(!receiver_transcript_error.contains("hello via local roundtrip"));
+    let receiver_transcript_text =
+        std::fs::read_to_string(&receiver_transcript).expect("read receiver transcript");
+    assert!(receiver_transcript_text.contains("received\t1\t"));
+    assert!(receiver_transcript_text.contains("received\t2\t"));
+    assert!(receiver_transcript_text.contains("hello from canonical dialer"));
+    assert!(receiver_transcript_text.contains("hello via local roundtrip"));
+
     let auto_roundtrip_plaintext = root.join("auto-roundtrip-message.txt");
     let auto_roundtrip_received = root.join("auto-roundtrip-received.txt");
     std::fs::write(&auto_roundtrip_plaintext, "hello via auto local roundtrip")
