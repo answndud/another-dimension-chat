@@ -3620,6 +3620,72 @@ replay check: no replayed messages after message 2
         assert!(!reply_message.network_io_attempted);
         assert!(!reply_message.transport_io_opened);
         assert!(!reply_message.runtime_messaging_enabled);
+
+        let second_reply = run_production_two_profile_message_roundtrip(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "second stored reply".to_string(),
+            86_400,
+        )
+        .expect("second stored-session reply roundtrip");
+        assert_eq!(second_reply.sender_profile, "alice");
+        assert_eq!(second_reply.receiver_profile, "bob");
+        assert!(second_reply.message_number > stored_message.message_number);
+        assert!(second_reply.sender_session_ready);
+        assert!(second_reply.receiver_session_ready);
+        assert!(second_reply.message_number_reserved);
+        assert!(second_reply.encrypted_envelope_exported);
+        assert!(second_reply.inbound_message_stored);
+        assert!(second_reply.received_status_verified);
+        assert!(second_reply.received_export_matches_input);
+        assert_eq!(second_reply.message_ttl_seconds, 86_400);
+        assert!(!second_reply.plaintext_returned_to_frontend);
+        assert!(!second_reply.store_path_returned);
+        assert!(!second_reply.passphrase_retained);
+        assert!(!second_reply.key_material_exposed);
+        assert!(!second_reply.network_io_attempted);
+        assert!(!second_reply.transport_io_opened);
+        assert!(!second_reply.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&second_reply).expect("serialize second reply");
+        assert!(!serialized.contains("second stored reply"));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("ADENV1"));
+
+        let alice_transcript = run_production_message_transcript_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("alice transcript after reply loop");
+        assert!(alice_transcript.entries.iter().any(|entry| {
+            entry.direction == "received"
+                && entry.message_number == reply_message.message_number
+                && entry.message == "stored session reply"
+        }));
+        assert!(alice_transcript.entries.iter().any(|entry| {
+            entry.direction == "sent"
+                && entry.message_number == second_reply.message_number
+                && entry.message == "second stored reply"
+        }));
+
+        let bob_transcript = run_production_message_transcript_export(
+            &root,
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("bob transcript after reply loop");
+        assert!(bob_transcript.entries.iter().any(|entry| {
+            entry.direction == "sent"
+                && entry.message_number == reply_message.message_number
+                && entry.message == "stored session reply"
+        }));
+        assert!(bob_transcript.entries.iter().any(|entry| {
+            entry.direction == "received"
+                && entry.message_number == second_reply.message_number
+                && entry.message == "second stored reply"
+        }));
         let _ = std::fs::remove_dir_all(root);
     }
 
