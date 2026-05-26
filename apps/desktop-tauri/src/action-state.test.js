@@ -739,7 +739,7 @@ test("productionManualNextActions follows pairing and message readiness", () => 
       hasImportedMessage: true,
       hasTwoProfileReplySelected: true,
     }).message,
-    "Next: click Show received for bob.",
+    "Next: click Show plaintext for bob.",
   );
   assert.equal(
     productionManualNextActions({ ...baseState, activeProfile: "bob", hasReceivedMessage: true }).message,
@@ -804,7 +804,7 @@ test("productionManualCurrentStepView summarizes the active manual phase", () =>
       hasImportedMessage: true,
       hasTwoProfileReplySelected: true,
     }),
-    "Message | Next: click Show received for bob.",
+    "Message | Next: click Show plaintext for bob.",
   );
   assert.equal(
     productionManualCurrentStepView({
@@ -1365,7 +1365,7 @@ test("productionManualMessageCheckView separates manual verification guidance", 
       hasInboundEnvelopeInput: true,
       hasTwoProfileReplySelected: true,
     }),
-    "Manual check: reply target is selected; write the reply or show received for local review.",
+    "Manual check: reply target is selected; write the reply or show plaintext for local review.",
   );
   assert.equal(
     productionManualMessageCheckView({
