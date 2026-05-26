@@ -618,9 +618,11 @@ test("productionManualNextActions follows pairing and message readiness", () => 
     productionManualNextActions({
       ...baseState,
       activeProfile: "bob",
+      counterpartProfile: "alice",
       sessionReadyForMessages: true,
       hasInboundEnvelopeInput: true,
       hasImportedMessage: true,
+      hasTwoProfileReplySelected: true,
     }).message,
     "Next: click Show received for bob.",
   );
@@ -684,6 +686,17 @@ test("productionManualCurrentStepView summarizes the active manual phase", () =>
       activeProfile: "bob",
       counterpartProfile: "alice",
       hasProfileUnlockInput: true,
+      hasImportedMessage: true,
+      hasTwoProfileReplySelected: true,
+    }),
+    "Message | Next: click Show received for bob.",
+  );
+  assert.equal(
+    productionManualCurrentStepView({
+      ...baseState,
+      activeProfile: "bob",
+      counterpartProfile: "alice",
+      hasProfileUnlockInput: true,
       hasTwoProfileReplySelected: true,
     }),
     "Reply | Next: write reply from bob to alice.",
@@ -713,6 +726,15 @@ test("productionManualCurrentFocusTarget resolves the next manual control", () =
       hasSessionDraftSaved: true,
     }),
     "export-init",
+  );
+  assert.equal(
+    productionManualCurrentFocusTarget({
+      ...baseState,
+      hasProfileUnlockInput: true,
+      hasImportedMessage: true,
+      hasTwoProfileReplySelected: true,
+    }),
+    "show-received",
   );
   assert.equal(
     productionManualCurrentFocusTarget({
@@ -760,7 +782,7 @@ test("productionManualCurrentFocusTarget resolves the next manual control", () =
   );
 });
 
-test("productionManualPrimaryActions keeps reply flow ahead of received review", () => {
+test("productionManualPrimaryActions keeps received review ahead of reply compose", () => {
   assert.deepEqual(
     productionManualPrimaryActions({
       ...baseState,
@@ -781,8 +803,8 @@ test("productionManualPrimaryActions keeps reply flow ahead of received review",
       hasTwoProfileReplySelected: true,
     }),
     {
-      showReceived: false,
-      selectReply: true,
+      showReceived: true,
+      selectReply: false,
       sendReply: false,
     },
   );
