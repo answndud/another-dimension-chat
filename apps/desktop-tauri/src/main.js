@@ -1940,6 +1940,7 @@ function productionManualFocusNode(target) {
     "received-message": fields.productionReceivedMessage,
     "two-profile-message": fields.productionTwoProfileMessage,
     "send-two-profile-message": fields.runProductionTwoProfileMessageRoundtrip,
+    "review-pending": fields.reviewPendingTwoProfileMessage,
   };
   return targets[target] ?? null;
 }
@@ -1947,7 +1948,7 @@ function productionManualFocusNode(target) {
 function focusTargetNeedsManualTools(target) {
   return Boolean(
     target &&
-      !["reply-message", "two-profile-message", "send-two-profile-message"].includes(target),
+      !["reply-message", "two-profile-message", "send-two-profile-message", "review-pending"].includes(target),
   );
 }
 
@@ -2552,7 +2553,9 @@ function applyProductionActionState() {
     const selectedNextAction = selectedMessageInputStale
       ? `Stale: click Reapply selected to restore ${selectedMessageLabel}.`
       : selectedPendingActionView.nextAction;
-    latestProductionManualFocusTarget = selectedPendingActionView.focusTargetKey;
+    latestProductionManualFocusTarget = selectedMessageInputStale
+      ? "review-pending"
+      : selectedPendingActionView.focusTargetKey;
     setProductionManualFocusCurrent(latestProductionManualFocusTarget);
     setText(fields.productionMessageNextAction, selectedNextAction);
     setText(fields.productionManualCurrent, selectedNextAction);
