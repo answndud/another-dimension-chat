@@ -41,6 +41,8 @@ required_files=(
   "$APP_DIR/src/main.js"
   "$APP_DIR/src/transcript-export.js"
   "$APP_DIR/src/transcript-export.test.js"
+  "$APP_DIR/src/transcript-retention.js"
+  "$APP_DIR/src/transcript-retention.test.js"
   "$APP_DIR/src/styles.css"
   "$APP_DIR/vite.config.js"
   "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh"
@@ -180,8 +182,11 @@ require_contains "$APP_DIR/src/main.js" 'twoProfileRetentionLabel'
 require_contains "$APP_DIR/src/main.js" 'transcriptRetentionWarning'
 require_contains "$APP_DIR/src/main.js" 'transcriptBoundarySummary'
 require_contains "$APP_DIR/src/main.js" 'from "./transcript-export.js"'
+require_contains "$APP_DIR/src/main.js" 'from "./transcript-retention.js"'
 require_contains "$APP_DIR/src/transcript-export.js" 'combinedTwoProfileTranscriptTsv'
 require_contains "$APP_DIR/src/transcript-export.test.js" 'combinedTwoProfileTranscriptTsv'
+require_contains "$APP_DIR/src/transcript-retention.js" 'transcriptRetentionView'
+require_contains "$APP_DIR/src/transcript-retention.test.js" 'transcriptRetentionView'
 require_contains "$APP_DIR/src/main.js" 'appendExpiredMessagesPurged'
 require_contains "$APP_DIR/src/main.js" 'expired_messages_purged'
 require_contains "$APP_DIR/src/styles.css" 'transcript-retention'
@@ -250,8 +255,10 @@ require_contains "$TAURI_DIR/src/lib.rs" 'sanitize_production_message_ttl_second
 require_contains "$TAURI_DIR/src/lib.rs" 'message_ttl_seconds'
 require_contains "$APP_DIR/src/action-state.test.js" 'node:test'
 require_contains "$APP_DIR/src/transcript-export.test.js" 'node:test'
+require_contains "$APP_DIR/src/transcript-retention.test.js" 'node:test'
 require_contains "$APP_DIR/package.json" 'test:state'
 require_contains "$APP_DIR/package.json" 'src/transcript-export.test.js'
+require_contains "$APP_DIR/package.json" 'src/transcript-retention.test.js'
 require_contains "$APP_DIR/src/main.js" 'productionSessionReadyForMessages'
 require_contains "$APP_DIR/src/main.js" 'applyProductionProfilePreset'
 require_contains "$APP_DIR/src/main.js" 'moveLocalPayload'
