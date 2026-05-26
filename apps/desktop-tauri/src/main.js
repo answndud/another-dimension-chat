@@ -8,6 +8,7 @@ import {
   productionManualCurrentFocusTarget,
   productionManualCurrentStepView,
   productionManualNextActions,
+  productionManualPrimaryActions,
   productionManualRelayCurrentActions,
   productionManualRelayDisabledReasons,
   productionManualRelayAvailability,
@@ -2224,6 +2225,7 @@ function applyProductionActionState() {
   const selectedDeliveredReplyDraftReady = Boolean(selectedDeliveredReplyReady && twoProfile.message);
   state.hasTwoProfileReplySelected = selectedDeliveredReplyReady || latestReplySelected;
   state.hasTwoProfileReplyDraftInput = selectedDeliveredReplyDraftReady;
+  const manualPrimaryActions = productionManualPrimaryActions(state);
   const manualCurrentActions = productionManualRelayCurrentActions(manualAvailability, {
     hasFinishImportInput,
     hasHandshakeFinishInput,
@@ -2337,7 +2339,7 @@ function applyProductionActionState() {
     fields.exportProductionReceivedMessage,
     !availability.exportReceivedMessage,
     busy ? "Wait for the active production action." : "Enter profile, passphrase, and message number first.",
-    hasImportedMessage && !hasReceivedMessage,
+    manualPrimaryActions.showReceived,
   );
   setActionButtonState(
     fields.loadProductionMessageTranscript,
@@ -2370,7 +2372,7 @@ function applyProductionActionState() {
     fields.replyLatestTwoProfileMessage,
     busy || !latestConversationDelivered,
     busy ? "Wait for the active production action." : "Load a delivered conversation first.",
-    selectedDeliveredReplyReady || latestReplySelected,
+    manualPrimaryActions.selectReply,
   );
   setActionButtonState(
     fields.reviewPendingTwoProfileMessage,
@@ -2406,7 +2408,7 @@ function applyProductionActionState() {
       : hasTwoProfileInput
         ? "Run full setup once before sending with stored sessions."
         : "Enter two profiles, passphrase, and message first.",
-    selectedDeliveredReplyDraftReady || twoProfileCanSendStoredMessage,
+    manualPrimaryActions.sendReply || (!state.hasTwoProfileReplySelected && twoProfileCanSendStoredMessage),
   );
   setActionButtonState(
     fields.useProductionPairingPayload,
