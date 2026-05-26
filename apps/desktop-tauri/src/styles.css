@@ -599,9 +599,16 @@ textarea[readonly] {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
+.message-transcript li.is-review-target {
+  border-color: var(--warning);
+  border-left-color: var(--warning);
+  box-shadow: inset 3px 0 0 var(--warning);
+}
+
 .message-transcript li.is-reply-target {
   border-color: var(--accent-cyan);
   border-left-color: var(--accent-cyan);
+  box-shadow: inset 3px 0 0 var(--accent-cyan);
 }
 
 .message-transcript li[role="button"] {
@@ -679,6 +686,11 @@ textarea[readonly] {
 
 .message-transcript .transcript-review.is-selected {
   color: var(--accent);
+  font-weight: 750;
+}
+
+.message-transcript .transcript-review.is-review-target {
+  color: var(--warning);
   font-weight: 750;
 }
 

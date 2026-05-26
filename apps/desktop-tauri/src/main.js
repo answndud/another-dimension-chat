@@ -864,9 +864,11 @@ function renderProductionTwoProfileConversationList() {
     const senderEnvelopeSlotPresent = messageEnvelopeSlotReadyForEntry(entry.sender, entry);
     const selected = key === selectedTwoProfileConversationKey;
     const currentReplyTarget = key === replyTargetKey;
+    const currentReviewTarget = selected && !currentReplyTarget && !delivered;
     item.className = delivered ? "is-delivered" : inboundOnly ? "is-inbound-only" : "is-pending-receive";
     item.classList.toggle("is-selected", selected);
     item.classList.toggle("is-reply-target", currentReplyTarget);
+    item.classList.toggle("is-review-target", currentReviewTarget);
     item.tabIndex = 0;
     item.setAttribute("role", "button");
     item.setAttribute("aria-pressed", selected ? "true" : "false");
@@ -921,7 +923,9 @@ function renderProductionTwoProfileConversationList() {
     item.append(meta, status, slot, retention, action);
     if (selected) {
       const review = document.createElement("span");
-      review.className = `transcript-review ${currentReplyTarget ? "is-reply-target" : "is-selected"}`;
+      review.className = `transcript-review ${
+        currentReplyTarget ? "is-reply-target" : currentReviewTarget ? "is-review-target" : "is-selected"
+      }`;
       review.textContent = currentReplyTarget
         ? `current reply target: ${entry.receiver} -> ${entry.sender} for message #${entry.messageNumber}`
         : delivered
