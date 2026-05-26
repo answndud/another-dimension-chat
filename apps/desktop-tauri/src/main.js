@@ -2476,14 +2476,15 @@ function applyProductionActionState() {
   renderManualNextActions(state);
   setTwoProfileComposeCurrent(twoProfileCurrentAction === "compose");
   renderManualMessageStatus(state);
+  let selectedPendingActionView = null;
   if (selectedConversation && !selectedConversationDelivered) {
-    const selectedActionView = twoProfileConversationActionView(selectedConversation);
-    latestProductionManualFocusTarget = selectedActionView.focusTargetKey;
+    selectedPendingActionView = twoProfileConversationActionView(selectedConversation);
+    latestProductionManualFocusTarget = selectedPendingActionView.focusTargetKey;
     setProductionManualFocusCurrent(latestProductionManualFocusTarget);
-    setText(fields.productionMessageNextAction, selectedActionView.nextAction);
-    setOpenManualProductionToolsLabel(selectedActionView.manualButtonLabel);
+    setText(fields.productionMessageNextAction, selectedPendingActionView.nextAction);
+    setOpenManualProductionToolsLabel(selectedPendingActionView.manualButtonLabel);
     setActionButtonState(fields.openManualProductionTools, false, "", true);
-    setProductionMessageManualCurrent(selectedActionView.manualTarget);
+    setProductionMessageManualCurrent(selectedPendingActionView.manualTarget);
   }
   renderManualStatus();
   setActionButtonState(
@@ -2595,7 +2596,11 @@ function applyProductionActionState() {
     selectedDeliveredReplyReady,
   });
   setReplyLatestTwoProfileLabel(replySelection.label);
-  setReviewPendingTwoProfileLabel(pendingSelected ? "Review selected" : "Review pending");
+  setReviewPendingTwoProfileLabel(
+    pendingSelected && selectedPendingActionView
+      ? selectedPendingActionView.manualButtonLabel
+      : "Review pending",
+  );
   setActionButtonState(
     fields.replyLatestTwoProfileMessage,
     busy || !replySelection.canSelect,
