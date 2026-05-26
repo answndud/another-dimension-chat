@@ -4462,6 +4462,7 @@ async function exportProductionMessageEnvelope() {
 
 async function importProductionMessageEnvelope() {
   const { profile, passphrase, messageNumber, envelopePayload, messageTtlSeconds } = productionMessageInput();
+  let focusReceivedReviewAfterImport = false;
   if (!messageRetentionPolicyReady()) {
     setProductionMessageState("Message import blocked");
     setText(fields.productionMessageWarning, messageRetentionPolicyBlocker());
@@ -4522,6 +4523,7 @@ async function importProductionMessageEnvelope() {
     setText(fields.productionMessageBoundary, view.boundary);
     const conversationRefresh = await refreshTwoProfileConversationAfterManualImport(profile, passphrase);
     if (conversationRefresh?.replySelected) {
+      focusReceivedReviewAfterImport = true;
       setText(
         fields.productionMessageWarning,
         `${result.warning}${
@@ -4541,6 +4543,9 @@ async function importProductionMessageEnvelope() {
       fields.importProductionMessageEnvelope.disabled = false;
     }
     applyProductionActionState();
+    if (focusReceivedReviewAfterImport) {
+      focusProductionCurrentAction();
+    }
   }
 }
 
