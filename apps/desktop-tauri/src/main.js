@@ -2508,9 +2508,9 @@ function applyProductionActionState() {
       twoProfile.profileA === selectedConversation.receiver &&
       twoProfile.profileB === selectedConversation.sender,
   );
-  const selectedDeliveredReplyDraftReady = Boolean(selectedDeliveredReplyReady && twoProfile.message);
+  const twoProfileReplyDraftReady = Boolean((selectedDeliveredReplyReady || latestReplySelected) && twoProfile.message);
   state.hasTwoProfileReplySelected = selectedDeliveredReplyReady || latestReplySelected;
-  state.hasTwoProfileReplyDraftInput = selectedDeliveredReplyDraftReady;
+  state.hasTwoProfileReplyDraftInput = twoProfileReplyDraftReady;
   const manualPrimaryActions = productionManualPrimaryActions(state);
   const replyComposerCurrent = Boolean(
     twoProfileCurrentAction === "compose" ||
@@ -2726,8 +2726,10 @@ function applyProductionActionState() {
       ? "Wait for the active production action."
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
-      : selectedDeliveredReplyDraftReady
+      : selectedDeliveredReplyReady && twoProfileReplyDraftReady
         ? `Send reply to selected message #${selectedConversation.messageNumber}.`
+      : latestReplySelected && twoProfileReplyDraftReady
+        ? "Send reply to the latest delivered message."
       : hasTwoProfileInput
         ? "Run full setup once before sending with stored sessions."
         : "Enter two profiles, passphrase, and message first.",
