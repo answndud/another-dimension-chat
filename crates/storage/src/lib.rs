@@ -1014,13 +1014,17 @@ pub mod production {
                 )
                 .expect("save replay window");
 
+            let encoded_replay_window = replay_window.encode_state();
             assert_eq!(
                 store.load_replay_window(&record_id).expect("load"),
                 Some(replay_window)
             );
             let database_bytes = std::fs::read(&path).expect("read database");
             assert!(!contains_bytes(&database_bytes, b"ADREPLAY1"));
-            assert!(!contains_bytes(&database_bytes, b"1,3"));
+            assert!(!contains_bytes(
+                &database_bytes,
+                encoded_replay_window.as_bytes()
+            ));
         }
 
         #[test]

@@ -400,6 +400,13 @@ function setProductionMessageManualCurrent(target) {
   fields.productionMessageInbound?.classList.toggle("is-current-manual", target === "inbound");
 }
 
+function setProductionManualFocusCurrent(target) {
+  for (const node of document.querySelectorAll(".is-current-input")) {
+    node?.classList.remove("is-current-input");
+  }
+  productionManualFocusNode(target)?.classList.add("is-current-input");
+}
+
 function setTwoProfileComposeLocked(locked) {
   if (!fields.productionTwoProfileMessage) {
     return;
@@ -628,6 +635,7 @@ function applyTwoProfilePairFromProfile(profile) {
 function renderManualNextActions(state) {
   const nextActions = productionManualNextActions(state);
   latestProductionManualFocusTarget = productionManualCurrentFocusTarget(state);
+  setProductionManualFocusCurrent(latestProductionManualFocusTarget);
 
   setText(fields.productionProfileNextAction, nextActions.profile);
   setText(fields.productionPairingNextAction, nextActions.pairing);
@@ -1004,6 +1012,7 @@ function twoProfileConversationActionView(entry) {
   };
   return {
     ...actionView,
+    focusTargetKey: actionView.focusTarget,
     focusTarget: focusTargets[actionView.focusTarget] ?? null,
   };
 }
@@ -2339,6 +2348,8 @@ function applyProductionActionState() {
   renderManualMessageStatus(state);
   if (selectedConversation && !selectedConversationDelivered) {
     const selectedActionView = twoProfileConversationActionView(selectedConversation);
+    latestProductionManualFocusTarget = selectedActionView.focusTargetKey;
+    setProductionManualFocusCurrent(latestProductionManualFocusTarget);
     setText(fields.productionMessageNextAction, selectedActionView.nextAction);
     setOpenManualProductionToolsLabel(selectedActionView.manualButtonLabel);
     setProductionMessageManualCurrent(selectedActionView.manualTarget);
