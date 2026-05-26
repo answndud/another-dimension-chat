@@ -27,6 +27,7 @@ import {
   productionSessionStateView,
   productionTwoProfileConversationActionView,
   productionTwoProfileMessageResultView,
+  productionTwoProfileReplySelectionView,
   productionTwoProfileResultView,
   productionTwoProfileSessionStatusView,
 } from "./action-state.js";
@@ -2422,12 +2423,17 @@ function applyProductionActionState() {
   const pendingConversation = latestTwoProfilePendingConversationEntry();
   const selectedPendingConversation = selectedTwoProfilePendingConversationEntry();
   const pendingSelected = Boolean(selectedPendingConversation);
-  setReplyLatestTwoProfileLabel(selectedDeliveredReplyReady ? "Reply selected" : "Reply to latest");
+  const replySelection = productionTwoProfileReplySelectionView({
+    latestConversationDelivered,
+    selectedConversationDelivered,
+    selectedDeliveredReplyReady,
+  });
+  setReplyLatestTwoProfileLabel(replySelection.label);
   setReviewPendingTwoProfileLabel(pendingSelected ? "Review selected" : "Review pending");
   setActionButtonState(
     fields.replyLatestTwoProfileMessage,
-    busy || !latestConversationDelivered,
-    busy ? "Wait for the active production action." : "Load a delivered conversation first.",
+    busy || !replySelection.canSelect,
+    busy ? "Wait for the active production action." : replySelection.disabledReason,
     manualPrimaryActions.selectReply,
   );
   setActionButtonState(
