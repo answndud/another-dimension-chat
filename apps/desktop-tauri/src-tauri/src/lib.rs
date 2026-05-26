@@ -77,6 +77,10 @@ pub struct ProductionLocalRoundtripResult {
 #[derive(serde::Serialize)]
 pub struct ProductionTwoProfileRoundtripResult {
     warning: &'static str,
+    sender_profile: String,
+    receiver_profile: String,
+    message_number: u64,
+    message_ttl_seconds: u64,
     profile_a_unlocked: bool,
     profile_b_unlocked: bool,
     pairing_payloads_exported: bool,
@@ -2083,6 +2087,8 @@ fn run_production_two_profile_roundtrip(
         sender_profile.clone(),
         passphrase.clone(),
     )?;
+    let sender_profile_result = sender_profile.clone();
+    let receiver_profile_result = receiver_profile.clone();
 
     let outbound = run_production_message_envelope_export(
         &app_data_root,
@@ -2110,6 +2116,10 @@ fn run_production_two_profile_roundtrip(
 
     Ok(ProductionTwoProfileRoundtripResult {
         warning: "two-profile app-data roundtrip only; no network, Tor, or secure-release claim",
+        sender_profile: sender_profile_result,
+        receiver_profile: receiver_profile_result,
+        message_number,
+        message_ttl_seconds,
         profile_a_unlocked: profile_a_unlock.storage_opened
             && profile_a_unlock.profile_marker_present
             && profile_a_unlock.identity_private_key_present,
