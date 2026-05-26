@@ -2376,6 +2376,7 @@ function applyProductionActionState() {
     ? Number.parseInt(selectedConversation.messageNumber, 10) === message.messageNumber &&
       String(selectedConversation.message ?? "").trim() === message.message
     : true;
+  const selectedMessageInputStale = !selectedMessageInputMatches;
   const selectedHasSentCopy = Boolean(selectedConversation?.statuses?.has("sent"));
   const selectedHasReceivedCopy = Boolean(selectedConversation?.statuses?.has("received"));
   const selectedNeedsSenderExport = Boolean(selectedConversation && !selectedHasSentCopy);
@@ -2548,10 +2549,13 @@ function applyProductionActionState() {
   let selectedPendingActionView = null;
   if (selectedConversation && !selectedConversationDelivered) {
     selectedPendingActionView = twoProfileConversationActionView(selectedConversation);
+    const selectedNextAction = selectedMessageInputStale
+      ? `Stale: click Reapply selected to restore ${selectedMessageLabel}.`
+      : selectedPendingActionView.nextAction;
     latestProductionManualFocusTarget = selectedPendingActionView.focusTargetKey;
     setProductionManualFocusCurrent(latestProductionManualFocusTarget);
-    setText(fields.productionMessageNextAction, selectedPendingActionView.nextAction);
-    setText(fields.productionManualCurrent, selectedPendingActionView.nextAction);
+    setText(fields.productionMessageNextAction, selectedNextAction);
+    setText(fields.productionManualCurrent, selectedNextAction);
     setOpenManualProductionToolsLabel(selectedPendingActionView.manualButtonLabel);
     setActionButtonState(fields.openManualProductionTools, false, "", true);
     setProductionMessageManualCurrent(selectedPendingActionView.manualTarget);
@@ -2674,7 +2678,9 @@ function applyProductionActionState() {
   });
   setReplyLatestTwoProfileLabel(replySelection.label);
   setReviewPendingTwoProfileLabel(
-    pendingSelected && selectedPendingActionView
+    pendingSelected && selectedMessageInputStale
+      ? "Reapply selected"
+      : pendingSelected && selectedPendingActionView
       ? selectedPendingActionView.manualButtonLabel
       : "Review pending",
   );
