@@ -1713,8 +1713,36 @@ test("productionTwoProfileReplySelectionView keeps selected delivered rows reply
     }),
     {
       canSelect: true,
-      label: "Reply selected",
+      label: "Use selected reply",
       disabledReason: "",
+    },
+  );
+
+  assert.deepEqual(
+    productionTwoProfileReplySelectionView({
+      latestConversationDelivered: true,
+      selectedConversationDelivered: true,
+      selectedDeliveredReplyReady: true,
+      hasTwoProfileReplyDraftInput: false,
+    }),
+    {
+      canSelect: false,
+      label: "Reply target set",
+      disabledReason: "Reply target is already selected; write the reply.",
+    },
+  );
+
+  assert.deepEqual(
+    productionTwoProfileReplySelectionView({
+      latestConversationDelivered: true,
+      selectedConversationDelivered: true,
+      selectedDeliveredReplyReady: true,
+      hasTwoProfileReplyDraftInput: true,
+    }),
+    {
+      canSelect: false,
+      label: "Reply target set",
+      disabledReason: "Reply draft is active; send it or select another delivered row.",
     },
   );
 

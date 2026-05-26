@@ -2683,6 +2683,7 @@ function applyProductionActionState() {
     latestConversationDelivered,
     selectedConversationDelivered,
     selectedDeliveredReplyReady,
+    hasTwoProfileReplyDraftInput: state.hasTwoProfileReplyDraftInput,
   });
   setReplyLatestTwoProfileLabel(replySelection.label);
   setReviewPendingTwoProfileLabel(

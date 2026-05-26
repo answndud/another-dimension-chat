@@ -224,11 +224,18 @@ export function productionTwoProfileReplySelectionView(state) {
   const selectedDelivered = Boolean(state?.selectedConversationDelivered);
   const latestDelivered = Boolean(state?.latestConversationDelivered);
   const selectedReplyReady = Boolean(state?.selectedDeliveredReplyReady);
-  const canSelect = selectedDelivered || latestDelivered;
+  const replyDraft = Boolean(state?.hasTwoProfileReplyDraftInput);
+  const canSelect = !selectedReplyReady && (selectedDelivered || latestDelivered);
   return {
     canSelect,
-    label: selectedDelivered || selectedReplyReady ? "Reply selected" : "Reply to latest",
-    disabledReason: canSelect ? "" : "Load a delivered conversation first.",
+    label: selectedReplyReady ? "Reply target set" : selectedDelivered ? "Use selected reply" : "Reply to latest",
+    disabledReason: canSelect
+      ? ""
+      : selectedReplyReady
+        ? replyDraft
+          ? "Reply draft is active; send it or select another delivered row."
+          : "Reply target is already selected; write the reply."
+        : "Load a delivered conversation first.",
   };
 }
 
