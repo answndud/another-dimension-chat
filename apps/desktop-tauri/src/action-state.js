@@ -194,6 +194,32 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
   };
 }
 
+export function productionTwoProfileConversationCompare(left, right, direction = "asc") {
+  const order = direction === "desc" ? -1 : 1;
+  const normalize = (entry) => {
+    const createdAtMs = Number.parseInt(entry?.createdAtMs ?? "", 10);
+    const messageNumber = Number.parseInt(entry?.messageNumber ?? "", 10);
+    return {
+      createdAtMs: Number.isFinite(createdAtMs) && createdAtMs > 0 ? createdAtMs : null,
+      messageNumber: Number.isFinite(messageNumber) ? messageNumber : 0,
+      route: `${String(entry?.sender ?? "")}:${String(entry?.receiver ?? "")}`,
+    };
+  };
+  const leftKey = normalize(left);
+  const rightKey = normalize(right);
+  if (
+    leftKey.createdAtMs !== null &&
+    rightKey.createdAtMs !== null &&
+    leftKey.createdAtMs !== rightKey.createdAtMs
+  ) {
+    return order * (leftKey.createdAtMs - rightKey.createdAtMs);
+  }
+  if (leftKey.messageNumber !== rightKey.messageNumber) {
+    return order * (leftKey.messageNumber - rightKey.messageNumber);
+  }
+  return order * leftKey.route.localeCompare(rightKey.route);
+}
+
 export function productionTwoProfileReplySelectionView(state) {
   const selectedDelivered = Boolean(state?.selectedConversationDelivered);
   const latestDelivered = Boolean(state?.latestConversationDelivered);

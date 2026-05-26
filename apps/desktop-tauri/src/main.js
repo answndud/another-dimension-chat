@@ -27,6 +27,7 @@ import {
   productionSessionStateView,
   productionTwoProfilePairFromProfiles,
   productionTwoProfileConversationActionView,
+  productionTwoProfileConversationCompare,
   productionTwoProfileCurrentAction,
   productionTwoProfileMessageResultView,
   productionTwoProfileReplySelectionView,
@@ -843,13 +844,9 @@ function renderProductionTwoProfileConversationList() {
     return;
   }
   target.replaceChildren();
-  const entries = [...productionTwoProfileConversationEntries.values()].sort((left, right) => {
-    const numberDelta = left.messageNumber - right.messageNumber;
-    if (numberDelta !== 0) {
-      return numberDelta;
-    }
-    return `${left.sender}:${left.receiver}`.localeCompare(`${right.sender}:${right.receiver}`);
-  });
+  const entries = [...productionTwoProfileConversationEntries.values()].sort(
+    productionTwoProfileConversationCompare,
+  );
   if (entries.length === 0) {
     const empty = document.createElement("li");
     empty.className = "is-empty";
@@ -938,13 +935,9 @@ function renderProductionTwoProfileConversationList() {
 }
 
 function latestTwoProfileConversationEntry() {
-  const entries = [...productionTwoProfileConversationEntries.values()].sort((left, right) => {
-    const numberDelta = right.messageNumber - left.messageNumber;
-    if (numberDelta !== 0) {
-      return numberDelta;
-    }
-    return `${right.sender}:${right.receiver}`.localeCompare(`${left.sender}:${left.receiver}`);
-  });
+  const entries = [...productionTwoProfileConversationEntries.values()].sort((left, right) =>
+    productionTwoProfileConversationCompare(left, right, "desc"),
+  );
   return entries[0] ?? null;
 }
 
@@ -955,26 +948,14 @@ function twoProfileConversationDelivered(entry) {
 function latestTwoProfilePendingConversationEntry() {
   const entries = [...productionTwoProfileConversationEntries.values()]
     .filter((entry) => !twoProfileConversationDelivered(entry))
-    .sort((left, right) => {
-      const numberDelta = right.messageNumber - left.messageNumber;
-      if (numberDelta !== 0) {
-        return numberDelta;
-      }
-      return `${right.sender}:${right.receiver}`.localeCompare(`${left.sender}:${left.receiver}`);
-    });
+    .sort((left, right) => productionTwoProfileConversationCompare(left, right, "desc"));
   return entries[0] ?? null;
 }
 
 function latestTwoProfileDeliveredConversationEntry() {
   const entries = [...productionTwoProfileConversationEntries.values()]
     .filter((entry) => twoProfileConversationDelivered(entry))
-    .sort((left, right) => {
-      const numberDelta = right.messageNumber - left.messageNumber;
-      if (numberDelta !== 0) {
-        return numberDelta;
-      }
-      return `${right.sender}:${right.receiver}`.localeCompare(`${left.sender}:${left.receiver}`);
-    });
+    .sort((left, right) => productionTwoProfileConversationCompare(left, right, "desc"));
   return entries[0] ?? null;
 }
 
@@ -1074,13 +1055,22 @@ function clearStaleTwoProfileConversationSelection() {
 
 function renderProductionTwoProfileTranscriptEntries(entries) {
   resetProductionTwoProfileTranscript({ preserveSelection: true });
-  const orderedEntries = [...(entries ?? [])].sort((left, right) => {
-    const numberDelta = left.messageNumber - right.messageNumber;
-    if (numberDelta !== 0) {
-      return numberDelta;
-    }
-    return `${left.profile}:${left.kind}`.localeCompare(`${right.profile}:${right.kind}`);
-  });
+  const orderedEntries = [...(entries ?? [])].sort((left, right) =>
+    productionTwoProfileConversationCompare(
+      {
+        sender: left.kind === "received" ? left.counterpartProfile : left.profile,
+        receiver: left.kind === "received" ? left.profile : left.counterpartProfile,
+        messageNumber: left.messageNumber,
+        createdAtMs: left.createdAtMs,
+      },
+      {
+        sender: right.kind === "received" ? right.counterpartProfile : right.profile,
+        receiver: right.kind === "received" ? right.profile : right.counterpartProfile,
+        messageNumber: right.messageNumber,
+        createdAtMs: right.createdAtMs,
+      },
+    ),
+  );
   for (const entry of orderedEntries) {
     appendProductionTwoProfileConversationStatus(
       entry.kind,

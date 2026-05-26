@@ -28,6 +28,7 @@ import {
   productionSessionStateView,
   productionTwoProfilePairFromProfiles,
   productionTwoProfileConversationActionView,
+  productionTwoProfileConversationCompare,
   productionTwoProfileCurrentAction,
   productionTwoProfileMessageResultView,
   productionTwoProfileReplySelectionView,
@@ -1576,6 +1577,44 @@ test("productionTwoProfileConversationActionView maps row status to next action"
       manualTarget: null,
       manualButtonLabel: "Open manual tools",
     },
+  );
+});
+
+test("productionTwoProfileConversationCompare prefers persisted time when available", () => {
+  const olderHighNumber = {
+    sender: "alice",
+    receiver: "bob",
+    messageNumber: 9,
+    createdAtMs: 1000,
+  };
+  const newerLowNumber = {
+    sender: "bob",
+    receiver: "alice",
+    messageNumber: 8,
+    createdAtMs: 2000,
+  };
+  assert.equal(
+    [olderHighNumber, newerLowNumber].sort(productionTwoProfileConversationCompare)[0],
+    olderHighNumber,
+  );
+  assert.equal(
+    [olderHighNumber, newerLowNumber].sort((left, right) =>
+      productionTwoProfileConversationCompare(left, right, "desc"),
+    )[0],
+    newerLowNumber,
+  );
+});
+
+test("productionTwoProfileConversationCompare falls back to message number without time", () => {
+  const first = { sender: "alice", receiver: "bob", messageNumber: 1 };
+  const second = { sender: "bob", receiver: "alice", messageNumber: 2 };
+
+  assert.equal([second, first].sort(productionTwoProfileConversationCompare)[0], first);
+  assert.equal(
+    [first, second].sort((left, right) =>
+      productionTwoProfileConversationCompare(left, right, "desc"),
+    )[0],
+    second,
   );
 });
 
