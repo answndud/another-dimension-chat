@@ -2369,6 +2369,9 @@ function applyProductionActionState() {
     counterpartProfile && productionPayloadSlots.messageEnvelope.has(counterpartProfile),
   );
   const selectedConversation = selectedTwoProfileConversationEntry();
+  const selectedMessageLabel = selectedConversation
+    ? `${selectedConversation.sender}->${selectedConversation.receiver}#${selectedConversation.messageNumber}`
+    : "";
   const selectedHasSentCopy = Boolean(selectedConversation?.statuses?.has("sent"));
   const selectedHasReceivedCopy = Boolean(selectedConversation?.statuses?.has("received"));
   const selectedNeedsSenderExport = Boolean(selectedConversation && !selectedHasSentCopy);
@@ -2458,6 +2461,7 @@ function applyProductionActionState() {
     selectedNeedsPeerImport,
     selectedManualExportProfile,
     selectedManualImportProfile,
+    selectedMessageLabel,
     messageNumber: message.messageNumber,
     autoMessageNumber: message.autoMessageNumber,
   };
