@@ -419,7 +419,11 @@ function setTwoProfileComposeLocked(locked) {
 function setProductionFollowupActions(enabled, message) {
   setText(fields.productionTwoProfileNextStep, message);
   setOpenManualProductionToolsLabel();
-  setDisabled(fields.openManualProductionTools, !enabled);
+  setActionButtonState(
+    fields.openManualProductionTools,
+    !enabled,
+    "Next actions unlock after a completed local roundtrip.",
+  );
   setDisabled(fields.focusLocalDiagnostic, !enabled);
   setDisabled(fields.swapTwoProfileDirection, !enabled);
   setDisabled(fields.editTwoProfileMessage, !enabled);
@@ -2352,6 +2356,7 @@ function applyProductionActionState() {
     setProductionManualFocusCurrent(latestProductionManualFocusTarget);
     setText(fields.productionMessageNextAction, selectedActionView.nextAction);
     setOpenManualProductionToolsLabel(selectedActionView.manualButtonLabel);
+    setActionButtonState(fields.openManualProductionTools, false, "", true);
     setProductionMessageManualCurrent(selectedActionView.manualTarget);
   }
   renderManualStatus();
