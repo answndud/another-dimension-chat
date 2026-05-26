@@ -4735,7 +4735,11 @@ async function exportProductionReceivedMessage() {
       fields.productionReceivedMessage.value = result.received_message;
     }
     completeProductionMessageImportReview();
-    appendProductionTranscriptEntry("received", profile, messageNumber, result.received_message);
+    appendProductionTranscriptEntry("received", profile, messageNumber, result.received_message, {
+      ttlSeconds: result.message_ttl_seconds,
+      expiresAtMs: result.expires_at_ms,
+      expired: result.expired,
+    });
     const replySelected = syncTwoProfileConversationAfterReceivedExport(
       profile,
       messageNumber,

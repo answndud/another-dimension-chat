@@ -600,6 +600,10 @@ pub mod production {
         received_message_record_decodable: bool,
         received_message_matches_session: bool,
         export_payload: Vec<u8>,
+        created_at_ms: u128,
+        ttl_seconds: u64,
+        expires_at_ms: Option<u128>,
+        expired: bool,
         plaintext_exposed: bool,
         network_receive_attempted: bool,
         key_material_exposed: bool,
@@ -1784,6 +1788,18 @@ pub mod production {
         }
         pub fn export_payload(&self) -> &[u8] {
             &self.export_payload
+        }
+        pub fn created_at_ms(&self) -> u128 {
+            self.created_at_ms
+        }
+        pub fn ttl_seconds(&self) -> u64 {
+            self.ttl_seconds
+        }
+        pub fn expires_at_ms(&self) -> Option<u128> {
+            self.expires_at_ms
+        }
+        pub fn expired(&self) -> bool {
+            self.expired
         }
         pub fn plaintext_exposed(&self) -> bool {
             self.plaintext_exposed
@@ -5199,12 +5215,17 @@ pub mod production {
         if !received_message_matches_session {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
+        let observed_at_ms = production_now_ms();
         Ok(ProductionMessageReceivedExport {
             storage_opened: true,
             runtime_material_reconstructable: true,
             received_message_record_present: true,
             received_message_record_decodable: true,
             received_message_matches_session,
+            created_at_ms: received.created_at_ms,
+            ttl_seconds: received.ttl_seconds,
+            expires_at_ms: received.expires_at_ms(),
+            expired: received.is_expired_at(observed_at_ms),
             export_payload: received.plaintext,
             plaintext_exposed: false,
             network_receive_attempted: false,
@@ -8135,6 +8156,13 @@ pub mod production {
             assert!(received_export.received_message_record_present());
             assert!(received_export.received_message_record_decodable());
             assert!(received_export.received_message_matches_session());
+            assert!(received_export.created_at_ms() > 0);
+            assert_eq!(
+                received_export.ttl_seconds(),
+                PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS
+            );
+            assert!(received_export.expires_at_ms().is_some());
+            assert!(!received_export.expired());
             assert_eq!(received_export.export_payload(), b"hi");
             assert!(!received_export.plaintext_exposed());
             assert!(!received_export.network_receive_attempted());

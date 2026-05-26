@@ -1021,6 +1021,9 @@ export function productionReceivedMessageExportView(result) {
       `present=${result.received_message_record_present} ` +
       `decodable=${result.received_message_record_decodable} ` +
       `session=${result.received_message_matches_session} ` +
+      `ttl=${result.message_ttl_seconds ?? "unknown"} ` +
+      `expires=${result.expires_at_ms ?? "none"} ` +
+      `expired=${result.expired === true} ` +
       `displayed=${result.plaintext_returned_after_unlock}`,
     boundary:
       `plaintext_after_unlock=${result.plaintext_returned_after_unlock} ` +
