@@ -29,6 +29,12 @@ import {
   productionTwoProfileResultView,
   productionTwoProfileSessionStatusView,
 } from "./action-state.js";
+import {
+  createMessageEnvelopeSlot,
+  messageEnvelopeSlotMatchesEntry,
+  messageEnvelopeSlotPayload,
+  messageEnvelopeSlotReadyForEntry as envelopeSlotReadyForEntry,
+} from "./message-envelope-slots.js";
 import "./styles.css";
 
 const fields = {
@@ -685,44 +691,18 @@ function appendProductionTranscriptEntry(kind, profile, messageNumber, message) 
   );
 }
 
-function messageEnvelopeSlotPayload(slot) {
-  return typeof slot === "string" ? slot : String(slot?.payload ?? "").trim();
-}
-
-function messageEnvelopeSlotMatchesEntry(slot, entry) {
-  if (!slot || !entry) {
-    return false;
-  }
-  if (typeof slot === "string") {
-    return true;
-  }
-  return (
-    Number.parseInt(slot.messageNumber, 10) === Number.parseInt(entry.messageNumber, 10) &&
-    String(slot.sender ?? "").trim().toLowerCase() === String(entry.sender ?? "").trim().toLowerCase() &&
-    String(slot.receiver ?? "").trim().toLowerCase() === String(entry.receiver ?? "").trim().toLowerCase() &&
-    String(slot.message ?? "").trim() === String(entry.message ?? "").trim()
-  );
-}
-
 function messageEnvelopeSlotReadyForEntry(profile, entry) {
   const normalizedProfile = String(profile ?? "").trim().toLowerCase();
   const slot = normalizedProfile ? productionPayloadSlots.messageEnvelope.get(normalizedProfile) : null;
-  return Boolean(messageEnvelopeSlotPayload(slot) && messageEnvelopeSlotMatchesEntry(slot, entry));
+  return envelopeSlotReadyForEntry(slot, entry);
 }
 
 function storeMessageEnvelopeSlot(profile, payload, metadata = {}) {
-  const normalizedProfile = String(profile ?? "").trim().toLowerCase();
-  const envelope = String(payload ?? "").trim();
-  if (!normalizedProfile || !envelope) {
+  const slot = createMessageEnvelopeSlot(profile, payload, metadata);
+  if (!slot) {
     return false;
   }
-  productionPayloadSlots.messageEnvelope.set(normalizedProfile, {
-    payload: envelope,
-    sender: normalizedProfile,
-    receiver: String(metadata.receiver ?? "").trim().toLowerCase(),
-    messageNumber: Number.parseInt(metadata.messageNumber, 10),
-    message: String(metadata.message ?? "").trim(),
-  });
+  productionPayloadSlots.messageEnvelope.set(slot.sender, slot);
   return true;
 }
 
