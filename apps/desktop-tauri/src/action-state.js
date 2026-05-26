@@ -840,7 +840,7 @@ export function productionTwoProfileMessageResultView(result) {
       `${boundaryContained ? "Contained" : "Review"}: no plaintext, key material, store path, network I/O, transport I/O, or runtime messaging exposure | ` +
       `plaintext_returned=${result.plaintext_returned_to_frontend} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
     nextStep: canContinue
-      ? "Next: reply direction is selected; write a stored-session reply."
+      ? "Next: continue from the delivered message and write a stored-session reply."
       : "Review stored-session result rows before continuing.",
   };
 }
