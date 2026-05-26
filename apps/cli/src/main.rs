@@ -219,6 +219,11 @@ fn production_main() -> Result<(), String> {
         {
             run_production_message_received_export_command(args)?;
         }
+        [cmd, sub, action, args @ ..]
+            if cmd == "production" && sub == "message" && action == "transcript-export" =>
+        {
+            run_production_message_transcript_export_command(args)?;
+        }
         [cmd, sub, _args @ ..] if cmd == "production" && sub == "unlock" => {
             return Err(production_unlock_rejected_error());
         }
@@ -295,6 +300,7 @@ fn production_help() -> String {
   another-dimension production message inbound-decrypt-import --profile <name> --store <path> --in <path> [--message-ttl-seconds <3600|86400|604800|2592000>] --passphrase-stdin
   another-dimension production message received-status --profile <name> --store <path> --message-number <n> --passphrase-stdin
   another-dimension production message received-export --profile <name> --store <path> --message-number <n> --out <path> --passphrase-stdin
+  another-dimension production message transcript-export --profile <name> --store <path> --out <path> --passphrase-stdin
   another-dimension --help
 
 boundary:
@@ -328,6 +334,7 @@ boundary:
   production message inbound-decrypt-import is storage-only: it imports an encrypted envelope, decrypts it locally, stores the received message encrypted-at-rest, and commits replay state without printing plaintext
   production message received-status is storage-only: it checks a stored received message without exposing plaintext or opening transport
   production message received-export is storage-only: it writes received plaintext only to explicit --out and never to stdout
+  production message transcript-export is storage-only: it writes recovered sent/received plaintext only to explicit --out and never to stdout
   prototype profile/pairing/message commands require --features dev-insecure"
         .to_string()
 }
@@ -1420,6 +1427,39 @@ fn run_production_message_received_export_command(args: &[String]) -> Result<(),
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+fn run_production_message_transcript_export_command(args: &[String]) -> Result<(), String> {
+    let options = ProductionMessageTranscriptExportOptions::parse(args)?;
+    let passphrase = read_production_passphrase()?;
+    let summary = another_dimension_core::production::production_message_transcript_export(
+        &options.store_path,
+        options.profile,
+        &passphrase,
+    )
+    .map_err(redacted_production_message_transcript_export_error)?;
+    let export = format_production_message_transcript(summary.entries())?;
+    std::fs::write(&options.out_path, export)
+        .map_err(|_| "production message transcript-export failed: out write failed".to_string())?;
+
+    println!(
+        "production message transcript exported: storage_opened={} runtime_material_reconstructable={} entries_exported={} expired_messages_purged={} plaintext_written={} plaintext_exposed={} network_io_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        summary.storage_opened(),
+        summary.runtime_material_reconstructable(),
+        summary.entries().len(),
+        summary.expired_messages_purged(),
+        !summary.entries().is_empty(),
+        summary.plaintext_exposed(),
+        summary.network_io_attempted(),
+        summary.key_material_exposed(),
+        summary.transport_io_opened(),
+        summary.runtime_messaging_enabled()
+    );
+    eprintln!(
+        "warning: production message transcript-export writes recovered plaintext only to --out"
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 struct ProductionProfileInitOptions {
     profile: another_dimension_identity::ProfileName,
     store_path: std::path::PathBuf,
@@ -1633,6 +1673,13 @@ struct ProductionMessageOutboundEnvelopeExportOptions {
     profile: another_dimension_identity::ProfileName,
     store_path: std::path::PathBuf,
     message_number: u64,
+    out_path: std::path::PathBuf,
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+struct ProductionMessageTranscriptExportOptions {
+    profile: another_dimension_identity::ProfileName,
+    store_path: std::path::PathBuf,
     out_path: std::path::PathBuf,
 }
 
@@ -2426,6 +2473,64 @@ impl ProductionMessageOutboundEnvelopeExportOptions {
 }
 
 #[cfg(not(feature = "dev-insecure"))]
+impl ProductionMessageTranscriptExportOptions {
+    fn parse(args: &[String]) -> Result<Self, String> {
+        let mut profile = None;
+        let mut store_path = None;
+        let mut out_path = None;
+        let mut passphrase_stdin = false;
+        let mut index = 0;
+
+        while index < args.len() {
+            match args[index].as_str() {
+                "--profile" => {
+                    index += 1;
+                    profile = Some(
+                        args.get(index)
+                            .ok_or_else(production_message_transcript_export_help)
+                            .and_then(|value| {
+                                another_dimension_identity::ProfileName::new(value)
+                                    .map_err(|_| "invalid production profile name".to_string())
+                            })?,
+                    );
+                }
+                "--store" => {
+                    index += 1;
+                    store_path = Some(
+                        args.get(index)
+                            .map(std::path::PathBuf::from)
+                            .ok_or_else(production_message_transcript_export_help)?,
+                    );
+                }
+                "--out" => {
+                    index += 1;
+                    out_path = Some(
+                        args.get(index)
+                            .map(std::path::PathBuf::from)
+                            .ok_or_else(production_message_transcript_export_help)?,
+                    );
+                }
+                "--passphrase-stdin" => {
+                    passphrase_stdin = true;
+                }
+                _ => return Err(production_message_transcript_export_help()),
+            }
+            index += 1;
+        }
+
+        if !passphrase_stdin {
+            return Err(production_message_transcript_export_help());
+        }
+
+        Ok(Self {
+            profile: profile.ok_or_else(production_message_transcript_export_help)?,
+            store_path: store_path.ok_or_else(production_message_transcript_export_help)?,
+            out_path: out_path.ok_or_else(production_message_transcript_export_help)?,
+        })
+    }
+}
+
+#[cfg(not(feature = "dev-insecure"))]
 impl ProductionMessageInboundDecryptImportOptions {
     fn parse(args: &[String]) -> Result<Self, String> {
         let mut profile = None;
@@ -2736,6 +2841,61 @@ fn production_message_received_export_help() -> String {
 
 Reads the profile passphrase from stdin and writes received plaintext only to --out. This does not print plaintext, open transport, receive from the network, or enable runtime messaging."
         .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn production_message_transcript_export_help() -> String {
+    "usage:
+  another-dimension production message transcript-export --profile <name> --store <path> --out <path> --passphrase-stdin
+
+Reads the profile passphrase from stdin and writes recovered sent/received plaintext only to --out as tab-separated transcript rows. This purges expired records through the same local retention path, does not print plaintext, open transport, or enable runtime messaging."
+        .to_string()
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn format_production_message_transcript(
+    entries: &[another_dimension_core::production::ProductionMessageTranscriptEntry],
+) -> Result<String, String> {
+    let mut out = String::from(
+        "direction\tmessage_number\tcreated_at_ms\tttl_seconds\texpires_at_ms\tmessage\n",
+    );
+    for entry in entries {
+        let message = String::from_utf8(entry.plaintext().to_vec())
+            .map_err(|_| "production message transcript-export failed: transcript is not UTF-8")?;
+        out.push_str(entry.direction());
+        out.push('\t');
+        out.push_str(&entry.message_number().to_string());
+        out.push('\t');
+        out.push_str(&entry.created_at_ms().to_string());
+        out.push('\t');
+        out.push_str(&entry.ttl_seconds().to_string());
+        out.push('\t');
+        out.push_str(
+            &entry
+                .expires_at_ms()
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| "none".to_string()),
+        );
+        out.push('\t');
+        out.push_str(&escape_transcript_cell(&message));
+        out.push('\n');
+    }
+    Ok(out)
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn escape_transcript_cell(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '\\' => escaped.push_str("\\\\"),
+            '\t' => escaped.push_str("\\t"),
+            '\r' => escaped.push_str("\\r"),
+            '\n' => escaped.push_str("\\n"),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
 }
 
 #[cfg(not(feature = "dev-insecure"))]
@@ -3193,6 +3353,14 @@ fn redacted_production_message_received_export_error(
     error: another_dimension_core::production::ProductionSessionError,
 ) -> String {
     redacted_production_message_send_prepare_error(error).replace("send-prepare", "received-export")
+}
+
+#[cfg(not(feature = "dev-insecure"))]
+fn redacted_production_message_transcript_export_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    redacted_production_message_send_prepare_error(error)
+        .replace("send-prepare", "transcript-export")
 }
 
 #[cfg(not(feature = "dev-insecure"))]
