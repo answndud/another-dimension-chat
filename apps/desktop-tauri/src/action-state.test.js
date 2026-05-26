@@ -26,6 +26,7 @@ import {
   productionReceivedMessageExportView,
   productionSessionDraftView,
   productionSessionStateView,
+  productionTwoProfilePairFromProfiles,
   productionTwoProfileConversationActionView,
   productionTwoProfileMessageResultView,
   productionTwoProfileReplySelectionView,
@@ -292,6 +293,35 @@ test("productionCounterpartProfile maps only known manual peers", () => {
   assert.equal(productionCounterpartProfile(" Alice "), "bob");
   assert.equal(productionCounterpartProfile("bob"), "alice");
   assert.equal(productionCounterpartProfile("carol"), null);
+});
+
+test("productionTwoProfilePairFromProfiles keeps saved current pair", () => {
+  assert.deepEqual(
+    productionTwoProfilePairFromProfiles(["alice", "bob", "carol"], "bob", "carol"),
+    { profileA: "bob", profileB: "carol", changed: false },
+  );
+});
+
+test("productionTwoProfilePairFromProfiles resumes from saved profiles when defaults are stale", () => {
+  assert.deepEqual(
+    productionTwoProfilePairFromProfiles(["me", "peer"], "alice", "bob"),
+    { profileA: "me", profileB: "peer", changed: true },
+  );
+  assert.deepEqual(
+    productionTwoProfilePairFromProfiles(["alice", "bob"], "me", "peer"),
+    { profileA: "alice", profileB: "bob", changed: true },
+  );
+});
+
+test("productionTwoProfilePairFromProfiles preserves one saved side when choosing peer", () => {
+  assert.deepEqual(
+    productionTwoProfilePairFromProfiles(["me", "peer", "third"], "peer", "bob"),
+    { profileA: "peer", profileB: "me", changed: true },
+  );
+  assert.deepEqual(
+    productionTwoProfilePairFromProfiles(["me", "peer", "third"], "alice", "peer"),
+    { profileA: "me", profileB: "peer", changed: true },
+  );
 });
 
 test("productionActionAvailability disables every action while busy", () => {

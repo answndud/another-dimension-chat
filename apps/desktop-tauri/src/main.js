@@ -25,6 +25,7 @@ import {
   productionReceivedMessageExportView,
   productionSessionDraftView,
   productionSessionStateView,
+  productionTwoProfilePairFromProfiles,
   productionTwoProfileConversationActionView,
   productionTwoProfileMessageResultView,
   productionTwoProfileReplySelectionView,
@@ -2813,6 +2814,22 @@ function renderProductionProfileSelector(profiles) {
     fields.productionProfileSelector.value = profiles[0];
     fields.productionProfileName.value = profiles[0];
   }
+  const pair = productionTwoProfilePairFromProfiles(
+    profiles,
+    fields.productionTwoProfileA?.value,
+    fields.productionTwoProfileB?.value,
+  );
+  if (pair.changed) {
+    if (fields.productionTwoProfileA) {
+      fields.productionTwoProfileA.value = pair.profileA;
+    }
+    if (fields.productionTwoProfileB) {
+      fields.productionTwoProfileB.value = pair.profileB;
+    }
+    renderProductionTwoProfileDirection(productionTwoProfileInput());
+    renderProductionTwoProfileMemory(productionTwoProfileInput());
+    resetTwoProfileAutoResumeAttempt();
+  }
   applyProductionActionState();
 }
 
@@ -2824,8 +2841,13 @@ async function loadProductionProfileList() {
     const result = await invoke("production_profile_list");
     renderProductionProfileSelector(result.profiles);
     if (result.profile_count > 0) {
-      setText(fields.productionProfileStorage, `saved_profiles=${result.profile_count}`);
+      const input = productionTwoProfileInput();
+      setText(
+        fields.productionProfileStorage,
+        `saved_profiles=${result.profile_count} selected_pair=${input.profileA || "none"}->${input.profileB || "none"}`,
+      );
     }
+    scheduleTwoProfileAutoResume();
   } catch (error) {
     renderProductionProfileSelector([]);
   }
