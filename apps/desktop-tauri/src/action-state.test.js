@@ -1240,6 +1240,34 @@ test("productionManualRelayDisabledReasons explain the missing payload or route"
     productionManualRelayDisabledReasons({ counterpartProfile: "alice" }).relayMessageEnvelope,
     "Export envelope first.",
   );
+  assert.equal(
+    productionManualRelayDisabledReasons({
+      activeProfile: "bob",
+      selectedManualExportProfile: "alice",
+    }).storeMessageEnvelope,
+    "Select alice in the manual profile panel before exporting this selected message envelope.",
+  );
+  assert.equal(
+    productionManualRelayDisabledReasons({
+      activeProfile: "alice",
+      selectedManualExportProfile: "alice",
+    }).relayMessageEnvelope,
+    "Export selected message envelope from alice first.",
+  );
+  assert.equal(
+    productionManualRelayDisabledReasons({
+      activeProfile: "alice",
+      selectedManualImportProfile: "bob",
+    }).loadMessageEnvelope,
+    "Select bob in the manual profile panel before loading this selected message envelope.",
+  );
+  assert.equal(
+    productionManualRelayDisabledReasons({
+      activeProfile: "bob",
+      selectedManualImportProfile: "bob",
+    }).loadMessageEnvelope,
+    "Load or paste sender envelope for bob first.",
+  );
 });
 
 test("productionManualMessageStatusView summarizes active message path", () => {

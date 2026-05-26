@@ -2406,6 +2406,10 @@ function applyProductionActionState() {
     hasTwoProfileSessionsReady: twoProfileSessionsReadyForInput(twoProfile),
     activeProfile: activeProductionProfileName(),
     counterpartProfile,
+    selectedNeedsSenderExport,
+    selectedNeedsPeerImport,
+    selectedManualExportProfile,
+    selectedManualImportProfile,
     messageNumber: message.messageNumber,
     autoMessageNumber: message.autoMessageNumber,
   };
