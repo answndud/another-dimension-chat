@@ -636,6 +636,18 @@ function resetProductionMessageImportState() {
   }
 }
 
+function clearManualMessageDraftForReplySelection() {
+  if (fields.productionMessageBody) {
+    fields.productionMessageBody.value = "";
+  }
+  if (fields.productionMessageEnvelope) {
+    fields.productionMessageEnvelope.value = "";
+  }
+  if (fields.productionRemoteMessageEnvelope) {
+    fields.productionRemoteMessageEnvelope.value = "";
+  }
+}
+
 function resetProductionMessageTranscript() {
   productionTranscriptEntryKeys.clear();
   resetTranscriptList(fields.productionMessageTranscript, "No messages yet.");
@@ -1835,6 +1847,9 @@ function swapTwoProfileDirection() {
   fields.productionTwoProfileB.value = profileA;
   const input = productionTwoProfileInput();
   const replyDirection = latestTwoProfileSuccessMatchesOppositeDirection(input);
+  if (replyDirection) {
+    clearManualMessageDraftForReplySelection();
+  }
   renderProductionTwoProfileDirection(input);
   renderProductionTwoProfileMemory(input);
   setProductionTwoProfileState(replyDirection ? "Reply direction ready" : "Direction swapped");
@@ -1869,6 +1884,7 @@ function replyToLatestTwoProfileMessage() {
   if (fields.productionTwoProfileMessage) {
     fields.productionTwoProfileMessage.value = "";
   }
+  clearManualMessageDraftForReplySelection();
   const input = productionTwoProfileInput();
   renderProductionTwoProfileDirection(input);
   renderProductionTwoProfileMemory(input);
@@ -2036,6 +2052,7 @@ function selectTwoProfileReplyDirection(sentInput) {
   if (fields.productionTwoProfileMessage) {
     fields.productionTwoProfileMessage.value = "";
   }
+  clearManualMessageDraftForReplySelection();
   renderProductionTwoProfileDirection(productionTwoProfileInput());
   renderProductionTwoProfileMemory(productionTwoProfileInput());
   setProductionTwoProfileState("Reply direction ready");
@@ -2063,6 +2080,7 @@ function selectReplyAfterDeliveredReview(entry, options = {}) {
   if (fields.productionTwoProfileMessage) {
     fields.productionTwoProfileMessage.value = "";
   }
+  clearManualMessageDraftForReplySelection();
   const input = productionTwoProfileInput();
   renderProductionTwoProfileDirection(input);
   renderProductionTwoProfileMemory(input);
