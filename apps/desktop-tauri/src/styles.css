@@ -593,22 +593,19 @@ textarea[readonly] {
 }
 
 .message-transcript li.is-selected {
-  border-color: var(--accent);
-  border-left-color: var(--accent-hot);
+  border-color: var(--panel-border);
+  border-left-color: var(--accent);
   background: var(--panel-strong);
-  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .message-transcript li.is-review-target {
-  border-color: var(--warning);
+  border-color: var(--panel-border);
   border-left-color: var(--warning);
-  box-shadow: inset 3px 0 0 var(--warning);
 }
 
 .message-transcript li.is-reply-target {
-  border-color: var(--accent-cyan);
+  border-color: var(--panel-border);
   border-left-color: var(--accent-cyan);
-  box-shadow: inset 3px 0 0 var(--accent-cyan);
 }
 
 .message-transcript li[role="button"] {
@@ -686,17 +683,17 @@ textarea[readonly] {
 
 .message-transcript .transcript-review.is-selected {
   color: var(--accent);
-  font-weight: 750;
+  font-weight: 650;
 }
 
 .message-transcript .transcript-review.is-review-target {
   color: var(--warning);
-  font-weight: 750;
+  font-weight: 650;
 }
 
 .message-transcript .transcript-review.is-reply-target {
   color: var(--accent-cyan);
-  font-weight: 750;
+  font-weight: 650;
 }
 
 .message-transcript span:not(.transcript-status):not(.transcript-slot):not(.transcript-retention):not(.transcript-action):not(.transcript-review) {
