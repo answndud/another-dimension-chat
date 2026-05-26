@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
     "build": "vite build",
-    "test:state": "node --test src/action-state.test.js src/message-envelope-slots.test.js",
+    "test:state": "node --test src/action-state.test.js src/message-envelope-slots.test.js src/transcript-export.test.js",
     "preview": "vite preview --host 127.0.0.1 --port 1420 --strictPort",
     "tauri": "tauri"
   },
