@@ -2678,6 +2678,7 @@ function applyProductionActionState() {
   const pendingConversation = latestTwoProfilePendingConversationEntry();
   const selectedPendingConversation = selectedTwoProfilePendingConversationEntry();
   const pendingSelected = Boolean(selectedPendingConversation);
+  const reviewPendingCurrent = Boolean(pendingSelected && selectedMessageInputStale);
   const replySelection = productionTwoProfileReplySelectionView({
     latestConversationDelivered,
     selectedConversationDelivered,
@@ -2701,7 +2702,7 @@ function applyProductionActionState() {
     fields.reviewPendingTwoProfileMessage,
     busy || !pendingConversation,
     busy ? "Wait for the active production action." : "No pending sent/received gap in loaded conversation.",
-    pendingSelected,
+    reviewPendingCurrent,
   );
   setActionButtonState(
     fields.runProductionTwoProfileRoundtrip,
