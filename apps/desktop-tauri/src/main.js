@@ -2260,6 +2260,26 @@ function selectReplyAfterDeliveredReview(entry, options = {}) {
   return true;
 }
 
+function selectReplyAfterSentMessageResult(result, fallbackInput, message, label) {
+  const sender = String(result?.sender_profile ?? fallbackInput?.profileA ?? "").trim().toLowerCase();
+  const receiver = String(result?.receiver_profile ?? fallbackInput?.profileB ?? "").trim().toLowerCase();
+  const messageNumber = Number.parseInt(result?.message_number, 10);
+  const sentMessage = selectTwoProfileConversationMessage(sender, receiver, messageNumber, message);
+  if (!selectReplyAfterDeliveredReview(sentMessage)) {
+    selectTwoProfileReplyDirection(fallbackInput);
+  }
+  const replyA = receiver || fallbackInput?.profileB;
+  const replyB = sender || fallbackInput?.profileA;
+  setText(
+    fields.productionTwoProfileWarning,
+    sentMessage
+      ? `${label} #${sentMessage.messageNumber} completed. Reply direction selected: ${replyA} -> ${replyB}.`
+      : `${label} completed. Reply direction selected: ${replyA} -> ${replyB}.`,
+  );
+  fields.productionTwoProfileMessage?.focus();
+  return sentMessage;
+}
+
 function applyProductionActionState() {
   const { profile, passphrase } = productionProfileInput();
   const pairing = productionPairingInput();
@@ -3402,22 +3422,7 @@ async function runProductionTwoProfileRoundtrip() {
     const view = renderProductionTwoProfileResult(result);
     if (view.canContinue) {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
-      const sentMessage = selectTwoProfileConversationMessage(
-        String(result.sender_profile ?? profileA).trim().toLowerCase(),
-        String(result.receiver_profile ?? profileB).trim().toLowerCase(),
-        Number.parseInt(result.message_number, 10),
-        message,
-      );
-      if (!selectReplyAfterDeliveredReview(sentMessage)) {
-        selectTwoProfileReplyDirection(sentInput);
-      }
-      setText(
-        fields.productionTwoProfileWarning,
-        sentMessage
-          ? `First message #${sentMessage.messageNumber} stored. Reply direction selected: ${profileB} -> ${profileA}.`
-          : `First message stored. Reply direction selected: ${profileB} -> ${profileA}.`,
-      );
-      fields.productionTwoProfileMessage?.focus();
+      selectReplyAfterSentMessageResult(result, sentInput, message, "First message");
     } else {
       setText(fields.productionTwoProfileWarning, result.warning);
     }
@@ -3486,21 +3491,7 @@ async function runProductionTwoProfileMessageRoundtrip() {
     const view = renderProductionTwoProfileMessageResult(result);
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
     if (view.canContinue) {
-      const sentMessage = selectTwoProfileConversationMessage(
-        String(result.sender_profile ?? profileA).trim().toLowerCase(),
-        String(result.receiver_profile ?? profileB).trim().toLowerCase(),
-        Number.parseInt(result.message_number, 10),
-        message,
-      );
-      if (!selectReplyAfterDeliveredReview(sentMessage)) {
-        selectTwoProfileReplyDirection(sentInput);
-      }
-      setText(
-        fields.productionTwoProfileWarning,
-        sentMessage
-          ? `Stored-session message #${sentMessage.messageNumber} completed. Reply direction selected: ${profileB} -> ${profileA}.`
-          : `Stored-session message completed. Reply direction selected: ${profileB} -> ${profileA}.`,
-      );
+      selectReplyAfterSentMessageResult(result, sentInput, message, "Stored-session message");
     } else {
       setText(
         fields.productionTwoProfileWarning,
