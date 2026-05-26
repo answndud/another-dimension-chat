@@ -489,7 +489,7 @@ require_contains "$APP_DIR/index.html" 'Encrypted envelope path'
 require_contains "$APP_DIR/index.html" 'Export envelope'
 require_contains "$APP_DIR/index.html" 'Remote envelope'
 require_contains "$APP_DIR/index.html" 'Import envelope'
-require_contains "$APP_DIR/index.html" 'Show received'
+require_contains "$APP_DIR/index.html" 'Show plaintext'
 require_contains "$APP_DIR/index.html" 'Received message'
 require_contains "$APP_DIR/index.html" 'Production core local roundtrip'
 require_contains "$APP_DIR/index.html" 'Run core roundtrip'
@@ -632,7 +632,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="relay-production-message-envelope" type="button">Relay to peer</button>' \
   | grep -v '<textarea id="production-remote-message-envelope" rows="5"></textarea>' \
   | grep -v '<button id="import-production-message-envelope" type="button">Import envelope</button>' \
-  | grep -v '<button id="export-production-received-message" type="button">Show received</button>' \
+  | grep -v '<button id="export-production-received-message" type="button">Show plaintext</button>' \
   | grep -v '<textarea id="production-received-message" rows="3" readonly></textarea>' \
   | grep -v '<button id="load-production-message-transcript" type="button">Load transcript</button>' \
   | grep -v '<button id="load-production-two-profile-transcript" type="button">Load conversation</button>' \

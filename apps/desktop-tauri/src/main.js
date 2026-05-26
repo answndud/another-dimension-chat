@@ -2240,7 +2240,7 @@ function selectReplyAfterDeliveredReview(entry, options = {}) {
   setText(
     fields.productionTwoProfileWarning,
     importProfile && deferReplyUntilReceivedReview
-      ? `Manual import for ${importProfile} completed. Click Show received to verify the message, then write the reply from ${input.profileA} to ${input.profileB}.`
+      ? `Manual import for ${importProfile} completed. Click Show plaintext to verify the message, then write the reply from ${input.profileA} to ${input.profileB}.`
       : importProfile && receivedReviewComplete
       ? `Received message verified for ${importProfile}. Write the reply from ${input.profileA} to ${input.profileB}.`
       : importProfile
@@ -2250,7 +2250,7 @@ function selectReplyAfterDeliveredReview(entry, options = {}) {
   setProductionFollowupActions(
     true,
     deferReplyUntilReceivedReview
-      ? `Next: click Show received for ${importProfile}, then write the reply.`
+      ? `Next: click Show plaintext for ${importProfile}, then write the reply.`
       : selectedTwoProfileNextActionMessage(entry),
   );
   applyProductionActionState();
@@ -4565,7 +4565,7 @@ async function importProductionMessageEnvelope() {
         clearedEnvelopeSlot ? " Consumed matching stored sender envelope slot." : ""
       }${clearedEnvelopeInput ? " Cleared imported remote envelope input." : ""}${
         clearedEnvelopeOutput ? " Cleared matching local envelope output." : ""
-      } Click Show received to verify the decrypted message.`,
+      } Click Show plaintext to verify the decrypted message.`,
     );
     setText(fields.productionMessageOutbound, "Not exported in this profile");
     setText(fields.productionMessageInbound, view.inbound);
@@ -4579,7 +4579,7 @@ async function importProductionMessageEnvelope() {
           clearedEnvelopeSlot ? " Consumed matching stored sender envelope slot." : ""
         }${clearedEnvelopeInput ? " Cleared imported remote envelope input." : ""}${
           clearedEnvelopeOutput ? " Cleared matching local envelope output." : ""
-        } Reply target selected in the two-profile conversation. Show received remains available for local plaintext review.`,
+        } Reply target selected in the two-profile conversation. Show plaintext remains available for local plaintext review.`,
       );
     }
   } catch (error) {

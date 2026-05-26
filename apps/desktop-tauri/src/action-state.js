@@ -341,7 +341,7 @@ export function productionManualNextActions(state) {
     message = `Next: import envelope for ${activeLabel}.`;
   }
   if (hasImportedMessage && !hasReceivedMessage) {
-    message = `Next: click Show received for ${activeLabel}.`;
+    message = `Next: click Show plaintext for ${activeLabel}.`;
   }
   if (hasReceivedMessage) {
     message = `Next: review received message for ${activeLabel}.`;
@@ -935,7 +935,7 @@ export function productionManualMessageCheckView(state) {
   } else if (state?.hasTwoProfileReplyDraftInput) {
     check = "Manual check: reply draft is ready; send the stored-session reply.";
   } else if (state?.hasTwoProfileReplySelected) {
-    check = "Manual check: reply target is selected; write the reply or show received for local review.";
+    check = "Manual check: reply target is selected; write the reply or show plaintext for local review.";
   } else if (state?.hasInboundEnvelopeInput && !state?.hasRemoteMessageEnvelopeSlot) {
     check = "Manual check: pasted envelope is not from the stored remote slot; verify source.";
   } else if (state?.hasLocalMessageEnvelope && !state?.hasRemoteMessageEnvelopeSlot) {
