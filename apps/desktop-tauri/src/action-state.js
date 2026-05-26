@@ -46,6 +46,19 @@ export function productionTwoProfileCurrentAction(state) {
   return "full-setup";
 }
 
+export function productionTwoProfileResumeTarget(state) {
+  if (!state?.sessionsReady) {
+    return null;
+  }
+  if (state?.hasPendingConversation) {
+    return "pending-review";
+  }
+  if (!state?.hasMessageDraft && state?.hasDeliveredConversation) {
+    return "reply-latest";
+  }
+  return "compose";
+}
+
 export function productionProfilePreset(peer) {
   const normalizedPeer = String(peer ?? "").trim().toLowerCase();
   if (normalizedPeer === "alice") {

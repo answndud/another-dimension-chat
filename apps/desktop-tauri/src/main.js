@@ -31,6 +31,7 @@ import {
   productionTwoProfileMessageResultView,
   productionTwoProfileReplySelectionView,
   productionTwoProfileResultView,
+  productionTwoProfileResumeTarget,
   productionTwoProfileSessionSummaryView,
   productionTwoProfileSessionStatusView,
 } from "./action-state.js";
@@ -2150,6 +2151,41 @@ function autoSelectPendingTwoProfileConversation() {
   return pending ? selectTwoProfileConversationEntryForReview(pending, { focusManual: false }) : false;
 }
 
+function autoSelectLatestDeliveredReply(options = {}) {
+  const input = productionTwoProfileInput();
+  if (input.message) {
+    return false;
+  }
+  const selectedEntry = selectedTwoProfileConversationEntry();
+  if (twoProfileConversationDelivered(selectedEntry)) {
+    return selectReplyAfterDeliveredReview(selectedEntry, {
+      focusReply: options.focusReply ?? "none",
+    });
+  }
+  const latestDelivered = latestTwoProfileDeliveredConversationEntry();
+  return latestDelivered
+    ? selectReplyAfterDeliveredReview(latestDelivered, {
+        focusReply: options.focusReply ?? "none",
+      })
+    : false;
+}
+
+function autoSelectTwoProfileResumeTarget(sessionStatus) {
+  const target = productionTwoProfileResumeTarget({
+    sessionsReady: Boolean(sessionStatus?.both_ready_for_message_envelope),
+    hasPendingConversation: Boolean(latestTwoProfilePendingConversationEntry()),
+    hasDeliveredConversation: Boolean(latestTwoProfileDeliveredConversationEntry()),
+    hasMessageDraft: Boolean(productionTwoProfileInput().message),
+  });
+  if (target === "pending-review") {
+    return autoSelectPendingTwoProfileConversation() ? target : null;
+  }
+  if (target === "reply-latest") {
+    return autoSelectLatestDeliveredReply() ? target : null;
+  }
+  return target;
+}
+
 function selectTwoProfileReplyDirection(sentInput) {
   const sender = String(sentInput?.profileA ?? "").trim();
   const receiver = String(sentInput?.profileB ?? "").trim();
@@ -2197,7 +2233,8 @@ function selectReplyAfterDeliveredReview(entry, options = {}) {
   const importProfile = String(options.importProfile ?? "").trim().toLowerCase();
   const deferReplyUntilReceivedReview = options.deferReplyUntilReceivedReview === true;
   const receivedReviewComplete = options.receivedReviewComplete === true;
-  const focusReply = options.focusReply !== false;
+  const focusMode =
+    options.focusReply === "none" ? "none" : options.focusReply === false ? "manual" : "reply";
   setText(
     fields.productionTwoProfileWarning,
     importProfile && deferReplyUntilReceivedReview
@@ -2215,9 +2252,9 @@ function selectReplyAfterDeliveredReview(entry, options = {}) {
       : selectedTwoProfileNextActionMessage(entry),
   );
   applyProductionActionState();
-  if (focusReply) {
+  if (focusMode === "reply") {
     fields.productionTwoProfileMessage?.focus();
-  } else {
+  } else if (focusMode === "manual") {
     focusProductionCurrentAction();
   }
   return true;
@@ -3949,19 +3986,41 @@ async function loadProductionTwoProfileTranscript(options = {}) {
     if (!quiet) {
       const ready = Boolean(sessionStatus?.both_ready_for_message_envelope);
       setProductionTwoProfileState(ready ? "Conversation resumed" : "Conversation loaded");
+      const resumeTarget = ready ? autoSelectTwoProfileResumeTarget(sessionStatus) : null;
       setText(
         fields.productionTwoProfileWarning,
-        ready ? resumeWarning : loadedWarning,
+        ready && resumeTarget === "reply-latest"
+          ? appendExpiredMessagesPurged(
+              "Stored conversation recovered. Latest delivered message is selected as the reply target.",
+              expiredMessagesPurged,
+            )
+          : ready
+            ? resumeWarning
+            : loadedWarning,
       );
-      autoSelectPendingTwoProfileConversation();
+      if (ready && resumeTarget !== "pending-review") {
+        renderProductionTwoProfileMemory();
+      }
+      if (!ready) {
+        autoSelectPendingTwoProfileConversation();
+      }
     } else if (autoResume && sessionStatus?.both_ready_for_message_envelope) {
       setProductionTwoProfileState("Conversation resumed");
-      setText(
-        fields.productionTwoProfileWarning,
-        resumeWarning,
-      );
-      const pendingSelected = autoSelectPendingTwoProfileConversation();
-      if (!pendingSelected) {
+      const resumeTarget = autoSelectTwoProfileResumeTarget(sessionStatus);
+      if (resumeTarget === "reply-latest") {
+        setText(
+          fields.productionTwoProfileWarning,
+          appendExpiredMessagesPurged(
+            "Stored conversation and message-ready sessions recovered after local unlock. Latest delivered message is selected for reply.",
+            expiredMessagesPurged,
+          ),
+        );
+      } else if (resumeTarget === "pending-review") {
+        setText(
+          fields.productionTwoProfileWarning,
+          resumeWarning,
+        );
+      } else {
         setText(
           fields.productionTwoProfileWarning,
           appendExpiredMessagesPurged(

@@ -33,6 +33,7 @@ import {
   productionTwoProfileReplySelectionView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
+  productionTwoProfileResumeTarget,
   productionTwoProfileSessionSummaryView,
   productionTwoProfileSessionStatusView,
 } from "./action-state.js";
@@ -320,6 +321,43 @@ test("productionTwoProfileCurrentAction selects the next top-level control", () 
       hasKnownSessionStatus: true,
     }),
     "full-setup",
+  );
+});
+
+test("productionTwoProfileResumeTarget prefers pending review then latest reply", () => {
+  assert.equal(
+    productionTwoProfileResumeTarget({
+      sessionsReady: false,
+      hasPendingConversation: true,
+      hasDeliveredConversation: true,
+    }),
+    null,
+  );
+  assert.equal(
+    productionTwoProfileResumeTarget({
+      sessionsReady: true,
+      hasPendingConversation: true,
+      hasDeliveredConversation: true,
+    }),
+    "pending-review",
+  );
+  assert.equal(
+    productionTwoProfileResumeTarget({
+      sessionsReady: true,
+      hasPendingConversation: false,
+      hasDeliveredConversation: true,
+      hasMessageDraft: false,
+    }),
+    "reply-latest",
+  );
+  assert.equal(
+    productionTwoProfileResumeTarget({
+      sessionsReady: true,
+      hasPendingConversation: false,
+      hasDeliveredConversation: true,
+      hasMessageDraft: true,
+    }),
+    "compose",
   );
 });
 
