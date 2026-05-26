@@ -2751,19 +2751,19 @@ function applyProductionActionState() {
     fields.storeProductionPairingPayload,
     !manualAvailability.storePairingPayload,
     manualDisabledReasons.storePairingPayload,
-    manualCurrentActions.storePairingPayload,
+    manualCurrentActions.storePairingPayload && latestProductionManualFocusTarget === "store-pairing",
   );
   setActionButtonState(
     fields.loadProductionPairingPayload,
     !manualAvailability.loadPairingPayload,
     manualDisabledReasons.loadPairingPayload,
-    manualCurrentActions.loadPairingPayload,
+    manualCurrentActions.loadPairingPayload && latestProductionManualFocusTarget === "load-pairing",
   );
   setActionButtonState(
     fields.relayProductionPairingPayload,
     !manualAvailability.relayPairingPayload,
     manualDisabledReasons.relayPairingPayload,
-    manualCurrentActions.relayPairingPayload,
+    manualCurrentActions.relayPairingPayload && latestProductionManualFocusTarget === "relay-pairing",
   );
   setActionButtonState(
     fields.useProductionHandshakeInit,
@@ -2774,19 +2774,19 @@ function applyProductionActionState() {
     fields.storeProductionHandshakeInit,
     !manualAvailability.storeHandshakeInit,
     manualDisabledReasons.storeHandshakeInit,
-    manualCurrentActions.storeHandshakeInit,
+    manualCurrentActions.storeHandshakeInit && latestProductionManualFocusTarget === "store-handshake-init",
   );
   setActionButtonState(
     fields.loadProductionHandshakeInit,
     !manualAvailability.loadHandshakeInit,
     manualDisabledReasons.loadHandshakeInit,
-    manualCurrentActions.loadHandshakeInit,
+    manualCurrentActions.loadHandshakeInit && latestProductionManualFocusTarget === "load-handshake-init",
   );
   setActionButtonState(
     fields.relayProductionHandshakeInit,
     !manualAvailability.relayHandshakeInit,
     manualDisabledReasons.relayHandshakeInit,
-    manualCurrentActions.relayHandshakeInit,
+    manualCurrentActions.relayHandshakeInit && latestProductionManualFocusTarget === "relay-handshake-init",
   );
   setActionButtonState(
     fields.useProductionHandshakeReply,
@@ -2797,19 +2797,19 @@ function applyProductionActionState() {
     fields.storeProductionHandshakeReply,
     !manualAvailability.storeHandshakeReply,
     manualDisabledReasons.storeHandshakeReply,
-    manualCurrentActions.storeHandshakeReply,
+    manualCurrentActions.storeHandshakeReply && latestProductionManualFocusTarget === "store-handshake-reply",
   );
   setActionButtonState(
     fields.loadProductionHandshakeReply,
     !manualAvailability.loadHandshakeReply,
     manualDisabledReasons.loadHandshakeReply,
-    manualCurrentActions.loadHandshakeReply,
+    manualCurrentActions.loadHandshakeReply && latestProductionManualFocusTarget === "load-handshake-reply",
   );
   setActionButtonState(
     fields.relayProductionHandshakeReply,
     !manualAvailability.relayHandshakeReply,
     manualDisabledReasons.relayHandshakeReply,
-    manualCurrentActions.relayHandshakeReply,
+    manualCurrentActions.relayHandshakeReply && latestProductionManualFocusTarget === "relay-handshake-reply",
   );
   setActionButtonState(
     fields.useProductionHandshakeFinish,
@@ -2820,19 +2820,19 @@ function applyProductionActionState() {
     fields.storeProductionHandshakeFinish,
     !manualAvailability.storeHandshakeFinish,
     manualDisabledReasons.storeHandshakeFinish,
-    manualCurrentActions.storeHandshakeFinish,
+    manualCurrentActions.storeHandshakeFinish && latestProductionManualFocusTarget === "store-handshake-finish",
   );
   setActionButtonState(
     fields.loadProductionHandshakeFinish,
     !manualAvailability.loadHandshakeFinish,
     manualDisabledReasons.loadHandshakeFinish,
-    manualCurrentActions.loadHandshakeFinish,
+    manualCurrentActions.loadHandshakeFinish && latestProductionManualFocusTarget === "load-handshake-finish",
   );
   setActionButtonState(
     fields.relayProductionHandshakeFinish,
     !manualAvailability.relayHandshakeFinish,
     manualDisabledReasons.relayHandshakeFinish,
-    manualCurrentActions.relayHandshakeFinish,
+    manualCurrentActions.relayHandshakeFinish && latestProductionManualFocusTarget === "relay-handshake-finish",
   );
   setActionButtonState(
     fields.useProductionMessageEnvelope,
@@ -2843,19 +2843,19 @@ function applyProductionActionState() {
     fields.storeProductionMessageEnvelope,
     !manualAvailability.storeMessageEnvelope,
     manualDisabledReasons.storeMessageEnvelope,
-    manualCurrentActions.storeMessageEnvelope,
+    manualCurrentActions.storeMessageEnvelope && latestProductionManualFocusTarget === "store-message-envelope",
   );
   setActionButtonState(
     fields.loadProductionMessageEnvelope,
     !manualAvailability.loadMessageEnvelope,
     manualDisabledReasons.loadMessageEnvelope,
-    manualCurrentActions.loadMessageEnvelope,
+    manualCurrentActions.loadMessageEnvelope && latestProductionManualFocusTarget === "load-message-envelope",
   );
   setActionButtonState(
     fields.relayProductionMessageEnvelope,
     !manualAvailability.relayMessageEnvelope,
     manualDisabledReasons.relayMessageEnvelope,
-    manualCurrentActions.relayMessageEnvelope,
+    manualCurrentActions.relayMessageEnvelope && latestProductionManualFocusTarget === "relay-message-envelope",
   );
   setActionButtonState(
     fields.swapTwoProfileDirection,
