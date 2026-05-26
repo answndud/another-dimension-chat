@@ -3445,6 +3445,7 @@ async function runProductionTwoProfileRoundtrip() {
 
 async function runProductionTwoProfileMessageRoundtrip() {
   const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
+  let focusReplyComposerAfterStoredMessage = false;
   if (!messageRetentionPolicyReady()) {
     setProductionTwoProfileState("Stored-session message blocked");
     setText(fields.productionTwoProfileWarning, messageRetentionPolicyBlocker());
@@ -3490,7 +3491,9 @@ async function runProductionTwoProfileMessageRoundtrip() {
     const view = renderProductionTwoProfileMessageResult(result);
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
     if (view.canContinue) {
-      selectReplyAfterSentMessageResult(result, sentInput, message, "Stored-session message");
+      focusReplyComposerAfterStoredMessage = Boolean(
+        selectReplyAfterSentMessageResult(result, sentInput, message, "Stored-session message"),
+      );
     } else {
       setText(
         fields.productionTwoProfileWarning,
@@ -3509,6 +3512,9 @@ async function runProductionTwoProfileMessageRoundtrip() {
   } finally {
     productionBusyAction = null;
     applyProductionActionState();
+    if (focusReplyComposerAfterStoredMessage) {
+      fields.productionTwoProfileMessage?.focus();
+    }
   }
 }
 
