@@ -2169,7 +2169,9 @@ function applyPendingConversationToManualMessageReview(entry, options = {}) {
   setText(fields.productionMessageInbound, inboundReadiness);
   setText(fields.productionMessageOutbound, outboundReadiness);
   if (focusManual && !deferFocus) {
-    selectedTwoProfileManualFocusTarget(entry)?.focus();
+    const node = productionManualFocusNode(selectedTwoProfileManualFocusTarget(entry));
+    node?.scrollIntoView({ block: "center", behavior: "smooth" });
+    node?.focus();
   }
   return { canPrepareImport, reviewProfile, twoProfileWarning };
 }
