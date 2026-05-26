@@ -32,6 +32,7 @@ import {
   productionTwoProfileReplySelectionView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
+  productionTwoProfileSessionSummaryView,
   productionTwoProfileSessionStatusView,
 } from "./action-state.js";
 
@@ -1386,6 +1387,15 @@ test("productionTwoProfileSessionStatusView formats both profile readiness", () 
     }).state,
     "Both profiles message-ready",
   );
+});
+
+test("productionTwoProfileSessionSummaryView maps stored session status to top-level rows", () => {
+  const view = productionTwoProfileSessionSummaryView(safeTwoProfileSessionStatusResult);
+
+  assert.equal(view.profiles, "Existing profile stores checked: alice -> bob");
+  assert.match(view.session, /^Two-profile session needs work:/);
+  assert.match(view.session, /bob: ready=false/);
+  assert.match(view.boundary, /passphrase_retained=false/);
 });
 
 test("productionProfileMessageReadiness prefers matching two-profile status", () => {
