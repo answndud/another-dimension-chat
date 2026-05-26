@@ -492,6 +492,39 @@ test("productionActionAvailability routes two-profile send by stored session rea
   );
 });
 
+test("productionActionAvailability blocks stale selected message export and import", () => {
+  assert.deepEqual(
+    {
+      exportReady: productionActionAvailability({
+        ...baseState,
+        hasOutboundMessageInput: true,
+        selectedMessageInputMatches: true,
+      }).exportMessageEnvelope,
+      exportStale: productionActionAvailability({
+        ...baseState,
+        hasOutboundMessageInput: true,
+        selectedMessageInputMatches: false,
+      }).exportMessageEnvelope,
+      importReady: productionActionAvailability({
+        ...baseState,
+        hasInboundEnvelopeInput: true,
+        selectedMessageInputMatches: true,
+      }).importMessageEnvelope,
+      importStale: productionActionAvailability({
+        ...baseState,
+        hasInboundEnvelopeInput: true,
+        selectedMessageInputMatches: false,
+      }).importMessageEnvelope,
+    },
+    {
+      exportReady: true,
+      exportStale: false,
+      importReady: true,
+      importStale: false,
+    },
+  );
+});
+
 test("productionActionAvailability blocks message actions until retention policy is ready", () => {
   assert.deepEqual(
     {

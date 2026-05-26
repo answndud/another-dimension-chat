@@ -540,6 +540,7 @@ export function productionActionAvailability(state) {
     hasTwoProfileInput,
     hasTwoProfileSessionsReady,
     hasMessageRetentionPolicy = true,
+    selectedMessageInputMatches = true,
   } = state;
 
   return {
@@ -551,8 +552,10 @@ export function productionActionAvailability(state) {
     exportHandshakeReply: !busy && hasHandshakeReplyInput,
     exportHandshakeFinish: !busy && hasHandshakeFinishInput,
     importHandshakeFinish: !busy && hasFinishImportInput,
-    exportMessageEnvelope: !busy && hasMessageRetentionPolicy && hasOutboundMessageInput,
-    importMessageEnvelope: !busy && hasMessageRetentionPolicy && hasInboundEnvelopeInput,
+    exportMessageEnvelope:
+      !busy && hasMessageRetentionPolicy && selectedMessageInputMatches && hasOutboundMessageInput,
+    importMessageEnvelope:
+      !busy && hasMessageRetentionPolicy && selectedMessageInputMatches && hasInboundEnvelopeInput,
     exportReceivedMessage: !busy && hasReceivedExportInput,
     runTwoProfileRoundtrip:
       !busy && hasMessageRetentionPolicy && hasTwoProfileInput && !hasTwoProfileSessionsReady,
