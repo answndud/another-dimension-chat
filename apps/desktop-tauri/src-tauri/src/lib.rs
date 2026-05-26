@@ -350,6 +350,10 @@ pub struct ProductionMessageReceivedExportResult {
     received_message_record_decodable: bool,
     received_message_matches_session: bool,
     received_message: String,
+    created_at_ms: u128,
+    message_ttl_seconds: u64,
+    expires_at_ms: Option<u128>,
+    expired: bool,
     plaintext_returned_after_unlock: bool,
     key_material_exposed: bool,
     network_receive_attempted: bool,
@@ -1872,6 +1876,10 @@ fn run_production_message_received_export(
         received_message_record_decodable: export.received_message_record_decodable(),
         received_message_matches_session: export.received_message_matches_session(),
         received_message,
+        created_at_ms: export.created_at_ms(),
+        message_ttl_seconds: export.ttl_seconds(),
+        expires_at_ms: export.expires_at_ms(),
+        expired: export.expired(),
         plaintext_returned_after_unlock: true,
         key_material_exposed: export.key_material_exposed(),
         network_receive_attempted: export.network_receive_attempted(),
@@ -3422,6 +3430,10 @@ replay check: no replayed messages after message 2
         assert!(received.received_message_record_decodable);
         assert!(received.received_message_matches_session);
         assert_eq!(received.received_message, "persistent hello");
+        assert!(received.created_at_ms > 0);
+        assert_eq!(received.message_ttl_seconds, 86_400);
+        assert!(received.expires_at_ms.is_some());
+        assert!(!received.expired);
         assert!(received.plaintext_returned_after_unlock);
         assert!(!received.key_material_exposed);
         assert!(!received.network_receive_attempted);
