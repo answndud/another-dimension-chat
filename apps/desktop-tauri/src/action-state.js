@@ -908,6 +908,7 @@ export function productionManualMessageStatusView(state) {
   const active = state?.activeProfile || "active profile";
   const counterpart = state?.counterpartProfile || "counterpart";
   const selected = state?.selectedMessageLabel || "none";
+  const selectedInput = state?.selectedMessageInputMatches === false ? "stale" : "matched";
   const messageNumber = Number.isInteger(state?.messageNumber) ? state.messageNumber : "invalid";
   const numberMode = state?.autoMessageNumber ? "auto" : "manual";
   const session = state?.sessionReadyForMessages ? "ready" : "not-ready";
@@ -921,7 +922,7 @@ export function productionManualMessageStatusView(state) {
       ? "selected"
       : "none";
   return (
-    `selected=${selected} active=${active} remote=${counterpart} number=${messageNumber} mode=${numberMode} session=${session} ` +
+    `selected=${selected} selected_input=${selectedInput} active=${active} remote=${counterpart} number=${messageNumber} mode=${numberMode} session=${session} ` +
     `local_envelope=${localEnvelope} remote_slot=${remoteSlot} remote_envelope=${remoteEnvelope} ` +
     `received=${received} reply=${reply}`
   );
@@ -933,6 +934,8 @@ export function productionManualMessageCheckView(state) {
     check = "Manual check: select Alice or Bob before using stored remote payloads.";
   } else if (!Number.isInteger(state?.messageNumber)) {
     check = "Manual check: enter the message number before export or import.";
+  } else if (state?.selectedMessageInputMatches === false) {
+    check = "Manual check: selected message and manual number/body differ; reselect the row before export or import.";
   } else if (state?.hasTwoProfileReplyDraftInput) {
     check = "Manual check: reply draft is ready; send the stored-session reply.";
   } else if (state?.hasTwoProfileReplySelected) {
