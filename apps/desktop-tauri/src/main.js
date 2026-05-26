@@ -2617,6 +2617,8 @@ function applyProductionActionState() {
         ? retentionPolicyBlocker
         : !selectedManualExportProfileMatches
           ? `Select ${selectedManualExportProfile} in the manual profile panel before exporting this selected message.`
+        : !selectedMessageInputMatches
+          ? "Reselect the pending row before exporting; manual number/body no longer match the selected message."
         : "Complete session state, then enter message number and message.",
     selectedNeedsSenderExport || (!selectedConversation && availability.exportMessageEnvelope),
   );
@@ -2629,6 +2631,8 @@ function applyProductionActionState() {
         ? retentionPolicyBlocker
         : !selectedManualImportProfileMatches
           ? `Select ${selectedManualImportProfile} in the manual profile panel before importing this selected message.`
+        : !selectedMessageInputMatches
+          ? "Reselect the pending row before importing; manual number/body no longer match the selected message."
         : "Complete session state, then load or paste a remote envelope.",
     hasInboundEnvelopeInput && !hasImportedMessage && (!selectedConversation || selectedNeedsPeerImport),
   );
