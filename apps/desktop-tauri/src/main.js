@@ -774,6 +774,30 @@ function storeMessageEnvelopeSlot(profile, payload, metadata = {}) {
   return true;
 }
 
+function selectedMessageEnvelopeMetadata(profile, messageNumber, message) {
+  const selectedEntry = selectedTwoProfileConversationEntry();
+  const normalizedProfile = String(profile ?? "").trim().toLowerCase();
+  const parsedNumber = Number.parseInt(messageNumber, 10);
+  const selectedNumber = Number.parseInt(selectedEntry?.messageNumber, 10);
+  const text = String(message ?? "").trim();
+  if (
+    !selectedEntry ||
+    !normalizedProfile ||
+    !Number.isInteger(parsedNumber) ||
+    !Number.isInteger(selectedNumber) ||
+    selectedEntry.sender !== normalizedProfile ||
+    selectedNumber !== parsedNumber ||
+    selectedEntry.message !== text
+  ) {
+    return {};
+  }
+  return {
+    receiver: selectedEntry.receiver,
+    messageNumber: parsedNumber,
+    message: text,
+  };
+}
+
 function twoProfileConversationKey(entry) {
   return [
     String(entry.sender ?? "").trim().toLowerCase(),
@@ -1721,16 +1745,22 @@ function moveLocalMessageEnvelope() {
 }
 
 function storeProductionMessageEnvelope() {
-  const profile = activeProductionProfileName();
+  const { profile, messageNumber, message } = productionMessageInput();
   const value = fields.productionMessageEnvelope?.value?.trim() ?? "";
   if (!profile || !value) {
     setProductionMessageState("Envelope store needs profile and envelope");
     setText(fields.productionMessageWarning, "Export envelope before storing a local message slot.");
     return;
   }
-  storeMessageEnvelopeSlot(profile, value);
+  const metadata = selectedMessageEnvelopeMetadata(profile, messageNumber, message);
+  storeMessageEnvelopeSlot(profile, value, metadata);
   setProductionMessageState("Message envelope stored");
-  setText(fields.productionMessageWarning, `Stored local message envelope slot for ${profile}.`);
+  setText(
+    fields.productionMessageWarning,
+    metadata.messageNumber
+      ? `Stored local message envelope slot for ${profile} message #${metadata.messageNumber}.`
+      : `Stored local message envelope slot for ${profile}.`,
+  );
   renderProductionTwoProfileConversationList();
   applyProductionActionState();
 }
@@ -1820,7 +1850,7 @@ function selectProductionProfileForManualRelay(profile) {
 }
 
 function relayProductionMessageEnvelopeToPeer() {
-  const profile = activeProductionProfileName();
+  const { profile, messageNumber, message } = productionMessageInput();
   const counterpart = productionCounterpartProfile(profile);
   const value = fields.productionMessageEnvelope?.value?.trim() ?? "";
   if (!profile || !counterpart || !value || !fields.productionRemoteMessageEnvelope) {
@@ -1832,7 +1862,11 @@ function relayProductionMessageEnvelopeToPeer() {
     return;
   }
   resetProductionMessageImportState();
-  storeMessageEnvelopeSlot(profile, value);
+  storeMessageEnvelopeSlot(
+    profile,
+    value,
+    selectedMessageEnvelopeMetadata(profile, messageNumber, message),
+  );
   renderProductionTwoProfileConversationList();
   if (!selectProductionProfileForManualRelay(counterpart)) {
     setProductionMessageState("Envelope relay needs supported peer");
