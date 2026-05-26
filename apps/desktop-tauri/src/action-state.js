@@ -176,7 +176,7 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
   }
   if (sentCopyPresent) {
     return {
-      nextAction: `Next: load or paste sender envelope for message #${entry.messageNumber}.`,
+      nextAction: `Next: load or paste ${entry.sender}'s envelope for message #${entry.messageNumber} into ${entry.receiver}.`,
       rowLabel: `action: load envelope for ${entry.receiver}`,
       state: "is-waiting",
       focusTarget: "remote-envelope",
@@ -185,7 +185,7 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
     };
   }
   return {
-    nextAction: `Next: review missing local sent copy for message #${entry.messageNumber}.`,
+    nextAction: `Next: export sender envelope for message #${entry.messageNumber} from ${entry.sender}.`,
     rowLabel: `action: export sender copy from ${entry.sender}`,
     state: "is-ready",
     focusTarget: "export-envelope",
