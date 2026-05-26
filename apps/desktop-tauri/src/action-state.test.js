@@ -9,6 +9,7 @@ import {
   productionManualCurrentFocusTarget,
   productionManualCurrentStepView,
   productionManualNextActions,
+  productionManualPrimaryActions,
   productionManualRelayCurrentActions,
   productionManualRelayDisabledReasons,
   productionManualRelayAvailability,
@@ -755,6 +756,61 @@ test("productionManualCurrentFocusTarget resolves the next manual control", () =
       hasRemoteMessageEnvelopeSlot: true,
     }),
     "load-message-envelope",
+  );
+});
+
+test("productionManualPrimaryActions keeps reply flow ahead of received review", () => {
+  assert.deepEqual(
+    productionManualPrimaryActions({
+      ...baseState,
+      hasImportedMessage: true,
+      hasReceivedMessage: false,
+    }),
+    {
+      showReceived: true,
+      selectReply: false,
+      sendReply: false,
+    },
+  );
+  assert.deepEqual(
+    productionManualPrimaryActions({
+      ...baseState,
+      hasImportedMessage: true,
+      hasReceivedMessage: false,
+      hasTwoProfileReplySelected: true,
+    }),
+    {
+      showReceived: false,
+      selectReply: true,
+      sendReply: false,
+    },
+  );
+  assert.deepEqual(
+    productionManualPrimaryActions({
+      ...baseState,
+      hasImportedMessage: true,
+      hasReceivedMessage: false,
+      hasTwoProfileReplySelected: true,
+      hasTwoProfileReplyDraftInput: true,
+    }),
+    {
+      showReceived: false,
+      selectReply: false,
+      sendReply: true,
+    },
+  );
+  assert.deepEqual(
+    productionManualPrimaryActions({
+      ...baseState,
+      busy: true,
+      hasTwoProfileReplySelected: true,
+      hasTwoProfileReplyDraftInput: true,
+    }),
+    {
+      showReceived: false,
+      selectReply: false,
+      sendReply: false,
+    },
   );
 });
 

@@ -348,6 +348,23 @@ export function productionManualCurrentFocusTarget(state) {
   return "unlock-profile";
 }
 
+export function productionManualPrimaryActions(state) {
+  if (state?.busy) {
+    return {
+      showReceived: false,
+      selectReply: false,
+      sendReply: false,
+    };
+  }
+  const replyDraft = Boolean(state?.hasTwoProfileReplyDraftInput);
+  const replySelected = Boolean(state?.hasTwoProfileReplySelected);
+  return {
+    showReceived: Boolean(state?.hasImportedMessage && !state?.hasReceivedMessage && !replySelected),
+    selectReply: Boolean(replySelected && !replyDraft),
+    sendReply: replyDraft,
+  };
+}
+
 export function productionManualStatusView(input, slots) {
   const profile = String(input?.profile ?? "").trim() || "No profile";
   const counterpart = productionCounterpartProfile(profile);
