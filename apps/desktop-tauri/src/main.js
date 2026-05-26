@@ -174,6 +174,7 @@ const fields = {
   productionReceivedMessage: document.querySelector("#production-received-message"),
   loadProductionMessageTranscript: document.querySelector("#load-production-message-transcript"),
   productionMessageTranscript: document.querySelector("#production-message-transcript"),
+  productionMessageTranscriptExport: document.querySelector("#production-message-transcript-export"),
   productionMessageActiveStatus: document.querySelector("#production-message-active-status"),
   productionMessageManualCheck: document.querySelector("#production-message-manual-check"),
   productionMessageOutbound: document.querySelector("#production-message-outbound"),
@@ -709,6 +710,9 @@ function clearManualMessageDraftForReplySelection() {
 function resetProductionMessageTranscript() {
   productionTranscriptEntryKeys.clear();
   resetTranscriptList(fields.productionMessageTranscript, "No messages yet.");
+  if (fields.productionMessageTranscriptExport) {
+    fields.productionMessageTranscriptExport.value = "";
+  }
 }
 
 function resetProductionTwoProfileTranscript(options = {}) {
@@ -4761,6 +4765,9 @@ async function loadProductionMessageTranscript() {
       passphrase,
     });
     renderProductionTranscriptEntries(profile, result.entries);
+    if (fields.productionMessageTranscriptExport) {
+      fields.productionMessageTranscriptExport.value = result.transcript_tsv ?? "";
+    }
     setProductionMessageState("Transcript loaded");
     setText(fields.productionMessageWarning, transcriptRetentionWarning(result));
     setText(fields.productionMessageBoundary, transcriptBoundarySummary(result));

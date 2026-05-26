@@ -374,6 +374,7 @@ pub struct ProductionMessageTranscriptExportResult {
     storage_opened: bool,
     runtime_material_reconstructable: bool,
     entries: Vec<ProductionMessageTranscriptEntryResult>,
+    transcript_tsv: String,
     expired_messages_purged: usize,
     plaintext_returned_after_unlock: bool,
     key_material_exposed: bool,
@@ -1884,7 +1885,9 @@ fn run_production_message_transcript_export(
     profile: String,
     passphrase: String,
 ) -> Result<ProductionMessageTranscriptExportResult, String> {
-    use another_dimension_core::production::production_message_transcript_export;
+    use another_dimension_core::production::{
+        production_message_transcript_export, production_message_transcript_tsv,
+    };
     use another_dimension_storage::production::ProfilePassphrase;
 
     let profile = sanitize_production_profile(profile)?;
@@ -1892,6 +1895,8 @@ fn run_production_message_transcript_export(
         .map_err(|_| "invalid production profile passphrase")?;
     let store_path = production_profile_store_path(app_data_root, &profile)?;
     let export = production_message_transcript_export(&store_path, profile, &passphrase)
+        .map_err(|_| "message transcript export failed")?;
+    let transcript_tsv = production_message_transcript_tsv(export.entries())
         .map_err(|_| "message transcript export failed")?;
     let entries = export
         .entries()
@@ -1916,6 +1921,7 @@ fn run_production_message_transcript_export(
         storage_opened: export.storage_opened(),
         runtime_material_reconstructable: export.runtime_material_reconstructable(),
         entries,
+        transcript_tsv,
         expired_messages_purged: export.expired_messages_purged(),
         plaintext_returned_after_unlock: true,
         key_material_exposed: export.key_material_exposed(),
@@ -3439,6 +3445,13 @@ replay check: no replayed messages after message 2
         assert_eq!(sender_transcript.entries[0].ttl_seconds, 86_400);
         assert!(sender_transcript.entries[0].expires_at_ms.is_some());
         assert!(!sender_transcript.entries[0].expired);
+        assert!(sender_transcript
+            .transcript_tsv
+            .starts_with("direction\tmessage_number\tcreated_at_ms\tttl_seconds\texpires_at_ms\tmessage\n"));
+        assert!(sender_transcript.transcript_tsv.contains("sent\t1\t"));
+        assert!(sender_transcript
+            .transcript_tsv
+            .contains("persistent hello\n"));
         assert!(sender_transcript.plaintext_returned_after_unlock);
         assert!(!sender_transcript.key_material_exposed);
         assert!(!sender_transcript.network_io_attempted);
@@ -3461,6 +3474,12 @@ replay check: no replayed messages after message 2
         assert_eq!(receiver_transcript.entries[0].ttl_seconds, 86_400);
         assert!(receiver_transcript.entries[0].expires_at_ms.is_some());
         assert!(!receiver_transcript.entries[0].expired);
+        assert!(receiver_transcript
+            .transcript_tsv
+            .contains("received\t1\t"));
+        assert!(receiver_transcript
+            .transcript_tsv
+            .contains("persistent hello\n"));
         assert!(receiver_transcript.plaintext_returned_after_unlock);
         assert!(!receiver_transcript.key_material_exposed);
         assert!(!receiver_transcript.network_io_attempted);

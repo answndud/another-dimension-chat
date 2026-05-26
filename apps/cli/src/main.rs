@@ -1436,7 +1436,9 @@ fn run_production_message_transcript_export_command(args: &[String]) -> Result<(
         &passphrase,
     )
     .map_err(redacted_production_message_transcript_export_error)?;
-    let export = format_production_message_transcript(summary.entries())?;
+    let export =
+        another_dimension_core::production::production_message_transcript_tsv(summary.entries())
+            .map_err(redacted_production_message_transcript_export_error)?;
     std::fs::write(&options.out_path, export)
         .map_err(|_| "production message transcript-export failed: out write failed".to_string())?;
 
@@ -2850,52 +2852,6 @@ fn production_message_transcript_export_help() -> String {
 
 Reads the profile passphrase from stdin and writes recovered sent/received plaintext only to --out as tab-separated transcript rows. This purges expired records through the same local retention path, does not print plaintext, open transport, or enable runtime messaging."
         .to_string()
-}
-
-#[cfg(not(feature = "dev-insecure"))]
-fn format_production_message_transcript(
-    entries: &[another_dimension_core::production::ProductionMessageTranscriptEntry],
-) -> Result<String, String> {
-    let mut out = String::from(
-        "direction\tmessage_number\tcreated_at_ms\tttl_seconds\texpires_at_ms\tmessage\n",
-    );
-    for entry in entries {
-        let message = String::from_utf8(entry.plaintext().to_vec())
-            .map_err(|_| "production message transcript-export failed: transcript is not UTF-8")?;
-        out.push_str(entry.direction());
-        out.push('\t');
-        out.push_str(&entry.message_number().to_string());
-        out.push('\t');
-        out.push_str(&entry.created_at_ms().to_string());
-        out.push('\t');
-        out.push_str(&entry.ttl_seconds().to_string());
-        out.push('\t');
-        out.push_str(
-            &entry
-                .expires_at_ms()
-                .map(|value| value.to_string())
-                .unwrap_or_else(|| "none".to_string()),
-        );
-        out.push('\t');
-        out.push_str(&escape_transcript_cell(&message));
-        out.push('\n');
-    }
-    Ok(out)
-}
-
-#[cfg(not(feature = "dev-insecure"))]
-fn escape_transcript_cell(value: &str) -> String {
-    let mut escaped = String::with_capacity(value.len());
-    for ch in value.chars() {
-        match ch {
-            '\\' => escaped.push_str("\\\\"),
-            '\t' => escaped.push_str("\\t"),
-            '\r' => escaped.push_str("\\r"),
-            '\n' => escaped.push_str("\\n"),
-            _ => escaped.push(ch),
-        }
-    }
-    escaped
 }
 
 #[cfg(not(feature = "dev-insecure"))]
