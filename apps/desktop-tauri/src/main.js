@@ -1842,8 +1842,14 @@ function productionManualFocusNode(target) {
   return targets[target] ?? null;
 }
 
+function focusTargetNeedsManualTools(target) {
+  return Boolean(target && !["two-profile-message", "send-two-profile-message"].includes(target));
+}
+
 function focusProductionCurrentAction() {
-  openManualProductionTools();
+  if (focusTargetNeedsManualTools(latestProductionManualFocusTarget)) {
+    openManualProductionTools();
+  }
   const node = productionManualFocusNode(latestProductionManualFocusTarget);
   if (!node) {
     return;
