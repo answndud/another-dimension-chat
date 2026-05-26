@@ -3782,14 +3782,15 @@ async function refreshTwoProfileConversationAfterManualImport(profile, passphras
   }
   setProductionTwoProfileState("Conversation updated after import");
   const selectedEntry = selectedTwoProfileConversationEntry();
-  if (!selectReplyAfterDeliveredReview(selectedEntry, { importProfile: importedProfile })) {
-    setText(
-      fields.productionTwoProfileWarning,
-      `Manual import for ${importedProfile} completed; conversation transcript was reloaded from encrypted local stores.`,
-    );
-    renderProductionTwoProfileMemory(input);
+  if (selectReplyAfterDeliveredReview(selectedEntry, { importProfile: importedProfile })) {
+    return { conversationReloaded: true, replySelected: true };
   }
-  return true;
+  setText(
+    fields.productionTwoProfileWarning,
+    `Manual import for ${importedProfile} completed; conversation transcript was reloaded from encrypted local stores.`,
+  );
+  renderProductionTwoProfileMemory(input);
+  return { conversationReloaded: true, replySelected: false };
 }
 
 function syncTwoProfileConversationAfterManualExport(
@@ -4218,7 +4219,17 @@ async function importProductionMessageEnvelope() {
     setText(fields.productionMessageOutbound, "Not exported in this profile");
     setText(fields.productionMessageInbound, view.inbound);
     setText(fields.productionMessageBoundary, view.boundary);
-    await refreshTwoProfileConversationAfterManualImport(profile, passphrase);
+    const conversationRefresh = await refreshTwoProfileConversationAfterManualImport(profile, passphrase);
+    if (conversationRefresh?.replySelected) {
+      setText(
+        fields.productionMessageWarning,
+        `${result.warning}${
+          clearedEnvelopeSlot ? " Consumed matching stored sender envelope slot." : ""
+        }${clearedEnvelopeInput ? " Cleared imported remote envelope input." : ""}${
+          clearedEnvelopeOutput ? " Cleared matching local envelope output." : ""
+        } Reply target selected in the two-profile conversation. Show received remains available for local plaintext review.`,
+      );
+    }
   } catch (error) {
     setProductionMessageState("Message envelope import failed");
     setText(fields.productionMessageWarning, String(error));
