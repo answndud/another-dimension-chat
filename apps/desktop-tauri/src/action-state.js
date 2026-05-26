@@ -671,8 +671,21 @@ export function productionManualRelayDisabledReasons(state) {
   }
 
   const counterpart = String(state?.counterpartProfile ?? "").trim().toLowerCase();
+  const active = String(state?.activeProfile ?? "").trim().toLowerCase();
+  const selectedExportProfile = String(state?.selectedManualExportProfile ?? "").trim().toLowerCase();
+  const selectedImportProfile = String(state?.selectedManualImportProfile ?? "").trim().toLowerCase();
   const remoteReason = (label) =>
     counterpart ? `Store ${counterpart} ${label} first.` : "Select Alice or Bob before filling remote payloads.";
+  const selectedExportReason = selectedExportProfile
+    ? active && active !== selectedExportProfile
+      ? `Select ${selectedExportProfile} in the manual profile panel before exporting this selected message envelope.`
+      : `Export selected message envelope from ${selectedExportProfile} first.`
+    : "";
+  const selectedImportReason = selectedImportProfile
+    ? active && active !== selectedImportProfile
+      ? `Select ${selectedImportProfile} in the manual profile panel before loading this selected message envelope.`
+      : `Load or paste sender envelope for ${selectedImportProfile} first.`
+    : "";
 
   return {
     usePairingPayload: "Export pairing first.",
@@ -691,10 +704,11 @@ export function productionManualRelayDisabledReasons(state) {
     storeHandshakeFinish: "Export finish first.",
     loadHandshakeFinish: remoteReason("finish"),
     relayHandshakeFinish: counterpart ? "Export finish first." : "Select Alice or Bob before relaying.",
-    useMessageEnvelope: "Export envelope first.",
-    storeMessageEnvelope: "Export envelope first.",
-    loadMessageEnvelope: remoteReason("envelope"),
-    relayMessageEnvelope: counterpart ? "Export envelope first." : "Select Alice or Bob before relaying.",
+    useMessageEnvelope: selectedExportReason || "Export envelope first.",
+    storeMessageEnvelope: selectedExportReason || "Export envelope first.",
+    loadMessageEnvelope: selectedImportReason || remoteReason("envelope"),
+    relayMessageEnvelope:
+      selectedExportReason || (counterpart ? "Export envelope first." : "Select Alice or Bob before relaying."),
   };
 }
 
