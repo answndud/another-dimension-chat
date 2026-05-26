@@ -5326,6 +5326,50 @@ pub mod production {
         })
     }
 
+    pub fn production_message_transcript_tsv(
+        entries: &[ProductionMessageTranscriptEntry],
+    ) -> Result<String, ProductionSessionError> {
+        let mut out = String::from(
+            "direction\tmessage_number\tcreated_at_ms\tttl_seconds\texpires_at_ms\tmessage\n",
+        );
+        for entry in entries {
+            let message = String::from_utf8(entry.plaintext.clone())
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            out.push_str(entry.direction);
+            out.push('\t');
+            out.push_str(&entry.message_number.to_string());
+            out.push('\t');
+            out.push_str(&entry.created_at_ms.to_string());
+            out.push('\t');
+            out.push_str(&entry.ttl_seconds.to_string());
+            out.push('\t');
+            out.push_str(
+                &entry
+                    .expires_at_ms
+                    .map(|value| value.to_string())
+                    .unwrap_or_else(|| "none".to_string()),
+            );
+            out.push('\t');
+            out.push_str(&escape_transcript_tsv_cell(&message));
+            out.push('\n');
+        }
+        Ok(out)
+    }
+
+    fn escape_transcript_tsv_cell(value: &str) -> String {
+        let mut escaped = String::with_capacity(value.len());
+        for ch in value.chars() {
+            match ch {
+                '\\' => escaped.push_str("\\\\"),
+                '\t' => escaped.push_str("\\t"),
+                '\r' => escaped.push_str("\\r"),
+                '\n' => escaped.push_str("\\n"),
+                _ => escaped.push(ch),
+            }
+        }
+        escaped
+    }
+
     pub fn production_session_evaluation_summary() -> ProductionSessionEvaluationSummary {
         ProductionSessionEvaluationSummary {
             protocol_candidate: "snow Noise XX synchronous boundary",
@@ -8117,6 +8161,14 @@ pub mod production {
             );
             assert!(outbound_transcript.entries()[0].expires_at_ms().is_some());
             assert!(!outbound_transcript.entries()[0].expired());
+            let outbound_transcript_tsv =
+                production_message_transcript_tsv(outbound_transcript.entries())
+                    .expect("outbound transcript tsv");
+            assert!(outbound_transcript_tsv.starts_with(
+                "direction\tmessage_number\tcreated_at_ms\tttl_seconds\texpires_at_ms\tmessage\n"
+            ));
+            assert!(outbound_transcript_tsv.contains("sent\t1\t"));
+            assert!(outbound_transcript_tsv.contains("hi\n"));
             assert!(!outbound_transcript.plaintext_exposed());
             assert!(!outbound_transcript.network_io_attempted());
             assert!(!outbound_transcript.key_material_exposed());

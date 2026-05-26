@@ -99,6 +99,7 @@ require_contains "$TAURI_DIR/src/lib.rs" 'production_message_envelope_import'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_message_received_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_message_transcript_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'ProductionMessageTranscriptEntryResult'
+require_contains "$TAURI_DIR/src/lib.rs" 'transcript_tsv'
 require_contains "$TAURI_DIR/src/lib.rs" 'created_at_ms'
 require_contains "$TAURI_DIR/src/lib.rs" 'ttl_seconds'
 require_contains "$TAURI_DIR/src/lib.rs" 'expires_at_ms'
@@ -635,6 +636,7 @@ if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Sen
   | grep -v '<button id="export-production-received-message" type="button">Show plaintext</button>' \
   | grep -v '<textarea id="production-received-message" rows="3" readonly></textarea>' \
   | grep -v '<button id="load-production-message-transcript" type="button">Load transcript</button>' \
+  | grep -v '<textarea id="production-message-transcript-export" rows="5" readonly></textarea>' \
   | grep -v '<button id="load-production-two-profile-transcript" type="button">Load conversation</button>' \
   | grep -v '<button id="reply-latest-two-profile-message" type="button">Reply to latest</button>' \
   | grep -v '<button id="review-pending-two-profile-message" type="button">Review pending</button>' \
