@@ -266,6 +266,10 @@ const productionMessageRetentionPolicy = {
   defaultTtlSeconds: null,
   allowedTtlSeconds: [],
 };
+const localPreviewRetentionPolicy = {
+  defaultTtlSeconds: 604_800,
+  allowedTtlSeconds: [3_600, 86_400, 604_800, 2_592_000],
+};
 
 const themeStorageKey = "another-dimension-theme";
 
@@ -357,6 +361,18 @@ function messageRetentionPolicyBlocker() {
     return `Message retention policy unavailable: ${productionMessageRetentionPolicy.error ?? "load failed"}`;
   }
   return "Message retention policy loading; message actions are disabled.";
+}
+
+function hasTauriRuntimeBridge() {
+  return Boolean(window.__TAURI_INTERNALS__?.invoke);
+}
+
+function applyLoadedMessageRetentionPolicy(defaultTtlSeconds, allowedTtlSeconds) {
+  productionMessageRetentionPolicy.status = "loaded";
+  productionMessageRetentionPolicy.error = null;
+  productionMessageRetentionPolicy.defaultTtlSeconds = defaultTtlSeconds;
+  productionMessageRetentionPolicy.allowedTtlSeconds = allowedTtlSeconds;
+  renderMessageTtlControlOptions();
 }
 
 function messageTtlInputBlocker() {
@@ -1175,6 +1191,14 @@ async function loadProductionMessageRetentionPolicy() {
   productionMessageRetentionPolicy.error = null;
   renderMessageTtlControlOptions();
   applyProductionActionState();
+  if (!hasTauriRuntimeBridge()) {
+    applyLoadedMessageRetentionPolicy(
+      localPreviewRetentionPolicy.defaultTtlSeconds,
+      localPreviewRetentionPolicy.allowedTtlSeconds,
+    );
+    applyProductionActionState();
+    return;
+  }
   try {
     const policy = await invoke("production_message_retention_policy");
     const defaultTtlSeconds = Number.parseInt(policy.default_ttl_seconds, 10);
@@ -1186,11 +1210,7 @@ async function loadProductionMessageRetentionPolicy() {
     if (!Number.isFinite(defaultTtlSeconds) || !allowedTtlSeconds.includes(defaultTtlSeconds)) {
       throw new Error("retention policy did not include a valid default TTL");
     }
-    productionMessageRetentionPolicy.status = "loaded";
-    productionMessageRetentionPolicy.error = null;
-    productionMessageRetentionPolicy.defaultTtlSeconds = defaultTtlSeconds;
-    productionMessageRetentionPolicy.allowedTtlSeconds = allowedTtlSeconds;
-    renderMessageTtlControlOptions();
+    applyLoadedMessageRetentionPolicy(defaultTtlSeconds, allowedTtlSeconds);
   } catch (error) {
     productionMessageRetentionPolicy.status = "failed";
     productionMessageRetentionPolicy.error = String(error);
