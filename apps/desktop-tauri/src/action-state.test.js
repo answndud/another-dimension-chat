@@ -1532,7 +1532,7 @@ test("productionTwoProfileConversationActionView maps row status to next action"
   assert.deepEqual(
     productionTwoProfileConversationActionView(entry),
     {
-      nextAction: "Next: review missing local sent copy for message #9.",
+      nextAction: "Next: export sender envelope for message #9 from alice.",
       rowLabel: "action: export sender copy from alice",
       state: "is-ready",
       focusTarget: "export-envelope",
@@ -1545,7 +1545,7 @@ test("productionTwoProfileConversationActionView maps row status to next action"
   assert.deepEqual(
     productionTwoProfileConversationActionView(entry),
     {
-      nextAction: "Next: load or paste sender envelope for message #9.",
+      nextAction: "Next: load or paste alice's envelope for message #9 into bob.",
       rowLabel: "action: load envelope for bob",
       state: "is-waiting",
       focusTarget: "remote-envelope",
