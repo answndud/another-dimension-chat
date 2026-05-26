@@ -42,6 +42,47 @@ export function productionCounterpartProfile(profile) {
   return null;
 }
 
+export function productionTwoProfilePairFromProfiles(profiles, currentA, currentB) {
+  const savedProfiles = [
+    ...new Set(
+      (Array.isArray(profiles) ? profiles : [])
+        .map((profile) => String(profile ?? "").trim())
+        .filter(Boolean),
+    ),
+  ];
+  const profileA = String(currentA ?? "").trim();
+  const profileB = String(currentB ?? "").trim();
+  const saved = new Set(savedProfiles);
+  if (profileA && profileB && profileA !== profileB && saved.has(profileA) && saved.has(profileB)) {
+    return { profileA, profileB, changed: false };
+  }
+  if (savedProfiles.length < 2) {
+    return { profileA, profileB, changed: false };
+  }
+
+  const choosePair = (first) => {
+    const second = savedProfiles.find((profile) => profile !== first);
+    return second ? [first, second] : null;
+  };
+  const preferred =
+    saved.has("alice") && saved.has("bob")
+      ? ["alice", "bob"]
+      : saved.has(profileA)
+        ? choosePair(profileA)
+        : saved.has(profileB)
+          ? [savedProfiles.find((profile) => profile !== profileB), profileB]
+          : [savedProfiles[0], savedProfiles[1]];
+  const [nextA, nextB] = preferred ?? [profileA, profileB];
+  if (!nextA || !nextB || nextA === nextB) {
+    return { profileA, profileB, changed: false };
+  }
+  return {
+    profileA: nextA,
+    profileB: nextB,
+    changed: nextA !== profileA || nextB !== profileB,
+  };
+}
+
 export function productionMessageTtlInputValue(value, allowedTtlSeconds, fallbackTtlSeconds) {
   const allowed = Array.isArray(allowedTtlSeconds)
     ? allowedTtlSeconds.filter((ttlSeconds) => Number.isFinite(ttlSeconds) && ttlSeconds > 0)
