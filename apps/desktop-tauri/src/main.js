@@ -4758,6 +4758,19 @@ for (const input of [
   }
 }
 
+for (const input of [
+  fields.productionProfileName,
+  fields.productionProfilePassphrase,
+  fields.productionMessageAutoNumber,
+  fields.productionMessageNumber,
+  fields.productionMessageBody,
+]) {
+  if (input) {
+    input.addEventListener("input", resetProductionMessageImportState);
+    input.addEventListener("change", resetProductionMessageImportState);
+  }
+}
+
 if (fields.productionProfilePassphrase) {
   fields.productionProfilePassphrase.addEventListener("input", () => {
     syncProductionTwoProfilePassphraseFromProfile();
