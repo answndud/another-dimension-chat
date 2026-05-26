@@ -234,13 +234,13 @@ export function productionManualNextActions(state) {
   if (hasInboundEnvelopeInput) {
     message = `Next: import envelope for ${activeLabel}.`;
   }
-  if (hasImportedMessage) {
+  if (hasImportedMessage && !hasReceivedMessage) {
     message = `Next: click Show received for ${activeLabel}.`;
   }
   if (hasReceivedMessage) {
     message = `Next: review received message for ${activeLabel}.`;
   }
-  if (hasTwoProfileReplySelected) {
+  if (hasTwoProfileReplySelected && (!hasImportedMessage || hasReceivedMessage)) {
     message = `Next: write reply from ${activeLabel} to ${counterpartLabel}.`;
   }
   if (hasTwoProfileReplyDraftInput) {
@@ -258,7 +258,8 @@ export function productionManualCurrentStepView(state) {
   if (!state?.hasProfileUnlockInput) {
     return `Profile | ${nextActions.profile}`;
   }
-  if (state.hasTwoProfileReplyDraftInput || state.hasTwoProfileReplySelected) {
+  const needsReceivedReview = Boolean(state.hasImportedMessage && !state.hasReceivedMessage);
+  if (state.hasTwoProfileReplyDraftInput || (state.hasTwoProfileReplySelected && !needsReceivedReview)) {
     return `Reply | ${nextActions.message}`;
   }
 
@@ -286,17 +287,18 @@ export function productionManualCurrentFocusTarget(state) {
     return state?.activeProfile ? "profile-passphrase" : "profile-name";
   }
 
+  const needsReceivedReview = Boolean(state.hasImportedMessage && !state.hasReceivedMessage);
   if (state.hasTwoProfileReplyDraftInput) {
     return "send-two-profile-message";
+  }
+  if (needsReceivedReview) {
+    return "show-received";
   }
   if (state.hasTwoProfileReplySelected) {
     return "two-profile-message";
   }
   if (state.hasReceivedMessage) {
     return "received-message";
-  }
-  if (state.hasImportedMessage) {
-    return "show-received";
   }
   if (state.hasInboundEnvelopeInput) {
     return "import-envelope";
@@ -370,9 +372,10 @@ export function productionManualPrimaryActions(state) {
   }
   const replyDraft = Boolean(state?.hasTwoProfileReplyDraftInput);
   const replySelected = Boolean(state?.hasTwoProfileReplySelected);
+  const needsReceivedReview = Boolean(state?.hasImportedMessage && !state?.hasReceivedMessage);
   return {
-    showReceived: Boolean(state?.hasImportedMessage && !state?.hasReceivedMessage && !replySelected),
-    selectReply: Boolean(replySelected && !replyDraft),
+    showReceived: Boolean(needsReceivedReview && !replyDraft),
+    selectReply: Boolean(replySelected && !replyDraft && !needsReceivedReview),
     sendReply: replyDraft,
   };
 }
