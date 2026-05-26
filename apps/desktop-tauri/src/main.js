@@ -670,7 +670,10 @@ function resetProductionMessageTranscript() {
   resetTranscriptList(fields.productionMessageTranscript, "No messages yet.");
 }
 
-function resetProductionTwoProfileTranscript() {
+function resetProductionTwoProfileTranscript(options = {}) {
+  if (options.preserveSelection !== true) {
+    selectedTwoProfileConversationKey = null;
+  }
   productionTwoProfileConversationEntries.clear();
   resetTranscriptList(fields.productionTwoProfileTranscript, "No two-profile messages yet.");
 }
@@ -1013,8 +1016,17 @@ function selectedTwoProfileManualFocusTarget(entry) {
   return twoProfileConversationActionView(entry).focusTarget;
 }
 
+function clearStaleTwoProfileConversationSelection() {
+  if (!selectedTwoProfileConversationKey || productionTwoProfileConversationEntries.has(selectedTwoProfileConversationKey)) {
+    return false;
+  }
+  selectedTwoProfileConversationKey = null;
+  renderProductionTwoProfileConversationList();
+  return true;
+}
+
 function renderProductionTwoProfileTranscriptEntries(entries) {
-  resetProductionTwoProfileTranscript();
+  resetProductionTwoProfileTranscript({ preserveSelection: true });
   const orderedEntries = [...(entries ?? [])].sort((left, right) => {
     const numberDelta = left.messageNumber - right.messageNumber;
     if (numberDelta !== 0) {
@@ -1037,6 +1049,7 @@ function renderProductionTwoProfileTranscriptEntries(entries) {
       },
     );
   }
+  clearStaleTwoProfileConversationSelection();
 }
 
 function renderProductionTranscriptEntries(profile, entries) {
