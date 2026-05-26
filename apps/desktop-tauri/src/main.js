@@ -2136,6 +2136,25 @@ function applyProductionActionState() {
   const hasRemoteMessageEnvelopeSlot = Boolean(
     counterpartProfile && productionPayloadSlots.messageEnvelope.has(counterpartProfile),
   );
+  const selectedConversation = selectedTwoProfileConversationEntry();
+  const selectedHasSentCopy = Boolean(selectedConversation?.statuses?.has("sent"));
+  const selectedHasReceivedCopy = Boolean(selectedConversation?.statuses?.has("received"));
+  const selectedNeedsSenderExport = Boolean(selectedConversation && !selectedHasSentCopy);
+  const selectedNeedsPeerImport = Boolean(
+    selectedConversation && selectedHasSentCopy && !selectedHasReceivedCopy,
+  );
+  const selectedManualExportProfile = selectedNeedsSenderExport
+    ? String(selectedConversation.sender ?? "").trim().toLowerCase()
+    : "";
+  const selectedManualImportProfile = selectedNeedsPeerImport
+    ? String(selectedConversation.receiver ?? "").trim().toLowerCase()
+    : "";
+  const selectedManualExportProfileMatches = Boolean(
+    !selectedManualExportProfile || activeProductionProfileName() === selectedManualExportProfile,
+  );
+  const selectedManualImportProfileMatches = Boolean(
+    !selectedManualImportProfile || activeProductionProfileName() === selectedManualImportProfile,
+  );
   const hasMessageNumberForExport =
     productionMessageUsesAutoNumber() || validProductionMessageNumber();
   const hasMessageNumberForImport = validProductionMessageNumber();
@@ -2143,13 +2162,15 @@ function applyProductionActionState() {
     hasProfileUnlockInput &&
       hasMessageNumberForExport &&
       message.message &&
-      sessionReadyForMessages,
+      sessionReadyForMessages &&
+      selectedManualExportProfileMatches,
   );
   const hasInboundEnvelopeInput = Boolean(
     hasProfileUnlockInput &&
       hasMessageNumberForImport &&
       message.envelopePayload &&
-      sessionReadyForMessages,
+      sessionReadyForMessages &&
+      selectedManualImportProfileMatches,
   );
   const hasImportedMessage = latestProductionMessageImportMatches(message);
   const hasReceivedExportInput = Boolean(hasProfileUnlockInput && hasMessageNumberForImport);
@@ -2221,13 +2242,6 @@ function applyProductionActionState() {
   const twoProfileCanSendStoredMessage = hasTwoProfileInput && twoProfileSessionsReady;
   const twoProfileCanReply = Boolean(
     !busy && latestProductionTwoProfileSuccess && hasTwoProfileSessionStatusInput && !twoProfile.message,
-  );
-  const selectedConversation = selectedTwoProfileConversationEntry();
-  const selectedHasSentCopy = Boolean(selectedConversation?.statuses?.has("sent"));
-  const selectedHasReceivedCopy = Boolean(selectedConversation?.statuses?.has("received"));
-  const selectedNeedsSenderExport = Boolean(selectedConversation && !selectedHasSentCopy);
-  const selectedNeedsPeerImport = Boolean(
-    selectedConversation && selectedHasSentCopy && !selectedHasReceivedCopy,
   );
   const selectedConversationDelivered = twoProfileConversationDelivered(selectedConversation);
   const latestReplySelected = Boolean(
@@ -2340,6 +2354,8 @@ function applyProductionActionState() {
       ? "Wait for the active production action."
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
+        : !selectedManualExportProfileMatches
+          ? `Select ${selectedManualExportProfile} in the manual profile panel before exporting this selected message.`
         : "Complete session state, then enter message number and message.",
     selectedNeedsSenderExport || (!selectedConversation && availability.exportMessageEnvelope),
   );
@@ -2350,6 +2366,8 @@ function applyProductionActionState() {
       ? "Wait for the active production action."
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
+        : !selectedManualImportProfileMatches
+          ? `Select ${selectedManualImportProfile} in the manual profile panel before importing this selected message.`
         : "Complete session state, then load or paste a remote envelope.",
     hasInboundEnvelopeInput && !hasImportedMessage && (!selectedConversation || selectedNeedsPeerImport),
   );
