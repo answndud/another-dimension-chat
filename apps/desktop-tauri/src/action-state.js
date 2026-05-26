@@ -907,6 +907,7 @@ export function productionProfileMessageReadiness(profile, singleProfileState, t
 export function productionManualMessageStatusView(state) {
   const active = state?.activeProfile || "active profile";
   const counterpart = state?.counterpartProfile || "counterpart";
+  const selected = state?.selectedMessageLabel || "none";
   const messageNumber = Number.isInteger(state?.messageNumber) ? state.messageNumber : "invalid";
   const numberMode = state?.autoMessageNumber ? "auto" : "manual";
   const session = state?.sessionReadyForMessages ? "ready" : "not-ready";
@@ -920,7 +921,7 @@ export function productionManualMessageStatusView(state) {
       ? "selected"
       : "none";
   return (
-    `active=${active} remote=${counterpart} number=${messageNumber} mode=${numberMode} session=${session} ` +
+    `selected=${selected} active=${active} remote=${counterpart} number=${messageNumber} mode=${numberMode} session=${session} ` +
     `local_envelope=${localEnvelope} remote_slot=${remoteSlot} remote_envelope=${remoteEnvelope} ` +
     `received=${received} reply=${reply}`
   );

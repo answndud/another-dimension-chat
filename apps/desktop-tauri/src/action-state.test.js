@@ -1283,12 +1283,13 @@ test("productionManualMessageStatusView summarizes active message path", () => {
       hasInboundEnvelopeInput: false,
       hasReceivedMessage: false,
     }),
-    "active=alice remote=bob number=7 mode=auto session=ready local_envelope=present remote_slot=empty remote_envelope=empty received=empty reply=none",
+    "selected=none active=alice remote=bob number=7 mode=auto session=ready local_envelope=present remote_slot=empty remote_envelope=empty received=empty reply=none",
   );
   assert.match(
     productionManualMessageStatusView({
       activeProfile: "bob",
       counterpartProfile: "alice",
+      selectedMessageLabel: "alice->bob#7",
       messageNumber: Number.NaN,
       sessionReadyForMessages: false,
       hasRemoteMessageEnvelopeSlot: true,
@@ -1296,7 +1297,7 @@ test("productionManualMessageStatusView summarizes active message path", () => {
       hasReceivedMessage: true,
       hasTwoProfileReplySelected: true,
     }),
-    /active=bob remote=alice number=invalid mode=manual session=not-ready .*remote_slot=ready remote_envelope=loaded received=present reply=selected/,
+    /selected=alice->bob#7 active=bob remote=alice number=invalid mode=manual session=not-ready .*remote_slot=ready remote_envelope=loaded received=present reply=selected/,
   );
   assert.match(
     productionManualMessageStatusView({
