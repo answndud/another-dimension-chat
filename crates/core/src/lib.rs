@@ -5145,7 +5145,7 @@ pub mod production {
             &material.remote_contact_id,
             message_number,
         );
-        let received = store
+        let mut received = store
             .get(&received_record_id)?
             .map(|record| {
                 if record.kind != ProductionRecordKind::ReceivedMessage {
@@ -5156,6 +5156,14 @@ pub mod production {
                 ReceivedMessageRecord::decode(&state)
             })
             .transpose()?;
+        let observed_at_ms = production_now_ms();
+        if received
+            .as_ref()
+            .is_some_and(|received| received.is_expired_at(observed_at_ms))
+        {
+            store.delete(&received_record_id)?;
+            received = None;
+        }
         let received_message_matches_session = received.as_ref().is_some_and(|received| {
             received.contact_id == material.remote_contact_id
                 && received.message_number == message_number
@@ -5216,6 +5224,10 @@ pub mod production {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
         let observed_at_ms = production_now_ms();
+        if received.is_expired_at(observed_at_ms) {
+            store.delete(&received_record_id)?;
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
         Ok(ProductionMessageReceivedExport {
             storage_opened: true,
             runtime_material_reconstructable: true,
@@ -8391,6 +8403,65 @@ pub mod production {
                 PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS
             );
             assert!(received_message_record.expires_at_ms().is_some());
+            let expired_received_message_number = 43;
+            let expired_received_id = production_received_message_record_id(
+                &inbound_draft.channel_id,
+                &inbound_draft.remote_contact_id,
+                expired_received_message_number,
+            );
+            inbound_store_after_receive
+                .put(
+                    &expired_received_id,
+                    &EncryptedRecord::new(
+                        ProductionRecordKind::ReceivedMessage,
+                        EncryptedRecordScope::contact(
+                            inbound_profile.clone(),
+                            inbound_draft.remote_contact_id.clone(),
+                        ),
+                        b"sqlcipher-page-encryption-v1".to_vec(),
+                        ReceivedMessageRecord::new_with_retention(
+                            inbound_draft.remote_contact_id.clone(),
+                            expired_received_message_number,
+                            MessageType::Data,
+                            b"expired inbound",
+                            expired_created_at_ms,
+                            expired_ttl_seconds,
+                        )
+                        .expect("expired received")
+                        .encode()
+                        .into_bytes(),
+                    )
+                    .expect("expired received record"),
+                )
+                .expect("write expired received");
+            drop(inbound_store_after_receive);
+            let expired_received_status = production_message_received_status(
+                inbound_store,
+                inbound_profile.clone(),
+                &passphrase,
+                expired_received_message_number,
+            )
+            .expect("expired received status");
+            assert!(!expired_received_status.received_message_record_present());
+            assert!(!expired_received_status.received_message_record_decodable());
+            assert!(!expired_received_status.received_message_matches_session());
+            assert!(matches!(
+                production_message_received_export(
+                    inbound_store,
+                    inbound_profile.clone(),
+                    &passphrase,
+                    expired_received_message_number,
+                ),
+                Err(ProductionSessionError::UnexpectedEnvelope)
+            ));
+            let inbound_store_after_expired_receive = LockedProfileStore::new(inbound_store)
+                .unlock(&passphrase)
+                .expect("unlock after expired received");
+            assert!(inbound_store_after_expired_receive
+                .get(&expired_received_id)
+                .expect("read expired received")
+                .is_none());
+            drop(inbound_store_after_expired_receive);
             assert!(matches!(
                 production_message_inbound_decrypt_import(
                     inbound_store,
