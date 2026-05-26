@@ -1164,7 +1164,14 @@ function combinedTwoProfileTranscriptTsv(profileA, profileAResult, profileB, pro
   const rows = [
     ...prefixedTranscriptRows(profileA, profileAResult?.transcript_tsv),
     ...prefixedTranscriptRows(profileB, profileBResult?.transcript_tsv),
-  ];
+  ]
+    .sort((left, right) => (
+      left.createdAtMs - right.createdAtMs ||
+      left.messageNumber - right.messageNumber ||
+      left.sourceProfile.localeCompare(right.sourceProfile) ||
+      left.direction.localeCompare(right.direction)
+    ))
+    .map((row) => row.line);
   return `${[header, ...rows].join("\n")}\n`;
 }
 
@@ -1173,7 +1180,16 @@ function prefixedTranscriptRows(profile, transcriptTsv) {
     .split(/\r?\n/)
     .slice(1)
     .filter((line) => line.trim().length > 0)
-    .map((line) => `${profile}\t${line}`);
+    .map((line) => {
+      const columns = line.split("\t");
+      return {
+        sourceProfile: profile,
+        direction: columns[0] ?? "",
+        messageNumber: Number.parseInt(columns[1] ?? "0", 10) || 0,
+        createdAtMs: Number.parseInt(columns[2] ?? "0", 10) || 0,
+        line: `${profile}\t${line}`,
+      };
+    });
 }
 
 function appendExpiredMessagesPurged(message, purged) {
