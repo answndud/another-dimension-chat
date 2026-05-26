@@ -20,6 +20,32 @@ export function productionTwoProfileReadiness(input, busy) {
   return "Ready: local encrypted roundtrip can run";
 }
 
+export function productionTwoProfileCurrentAction(state) {
+  const input = state?.input ?? {};
+  if (state?.busy) {
+    return null;
+  }
+  if (!state?.hasMessageRetentionPolicy) {
+    return null;
+  }
+  if (!input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
+    return null;
+  }
+  if (!input.messageTtlSeconds) {
+    return null;
+  }
+  if (!input.message) {
+    return "compose";
+  }
+  if (state?.sessionsReady) {
+    return "stored-message";
+  }
+  if (!state?.hasKnownSessionStatus && state?.hasRecoveredConversation) {
+    return "check-session";
+  }
+  return "full-setup";
+}
+
 export function productionProfilePreset(peer) {
   const normalizedPeer = String(peer ?? "").trim().toLowerCase();
   if (normalizedPeer === "alice") {
