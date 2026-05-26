@@ -1917,6 +1917,14 @@ function focusProductionCurrentAction() {
   node.focus();
 }
 
+function focusAfterProductionBusyAction(target) {
+  if (target === "current-action") {
+    focusProductionCurrentAction();
+  } else if (target === "reply-composer") {
+    fields.productionTwoProfileMessage?.focus();
+  }
+}
+
 function focusLocalDiagnostic() {
   fields.localDiagnosticPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
   fields.runDemo?.focus();
@@ -3374,6 +3382,7 @@ async function runLocalLoop() {
 
 async function runProductionTwoProfileRoundtrip() {
   const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
+  let postBusyFocus = null;
   if (!messageRetentionPolicyReady()) {
     setProductionTwoProfileState("Two-profile roundtrip blocked");
     setText(fields.productionTwoProfileWarning, messageRetentionPolicyBlocker());
@@ -3421,7 +3430,9 @@ async function runProductionTwoProfileRoundtrip() {
     const view = renderProductionTwoProfileResult(result);
     if (view.canContinue) {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
-      selectReplyAfterSentMessageResult(result, sentInput, message, "First message");
+      postBusyFocus = selectReplyAfterSentMessageResult(result, sentInput, message, "First message")
+        ? "reply-composer"
+        : null;
     } else {
       setText(fields.productionTwoProfileWarning, result.warning);
     }
@@ -3440,12 +3451,13 @@ async function runProductionTwoProfileRoundtrip() {
       fields.runProductionTwoProfileRoundtrip.disabled = false;
     }
     applyProductionActionState();
+    focusAfterProductionBusyAction(postBusyFocus);
   }
 }
 
 async function runProductionTwoProfileMessageRoundtrip() {
   const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
-  let focusReplyComposerAfterStoredMessage = false;
+  let postBusyFocus = null;
   if (!messageRetentionPolicyReady()) {
     setProductionTwoProfileState("Stored-session message blocked");
     setText(fields.productionTwoProfileWarning, messageRetentionPolicyBlocker());
@@ -3491,9 +3503,9 @@ async function runProductionTwoProfileMessageRoundtrip() {
     const view = renderProductionTwoProfileMessageResult(result);
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
     if (view.canContinue) {
-      focusReplyComposerAfterStoredMessage = Boolean(
-        selectReplyAfterSentMessageResult(result, sentInput, message, "Stored-session message"),
-      );
+      postBusyFocus = selectReplyAfterSentMessageResult(result, sentInput, message, "Stored-session message")
+        ? "reply-composer"
+        : null;
     } else {
       setText(
         fields.productionTwoProfileWarning,
@@ -3512,9 +3524,7 @@ async function runProductionTwoProfileMessageRoundtrip() {
   } finally {
     productionBusyAction = null;
     applyProductionActionState();
-    if (focusReplyComposerAfterStoredMessage) {
-      fields.productionTwoProfileMessage?.focus();
-    }
+    focusAfterProductionBusyAction(postBusyFocus);
   }
 }
 
@@ -4468,7 +4478,7 @@ async function exportProductionMessageEnvelope() {
 
 async function importProductionMessageEnvelope() {
   const { profile, passphrase, messageNumber, envelopePayload, messageTtlSeconds } = productionMessageInput();
-  let focusReceivedReviewAfterImport = false;
+  let postBusyFocus = null;
   if (!messageRetentionPolicyReady()) {
     setProductionMessageState("Message import blocked");
     setText(fields.productionMessageWarning, messageRetentionPolicyBlocker());
@@ -4529,7 +4539,7 @@ async function importProductionMessageEnvelope() {
     setText(fields.productionMessageBoundary, view.boundary);
     const conversationRefresh = await refreshTwoProfileConversationAfterManualImport(profile, passphrase);
     if (conversationRefresh?.replySelected) {
-      focusReceivedReviewAfterImport = true;
+      postBusyFocus = "current-action";
       setText(
         fields.productionMessageWarning,
         `${result.warning}${
@@ -4549,15 +4559,13 @@ async function importProductionMessageEnvelope() {
       fields.importProductionMessageEnvelope.disabled = false;
     }
     applyProductionActionState();
-    if (focusReceivedReviewAfterImport) {
-      focusProductionCurrentAction();
-    }
+    focusAfterProductionBusyAction(postBusyFocus);
   }
 }
 
 async function exportProductionReceivedMessage() {
   const { profile, passphrase, messageNumber } = productionMessageInput();
-  let focusReplyComposerAfterReceivedReview = false;
+  let postBusyFocus = null;
   if (!profile || !passphrase || !Number.isInteger(messageNumber) || messageNumber < 1) {
     setProductionMessageState("Received export needs input");
     setText(fields.productionMessageWarning, "Enter profile, passphrase, and message number.");
@@ -4593,7 +4601,7 @@ async function exportProductionReceivedMessage() {
     setText(fields.productionMessageInbound, view.inbound);
     setText(fields.productionMessageBoundary, view.boundary);
     if (replySelected) {
-      focusReplyComposerAfterReceivedReview = true;
+      postBusyFocus = "reply-composer";
       setText(
         fields.productionMessageWarning,
         `${result.warning} Received review is complete; write the reply in the two-profile composer.`,
@@ -4609,9 +4617,7 @@ async function exportProductionReceivedMessage() {
       fields.exportProductionReceivedMessage.disabled = false;
     }
     applyProductionActionState();
-    if (focusReplyComposerAfterReceivedReview) {
-      fields.productionTwoProfileMessage?.focus();
-    }
+    focusAfterProductionBusyAction(postBusyFocus);
   }
 }
 
