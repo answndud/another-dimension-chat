@@ -665,6 +665,10 @@ function resetProductionMessageImportState() {
   }
 }
 
+function completeProductionMessageImportReview() {
+  latestProductionMessageImport = null;
+}
+
 function clearManualMessageDraftForReplySelection() {
   if (fields.productionMessageBody) {
     fields.productionMessageBody.value = "";
@@ -2163,11 +2167,14 @@ function selectReplyAfterDeliveredReview(entry, options = {}) {
   setProductionTwoProfileState("Reply direction ready");
   const importProfile = String(options.importProfile ?? "").trim().toLowerCase();
   const deferReplyUntilReceivedReview = options.deferReplyUntilReceivedReview === true;
+  const receivedReviewComplete = options.receivedReviewComplete === true;
   const focusReply = options.focusReply !== false;
   setText(
     fields.productionTwoProfileWarning,
     importProfile && deferReplyUntilReceivedReview
       ? `Manual import for ${importProfile} completed. Click Show received to verify the message, then write the reply from ${input.profileA} to ${input.profileB}.`
+      : importProfile && receivedReviewComplete
+      ? `Received message verified for ${importProfile}. Write the reply from ${input.profileA} to ${input.profileB}.`
       : importProfile
       ? `Manual import for ${importProfile} completed. Reply direction selected: ${input.profileA} -> ${input.profileB}; write the reply next.`
       : `Message #${entry.messageNumber} delivered; reply direction selected: ${input.profileA} -> ${input.profileB}.`,
@@ -4043,7 +4050,10 @@ function syncTwoProfileConversationAfterReceivedExport(profile, messageNumber, m
   );
   const refreshedEntry = selectedTwoProfileConversationEntry();
   if (twoProfileConversationDelivered(refreshedEntry)) {
-    return selectReplyAfterDeliveredReview(refreshedEntry, { importProfile: receivedProfile });
+    return selectReplyAfterDeliveredReview(refreshedEntry, {
+      importProfile: receivedProfile,
+      receivedReviewComplete: true,
+    });
   }
   return true;
 }
@@ -4454,10 +4464,21 @@ async function exportProductionReceivedMessage() {
     if (fields.productionReceivedMessage) {
       fields.productionReceivedMessage.value = result.received_message;
     }
+    completeProductionMessageImportReview();
     appendProductionTranscriptEntry("received", profile, messageNumber, result.received_message);
-    syncTwoProfileConversationAfterReceivedExport(profile, messageNumber, result.received_message);
+    const replySelected = syncTwoProfileConversationAfterReceivedExport(
+      profile,
+      messageNumber,
+      result.received_message,
+    );
     setText(fields.productionMessageInbound, view.inbound);
     setText(fields.productionMessageBoundary, view.boundary);
+    if (replySelected) {
+      setText(
+        fields.productionMessageWarning,
+        `${result.warning} Received review is complete; write the reply in the two-profile composer.`,
+      );
+    }
   } catch (error) {
     setProductionMessageState("Received message export failed");
     setText(fields.productionMessageWarning, String(error));
