@@ -4551,6 +4551,7 @@ async function importProductionMessageEnvelope() {
 
 async function exportProductionReceivedMessage() {
   const { profile, passphrase, messageNumber } = productionMessageInput();
+  let focusReplyComposerAfterReceivedReview = false;
   if (!profile || !passphrase || !Number.isInteger(messageNumber) || messageNumber < 1) {
     setProductionMessageState("Received export needs input");
     setText(fields.productionMessageWarning, "Enter profile, passphrase, and message number.");
@@ -4586,6 +4587,7 @@ async function exportProductionReceivedMessage() {
     setText(fields.productionMessageInbound, view.inbound);
     setText(fields.productionMessageBoundary, view.boundary);
     if (replySelected) {
+      focusReplyComposerAfterReceivedReview = true;
       setText(
         fields.productionMessageWarning,
         `${result.warning} Received review is complete; write the reply in the two-profile composer.`,
@@ -4601,6 +4603,9 @@ async function exportProductionReceivedMessage() {
       fields.exportProductionReceivedMessage.disabled = false;
     }
     applyProductionActionState();
+    if (focusReplyComposerAfterReceivedReview) {
+      fields.productionTwoProfileMessage?.focus();
+    }
   }
 }
 
