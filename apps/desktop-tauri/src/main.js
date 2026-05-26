@@ -30,6 +30,7 @@ import {
   productionTwoProfileMessageResultView,
   productionTwoProfileReplySelectionView,
   productionTwoProfileResultView,
+  productionTwoProfileSessionSummaryView,
   productionTwoProfileSessionStatusView,
 } from "./action-state.js";
 import {
@@ -544,6 +545,16 @@ function rememberTwoProfileSessionStatus(input, result) {
     fingerprint: twoProfileSessionStatusFingerprint(input),
     result,
   };
+}
+
+function renderProductionTwoProfileSessionStatusResult(result) {
+  const view = productionTwoProfileSessionStatusView(result);
+  const summary = productionTwoProfileSessionSummaryView(result);
+  setText(fields.productionTwoProfileSessionStatus, `${view.state}: ${view.status}`);
+  setText(fields.productionTwoProfileProfiles, summary.profiles);
+  setText(fields.productionTwoProfileSession, summary.session);
+  setText(fields.productionTwoProfileBoundary, summary.boundary);
+  setText(fields.productionPairingBoundary, summary.boundary);
 }
 
 function latestTwoProfileSuccessMatchesDirection(input = productionTwoProfileInput()) {
@@ -3811,11 +3822,9 @@ async function checkProductionTwoProfileSessionStatus() {
       profileB,
       passphrase,
     });
-    const view = productionTwoProfileSessionStatusView(result);
     rememberTwoProfileSessionStatus({ profileA, profileB }, result);
-    setText(fields.productionTwoProfileSessionStatus, `${view.state}: ${view.status}`);
+    renderProductionTwoProfileSessionStatusResult(result);
     setText(fields.productionPairingWarning, result.warning);
-    setText(fields.productionPairingBoundary, view.boundary);
     if (result.both_ready_for_message_envelope) {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
       const currentInput = productionTwoProfileInput();
@@ -3865,11 +3874,9 @@ async function refreshTwoProfileSessionStatusAfterTranscript(input) {
     profileB: input.profileB,
     passphrase: input.passphrase,
   });
-  const view = productionTwoProfileSessionStatusView(result);
   rememberTwoProfileSessionStatus(input, result);
-  setText(fields.productionTwoProfileSessionStatus, `${view.state}: ${view.status}`);
+  renderProductionTwoProfileSessionStatusResult(result);
   setText(fields.productionPairingWarning, result.warning);
-  setText(fields.productionPairingBoundary, view.boundary);
   return result;
 }
 

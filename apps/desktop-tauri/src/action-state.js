@@ -801,6 +801,16 @@ export function productionTwoProfileSessionStatusView(result) {
   };
 }
 
+export function productionTwoProfileSessionSummaryView(result) {
+  const view = productionTwoProfileSessionStatusView(result);
+  const direction = `${result.profile_a ?? "profile-a"} -> ${result.profile_b ?? "profile-b"}`;
+  return {
+    profiles: `Existing profile stores checked: ${direction}`,
+    session: `${view.state}: ${view.status}`,
+    boundary: view.boundary,
+  };
+}
+
 export function productionProfileMessageReadiness(profile, singleProfileState, twoProfileStatus) {
   const normalizedProfile = String(profile ?? "").trim().toLowerCase();
   if (!normalizedProfile) {
