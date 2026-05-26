@@ -599,6 +599,11 @@ textarea[readonly] {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
+.message-transcript li.is-reply-target {
+  border-color: var(--accent-cyan);
+  border-left-color: var(--accent-cyan);
+}
+
 .message-transcript li[role="button"] {
   cursor: pointer;
 }
@@ -674,6 +679,11 @@ textarea[readonly] {
 
 .message-transcript .transcript-review.is-selected {
   color: var(--accent);
+  font-weight: 750;
+}
+
+.message-transcript .transcript-review.is-reply-target {
+  color: var(--accent-cyan);
   font-weight: 750;
 }
 
