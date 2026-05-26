@@ -4150,13 +4150,39 @@ function syncTwoProfileConversationAfterManualExport(
   setProductionTwoProfileState("Conversation updated after export");
   const refreshedEntry = selectedTwoProfileConversationEntry();
   if (!selectReplyAfterDeliveredReview(refreshedEntry)) {
+    if (
+      refreshedEntry &&
+      refreshedEntry.statuses?.has("sent") &&
+      !refreshedEntry.statuses?.has("received") &&
+      envelope &&
+      selectProductionProfileForManualRelay(refreshedEntry.receiver)
+    ) {
+      if (fields.productionRemoteMessageEnvelope) {
+        fields.productionRemoteMessageEnvelope.value = envelope;
+        fields.productionRemoteMessageEnvelope.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      if (fields.productionMessageEnvelope) {
+        fields.productionMessageEnvelope.value = "";
+      }
+      setProductionMessageState("Manual import ready");
+      setText(
+        fields.productionMessageWarning,
+        `Manual export for ${exportedProfile} completed. Selected ${refreshedEntry.receiver} and loaded the sender envelope for explicit import.`,
+      );
+      setText(
+        fields.productionTwoProfileWarning,
+        `Manual export for ${exportedProfile} completed; import is ready for ${refreshedEntry.receiver}.`,
+      );
+      applyProductionActionState();
+      return { conversationUpdated: true, peerImportReady: true };
+    }
     setText(
       fields.productionTwoProfileWarning,
       `Manual export for ${exportedProfile} completed; sender envelope slot is stored for explicit peer import.`,
     );
     applyProductionActionState();
   }
-  return true;
+  return { conversationUpdated: true, peerImportReady: false };
 }
 
 function syncTwoProfileConversationAfterReceivedExport(profile, messageNumber, message) {
@@ -4402,6 +4428,7 @@ async function importProductionHandshakeFinish() {
 async function exportProductionMessageEnvelope() {
   const { profile, passphrase, autoMessageNumber, messageNumber, message, messageTtlSeconds } =
     productionMessageInput();
+  let postBusyFocus = null;
   if (!messageRetentionPolicyReady()) {
     setProductionMessageState("Message export blocked");
     setText(fields.productionMessageWarning, messageRetentionPolicyBlocker());
@@ -4456,13 +4483,14 @@ async function exportProductionMessageEnvelope() {
       fields.productionMessageEnvelope.value = result.envelope_payload;
     }
     appendProductionTranscriptEntry("sent", profile, result.selected_message_number, message);
-    syncTwoProfileConversationAfterManualExport(
+    const conversationSync = syncTwoProfileConversationAfterManualExport(
       profile,
       result.selected_message_number,
       message,
       result.message_ttl_seconds,
       result.envelope_payload,
     );
+    postBusyFocus = conversationSync?.peerImportReady ? "current-action" : null;
     applyProductionActionState();
     setText(fields.productionMessageOutbound, view.outbound);
     setText(fields.productionMessageInbound, "Not imported yet");
@@ -4477,6 +4505,7 @@ async function exportProductionMessageEnvelope() {
       fields.exportProductionMessageEnvelope.disabled = false;
     }
     applyProductionActionState();
+    focusAfterProductionBusyAction(postBusyFocus);
   }
 }
 
