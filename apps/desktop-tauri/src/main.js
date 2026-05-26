@@ -2568,7 +2568,7 @@ function applyProductionActionState() {
     setText(fields.productionMessageNextAction, selectedNextAction);
     setText(fields.productionManualCurrent, selectedNextAction);
     setOpenManualProductionToolsLabel(selectedPendingActionView.manualButtonLabel);
-    setActionButtonState(fields.openManualProductionTools, false, "", true);
+    setActionButtonState(fields.openManualProductionTools, false, "", false);
     setProductionMessageManualCurrent(selectedPendingActionView.manualTarget);
     if (selectedPendingActionView.manualTarget) {
       revealManualProductionTools();
