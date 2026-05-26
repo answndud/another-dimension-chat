@@ -854,9 +854,15 @@ function renderProductionTwoProfileConversationList() {
     item.classList.toggle("is-reply-target", currentReplyTarget);
     item.tabIndex = 0;
     item.setAttribute("role", "button");
+    item.setAttribute("aria-pressed", selected ? "true" : "false");
+    if (currentReplyTarget) {
+      item.setAttribute("aria-current", "true");
+    }
     item.setAttribute(
       "aria-label",
-      delivered
+      currentReplyTarget
+        ? `Current reply target message ${entry.messageNumber}: compose ${entry.receiver} to ${entry.sender}`
+        : delivered
         ? `Reply to delivered message ${entry.sender} to ${entry.receiver} number ${entry.messageNumber}`
         : `Review pending message ${entry.sender} to ${entry.receiver} number ${entry.messageNumber}`,
     );
