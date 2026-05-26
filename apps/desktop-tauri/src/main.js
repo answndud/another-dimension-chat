@@ -3109,10 +3109,20 @@ async function runProductionTwoProfileRoundtrip() {
     const view = renderProductionTwoProfileResult(result);
     if (view.canContinue) {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
-      selectTwoProfileReplyDirection(sentInput);
+      const sentMessage = selectTwoProfileConversationMessage(
+        String(result.sender_profile ?? profileA).trim().toLowerCase(),
+        String(result.receiver_profile ?? profileB).trim().toLowerCase(),
+        Number.parseInt(result.message_number, 10),
+        message,
+      );
+      if (!selectReplyAfterDeliveredReview(sentMessage)) {
+        selectTwoProfileReplyDirection(sentInput);
+      }
       setText(
         fields.productionTwoProfileWarning,
-        `First message stored. Reply direction selected: ${profileB} -> ${profileA}.`,
+        sentMessage
+          ? `First message #${sentMessage.messageNumber} stored. Reply direction selected: ${profileB} -> ${profileA}.`
+          : `First message stored. Reply direction selected: ${profileB} -> ${profileA}.`,
       );
       fields.productionTwoProfileMessage?.focus();
     } else {
