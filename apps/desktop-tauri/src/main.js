@@ -4345,10 +4345,35 @@ async function launchProductionTwoProfileOnionEndpoint() {
       passphrase,
       manualNetworkPermission,
     });
+    let pairingPayloadExported = false;
     if (result.local_onion_endpoint && fields.productionPairingEndpoint) {
       fields.productionPairingEndpoint.value = result.local_onion_endpoint;
       fields.productionPairingEndpoint.dispatchEvent(new Event("input", { bubbles: true }));
-      setProductionPairingState("Local onion endpoint ready");
+      if (fields.productionProfileName) {
+        fields.productionProfileName.value = profileA;
+        fields.productionProfileName.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      if (fields.productionProfileSelector) {
+        fields.productionProfileSelector.value = profileA;
+      }
+      try {
+        const pairing = await invoke("production_pairing_payload_export", {
+          profile: profileA,
+          passphrase,
+          rendezvousEndpoint: result.local_onion_endpoint,
+        });
+        await applyProductionPairingPayloadExportResult(
+          pairing,
+          "Pairing payload exported from local endpoint",
+        );
+        pairingPayloadExported = true;
+      } catch (pairingError) {
+        setProductionPairingState("Local endpoint ready; pairing export failed");
+        setText(
+          fields.productionPairingWarning,
+          `Endpoint launch succeeded, but pairing payload export failed without exposing secrets. ${pairingError}`,
+        );
+      }
     }
     setProductionTwoProfileState(
       result.launch_attempt_succeeded && result.onion_endpoint_returned
@@ -4362,7 +4387,7 @@ async function launchProductionTwoProfileOnionEndpoint() {
     );
     setText(
       fields.productionTwoProfileSession,
-      `persistent_client=${result.persistent_client_ready} launch_preflight=${result.launch_preflight_ready} adapter=${result.launch_adapter_ready} retained=${result.onion_service_retained}`,
+      `persistent_client=${result.persistent_client_ready} launch_preflight=${result.launch_preflight_ready} adapter=${result.launch_adapter_ready} retained=${result.onion_service_retained} pairing_payload=${pairingPayloadExported}`,
     );
     setText(fields.productionTwoProfileMessageState, "No message transport attempted");
     setText(
@@ -5363,6 +5388,20 @@ async function restoreProductionSessionAfterUnlock(profile, passphrase) {
   }
 }
 
+async function applyProductionPairingPayloadExportResult(result, stateLabel = "Pairing payload exported") {
+  const view = productionPairingPayloadView(result);
+  setProductionPairingState(stateLabel);
+  setText(fields.productionPairingWarning, result.warning);
+  if (fields.productionPairingPayload) {
+    fields.productionPairingPayload.value = result.pairing_payload;
+  }
+  resetProductionPairingSafety("Safety check required after pairing export.");
+  await renderProductionPairingQr(result.pairing_payload);
+  applyProductionActionState();
+  setText(fields.productionPairingStorage, view.storage);
+  setText(fields.productionPairingBoundary, view.boundary);
+}
+
 async function exportProductionPairingPayload() {
   const { profile, passphrase, rendezvousEndpoint } = productionPairingInput();
   if (!profile || !passphrase || !rendezvousEndpoint) {
@@ -5389,17 +5428,7 @@ async function exportProductionPairingPayload() {
       passphrase,
       rendezvousEndpoint,
     });
-    const view = productionPairingPayloadView(result);
-    setProductionPairingState("Pairing payload exported");
-    setText(fields.productionPairingWarning, result.warning);
-    if (fields.productionPairingPayload) {
-      fields.productionPairingPayload.value = result.pairing_payload;
-    }
-    resetProductionPairingSafety("Safety check required after pairing export.");
-    await renderProductionPairingQr(result.pairing_payload);
-    applyProductionActionState();
-    setText(fields.productionPairingStorage, view.storage);
-    setText(fields.productionPairingBoundary, view.boundary);
+    await applyProductionPairingPayloadExportResult(result);
   } catch (error) {
     setProductionPairingState("Pairing payload export failed");
     setText(fields.productionPairingWarning, String(error));
