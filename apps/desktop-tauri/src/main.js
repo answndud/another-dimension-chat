@@ -299,6 +299,9 @@ const fields = {
   prepareProductionTwoProfileOnionPairing: document.querySelector(
     "#prepare-production-two-profile-onion-pairing",
   ),
+  saveProductionTwoProfileOnionSessions: document.querySelector(
+    "#save-production-two-profile-onion-sessions",
+  ),
   runProductionTwoProfileRealOnionRoundtrip: document.querySelector(
     "#run-production-two-profile-real-onion-roundtrip",
   ),
@@ -3191,6 +3194,25 @@ function applyProductionActionState() {
     false,
   );
   setActionButtonState(
+    fields.saveProductionTwoProfileOnionSessions,
+    busy ||
+      !hasTwoProfileSessionStatusInput ||
+      !currentPairingSafetyVerified() ||
+      !(fields.productionPairingPayload?.value ?? "").trim() ||
+      !(fields.productionRemotePairingPayload?.value ?? "").trim(),
+    busy
+      ? "Wait for the active production action."
+      : !hasTwoProfileSessionStatusInput
+        ? "Enter distinct Profile A, Profile B, and passphrase first."
+      : !currentPairingSafetyVerified()
+        ? "Verify the safety number before saving Alice/Bob onion sessions."
+      : !(fields.productionPairingPayload?.value ?? "").trim() ||
+          !(fields.productionRemotePairingPayload?.value ?? "").trim()
+        ? "Prepare onion pairing payloads first."
+        : "Save Alice/Bob session drafts from the verified onion pairing payloads.",
+    false,
+  );
+  setActionButtonState(
     fields.runProductionTwoProfileRealOnionRoundtrip,
     busy || !hasTwoProfileInput || !hasMessageRetentionPolicy || !manualNetworkPermission,
     busy
@@ -4518,6 +4540,112 @@ async function prepareProductionTwoProfileOnionPairing() {
     productionBusyAction = null;
     if (fields.prepareProductionTwoProfileOnionPairing) {
       fields.prepareProductionTwoProfileOnionPairing.disabled = false;
+    }
+    applyProductionActionState();
+  }
+}
+
+async function saveProductionTwoProfileOnionSessions() {
+  const { profileA, profileB, passphrase } = productionTwoProfileInput();
+  const localPayload = (fields.productionPairingPayload?.value ?? "").trim();
+  const remotePayload = (fields.productionRemotePairingPayload?.value ?? "").trim();
+  if (!profileA || !profileB || profileA === profileB || !passphrase) {
+    setProductionTwoProfileState("Onion session save needs profiles");
+    setText(fields.productionTwoProfileWarning, "Enter two distinct profiles and passphrase before saving onion sessions.");
+    return;
+  }
+  if (!localPayload || !remotePayload) {
+    setProductionTwoProfileState("Onion session save needs payloads");
+    setText(fields.productionTwoProfileWarning, "Prepare onion pairing payloads before saving sessions.");
+    return;
+  }
+  if (!currentPairingSafetyVerified({ localPayload, remotePayload, safetyConfirmed: true })) {
+    setProductionTwoProfileState("Onion session save needs safety");
+    setText(fields.productionTwoProfileWarning, "Verify the safety number before saving Alice/Bob onion sessions.");
+    return;
+  }
+
+  productionBusyAction = "two-profile-onion-session-save";
+  setProductionTwoProfileState("Onion session save running");
+  setText(fields.productionTwoProfileWarning, "Saving verified Alice/Bob session drafts from onion pairing payloads.");
+  setText(fields.productionTwoProfileProfiles, `a=${profileA} b=${profileB}`);
+  setText(fields.productionTwoProfileSession, "Writing both encrypted session drafts");
+  setText(fields.productionTwoProfileMessageState, "No message transport attempted");
+  setText(fields.productionTwoProfileBoundary, "Session save in progress");
+  applyProductionActionState();
+  if (fields.saveProductionTwoProfileOnionSessions) {
+    fields.saveProductionTwoProfileOnionSessions.disabled = true;
+  }
+
+  try {
+    const profileADraft = await invoke("production_pairing_session_draft_save", {
+      profile: profileA,
+      passphrase,
+      localPayload,
+      remotePayload,
+      safetyConfirmed: true,
+    });
+    const profileBDraft = await invoke("production_pairing_session_draft_save", {
+      profile: profileB,
+      passphrase,
+      localPayload: remotePayload,
+      remotePayload: localPayload,
+      safetyConfirmed: true,
+    });
+    const status = await invoke("production_two_profile_session_status", {
+      profileA,
+      profileB,
+      passphrase,
+    });
+    rememberTwoProfileSessionStatus({ profileA, profileB, passphrase }, status);
+    renderProductionTwoProfileSessionStatusResult(status);
+    const profileAView = productionSessionDraftView(profileADraft);
+    const profileBView = productionSessionDraftView(profileBDraft);
+    setProductionPairingState("Onion sessions saved");
+    setText(
+      fields.productionPairingWarning,
+      "Verified onion pairing saved for both local profiles. Message sessions still require handshake completion.",
+    );
+    setText(
+      fields.productionPairingSession,
+      `a=${profileAView.session} b=${profileBView.session}`,
+    );
+    setProductionTwoProfileState(
+      status.both_ready_for_message_envelope ? "Onion sessions message-ready" : "Onion session drafts saved",
+    );
+    setText(
+      fields.productionTwoProfileWarning,
+      status.both_ready_for_message_envelope
+        ? "Alice/Bob sessions are message-ready. Send a stored-session message or continue onion roundtrip."
+        : "Alice/Bob session drafts saved. Continue with handshake before stored-session messages.",
+    );
+    setText(
+      fields.productionTwoProfileProfiles,
+      `a_draft=${profileADraft.session_draft_present} b_draft=${profileBDraft.session_draft_present}`,
+    );
+    setText(
+      fields.productionTwoProfileSession,
+      `a_ready=${status.profile_a_ready_for_message_envelope} b_ready=${status.profile_b_ready_for_message_envelope} both_ready=${status.both_ready_for_message_envelope}`,
+    );
+    setText(fields.productionTwoProfileMessageState, "No message transport attempted");
+    setText(
+      fields.productionTwoProfileBoundary,
+      `a_written=${profileADraft.session_draft_written} b_written=${profileBDraft.session_draft_written} a_present=${profileADraft.session_draft_present} b_present=${profileBDraft.session_draft_present} path=${profileADraft.store_path_returned || profileBDraft.store_path_returned || status.store_path_returned} passphrase=${profileADraft.passphrase_retained || profileBDraft.passphrase_retained || status.passphrase_retained} key_material=${profileADraft.key_material_exposed || profileBDraft.key_material_exposed || status.key_material_exposed} network=false transport=${profileADraft.transport_io_opened || profileBDraft.transport_io_opened || status.transport_io_opened} runtime=${profileADraft.runtime_messaging_enabled || profileBDraft.runtime_messaging_enabled || status.runtime_messaging_enabled}`,
+    );
+    setProductionFollowupActions(
+      true,
+      status.both_ready_for_message_envelope
+        ? "Next: send a stored-session message."
+        : "Next: complete handshake to make the sessions message-ready.",
+    );
+  } catch (error) {
+    setProductionTwoProfileState("Onion session save failed");
+    setText(fields.productionTwoProfileWarning, `Onion session save failed without returning secrets. ${error}`);
+    setText(fields.productionTwoProfileBoundary, "Failed before message transport.");
+  } finally {
+    productionBusyAction = null;
+    if (fields.saveProductionTwoProfileOnionSessions) {
+      fields.saveProductionTwoProfileOnionSessions.disabled = false;
     }
     applyProductionActionState();
   }
@@ -7145,6 +7273,13 @@ if (fields.prepareProductionTwoProfileOnionPairing) {
   fields.prepareProductionTwoProfileOnionPairing.addEventListener(
     "click",
     prepareProductionTwoProfileOnionPairing,
+  );
+}
+
+if (fields.saveProductionTwoProfileOnionSessions) {
+  fields.saveProductionTwoProfileOnionSessions.addEventListener(
+    "click",
+    saveProductionTwoProfileOnionSessions,
   );
 }
 
