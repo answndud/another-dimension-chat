@@ -6186,21 +6186,101 @@ async fn run_production_two_profile_real_onion_roundtrip(
             passphrase.clone(),
         )?;
 
+        let blocked_result = |next_blocker: String,
+                              blockers: Vec<String>,
+                              event_summary: Vec<String>,
+                              profile_a_client_bootstrapped: bool,
+                              profile_b_client_bootstrapped: bool| {
+            ProductionTwoProfileRealOnionRoundtripResult {
+                warning: "Real onion roundtrip stopped before endpoint launch. Retry when Tor bootstrap is reachable; result is redacted and no message transport was attempted.",
+                manual_client_attempt_feature_compiled: true,
+                manual_network_permission_enabled: true,
+                sender_profile: profile_a_name.clone(),
+                receiver_profile: profile_b_name.clone(),
+                message_number: 0,
+                message_ttl_seconds,
+                profile_a_unlocked: profile_a_unlock.storage_opened
+                    && profile_a_unlock.profile_marker_present,
+                profile_b_unlocked: profile_b_unlock.storage_opened
+                    && profile_b_unlock.profile_marker_present,
+                profile_a_client_bootstrapped,
+                profile_b_client_bootstrapped,
+                profile_a_onion_service_launched: false,
+                profile_b_onion_service_launched: false,
+                profile_a_endpoint_ready: false,
+                profile_b_endpoint_ready: false,
+                pairing_payloads_exported: false,
+                session_drafts_saved: false,
+                handshake_completed: false,
+                sender_session_ready: false,
+                receiver_session_ready: false,
+                message_number_reserved: false,
+                encrypted_envelope_exported: false,
+                send_attempt_started: false,
+                send_attempt_succeeded: false,
+                receive_attempt_started: false,
+                receive_attempt_succeeded: false,
+                inbound_message_stored: false,
+                received_status_verified: false,
+                received_export_matches_input: false,
+                event_summary,
+                next_blocker,
+                blockers,
+                local_endpoint_returned: false,
+                peer_endpoint_returned: false,
+                envelope_payload_returned: false,
+                plaintext_returned_to_frontend: false,
+                store_path_returned: false,
+                passphrase_retained: false,
+                key_material_exposed: profile_a_unlock.key_material_exposed
+                    || profile_b_unlock.key_material_exposed,
+                network_io_attempted: true,
+                transport_io_opened: false,
+                runtime_messaging_enabled: false,
+            }
+        };
+
         let mut event_summary = Vec::new();
-        let mut profile_a_owner = build_real_onion_roundtrip_owner(
+        let mut profile_a_owner = match build_real_onion_roundtrip_owner(
             _app_data_root.as_ref(),
             _app_cache_root.as_ref(),
             &profile_a_name,
             &mut event_summary,
         )
-        .await?;
-        let mut profile_b_owner = build_real_onion_roundtrip_owner(
+        .await
+        {
+            Ok(owner) => owner,
+            Err(error) => {
+                event_summary.push(format!("redacted_stage={error}"));
+                return Ok(blocked_result(
+                    "ProfileABootstrapTimeout".to_string(),
+                    vec!["BootstrapTimeout".to_string()],
+                    event_summary,
+                    false,
+                    false,
+                ));
+            }
+        };
+        let mut profile_b_owner = match build_real_onion_roundtrip_owner(
             _app_data_root.as_ref(),
             _app_cache_root.as_ref(),
             &profile_b_name,
             &mut event_summary,
         )
-        .await?;
+        .await
+        {
+            Ok(owner) => owner,
+            Err(error) => {
+                event_summary.push(format!("redacted_stage={error}"));
+                return Ok(blocked_result(
+                    "ProfileBBootstrapTimeout".to_string(),
+                    vec!["BootstrapTimeout".to_string()],
+                    event_summary,
+                    true,
+                    false,
+                ));
+            }
+        };
 
         let profile_a_client_bootstrapped = profile_a_owner.summary().has_bootstrapped_client();
         let profile_b_client_bootstrapped = profile_b_owner.summary().has_bootstrapped_client();
