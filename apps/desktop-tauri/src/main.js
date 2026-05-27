@@ -795,6 +795,40 @@ function storeMessageEnvelopeSlot(profile, payload, metadata = {}) {
   return true;
 }
 
+function clearMessageEnvelopeFieldsForPayload(payload) {
+  const envelope = String(payload ?? "").trim();
+  if (!envelope) {
+    return false;
+  }
+  let cleared = false;
+  for (const field of [fields.productionRemoteMessageEnvelope, fields.productionMessageEnvelope]) {
+    if (field?.value.trim() === envelope) {
+      field.value = "";
+      cleared = true;
+    }
+  }
+  return cleared;
+}
+
+function pruneStaleMessageEnvelopeSlots() {
+  let pruned = 0;
+  for (const [sender, slot] of productionPayloadSlots.messageEnvelope.entries()) {
+    if (typeof slot === "string") {
+      continue;
+    }
+    const payload = messageEnvelopeSlotPayload(slot);
+    const stillMatchesConversation = [...productionTwoProfileConversationEntries.values()].some((entry) =>
+      messageEnvelopeSlotMatchesEntry(slot, entry),
+    );
+    if (!payload || !stillMatchesConversation) {
+      productionPayloadSlots.messageEnvelope.delete(sender);
+      clearMessageEnvelopeFieldsForPayload(payload);
+      pruned += 1;
+    }
+  }
+  return pruned;
+}
+
 function selectedMessageEnvelopeMetadata(profile, messageNumber, message) {
   const selectedEntry = selectedTwoProfileConversationEntry();
   const normalizedProfile = String(profile ?? "").trim().toLowerCase();
@@ -1133,6 +1167,12 @@ function renderProductionTwoProfileTranscriptEntries(entries) {
     );
   }
   clearStaleTwoProfileConversationSelection();
+  const prunedEnvelopeSlots = pruneStaleMessageEnvelopeSlots();
+  if (prunedEnvelopeSlots > 0) {
+    renderProductionTwoProfileConversationList();
+    applyProductionActionState();
+  }
+  return prunedEnvelopeSlots;
 }
 
 function renderProductionTranscriptEntries(profile, entries) {
@@ -1162,6 +1202,10 @@ function transcriptBoundarySummary(result) {
 
 function appendExpiredMessagesPurged(message, purged) {
   return purged > 0 ? `${message} Expired messages purged: ${purged}.` : message;
+}
+
+function appendStaleMessageEnvelopeSlotsPruned(message, pruned) {
+  return pruned > 0 ? `${message} Stale message envelope slots cleared: ${pruned}.` : message;
 }
 
 function appendMessageLifecyclePurgeWarning(message, result) {
@@ -4113,15 +4157,21 @@ async function loadProductionTwoProfileTranscript(options = {}) {
     const expiredMessagesPurged =
       Number.parseInt(profileAResult.expired_messages_purged ?? 0, 10) +
       Number.parseInt(profileBResult.expired_messages_purged ?? 0, 10);
-    const resumeWarning = appendExpiredMessagesPurged(
-      "Stored conversation and message-ready sessions recovered after local unlock.",
-      expiredMessagesPurged,
+    const staleMessageEnvelopeSlotsPruned = renderProductionTwoProfileTranscriptEntries(entries);
+    const resumeWarning = appendStaleMessageEnvelopeSlotsPruned(
+      appendExpiredMessagesPurged(
+        "Stored conversation and message-ready sessions recovered after local unlock.",
+        expiredMessagesPurged,
+      ),
+      staleMessageEnvelopeSlotsPruned,
     );
-    const loadedWarning = appendExpiredMessagesPurged(
-      "Stored conversation loaded, but sessions are not ready for stored-message send.",
-      expiredMessagesPurged,
+    const loadedWarning = appendStaleMessageEnvelopeSlotsPruned(
+      appendExpiredMessagesPurged(
+        "Stored conversation loaded, but sessions are not ready for stored-message send.",
+        expiredMessagesPurged,
+      ),
+      staleMessageEnvelopeSlotsPruned,
     );
-    renderProductionTwoProfileTranscriptEntries(entries);
     let sessionStatus = latestTwoProfileSessionStatusForCurrentInput({ profileA, profileB });
     if (refreshSessionStatus) {
       sessionStatus = await refreshTwoProfileSessionStatusAfterTranscript({
@@ -4138,7 +4188,10 @@ async function loadProductionTwoProfileTranscript(options = {}) {
         fields.productionTwoProfileWarning,
         ready && resumeTarget === "reply-latest"
           ? appendExpiredMessagesPurged(
-              "Stored conversation recovered. Latest delivered message is selected as the reply target.",
+              appendStaleMessageEnvelopeSlotsPruned(
+                "Stored conversation recovered. Latest delivered message is selected as the reply target.",
+                staleMessageEnvelopeSlotsPruned,
+              ),
               expiredMessagesPurged,
             )
           : ready
@@ -4158,7 +4211,10 @@ async function loadProductionTwoProfileTranscript(options = {}) {
         setText(
           fields.productionTwoProfileWarning,
           appendExpiredMessagesPurged(
-            "Stored conversation and message-ready sessions recovered after local unlock. Latest delivered message is selected for reply.",
+            appendStaleMessageEnvelopeSlotsPruned(
+              "Stored conversation and message-ready sessions recovered after local unlock. Latest delivered message is selected for reply.",
+              staleMessageEnvelopeSlotsPruned,
+            ),
             expiredMessagesPurged,
           ),
         );
@@ -4171,7 +4227,10 @@ async function loadProductionTwoProfileTranscript(options = {}) {
         setText(
           fields.productionTwoProfileWarning,
           appendExpiredMessagesPurged(
-            "Stored conversation and message-ready sessions recovered after local unlock. Write a message to continue.",
+            appendStaleMessageEnvelopeSlotsPruned(
+              "Stored conversation and message-ready sessions recovered after local unlock. Write a message to continue.",
+              staleMessageEnvelopeSlotsPruned,
+            ),
             expiredMessagesPurged,
           ),
         );
