@@ -576,12 +576,38 @@ function setOpenManualProductionToolsLabel(label = "Open manual tools") {
   setText(fields.openManualProductionTools, label);
 }
 
-function setReviewPendingTwoProfileLabel(label = "Review pending") {
+function setReviewPendingTwoProfileLabel(label = "Review") {
   setText(fields.reviewPendingTwoProfileMessage, label);
 }
 
-function setReplyLatestTwoProfileLabel(label = "Reply to latest") {
-  setText(fields.replyLatestTwoProfileMessage, label);
+function chatReplyButtonLabel(label = "Reply") {
+  if (label === "Reply to latest" || label === "Use selected reply") {
+    return "Reply";
+  }
+  if (label === "Reply target set") {
+    return "Reply set";
+  }
+  return label;
+}
+
+function chatReviewButtonLabel(label = "Review") {
+  if (label === "Review pending") {
+    return "Review";
+  }
+  if (label === "Open import tools") {
+    return "Import";
+  }
+  if (label === "Open envelope input") {
+    return "Envelope";
+  }
+  if (label === "Open export tools") {
+    return "Export";
+  }
+  return label;
+}
+
+function setReplyLatestTwoProfileLabel(label = "Reply") {
+  setText(fields.replyLatestTwoProfileMessage, chatReplyButtonLabel(label));
 }
 
 function setProductionMessageManualCurrent(target) {
@@ -3184,11 +3210,13 @@ function applyProductionActionState() {
   });
   setReplyLatestTwoProfileLabel(replySelection.label);
   setReviewPendingTwoProfileLabel(
-    pendingSelected && selectedMessageInputStale
-      ? "Reapply selected"
-      : pendingSelected && selectedPendingActionView
-      ? selectedPendingActionView.manualButtonLabel
-      : "Review pending",
+    chatReviewButtonLabel(
+      pendingSelected && selectedMessageInputStale
+        ? "Reapply"
+        : pendingSelected && selectedPendingActionView
+        ? selectedPendingActionView.manualButtonLabel
+        : "Review",
+    ),
   );
   setActionButtonState(
     fields.replyLatestTwoProfileMessage,

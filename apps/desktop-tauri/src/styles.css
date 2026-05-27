@@ -645,6 +645,10 @@ textarea[readonly] {
   margin-top: 4px;
 }
 
+.production-workflow[aria-labelledby="production-two-profile-title"] > .chat-transcript-toolbar {
+  order: 1;
+}
+
 .production-workflow[aria-labelledby="production-two-profile-title"] > .loop-label:not([for]) + .loop-actions {
   order: 2;
   justify-content: flex-end;
@@ -739,6 +743,33 @@ textarea[readonly] {
 .chat-diagnostics .demo-warning,
 .chat-diagnostics .flow-summary + .flow-summary {
   margin-top: 10px;
+}
+
+.chat-transcript-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--panel-border);
+  padding-bottom: 8px;
+}
+
+.chat-transcript-toolbar .loop-label {
+  margin: 0;
+}
+
+.chat-transcript-toolbar .loop-actions {
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.chat-transcript-toolbar button {
+  min-width: 82px;
+  min-height: 34px;
+  padding: 7px 10px;
+  background: color-mix(in srgb, var(--button-bg) 82%, var(--panel));
+  font-size: 11px;
 }
 
 .advanced-stack {
