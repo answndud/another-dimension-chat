@@ -588,6 +588,7 @@ pub mod production {
         received_message_record_present: bool,
         received_message_record_decodable: bool,
         received_message_matches_session: bool,
+        expired_received_message_purged: bool,
         plaintext_exposed: bool,
         network_receive_attempted: bool,
         key_material_exposed: bool,
@@ -1767,6 +1768,9 @@ pub mod production {
         }
         pub fn received_message_matches_session(self) -> bool {
             self.received_message_matches_session
+        }
+        pub fn expired_received_message_purged(self) -> bool {
+            self.expired_received_message_purged
         }
         pub fn plaintext_exposed(self) -> bool {
             self.plaintext_exposed
@@ -5205,12 +5209,14 @@ pub mod production {
             })
             .transpose()?;
         let observed_at_ms = production_now_ms();
+        let mut expired_received_message_purged = false;
         if received
             .as_ref()
             .is_some_and(|received| received.is_expired_at(observed_at_ms))
         {
             store.delete(&received_record_id)?;
             received = None;
+            expired_received_message_purged = true;
         }
         let received_message_matches_session = received.as_ref().is_some_and(|received| {
             received.contact_id == material.remote_contact_id
@@ -5224,6 +5230,7 @@ pub mod production {
             received_message_record_present: received.is_some(),
             received_message_record_decodable: received.is_some(),
             received_message_matches_session,
+            expired_received_message_purged,
             plaintext_exposed: false,
             network_receive_attempted: false,
             key_material_exposed: false,
@@ -8699,6 +8706,7 @@ pub mod production {
             assert!(!expired_received_status.received_message_record_present());
             assert!(!expired_received_status.received_message_record_decodable());
             assert!(!expired_received_status.received_message_matches_session());
+            assert!(expired_received_status.expired_received_message_purged());
             assert!(matches!(
                 production_message_received_export(
                     inbound_store,

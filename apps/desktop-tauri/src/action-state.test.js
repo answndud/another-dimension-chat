@@ -245,6 +245,7 @@ const safeMessageEnvelopeImportResult = {
   plaintext_decrypted: true,
   received_message_written: true,
   received_message_matches_session: true,
+  expired_received_message_purged: true,
   plaintext_returned: false,
   key_material_exposed: false,
   network_receive_attempted: false,
@@ -1799,6 +1800,7 @@ test("productionMessageEnvelopeImportView formats inbound message result", () =>
 
   assert.match(view.inbound, /replay=true/);
   assert.match(view.inbound, /stored=true/);
+  assert.match(view.inbound, /expired_purged=true/);
   assert.match(view.boundary, /network_receive=false/);
 });
 
