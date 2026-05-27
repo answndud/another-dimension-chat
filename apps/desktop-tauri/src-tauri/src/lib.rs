@@ -299,6 +299,25 @@ pub struct ProductionSessionStateCheckResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionPairingSessionRemoteEndpointUpdateResult {
+    warning: &'static str,
+    storage_opened: bool,
+    session_draft_loaded: bool,
+    previous_remote_endpoint_present: bool,
+    update_channel_existing_encrypted_session: bool,
+    remote_endpoint_changed: bool,
+    remote_endpoint_state_written: bool,
+    runtime_material_reconstructable: bool,
+    remote_endpoint_returned: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionTwoProfileSessionStatusResult {
     warning: &'static str,
     profile_a: String,
@@ -1574,6 +1593,28 @@ fn production_pairing_session_draft_save(
     )
     .map_err(|_| {
         "production pairing session draft save failed without exposing profile, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_pairing_session_remote_endpoint_update(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    rendezvous_endpoint: String,
+) -> Result<ProductionPairingSessionRemoteEndpointUpdateResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production pairing session remote endpoint update failed without exposing local path details"
+    })?;
+    run_production_pairing_session_remote_endpoint_update(
+        app_data_root,
+        profile,
+        passphrase,
+        rendezvous_endpoint,
+    )
+    .map_err(|_| {
+        "production pairing session remote endpoint update failed without exposing profile, endpoint, path, or key details"
             .to_string()
     })
 }
@@ -5405,6 +5446,47 @@ fn run_production_pairing_session_draft_save(
     })
 }
 
+fn run_production_pairing_session_remote_endpoint_update(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    rendezvous_endpoint: String,
+) -> Result<ProductionPairingSessionRemoteEndpointUpdateResult, String> {
+    use another_dimension_core::production::production_pairing_session_remote_endpoint_update;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let rendezvous_endpoint = sanitize_pairing_rendezvous_endpoint(rendezvous_endpoint)?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let update = production_pairing_session_remote_endpoint_update(
+        &store_path,
+        profile,
+        &passphrase,
+        rendezvous_endpoint,
+    )
+    .map_err(|_| "stored remote endpoint update failed".to_string())?;
+
+    Ok(ProductionPairingSessionRemoteEndpointUpdateResult {
+        warning: "stored peer endpoint updated inside the existing encrypted session context only; no network I/O, pairing reset, or key material export occurred",
+        storage_opened: update.storage_opened(),
+        session_draft_loaded: update.session_draft_loaded(),
+        previous_remote_endpoint_present: update.previous_remote_endpoint_present(),
+        update_channel_existing_encrypted_session: update.update_channel_existing_encrypted_session(),
+        remote_endpoint_changed: update.remote_endpoint_changed(),
+        remote_endpoint_state_written: update.remote_endpoint_state_written(),
+        runtime_material_reconstructable: update.runtime_material_reconstructable(),
+        remote_endpoint_returned: false,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: update.key_material_exposed(),
+        network_io_attempted: false,
+        transport_io_opened: update.transport_io_opened(),
+        runtime_messaging_enabled: update.runtime_messaging_enabled(),
+    })
+}
+
 fn run_production_pairing_safety_preview(
     local_payload: String,
     remote_payload: String,
@@ -7335,6 +7417,7 @@ pub fn run() {
             production_pairing_payload_export,
             production_pairing_safety_preview,
             production_pairing_session_draft_save,
+            production_pairing_session_remote_endpoint_update,
             production_session_state_check,
             production_two_profile_session_status,
             production_handshake_init_export,
@@ -7391,7 +7474,8 @@ mod tests {
         run_production_onion_preflight_check, run_production_onion_service_launch_attempt,
         run_production_onion_stream_adapter_closeout_prepare,
         run_production_pairing_payload_export, run_production_pairing_safety_preview,
-        run_production_pairing_session_draft_save, run_production_profile_list,
+        run_production_pairing_session_draft_save,
+        run_production_pairing_session_remote_endpoint_update, run_production_profile_list,
         run_production_profile_unlock,
         run_production_session_state_check, ProductionOnionClientRuntimeState,
         run_production_two_profile_message_roundtrip, run_production_two_profile_roundtrip,
@@ -9333,6 +9417,92 @@ replay check: no replayed messages after message 2
         assert!(!ready_status.transport_io_opened);
         assert!(!ready_status.runtime_messaging_enabled);
         let serialized = serde_json::to_string(&ready_status).expect("serialize status");
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("/tmp"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_remote_endpoint_update_keeps_existing_session_without_transport_io() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        for profile in ["alice", "bob"] {
+            run_production_profile_unlock(
+                &root,
+                profile.to_string(),
+                "correct-passphrase".to_string(),
+            )
+            .expect("profile unlock");
+        }
+        let alice_payload = run_production_pairing_payload_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "alice.onion".to_string(),
+        )
+        .expect("alice payload")
+        .pairing_payload;
+        let bob_payload = run_production_pairing_payload_export(
+            &root,
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "bob.onion".to_string(),
+        )
+        .expect("bob payload")
+        .pairing_payload;
+        run_production_pairing_session_draft_save(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            alice_payload.clone(),
+            bob_payload.clone(),
+            true,
+        )
+        .expect("alice draft");
+        run_production_pairing_session_draft_save(
+            &root,
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            bob_payload,
+            alice_payload,
+            true,
+        )
+        .expect("bob draft");
+
+        let update = run_production_pairing_session_remote_endpoint_update(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "bob-rotated.onion".to_string(),
+        )
+        .expect("endpoint update");
+
+        assert!(update.storage_opened);
+        assert!(update.session_draft_loaded);
+        assert!(update.previous_remote_endpoint_present);
+        assert!(update.update_channel_existing_encrypted_session);
+        assert!(update.remote_endpoint_changed);
+        assert!(update.remote_endpoint_state_written);
+        assert!(update.runtime_material_reconstructable);
+        assert!(!update.remote_endpoint_returned);
+        assert!(!update.store_path_returned);
+        assert!(!update.passphrase_retained);
+        assert!(!update.key_material_exposed);
+        assert!(!update.network_io_attempted);
+        assert!(!update.transport_io_opened);
+        assert!(!update.runtime_messaging_enabled);
+
+        let status = run_production_two_profile_session_status(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("status");
+        assert!(status.profile_a_remote_endpoint_state_present);
+        assert!(status.profile_a_runtime_material_reconstructable);
+        assert!(!status.network_io_attempted);
+        let serialized = serde_json::to_string(&update).expect("serialize update");
+        assert!(!serialized.contains("bob-rotated.onion"));
         assert!(!serialized.contains("correct-passphrase"));
         assert!(!serialized.contains("/tmp"));
         let _ = std::fs::remove_dir_all(root);
