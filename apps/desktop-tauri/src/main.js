@@ -3186,9 +3186,11 @@ function applyProductionActionState() {
   );
   setActionButtonState(
     fields.prepareProductionTwoProfileOnionPairing,
-    busy || !manualNetworkPermission || !hasTwoProfileSessionStatusInput,
+    busy || twoProfileSessionsReady || !manualNetworkPermission || !hasTwoProfileSessionStatusInput,
     busy
       ? "Wait for the active production action."
+      : twoProfileSessionsReady
+        ? "Alice/Bob sessions are message-ready; send a stored-session message instead."
       : !manualNetworkPermission
         ? "Enable manual onion network permission before preparing onion pairing."
       : !hasTwoProfileSessionStatusInput
@@ -3199,12 +3201,15 @@ function applyProductionActionState() {
   setActionButtonState(
     fields.saveProductionTwoProfileOnionSessions,
     busy ||
+      twoProfileSessionsReady ||
       !hasTwoProfileSessionStatusInput ||
       !currentPairingSafetyVerified() ||
       !(fields.productionPairingPayload?.value ?? "").trim() ||
       !(fields.productionRemotePairingPayload?.value ?? "").trim(),
     busy
       ? "Wait for the active production action."
+      : twoProfileSessionsReady
+        ? "Alice/Bob sessions are already message-ready; send a stored-session message instead."
       : !hasTwoProfileSessionStatusInput
         ? "Enter distinct Profile A, Profile B, and passphrase first."
       : !currentPairingSafetyVerified()
@@ -3217,9 +3222,11 @@ function applyProductionActionState() {
   );
   setActionButtonState(
     fields.completeProductionTwoProfileOnionHandshake,
-    busy || !hasTwoProfileSessionStatusInput,
+    busy || twoProfileSessionsReady || !hasTwoProfileSessionStatusInput,
     busy
       ? "Wait for the active production action."
+      : twoProfileSessionsReady
+        ? "Alice/Bob sessions are message-ready; send a stored-session message instead."
       : !hasTwoProfileSessionStatusInput
         ? "Enter distinct Profile A, Profile B, and passphrase first."
         : "Complete Alice/Bob local handshake and persist transport state.",
@@ -4774,6 +4781,12 @@ async function completeProductionTwoProfileOnionHandshake() {
         ? "Next: send a stored-session message."
         : "Next: check session status and retry handshake if needed.",
     );
+    const currentInput = productionTwoProfileInput();
+    if (status.both_ready_for_message_envelope && currentInput.message) {
+      fields.runProductionTwoProfileMessageRoundtrip?.focus();
+    } else if (status.both_ready_for_message_envelope) {
+      fields.productionTwoProfileMessage?.focus();
+    }
   } catch (error) {
     setProductionTwoProfileState("Onion handshake failed");
     setText(fields.productionTwoProfileWarning, `Onion handshake failed without returning secrets. ${error}`);
