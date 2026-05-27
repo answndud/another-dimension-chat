@@ -290,6 +290,9 @@ const fields = {
   startProductionTwoProfileOnionBootstrap: document.querySelector(
     "#start-production-two-profile-onion-bootstrap",
   ),
+  prepareProductionTwoProfileOnionKey: document.querySelector(
+    "#prepare-production-two-profile-onion-key",
+  ),
   launchProductionTwoProfileOnionEndpoint: document.querySelector(
     "#launch-production-two-profile-onion-endpoint",
   ),
@@ -3151,6 +3154,16 @@ function applyProductionActionState() {
     false,
   );
   setActionButtonState(
+    fields.prepareProductionTwoProfileOnionKey,
+    busy || !twoProfile.profileA || !twoProfile.passphrase,
+    busy
+      ? "Wait for the active production action."
+      : !twoProfile.profileA || !twoProfile.passphrase
+        ? "Enter profile A and passphrase before preparing the onion key."
+        : "Prepare profile A's local onion key record before endpoint launch.",
+    false,
+  );
+  setActionButtonState(
     fields.launchProductionTwoProfileOnionEndpoint,
     busy || !manualNetworkPermission || !twoProfile.profileA || !twoProfile.passphrase,
     busy
@@ -4232,6 +4245,69 @@ async function startProductionTwoProfileOnionBootstrap() {
     productionBusyAction = null;
     if (fields.startProductionTwoProfileOnionBootstrap) {
       fields.startProductionTwoProfileOnionBootstrap.disabled = false;
+    }
+    applyProductionActionState();
+  }
+}
+
+async function prepareProductionTwoProfileOnionKey() {
+  const { profileA, passphrase } = productionTwoProfileInput();
+  if (!profileA || !passphrase) {
+    setProductionTwoProfileState("Onion key needs profile");
+    setText(fields.productionTwoProfileWarning, "Enter profile A and passphrase before preparing the onion key.");
+    return;
+  }
+
+  productionBusyAction = "two-profile-onion-key-prepare";
+  setProductionTwoProfileState("Onion key prepare running");
+  setText(fields.productionTwoProfileWarning, "Preparing local onion key record for profile A.");
+  setText(fields.productionTwoProfileProfiles, `local_profile=${profileA}`);
+  setText(fields.productionTwoProfileSession, "Preparing backup exclusion and encrypted onion key record");
+  setText(fields.productionTwoProfileMessageState, "No network or message transport attempted");
+  setText(fields.productionTwoProfileBoundary, "Local onion key preparation in progress");
+  applyProductionActionState();
+  if (fields.prepareProductionTwoProfileOnionKey) {
+    fields.prepareProductionTwoProfileOnionKey.disabled = true;
+  }
+
+  try {
+    const backup = await invoke("production_onion_backup_exclusion_prepare");
+    const result = await invoke("production_onion_key_record_prepare", {
+      profile: profileA,
+      passphrase,
+    });
+    const blockers = [...backup.blockers, ...result.blockers];
+    setOnionKeyRecordState(result.key_material_ready ? "Key record prepared" : "Key record blocked");
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionKeyRecordBoundary,
+      `storage=${result.storage_opened} profile=${result.profile_marker_present} profile_unlock=${result.profile_transport_unlock_ready} backup=${result.backup_exclusion_verified} lifecycle=${result.lifecycle_ready} written=${result.key_record_written} present=${result.key_record_present} material_ready=${result.key_material_ready} blockers=${result.blockers.join("; ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+    setProductionTwoProfileState(
+      result.key_material_ready ? "Onion key ready" : "Onion key needs setup",
+    );
+    setText(fields.productionTwoProfileWarning, result.warning);
+    setText(
+      fields.productionTwoProfileProfiles,
+      `profile_unlock=${result.profile_transport_unlock_ready} profile_marker=${result.profile_marker_present} storage=${result.storage_opened}`,
+    );
+    setText(
+      fields.productionTwoProfileSession,
+      `backup=${backup.backup_exclusion_verified} lifecycle=${result.lifecycle_ready} key_record=${result.key_record_present} key_material=${result.key_material_ready}`,
+    );
+    setText(fields.productionTwoProfileMessageState, "No network or message transport attempted");
+    setText(
+      fields.productionTwoProfileBoundary,
+      `backup_dirs=${backup.state_cache_dirs_accessible} backup_written=${backup.backup_exclusion_written} backup_verified=${backup.backup_exclusion_verified} key_written=${result.key_record_written} blockers=${blockers.join("; ") || "none"} raw_path=${backup.raw_path_returned || result.raw_path_returned} onion_secret=${backup.onion_secret_returned || result.onion_secret_returned} key_material=${backup.key_material_exposed || result.key_material_exposed} network=${backup.network_io_attempted || result.network_io_attempted} transport=${backup.transport_io_opened || result.transport_io_opened} runtime=${backup.runtime_messaging_enabled || result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionTwoProfileState("Onion key prepare failed");
+    setText(fields.productionTwoProfileWarning, `Onion key prepare failed without returning secrets. ${error}`);
+    setText(fields.productionTwoProfileBoundary, "Failed before network, endpoint launch, or message transport.");
+  } finally {
+    productionBusyAction = null;
+    if (fields.prepareProductionTwoProfileOnionKey) {
+      fields.prepareProductionTwoProfileOnionKey.disabled = false;
     }
     applyProductionActionState();
   }
@@ -6899,6 +6975,13 @@ if (fields.startProductionTwoProfileOnionBootstrap) {
   fields.startProductionTwoProfileOnionBootstrap.addEventListener(
     "click",
     startProductionTwoProfileOnionBootstrap,
+  );
+}
+
+if (fields.prepareProductionTwoProfileOnionKey) {
+  fields.prepareProductionTwoProfileOnionKey.addEventListener(
+    "click",
+    prepareProductionTwoProfileOnionKey,
   );
 }
 
