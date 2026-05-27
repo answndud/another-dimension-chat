@@ -4598,7 +4598,14 @@ pub mod production {
             None => 1,
         };
         let mut existing_message_slot_skipped = false;
+        let observed_at_ms = production_now_ms();
         loop {
+            let _ = purge_expired_outbound_message_if_needed(
+                &store,
+                &material,
+                candidate,
+                observed_at_ms,
+            )?;
             let local_index_id = production_local_message_index_record_id(
                 &material.channel_id,
                 &material.remote_contact_id,
@@ -8563,6 +8570,9 @@ pub mod production {
                 .get(&export_expired_sent_id)
                 .expect("read export expired sent")
                 .is_none());
+            let reusable_expired_message_number = 2;
+            let (reusable_expired_index_id, reusable_expired_pending_id, reusable_expired_sent_id) =
+                write_expired_outbound(reusable_expired_message_number);
             let second_reservation = production_message_next_number_reserve(
                 outbound_store,
                 outbound_profile.clone(),
@@ -8570,12 +8580,27 @@ pub mod production {
             )
             .expect("second message number reservation");
             assert_eq!(second_reservation.previous_last_reserved(), Some(1));
-            assert_eq!(second_reservation.reserved_message_number(), 2);
+            assert_eq!(
+                second_reservation.reserved_message_number(),
+                reusable_expired_message_number
+            );
             assert!(second_reservation.counter_record_written());
             assert!(!second_reservation.existing_message_slot_skipped());
             assert!(!second_reservation.key_material_exposed());
             assert!(!second_reservation.transport_io_opened());
             assert!(!second_reservation.runtime_messaging_enabled());
+            assert!(outbound_store_after_expiry
+                .get(&reusable_expired_index_id)
+                .expect("read reusable expired index")
+                .is_none());
+            assert!(outbound_store_after_expiry
+                .get(&reusable_expired_pending_id)
+                .expect("read reusable expired pending")
+                .is_none());
+            assert!(outbound_store_after_expiry
+                .get(&reusable_expired_sent_id)
+                .expect("read reusable expired sent")
+                .is_none());
             let inbound_store_after_receive = LockedProfileStore::new(inbound_store)
                 .unlock(&passphrase)
                 .expect("unlock after receive");
