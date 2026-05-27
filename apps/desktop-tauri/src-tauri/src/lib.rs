@@ -285,6 +285,9 @@ pub struct ProductionSessionStateCheckResult {
     local_role_available: bool,
     remote_contact_present: bool,
     remote_endpoint_state_present: bool,
+    remote_endpoint_marked_stale: bool,
+    remote_endpoint_refresh_recommended: bool,
+    remote_endpoint_last_failed_message_number: Option<u64>,
     replay_window_present: bool,
     session_transport_state_present: bool,
     runtime_material_reconstructable: bool,
@@ -327,6 +330,12 @@ pub struct ProductionTwoProfileSessionStatusResult {
     both_ready_for_message_envelope: bool,
     profile_a_remote_endpoint_state_present: bool,
     profile_b_remote_endpoint_state_present: bool,
+    profile_a_remote_endpoint_marked_stale: bool,
+    profile_b_remote_endpoint_marked_stale: bool,
+    profile_a_remote_endpoint_refresh_recommended: bool,
+    profile_b_remote_endpoint_refresh_recommended: bool,
+    profile_a_remote_endpoint_last_failed_message_number: Option<u64>,
+    profile_b_remote_endpoint_last_failed_message_number: Option<u64>,
     profile_a_session_transport_state_present: bool,
     profile_b_session_transport_state_present: bool,
     profile_a_runtime_material_reconstructable: bool,
@@ -970,6 +979,9 @@ pub struct ProductionOnionOutboundEnvelopeSendAttemptResult {
     send_intent_prepared: bool,
     send_attempt_started: bool,
     send_attempt_succeeded: bool,
+    peer_endpoint_failure_recorded: bool,
+    peer_endpoint_refresh_recommended: bool,
+    retry_recommended_after_endpoint_refresh: bool,
     ack_wait_registered: bool,
     redacted_send_result_event_recorded: bool,
     event_summary: Vec<String>,
@@ -1409,12 +1421,12 @@ async fn production_onion_outbound_envelope_send_attempt(
     let app_cache_root = app.path().app_cache_dir().map_err(|_| {
         "production onion outbound envelope send attempt failed without exposing local path details"
     })?;
-    run_production_onion_outbound_envelope_send_attempt(
-        app_data_root,
+    let mut result = run_production_onion_outbound_envelope_send_attempt(
+        &app_data_root,
         app_cache_root,
         &state,
-        profile,
-        passphrase,
+        profile.clone(),
+        passphrase.clone(),
         rendezvous_endpoint,
         message_number,
         manual_network_permission,
@@ -1423,7 +1435,15 @@ async fn production_onion_outbound_envelope_send_attempt(
     .map_err(|_| {
         "production onion outbound envelope send attempt failed without exposing profile, endpoint, payload, path, proof, or key details"
             .to_string()
-    })
+    })?;
+    apply_peer_endpoint_send_failure_result(
+        &mut result,
+        app_data_root,
+        profile,
+        passphrase,
+        message_number,
+    );
+    Ok(result)
 }
 
 #[tauri::command]
@@ -1450,12 +1470,12 @@ async fn production_onion_outbound_envelope_send_stored_endpoint_attempt(
         "production onion outbound envelope send stored-endpoint attempt failed without exposing endpoint, profile, path, or key details"
             .to_string()
     })?;
-    run_production_onion_outbound_envelope_send_attempt(
-        app_data_root,
+    let mut result = run_production_onion_outbound_envelope_send_attempt(
+        &app_data_root,
         app_cache_root,
         &state,
-        profile,
-        passphrase,
+        profile.clone(),
+        passphrase.clone(),
         rendezvous_endpoint,
         message_number,
         manual_network_permission,
@@ -1464,7 +1484,15 @@ async fn production_onion_outbound_envelope_send_stored_endpoint_attempt(
     .map_err(|_| {
         "production onion outbound envelope send stored-endpoint attempt failed without exposing profile, endpoint, payload, path, proof, or key details"
             .to_string()
-    })
+    })?;
+    apply_peer_endpoint_send_failure_result(
+        &mut result,
+        app_data_root,
+        profile,
+        passphrase,
+        message_number,
+    );
+    Ok(result)
 }
 
 #[tauri::command]
@@ -5137,6 +5165,9 @@ async fn run_production_onion_outbound_envelope_send_attempt(
             send_intent_prepared: prepare.send_intent_prepared,
             send_attempt_started,
             send_attempt_succeeded,
+            peer_endpoint_failure_recorded: false,
+            peer_endpoint_refresh_recommended: false,
+            retry_recommended_after_endpoint_refresh: false,
             ack_wait_registered: prepare.ack_wait_registered,
             redacted_send_result_event_recorded: !event_summary.is_empty(),
             event_summary,
@@ -5249,6 +5280,9 @@ async fn run_production_onion_outbound_envelope_send_attempt(
             send_intent_prepared: prepare.send_intent_prepared,
             send_attempt_started,
             send_attempt_succeeded,
+            peer_endpoint_failure_recorded: false,
+            peer_endpoint_refresh_recommended: false,
+            retry_recommended_after_endpoint_refresh: false,
             ack_wait_registered: prepare.ack_wait_registered && send_attempt_started,
             redacted_send_result_event_recorded: !event_summary.is_empty(),
             event_summary,
@@ -5540,7 +5574,8 @@ fn run_production_session_state_check(
     passphrase: String,
 ) -> Result<ProductionSessionStateCheckResult, String> {
     use another_dimension_core::production::{
-        production_pairing_session_open_runtime, production_pairing_session_status,
+        production_pairing_session_open_runtime, production_pairing_session_remote_endpoint_status,
+        production_pairing_session_status,
     };
     use another_dimension_storage::production::ProfilePassphrase;
 
@@ -5550,6 +5585,9 @@ fn run_production_session_state_check(
     let store_path = production_profile_store_path(app_data_root, &profile)?;
     let status = production_pairing_session_status(&store_path, profile.clone(), &passphrase)
         .map_err(|_| "session state status failed")?;
+    let remote_endpoint_status =
+        production_pairing_session_remote_endpoint_status(&store_path, profile.clone(), &passphrase)
+            .ok();
     let runtime =
         production_pairing_session_open_runtime(&store_path, profile.clone(), &passphrase).ok();
 
@@ -5574,6 +5612,15 @@ fn run_production_session_state_check(
         local_role_available: status.local_role_available(),
         remote_contact_present: status.remote_contact_present(),
         remote_endpoint_state_present: status.remote_endpoint_state_present(),
+        remote_endpoint_marked_stale: remote_endpoint_status
+            .as_ref()
+            .is_some_and(|status| status.remote_endpoint_marked_stale()),
+        remote_endpoint_refresh_recommended: remote_endpoint_status
+            .as_ref()
+            .is_some_and(|status| status.refresh_recommended()),
+        remote_endpoint_last_failed_message_number: remote_endpoint_status
+            .as_ref()
+            .and_then(|status| status.last_failed_message_number()),
         replay_window_present: status.replay_window_present(),
         session_transport_state_present,
         runtime_material_reconstructable,
@@ -5621,6 +5668,53 @@ fn run_production_pairing_session_remote_endpoint_for_transport(
     Ok(endpoint.endpoint().as_str().to_string())
 }
 
+fn apply_peer_endpoint_send_failure_result(
+    result: &mut ProductionOnionOutboundEnvelopeSendAttemptResult,
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+) {
+    if !result.send_attempt_started || result.send_attempt_succeeded {
+        return;
+    }
+    if run_production_pairing_session_remote_endpoint_mark_send_failure(
+        app_data_root,
+        profile,
+        passphrase,
+        message_number,
+    )
+    .is_ok()
+    {
+        result.peer_endpoint_failure_recorded = true;
+        result.peer_endpoint_refresh_recommended = true;
+        result.retry_recommended_after_endpoint_refresh = true;
+    }
+}
+
+fn run_production_pairing_session_remote_endpoint_mark_send_failure(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+) -> Result<(), String> {
+    use another_dimension_core::production::production_pairing_session_remote_endpoint_mark_send_failure;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    production_pairing_session_remote_endpoint_mark_send_failure(
+        &store_path,
+        profile,
+        &passphrase,
+        message_number,
+    )
+    .map(|_| ())
+    .map_err(|_| "stored remote endpoint send failure mark failed".to_string())
+}
+
 fn run_production_two_profile_session_status(
     app_data_root: impl AsRef<std::path::Path>,
     profile_a: String,
@@ -5657,6 +5751,16 @@ fn run_production_two_profile_session_status(
             && profile_b_state.ready_for_message_envelope,
         profile_a_remote_endpoint_state_present: profile_a_state.remote_endpoint_state_present,
         profile_b_remote_endpoint_state_present: profile_b_state.remote_endpoint_state_present,
+        profile_a_remote_endpoint_marked_stale: profile_a_state.remote_endpoint_marked_stale,
+        profile_b_remote_endpoint_marked_stale: profile_b_state.remote_endpoint_marked_stale,
+        profile_a_remote_endpoint_refresh_recommended: profile_a_state
+            .remote_endpoint_refresh_recommended,
+        profile_b_remote_endpoint_refresh_recommended: profile_b_state
+            .remote_endpoint_refresh_recommended,
+        profile_a_remote_endpoint_last_failed_message_number: profile_a_state
+            .remote_endpoint_last_failed_message_number,
+        profile_b_remote_endpoint_last_failed_message_number: profile_b_state
+            .remote_endpoint_last_failed_message_number,
         profile_a_session_transport_state_present: profile_a_state.session_transport_state_present,
         profile_b_session_transport_state_present: profile_b_state.session_transport_state_present,
         profile_a_runtime_material_reconstructable: profile_a_state
@@ -7475,6 +7579,7 @@ mod tests {
         run_production_onion_stream_adapter_closeout_prepare,
         run_production_pairing_payload_export, run_production_pairing_safety_preview,
         run_production_pairing_session_draft_save,
+        run_production_pairing_session_remote_endpoint_mark_send_failure,
         run_production_pairing_session_remote_endpoint_update, run_production_profile_list,
         run_production_profile_unlock,
         run_production_session_state_check, ProductionOnionClientRuntimeState,
@@ -9505,6 +9610,52 @@ replay check: no replayed messages after message 2
         assert!(!serialized.contains("bob-rotated.onion"));
         assert!(!serialized.contains("correct-passphrase"));
         assert!(!serialized.contains("/tmp"));
+
+        run_production_pairing_session_remote_endpoint_mark_send_failure(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            7,
+        )
+        .expect("mark send failure");
+        let stale_status = run_production_two_profile_session_status(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("stale status");
+        assert!(stale_status.profile_a_remote_endpoint_marked_stale);
+        assert!(stale_status.profile_a_remote_endpoint_refresh_recommended);
+        assert_eq!(
+            stale_status.profile_a_remote_endpoint_last_failed_message_number,
+            Some(7)
+        );
+        assert!(!stale_status.network_io_attempted);
+        assert!(!serde_json::to_string(&stale_status)
+            .expect("serialize stale status")
+            .contains("bob-rotated.onion"));
+
+        run_production_pairing_session_remote_endpoint_update(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "bob-rerotated.onion".to_string(),
+        )
+        .expect("clear stale endpoint");
+        let refreshed_status = run_production_two_profile_session_status(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("refreshed status");
+        assert!(!refreshed_status.profile_a_remote_endpoint_marked_stale);
+        assert!(!refreshed_status.profile_a_remote_endpoint_refresh_recommended);
+        assert_eq!(
+            refreshed_status.profile_a_remote_endpoint_last_failed_message_number,
+            None
+        );
         let _ = std::fs::remove_dir_all(root);
     }
 
