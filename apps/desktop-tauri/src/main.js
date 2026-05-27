@@ -366,6 +366,9 @@ let latestProductionTwoProfileOnionEndpoints = null;
 let productionTwoProfileOnionReceiveMode = {
   enabled: false,
   profile: "",
+  passphrase: "",
+  timer: null,
+  attempt: 0,
 };
 let latestProductionMessageImport = null;
 let latestProductionPairingSafety = null;
@@ -374,6 +377,7 @@ let latestProductionManualFocusTarget = null;
 let twoProfileAutoResumeTimer = null;
 let latestTwoProfileAutoResumeFingerprint = null;
 let selectedTwoProfileConversationKey = null;
+const TWO_PROFILE_ONION_RECEIVE_RETRY_MS = 3000;
 const productionTranscriptEntryKeys = new Set();
 const productionTwoProfileConversationEntries = new Map();
 const productionPayloadSlots = {
@@ -3323,17 +3327,15 @@ function applyProductionActionState() {
         ? "Enable manual onion network permission before receiving."
       : !hasTwoProfileSessionStatusInput
         ? "Enter distinct Profile A, Profile B, and passphrase first."
-        : `Start one bounded receive attempt for ${twoProfile.profileB}.`,
+        : `Start explicit receive mode for ${twoProfile.profileB}.`,
     false,
   );
   setActionButtonState(
     fields.stopProductionTwoProfileOnionReceive,
-    busy || !productionTwoProfileOnionReceiveMode.enabled,
-    busy
-      ? "Wait for the active production action."
-      : productionTwoProfileOnionReceiveMode.enabled
-        ? "Stop receive mode before another receive attempt."
-        : "Receive mode is stopped.",
+    !productionTwoProfileOnionReceiveMode.enabled,
+    productionTwoProfileOnionReceiveMode.enabled
+      ? "Stop receive mode before another receive attempt."
+      : "Receive mode is stopped.",
     false,
   );
   setActionButtonState(
@@ -5527,22 +5529,78 @@ async function startProductionTwoProfileOnionReceive() {
   productionTwoProfileOnionReceiveMode = {
     enabled: true,
     profile: profileB,
+    passphrase,
+    timer: null,
+    attempt: 0,
   };
-  productionBusyAction = "two-profile-onion-receive";
-  setProductionTwoProfileState("Receive mode starting");
-  setText(fields.productionTwoProfileWarning, `Starting one bounded onion receive attempt for ${profileB}.`);
+  setProductionTwoProfileState("Receive mode enabled");
+  setText(fields.productionTwoProfileWarning, `Receive mode enabled for ${profileB}. Bounded receive attempts will repeat until stopped.`);
   setText(fields.productionTwoProfileProfiles, `receiver=${profileB}`);
   setText(fields.productionTwoProfileSession, "Using retained onion service and stored receiver session");
-  setText(fields.productionTwoProfileMessageState, "Waiting for inbound accept/read/import");
-  setText(fields.productionTwoProfileBoundary, "Receive attempt in progress with manual network permission");
+  setText(fields.productionTwoProfileMessageState, "Receive mode waiting for first bounded attempt");
+  setText(fields.productionTwoProfileBoundary, "Receive mode enabled by explicit user action");
   applyProductionActionState();
-  if (fields.startProductionTwoProfileOnionReceive) {
-    fields.startProductionTwoProfileOnionReceive.disabled = true;
+  runProductionTwoProfileOnionReceiveAttempt();
+}
+
+function clearProductionTwoProfileOnionReceiveTimer() {
+  if (productionTwoProfileOnionReceiveMode.timer) {
+    clearTimeout(productionTwoProfileOnionReceiveMode.timer);
+  }
+  productionTwoProfileOnionReceiveMode.timer = null;
+}
+
+function scheduleProductionTwoProfileOnionReceiveAttempt(delayMs = TWO_PROFILE_ONION_RECEIVE_RETRY_MS) {
+  if (!productionTwoProfileOnionReceiveMode.enabled) {
+    return;
+  }
+  clearProductionTwoProfileOnionReceiveTimer();
+  productionTwoProfileOnionReceiveMode.timer = setTimeout(() => {
+    productionTwoProfileOnionReceiveMode.timer = null;
+    runProductionTwoProfileOnionReceiveAttempt();
+  }, delayMs);
+}
+
+async function runProductionTwoProfileOnionReceiveAttempt() {
+  if (!productionTwoProfileOnionReceiveMode.enabled) {
+    return;
+  }
+  const { profile, passphrase } = productionTwoProfileOnionReceiveMode;
+  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  if (!manualNetworkPermission) {
+    setProductionTwoProfileState("Receive mode paused");
+    setText(
+      fields.productionTwoProfileWarning,
+      "Manual onion network permission is disabled. Receive mode remains enabled but will not attempt network work until permission is restored or stopped.",
+    );
+    setText(fields.productionTwoProfileMessageState, "Receive mode paused before network attempt");
+    setText(fields.productionTwoProfileBoundary, "No network attempt made while manual permission is disabled");
+    applyProductionActionState();
+    scheduleProductionTwoProfileOnionReceiveAttempt();
+    return;
+  }
+  if (productionBusyAction) {
+    setProductionTwoProfileState("Receive mode waiting");
+    setText(fields.productionTwoProfileWarning, "Receive mode is waiting for the active production action to finish.");
+    setText(fields.productionTwoProfileMessageState, "Next bounded receive attempt queued");
+    applyProductionActionState();
+    scheduleProductionTwoProfileOnionReceiveAttempt();
+    return;
   }
 
+  productionTwoProfileOnionReceiveMode.attempt += 1;
+  const attempt = productionTwoProfileOnionReceiveMode.attempt;
+  productionBusyAction = "two-profile-onion-receive";
+  setProductionTwoProfileState("Receive mode attempting");
+  setText(fields.productionTwoProfileWarning, `Running bounded onion receive attempt #${attempt} for ${profile}.`);
+  setText(fields.productionTwoProfileProfiles, `receiver=${profile}`);
+  setText(fields.productionTwoProfileSession, "Using retained onion service and stored receiver session");
+  setText(fields.productionTwoProfileMessageState, `Attempt #${attempt}: waiting for inbound accept/read/import`);
+  setText(fields.productionTwoProfileBoundary, "Receive attempt in progress with manual network permission");
+  applyProductionActionState();
   try {
     const result = await invoke("production_onion_inbound_envelope_receive_attempt", {
-      profile: profileB,
+      profile,
       passphrase,
       manualNetworkPermission,
     });
@@ -5564,11 +5622,11 @@ async function startProductionTwoProfileOnionReceive() {
     setText(fields.productionTwoProfileWarning, result.warning);
     setText(
       fields.productionTwoProfileSession,
-      `receiver=${profileB} inbound_prepared=${result.inbound_stream_preparation_ready} received=${result.received_envelope_ready}`,
+      `receiver=${profile} attempt=${attempt} inbound_prepared=${result.inbound_stream_preparation_ready} received=${result.received_envelope_ready}`,
     );
     setText(
       fields.productionTwoProfileMessageState,
-      `started=${result.receive_attempt_started} succeeded=${result.receive_attempt_succeeded} import=${result.inbound_import_attempted} next=${result.next_blocker}`,
+      `attempt=${attempt} started=${result.receive_attempt_started} succeeded=${result.receive_attempt_succeeded} import=${result.inbound_import_attempted} next=${result.next_blocker}`,
     );
     setText(
       fields.productionTwoProfileBoundary,
@@ -5583,8 +5641,8 @@ async function startProductionTwoProfileOnionReceive() {
     setText(fields.productionTwoProfileBoundary, "Failed before or during bounded onion receive attempt.");
   } finally {
     productionBusyAction = null;
-    if (fields.startProductionTwoProfileOnionReceive) {
-      fields.startProductionTwoProfileOnionReceive.disabled = false;
+    if (productionTwoProfileOnionReceiveMode.enabled) {
+      scheduleProductionTwoProfileOnionReceiveAttempt();
     }
     applyProductionActionState();
   }
@@ -5592,9 +5650,13 @@ async function startProductionTwoProfileOnionReceive() {
 
 function stopProductionTwoProfileOnionReceive() {
   const profile = productionTwoProfileOnionReceiveMode.profile;
+  clearProductionTwoProfileOnionReceiveTimer();
   productionTwoProfileOnionReceiveMode = {
     enabled: false,
     profile: "",
+    passphrase: "",
+    timer: null,
+    attempt: 0,
   };
   setProductionTwoProfileState("Receive mode stopped");
   setText(
