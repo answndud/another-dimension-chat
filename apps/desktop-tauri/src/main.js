@@ -305,6 +305,9 @@ const fields = {
   completeProductionTwoProfileOnionHandshake: document.querySelector(
     "#complete-production-two-profile-onion-handshake",
   ),
+  sendProductionTwoProfileLatestOnionEnvelope: document.querySelector(
+    "#send-production-two-profile-latest-onion-envelope",
+  ),
   runProductionTwoProfileRealOnionRoundtrip: document.querySelector(
     "#run-production-two-profile-real-onion-roundtrip",
   ),
@@ -353,6 +356,7 @@ let latestSimulation = null;
 let latestProductionSessionState = null;
 let latestProductionTwoProfileSessionStatus = null;
 let latestProductionTwoProfileSuccess = null;
+let latestProductionTwoProfileOnionEndpoints = null;
 let latestProductionMessageImport = null;
 let latestProductionPairingSafety = null;
 let productionBusyAction = null;
@@ -779,6 +783,59 @@ function twoProfileSessionsReadyForInput(input = productionTwoProfileInput()) {
     latestTwoProfileSuccessMatchesDirection(input) ||
     latestTwoProfileSuccessMatchesOppositeDirection(input)
   );
+}
+
+function rememberTwoProfileOnionEndpoints(input, endpoints) {
+  if (!input?.profileA || !input?.profileB || !endpoints?.profileAEndpoint || !endpoints?.profileBEndpoint) {
+    latestProductionTwoProfileOnionEndpoints = null;
+    return;
+  }
+  latestProductionTwoProfileOnionEndpoints = {
+    fingerprint: twoProfileSessionStatusFingerprint(input),
+    profileA: input.profileA,
+    profileB: input.profileB,
+    profileAEndpoint: endpoints.profileAEndpoint,
+    profileBEndpoint: endpoints.profileBEndpoint,
+  };
+}
+
+function latestTwoProfilePeerOnionEndpoint(input = productionTwoProfileInput()) {
+  if (
+    !latestProductionTwoProfileOnionEndpoints ||
+    latestProductionTwoProfileOnionEndpoints.fingerprint !== twoProfileSessionStatusFingerprint(input)
+  ) {
+    return "";
+  }
+  if (input.profileA === latestProductionTwoProfileOnionEndpoints.profileA) {
+    return latestProductionTwoProfileOnionEndpoints.profileBEndpoint;
+  }
+  if (input.profileA === latestProductionTwoProfileOnionEndpoints.profileB) {
+    return latestProductionTwoProfileOnionEndpoints.profileAEndpoint;
+  }
+  return "";
+}
+
+function latestTwoProfileOutboundOnionMessage(input = productionTwoProfileInput()) {
+  const latest = latestProductionTwoProfileSuccess;
+  if (
+    !latest ||
+    latest.profileA !== input.profileA ||
+    latest.profileB !== input.profileB ||
+    !Number.isInteger(latest.messageNumber) ||
+    latest.messageNumber < 1
+  ) {
+    return null;
+  }
+  const peerEndpoint = latestTwoProfilePeerOnionEndpoint(input);
+  if (!peerEndpoint) {
+    return null;
+  }
+  return {
+    profile: input.profileA,
+    passphrase: input.passphrase,
+    peerEndpoint,
+    messageNumber: latest.messageNumber,
+  };
 }
 
 function rememberTwoProfileReadySessionFromRoundtrip(input, result) {
@@ -3232,6 +3289,19 @@ function applyProductionActionState() {
         : "Complete Alice/Bob local handshake and persist transport state.",
     false,
   );
+  const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(twoProfile);
+  setActionButtonState(
+    fields.sendProductionTwoProfileLatestOnionEnvelope,
+    busy || !manualNetworkPermission || !latestOnionOutbound,
+    busy
+      ? "Wait for the active production action."
+      : !manualNetworkPermission
+        ? "Enable manual onion network permission before sending over onion."
+      : !latestOnionOutbound
+        ? "Send a stored-session message after preparing onion pairing endpoints first."
+        : `Attempt onion send for message #${latestOnionOutbound.messageNumber}.`,
+    false,
+  );
   setActionButtonState(
     fields.runProductionTwoProfileRealOnionRoundtrip,
     busy || !hasTwoProfileInput || !hasMessageRetentionPolicy || !manualNetworkPermission,
@@ -3616,6 +3686,7 @@ function renderProductionTwoProfileResult(result) {
       profileA: input.profileA,
       profileB: input.profileB,
       messageLength: input.message.length,
+      messageNumber: Number.parseInt(result.message_number, 10),
       fingerprint: twoProfileInputFingerprint(input),
     };
     rememberTwoProfileReadySessionFromRoundtrip(input, result);
@@ -3642,6 +3713,7 @@ function renderProductionTwoProfileMessageResult(result) {
       profileA: input.profileA,
       profileB: input.profileB,
       messageLength: input.message.length,
+      messageNumber: Number.parseInt(result.message_number, 10),
       fingerprint: twoProfileInputFingerprint(input),
     };
     renderProductionTwoProfileMemory(input);
@@ -4547,6 +4619,13 @@ async function prepareProductionTwoProfileOnionPairing() {
       fields.productionTwoProfileSession,
       `a_payload=${profileAResult.pairing.pairing_payload_exported} b_payload=${profileBResult.pairing.pairing_payload_exported} safety=${safety.payloads_decodable}`,
     );
+    rememberTwoProfileOnionEndpoints(
+      { profileA, profileB, passphrase },
+      {
+        profileAEndpoint: profileAResult.launch.local_onion_endpoint,
+        profileBEndpoint: profileBResult.launch.local_onion_endpoint,
+      },
+    );
     setText(fields.productionTwoProfileMessageState, "No message transport attempted");
     setText(
       fields.productionTwoProfileBoundary,
@@ -5304,6 +5383,88 @@ async function attemptOnionOutboundEnvelopeSend() {
     if (fields.attemptOnionOutboundEnvelopeSend) {
       fields.attemptOnionOutboundEnvelopeSend.disabled = false;
     }
+  }
+}
+
+async function sendProductionTwoProfileLatestOnionEnvelope() {
+  const input = productionTwoProfileInput();
+  const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(input);
+  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  if (!manualNetworkPermission) {
+    setProductionTwoProfileState("Onion send blocked");
+    setText(fields.productionTwoProfileWarning, "Enable manual onion network permission before sending over onion.");
+    return;
+  }
+  if (!latestOnionOutbound) {
+    setProductionTwoProfileState("Onion send needs latest message");
+    setText(
+      fields.productionTwoProfileWarning,
+      "Prepare onion pairing endpoints, complete handshake, then send a stored-session message before attempting onion send.",
+    );
+    return;
+  }
+
+  productionBusyAction = "two-profile-onion-envelope-send";
+  setProductionTwoProfileState("Onion envelope send running");
+  setText(
+    fields.productionTwoProfileWarning,
+    `Attempting one bounded onion stream send for message #${latestOnionOutbound.messageNumber}.`,
+  );
+  setText(fields.productionTwoProfileProfiles, `sender=${input.profileA} receiver=${input.profileB}`);
+  setText(fields.productionTwoProfileSession, "Using stored outbound envelope and retained onion endpoint");
+  setText(fields.productionTwoProfileMessageState, "Waiting for onion stream send attempt");
+  setText(fields.productionTwoProfileBoundary, "Onion send attempt in progress with manual network permission");
+  applyProductionActionState();
+  if (fields.sendProductionTwoProfileLatestOnionEnvelope) {
+    fields.sendProductionTwoProfileLatestOnionEnvelope.disabled = true;
+  }
+
+  try {
+    const result = await invoke("production_onion_outbound_envelope_send_attempt", {
+      profile: latestOnionOutbound.profile,
+      passphrase: latestOnionOutbound.passphrase,
+      rendezvousEndpoint: latestOnionOutbound.peerEndpoint,
+      messageNumber: latestOnionOutbound.messageNumber,
+      manualNetworkPermission,
+    });
+    setOnionOutboundEnvelopeSendState(
+      result.send_attempt_succeeded
+        ? "Envelope send attempt wrote"
+        : result.send_attempt_started
+          ? "Envelope send attempt failed closed"
+          : "Envelope send attempt blocked",
+    );
+    setProductionTwoProfileState(
+      result.send_attempt_succeeded ? "Onion envelope send attempted" : "Onion envelope send blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionOutboundEnvelopeSendAttempt,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} send_intent=${result.send_intent_prepared} started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} ack_wait=${result.ack_wait_registered} event_recorded=${result.redacted_send_result_event_recorded} events=${result.event_summary.join("; ") || "none"} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} peer_proof=${result.peer_proof_returned} transcript=${result.session_transcript_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} accept=${result.stream_accept_attempted} dial=${result.stream_dial_attempted} read_write=${result.stream_read_write_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+    setText(fields.productionTwoProfileWarning, result.warning);
+    setText(
+      fields.productionTwoProfileSession,
+      `message=${latestOnionOutbound.messageNumber} intent=${result.send_intent_prepared} ack_wait=${result.ack_wait_registered}`,
+    );
+    setText(
+      fields.productionTwoProfileMessageState,
+      `started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} next=${result.next_blocker}`,
+    );
+    setText(
+      fields.productionTwoProfileBoundary,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} events=${result.event_summary.join("; ") || "none"} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} peer_proof=${result.peer_proof_returned} transcript=${result.session_transcript_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network=${result.network_io_attempted} dial=${result.stream_dial_attempted} read_write=${result.stream_read_write_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionTwoProfileState("Onion envelope send failed");
+    setText(fields.productionTwoProfileWarning, `Onion envelope send failed without returning secrets. ${error}`);
+    setText(fields.productionTwoProfileBoundary, "Failed before or during bounded onion send attempt.");
+  } finally {
+    productionBusyAction = null;
+    if (fields.sendProductionTwoProfileLatestOnionEnvelope) {
+      fields.sendProductionTwoProfileLatestOnionEnvelope.disabled = false;
+    }
+    applyProductionActionState();
   }
 }
 
@@ -7436,6 +7597,13 @@ if (fields.completeProductionTwoProfileOnionHandshake) {
   fields.completeProductionTwoProfileOnionHandshake.addEventListener(
     "click",
     completeProductionTwoProfileOnionHandshake,
+  );
+}
+
+if (fields.sendProductionTwoProfileLatestOnionEnvelope) {
+  fields.sendProductionTwoProfileLatestOnionEnvelope.addEventListener(
+    "click",
+    sendProductionTwoProfileLatestOnionEnvelope,
   );
 }
 
