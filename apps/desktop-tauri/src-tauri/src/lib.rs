@@ -881,6 +881,9 @@ pub struct ProductionOnionInboundEnvelopeReceiveAttemptResult {
     receive_attempt_succeeded: bool,
     received_envelope_ready: bool,
     inbound_import_attempted: bool,
+    control_envelope_imported: bool,
+    endpoint_update_applied: bool,
+    stale_endpoint_status_cleared: bool,
     redacted_receive_result_event_recorded: bool,
     event_summary: Vec<String>,
     next_blocker: String,
@@ -1003,6 +1006,42 @@ pub struct ProductionOnionOutboundEnvelopeSendPrepareResult {
     peer_proof_returned: bool,
     session_transcript_returned: bool,
     envelope_payload_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    stream_accept_attempted: bool,
+    stream_dial_attempted: bool,
+    stream_read_write_attempted: bool,
+    stream_send_attempted: bool,
+    envelope_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionEndpointUpdateControlSendAttemptResult {
+    warning: &'static str,
+    preparation_only: bool,
+    manual_client_attempt_feature_compiled: bool,
+    manual_network_permission_enabled: bool,
+    persistent_client_ready: bool,
+    endpoint_update_created: bool,
+    encrypted_control_envelope_written: bool,
+    send_intent_prepared: bool,
+    send_attempt_started: bool,
+    send_attempt_succeeded: bool,
+    peer_endpoint_failure_recorded: bool,
+    peer_endpoint_refresh_recommended: bool,
+    retry_recommended_after_endpoint_refresh: bool,
+    redacted_send_result_event_recorded: bool,
+    event_summary: Vec<String>,
+    next_blocker: String,
+    blockers: Vec<String>,
+    raw_endpoint_returned: bool,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    peer_proof_returned: bool,
+    session_transcript_returned: bool,
+    envelope_payload_returned: bool,
+    endpoint_plaintext_exposed: bool,
     key_material_exposed: bool,
     network_io_attempted: bool,
     stream_accept_attempted: bool,
@@ -1530,6 +1569,47 @@ async fn production_onion_outbound_envelope_send_stored_endpoint_attempt(
             .to_string()
     })?;
     apply_peer_endpoint_send_failure_result(
+        &mut result,
+        app_data_root,
+        profile,
+        passphrase,
+        message_number,
+    );
+    Ok(result)
+}
+
+#[tauri::command]
+async fn production_onion_endpoint_update_control_send_stored_endpoint_attempt(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+    local_rendezvous_endpoint: String,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionEndpointUpdateControlSendAttemptResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production onion endpoint update send attempt failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production onion endpoint update send attempt failed without exposing local path details"
+    })?;
+    let mut result = run_production_onion_endpoint_update_control_send_stored_endpoint_attempt(
+        &app_data_root,
+        app_cache_root,
+        &state,
+        profile.clone(),
+        passphrase.clone(),
+        message_number,
+        local_rendezvous_endpoint,
+        manual_network_permission,
+    )
+    .await
+    .map_err(|_| {
+        "production onion endpoint update send attempt failed without exposing profile, endpoint, payload, path, proof, or key details"
+            .to_string()
+    })?;
+    apply_endpoint_update_control_send_failure_result(
         &mut result,
         app_data_root,
         profile,
@@ -4547,6 +4627,18 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
     let mut inbound_import_attempted = false;
     #[cfg(not(feature = "manual-onion-client-attempt"))]
     let inbound_import_attempted = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut control_envelope_imported = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let control_envelope_imported = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut endpoint_update_applied = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let endpoint_update_applied = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut stale_endpoint_status_cleared = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let stale_endpoint_status_cleared = false;
 
     #[cfg(not(feature = "manual-onion-client-attempt"))]
     {
@@ -4574,6 +4666,9 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
             receive_attempt_succeeded,
             received_envelope_ready,
             inbound_import_attempted,
+            control_envelope_imported,
+            endpoint_update_applied,
+            stale_endpoint_status_cleared,
             redacted_receive_result_event_recorded: !event_summary.is_empty(),
             event_summary,
             next_blocker,
@@ -4653,28 +4748,57 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
                                         &envelope_payload,
                                     )
                                     .map_err(|_| "inbound envelope decode failed")?;
-                                    let retention = run_production_message_retention_preference_get(
-                                        app_data_root.as_ref(),
-                                        profile_for_import.clone(),
-                                        passphrase_for_import.clone(),
-                                    )?;
                                     inbound_import_attempted = true;
-                                    let import = run_production_message_envelope_import(
-                                        app_data_root.as_ref(),
-                                        profile_for_import.clone(),
-                                        passphrase_for_import.clone(),
-                                        envelope.message_number,
-                                        envelope_payload,
-                                        retention.message_ttl_seconds,
-                                    )?;
-                                    received_envelope_ready = import.received_message_written
-                                        && import.received_message_record_present
-                                        && import.received_message_record_decodable;
-                                    next_blocker = if received_envelope_ready {
-                                        "none".to_string()
-                                    } else {
-                                        "InboundEnvelopeImportIncomplete".to_string()
-                                    };
+                                    match envelope.message_type {
+                                        another_dimension_protocol::MessageType::Data => {
+                                            let retention =
+                                                run_production_message_retention_preference_get(
+                                                    app_data_root.as_ref(),
+                                                    profile_for_import.clone(),
+                                                    passphrase_for_import.clone(),
+                                                )?;
+                                            let import = run_production_message_envelope_import(
+                                                app_data_root.as_ref(),
+                                                profile_for_import.clone(),
+                                                passphrase_for_import.clone(),
+                                                envelope.message_number,
+                                                envelope_payload,
+                                                retention.message_ttl_seconds,
+                                            )?;
+                                            received_envelope_ready =
+                                                import.received_message_written
+                                                    && import.received_message_record_present
+                                                    && import.received_message_record_decodable;
+                                            next_blocker = if received_envelope_ready {
+                                                "none".to_string()
+                                            } else {
+                                                "InboundEnvelopeImportIncomplete".to_string()
+                                            };
+                                        }
+                                        another_dimension_protocol::MessageType::Control => {
+                                            let import =
+                                                run_production_endpoint_update_control_envelope_import(
+                                                    app_data_root.as_ref(),
+                                                    profile_for_import.clone(),
+                                                    passphrase_for_import.clone(),
+                                                    envelope_payload,
+                                                )?;
+                                            control_envelope_imported = true;
+                                            endpoint_update_applied = import.endpoint_update_applied;
+                                            stale_endpoint_status_cleared =
+                                                import.stale_endpoint_status_cleared;
+                                            received_envelope_ready = endpoint_update_applied;
+                                            next_blocker = if endpoint_update_applied {
+                                                "none".to_string()
+                                            } else {
+                                                "InboundControlEnvelopeImportIncomplete".to_string()
+                                            };
+                                        }
+                                        another_dimension_protocol::MessageType::Ack => {
+                                            next_blocker =
+                                                "InboundAckEnvelopeImportUnsupported".to_string();
+                                        }
+                                    }
                                 }
                                 Err(error) => {
                                     next_blocker = format!("{error:?}");
@@ -4720,6 +4844,9 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
             receive_attempt_succeeded: received_envelope_ready,
             received_envelope_ready,
             inbound_import_attempted,
+            control_envelope_imported,
+            endpoint_update_applied,
+            stale_endpoint_status_cleared,
             redacted_receive_result_event_recorded: !event_summary.is_empty(),
             event_summary,
             next_blocker,
@@ -5396,6 +5523,224 @@ async fn run_production_onion_outbound_envelope_send_attempt(
     }
 }
 
+async fn run_production_onion_endpoint_update_control_send_stored_endpoint_attempt(
+    app_data_root: impl AsRef<std::path::Path>,
+    _app_cache_root: impl AsRef<std::path::Path>,
+    state: &ProductionOnionClientRuntimeState,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+    local_rendezvous_endpoint: String,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionEndpointUpdateControlSendAttemptResult, String> {
+    let persistent_client_ready = run_production_onion_persistent_client_ready(state)?;
+    let mut blockers = Vec::new();
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut event_summary = Vec::new();
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let event_summary = Vec::new();
+    let next_blocker;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut endpoint_update_created = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let endpoint_update_created = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut encrypted_control_envelope_written = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let encrypted_control_envelope_written = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut send_intent_prepared = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let send_intent_prepared = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut send_attempt_started = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let send_attempt_started = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut send_attempt_succeeded = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let send_attempt_succeeded = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut key_material_exposed = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let key_material_exposed = false;
+
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    {
+        let _ = (
+            app_data_root,
+            _app_cache_root,
+            state,
+            profile,
+            passphrase,
+            message_number,
+            local_rendezvous_endpoint,
+        );
+        next_blocker = "ManualClientAttemptFeatureNotEnabled".to_string();
+        blockers.push(next_blocker.clone());
+        return Ok(ProductionOnionEndpointUpdateControlSendAttemptResult {
+            warning: "Endpoint update control send attempt is feature-disabled in this build. No stream dial, stream send, envelope I/O, or message transport was attempted.",
+            preparation_only: false,
+            manual_client_attempt_feature_compiled: false,
+            manual_network_permission_enabled: manual_network_permission,
+            persistent_client_ready,
+            endpoint_update_created,
+            encrypted_control_envelope_written,
+            send_intent_prepared,
+            send_attempt_started,
+            send_attempt_succeeded,
+            peer_endpoint_failure_recorded: false,
+            peer_endpoint_refresh_recommended: false,
+            retry_recommended_after_endpoint_refresh: false,
+            redacted_send_result_event_recorded: !event_summary.is_empty(),
+            event_summary,
+            next_blocker,
+            blockers,
+            raw_endpoint_returned: false,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            peer_proof_returned: false,
+            session_transcript_returned: false,
+            envelope_payload_returned: false,
+            endpoint_plaintext_exposed: false,
+            key_material_exposed,
+            network_io_attempted: false,
+            stream_accept_attempted: false,
+            stream_dial_attempted: false,
+            stream_read_write_attempted: false,
+            stream_send_attempted: false,
+            envelope_io_opened: false,
+            runtime_messaging_enabled: false,
+        });
+    }
+
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        use another_dimension_transport::{arti_adapter_spike, InMemoryTransportRuntimeEventSink};
+
+        if !manual_network_permission {
+            next_blocker = "ManualNetworkPermissionMissing".to_string();
+        } else if !persistent_client_ready {
+            next_blocker = "PersistentClientNotReady".to_string();
+        } else if message_number == 0 {
+            next_blocker = "EndpointUpdateMessageNumberMissing".to_string();
+        } else if state
+            .send_in_progress
+            .swap(true, std::sync::atomic::Ordering::AcqRel)
+        {
+            next_blocker = "OutboundEnvelopeSendAlreadyInProgress".to_string();
+        } else {
+            let export = run_production_endpoint_update_control_envelope_export(
+                app_data_root.as_ref(),
+                profile.clone(),
+                passphrase.clone(),
+                message_number,
+                local_rendezvous_endpoint,
+            );
+            match export {
+                Ok(export) => {
+                    endpoint_update_created = export.endpoint_update_created;
+                    encrypted_control_envelope_written = export.encrypted_control_envelope_written;
+                    key_material_exposed = export.key_material_exposed;
+                    let rendezvous_endpoint =
+                        run_production_pairing_session_remote_endpoint_for_transport(
+                            app_data_root.as_ref(),
+                            profile,
+                            passphrase,
+                        );
+                    match rendezvous_endpoint {
+                        Ok(rendezvous_endpoint) => {
+                            send_intent_prepared = true;
+                            let mut owner = match state.owner.lock() {
+                                Ok(mut guard) => guard.take(),
+                                Err(_) => None,
+                            };
+                            match owner.as_mut() {
+                                Some(owner) => {
+                                    let mut sink = InMemoryTransportRuntimeEventSink::default();
+                                    send_attempt_started = true;
+                                    let result = owner
+                                        .write_outbound_envelope_once(
+                                            arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                                            &rendezvous_endpoint,
+                                            export.envelope_payload.as_bytes(),
+                                            &mut sink,
+                                        )
+                                        .await;
+                                    event_summary
+                                        .extend(sink.events().iter().map(ToString::to_string));
+                                    match result {
+                                        Ok(()) => {
+                                            send_attempt_succeeded = true;
+                                            next_blocker = "AwaitingRemoteControlImport".to_string();
+                                        }
+                                        Err(error) => {
+                                            next_blocker = format!("{error:?}");
+                                        }
+                                    }
+                                }
+                                None => {
+                                    next_blocker = "PersistentClientOwnerUnavailable".to_string();
+                                }
+                            }
+                            if let Ok(mut guard) = state.owner.lock() {
+                                *guard = owner;
+                            }
+                        }
+                        Err(error) => {
+                            next_blocker = error;
+                        }
+                    }
+                }
+                Err(error) => {
+                    next_blocker = error;
+                }
+            }
+            state
+                .send_in_progress
+                .store(false, std::sync::atomic::Ordering::Release);
+        }
+
+        if next_blocker != "none" && !blockers.iter().any(|blocker| blocker == &next_blocker) {
+            blockers.push(next_blocker.clone());
+        }
+        Ok(ProductionOnionEndpointUpdateControlSendAttemptResult {
+            warning: "Endpoint update control send attempt boundary. With manual network permission and a retained Tor client, it writes an encrypted control envelope over the stored peer onion endpoint and returns only redacted status.",
+            preparation_only: false,
+            manual_client_attempt_feature_compiled: true,
+            manual_network_permission_enabled: manual_network_permission,
+            persistent_client_ready,
+            endpoint_update_created,
+            encrypted_control_envelope_written,
+            send_intent_prepared,
+            send_attempt_started,
+            send_attempt_succeeded,
+            peer_endpoint_failure_recorded: false,
+            peer_endpoint_refresh_recommended: false,
+            retry_recommended_after_endpoint_refresh: false,
+            redacted_send_result_event_recorded: !event_summary.is_empty(),
+            event_summary,
+            next_blocker,
+            blockers,
+            raw_endpoint_returned: false,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            peer_proof_returned: false,
+            session_transcript_returned: false,
+            envelope_payload_returned: false,
+            endpoint_plaintext_exposed: false,
+            key_material_exposed,
+            network_io_attempted: send_attempt_started,
+            stream_accept_attempted: false,
+            stream_dial_attempted: send_attempt_started,
+            stream_read_write_attempted: send_attempt_started,
+            stream_send_attempted: send_attempt_succeeded,
+            envelope_io_opened: send_attempt_started,
+            runtime_messaging_enabled: false,
+        })
+    }
+}
+
 fn run_production_profile_list(
     app_data_root: impl AsRef<std::path::Path>,
 ) -> Result<ProductionProfileListResult, String> {
@@ -5760,6 +6105,30 @@ fn run_production_pairing_session_remote_endpoint_for_transport(
 
 fn apply_peer_endpoint_send_failure_result(
     result: &mut ProductionOnionOutboundEnvelopeSendAttemptResult,
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+) {
+    if !result.send_attempt_started || result.send_attempt_succeeded {
+        return;
+    }
+    if run_production_pairing_session_remote_endpoint_mark_send_failure(
+        app_data_root,
+        profile,
+        passphrase,
+        message_number,
+    )
+    .is_ok()
+    {
+        result.peer_endpoint_failure_recorded = true;
+        result.peer_endpoint_refresh_recommended = true;
+        result.retry_recommended_after_endpoint_refresh = true;
+    }
+}
+
+fn apply_endpoint_update_control_send_failure_result(
+    result: &mut ProductionOnionEndpointUpdateControlSendAttemptResult,
     app_data_root: impl AsRef<std::path::Path>,
     profile: String,
     passphrase: String,
@@ -7693,6 +8062,7 @@ pub fn run() {
             production_onion_preflight_check,
             production_onion_outbound_envelope_send_attempt,
             production_onion_outbound_envelope_send_stored_endpoint_attempt,
+            production_onion_endpoint_update_control_send_stored_endpoint_attempt,
             production_onion_outbound_envelope_send_prepare,
             production_onion_remote_peer_authentication_prepare,
             production_onion_stream_adapter_closeout_prepare,
@@ -9060,6 +9430,78 @@ replay check: no replayed messages after message 2
         assert!(!serialized.contains("correct-passphrase"));
         assert!(!serialized.contains(format!("{}.onion", roundtrip.receiver_profile).as_str()));
         assert!(!serialized.contains("transport send attempt"));
+        assert!(!serialized.contains("ADENV1"));
+        assert!(!serialized.contains("ADPAIR2"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(all(target_os = "macos", feature = "manual-onion-client-attempt"))]
+    #[test]
+    fn production_onion_endpoint_update_control_send_requires_manual_permission() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+        let state = ProductionOnionClientRuntimeState::default();
+
+        let roundtrip = run_production_two_profile_roundtrip(
+            &data_root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "endpoint update send attempt".to_string(),
+            86_400,
+        )
+        .expect("two-profile roundtrip");
+        assert_eq!(roundtrip.message_number, 1);
+        assert!(roundtrip.encrypted_envelope_exported);
+
+        let result = tauri::async_runtime::block_on(
+            super::run_production_onion_endpoint_update_control_send_stored_endpoint_attempt(
+                &data_root,
+                &cache_root,
+                &state,
+                roundtrip.sender_profile.clone(),
+                "correct-passphrase".to_string(),
+                2,
+                format!("{}-rotated.onion", roundtrip.sender_profile),
+                false,
+            ),
+        )
+        .expect("endpoint update control send attempt");
+
+        assert!(!result.preparation_only);
+        assert!(result.manual_client_attempt_feature_compiled);
+        assert!(!result.manual_network_permission_enabled);
+        assert!(!result.endpoint_update_created);
+        assert!(!result.encrypted_control_envelope_written);
+        assert!(!result.send_intent_prepared);
+        assert!(!result.send_attempt_started);
+        assert!(!result.send_attempt_succeeded);
+        assert_eq!(result.next_blocker, "ManualNetworkPermissionMissing");
+        assert!(result
+            .blockers
+            .contains(&"ManualNetworkPermissionMissing".to_string()));
+        assert!(result.event_summary.is_empty());
+        assert!(!result.raw_endpoint_returned);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.peer_proof_returned);
+        assert!(!result.session_transcript_returned);
+        assert!(!result.envelope_payload_returned);
+        assert!(!result.endpoint_plaintext_exposed);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.stream_dial_attempted);
+        assert!(!result.stream_read_write_attempted);
+        assert!(!result.stream_send_attempted);
+        assert!(!result.envelope_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize endpoint update send");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("rotated.onion"));
+        assert!(!serialized.contains("endpoint update send attempt"));
         assert!(!serialized.contains("ADENV1"));
         assert!(!serialized.contains("ADPAIR2"));
         let _ = std::fs::remove_dir_all(root);

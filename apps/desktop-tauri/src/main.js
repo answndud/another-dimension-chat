@@ -3442,6 +3442,7 @@ function applyProductionActionState() {
   setActionButtonState(
     fields.sendProductionTwoProfileEndpointUpdate,
     busy ||
+      !manualNetworkPermission ||
       !hasTwoProfileSessionStatusInput ||
       !twoProfileSessionsReady ||
       !latestTwoProfileLocalOnionEndpoint(twoProfile) ||
@@ -3450,6 +3451,8 @@ function applyProductionActionState() {
       latestProductionTwoProfileSuccess.profileB !== twoProfile.profileB,
     busy
       ? "Wait for the active production action."
+      : !manualNetworkPermission
+        ? "Enable manual onion network permission before sending an endpoint update over onion."
       : !hasTwoProfileSessionStatusInput
         ? "Enter distinct Profile A, Profile B, and passphrase first."
       : !twoProfileSessionsReady
@@ -3460,7 +3463,7 @@ function applyProductionActionState() {
           latestProductionTwoProfileSuccess.profileA !== twoProfile.profileA ||
           latestProductionTwoProfileSuccess.profileB !== twoProfile.profileB
         ? "Send a stored-session message first."
-        : "Export and import an encrypted endpoint update control envelope.",
+        : "Send an encrypted endpoint update control envelope over the stored peer onion endpoint.",
     false,
   );
   setActionButtonState(
@@ -5085,31 +5088,33 @@ async function sendProductionTwoProfileEndpointUpdate() {
     setText(fields.productionTwoProfileWarning, "Send a stored-session message first so the endpoint update uses the next session message number.");
     return;
   }
+  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  if (!manualNetworkPermission) {
+    setProductionTwoProfileState("Endpoint update blocked");
+    setText(fields.productionTwoProfileWarning, "Enable manual onion network permission before sending an endpoint update over onion.");
+    return;
+  }
 
   const updateMessageNumber = latestMessage.messageNumber + 1;
   productionBusyAction = "two-profile-endpoint-update-control";
   setProductionTwoProfileState("Endpoint update running");
-  setText(fields.productionTwoProfileWarning, `Encrypting endpoint update control message #${updateMessageNumber}.`);
+  setText(fields.productionTwoProfileWarning, `Sending endpoint update control message #${updateMessageNumber} over onion.`);
   setText(fields.productionTwoProfileProfiles, `sender=${input.profileA} receiver=${input.profileB}`);
-  setText(fields.productionTwoProfileSession, "Using existing encrypted session control envelope");
-  setText(fields.productionTwoProfileMessageState, "No onion stream send attempted");
-  setText(fields.productionTwoProfileBoundary, "Endpoint update control export/import in progress");
+  setText(fields.productionTwoProfileSession, "Using existing encrypted session control envelope and stored peer endpoint");
+  setText(fields.productionTwoProfileMessageState, "Waiting for bounded onion endpoint update send attempt");
+  setText(fields.productionTwoProfileBoundary, "Endpoint update control send in progress with manual network permission");
   applyProductionActionState();
   if (fields.sendProductionTwoProfileEndpointUpdate) {
     fields.sendProductionTwoProfileEndpointUpdate.disabled = true;
   }
 
   try {
-    const exported = await invoke("production_endpoint_update_control_envelope_export", {
+    const result = await invoke("production_onion_endpoint_update_control_send_stored_endpoint_attempt", {
       profile: input.profileA,
       passphrase: input.passphrase,
       messageNumber: updateMessageNumber,
       localRendezvousEndpoint: localEndpoint,
-    });
-    const imported = await invoke("production_endpoint_update_control_envelope_import", {
-      profile: input.profileB,
-      passphrase: input.passphrase,
-      envelopePayload: exported.envelope_payload,
+      manualNetworkPermission,
     });
     const status = await invoke("production_two_profile_session_status", {
       profileA: input.profileA,
@@ -5118,19 +5123,27 @@ async function sendProductionTwoProfileEndpointUpdate() {
     });
     rememberTwoProfileSessionStatus(input, status);
     renderProductionTwoProfileSessionStatusResult(status);
-    setProductionTwoProfileState("Endpoint update applied");
-    setText(fields.productionTwoProfileWarning, imported.warning);
+    setProductionTwoProfileState(
+      result.send_attempt_succeeded
+        ? "Endpoint update sent"
+        : result.peer_endpoint_refresh_recommended
+          ? "Peer endpoint refresh needed"
+          : "Endpoint update blocked",
+    );
+    setText(fields.productionTwoProfileWarning, result.warning);
     setText(
       fields.productionTwoProfileSession,
-      `control_message=${updateMessageNumber} exported=${exported.encrypted_control_envelope_written} imported=${imported.endpoint_update_applied}`,
+      `control_message=${updateMessageNumber} created=${result.endpoint_update_created} encrypted=${result.encrypted_control_envelope_written} intent=${result.send_intent_prepared}`,
     );
     setText(
       fields.productionTwoProfileMessageState,
-      `replay=${imported.replay_accepted} endpoint_state=${imported.remote_endpoint_state_written} stale_cleared=${imported.stale_endpoint_status_cleared}`,
+      result.peer_endpoint_refresh_recommended
+        ? `started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} next=refresh peer endpoints, then retry control message #${updateMessageNumber}`
+        : `started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} next=${result.next_blocker}`,
     );
     setText(
       fields.productionTwoProfileBoundary,
-      `payload_returned=${exported.endpoint_payload_returned || imported.endpoint_payload_returned} endpoint_plaintext=${exported.endpoint_plaintext_exposed || imported.endpoint_plaintext_exposed} key_material=${exported.key_material_exposed || imported.key_material_exposed || status.key_material_exposed} network=${exported.network_send_attempted || imported.network_receive_attempted || status.network_io_attempted} transport=${exported.transport_io_opened || imported.transport_io_opened || status.transport_io_opened} runtime=${exported.runtime_messaging_enabled || imported.runtime_messaging_enabled || status.runtime_messaging_enabled}`,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} endpoint_failure_recorded=${result.peer_endpoint_failure_recorded} refresh=${result.peer_endpoint_refresh_recommended} retry_after_refresh=${result.retry_recommended_after_endpoint_refresh} events=${result.event_summary.join("; ") || "none"} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} peer_proof=${result.peer_proof_returned} transcript=${result.session_transcript_returned} envelope_payload=${result.envelope_payload_returned} endpoint_plaintext=${result.endpoint_plaintext_exposed} key_material=${result.key_material_exposed || status.key_material_exposed} network=${result.network_io_attempted || status.network_io_attempted} dial=${result.stream_dial_attempted} read_write=${result.stream_read_write_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled || status.runtime_messaging_enabled}`,
     );
   } catch (error) {
     setProductionTwoProfileState("Endpoint update failed");
@@ -5523,7 +5536,7 @@ async function attemptOnionInboundEnvelopeReceive() {
     setText(fields.onionPreflightWarning, result.warning);
     setText(
       fields.onionInboundEnvelopeReceiveAttempt,
-      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} inbound_prepared=${result.inbound_stream_preparation_ready} rend_stream=${result.inbound_rend_request_stream_ready} rend_accept_attempted=${result.inbound_rend_request_accept_attempted} rend_accepted=${result.inbound_rend_request_accepted} stream_requests=${result.accepted_stream_request_stream_ready} stream_accept_attempted=${result.stream_request_accept_attempted} stream_accepted=${result.stream_request_accepted} stream_read_attempted=${result.stream_read_attempted} stream_bytes=${result.stream_bytes_read} started=${result.receive_attempt_started} succeeded=${result.receive_attempt_succeeded} received_envelope=${result.received_envelope_ready} import_attempted=${result.inbound_import_attempted} event_recorded=${result.redacted_receive_result_event_recorded} events=${result.event_summary.join("; ") || "none"} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} stream_id=${result.stream_id_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} accept=${result.stream_accept_attempted} read_write=${result.stream_read_write_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} inbound_prepared=${result.inbound_stream_preparation_ready} rend_stream=${result.inbound_rend_request_stream_ready} rend_accept_attempted=${result.inbound_rend_request_accept_attempted} rend_accepted=${result.inbound_rend_request_accepted} stream_requests=${result.accepted_stream_request_stream_ready} stream_accept_attempted=${result.stream_request_accept_attempted} stream_accepted=${result.stream_request_accepted} stream_read_attempted=${result.stream_read_attempted} stream_bytes=${result.stream_bytes_read} started=${result.receive_attempt_started} succeeded=${result.receive_attempt_succeeded} received_envelope=${result.received_envelope_ready} import_attempted=${result.inbound_import_attempted} control_imported=${result.control_envelope_imported} endpoint_update=${result.endpoint_update_applied} stale_cleared=${result.stale_endpoint_status_cleared} event_recorded=${result.redacted_receive_result_event_recorded} events=${result.event_summary.join("; ") || "none"} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} stream_id=${result.stream_id_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} accept=${result.stream_accept_attempted} read_write=${result.stream_read_write_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
     );
   } catch (error) {
     setOnionInboundStreamState("Envelope receive attempt failed");
@@ -6003,25 +6016,45 @@ async function runProductionTwoProfileOnionReceiveAttempt() {
     setText(fields.onionPreflightWarning, result.warning);
     setText(
       fields.onionInboundEnvelopeReceiveAttempt,
-      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} inbound_prepared=${result.inbound_stream_preparation_ready} rend_stream=${result.inbound_rend_request_stream_ready} rend_accept_attempted=${result.inbound_rend_request_accept_attempted} rend_accepted=${result.inbound_rend_request_accepted} stream_requests=${result.accepted_stream_request_stream_ready} stream_accept_attempted=${result.stream_request_accept_attempted} stream_accepted=${result.stream_request_accepted} stream_read_attempted=${result.stream_read_attempted} stream_bytes=${result.stream_bytes_read} started=${result.receive_attempt_started} succeeded=${result.receive_attempt_succeeded} received_envelope=${result.received_envelope_ready} import_attempted=${result.inbound_import_attempted} event_recorded=${result.redacted_receive_result_event_recorded} events=${result.event_summary.join("; ") || "none"} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} stream_id=${result.stream_id_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} accept=${result.stream_accept_attempted} read_write=${result.stream_read_write_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} inbound_prepared=${result.inbound_stream_preparation_ready} rend_stream=${result.inbound_rend_request_stream_ready} rend_accept_attempted=${result.inbound_rend_request_accept_attempted} rend_accepted=${result.inbound_rend_request_accepted} stream_requests=${result.accepted_stream_request_stream_ready} stream_accept_attempted=${result.stream_request_accept_attempted} stream_accepted=${result.stream_request_accepted} stream_read_attempted=${result.stream_read_attempted} stream_bytes=${result.stream_bytes_read} started=${result.receive_attempt_started} succeeded=${result.receive_attempt_succeeded} received_envelope=${result.received_envelope_ready} import_attempted=${result.inbound_import_attempted} control_imported=${result.control_envelope_imported} endpoint_update=${result.endpoint_update_applied} stale_cleared=${result.stale_endpoint_status_cleared} event_recorded=${result.redacted_receive_result_event_recorded} events=${result.event_summary.join("; ") || "none"} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} stream_id=${result.stream_id_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} accept=${result.stream_accept_attempted} read_write=${result.stream_read_write_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
     );
     setProductionTwoProfileState(
-      result.receive_attempt_succeeded ? "Receive mode imported message" : "Receive mode waiting",
+      result.endpoint_update_applied
+        ? "Receive mode updated endpoint"
+        : result.receive_attempt_succeeded
+          ? "Receive mode imported message"
+          : "Receive mode waiting",
     );
     setText(fields.productionTwoProfileWarning, result.warning);
     setText(
       fields.productionTwoProfileSession,
-      `receiver=${profile} attempt=${attempt} inbound_prepared=${result.inbound_stream_preparation_ready} received=${result.received_envelope_ready}`,
+      `receiver=${profile} attempt=${attempt} inbound_prepared=${result.inbound_stream_preparation_ready} received=${result.received_envelope_ready} control_imported=${result.control_envelope_imported}`,
     );
     setText(
       fields.productionTwoProfileMessageState,
-      `attempt=${attempt} started=${result.receive_attempt_started} succeeded=${result.receive_attempt_succeeded} import=${result.inbound_import_attempted} next=${result.next_blocker}`,
+      `attempt=${attempt} started=${result.receive_attempt_started} succeeded=${result.receive_attempt_succeeded} import=${result.inbound_import_attempted} control_imported=${result.control_envelope_imported} endpoint_update=${result.endpoint_update_applied} next=${result.next_blocker}`,
     );
     setText(
       fields.productionTwoProfileBoundary,
-      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} events=${result.event_summary.join("; ") || "none"} blockers=${result.blockers.join("; ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} stream_id=${result.stream_id_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} accept=${result.stream_accept_attempted} read_write=${result.stream_read_write_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} endpoint_update=${result.endpoint_update_applied} stale_cleared=${result.stale_endpoint_status_cleared} events=${result.event_summary.join("; ") || "none"} blockers=${result.blockers.join("; ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} stream_id=${result.stream_id_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} accept=${result.stream_accept_attempted} read_write=${result.stream_read_write_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
     );
-    if (result.receive_attempt_succeeded || result.received_envelope_ready) {
+    if (result.endpoint_update_applied) {
+      const input = productionTwoProfileInput();
+      if (input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase) {
+        const status = await invoke("production_two_profile_session_status", {
+          profileA: input.profileA,
+          profileB: input.profileB,
+          passphrase: input.passphrase,
+        });
+        rememberTwoProfileSessionStatus(input, status);
+        renderProductionTwoProfileSessionStatusResult(status);
+        renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
+      }
+      setText(
+        fields.productionTwoProfileWarning,
+        `Receive attempt #${attempt} imported an encrypted endpoint update for ${profile}. Peer endpoint state refreshed.`,
+      );
+    } else if (result.receive_attempt_succeeded || result.received_envelope_ready) {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
       if (selectLatestReceivedReplyForProfile(profile, { focusReply: "none" })) {
         setProductionTwoProfileState("Receive mode imported message");
