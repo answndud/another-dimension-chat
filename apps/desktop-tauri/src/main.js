@@ -302,6 +302,9 @@ const fields = {
   saveProductionTwoProfileOnionSessions: document.querySelector(
     "#save-production-two-profile-onion-sessions",
   ),
+  completeProductionTwoProfileOnionHandshake: document.querySelector(
+    "#complete-production-two-profile-onion-handshake",
+  ),
   runProductionTwoProfileRealOnionRoundtrip: document.querySelector(
     "#run-production-two-profile-real-onion-roundtrip",
   ),
@@ -3213,6 +3216,16 @@ function applyProductionActionState() {
     false,
   );
   setActionButtonState(
+    fields.completeProductionTwoProfileOnionHandshake,
+    busy || !hasTwoProfileSessionStatusInput,
+    busy
+      ? "Wait for the active production action."
+      : !hasTwoProfileSessionStatusInput
+        ? "Enter distinct Profile A, Profile B, and passphrase first."
+        : "Complete Alice/Bob local handshake and persist transport state.",
+    false,
+  );
+  setActionButtonState(
     fields.runProductionTwoProfileRealOnionRoundtrip,
     busy || !hasTwoProfileInput || !hasMessageRetentionPolicy || !manualNetworkPermission,
     busy
@@ -4646,6 +4659,129 @@ async function saveProductionTwoProfileOnionSessions() {
     productionBusyAction = null;
     if (fields.saveProductionTwoProfileOnionSessions) {
       fields.saveProductionTwoProfileOnionSessions.disabled = false;
+    }
+    applyProductionActionState();
+  }
+}
+
+async function completeProductionTwoProfileOnionHandshake() {
+  const { profileA, profileB, passphrase } = productionTwoProfileInput();
+  if (!profileA || !profileB || profileA === profileB || !passphrase) {
+    setProductionTwoProfileState("Onion handshake needs profiles");
+    setText(fields.productionTwoProfileWarning, "Enter two distinct profiles and passphrase before completing the onion handshake.");
+    return;
+  }
+
+  productionBusyAction = "two-profile-onion-handshake";
+  setProductionTwoProfileState("Onion handshake running");
+  setText(fields.productionTwoProfileWarning, "Completing Alice/Bob handshake from stored onion session drafts.");
+  setText(fields.productionTwoProfileProfiles, `a=${profileA} b=${profileB}`);
+  setText(fields.productionTwoProfileSession, "Creating init, reply, finish, and importing finish locally");
+  setText(fields.productionTwoProfileMessageState, "No network or message transport attempted");
+  setText(fields.productionTwoProfileBoundary, "Handshake in progress");
+  applyProductionActionState();
+  if (fields.completeProductionTwoProfileOnionHandshake) {
+    fields.completeProductionTwoProfileOnionHandshake.disabled = true;
+  }
+
+  try {
+    const profileAInit = await invoke("production_handshake_init_export", {
+      profile: profileA,
+      passphrase,
+    });
+    let senderProfile = profileA;
+    let receiverProfile = profileB;
+    let init = profileAInit;
+    let profileBInit = null;
+    if (!profileAInit.output_payload_created) {
+      profileBInit = await invoke("production_handshake_init_export", {
+        profile: profileB,
+        passphrase,
+      });
+      if (!profileBInit.output_payload_created) {
+        throw new Error("handshake init was not created for either profile");
+      }
+      senderProfile = profileB;
+      receiverProfile = profileA;
+      init = profileBInit;
+    }
+
+    const reply = await invoke("production_handshake_reply_export", {
+      profile: receiverProfile,
+      passphrase,
+      initPayload: init.output_payload,
+    });
+    const finish = await invoke("production_handshake_finish_export", {
+      profile: senderProfile,
+      passphrase,
+      replyPayload: reply.output_payload,
+    });
+    const finishImport = await invoke("production_handshake_finish_import", {
+      profile: receiverProfile,
+      passphrase,
+      finishPayload: finish.output_payload,
+    });
+    const status = await invoke("production_two_profile_session_status", {
+      profileA,
+      profileB,
+      passphrase,
+    });
+
+    if (fields.productionProfileName) {
+      fields.productionProfileName.value = senderProfile;
+      fields.productionProfileName.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    if (fields.productionProfileSelector) {
+      fields.productionProfileSelector.value = senderProfile;
+    }
+    setHandshakePayload(fields.productionHandshakeInitPayload, init.output_payload);
+    setHandshakePayload(fields.productionHandshakeReplyPayload, reply.output_payload);
+    setHandshakePayload(fields.productionHandshakeFinishPayload, finish.output_payload);
+    setText(fields.productionHandshakeState, "Two-profile handshake completed");
+    rememberTwoProfileSessionStatus({ profileA, profileB, passphrase }, status);
+    renderProductionTwoProfileSessionStatusResult(status);
+    setProductionPairingState(
+      status.both_ready_for_message_envelope ? "Onion handshake message-ready" : "Onion handshake needs review",
+    );
+    setText(
+      fields.productionPairingWarning,
+      status.both_ready_for_message_envelope
+        ? "Handshake transport state persisted for both local profiles."
+        : "Handshake completed but message-ready state needs review.",
+    );
+    setProductionTwoProfileState(
+      status.both_ready_for_message_envelope ? "Onion handshake message-ready" : "Onion handshake needs review",
+    );
+    setText(
+      fields.productionTwoProfileWarning,
+      status.both_ready_for_message_envelope
+        ? "Alice/Bob sessions are message-ready. Send a stored-session message next."
+        : "Handshake completed, but session status is not fully message-ready.",
+    );
+    setText(fields.productionTwoProfileProfiles, `sender=${senderProfile} receiver=${receiverProfile}`);
+    setText(
+      fields.productionTwoProfileSession,
+      `init=${init.output_payload_created} reply=${reply.output_payload_created} finish=${finish.output_payload_created} import=${finishImport.transport_state_persisted} both_ready=${status.both_ready_for_message_envelope}`,
+    );
+    setText(fields.productionTwoProfileMessageState, "No message transport attempted");
+    setText(
+      fields.productionTwoProfileBoundary,
+      `a_init=${profileAInit.output_payload_created} b_init=${profileBInit?.output_payload_created ?? false} reply_state=${reply.state_written} finish_state=${finish.state_written} finish_import=${finishImport.transport_state_created} a_ready=${status.profile_a_ready_for_message_envelope} b_ready=${status.profile_b_ready_for_message_envelope} path=${status.store_path_returned} passphrase=${status.passphrase_retained} key_material=${profileAInit.key_material_exposed || Boolean(profileBInit?.key_material_exposed) || reply.key_material_exposed || finish.key_material_exposed || finishImport.key_material_exposed || status.key_material_exposed} network=false transport=${profileAInit.transport_io_opened || Boolean(profileBInit?.transport_io_opened) || reply.transport_io_opened || finish.transport_io_opened || finishImport.transport_io_opened || status.transport_io_opened} runtime=${profileAInit.runtime_messaging_enabled || Boolean(profileBInit?.runtime_messaging_enabled) || reply.runtime_messaging_enabled || finish.runtime_messaging_enabled || finishImport.runtime_messaging_enabled || status.runtime_messaging_enabled}`,
+    );
+    setProductionFollowupActions(
+      true,
+      status.both_ready_for_message_envelope
+        ? "Next: send a stored-session message."
+        : "Next: check session status and retry handshake if needed.",
+    );
+  } catch (error) {
+    setProductionTwoProfileState("Onion handshake failed");
+    setText(fields.productionTwoProfileWarning, `Onion handshake failed without returning secrets. ${error}`);
+    setText(fields.productionTwoProfileBoundary, "Failed before message transport.");
+  } finally {
+    productionBusyAction = null;
+    if (fields.completeProductionTwoProfileOnionHandshake) {
+      fields.completeProductionTwoProfileOnionHandshake.disabled = false;
     }
     applyProductionActionState();
   }
@@ -7280,6 +7416,13 @@ if (fields.saveProductionTwoProfileOnionSessions) {
   fields.saveProductionTwoProfileOnionSessions.addEventListener(
     "click",
     saveProductionTwoProfileOnionSessions,
+  );
+}
+
+if (fields.completeProductionTwoProfileOnionHandshake) {
+  fields.completeProductionTwoProfileOnionHandshake.addEventListener(
+    "click",
+    completeProductionTwoProfileOnionHandshake,
   );
 }
 
