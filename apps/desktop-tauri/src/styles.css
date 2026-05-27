@@ -200,7 +200,8 @@ h1 {
 }
 
 .boundary-details summary,
-.advanced-panel summary {
+.advanced-panel summary,
+.chat-setup-controls summary {
   width: fit-content;
   min-height: 38px;
   border: 1px solid var(--panel-border);
@@ -214,6 +215,7 @@ h1 {
 
 .boundary-details summary:hover,
 .advanced-panel summary:hover,
+.chat-setup-controls summary:hover,
 button:hover:not(:disabled) {
   border-color: var(--accent-cyan);
 }
@@ -634,7 +636,42 @@ textarea[readonly] {
   order: 6;
 }
 
+.production-workflow[aria-labelledby="production-two-profile-title"] > .chat-setup-controls {
+  order: 6;
+  margin-top: -2px;
+}
+
+.chat-setup-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.chat-setup-controls[open] {
+  border-top: 1px solid var(--panel-border);
+  padding-top: 10px;
+}
+
+.chat-primary-actions {
+  align-items: center;
+  border: 1px solid var(--panel-border);
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel-strong) 78%, var(--bg));
+}
+
+.chat-primary-actions button {
+  min-width: 132px;
+}
+
+.chat-primary-actions #run-production-two-profile-message-roundtrip,
+.chat-primary-actions #start-production-two-profile-onion-receive {
+  border-color: var(--accent-cyan);
+}
+
 .production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-readiness {
+  margin-left: auto;
+}
+
+.chat-primary-actions #production-two-profile-readiness {
   margin-left: auto;
 }
 
