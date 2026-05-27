@@ -164,6 +164,16 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
       manualButtonLabel: "Open manual tools",
     };
   }
+  if (receivedCopyPresent) {
+    return {
+      nextAction: `Received: message #${entry.messageNumber} is ready. Next: write reply from ${entry.receiver} to ${entry.sender}.`,
+      rowLabel: `action: reply from ${entry.receiver}`,
+      state: "is-reply",
+      focusTarget: "reply-message",
+      manualTarget: null,
+      manualButtonLabel: "Open manual tools",
+    };
+  }
   if (sentCopyPresent && senderEnvelopeSlotPresent) {
     return {
       nextAction: `Next: import envelope for message #${entry.messageNumber} into ${entry.receiver}.`,
