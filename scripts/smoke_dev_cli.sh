@@ -2,6 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# shellcheck source=build_cache_env.sh
+source "$ROOT_DIR/scripts/build_cache_env.sh"
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/another-dimension-smoke.XXXXXX")"
 AD_HOME="$WORK_DIR/home"
 ALICE_PAIR="$WORK_DIR/alice.pair"

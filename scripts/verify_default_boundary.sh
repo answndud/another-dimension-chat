@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# shellcheck source=build_cache_env.sh
+source "$ROOT_DIR/scripts/build_cache_env.sh"
+
 if grep -R -n -E '^default[[:space:]]*=.*dev-insecure' \
   "$ROOT_DIR/Cargo.toml" \
   "$ROOT_DIR/apps/cli/Cargo.toml" \
