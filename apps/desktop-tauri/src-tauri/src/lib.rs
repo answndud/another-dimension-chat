@@ -351,6 +351,7 @@ pub struct ProductionMessageReceivedExportResult {
     received_message_record_present: bool,
     received_message_record_decodable: bool,
     received_message_matches_session: bool,
+    expired_received_message_purged: bool,
     received_message: String,
     created_at_ms: u128,
     message_ttl_seconds: u64,
@@ -1863,13 +1864,38 @@ fn run_production_message_received_export(
     passphrase: String,
     message_number: u64,
 ) -> Result<ProductionMessageReceivedExportResult, String> {
-    use another_dimension_core::production::production_message_received_export;
+    use another_dimension_core::production::{
+        production_message_received_export, production_message_received_status,
+    };
     use another_dimension_storage::production::ProfilePassphrase;
 
     let profile = sanitize_production_profile(profile)?;
     let passphrase = ProfilePassphrase::new(passphrase.trim())
         .map_err(|_| "invalid production profile passphrase")?;
     let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let status = production_message_received_status(&store_path, profile.clone(), &passphrase, message_number)
+        .map_err(|_| "received message status failed")?;
+    if status.expired_received_message_purged() {
+        return Ok(ProductionMessageReceivedExportResult {
+            warning: "received message expired and was purged after local unlock; plaintext was not returned",
+            storage_opened: status.storage_opened(),
+            runtime_material_reconstructable: status.runtime_material_reconstructable(),
+            received_message_record_present: status.received_message_record_present(),
+            received_message_record_decodable: status.received_message_record_decodable(),
+            received_message_matches_session: status.received_message_matches_session(),
+            expired_received_message_purged: true,
+            received_message: String::new(),
+            created_at_ms: 0,
+            message_ttl_seconds: 0,
+            expires_at_ms: None,
+            expired: true,
+            plaintext_returned_after_unlock: false,
+            key_material_exposed: status.key_material_exposed(),
+            network_receive_attempted: status.network_receive_attempted(),
+            transport_io_opened: status.transport_io_opened(),
+            runtime_messaging_enabled: status.runtime_messaging_enabled(),
+        });
+    }
     let export =
         production_message_received_export(&store_path, profile, &passphrase, message_number)
             .map_err(|_| "received message export failed")?;
@@ -1883,6 +1909,7 @@ fn run_production_message_received_export(
         received_message_record_present: export.received_message_record_present(),
         received_message_record_decodable: export.received_message_record_decodable(),
         received_message_matches_session: export.received_message_matches_session(),
+        expired_received_message_purged: false,
         received_message,
         created_at_ms: export.created_at_ms(),
         message_ttl_seconds: export.ttl_seconds(),
