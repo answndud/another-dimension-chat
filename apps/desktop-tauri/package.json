@@ -8,7 +8,7 @@
     "build": "vite build",
     "test:state": "node --test src/action-state.test.js src/message-envelope-slots.test.js src/transcript-export.test.js src/transcript-retention.test.js",
     "preview": "vite preview --host 127.0.0.1 --port 1420 --strictPort",
-    "tauri": "tauri"
+    "tauri": "node scripts/with-cargo-target.mjs tauri"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",

@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_DIR="$ROOT_DIR/apps/desktop-tauri"
+
+# shellcheck source=build_cache_env.sh
+source "$ROOT_DIR/scripts/build_cache_env.sh"
 LOG_FILE="$(mktemp "${TMPDIR:-/tmp}/another-dimension-tauri-smoke.XXXXXX")"
 RESULT_FILE=""
 PROFILE_SUFFIX="$(date +%s)$$"
@@ -19,7 +22,9 @@ cleanup() {
     kill "$TAURI_PID" 2>/dev/null || true
     wait "$TAURI_PID" 2>/dev/null || true
   fi
-  pkill -f "$APP_DIR/src-tauri/target/debug/$APP_PROCESS" 2>/dev/null || true
+  if [[ -n "${CARGO_TARGET_DIR:-}" ]]; then
+    pkill -f "$CARGO_TARGET_DIR/debug/$APP_PROCESS" 2>/dev/null || true
+  fi
   if [[ "$status" -eq 0 ]]; then
     rm -f "$LOG_FILE"
   else
