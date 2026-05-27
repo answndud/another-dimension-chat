@@ -3901,6 +3901,7 @@ async function unlockProductionProfile() {
     await loadProductionMessageRetentionPreference(profile, passphrase, { quiet: true });
     await loadProductionProfileList();
     await restoreProductionSessionAfterUnlock(profile, passphrase);
+    await refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase);
   } catch (error) {
     setProductionProfileState("Profile unlock failed");
     setText(fields.productionProfileWarning, String(error));
@@ -3913,6 +3914,50 @@ async function unlockProductionProfile() {
       fields.unlockProductionProfile.disabled = false;
     }
     applyProductionActionState();
+  }
+}
+
+async function refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase) {
+  const unlockedProfile = String(profile ?? "").trim().toLowerCase();
+  const input = productionTwoProfileInput();
+  if (
+    !unlockedProfile ||
+    !passphrase ||
+    !input.profileA ||
+    !input.profileB ||
+    input.profileA === input.profileB ||
+    !input.passphrase ||
+    (input.profileA !== unlockedProfile && input.profileB !== unlockedProfile)
+  ) {
+    return false;
+  }
+
+  try {
+    const result = await invoke("production_two_profile_session_status", {
+      profileA: input.profileA,
+      profileB: input.profileB,
+      passphrase: input.passphrase,
+    });
+    rememberTwoProfileSessionStatus(input, result);
+    renderProductionTwoProfileSessionStatusResult(result);
+    if (result.both_ready_for_message_envelope) {
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+      const currentInput = productionTwoProfileInput();
+      setProductionTwoProfileState("Sessions recovered after profile unlock");
+      setText(
+        fields.productionTwoProfileWarning,
+        currentInput.message
+          ? `Stored sessions recovered for ${currentInput.profileA} -> ${currentInput.profileB}. Run stored-session message.`
+          : `Stored sessions recovered for ${currentInput.profileA} -> ${currentInput.profileB}. Write a message to continue.`,
+      );
+      return true;
+    }
+    setProductionTwoProfileState("Sessions incomplete after profile unlock");
+    setText(fields.productionTwoProfileWarning, twoProfileSessionRebuildMessage(input));
+    setProductionFollowupActions(true, `Next: ${twoProfileSessionRebuildMessage(input)}`);
+    return false;
+  } catch {
+    return false;
   }
 }
 
