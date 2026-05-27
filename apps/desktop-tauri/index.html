@@ -370,34 +370,12 @@
             </select>
             <label class="loop-label" for="production-two-profile-message">Write message</label>
             <textarea id="production-two-profile-message" rows="3" placeholder="Message from alice to bob">hello between app-data profiles</textarea>
-            <div class="loop-actions">
-              <button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>
+            <div class="loop-actions chat-primary-actions">
               <button id="check-production-two-profile-session-status-inline" type="button">
                 Check sessions
               </button>
               <button id="run-production-two-profile-message-roundtrip" type="button">
-                Run stored-session message
-              </button>
-              <button id="start-production-two-profile-onion-bootstrap" type="button">
-                Start Tor bootstrap
-              </button>
-              <button id="prepare-production-two-profile-onion-key" type="button">
-                Prepare onion key
-              </button>
-              <button id="launch-production-two-profile-onion-endpoint" type="button">
-                Launch onion endpoint
-              </button>
-              <button id="prepare-production-two-profile-onion-pairing" type="button">
-                Prepare onion pairing
-              </button>
-              <button id="save-production-two-profile-onion-sessions" type="button">
-                Save onion sessions
-              </button>
-              <button id="complete-production-two-profile-onion-handshake" type="button">
-                Complete onion handshake
-              </button>
-              <button id="send-production-two-profile-latest-onion-envelope" type="button">
-                Send latest over onion
+                Send
               </button>
               <button id="start-production-two-profile-onion-receive" type="button">
                 Start receiving
@@ -405,13 +383,40 @@
               <button id="stop-production-two-profile-onion-receive" type="button">
                 Stop receiving
               </button>
-              <button id="run-production-two-profile-real-onion-roundtrip" type="button">
-                Run real onion roundtrip
-              </button>
               <p id="production-two-profile-readiness" class="action-readiness" aria-live="polite">
                 Blocked: passphrase required
               </p>
             </div>
+            <details class="chat-setup-controls">
+              <summary>Onion setup</summary>
+              <div class="loop-actions">
+                <button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>
+                <button id="start-production-two-profile-onion-bootstrap" type="button">
+                  Start Tor bootstrap
+                </button>
+                <button id="prepare-production-two-profile-onion-key" type="button">
+                  Prepare onion key
+                </button>
+                <button id="launch-production-two-profile-onion-endpoint" type="button">
+                  Launch onion endpoint
+                </button>
+                <button id="prepare-production-two-profile-onion-pairing" type="button">
+                  Prepare onion pairing
+                </button>
+                <button id="save-production-two-profile-onion-sessions" type="button">
+                  Save onion sessions
+                </button>
+                <button id="complete-production-two-profile-onion-handshake" type="button">
+                  Complete onion handshake
+                </button>
+                <button id="send-production-two-profile-latest-onion-envelope" type="button">
+                  Send latest over onion
+                </button>
+                <button id="run-production-two-profile-real-onion-roundtrip" type="button">
+                  Run real onion roundtrip
+                </button>
+              </div>
+            </details>
             <p id="production-two-profile-state" class="demo-state" aria-live="polite">
               Two-profile roundtrip idle
             </p>
