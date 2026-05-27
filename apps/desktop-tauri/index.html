@@ -389,6 +389,14 @@
                 Blocked: passphrase required
               </p>
             </div>
+            <div class="chat-compose-tools" aria-label="Compose tools">
+              <button id="swap-two-profile-direction" type="button" class="flow-control is-secondary">
+                Swap
+              </button>
+              <button id="edit-two-profile-message" type="button" class="flow-control is-secondary">
+                Edit
+              </button>
+            </div>
             <details class="chat-setup-controls">
               <summary>Onion setup</summary>
               <div class="loop-actions">
@@ -469,7 +477,8 @@
             </ol>
             <label class="loop-label" for="production-two-profile-transcript-export">Conversation TSV</label>
             <textarea id="production-two-profile-transcript-export" rows="5" readonly></textarea>
-            <div class="followup-actions" aria-label="Post-roundtrip actions">
+            <details class="followup-actions" aria-label="Post-roundtrip actions">
+              <summary>Advanced follow-up</summary>
               <p id="production-two-profile-next-step">Next actions unlock after a completed local roundtrip.</p>
               <div class="loop-actions">
                 <button id="open-manual-production-tools" type="button" class="flow-control is-secondary">
@@ -478,14 +487,8 @@
                 <button id="focus-local-diagnostic" type="button" class="flow-control is-secondary">
                   Review diagnostic
                 </button>
-                <button id="swap-two-profile-direction" type="button" class="flow-control is-secondary">
-                  Swap direction
-                </button>
-                <button id="edit-two-profile-message" type="button" class="flow-control is-secondary">
-                  Edit message
-                </button>
               </div>
-            </div>
+            </details>
           </section>
           <div>
             <p class="eyebrow">Local diagnostic only</p>

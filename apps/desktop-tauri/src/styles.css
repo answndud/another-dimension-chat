@@ -202,7 +202,8 @@ h1 {
 .boundary-details summary,
 .advanced-panel summary,
 .chat-setup-controls summary,
-.chat-diagnostics summary {
+.chat-diagnostics summary,
+.followup-actions summary {
   width: fit-content;
   min-height: 38px;
   border: 1px solid var(--panel-border);
@@ -218,6 +219,7 @@ h1 {
 .advanced-panel summary:hover,
 .chat-setup-controls summary:hover,
 .chat-diagnostics summary:hover,
+.followup-actions summary:hover,
 button:hover:not(:disabled) {
   border-color: var(--accent-cyan);
 }
@@ -675,6 +677,10 @@ textarea[readonly] {
   order: 6;
 }
 
+.production-workflow[aria-labelledby="production-two-profile-title"] > .chat-compose-tools {
+  order: 6;
+}
+
 .production-workflow[aria-labelledby="production-two-profile-title"] > .chat-setup-controls {
   order: 6;
   margin-top: -2px;
@@ -704,6 +710,21 @@ textarea[readonly] {
 .chat-primary-actions #run-production-two-profile-message-roundtrip,
 .chat-primary-actions #start-production-two-profile-onion-receive {
   border-color: var(--accent-cyan);
+}
+
+.chat-compose-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: -4px;
+}
+
+.chat-compose-tools button {
+  min-width: 72px;
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 11px;
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-readiness {
@@ -834,6 +855,16 @@ textarea[readonly] {
   border: 1px solid var(--panel-border);
   padding: 12px;
   background: var(--panel);
+}
+
+.followup-actions:not([open]) {
+  border-color: transparent;
+  padding: 0;
+  background: transparent;
+}
+
+.followup-actions[open] {
+  border-top-color: var(--panel-border);
 }
 
 .followup-actions p {
