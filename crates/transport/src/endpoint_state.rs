@@ -366,6 +366,22 @@ impl EndpointUpdateControlPlaintext {
         }
     }
 
+    pub fn decode(value: &[u8]) -> Result<Self, EndpointLifecycleError> {
+        let value = std::str::from_utf8(value)
+            .map_err(|_| EndpointLifecycleError::InvalidControlEnvelope)?;
+        let parts = value.trim().split('|').collect::<Vec<_>>();
+        if parts.len() != 2 || parts[0] != Self::SCHEMA {
+            return Err(EndpointLifecycleError::InvalidControlEnvelope);
+        }
+        let new_endpoint = OnionServiceEndpoint::new(parts[1])
+            .map_err(|_| EndpointLifecycleError::InvalidControlEnvelope)?;
+        Ok(Self { new_endpoint })
+    }
+
+    pub fn new_endpoint(&self) -> &OnionServiceEndpoint {
+        &self.new_endpoint
+    }
+
     pub fn encode(&self) -> Vec<u8> {
         format!("{}|{}", Self::SCHEMA, self.new_endpoint.as_str()).into_bytes()
     }
