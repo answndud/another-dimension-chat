@@ -1146,7 +1146,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
     })?;
 
     println!(
-        "production message local roundtrip completed: selected_message_number={} auto_message_number={} auto_counter_written={} existing_message_slot_skipped={} message_ttl_seconds={} sender_runtime_material_reconstructable={} sender_message_number_reserved={} sender_pending_record_present={} sender_session_transport_ready={} encrypted_envelope_exported={} receiver_inbound_message_stored={} receiver_received_status_verified={} received_written={} received_export_matches_input={} plaintext_exposed=false network_send_attempted={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        "production message local roundtrip completed: selected_message_number={} auto_message_number={} auto_counter_written={} existing_message_slot_skipped={} expired_outbound_messages_purged={} message_ttl_seconds={} sender_runtime_material_reconstructable={} sender_message_number_reserved={} sender_pending_record_present={} sender_session_transport_ready={} encrypted_envelope_exported={} receiver_inbound_message_stored={} receiver_received_status_verified={} received_written={} received_export_matches_input={} plaintext_exposed=false network_send_attempted={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
         message_number,
         options.auto_message_number,
         reservation_summary
@@ -1155,6 +1155,11 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
         reservation_summary
             .as_ref()
             .is_some_and(|summary| summary.existing_message_slot_skipped()),
+        reservation_summary
+            .as_ref()
+            .map_or(0, |summary| summary.expired_outbound_messages_purged())
+            + usize::from(pending_summary.expired_outbound_message_purged())
+            + usize::from(encrypt_summary.expired_outbound_message_purged()),
         message_ttl_seconds,
         send_summary.runtime_material_reconstructable(),
         send_summary.message_number_reserved(),
@@ -1213,13 +1218,14 @@ fn run_production_message_pending_status_command(args: &[String]) -> Result<(), 
     .map_err(redacted_production_message_pending_status_error)?;
 
     println!(
-        "production message pending status: storage_opened={} runtime_material_reconstructable={} local_message_index_present={} pending_message_record_present={} pending_message_record_decodable={} local_message_index_matches_pending={} plaintext_exposed={} envelope_encryption_ready={} network_send_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        "production message pending status: storage_opened={} runtime_material_reconstructable={} local_message_index_present={} pending_message_record_present={} pending_message_record_decodable={} local_message_index_matches_pending={} expired_outbound_message_purged={} plaintext_exposed={} envelope_encryption_ready={} network_send_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
         summary.storage_opened(),
         summary.runtime_material_reconstructable(),
         summary.local_message_index_present(),
         summary.pending_message_record_present(),
         summary.pending_message_record_decodable(),
         summary.local_message_index_matches_pending(),
+        summary.expired_outbound_message_purged(),
         summary.plaintext_exposed(),
         summary.envelope_encryption_ready(),
         summary.network_send_attempted(),
@@ -1249,7 +1255,7 @@ fn run_production_message_outbound_encrypt_prepare_command(args: &[String]) -> R
     .map_err(redacted_production_message_outbound_encrypt_prepare_error)?;
 
     println!(
-        "production message outbound encrypt prepared: storage_opened={} runtime_material_reconstructable={} local_message_index_present={} pending_message_record_present={} pending_message_record_decodable={} local_message_index_matches_pending={} pending_plaintext_loaded={} plaintext_exposed={} session_transport_ready={} envelope_encryption_ready={} encrypted_envelope_written={} network_send_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        "production message outbound encrypt prepared: storage_opened={} runtime_material_reconstructable={} local_message_index_present={} pending_message_record_present={} pending_message_record_decodable={} local_message_index_matches_pending={} pending_plaintext_loaded={} expired_outbound_message_purged={} plaintext_exposed={} session_transport_ready={} envelope_encryption_ready={} encrypted_envelope_written={} network_send_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
         summary.storage_opened(),
         summary.runtime_material_reconstructable(),
         summary.local_message_index_present(),
@@ -1257,6 +1263,7 @@ fn run_production_message_outbound_encrypt_prepare_command(args: &[String]) -> R
         summary.pending_message_record_decodable(),
         summary.local_message_index_matches_pending(),
         summary.pending_plaintext_loaded(),
+        summary.expired_outbound_message_purged(),
         summary.plaintext_exposed(),
         summary.session_transport_ready(),
         summary.envelope_encryption_ready(),
