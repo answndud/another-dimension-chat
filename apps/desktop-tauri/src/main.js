@@ -270,6 +270,13 @@ const productionPayloadSlots = {
   messageEnvelope: new Map(),
 };
 
+const manualRemotePayloadFields = [
+  { kind: "pairing", field: () => fields.productionRemotePairingPayload },
+  { kind: "handshakeInit", field: () => fields.productionRemoteHandshakeInitPayload },
+  { kind: "handshakeReply", field: () => fields.productionRemoteHandshakeReplyPayload },
+  { kind: "handshakeFinish", field: () => fields.productionRemoteHandshakeFinishPayload },
+];
+
 const productionMessageRetentionPolicy = {
   status: "loading",
   error: null,
@@ -1786,6 +1793,47 @@ function manualLoadedCounterpartWarning(profile, counterpart, label) {
   return `Filled remote ${payloadLabel(label)} for active=${profile} loaded_from=${counterpart}.`;
 }
 
+function setRemotePayloadField(targetField, value, sourceProfile, kind) {
+  if (!targetField) {
+    return false;
+  }
+  targetField.value = value;
+  targetField.dataset.remotePayloadSourceProfile = String(sourceProfile ?? "").trim().toLowerCase();
+  targetField.dataset.remotePayloadKind = kind;
+  targetField.dispatchEvent(new Event("input", { bubbles: true }));
+  return true;
+}
+
+function clearTrackedRemotePayloadField(targetField) {
+  if (!targetField) {
+    return false;
+  }
+  targetField.value = "";
+  delete targetField.dataset.remotePayloadSourceProfile;
+  delete targetField.dataset.remotePayloadKind;
+  return true;
+}
+
+function clearStaleManualRemotePayloadInputs(activeProfile = activeProductionProfileName()) {
+  const expectedSource = productionCounterpartProfile(activeProfile);
+  let cleared = 0;
+  for (const remote of manualRemotePayloadFields) {
+    const field = remote.field();
+    const source = String(field?.dataset.remotePayloadSourceProfile ?? "").trim().toLowerCase();
+    if (field?.value.trim() && source && source !== expectedSource) {
+      clearTrackedRemotePayloadField(field);
+      cleared += 1;
+    }
+  }
+  return cleared;
+}
+
+function clearAllManualRemotePayloadInputs() {
+  for (const remote of manualRemotePayloadFields) {
+    clearTrackedRemotePayloadField(remote.field());
+  }
+}
+
 function moveLocalPayload(sourceField, targetField, label) {
   const profile = activeProductionProfileName();
   const value = sourceField?.value?.trim() ?? "";
@@ -1793,8 +1841,7 @@ function moveLocalPayload(sourceField, targetField, label) {
     setProductionPairingState(`${label} needs payload`);
     return;
   }
-  targetField.value = value;
-  targetField.dispatchEvent(new Event("input", { bubbles: true }));
+  setRemotePayloadField(targetField, value, profile, label);
   setProductionPairingState(`${label} applied`);
   setText(fields.productionPairingWarning, manualFilledRemoteFieldWarning(profile, label));
   applyProductionActionState();
@@ -1823,8 +1870,7 @@ function loadProductionPayloadSlot(kind, targetField, label) {
     setText(fields.productionPairingWarning, manualMissingCounterpartWarning(profile, counterpart, label));
     return;
   }
-  targetField.value = value;
-  targetField.dispatchEvent(new Event("input", { bubbles: true }));
+  setRemotePayloadField(targetField, value, counterpart, kind);
   setProductionPairingState(`Remote ${payloadLabel(label)} loaded`);
   setText(fields.productionPairingWarning, manualLoadedCounterpartWarning(profile, counterpart, label));
   applyProductionActionState();
@@ -1848,9 +1894,8 @@ function relayProductionPayloadSlotToPeer(kind, sourceField, targetField, label)
     setText(fields.productionPairingWarning, "Relay supports the local Alice/Bob manual pair only.");
     return;
   }
-  targetField.value = value;
+  setRemotePayloadField(targetField, value, profile, kind);
   sourceField.value = "";
-  targetField.dispatchEvent(new Event("input", { bubbles: true }));
   setProductionPairingState(`${label} relayed to ${counterpart}`);
   setText(
     fields.productionPairingWarning,
@@ -3162,6 +3207,7 @@ function resetProductionPairingView(options = {}) {
   if (fields.productionPairingPayload) {
     fields.productionPairingPayload.value = "";
   }
+  clearAllManualRemotePayloadInputs();
   setHandshakePayload(fields.productionHandshakeInitPayload, "");
   setHandshakePayload(fields.productionHandshakeReplyPayload, "");
   setHandshakePayload(fields.productionHandshakeFinishPayload, "");
@@ -5045,12 +5091,39 @@ for (const input of [
   }
 }
 
+for (const remote of manualRemotePayloadFields) {
+  const input = remote.field();
+  if (input) {
+    input.addEventListener("input", (event) => {
+      if (event.isTrusted) {
+        delete input.dataset.remotePayloadSourceProfile;
+        delete input.dataset.remotePayloadKind;
+      }
+    });
+    input.addEventListener("change", (event) => {
+      if (event.isTrusted) {
+        delete input.dataset.remotePayloadSourceProfile;
+        delete input.dataset.remotePayloadKind;
+      }
+    });
+  }
+}
+
 if (fields.productionProfilePassphrase) {
   fields.productionProfilePassphrase.addEventListener("input", () => {
     syncProductionTwoProfilePassphraseFromProfile();
     resetTwoProfileAutoResumeAttempt();
     applyProductionActionState();
     scheduleTwoProfileAutoResume();
+  });
+}
+
+if (fields.productionProfileName) {
+  fields.productionProfileName.addEventListener("input", () => {
+    clearStaleManualRemotePayloadInputs();
+  });
+  fields.productionProfileName.addEventListener("change", () => {
+    clearStaleManualRemotePayloadInputs();
   });
 }
 
