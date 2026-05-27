@@ -6091,13 +6091,25 @@ fn run_production_pairing_session_remote_endpoint_for_transport(
     profile: String,
     passphrase: String,
 ) -> Result<String, String> {
-    use another_dimension_core::production::production_pairing_session_remote_endpoint;
+    use another_dimension_core::production::{
+        production_pairing_session_remote_endpoint,
+        production_pairing_session_remote_endpoint_status,
+    };
     use another_dimension_storage::production::ProfilePassphrase;
 
     let profile = sanitize_production_profile(profile)?;
     let passphrase = ProfilePassphrase::new(passphrase.trim())
         .map_err(|_| "invalid production profile passphrase")?;
     let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let endpoint_status =
+        production_pairing_session_remote_endpoint_status(&store_path, profile.clone(), &passphrase)
+            .map_err(|_| "stored remote endpoint unavailable".to_string())?;
+    if !endpoint_status.remote_endpoint_state_present() {
+        return Err("stored remote endpoint unavailable".to_string());
+    }
+    if endpoint_status.remote_endpoint_marked_stale() {
+        return Err("stored remote endpoint refresh required".to_string());
+    }
     let endpoint = production_pairing_session_remote_endpoint(&store_path, profile, &passphrase)
         .map_err(|_| "stored remote endpoint unavailable".to_string())?;
     Ok(endpoint.endpoint().as_str().to_string())
@@ -10264,6 +10276,15 @@ replay check: no replayed messages after message 2
         assert!(!serde_json::to_string(&stale_status)
             .expect("serialize stale status")
             .contains("bob-rotated.onion"));
+        assert!(
+            super::run_production_pairing_session_remote_endpoint_for_transport(
+                &root,
+                "alice".to_string(),
+                "correct-passphrase".to_string(),
+            )
+            .is_err(),
+            "stale stored endpoint must not be returned for transport send"
+        );
 
         run_production_pairing_session_remote_endpoint_update(
             &root,
@@ -10285,6 +10306,13 @@ replay check: no replayed messages after message 2
             refreshed_status.profile_a_remote_endpoint_last_failed_message_number,
             None
         );
+        let refreshed_endpoint = super::run_production_pairing_session_remote_endpoint_for_transport(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("refreshed endpoint for transport");
+        assert_eq!(refreshed_endpoint, "bob-rerotated.onion");
         let _ = std::fs::remove_dir_all(root);
     }
 
