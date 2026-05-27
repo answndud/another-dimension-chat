@@ -1408,6 +1408,47 @@ async fn production_onion_outbound_envelope_send_attempt(
 }
 
 #[tauri::command]
+async fn production_onion_outbound_envelope_send_stored_endpoint_attempt(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionOutboundEnvelopeSendAttemptResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production onion outbound envelope send stored-endpoint attempt failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production onion outbound envelope send stored-endpoint attempt failed without exposing local path details"
+    })?;
+    let rendezvous_endpoint = run_production_pairing_session_remote_endpoint_for_transport(
+        &app_data_root,
+        profile.clone(),
+        passphrase.clone(),
+    )
+    .map_err(|_| {
+        "production onion outbound envelope send stored-endpoint attempt failed without exposing endpoint, profile, path, or key details"
+            .to_string()
+    })?;
+    run_production_onion_outbound_envelope_send_attempt(
+        app_data_root,
+        app_cache_root,
+        &state,
+        profile,
+        passphrase,
+        rendezvous_endpoint,
+        message_number,
+        manual_network_permission,
+    )
+    .await
+    .map_err(|_| {
+        "production onion outbound envelope send stored-endpoint attempt failed without exposing profile, endpoint, payload, path, proof, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
 fn production_onion_key_record_prepare(
     app: tauri::AppHandle,
     profile: String,
@@ -5481,6 +5522,23 @@ fn run_production_session_state_check(
     })
 }
 
+fn run_production_pairing_session_remote_endpoint_for_transport(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+) -> Result<String, String> {
+    use another_dimension_core::production::production_pairing_session_remote_endpoint;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let endpoint = production_pairing_session_remote_endpoint(&store_path, profile, &passphrase)
+        .map_err(|_| "stored remote endpoint unavailable".to_string())?;
+    Ok(endpoint.endpoint().as_str().to_string())
+}
+
 fn run_production_two_profile_session_status(
     app_data_root: impl AsRef<std::path::Path>,
     profile_a: String,
@@ -7265,6 +7323,7 @@ pub fn run() {
             production_onion_persistent_client_status,
             production_onion_preflight_check,
             production_onion_outbound_envelope_send_attempt,
+            production_onion_outbound_envelope_send_stored_endpoint_attempt,
             production_onion_outbound_envelope_send_prepare,
             production_onion_remote_peer_authentication_prepare,
             production_onion_stream_adapter_closeout_prepare,
