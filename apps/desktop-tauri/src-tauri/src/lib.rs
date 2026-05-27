@@ -295,6 +295,7 @@ pub struct ProductionMessageEnvelopeExportResult {
     auto_message_number: bool,
     auto_counter_written: bool,
     existing_message_slot_skipped: bool,
+    expired_outbound_messages_purged: usize,
     storage_opened: bool,
     runtime_material_reconstructable: bool,
     outbound_envelope_io_ready: bool,
@@ -1737,6 +1738,10 @@ fn run_production_message_envelope_export(
     let auto_counter_written = reservation.is_some_and(|summary| summary.counter_record_written());
     let existing_message_slot_skipped =
         reservation.is_some_and(|summary| summary.existing_message_slot_skipped());
+    let expired_outbound_messages_purged =
+        reservation.map_or(0, |summary| summary.expired_outbound_messages_purged())
+            + usize::from(pending.expired_outbound_message_purged())
+            + usize::from(encrypt.expired_outbound_message_purged());
 
     Ok(ProductionMessageEnvelopeExportResult {
         warning:
@@ -1746,6 +1751,7 @@ fn run_production_message_envelope_export(
         auto_message_number,
         auto_counter_written,
         existing_message_slot_skipped,
+        expired_outbound_messages_purged,
         storage_opened: send.storage_opened()
             && pending.storage_opened()
             && encrypt.storage_opened()

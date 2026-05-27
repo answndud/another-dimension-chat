@@ -223,6 +223,7 @@ const safeMessageEnvelopeExportResult = {
   auto_message_number: true,
   auto_counter_written: true,
   existing_message_slot_skipped: false,
+  expired_outbound_messages_purged: 1,
   message_number_reserved: true,
   pending_message_record_written: true,
   local_message_index_written: true,
@@ -1788,6 +1789,7 @@ test("productionMessageEnvelopeExportView formats outbound message result", () =
   assert.match(view.outbound, /reserved=true/);
   assert.match(view.outbound, /number=7/);
   assert.match(view.outbound, /auto=true/);
+  assert.match(view.outbound, /expired_purged=1/);
   assert.match(view.outbound, /encrypted=true/);
   assert.match(view.boundary, /network_send=false/);
 });

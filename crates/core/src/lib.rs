@@ -503,6 +503,7 @@ pub mod production {
         reserved_message_number: u64,
         counter_record_written: bool,
         existing_message_slot_skipped: bool,
+        expired_outbound_messages_purged: usize,
         key_material_exposed: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
@@ -516,6 +517,7 @@ pub mod production {
         pending_message_record_present: bool,
         pending_message_record_decodable: bool,
         local_message_index_matches_pending: bool,
+        expired_outbound_message_purged: bool,
         plaintext_exposed: bool,
         envelope_encryption_ready: bool,
         network_send_attempted: bool,
@@ -533,6 +535,7 @@ pub mod production {
         pending_message_record_decodable: bool,
         local_message_index_matches_pending: bool,
         pending_plaintext_loaded: bool,
+        expired_outbound_message_purged: bool,
         plaintext_exposed: bool,
         session_transport_ready: bool,
         envelope_encryption_ready: bool,
@@ -1096,6 +1099,10 @@ pub mod production {
             self.existing_message_slot_skipped
         }
 
+        pub fn expired_outbound_messages_purged(self) -> usize {
+            self.expired_outbound_messages_purged
+        }
+
         pub fn key_material_exposed(self) -> bool {
             self.key_material_exposed
         }
@@ -1132,6 +1139,10 @@ pub mod production {
 
         pub fn local_message_index_matches_pending(self) -> bool {
             self.local_message_index_matches_pending
+        }
+
+        pub fn expired_outbound_message_purged(self) -> bool {
+            self.expired_outbound_message_purged
         }
 
         pub fn plaintext_exposed(self) -> bool {
@@ -1604,6 +1615,10 @@ pub mod production {
 
         pub fn pending_plaintext_loaded(self) -> bool {
             self.pending_plaintext_loaded
+        }
+
+        pub fn expired_outbound_message_purged(self) -> bool {
+            self.expired_outbound_message_purged
         }
 
         pub fn plaintext_exposed(self) -> bool {
@@ -4598,14 +4613,17 @@ pub mod production {
             None => 1,
         };
         let mut existing_message_slot_skipped = false;
+        let mut expired_outbound_messages_purged = 0;
         let observed_at_ms = production_now_ms();
         loop {
-            let _ = purge_expired_outbound_message_if_needed(
+            if purge_expired_outbound_message_if_needed(
                 &store,
                 &material,
                 candidate,
                 observed_at_ms,
-            )?;
+            )? {
+                expired_outbound_messages_purged += 1;
+            }
             let local_index_id = production_local_message_index_record_id(
                 &material.channel_id,
                 &material.remote_contact_id,
@@ -4649,6 +4667,7 @@ pub mod production {
             reserved_message_number: candidate,
             counter_record_written: true,
             existing_message_slot_skipped,
+            expired_outbound_messages_purged,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -4670,7 +4689,7 @@ pub mod production {
             return Err(ProductionSessionError::ProfileMarkerMissing);
         }
         let material = load_session_runtime_material(&store, &profile)?;
-        let _ = purge_expired_outbound_message_if_needed(
+        let expired_outbound_message_purged = purge_expired_outbound_message_if_needed(
             &store,
             &material,
             message_number,
@@ -4725,6 +4744,7 @@ pub mod production {
             pending_message_record_present: pending.is_some(),
             pending_message_record_decodable: pending.is_some(),
             local_message_index_matches_pending,
+            expired_outbound_message_purged,
             plaintext_exposed: false,
             envelope_encryption_ready: false,
             network_send_attempted: false,
@@ -4749,7 +4769,7 @@ pub mod production {
             return Err(ProductionSessionError::ProfileMarkerMissing);
         }
         let material = load_session_runtime_material(&store, &profile)?;
-        let _ = purge_expired_outbound_message_if_needed(
+        let expired_outbound_message_purged = purge_expired_outbound_message_if_needed(
             &store,
             &material,
             message_number,
@@ -4919,6 +4939,7 @@ pub mod production {
             pending_message_record_decodable: pending.is_some(),
             local_message_index_matches_pending,
             pending_plaintext_loaded: pending.is_some(),
+            expired_outbound_message_purged,
             plaintext_exposed: false,
             session_transport_ready,
             envelope_encryption_ready,
@@ -8534,6 +8555,7 @@ pub mod production {
             assert!(!expired_pending_status.pending_message_record_present);
             assert!(!expired_pending_status.pending_message_record_decodable);
             assert!(!expired_pending_status.local_message_index_matches_pending);
+            assert!(expired_pending_status.expired_outbound_message_purged);
             assert!(outbound_store_after_expiry
                 .get(&direct_expired_index_id)
                 .expect("read direct expired index")
@@ -8586,6 +8608,7 @@ pub mod production {
             );
             assert!(second_reservation.counter_record_written());
             assert!(!second_reservation.existing_message_slot_skipped());
+            assert_eq!(second_reservation.expired_outbound_messages_purged(), 1);
             assert!(!second_reservation.key_material_exposed());
             assert!(!second_reservation.transport_io_opened());
             assert!(!second_reservation.runtime_messaging_enabled());
