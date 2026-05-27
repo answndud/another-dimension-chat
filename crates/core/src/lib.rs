@@ -30,9 +30,9 @@ pub mod production {
     };
     use another_dimension_transport::{
         BoundOutboundStreamSession, EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
-        EndpointUpdateControlPlaintext, EnvelopeIoAdapterReady, OnionEnvelopeTransport,
-        OnionOutboundStreamBoundary, OnionServiceEndpoint, OnionServiceKeyLifecycleDecision,
-        OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId,
+        EndpointUpdateChannel, EndpointUpdateControlPlaintext, EnvelopeIoAdapterReady,
+        OnionEnvelopeTransport, OnionOutboundStreamBoundary, OnionServiceEndpoint,
+        OnionServiceKeyLifecycleDecision, OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId,
         OutboundEnvelopeIoAdapterBoundary, OutboundStreamGateDecision,
         OutboundStreamPreparationBoundary, PairwiseEndpointUpdate, PairwiseRendezvousEndpoint,
         PairwiseStreamSessionBinding, ProfileTransportUnlockReady,
@@ -345,6 +345,20 @@ pub mod production {
         remote_endpoint_state_present: bool,
         replay_window_present: bool,
         session_transport_state_present: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionRemoteEndpointUpdateSummary {
+        storage_opened: bool,
+        session_draft_loaded: bool,
+        previous_remote_endpoint_present: bool,
+        update_channel_existing_encrypted_session: bool,
+        remote_endpoint_changed: bool,
+        remote_endpoint_state_written: bool,
+        runtime_material_reconstructable: bool,
         key_material_exposed: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
@@ -1028,6 +1042,48 @@ pub mod production {
 
         pub fn session_transport_state_present(self) -> bool {
             self.session_transport_state_present
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionRemoteEndpointUpdateSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_draft_loaded(self) -> bool {
+            self.session_draft_loaded
+        }
+
+        pub fn previous_remote_endpoint_present(self) -> bool {
+            self.previous_remote_endpoint_present
+        }
+
+        pub fn update_channel_existing_encrypted_session(self) -> bool {
+            self.update_channel_existing_encrypted_session
+        }
+
+        pub fn remote_endpoint_changed(self) -> bool {
+            self.remote_endpoint_changed
+        }
+
+        pub fn remote_endpoint_state_written(self) -> bool {
+            self.remote_endpoint_state_written
+        }
+
+        pub fn runtime_material_reconstructable(self) -> bool {
+            self.runtime_material_reconstructable
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -4148,6 +4204,62 @@ pub mod production {
         }
         let material = load_session_runtime_material(&store, &profile)?;
         Ok(material.remote_endpoint)
+    }
+
+    pub fn production_pairing_session_remote_endpoint_update(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        rendezvous_endpoint: impl Into<String>,
+    ) -> Result<ProductionPairingSessionRemoteEndpointUpdateSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let draft = load_latest_session_draft(&store, &profile)?
+            .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let current_endpoint = load_remote_endpoint_state(&store, &draft)?
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        let new_endpoint = OnionServiceEndpoint::new(rendezvous_endpoint.into())
+            .map_err(|_| ProductionSessionError::InvalidRendezvousEndpoint)?;
+        let update = PairwiseEndpointUpdate::for_existing_encrypted_session(
+            &current_endpoint,
+            new_endpoint,
+            EndpointUpdateChannel::ExistingEncryptedSession,
+        )?;
+        let updated_endpoint = PairwiseRendezvousEndpoint::new(
+            update.contact_id().clone(),
+            update.new_endpoint().clone(),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )?;
+        let endpoint_record = EncryptedRecord::new(
+            ProductionRecordKind::RendezvousEndpointState,
+            EncryptedRecordScope::contact(profile.clone(), draft.remote_contact_id.clone()),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            updated_endpoint.encode_state().into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)?;
+        store.put(
+            &production_endpoint_state_record_id(&draft.channel_id, &draft.remote_contact_id),
+            &endpoint_record,
+        )?;
+        let runtime_material_reconstructable =
+            load_session_runtime_material(&store, &profile).is_ok();
+
+        Ok(ProductionPairingSessionRemoteEndpointUpdateSummary {
+            storage_opened: true,
+            session_draft_loaded: true,
+            previous_remote_endpoint_present: true,
+            update_channel_existing_encrypted_session: true,
+            remote_endpoint_changed: true,
+            remote_endpoint_state_written: true,
+            runtime_material_reconstructable,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
     }
 
     pub fn production_pairing_session_open_runtime(
@@ -8085,6 +8197,46 @@ pub mod production {
             )
             .expect("remote endpoint");
             assert_eq!(remote_endpoint.endpoint().as_str(), "bob.onion");
+
+            let endpoint_update = production_pairing_session_remote_endpoint_update(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+                "bob-rotated.onion",
+            )
+            .expect("remote endpoint update");
+            assert!(endpoint_update.storage_opened());
+            assert!(endpoint_update.session_draft_loaded());
+            assert!(endpoint_update.previous_remote_endpoint_present());
+            assert!(endpoint_update.update_channel_existing_encrypted_session());
+            assert!(endpoint_update.remote_endpoint_changed());
+            assert!(endpoint_update.remote_endpoint_state_written());
+            assert!(endpoint_update.runtime_material_reconstructable());
+            assert!(!endpoint_update.key_material_exposed());
+            assert!(!endpoint_update.transport_io_opened());
+            assert!(!endpoint_update.runtime_messaging_enabled());
+
+            let updated_remote_endpoint = production_pairing_session_remote_endpoint(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+            )
+            .expect("updated remote endpoint");
+            assert_eq!(
+                updated_remote_endpoint.endpoint().as_str(),
+                "bob-rotated.onion"
+            );
+            assert!(matches!(
+                production_pairing_session_remote_endpoint_update(
+                    &alice_store,
+                    alice.clone(),
+                    &passphrase,
+                    "bob-rotated.onion"
+                ),
+                Err(ProductionSessionError::EndpointLifecycle(
+                    EndpointLifecycleError::EndpointUnchanged
+                ))
+            ));
 
             let opened =
                 production_pairing_session_open_runtime(&alice_store, alice.clone(), &passphrase)

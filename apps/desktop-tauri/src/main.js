@@ -302,6 +302,9 @@ const fields = {
   saveProductionTwoProfileOnionSessions: document.querySelector(
     "#save-production-two-profile-onion-sessions",
   ),
+  refreshProductionTwoProfilePeerEndpoints: document.querySelector(
+    "#refresh-production-two-profile-peer-endpoints",
+  ),
   completeProductionTwoProfileOnionHandshake: document.querySelector(
     "#complete-production-two-profile-onion-handshake",
   ),
@@ -3368,6 +3371,20 @@ function applyProductionActionState() {
     false,
   );
   setActionButtonState(
+    fields.refreshProductionTwoProfilePeerEndpoints,
+    busy || !manualNetworkPermission || !hasTwoProfileSessionStatusInput || !latestTwoProfileSessionStatusForCurrentInput(twoProfile),
+    busy
+      ? "Wait for the active production action."
+      : !manualNetworkPermission
+        ? "Enable manual onion network permission before refreshing peer endpoints."
+      : !hasTwoProfileSessionStatusInput
+        ? "Enter distinct Profile A, Profile B, and passphrase first."
+      : !latestTwoProfileSessionStatusForCurrentInput(twoProfile)
+        ? "Check or save onion sessions before refreshing peer endpoints."
+        : "Launch fresh local endpoints and apply them to existing peer session records.",
+    false,
+  );
+  setActionButtonState(
     fields.completeProductionTwoProfileOnionHandshake,
     busy || twoProfileSessionsReady || !hasTwoProfileSessionStatusInput,
     busy
@@ -4860,6 +4877,106 @@ async function saveProductionTwoProfileOnionSessions() {
     productionBusyAction = null;
     if (fields.saveProductionTwoProfileOnionSessions) {
       fields.saveProductionTwoProfileOnionSessions.disabled = false;
+    }
+    applyProductionActionState();
+  }
+}
+
+async function refreshProductionTwoProfilePeerEndpoints() {
+  const { profileA, profileB, passphrase } = productionTwoProfileInput();
+  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  if (!profileA || !profileB || profileA === profileB || !passphrase) {
+    setProductionTwoProfileState("Endpoint refresh needs profiles");
+    setText(fields.productionTwoProfileWarning, "Enter two distinct profiles and passphrase before refreshing peer endpoints.");
+    return;
+  }
+  if (!manualNetworkPermission) {
+    setProductionTwoProfileState("Endpoint refresh blocked");
+    setText(fields.productionTwoProfileWarning, "Enable manual onion network permission before refreshing endpoints.");
+    return;
+  }
+  if (!latestTwoProfileSessionStatusForCurrentInput({ profileA, profileB, passphrase })) {
+    setProductionTwoProfileState("Endpoint refresh needs session");
+    setText(fields.productionTwoProfileWarning, "Check or save onion sessions before applying refreshed peer endpoints.");
+    return;
+  }
+
+  const launchEndpoint = async (profile) => {
+    const launch = await invoke("production_onion_service_launch_attempt", {
+      profile,
+      passphrase,
+      manualNetworkPermission,
+    });
+    if (!launch.local_onion_endpoint) {
+      throw new Error(`${profile} endpoint unavailable: ${launch.next_blocker || "unknown blocker"}`);
+    }
+    return launch;
+  };
+
+  productionBusyAction = "two-profile-peer-endpoint-refresh";
+  setProductionTwoProfileState("Endpoint refresh running");
+  setText(fields.productionTwoProfileWarning, "Launching fresh local onion endpoints and applying them to existing peer session records.");
+  setText(fields.productionTwoProfileProfiles, `a=${profileA} b=${profileB}`);
+  setText(fields.productionTwoProfileSession, "Existing encrypted session drafts are kept; only peer endpoint records are updated");
+  setText(fields.productionTwoProfileMessageState, "No message transport attempted");
+  setText(fields.productionTwoProfileBoundary, "Endpoint refresh in progress with manual network permission");
+  applyProductionActionState();
+  if (fields.refreshProductionTwoProfilePeerEndpoints) {
+    fields.refreshProductionTwoProfilePeerEndpoints.disabled = true;
+  }
+
+  try {
+    const profileALaunch = await launchEndpoint(profileA);
+    const profileBLaunch = await launchEndpoint(profileB);
+    const profileAUpdate = await invoke("production_pairing_session_remote_endpoint_update", {
+      profile: profileA,
+      passphrase,
+      rendezvousEndpoint: profileBLaunch.local_onion_endpoint,
+    });
+    const profileBUpdate = await invoke("production_pairing_session_remote_endpoint_update", {
+      profile: profileB,
+      passphrase,
+      rendezvousEndpoint: profileALaunch.local_onion_endpoint,
+    });
+    const status = await invoke("production_two_profile_session_status", {
+      profileA,
+      profileB,
+      passphrase,
+    });
+    rememberTwoProfileOnionEndpoints(
+      { profileA, profileB, passphrase },
+      {
+        profileAEndpoint: profileALaunch.local_onion_endpoint,
+        profileBEndpoint: profileBLaunch.local_onion_endpoint,
+      },
+    );
+    rememberTwoProfileSessionStatus({ profileA, profileB, passphrase }, status);
+    renderProductionTwoProfileSessionStatusResult(status);
+    setProductionTwoProfileState(
+      status.both_ready_for_message_envelope ? "Peer endpoints refreshed" : "Peer endpoints refreshed; session needs review",
+    );
+    setText(fields.productionTwoProfileWarning, "Stored peer endpoints were refreshed without redoing pairing.");
+    setText(
+      fields.productionTwoProfileProfiles,
+      `a_endpoint=${profileALaunch.onion_endpoint_returned} b_endpoint=${profileBLaunch.onion_endpoint_returned}`,
+    );
+    setText(
+      fields.productionTwoProfileSession,
+      `a_update=${profileAUpdate.remote_endpoint_state_written} b_update=${profileBUpdate.remote_endpoint_state_written} a_ready=${status.profile_a_ready_for_message_envelope} b_ready=${status.profile_b_ready_for_message_envelope}`,
+    );
+    setText(fields.productionTwoProfileMessageState, "No message transport attempted");
+    setText(
+      fields.productionTwoProfileBoundary,
+      `a_changed=${profileAUpdate.remote_endpoint_changed} b_changed=${profileBUpdate.remote_endpoint_changed} existing_session=${profileAUpdate.update_channel_existing_encrypted_session && profileBUpdate.update_channel_existing_encrypted_session} a_retained=${profileALaunch.onion_service_retained} b_retained=${profileBLaunch.onion_service_retained} raw_endpoint=${profileAUpdate.remote_endpoint_returned || profileBUpdate.remote_endpoint_returned} raw_path=${profileAUpdate.store_path_returned || profileBUpdate.store_path_returned || profileALaunch.raw_path_returned || profileBLaunch.raw_path_returned} onion_secret=${profileALaunch.onion_secret_returned || profileBLaunch.onion_secret_returned} key_material=${profileAUpdate.key_material_exposed || profileBUpdate.key_material_exposed || profileALaunch.key_material_exposed || profileBLaunch.key_material_exposed} network=${profileALaunch.network_io_attempted || profileBLaunch.network_io_attempted} transport=${profileAUpdate.transport_io_opened || profileBUpdate.transport_io_opened || profileALaunch.transport_io_opened || profileBLaunch.transport_io_opened} runtime=${profileAUpdate.runtime_messaging_enabled || profileBUpdate.runtime_messaging_enabled || profileALaunch.runtime_messaging_enabled || profileBLaunch.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionTwoProfileState("Endpoint refresh failed");
+    setText(fields.productionTwoProfileWarning, `Endpoint refresh failed without returning endpoint, path, or key details. ${error}`);
+    setText(fields.productionTwoProfileBoundary, "Existing session state was not intentionally deleted or re-paired.");
+  } finally {
+    productionBusyAction = null;
+    if (fields.refreshProductionTwoProfilePeerEndpoints) {
+      fields.refreshProductionTwoProfilePeerEndpoints.disabled = false;
     }
     applyProductionActionState();
   }
@@ -7910,6 +8027,13 @@ if (fields.saveProductionTwoProfileOnionSessions) {
   fields.saveProductionTwoProfileOnionSessions.addEventListener(
     "click",
     saveProductionTwoProfileOnionSessions,
+  );
+}
+
+if (fields.refreshProductionTwoProfilePeerEndpoints) {
+  fields.refreshProductionTwoProfilePeerEndpoints.addEventListener(
+    "click",
+    refreshProductionTwoProfilePeerEndpoints,
   );
 }
 
