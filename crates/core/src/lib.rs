@@ -4136,6 +4136,20 @@ pub mod production {
         })
     }
 
+    pub fn production_pairing_session_remote_endpoint(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<PairwiseRendezvousEndpoint, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        Ok(material.remote_endpoint)
+    }
+
     pub fn production_pairing_session_open_runtime(
         store_path: impl AsRef<std::path::Path>,
         profile: ProfileName,
@@ -8063,6 +8077,14 @@ pub mod production {
             assert!(!runtime.key_material_exposed());
             assert!(!runtime.transport_io_opened());
             assert!(!runtime.runtime_messaging_enabled());
+
+            let remote_endpoint = production_pairing_session_remote_endpoint(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+            )
+            .expect("remote endpoint");
+            assert_eq!(remote_endpoint.endpoint().as_str(), "bob.onion");
 
             let opened =
                 production_pairing_session_open_runtime(&alice_store, alice.clone(), &passphrase)

@@ -881,7 +881,7 @@ function twoProfilePeerEndpointState(input = productionTwoProfileInput()) {
     return { ready: true, reason: "ready", source: "current runtime" };
   }
   if (storedPeerEndpointPresentForInput(input)) {
-    return { ready: false, reason: "endpoint stored; relaunch needed", source: "stored session" };
+    return { ready: true, reason: "stored endpoint ready", source: "stored session" };
   }
   if (latestTwoProfileSessionStatusForCurrentInput(input)) {
     return { ready: false, reason: "peer endpoint missing", source: "stored session" };
@@ -901,13 +901,15 @@ function latestTwoProfileOutboundOnionMessage(input = productionTwoProfileInput(
     return null;
   }
   const peerEndpoint = latestTwoProfilePeerOnionEndpoint(input);
-  if (!peerEndpoint) {
+  const peerEndpointState = twoProfilePeerEndpointState(input);
+  if (!peerEndpointState.ready) {
     return null;
   }
   return {
     profile: input.profileA,
     passphrase: input.passphrase,
     peerEndpoint,
+    useStoredEndpoint: !peerEndpoint,
     messageNumber: latest.messageNumber,
   };
 }
@@ -5527,7 +5529,12 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
     `Attempting one bounded onion stream send for message #${latestOnionOutbound.messageNumber}.`,
   );
   setText(fields.productionTwoProfileProfiles, `sender=${input.profileA} receiver=${input.profileB}`);
-  setText(fields.productionTwoProfileSession, "Using stored outbound envelope and retained onion endpoint");
+  setText(
+    fields.productionTwoProfileSession,
+    latestOnionOutbound.useStoredEndpoint
+      ? "Using stored outbound envelope and encrypted stored peer endpoint"
+      : "Using stored outbound envelope and current peer endpoint",
+  );
   setText(fields.productionTwoProfileMessageState, "Waiting for onion stream send attempt");
   setText(fields.productionTwoProfileBoundary, "Onion send attempt in progress with manual network permission");
   applyProductionActionState();
@@ -5536,13 +5543,20 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
   }
 
   try {
-    const result = await invoke("production_onion_outbound_envelope_send_attempt", {
-      profile: latestOnionOutbound.profile,
-      passphrase: latestOnionOutbound.passphrase,
-      rendezvousEndpoint: latestOnionOutbound.peerEndpoint,
-      messageNumber: latestOnionOutbound.messageNumber,
-      manualNetworkPermission,
-    });
+    const result = latestOnionOutbound.useStoredEndpoint
+      ? await invoke("production_onion_outbound_envelope_send_stored_endpoint_attempt", {
+          profile: latestOnionOutbound.profile,
+          passphrase: latestOnionOutbound.passphrase,
+          messageNumber: latestOnionOutbound.messageNumber,
+          manualNetworkPermission,
+        })
+      : await invoke("production_onion_outbound_envelope_send_attempt", {
+          profile: latestOnionOutbound.profile,
+          passphrase: latestOnionOutbound.passphrase,
+          rendezvousEndpoint: latestOnionOutbound.peerEndpoint,
+          messageNumber: latestOnionOutbound.messageNumber,
+          manualNetworkPermission,
+        });
     setOnionOutboundEnvelopeSendState(
       result.send_attempt_succeeded
         ? "Envelope send attempt wrote"
