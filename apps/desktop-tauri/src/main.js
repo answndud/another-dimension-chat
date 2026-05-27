@@ -668,15 +668,18 @@ function setProductionTwoProfileReadiness(message, state = "blocked") {
 function renderRoomIdentityBar(input, sessionsReady) {
   const route = input.profileA && input.profileB ? `${input.profileA} -> ${input.profileB}` : "profiles missing";
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
+  const activeEndpointState = twoProfilePeerEndpointState(input);
   const pairState = sessionsReady
     ? "stored session"
     : sessionStatus
       ? "incomplete"
       : "not checked";
   const verifyState = sessionsReady ? "safety confirmed" : "pending";
-  const transportState = fields.manualOnionNetworkPermission?.checked
-    ? "onion manual gate"
-    : "local harness";
+  const transportState = activeEndpointState.ready
+    ? fields.manualOnionNetworkPermission?.checked
+      ? "peer endpoint ready"
+      : "endpoint ready; permission off"
+    : activeEndpointState.reason;
 
   setText(fields.roomIdentityRoute, route);
   setText(fields.roomIdentityPair, pairState);
@@ -853,6 +856,37 @@ function latestTwoProfilePeerOnionEndpoint(input = productionTwoProfileInput()) 
     return latestProductionTwoProfileOnionEndpoints.profileAEndpoint;
   }
   return "";
+}
+
+function storedPeerEndpointPresentForInput(input = productionTwoProfileInput()) {
+  const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
+  if (!sessionStatus || !input.profileA) {
+    return false;
+  }
+  if (input.profileA === sessionStatus.profile_a) {
+    return sessionStatus.profile_a_remote_endpoint_state_present === true;
+  }
+  if (input.profileA === sessionStatus.profile_b) {
+    return sessionStatus.profile_b_remote_endpoint_state_present === true;
+  }
+  return false;
+}
+
+function twoProfilePeerEndpointState(input = productionTwoProfileInput()) {
+  if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
+    return { ready: false, reason: "profiles missing" };
+  }
+  const transientEndpoint = latestTwoProfilePeerOnionEndpoint(input);
+  if (transientEndpoint) {
+    return { ready: true, reason: "ready", source: "current runtime" };
+  }
+  if (storedPeerEndpointPresentForInput(input)) {
+    return { ready: false, reason: "endpoint stored; relaunch needed", source: "stored session" };
+  }
+  if (latestTwoProfileSessionStatusForCurrentInput(input)) {
+    return { ready: false, reason: "peer endpoint missing", source: "stored session" };
+  }
+  return { ready: false, reason: "endpoint not checked" };
 }
 
 function latestTwoProfileOutboundOnionMessage(input = productionTwoProfileInput()) {
@@ -3344,6 +3378,7 @@ function applyProductionActionState() {
     false,
   );
   const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(twoProfile);
+  const peerEndpointState = twoProfilePeerEndpointState(twoProfile);
   setActionButtonState(
     fields.sendProductionTwoProfileLatestOnionEnvelope,
     busy || !manualNetworkPermission || !latestOnionOutbound,
@@ -3351,6 +3386,8 @@ function applyProductionActionState() {
       ? "Wait for the active production action."
       : !manualNetworkPermission
         ? "Enable manual onion network permission before sending over onion."
+      : !peerEndpointState.ready
+        ? `Peer endpoint blocked: ${peerEndpointState.reason}.`
       : !latestOnionOutbound
         ? "Send a stored-session message after preparing onion pairing endpoints first."
         : `Attempt onion send for message #${latestOnionOutbound.messageNumber}.`,
@@ -5473,9 +5510,12 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
   }
   if (!latestOnionOutbound) {
     setProductionTwoProfileState("Onion send needs latest message");
+    const peerEndpointState = twoProfilePeerEndpointState(input);
     setText(
       fields.productionTwoProfileWarning,
-      "Prepare onion pairing endpoints, complete handshake, then send a stored-session message before attempting onion send.",
+      peerEndpointState.ready
+        ? "Send a stored-session message before attempting onion send."
+        : `Peer endpoint is not ready: ${peerEndpointState.reason}. Prepare onion pairing endpoints or relaunch the endpoint before sending.`,
     );
     return;
   }

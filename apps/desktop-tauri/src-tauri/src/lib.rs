@@ -306,6 +306,8 @@ pub struct ProductionTwoProfileSessionStatusResult {
     profile_a_ready_for_message_envelope: bool,
     profile_b_ready_for_message_envelope: bool,
     both_ready_for_message_envelope: bool,
+    profile_a_remote_endpoint_state_present: bool,
+    profile_b_remote_endpoint_state_present: bool,
     profile_a_session_transport_state_present: bool,
     profile_b_session_transport_state_present: bool,
     profile_a_runtime_material_reconstructable: bool,
@@ -5513,6 +5515,8 @@ fn run_production_two_profile_session_status(
         profile_b_ready_for_message_envelope: profile_b_state.ready_for_message_envelope,
         both_ready_for_message_envelope: profile_a_state.ready_for_message_envelope
             && profile_b_state.ready_for_message_envelope,
+        profile_a_remote_endpoint_state_present: profile_a_state.remote_endpoint_state_present,
+        profile_b_remote_endpoint_state_present: profile_b_state.remote_endpoint_state_present,
         profile_a_session_transport_state_present: profile_a_state.session_transport_state_present,
         profile_b_session_transport_state_present: profile_b_state.session_transport_state_present,
         profile_a_runtime_material_reconstructable: profile_a_state
@@ -9207,6 +9211,8 @@ replay check: no replayed messages after message 2
         assert_eq!(draft_status.profile_a, "alice");
         assert_eq!(draft_status.profile_b, "bob");
         assert!(!draft_status.both_ready_for_message_envelope);
+        assert!(draft_status.profile_a_remote_endpoint_state_present);
+        assert!(draft_status.profile_b_remote_endpoint_state_present);
         assert!(!draft_status.profile_a_session_transport_state_present);
         assert!(!draft_status.profile_b_session_transport_state_present);
 
@@ -9259,6 +9265,8 @@ replay check: no replayed messages after message 2
         assert!(ready_status.profile_a_ready_for_message_envelope);
         assert!(ready_status.profile_b_ready_for_message_envelope);
         assert!(ready_status.both_ready_for_message_envelope);
+        assert!(ready_status.profile_a_remote_endpoint_state_present);
+        assert!(ready_status.profile_b_remote_endpoint_state_present);
         assert!(!ready_status.store_path_returned);
         assert!(!ready_status.passphrase_retained);
         assert!(!ready_status.key_material_exposed);

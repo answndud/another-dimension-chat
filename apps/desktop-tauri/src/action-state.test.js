@@ -178,6 +178,8 @@ const safeTwoProfileSessionStatusResult = {
   profile_a_ready_for_message_envelope: true,
   profile_b_ready_for_message_envelope: false,
   both_ready_for_message_envelope: false,
+  profile_a_remote_endpoint_state_present: true,
+  profile_b_remote_endpoint_state_present: true,
   profile_a_session_transport_state_present: true,
   profile_b_session_transport_state_present: false,
   profile_a_runtime_material_reconstructable: true,
@@ -1537,8 +1539,8 @@ test("productionTwoProfileSessionStatusView formats both profile readiness", () 
   const view = productionTwoProfileSessionStatusView(safeTwoProfileSessionStatusResult);
 
   assert.equal(view.state, "Two-profile session needs work");
-  assert.match(view.status, /alice: ready=true transport=true/);
-  assert.match(view.status, /bob: ready=false transport=false/);
+  assert.match(view.status, /alice: ready=true endpoint=true transport=true/);
+  assert.match(view.status, /bob: ready=false endpoint=true transport=false/);
   assert.match(view.boundary, /network_io=false/);
 
   assert.equal(
