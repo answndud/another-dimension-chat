@@ -1153,11 +1153,7 @@ function renderProductionTranscriptEntries(profile, entries) {
 }
 
 function transcriptRetentionWarning(result) {
-  const purged = Number.parseInt(result?.expired_messages_purged ?? 0, 10);
-  if (Number.isInteger(purged) && purged > 0) {
-    return `${result.warning} Expired messages purged: ${purged}.`;
-  }
-  return result?.warning ?? "";
+  return appendMessageLifecyclePurgeWarning(result?.warning, result);
 }
 
 function transcriptBoundarySummary(result) {
@@ -1166,6 +1162,23 @@ function transcriptBoundarySummary(result) {
 
 function appendExpiredMessagesPurged(message, purged) {
   return purged > 0 ? `${message} Expired messages purged: ${purged}.` : message;
+}
+
+function appendMessageLifecyclePurgeWarning(message, result) {
+  const warning = String(message ?? "").trim();
+  const messagesPurged = Number.parseInt(result?.expired_messages_purged ?? 0, 10);
+  const outboundPurged = Number.parseInt(result?.expired_outbound_messages_purged ?? 0, 10);
+  const lifecycleWarnings = [];
+  if (Number.isInteger(messagesPurged) && messagesPurged > 0) {
+    lifecycleWarnings.push(`Expired messages purged: ${messagesPurged}.`);
+  }
+  if (Number.isInteger(outboundPurged) && outboundPurged > 0) {
+    lifecycleWarnings.push(`Expired outbound messages purged: ${outboundPurged}.`);
+  }
+  if (result?.expired_received_message_purged === true) {
+    lifecycleWarnings.push("Expired received message purged.");
+  }
+  return [warning, ...lifecycleWarnings].filter(Boolean).join(" ");
 }
 
 function renderManualStatus() {
@@ -4583,7 +4596,7 @@ async function exportProductionMessageEnvelope() {
     });
     const view = productionMessageEnvelopeExportView(result);
     setProductionMessageState("Message envelope exported");
-    setText(fields.productionMessageWarning, result.warning);
+    setText(fields.productionMessageWarning, appendMessageLifecyclePurgeWarning(result.warning, result));
     if (fields.productionMessageNumber) {
       fields.productionMessageNumber.value = String(result.selected_message_number);
     }
@@ -4668,10 +4681,11 @@ async function importProductionMessageEnvelope() {
     const clearedEnvelopeSlot = clearImportedMessageEnvelopeSlot(profile, envelopePayload);
     const clearedEnvelopeInput = clearImportedRemoteMessageEnvelopeInput(envelopePayload);
     const clearedEnvelopeOutput = clearImportedLocalMessageEnvelopeOutput(envelopePayload);
+    const importWarning = appendMessageLifecyclePurgeWarning(result.warning, result);
     setProductionMessageState("Message envelope imported");
     setText(
       fields.productionMessageWarning,
-      `${result.warning}${
+      `${importWarning}${
         clearedEnvelopeSlot ? " Consumed matching stored sender envelope slot." : ""
       }${clearedEnvelopeInput ? " Cleared imported remote envelope input." : ""}${
         clearedEnvelopeOutput ? " Cleared matching local envelope output." : ""
@@ -4685,7 +4699,7 @@ async function importProductionMessageEnvelope() {
       postBusyFocus = "current-action";
       setText(
         fields.productionMessageWarning,
-        `${result.warning}${
+        `${importWarning}${
           clearedEnvelopeSlot ? " Consumed matching stored sender envelope slot." : ""
         }${clearedEnvelopeInput ? " Cleared imported remote envelope input." : ""}${
           clearedEnvelopeOutput ? " Cleared matching local envelope output." : ""
