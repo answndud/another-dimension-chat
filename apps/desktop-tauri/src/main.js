@@ -290,6 +290,9 @@ const fields = {
   startProductionTwoProfileOnionBootstrap: document.querySelector(
     "#start-production-two-profile-onion-bootstrap",
   ),
+  launchProductionTwoProfileOnionEndpoint: document.querySelector(
+    "#launch-production-two-profile-onion-endpoint",
+  ),
   runProductionTwoProfileRealOnionRoundtrip: document.querySelector(
     "#run-production-two-profile-real-onion-roundtrip",
   ),
@@ -3148,6 +3151,18 @@ function applyProductionActionState() {
     false,
   );
   setActionButtonState(
+    fields.launchProductionTwoProfileOnionEndpoint,
+    busy || !manualNetworkPermission || !twoProfile.profileA || !twoProfile.passphrase,
+    busy
+      ? "Wait for the active production action."
+      : !manualNetworkPermission
+        ? "Enable manual onion network permission before launching an endpoint."
+      : !twoProfile.profileA || !twoProfile.passphrase
+        ? "Enter profile A and passphrase before launching the local onion endpoint."
+        : "Launch or retry the local onion endpoint after Tor bootstrap is ready.",
+    false,
+  );
+  setActionButtonState(
     fields.runProductionTwoProfileRealOnionRoundtrip,
     busy || !hasTwoProfileInput || !hasMessageRetentionPolicy || !manualNetworkPermission,
     busy
@@ -4217,6 +4232,75 @@ async function startProductionTwoProfileOnionBootstrap() {
     productionBusyAction = null;
     if (fields.startProductionTwoProfileOnionBootstrap) {
       fields.startProductionTwoProfileOnionBootstrap.disabled = false;
+    }
+    applyProductionActionState();
+  }
+}
+
+async function launchProductionTwoProfileOnionEndpoint() {
+  const { profileA, passphrase } = productionTwoProfileInput();
+  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  if (!profileA || !passphrase) {
+    setProductionTwoProfileState("Onion endpoint needs profile");
+    setText(fields.productionTwoProfileWarning, "Enter profile A and passphrase before launching the local onion endpoint.");
+    return;
+  }
+  if (!manualNetworkPermission) {
+    setProductionTwoProfileState("Onion endpoint blocked");
+    setText(fields.productionTwoProfileWarning, "Enable manual onion network permission before launching an endpoint.");
+    return;
+  }
+
+  productionBusyAction = "two-profile-onion-endpoint-launch";
+  setProductionTwoProfileState("Onion endpoint launch running");
+  setText(fields.productionTwoProfileWarning, "Launching local onion endpoint for profile A.");
+  setText(fields.productionTwoProfileProfiles, `local_profile=${profileA}`);
+  setText(fields.productionTwoProfileSession, "Checking retained Tor client and onion key record");
+  setText(fields.productionTwoProfileMessageState, "No message transport attempted");
+  setText(fields.productionTwoProfileBoundary, "Endpoint launch in progress with manual network permission");
+  applyProductionActionState();
+  if (fields.launchProductionTwoProfileOnionEndpoint) {
+    fields.launchProductionTwoProfileOnionEndpoint.disabled = true;
+  }
+
+  try {
+    const result = await invoke("production_onion_service_launch_attempt", {
+      profile: profileA,
+      passphrase,
+      manualNetworkPermission,
+    });
+    if (result.local_onion_endpoint && fields.productionPairingEndpoint) {
+      fields.productionPairingEndpoint.value = result.local_onion_endpoint;
+      fields.productionPairingEndpoint.dispatchEvent(new Event("input", { bubbles: true }));
+      setProductionPairingState("Local onion endpoint ready");
+    }
+    setProductionTwoProfileState(
+      result.launch_attempt_succeeded && result.onion_endpoint_returned
+        ? "Onion endpoint ready"
+        : "Onion endpoint needs setup",
+    );
+    setText(fields.productionTwoProfileWarning, result.warning);
+    setText(
+      fields.productionTwoProfileProfiles,
+      `profile_unlock=${result.profile_transport_unlock_ready} key_record=${result.key_record_present} key_material=${result.key_material_ready}`,
+    );
+    setText(
+      fields.productionTwoProfileSession,
+      `persistent_client=${result.persistent_client_ready} launch_preflight=${result.launch_preflight_ready} adapter=${result.launch_adapter_ready} retained=${result.onion_service_retained}`,
+    );
+    setText(fields.productionTwoProfileMessageState, "No message transport attempted");
+    setText(
+      fields.productionTwoProfileBoundary,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} started=${result.launch_attempt_started} succeeded=${result.launch_attempt_succeeded} endpoint_ready=${result.onion_endpoint_returned} event_recorded=${result.redacted_launch_result_event_recorded} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} events=${result.event_summary.join("; ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} key_material=${result.key_material_exposed} network=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} transport=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionTwoProfileState("Onion endpoint launch failed");
+    setText(fields.productionTwoProfileWarning, `Endpoint launch failed without returning secrets. ${error}`);
+    setText(fields.productionTwoProfileBoundary, "Failed before descriptor publication or message transport.");
+  } finally {
+    productionBusyAction = null;
+    if (fields.launchProductionTwoProfileOnionEndpoint) {
+      fields.launchProductionTwoProfileOnionEndpoint.disabled = false;
     }
     applyProductionActionState();
   }
@@ -6815,6 +6899,13 @@ if (fields.startProductionTwoProfileOnionBootstrap) {
   fields.startProductionTwoProfileOnionBootstrap.addEventListener(
     "click",
     startProductionTwoProfileOnionBootstrap,
+  );
+}
+
+if (fields.launchProductionTwoProfileOnionEndpoint) {
+  fields.launchProductionTwoProfileOnionEndpoint.addEventListener(
+    "click",
+    launchProductionTwoProfileOnionEndpoint,
   );
 }
 
