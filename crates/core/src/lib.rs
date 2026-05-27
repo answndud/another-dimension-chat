@@ -637,6 +637,45 @@ pub mod production {
         runtime_messaging_enabled: bool,
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ProductionEndpointUpdateControlEnvelopeExportSummary {
+        storage_opened: bool,
+        runtime_material_reconstructable: bool,
+        session_transport_ready: bool,
+        endpoint_update_created: bool,
+        encrypted_control_envelope_written: bool,
+        envelope_decodable: bool,
+        envelope_message_number_matches: bool,
+        envelope_message_type_control: bool,
+        export_payload: String,
+        endpoint_plaintext_exposed: bool,
+        network_send_attempted: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionEndpointUpdateControlEnvelopeImportSummary {
+        storage_opened: bool,
+        runtime_material_reconstructable: bool,
+        envelope_read: bool,
+        envelope_decodable: bool,
+        envelope_message_type_control: bool,
+        session_transport_ready: bool,
+        replay_window_loaded: bool,
+        replay_accepted: bool,
+        control_plaintext_decrypted: bool,
+        endpoint_update_applied: bool,
+        remote_endpoint_state_written: bool,
+        stale_endpoint_status_cleared: bool,
+        endpoint_plaintext_exposed: bool,
+        network_receive_attempted: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionMessageInboundDecryptImportSummary {
         storage_opened: bool,
@@ -1986,6 +2025,118 @@ pub mod production {
         }
 
         pub fn runtime_messaging_enabled(&self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionEndpointUpdateControlEnvelopeExportSummary {
+        pub fn storage_opened(&self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn runtime_material_reconstructable(&self) -> bool {
+            self.runtime_material_reconstructable
+        }
+
+        pub fn session_transport_ready(&self) -> bool {
+            self.session_transport_ready
+        }
+
+        pub fn endpoint_update_created(&self) -> bool {
+            self.endpoint_update_created
+        }
+
+        pub fn encrypted_control_envelope_written(&self) -> bool {
+            self.encrypted_control_envelope_written
+        }
+
+        pub fn envelope_decodable(&self) -> bool {
+            self.envelope_decodable
+        }
+
+        pub fn envelope_message_number_matches(&self) -> bool {
+            self.envelope_message_number_matches
+        }
+
+        pub fn envelope_message_type_control(&self) -> bool {
+            self.envelope_message_type_control
+        }
+
+        pub fn export_payload(&self) -> &str {
+            &self.export_payload
+        }
+
+        pub fn endpoint_plaintext_exposed(&self) -> bool {
+            self.endpoint_plaintext_exposed
+        }
+
+        pub fn network_send_attempted(&self) -> bool {
+            self.network_send_attempted
+        }
+
+        pub fn key_material_exposed(&self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(&self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(&self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionEndpointUpdateControlEnvelopeImportSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+        pub fn runtime_material_reconstructable(self) -> bool {
+            self.runtime_material_reconstructable
+        }
+        pub fn envelope_read(self) -> bool {
+            self.envelope_read
+        }
+        pub fn envelope_decodable(self) -> bool {
+            self.envelope_decodable
+        }
+        pub fn envelope_message_type_control(self) -> bool {
+            self.envelope_message_type_control
+        }
+        pub fn session_transport_ready(self) -> bool {
+            self.session_transport_ready
+        }
+        pub fn replay_window_loaded(self) -> bool {
+            self.replay_window_loaded
+        }
+        pub fn replay_accepted(self) -> bool {
+            self.replay_accepted
+        }
+        pub fn control_plaintext_decrypted(self) -> bool {
+            self.control_plaintext_decrypted
+        }
+        pub fn endpoint_update_applied(self) -> bool {
+            self.endpoint_update_applied
+        }
+        pub fn remote_endpoint_state_written(self) -> bool {
+            self.remote_endpoint_state_written
+        }
+        pub fn stale_endpoint_status_cleared(self) -> bool {
+            self.stale_endpoint_status_cleared
+        }
+        pub fn endpoint_plaintext_exposed(self) -> bool {
+            self.endpoint_plaintext_exposed
+        }
+        pub fn network_receive_attempted(self) -> bool {
+            self.network_receive_attempted
+        }
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+        pub fn runtime_messaging_enabled(self) -> bool {
             self.runtime_messaging_enabled
         }
     }
@@ -5583,6 +5734,325 @@ pub mod production {
         })
     }
 
+    pub fn production_endpoint_update_control_envelope_export(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        message_number: u64,
+        local_rendezvous_endpoint: impl Into<String>,
+    ) -> Result<ProductionEndpointUpdateControlEnvelopeExportSummary, ProductionSessionError> {
+        if message_number == 0 {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        let draft = load_latest_session_draft(&store, &profile)?
+            .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let local_noise_static = store
+            .get(&production_latest_pairing_noise_static_record_id())?
+            .map(decode_production_noise_static_private_key_record)
+            .transpose()?
+            .ok_or(ProductionSessionError::NoiseStaticPrivateKeyMissing)?;
+        if local_noise_static.keypair.public_key() != draft.local_noise_static_public_key {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
+        let transport_state = load_session_transport_state(&store, &profile, &draft)?
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        let session_transport_ready = transport_state.channel_id == material.channel_id
+            && transport_state.local_role == draft.local_role
+            && transport_state.remote_contact_id == material.remote_contact_id
+            && transport_state.remote_noise_static_public_key
+                == draft.remote_noise_static_public_key
+            && transport_state.transport_state_created
+            && matches!(
+                (
+                    draft.local_role,
+                    transport_state.handshake_message_kind.as_str()
+                ),
+                (SessionRole::CanonicalDialer, "reply") | (SessionRole::Responder, "finish")
+            );
+        if !session_transport_ready {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let new_endpoint = OnionServiceEndpoint::new(local_rendezvous_endpoint.into())
+            .map_err(|_| ProductionSessionError::InvalidRendezvousEndpoint)?;
+        let update = PairwiseEndpointUpdate::for_existing_encrypted_session(
+            &material.remote_endpoint,
+            new_endpoint,
+            EndpointUpdateChannel::ExistingEncryptedSession,
+        )?;
+        let plaintext = EndpointUpdateControlPlaintext::from_pairwise_update(&update);
+        let padded = plaintext.encode_padded()?;
+        let ciphertext = match draft.local_role {
+            SessionRole::CanonicalDialer => {
+                let state = store
+                    .get(&production_pending_handshake_initiator_state_record_id())?
+                    .map(|record| {
+                        decode_production_handshake_initiator_state_record(
+                            record,
+                            &profile,
+                            &draft.channel_id,
+                        )
+                    })
+                    .transpose()?
+                    .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+                let transport = create_noise_xx_stateless_initiator_transport(
+                    &draft.safety_transcript,
+                    &local_noise_static.keypair,
+                    &state.initiator_ephemeral_private,
+                    &transport_state.handshake_message,
+                )
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                if transport.remote_static() != draft.remote_noise_static_public_key {
+                    return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+                }
+                transport
+                    .encrypt_with_nonce(message_number - 1, &padded)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
+            }
+            SessionRole::Responder => {
+                let state = store
+                    .get(&production_pending_handshake_initiator_state_record_id())?
+                    .map(|record| {
+                        decode_production_handshake_responder_state_record(
+                            record,
+                            &profile,
+                            &draft.channel_id,
+                        )
+                    })
+                    .transpose()?
+                    .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+                let transport = create_noise_xx_stateless_responder_transport(
+                    &draft.safety_transcript,
+                    &local_noise_static.keypair,
+                    &state.init_message,
+                    &state.responder_ephemeral_private,
+                    &transport_state.handshake_message,
+                )
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                if transport.remote_static() != draft.remote_noise_static_public_key {
+                    return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+                }
+                transport
+                    .encrypt_with_nonce(message_number - 1, &padded)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
+            }
+        };
+        if ciphertext.remote_static != draft.remote_noise_static_public_key
+            || ciphertext.key_material_exposed
+        {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
+        let control = EncryptedEndpointUpdateControlEnvelope::from_pairwise_update(
+            &update,
+            material.channel_id.clone(),
+            message_number,
+            ciphertext.ciphertext,
+        )?;
+        let envelope = control.envelope().clone();
+        let message_record_id = production_message_envelope_record_id(
+            &material.channel_id,
+            message_number,
+            MessageType::Control,
+        );
+        if store.get(&message_record_id)?.is_some() {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let envelope_record = EncryptedRecord::new(
+            ProductionRecordKind::MessageEnvelope,
+            EncryptedRecordScope::contact(profile, material.remote_contact_id),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            envelope.encode().into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)?;
+        store.put(&message_record_id, &envelope_record)?;
+        Ok(ProductionEndpointUpdateControlEnvelopeExportSummary {
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            session_transport_ready,
+            endpoint_update_created: true,
+            encrypted_control_envelope_written: true,
+            envelope_decodable: true,
+            envelope_message_number_matches: envelope.message_number == message_number,
+            envelope_message_type_control: envelope.message_type == MessageType::Control,
+            export_payload: format!("{}\n", envelope.encode()),
+            endpoint_plaintext_exposed: false,
+            network_send_attempted: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_endpoint_update_control_envelope_import(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        envelope_payload: &str,
+    ) -> Result<ProductionEndpointUpdateControlEnvelopeImportSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        let draft = load_latest_session_draft(&store, &profile)?
+            .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let local_noise_static = store
+            .get(&production_latest_pairing_noise_static_record_id())?
+            .map(decode_production_noise_static_private_key_record)
+            .transpose()?
+            .ok_or(ProductionSessionError::NoiseStaticPrivateKeyMissing)?;
+        if local_noise_static.keypair.public_key() != draft.local_noise_static_public_key {
+            return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+        }
+        let transport_state = load_session_transport_state(&store, &profile, &draft)?
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        let session_transport_ready = transport_state.channel_id == material.channel_id
+            && transport_state.local_role == draft.local_role
+            && transport_state.remote_contact_id == material.remote_contact_id
+            && transport_state.remote_noise_static_public_key
+                == draft.remote_noise_static_public_key
+            && transport_state.transport_state_created
+            && matches!(
+                (
+                    draft.local_role,
+                    transport_state.handshake_message_kind.as_str()
+                ),
+                (SessionRole::CanonicalDialer, "reply") | (SessionRole::Responder, "finish")
+            );
+        if !session_transport_ready {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let envelope = Envelope::decode(envelope_payload)?;
+        if envelope.message_number == 0
+            || envelope.channel_id != material.channel_id
+            || envelope.message_type != MessageType::Control
+        {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let mut replay_window = store
+            .load_replay_window(&production_replay_record_id(&draft.channel_id))?
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        replay_window.accept(envelope.message_number)?;
+        let plaintext = match draft.local_role {
+            SessionRole::CanonicalDialer => {
+                let state = store
+                    .get(&production_pending_handshake_initiator_state_record_id())?
+                    .map(|record| {
+                        decode_production_handshake_initiator_state_record(
+                            record,
+                            &profile,
+                            &draft.channel_id,
+                        )
+                    })
+                    .transpose()?
+                    .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+                let transport = create_noise_xx_stateless_initiator_transport(
+                    &draft.safety_transcript,
+                    &local_noise_static.keypair,
+                    &state.initiator_ephemeral_private,
+                    &transport_state.handshake_message,
+                )
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                if transport.remote_static() != draft.remote_noise_static_public_key {
+                    return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+                }
+                transport
+                    .decrypt_with_nonce(envelope.message_number - 1, &envelope.padded_ciphertext)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
+            }
+            SessionRole::Responder => {
+                let state = store
+                    .get(&production_pending_handshake_initiator_state_record_id())?
+                    .map(|record| {
+                        decode_production_handshake_responder_state_record(
+                            record,
+                            &profile,
+                            &draft.channel_id,
+                        )
+                    })
+                    .transpose()?
+                    .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+                let transport = create_noise_xx_stateless_responder_transport(
+                    &draft.safety_transcript,
+                    &local_noise_static.keypair,
+                    &state.init_message,
+                    &state.responder_ephemeral_private,
+                    &transport_state.handshake_message,
+                )
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                if transport.remote_static() != draft.remote_noise_static_public_key {
+                    return Err(ProductionSessionError::NoiseStaticKeyMismatch);
+                }
+                transport
+                    .decrypt_with_nonce(envelope.message_number - 1, &envelope.padded_ciphertext)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
+            }
+        };
+        if plaintext.remote_static != draft.remote_noise_static_public_key
+            || plaintext.key_material_exposed
+        {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let control_plaintext =
+            EndpointUpdateControlPlaintext::decode(trim_padding(&plaintext.plaintext))?;
+        let update = PairwiseEndpointUpdate::for_existing_encrypted_session(
+            &material.remote_endpoint,
+            control_plaintext.new_endpoint().clone(),
+            EndpointUpdateChannel::ExistingEncryptedSession,
+        )?;
+        let updated_endpoint = PairwiseRendezvousEndpoint::new(
+            update.contact_id().clone(),
+            update.new_endpoint().clone(),
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )?;
+        let endpoint_record = EncryptedRecord::new(
+            ProductionRecordKind::RendezvousEndpointState,
+            EncryptedRecordScope::contact(profile.clone(), draft.remote_contact_id.clone()),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            updated_endpoint.encode_state().into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)?;
+        store.put(
+            &production_endpoint_state_record_id(&draft.channel_id, &draft.remote_contact_id),
+            &endpoint_record,
+        )?;
+        store.delete(&production_endpoint_status_record_id(
+            &draft.channel_id,
+            &draft.remote_contact_id,
+        ))?;
+        store.save_replay_window(
+            &production_replay_record_id(&draft.channel_id),
+            EncryptedRecordScope::contact(profile, material.remote_contact_id),
+            &replay_window,
+        )?;
+        Ok(ProductionEndpointUpdateControlEnvelopeImportSummary {
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            envelope_read: !envelope_payload.is_empty(),
+            envelope_decodable: true,
+            envelope_message_type_control: true,
+            session_transport_ready,
+            replay_window_loaded: true,
+            replay_accepted: true,
+            control_plaintext_decrypted: true,
+            endpoint_update_applied: true,
+            remote_endpoint_state_written: true,
+            stale_endpoint_status_cleared: true,
+            endpoint_plaintext_exposed: false,
+            network_receive_attempted: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
     pub fn production_message_inbound_decrypt_import(
         store_path: impl AsRef<std::path::Path>,
         profile: ProfileName,
@@ -9096,6 +9566,98 @@ pub mod production {
             assert!(!received_export.key_material_exposed());
             assert!(!received_export.transport_io_opened());
             assert!(!received_export.runtime_messaging_enabled());
+
+            let local_endpoint_update = if outbound_profile == alice {
+                "alice-rotated.onion"
+            } else {
+                "bob-rotated.onion"
+            };
+            let control_export = production_endpoint_update_control_envelope_export(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+                2,
+                local_endpoint_update,
+            )
+            .expect("endpoint update control export");
+            assert!(control_export.storage_opened());
+            assert!(control_export.runtime_material_reconstructable());
+            assert!(control_export.session_transport_ready());
+            assert!(control_export.endpoint_update_created());
+            assert!(control_export.encrypted_control_envelope_written());
+            assert!(control_export.envelope_decodable());
+            assert!(control_export.envelope_message_number_matches());
+            assert!(control_export.envelope_message_type_control());
+            assert!(control_export.export_payload().starts_with("ADENV1|"));
+            assert!(!control_export
+                .export_payload()
+                .contains(local_endpoint_update));
+            assert!(!control_export.endpoint_plaintext_exposed());
+            assert!(!control_export.network_send_attempted());
+            assert!(!control_export.key_material_exposed());
+            assert!(!control_export.transport_io_opened());
+            assert!(!control_export.runtime_messaging_enabled());
+
+            production_pairing_session_remote_endpoint_mark_send_failure(
+                inbound_store,
+                inbound_profile.clone(),
+                &passphrase,
+                2,
+            )
+            .expect("mark inbound endpoint stale before control update");
+            let control_import = production_endpoint_update_control_envelope_import(
+                inbound_store,
+                inbound_profile.clone(),
+                &passphrase,
+                control_export.export_payload(),
+            )
+            .expect("endpoint update control import");
+            assert!(control_import.storage_opened());
+            assert!(control_import.runtime_material_reconstructable());
+            assert!(control_import.envelope_read());
+            assert!(control_import.envelope_decodable());
+            assert!(control_import.envelope_message_type_control());
+            assert!(control_import.session_transport_ready());
+            assert!(control_import.replay_window_loaded());
+            assert!(control_import.replay_accepted());
+            assert!(control_import.control_plaintext_decrypted());
+            assert!(control_import.endpoint_update_applied());
+            assert!(control_import.remote_endpoint_state_written());
+            assert!(control_import.stale_endpoint_status_cleared());
+            assert!(!control_import.endpoint_plaintext_exposed());
+            assert!(!control_import.network_receive_attempted());
+            assert!(!control_import.key_material_exposed());
+            assert!(!control_import.transport_io_opened());
+            assert!(!control_import.runtime_messaging_enabled());
+            let inbound_updated_endpoint = production_pairing_session_remote_endpoint(
+                inbound_store,
+                inbound_profile.clone(),
+                &passphrase,
+            )
+            .expect("inbound updated endpoint");
+            assert_eq!(
+                inbound_updated_endpoint.endpoint().as_str(),
+                local_endpoint_update
+            );
+            let inbound_endpoint_status = production_pairing_session_remote_endpoint_status(
+                inbound_store,
+                inbound_profile.clone(),
+                &passphrase,
+            )
+            .expect("inbound endpoint status");
+            assert!(!inbound_endpoint_status.remote_endpoint_marked_stale());
+            assert_eq!(inbound_endpoint_status.last_failed_message_number(), None);
+            assert!(matches!(
+                production_endpoint_update_control_envelope_import(
+                    inbound_store,
+                    inbound_profile.clone(),
+                    &passphrase,
+                    control_export.export_payload()
+                ),
+                Err(ProductionSessionError::Protocol(
+                    ProtocolError::ReplayMessage
+                ))
+            ));
             let outbound_transcript = production_message_transcript_export(
                 outbound_store,
                 outbound_profile.clone(),

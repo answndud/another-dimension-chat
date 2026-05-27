@@ -450,6 +450,50 @@ pub struct ProductionMessageEnvelopeImportResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionEndpointUpdateControlEnvelopeExportResult {
+    warning: &'static str,
+    selected_message_number: u64,
+    storage_opened: bool,
+    runtime_material_reconstructable: bool,
+    session_transport_ready: bool,
+    endpoint_update_created: bool,
+    encrypted_control_envelope_written: bool,
+    envelope_decodable: bool,
+    envelope_message_number_matches: bool,
+    envelope_message_type_control: bool,
+    envelope_payload: String,
+    endpoint_payload_returned: bool,
+    endpoint_plaintext_exposed: bool,
+    key_material_exposed: bool,
+    network_send_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionEndpointUpdateControlEnvelopeImportResult {
+    warning: &'static str,
+    storage_opened: bool,
+    runtime_material_reconstructable: bool,
+    envelope_read: bool,
+    envelope_decodable: bool,
+    envelope_message_type_control: bool,
+    session_transport_ready: bool,
+    replay_window_loaded: bool,
+    replay_accepted: bool,
+    control_plaintext_decrypted: bool,
+    endpoint_update_applied: bool,
+    remote_endpoint_state_written: bool,
+    stale_endpoint_status_cleared: bool,
+    endpoint_payload_returned: bool,
+    endpoint_plaintext_exposed: bool,
+    key_material_exposed: bool,
+    network_receive_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionMessageReceivedExportResult {
     warning: &'static str,
     storage_opened: bool,
@@ -1814,6 +1858,52 @@ fn production_message_envelope_import(
     )
     .map_err(|_| {
         "production message import failed without exposing profile, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_endpoint_update_control_envelope_export(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+    local_rendezvous_endpoint: String,
+) -> Result<ProductionEndpointUpdateControlEnvelopeExportResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production endpoint update export failed without exposing local path details"
+    })?;
+    run_production_endpoint_update_control_envelope_export(
+        app_data_root,
+        profile,
+        passphrase,
+        message_number,
+        local_rendezvous_endpoint,
+    )
+    .map_err(|_| {
+        "production endpoint update export failed without exposing profile, endpoint, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_endpoint_update_control_envelope_import(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    envelope_payload: String,
+) -> Result<ProductionEndpointUpdateControlEnvelopeImportResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production endpoint update import failed without exposing local path details"
+    })?;
+    run_production_endpoint_update_control_envelope_import(
+        app_data_root,
+        profile,
+        passphrase,
+        envelope_payload,
+    )
+    .map_err(|_| {
+        "production endpoint update import failed without exposing profile, endpoint, path, or key details"
             .to_string()
     })
 }
@@ -6149,6 +6239,99 @@ fn run_production_message_envelope_import(
     })
 }
 
+fn run_production_endpoint_update_control_envelope_export(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+    local_rendezvous_endpoint: String,
+) -> Result<ProductionEndpointUpdateControlEnvelopeExportResult, String> {
+    use another_dimension_core::production::production_endpoint_update_control_envelope_export;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let local_rendezvous_endpoint = sanitize_pairing_rendezvous_endpoint(local_rendezvous_endpoint)?;
+    if message_number == 0 {
+        return Err("endpoint update message number is required".to_string());
+    }
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let export = production_endpoint_update_control_envelope_export(
+        &store_path,
+        profile,
+        &passphrase,
+        message_number,
+        local_rendezvous_endpoint,
+    )
+    .map_err(|_| "endpoint update control envelope export failed")?;
+
+    Ok(ProductionEndpointUpdateControlEnvelopeExportResult {
+        warning: "encrypted endpoint update control envelope exported; it contains no plaintext endpoint in the result",
+        selected_message_number: message_number,
+        storage_opened: export.storage_opened(),
+        runtime_material_reconstructable: export.runtime_material_reconstructable(),
+        session_transport_ready: export.session_transport_ready(),
+        endpoint_update_created: export.endpoint_update_created(),
+        encrypted_control_envelope_written: export.encrypted_control_envelope_written(),
+        envelope_decodable: export.envelope_decodable(),
+        envelope_message_number_matches: export.envelope_message_number_matches(),
+        envelope_message_type_control: export.envelope_message_type_control(),
+        envelope_payload: export.export_payload().trim().to_string(),
+        endpoint_payload_returned: false,
+        endpoint_plaintext_exposed: export.endpoint_plaintext_exposed(),
+        key_material_exposed: export.key_material_exposed(),
+        network_send_attempted: export.network_send_attempted(),
+        transport_io_opened: export.transport_io_opened(),
+        runtime_messaging_enabled: export.runtime_messaging_enabled(),
+    })
+}
+
+fn run_production_endpoint_update_control_envelope_import(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    envelope_payload: String,
+) -> Result<ProductionEndpointUpdateControlEnvelopeImportResult, String> {
+    use another_dimension_core::production::production_endpoint_update_control_envelope_import;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let envelope_payload = sanitize_envelope_payload(envelope_payload)?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let import = production_endpoint_update_control_envelope_import(
+        &store_path,
+        profile,
+        &passphrase,
+        &envelope_payload,
+    )
+    .map_err(|_| "endpoint update control envelope import failed")?;
+
+    Ok(ProductionEndpointUpdateControlEnvelopeImportResult {
+        warning: "encrypted endpoint update control envelope imported; stored peer endpoint changed inside the existing session only",
+        storage_opened: import.storage_opened(),
+        runtime_material_reconstructable: import.runtime_material_reconstructable(),
+        envelope_read: import.envelope_read(),
+        envelope_decodable: import.envelope_decodable(),
+        envelope_message_type_control: import.envelope_message_type_control(),
+        session_transport_ready: import.session_transport_ready(),
+        replay_window_loaded: import.replay_window_loaded(),
+        replay_accepted: import.replay_accepted(),
+        control_plaintext_decrypted: import.control_plaintext_decrypted(),
+        endpoint_update_applied: import.endpoint_update_applied(),
+        remote_endpoint_state_written: import.remote_endpoint_state_written(),
+        stale_endpoint_status_cleared: import.stale_endpoint_status_cleared(),
+        endpoint_payload_returned: false,
+        endpoint_plaintext_exposed: import.endpoint_plaintext_exposed(),
+        key_material_exposed: import.key_material_exposed(),
+        network_receive_attempted: import.network_receive_attempted(),
+        transport_io_opened: import.transport_io_opened(),
+        runtime_messaging_enabled: import.runtime_messaging_enabled(),
+    })
+}
+
 fn run_production_message_received_export(
     app_data_root: impl AsRef<std::path::Path>,
     profile: String,
@@ -7530,6 +7713,8 @@ pub fn run() {
             production_handshake_finish_import,
             production_message_envelope_export,
             production_message_envelope_import,
+            production_endpoint_update_control_envelope_export,
+            production_endpoint_update_control_envelope_import,
             production_message_received_export,
             production_message_transcript_export,
             production_local_roundtrip,
@@ -7558,6 +7743,8 @@ mod tests {
     use super::{
         build_demo_simulation, parse_demo_steps, parse_loop_messages,
         production_message_retention_policy,
+        run_production_endpoint_update_control_envelope_export,
+        run_production_endpoint_update_control_envelope_import,
         production_profile_store_path, run_production_handshake_finish_export,
         run_production_handshake_finish_import, run_production_handshake_init_export,
         run_production_handshake_reply_export, run_production_local_roundtrip,
@@ -9848,6 +10035,82 @@ replay check: no replayed messages after message 2
         assert!(!received.network_receive_attempted);
         assert!(!received.transport_io_opened);
         assert!(!received.runtime_messaging_enabled);
+
+        let endpoint_update = run_production_endpoint_update_control_envelope_export(
+            &root,
+            initiator.to_string(),
+            "correct-passphrase".to_string(),
+            2,
+            format!("{initiator}-rotated.onion"),
+        )
+        .expect("endpoint update export");
+        assert_eq!(endpoint_update.selected_message_number, 2);
+        assert!(endpoint_update.storage_opened);
+        assert!(endpoint_update.runtime_material_reconstructable);
+        assert!(endpoint_update.session_transport_ready);
+        assert!(endpoint_update.endpoint_update_created);
+        assert!(endpoint_update.encrypted_control_envelope_written);
+        assert!(endpoint_update.envelope_decodable);
+        assert!(endpoint_update.envelope_message_number_matches);
+        assert!(endpoint_update.envelope_message_type_control);
+        assert!(endpoint_update.envelope_payload.starts_with("ADENV1|"));
+        assert!(!endpoint_update.envelope_payload.contains("rotated.onion"));
+        assert!(!endpoint_update.endpoint_payload_returned);
+        assert!(!endpoint_update.endpoint_plaintext_exposed);
+        assert!(!endpoint_update.key_material_exposed);
+        assert!(!endpoint_update.network_send_attempted);
+        assert!(!endpoint_update.transport_io_opened);
+        assert!(!endpoint_update.runtime_messaging_enabled);
+
+        run_production_pairing_session_remote_endpoint_mark_send_failure(
+            &root,
+            responder.to_string(),
+            "correct-passphrase".to_string(),
+            2,
+        )
+        .expect("mark responder endpoint stale");
+        let endpoint_import = run_production_endpoint_update_control_envelope_import(
+            &root,
+            responder.to_string(),
+            "correct-passphrase".to_string(),
+            endpoint_update.envelope_payload.clone(),
+        )
+        .expect("endpoint update import");
+        assert!(endpoint_import.storage_opened);
+        assert!(endpoint_import.runtime_material_reconstructable);
+        assert!(endpoint_import.envelope_read);
+        assert!(endpoint_import.envelope_decodable);
+        assert!(endpoint_import.envelope_message_type_control);
+        assert!(endpoint_import.session_transport_ready);
+        assert!(endpoint_import.replay_window_loaded);
+        assert!(endpoint_import.replay_accepted);
+        assert!(endpoint_import.control_plaintext_decrypted);
+        assert!(endpoint_import.endpoint_update_applied);
+        assert!(endpoint_import.remote_endpoint_state_written);
+        assert!(endpoint_import.stale_endpoint_status_cleared);
+        assert!(!endpoint_import.endpoint_payload_returned);
+        assert!(!endpoint_import.endpoint_plaintext_exposed);
+        assert!(!endpoint_import.key_material_exposed);
+        assert!(!endpoint_import.network_receive_attempted);
+        assert!(!endpoint_import.transport_io_opened);
+        assert!(!endpoint_import.runtime_messaging_enabled);
+        let endpoint_status = run_production_two_profile_session_status(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("endpoint status after control import");
+        if responder == "alice" {
+            assert!(!endpoint_status.profile_a_remote_endpoint_marked_stale);
+        } else {
+            assert!(!endpoint_status.profile_b_remote_endpoint_marked_stale);
+        }
+        let serialized_endpoint_update =
+            serde_json::to_string(&endpoint_import).expect("serialize endpoint import");
+        assert!(!serialized_endpoint_update.contains("rotated.onion"));
+        assert!(!serialized_endpoint_update.contains("correct-passphrase"));
+        assert!(!serialized_endpoint_update.contains("/tmp"));
 
         let sender_transcript = run_production_message_transcript_export(
             &root,

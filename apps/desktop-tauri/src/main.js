@@ -305,6 +305,9 @@ const fields = {
   refreshProductionTwoProfilePeerEndpoints: document.querySelector(
     "#refresh-production-two-profile-peer-endpoints",
   ),
+  sendProductionTwoProfileEndpointUpdate: document.querySelector(
+    "#send-production-two-profile-endpoint-update",
+  ),
   completeProductionTwoProfileOnionHandshake: document.querySelector(
     "#complete-production-two-profile-onion-handshake",
   ),
@@ -859,6 +862,22 @@ function latestTwoProfilePeerOnionEndpoint(input = productionTwoProfileInput()) 
   }
   if (input.profileA === latestProductionTwoProfileOnionEndpoints.profileB) {
     return latestProductionTwoProfileOnionEndpoints.profileAEndpoint;
+  }
+  return "";
+}
+
+function latestTwoProfileLocalOnionEndpoint(input = productionTwoProfileInput()) {
+  if (
+    !latestProductionTwoProfileOnionEndpoints ||
+    latestProductionTwoProfileOnionEndpoints.fingerprint !== twoProfileSessionStatusFingerprint(input)
+  ) {
+    return "";
+  }
+  if (input.profileA === latestProductionTwoProfileOnionEndpoints.profileA) {
+    return latestProductionTwoProfileOnionEndpoints.profileAEndpoint;
+  }
+  if (input.profileA === latestProductionTwoProfileOnionEndpoints.profileB) {
+    return latestProductionTwoProfileOnionEndpoints.profileBEndpoint;
   }
   return "";
 }
@@ -3421,6 +3440,30 @@ function applyProductionActionState() {
     false,
   );
   setActionButtonState(
+    fields.sendProductionTwoProfileEndpointUpdate,
+    busy ||
+      !hasTwoProfileSessionStatusInput ||
+      !twoProfileSessionsReady ||
+      !latestTwoProfileLocalOnionEndpoint(twoProfile) ||
+      !latestProductionTwoProfileSuccess ||
+      latestProductionTwoProfileSuccess.profileA !== twoProfile.profileA ||
+      latestProductionTwoProfileSuccess.profileB !== twoProfile.profileB,
+    busy
+      ? "Wait for the active production action."
+      : !hasTwoProfileSessionStatusInput
+        ? "Enter distinct Profile A, Profile B, and passphrase first."
+      : !twoProfileSessionsReady
+        ? "Complete the verified session handshake first."
+      : !latestTwoProfileLocalOnionEndpoint(twoProfile)
+        ? "Refresh or prepare onion endpoints first."
+      : !latestProductionTwoProfileSuccess ||
+          latestProductionTwoProfileSuccess.profileA !== twoProfile.profileA ||
+          latestProductionTwoProfileSuccess.profileB !== twoProfile.profileB
+        ? "Send a stored-session message first."
+        : "Export and import an encrypted endpoint update control envelope.",
+    false,
+  );
+  setActionButtonState(
     fields.completeProductionTwoProfileOnionHandshake,
     busy || twoProfileSessionsReady || !hasTwoProfileSessionStatusInput,
     busy
@@ -5013,6 +5056,90 @@ async function refreshProductionTwoProfilePeerEndpoints() {
     productionBusyAction = null;
     if (fields.refreshProductionTwoProfilePeerEndpoints) {
       fields.refreshProductionTwoProfilePeerEndpoints.disabled = false;
+    }
+    applyProductionActionState();
+  }
+}
+
+async function sendProductionTwoProfileEndpointUpdate() {
+  const input = productionTwoProfileInput();
+  const localEndpoint = latestTwoProfileLocalOnionEndpoint(input);
+  const latestMessage = latestProductionTwoProfileSuccess;
+  if (!input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
+    setProductionTwoProfileState("Endpoint update needs profiles");
+    setText(fields.productionTwoProfileWarning, "Enter two distinct profiles and passphrase before sending an endpoint update.");
+    return;
+  }
+  if (!twoProfileSessionsReadyForInput(input)) {
+    setProductionTwoProfileState("Endpoint update needs session");
+    setText(fields.productionTwoProfileWarning, "Complete the verified session handshake before sending an endpoint update.");
+    return;
+  }
+  if (!localEndpoint) {
+    setProductionTwoProfileState("Endpoint update needs local endpoint");
+    setText(fields.productionTwoProfileWarning, "Refresh or prepare onion endpoints before sending an endpoint update.");
+    return;
+  }
+  if (!latestMessage || latestMessage.profileA !== input.profileA || latestMessage.profileB !== input.profileB) {
+    setProductionTwoProfileState("Endpoint update needs message baseline");
+    setText(fields.productionTwoProfileWarning, "Send a stored-session message first so the endpoint update uses the next session message number.");
+    return;
+  }
+
+  const updateMessageNumber = latestMessage.messageNumber + 1;
+  productionBusyAction = "two-profile-endpoint-update-control";
+  setProductionTwoProfileState("Endpoint update running");
+  setText(fields.productionTwoProfileWarning, `Encrypting endpoint update control message #${updateMessageNumber}.`);
+  setText(fields.productionTwoProfileProfiles, `sender=${input.profileA} receiver=${input.profileB}`);
+  setText(fields.productionTwoProfileSession, "Using existing encrypted session control envelope");
+  setText(fields.productionTwoProfileMessageState, "No onion stream send attempted");
+  setText(fields.productionTwoProfileBoundary, "Endpoint update control export/import in progress");
+  applyProductionActionState();
+  if (fields.sendProductionTwoProfileEndpointUpdate) {
+    fields.sendProductionTwoProfileEndpointUpdate.disabled = true;
+  }
+
+  try {
+    const exported = await invoke("production_endpoint_update_control_envelope_export", {
+      profile: input.profileA,
+      passphrase: input.passphrase,
+      messageNumber: updateMessageNumber,
+      localRendezvousEndpoint: localEndpoint,
+    });
+    const imported = await invoke("production_endpoint_update_control_envelope_import", {
+      profile: input.profileB,
+      passphrase: input.passphrase,
+      envelopePayload: exported.envelope_payload,
+    });
+    const status = await invoke("production_two_profile_session_status", {
+      profileA: input.profileA,
+      profileB: input.profileB,
+      passphrase: input.passphrase,
+    });
+    rememberTwoProfileSessionStatus(input, status);
+    renderProductionTwoProfileSessionStatusResult(status);
+    setProductionTwoProfileState("Endpoint update applied");
+    setText(fields.productionTwoProfileWarning, imported.warning);
+    setText(
+      fields.productionTwoProfileSession,
+      `control_message=${updateMessageNumber} exported=${exported.encrypted_control_envelope_written} imported=${imported.endpoint_update_applied}`,
+    );
+    setText(
+      fields.productionTwoProfileMessageState,
+      `replay=${imported.replay_accepted} endpoint_state=${imported.remote_endpoint_state_written} stale_cleared=${imported.stale_endpoint_status_cleared}`,
+    );
+    setText(
+      fields.productionTwoProfileBoundary,
+      `payload_returned=${exported.endpoint_payload_returned || imported.endpoint_payload_returned} endpoint_plaintext=${exported.endpoint_plaintext_exposed || imported.endpoint_plaintext_exposed} key_material=${exported.key_material_exposed || imported.key_material_exposed || status.key_material_exposed} network=${exported.network_send_attempted || imported.network_receive_attempted || status.network_io_attempted} transport=${exported.transport_io_opened || imported.transport_io_opened || status.transport_io_opened} runtime=${exported.runtime_messaging_enabled || imported.runtime_messaging_enabled || status.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionTwoProfileState("Endpoint update failed");
+    setText(fields.productionTwoProfileWarning, `Endpoint update failed without returning endpoint, path, or key details. ${error}`);
+    setText(fields.productionTwoProfileBoundary, "Existing session state was not intentionally deleted or re-paired.");
+  } finally {
+    productionBusyAction = null;
+    if (fields.sendProductionTwoProfileEndpointUpdate) {
+      fields.sendProductionTwoProfileEndpointUpdate.disabled = false;
     }
     applyProductionActionState();
   }
@@ -8085,6 +8212,13 @@ if (fields.refreshProductionTwoProfilePeerEndpoints) {
   fields.refreshProductionTwoProfilePeerEndpoints.addEventListener(
     "click",
     refreshProductionTwoProfilePeerEndpoints,
+  );
+}
+
+if (fields.sendProductionTwoProfileEndpointUpdate) {
+  fields.sendProductionTwoProfileEndpointUpdate.addEventListener(
+    "click",
+    sendProductionTwoProfileEndpointUpdate,
   );
 }
 
