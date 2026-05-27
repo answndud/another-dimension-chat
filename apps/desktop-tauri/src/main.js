@@ -296,6 +296,9 @@ const fields = {
   launchProductionTwoProfileOnionEndpoint: document.querySelector(
     "#launch-production-two-profile-onion-endpoint",
   ),
+  prepareProductionTwoProfileOnionPairing: document.querySelector(
+    "#prepare-production-two-profile-onion-pairing",
+  ),
   runProductionTwoProfileRealOnionRoundtrip: document.querySelector(
     "#run-production-two-profile-real-onion-roundtrip",
   ),
@@ -3176,6 +3179,18 @@ function applyProductionActionState() {
     false,
   );
   setActionButtonState(
+    fields.prepareProductionTwoProfileOnionPairing,
+    busy || !manualNetworkPermission || !hasTwoProfileSessionStatusInput,
+    busy
+      ? "Wait for the active production action."
+      : !manualNetworkPermission
+        ? "Enable manual onion network permission before preparing onion pairing."
+      : !hasTwoProfileSessionStatusInput
+        ? "Enter distinct Profile A, Profile B, and passphrase first."
+        : "Launch both local onion endpoints, export both pairing payloads, and preview safety.",
+    false,
+  );
+  setActionButtonState(
     fields.runProductionTwoProfileRealOnionRoundtrip,
     busy || !hasTwoProfileInput || !hasMessageRetentionPolicy || !manualNetworkPermission,
     busy
@@ -4407,6 +4422,107 @@ async function launchProductionTwoProfileOnionEndpoint() {
   }
 }
 
+async function prepareProductionTwoProfileOnionPairing() {
+  const { profileA, profileB, passphrase } = productionTwoProfileInput();
+  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  if (!profileA || !profileB || profileA === profileB || !passphrase) {
+    setProductionTwoProfileState("Onion pairing needs profiles");
+    setText(fields.productionTwoProfileWarning, "Enter two distinct profiles and passphrase before preparing onion pairing.");
+    return;
+  }
+  if (!manualNetworkPermission) {
+    setProductionTwoProfileState("Onion pairing blocked");
+    setText(fields.productionTwoProfileWarning, "Enable manual onion network permission before preparing onion pairing.");
+    return;
+  }
+
+  const launchAndExport = async (profile) => {
+    const launch = await invoke("production_onion_service_launch_attempt", {
+      profile,
+      passphrase,
+      manualNetworkPermission,
+    });
+    if (!launch.local_onion_endpoint) {
+      throw new Error(`${profile} endpoint unavailable: ${launch.next_blocker || "unknown blocker"}`);
+    }
+    const pairing = await invoke("production_pairing_payload_export", {
+      profile,
+      passphrase,
+      rendezvousEndpoint: launch.local_onion_endpoint,
+    });
+    return { launch, pairing };
+  };
+
+  productionBusyAction = "two-profile-onion-pairing";
+  setProductionTwoProfileState("Onion pairing running");
+  setText(fields.productionTwoProfileWarning, "Launching Alice/Bob onion endpoints and preparing pairing payloads.");
+  setText(fields.productionTwoProfileProfiles, `a=${profileA} b=${profileB}`);
+  setText(fields.productionTwoProfileSession, "Waiting for endpoint launch, payload export, and safety preview");
+  setText(fields.productionTwoProfileMessageState, "No message transport attempted");
+  setText(fields.productionTwoProfileBoundary, "Onion pairing in progress with manual network permission");
+  applyProductionActionState();
+  if (fields.prepareProductionTwoProfileOnionPairing) {
+    fields.prepareProductionTwoProfileOnionPairing.disabled = true;
+  }
+
+  try {
+    const profileAResult = await launchAndExport(profileA);
+    const profileBResult = await launchAndExport(profileB);
+    if (fields.productionProfileName) {
+      fields.productionProfileName.value = profileA;
+      fields.productionProfileName.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    if (fields.productionProfileSelector) {
+      fields.productionProfileSelector.value = profileA;
+    }
+    if (fields.productionPairingEndpoint) {
+      fields.productionPairingEndpoint.value = profileAResult.launch.local_onion_endpoint;
+      fields.productionPairingEndpoint.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    await applyProductionPairingPayloadExportResult(
+      profileAResult.pairing,
+      "Onion pairing payloads ready",
+    );
+    if (fields.productionRemotePairingPayload) {
+      fields.productionRemotePairingPayload.value = profileBResult.pairing.pairing_payload;
+      fields.productionRemotePairingPayload.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    const safety = await invoke("production_pairing_safety_preview", {
+      localPayload: profileAResult.pairing.pairing_payload,
+      remotePayload: profileBResult.pairing.pairing_payload,
+    });
+    applyProductionPairingSafetyPreviewResult(safety, profileAResult.pairing.pairing_payload, profileBResult.pairing.pairing_payload);
+    setProductionTwoProfileState("Onion pairing safety ready");
+    setText(
+      fields.productionTwoProfileWarning,
+      "Alice/Bob onion endpoints and pairing payloads are ready. Verify the safety number before saving a session draft.",
+    );
+    setText(
+      fields.productionTwoProfileProfiles,
+      `a_endpoint=${profileAResult.launch.onion_endpoint_returned} b_endpoint=${profileBResult.launch.onion_endpoint_returned}`,
+    );
+    setText(
+      fields.productionTwoProfileSession,
+      `a_payload=${profileAResult.pairing.pairing_payload_exported} b_payload=${profileBResult.pairing.pairing_payload_exported} safety=${safety.payloads_decodable}`,
+    );
+    setText(fields.productionTwoProfileMessageState, "No message transport attempted");
+    setText(
+      fields.productionTwoProfileBoundary,
+      `a_launch=${profileAResult.launch.launch_attempt_succeeded} b_launch=${profileBResult.launch.launch_attempt_succeeded} a_retained=${profileAResult.launch.onion_service_retained} b_retained=${profileBResult.launch.onion_service_retained} a_events=${profileAResult.launch.event_summary.join("; ") || "none"} b_events=${profileBResult.launch.event_summary.join("; ") || "none"} payloads_returned=false safety_transcript_returned=${safety.safety_transcript_returned} raw_path=${profileAResult.launch.raw_path_returned || profileBResult.launch.raw_path_returned} onion_secret=${profileAResult.launch.onion_secret_returned || profileBResult.launch.onion_secret_returned} descriptor_body=${profileAResult.launch.descriptor_body_returned || profileBResult.launch.descriptor_body_returned} key_material=${profileAResult.launch.key_material_exposed || profileBResult.launch.key_material_exposed || profileAResult.pairing.key_material_exposed || profileBResult.pairing.key_material_exposed || safety.key_material_exposed} network=${profileAResult.launch.network_io_attempted || profileBResult.launch.network_io_attempted} transport=${profileAResult.launch.transport_io_opened || profileBResult.launch.transport_io_opened || profileAResult.pairing.transport_io_opened || profileBResult.pairing.transport_io_opened || safety.transport_io_opened} runtime=${profileAResult.launch.runtime_messaging_enabled || profileBResult.launch.runtime_messaging_enabled || profileAResult.pairing.runtime_messaging_enabled || profileBResult.pairing.runtime_messaging_enabled || safety.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionTwoProfileState("Onion pairing failed");
+    setText(fields.productionTwoProfileWarning, `Onion pairing failed without returning secrets. ${error}`);
+    setText(fields.productionTwoProfileBoundary, "Failed before session save or message transport.");
+  } finally {
+    productionBusyAction = null;
+    if (fields.prepareProductionTwoProfileOnionPairing) {
+      fields.prepareProductionTwoProfileOnionPairing.disabled = false;
+    }
+    applyProductionActionState();
+  }
+}
+
 async function prepareOnionKeyRecord() {
   const { profile, passphrase } = productionProfileInput();
   if (!profile || !passphrase) {
@@ -5524,6 +5640,22 @@ function useRemotePairingQrText() {
   applyProductionActionState();
 }
 
+function applyProductionPairingSafetyPreviewResult(result, localPayload, remotePayload) {
+  latestProductionPairingSafety = {
+    fingerprint: pairingSafetyFingerprint({ localPayload, remotePayload }),
+    safetyNumber: result.safety_number,
+    safetyPhrase: result.safety_phrase,
+  };
+  setProductionPairingState("Safety check ready");
+  setText(fields.productionPairingWarning, result.warning);
+  setText(fields.productionPairingSafetyNumber, result.safety_number);
+  setText(fields.productionPairingSafetyPhrase, result.safety_phrase);
+  setText(
+    fields.productionPairingSafetyBoundary,
+    `verified=${result.safety_confirmed} payloads=${result.payloads_decodable} transcript_bound=${result.safety_transcript_bound} payloads_returned=${result.payloads_returned} transcript_returned=${result.safety_transcript_returned} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+  );
+}
+
 async function checkProductionPairingSafety() {
   const input = productionPairingInput();
   if (!input.localPayload || !input.remotePayload) {
@@ -5544,19 +5676,7 @@ async function checkProductionPairingSafety() {
       localPayload: input.localPayload,
       remotePayload: input.remotePayload,
     });
-    latestProductionPairingSafety = {
-      fingerprint: pairingSafetyFingerprint(input),
-      safetyNumber: result.safety_number,
-      safetyPhrase: result.safety_phrase,
-    };
-    setProductionPairingState("Safety check ready");
-    setText(fields.productionPairingWarning, result.warning);
-    setText(fields.productionPairingSafetyNumber, result.safety_number);
-    setText(fields.productionPairingSafetyPhrase, result.safety_phrase);
-    setText(
-      fields.productionPairingSafetyBoundary,
-      `verified=${result.safety_confirmed} payloads=${result.payloads_decodable} transcript_bound=${result.safety_transcript_bound} payloads_returned=${result.payloads_returned} transcript_returned=${result.safety_transcript_returned} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    applyProductionPairingSafetyPreviewResult(result, input.localPayload, input.remotePayload);
   } catch (error) {
     setProductionPairingState("Safety check failed");
     setText(fields.productionPairingWarning, String(error));
@@ -7018,6 +7138,13 @@ if (fields.launchProductionTwoProfileOnionEndpoint) {
   fields.launchProductionTwoProfileOnionEndpoint.addEventListener(
     "click",
     launchProductionTwoProfileOnionEndpoint,
+  );
+}
+
+if (fields.prepareProductionTwoProfileOnionPairing) {
+  fields.prepareProductionTwoProfileOnionPairing.addEventListener(
+    "click",
+    prepareProductionTwoProfileOnionPairing,
   );
 }
 
