@@ -1220,15 +1220,16 @@ function renderProductionTwoProfileConversationList() {
     });
 
     const meta = document.createElement("strong");
+    meta.className = "transcript-meta";
     meta.textContent = `${entry.sender} -> ${entry.receiver} / #${entry.messageNumber}`;
 
     const status = document.createElement("span");
     status.className = `transcript-status ${delivered ? "is-delivered" : inboundOnly ? "is-inbound-only" : "is-pending-receive"}`;
     status.textContent = delivered
-      ? "delivered: local sent + peer received"
+      ? "delivered"
       : inboundOnly
-        ? "inbound-only: local sent copy missing"
-        : "pending: peer received copy missing";
+        ? "received"
+        : "pending";
 
     const slot = document.createElement("span");
     slot.className = `transcript-slot ${senderEnvelopeSlotPresent ? "is-present" : "is-missing"}`;
@@ -1244,25 +1245,35 @@ function renderProductionTwoProfileConversationList() {
     const actionView = twoProfileConversationActionView(entry);
     const action = document.createElement("span");
     action.className = `transcript-action ${actionView.state}`;
-    action.textContent = actionView.rowLabel;
+    action.textContent = currentReplyTarget
+      ? "reply target"
+      : actionView.state === "is-reply"
+        ? "reply ready"
+        : actionView.state === "is-ready"
+          ? "action ready"
+          : "waiting";
+
+    const details = document.createElement("span");
+    details.className = "transcript-details";
+    details.textContent = `${slot.textContent} / ${actionView.rowLabel}`;
 
     const body = document.createElement("span");
+    body.className = "transcript-body";
     body.textContent = entry.message;
 
-    item.append(meta, status, slot, retention, action);
+    item.append(meta, body, status, retention, action, details);
     if (selected) {
       const review = document.createElement("span");
       review.className = `transcript-review ${
         currentReplyTarget ? "is-reply-target" : currentReviewTarget ? "is-review-target" : "is-selected"
       }`;
       review.textContent = currentReplyTarget
-        ? `reply target set: ${entry.receiver} -> ${entry.sender} for message #${entry.messageNumber}`
+        ? `reply target: ${entry.receiver} -> ${entry.sender}`
         : delivered
-        ? `selected reply candidate: ${entry.receiver} -> ${entry.sender} for message #${entry.messageNumber}`
+        ? `reply candidate: ${entry.receiver} -> ${entry.sender}`
         : `review target set: message #${entry.messageNumber}`;
       item.append(review);
     }
-    item.append(body);
     target.append(item);
   }
 }

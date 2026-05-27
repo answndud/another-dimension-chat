@@ -787,7 +787,8 @@ textarea[readonly] {
   width: min(78%, 640px);
   border: 1px solid var(--panel-border);
   border-left: 2px solid var(--accent);
-  padding: 11px 13px;
+  border-radius: 8px 8px 8px 2px;
+  padding: 12px 14px;
   background: var(--panel);
   box-shadow: 0 10px 20px rgb(0 0 0 / 16%);
 }
@@ -801,12 +802,14 @@ textarea[readonly] {
 .message-transcript li.is-delivered {
   justify-self: end;
   border-left-color: var(--success);
+  border-radius: 8px 8px 2px 8px;
   background: color-mix(in srgb, var(--panel-strong) 78%, var(--accent-cyan));
 }
 
 .message-transcript li.is-pending-receive {
   justify-self: end;
   border-left-color: var(--warning);
+  border-radius: 8px 8px 2px 8px;
 }
 
 .message-transcript li.is-selected {
@@ -840,46 +843,58 @@ textarea[readonly] {
   color: var(--text-muted);
 }
 
-.message-transcript strong,
-.message-transcript span {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-}
-
 .message-transcript strong {
   color: var(--text-muted);
   font-size: 11px;
   text-transform: uppercase;
 }
 
-.message-transcript .transcript-status {
+.message-transcript .transcript-meta,
+.message-transcript .transcript-status,
+.message-transcript .transcript-retention,
+.message-transcript .transcript-action,
+.message-transcript .transcript-review,
+.message-transcript .transcript-details {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.message-transcript .transcript-meta {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.message-transcript .transcript-status.is-delivered {
+.message-transcript .transcript-status,
+.message-transcript .transcript-retention,
+.message-transcript .transcript-action {
+  justify-self: start;
+  width: fit-content;
+  border: 1px solid var(--badge-border);
+  padding: 2px 7px;
+  background: var(--badge-bg);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.message-transcript li.is-delivered .transcript-status,
+.message-transcript li.is-inbound-only .transcript-status {
   color: var(--success);
 }
 
-.message-transcript .transcript-status.is-pending-receive {
+.message-transcript li.is-pending-receive .transcript-status {
   color: var(--warning);
 }
 
-.message-transcript .transcript-slot,
-.message-transcript .transcript-retention,
-.message-transcript .transcript-action,
-.message-transcript .transcript-review {
+.message-transcript .transcript-details {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 10px;
+  opacity: 0;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
-}
-
-.message-transcript .transcript-slot.is-present {
-  color: var(--accent);
-}
-
-.message-transcript .transcript-slot.is-missing {
-  color: var(--warning);
+  transition: opacity 120ms ease;
 }
 
 .message-transcript .transcript-retention.is-active {
@@ -914,9 +929,16 @@ textarea[readonly] {
   font-weight: 650;
 }
 
-.message-transcript span:not(.transcript-status):not(.transcript-slot):not(.transcript-retention):not(.transcript-action):not(.transcript-review) {
+.message-transcript li:hover .transcript-details,
+.message-transcript li:focus-visible .transcript-details,
+.message-transcript li.is-selected .transcript-details {
+  opacity: 1;
+}
+
+.message-transcript .transcript-body {
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
