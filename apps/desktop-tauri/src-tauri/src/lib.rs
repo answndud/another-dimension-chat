@@ -336,6 +336,7 @@ pub struct ProductionMessageEnvelopeImportResult {
     received_message_record_present: bool,
     received_message_record_decodable: bool,
     received_message_matches_session: bool,
+    expired_received_message_purged: bool,
     key_material_exposed: bool,
     network_receive_attempted: bool,
     transport_io_opened: bool,
@@ -1846,6 +1847,7 @@ fn run_production_message_envelope_import(
         received_message_record_present: status.received_message_record_present(),
         received_message_record_decodable: status.received_message_record_decodable(),
         received_message_matches_session: status.received_message_matches_session(),
+        expired_received_message_purged: status.expired_received_message_purged(),
         key_material_exposed: import.key_material_exposed() || status.key_material_exposed(),
         network_receive_attempted: import.network_receive_attempted()
             || status.network_receive_attempted(),

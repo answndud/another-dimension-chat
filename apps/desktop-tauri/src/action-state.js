@@ -1008,6 +1008,7 @@ export function productionMessageEnvelopeImportView(result) {
       `read=${result.envelope_read} decodable=${result.envelope_decodable} ` +
       `transport=${result.session_transport_ready} replay=${result.replay_accepted} ` +
       `decrypted=${result.plaintext_decrypted} stored=${result.received_message_written} ` +
+      `expired_purged=${result.expired_received_message_purged === true} ` +
       `status=${result.received_message_matches_session}`,
     boundary:
       `plaintext_returned=${result.plaintext_returned} key_material=${result.key_material_exposed} ` +

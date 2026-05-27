@@ -1146,7 +1146,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
     })?;
 
     println!(
-        "production message local roundtrip completed: selected_message_number={} auto_message_number={} auto_counter_written={} existing_message_slot_skipped={} expired_outbound_messages_purged={} message_ttl_seconds={} sender_runtime_material_reconstructable={} sender_message_number_reserved={} sender_pending_record_present={} sender_session_transport_ready={} encrypted_envelope_exported={} receiver_inbound_message_stored={} receiver_received_status_verified={} received_written={} received_export_matches_input={} plaintext_exposed=false network_send_attempted={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        "production message local roundtrip completed: selected_message_number={} auto_message_number={} auto_counter_written={} existing_message_slot_skipped={} expired_outbound_messages_purged={} expired_received_message_purged={} message_ttl_seconds={} sender_runtime_material_reconstructable={} sender_message_number_reserved={} sender_pending_record_present={} sender_session_transport_ready={} encrypted_envelope_exported={} receiver_inbound_message_stored={} receiver_received_status_verified={} received_written={} received_export_matches_input={} plaintext_exposed=false network_send_attempted={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
         message_number,
         options.auto_message_number,
         reservation_summary
@@ -1160,6 +1160,7 @@ fn run_production_message_local_roundtrip_command(args: &[String]) -> Result<(),
             .map_or(0, |summary| summary.expired_outbound_messages_purged())
             + usize::from(pending_summary.expired_outbound_message_purged())
             + usize::from(encrypt_summary.expired_outbound_message_purged()),
+        received_status_summary.expired_received_message_purged(),
         message_ttl_seconds,
         send_summary.runtime_material_reconstructable(),
         send_summary.message_number_reserved(),
@@ -1378,12 +1379,13 @@ fn run_production_message_received_status_command(args: &[String]) -> Result<(),
     .map_err(redacted_production_message_received_status_error)?;
 
     println!(
-        "production message received status: storage_opened={} runtime_material_reconstructable={} received_message_record_present={} received_message_record_decodable={} received_message_matches_session={} plaintext_exposed={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
+        "production message received status: storage_opened={} runtime_material_reconstructable={} received_message_record_present={} received_message_record_decodable={} received_message_matches_session={} expired_received_message_purged={} plaintext_exposed={} network_receive_attempted={} key_material_exposed={} transport_io_opened={} runtime_messaging={}",
         summary.storage_opened(),
         summary.runtime_material_reconstructable(),
         summary.received_message_record_present(),
         summary.received_message_record_decodable(),
         summary.received_message_matches_session(),
+        summary.expired_received_message_purged(),
         summary.plaintext_exposed(),
         summary.network_receive_attempted(),
         summary.key_material_exposed(),
