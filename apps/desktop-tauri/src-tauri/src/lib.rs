@@ -6554,7 +6554,8 @@ async fn build_real_onion_roundtrip_owner(
     use another_dimension_transport::{
         arti_adapter_spike, probe_app_private_state_cache_dirs, verify_transport_backup_exclusion,
         BridgeCensorshipConfiguration, BridgeRequirement, InMemoryTransportRuntimeEventSink,
-        TransportBootstrapExecutionSkeleton, TransportBootstrapPolicy, TransportCrashRedactionPolicy,
+        TransportBootstrapExecutionSkeleton, TransportBootstrapPolicy, TransportBootstrapRetryPolicy,
+        TransportBootstrapTimeoutPolicy, TransportCrashRedactionPolicy,
         TransportLogRedactionPolicy, TransportRuntimePermissionPreflight,
     };
 
@@ -6585,7 +6586,14 @@ async fn build_real_onion_roundtrip_owner(
     )
     .check()
     .map_err(|_| "real onion runtime preflight failed")?;
-    let policy = TransportBootstrapPolicy::high_risk_default();
+    let policy = TransportBootstrapPolicy::new(
+        TransportBootstrapTimeoutPolicy::new(12)
+            .map_err(|_| "real onion bootstrap timeout policy rejected")?,
+        TransportBootstrapRetryPolicy::high_risk_default(),
+        false,
+        true,
+    )
+    .map_err(|_| "real onion bootstrap policy rejected")?;
     let skeleton = TransportBootstrapExecutionSkeleton::new(runtime_ready, policy);
     let arti_dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
         dirs.state_dir().to_path_buf(),
