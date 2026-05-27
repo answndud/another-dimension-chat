@@ -201,7 +201,8 @@ h1 {
 
 .boundary-details summary,
 .advanced-panel summary,
-.chat-setup-controls summary {
+.chat-setup-controls summary,
+.chat-diagnostics summary {
   width: fit-content;
   min-height: 38px;
   border: 1px solid var(--panel-border);
@@ -216,6 +217,7 @@ h1 {
 .boundary-details summary:hover,
 .advanced-panel summary:hover,
 .chat-setup-controls summary:hover,
+.chat-diagnostics summary:hover,
 button:hover:not(:disabled) {
   border-color: var(--accent-cyan);
 }
@@ -600,9 +602,42 @@ textarea[readonly] {
   content: "pair -> verify -> send -> receive -> resume";
 }
 
+.chat-room-controls {
+  order: 1;
+  display: grid;
+  grid-template-columns: max-content minmax(110px, 1fr) max-content minmax(110px, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  border: 1px solid var(--panel-border);
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel-strong) 72%, var(--bg));
+}
+
+.chat-room-controls .loop-label {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.chat-room-controls input,
+.chat-room-controls select {
+  min-width: 0;
+}
+
+.chat-room-controls #production-two-profile-direction {
+  grid-column: 1 / -1;
+  margin: 0;
+  border-top: 1px solid var(--panel-border);
+  padding-top: 8px;
+}
+
 .production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-transcript-export"],
 .production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-transcript-export {
   display: none;
+}
+
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-flow {
+  order: 1;
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > .loop-label:not([for]) {
@@ -680,16 +715,30 @@ textarea[readonly] {
 .production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-b"],
 .production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-b,
 .production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-direction,
-.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-flow,
 .production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-passphrase"],
 .production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-passphrase,
 .production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-message-ttl"],
 .production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-message-ttl,
 .production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-state,
-.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-warning,
 .production-workflow[aria-labelledby="production-two-profile-title"] > .flow-summary,
-.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-transcript-export + .followup-actions {
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-transcript-export + .followup-actions,
+.production-workflow[aria-labelledby="production-two-profile-title"] > .chat-diagnostics {
   order: 7;
+}
+
+.chat-diagnostics {
+  display: grid;
+  gap: 10px;
+}
+
+.chat-diagnostics[open] {
+  border-top: 1px solid var(--panel-border);
+  padding-top: 10px;
+}
+
+.chat-diagnostics .demo-warning,
+.chat-diagnostics .flow-summary + .flow-summary {
+  margin-top: 10px;
 }
 
 .advanced-stack {

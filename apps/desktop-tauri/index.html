@@ -333,13 +333,25 @@
                 <dd id="room-identity-transport">local harness</dd>
               </div>
             </dl>
-            <label class="loop-label" for="production-two-profile-a">Profile A</label>
-            <input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />
-            <label class="loop-label" for="production-two-profile-b">Profile B</label>
-            <input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />
-            <p id="production-two-profile-direction" class="demo-state" aria-live="polite">
-              Direction: alice -> bob
-            </p>
+            <div class="chat-room-controls" aria-label="Room controls">
+              <label class="loop-label" for="production-two-profile-a">Profile A</label>
+              <input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />
+              <label class="loop-label" for="production-two-profile-b">Profile B</label>
+              <input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />
+              <label class="loop-label" for="production-two-profile-passphrase">Passphrase</label>
+              <input
+                id="production-two-profile-passphrase"
+                type="password"
+                autocomplete="current-password"
+              />
+              <label class="loop-label" for="production-two-profile-message-ttl">Retention</label>
+              <select id="production-two-profile-message-ttl">
+                <option value="">Loading retention policy</option>
+              </select>
+              <p id="production-two-profile-direction" class="demo-state" aria-live="polite">
+                Direction: alice -> bob
+              </p>
+            </div>
             <ol id="production-two-profile-flow" class="demo-steps compact-flow" aria-label="Two-profile guided flow">
               <li id="production-two-profile-step-session" class="is-running">
                 <strong>1 Session</strong>
@@ -358,16 +370,6 @@
                 <span id="production-two-profile-step-reply-detail">After send, swap direction and write the reply.</span>
               </li>
             </ol>
-            <label class="loop-label" for="production-two-profile-passphrase">Passphrase</label>
-            <input
-              id="production-two-profile-passphrase"
-              type="password"
-              autocomplete="current-password"
-            />
-            <label class="loop-label" for="production-two-profile-message-ttl">Retention</label>
-            <select id="production-two-profile-message-ttl">
-              <option value="">Loading retention policy</option>
-            </select>
             <label class="loop-label" for="production-two-profile-message">Write message</label>
             <textarea id="production-two-profile-message" rows="3" placeholder="Message from alice to bob">hello between app-data profiles</textarea>
             <div class="loop-actions chat-primary-actions">
@@ -420,37 +422,40 @@
             <p id="production-two-profile-state" class="demo-state" aria-live="polite">
               Two-profile roundtrip idle
             </p>
-            <p id="production-two-profile-warning" class="demo-warning">
-              Two-profile app-data harness has not run yet.
-            </p>
-            <dl class="flow-summary">
-              <div>
-                <dt>Profiles</dt>
-                <dd id="production-two-profile-profiles">Not checked yet</dd>
-              </div>
-              <div>
-                <dt>Session</dt>
-                <dd id="production-two-profile-session">Not checked yet</dd>
-              </div>
-              <div>
-                <dt>Message</dt>
-                <dd id="production-two-profile-message-state">Not checked yet</dd>
-              </div>
-              <div>
-                <dt>Safety boundary</dt>
-                <dd id="production-two-profile-boundary">Not checked yet</dd>
-              </div>
-            </dl>
-            <dl class="flow-summary" aria-label="Conversation compose context">
-              <div>
-                <dt>Compose context</dt>
-                <dd id="production-two-profile-current-input">No successful run yet</dd>
-              </div>
-              <div>
-                <dt>Last success</dt>
-                <dd id="production-two-profile-last-success">No successful roundtrip in this app session</dd>
-              </div>
-            </dl>
+            <details class="chat-diagnostics">
+              <summary>Room status</summary>
+              <p id="production-two-profile-warning" class="demo-warning">
+                Two-profile app-data harness has not run yet.
+              </p>
+              <dl class="flow-summary">
+                <div>
+                  <dt>Profiles</dt>
+                  <dd id="production-two-profile-profiles">Not checked yet</dd>
+                </div>
+                <div>
+                  <dt>Session</dt>
+                  <dd id="production-two-profile-session">Not checked yet</dd>
+                </div>
+                <div>
+                  <dt>Message</dt>
+                  <dd id="production-two-profile-message-state">Not checked yet</dd>
+                </div>
+                <div>
+                  <dt>Safety boundary</dt>
+                  <dd id="production-two-profile-boundary">Not checked yet</dd>
+                </div>
+              </dl>
+              <dl class="flow-summary" aria-label="Conversation compose context">
+                <div>
+                  <dt>Compose context</dt>
+                  <dd id="production-two-profile-current-input">No successful run yet</dd>
+                </div>
+                <div>
+                  <dt>Last success</dt>
+                  <dd id="production-two-profile-last-success">No successful roundtrip in this app session</dd>
+                </div>
+              </dl>
+            </details>
             <p class="loop-label">Room transcript</p>
             <div class="loop-actions">
               <button id="load-production-two-profile-transcript" type="button">Load conversation</button>
