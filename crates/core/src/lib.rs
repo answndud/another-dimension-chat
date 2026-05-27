@@ -48,6 +48,8 @@ pub mod production {
     const PRODUCTION_REPLAY_RECORD_DOMAIN: &[u8] = b"AD-PRODUCTION-REPLAY-RECORD-V1";
     const PRODUCTION_ENDPOINT_STATE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-ENDPOINT-STATE-RECORD-V1";
+    const PRODUCTION_ENDPOINT_STATUS_RECORD_DOMAIN: &[u8] =
+        b"AD-PRODUCTION-ENDPOINT-STATUS-RECORD-V1";
     const PRODUCTION_ONION_SERVICE_KEY_RECORD_ID: &str = "onion_service_key_material_v1";
     const PRODUCTION_MESSAGE_ENVELOPE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-MESSAGE-ENVELOPE-RECORD-V1";
@@ -359,6 +361,35 @@ pub mod production {
         remote_endpoint_changed: bool,
         remote_endpoint_state_written: bool,
         runtime_material_reconstructable: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionRemoteEndpointStatusSummary {
+        storage_opened: bool,
+        session_draft_loaded: bool,
+        remote_endpoint_state_present: bool,
+        remote_endpoint_marked_stale: bool,
+        last_failed_message_number: Option<u64>,
+        failure_record_present: bool,
+        refresh_recommended: bool,
+        retry_recommended_after_refresh: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionRemoteEndpointFailureSummary {
+        storage_opened: bool,
+        session_draft_loaded: bool,
+        remote_endpoint_state_present: bool,
+        failure_record_written: bool,
+        remote_endpoint_marked_stale: bool,
+        refresh_recommended: bool,
+        retry_recommended_after_refresh: bool,
         key_material_exposed: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
@@ -1084,6 +1115,94 @@ pub mod production {
 
         pub fn runtime_material_reconstructable(self) -> bool {
             self.runtime_material_reconstructable
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionRemoteEndpointStatusSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_draft_loaded(self) -> bool {
+            self.session_draft_loaded
+        }
+
+        pub fn remote_endpoint_state_present(self) -> bool {
+            self.remote_endpoint_state_present
+        }
+
+        pub fn remote_endpoint_marked_stale(self) -> bool {
+            self.remote_endpoint_marked_stale
+        }
+
+        pub fn last_failed_message_number(self) -> Option<u64> {
+            self.last_failed_message_number
+        }
+
+        pub fn failure_record_present(self) -> bool {
+            self.failure_record_present
+        }
+
+        pub fn refresh_recommended(self) -> bool {
+            self.refresh_recommended
+        }
+
+        pub fn retry_recommended_after_refresh(self) -> bool {
+            self.retry_recommended_after_refresh
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionRemoteEndpointFailureSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_draft_loaded(self) -> bool {
+            self.session_draft_loaded
+        }
+
+        pub fn remote_endpoint_state_present(self) -> bool {
+            self.remote_endpoint_state_present
+        }
+
+        pub fn failure_record_written(self) -> bool {
+            self.failure_record_written
+        }
+
+        pub fn remote_endpoint_marked_stale(self) -> bool {
+            self.remote_endpoint_marked_stale
+        }
+
+        pub fn refresh_recommended(self) -> bool {
+            self.refresh_recommended
+        }
+
+        pub fn retry_recommended_after_refresh(self) -> bool {
+            self.retry_recommended_after_refresh
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -3349,6 +3468,55 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    struct RemoteEndpointStatusRecord {
+        contact_id: ContactId,
+        last_failed_message_number: u64,
+        observed_at_ms: u128,
+    }
+
+    impl RemoteEndpointStatusRecord {
+        fn stale(
+            contact_id: ContactId,
+            last_failed_message_number: u64,
+            observed_at_ms: u128,
+        ) -> Result<Self, ProductionSessionError> {
+            if last_failed_message_number == 0 || observed_at_ms == 0 {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            Ok(Self {
+                contact_id,
+                last_failed_message_number,
+                observed_at_ms,
+            })
+        }
+
+        fn encode(&self) -> String {
+            format!(
+                "ADENDPOINTSTATUS1|{}|stale|{}|{}",
+                self.contact_id.as_str(),
+                self.last_failed_message_number,
+                self.observed_at_ms
+            )
+        }
+
+        fn decode(value: &str) -> Result<Self, ProductionSessionError> {
+            let parts = value.split('|').collect::<Vec<_>>();
+            if parts.len() != 5 || parts[0] != "ADENDPOINTSTATUS1" || parts[2] != "stale" {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            let contact_id =
+                ContactId::new(parts[1]).map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let last_failed_message_number = parts[3]
+                .parse::<u64>()
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let observed_at_ms = parts[4]
+                .parse::<u128>()
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            Self::stale(contact_id, last_failed_message_number, observed_at_ms)
+        }
+    }
+
     #[derive(Debug)]
     pub struct ProductionEnvelopeSession {
         plan: ProductionSessionPlan,
@@ -4245,6 +4413,10 @@ pub mod production {
             &production_endpoint_state_record_id(&draft.channel_id, &draft.remote_contact_id),
             &endpoint_record,
         )?;
+        store.delete(&production_endpoint_status_record_id(
+            &draft.channel_id,
+            &draft.remote_contact_id,
+        ))?;
         let runtime_material_reconstructable =
             load_session_runtime_material(&store, &profile).is_ok();
 
@@ -4256,6 +4428,87 @@ pub mod production {
             remote_endpoint_changed: true,
             remote_endpoint_state_written: true,
             runtime_material_reconstructable,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_pairing_session_remote_endpoint_status(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionPairingSessionRemoteEndpointStatusSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let draft = load_latest_session_draft(&store, &profile)?
+            .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let endpoint_present = load_remote_endpoint_state(&store, &draft)?.is_some();
+        let failure = load_remote_endpoint_status(&store, &draft)?;
+        Ok(ProductionPairingSessionRemoteEndpointStatusSummary {
+            storage_opened: true,
+            session_draft_loaded: true,
+            remote_endpoint_state_present: endpoint_present,
+            remote_endpoint_marked_stale: failure.is_some(),
+            last_failed_message_number: failure
+                .as_ref()
+                .map(|failure| failure.last_failed_message_number),
+            failure_record_present: failure.is_some(),
+            refresh_recommended: failure.is_some(),
+            retry_recommended_after_refresh: failure.is_some(),
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_pairing_session_remote_endpoint_mark_send_failure(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        message_number: u64,
+    ) -> Result<ProductionPairingSessionRemoteEndpointFailureSummary, ProductionSessionError> {
+        if message_number == 0 {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let draft = load_latest_session_draft(&store, &profile)?
+            .ok_or(ProductionSessionError::SessionDraftMissing)?;
+        let endpoint_present = load_remote_endpoint_state(&store, &draft)?.is_some();
+        if !endpoint_present {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let status = RemoteEndpointStatusRecord::stale(
+            draft.remote_contact_id.clone(),
+            message_number,
+            production_now_ms(),
+        )?;
+        let record = EncryptedRecord::new(
+            ProductionRecordKind::RendezvousEndpointStatus,
+            EncryptedRecordScope::contact(profile, draft.remote_contact_id.clone()),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            status.encode().into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)?;
+        store.put(
+            &production_endpoint_status_record_id(&draft.channel_id, &draft.remote_contact_id),
+            &record,
+        )?;
+        Ok(ProductionPairingSessionRemoteEndpointFailureSummary {
+            storage_opened: true,
+            session_draft_loaded: true,
+            remote_endpoint_state_present: endpoint_present,
+            failure_record_written: true,
+            remote_endpoint_marked_stale: true,
+            refresh_recommended: true,
+            retry_recommended_after_refresh: true,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -6421,6 +6674,23 @@ pub mod production {
             .expect("domain-separated sent message record id is valid")
     }
 
+    fn production_endpoint_status_record_id(
+        channel_id: &str,
+        contact_id: &ContactId,
+    ) -> EncryptedRecordId {
+        let mut hasher = Sha256::new();
+        hasher.update(PRODUCTION_ENDPOINT_STATUS_RECORD_DOMAIN);
+        hasher.update([0]);
+        hasher.update(channel_id.as_bytes());
+        hasher.update([0]);
+        hasher.update(contact_id.as_str().as_bytes());
+        EncryptedRecordId::new(format!(
+            "endpoint_status_{}",
+            encode_hex(&hasher.finalize())
+        ))
+        .expect("domain-separated endpoint status record id is valid")
+    }
+
     fn production_received_message_record_id(
         channel_id: &str,
         contact_id: &ContactId,
@@ -7024,6 +7294,29 @@ pub mod production {
                     return Err(ProductionSessionError::EndpointScopeMismatch);
                 }
                 Ok(endpoint)
+            })
+            .transpose()
+    }
+
+    fn load_remote_endpoint_status(
+        store: &SqlCipherRecordStore,
+        draft: &ProductionStoredSessionDraft,
+    ) -> Result<Option<RemoteEndpointStatusRecord>, ProductionSessionError> {
+        let status_record_id =
+            production_endpoint_status_record_id(&draft.channel_id, &draft.remote_contact_id);
+        store
+            .get(&status_record_id)?
+            .map(|record| {
+                if record.kind != ProductionRecordKind::RendezvousEndpointStatus {
+                    return Err(ProductionSessionError::UnexpectedEnvelope);
+                }
+                let state = String::from_utf8(record.sealed_body)
+                    .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                let status = RemoteEndpointStatusRecord::decode(&state)?;
+                if status.contact_id != draft.remote_contact_id {
+                    return Err(ProductionSessionError::EndpointScopeMismatch);
+                }
+                Ok(status)
             })
             .transpose()
     }
@@ -8237,6 +8530,56 @@ pub mod production {
                     EndpointLifecycleError::EndpointUnchanged
                 ))
             ));
+
+            let failure = production_pairing_session_remote_endpoint_mark_send_failure(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+                9,
+            )
+            .expect("mark send failure");
+            assert!(failure.storage_opened());
+            assert!(failure.session_draft_loaded());
+            assert!(failure.remote_endpoint_state_present());
+            assert!(failure.failure_record_written());
+            assert!(failure.remote_endpoint_marked_stale());
+            assert!(failure.refresh_recommended());
+            assert!(failure.retry_recommended_after_refresh());
+            assert!(!failure.key_material_exposed());
+            assert!(!failure.transport_io_opened());
+            assert!(!failure.runtime_messaging_enabled());
+            let stale = production_pairing_session_remote_endpoint_status(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+            )
+            .expect("stale endpoint status");
+            assert!(stale.storage_opened());
+            assert!(stale.session_draft_loaded());
+            assert!(stale.remote_endpoint_state_present());
+            assert!(stale.remote_endpoint_marked_stale());
+            assert_eq!(stale.last_failed_message_number(), Some(9));
+            assert!(stale.failure_record_present());
+            assert!(stale.refresh_recommended());
+            assert!(stale.retry_recommended_after_refresh());
+            assert!(!stale.key_material_exposed());
+            assert!(!stale.transport_io_opened());
+            assert!(!stale.runtime_messaging_enabled());
+            production_pairing_session_remote_endpoint_update(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+                "bob-rerotated.onion",
+            )
+            .expect("clear stale with endpoint update");
+            let refreshed = production_pairing_session_remote_endpoint_status(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+            )
+            .expect("refreshed endpoint status");
+            assert!(!refreshed.remote_endpoint_marked_stale());
+            assert_eq!(refreshed.last_failed_message_number(), None);
 
             let opened =
                 production_pairing_session_open_runtime(&alice_store, alice.clone(), &passphrase)

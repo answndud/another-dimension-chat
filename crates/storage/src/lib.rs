@@ -50,6 +50,7 @@ pub mod production {
         LocalMessageIndex,
         MessageCounter,
         RendezvousEndpointState,
+        RendezvousEndpointStatus,
         SessionDraft,
         HandshakeState,
         SessionTransportState,
@@ -71,6 +72,7 @@ pub mod production {
                 Self::LocalMessageIndex => "local-message-index",
                 Self::MessageCounter => "message-counter",
                 Self::RendezvousEndpointState => "rendezvous-endpoint-state",
+                Self::RendezvousEndpointStatus => "rendezvous-endpoint-status",
                 Self::SessionDraft => "session-draft",
                 Self::HandshakeState => "handshake-state",
                 Self::SessionTransportState => "session-transport-state",
@@ -92,6 +94,7 @@ pub mod production {
                 "local-message-index" => Ok(Self::LocalMessageIndex),
                 "message-counter" => Ok(Self::MessageCounter),
                 "rendezvous-endpoint-state" => Ok(Self::RendezvousEndpointState),
+                "rendezvous-endpoint-status" => Ok(Self::RendezvousEndpointStatus),
                 "session-draft" => Ok(Self::SessionDraft),
                 "handshake-state" => Ok(Self::HandshakeState),
                 "session-transport-state" => Ok(Self::SessionTransportState),
@@ -740,6 +743,7 @@ pub mod production {
             | ProductionRecordKind::LocalMessageIndex
             | ProductionRecordKind::MessageCounter
             | ProductionRecordKind::RendezvousEndpointState
+            | ProductionRecordKind::RendezvousEndpointStatus
             | ProductionRecordKind::HandshakeState
             | ProductionRecordKind::SessionDraft
             | ProductionRecordKind::SessionTransportState => {
@@ -810,6 +814,7 @@ pub mod production {
                 ProductionRecordKind::LocalMessageIndex,
                 ProductionRecordKind::MessageCounter,
                 ProductionRecordKind::RendezvousEndpointState,
+                ProductionRecordKind::RendezvousEndpointStatus,
                 ProductionRecordKind::SessionDraft,
                 ProductionRecordKind::HandshakeState,
                 ProductionRecordKind::SessionTransportState,
@@ -836,6 +841,7 @@ pub mod production {
                 ProductionRecordKind::LocalMessageIndex,
                 ProductionRecordKind::MessageCounter,
                 ProductionRecordKind::RendezvousEndpointState,
+                ProductionRecordKind::RendezvousEndpointStatus,
                 ProductionRecordKind::SessionDraft,
                 ProductionRecordKind::HandshakeState,
                 ProductionRecordKind::SessionTransportState,

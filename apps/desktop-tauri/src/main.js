@@ -682,6 +682,8 @@ function renderRoomIdentityBar(input, sessionsReady) {
     ? fields.manualOnionNetworkPermission?.checked
       ? "peer endpoint ready"
       : "endpoint ready; permission off"
+    : activeEndpointState.stale
+      ? "endpoint stale; refresh"
     : activeEndpointState.reason;
 
   setText(fields.roomIdentityRoute, route);
@@ -875,6 +877,28 @@ function storedPeerEndpointPresentForInput(input = productionTwoProfileInput()) 
   return false;
 }
 
+function storedPeerEndpointStatusForInput(input = productionTwoProfileInput()) {
+  const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
+  if (!sessionStatus || !input.profileA) {
+    return null;
+  }
+  if (input.profileA === sessionStatus.profile_a) {
+    return {
+      stale: sessionStatus.profile_a_remote_endpoint_marked_stale === true,
+      refreshRecommended: sessionStatus.profile_a_remote_endpoint_refresh_recommended === true,
+      lastFailedMessageNumber: sessionStatus.profile_a_remote_endpoint_last_failed_message_number ?? null,
+    };
+  }
+  if (input.profileA === sessionStatus.profile_b) {
+    return {
+      stale: sessionStatus.profile_b_remote_endpoint_marked_stale === true,
+      refreshRecommended: sessionStatus.profile_b_remote_endpoint_refresh_recommended === true,
+      lastFailedMessageNumber: sessionStatus.profile_b_remote_endpoint_last_failed_message_number ?? null,
+    };
+  }
+  return null;
+}
+
 function twoProfilePeerEndpointState(input = productionTwoProfileInput()) {
   if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
     return { ready: false, reason: "profiles missing" };
@@ -882,6 +906,18 @@ function twoProfilePeerEndpointState(input = productionTwoProfileInput()) {
   const transientEndpoint = latestTwoProfilePeerOnionEndpoint(input);
   if (transientEndpoint) {
     return { ready: true, reason: "ready", source: "current runtime" };
+  }
+  const storedStatus = storedPeerEndpointStatusForInput(input);
+  if (storedStatus?.stale) {
+    return {
+      ready: false,
+      reason: storedStatus.lastFailedMessageNumber
+        ? `stored endpoint stale after message #${storedStatus.lastFailedMessageNumber}`
+        : "stored endpoint stale",
+      source: "stored session",
+      stale: true,
+      refreshRecommended: storedStatus.refreshRecommended,
+    };
   }
   if (storedPeerEndpointPresentForInput(input)) {
     return { ready: true, reason: "stored endpoint ready", source: "stored session" };
@@ -5682,7 +5718,11 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
           : "Envelope send attempt blocked",
     );
     setProductionTwoProfileState(
-      result.send_attempt_succeeded ? "Onion envelope send attempted" : "Onion envelope send blocked",
+      result.send_attempt_succeeded
+        ? "Onion envelope send attempted"
+        : result.peer_endpoint_refresh_recommended
+          ? "Peer endpoint refresh needed"
+          : "Onion envelope send blocked",
     );
     setText(fields.onionPreflightWarning, result.warning);
     setText(
@@ -5692,16 +5732,27 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
     setText(fields.productionTwoProfileWarning, result.warning);
     setText(
       fields.productionTwoProfileSession,
-      `message=${latestOnionOutbound.messageNumber} intent=${result.send_intent_prepared} ack_wait=${result.ack_wait_registered}`,
+      `message=${latestOnionOutbound.messageNumber} intent=${result.send_intent_prepared} ack_wait=${result.ack_wait_registered} endpoint_failure_recorded=${result.peer_endpoint_failure_recorded}`,
     );
     setText(
       fields.productionTwoProfileMessageState,
-      `started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} next=${result.next_blocker}`,
+      result.peer_endpoint_refresh_recommended
+        ? `started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} next=refresh peer endpoints, then retry message #${latestOnionOutbound.messageNumber}`
+        : `started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} next=${result.next_blocker}`,
     );
     setText(
       fields.productionTwoProfileBoundary,
-      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} events=${result.event_summary.join("; ") || "none"} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} peer_proof=${result.peer_proof_returned} transcript=${result.session_transcript_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network=${result.network_io_attempted} dial=${result.stream_dial_attempted} read_write=${result.stream_read_write_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} endpoint_failure_recorded=${result.peer_endpoint_failure_recorded} refresh=${result.peer_endpoint_refresh_recommended} retry_after_refresh=${result.retry_recommended_after_endpoint_refresh} events=${result.event_summary.join("; ") || "none"} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} peer_proof=${result.peer_proof_returned} transcript=${result.session_transcript_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network=${result.network_io_attempted} dial=${result.stream_dial_attempted} read_write=${result.stream_read_write_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
     );
+    if (result.peer_endpoint_failure_recorded) {
+      const status = await invoke("production_two_profile_session_status", {
+        profileA: input.profileA,
+        profileB: input.profileB,
+        passphrase: input.passphrase,
+      });
+      rememberTwoProfileSessionStatus(input, status);
+      renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
+    }
   } catch (error) {
     setProductionTwoProfileState("Onion envelope send failed");
     setText(fields.productionTwoProfileWarning, `Onion envelope send failed without returning secrets. ${error}`);
