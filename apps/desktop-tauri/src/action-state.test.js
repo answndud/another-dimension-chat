@@ -1645,6 +1645,24 @@ test("productionTwoProfileConversationActionView maps row status to next action"
     },
   );
 
+  const inboundOnly = {
+    sender: "alice",
+    receiver: "bob",
+    messageNumber: 10,
+    statuses: new Set(["received"]),
+  };
+  assert.deepEqual(
+    productionTwoProfileConversationActionView(inboundOnly),
+    {
+      nextAction: "Received: message #10 is ready. Next: write reply from bob to alice.",
+      rowLabel: "action: reply from bob",
+      state: "is-reply",
+      focusTarget: "reply-message",
+      manualTarget: null,
+      manualButtonLabel: "Open manual tools",
+    },
+  );
+
   entry.statuses.add("received");
   assert.deepEqual(
     productionTwoProfileConversationActionView(entry, true),
