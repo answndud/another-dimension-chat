@@ -1181,6 +1181,22 @@ function appendMessageLifecyclePurgeWarning(message, result) {
   return [warning, ...lifecycleWarnings].filter(Boolean).join(" ");
 }
 
+function expiredOutboundMessagesPurged(result) {
+  const purged = Number.parseInt(result?.expired_outbound_messages_purged ?? 0, 10);
+  return Number.isInteger(purged) && purged > 0 ? purged : 0;
+}
+
+function appendMessageLifecyclePurgeWarningToField(field, result) {
+  if (!field) {
+    return;
+  }
+  const current = field.textContent ?? "";
+  const updated = appendMessageLifecyclePurgeWarning(current, result);
+  if (updated !== current) {
+    setText(field, updated);
+  }
+}
+
 function renderManualStatus() {
   const profile = activeProductionProfileName();
   const counterpart = productionCounterpartProfile(profile);
@@ -4596,7 +4612,7 @@ async function exportProductionMessageEnvelope() {
     });
     const view = productionMessageEnvelopeExportView(result);
     setProductionMessageState("Message envelope exported");
-    setText(fields.productionMessageWarning, appendMessageLifecyclePurgeWarning(result.warning, result));
+    setText(fields.productionMessageWarning, result.warning);
     if (fields.productionMessageNumber) {
       fields.productionMessageNumber.value = String(result.selected_message_number);
     }
@@ -4613,6 +4629,13 @@ async function exportProductionMessageEnvelope() {
       result.message_ttl_seconds,
       result.envelope_payload,
     );
+    if (expiredOutboundMessagesPurged(result) > 0) {
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+      if (conversationSync?.conversationUpdated) {
+        appendMessageLifecyclePurgeWarningToField(fields.productionTwoProfileWarning, result);
+      }
+    }
+    appendMessageLifecyclePurgeWarningToField(fields.productionMessageWarning, result);
     postBusyFocus = conversationSync?.peerImportReady ? "current-action" : null;
     applyProductionActionState();
     setText(fields.productionMessageOutbound, view.outbound);
