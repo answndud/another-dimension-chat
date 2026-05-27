@@ -1098,6 +1098,39 @@ function selectedTwoProfilePendingConversationEntry() {
     : null;
 }
 
+function selectedManualMessageActionBlocker(action, input = productionMessageInput()) {
+  const entry = selectedTwoProfilePendingConversationEntry();
+  if (!entry) {
+    return "";
+  }
+  const profile = String(input.profile ?? "").trim().toLowerCase();
+  const messageNumber = Number.parseInt(input.messageNumber, 10);
+  const message = String(input.message ?? "").trim();
+  if (Number.parseInt(entry.messageNumber, 10) !== messageNumber || String(entry.message ?? "").trim() !== message) {
+    return `Reapply selected pending message #${entry.messageNumber} before ${action}; manual number/body no longer match.`;
+  }
+  if (action === "export") {
+    if (entry.statuses?.has("sent")) {
+      return `Selected pending message #${entry.messageNumber} already has a local sent copy; import the peer receive step instead.`;
+    }
+    if (input.autoMessageNumber) {
+      return `Turn off auto-number before exporting selected pending message #${entry.messageNumber}.`;
+    }
+    if (profile !== entry.sender) {
+      return `Select ${entry.sender} before exporting selected pending message #${entry.messageNumber}.`;
+    }
+  }
+  if (action === "import") {
+    if (!entry.statuses?.has("sent") || entry.statuses?.has("received")) {
+      return `Selected pending message #${entry.messageNumber} is not waiting for peer import.`;
+    }
+    if (profile !== entry.receiver) {
+      return `Select ${entry.receiver} before importing selected pending message #${entry.messageNumber}.`;
+    }
+  }
+  return "";
+}
+
 function twoProfileConversationActionView(entry) {
   const senderEnvelopeSlotPresent = entry
     ? messageEnvelopeSlotReadyForEntry(entry.sender, entry)
@@ -2463,17 +2496,18 @@ function applyProductionActionState() {
   const selectedMessageLabel = selectedConversation
     ? `${selectedConversation.sender}->${selectedConversation.receiver}#${selectedConversation.messageNumber}`
     : "";
-  const selectedMessageInputMatches = selectedConversation
-    ? Number.parseInt(selectedConversation.messageNumber, 10) === message.messageNumber &&
-      String(selectedConversation.message ?? "").trim() === message.message
-    : true;
-  const selectedMessageInputStale = !selectedMessageInputMatches;
   const selectedHasSentCopy = Boolean(selectedConversation?.statuses?.has("sent"));
   const selectedHasReceivedCopy = Boolean(selectedConversation?.statuses?.has("received"));
   const selectedNeedsSenderExport = Boolean(selectedConversation && !selectedHasSentCopy);
   const selectedNeedsPeerImport = Boolean(
     selectedConversation && selectedHasSentCopy && !selectedHasReceivedCopy,
   );
+  const selectedMessageInputMatches = selectedConversation
+    ? Number.parseInt(selectedConversation.messageNumber, 10) === message.messageNumber &&
+      String(selectedConversation.message ?? "").trim() === message.message &&
+      !(selectedNeedsSenderExport && message.autoMessageNumber)
+    : true;
+  const selectedMessageInputStale = !selectedMessageInputMatches;
   const selectedManualExportProfile = selectedNeedsSenderExport
     ? String(selectedConversation.sender ?? "").trim().toLowerCase()
     : "";
@@ -2719,7 +2753,7 @@ function applyProductionActionState() {
         : !selectedManualExportProfileMatches
           ? `Select ${selectedManualExportProfile} in the manual profile panel before exporting this selected message.`
         : !selectedMessageInputMatches
-          ? "Reselect the pending row before exporting; manual number/body no longer match the selected message."
+          ? "Reapply the pending row before exporting; manual number/body or auto-number mode no longer matches the selected message."
         : "Complete session state, then enter message number and message.",
     latestProductionManualFocusTarget === "export-message-envelope",
   );
@@ -2733,7 +2767,7 @@ function applyProductionActionState() {
         : !selectedManualImportProfileMatches
           ? `Select ${selectedManualImportProfile} in the manual profile panel before importing this selected message.`
         : !selectedMessageInputMatches
-          ? "Reselect the pending row before importing; manual number/body no longer match the selected message."
+          ? "Reapply the pending row before importing; manual number/body no longer matches the selected message."
         : "Complete session state, then load or paste a remote envelope.",
     latestProductionManualFocusTarget === "import-envelope",
   );
@@ -4622,9 +4656,16 @@ async function importProductionHandshakeFinish() {
 }
 
 async function exportProductionMessageEnvelope() {
-  const { profile, passphrase, autoMessageNumber, messageNumber, message, messageTtlSeconds } =
-    productionMessageInput();
+  const input = productionMessageInput();
+  const { profile, passphrase, autoMessageNumber, messageNumber, message, messageTtlSeconds } = input;
   let postBusyFocus = null;
+  const selectedBlocker = selectedManualMessageActionBlocker("export", input);
+  if (selectedBlocker) {
+    setProductionMessageState("Message export blocked");
+    setText(fields.productionMessageWarning, selectedBlocker);
+    applyProductionActionState();
+    return;
+  }
   if (!messageRetentionPolicyReady()) {
     setProductionMessageState("Message export blocked");
     setText(fields.productionMessageWarning, messageRetentionPolicyBlocker());
@@ -4715,8 +4756,16 @@ async function exportProductionMessageEnvelope() {
 }
 
 async function importProductionMessageEnvelope() {
-  const { profile, passphrase, messageNumber, envelopePayload, messageTtlSeconds } = productionMessageInput();
+  const input = productionMessageInput();
+  const { profile, passphrase, messageNumber, envelopePayload, messageTtlSeconds } = input;
   let postBusyFocus = null;
+  const selectedBlocker = selectedManualMessageActionBlocker("import", input);
+  if (selectedBlocker) {
+    setProductionMessageState("Message import blocked");
+    setText(fields.productionMessageWarning, selectedBlocker);
+    applyProductionActionState();
+    return;
+  }
   if (!messageRetentionPolicyReady()) {
     setProductionMessageState("Message import blocked");
     setText(fields.productionMessageWarning, messageRetentionPolicyBlocker());
