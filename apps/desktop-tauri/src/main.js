@@ -4766,8 +4766,20 @@ async function exportProductionReceivedMessage() {
       messageNumber,
     });
     const view = productionReceivedMessageExportView(result);
-    setProductionMessageState("Received message exported");
-    setText(fields.productionMessageWarning, result.warning);
+    const expiredReceivedPurged = result.expired_received_message_purged === true;
+    setProductionMessageState(expiredReceivedPurged ? "Received message expired" : "Received message exported");
+    setText(fields.productionMessageWarning, appendMessageLifecyclePurgeWarning(result.warning, result));
+    if (expiredReceivedPurged) {
+      if (fields.productionReceivedMessage) {
+        fields.productionReceivedMessage.value = "";
+      }
+      completeProductionMessageImportReview();
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+      appendMessageLifecyclePurgeWarningToField(fields.productionTwoProfileWarning, result);
+      setText(fields.productionMessageInbound, view.inbound);
+      setText(fields.productionMessageBoundary, view.boundary);
+      return;
+    }
     if (fields.productionReceivedMessage) {
       fields.productionReceivedMessage.value = result.received_message;
     }

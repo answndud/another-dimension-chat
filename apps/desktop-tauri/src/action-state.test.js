@@ -257,6 +257,7 @@ const safeReceivedMessageExportResult = {
   received_message_record_present: true,
   received_message_record_decodable: true,
   received_message_matches_session: true,
+  expired_received_message_purged: false,
   message_ttl_seconds: 604800,
   expires_at_ms: 123456789,
   expired: false,
@@ -1808,6 +1809,7 @@ test("productionReceivedMessageExportView formats received export result", () =>
   const view = productionReceivedMessageExportView(safeReceivedMessageExportResult);
 
   assert.match(view.inbound, /present=true/);
+  assert.match(view.inbound, /expired_purged=false/);
   assert.match(view.inbound, /ttl=604800/);
   assert.match(view.inbound, /expired=false/);
   assert.match(view.inbound, /displayed=true/);

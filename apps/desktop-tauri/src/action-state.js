@@ -1023,6 +1023,7 @@ export function productionReceivedMessageExportView(result) {
       `present=${result.received_message_record_present} ` +
       `decodable=${result.received_message_record_decodable} ` +
       `session=${result.received_message_matches_session} ` +
+      `expired_purged=${result.expired_received_message_purged === true} ` +
       `ttl=${result.message_ttl_seconds ?? "unknown"} ` +
       `expires=${result.expires_at_ms ?? "none"} ` +
       `expired=${result.expired === true} ` +
