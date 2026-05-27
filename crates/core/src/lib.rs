@@ -1170,47 +1170,47 @@ pub mod production {
     }
 
     impl ProductionPairingSessionRemoteEndpointStatusSummary {
-        pub fn storage_opened(self) -> bool {
+        pub fn storage_opened(&self) -> bool {
             self.storage_opened
         }
 
-        pub fn session_draft_loaded(self) -> bool {
+        pub fn session_draft_loaded(&self) -> bool {
             self.session_draft_loaded
         }
 
-        pub fn remote_endpoint_state_present(self) -> bool {
+        pub fn remote_endpoint_state_present(&self) -> bool {
             self.remote_endpoint_state_present
         }
 
-        pub fn remote_endpoint_marked_stale(self) -> bool {
+        pub fn remote_endpoint_marked_stale(&self) -> bool {
             self.remote_endpoint_marked_stale
         }
 
-        pub fn last_failed_message_number(self) -> Option<u64> {
+        pub fn last_failed_message_number(&self) -> Option<u64> {
             self.last_failed_message_number
         }
 
-        pub fn failure_record_present(self) -> bool {
+        pub fn failure_record_present(&self) -> bool {
             self.failure_record_present
         }
 
-        pub fn refresh_recommended(self) -> bool {
+        pub fn refresh_recommended(&self) -> bool {
             self.refresh_recommended
         }
 
-        pub fn retry_recommended_after_refresh(self) -> bool {
+        pub fn retry_recommended_after_refresh(&self) -> bool {
             self.retry_recommended_after_refresh
         }
 
-        pub fn key_material_exposed(self) -> bool {
+        pub fn key_material_exposed(&self) -> bool {
             self.key_material_exposed
         }
 
-        pub fn transport_io_opened(self) -> bool {
+        pub fn transport_io_opened(&self) -> bool {
             self.transport_io_opened
         }
 
-        pub fn runtime_messaging_enabled(self) -> bool {
+        pub fn runtime_messaging_enabled(&self) -> bool {
             self.runtime_messaging_enabled
         }
     }

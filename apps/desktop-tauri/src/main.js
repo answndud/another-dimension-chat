@@ -947,6 +947,30 @@ function twoProfilePeerEndpointState(input = productionTwoProfileInput()) {
   return { ready: false, reason: "endpoint not checked" };
 }
 
+function storedPeerEndpointTransportState(input = productionTwoProfileInput()) {
+  if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
+    return { ready: false, reason: "profiles missing" };
+  }
+  const storedStatus = storedPeerEndpointStatusForInput(input);
+  if (storedStatus?.stale) {
+    return {
+      ready: false,
+      reason: storedStatus.lastFailedMessageNumber
+        ? `stored endpoint stale after message #${storedStatus.lastFailedMessageNumber}`
+        : "stored endpoint stale",
+      stale: true,
+      refreshRecommended: storedStatus.refreshRecommended,
+    };
+  }
+  if (storedPeerEndpointPresentForInput(input)) {
+    return { ready: true, reason: "stored endpoint ready" };
+  }
+  if (latestTwoProfileSessionStatusForCurrentInput(input)) {
+    return { ready: false, reason: "stored peer endpoint missing" };
+  }
+  return { ready: false, reason: "endpoint not checked" };
+}
+
 function latestTwoProfileOutboundOnionMessage(input = productionTwoProfileInput()) {
   const latest = latestProductionTwoProfileSuccess;
   if (
@@ -3439,12 +3463,15 @@ function applyProductionActionState() {
         : "Launch fresh local endpoints and apply them to existing peer session records.",
     false,
   );
+  const peerEndpointState = twoProfilePeerEndpointState(twoProfile);
+  const storedEndpointTransportState = storedPeerEndpointTransportState(twoProfile);
   setActionButtonState(
     fields.sendProductionTwoProfileEndpointUpdate,
     busy ||
       !manualNetworkPermission ||
       !hasTwoProfileSessionStatusInput ||
       !twoProfileSessionsReady ||
+      !storedEndpointTransportState.ready ||
       !latestTwoProfileLocalOnionEndpoint(twoProfile) ||
       !latestProductionTwoProfileSuccess ||
       latestProductionTwoProfileSuccess.profileA !== twoProfile.profileA ||
@@ -3457,6 +3484,8 @@ function applyProductionActionState() {
         ? "Enter distinct Profile A, Profile B, and passphrase first."
       : !twoProfileSessionsReady
         ? "Complete the verified session handshake first."
+      : !storedEndpointTransportState.ready
+        ? `Stored peer endpoint blocked: ${storedEndpointTransportState.reason}.`
       : !latestTwoProfileLocalOnionEndpoint(twoProfile)
         ? "Refresh or prepare onion endpoints first."
       : !latestProductionTwoProfileSuccess ||
@@ -3479,7 +3508,6 @@ function applyProductionActionState() {
     false,
   );
   const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(twoProfile);
-  const peerEndpointState = twoProfilePeerEndpointState(twoProfile);
   setActionButtonState(
     fields.sendProductionTwoProfileLatestOnionEnvelope,
     busy || !manualNetworkPermission || !latestOnionOutbound,
@@ -5068,6 +5096,7 @@ async function sendProductionTwoProfileEndpointUpdate() {
   const input = productionTwoProfileInput();
   const localEndpoint = latestTwoProfileLocalOnionEndpoint(input);
   const latestMessage = latestProductionTwoProfileSuccess;
+  const storedEndpointTransportState = storedPeerEndpointTransportState(input);
   if (!input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
     setProductionTwoProfileState("Endpoint update needs profiles");
     setText(fields.productionTwoProfileWarning, "Enter two distinct profiles and passphrase before sending an endpoint update.");
@@ -5076,6 +5105,14 @@ async function sendProductionTwoProfileEndpointUpdate() {
   if (!twoProfileSessionsReadyForInput(input)) {
     setProductionTwoProfileState("Endpoint update needs session");
     setText(fields.productionTwoProfileWarning, "Complete the verified session handshake before sending an endpoint update.");
+    return;
+  }
+  if (!storedEndpointTransportState.ready) {
+    setProductionTwoProfileState("Endpoint update needs peer endpoint");
+    setText(
+      fields.productionTwoProfileWarning,
+      `Stored peer endpoint is not ready: ${storedEndpointTransportState.reason}. Refresh peer endpoints before sending an endpoint update over onion.`,
+    );
     return;
   }
   if (!localEndpoint) {
