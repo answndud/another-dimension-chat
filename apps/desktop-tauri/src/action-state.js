@@ -886,10 +886,12 @@ export function productionTwoProfileSessionStatusView(result) {
     state: bothReady ? "Both profiles message-ready" : "Two-profile session needs work",
     status:
       `${result.profile_a}: ready=${result.profile_a_ready_for_message_envelope} ` +
+      `endpoint=${result.profile_a_remote_endpoint_state_present} ` +
       `transport=${result.profile_a_session_transport_state_present} ` +
       `runtime=${result.profile_a_runtime_material_reconstructable} ` +
       `outbound=${result.profile_a_outbound_envelope_io_ready} | ` +
       `${result.profile_b}: ready=${result.profile_b_ready_for_message_envelope} ` +
+      `endpoint=${result.profile_b_remote_endpoint_state_present} ` +
       `transport=${result.profile_b_session_transport_state_present} ` +
       `runtime=${result.profile_b_runtime_material_reconstructable} ` +
       `outbound=${result.profile_b_outbound_envelope_io_ready}`,
