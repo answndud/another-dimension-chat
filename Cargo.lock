@@ -169,7 +169,12 @@ dependencies = [
  "another-dimension-protocol",
  "another-dimension-storage",
  "arti-client",
+ "futures",
+ "safelog",
  "tokio",
+ "tor-cell",
+ "tor-hsservice",
+ "tor-rtcompat",
 ]
 
 [[package]]

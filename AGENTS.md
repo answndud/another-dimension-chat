@@ -10,9 +10,9 @@
 ## 개발 진행 방식
 
 - 기본 작업 방식은 실제 앱 흐름을 끝까지 관통하는 vertical slice 구현이다.
-- record prefix, status mirror, boundary copy처럼 작은 안전장치만 반복하는 작업은 명확한 취약점 차단이나 현재 vertical slice 완성에 직접 필요할 때만 한다.
-- 보안/릴리즈 주장은 계속 보수적으로 닫아두되, 코딩은 pairing -> session persistence -> message export/import -> UI/CLI 재사용처럼 사용자가 체감하는 end-to-end 흐름을 우선한다.
-- 다음 작업을 고를 때는 "이 변경으로 사용자가 실제로 한 단계 더 메시지를 주고받거나 재개할 수 있는가?"를 먼저 본다.
+- record prefix, status mirror, boundary copy처럼 작은 안전장치만 반복하는 작업은 중단하고, 실제 pair -> verify -> onion connect -> send/receive -> resume 흐름을 여는 작업을 우선한다.
+- 보안/릴리즈 주장은 계속 보수적으로 닫아두되, 코딩은 사용자가 체감하는 end-to-end 흐름을 빠르게 관통하도록 구현 우선으로 진행한다.
+- 다음 작업을 고를 때는 "이 변경으로 실제 네트워크 송수신이나 앱 재개 흐름이 얼마나 더 열리는가?"를 먼저 본다.
 - 문서나 하네스 정리는 코드 흐름을 빠르게 만들 때만 수행한다. 기능 구현을 미루기 위한 문서/검증 scaffold 작업은 금지한다.
 - 단, 자체 암호/RNG/KDF 작성, silent network enablement, production secure claim, user data destructive change는 vertical slice라도 금지한다.
 
@@ -65,7 +65,7 @@
 - 루트에 release scaffold Markdown을 새로 만들지 않는다. 특히 `RELEASE_*`, `*_TEMPLATE`, `*_AUDIT`, `*_FIXTURE`, `*_GUARD`, `*_REQUIREMENTS` 계열 파일을 작업 slice마다 추가하는 방식은 금지한다.
 - 문서 전용 verifier를 새로 만들지 않는다. `scripts/verify_all.sh`는 기능 코드와 직접 연결된 fmt/test/boundary 검증만 포함한다.
 - release readiness는 실제 release 후보가 생겼을 때 소수의 기존 public 문서나 GitHub release checklist에서 다루며, 기능 개발 루프의 다음 작업으로 문서 scaffold를 반복 생성하지 않는다.
-- 기능 개발 루프에서 status mirror, guard, prefix, copy update만 독립 반복하지 않는다. 그런 변경은 현재 vertical slice의 실제 저장/재개/송수신/표시 흐름을 완성하는 데 필요한 경우에만 포함한다.
+- 기능 개발 루프에서 status mirror, guard, prefix, copy update만 독립 반복하지 않는다. 실제 저장/재개/송수신 구현을 막는 scaffold성 검증은 축소하고, 기능이 열릴 때 필요한 최소 non-claim 검사만 유지한다.
 - local git repository는 `main` branch로 초기화되어 있다.
 - initial prototype scaffold commit은 생성되어 있다.
 - remote `origin`은 `git@github.com:answndud/another-dimension-chat.git`이다.

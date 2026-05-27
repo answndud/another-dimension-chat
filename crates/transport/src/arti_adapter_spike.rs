@@ -255,13 +255,19 @@ pub enum PersistentArtiClientLifecycleError {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum OnionServiceLaunchAdapterError {
     PersistentClientNotBootstrapped,
+    OnionServiceAlreadyLaunched,
+    OnionServiceConfigBuildFailed,
     OnionHostingNotImplemented,
+    OnionServiceLaunchFailed,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct PersistentArtiClientLifecycleSummary {
     state: PersistentArtiClientLifecycleState,
     client_owned: bool,
+    onion_service_owned: bool,
+    inbound_rend_request_stream_owned: bool,
+    accepted_stream_request_stream_owned: bool,
     timeout_seconds: u16,
 }
 
@@ -274,6 +280,18 @@ impl PersistentArtiClientLifecycleSummary {
         self.client_owned
     }
 
+    pub fn onion_service_owned(self) -> bool {
+        self.onion_service_owned
+    }
+
+    pub fn inbound_rend_request_stream_owned(self) -> bool {
+        self.inbound_rend_request_stream_owned
+    }
+
+    pub fn accepted_stream_request_stream_owned(self) -> bool {
+        self.accepted_stream_request_stream_owned
+    }
+
     pub fn timeout_seconds(self) -> u16 {
         self.timeout_seconds
     }
@@ -283,14 +301,73 @@ impl PersistentArtiClientLifecycleSummary {
     }
 
     pub fn can_prepare_onion_launch(self) -> bool {
-        self.has_bootstrapped_client()
+        self.has_bootstrapped_client() && !self.onion_service_owned
     }
 }
 
 pub struct PersistentArtiClientOwner {
     adapter: BoundedArtiBootstrapAdapterSpike,
     state: PersistentArtiClientLifecycleState,
-    client: Option<Arc<dyn Send + Sync + 'static>>,
+    client: Option<PersistentArtiClientHandle>,
+    #[cfg(feature = "arti-manual-bootstrap")]
+    onion_service: Option<PersistentOnionServiceHandle>,
+}
+
+#[cfg(feature = "arti-manual-bootstrap")]
+enum PersistentArtiClientHandle {
+    Real(Arc<arti_client::TorClient<tor_rtcompat::PreferredRuntime>>),
+    #[cfg(test)]
+    Test,
+}
+
+#[cfg(feature = "arti-manual-bootstrap")]
+enum PersistentOnionServiceHandle {
+    Real {
+        service: Arc<tor_hsservice::RunningOnionService>,
+        rend_requests: std::pin::Pin<
+            Box<dyn futures::Stream<Item = tor_hsservice::RendRequest> + Send + Sync>,
+        >,
+        accepted_stream_requests: Option<
+            std::sync::Mutex<
+                std::pin::Pin<Box<dyn futures::Stream<Item = tor_hsservice::StreamRequest> + Send>>,
+            >,
+        >,
+    },
+    #[cfg(test)]
+    Test,
+}
+
+#[cfg(feature = "arti-manual-bootstrap")]
+impl fmt::Debug for PersistentArtiClientHandle {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Real(_) => formatter.write_str("<bootstrapped-client>"),
+            #[cfg(test)]
+            Self::Test => formatter.write_str("<test-client>"),
+        }
+    }
+}
+
+#[cfg(feature = "arti-manual-bootstrap")]
+impl fmt::Debug for PersistentOnionServiceHandle {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Real {
+                service,
+                rend_requests,
+                accepted_stream_requests,
+            } => {
+                let _ = Arc::strong_count(service);
+                let _ = rend_requests.as_ref();
+                let _ = accepted_stream_requests
+                    .as_ref()
+                    .map(|stream| stream.is_poisoned());
+                formatter.write_str("<running-onion-service>")
+            }
+            #[cfg(test)]
+            Self::Test => formatter.write_str("<test-onion-service>"),
+        }
+    }
 }
 
 impl PersistentArtiClientOwner {
@@ -299,6 +376,8 @@ impl PersistentArtiClientOwner {
             adapter,
             state: PersistentArtiClientLifecycleState::Unbootstrapped,
             client: None,
+            #[cfg(feature = "arti-manual-bootstrap")]
+            onion_service: None,
         }
     }
 
@@ -311,9 +390,31 @@ impl PersistentArtiClientOwner {
     }
 
     pub fn summary(&self) -> PersistentArtiClientLifecycleSummary {
+        #[cfg(feature = "arti-manual-bootstrap")]
+        let onion_service_owned = self.onion_service.is_some();
+        #[cfg(not(feature = "arti-manual-bootstrap"))]
+        let onion_service_owned = false;
+        #[cfg(feature = "arti-manual-bootstrap")]
+        let inbound_rend_request_stream_owned = self
+            .onion_service
+            .as_ref()
+            .is_some_and(PersistentOnionServiceHandle::inbound_rend_request_stream_owned);
+        #[cfg(feature = "arti-manual-bootstrap")]
+        let accepted_stream_request_stream_owned = self
+            .onion_service
+            .as_ref()
+            .is_some_and(PersistentOnionServiceHandle::accepted_stream_request_stream_owned);
+        #[cfg(not(feature = "arti-manual-bootstrap"))]
+        let inbound_rend_request_stream_owned = false;
+        #[cfg(not(feature = "arti-manual-bootstrap"))]
+        let accepted_stream_request_stream_owned = false;
+
         PersistentArtiClientLifecycleSummary {
             state: self.state,
             client_owned: self.client.is_some(),
+            onion_service_owned,
+            inbound_rend_request_stream_owned,
+            accepted_stream_request_stream_owned,
             timeout_seconds: self.adapter.skeleton().policy().timeout().seconds(),
         }
     }
@@ -332,6 +433,10 @@ impl PersistentArtiClientOwner {
     }
 
     pub fn shutdown<S: TransportRuntimeEventSink>(&mut self, sink: &mut S) {
+        #[cfg(feature = "arti-manual-bootstrap")]
+        {
+            self.onion_service = None;
+        }
         self.client = None;
         self.state = PersistentArtiClientLifecycleState::Shutdown;
         sink.record(RedactedTransportRuntimeEvent::runtime_lifecycle_changed());
@@ -342,7 +447,7 @@ impl PersistentArtiClientOwner {
         &mut self,
         sink: &mut S,
     ) {
-        self.client = Some(Arc::new(()));
+        self.client = Some(PersistentArtiClientHandle::Test);
         self.state = PersistentArtiClientLifecycleState::Bootstrapped;
         sink.record(RedactedTransportRuntimeEvent::runtime_lifecycle_changed());
     }
@@ -350,13 +455,63 @@ impl PersistentArtiClientOwner {
 
 impl fmt::Debug for PersistentArtiClientOwner {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        #[cfg(feature = "arti-manual-bootstrap")]
+        let onion_service_owned = self.onion_service.is_some();
+        #[cfg(not(feature = "arti-manual-bootstrap"))]
+        let onion_service_owned = false;
+
         formatter
             .debug_struct("PersistentArtiClientOwner")
             .field("state", &self.state)
             .field("client_owned", &self.client.is_some())
+            .field("onion_service_owned", &onion_service_owned)
+            .field(
+                "inbound_rend_request_stream_owned",
+                &self.summary().inbound_rend_request_stream_owned(),
+            )
+            .field(
+                "accepted_stream_request_stream_owned",
+                &self.summary().accepted_stream_request_stream_owned(),
+            )
             .field("state_dir", &"<redacted>")
             .field("cache_dir", &"<redacted>")
             .finish()
+    }
+}
+
+#[cfg(feature = "arti-manual-bootstrap")]
+impl PersistentOnionServiceHandle {
+    fn inbound_rend_request_stream_owned(&self) -> bool {
+        match self {
+            Self::Real { .. } => true,
+            #[cfg(test)]
+            Self::Test => false,
+        }
+    }
+
+    fn accepted_stream_request_stream_owned(&self) -> bool {
+        match self {
+            Self::Real {
+                accepted_stream_requests,
+                ..
+            } => accepted_stream_requests.is_some(),
+            #[cfg(test)]
+            Self::Test => false,
+        }
+    }
+
+    fn onion_endpoint(&self) -> Option<String> {
+        match self {
+            Self::Real { service, .. } => {
+                use safelog::DisplayRedacted;
+
+                service
+                    .onion_address()
+                    .map(|address| address.display_unredacted().to_string())
+            }
+            #[cfg(test)]
+            Self::Test => None,
+        }
     }
 }
 
@@ -473,7 +628,7 @@ impl OnionServiceLaunchAdapterSkeleton {
         OnionServiceLaunchAdapterSummary {
             owner_summary: self.owner_summary,
             key_material_ready: self._key_material_ready,
-            launch_descriptor_created: false,
+            launch_descriptor_created: self.owner_summary.onion_service_owned(),
         }
     }
 
@@ -672,7 +827,7 @@ impl PersistentArtiClientOwner {
 
         match tokio::time::timeout(timeout, attempt).await {
             Ok(Ok(client)) => {
-                self.client = Some(Arc::new(client));
+                self.client = Some(PersistentArtiClientHandle::Real(Arc::new(client)));
                 self.state = PersistentArtiClientLifecycleState::Bootstrapped;
                 sink.record(RedactedTransportRuntimeEvent::bootstrap_succeeded());
                 Ok(())
@@ -691,6 +846,371 @@ impl PersistentArtiClientOwner {
                 Err(PersistentArtiClientLifecycleError::BootstrapFailed(error))
             }
         }
+    }
+
+    pub async fn write_outbound_envelope_once<S: TransportRuntimeEventSink>(
+        &self,
+        network_permission: ManualArtiBootstrapNetworkPermission,
+        onion_endpoint: &str,
+        envelope_payload: &[u8],
+        sink: &mut S,
+    ) -> Result<(), TransportRuntimeError> {
+        use futures::io::AsyncWriteExt;
+
+        if network_permission
+            != ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike
+        {
+            let error = TransportRuntimeError::RuntimeNetworkDisabled;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Send,
+                error,
+            ));
+            return Err(error);
+        }
+        if self.state != PersistentArtiClientLifecycleState::Bootstrapped {
+            let error = TransportRuntimeError::RuntimeNetworkDisabled;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Send,
+                error,
+            ));
+            return Err(error);
+        }
+
+        let Some(PersistentArtiClientHandle::Real(client)) = self.client.as_ref() else {
+            let error = TransportRuntimeError::SendFailed;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Send,
+                error,
+            ));
+            return Err(error);
+        };
+
+        let timeout = std::time::Duration::from_secs(u64::from(
+            self.adapter.skeleton().policy().timeout().seconds(),
+        ));
+        let attempt = async {
+            let mut stream = client
+                .connect((onion_endpoint, 443))
+                .await
+                .map_err(|_| TransportRuntimeError::SendFailed)?;
+            stream
+                .write_all(envelope_payload)
+                .await
+                .map_err(|_| TransportRuntimeError::SendFailed)?;
+            stream
+                .flush()
+                .await
+                .map_err(|_| TransportRuntimeError::SendFailed)?;
+            Ok(())
+        };
+
+        match tokio::time::timeout(timeout, attempt).await {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(error)) => {
+                sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                    crate::TransportTransferDirection::Send,
+                    error,
+                ));
+                Err(error)
+            }
+            Err(_) => {
+                let error = TransportRuntimeError::SendFailed;
+                sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                    crate::TransportTransferDirection::Send,
+                    error,
+                ));
+                Err(error)
+            }
+        }
+    }
+
+    pub fn launch_onion_service_once<S: TransportRuntimeEventSink>(
+        &mut self,
+        network_permission: ManualArtiBootstrapNetworkPermission,
+        service_nickname: &str,
+        sink: &mut S,
+    ) -> Result<(), OnionServiceLaunchAdapterError> {
+        if network_permission
+            != ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike
+        {
+            sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+                TransportRuntimeError::RuntimeNetworkDisabled,
+            ));
+            return Err(OnionServiceLaunchAdapterError::PersistentClientNotBootstrapped);
+        }
+        if self.state != PersistentArtiClientLifecycleState::Bootstrapped {
+            sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+                TransportRuntimeError::RuntimeNetworkDisabled,
+            ));
+            return Err(OnionServiceLaunchAdapterError::PersistentClientNotBootstrapped);
+        }
+        if self.onion_service.is_some() {
+            return Err(OnionServiceLaunchAdapterError::OnionServiceAlreadyLaunched);
+        }
+
+        let Some(PersistentArtiClientHandle::Real(client)) = self.client.as_ref() else {
+            sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+                TransportRuntimeError::OnionServiceLaunchFailed,
+            ));
+            return Err(OnionServiceLaunchAdapterError::OnionHostingNotImplemented);
+        };
+
+        let nickname = tor_hsservice::HsNickname::new(service_nickname.to_owned())
+            .map_err(|_| OnionServiceLaunchAdapterError::OnionServiceConfigBuildFailed)?;
+        let config = arti_client::config::onion_service::OnionServiceConfigBuilder::default()
+            .nickname(nickname)
+            .build()
+            .map_err(|_| OnionServiceLaunchAdapterError::OnionServiceConfigBuildFailed)?;
+
+        match client.launch_onion_service(config) {
+            Ok(Some((running_service, rend_requests))) => {
+                self.onion_service = Some(PersistentOnionServiceHandle::Real {
+                    service: running_service,
+                    rend_requests: Box::pin(rend_requests),
+                    accepted_stream_requests: None,
+                });
+                sink.record(RedactedTransportRuntimeEvent::onion_service_launch_succeeded());
+                Ok(())
+            }
+            Ok(None) | Err(_) => {
+                sink.record(RedactedTransportRuntimeEvent::runtime_preflight_failed(
+                    TransportRuntimeError::OnionServiceLaunchFailed,
+                ));
+                Err(OnionServiceLaunchAdapterError::OnionServiceLaunchFailed)
+            }
+        }
+    }
+
+    pub fn retained_onion_endpoint(&self) -> Option<String> {
+        self.onion_service
+            .as_ref()
+            .and_then(PersistentOnionServiceHandle::onion_endpoint)
+    }
+
+    pub async fn accept_inbound_rend_request_once<S: TransportRuntimeEventSink>(
+        &mut self,
+        network_permission: ManualArtiBootstrapNetworkPermission,
+        sink: &mut S,
+    ) -> Result<(), TransportRuntimeError> {
+        use futures::StreamExt;
+
+        if network_permission
+            != ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike
+        {
+            let error = TransportRuntimeError::RuntimeNetworkDisabled;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Receive,
+                error,
+            ));
+            return Err(error);
+        }
+        if self.state != PersistentArtiClientLifecycleState::Bootstrapped {
+            let error = TransportRuntimeError::RuntimeNetworkDisabled;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Receive,
+                error,
+            ));
+            return Err(error);
+        }
+
+        let Some(PersistentOnionServiceHandle::Real {
+            rend_requests,
+            accepted_stream_requests,
+            ..
+        }) = self.onion_service.as_mut()
+        else {
+            let error = TransportRuntimeError::ReceiveFailed;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Receive,
+                error,
+            ));
+            return Err(error);
+        };
+
+        let timeout = std::time::Duration::from_secs(u64::from(
+            self.adapter.skeleton().policy().timeout().seconds(),
+        ));
+        let Some(rend_request) = (match tokio::time::timeout(timeout, rend_requests.next()).await {
+            Ok(next) => next,
+            Err(_) => {
+                let error = TransportRuntimeError::ReceiveFailed;
+                sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                    crate::TransportTransferDirection::Receive,
+                    error,
+                ));
+                return Err(error);
+            }
+        }) else {
+            let error = TransportRuntimeError::ReceiveFailed;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Receive,
+                error,
+            ));
+            return Err(error);
+        };
+
+        match tokio::time::timeout(timeout, rend_request.accept()).await {
+            Ok(Ok(stream_requests)) => {
+                *accepted_stream_requests = Some(std::sync::Mutex::new(Box::pin(stream_requests)));
+                Ok(())
+            }
+            Ok(Err(_)) | Err(_) => {
+                let error = TransportRuntimeError::ReceiveFailed;
+                sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                    crate::TransportTransferDirection::Receive,
+                    error,
+                ));
+                Err(error)
+            }
+        }
+    }
+
+    pub async fn read_accepted_inbound_stream_once<S: TransportRuntimeEventSink>(
+        &mut self,
+        network_permission: ManualArtiBootstrapNetworkPermission,
+        max_bytes: usize,
+        sink: &mut S,
+    ) -> Result<Vec<u8>, TransportRuntimeError> {
+        use futures::{io::AsyncReadExt, StreamExt};
+
+        if network_permission
+            != ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike
+        {
+            let error = TransportRuntimeError::RuntimeNetworkDisabled;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Receive,
+                error,
+            ));
+            return Err(error);
+        }
+        if self.state != PersistentArtiClientLifecycleState::Bootstrapped {
+            let error = TransportRuntimeError::RuntimeNetworkDisabled;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Receive,
+                error,
+            ));
+            return Err(error);
+        }
+
+        let Some(PersistentOnionServiceHandle::Real {
+            accepted_stream_requests,
+            ..
+        }) = self.onion_service.as_mut()
+        else {
+            let error = TransportRuntimeError::ReceiveFailed;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Receive,
+                error,
+            ));
+            return Err(error);
+        };
+        let Some(accepted_stream_requests) = accepted_stream_requests.as_ref() else {
+            let error = TransportRuntimeError::ReceiveFailed;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Receive,
+                error,
+            ));
+            return Err(error);
+        };
+
+        let mut stream_requests = {
+            let mut guard = accepted_stream_requests.lock().map_err(|_| {
+                let error = TransportRuntimeError::ReceiveFailed;
+                sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                    crate::TransportTransferDirection::Receive,
+                    error,
+                ));
+                error
+            })?;
+            let empty_stream: std::pin::Pin<
+                Box<dyn futures::Stream<Item = tor_hsservice::StreamRequest> + Send>,
+            > = Box::pin(futures::stream::empty());
+            std::mem::replace(&mut *guard, empty_stream)
+        };
+
+        let timeout = std::time::Duration::from_secs(u64::from(
+            self.adapter.skeleton().policy().timeout().seconds(),
+        ));
+        let read_result = async {
+            let stream_request = stream_requests
+                .next()
+                .await
+                .ok_or(TransportRuntimeError::ReceiveFailed)?;
+            let mut data_stream = stream_request
+                .accept(tor_cell::relaycell::msg::Connected::new_empty())
+                .await
+                .map_err(|_| TransportRuntimeError::ReceiveFailed)?;
+            let mut envelope = Vec::new();
+            (&mut data_stream)
+                .take((max_bytes.saturating_add(1)) as u64)
+                .read_to_end(&mut envelope)
+                .await
+                .map_err(|_| TransportRuntimeError::ReceiveFailed)?;
+            if envelope.len() > max_bytes {
+                return Err(TransportRuntimeError::ReceiveFailed);
+            }
+            Ok(envelope)
+        };
+
+        let result = match tokio::time::timeout(timeout, read_result).await {
+            Ok(result) => result,
+            Err(_) => Err(TransportRuntimeError::ReceiveFailed),
+        };
+
+        if let Ok(mut guard) = accepted_stream_requests.lock() {
+            *guard = stream_requests;
+        }
+
+        match result {
+            Ok(envelope) => Ok(envelope),
+            Err(error) => {
+                sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                    crate::TransportTransferDirection::Receive,
+                    error,
+                ));
+                Err(error)
+            }
+        }
+    }
+
+    pub fn read_inbound_envelope_once<S: TransportRuntimeEventSink>(
+        &self,
+        network_permission: ManualArtiBootstrapNetworkPermission,
+        sink: &mut S,
+    ) -> Result<(), TransportRuntimeError> {
+        if network_permission
+            != ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike
+        {
+            let error = TransportRuntimeError::RuntimeNetworkDisabled;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Receive,
+                error,
+            ));
+            return Err(error);
+        }
+        if self.state != PersistentArtiClientLifecycleState::Bootstrapped {
+            let error = TransportRuntimeError::RuntimeNetworkDisabled;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Receive,
+                error,
+            ));
+            return Err(error);
+        }
+        if !self.summary().inbound_rend_request_stream_owned() {
+            let error = TransportRuntimeError::ReceiveFailed;
+            sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+                crate::TransportTransferDirection::Receive,
+                error,
+            ));
+            return Err(error);
+        }
+
+        let error = TransportRuntimeError::ReceiveFailed;
+        sink.record(RedactedTransportRuntimeEvent::transfer_failed(
+            crate::TransportTransferDirection::Receive,
+            error,
+        ));
+        Err(error)
     }
 }
 
