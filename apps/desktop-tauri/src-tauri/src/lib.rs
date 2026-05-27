@@ -2860,11 +2860,19 @@ async fn run_production_onion_persistent_client_start(
         use another_dimension_transport::{
             arti_adapter_spike, InMemoryTransportRuntimeEventSink,
             TransportBootstrapExecutionSkeleton, TransportBootstrapPolicy,
+            TransportBootstrapRetryPolicy, TransportBootstrapTimeoutPolicy,
             TransportCrashRedactionPolicy, TransportLogRedactionPolicy,
             TransportRuntimePermissionPreflight,
         };
 
         let mut event_summary = event_summary;
+        let interactive_policy = TransportBootstrapPolicy::new(
+            TransportBootstrapTimeoutPolicy::new(12).expect("bounded interactive timeout"),
+            TransportBootstrapRetryPolicy::high_risk_default(),
+            false,
+            true,
+        )
+        .expect("bounded interactive bootstrap policy");
         let next_blocker: String;
         let mut lifecycle_state = "not-created".to_string();
         let mut client_bootstrap_started = false;
@@ -2921,9 +2929,8 @@ async fn run_production_onion_persistent_client_start(
                 };
                 owner = match (runtime_ready, dirs) {
                     (Some(runtime_ready), Some(dirs)) => {
-                        let policy = TransportBootstrapPolicy::high_risk_default();
                         let skeleton =
-                            TransportBootstrapExecutionSkeleton::new(runtime_ready, policy);
+                            TransportBootstrapExecutionSkeleton::new(runtime_ready, interactive_policy);
                         arti_adapter_spike::ArtiAppPrivateDirs::new(
                             dirs.state_dir().to_path_buf(),
                             dirs.cache_dir().to_path_buf(),
@@ -2950,12 +2957,29 @@ async fn run_production_onion_persistent_client_start(
                     } else {
                         let mut sink = InMemoryTransportRuntimeEventSink::default();
                         client_bootstrap_started = true;
-                        let result = owner
-                            .bootstrap_and_keep_client(
+                        let bootstrap_timeout = std::time::Duration::from_secs(u64::from(
+                            interactive_policy.timeout().seconds() + 2,
+                        ));
+                        let result = match tokio::time::timeout(
+                            bootstrap_timeout,
+                            owner.bootstrap_and_keep_client(
                                 arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
                                 &mut sink,
-                            )
-                            .await;
+                            ),
+                        )
+                        .await
+                        {
+                            Ok(result) => result,
+                            Err(_) => {
+                                event_summary.push(
+                                    "transport_event kind=BootstrapFailed runtime_error=Some(BootstrapTimeout) probe_error=None route_kind=None direction=None"
+                                        .to_string(),
+                                );
+                                Err(arti_adapter_spike::PersistentArtiClientLifecycleError::BootstrapFailed(
+                                    another_dimension_transport::TransportRuntimeError::BootstrapTimeout,
+                                ))
+                            }
+                        };
                         event_summary.extend(sink.events().iter().map(ToString::to_string));
                         let summary = owner.summary();
                         persistent_client_ready = summary.has_bootstrapped_client();
@@ -2996,7 +3020,7 @@ async fn run_production_onion_persistent_client_start(
             runtime_preflight_ready: preflight.runtime_preflight_ready,
             bootstrap_policy_ready: preflight.bootstrap_policy_ready,
             lifecycle_state,
-            timeout_seconds: preflight.timeout_seconds,
+            timeout_seconds: interactive_policy.timeout().seconds(),
             next_blocker,
             blockers,
             event_summary,
@@ -6607,12 +6631,28 @@ async fn build_real_onion_roundtrip_owner(
         .map_err(|_| "real onion Arti adapter unavailable")?;
     let mut owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
     let mut sink = InMemoryTransportRuntimeEventSink::default();
-    let bootstrap_result = owner
-        .bootstrap_and_keep_client(
+    let bootstrap_timeout =
+        std::time::Duration::from_secs(u64::from(policy.timeout().seconds() + 2));
+    let bootstrap_result = match tokio::time::timeout(
+        bootstrap_timeout,
+        owner.bootstrap_and_keep_client(
             arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
             &mut sink,
-        )
-        .await;
+        ),
+    )
+    .await
+    {
+        Ok(result) => result,
+        Err(_) => {
+            event_summary.push(
+                "transport_event kind=BootstrapFailed runtime_error=Some(BootstrapTimeout) probe_error=None route_kind=None direction=None"
+                    .to_string(),
+            );
+            Err(arti_adapter_spike::PersistentArtiClientLifecycleError::BootstrapFailed(
+                another_dimension_transport::TransportRuntimeError::BootstrapTimeout,
+            ))
+        }
+    };
     event_summary.extend(sink.events().iter().map(ToString::to_string));
     bootstrap_result.map_err(|_| {
         format!(

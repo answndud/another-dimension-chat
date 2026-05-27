@@ -287,6 +287,9 @@ const fields = {
   runProductionTwoProfileMessageRoundtrip: document.querySelector(
     "#run-production-two-profile-message-roundtrip",
   ),
+  startProductionTwoProfileOnionBootstrap: document.querySelector(
+    "#start-production-two-profile-onion-bootstrap",
+  ),
   runProductionTwoProfileRealOnionRoundtrip: document.querySelector(
     "#run-production-two-profile-real-onion-roundtrip",
   ),
@@ -3135,6 +3138,16 @@ function applyProductionActionState() {
       (!state.hasTwoProfileReplySelected && twoProfileCurrentAction === "stored-message"),
   );
   setActionButtonState(
+    fields.startProductionTwoProfileOnionBootstrap,
+    busy || !manualNetworkPermission,
+    busy
+      ? "Wait for the active production action."
+      : !manualNetworkPermission
+        ? "Enable manual onion network permission before starting Tor bootstrap."
+        : "Start or retry the retained Tor client before real onion roundtrip.",
+    false,
+  );
+  setActionButtonState(
     fields.runProductionTwoProfileRealOnionRoundtrip,
     busy || !hasTwoProfileInput || !hasMessageRetentionPolicy || !manualNetworkPermission,
     busy
@@ -4152,6 +4165,60 @@ async function startOnionPersistentClient() {
     if (fields.startOnionPersistentClient) {
       fields.startOnionPersistentClient.disabled = false;
     }
+  }
+}
+
+async function startProductionTwoProfileOnionBootstrap() {
+  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  if (!manualNetworkPermission) {
+    setProductionTwoProfileState("Tor bootstrap blocked");
+    setText(fields.productionTwoProfileWarning, "Enable manual onion network permission before starting Tor bootstrap.");
+    return;
+  }
+
+  productionBusyAction = "two-profile-onion-bootstrap";
+  setProductionTwoProfileState("Tor bootstrap running");
+  setText(fields.productionTwoProfileWarning, "Starting retained Tor client for the chat flow.");
+  setText(fields.productionTwoProfileProfiles, "Profile stores unchanged");
+  setText(fields.productionTwoProfileSession, "Waiting for Tor bootstrap before endpoint launch");
+  setText(fields.productionTwoProfileMessageState, "No message transport attempted");
+  setText(fields.productionTwoProfileBoundary, "Bootstrap in progress with manual network permission");
+  applyProductionActionState();
+  if (fields.startProductionTwoProfileOnionBootstrap) {
+    fields.startProductionTwoProfileOnionBootstrap.disabled = true;
+  }
+
+  try {
+    const result = await invoke("production_onion_persistent_client_start", { manualNetworkPermission });
+    setProductionTwoProfileState(
+      result.persistent_client_ready ? "Tor bootstrap ready" : "Tor bootstrap needs retry",
+    );
+    setText(fields.productionTwoProfileWarning, result.warning);
+    setText(
+      fields.productionTwoProfileProfiles,
+      `persistent_client=${result.persistent_client_ready} lifecycle=${result.lifecycle_state}`,
+    );
+    setText(
+      fields.productionTwoProfileSession,
+      result.persistent_client_ready
+        ? "Tor client retained; run real onion roundtrip to launch endpoints."
+        : "Tor client not ready; retry bootstrap before endpoint launch.",
+    );
+    setText(fields.productionTwoProfileMessageState, "No message transport attempted");
+    setText(
+      fields.productionTwoProfileBoundary,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} started=${result.client_bootstrap_started} succeeded=${result.client_bootstrap_succeeded} timeout=${result.timeout_seconds}s next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} events=${result.event_summary.join(" | ") || "none"} network=${result.network_io_attempted} transport=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionTwoProfileState("Tor bootstrap failed");
+    setText(fields.productionTwoProfileWarning, `Tor bootstrap failed without returning secrets. ${error}`);
+    setText(fields.productionTwoProfileBoundary, "Failed before endpoint launch or message transport.");
+  } finally {
+    productionBusyAction = null;
+    if (fields.startProductionTwoProfileOnionBootstrap) {
+      fields.startProductionTwoProfileOnionBootstrap.disabled = false;
+    }
+    applyProductionActionState();
   }
 }
 
@@ -6388,6 +6455,7 @@ for (const input of [
   fields.productionTwoProfileB,
   fields.productionTwoProfileMessageTtl,
   fields.productionTwoProfileMessage,
+  fields.manualOnionNetworkPermission,
 ]) {
   if (input) {
     input.addEventListener("input", () => {
@@ -6740,6 +6808,13 @@ if (fields.runProductionTwoProfileMessageRoundtrip) {
   fields.runProductionTwoProfileMessageRoundtrip.addEventListener(
     "click",
     runProductionTwoProfileMessageRoundtrip,
+  );
+}
+
+if (fields.startProductionTwoProfileOnionBootstrap) {
+  fields.startProductionTwoProfileOnionBootstrap.addEventListener(
+    "click",
+    startProductionTwoProfileOnionBootstrap,
   );
 }
 
