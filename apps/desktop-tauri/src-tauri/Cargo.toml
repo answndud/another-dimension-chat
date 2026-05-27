@@ -11,14 +11,22 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
+[features]
+manual-onion-client-attempt = ["another-dimension-transport/arti-manual-bootstrap"]
+
 [dependencies]
 another-dimension-core = { path = "../../../crates/core" }
+another-dimension-crypto = { path = "../../../crates/crypto" }
 another-dimension-identity = { path = "../../../crates/identity" }
 another-dimension-pairing = { path = "../../../crates/pairing" }
+another-dimension-protocol = { path = "../../../crates/protocol" }
 another-dimension-storage = { path = "../../../crates/storage" }
+another-dimension-transport = { path = "../../../crates/transport" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+rustls = { version = "0.23.40", default-features = false, features = ["ring"] }
 tauri = { version = "2", features = [] }
+tokio = { version = "1.52.3", default-features = false, features = ["macros"] }
 
 [lints.rust]
 unsafe_code = "forbid"

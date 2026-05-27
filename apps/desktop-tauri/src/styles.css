@@ -1,7 +1,7 @@
 :root {
   color-scheme: dark;
   --bg: #07090a;
-  --bg-grid: transparent;
+  --bg-grid: #111719;
   --panel: #0b0f10;
   --panel-strong: #101516;
   --panel-border: #263134;
@@ -69,20 +69,49 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background: var(--bg);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--bg-grid) 52%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--bg-grid) 52%, transparent) 1px, transparent 1px),
+    var(--bg);
+  background-size: 28px 28px;
 }
 
 .shell {
-  display: grid;
+  display: block;
   min-height: 100vh;
-  place-items: center;
-  padding: 40px 24px;
+  padding: 28px 24px 44px;
 }
 
 .status-panel {
-  width: min(720px, 100%);
+  display: flex;
+  flex-direction: column;
+  width: min(1180px, 100%);
+  margin: 0 auto;
   border-left: 1px solid var(--panel-border);
   padding-left: 20px;
+}
+
+.status-panel > .eyebrow,
+.status-panel > h1,
+.status-panel > .theme-control {
+  order: 0;
+}
+
+.demo-panel {
+  order: 1;
+}
+
+.status-summary {
+  order: 2;
+}
+
+.status-panel > .production-workflow[aria-labelledby="onion-preflight-title"] {
+  order: 3;
+  margin-top: 18px;
+}
+
+.boundary-details {
+  order: 4;
 }
 
 .eyebrow {
@@ -100,7 +129,7 @@ body {
 }
 
 h1 {
-  margin: 0 0 24px;
+  margin: 0 0 18px;
   border-bottom: 1px solid var(--panel-border);
   padding-bottom: 14px;
   color: var(--text-primary);
@@ -128,6 +157,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
+  margin-top: 18px;
   border: 1px solid var(--panel-border);
   background: var(--panel-border);
 }
@@ -236,7 +266,7 @@ dd {
 .demo-panel {
   display: grid;
   gap: 18px;
-  margin-top: 28px;
+  margin-top: 6px;
 }
 
 h2,
@@ -497,6 +527,134 @@ textarea[readonly] {
   background: var(--panel);
 }
 
+.production-workflow[aria-labelledby="production-two-profile-title"] {
+  min-height: calc(100vh - 170px);
+  display: flex;
+  flex-direction: column;
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--panel-border));
+  border-top: 1px solid var(--accent-cyan);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-strong) 70%, transparent), transparent 220px),
+    var(--panel);
+}
+
+.production-workflow[aria-labelledby="production-two-profile-title"] > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: end;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--panel-border);
+  padding-bottom: 12px;
+  order: 0;
+}
+
+.room-identity-bar {
+  order: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-border);
+}
+
+.room-identity-bar div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 9px 10px;
+  background: color-mix(in srgb, var(--panel-strong) 86%, var(--bg));
+}
+
+.room-identity-bar dt,
+.room-identity-bar dd {
+  margin: 0;
+}
+
+.room-identity-bar dt {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.room-identity-bar dd {
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+#production-two-profile-title::after {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  font-weight: 650;
+  content: "pair -> verify -> send -> receive -> resume";
+}
+
+.production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-transcript-export"],
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-transcript-export {
+  display: none;
+}
+
+.production-workflow[aria-labelledby="production-two-profile-title"] > .loop-label:not([for]) {
+  order: 1;
+  margin-top: 4px;
+}
+
+.production-workflow[aria-labelledby="production-two-profile-title"] > .loop-label:not([for]) + .loop-actions {
+  order: 2;
+  justify-content: flex-end;
+  max-width: 100%;
+}
+
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-transcript {
+  order: 3;
+  min-height: 380px;
+}
+
+.production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-message"] {
+  order: 4;
+}
+
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-message {
+  order: 5;
+  min-height: 86px;
+  font-family: inherit;
+  font-size: 15px;
+}
+
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-message + .loop-actions {
+  order: 6;
+}
+
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-readiness {
+  margin-left: auto;
+}
+
+.production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-a"],
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-a,
+.production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-b"],
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-b,
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-direction,
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-flow,
+.production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-passphrase"],
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-passphrase,
+.production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-message-ttl"],
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-message-ttl,
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-state,
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-warning,
+.production-workflow[aria-labelledby="production-two-profile-title"] > .flow-summary,
+.production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-transcript-export + .followup-actions {
+  order: 7;
+}
+
 .advanced-stack {
   display: grid;
   gap: 14px;
@@ -513,6 +671,21 @@ textarea[readonly] {
   gap: 10px;
   border-top: 1px solid var(--panel-border);
   padding-top: 14px;
+}
+
+.qr-pairing-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 224px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.qr-pairing-panel canvas {
+  width: 224px;
+  height: 224px;
+  max-width: 100%;
+  border: 1px solid var(--panel-border);
+  background: #fff;
 }
 
 .loop-panel > .tool-step:first-of-type {
@@ -565,6 +738,7 @@ textarea[readonly] {
 .message-transcript {
   display: grid;
   gap: 8px;
+  align-content: start;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -573,22 +747,28 @@ textarea[readonly] {
 .message-transcript li {
   display: grid;
   gap: 5px;
+  width: min(78%, 640px);
   border: 1px solid var(--panel-border);
   border-left: 2px solid var(--accent);
-  padding: 10px 12px;
+  padding: 11px 13px;
   background: var(--panel);
+  box-shadow: 0 10px 20px rgb(0 0 0 / 16%);
 }
 
 .message-transcript li.is-received,
 .message-transcript li.is-inbound-only {
+  justify-self: start;
   border-left-color: var(--success);
 }
 
 .message-transcript li.is-delivered {
+  justify-self: end;
   border-left-color: var(--success);
+  background: color-mix(in srgb, var(--panel-strong) 78%, var(--accent-cyan));
 }
 
 .message-transcript li.is-pending-receive {
+  justify-self: end;
   border-left-color: var(--warning);
 }
 
@@ -618,6 +798,7 @@ textarea[readonly] {
 }
 
 .message-transcript li.is-empty {
+  width: 100%;
   border-left-color: var(--panel-border);
   color: var(--text-muted);
 }
@@ -787,6 +968,14 @@ pre.is-failed {
   .manual-relay-summary div {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .qr-pairing-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .room-identity-bar {
+    grid-template-columns: 1fr 1fr;
   }
 
   .compact-flow {

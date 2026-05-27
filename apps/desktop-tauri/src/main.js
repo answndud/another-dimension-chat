@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import * as QRCode from "qrcode";
 import {
   productionActionAvailability,
   productionCounterpartProfile,
@@ -73,6 +74,62 @@ const fields = {
   transportIo: document.querySelector("#transport-io"),
   storage: document.querySelector("#storage"),
   verification: document.querySelector("#verification"),
+  checkOnionPreflight: document.querySelector("#check-onion-preflight"),
+  onionPreflightState: document.querySelector("#onion-preflight-state"),
+  onionPreflightWarning: document.querySelector("#onion-preflight-warning"),
+  onionPreflightRuntime: document.querySelector("#onion-preflight-runtime"),
+  onionPreflightLaunch: document.querySelector("#onion-preflight-launch"),
+  onionPreflightEvents: document.querySelector("#onion-preflight-events"),
+  onionPreflightBoundary: document.querySelector("#onion-preflight-boundary"),
+  prepareOnionBackupExclusion: document.querySelector("#prepare-onion-backup-exclusion"),
+  onionBackupExclusionState: document.querySelector("#onion-backup-exclusion-state"),
+  onionBackupExclusionBoundary: document.querySelector("#onion-backup-exclusion-boundary"),
+  checkOnionClientPreflight: document.querySelector("#check-onion-client-preflight"),
+  onionClientPreflightState: document.querySelector("#onion-client-preflight-state"),
+  onionClientPreflightBoundary: document.querySelector("#onion-client-preflight-boundary"),
+  checkOnionClientAttemptGate: document.querySelector("#check-onion-client-attempt-gate"),
+  onionClientAttemptGateState: document.querySelector("#onion-client-attempt-gate-state"),
+  onionClientAttemptGateBoundary: document.querySelector("#onion-client-attempt-gate-boundary"),
+  manualOnionNetworkPermission: document.querySelector("#manual-onion-network-permission"),
+  runOnionClientOnce: document.querySelector("#run-onion-client-once"),
+  onionClientOnceState: document.querySelector("#onion-client-once-state"),
+  onionClientOnceBoundary: document.querySelector("#onion-client-once-boundary"),
+  checkOnionPersistentClient: document.querySelector("#check-onion-persistent-client"),
+  startOnionPersistentClient: document.querySelector("#start-onion-persistent-client"),
+  onionPersistentClientState: document.querySelector("#onion-persistent-client-state"),
+  onionPersistentClientBoundary: document.querySelector("#onion-persistent-client-boundary"),
+  prepareOnionKeyRecord: document.querySelector("#prepare-onion-key-record"),
+  onionKeyRecordState: document.querySelector("#onion-key-record-state"),
+  onionKeyRecordBoundary: document.querySelector("#onion-key-record-boundary"),
+  checkOnionLaunchPreflight: document.querySelector("#check-onion-launch-preflight"),
+  onionLaunchPreflightState: document.querySelector("#onion-launch-preflight-state"),
+  onionLaunchPreflightBoundary: document.querySelector("#onion-launch-preflight-boundary"),
+  attemptOnionServiceLaunch: document.querySelector("#attempt-onion-service-launch"),
+  onionServiceLaunchAttempt: document.querySelector("#onion-service-launch-attempt"),
+  prepareOnionDescriptorPublication: document.querySelector("#prepare-onion-descriptor-publication"),
+  attemptOnionDescriptorPublication: document.querySelector("#attempt-onion-descriptor-publication"),
+  onionDescriptorPublicationState: document.querySelector("#onion-descriptor-publication-state"),
+  onionDescriptorPublicationBoundary: document.querySelector("#onion-descriptor-publication-boundary"),
+  onionDescriptorPublicationAttempt: document.querySelector("#onion-descriptor-publication-attempt"),
+  prepareOnionInboundStream: document.querySelector("#prepare-onion-inbound-stream"),
+  attemptOnionInboundEnvelopeReceive: document.querySelector("#attempt-onion-inbound-envelope-receive"),
+  onionInboundStreamState: document.querySelector("#onion-inbound-stream-state"),
+  onionInboundStreamBoundary: document.querySelector("#onion-inbound-stream-boundary"),
+  onionInboundEnvelopeReceiveAttempt: document.querySelector("#onion-inbound-envelope-receive-attempt"),
+  prepareOnionOutboundStream: document.querySelector("#prepare-onion-outbound-stream"),
+  onionOutboundStreamState: document.querySelector("#onion-outbound-stream-state"),
+  onionOutboundStreamBoundary: document.querySelector("#onion-outbound-stream-boundary"),
+  prepareOnionStreamCloseout: document.querySelector("#prepare-onion-stream-closeout"),
+  onionStreamCloseoutState: document.querySelector("#onion-stream-closeout-state"),
+  onionStreamCloseoutBoundary: document.querySelector("#onion-stream-closeout-boundary"),
+  prepareOnionRemoteAuth: document.querySelector("#prepare-onion-remote-auth"),
+  onionRemoteAuthState: document.querySelector("#onion-remote-auth-state"),
+  onionRemoteAuthBoundary: document.querySelector("#onion-remote-auth-boundary"),
+  prepareOnionOutboundEnvelopeSend: document.querySelector("#prepare-onion-outbound-envelope-send"),
+  attemptOnionOutboundEnvelopeSend: document.querySelector("#attempt-onion-outbound-envelope-send"),
+  onionOutboundEnvelopeSendState: document.querySelector("#onion-outbound-envelope-send-state"),
+  onionOutboundEnvelopeSendBoundary: document.querySelector("#onion-outbound-envelope-send-boundary"),
+  onionOutboundEnvelopeSendAttempt: document.querySelector("#onion-outbound-envelope-send-attempt"),
   runDemo: document.querySelector("#run-demo"),
   demoState: document.querySelector("#demo-state"),
   demoHint: document.querySelector("#demo-hint"),
@@ -117,12 +174,29 @@ const fields = {
   productionPairingState: document.querySelector("#production-pairing-state"),
   productionPairingNextAction: document.querySelector("#production-pairing-next-action"),
   productionPairingWarning: document.querySelector("#production-pairing-warning"),
+  productionPairingStepExport: document.querySelector("#production-pairing-step-export"),
+  productionPairingStepExportDetail: document.querySelector("#production-pairing-step-export-detail"),
+  productionPairingStepRemote: document.querySelector("#production-pairing-step-remote"),
+  productionPairingStepRemoteDetail: document.querySelector("#production-pairing-step-remote-detail"),
+  productionPairingStepSafety: document.querySelector("#production-pairing-step-safety"),
+  productionPairingStepSafetyDetail: document.querySelector("#production-pairing-step-safety-detail"),
+  productionPairingStepDraft: document.querySelector("#production-pairing-step-draft"),
+  productionPairingStepDraftDetail: document.querySelector("#production-pairing-step-draft-detail"),
   productionPairingPayload: document.querySelector("#production-pairing-payload"),
+  productionPairingQr: document.querySelector("#production-pairing-qr"),
+  productionPairingQrStatus: document.querySelector("#production-pairing-qr-status"),
   useProductionPairingPayload: document.querySelector("#use-production-pairing-payload"),
   storeProductionPairingPayload: document.querySelector("#store-production-pairing-payload"),
   loadProductionPairingPayload: document.querySelector("#load-production-pairing-payload"),
   relayProductionPairingPayload: document.querySelector("#relay-production-pairing-payload"),
+  productionRemotePairingQrPayload: document.querySelector("#production-remote-pairing-qr-payload"),
+  useProductionRemotePairingQr: document.querySelector("#use-production-remote-pairing-qr"),
   productionRemotePairingPayload: document.querySelector("#production-remote-pairing-payload"),
+  checkProductionPairingSafety: document.querySelector("#check-production-pairing-safety"),
+  productionPairingSafetyVerified: document.querySelector("#production-pairing-safety-verified"),
+  productionPairingSafetyNumber: document.querySelector("#production-pairing-safety-number"),
+  productionPairingSafetyPhrase: document.querySelector("#production-pairing-safety-phrase"),
+  productionPairingSafetyBoundary: document.querySelector("#production-pairing-safety-boundary"),
   saveProductionSessionDraft: document.querySelector("#save-production-session-draft"),
   productionHandshakeInitPayload: document.querySelector("#production-handshake-init-payload"),
   useProductionHandshakeInit: document.querySelector("#use-production-handshake-init"),
@@ -202,12 +276,19 @@ const fields = {
   productionTwoProfilePassphrase: document.querySelector("#production-two-profile-passphrase"),
   productionTwoProfileMessageTtl: document.querySelector("#production-two-profile-message-ttl"),
   productionTwoProfileMessage: document.querySelector("#production-two-profile-message"),
+  roomIdentityRoute: document.querySelector("#room-identity-route"),
+  roomIdentityPair: document.querySelector("#room-identity-pair"),
+  roomIdentityVerify: document.querySelector("#room-identity-verify"),
+  roomIdentityTransport: document.querySelector("#room-identity-transport"),
   runProductionTwoProfileRoundtrip: document.querySelector("#run-production-two-profile-roundtrip"),
   checkProductionTwoProfileSessionStatusInline: document.querySelector(
     "#check-production-two-profile-session-status-inline",
   ),
   runProductionTwoProfileMessageRoundtrip: document.querySelector(
     "#run-production-two-profile-message-roundtrip",
+  ),
+  runProductionTwoProfileRealOnionRoundtrip: document.querySelector(
+    "#run-production-two-profile-real-onion-roundtrip",
   ),
   productionTwoProfileReadiness: document.querySelector("#production-two-profile-readiness"),
   productionTwoProfileState: document.querySelector("#production-two-profile-state"),
@@ -255,6 +336,7 @@ let latestProductionSessionState = null;
 let latestProductionTwoProfileSessionStatus = null;
 let latestProductionTwoProfileSuccess = null;
 let latestProductionMessageImport = null;
+let latestProductionPairingSafety = null;
 let productionBusyAction = null;
 let latestProductionManualFocusTarget = null;
 let twoProfileAutoResumeTimer = null;
@@ -345,6 +427,62 @@ function setProductionPairingState(message) {
 
 function setProductionMessageState(message) {
   setText(fields.productionMessageState, message);
+}
+
+function setOnionPreflightState(message) {
+  setText(fields.onionPreflightState, message);
+}
+
+function setOnionBackupExclusionState(message) {
+  setText(fields.onionBackupExclusionState, message);
+}
+
+function setOnionClientPreflightState(message) {
+  setText(fields.onionClientPreflightState, message);
+}
+
+function setOnionClientAttemptGateState(message) {
+  setText(fields.onionClientAttemptGateState, message);
+}
+
+function setOnionClientOnceState(message) {
+  setText(fields.onionClientOnceState, message);
+}
+
+function setOnionPersistentClientState(message) {
+  setText(fields.onionPersistentClientState, message);
+}
+
+function setOnionKeyRecordState(message) {
+  setText(fields.onionKeyRecordState, message);
+}
+
+function setOnionLaunchPreflightState(message) {
+  setText(fields.onionLaunchPreflightState, message);
+}
+
+function setOnionDescriptorPublicationState(message) {
+  setText(fields.onionDescriptorPublicationState, message);
+}
+
+function setOnionInboundStreamState(message) {
+  setText(fields.onionInboundStreamState, message);
+}
+
+function setOnionOutboundStreamState(message) {
+  setText(fields.onionOutboundStreamState, message);
+}
+
+function setOnionStreamCloseoutState(message) {
+  setText(fields.onionStreamCloseoutState, message);
+}
+
+function setOnionRemoteAuthState(message) {
+  setText(fields.onionRemoteAuthState, message);
+}
+
+function setOnionOutboundEnvelopeSendState(message) {
+  setText(fields.onionOutboundEnvelopeSendState, message);
 }
 
 function setDisabled(node, disabled) {
@@ -463,6 +601,25 @@ function setProductionTwoProfileReadiness(message, state = "blocked") {
   node.textContent = message;
   node.classList.remove("is-ready", "is-setup", "is-compose", "is-blocked");
   node.classList.add(`is-${state}`);
+}
+
+function renderRoomIdentityBar(input, sessionsReady) {
+  const route = input.profileA && input.profileB ? `${input.profileA} -> ${input.profileB}` : "profiles missing";
+  const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
+  const pairState = sessionsReady
+    ? "stored session"
+    : sessionStatus
+      ? "incomplete"
+      : "not checked";
+  const verifyState = sessionsReady ? "safety confirmed" : "pending";
+  const transportState = fields.manualOnionNetworkPermission?.checked
+    ? "onion manual gate"
+    : "local harness";
+
+  setText(fields.roomIdentityRoute, route);
+  setText(fields.roomIdentityPair, pairState);
+  setText(fields.roomIdentityVerify, verifyState);
+  setText(fields.roomIdentityTransport, transportState);
 }
 
 function renderAppStateSummary(status) {
@@ -1563,6 +1720,9 @@ function twoProfileRecoveryMessage(action, error, input = productionTwoProfileIn
       `No network or transport send was attempted.${suffix}`
     );
   }
+  if (action === "real-onion-roundtrip") {
+    return `Real onion transport did not complete. Retry after Tor bootstrap is reachable.${suffix}`;
+  }
   return `Two-profile action failed.${suffix}`;
 }
 
@@ -1586,6 +1746,65 @@ function setTwoProfileFlowStep(item, detail, state, message) {
     item.classList.add(`is-${state}`);
   }
   setText(detail, message);
+}
+
+function setProductionPairingFlowStep(item, detail, state, message) {
+  setTwoProfileFlowStep(item, detail, state, message);
+}
+
+function renderProductionPairingFlow(input = productionPairingInput()) {
+  const hasProfile = Boolean(input.profile && input.passphrase);
+  const hasEndpoint = Boolean(input.rendezvousEndpoint);
+  const hasLocalPayload = Boolean(input.localPayload);
+  const hasRemotePayload = Boolean(input.remotePayload);
+  const hasSafetyPreview = Boolean(
+    latestProductionPairingSafety?.fingerprint === pairingSafetyFingerprint(input),
+  );
+  const safetyVerified = currentPairingSafetyVerified(input);
+  const draftSaved = Boolean(latestProductionSessionState?.session_draft_present);
+
+  setProductionPairingFlowStep(
+    fields.productionPairingStepExport,
+    fields.productionPairingStepExportDetail,
+    hasLocalPayload ? "complete" : hasProfile && hasEndpoint ? "running" : "pending",
+    hasLocalPayload
+      ? "Local QR payload is ready."
+      : hasProfile && hasEndpoint
+        ? "Export the local pairing QR."
+        : "Unlock profile and set an onion endpoint.",
+  );
+  setProductionPairingFlowStep(
+    fields.productionPairingStepRemote,
+    fields.productionPairingStepRemoteDetail,
+    hasRemotePayload ? "complete" : hasLocalPayload ? "running" : "pending",
+    hasRemotePayload
+      ? "Remote pairing payload is loaded."
+      : hasLocalPayload
+        ? "Paste scanned QR text or load the remote payload."
+        : "Export local payload before loading remote.",
+  );
+  setProductionPairingFlowStep(
+    fields.productionPairingStepSafety,
+    fields.productionPairingStepSafetyDetail,
+    safetyVerified ? "complete" : hasRemotePayload ? "running" : "pending",
+    safetyVerified
+      ? "Safety number marked verified."
+      : hasSafetyPreview
+        ? "Compare the shown safety number, then mark verified."
+        : hasRemotePayload
+          ? "Check safety before saving the draft."
+          : "Load remote payload before safety check.",
+  );
+  setProductionPairingFlowStep(
+    fields.productionPairingStepDraft,
+    fields.productionPairingStepDraftDetail,
+    draftSaved ? "complete" : safetyVerified ? "running" : "pending",
+    draftSaved
+      ? "Session draft is stored locally."
+      : safetyVerified
+        ? "Save the verified session draft."
+        : "Safety verification is required before draft save.",
+  );
 }
 
 function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
@@ -2508,8 +2727,9 @@ function applyProductionActionState() {
   const sessionReadyForMessages = productionSessionReadyForMessages();
   const hasProfileUnlockInput = Boolean(profile && passphrase);
   const hasPairingInput = Boolean(hasProfileUnlockInput && pairing.rendezvousEndpoint);
+  const pairingSafetyVerified = currentPairingSafetyVerified(pairing);
   const hasSessionDraftInput = Boolean(
-    hasProfileUnlockInput && pairing.localPayload && pairing.remotePayload,
+    hasProfileUnlockInput && pairing.localPayload && pairing.remotePayload && pairingSafetyVerified,
   );
   const hasSessionDraftSaved = Boolean(latestProductionSessionState?.session_draft_present);
   const hasHandshakeReplyInput = Boolean(hasProfileUnlockInput && pairing.initPayload);
@@ -2593,6 +2813,7 @@ function applyProductionActionState() {
       twoProfile.messageTtlSeconds &&
       twoProfile.message,
   );
+  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
   const hasTwoProfileSessionStatusInput = Boolean(
     twoProfile.profileA &&
       twoProfile.profileB &&
@@ -2709,6 +2930,7 @@ function applyProductionActionState() {
   setTwoProfileComposeLocked(twoProfileComposeLocked);
   renderProductionTwoProfileDirection(twoProfile);
   renderProductionTwoProfileFlow(twoProfile);
+  renderRoomIdentityBar(twoProfile, twoProfileSessionsReady);
   const twoProfileReadiness = twoProfilePrimaryReadiness(
     twoProfile,
     busy,
@@ -2718,6 +2940,7 @@ function applyProductionActionState() {
   setProductionTwoProfileReadiness(twoProfileReadiness.message, twoProfileReadiness.state);
   renderProductionTwoProfileMemory(twoProfile);
   renderManualNextActions(state);
+  renderProductionPairingFlow(pairing);
   setTwoProfileComposeCurrent(replyComposerCurrent);
   renderManualMessageStatus(state);
   let selectedPendingActionView = null;
@@ -2755,7 +2978,11 @@ function applyProductionActionState() {
   setActionButtonState(
     fields.saveProductionSessionDraft,
     !availability.saveSessionDraft,
-    busy ? "Wait for the active production action." : "Load or paste both local and remote pairing payloads first.",
+    busy
+      ? "Wait for the active production action."
+      : pairing.localPayload && pairing.remotePayload
+        ? "Check and confirm the safety number first."
+        : "Load or paste both local and remote pairing payloads first.",
     latestProductionManualFocusTarget === "save-draft",
   );
   setActionButtonState(
@@ -2906,6 +3133,18 @@ function applyProductionActionState() {
         : "Enter two profiles, passphrase, and message first.",
     manualPrimaryActions.sendReply ||
       (!state.hasTwoProfileReplySelected && twoProfileCurrentAction === "stored-message"),
+  );
+  setActionButtonState(
+    fields.runProductionTwoProfileRealOnionRoundtrip,
+    busy || !hasTwoProfileInput || !hasMessageRetentionPolicy || !manualNetworkPermission,
+    busy
+      ? "Wait for the active production action."
+      : !manualNetworkPermission
+        ? "Enable manual onion network permission before running real onion roundtrip."
+      : !hasMessageRetentionPolicy
+        ? retentionPolicyBlocker
+      : "Enter two profiles, passphrase, and message first.",
+    twoProfileCurrentAction === "real-onion-roundtrip",
   );
   setActionButtonState(
     fields.useProductionPairingPayload,
@@ -3207,6 +3446,11 @@ function resetProductionPairingView(options = {}) {
   if (fields.productionPairingPayload) {
     fields.productionPairingPayload.value = "";
   }
+  if (fields.productionRemotePairingQrPayload) {
+    fields.productionRemotePairingQrPayload.value = "";
+  }
+  resetProductionPairingSafety();
+  clearProductionPairingQr();
   clearAllManualRemotePayloadInputs();
   setHandshakePayload(fields.productionHandshakeInitPayload, "");
   setHandshakePayload(fields.productionHandshakeReplyPayload, "");
@@ -3363,11 +3607,62 @@ function productionPairingInput() {
     ...productionProfileInput(),
     rendezvousEndpoint: (fields.productionPairingEndpoint?.value ?? "").trim(),
     localPayload: (fields.productionPairingPayload?.value ?? "").trim(),
+    remoteQrPayload: (fields.productionRemotePairingQrPayload?.value ?? "").trim(),
     remotePayload: (fields.productionRemotePairingPayload?.value ?? "").trim(),
+    safetyConfirmed: Boolean(fields.productionPairingSafetyVerified?.checked),
     initPayload: (fields.productionRemoteHandshakeInitPayload?.value ?? "").trim(),
     replyPayload: (fields.productionRemoteHandshakeReplyPayload?.value ?? "").trim(),
     finishPayload: (fields.productionRemoteHandshakeFinishPayload?.value ?? "").trim(),
   };
+}
+
+function pairingSafetyFingerprint(input = productionPairingInput()) {
+  return `${input.localPayload}\n${input.remotePayload}`;
+}
+
+function currentPairingSafetyVerified(input = productionPairingInput()) {
+  return Boolean(
+    input.safetyConfirmed &&
+      latestProductionPairingSafety &&
+      latestProductionPairingSafety.fingerprint === pairingSafetyFingerprint(input),
+  );
+}
+
+function resetProductionPairingSafety(status = "Not checked yet") {
+  latestProductionPairingSafety = null;
+  if (fields.productionPairingSafetyVerified) {
+    fields.productionPairingSafetyVerified.checked = false;
+  }
+  setText(fields.productionPairingSafetyNumber, status);
+  setText(fields.productionPairingSafetyPhrase, status);
+  setText(fields.productionPairingSafetyBoundary, "verified=false network_io=false");
+}
+
+function clearProductionPairingQr(status = "QR appears after pairing export.") {
+  const canvas = fields.productionPairingQr;
+  if (canvas?.getContext) {
+    const context = canvas.getContext("2d");
+    context.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  setText(fields.productionPairingQrStatus, status);
+}
+
+async function renderProductionPairingQr(payload) {
+  const canvas = fields.productionPairingQr;
+  if (!canvas || !payload) {
+    clearProductionPairingQr();
+    return;
+  }
+  await QRCode.toCanvas(canvas, payload, {
+    errorCorrectionLevel: "M",
+    margin: 2,
+    width: 224,
+    color: {
+      dark: "#111827",
+      light: "#ffffff",
+    },
+  });
+  setText(fields.productionPairingQrStatus, "QR ready for face-to-face pairing payload transfer.");
 }
 
 function productionMessageInput() {
@@ -3637,6 +3932,736 @@ async function runLocalLoop() {
   }
 }
 
+async function checkOnionPreflight() {
+  setOnionPreflightState("Onion preflight running");
+  setText(fields.onionPreflightWarning, "Checking app-private Tor runtime preflight. No network bootstrap will run.");
+  setText(fields.onionPreflightRuntime, "Waiting for runtime permission guards");
+  setText(fields.onionPreflightLaunch, "Waiting for onion launch boundary");
+  setText(fields.onionPreflightEvents, "Waiting for redacted event summary");
+  setText(fields.onionPreflightBoundary, "Waiting for boundary flags");
+  if (fields.checkOnionPreflight) {
+    fields.checkOnionPreflight.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_preflight_check");
+    setOnionPreflightState(
+      result.ready_for_runtime_bootstrap ? "Runtime preflight ready" : "Runtime preflight blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionPreflightRuntime,
+      `dirs=${result.state_cache_dirs_accessible} backup_exclusion=${result.backup_exclusion_verified} log_redaction=${result.log_redaction_ready} crash_redaction=${result.crash_redaction_ready} bridge_or_censorship=${result.bridge_or_censorship_ready}`,
+    );
+    setText(
+      fields.onionPreflightLaunch,
+      `runtime_bootstrap=${result.ready_for_runtime_bootstrap} onion_launch=${result.ready_for_onion_launch} blockers=${result.blockers.join("; ") || "none"}`,
+    );
+    setText(
+      fields.onionPreflightEvents,
+      result.event_summary.length > 0 ? result.event_summary.join("\n") : "No redacted runtime event emitted",
+    );
+    setText(
+      fields.onionPreflightBoundary,
+      `preflight_only=${result.preflight_only} manual_action=${result.manual_network_action} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionPreflightState("Onion preflight failed");
+    setText(fields.onionPreflightWarning, String(error));
+    setText(fields.onionPreflightRuntime, "Failed without returning local path details");
+    setText(fields.onionPreflightLaunch, "Failed closed");
+    setText(fields.onionPreflightEvents, "No raw transport details returned");
+    setText(fields.onionPreflightBoundary, "network_io=false transport_io=false runtime=false");
+  } finally {
+    if (fields.checkOnionPreflight) {
+      fields.checkOnionPreflight.disabled = false;
+    }
+  }
+}
+
+async function prepareOnionBackupExclusion() {
+  setOnionBackupExclusionState("Backup exclusion prepare running");
+  setText(
+    fields.onionBackupExclusionBoundary,
+    "Marking app-private Tor state/cache directories before any transport runtime starts.",
+  );
+  if (fields.prepareOnionBackupExclusion) {
+    fields.prepareOnionBackupExclusion.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_backup_exclusion_prepare");
+    setOnionBackupExclusionState(
+      result.backup_exclusion_verified ? "Backup exclusion verified" : "Backup exclusion blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionBackupExclusionBoundary,
+      `dirs=${result.state_cache_dirs_accessible} written=${result.backup_exclusion_written} verified=${result.backup_exclusion_verified} blockers=${result.blockers.join("; ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionBackupExclusionState("Backup exclusion prepare failed");
+    setText(fields.onionBackupExclusionBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.prepareOnionBackupExclusion) {
+      fields.prepareOnionBackupExclusion.disabled = false;
+    }
+  }
+}
+
+async function checkOnionClientPreflight() {
+  setOnionClientPreflightState("Client preflight running");
+  setText(
+    fields.onionClientPreflightBoundary,
+    "Checking bounded Tor bootstrap policy without starting a persistent client.",
+  );
+  if (fields.checkOnionClientPreflight) {
+    fields.checkOnionClientPreflight.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_bootstrap_preflight_check");
+    setOnionClientPreflightState(
+      result.bootstrap_policy_ready ? "Client skeleton ready" : "Client preflight blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionClientPreflightBoundary,
+      `dirs=${result.state_cache_dirs_accessible} backup=${result.backup_exclusion_verified} runtime=${result.runtime_preflight_ready} policy=${result.bootstrap_policy_ready} timeout=${result.timeout_seconds}s retries=${result.retry_max_attempts} backoff=${result.retry_initial_backoff_ms}-${result.retry_max_backoff_ms}ms silent_retry=${result.silent_retry_allowed} censorship_classification=${result.censorship_classification_ready} persistent_client=${result.persistent_client_ready} manual_attempt=${result.manual_bootstrap_attempt_enabled} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime_messaging=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionClientPreflightState("Client preflight failed");
+    setText(fields.onionClientPreflightBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.checkOnionClientPreflight) {
+      fields.checkOnionClientPreflight.disabled = false;
+    }
+  }
+}
+
+async function checkOnionClientAttemptGate() {
+  setOnionClientAttemptGateState("Client gate running");
+  setText(
+    fields.onionClientAttemptGateBoundary,
+    "Checking manual client attempt gate without enabling network permission.",
+  );
+  if (fields.checkOnionClientAttemptGate) {
+    fields.checkOnionClientAttemptGate.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_client_attempt_gate_check");
+    setOnionClientAttemptGateState(
+      result.manual_client_attempt_feature_compiled ? "Client gate feature present" : "Client gate feature disabled",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionClientAttemptGateBoundary,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} started=${result.client_attempt_started} persistent_client=${result.persistent_client_ready} lifecycle=${result.lifecycle_state} runtime=${result.runtime_preflight_ready} policy=${result.bootstrap_policy_ready} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} events=${result.event_summary.join(" | ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime_messaging=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionClientAttemptGateState("Client gate failed");
+    setText(fields.onionClientAttemptGateBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.checkOnionClientAttemptGate) {
+      fields.checkOnionClientAttemptGate.disabled = false;
+    }
+  }
+}
+
+async function runOnionClientOnce() {
+  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  setOnionClientOnceState("Client once running");
+  setText(
+    fields.onionClientOnceBoundary,
+    manualNetworkPermission
+      ? "Manual permission set. This may attempt a bounded Tor client bootstrap in feature builds."
+      : "Manual permission is off. The command will fail closed without network I/O.",
+  );
+  if (fields.runOnionClientOnce) {
+    fields.runOnionClientOnce.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_client_bootstrap_once", { manualNetworkPermission });
+    setOnionClientOnceState(
+      result.client_bootstrap_succeeded ? "Client once completed" : "Client once blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionClientOnceBoundary,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} started=${result.client_attempt_started} succeeded=${result.client_bootstrap_succeeded} persistent_client=${result.persistent_client_ready} lifecycle=${result.lifecycle_state} runtime=${result.runtime_preflight_ready} policy=${result.bootstrap_policy_ready} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} events=${result.event_summary.join(" | ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime_messaging=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionClientOnceState("Client once failed");
+    setText(fields.onionClientOnceBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.runOnionClientOnce) {
+      fields.runOnionClientOnce.disabled = false;
+    }
+  }
+}
+
+async function checkOnionPersistentClient() {
+  setOnionPersistentClientState("Persistent client check running");
+  setText(fields.onionPersistentClientBoundary, "Reading retained client state without network I/O.");
+  if (fields.checkOnionPersistentClient) {
+    fields.checkOnionPersistentClient.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_persistent_client_status");
+    setOnionPersistentClientState(
+      result.persistent_client_ready ? "Persistent client retained" : "Persistent client not retained",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionPersistentClientBoundary,
+      `feature=${result.manual_client_attempt_feature_compiled} persistent_client=${result.persistent_client_ready} lifecycle=${result.lifecycle_state} timeout=${result.timeout_seconds}s in_progress=${result.bootstrap_in_progress} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime_messaging=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionPersistentClientState("Persistent client check failed");
+    setText(fields.onionPersistentClientBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.checkOnionPersistentClient) {
+      fields.checkOnionPersistentClient.disabled = false;
+    }
+  }
+}
+
+async function startOnionPersistentClient() {
+  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  setOnionPersistentClientState("Persistent client start running");
+  setText(
+    fields.onionPersistentClientBoundary,
+    manualNetworkPermission
+      ? "Manual permission set. This may attempt bounded Tor client bootstrap in feature builds and retain the client in memory."
+      : "Manual permission is off. The command will fail closed without network I/O.",
+  );
+  if (fields.startOnionPersistentClient) {
+    fields.startOnionPersistentClient.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_persistent_client_start", { manualNetworkPermission });
+    setOnionPersistentClientState(
+      result.persistent_client_ready ? "Persistent client retained" : "Persistent client blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionPersistentClientBoundary,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} started=${result.client_bootstrap_started} succeeded=${result.client_bootstrap_succeeded} persistent_client=${result.persistent_client_ready} lifecycle=${result.lifecycle_state} timeout=${result.timeout_seconds}s runtime=${result.runtime_preflight_ready} policy=${result.bootstrap_policy_ready} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} events=${result.event_summary.join(" | ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime_messaging=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionPersistentClientState("Persistent client start failed");
+    setText(fields.onionPersistentClientBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.startOnionPersistentClient) {
+      fields.startOnionPersistentClient.disabled = false;
+    }
+  }
+}
+
+async function prepareOnionKeyRecord() {
+  const { profile, passphrase } = productionProfileInput();
+  if (!profile || !passphrase) {
+    setOnionKeyRecordState("Key record prepare needs profile");
+    setText(fields.onionKeyRecordBoundary, "Enter profile and passphrase in the profile unlock panel first.");
+    return;
+  }
+
+  setOnionKeyRecordState("Key record prepare running");
+  setText(fields.onionKeyRecordBoundary, "Checking backup exclusion before opening the encrypted profile store.");
+  if (fields.prepareOnionKeyRecord) {
+    fields.prepareOnionKeyRecord.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_key_record_prepare", { profile, passphrase });
+    setOnionKeyRecordState(result.key_material_ready ? "Key record prepared" : "Key record blocked");
+    setText(
+      fields.onionKeyRecordBoundary,
+      `storage=${result.storage_opened} profile=${result.profile_marker_present} profile_unlock=${result.profile_transport_unlock_ready} backup=${result.backup_exclusion_verified} lifecycle=${result.lifecycle_ready} written=${result.key_record_written} present=${result.key_record_present} material_ready=${result.key_material_ready} blockers=${result.blockers.join("; ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+  } catch (error) {
+    setOnionKeyRecordState("Key record prepare failed");
+    setText(fields.onionKeyRecordBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.prepareOnionKeyRecord) {
+      fields.prepareOnionKeyRecord.disabled = false;
+    }
+  }
+}
+
+async function checkOnionLaunchPreflight() {
+  const { profile, passphrase } = productionProfileInput();
+  if (!profile || !passphrase) {
+    setOnionLaunchPreflightState("Launch preflight needs profile");
+    setText(fields.onionLaunchPreflightBoundary, "Enter profile and passphrase in the profile unlock panel first.");
+    return;
+  }
+
+  setOnionLaunchPreflightState("Launch preflight running");
+  setText(
+    fields.onionLaunchPreflightBoundary,
+    "Checking launch preflight guards without starting Tor or publishing a descriptor.",
+  );
+  if (fields.checkOnionLaunchPreflight) {
+    fields.checkOnionLaunchPreflight.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_launch_preflight_check", { profile, passphrase });
+    setOnionLaunchPreflightState(
+      result.ready_for_onion_launch ? "Launch preflight ready" : "Launch preflight blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionLaunchPreflightBoundary,
+      `profile_unlock=${result.profile_transport_unlock_ready} backup=${result.backup_exclusion_verified} key_record=${result.key_record_present} key_material=${result.key_material_ready} persistent_client=${result.persistent_client_ready} publication_policy=${result.endpoint_publication_policy_ready} update_policy=${result.endpoint_update_policy_ready} redacted_events=${result.redacted_events_only} launch=${result.ready_for_onion_launch} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} key_material_exposed=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionLaunchPreflightState("Launch preflight failed");
+    setText(fields.onionLaunchPreflightBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.checkOnionLaunchPreflight) {
+      fields.checkOnionLaunchPreflight.disabled = false;
+    }
+  }
+}
+
+async function attemptOnionServiceLaunch() {
+  const { profile, passphrase } = productionProfileInput();
+  const manualNetworkPermission = Boolean(fields.manualOnionNetworkPermission?.checked);
+  if (!profile || !passphrase) {
+    setText(fields.onionServiceLaunchAttempt, "Enter profile and passphrase in the profile unlock panel first.");
+    return;
+  }
+
+  setText(
+    fields.onionServiceLaunchAttempt,
+    "Attempting fail-closed onion launch boundary with explicit manual permission.",
+  );
+  if (fields.attemptOnionServiceLaunch) {
+    fields.attemptOnionServiceLaunch.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_service_launch_attempt", {
+      profile,
+      passphrase,
+      manualNetworkPermission,
+    });
+    setText(fields.onionPreflightWarning, result.warning);
+    if (result.local_onion_endpoint && fields.productionPairingEndpoint) {
+      fields.productionPairingEndpoint.value = result.local_onion_endpoint;
+      fields.productionPairingEndpoint.dispatchEvent(new Event("input", { bubbles: true }));
+      setProductionPairingState("Local onion endpoint ready");
+    }
+    setText(
+      fields.onionServiceLaunchAttempt,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} profile_unlock=${result.profile_transport_unlock_ready} backup=${result.backup_exclusion_verified} key_record=${result.key_record_present} key_material=${result.key_material_ready} persistent_client=${result.persistent_client_ready} launch_preflight=${result.launch_preflight_ready} adapter=${result.launch_adapter_ready} started=${result.launch_attempt_started} succeeded=${result.launch_attempt_succeeded} retained=${result.onion_service_retained} rend_stream=${result.inbound_rend_request_stream_retained} endpoint_ready=${result.onion_endpoint_returned} event_recorded=${result.redacted_launch_result_event_recorded} events=${result.event_summary.join("; ") || "none"} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} key_material_exposed=${result.key_material_exposed} network_io=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setText(fields.onionServiceLaunchAttempt, `Failed closed: ${error}`);
+  } finally {
+    if (fields.attemptOnionServiceLaunch) {
+      fields.attemptOnionServiceLaunch.disabled = false;
+    }
+  }
+}
+
+async function prepareOnionDescriptorPublication() {
+  const { profile, passphrase } = productionProfileInput();
+  if (!profile || !passphrase) {
+    setOnionDescriptorPublicationState("Descriptor prepare needs profile");
+    setText(fields.onionDescriptorPublicationBoundary, "Enter profile and passphrase in the profile unlock panel first.");
+    return;
+  }
+
+  setOnionDescriptorPublicationState("Descriptor prepare running");
+  setText(
+    fields.onionDescriptorPublicationBoundary,
+    "Checking descriptor publication preparation guards without creating or publishing a descriptor.",
+  );
+  if (fields.prepareOnionDescriptorPublication) {
+    fields.prepareOnionDescriptorPublication.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_descriptor_publication_prepare", { profile, passphrase });
+    setOnionDescriptorPublicationState(
+      result.descriptor_preparation_ready ? "Descriptor prepare ready" : "Descriptor prepare blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionDescriptorPublicationBoundary,
+      `feature=${result.manual_client_attempt_feature_compiled} profile_unlock=${result.profile_transport_unlock_ready} key_material=${result.key_material_ready} persistent_client=${result.persistent_client_ready} launch=${result.launch_preflight_ready} hosting_gate=${result.onion_hosting_gate_ready} descriptor_gate=${result.descriptor_publication_gate_ready} adapter=${result.fail_closed_adapter_ready} redacted_context=${result.redacted_context_ready} prepared=${result.descriptor_preparation_ready} policy=${result.endpoint_publication_policy_ready} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} key_material_exposed=${result.key_material_exposed} network_io=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionDescriptorPublicationState("Descriptor prepare failed");
+    setText(fields.onionDescriptorPublicationBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.prepareOnionDescriptorPublication) {
+      fields.prepareOnionDescriptorPublication.disabled = false;
+    }
+  }
+}
+
+async function attemptOnionDescriptorPublication() {
+  const { profile, passphrase } = productionProfileInput();
+  const manualNetworkPermission = Boolean(fields.manualOnionNetworkPermission?.checked);
+  if (!profile || !passphrase) {
+    setText(fields.onionDescriptorPublicationAttempt, "Enter profile and passphrase in the profile unlock panel first.");
+    return;
+  }
+
+  setText(
+    fields.onionDescriptorPublicationAttempt,
+    "Attempting fail-closed descriptor publication boundary with explicit manual permission.",
+  );
+  if (fields.attemptOnionDescriptorPublication) {
+    fields.attemptOnionDescriptorPublication.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_descriptor_publication_attempt", {
+      profile,
+      passphrase,
+      manualNetworkPermission,
+    });
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionDescriptorPublicationAttempt,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} launch=${result.launch_preflight_ready} descriptor_gate=${result.descriptor_publication_gate_ready} prepared=${result.descriptor_preparation_ready} started=${result.publish_attempt_started} succeeded=${result.publish_attempt_succeeded} event_recorded=${result.redacted_publish_result_event_recorded} events=${result.event_summary.join("; ") || "none"} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} key_material_exposed=${result.key_material_exposed} network_io=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setText(fields.onionDescriptorPublicationAttempt, `Failed closed: ${error}`);
+  } finally {
+    if (fields.attemptOnionDescriptorPublication) {
+      fields.attemptOnionDescriptorPublication.disabled = false;
+    }
+  }
+}
+
+async function prepareOnionInboundStream() {
+  const { profile, passphrase } = productionProfileInput();
+  if (!profile || !passphrase) {
+    setOnionInboundStreamState("Inbound prepare needs profile");
+    setText(fields.onionInboundStreamBoundary, "Enter profile and passphrase in the profile unlock panel first.");
+    return;
+  }
+
+  setOnionInboundStreamState("Inbound prepare running");
+  setText(
+    fields.onionInboundStreamBoundary,
+    "Checking inbound stream guards without accepting streams or opening read/write I/O.",
+  );
+  if (fields.prepareOnionInboundStream) {
+    fields.prepareOnionInboundStream.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_inbound_stream_prepare", { profile, passphrase });
+    setOnionInboundStreamState(
+      result.inbound_stream_preparation_ready ? "Inbound prepare ready" : "Inbound prepare blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionInboundStreamBoundary,
+      `feature=${result.manual_client_attempt_feature_compiled} persistent_client=${result.persistent_client_ready} launch=${result.launch_preflight_ready} descriptor_gate=${result.descriptor_publication_gate_ready} descriptor_prepared=${result.descriptor_preparation_ready} inbound_gate=${result.inbound_stream_gate_ready} adapter=${result.fail_closed_adapter_ready} inbound_prepared=${result.inbound_stream_preparation_ready} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} stream_id=${result.stream_id_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} accept=${result.stream_accept_attempted} read_write=${result.stream_read_write_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionInboundStreamState("Inbound prepare failed");
+    setText(fields.onionInboundStreamBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.prepareOnionInboundStream) {
+      fields.prepareOnionInboundStream.disabled = false;
+    }
+  }
+}
+
+async function attemptOnionInboundEnvelopeReceive() {
+  const { profile, passphrase } = productionProfileInput();
+  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  if (!profile || !passphrase) {
+    setOnionInboundStreamState("Envelope receive attempt needs profile");
+    setText(fields.onionInboundEnvelopeReceiveAttempt, "Enter profile and passphrase first.");
+    return;
+  }
+
+  setOnionInboundStreamState("Envelope receive attempt running");
+  setText(
+    fields.onionInboundEnvelopeReceiveAttempt,
+    manualNetworkPermission
+      ? "Manual permission set. This may advance to the inbound receive adapter in feature builds."
+      : "Manual permission is off. The command will fail closed without network I/O.",
+  );
+  if (fields.attemptOnionInboundEnvelopeReceive) {
+    fields.attemptOnionInboundEnvelopeReceive.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_inbound_envelope_receive_attempt", {
+      profile,
+      passphrase,
+      manualNetworkPermission,
+    });
+    setOnionInboundStreamState(
+      result.receive_attempt_succeeded
+        ? "Envelope receive attempt read"
+        : result.receive_attempt_started
+          ? "Envelope receive attempt failed closed"
+          : "Envelope receive attempt blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionInboundEnvelopeReceiveAttempt,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} inbound_prepared=${result.inbound_stream_preparation_ready} rend_stream=${result.inbound_rend_request_stream_ready} rend_accept_attempted=${result.inbound_rend_request_accept_attempted} rend_accepted=${result.inbound_rend_request_accepted} stream_requests=${result.accepted_stream_request_stream_ready} stream_accept_attempted=${result.stream_request_accept_attempted} stream_accepted=${result.stream_request_accepted} stream_read_attempted=${result.stream_read_attempted} stream_bytes=${result.stream_bytes_read} started=${result.receive_attempt_started} succeeded=${result.receive_attempt_succeeded} received_envelope=${result.received_envelope_ready} import_attempted=${result.inbound_import_attempted} event_recorded=${result.redacted_receive_result_event_recorded} events=${result.event_summary.join("; ") || "none"} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} stream_id=${result.stream_id_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} accept=${result.stream_accept_attempted} read_write=${result.stream_read_write_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionInboundStreamState("Envelope receive attempt failed");
+    setText(fields.onionInboundEnvelopeReceiveAttempt, `Failed closed: ${error}`);
+  } finally {
+    if (fields.attemptOnionInboundEnvelopeReceive) {
+      fields.attemptOnionInboundEnvelopeReceive.disabled = false;
+    }
+  }
+}
+
+async function prepareOnionOutboundStream() {
+  const rendezvousEndpoint = (fields.productionPairingEndpoint?.value ?? "").trim();
+  if (!rendezvousEndpoint) {
+    setOnionOutboundStreamState("Outbound prepare needs endpoint");
+    setText(fields.onionOutboundStreamBoundary, "Enter a pairwise onion endpoint in the pairing panel first.");
+    return;
+  }
+
+  setOnionOutboundStreamState("Outbound prepare running");
+  setText(
+    fields.onionOutboundStreamBoundary,
+    "Checking outbound stream guards without dialing or sending over a stream.",
+  );
+  if (fields.prepareOnionOutboundStream) {
+    fields.prepareOnionOutboundStream.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_outbound_stream_prepare", { rendezvousEndpoint });
+    setOnionOutboundStreamState(
+      result.outbound_stream_preparation_ready ? "Outbound prepare ready" : "Outbound prepare blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionOutboundStreamBoundary,
+      `endpoint=${result.endpoint_accepted} pairwise=${result.pairwise_endpoint_ready} high_risk_policy=${result.high_risk_onion_policy_ready} outbound_gate=${result.outbound_stream_gate_ready} adapter=${result.fail_closed_adapter_ready} outbound_prepared=${result.outbound_stream_preparation_ready} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} stream_id=${result.stream_id_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} dial=${result.stream_dial_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionOutboundStreamState("Outbound prepare failed");
+    setText(fields.onionOutboundStreamBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.prepareOnionOutboundStream) {
+      fields.prepareOnionOutboundStream.disabled = false;
+    }
+  }
+}
+
+async function prepareOnionStreamCloseout() {
+  const { profile, passphrase } = productionProfileInput();
+  const rendezvousEndpoint = (fields.productionPairingEndpoint?.value ?? "").trim();
+  if (!profile || !passphrase) {
+    setOnionStreamCloseoutState("Stream closeout needs profile");
+    setText(fields.onionStreamCloseoutBoundary, "Enter profile and passphrase in the profile unlock panel first.");
+    return;
+  }
+  if (!rendezvousEndpoint) {
+    setOnionStreamCloseoutState("Stream closeout needs endpoint");
+    setText(fields.onionStreamCloseoutBoundary, "Enter a pairwise onion endpoint in the pairing panel first.");
+    return;
+  }
+
+  setOnionStreamCloseoutState("Stream closeout running");
+  setText(
+    fields.onionStreamCloseoutBoundary,
+    "Checking inbound and outbound stream adapter closeout without accepting, dialing, read/write, or sending.",
+  );
+  if (fields.prepareOnionStreamCloseout) {
+    fields.prepareOnionStreamCloseout.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_stream_adapter_closeout_prepare", {
+      profile,
+      passphrase,
+      rendezvousEndpoint,
+    });
+    setOnionStreamCloseoutState(
+      result.stream_adapter_closeout_ready ? "Stream closeout ready" : "Stream closeout blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionStreamCloseoutBoundary,
+      `feature=${result.manual_client_attempt_feature_compiled} persistent_client=${result.persistent_client_ready} inbound=${result.inbound_stream_preparation_ready} outbound=${result.outbound_stream_preparation_ready} closeout=${result.stream_adapter_closeout_ready} remote_auth_next=${result.remote_peer_authentication_next} verified_session_after_auth=${result.verified_pairwise_session_after_remote_authentication} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} stream_id=${result.stream_id_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} accept=${result.stream_accept_attempted} dial=${result.stream_dial_attempted} read_write=${result.stream_read_write_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionStreamCloseoutState("Stream closeout failed");
+    setText(fields.onionStreamCloseoutBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.prepareOnionStreamCloseout) {
+      fields.prepareOnionStreamCloseout.disabled = false;
+    }
+  }
+}
+
+async function prepareOnionRemoteAuth() {
+  const { profile, passphrase } = productionProfileInput();
+  const rendezvousEndpoint = (fields.productionPairingEndpoint?.value ?? "").trim();
+  if (!profile || !passphrase) {
+    setOnionRemoteAuthState("Remote auth needs profile");
+    setText(fields.onionRemoteAuthBoundary, "Enter profile and passphrase in the profile unlock panel first.");
+    return;
+  }
+  if (!rendezvousEndpoint) {
+    setOnionRemoteAuthState("Remote auth needs endpoint");
+    setText(fields.onionRemoteAuthBoundary, "Enter a pairwise onion endpoint in the pairing panel first.");
+    return;
+  }
+
+  setOnionRemoteAuthState("Remote auth boundary running");
+  setText(
+    fields.onionRemoteAuthBoundary,
+    "Checking that peer proof is required before stream session binding or envelope I/O.",
+  );
+  if (fields.prepareOnionRemoteAuth) {
+    fields.prepareOnionRemoteAuth.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_remote_peer_authentication_prepare", {
+      profile,
+      passphrase,
+      rendezvousEndpoint,
+    });
+    setOnionRemoteAuthState(
+      result.remote_peer_authentication_ready ? "Remote auth ready" : "Remote auth blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionRemoteAuthBoundary,
+      `closeout=${result.stream_adapter_closeout_ready} auth_required=${result.remote_peer_authentication_required} stored_session=${result.stored_pairwise_session_ready} auth_ready=${result.remote_peer_authentication_ready} session_binding=${result.verified_pairwise_session_binding_ready} bound_stream=${result.bound_stream_session_ready} outbound_io_boundary=${result.outbound_envelope_io_boundary_ready} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} peer_proof=${result.peer_proof_returned} transcript=${result.session_transcript_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} accept=${result.stream_accept_attempted} dial=${result.stream_dial_attempted} read_write=${result.stream_read_write_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionRemoteAuthState("Remote auth failed");
+    setText(fields.onionRemoteAuthBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.prepareOnionRemoteAuth) {
+      fields.prepareOnionRemoteAuth.disabled = false;
+    }
+  }
+}
+
+async function prepareOnionOutboundEnvelopeSend() {
+  const { profile, passphrase, messageNumber } = productionMessageInput();
+  const rendezvousEndpoint = (fields.productionPairingEndpoint?.value ?? "").trim();
+  if (!profile || !passphrase) {
+    setOnionOutboundEnvelopeSendState("Envelope send needs profile");
+    setText(
+      fields.onionOutboundEnvelopeSendBoundary,
+      "Enter profile and passphrase in the profile unlock panel first.",
+    );
+    return;
+  }
+  if (!rendezvousEndpoint) {
+    setOnionOutboundEnvelopeSendState("Envelope send needs endpoint");
+    setText(
+      fields.onionOutboundEnvelopeSendBoundary,
+      "Enter a pairwise onion endpoint in the pairing panel first.",
+    );
+    return;
+  }
+  if (!Number.isInteger(messageNumber) || messageNumber < 1) {
+    setOnionOutboundEnvelopeSendState("Envelope send needs message");
+    setText(fields.onionOutboundEnvelopeSendBoundary, "Enter the stored outbound message number first.");
+    return;
+  }
+
+  setOnionOutboundEnvelopeSendState("Envelope send prepare running");
+  setText(
+    fields.onionOutboundEnvelopeSendBoundary,
+    "Checking stored encrypted envelope against the verified stream session without stream send.",
+  );
+  if (fields.prepareOnionOutboundEnvelopeSend) {
+    fields.prepareOnionOutboundEnvelopeSend.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_outbound_envelope_send_prepare", {
+      profile,
+      passphrase,
+      rendezvousEndpoint,
+      messageNumber,
+    });
+    setOnionOutboundEnvelopeSendState(
+      result.send_intent_prepared ? "Envelope send intent ready" : "Envelope send intent blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionOutboundEnvelopeSendBoundary,
+      `auth=${result.remote_peer_authentication_ready} bound_stream=${result.bound_stream_session_ready} io_boundary=${result.outbound_envelope_io_boundary_ready} stored_envelope=${result.stored_outbound_envelope_ready} decodable=${result.envelope_decodable} number_match=${result.envelope_message_number_matches} send_intent=${result.send_intent_prepared} ack_wait=${result.ack_wait_registered} event_recorded=${result.redacted_send_result_event_recorded} events=${result.event_summary.join("; ") || "none"} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} peer_proof=${result.peer_proof_returned} transcript=${result.session_transcript_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} accept=${result.stream_accept_attempted} dial=${result.stream_dial_attempted} read_write=${result.stream_read_write_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionOutboundEnvelopeSendState("Envelope send prepare failed");
+    setText(fields.onionOutboundEnvelopeSendBoundary, `Failed closed: ${error}`);
+  } finally {
+    if (fields.prepareOnionOutboundEnvelopeSend) {
+      fields.prepareOnionOutboundEnvelopeSend.disabled = false;
+    }
+  }
+}
+
+async function attemptOnionOutboundEnvelopeSend() {
+  const { profile, passphrase, messageNumber } = productionMessageInput();
+  const rendezvousEndpoint = (fields.productionPairingEndpoint?.value ?? "").trim();
+  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  if (!profile || !passphrase) {
+    setOnionOutboundEnvelopeSendState("Envelope send attempt needs profile");
+    setText(fields.onionOutboundEnvelopeSendAttempt, "Enter profile and passphrase first.");
+    return;
+  }
+  if (!rendezvousEndpoint) {
+    setOnionOutboundEnvelopeSendState("Envelope send attempt needs endpoint");
+    setText(fields.onionOutboundEnvelopeSendAttempt, "Enter a pairwise onion endpoint first.");
+    return;
+  }
+  if (!Number.isInteger(messageNumber) || messageNumber < 1) {
+    setOnionOutboundEnvelopeSendState("Envelope send attempt needs message");
+    setText(fields.onionOutboundEnvelopeSendAttempt, "Enter the stored outbound message number first.");
+    return;
+  }
+
+  setOnionOutboundEnvelopeSendState("Envelope send attempt running");
+  setText(
+    fields.onionOutboundEnvelopeSendAttempt,
+    manualNetworkPermission
+      ? "Manual permission set. This may attempt one bounded onion stream dial and encrypted envelope write."
+      : "Manual permission is off. The command will fail closed without network I/O.",
+  );
+  if (fields.attemptOnionOutboundEnvelopeSend) {
+    fields.attemptOnionOutboundEnvelopeSend.disabled = true;
+  }
+  try {
+    const result = await invoke("production_onion_outbound_envelope_send_attempt", {
+      profile,
+      passphrase,
+      rendezvousEndpoint,
+      messageNumber,
+      manualNetworkPermission,
+    });
+    setOnionOutboundEnvelopeSendState(
+      result.send_attempt_succeeded
+        ? "Envelope send attempt wrote"
+        : result.send_attempt_started
+          ? "Envelope send attempt failed closed"
+          : "Envelope send attempt blocked",
+    );
+    setText(fields.onionPreflightWarning, result.warning);
+    setText(
+      fields.onionOutboundEnvelopeSendAttempt,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} send_intent=${result.send_intent_prepared} started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} ack_wait=${result.ack_wait_registered} event_recorded=${result.redacted_send_result_event_recorded} events=${result.event_summary.join("; ") || "none"} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} peer_proof=${result.peer_proof_returned} transcript=${result.session_transcript_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} accept=${result.stream_accept_attempted} dial=${result.stream_dial_attempted} read_write=${result.stream_read_write_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setOnionOutboundEnvelopeSendState("Envelope send attempt failed");
+    setText(fields.onionOutboundEnvelopeSendAttempt, `Failed closed: ${error}`);
+  } finally {
+    if (fields.attemptOnionOutboundEnvelopeSend) {
+      fields.attemptOnionOutboundEnvelopeSend.disabled = false;
+    }
+  }
+}
+
 async function runProductionTwoProfileRoundtrip() {
   const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
   let postBusyFocus = null;
@@ -3674,7 +4699,6 @@ async function runProductionTwoProfileRoundtrip() {
     fields.runProductionTwoProfileRoundtrip.disabled = true;
   }
   try {
-    await saveProductionMessageRetentionPreference(profileA, passphrase, messageTtlSeconds);
     const result = await invoke("production_two_profile_roundtrip", {
       profileA,
       profileB,
@@ -3682,6 +4706,12 @@ async function runProductionTwoProfileRoundtrip() {
       message,
       messageTtlSeconds,
     });
+    let retentionPreferenceWarning = null;
+    try {
+      await saveProductionMessageRetentionPreference(profileA, passphrase, messageTtlSeconds);
+    } catch (error) {
+      retentionPreferenceWarning = `Roundtrip completed, but retention preference was not saved: ${String(error)}`;
+    }
     setProductionTwoProfileState("Two-profile roundtrip completed");
     const sentInput = { profileA, profileB };
     const view = renderProductionTwoProfileResult(result);
@@ -3692,6 +4722,9 @@ async function runProductionTwoProfileRoundtrip() {
         : null;
     } else {
       setText(fields.productionTwoProfileWarning, result.warning);
+    }
+    if (retentionPreferenceWarning) {
+      setText(fields.productionTwoProfileWarning, retentionPreferenceWarning);
     }
     await loadProductionProfileList();
   } catch (error) {
@@ -3782,6 +4815,97 @@ async function runProductionTwoProfileMessageRoundtrip() {
     productionBusyAction = null;
     applyProductionActionState();
     focusAfterProductionBusyAction(postBusyFocus);
+  }
+}
+
+async function runProductionTwoProfileRealOnionRoundtrip() {
+  const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
+  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  if (!profileA || !profileB || profileA === profileB || !passphrase || !message || !messageTtlSeconds) {
+    setProductionTwoProfileState("Real onion roundtrip needs input");
+    setText(fields.productionTwoProfileWarning, "Enter two distinct profiles, passphrase, retention, and message.");
+    return;
+  }
+  if (!manualNetworkPermission) {
+    setProductionTwoProfileState("Real onion roundtrip blocked");
+    setText(fields.productionTwoProfileWarning, "Enable manual onion network permission before running real onion roundtrip.");
+    return;
+  }
+
+  setProductionTwoProfileState("Real onion roundtrip running");
+  setText(fields.productionTwoProfileWarning, "Launching two explicit onion runtimes and sending one encrypted message.");
+  setText(fields.productionTwoProfileProfiles, "Preparing encrypted profile stores and onion endpoints");
+  setText(fields.productionTwoProfileSession, "Pairing with real onion endpoints");
+  setText(fields.productionTwoProfileMessageState, "Waiting for onion send and receive");
+  setText(fields.productionTwoProfileBoundary, "Network roundtrip in progress");
+  setProductionFollowupActions(false, "Real onion roundtrip running. Follow-up actions are locked.");
+  productionBusyAction = "two-profile-real-onion-roundtrip";
+  applyProductionActionState();
+  if (fields.runProductionTwoProfileRealOnionRoundtrip) {
+    fields.runProductionTwoProfileRealOnionRoundtrip.disabled = true;
+  }
+  try {
+    const result = await invoke("production_two_profile_real_onion_roundtrip", {
+      profileA,
+      profileB,
+      passphrase,
+      message,
+      messageTtlSeconds,
+      manualNetworkPermission,
+    });
+    setProductionTwoProfileState(
+      result.received_export_matches_input ? "Real onion roundtrip completed" : "Real onion roundtrip needs review",
+    );
+    setText(fields.productionTwoProfileWarning, result.warning);
+    setText(
+      fields.productionTwoProfileProfiles,
+      `a_unlock=${result.profile_a_unlocked} b_unlock=${result.profile_b_unlocked} a_client=${result.profile_a_client_bootstrapped} b_client=${result.profile_b_client_bootstrapped} a_service=${result.profile_a_onion_service_launched} b_service=${result.profile_b_onion_service_launched} a_endpoint=${result.profile_a_endpoint_ready} b_endpoint=${result.profile_b_endpoint_ready}`,
+    );
+    setText(
+      fields.productionTwoProfileSession,
+      `pairing=${result.pairing_payloads_exported} drafts=${result.session_drafts_saved} handshake=${result.handshake_completed} sender=${result.sender_session_ready} receiver=${result.receiver_session_ready}`,
+    );
+    setText(
+      fields.productionTwoProfileMessageState,
+      `reserved=${result.message_number_reserved} envelope=${result.encrypted_envelope_exported} send=${result.send_attempt_succeeded} receive=${result.receive_attempt_succeeded} inbound=${result.inbound_message_stored} status=${result.received_status_verified} match=${result.received_export_matches_input}`,
+    );
+    setText(
+      fields.productionTwoProfileBoundary,
+      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} events=${result.event_summary.join("; ") || "none"} endpoint_returned=${result.local_endpoint_returned || result.peer_endpoint_returned} envelope_payload=${result.envelope_payload_returned} plaintext=${result.plaintext_returned_to_frontend} path=${result.store_path_returned} passphrase=${result.passphrase_retained} key_material=${result.key_material_exposed} network=${result.network_io_attempted} transport=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+    if (result.received_export_matches_input) {
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+    }
+  } catch (error) {
+    setProductionTwoProfileState("Real onion roundtrip failed");
+    const detail = String(error ?? "");
+    const redactedStage = detail.includes("redacted stage:")
+      ? detail.split("redacted stage:").slice(1).join("redacted stage:").trim()
+      : "";
+    setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("real-onion-roundtrip", error));
+    setText(
+      fields.productionTwoProfileProfiles,
+      redactedStage.includes("bootstrap")
+        ? "Profile stores opened before Tor bootstrap completed"
+        : "Real onion profile setup failed",
+    );
+    setText(
+      fields.productionTwoProfileSession,
+      redactedStage.includes("bootstrap")
+        ? "Session setup blocked until local onion endpoint exists"
+        : "Real onion session setup failed",
+    );
+    setText(fields.productionTwoProfileMessageState, "Real onion message not delivered");
+    setText(
+      fields.productionTwoProfileBoundary,
+      redactedStage || "Failed without returning endpoint, payload, path, or key details",
+    );
+  } finally {
+    productionBusyAction = null;
+    if (fields.runProductionTwoProfileRealOnionRoundtrip) {
+      fields.runProductionTwoProfileRealOnionRoundtrip.disabled = false;
+    }
+    applyProductionActionState();
   }
 }
 
@@ -4044,6 +5168,8 @@ async function exportProductionPairingPayload() {
     if (fields.productionPairingPayload) {
       fields.productionPairingPayload.value = result.pairing_payload;
     }
+    resetProductionPairingSafety("Safety check required after pairing export.");
+    await renderProductionPairingQr(result.pairing_payload);
     applyProductionActionState();
     setText(fields.productionPairingStorage, view.storage);
     setText(fields.productionPairingBoundary, view.boundary);
@@ -4053,6 +5179,7 @@ async function exportProductionPairingPayload() {
     if (fields.productionPairingPayload) {
       fields.productionPairingPayload.value = "";
     }
+    clearProductionPairingQr("QR unavailable because pairing export failed.");
     setText(fields.productionPairingStorage, "Failed");
     setText(fields.productionPairingBoundary, "Failed");
   } finally {
@@ -4065,10 +5192,15 @@ async function exportProductionPairingPayload() {
 }
 
 async function saveProductionSessionDraft() {
-  const { profile, passphrase, localPayload, remotePayload } = productionPairingInput();
+  const { profile, passphrase, localPayload, remotePayload, safetyConfirmed } = productionPairingInput();
   if (!profile || !passphrase || !localPayload || !remotePayload) {
     setProductionPairingState("Session draft needs payloads");
     setText(fields.productionPairingWarning, "Export local payload and paste a remote payload.");
+    return;
+  }
+  if (!currentPairingSafetyVerified()) {
+    setProductionPairingState("Session draft needs safety check");
+    setText(fields.productionPairingWarning, "Check the safety number and mark it verified before saving the draft.");
     return;
   }
 
@@ -4087,6 +5219,7 @@ async function saveProductionSessionDraft() {
       passphrase,
       localPayload,
       remotePayload,
+      safetyConfirmed,
     });
     const view = productionSessionDraftView(result);
     setProductionPairingState("Session draft saved");
@@ -4106,6 +5239,75 @@ async function saveProductionSessionDraft() {
     productionBusyAction = null;
     if (fields.saveProductionSessionDraft) {
       fields.saveProductionSessionDraft.disabled = false;
+    }
+    applyProductionActionState();
+  }
+}
+
+function useRemotePairingQrText() {
+  const payload = (fields.productionRemotePairingQrPayload?.value ?? "").trim();
+  if (!payload) {
+    setProductionPairingState("Remote QR text needs payload");
+    setText(fields.productionPairingWarning, "Paste scanned ADPAIR2 text before using it as the remote payload.");
+    return;
+  }
+  if (!payload.startsWith("ADPAIR2|")) {
+    setProductionPairingState("Remote QR text blocked");
+    setText(fields.productionPairingWarning, "Remote QR text must be a single ADPAIR2 pairing payload.");
+    return;
+  }
+  if (fields.productionRemotePairingPayload) {
+    fields.productionRemotePairingPayload.value = payload;
+  }
+  resetProductionPairingSafety("Safety check required after remote QR text update.");
+  setProductionPairingState("Remote QR text applied");
+  setText(
+    fields.productionPairingWarning,
+    "Scanned QR text copied into remote payload. Save draft still verifies the payload before storing anything.",
+  );
+  applyProductionActionState();
+}
+
+async function checkProductionPairingSafety() {
+  const input = productionPairingInput();
+  if (!input.localPayload || !input.remotePayload) {
+    setProductionPairingState("Safety check needs payloads");
+    setText(fields.productionPairingWarning, "Export local payload and paste or load a remote payload first.");
+    resetProductionPairingSafety("Not checked yet");
+    return;
+  }
+
+  setProductionPairingState("Safety check running");
+  setText(fields.productionPairingWarning, "Calculating safety number for the local and remote pairing payloads.");
+  if (fields.checkProductionPairingSafety) {
+    fields.checkProductionPairingSafety.disabled = true;
+  }
+  resetProductionPairingSafety("Checking");
+  try {
+    const result = await invoke("production_pairing_safety_preview", {
+      localPayload: input.localPayload,
+      remotePayload: input.remotePayload,
+    });
+    latestProductionPairingSafety = {
+      fingerprint: pairingSafetyFingerprint(input),
+      safetyNumber: result.safety_number,
+      safetyPhrase: result.safety_phrase,
+    };
+    setProductionPairingState("Safety check ready");
+    setText(fields.productionPairingWarning, result.warning);
+    setText(fields.productionPairingSafetyNumber, result.safety_number);
+    setText(fields.productionPairingSafetyPhrase, result.safety_phrase);
+    setText(
+      fields.productionPairingSafetyBoundary,
+      `verified=${result.safety_confirmed} payloads=${result.payloads_decodable} transcript_bound=${result.safety_transcript_bound} payloads_returned=${result.payloads_returned} transcript_returned=${result.safety_transcript_returned} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+  } catch (error) {
+    setProductionPairingState("Safety check failed");
+    setText(fields.productionPairingWarning, String(error));
+    resetProductionPairingSafety("Failed");
+  } finally {
+    if (fields.checkProductionPairingSafety) {
+      fields.checkProductionPairingSafety.disabled = false;
     }
     applyProductionActionState();
   }
@@ -5063,6 +6265,82 @@ if (fields.themeToggle) {
   fields.themeToggle.addEventListener("click", toggleTheme);
 }
 
+if (fields.checkOnionPreflight) {
+  fields.checkOnionPreflight.addEventListener("click", checkOnionPreflight);
+}
+
+if (fields.prepareOnionBackupExclusion) {
+  fields.prepareOnionBackupExclusion.addEventListener("click", prepareOnionBackupExclusion);
+}
+
+if (fields.checkOnionClientPreflight) {
+  fields.checkOnionClientPreflight.addEventListener("click", checkOnionClientPreflight);
+}
+
+if (fields.checkOnionClientAttemptGate) {
+  fields.checkOnionClientAttemptGate.addEventListener("click", checkOnionClientAttemptGate);
+}
+
+if (fields.runOnionClientOnce) {
+  fields.runOnionClientOnce.addEventListener("click", runOnionClientOnce);
+}
+
+if (fields.checkOnionPersistentClient) {
+  fields.checkOnionPersistentClient.addEventListener("click", checkOnionPersistentClient);
+}
+
+if (fields.startOnionPersistentClient) {
+  fields.startOnionPersistentClient.addEventListener("click", startOnionPersistentClient);
+}
+
+if (fields.prepareOnionKeyRecord) {
+  fields.prepareOnionKeyRecord.addEventListener("click", prepareOnionKeyRecord);
+}
+
+if (fields.checkOnionLaunchPreflight) {
+  fields.checkOnionLaunchPreflight.addEventListener("click", checkOnionLaunchPreflight);
+}
+
+if (fields.attemptOnionServiceLaunch) {
+  fields.attemptOnionServiceLaunch.addEventListener("click", attemptOnionServiceLaunch);
+}
+
+if (fields.prepareOnionDescriptorPublication) {
+  fields.prepareOnionDescriptorPublication.addEventListener("click", prepareOnionDescriptorPublication);
+}
+
+if (fields.attemptOnionDescriptorPublication) {
+  fields.attemptOnionDescriptorPublication.addEventListener("click", attemptOnionDescriptorPublication);
+}
+
+if (fields.prepareOnionInboundStream) {
+  fields.prepareOnionInboundStream.addEventListener("click", prepareOnionInboundStream);
+}
+
+if (fields.attemptOnionInboundEnvelopeReceive) {
+  fields.attemptOnionInboundEnvelopeReceive.addEventListener("click", attemptOnionInboundEnvelopeReceive);
+}
+
+if (fields.prepareOnionOutboundStream) {
+  fields.prepareOnionOutboundStream.addEventListener("click", prepareOnionOutboundStream);
+}
+
+if (fields.prepareOnionStreamCloseout) {
+  fields.prepareOnionStreamCloseout.addEventListener("click", prepareOnionStreamCloseout);
+}
+
+if (fields.prepareOnionRemoteAuth) {
+  fields.prepareOnionRemoteAuth.addEventListener("click", prepareOnionRemoteAuth);
+}
+
+if (fields.prepareOnionOutboundEnvelopeSend) {
+  fields.prepareOnionOutboundEnvelopeSend.addEventListener("click", prepareOnionOutboundEnvelopeSend);
+}
+
+if (fields.attemptOnionOutboundEnvelopeSend) {
+  fields.attemptOnionOutboundEnvelopeSend.addEventListener("click", attemptOnionOutboundEnvelopeSend);
+}
+
 if (fields.productionProfileSelector) {
   fields.productionProfileSelector.addEventListener("change", () => {
     if (fields.productionProfileName && fields.productionProfileSelector.value) {
@@ -5120,6 +6398,17 @@ for (const input of [
       applyProductionActionState();
       scheduleTwoProfileAutoResume();
     });
+  }
+}
+
+for (const input of [fields.productionPairingPayload, fields.productionRemotePairingPayload]) {
+  if (input) {
+    input.addEventListener("input", () =>
+      resetProductionPairingSafety("Safety check required after pairing payload update."),
+    );
+    input.addEventListener("change", () =>
+      resetProductionPairingSafety("Safety check required after pairing payload update."),
+    );
   }
 }
 
@@ -5202,11 +6491,14 @@ if (fields.exportProductionPairing) {
 
 if (fields.useProductionPairingPayload) {
   fields.useProductionPairingPayload.addEventListener("click", () =>
-    moveLocalPayload(
+    {
+      moveLocalPayload(
       fields.productionPairingPayload,
       fields.productionRemotePairingPayload,
       "Pairing payload",
-    ),
+      );
+      resetProductionPairingSafety("Safety check required after remote payload update.");
+    },
   );
 }
 
@@ -5218,19 +6510,50 @@ if (fields.storeProductionPairingPayload) {
 
 if (fields.loadProductionPairingPayload) {
   fields.loadProductionPairingPayload.addEventListener("click", () =>
-    loadProductionPayloadSlot("pairing", fields.productionRemotePairingPayload, "Pairing payload"),
+    {
+      loadProductionPayloadSlot("pairing", fields.productionRemotePairingPayload, "Pairing payload");
+      resetProductionPairingSafety("Safety check required after remote payload update.");
+    },
   );
 }
 
 if (fields.relayProductionPairingPayload) {
   fields.relayProductionPairingPayload.addEventListener("click", () =>
-    relayProductionPayloadSlotToPeer(
+    {
+      relayProductionPayloadSlotToPeer(
       "pairing",
       fields.productionPairingPayload,
       fields.productionRemotePairingPayload,
       "Pairing payload",
-    ),
+      );
+      resetProductionPairingSafety("Safety check required after remote payload update.");
+    },
   );
+}
+
+if (fields.useProductionRemotePairingQr) {
+  fields.useProductionRemotePairingQr.addEventListener("click", useRemotePairingQrText);
+}
+
+if (fields.checkProductionPairingSafety) {
+  fields.checkProductionPairingSafety.addEventListener("click", checkProductionPairingSafety);
+}
+
+if (fields.productionPairingSafetyVerified) {
+  fields.productionPairingSafetyVerified.addEventListener("change", () => {
+    if (fields.productionPairingSafetyVerified.checked && !latestProductionPairingSafety) {
+      fields.productionPairingSafetyVerified.checked = false;
+      setProductionPairingState("Safety check required");
+      setText(fields.productionPairingWarning, "Check the safety number before marking it verified.");
+    }
+    setText(
+      fields.productionPairingSafetyBoundary,
+      currentPairingSafetyVerified()
+        ? "verified=true payloads_returned=false transcript_returned=false network_io=false"
+        : "verified=false network_io=false",
+    );
+    applyProductionActionState();
+  });
 }
 
 if (fields.saveProductionSessionDraft) {
@@ -5417,6 +6740,13 @@ if (fields.runProductionTwoProfileMessageRoundtrip) {
   fields.runProductionTwoProfileMessageRoundtrip.addEventListener(
     "click",
     runProductionTwoProfileMessageRoundtrip,
+  );
+}
+
+if (fields.runProductionTwoProfileRealOnionRoundtrip) {
+  fields.runProductionTwoProfileRealOnionRoundtrip.addEventListener(
+    "click",
+    runProductionTwoProfileRealOnionRoundtrip,
   );
 }
 

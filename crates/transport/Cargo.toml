@@ -9,7 +9,12 @@ another-dimension-identity = { path = "../identity" }
 another-dimension-protocol = { path = "../protocol" }
 another-dimension-storage = { path = "../storage" }
 arti-client = { version = "0.42.0", default-features = false, optional = true }
+futures = { version = "0.3", optional = true }
+safelog = { version = "0.8.2", optional = true }
 tokio = { version = "1.52.3", default-features = false, features = ["macros", "rt", "time"], optional = true }
+tor-cell = { version = "0.42.0", default-features = false, optional = true }
+tor-hsservice = { version = "0.42.0", default-features = false, optional = true }
+tor-rtcompat = { version = "0.42.0", default-features = false, features = ["tokio", "rustls"], optional = true }
 
 [features]
 arti-adapter-spike = [
@@ -22,7 +27,12 @@ arti-adapter-spike = [
 ]
 arti-manual-bootstrap = [
     "arti-adapter-spike",
+    "dep:futures",
+    "dep:safelog",
     "dep:tokio",
+    "dep:tor-cell",
+    "dep:tor-hsservice",
+    "dep:tor-rtcompat",
 ]
 dev-insecure = [
     "another-dimension-identity/dev-insecure",

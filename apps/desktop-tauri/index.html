@@ -9,7 +9,7 @@
   <body>
     <main class="shell">
       <section class="status-panel" aria-labelledby="app-title">
-        <p class="eyebrow">Local secure messaging console</p>
+        <p class="eyebrow">Onion-routed private chat</p>
         <h1 id="app-title">Another Dimension Chat</h1>
         <div class="theme-control" aria-label="Display mode">
           <span>Display mode</span>
@@ -134,12 +134,205 @@
             </div>
           </dl>
         </details>
+        <section class="production-workflow" aria-labelledby="onion-preflight-title">
+          <div>
+            <p class="eyebrow">Onion transport</p>
+            <h3 id="onion-preflight-title">Tor preflight</h3>
+          </div>
+          <div class="loop-actions">
+            <button id="check-onion-preflight" type="button">Check Tor preflight</button>
+            <button id="prepare-onion-backup-exclusion" type="button">Prepare backup exclusion</button>
+            <button id="check-onion-client-preflight" type="button">Check client preflight</button>
+            <button id="check-onion-client-attempt-gate" type="button">Check client gate</button>
+            <label class="inline-toggle">
+              <input id="manual-onion-network-permission" type="checkbox" />
+              Manual network permission
+            </label>
+            <button id="run-onion-client-once" type="button">Run client once</button>
+            <button id="check-onion-persistent-client" type="button">Check client state</button>
+            <button id="start-onion-persistent-client" type="button">Start persistent client</button>
+            <button id="prepare-onion-key-record" type="button">Prepare key record</button>
+            <button id="check-onion-launch-preflight" type="button">Check launch preflight</button>
+            <button id="attempt-onion-service-launch" type="button">Attempt onion launch</button>
+            <button id="prepare-onion-descriptor-publication" type="button">Prepare descriptor</button>
+            <button id="attempt-onion-descriptor-publication" type="button">Attempt descriptor publish</button>
+            <button id="prepare-onion-inbound-stream" type="button">Prepare inbound stream</button>
+            <button id="attempt-onion-inbound-envelope-receive" type="button">Attempt envelope receive</button>
+            <button id="prepare-onion-outbound-stream" type="button">Prepare outbound stream</button>
+            <button id="prepare-onion-stream-closeout" type="button">Prepare stream closeout</button>
+            <button id="prepare-onion-remote-auth" type="button">Check remote auth boundary</button>
+            <button id="prepare-onion-outbound-envelope-send" type="button">Prepare envelope send</button>
+            <button id="attempt-onion-outbound-envelope-send" type="button">Attempt envelope send</button>
+          </div>
+          <p id="onion-preflight-state" class="demo-state" aria-live="polite">
+            Onion preflight idle
+          </p>
+          <p id="onion-preflight-warning" class="demo-warning">
+            Explicit preflight only. No Tor bootstrap or onion service launch has run.
+          </p>
+          <dl class="flow-summary">
+            <div>
+              <dt>Runtime</dt>
+              <dd id="onion-preflight-runtime">Not checked yet</dd>
+            </div>
+            <div>
+              <dt>Launch gate</dt>
+              <dd id="onion-preflight-launch">Not checked yet</dd>
+            </div>
+            <div>
+              <dt>Events</dt>
+              <dd id="onion-preflight-events">Not checked yet</dd>
+            </div>
+            <div>
+              <dt>Boundary</dt>
+              <dd id="onion-preflight-boundary">network_io=false transport_io=false runtime=false</dd>
+            </div>
+            <div>
+              <dt>Backup exclusion</dt>
+              <dd id="onion-backup-exclusion-state">Not prepared</dd>
+            </div>
+            <div>
+              <dt>Backup boundary</dt>
+              <dd id="onion-backup-exclusion-boundary">raw_path=false network_io=false</dd>
+            </div>
+            <div>
+              <dt>Client preflight</dt>
+              <dd id="onion-client-preflight-state">Not checked yet</dd>
+            </div>
+            <div>
+              <dt>Client boundary</dt>
+              <dd id="onion-client-preflight-boundary">persistent_client=false network_io=false</dd>
+            </div>
+            <div>
+              <dt>Client gate</dt>
+              <dd id="onion-client-attempt-gate-state">Not checked yet</dd>
+            </div>
+            <div>
+              <dt>Client gate boundary</dt>
+              <dd id="onion-client-attempt-gate-boundary">manual_permission=false network_io=false</dd>
+            </div>
+            <div>
+              <dt>Client once</dt>
+              <dd id="onion-client-once-state">Not run</dd>
+            </div>
+            <div>
+              <dt>Client once boundary</dt>
+              <dd id="onion-client-once-boundary">manual_permission=false network_io=false</dd>
+            </div>
+            <div>
+              <dt>Persistent client</dt>
+              <dd id="onion-persistent-client-state">Not retained</dd>
+            </div>
+            <div>
+              <dt>Persistent boundary</dt>
+              <dd id="onion-persistent-client-boundary">persistent_client=false network_io=false</dd>
+            </div>
+            <div>
+              <dt>Key record</dt>
+              <dd id="onion-key-record-state">Not prepared</dd>
+            </div>
+            <div>
+              <dt>Key boundary</dt>
+              <dd id="onion-key-record-boundary">profile_unlock=false key_material=false network_io=false</dd>
+            </div>
+            <div>
+              <dt>Launch preflight</dt>
+              <dd id="onion-launch-preflight-state">Not checked yet</dd>
+            </div>
+            <div>
+              <dt>Launch boundary</dt>
+              <dd id="onion-launch-preflight-boundary">persistent_client=false launch=false network_io=false</dd>
+            </div>
+            <div>
+              <dt>Launch attempt</dt>
+              <dd id="onion-service-launch-attempt">manual_permission=false launch=false publish=false</dd>
+            </div>
+            <div>
+              <dt>Descriptor prep</dt>
+              <dd id="onion-descriptor-publication-state">Not prepared</dd>
+            </div>
+            <div>
+              <dt>Descriptor boundary</dt>
+              <dd id="onion-descriptor-publication-boundary">descriptor_body=false publish=false</dd>
+            </div>
+            <div>
+              <dt>Descriptor attempt</dt>
+              <dd id="onion-descriptor-publication-attempt">manual_permission=false publish=false</dd>
+            </div>
+            <div>
+              <dt>Inbound stream</dt>
+              <dd id="onion-inbound-stream-state">Not prepared</dd>
+            </div>
+            <div>
+              <dt>Inbound boundary</dt>
+              <dd id="onion-inbound-stream-boundary">accept=false read_write=false</dd>
+            </div>
+            <div>
+              <dt>Envelope receive attempt</dt>
+              <dd id="onion-inbound-envelope-receive-attempt">network_io=false accept=false read_write=false</dd>
+            </div>
+            <div>
+              <dt>Outbound stream</dt>
+              <dd id="onion-outbound-stream-state">Not prepared</dd>
+            </div>
+            <div>
+              <dt>Outbound boundary</dt>
+              <dd id="onion-outbound-stream-boundary">dial=false send=false</dd>
+            </div>
+            <div>
+              <dt>Stream closeout</dt>
+              <dd id="onion-stream-closeout-state">Not prepared</dd>
+            </div>
+            <div>
+              <dt>Stream closeout boundary</dt>
+              <dd id="onion-stream-closeout-boundary">inbound=false outbound=false</dd>
+            </div>
+            <div>
+              <dt>Remote auth</dt>
+              <dd id="onion-remote-auth-state">Not checked yet</dd>
+            </div>
+            <div>
+              <dt>Remote auth boundary</dt>
+              <dd id="onion-remote-auth-boundary">peer_proof=false session_binding=false</dd>
+            </div>
+            <div>
+              <dt>Envelope send prep</dt>
+              <dd id="onion-outbound-envelope-send-state">Not prepared</dd>
+            </div>
+            <div>
+              <dt>Envelope send boundary</dt>
+              <dd id="onion-outbound-envelope-send-boundary">stored_envelope=false send=false</dd>
+            </div>
+            <div>
+              <dt>Envelope send attempt</dt>
+              <dd id="onion-outbound-envelope-send-attempt">network_io=false dial=false send=false</dd>
+            </div>
+          </dl>
+        </section>
         <section class="demo-panel" aria-labelledby="demo-title">
           <section class="production-workflow" aria-labelledby="production-two-profile-title">
             <div>
-              <p class="eyebrow">Production two-profile</p>
-              <h3 id="production-two-profile-title">App-data local harness</h3>
+              <p class="eyebrow">Darkroom chat</p>
+              <h3 id="production-two-profile-title">Alice / Bob room</h3>
             </div>
+            <dl class="room-identity-bar" aria-label="Room identity">
+              <div>
+                <dt>Route</dt>
+                <dd id="room-identity-route">alice -> bob</dd>
+              </div>
+              <div>
+                <dt>Pair</dt>
+                <dd id="room-identity-pair">not checked</dd>
+              </div>
+              <div>
+                <dt>Verify</dt>
+                <dd id="room-identity-verify">pending</dd>
+              </div>
+              <div>
+                <dt>Transport</dt>
+                <dd id="room-identity-transport">local harness</dd>
+              </div>
+            </dl>
             <label class="loop-label" for="production-two-profile-a">Profile A</label>
             <input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />
             <label class="loop-label" for="production-two-profile-b">Profile B</label>
@@ -175,7 +368,7 @@
             <select id="production-two-profile-message-ttl">
               <option value="">Loading retention policy</option>
             </select>
-            <label class="loop-label" for="production-two-profile-message">Message</label>
+            <label class="loop-label" for="production-two-profile-message">Write message</label>
             <textarea id="production-two-profile-message" rows="3" placeholder="Message from alice to bob">hello between app-data profiles</textarea>
             <div class="loop-actions">
               <button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>
@@ -184,6 +377,9 @@
               </button>
               <button id="run-production-two-profile-message-roundtrip" type="button">
                 Run stored-session message
+              </button>
+              <button id="run-production-two-profile-real-onion-roundtrip" type="button">
+                Run real onion roundtrip
               </button>
               <p id="production-two-profile-readiness" class="action-readiness" aria-live="polite">
                 Blocked: passphrase required
@@ -223,7 +419,7 @@
                 <dd id="production-two-profile-last-success">No successful roundtrip in this app session</dd>
               </div>
             </dl>
-            <p class="loop-label">Conversation</p>
+            <p class="loop-label">Room transcript</p>
             <div class="loop-actions">
               <button id="load-production-two-profile-transcript" type="button">Load conversation</button>
               <button id="reply-latest-two-profile-message" type="button">Reply to latest</button>
@@ -443,18 +639,66 @@
                   <p id="production-pairing-warning" class="demo-warning">
                     Pairing payload has not been exported yet.
                   </p>
+                  <ol id="production-pairing-flow" class="demo-steps compact-flow" aria-label="Pairing guided flow">
+                    <li id="production-pairing-step-export" class="is-running">
+                      <strong>1 Export</strong>
+                      <span id="production-pairing-step-export-detail">Export a local QR payload.</span>
+                    </li>
+                    <li id="production-pairing-step-remote" class="is-pending">
+                      <strong>2 Remote</strong>
+                      <span id="production-pairing-step-remote-detail">Paste or load the remote QR payload.</span>
+                    </li>
+                    <li id="production-pairing-step-safety" class="is-pending">
+                      <strong>3 Verify</strong>
+                      <span id="production-pairing-step-safety-detail">Compare the safety number out-of-band.</span>
+                    </li>
+                    <li id="production-pairing-step-draft" class="is-pending">
+                      <strong>4 Draft</strong>
+                      <span id="production-pairing-step-draft-detail">Save the session draft after verification.</span>
+                    </li>
+                  </ol>
                 </div>
                 <div class="tool-step">
                   <label class="loop-label" for="production-pairing-payload">Pairing payload</label>
                   <textarea id="production-pairing-payload" rows="5" readonly></textarea>
+                  <div class="qr-pairing-panel" aria-label="Pairing QR">
+                    <canvas id="production-pairing-qr" width="224" height="224"></canvas>
+                    <p id="production-pairing-qr-status" class="demo-hint">QR appears after pairing export.</p>
+                  </div>
                   <div class="loop-actions">
                     <button id="use-production-pairing-payload" type="button" class="flow-control is-secondary">Fill local</button>
                     <button id="store-production-pairing-payload" type="button" class="flow-control is-secondary">Store pairing</button>
                     <button id="load-production-pairing-payload" type="button" class="flow-control is-secondary">Fill remote</button>
                     <button id="relay-production-pairing-payload" type="button">Relay to peer</button>
                   </div>
+                  <label class="loop-label" for="production-remote-pairing-qr-payload">Remote QR text</label>
+                  <textarea id="production-remote-pairing-qr-payload" rows="3"></textarea>
+                  <div class="loop-actions">
+                    <button id="use-production-remote-pairing-qr" type="button" class="flow-control is-secondary">Use QR text</button>
+                  </div>
                   <label class="loop-label" for="production-remote-pairing-payload">Remote payload</label>
                   <textarea id="production-remote-pairing-payload" rows="5"></textarea>
+                  <div class="loop-actions">
+                    <button id="check-production-pairing-safety" type="button">Check safety</button>
+                    <label class="inline-toggle">
+                      <input id="production-pairing-safety-verified" type="checkbox" />
+                      Safety verified
+                    </label>
+                  </div>
+                  <dl class="flow-summary">
+                    <div>
+                      <dt>Safety number</dt>
+                      <dd id="production-pairing-safety-number">Not checked yet</dd>
+                    </div>
+                    <div>
+                      <dt>Safety phrase</dt>
+                      <dd id="production-pairing-safety-phrase">Not checked yet</dd>
+                    </div>
+                    <div>
+                      <dt>Safety boundary</dt>
+                      <dd id="production-pairing-safety-boundary">verified=false network_io=false</dd>
+                    </div>
+                  </dl>
                   <div class="loop-actions">
                     <button id="save-production-session-draft" type="button">Save draft</button>
                   </div>

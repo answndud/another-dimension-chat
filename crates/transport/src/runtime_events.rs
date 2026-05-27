@@ -13,6 +13,7 @@ pub enum TransportRuntimeEventKind {
     DirectoryProbeFailed,
     RouteRejected,
     RuntimeLifecycleChanged,
+    OnionServiceLaunchSucceeded,
     RuntimePreflightFailed,
     TransferFailed,
     SensitiveContextRejected,
@@ -85,6 +86,16 @@ impl RedactedTransportRuntimeEvent {
     pub fn runtime_lifecycle_changed() -> Self {
         Self {
             kind: TransportRuntimeEventKind::RuntimeLifecycleChanged,
+            runtime_error: None,
+            probe_error: None,
+            route_kind: None,
+            transfer_direction: None,
+        }
+    }
+
+    pub fn onion_service_launch_succeeded() -> Self {
+        Self {
+            kind: TransportRuntimeEventKind::OnionServiceLaunchSucceeded,
             runtime_error: None,
             probe_error: None,
             route_kind: None,

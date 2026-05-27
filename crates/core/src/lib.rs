@@ -31,12 +31,14 @@ pub mod production {
     use another_dimension_transport::{
         BoundOutboundStreamSession, EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
         EndpointUpdateControlPlaintext, EnvelopeIoAdapterReady, OnionEnvelopeTransport,
-        OnionOutboundStreamBoundary, OnionServiceEndpoint, OutboundEnvelopeIoAdapterBoundary,
-        OutboundStreamGateDecision, OutboundStreamPreparationBoundary, PairwiseEndpointUpdate,
-        PairwiseRendezvousEndpoint, PairwiseStreamSessionBinding,
+        OnionOutboundStreamBoundary, OnionServiceEndpoint, OnionServiceKeyLifecycleDecision,
+        OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId,
+        OutboundEnvelopeIoAdapterBoundary, OutboundStreamGateDecision,
+        OutboundStreamPreparationBoundary, PairwiseEndpointUpdate, PairwiseRendezvousEndpoint,
+        PairwiseStreamSessionBinding, ProfileTransportUnlockReady,
         RedactedRemotePeerAuthenticationContext, RedactedStreamSessionVerificationContext,
         RemotePeerAuthenticationReady, RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
-        TransportKind, TransportPolicy, TransportRoute,
+        TransportBackupExclusionVerification, TransportKind, TransportPolicy, TransportRoute,
     };
     use sha2::{Digest, Sha256};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -46,6 +48,7 @@ pub mod production {
     const PRODUCTION_REPLAY_RECORD_DOMAIN: &[u8] = b"AD-PRODUCTION-REPLAY-RECORD-V1";
     const PRODUCTION_ENDPOINT_STATE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-ENDPOINT-STATE-RECORD-V1";
+    const PRODUCTION_ONION_SERVICE_KEY_RECORD_ID: &str = "onion_service_key_material_v1";
     const PRODUCTION_MESSAGE_ENVELOPE_RECORD_DOMAIN: &[u8] =
         b"AD-PRODUCTION-MESSAGE-ENVELOPE-RECORD-V1";
     const PRODUCTION_LOCAL_MESSAGE_INDEX_RECORD_DOMAIN: &[u8] =
@@ -249,6 +252,33 @@ pub mod production {
         identity_private_key_present: bool,
         identity_public_key_derivable: bool,
         key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionOnionServiceKeyRecordPrepareSummary {
+        storage_opened: bool,
+        profile_marker_present: bool,
+        profile_transport_unlock_ready: bool,
+        lifecycle_ready: bool,
+        key_record_written: bool,
+        key_record_present: bool,
+        key_material_ready: bool,
+        key_material_exposed: bool,
+        network_io_attempted: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionOnionServiceKeyRecordStatusSummary {
+        storage_opened: bool,
+        profile_marker_present: bool,
+        profile_transport_unlock_ready: bool,
+        key_record_present: bool,
+        key_material_exposed: bool,
+        network_io_attempted: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
     }
@@ -724,6 +754,86 @@ pub mod production {
 
         pub fn key_material_exposed(self) -> bool {
             self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionOnionServiceKeyRecordPrepareSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn profile_marker_present(self) -> bool {
+            self.profile_marker_present
+        }
+
+        pub fn profile_transport_unlock_ready(self) -> bool {
+            self.profile_transport_unlock_ready
+        }
+
+        pub fn lifecycle_ready(self) -> bool {
+            self.lifecycle_ready
+        }
+
+        pub fn key_record_written(self) -> bool {
+            self.key_record_written
+        }
+
+        pub fn key_record_present(self) -> bool {
+            self.key_record_present
+        }
+
+        pub fn key_material_ready(self) -> bool {
+            self.key_material_ready
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn network_io_attempted(self) -> bool {
+            self.network_io_attempted
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionOnionServiceKeyRecordStatusSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn profile_marker_present(self) -> bool {
+            self.profile_marker_present
+        }
+
+        pub fn profile_transport_unlock_ready(self) -> bool {
+            self.profile_transport_unlock_ready
+        }
+
+        pub fn key_record_present(self) -> bool {
+            self.key_record_present
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn network_io_attempted(self) -> bool {
+            self.network_io_attempted
         }
 
         pub fn transport_io_opened(self) -> bool {
@@ -3589,6 +3699,86 @@ pub mod production {
         })
     }
 
+    pub fn production_onion_service_key_record_status(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionOnionServiceKeyRecordStatusSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        let profile_marker_present = store.profile_marker_exists(&profile)?;
+        if !profile_marker_present {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let key_record_present = store
+            .get(&production_onion_service_key_record_id())?
+            .map(|record| decode_onion_service_key_record(record, &profile))
+            .transpose()?
+            .is_some();
+        Ok(ProductionOnionServiceKeyRecordStatusSummary {
+            storage_opened: true,
+            profile_marker_present,
+            profile_transport_unlock_ready: true,
+            key_record_present,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_onion_service_key_record_prepare(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        backup_exclusion_verification: &TransportBackupExclusionVerification,
+    ) -> Result<ProductionOnionServiceKeyRecordPrepareSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        let profile_marker_present = store.profile_marker_exists(&profile)?;
+        if !profile_marker_present {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let profile_unlock = ProfileTransportUnlockReady;
+        let lifecycle_ready = OnionServiceKeyLifecycleDecision::sqlcipher_wrapped_after_unlock(
+            backup_exclusion_verification,
+        )
+        .check()
+        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let record_id = OnionServiceKeyRecordId::new(PRODUCTION_ONION_SERVICE_KEY_RECORD_ID)
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let key_material_ready =
+            OnionServiceKeyMaterialDecision::sqlcipher_wrapped_record_after_unlock(
+                &profile_unlock,
+                &lifecycle_ready,
+                record_id.clone(),
+            )
+            .check()
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        store.put(
+            &production_onion_service_key_record_id(),
+            &encode_onion_service_key_record(profile.clone(), key_material_ready.record_id())?,
+        )?;
+        let key_record_present = store
+            .get(&production_onion_service_key_record_id())?
+            .map(|record| decode_onion_service_key_record(record, &profile))
+            .transpose()?
+            .is_some();
+        Ok(ProductionOnionServiceKeyRecordPrepareSummary {
+            storage_opened: true,
+            profile_marker_present,
+            profile_transport_unlock_ready: true,
+            lifecycle_ready: true,
+            key_record_written: true,
+            key_record_present,
+            key_material_ready: true,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
     pub fn production_message_retention_preference_get(
         store_path: impl AsRef<std::path::Path>,
         profile: ProfileName,
@@ -6243,6 +6433,11 @@ pub mod production {
             .expect("static production identity record id is valid")
     }
 
+    fn production_onion_service_key_record_id() -> EncryptedRecordId {
+        EncryptedRecordId::new(PRODUCTION_ONION_SERVICE_KEY_RECORD_ID)
+            .expect("static production onion service key record id is valid")
+    }
+
     fn production_latest_pairing_noise_static_record_id() -> EncryptedRecordId {
         EncryptedRecordId::new(PRODUCTION_LATEST_PAIRING_NOISE_STATIC_RECORD_ID)
             .expect("static production noise static record id is valid")
@@ -6261,6 +6456,38 @@ pub mod production {
     fn production_pending_handshake_initiator_state_record_id() -> EncryptedRecordId {
         EncryptedRecordId::new(PRODUCTION_PENDING_HANDSHAKE_INITIATOR_STATE_RECORD_ID)
             .expect("static production pending handshake state record id is valid")
+    }
+
+    fn encode_onion_service_key_record(
+        profile: ProfileName,
+        record_id: &OnionServiceKeyRecordId,
+    ) -> Result<EncryptedRecord, ProductionSessionError> {
+        EncryptedRecord::new(
+            ProductionRecordKind::OnionServiceKeyMaterial,
+            EncryptedRecordScope::profile(profile),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            format!("onion-service-key-record-ready-v1|{}", record_id.as_str()).into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)
+        .map_err(ProductionSessionError::from)
+    }
+
+    fn decode_onion_service_key_record(
+        record: EncryptedRecord,
+        profile: &ProfileName,
+    ) -> Result<OnionServiceKeyRecordId, ProductionSessionError> {
+        if record.kind != ProductionRecordKind::OnionServiceKeyMaterial
+            || record.scope.profile_name() != profile
+        {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let state = String::from_utf8(record.sealed_body)
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let record_id = state
+            .strip_prefix("onion-service-key-record-ready-v1|")
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        OnionServiceKeyRecordId::new(record_id)
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)
     }
 
     fn encode_production_identity_private_key_record(
@@ -7314,6 +7541,78 @@ pub mod production {
             assert!(!present.key_material_exposed());
             assert!(!present.transport_io_opened());
             assert!(!present.runtime_messaging_enabled());
+
+            let _ = std::fs::remove_dir_all(dir);
+        }
+
+        #[test]
+        fn production_onion_service_key_record_prepares_after_profile_unlock_without_key_bytes() {
+            let dir = std::env::temp_dir().join(format!(
+                "another-dimension-production-onion-key-record-{}-{:?}",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+            if dir.exists() {
+                std::fs::remove_dir_all(&dir).expect("remove stale dir");
+            }
+            std::fs::create_dir_all(&dir).expect("create dir");
+            let store_path = dir.join("profile.db");
+            let profile = ProfileName::new("alice").expect("valid profile");
+            let passphrase = ProfilePassphrase::new("correct-passphrase").expect("passphrase");
+            let backup_exclusion = TransportBackupExclusionVerification;
+            production_profile_init(&store_path, profile.clone(), &passphrase)
+                .expect("profile init");
+
+            let missing = production_onion_service_key_record_status(
+                &store_path,
+                profile.clone(),
+                &passphrase,
+            )
+            .expect("onion key status");
+            assert!(missing.storage_opened());
+            assert!(missing.profile_marker_present());
+            assert!(missing.profile_transport_unlock_ready());
+            assert!(!missing.key_record_present());
+
+            let prepared = production_onion_service_key_record_prepare(
+                &store_path,
+                profile.clone(),
+                &passphrase,
+                &backup_exclusion,
+            )
+            .expect("onion key prepare");
+            assert!(prepared.storage_opened());
+            assert!(prepared.profile_marker_present());
+            assert!(prepared.profile_transport_unlock_ready());
+            assert!(prepared.lifecycle_ready());
+            assert!(prepared.key_record_written());
+            assert!(prepared.key_record_present());
+            assert!(prepared.key_material_ready());
+            assert!(!prepared.key_material_exposed());
+            assert!(!prepared.network_io_attempted());
+            assert!(!prepared.transport_io_opened());
+            assert!(!prepared.runtime_messaging_enabled());
+
+            let present =
+                production_onion_service_key_record_status(&store_path, profile, &passphrase)
+                    .expect("onion key status after prepare");
+            assert!(present.key_record_present());
+            assert!(!present.key_material_exposed());
+            assert!(!present.network_io_attempted());
+            assert!(!present.transport_io_opened());
+            assert!(!present.runtime_messaging_enabled());
+
+            let store = LockedProfileStore::new(&store_path)
+                .unlock(&passphrase)
+                .expect("unlock store");
+            let record = store
+                .get(&production_onion_service_key_record_id())
+                .expect("load onion key record")
+                .expect("onion key record");
+            assert_eq!(record.kind, ProductionRecordKind::OnionServiceKeyMaterial);
+            let encoded = record.encode();
+            assert!(!encoded.contains("alice.onion"));
+            assert!(!encoded.contains("correct-passphrase"));
 
             let _ = std::fs::remove_dir_all(dir);
         }

@@ -41,6 +41,7 @@ pub mod production {
         ProfileState,
         PairingPayload,
         PairwiseIdentityPrivateKey,
+        OnionServiceKeyMaterial,
         NoiseStaticPrivateKey,
         ReplayWindowState,
         MessageEnvelope,
@@ -61,6 +62,7 @@ pub mod production {
                 Self::ProfileState => "profile-state",
                 Self::PairingPayload => "pairing-payload",
                 Self::PairwiseIdentityPrivateKey => "pairwise-identity-private-key",
+                Self::OnionServiceKeyMaterial => "onion-service-key-material",
                 Self::NoiseStaticPrivateKey => "noise-static-private-key",
                 Self::ReplayWindowState => "replay-window-state",
                 Self::MessageEnvelope => "message-envelope",
@@ -81,6 +83,7 @@ pub mod production {
                 "profile-state" => Ok(Self::ProfileState),
                 "pairing-payload" => Ok(Self::PairingPayload),
                 "pairwise-identity-private-key" => Ok(Self::PairwiseIdentityPrivateKey),
+                "onion-service-key-material" => Ok(Self::OnionServiceKeyMaterial),
                 "noise-static-private-key" => Ok(Self::NoiseStaticPrivateKey),
                 "replay-window-state" => Ok(Self::ReplayWindowState),
                 "message-envelope" => Ok(Self::MessageEnvelope),
@@ -728,6 +731,7 @@ pub mod production {
             ProductionRecordKind::ProfileState
             | ProductionRecordKind::PairingPayload
             | ProductionRecordKind::PairwiseIdentityPrivateKey
+            | ProductionRecordKind::OnionServiceKeyMaterial
             | ProductionRecordKind::NoiseStaticPrivateKey
             | ProductionRecordKind::ReplayWindowState
             | ProductionRecordKind::MessageEnvelope
@@ -797,6 +801,7 @@ pub mod production {
                 ProductionRecordKind::PairingPayload,
                 ProductionRecordKind::ProfileState,
                 ProductionRecordKind::PairwiseIdentityPrivateKey,
+                ProductionRecordKind::OnionServiceKeyMaterial,
                 ProductionRecordKind::NoiseStaticPrivateKey,
                 ProductionRecordKind::ReplayWindowState,
                 ProductionRecordKind::MessageEnvelope,
@@ -822,6 +827,7 @@ pub mod production {
                 ProductionRecordKind::PairingPayload,
                 ProductionRecordKind::ProfileState,
                 ProductionRecordKind::PairwiseIdentityPrivateKey,
+                ProductionRecordKind::OnionServiceKeyMaterial,
                 ProductionRecordKind::NoiseStaticPrivateKey,
                 ProductionRecordKind::ReplayWindowState,
                 ProductionRecordKind::MessageEnvelope,

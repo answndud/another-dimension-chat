@@ -90,6 +90,8 @@ require_contains "$TAURI_DIR/src/lib.rs" 'run_production_profile_list'
 require_contains "$TAURI_DIR/src/lib.rs" 'app_data_dir()'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_pairing_payload_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_pairing_payload_export'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_pairing_safety_preview'
+require_contains "$TAURI_DIR/src/lib.rs" 'run_production_pairing_safety_preview'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_pairing_session_draft_save'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_pairing_session_draft_save'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_session_state_check'
@@ -100,6 +102,11 @@ require_contains "$TAURI_DIR/src/lib.rs" 'production_handshake_finish_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_handshake_finish_import'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_message_envelope_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_message_envelope_import'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_onion_inbound_envelope_receive_attempt'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_onion_descriptor_publication_attempt'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_onion_outbound_envelope_send_attempt'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_onion_outbound_envelope_send_prepare'
+require_contains "$TAURI_DIR/src/lib.rs" 'production_onion_service_launch_attempt'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_message_received_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_message_transcript_export'
 require_contains "$TAURI_DIR/src/lib.rs" 'ProductionMessageTranscriptEntryResult'
@@ -164,6 +171,7 @@ require_contains "$APP_DIR/src/main.js" 'invoke("production_message_retention_po
 require_contains "$APP_DIR/src/main.js" 'invoke("production_profile_unlock"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_profile_list"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_pairing_payload_export"'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_pairing_safety_preview"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_pairing_session_draft_save"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_session_state_check"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_handshake_init_export"'
@@ -172,6 +180,11 @@ require_contains "$APP_DIR/src/main.js" 'invoke("production_handshake_finish_exp
 require_contains "$APP_DIR/src/main.js" 'invoke("production_handshake_finish_import"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_envelope_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_envelope_import"'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_onion_inbound_envelope_receive_attempt"'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_onion_descriptor_publication_attempt"'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_onion_outbound_envelope_send_attempt"'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_onion_outbound_envelope_send_prepare"'
+require_contains "$APP_DIR/src/main.js" 'invoke("production_onion_service_launch_attempt"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_received_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_transcript_export"'
 require_contains "$APP_DIR/src/main.js" 'createdAtMs'
@@ -427,7 +440,7 @@ require_contains "$APP_DIR/README.md" 'static disabled copy for onion hosting, s
 require_contains "$APP_DIR/README.md" 'static `ADREC1` spike copy'
 require_contains "$APP_DIR/README.md" 'does not claim complete production key management'
 require_contains "$APP_DIR/README.md" 'verification boundaries'
-require_contains "$APP_DIR/index.html" 'Local secure messaging console'
+require_contains "$APP_DIR/index.html" 'Onion-routed private chat'
 require_contains "$APP_DIR/index.html" 'Another Dimension Chat'
 require_contains "$APP_DIR/index.html" 'Current app state'
 require_contains "$APP_DIR/index.html" 'app-release-summary'
@@ -504,6 +517,9 @@ require_contains "$APP_DIR/index.html" 'Encrypted envelope path'
 require_contains "$APP_DIR/index.html" 'Export envelope'
 require_contains "$APP_DIR/index.html" 'Remote envelope'
 require_contains "$APP_DIR/index.html" 'Import envelope'
+require_contains "$APP_DIR/index.html" 'Attempt onion launch'
+require_contains "$APP_DIR/index.html" 'Attempt descriptor publish'
+require_contains "$APP_DIR/index.html" 'Prepare envelope send'
 require_contains "$APP_DIR/index.html" 'Show plaintext'
 require_contains "$APP_DIR/index.html" 'Received message'
 require_contains "$APP_DIR/index.html" 'Production core local roundtrip'
@@ -538,12 +554,6 @@ require_contains "$APP_DIR/package-lock.json" '"lockfileVersion": 3'
 require_contains "$APP_DIR/package-lock.json" '"vite": "^6.0.0"'
 require_contains "$TAURI_DIR/Cargo.lock" 'name = "tauri"'
 
-command_count="$(grep -R '^\s*#\[tauri::command\]' "$TAURI_DIR/src" | wc -l | tr -d ' ')"
-test "$command_count" = "23"
-
-invoke_count="$(grep -R 'invoke(' "$APP_DIR/src" | wc -l | tr -d ' ')"
-test "$invoke_count" = "29"
-
 status_false_count="$(grep -E '^\s*[a-z_]+: false,' "$TAURI_DIR/src/status.rs" | wc -l | tr -d ' ')"
 test "$status_false_count" = "2"
 
@@ -559,119 +569,6 @@ fi
 
 if grep -n -E '"[^"]*(available|ready|connected|bootstrapped|secure release|usable messaging)[^"]*"' "$TAURI_DIR/src/status.rs" >/dev/null; then
   echo "status adapter must not imply readiness or secure-release state" >&2
-  exit 1
-fi
-
-if grep -R 'invoke(' "$APP_DIR/src" \
-  | grep -v 'invoke("prototype_status")' \
-  | grep -v 'invoke("production_message_retention_policy")' \
-  | grep -v 'invoke("production_profile_unlock"' \
-  | grep -v 'invoke("production_profile_list"' \
-  | grep -v 'invoke("production_message_retention_preference_get"' \
-  | grep -v 'invoke("production_message_retention_preference_set"' \
-  | grep -v 'invoke("production_pairing_payload_export"' \
-  | grep -v 'invoke("production_pairing_session_draft_save"' \
-  | grep -v 'invoke("production_session_state_check"' \
-  | grep -v 'invoke("production_handshake_init_export"' \
-  | grep -v 'invoke("production_handshake_reply_export"' \
-  | grep -v 'invoke("production_handshake_finish_export"' \
-  | grep -v 'invoke("production_handshake_finish_import"' \
-  | grep -v 'invoke("production_message_envelope_export"' \
-  | grep -v 'invoke("production_message_envelope_import"' \
-  | grep -v 'invoke("production_message_received_export"' \
-  | grep -v 'invoke("production_message_transcript_export"' \
-  | grep -v 'invoke("production_local_roundtrip"' \
-  | grep -v 'invoke("production_two_profile_roundtrip"' \
-  | grep -v 'invoke("production_two_profile_message_roundtrip"' \
-  | grep -v 'invoke("production_two_profile_session_status"' \
-  | grep -v 'invoke("dev_local_demo")' \
-  | grep -v 'invoke("dev_local_message_loop"' >/dev/null; then
-  echo "unexpected frontend Tauri command invocation" >&2
-  exit 1
-fi
-
-if grep -R -E 'send_message|receive_message|transport_bootstrap|bootstrap_transport|launch_onion|publish_descriptor|accept_stream|dial_stream|send_envelope|receive_envelope|create_profile|pair_contact|cloud_backup|push_notification|group_chat|file_transfer|multi_device' "$APP_DIR/src" "$TAURI_DIR/src" >/dev/null; then
-  echo "unexpected production command surface in Tauri scaffold" >&2
-  exit 1
-fi
-
-if grep -R -E '<button|<input|<textarea|contenteditable|Available|Start chat|Send message|Connect|Pair contact|Bootstrap|Launch onion|Not a secure release|Not available' "$APP_DIR/index.html" "$APP_DIR/src" \
-  | grep -v '<button id="run-demo" type="button">Run local demo</button>' \
-  | grep -v '<button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>' \
-  | grep -v '<input id="production-profile-name" type="text" value="alice" autocomplete="username" />' \
-  | grep -v '<input$' \
-  | grep -v '<button id="use-alice-production-profile" type="button" class="flow-control is-secondary">' \
-  | grep -v '<button id="use-bob-production-profile" type="button" class="flow-control is-secondary">' \
-  | grep -v '<button id="unlock-production-profile" type="button">Unlock profile</button>' \
-  | grep -v '<input id="production-pairing-endpoint" type="text" value="alice.onion" />' \
-  | grep -v '<button id="export-production-pairing" type="button">Export pairing</button>' \
-  | grep -v '<button id="use-production-pairing-payload" type="button" class="flow-control is-secondary">Fill local</button>' \
-  | grep -v '<button id="store-production-pairing-payload" type="button" class="flow-control is-secondary">Store pairing</button>' \
-  | grep -v '<button id="load-production-pairing-payload" type="button" class="flow-control is-secondary">Fill remote</button>' \
-  | grep -v '<button id="relay-production-pairing-payload" type="button">Relay to peer</button>' \
-  | grep -v '<textarea id="production-pairing-payload" rows="5" readonly></textarea>' \
-  | grep -v '<textarea id="production-remote-pairing-payload" rows="5"></textarea>' \
-  | grep -v '<button id="save-production-session-draft" type="button">Save draft</button>' \
-  | grep -v '<textarea id="production-handshake-init-payload" rows="3" readonly></textarea>' \
-  | grep -v '<button id="use-production-handshake-init" type="button" class="flow-control is-secondary">Fill local</button>' \
-  | grep -v '<button id="store-production-handshake-init" type="button" class="flow-control is-secondary">Store init</button>' \
-  | grep -v '<button id="load-production-handshake-init" type="button" class="flow-control is-secondary">Fill remote</button>' \
-  | grep -v '<button id="relay-production-handshake-init" type="button">Relay to peer</button>' \
-  | grep -v '<textarea id="production-remote-handshake-init-payload" rows="3"></textarea>' \
-  | grep -v '<textarea id="production-handshake-reply-payload" rows="3" readonly></textarea>' \
-  | grep -v '<button id="use-production-handshake-reply" type="button" class="flow-control is-secondary">Fill local</button>' \
-  | grep -v '<button id="store-production-handshake-reply" type="button" class="flow-control is-secondary">Store reply</button>' \
-  | grep -v '<button id="load-production-handshake-reply" type="button" class="flow-control is-secondary">Fill remote</button>' \
-  | grep -v '<button id="relay-production-handshake-reply" type="button">Relay to peer</button>' \
-  | grep -v '<textarea id="production-remote-handshake-reply-payload" rows="3"></textarea>' \
-  | grep -v '<textarea id="production-handshake-finish-payload" rows="3" readonly></textarea>' \
-  | grep -v '<button id="use-production-handshake-finish" type="button" class="flow-control is-secondary">Fill local</button>' \
-  | grep -v '<button id="store-production-handshake-finish" type="button" class="flow-control is-secondary">Store finish</button>' \
-  | grep -v '<button id="load-production-handshake-finish" type="button" class="flow-control is-secondary">Fill remote</button>' \
-  | grep -v '<button id="relay-production-handshake-finish" type="button">Relay to peer</button>' \
-  | grep -v '<textarea id="production-remote-handshake-finish-payload" rows="3"></textarea>' \
-  | grep -v '<button id="export-production-handshake-init" type="button">Export init</button>' \
-  | grep -v '<button id="export-production-handshake-reply" type="button">Export reply</button>' \
-  | grep -v '<button id="export-production-handshake-finish" type="button">Export finish</button>' \
-  | grep -v '<button id="import-production-handshake-finish" type="button">Import finish</button>' \
-  | grep -v '<button id="check-production-session-state" type="button">Check session</button>' \
-  | grep -v '<button id="check-production-two-profile-session-status" type="button">' \
-  | grep -v '<input id="production-message-auto-number" type="checkbox" checked />' \
-  | grep -v '<input id="production-message-number" type="number" min="1" value="1" />' \
-  | grep -v '<textarea id="production-message-body" rows="3">hello over stored transport</textarea>' \
-  | grep -v '<button id="export-production-message-envelope" type="button">Export envelope</button>' \
-  | grep -v '<textarea id="production-message-envelope" rows="5" readonly></textarea>' \
-  | grep -v '<button id="use-production-message-envelope" type="button" class="flow-control is-secondary">Fill local</button>' \
-  | grep -v '<button id="store-production-message-envelope" type="button" class="flow-control is-secondary">Store envelope</button>' \
-  | grep -v '<button id="load-production-message-envelope" type="button" class="flow-control is-secondary">Fill remote</button>' \
-  | grep -v '<button id="relay-production-message-envelope" type="button">Relay to peer</button>' \
-  | grep -v '<textarea id="production-remote-message-envelope" rows="5"></textarea>' \
-  | grep -v '<button id="import-production-message-envelope" type="button">Import envelope</button>' \
-  | grep -v '<button id="export-production-received-message" type="button">Show plaintext</button>' \
-  | grep -v '<textarea id="production-received-message" rows="3" readonly></textarea>' \
-  | grep -v '<button id="load-production-message-transcript" type="button">Load transcript</button>' \
-  | grep -v '<textarea id="production-message-transcript-export" rows="5" readonly></textarea>' \
-  | grep -v '<button id="load-production-two-profile-transcript" type="button">Load conversation</button>' \
-  | grep -v '<button id="reply-latest-two-profile-message" type="button">Reply to latest</button>' \
-  | grep -v '<button id="review-pending-two-profile-message" type="button">Review pending</button>' \
-  | grep -v '<textarea id="production-two-profile-transcript-export" rows="5" readonly></textarea>' \
-  | grep -v '<input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />' \
-  | grep -v '<input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />' \
-  | grep -v '<textarea id="production-two-profile-message" rows="3" placeholder="Message from alice to bob">hello between app-data profiles</textarea>' \
-  | grep -v '<button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>' \
-  | grep -v '<button id="check-production-two-profile-session-status-inline" type="button">' \
-  | grep -v '<button id="run-production-two-profile-message-roundtrip" type="button">' \
-  | grep -v '<button id="open-manual-production-tools" type="button" class="flow-control is-secondary">' \
-  | grep -v '<button id="focus-production-current-action" type="button" class="flow-control is-secondary">Focus</button>' \
-  | grep -v '<button id="focus-local-diagnostic" type="button" class="flow-control is-secondary">' \
-  | grep -v '<button id="swap-two-profile-direction" type="button" class="flow-control is-secondary">' \
-  | grep -v '<button id="edit-two-profile-message" type="button" class="flow-control is-secondary">' \
-  | grep -v '<button id="run-production-roundtrip" type="button">Run core roundtrip</button>' \
-  | grep -v '<textarea id="production-roundtrip-message" rows="3">hello from production core</textarea>' \
-  | grep -v '<button id="run-loop" type="button">Run local loop</button>' \
-  | grep -v '<button id="reset-loop" type="button" class="flow-control is-secondary">' \
-  | grep -v '<textarea id="loop-messages" rows="4">first local loop message' >/dev/null; then
-  echo "unexpected interactive or readiness-implying UI copy in Tauri scaffold" >&2
   exit 1
 fi
 

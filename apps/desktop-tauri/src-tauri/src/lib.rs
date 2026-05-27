@@ -3,6 +3,18 @@ mod status;
 pub use status::PrototypeStatus;
 use tauri::Manager;
 
+#[derive(Default)]
+struct ProductionOnionClientRuntimeState {
+    #[cfg(feature = "manual-onion-client-attempt")]
+    owner: std::sync::Mutex<Option<another_dimension_transport::arti_adapter_spike::PersistentArtiClientOwner>>,
+    #[cfg(feature = "manual-onion-client-attempt")]
+    bootstrap_in_progress: std::sync::atomic::AtomicBool,
+    #[cfg(feature = "manual-onion-client-attempt")]
+    send_in_progress: std::sync::atomic::AtomicBool,
+    #[cfg(feature = "manual-onion-client-attempt")]
+    receive_in_progress: std::sync::atomic::AtomicBool,
+}
+
 #[derive(serde::Serialize)]
 pub struct DevLocalDemoTranscript {
     warning: String,
@@ -126,6 +138,52 @@ pub struct ProductionTwoProfileMessageRoundtripResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionTwoProfileRealOnionRoundtripResult {
+    warning: &'static str,
+    manual_client_attempt_feature_compiled: bool,
+    manual_network_permission_enabled: bool,
+    sender_profile: String,
+    receiver_profile: String,
+    message_number: u64,
+    message_ttl_seconds: u64,
+    profile_a_unlocked: bool,
+    profile_b_unlocked: bool,
+    profile_a_client_bootstrapped: bool,
+    profile_b_client_bootstrapped: bool,
+    profile_a_onion_service_launched: bool,
+    profile_b_onion_service_launched: bool,
+    profile_a_endpoint_ready: bool,
+    profile_b_endpoint_ready: bool,
+    pairing_payloads_exported: bool,
+    session_drafts_saved: bool,
+    handshake_completed: bool,
+    sender_session_ready: bool,
+    receiver_session_ready: bool,
+    message_number_reserved: bool,
+    encrypted_envelope_exported: bool,
+    send_attempt_started: bool,
+    send_attempt_succeeded: bool,
+    receive_attempt_started: bool,
+    receive_attempt_succeeded: bool,
+    inbound_message_stored: bool,
+    received_status_verified: bool,
+    received_export_matches_input: bool,
+    event_summary: Vec<String>,
+    next_blocker: String,
+    blockers: Vec<String>,
+    local_endpoint_returned: bool,
+    peer_endpoint_returned: bool,
+    envelope_payload_returned: bool,
+    plaintext_returned_to_frontend: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionProfileUnlockResult {
     warning: &'static str,
     storage_opened: bool,
@@ -170,6 +228,24 @@ pub struct ProductionPairingPayloadExportResult {
     store_path_returned: bool,
     passphrase_retained: bool,
     private_key_material_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionPairingSafetyPreviewResult {
+    warning: &'static str,
+    payloads_decodable: bool,
+    safety_transcript_bound: bool,
+    safety_number: String,
+    safety_phrase: String,
+    safety_confirmed: bool,
+    payloads_returned: bool,
+    safety_transcript_returned: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
     key_material_exposed: bool,
     network_io_attempted: bool,
     transport_io_opened: bool,
@@ -409,6 +485,491 @@ pub struct ProductionMessageRetentionPolicyResult {
     allowed_ttl_seconds: Vec<u64>,
 }
 
+#[derive(serde::Serialize)]
+pub struct ProductionOnionPreflightCheckResult {
+    warning: &'static str,
+    preflight_only: bool,
+    ready_for_runtime_bootstrap: bool,
+    ready_for_onion_launch: bool,
+    state_cache_dirs_accessible: bool,
+    backup_exclusion_verified: bool,
+    log_redaction_ready: bool,
+    crash_redaction_ready: bool,
+    bridge_or_censorship_ready: bool,
+    manual_network_action: bool,
+    blockers: Vec<String>,
+    event_summary: Vec<String>,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionBackupExclusionPrepareResult {
+    warning: &'static str,
+    state_cache_dirs_accessible: bool,
+    backup_exclusion_written: bool,
+    backup_exclusion_verified: bool,
+    blockers: Vec<String>,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionKeyRecordPrepareResult {
+    warning: &'static str,
+    storage_opened: bool,
+    profile_marker_present: bool,
+    profile_transport_unlock_ready: bool,
+    backup_exclusion_verified: bool,
+    lifecycle_ready: bool,
+    key_record_written: bool,
+    key_record_present: bool,
+    key_material_ready: bool,
+    blockers: Vec<String>,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionBootstrapPreflightCheckResult {
+    warning: &'static str,
+    bootstrap_preflight_only: bool,
+    state_cache_dirs_accessible: bool,
+    backup_exclusion_verified: bool,
+    runtime_preflight_ready: bool,
+    bootstrap_policy_ready: bool,
+    timeout_seconds: u16,
+    retry_max_attempts: u8,
+    retry_initial_backoff_ms: u32,
+    retry_max_backoff_ms: u32,
+    silent_retry_allowed: bool,
+    censorship_classification_ready: bool,
+    persistent_client_ready: bool,
+    manual_bootstrap_attempt_enabled: bool,
+    next_blocker: String,
+    blockers: Vec<String>,
+    event_summary: Vec<String>,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionClientAttemptGateResult {
+    warning: &'static str,
+    attempt_gate_only: bool,
+    manual_client_attempt_feature_compiled: bool,
+    manual_network_permission_enabled: bool,
+    client_attempt_started: bool,
+    persistent_client_ready: bool,
+    runtime_preflight_ready: bool,
+    bootstrap_policy_ready: bool,
+    lifecycle_state: String,
+    next_blocker: String,
+    blockers: Vec<String>,
+    event_summary: Vec<String>,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionClientBootstrapOnceResult {
+    warning: &'static str,
+    manual_client_attempt_feature_compiled: bool,
+    manual_network_permission_enabled: bool,
+    client_attempt_started: bool,
+    client_bootstrap_succeeded: bool,
+    persistent_client_ready: bool,
+    runtime_preflight_ready: bool,
+    bootstrap_policy_ready: bool,
+    lifecycle_state: String,
+    next_blocker: String,
+    blockers: Vec<String>,
+    event_summary: Vec<String>,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionPersistentClientStatusResult {
+    warning: &'static str,
+    manual_client_attempt_feature_compiled: bool,
+    persistent_client_ready: bool,
+    lifecycle_state: String,
+    timeout_seconds: u16,
+    bootstrap_in_progress: bool,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionPersistentClientStartResult {
+    warning: &'static str,
+    manual_client_attempt_feature_compiled: bool,
+    manual_network_permission_enabled: bool,
+    client_bootstrap_started: bool,
+    client_bootstrap_succeeded: bool,
+    persistent_client_ready: bool,
+    runtime_preflight_ready: bool,
+    bootstrap_policy_ready: bool,
+    lifecycle_state: String,
+    timeout_seconds: u16,
+    next_blocker: String,
+    blockers: Vec<String>,
+    event_summary: Vec<String>,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionLaunchPreflightCheckResult {
+    warning: &'static str,
+    launch_preflight_only: bool,
+    profile_transport_unlock_ready: bool,
+    backup_exclusion_verified: bool,
+    key_record_present: bool,
+    key_material_ready: bool,
+    persistent_client_ready: bool,
+    endpoint_publication_policy_ready: bool,
+    endpoint_update_policy_ready: bool,
+    redacted_events_only: bool,
+    ready_for_onion_launch: bool,
+    next_blocker: String,
+    blockers: Vec<String>,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionServiceLaunchAttemptResult {
+    warning: &'static str,
+    manual_client_attempt_feature_compiled: bool,
+    manual_network_permission_enabled: bool,
+    profile_transport_unlock_ready: bool,
+    backup_exclusion_verified: bool,
+    key_record_present: bool,
+    key_material_ready: bool,
+    persistent_client_ready: bool,
+    launch_preflight_ready: bool,
+    launch_adapter_ready: bool,
+    launch_attempt_started: bool,
+    launch_attempt_succeeded: bool,
+    onion_service_retained: bool,
+    inbound_rend_request_stream_retained: bool,
+    local_onion_endpoint: String,
+    onion_endpoint_returned: bool,
+    redacted_launch_result_event_recorded: bool,
+    event_summary: Vec<String>,
+    next_blocker: String,
+    blockers: Vec<String>,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    descriptor_body_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    descriptor_publish_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionDescriptorPublicationPrepareResult {
+    warning: &'static str,
+    preparation_only: bool,
+    manual_client_attempt_feature_compiled: bool,
+    profile_transport_unlock_ready: bool,
+    key_material_ready: bool,
+    persistent_client_ready: bool,
+    launch_preflight_ready: bool,
+    onion_hosting_gate_ready: bool,
+    descriptor_publication_gate_ready: bool,
+    fail_closed_adapter_ready: bool,
+    redacted_context_ready: bool,
+    descriptor_preparation_ready: bool,
+    endpoint_publication_policy_ready: bool,
+    next_blocker: String,
+    blockers: Vec<String>,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    descriptor_body_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    descriptor_publish_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionDescriptorPublicationAttemptResult {
+    warning: &'static str,
+    preparation_only: bool,
+    manual_client_attempt_feature_compiled: bool,
+    manual_network_permission_enabled: bool,
+    persistent_client_ready: bool,
+    launch_preflight_ready: bool,
+    descriptor_publication_gate_ready: bool,
+    descriptor_preparation_ready: bool,
+    publish_attempt_started: bool,
+    publish_attempt_succeeded: bool,
+    redacted_publish_result_event_recorded: bool,
+    event_summary: Vec<String>,
+    next_blocker: String,
+    blockers: Vec<String>,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    descriptor_body_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    descriptor_publish_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionInboundStreamPrepareResult {
+    warning: &'static str,
+    preparation_only: bool,
+    manual_client_attempt_feature_compiled: bool,
+    persistent_client_ready: bool,
+    launch_preflight_ready: bool,
+    descriptor_publication_gate_ready: bool,
+    descriptor_preparation_ready: bool,
+    inbound_stream_gate_ready: bool,
+    fail_closed_adapter_ready: bool,
+    inbound_stream_preparation_ready: bool,
+    next_blocker: String,
+    blockers: Vec<String>,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    descriptor_body_returned: bool,
+    stream_id_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    descriptor_publish_attempted: bool,
+    stream_accept_attempted: bool,
+    stream_read_write_attempted: bool,
+    envelope_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionInboundEnvelopeReceiveAttemptResult {
+    warning: &'static str,
+    preparation_only: bool,
+    manual_client_attempt_feature_compiled: bool,
+    manual_network_permission_enabled: bool,
+    persistent_client_ready: bool,
+    inbound_stream_preparation_ready: bool,
+    inbound_rend_request_stream_ready: bool,
+    inbound_rend_request_accept_attempted: bool,
+    inbound_rend_request_accepted: bool,
+    accepted_stream_request_stream_ready: bool,
+    stream_request_accept_attempted: bool,
+    stream_request_accepted: bool,
+    stream_read_attempted: bool,
+    stream_bytes_read: bool,
+    receive_attempt_started: bool,
+    receive_attempt_succeeded: bool,
+    received_envelope_ready: bool,
+    inbound_import_attempted: bool,
+    redacted_receive_result_event_recorded: bool,
+    event_summary: Vec<String>,
+    next_blocker: String,
+    blockers: Vec<String>,
+    raw_endpoint_returned: bool,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    descriptor_body_returned: bool,
+    stream_id_returned: bool,
+    envelope_payload_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    descriptor_publish_attempted: bool,
+    stream_accept_attempted: bool,
+    stream_read_write_attempted: bool,
+    envelope_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionOutboundStreamPrepareResult {
+    warning: &'static str,
+    preparation_only: bool,
+    endpoint_accepted: bool,
+    pairwise_endpoint_ready: bool,
+    high_risk_onion_policy_ready: bool,
+    outbound_stream_gate_ready: bool,
+    fail_closed_adapter_ready: bool,
+    outbound_stream_preparation_ready: bool,
+    next_blocker: String,
+    blockers: Vec<String>,
+    raw_endpoint_returned: bool,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    stream_id_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    stream_dial_attempted: bool,
+    stream_send_attempted: bool,
+    envelope_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionStreamAdapterCloseoutPrepareResult {
+    warning: &'static str,
+    preparation_only: bool,
+    manual_client_attempt_feature_compiled: bool,
+    persistent_client_ready: bool,
+    inbound_stream_preparation_ready: bool,
+    outbound_stream_preparation_ready: bool,
+    stream_adapter_closeout_ready: bool,
+    remote_peer_authentication_next: bool,
+    verified_pairwise_session_after_remote_authentication: bool,
+    next_blocker: String,
+    blockers: Vec<String>,
+    raw_endpoint_returned: bool,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    descriptor_body_returned: bool,
+    stream_id_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    descriptor_publish_attempted: bool,
+    stream_accept_attempted: bool,
+    stream_dial_attempted: bool,
+    stream_read_write_attempted: bool,
+    stream_send_attempted: bool,
+    envelope_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionRemotePeerAuthenticationPrepareResult {
+    warning: &'static str,
+    preparation_only: bool,
+    stream_adapter_closeout_ready: bool,
+    remote_peer_authentication_required: bool,
+    stored_pairwise_session_ready: bool,
+    remote_peer_authentication_ready: bool,
+    verified_pairwise_session_binding_ready: bool,
+    bound_stream_session_ready: bool,
+    outbound_envelope_io_boundary_ready: bool,
+    next_blocker: String,
+    blockers: Vec<String>,
+    raw_endpoint_returned: bool,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    peer_proof_returned: bool,
+    session_transcript_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    stream_accept_attempted: bool,
+    stream_dial_attempted: bool,
+    stream_read_write_attempted: bool,
+    stream_send_attempted: bool,
+    envelope_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionOutboundEnvelopeSendPrepareResult {
+    warning: &'static str,
+    preparation_only: bool,
+    remote_peer_authentication_ready: bool,
+    bound_stream_session_ready: bool,
+    outbound_envelope_io_boundary_ready: bool,
+    stored_outbound_envelope_ready: bool,
+    envelope_decodable: bool,
+    envelope_message_number_matches: bool,
+    send_intent_prepared: bool,
+    ack_wait_registered: bool,
+    redacted_send_result_event_recorded: bool,
+    event_summary: Vec<String>,
+    next_blocker: String,
+    blockers: Vec<String>,
+    raw_endpoint_returned: bool,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    peer_proof_returned: bool,
+    session_transcript_returned: bool,
+    envelope_payload_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    stream_accept_attempted: bool,
+    stream_dial_attempted: bool,
+    stream_read_write_attempted: bool,
+    stream_send_attempted: bool,
+    envelope_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionOutboundEnvelopeSendAttemptResult {
+    warning: &'static str,
+    preparation_only: bool,
+    manual_client_attempt_feature_compiled: bool,
+    manual_network_permission_enabled: bool,
+    persistent_client_ready: bool,
+    send_intent_prepared: bool,
+    send_attempt_started: bool,
+    send_attempt_succeeded: bool,
+    ack_wait_registered: bool,
+    redacted_send_result_event_recorded: bool,
+    event_summary: Vec<String>,
+    next_blocker: String,
+    blockers: Vec<String>,
+    raw_endpoint_returned: bool,
+    raw_path_returned: bool,
+    onion_secret_returned: bool,
+    peer_proof_returned: bool,
+    session_transcript_returned: bool,
+    envelope_payload_returned: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    stream_accept_attempted: bool,
+    stream_dial_attempted: bool,
+    stream_read_write_attempted: bool,
+    stream_send_attempted: bool,
+    envelope_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
 #[tauri::command]
 fn prototype_status() -> PrototypeStatus {
     status::redacted_prototype_status()
@@ -421,6 +982,448 @@ fn production_message_retention_policy() -> ProductionMessageRetentionPolicyResu
         allowed_ttl_seconds: another_dimension_core::production::PRODUCTION_ALLOWED_MESSAGE_TTL_SECONDS
             .to_vec(),
     }
+}
+
+#[tauri::command]
+fn production_onion_backup_exclusion_prepare(
+    app: tauri::AppHandle,
+) -> Result<ProductionOnionBackupExclusionPrepareResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production onion backup exclusion prepare failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production onion backup exclusion prepare failed without exposing local path details"
+    })?;
+    Ok(run_production_onion_backup_exclusion_prepare(
+        app_data_root,
+        app_cache_root,
+    ))
+}
+
+#[tauri::command]
+fn production_onion_preflight_check(
+    app: tauri::AppHandle,
+) -> Result<ProductionOnionPreflightCheckResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production onion preflight failed without exposing local path details")?;
+    let app_cache_root = app
+        .path()
+        .app_cache_dir()
+        .map_err(|_| "production onion preflight failed without exposing local path details")?;
+    Ok(run_production_onion_preflight_check(
+        app_data_root,
+        app_cache_root,
+    ))
+}
+
+#[tauri::command]
+fn production_onion_bootstrap_preflight_check(
+    app: tauri::AppHandle,
+) -> Result<ProductionOnionBootstrapPreflightCheckResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production onion bootstrap preflight failed without exposing local path details")?;
+    let app_cache_root = app
+        .path()
+        .app_cache_dir()
+        .map_err(|_| "production onion bootstrap preflight failed without exposing local path details")?;
+    Ok(run_production_onion_bootstrap_preflight_check(
+        app_data_root,
+        app_cache_root,
+    ))
+}
+
+#[tauri::command]
+async fn production_onion_client_bootstrap_once(
+    app: tauri::AppHandle,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionClientBootstrapOnceResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production onion client attempt failed without exposing local path details")?;
+    let app_cache_root = app
+        .path()
+        .app_cache_dir()
+        .map_err(|_| "production onion client attempt failed without exposing local path details")?;
+    Ok(run_production_onion_client_bootstrap_once(
+        app_data_root,
+        app_cache_root,
+        manual_network_permission,
+    )
+    .await)
+}
+
+#[tauri::command]
+fn production_onion_persistent_client_status(
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+) -> Result<ProductionOnionPersistentClientStatusResult, String> {
+    Ok(run_production_onion_persistent_client_status(&state))
+}
+
+#[tauri::command]
+async fn production_onion_persistent_client_start(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionPersistentClientStartResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production onion persistent client start failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production onion persistent client start failed without exposing local path details"
+    })?;
+    Ok(run_production_onion_persistent_client_start(
+        app_data_root,
+        app_cache_root,
+        &state,
+        manual_network_permission,
+    )
+    .await)
+}
+
+#[tauri::command]
+async fn production_onion_client_attempt_gate_check(
+    app: tauri::AppHandle,
+) -> Result<ProductionOnionClientAttemptGateResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production onion client attempt gate failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production onion client attempt gate failed without exposing local path details"
+    })?;
+    Ok(run_production_onion_client_attempt_gate_check(
+        app_data_root,
+        app_cache_root,
+    )
+    .await)
+}
+
+#[tauri::command]
+fn production_onion_launch_preflight_check(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionOnionLaunchPreflightCheckResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production onion launch preflight failed without exposing local path details")?;
+    let app_cache_root = app
+        .path()
+        .app_cache_dir()
+        .map_err(|_| "production onion launch preflight failed without exposing local path details")?;
+    let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
+    run_production_onion_launch_preflight_check_with_persistent_client(
+        app_data_root,
+        app_cache_root,
+        profile,
+        passphrase,
+        persistent_client_ready,
+    )
+    .map_err(|_| {
+            "production onion launch preflight failed without exposing profile, path, or key details"
+                .to_string()
+	    })
+}
+
+#[tauri::command]
+fn production_onion_service_launch_attempt(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    profile: String,
+    passphrase: String,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionServiceLaunchAttemptResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production onion service launch failed without exposing local path details")?;
+    let app_cache_root = app
+        .path()
+        .app_cache_dir()
+        .map_err(|_| "production onion service launch failed without exposing local path details")?;
+    run_production_onion_service_launch_attempt(
+        app_data_root,
+        app_cache_root,
+        &state,
+        profile,
+        passphrase,
+        manual_network_permission,
+    )
+    .map_err(|_| {
+        "production onion service launch failed without exposing profile, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_onion_descriptor_publication_prepare(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionOnionDescriptorPublicationPrepareResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production onion descriptor publication prepare failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production onion descriptor publication prepare failed without exposing local path details"
+    })?;
+    let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
+    run_production_onion_descriptor_publication_prepare(
+        app_data_root,
+        app_cache_root,
+        profile,
+        passphrase,
+        persistent_client_ready,
+    )
+    .map_err(|_| {
+        "production onion descriptor publication prepare failed without exposing profile, path, or key details"
+            .to_string()
+	    })
+}
+
+#[tauri::command]
+fn production_onion_descriptor_publication_attempt(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    profile: String,
+    passphrase: String,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionDescriptorPublicationAttemptResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production onion descriptor publication attempt failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production onion descriptor publication attempt failed without exposing local path details"
+    })?;
+    let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
+    run_production_onion_descriptor_publication_attempt(
+        app_data_root,
+        app_cache_root,
+        profile,
+        passphrase,
+        persistent_client_ready,
+        manual_network_permission,
+    )
+    .map_err(|_| {
+        "production onion descriptor publication attempt failed without exposing profile, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_onion_inbound_stream_prepare(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionOnionInboundStreamPrepareResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production onion inbound stream prepare failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production onion inbound stream prepare failed without exposing local path details"
+    })?;
+    let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
+    run_production_onion_inbound_stream_prepare(
+        app_data_root,
+        app_cache_root,
+        profile,
+        passphrase,
+        persistent_client_ready,
+    )
+    .map_err(|_| {
+        "production onion inbound stream prepare failed without exposing profile, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+async fn production_onion_inbound_envelope_receive_attempt(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    profile: String,
+    passphrase: String,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionInboundEnvelopeReceiveAttemptResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production onion inbound envelope receive attempt failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production onion inbound envelope receive attempt failed without exposing local path details"
+    })?;
+    run_production_onion_inbound_envelope_receive_attempt(
+        app_data_root,
+        app_cache_root,
+        &state,
+        profile,
+        passphrase,
+        manual_network_permission,
+    )
+    .await
+    .map_err(|_| {
+        "production onion inbound envelope receive attempt failed without exposing profile, endpoint, payload, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_onion_outbound_stream_prepare(
+    rendezvous_endpoint: String,
+) -> Result<ProductionOnionOutboundStreamPrepareResult, String> {
+    run_production_onion_outbound_stream_prepare(rendezvous_endpoint).map_err(|_| {
+        "production onion outbound stream prepare failed without exposing endpoint details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_onion_stream_adapter_closeout_prepare(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    profile: String,
+    passphrase: String,
+    rendezvous_endpoint: String,
+) -> Result<ProductionOnionStreamAdapterCloseoutPrepareResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production onion stream adapter closeout prepare failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production onion stream adapter closeout prepare failed without exposing local path details"
+    })?;
+    let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
+    run_production_onion_stream_adapter_closeout_prepare(
+        app_data_root,
+        app_cache_root,
+        profile,
+        passphrase,
+        rendezvous_endpoint,
+        persistent_client_ready,
+    )
+    .map_err(|_| {
+        "production onion stream adapter closeout prepare failed without exposing profile, endpoint, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_onion_remote_peer_authentication_prepare(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    profile: String,
+    passphrase: String,
+    rendezvous_endpoint: String,
+) -> Result<ProductionOnionRemotePeerAuthenticationPrepareResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production onion remote peer authentication prepare failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production onion remote peer authentication prepare failed without exposing local path details"
+    })?;
+    let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
+    run_production_onion_remote_peer_authentication_prepare(
+        app_data_root,
+        app_cache_root,
+        profile,
+        passphrase,
+        rendezvous_endpoint,
+        persistent_client_ready,
+    )
+    .map_err(|_| {
+        "production onion remote peer authentication prepare failed without exposing profile, endpoint, path, proof, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_onion_outbound_envelope_send_prepare(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    profile: String,
+    passphrase: String,
+    rendezvous_endpoint: String,
+    message_number: u64,
+) -> Result<ProductionOnionOutboundEnvelopeSendPrepareResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production onion outbound envelope send prepare failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production onion outbound envelope send prepare failed without exposing local path details"
+    })?;
+    let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
+    run_production_onion_outbound_envelope_send_prepare(
+        app_data_root,
+        app_cache_root,
+        profile,
+        passphrase,
+        rendezvous_endpoint,
+        message_number,
+        persistent_client_ready,
+    )
+    .map_err(|_| {
+        "production onion outbound envelope send prepare failed without exposing profile, endpoint, payload, path, proof, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+async fn production_onion_outbound_envelope_send_attempt(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    profile: String,
+    passphrase: String,
+    rendezvous_endpoint: String,
+    message_number: u64,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionOutboundEnvelopeSendAttemptResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production onion outbound envelope send attempt failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production onion outbound envelope send attempt failed without exposing local path details"
+    })?;
+    run_production_onion_outbound_envelope_send_attempt(
+        app_data_root,
+        app_cache_root,
+        &state,
+        profile,
+        passphrase,
+        rendezvous_endpoint,
+        message_number,
+        manual_network_permission,
+    )
+    .await
+    .map_err(|_| {
+        "production onion outbound envelope send attempt failed without exposing profile, endpoint, payload, path, proof, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_onion_key_record_prepare(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionOnionKeyRecordPrepareResult, String> {
+    let app_data_root = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "production onion key record prepare failed without exposing local path details")?;
+    let app_cache_root = app
+        .path()
+        .app_cache_dir()
+        .map_err(|_| "production onion key record prepare failed without exposing local path details")?;
+    run_production_onion_key_record_prepare(app_data_root, app_cache_root, profile, passphrase)
+        .map_err(|_| {
+            "production onion key record prepare failed without exposing profile, path, or key details"
+                .to_string()
+        })
 }
 
 #[tauri::command]
@@ -513,6 +1516,7 @@ fn production_pairing_session_draft_save(
     passphrase: String,
     local_payload: String,
     remote_payload: String,
+    safety_confirmed: bool,
 ) -> Result<ProductionPairingSessionDraftResult, String> {
     let app_data_root = app.path().app_data_dir().map_err(|_| {
         "production pairing session draft save failed without exposing local path details"
@@ -523,9 +1527,21 @@ fn production_pairing_session_draft_save(
         passphrase,
         local_payload,
         remote_payload,
+        safety_confirmed,
     )
     .map_err(|_| {
         "production pairing session draft save failed without exposing profile, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_pairing_safety_preview(
+    local_payload: String,
+    remote_payload: String,
+) -> Result<ProductionPairingSafetyPreviewResult, String> {
+    run_production_pairing_safety_preview(local_payload, remote_payload).map_err(|_| {
+        "production pairing safety preview failed without exposing payload or transcript details"
             .to_string()
     })
 }
@@ -779,6 +1795,40 @@ fn production_two_profile_message_roundtrip(
     .map_err(|_| {
         "production stored-session message roundtrip failed without exposing profile, path, or key details"
             .to_string()
+    })
+}
+
+#[tauri::command]
+async fn production_two_profile_real_onion_roundtrip(
+    app: tauri::AppHandle,
+    profile_a: String,
+    profile_b: String,
+    passphrase: String,
+    message: String,
+    message_ttl_seconds: u64,
+    manual_network_permission: bool,
+) -> Result<ProductionTwoProfileRealOnionRoundtripResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production real onion roundtrip failed without exposing local path details"
+    })?;
+    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+        "production real onion roundtrip failed without exposing local path details"
+    })?;
+    run_production_two_profile_real_onion_roundtrip(
+        app_data_root,
+        app_cache_root,
+        profile_a,
+        profile_b,
+        passphrase,
+        message,
+        message_ttl_seconds,
+        manual_network_permission,
+    )
+    .await
+    .map_err(|error| {
+        format!(
+            "production real onion roundtrip stopped at redacted stage: {error}"
+        )
     })
 }
 
@@ -1183,6 +2233,2937 @@ fn production_profile_store_path(
         .join(format!("{profile_name}.db")))
 }
 
+#[cfg(feature = "manual-onion-client-attempt")]
+fn production_onion_service_nickname(profile: &another_dimension_identity::ProfileName) -> String {
+    format!("adchat-{}", profile.as_str().to_ascii_lowercase())
+}
+
+fn run_production_onion_preflight_check(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+) -> ProductionOnionPreflightCheckResult {
+    use another_dimension_transport::{
+        probe_app_private_state_cache_dirs, verify_transport_backup_exclusion,
+        BridgeCensorshipConfiguration, BridgeRequirement, OnionServiceLaunchPreflight,
+        RedactedTransportRuntimeEvent, TransportPreNetworkBlocker, TransportPreNetworkCloseout,
+        TransportRuntimePermissionPreflight,
+    };
+
+    let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
+    let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
+    let mut blockers = Vec::new();
+    let mut event_summary = Vec::new();
+
+    let dirs = match probe_app_private_state_cache_dirs(&state_dir, &cache_dir) {
+        Ok(dirs) => Some(dirs),
+        Err(error) => {
+            blockers.push("app-private state/cache directories unavailable".to_string());
+            event_summary.push(
+                RedactedTransportRuntimeEvent::directory_probe_failed(&state_dir, error)
+                    .to_string(),
+            );
+            None
+        }
+    };
+
+    let backup_exclusion_verified = dirs
+        .as_ref()
+        .and_then(|dirs| verify_transport_backup_exclusion(dirs).ok())
+        .is_some();
+    if dirs.is_some() && !backup_exclusion_verified {
+        blockers.push("state/cache backup exclusion not verified".to_string());
+    }
+
+    let bridge_ready = BridgeCensorshipConfiguration::NoBridgeRequired
+        .check(BridgeRequirement::ExplicitlyNotRequiredForThisBuild)
+        .ok();
+    if bridge_ready.is_none() {
+        blockers.push("bridge/censorship decision unavailable".to_string());
+    }
+
+    let permission_preflight = dirs
+        .as_ref()
+        .map(|dirs| {
+            TransportRuntimePermissionPreflight::from_platform_preflight(
+                dirs,
+                true,
+                backup_exclusion_verified,
+                another_dimension_transport::TransportLogRedactionPolicy::RedactedTransportEventsOnly,
+                another_dimension_transport::TransportCrashRedactionPolicy::SensitivePathsAndIdentifiersRedacted,
+                bridge_ready
+                    .map(|ready| ready.readiness())
+                    .unwrap_or(another_dimension_transport::TransportCensorshipReadiness::Unsupported),
+            )
+        })
+        .unwrap_or_else(TransportRuntimePermissionPreflight::locked_down_by_default);
+    let runtime_preflight = permission_preflight.to_runtime_preflight();
+    if let Some(error) = runtime_preflight.first_runtime_blocker() {
+        event_summary
+            .push(RedactedTransportRuntimeEvent::runtime_preflight_failed(error).to_string());
+    }
+
+    let mut pre_network_blockers = Vec::new();
+    if !backup_exclusion_verified {
+        pre_network_blockers.push(TransportPreNetworkBlocker::BackupExclusionVerification);
+    }
+    pre_network_blockers.push(TransportPreNetworkBlocker::OnionServiceKeyLifecycle);
+    if bridge_ready.is_none() {
+        pre_network_blockers.push(TransportPreNetworkBlocker::BridgeCensorshipConfiguration);
+    }
+    let closeout = TransportPreNetworkCloseout::from_blockers(pre_network_blockers);
+    if !closeout.network_execution_allowed() {
+        blockers.push(format!(
+            "pre-network closeout incomplete: next={:?}",
+            closeout.next_phase()
+        ));
+    }
+
+    if let Err(error) = OnionServiceLaunchPreflight::locked_down_by_default().check() {
+        blockers.push(format!("onion launch preflight blocked: {error:?}"));
+    }
+
+    ProductionOnionPreflightCheckResult {
+        warning: "Onion transport preflight only. No Tor bootstrap, onion service launch, descriptor publication, stream I/O, or message transport was attempted.",
+        preflight_only: true,
+        ready_for_runtime_bootstrap: runtime_preflight.all_runtime_guards_ready(),
+        ready_for_onion_launch: false,
+        state_cache_dirs_accessible: dirs.is_some(),
+        backup_exclusion_verified,
+        log_redaction_ready: runtime_preflight.log_redaction_ready,
+        crash_redaction_ready: true,
+        bridge_or_censorship_ready: runtime_preflight.bridge_or_censorship_ready,
+        manual_network_action: true,
+        blockers,
+        event_summary,
+        raw_path_returned: false,
+        onion_secret_returned: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
+    }
+}
+
+fn run_production_onion_bootstrap_preflight_check(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+) -> ProductionOnionBootstrapPreflightCheckResult {
+    use another_dimension_transport::{
+        probe_app_private_state_cache_dirs, verify_transport_backup_exclusion,
+        BridgeCensorshipConfiguration, BridgeRequirement, RedactedTransportRuntimeEvent,
+        TransportBootstrapExecutionSkeleton, TransportBootstrapPolicy,
+        TransportCrashRedactionPolicy, TransportLogRedactionPolicy,
+        TransportRuntimePermissionPreflight,
+    };
+
+    let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
+    let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
+    let mut blockers = Vec::new();
+    let mut event_summary = Vec::new();
+
+    let dirs = match probe_app_private_state_cache_dirs(&state_dir, &cache_dir) {
+        Ok(dirs) => Some(dirs),
+        Err(error) => {
+            blockers.push("app-private state/cache directories unavailable".to_string());
+            event_summary.push(
+                RedactedTransportRuntimeEvent::directory_probe_failed(&state_dir, error)
+                    .to_string(),
+            );
+            None
+        }
+    };
+    let backup_exclusion = dirs
+        .as_ref()
+        .and_then(|dirs| verify_transport_backup_exclusion(dirs).ok());
+    if dirs.is_some() && backup_exclusion.is_none() {
+        blockers.push("state/cache backup exclusion not verified".to_string());
+    }
+
+    let bridge_ready = BridgeCensorshipConfiguration::NoBridgeRequired
+        .check(BridgeRequirement::ExplicitlyNotRequiredForThisBuild)
+        .ok();
+    if bridge_ready.is_none() {
+        blockers.push("bridge/censorship decision unavailable".to_string());
+    }
+
+    let permission_preflight = match (dirs.as_ref(), backup_exclusion.as_ref(), bridge_ready) {
+        (Some(dirs), Some(backup_exclusion), Some(bridge_ready)) => {
+            TransportRuntimePermissionPreflight::from_fully_verified_preflight(
+                dirs,
+                true,
+                backup_exclusion,
+                bridge_ready,
+                TransportLogRedactionPolicy::RedactedTransportEventsOnly,
+                TransportCrashRedactionPolicy::SensitivePathsAndIdentifiersRedacted,
+            )
+        }
+        _ => TransportRuntimePermissionPreflight::locked_down_by_default(),
+    };
+    let runtime_preflight = permission_preflight.to_runtime_preflight();
+    let runtime_ready = permission_preflight.check().ok();
+    if let Some(error) = runtime_preflight.first_runtime_blocker() {
+        event_summary
+            .push(RedactedTransportRuntimeEvent::runtime_preflight_failed(error).to_string());
+    }
+
+    let policy = TransportBootstrapPolicy::high_risk_default();
+    let skeleton = runtime_ready
+        .map(|runtime_ready| TransportBootstrapExecutionSkeleton::new(runtime_ready, policy));
+    let bootstrap_policy_ready = skeleton.is_some();
+    let manual_bootstrap_attempt_enabled = false;
+    let persistent_client_ready = false;
+
+    let next_blocker = if !runtime_preflight.all_runtime_guards_ready() {
+        runtime_preflight
+            .first_runtime_blocker()
+            .map(|error| format!("{error:?}"))
+            .unwrap_or_else(|| "RuntimePreflightNotReady".to_string())
+    } else if !manual_bootstrap_attempt_enabled {
+        "ManualBootstrapAttemptNotEnabled".to_string()
+    } else {
+        "PersistentClientNotReady".to_string()
+    };
+    if !blockers.iter().any(|blocker| blocker == &next_blocker) {
+        blockers.push(next_blocker.clone());
+    }
+
+    ProductionOnionBootstrapPreflightCheckResult {
+        warning: "Onion bootstrap preflight check only. No persistent Tor client bootstrap, onion service launch, descriptor publication, stream I/O, or message transport was attempted.",
+        bootstrap_preflight_only: true,
+        state_cache_dirs_accessible: dirs.is_some(),
+        backup_exclusion_verified: backup_exclusion.is_some(),
+        runtime_preflight_ready: runtime_preflight.all_runtime_guards_ready(),
+        bootstrap_policy_ready,
+        timeout_seconds: policy.timeout().seconds(),
+        retry_max_attempts: policy.retry().max_attempts(),
+        retry_initial_backoff_ms: policy.retry().initial_backoff_ms(),
+        retry_max_backoff_ms: policy.retry().max_backoff_ms(),
+        silent_retry_allowed: policy.allow_silent_retry(),
+        censorship_classification_ready: policy.classify_censorship_separately(),
+        persistent_client_ready,
+        manual_bootstrap_attempt_enabled,
+        next_blocker,
+        blockers,
+        event_summary,
+        raw_path_returned: false,
+        onion_secret_returned: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
+    }
+}
+
+async fn run_production_onion_client_attempt_gate_check(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+) -> ProductionOnionClientAttemptGateResult {
+    let preflight =
+        run_production_onion_bootstrap_preflight_check(&app_data_root, &app_cache_root);
+    let mut blockers = preflight.blockers.clone();
+    let event_summary = preflight.event_summary.clone();
+
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    {
+        let next_blocker = "ManualClientAttemptFeatureNotEnabled".to_string();
+        if !blockers.iter().any(|blocker| blocker == &next_blocker) {
+            blockers.push(next_blocker.clone());
+        }
+        return ProductionOnionClientAttemptGateResult {
+            warning: "Onion client attempt gate only. The manual client attempt feature is not enabled; no persistent Tor client bootstrap, onion service launch, descriptor publication, stream I/O, or message transport was attempted.",
+            attempt_gate_only: true,
+            manual_client_attempt_feature_compiled: false,
+            manual_network_permission_enabled: false,
+            client_attempt_started: false,
+            persistent_client_ready: false,
+            runtime_preflight_ready: preflight.runtime_preflight_ready,
+            bootstrap_policy_ready: preflight.bootstrap_policy_ready,
+            lifecycle_state: "feature-disabled".to_string(),
+            next_blocker,
+            blockers,
+            event_summary,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        };
+    }
+
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        use another_dimension_transport::{
+            arti_adapter_spike, InMemoryTransportRuntimeEventSink,
+            TransportBootstrapExecutionSkeleton, TransportBootstrapPolicy,
+            TransportCrashRedactionPolicy, TransportLogRedactionPolicy,
+            TransportRuntimePermissionPreflight,
+        };
+
+        let mut event_summary = event_summary;
+        let mut lifecycle_state = "not-created".to_string();
+        let mut next_blocker = preflight.next_blocker.clone();
+        if preflight.runtime_preflight_ready && preflight.bootstrap_policy_ready {
+            let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
+            let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
+            let dirs = another_dimension_transport::probe_app_private_state_cache_dirs(
+                &state_dir, &cache_dir,
+            )
+            .ok();
+            let backup_exclusion = dirs
+                .as_ref()
+                .and_then(|dirs| another_dimension_transport::verify_transport_backup_exclusion(dirs).ok());
+            let bridge_ready = another_dimension_transport::BridgeCensorshipConfiguration::NoBridgeRequired
+                .check(another_dimension_transport::BridgeRequirement::ExplicitlyNotRequiredForThisBuild)
+                .ok();
+            let runtime_ready = match (dirs.as_ref(), backup_exclusion.as_ref(), bridge_ready) {
+                (Some(dirs), Some(backup_exclusion), Some(bridge_ready)) => {
+                    TransportRuntimePermissionPreflight::from_fully_verified_preflight(
+                        dirs,
+                        true,
+                        backup_exclusion,
+                        bridge_ready,
+                        TransportLogRedactionPolicy::RedactedTransportEventsOnly,
+                        TransportCrashRedactionPolicy::SensitivePathsAndIdentifiersRedacted,
+                    )
+                    .check()
+                    .ok()
+                }
+                _ => None,
+            };
+
+            if let Some(runtime_ready) = runtime_ready {
+                let policy = TransportBootstrapPolicy::high_risk_default();
+                let skeleton = TransportBootstrapExecutionSkeleton::new(runtime_ready, policy);
+                if let Some(dirs) = dirs {
+                    match arti_adapter_spike::ArtiAppPrivateDirs::new(
+                        dirs.state_dir().to_path_buf(),
+                        dirs.cache_dir().to_path_buf(),
+                    )
+                    .and_then(|arti_dirs| {
+                        arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                            arti_dirs, skeleton,
+                        )
+                    }) {
+                        Ok(adapter) => {
+                            let gate = arti_adapter_spike::ManualArtiBootstrapAttemptGate::disabled(adapter);
+                            let mut sink = InMemoryTransportRuntimeEventSink::default();
+                            let result = gate.bootstrap_once_and_drop_client(&mut sink).await;
+                            event_summary.extend(sink.events().iter().map(ToString::to_string));
+                            lifecycle_state = "unbootstrapped".to_string();
+                            next_blocker = format!("{:?}", result.expect_err("disabled gate fails closed"));
+                        }
+                        Err(_) => {
+                            next_blocker = "ClientAdapterConfigFailed".to_string();
+                        }
+                    }
+                }
+            }
+        }
+        if !blockers.iter().any(|blocker| blocker == &next_blocker) {
+            blockers.push(next_blocker.clone());
+        }
+        ProductionOnionClientAttemptGateResult {
+            warning: "Onion client attempt gate only. Manual network permission remains disabled, so no persistent Tor client bootstrap, onion service launch, descriptor publication, stream I/O, or message transport was attempted.",
+            attempt_gate_only: true,
+            manual_client_attempt_feature_compiled: true,
+            manual_network_permission_enabled: false,
+            client_attempt_started: false,
+            persistent_client_ready: false,
+            runtime_preflight_ready: preflight.runtime_preflight_ready,
+            bootstrap_policy_ready: preflight.bootstrap_policy_ready,
+            lifecycle_state,
+            next_blocker,
+            blockers,
+            event_summary,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        }
+    }
+}
+
+async fn run_production_onion_client_bootstrap_once(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    manual_network_permission: bool,
+) -> ProductionOnionClientBootstrapOnceResult {
+    let preflight =
+        run_production_onion_bootstrap_preflight_check(&app_data_root, &app_cache_root);
+    let mut blockers = preflight.blockers.clone();
+    let event_summary = preflight.event_summary.clone();
+
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    {
+        let next_blocker = "ManualClientAttemptFeatureNotEnabled".to_string();
+        if !blockers.iter().any(|blocker| blocker == &next_blocker) {
+            blockers.push(next_blocker.clone());
+        }
+        return ProductionOnionClientBootstrapOnceResult {
+            warning: "Onion client one-shot attempt is feature-disabled in this build. No persistent Tor client bootstrap, onion service launch, descriptor publication, stream I/O, or message transport was attempted.",
+            manual_client_attempt_feature_compiled: false,
+            manual_network_permission_enabled: manual_network_permission,
+            client_attempt_started: false,
+            client_bootstrap_succeeded: false,
+            persistent_client_ready: false,
+            runtime_preflight_ready: preflight.runtime_preflight_ready,
+            bootstrap_policy_ready: preflight.bootstrap_policy_ready,
+            lifecycle_state: "feature-disabled".to_string(),
+            next_blocker,
+            blockers,
+            event_summary,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        };
+    }
+
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        use another_dimension_transport::{
+            arti_adapter_spike, InMemoryTransportRuntimeEventSink,
+            TransportBootstrapExecutionSkeleton, TransportBootstrapPolicy,
+            TransportCrashRedactionPolicy, TransportLogRedactionPolicy,
+            TransportRuntimePermissionPreflight,
+        };
+
+        let mut event_summary = event_summary;
+        let mut lifecycle_state = "not-created".to_string();
+        let mut next_blocker = preflight.next_blocker.clone();
+        let mut client_attempt_started = false;
+        let mut client_bootstrap_succeeded = false;
+
+        if !manual_network_permission {
+            next_blocker = "ManualNetworkPermissionMissing".to_string();
+        } else if preflight.runtime_preflight_ready && preflight.bootstrap_policy_ready {
+            let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
+            let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
+            let dirs = another_dimension_transport::probe_app_private_state_cache_dirs(
+                &state_dir, &cache_dir,
+            )
+            .ok();
+            let backup_exclusion = dirs.as_ref().and_then(|dirs| {
+                another_dimension_transport::verify_transport_backup_exclusion(dirs).ok()
+            });
+            let bridge_ready =
+                another_dimension_transport::BridgeCensorshipConfiguration::NoBridgeRequired
+                    .check(another_dimension_transport::BridgeRequirement::ExplicitlyNotRequiredForThisBuild)
+                    .ok();
+            let runtime_ready = match (dirs.as_ref(), backup_exclusion.as_ref(), bridge_ready) {
+                (Some(dirs), Some(backup_exclusion), Some(bridge_ready)) => {
+                    TransportRuntimePermissionPreflight::from_fully_verified_preflight(
+                        dirs,
+                        true,
+                        backup_exclusion,
+                        bridge_ready,
+                        TransportLogRedactionPolicy::RedactedTransportEventsOnly,
+                        TransportCrashRedactionPolicy::SensitivePathsAndIdentifiersRedacted,
+                    )
+                    .check()
+                    .ok()
+                }
+                _ => None,
+            };
+
+            if let (Some(runtime_ready), Some(dirs)) = (runtime_ready, dirs) {
+                let policy = TransportBootstrapPolicy::high_risk_default();
+                let skeleton = TransportBootstrapExecutionSkeleton::new(runtime_ready, policy);
+                match arti_adapter_spike::ArtiAppPrivateDirs::new(
+                    dirs.state_dir().to_path_buf(),
+                    dirs.cache_dir().to_path_buf(),
+                )
+                .and_then(|arti_dirs| {
+                    arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                        arti_dirs, skeleton,
+                    )
+                }) {
+                    Ok(adapter) => {
+                        let gate = arti_adapter_spike::ManualArtiBootstrapAttemptGate::explicitly_enabled_for_manual_spike(adapter);
+                        let mut sink = InMemoryTransportRuntimeEventSink::default();
+                        client_attempt_started = true;
+                        let result = gate.bootstrap_once_and_drop_client(&mut sink).await;
+                        event_summary.extend(sink.events().iter().map(ToString::to_string));
+                        lifecycle_state = "one-shot-client-dropped".to_string();
+                        match result {
+                            Ok(()) => {
+                                client_bootstrap_succeeded = true;
+                                next_blocker = "PersistentClientNotKeptAfterOneShot".to_string();
+                            }
+                            Err(error) => {
+                                next_blocker = format!("{error:?}");
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        next_blocker = "ClientAdapterConfigFailed".to_string();
+                    }
+                }
+            }
+        }
+        if !blockers.iter().any(|blocker| blocker == &next_blocker) {
+            blockers.push(next_blocker.clone());
+        }
+        ProductionOnionClientBootstrapOnceResult {
+            warning: "Onion client one-shot attempt boundary. It may attempt Tor bootstrap only when this build has the manual feature and the checkbox permission is set; it never launches an onion service, publishes a descriptor, opens stream I/O, or sends messages.",
+            manual_client_attempt_feature_compiled: true,
+            manual_network_permission_enabled: manual_network_permission,
+            client_attempt_started,
+            client_bootstrap_succeeded,
+            persistent_client_ready: false,
+            runtime_preflight_ready: preflight.runtime_preflight_ready,
+            bootstrap_policy_ready: preflight.bootstrap_policy_ready,
+            lifecycle_state,
+            next_blocker,
+            blockers,
+            event_summary,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: client_attempt_started,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        }
+    }
+}
+
+fn run_production_onion_persistent_client_ready(
+    state: &ProductionOnionClientRuntimeState,
+) -> Result<bool, String> {
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    {
+        let _ = state;
+        Ok(false)
+    }
+
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        let guard = state
+            .owner
+            .lock()
+            .map_err(|_| "production onion persistent client state unavailable".to_string())?;
+        Ok(guard
+            .as_ref()
+            .map(|owner| owner.summary().has_bootstrapped_client())
+            .unwrap_or(false))
+    }
+}
+
+fn run_production_onion_persistent_client_status(
+    state: &ProductionOnionClientRuntimeState,
+) -> ProductionOnionPersistentClientStatusResult {
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    {
+        let _ = state;
+        ProductionOnionPersistentClientStatusResult {
+            warning: "Persistent onion client status is feature-disabled in this build. No Tor client is retained and no network I/O was attempted.",
+            manual_client_attempt_feature_compiled: false,
+            persistent_client_ready: false,
+            lifecycle_state: "feature-disabled".to_string(),
+            timeout_seconds: 45,
+            bootstrap_in_progress: false,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        }
+    }
+
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        let bootstrap_in_progress = state
+            .bootstrap_in_progress
+            .load(std::sync::atomic::Ordering::Acquire);
+        let (persistent_client_ready, lifecycle_state, timeout_seconds) = state
+            .owner
+            .lock()
+            .ok()
+            .and_then(|guard| {
+                guard.as_ref().map(|owner| {
+                    let summary = owner.summary();
+                    (
+                        summary.has_bootstrapped_client(),
+                        format!("{:?}", summary.state()),
+                        summary.timeout_seconds(),
+                    )
+                })
+            })
+            .unwrap_or((false, "not-created".to_string(), 45));
+
+        ProductionOnionPersistentClientStatusResult {
+            warning: "Persistent onion client status only. This reports retained in-memory client state without launching an onion service, publishing a descriptor, opening stream I/O, or sending messages.",
+            manual_client_attempt_feature_compiled: true,
+            persistent_client_ready,
+            lifecycle_state,
+            timeout_seconds,
+            bootstrap_in_progress,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        }
+    }
+}
+
+async fn run_production_onion_persistent_client_start(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    state: &ProductionOnionClientRuntimeState,
+    manual_network_permission: bool,
+) -> ProductionOnionPersistentClientStartResult {
+    let preflight =
+        run_production_onion_bootstrap_preflight_check(&app_data_root, &app_cache_root);
+    let mut blockers = preflight.blockers.clone();
+    let event_summary = preflight.event_summary.clone();
+
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    {
+        let _ = state;
+        let next_blocker = "ManualClientAttemptFeatureNotEnabled".to_string();
+        if !blockers.iter().any(|blocker| blocker == &next_blocker) {
+            blockers.push(next_blocker.clone());
+        }
+        return ProductionOnionPersistentClientStartResult {
+            warning: "Persistent onion client start is feature-disabled in this build. No Tor client bootstrap, onion service launch, descriptor publication, stream I/O, or message transport was attempted.",
+            manual_client_attempt_feature_compiled: false,
+            manual_network_permission_enabled: manual_network_permission,
+            client_bootstrap_started: false,
+            client_bootstrap_succeeded: false,
+            persistent_client_ready: false,
+            runtime_preflight_ready: preflight.runtime_preflight_ready,
+            bootstrap_policy_ready: preflight.bootstrap_policy_ready,
+            lifecycle_state: "feature-disabled".to_string(),
+            timeout_seconds: preflight.timeout_seconds,
+            next_blocker,
+            blockers,
+            event_summary,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        };
+    }
+
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        use another_dimension_transport::{
+            arti_adapter_spike, InMemoryTransportRuntimeEventSink,
+            TransportBootstrapExecutionSkeleton, TransportBootstrapPolicy,
+            TransportCrashRedactionPolicy, TransportLogRedactionPolicy,
+            TransportRuntimePermissionPreflight,
+        };
+
+        let mut event_summary = event_summary;
+        let next_blocker: String;
+        let mut lifecycle_state = "not-created".to_string();
+        let mut client_bootstrap_started = false;
+        let mut client_bootstrap_succeeded = false;
+        let mut persistent_client_ready = false;
+
+        if !manual_network_permission {
+            next_blocker = "ManualNetworkPermissionMissing".to_string();
+        } else if !(preflight.runtime_preflight_ready && preflight.bootstrap_policy_ready) {
+            next_blocker = preflight.next_blocker.clone();
+        } else if state
+            .bootstrap_in_progress
+            .swap(true, std::sync::atomic::Ordering::AcqRel)
+        {
+            next_blocker = "PersistentClientBootstrapAlreadyInProgress".to_string();
+        } else {
+            let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
+            let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
+            let mut owner = match state.owner.lock() {
+                Ok(mut guard) => guard.take(),
+                Err(_) => {
+                    state
+                        .bootstrap_in_progress
+                        .store(false, std::sync::atomic::Ordering::Release);
+                    None
+                }
+            };
+            if owner.is_none() {
+                let dirs = another_dimension_transport::probe_app_private_state_cache_dirs(
+                    &state_dir, &cache_dir,
+                )
+                .ok();
+                let backup_exclusion = dirs.as_ref().and_then(|dirs| {
+                    another_dimension_transport::verify_transport_backup_exclusion(dirs).ok()
+                });
+                let bridge_ready =
+                    another_dimension_transport::BridgeCensorshipConfiguration::NoBridgeRequired
+                        .check(another_dimension_transport::BridgeRequirement::ExplicitlyNotRequiredForThisBuild)
+                        .ok();
+                let runtime_ready = match (dirs.as_ref(), backup_exclusion.as_ref(), bridge_ready) {
+                    (Some(dirs), Some(backup_exclusion), Some(bridge_ready)) => {
+                        TransportRuntimePermissionPreflight::from_fully_verified_preflight(
+                            dirs,
+                            true,
+                            backup_exclusion,
+                            bridge_ready,
+                            TransportLogRedactionPolicy::RedactedTransportEventsOnly,
+                            TransportCrashRedactionPolicy::SensitivePathsAndIdentifiersRedacted,
+                        )
+                        .check()
+                        .ok()
+                    }
+                    _ => None,
+                };
+                owner = match (runtime_ready, dirs) {
+                    (Some(runtime_ready), Some(dirs)) => {
+                        let policy = TransportBootstrapPolicy::high_risk_default();
+                        let skeleton =
+                            TransportBootstrapExecutionSkeleton::new(runtime_ready, policy);
+                        arti_adapter_spike::ArtiAppPrivateDirs::new(
+                            dirs.state_dir().to_path_buf(),
+                            dirs.cache_dir().to_path_buf(),
+                        )
+                        .and_then(|arti_dirs| {
+                            arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+                                arti_dirs, skeleton,
+                            )
+                        })
+                        .ok()
+                        .map(arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped)
+                    }
+                    _ => None,
+                };
+            }
+
+            match owner {
+                Some(mut owner) => {
+                    let summary = owner.summary();
+                    if summary.has_bootstrapped_client() {
+                        persistent_client_ready = true;
+                        lifecycle_state = format!("{:?}", summary.state());
+                        next_blocker = "none".to_string();
+                    } else {
+                        let mut sink = InMemoryTransportRuntimeEventSink::default();
+                        client_bootstrap_started = true;
+                        let result = owner
+                            .bootstrap_and_keep_client(
+                                arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                                &mut sink,
+                            )
+                            .await;
+                        event_summary.extend(sink.events().iter().map(ToString::to_string));
+                        let summary = owner.summary();
+                        persistent_client_ready = summary.has_bootstrapped_client();
+                        lifecycle_state = format!("{:?}", summary.state());
+                        match result {
+                            Ok(()) => {
+                                client_bootstrap_succeeded = true;
+                                next_blocker = "none".to_string();
+                            }
+                            Err(error) => {
+                                next_blocker = format!("{error:?}");
+                            }
+                        }
+                    }
+                    if let Ok(mut guard) = state.owner.lock() {
+                        *guard = Some(owner);
+                    }
+                }
+                None => {
+                    next_blocker = "PersistentClientOwnerUnavailable".to_string();
+                }
+            }
+            state
+                .bootstrap_in_progress
+                .store(false, std::sync::atomic::Ordering::Release);
+        }
+
+        if !persistent_client_ready && !blockers.iter().any(|blocker| blocker == &next_blocker) {
+            blockers.push(next_blocker.clone());
+        }
+        ProductionOnionPersistentClientStartResult {
+            warning: "Persistent onion client start boundary. It may attempt Tor bootstrap only when this build has the manual feature and the checkbox permission is set; it never launches an onion service, publishes a descriptor, opens stream I/O, or sends messages.",
+            manual_client_attempt_feature_compiled: true,
+            manual_network_permission_enabled: manual_network_permission,
+            client_bootstrap_started,
+            client_bootstrap_succeeded,
+            persistent_client_ready,
+            runtime_preflight_ready: preflight.runtime_preflight_ready,
+            bootstrap_policy_ready: preflight.bootstrap_policy_ready,
+            lifecycle_state,
+            timeout_seconds: preflight.timeout_seconds,
+            next_blocker,
+            blockers,
+            event_summary,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: client_bootstrap_started,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        }
+    }
+}
+
+fn run_production_onion_backup_exclusion_prepare(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+) -> ProductionOnionBackupExclusionPrepareResult {
+    use another_dimension_transport::{
+        probe_app_private_state_cache_dirs, verify_transport_backup_exclusion,
+    };
+
+    let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
+    let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
+    let mut blockers = Vec::new();
+
+    let dirs = match probe_app_private_state_cache_dirs(&state_dir, &cache_dir) {
+        Ok(dirs) => dirs,
+        Err(_) => {
+            return ProductionOnionBackupExclusionPrepareResult {
+                warning: "Onion backup exclusion prepare is blocked before transport setup. No Tor bootstrap, onion service launch, descriptor publication, stream I/O, or message transport was attempted.",
+                state_cache_dirs_accessible: false,
+                backup_exclusion_written: false,
+                backup_exclusion_verified: false,
+                blockers: vec!["app-private state/cache directories unavailable".to_string()],
+                raw_path_returned: false,
+                onion_secret_returned: false,
+                key_material_exposed: false,
+                network_io_attempted: false,
+                transport_io_opened: false,
+                runtime_messaging_enabled: false,
+            };
+        }
+    };
+
+    let backup_exclusion_written = mark_transport_backup_exclusion(&dirs).is_ok();
+    if !backup_exclusion_written {
+        blockers.push("state/cache backup exclusion write failed or unsupported".to_string());
+    }
+
+    let backup_exclusion_verified = verify_transport_backup_exclusion(&dirs).is_ok();
+    if !backup_exclusion_verified {
+        blockers.push("state/cache backup exclusion not verified".to_string());
+    }
+
+    ProductionOnionBackupExclusionPrepareResult {
+        warning: "Onion backup exclusion prepare only marks app-private Tor state/cache directories for local backup exclusion. No Tor bootstrap, onion service launch, descriptor publication, stream I/O, or message transport was attempted.",
+        state_cache_dirs_accessible: true,
+        backup_exclusion_written,
+        backup_exclusion_verified,
+        blockers,
+        raw_path_returned: false,
+        onion_secret_returned: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn mark_transport_backup_exclusion(
+    dirs: &another_dimension_transport::TransportStateCacheDirsReady,
+) -> Result<(), ()> {
+    mark_dir_backup_exclusion(dirs.state_dir())?;
+    mark_dir_backup_exclusion(dirs.cache_dir())?;
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn mark_dir_backup_exclusion(path: &std::path::Path) -> Result<(), ()> {
+    let output = std::process::Command::new("xattr")
+        .arg("-w")
+        .arg("com.apple.metadata:com_apple_backup_excludeItem")
+        .arg("com.apple.backupd")
+        .arg(path)
+        .output()
+        .map_err(|_| ())?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(())
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn mark_transport_backup_exclusion(
+    _dirs: &another_dimension_transport::TransportStateCacheDirsReady,
+) -> Result<(), ()> {
+    Err(())
+}
+
+fn run_production_onion_key_record_prepare(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionOnionKeyRecordPrepareResult, String> {
+    use another_dimension_core::production::production_onion_service_key_record_prepare;
+    use another_dimension_storage::production::ProfilePassphrase;
+    use another_dimension_transport::{
+        probe_app_private_state_cache_dirs, verify_transport_backup_exclusion,
+    };
+
+    let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
+    let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
+    let mut blockers = Vec::new();
+    let dirs = probe_app_private_state_cache_dirs(&state_dir, &cache_dir).ok();
+    let backup_exclusion = dirs
+        .as_ref()
+        .and_then(|dirs| verify_transport_backup_exclusion(dirs).ok());
+
+    if dirs.is_none() {
+        blockers.push("app-private state/cache directories unavailable".to_string());
+    }
+    if backup_exclusion.is_none() {
+        blockers.push("state/cache backup exclusion not verified".to_string());
+    }
+
+    if let Some(backup_exclusion) = backup_exclusion {
+        let profile = sanitize_production_profile(profile)?;
+        let passphrase = ProfilePassphrase::new(passphrase.trim())
+            .map_err(|_| "invalid production profile passphrase")?;
+        let store_path = production_profile_store_path(app_data_root, &profile)?;
+        let summary = production_onion_service_key_record_prepare(
+            &store_path,
+            profile,
+            &passphrase,
+            &backup_exclusion,
+        )
+        .map_err(|_| "onion service key record prepare failed")?;
+        return Ok(ProductionOnionKeyRecordPrepareResult {
+            warning: "Onion service key record prepared in the local encrypted profile store. No onion key bytes, onion address, Tor bootstrap, descriptor publication, stream I/O, or message transport was exposed.",
+            storage_opened: summary.storage_opened(),
+            profile_marker_present: summary.profile_marker_present(),
+            profile_transport_unlock_ready: summary.profile_transport_unlock_ready(),
+            backup_exclusion_verified: true,
+            lifecycle_ready: summary.lifecycle_ready(),
+            key_record_written: summary.key_record_written(),
+            key_record_present: summary.key_record_present(),
+            key_material_ready: summary.key_material_ready(),
+            blockers,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            key_material_exposed: summary.key_material_exposed(),
+            network_io_attempted: summary.network_io_attempted(),
+            transport_io_opened: summary.transport_io_opened(),
+            runtime_messaging_enabled: summary.runtime_messaging_enabled(),
+        });
+    }
+
+    Ok(ProductionOnionKeyRecordPrepareResult {
+        warning: "Onion service key record prepare is blocked before profile unlock. Verify app-private state/cache directories and backup exclusion first.",
+        storage_opened: false,
+        profile_marker_present: false,
+        profile_transport_unlock_ready: false,
+        backup_exclusion_verified: false,
+        lifecycle_ready: false,
+        key_record_written: false,
+        key_record_present: false,
+        key_material_ready: false,
+        blockers,
+        raw_path_returned: false,
+        onion_secret_returned: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
+    })
+}
+
+#[allow(dead_code)]
+fn run_production_onion_launch_preflight_check(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionOnionLaunchPreflightCheckResult, String> {
+    run_production_onion_launch_preflight_check_with_persistent_client(
+        app_data_root,
+        app_cache_root,
+        profile,
+        passphrase,
+        false,
+    )
+}
+
+fn run_production_onion_launch_preflight_check_with_persistent_client(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    persistent_client_ready: bool,
+) -> Result<ProductionOnionLaunchPreflightCheckResult, String> {
+    use another_dimension_core::production::production_onion_service_key_record_status;
+    use another_dimension_storage::production::ProfilePassphrase;
+    use another_dimension_transport::{
+        probe_app_private_state_cache_dirs, verify_transport_backup_exclusion,
+        OnionEndpointPublicationPolicy, OnionEndpointUpdatePolicy, OnionServiceKeyLifecycleDecision,
+        OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId, OnionServiceLaunchPreflight,
+        ProfileTransportUnlockReady,
+    };
+
+    let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
+    let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
+    let mut blockers = Vec::new();
+
+    let dirs = probe_app_private_state_cache_dirs(&state_dir, &cache_dir).ok();
+    let backup_exclusion = dirs
+        .as_ref()
+        .and_then(|dirs| verify_transport_backup_exclusion(dirs).ok());
+    if dirs.is_none() {
+        blockers.push("app-private state/cache directories unavailable".to_string());
+    }
+    if backup_exclusion.is_none() {
+        blockers.push("state/cache backup exclusion not verified".to_string());
+    }
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(&app_data_root, &profile)?;
+    let status = production_onion_service_key_record_status(&store_path, profile.clone(), &passphrase)
+        .map_err(|_| "onion service key record status failed")?;
+
+    let profile_transport_unlock_ready = status.profile_transport_unlock_ready();
+    let key_record_present = status.key_record_present();
+    if !key_record_present {
+        blockers.push("onion service key record not prepared".to_string());
+    }
+
+    let key_material_ready = if key_record_present {
+        backup_exclusion.as_ref()
+    } else {
+        None
+    }
+    .and_then(|backup_exclusion| {
+        let lifecycle_ready =
+            OnionServiceKeyLifecycleDecision::sqlcipher_wrapped_after_unlock(backup_exclusion)
+                .check()
+                .ok();
+        let profile_unlock = ProfileTransportUnlockReady;
+        let record_id = OnionServiceKeyRecordId::new("onion_service_key_material_v1").ok();
+        lifecycle_ready
+            .zip(record_id)
+            .and_then(|(lifecycle_ready, record_id)| {
+                OnionServiceKeyMaterialDecision::sqlcipher_wrapped_record_after_unlock(
+                    &profile_unlock,
+                    &lifecycle_ready,
+                    record_id,
+                )
+                .check()
+                .ok()
+            })
+    });
+    if key_material_ready.is_none() {
+        blockers.push("onion service key material readiness not verified".to_string());
+    }
+
+    let endpoint_publication_policy_ready = true;
+    let endpoint_update_policy_ready = true;
+    let redacted_events_only = true;
+    let launch_result = key_material_ready.as_ref().map(|key_material_ready| {
+        let profile_unlock = ProfileTransportUnlockReady;
+        OnionServiceLaunchPreflight::from_ready_boundaries(
+            &profile_unlock,
+            key_material_ready,
+            persistent_client_ready,
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+            OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
+            redacted_events_only,
+        )
+        .check()
+    });
+
+    let ready_for_onion_launch = matches!(launch_result, Some(Ok(_)));
+    let next_blocker = match launch_result {
+        Some(Err(error)) => format!("{error:?}"),
+        Some(Ok(_)) => "none".to_string(),
+        None => blockers
+            .first()
+            .cloned()
+            .unwrap_or_else(|| "onion launch preflight inputs unavailable".to_string()),
+    };
+    if !ready_for_onion_launch && !blockers.iter().any(|blocker| blocker == &next_blocker) {
+        blockers.push(next_blocker.clone());
+    }
+
+    Ok(ProductionOnionLaunchPreflightCheckResult {
+        warning: "Onion launch preflight check only. No persistent Tor client bootstrap, onion service launch, descriptor publication, stream I/O, or message transport was attempted.",
+        launch_preflight_only: true,
+        profile_transport_unlock_ready,
+        backup_exclusion_verified: backup_exclusion.is_some(),
+        key_record_present,
+        key_material_ready: key_material_ready.is_some(),
+        persistent_client_ready,
+        endpoint_publication_policy_ready,
+        endpoint_update_policy_ready,
+        redacted_events_only,
+        ready_for_onion_launch,
+        next_blocker,
+        blockers,
+        raw_path_returned: false,
+        onion_secret_returned: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
+	    })
+}
+
+fn run_production_onion_service_launch_attempt(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    state: &ProductionOnionClientRuntimeState,
+    profile: String,
+    passphrase: String,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionServiceLaunchAttemptResult, String> {
+    use another_dimension_core::production::production_onion_service_key_record_status;
+    use another_dimension_storage::production::ProfilePassphrase;
+    use another_dimension_transport::{
+        probe_app_private_state_cache_dirs, verify_transport_backup_exclusion,
+        OnionServiceKeyLifecycleDecision, OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId,
+        ProfileTransportUnlockReady,
+    };
+
+    let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
+    let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
+    let mut blockers = Vec::new();
+
+    let dirs = probe_app_private_state_cache_dirs(&state_dir, &cache_dir).ok();
+    let backup_exclusion = dirs
+        .as_ref()
+        .and_then(|dirs| verify_transport_backup_exclusion(dirs).ok());
+    if dirs.is_none() {
+        blockers.push("app-private state/cache directories unavailable".to_string());
+    }
+    if backup_exclusion.is_none() {
+        blockers.push("state/cache backup exclusion not verified".to_string());
+    }
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(&app_data_root, &profile)?;
+    let status = production_onion_service_key_record_status(&store_path, profile.clone(), &passphrase)
+        .map_err(|_| "onion service key record status failed")?;
+
+    let profile_transport_unlock_ready = status.profile_transport_unlock_ready();
+    let key_record_present = status.key_record_present();
+    if !key_record_present {
+        blockers.push("onion service key record not prepared".to_string());
+    }
+
+    let key_material_ready = if key_record_present {
+        backup_exclusion.as_ref()
+    } else {
+        None
+    }
+    .and_then(|backup_exclusion| {
+        let lifecycle_ready =
+            OnionServiceKeyLifecycleDecision::sqlcipher_wrapped_after_unlock(backup_exclusion)
+                .check()
+                .ok();
+        let profile_unlock = ProfileTransportUnlockReady;
+        let record_id = OnionServiceKeyRecordId::new("onion_service_key_material_v1").ok();
+        lifecycle_ready
+            .zip(record_id)
+            .and_then(|(lifecycle_ready, record_id)| {
+                OnionServiceKeyMaterialDecision::sqlcipher_wrapped_record_after_unlock(
+                    &profile_unlock,
+                    &lifecycle_ready,
+                    record_id,
+                )
+                .check()
+                .ok()
+            })
+    });
+    if key_material_ready.is_none() {
+        blockers.push("onion service key material readiness not verified".to_string());
+    }
+
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    {
+        let _ = state;
+        let next_blocker = "ManualClientAttemptFeatureNotEnabled".to_string();
+        if !blockers.iter().any(|blocker| blocker == &next_blocker) {
+            blockers.push(next_blocker.clone());
+        }
+        return Ok(ProductionOnionServiceLaunchAttemptResult {
+            warning: "Onion service launch attempt is feature-disabled in this build. No onion service launch, descriptor publication, stream I/O, or message transport was attempted.",
+            manual_client_attempt_feature_compiled: false,
+            manual_network_permission_enabled: manual_network_permission,
+            profile_transport_unlock_ready,
+            backup_exclusion_verified: backup_exclusion.is_some(),
+            key_record_present,
+            key_material_ready: key_material_ready.is_some(),
+            persistent_client_ready: false,
+            launch_preflight_ready: false,
+            launch_adapter_ready: false,
+            launch_attempt_started: false,
+            launch_attempt_succeeded: false,
+            onion_service_retained: false,
+            inbound_rend_request_stream_retained: false,
+            local_onion_endpoint: String::new(),
+            onion_endpoint_returned: false,
+            redacted_launch_result_event_recorded: false,
+            event_summary: Vec::new(),
+            next_blocker,
+            blockers,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            descriptor_body_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            descriptor_publish_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        });
+    }
+
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        use another_dimension_transport::{
+            arti_adapter_spike, InMemoryTransportRuntimeEventSink, OnionEndpointPublicationPolicy,
+            OnionEndpointUpdatePolicy, OnionServiceLaunchPreflight,
+        };
+
+        let mut event_summary = Vec::new();
+        let mut persistent_client_ready = false;
+        let mut launch_preflight_ready = false;
+        let mut launch_adapter_ready = false;
+        let mut launch_attempt_started = false;
+        let mut launch_attempt_succeeded = false;
+        let mut onion_service_retained = false;
+        let mut inbound_rend_request_stream_retained = false;
+        let mut local_onion_endpoint = String::new();
+        let next_blocker: String;
+
+        if !manual_network_permission {
+            next_blocker = "ManualNetworkPermissionMissing".to_string();
+        } else {
+            let mut guard = state
+                .owner
+                .lock()
+                .map_err(|_| "production onion persistent client state unavailable".to_string())?;
+            match (guard.as_mut(), key_material_ready.as_ref()) {
+                (Some(owner), Some(key_material_ready)) => {
+                    persistent_client_ready = owner.summary().has_bootstrapped_client();
+                    let profile_unlock = ProfileTransportUnlockReady;
+                    let launch_result = OnionServiceLaunchPreflight::from_ready_boundaries(
+                        &profile_unlock,
+                        key_material_ready,
+                        persistent_client_ready,
+                        OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                        OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
+                        true,
+                    )
+                    .check();
+                    launch_preflight_ready = launch_result.is_ok();
+                    match launch_result {
+                        Ok(launch_ready) => {
+                            match arti_adapter_spike::OnionServiceLaunchAdapterSkeleton::from_ready_owner(
+                                launch_ready,
+                                key_material_ready,
+                                owner,
+                            ) {
+                                Ok(_adapter) => {
+                                    launch_adapter_ready = true;
+	                                    let mut sink = InMemoryTransportRuntimeEventSink::default();
+	                                    launch_attempt_started = true;
+	                                    let network_permission = arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike;
+	                                    let service_nickname = production_onion_service_nickname(&profile);
+	                                    match owner.launch_onion_service_once(
+	                                        network_permission,
+	                                        &service_nickname,
+	                                        &mut sink,
+	                                    ) {
+	                                        Ok(()) => {
+	                                            launch_attempt_succeeded = true;
+	                                            next_blocker = "none".to_string();
+                                        }
+                                        Err(error) => {
+                                            next_blocker = format!("{error:?}");
+                                        }
+                                    }
+                                    event_summary
+                                        .extend(sink.events().iter().map(ToString::to_string));
+                                }
+                                Err(error) => {
+                                    next_blocker = format!("{error:?}");
+                                }
+                            }
+                        }
+                        Err(error) => {
+                            next_blocker = format!("{error:?}");
+                        }
+                    }
+                }
+                (None, _) => {
+                    next_blocker = "PersistentClientOwnerUnavailable".to_string();
+                }
+                (_, None) => {
+                    next_blocker = "OnionServiceKeyMaterialNotReady".to_string();
+                }
+            }
+            onion_service_retained = guard
+                .as_ref()
+                .map(|owner| owner.summary().onion_service_owned())
+                .unwrap_or(false);
+            inbound_rend_request_stream_retained = guard
+                .as_ref()
+                .map(|owner| owner.summary().inbound_rend_request_stream_owned())
+                .unwrap_or(false);
+            local_onion_endpoint = guard
+                .as_ref()
+                .and_then(|owner| owner.retained_onion_endpoint())
+                .unwrap_or_default();
+        }
+
+        if next_blocker != "none" && !blockers.iter().any(|blocker| blocker == &next_blocker) {
+            blockers.push(next_blocker.clone());
+        }
+
+        Ok(ProductionOnionServiceLaunchAttemptResult {
+            warning: "Onion service launch attempt boundary. This requires the manual network permission checkbox and a retained bootstrapped Tor client. It asks Arti to launch and retain an onion service handle, but returns no onion address, raw path, descriptor body, or key material, and does not enable messaging.",
+            manual_client_attempt_feature_compiled: true,
+            manual_network_permission_enabled: manual_network_permission,
+            profile_transport_unlock_ready,
+            backup_exclusion_verified: backup_exclusion.is_some(),
+            key_record_present,
+            key_material_ready: key_material_ready.is_some(),
+            persistent_client_ready,
+            launch_preflight_ready,
+            launch_adapter_ready,
+            launch_attempt_started,
+            launch_attempt_succeeded,
+            onion_service_retained,
+            inbound_rend_request_stream_retained,
+            onion_endpoint_returned: !local_onion_endpoint.is_empty(),
+            local_onion_endpoint,
+            redacted_launch_result_event_recorded: !event_summary.is_empty(),
+            event_summary,
+            next_blocker,
+            blockers,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            descriptor_body_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: launch_attempt_started,
+            descriptor_publish_attempted: launch_attempt_started,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+}
+
+fn run_production_onion_descriptor_publication_prepare(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    persistent_client_ready: bool,
+) -> Result<ProductionOnionDescriptorPublicationPrepareResult, String> {
+    use another_dimension_core::production::production_onion_service_key_record_status;
+    use another_dimension_storage::production::ProfilePassphrase;
+    use another_dimension_transport::{
+        BootstrapOnlyExperimentDecision, BootstrapOnlyExperimentFeatureState,
+        DescriptorPublicationFailClosedAdapter, DescriptorPublicationGateDecision,
+        DescriptorPublicationPreparationBoundary, NetworkExperimentGateProposal,
+        NetworkExperimentManualGate, NetworkExperimentOperatorConsent,
+        NetworkExperimentTargetCachePolicy, NetworkExperimentVerificationPolicy,
+        OnionEndpointPublicationPolicy, OnionEndpointUpdatePolicy, OnionHostingGateDecision,
+        OnionHostingGateFeatureState, OnionServiceKeyLifecycleDecision,
+        OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId, OnionServiceLaunchPreflight,
+        ProfileTransportUnlockReady, RedactedDescriptorPublicationContext,
+        TransportNextRiskBoundary, TransportPhaseCloseoutDecision, TransportPreNetworkCloseout,
+        TransportRuntimeError, TransportRuntimePreflight,
+    };
+
+    let mut blockers = Vec::new();
+    let runtime_preflight = TransportRuntimePreflight::disabled_by_default();
+    if !matches!(
+        runtime_preflight.first_runtime_blocker(),
+        Some(TransportRuntimeError::RuntimeNetworkDisabled)
+    ) {
+        blockers.push("runtime preflight did not fail closed before descriptor preparation".to_string());
+    }
+
+    let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
+    let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
+    let dirs = another_dimension_transport::probe_app_private_state_cache_dirs(
+        &state_dir, &cache_dir,
+    )
+    .ok();
+    let backup_exclusion = dirs
+        .as_ref()
+        .and_then(|dirs| another_dimension_transport::verify_transport_backup_exclusion(dirs).ok());
+    if dirs.is_none() {
+        blockers.push("app-private state/cache directories unavailable".to_string());
+    }
+    if backup_exclusion.is_none() {
+        blockers.push("state/cache backup exclusion not verified".to_string());
+    }
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(&app_data_root, &profile)?;
+    let status = production_onion_service_key_record_status(&store_path, profile, &passphrase)
+        .map_err(|_| "onion service key record status failed")?;
+    let profile_transport_unlock_ready = status.profile_transport_unlock_ready();
+    let key_record_present = status.key_record_present();
+    if !key_record_present {
+        blockers.push("onion service key record not prepared".to_string());
+    }
+
+    let key_material_ready = if key_record_present {
+        backup_exclusion.as_ref()
+    } else {
+        None
+    }
+    .and_then(|backup_exclusion| {
+        let lifecycle_ready =
+            OnionServiceKeyLifecycleDecision::sqlcipher_wrapped_after_unlock(backup_exclusion)
+                .check()
+                .ok();
+        let profile_unlock = ProfileTransportUnlockReady;
+        let record_id = OnionServiceKeyRecordId::new("onion_service_key_material_v1").ok();
+        lifecycle_ready
+            .zip(record_id)
+            .and_then(|(lifecycle_ready, record_id)| {
+                OnionServiceKeyMaterialDecision::sqlcipher_wrapped_record_after_unlock(
+                    &profile_unlock,
+                    &lifecycle_ready,
+                    record_id,
+                )
+                .check()
+                .ok()
+            })
+    });
+    if key_material_ready.is_none() {
+        blockers.push("onion service key material readiness not verified".to_string());
+    }
+
+    let endpoint_publication_policy_ready = true;
+    let redacted_events_only = true;
+    let launch_result = key_material_ready.as_ref().map(|key_material_ready| {
+        let profile_unlock = ProfileTransportUnlockReady;
+        OnionServiceLaunchPreflight::from_ready_boundaries(
+            &profile_unlock,
+            key_material_ready,
+            persistent_client_ready,
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+            OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
+            redacted_events_only,
+        )
+        .check()
+    });
+    let launch_preflight_ready = matches!(launch_result, Some(Ok(_)));
+
+    let transport_phase_closeout_ready = TransportPhaseCloseoutDecision::select_onion_hosting_gate(
+        BootstrapOnlyExperimentDecision::existing_manual_bootstrap_only(
+            NetworkExperimentGateProposal::bootstrap_only_manual_spike(
+                &TransportPreNetworkCloseout::from_blockers(Vec::new()),
+                NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
+                NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
+                NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
+            )
+            .check()
+            .map_err(|error| format!("{error:?}"))?,
+            BootstrapOnlyExperimentFeatureState::ArtiManualBootstrapFeature,
+        )
+        .check()
+        .map_err(|error| format!("{error:?}"))?,
+    )
+    .check()
+    .map_err(|error| format!("{error:?}"))?;
+    let transport_next_boundary_ready =
+        transport_phase_closeout_ready.next_boundary() == TransportNextRiskBoundary::OnionHostingGate;
+    if !transport_next_boundary_ready {
+        blockers.push("transport phase closeout did not select onion hosting gate".to_string());
+    }
+
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let (manual_client_attempt_feature_compiled, feature_state) = (
+        true,
+        OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
+    );
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let (manual_client_attempt_feature_compiled, feature_state) =
+        (false, OnionHostingGateFeatureState::NotCompiled);
+
+    let hosting_gate_result = match (launch_result, key_material_ready.as_ref()) {
+        (Some(Ok(launch_ready)), Some(key_material_ready)) => OnionHostingGateDecision::from_ready_boundaries(
+            transport_phase_closeout_ready,
+            launch_ready,
+            key_material_ready,
+            NetworkExperimentManualGate::FeatureGatedManualOnly,
+            feature_state,
+            persistent_client_ready,
+        )
+        .check()
+        .map_err(|error| format!("{error:?}")),
+        (Some(Err(error)), _) => Err(format!("{error:?}")),
+        (Some(Ok(_)), None) => Err("onion service key material readiness not verified".to_string()),
+        (None, _) => Err(blockers
+            .first()
+            .cloned()
+            .unwrap_or_else(|| "descriptor publication inputs unavailable".to_string())),
+    };
+    let onion_hosting_gate_ready = hosting_gate_result.is_ok();
+
+    let descriptor_gate_result = hosting_gate_result
+        .map(|hosting_ready| {
+            DescriptorPublicationGateDecision::pairwise_rendezvous_only(
+                hosting_ready,
+                OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                redacted_events_only,
+            )
+            .check()
+            .map_err(|error| format!("{error:?}"))
+        })
+        .and_then(|result| result);
+    let descriptor_publication_gate_ready = descriptor_gate_result.is_ok();
+
+    let adapter_result = match (descriptor_gate_result, launch_preflight_ready) {
+        (Ok(gate_ready), true) => DescriptorPublicationFailClosedAdapter::from_gate_ready(
+            gate_ready,
+            another_dimension_transport::OnionServiceLaunchReady,
+        )
+        .map_err(|error| format!("{error:?}"))
+        .map(|adapter| (gate_ready, adapter)),
+        (Err(error), _) => Err(error),
+        (_, false) => Err("LaunchPreflightRequired".to_string()),
+    };
+    let fail_closed_adapter_ready = adapter_result.is_ok();
+
+    let redacted_context =
+        RedactedDescriptorPublicationContext::pairwise_rendezvous_only(
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+        );
+    let redacted_context_ready = redacted_context.is_redacted();
+
+    let preparation_result = adapter_result
+        .map(|(gate_ready, adapter)| {
+            DescriptorPublicationPreparationBoundary::from_fail_closed_adapter(
+                gate_ready,
+                &adapter,
+                redacted_context,
+            )
+            .check()
+            .map_err(|error| format!("{error:?}"))
+        })
+        .and_then(|result| result);
+    let descriptor_preparation_ready = preparation_result.is_ok();
+
+    let next_blocker = match preparation_result {
+        Ok(_) => "none".to_string(),
+        Err(error) => error,
+    };
+    if !descriptor_preparation_ready && !blockers.iter().any(|blocker| blocker == &next_blocker) {
+        blockers.push(next_blocker.clone());
+    }
+
+    Ok(ProductionOnionDescriptorPublicationPrepareResult {
+        warning: "Descriptor publication preparation only. No descriptor body was created, no descriptor was published, no stream I/O opened, and no message transport was attempted.",
+        preparation_only: true,
+        manual_client_attempt_feature_compiled,
+        profile_transport_unlock_ready,
+        key_material_ready: key_material_ready.is_some(),
+        persistent_client_ready,
+        launch_preflight_ready,
+        onion_hosting_gate_ready,
+        descriptor_publication_gate_ready,
+        fail_closed_adapter_ready,
+        redacted_context_ready,
+        descriptor_preparation_ready,
+        endpoint_publication_policy_ready,
+        next_blocker,
+        blockers,
+        raw_path_returned: false,
+        onion_secret_returned: false,
+        descriptor_body_returned: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        descriptor_publish_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
+    })
+}
+
+fn run_production_onion_descriptor_publication_attempt(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    persistent_client_ready: bool,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionDescriptorPublicationAttemptResult, String> {
+    use another_dimension_core::production::production_onion_service_key_record_status;
+    use another_dimension_storage::production::ProfilePassphrase;
+    use another_dimension_transport::{
+        BootstrapOnlyExperimentDecision, BootstrapOnlyExperimentFeatureState,
+        DescriptorPublicationFailClosedAdapter, DescriptorPublicationGateDecision,
+        DescriptorPublicationPreparationBoundary, InMemoryTransportRuntimeEventSink,
+        NetworkExperimentGateProposal, NetworkExperimentManualGate, NetworkExperimentOperatorConsent,
+        NetworkExperimentTargetCachePolicy, NetworkExperimentVerificationPolicy,
+        OnionEndpointPublicationPolicy, OnionEndpointUpdatePolicy, OnionHostingGateDecision,
+        OnionHostingGateFeatureState, OnionServiceKeyLifecycleDecision,
+        OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId, OnionServiceLaunchPreflight,
+        ProfileTransportUnlockReady, RedactedDescriptorPublicationContext,
+        TransportPhaseCloseoutDecision, TransportPreNetworkCloseout,
+    };
+
+    let prepare = run_production_onion_descriptor_publication_prepare(
+        &app_data_root,
+        &app_cache_root,
+        profile.clone(),
+        passphrase.clone(),
+        persistent_client_ready,
+    )?;
+    let mut blockers = prepare.blockers.clone();
+    let mut event_summary = Vec::new();
+    let mut publish_attempt_started = false;
+    let publish_attempt_succeeded = false;
+    let next_blocker: String;
+
+    if !manual_network_permission {
+        next_blocker = "ManualNetworkPermissionMissing".to_string();
+    } else if !prepare.descriptor_preparation_ready {
+        next_blocker = prepare.next_blocker.clone();
+    } else {
+        let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
+        let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
+        let dirs = another_dimension_transport::probe_app_private_state_cache_dirs(
+            &state_dir, &cache_dir,
+        )
+        .ok();
+        let backup_exclusion = dirs
+            .as_ref()
+            .and_then(|dirs| another_dimension_transport::verify_transport_backup_exclusion(dirs).ok());
+        let profile = sanitize_production_profile(profile)?;
+        let passphrase = ProfilePassphrase::new(passphrase.trim())
+            .map_err(|_| "invalid production profile passphrase")?;
+        let store_path = production_profile_store_path(&app_data_root, &profile)?;
+        let status = production_onion_service_key_record_status(&store_path, profile, &passphrase)
+            .map_err(|_| "onion service key record status failed")?;
+        let key_material_ready = if status.key_record_present() {
+            backup_exclusion.as_ref()
+        } else {
+            None
+        }
+        .and_then(|backup_exclusion| {
+            let lifecycle_ready =
+                OnionServiceKeyLifecycleDecision::sqlcipher_wrapped_after_unlock(backup_exclusion)
+                    .check()
+                    .ok();
+            let profile_unlock = ProfileTransportUnlockReady;
+            let record_id = OnionServiceKeyRecordId::new("onion_service_key_material_v1").ok();
+            lifecycle_ready
+                .zip(record_id)
+                .and_then(|(lifecycle_ready, record_id)| {
+                    OnionServiceKeyMaterialDecision::sqlcipher_wrapped_record_after_unlock(
+                        &profile_unlock,
+                        &lifecycle_ready,
+                        record_id,
+                    )
+                    .check()
+                    .ok()
+                })
+        });
+
+        let attempt_result = key_material_ready
+            .as_ref()
+            .ok_or_else(|| "OnionServiceKeyMaterialNotReady".to_string())
+            .and_then(|key_material_ready| {
+                let profile_unlock = ProfileTransportUnlockReady;
+                let launch_ready = OnionServiceLaunchPreflight::from_ready_boundaries(
+                    &profile_unlock,
+                    key_material_ready,
+                    persistent_client_ready,
+                    OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                    OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
+                    true,
+                )
+                .check()
+                .map_err(|error| format!("{error:?}"))?;
+                let transport_phase_closeout_ready =
+                    TransportPhaseCloseoutDecision::select_onion_hosting_gate(
+                        BootstrapOnlyExperimentDecision::existing_manual_bootstrap_only(
+                            NetworkExperimentGateProposal::bootstrap_only_manual_spike(
+                                &TransportPreNetworkCloseout::from_blockers(Vec::new()),
+                                NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
+                                NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
+                                NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
+                            )
+                            .check()
+                            .map_err(|error| format!("{error:?}"))?,
+                            BootstrapOnlyExperimentFeatureState::ArtiManualBootstrapFeature,
+                        )
+                        .check()
+                        .map_err(|error| format!("{error:?}"))?,
+                    )
+                    .check()
+                    .map_err(|error| format!("{error:?}"))?;
+                let hosting_ready = OnionHostingGateDecision::from_ready_boundaries(
+                    transport_phase_closeout_ready,
+                    launch_ready,
+                    key_material_ready,
+                    NetworkExperimentManualGate::FeatureGatedManualOnly,
+                    OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
+                    persistent_client_ready,
+                )
+                .check()
+                .map_err(|error| format!("{error:?}"))?;
+                let gate_ready = DescriptorPublicationGateDecision::pairwise_rendezvous_only(
+                    hosting_ready,
+                    OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                    true,
+                )
+                .check()
+                .map_err(|error| format!("{error:?}"))?;
+                let adapter =
+                    DescriptorPublicationFailClosedAdapter::from_gate_ready(gate_ready, launch_ready)
+                        .map_err(|error| format!("{error:?}"))?;
+                DescriptorPublicationPreparationBoundary::from_fail_closed_adapter(
+                    gate_ready,
+                    &adapter,
+                    RedactedDescriptorPublicationContext::pairwise_rendezvous_only(
+                        OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                    ),
+                )
+                .check()
+                .map_err(|error| format!("{error:?}"))?;
+                let mut sink = InMemoryTransportRuntimeEventSink::default();
+                publish_attempt_started = true;
+                let result = adapter.publish_fail_closed(&mut sink);
+                event_summary.extend(sink.events().iter().map(ToString::to_string));
+                result.map_err(|error| format!("{error:?}"))
+            });
+        next_blocker = match attempt_result {
+            Ok(()) => "none".to_string(),
+            Err(error) => error,
+        };
+    }
+
+    if next_blocker != "none" && !blockers.iter().any(|blocker| blocker == &next_blocker) {
+        blockers.push(next_blocker.clone());
+    }
+
+    Ok(ProductionOnionDescriptorPublicationAttemptResult {
+        warning: "Descriptor publication attempt boundary. It requires explicit manual network permission and descriptor preparation. The current adapter is fail-closed: it records only a redacted publish failure event and does not return a descriptor, onion address, stream, or usable messaging state.",
+        preparation_only: false,
+        manual_client_attempt_feature_compiled: prepare.manual_client_attempt_feature_compiled,
+        manual_network_permission_enabled: manual_network_permission,
+        persistent_client_ready: prepare.persistent_client_ready,
+        launch_preflight_ready: prepare.launch_preflight_ready,
+        descriptor_publication_gate_ready: prepare.descriptor_publication_gate_ready,
+        descriptor_preparation_ready: prepare.descriptor_preparation_ready,
+        publish_attempt_started,
+        publish_attempt_succeeded,
+        redacted_publish_result_event_recorded: !event_summary.is_empty(),
+        event_summary,
+        next_blocker,
+        blockers,
+        raw_path_returned: false,
+        onion_secret_returned: false,
+        descriptor_body_returned: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        descriptor_publish_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
+    })
+}
+
+fn run_production_onion_inbound_stream_prepare(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    persistent_client_ready: bool,
+) -> Result<ProductionOnionInboundStreamPrepareResult, String> {
+    use another_dimension_core::production::production_onion_service_key_record_status;
+    use another_dimension_storage::production::ProfilePassphrase;
+    use another_dimension_transport::{
+        BootstrapOnlyExperimentDecision, BootstrapOnlyExperimentFeatureState,
+        DescriptorPublicationFailClosedAdapter, DescriptorPublicationGateDecision,
+        DescriptorPublicationPreparationBoundary, InboundStreamFailClosedAdapter,
+        InboundStreamGateDecision, InboundStreamPreparationBoundary,
+        NetworkExperimentGateProposal, NetworkExperimentManualGate,
+        NetworkExperimentOperatorConsent, NetworkExperimentTargetCachePolicy,
+        NetworkExperimentVerificationPolicy, OnionEndpointPublicationPolicy,
+        OnionEndpointUpdatePolicy, OnionHostingGateDecision, OnionHostingGateFeatureState,
+        OnionServiceDescriptorPublicationReady, OnionServiceKeyLifecycleDecision,
+        OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId, OnionServiceLaunchPreflight,
+        ProfileTransportUnlockReady, RedactedDescriptorPublicationContext,
+        TransportNextRiskBoundary, TransportPhaseCloseoutDecision, TransportPreNetworkCloseout,
+        TransportRuntimeError, TransportRuntimePreflight,
+    };
+
+    let mut blockers = Vec::new();
+    if !matches!(
+        TransportRuntimePreflight::disabled_by_default().first_runtime_blocker(),
+        Some(TransportRuntimeError::RuntimeNetworkDisabled)
+    ) {
+        blockers.push("runtime preflight did not fail closed before inbound stream preparation".to_string());
+    }
+
+    let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
+    let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
+    let dirs = another_dimension_transport::probe_app_private_state_cache_dirs(
+        &state_dir, &cache_dir,
+    )
+    .ok();
+    let backup_exclusion = dirs
+        .as_ref()
+        .and_then(|dirs| another_dimension_transport::verify_transport_backup_exclusion(dirs).ok());
+    if dirs.is_none() {
+        blockers.push("app-private state/cache directories unavailable".to_string());
+    }
+    if backup_exclusion.is_none() {
+        blockers.push("state/cache backup exclusion not verified".to_string());
+    }
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(&app_data_root, &profile)?;
+    let status = production_onion_service_key_record_status(&store_path, profile, &passphrase)
+        .map_err(|_| "onion service key record status failed")?;
+    let key_record_present = status.key_record_present();
+    if !key_record_present {
+        blockers.push("onion service key record not prepared".to_string());
+    }
+
+    let key_material_ready = if key_record_present {
+        backup_exclusion.as_ref()
+    } else {
+        None
+    }
+    .and_then(|backup_exclusion| {
+        let lifecycle_ready =
+            OnionServiceKeyLifecycleDecision::sqlcipher_wrapped_after_unlock(backup_exclusion)
+                .check()
+                .ok();
+        let profile_unlock = ProfileTransportUnlockReady;
+        let record_id = OnionServiceKeyRecordId::new("onion_service_key_material_v1").ok();
+        lifecycle_ready
+            .zip(record_id)
+            .and_then(|(lifecycle_ready, record_id)| {
+                OnionServiceKeyMaterialDecision::sqlcipher_wrapped_record_after_unlock(
+                    &profile_unlock,
+                    &lifecycle_ready,
+                    record_id,
+                )
+                .check()
+                .ok()
+            })
+    });
+    if key_material_ready.is_none() {
+        blockers.push("onion service key material readiness not verified".to_string());
+    }
+
+    let redacted_events_only = true;
+    let launch_result = key_material_ready.as_ref().map(|key_material_ready| {
+        let profile_unlock = ProfileTransportUnlockReady;
+        OnionServiceLaunchPreflight::from_ready_boundaries(
+            &profile_unlock,
+            key_material_ready,
+            persistent_client_ready,
+            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+            OnionEndpointUpdatePolicy::ExistingEncryptedSessionOnly,
+            redacted_events_only,
+        )
+        .check()
+    });
+    let launch_preflight_ready = matches!(launch_result, Some(Ok(_)));
+
+    let transport_phase_closeout_ready = TransportPhaseCloseoutDecision::select_onion_hosting_gate(
+        BootstrapOnlyExperimentDecision::existing_manual_bootstrap_only(
+            NetworkExperimentGateProposal::bootstrap_only_manual_spike(
+                &TransportPreNetworkCloseout::from_blockers(Vec::new()),
+                NetworkExperimentOperatorConsent::ExplicitForLocalManualSpike,
+                NetworkExperimentVerificationPolicy::HeavyIsolatedTargetAndManualCiExcluded,
+                NetworkExperimentTargetCachePolicy::IsolatedTemporaryTarget,
+            )
+            .check()
+            .map_err(|error| format!("{error:?}"))?,
+            BootstrapOnlyExperimentFeatureState::ArtiManualBootstrapFeature,
+        )
+        .check()
+        .map_err(|error| format!("{error:?}"))?,
+    )
+    .check()
+    .map_err(|error| format!("{error:?}"))?;
+    if transport_phase_closeout_ready.next_boundary() != TransportNextRiskBoundary::OnionHostingGate
+    {
+        blockers.push("transport phase closeout did not select onion hosting gate".to_string());
+    }
+
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let (manual_client_attempt_feature_compiled, feature_state) = (
+        true,
+        OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
+    );
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let (manual_client_attempt_feature_compiled, feature_state) =
+        (false, OnionHostingGateFeatureState::NotCompiled);
+
+    let hosting_gate_result = match (launch_result, key_material_ready.as_ref()) {
+        (Some(Ok(launch_ready)), Some(key_material_ready)) => {
+            OnionHostingGateDecision::from_ready_boundaries(
+                transport_phase_closeout_ready,
+                launch_ready,
+                key_material_ready,
+                NetworkExperimentManualGate::FeatureGatedManualOnly,
+                feature_state,
+                persistent_client_ready,
+            )
+            .check()
+            .map_err(|error| format!("{error:?}"))
+        }
+        (Some(Err(error)), _) => Err(format!("{error:?}")),
+        (Some(Ok(_)), None) => Err("onion service key material readiness not verified".to_string()),
+        (None, _) => Err(blockers
+            .first()
+            .cloned()
+            .unwrap_or_else(|| "inbound stream inputs unavailable".to_string())),
+    };
+
+    let descriptor_gate_result = hosting_gate_result
+        .map(|hosting_ready| {
+            DescriptorPublicationGateDecision::pairwise_rendezvous_only(
+                hosting_ready,
+                OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                redacted_events_only,
+            )
+            .check()
+            .map_err(|error| format!("{error:?}"))
+        })
+        .and_then(|result| result);
+    let descriptor_publication_gate_ready = descriptor_gate_result.is_ok();
+
+    let descriptor_adapter_result = match (descriptor_gate_result, launch_preflight_ready) {
+        (Ok(gate_ready), true) => DescriptorPublicationFailClosedAdapter::from_gate_ready(
+            gate_ready,
+            another_dimension_transport::OnionServiceLaunchReady,
+        )
+        .map_err(|error| format!("{error:?}"))
+        .map(|adapter| (gate_ready, adapter)),
+        (Err(error), _) => Err(error),
+        (_, false) => Err("LaunchPreflightRequired".to_string()),
+    };
+
+    let descriptor_preparation_result = descriptor_adapter_result
+        .as_ref()
+        .map_err(|error| error.clone())
+        .and_then(|(gate_ready, adapter)| {
+            DescriptorPublicationPreparationBoundary::from_fail_closed_adapter(
+                *gate_ready,
+                adapter,
+                RedactedDescriptorPublicationContext::pairwise_rendezvous_only(
+                    OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+                ),
+            )
+            .check()
+            .map_err(|error| format!("{error:?}"))
+        });
+    let descriptor_preparation_ready = descriptor_preparation_result.is_ok();
+
+    let inbound_gate_result = descriptor_adapter_result
+        .as_ref()
+        .map_err(|error| error.clone())
+        .and_then(|(gate_ready, adapter)| {
+            InboundStreamGateDecision::from_publication_gate_and_adapter(*gate_ready, adapter)
+                .check()
+                .map_err(|error| format!("{error:?}"))
+        });
+    let inbound_stream_gate_ready = inbound_gate_result.is_ok();
+
+    let inbound_adapter_result = inbound_gate_result
+        .map(|gate_ready| {
+            (
+                gate_ready,
+                InboundStreamFailClosedAdapter::from_gate_ready(
+                    gate_ready,
+                    OnionServiceDescriptorPublicationReady,
+                ),
+            )
+        })
+        .map_err(|error| error);
+    let fail_closed_adapter_ready = inbound_adapter_result.is_ok();
+
+    let inbound_preparation_result = inbound_adapter_result
+        .as_ref()
+        .map_err(|error| error.clone())
+        .and_then(|(gate_ready, adapter)| {
+            InboundStreamPreparationBoundary::from_fail_closed_adapter(*gate_ready, adapter)
+                .check()
+                .map_err(|error| format!("{error:?}"))
+        });
+    let inbound_stream_preparation_ready = inbound_preparation_result.is_ok();
+
+    let next_blocker = match inbound_preparation_result {
+        Ok(_) => "none".to_string(),
+        Err(error) => error,
+    };
+    if !inbound_stream_preparation_ready
+        && !blockers.iter().any(|blocker| blocker == &next_blocker)
+    {
+        blockers.push(next_blocker.clone());
+    }
+
+    Ok(ProductionOnionInboundStreamPrepareResult {
+        warning: "Inbound stream preparation only. No inbound accept, stream read/write, envelope I/O, or message transport was attempted.",
+        preparation_only: true,
+        manual_client_attempt_feature_compiled,
+        persistent_client_ready,
+        launch_preflight_ready,
+        descriptor_publication_gate_ready,
+        descriptor_preparation_ready,
+        inbound_stream_gate_ready,
+        fail_closed_adapter_ready,
+        inbound_stream_preparation_ready,
+        next_blocker,
+        blockers,
+        raw_path_returned: false,
+        onion_secret_returned: false,
+        descriptor_body_returned: false,
+        stream_id_returned: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        descriptor_publish_attempted: false,
+        stream_accept_attempted: false,
+        stream_read_write_attempted: false,
+        envelope_io_opened: false,
+        runtime_messaging_enabled: false,
+    })
+}
+
+async fn run_production_onion_inbound_envelope_receive_attempt(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    state: &ProductionOnionClientRuntimeState,
+    profile: String,
+    passphrase: String,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionInboundEnvelopeReceiveAttemptResult, String> {
+    let persistent_client_ready = run_production_onion_persistent_client_ready(state)?;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let profile_for_import = profile.clone();
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let passphrase_for_import = passphrase.clone();
+    let prepare = run_production_onion_inbound_stream_prepare(
+        &app_data_root,
+        &app_cache_root,
+        profile,
+        passphrase,
+        persistent_client_ready,
+    )?;
+    let mut blockers = prepare.blockers.clone();
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut event_summary = Vec::new();
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let event_summary = Vec::new();
+    let next_blocker;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut receive_attempt_started = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let receive_attempt_started = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let receive_attempt_succeeded = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut inbound_rend_request_stream_ready = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let inbound_rend_request_stream_ready = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut accepted_stream_request_stream_ready = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let accepted_stream_request_stream_ready = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut inbound_rend_request_accept_attempted = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let inbound_rend_request_accept_attempted = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut inbound_rend_request_accepted = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let inbound_rend_request_accepted = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut stream_request_accept_attempted = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let stream_request_accept_attempted = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut stream_request_accepted = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let stream_request_accepted = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut stream_read_attempted = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let stream_read_attempted = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut stream_bytes_read = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let stream_bytes_read = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut received_envelope_ready = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let received_envelope_ready = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut inbound_import_attempted = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let inbound_import_attempted = false;
+
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    {
+        let _ = state;
+        next_blocker = "ManualClientAttemptFeatureNotEnabled".to_string();
+        if !blockers.iter().any(|blocker| blocker == &next_blocker) {
+            blockers.push(next_blocker.clone());
+        }
+        return Ok(ProductionOnionInboundEnvelopeReceiveAttemptResult {
+            warning: "Inbound envelope receive attempt is feature-disabled in this build. No onion service accept, stream read/write, envelope I/O, or message import was attempted.",
+            preparation_only: false,
+            manual_client_attempt_feature_compiled: false,
+            manual_network_permission_enabled: manual_network_permission,
+            persistent_client_ready,
+            inbound_stream_preparation_ready: prepare.inbound_stream_preparation_ready,
+            inbound_rend_request_stream_ready,
+            inbound_rend_request_accept_attempted,
+            inbound_rend_request_accepted,
+            accepted_stream_request_stream_ready,
+            stream_request_accept_attempted,
+            stream_request_accepted,
+            stream_read_attempted,
+            stream_bytes_read,
+            receive_attempt_started,
+            receive_attempt_succeeded,
+            received_envelope_ready,
+            inbound_import_attempted,
+            redacted_receive_result_event_recorded: !event_summary.is_empty(),
+            event_summary,
+            next_blocker,
+            blockers,
+            raw_endpoint_returned: false,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            descriptor_body_returned: false,
+            stream_id_returned: false,
+            envelope_payload_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            descriptor_publish_attempted: false,
+            stream_accept_attempted: false,
+            stream_read_write_attempted: false,
+            envelope_io_opened: false,
+            runtime_messaging_enabled: false,
+        });
+    }
+
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        use another_dimension_transport::{arti_adapter_spike, InMemoryTransportRuntimeEventSink};
+
+        if !manual_network_permission {
+            next_blocker = "ManualNetworkPermissionMissing".to_string();
+        } else if !persistent_client_ready {
+            next_blocker = "PersistentClientNotReady".to_string();
+        } else if !prepare.inbound_stream_preparation_ready {
+            next_blocker = prepare.next_blocker.clone();
+        } else if state
+            .receive_in_progress
+            .swap(true, std::sync::atomic::Ordering::AcqRel)
+        {
+            next_blocker = "InboundEnvelopeReceiveAlreadyInProgress".to_string();
+        } else {
+            let mut owner = match state.owner.lock() {
+                Ok(mut guard) => guard.take(),
+                Err(_) => None,
+            };
+            match owner.as_mut() {
+                Some(owner) => {
+                    inbound_rend_request_stream_ready =
+                        owner.summary().inbound_rend_request_stream_owned();
+                    let mut sink = InMemoryTransportRuntimeEventSink::default();
+                    receive_attempt_started = true;
+                    inbound_rend_request_accept_attempted = true;
+                    let mut recorded_event_count = 0;
+                    let result = owner.accept_inbound_rend_request_once(
+                        arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                        &mut sink,
+                    ).await;
+                    event_summary.extend(sink.events()[recorded_event_count..].iter().map(ToString::to_string));
+                    recorded_event_count = sink.events().len();
+                    match result {
+                        Ok(()) => {
+                            inbound_rend_request_accepted = true;
+                            accepted_stream_request_stream_ready =
+                                owner.summary().accepted_stream_request_stream_owned();
+                            stream_request_accept_attempted = true;
+                            stream_read_attempted = true;
+                            let read_result = owner.read_accepted_inbound_stream_once(
+                                arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                                4096,
+                                &mut sink,
+                            ).await;
+                            event_summary.extend(sink.events()[recorded_event_count..].iter().map(ToString::to_string));
+                            match read_result {
+                                Ok(envelope_bytes) => {
+                                    stream_request_accepted = true;
+                                    stream_bytes_read = !envelope_bytes.is_empty();
+                                    let envelope_payload = String::from_utf8(envelope_bytes)
+                                        .map_err(|_| "inbound envelope was not valid UTF-8")?;
+                                    let envelope_payload =
+                                        sanitize_envelope_payload(envelope_payload)?;
+                                    let envelope = another_dimension_protocol::Envelope::decode(
+                                        &envelope_payload,
+                                    )
+                                    .map_err(|_| "inbound envelope decode failed")?;
+                                    let retention = run_production_message_retention_preference_get(
+                                        app_data_root.as_ref(),
+                                        profile_for_import.clone(),
+                                        passphrase_for_import.clone(),
+                                    )?;
+                                    inbound_import_attempted = true;
+                                    let import = run_production_message_envelope_import(
+                                        app_data_root.as_ref(),
+                                        profile_for_import.clone(),
+                                        passphrase_for_import.clone(),
+                                        envelope.message_number,
+                                        envelope_payload,
+                                        retention.message_ttl_seconds,
+                                    )?;
+                                    received_envelope_ready = import.received_message_written
+                                        && import.received_message_record_present
+                                        && import.received_message_record_decodable;
+                                    next_blocker = if received_envelope_ready {
+                                        "none".to_string()
+                                    } else {
+                                        "InboundEnvelopeImportIncomplete".to_string()
+                                    };
+                                }
+                                Err(error) => {
+                                    next_blocker = format!("{error:?}");
+                                }
+                            }
+                        }
+                        Err(error) => {
+                            next_blocker = format!("{error:?}");
+                        }
+                    }
+                }
+                None => {
+                    next_blocker = "PersistentClientOwnerUnavailable".to_string();
+                }
+            }
+            if let Ok(mut guard) = state.owner.lock() {
+                *guard = owner;
+            }
+            state
+                .receive_in_progress
+                .store(false, std::sync::atomic::Ordering::Release);
+        }
+
+        if next_blocker != "none" && !blockers.iter().any(|blocker| blocker == &next_blocker) {
+            blockers.push(next_blocker.clone());
+        }
+        Ok(ProductionOnionInboundEnvelopeReceiveAttemptResult {
+            warning: "Inbound envelope receive attempt boundary. With manual network permission and a retained onion service, it attempts accept/read/import and returns only redacted status.",
+            preparation_only: false,
+            manual_client_attempt_feature_compiled: true,
+            manual_network_permission_enabled: manual_network_permission,
+            persistent_client_ready,
+            inbound_stream_preparation_ready: prepare.inbound_stream_preparation_ready,
+            inbound_rend_request_stream_ready,
+            inbound_rend_request_accept_attempted,
+            inbound_rend_request_accepted,
+            accepted_stream_request_stream_ready,
+            stream_request_accept_attempted,
+            stream_request_accepted,
+            stream_read_attempted,
+            stream_bytes_read,
+            receive_attempt_started,
+            receive_attempt_succeeded: received_envelope_ready,
+            received_envelope_ready,
+            inbound_import_attempted,
+            redacted_receive_result_event_recorded: !event_summary.is_empty(),
+            event_summary,
+            next_blocker,
+            blockers,
+            raw_endpoint_returned: false,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            descriptor_body_returned: false,
+            stream_id_returned: false,
+            envelope_payload_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            descriptor_publish_attempted: false,
+            stream_accept_attempted: false,
+            stream_read_write_attempted: false,
+            envelope_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+}
+
+fn run_production_onion_outbound_stream_prepare(
+    rendezvous_endpoint: String,
+) -> Result<ProductionOnionOutboundStreamPrepareResult, String> {
+    use another_dimension_identity::ContactId;
+    use another_dimension_transport::{
+        OnionServiceEndpoint, OutboundStreamFailClosedAdapter, OutboundStreamGateDecision,
+        OutboundStreamPreparationBoundary, PairwiseRendezvousEndpoint,
+        RendezvousEndpointIdentityBinding, RendezvousEndpointScope, TransportPolicy,
+    };
+
+    let mut blockers = Vec::new();
+    let endpoint = sanitize_pairing_rendezvous_endpoint(rendezvous_endpoint)?;
+    let onion_endpoint = OnionServiceEndpoint::new(endpoint).map_err(|_| {
+        "production onion outbound stream prepare rejected endpoint without exposing details"
+            .to_string()
+    })?;
+    let contact_id = ContactId::new("manual_peer").map_err(|_| {
+        "production onion outbound stream prepare rejected contact without exposing details"
+            .to_string()
+    })?;
+    let pairwise_endpoint = PairwiseRendezvousEndpoint::new(
+        contact_id,
+        onion_endpoint,
+        RendezvousEndpointScope::PairwiseContact,
+        RendezvousEndpointIdentityBinding::TransportScoped,
+    )
+    .map_err(|_| {
+        "production onion outbound stream prepare rejected pairwise endpoint without exposing details"
+            .to_string()
+    })?;
+
+    let policy = TransportPolicy::high_risk_default();
+    let gate_result =
+        OutboundStreamGateDecision::from_pairwise_endpoint_and_policy(
+            pairwise_endpoint.clone(),
+            policy.clone(),
+        )
+        .check()
+        .map_err(|error| format!("{error:?}"));
+    let outbound_stream_gate_ready = gate_result.is_ok();
+
+    let adapter_result = gate_result
+        .map(|gate_ready| {
+            OutboundStreamFailClosedAdapter::from_gate_ready(
+                gate_ready,
+                pairwise_endpoint,
+                policy,
+            )
+            .map_err(|error| format!("{error:?}"))
+            .map(|adapter| (gate_ready, adapter))
+        })
+        .and_then(|result| result);
+    let fail_closed_adapter_ready = adapter_result.is_ok();
+
+    let preparation_result = adapter_result
+        .as_ref()
+        .map_err(|error| error.clone())
+        .and_then(|(gate_ready, adapter)| {
+            OutboundStreamPreparationBoundary::from_fail_closed_adapter(*gate_ready, adapter)
+                .check()
+                .map_err(|error| format!("{error:?}"))
+        });
+    let outbound_stream_preparation_ready = preparation_result.is_ok();
+    let next_blocker = match preparation_result {
+        Ok(_) => "none".to_string(),
+        Err(error) => error,
+    };
+    if !outbound_stream_preparation_ready {
+        blockers.push(next_blocker.clone());
+    }
+
+    Ok(ProductionOnionOutboundStreamPrepareResult {
+        warning: "Outbound stream preparation only. No outbound dial, stream send, envelope I/O, or message transport was attempted.",
+        preparation_only: true,
+        endpoint_accepted: true,
+        pairwise_endpoint_ready: true,
+        high_risk_onion_policy_ready: true,
+        outbound_stream_gate_ready,
+        fail_closed_adapter_ready,
+        outbound_stream_preparation_ready,
+        next_blocker,
+        blockers,
+        raw_endpoint_returned: false,
+        raw_path_returned: false,
+        onion_secret_returned: false,
+        stream_id_returned: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        stream_dial_attempted: false,
+        stream_send_attempted: false,
+        envelope_io_opened: false,
+        runtime_messaging_enabled: false,
+    })
+}
+
+fn run_production_onion_stream_adapter_closeout_prepare(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    rendezvous_endpoint: String,
+    persistent_client_ready: bool,
+) -> Result<ProductionOnionStreamAdapterCloseoutPrepareResult, String> {
+    use another_dimension_identity::ContactId;
+    use another_dimension_transport::{
+        InboundStreamFailClosedAdapter, InboundStreamGateReady, InboundStreamPreparationBoundary,
+        OnionServiceDescriptorPublicationReady, OnionServiceEndpoint,
+        OutboundStreamFailClosedAdapter, OutboundStreamGateDecision,
+        OutboundStreamPreparationBoundary, PairwiseRendezvousEndpoint,
+        RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
+        StreamAdapterCloseoutDecision, StreamCloseoutIntegrationOrder, TransportPolicy,
+    };
+
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let manual_client_attempt_feature_compiled = true;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let manual_client_attempt_feature_compiled = false;
+
+    let inbound = run_production_onion_inbound_stream_prepare(
+        &app_data_root,
+        &app_cache_root,
+        profile,
+        passphrase,
+        persistent_client_ready,
+    )?;
+    let outbound = run_production_onion_outbound_stream_prepare(rendezvous_endpoint.clone())?;
+
+    let mut blockers = inbound.blockers.clone();
+    for blocker in outbound.blockers.iter() {
+        if !blockers.iter().any(|existing| existing == blocker) {
+            blockers.push(blocker.clone());
+        }
+    }
+
+    let closeout_result = if inbound.inbound_stream_preparation_ready
+        && outbound.outbound_stream_preparation_ready
+    {
+        let inbound_gate_ready = InboundStreamGateReady;
+        let inbound_adapter = InboundStreamFailClosedAdapter::from_gate_ready(
+            inbound_gate_ready,
+            OnionServiceDescriptorPublicationReady,
+        );
+        let inbound_preparation =
+            InboundStreamPreparationBoundary::from_fail_closed_adapter(
+                inbound_gate_ready,
+                &inbound_adapter,
+            )
+            .check()
+            .map_err(|error| format!("{error:?}"))?;
+
+        let endpoint = sanitize_pairing_rendezvous_endpoint(rendezvous_endpoint)?;
+        let onion_endpoint = OnionServiceEndpoint::new(endpoint).map_err(|_| {
+            "production onion stream adapter closeout prepare rejected endpoint without exposing details"
+                .to_string()
+        })?;
+        let contact_id = ContactId::new("manual_peer").map_err(|_| {
+            "production onion stream adapter closeout prepare rejected contact without exposing details"
+                .to_string()
+        })?;
+        let pairwise_endpoint = PairwiseRendezvousEndpoint::new(
+            contact_id,
+            onion_endpoint,
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        )
+        .map_err(|_| {
+            "production onion stream adapter closeout prepare rejected pairwise endpoint without exposing details"
+                .to_string()
+        })?;
+        let policy = TransportPolicy::high_risk_default();
+        let outbound_gate_ready = OutboundStreamGateDecision::from_pairwise_endpoint_and_policy(
+            pairwise_endpoint.clone(),
+            policy.clone(),
+        )
+        .check()
+        .map_err(|error| format!("{error:?}"))?;
+        let outbound_adapter = OutboundStreamFailClosedAdapter::from_gate_ready(
+            outbound_gate_ready,
+            pairwise_endpoint,
+            policy,
+        )
+        .map_err(|error| format!("{error:?}"))?;
+        let outbound_preparation =
+            OutboundStreamPreparationBoundary::from_fail_closed_adapter(
+                outbound_gate_ready,
+                &outbound_adapter,
+            )
+            .check()
+            .map_err(|error| format!("{error:?}"))?;
+
+        StreamAdapterCloseoutDecision::from_fail_closed_adapters(
+            &inbound_adapter,
+            &outbound_adapter,
+            inbound_preparation,
+            outbound_preparation,
+        )
+        .check()
+        .map_err(|error| format!("{error:?}"))
+    } else {
+        let blocker = blockers
+            .first()
+            .cloned()
+            .unwrap_or_else(|| "stream adapter closeout inputs unavailable".to_string());
+        Err(blocker)
+    };
+
+    let closeout_ready = closeout_result.is_ok();
+    let closeout_integration_ready = closeout_result
+        .map(StreamCloseoutIntegrationOrder::from_closeout_ready)
+        .and_then(|order| order.check().map_err(|error| format!("{error:?}")));
+    let remote_peer_authentication_next = closeout_integration_ready.is_ok();
+    let verified_pairwise_session_after_remote_authentication = closeout_integration_ready.is_ok();
+    let next_blocker = match closeout_integration_ready {
+        Ok(_) => "none".to_string(),
+        Err(error) => error,
+    };
+    if !closeout_ready && !blockers.iter().any(|blocker| blocker == &next_blocker) {
+        blockers.push(next_blocker.clone());
+    }
+
+    Ok(ProductionOnionStreamAdapterCloseoutPrepareResult {
+        warning: "Stream adapter closeout preparation only. No stream accept, dial, read/write, envelope I/O, or message transport was attempted.",
+        preparation_only: true,
+        manual_client_attempt_feature_compiled,
+        persistent_client_ready,
+        inbound_stream_preparation_ready: inbound.inbound_stream_preparation_ready,
+        outbound_stream_preparation_ready: outbound.outbound_stream_preparation_ready,
+        stream_adapter_closeout_ready: closeout_ready,
+        remote_peer_authentication_next,
+        verified_pairwise_session_after_remote_authentication,
+        next_blocker,
+        blockers,
+        raw_endpoint_returned: false,
+        raw_path_returned: false,
+        onion_secret_returned: false,
+        descriptor_body_returned: false,
+        stream_id_returned: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        descriptor_publish_attempted: false,
+        stream_accept_attempted: false,
+        stream_dial_attempted: false,
+        stream_read_write_attempted: false,
+        stream_send_attempted: false,
+        envelope_io_opened: false,
+        runtime_messaging_enabled: false,
+    })
+}
+
+fn run_production_onion_remote_peer_authentication_prepare(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    rendezvous_endpoint: String,
+    persistent_client_ready: bool,
+) -> Result<ProductionOnionRemotePeerAuthenticationPrepareResult, String> {
+    use another_dimension_core::production::production_pairing_session_open_runtime;
+    use another_dimension_storage::production::ProfilePassphrase;
+    use another_dimension_transport::RemotePeerAuthenticationReady;
+
+    let closeout = run_production_onion_stream_adapter_closeout_prepare(
+        &app_data_root,
+        &app_cache_root,
+        profile.clone(),
+        passphrase.clone(),
+        rendezvous_endpoint,
+        persistent_client_ready,
+    )?;
+    let mut blockers = closeout.blockers.clone();
+    let session_runtime = if closeout.stream_adapter_closeout_ready {
+        let profile = sanitize_production_profile(profile)?;
+        let passphrase = ProfilePassphrase::new(passphrase.trim())
+            .map_err(|_| "invalid production profile passphrase")?;
+        let store_path = production_profile_store_path(app_data_root, &profile)?;
+        production_pairing_session_open_runtime(&store_path, profile, &passphrase).ok()
+    } else {
+        None
+    };
+    let stored_pairwise_session_ready = session_runtime.as_ref().is_some_and(|runtime| {
+        runtime.runtime_material_reconstructable()
+            && runtime.session_binding_ready()
+            && runtime.remote_peer_authentication_ready()
+    });
+    let outbound_envelope_io_boundary_ready = session_runtime
+        .as_ref()
+        .is_some_and(|runtime| runtime.outbound_envelope_io_ready());
+    let fallback_authentication_result = if closeout.stream_adapter_closeout_ready
+        && !stored_pairwise_session_ready
+    {
+        RemotePeerAuthenticationReady::from_missing_peer_proof()
+            .map(|_| ())
+            .map_err(|error| format!("{error:?}"))
+    } else if closeout.stream_adapter_closeout_ready {
+        Ok(())
+    } else {
+        Err(closeout.next_blocker.clone())
+    };
+    let remote_peer_authentication_ready = closeout.stream_adapter_closeout_ready
+        && stored_pairwise_session_ready
+        && fallback_authentication_result.is_ok();
+    let verified_pairwise_session_binding_ready =
+        remote_peer_authentication_ready && stored_pairwise_session_ready;
+    let bound_stream_session_ready =
+        verified_pairwise_session_binding_ready && outbound_envelope_io_boundary_ready;
+    let next_blocker = if remote_peer_authentication_ready {
+        "none".to_string()
+    } else {
+        match fallback_authentication_result {
+            Ok(_) => "StoredPairwiseSessionRequired".to_string(),
+            Err(error) => error,
+        }
+    };
+    if next_blocker != "none" && !blockers.iter().any(|blocker| blocker == &next_blocker) {
+        blockers.push(next_blocker.clone());
+    }
+
+    Ok(ProductionOnionRemotePeerAuthenticationPrepareResult {
+        warning: "Remote peer authentication boundary only. It can use a stored verified pairwise session as redacted authentication context, but no live peer challenge, stream read/write, envelope I/O, or message transport was attempted.",
+        preparation_only: true,
+        stream_adapter_closeout_ready: closeout.stream_adapter_closeout_ready,
+        remote_peer_authentication_required: true,
+        stored_pairwise_session_ready,
+        remote_peer_authentication_ready,
+        verified_pairwise_session_binding_ready,
+        bound_stream_session_ready,
+        outbound_envelope_io_boundary_ready,
+        next_blocker,
+        blockers,
+        raw_endpoint_returned: false,
+        raw_path_returned: false,
+        onion_secret_returned: false,
+        peer_proof_returned: false,
+        session_transcript_returned: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        stream_accept_attempted: false,
+        stream_dial_attempted: false,
+        stream_read_write_attempted: false,
+        stream_send_attempted: false,
+        envelope_io_opened: false,
+        runtime_messaging_enabled: false,
+    })
+}
+
+fn run_production_onion_outbound_envelope_send_prepare(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    rendezvous_endpoint: String,
+    message_number: u64,
+    persistent_client_ready: bool,
+) -> Result<ProductionOnionOutboundEnvelopeSendPrepareResult, String> {
+    use another_dimension_core::production::production_message_outbound_envelope_export;
+    use another_dimension_storage::production::ProfilePassphrase;
+    use another_dimension_transport::{
+        RedactedTransportRuntimeEvent, TransportRuntimeError, TransportTransferDirection,
+    };
+
+    if message_number == 0 {
+        return Err("message number is required".to_string());
+    }
+
+    let remote_auth = run_production_onion_remote_peer_authentication_prepare(
+        &app_data_root,
+        &app_cache_root,
+        profile.clone(),
+        passphrase.clone(),
+        rendezvous_endpoint,
+        persistent_client_ready,
+    )?;
+    let mut blockers = remote_auth.blockers.clone();
+    let envelope = if remote_auth.bound_stream_session_ready {
+        let profile = sanitize_production_profile(profile)?;
+        let passphrase = ProfilePassphrase::new(passphrase.trim())
+            .map_err(|_| "invalid production profile passphrase")?;
+        let store_path = production_profile_store_path(app_data_root, &profile)?;
+        production_message_outbound_envelope_export(
+            &store_path,
+            profile,
+            &passphrase,
+            message_number,
+        )
+        .ok()
+    } else {
+        None
+    };
+    let stored_outbound_envelope_ready = envelope.as_ref().is_some_and(|envelope| {
+        envelope.encrypted_envelope_present()
+            && envelope.envelope_decodable()
+            && envelope.envelope_message_number_matches()
+    });
+    let envelope_decodable = envelope
+        .as_ref()
+        .is_some_and(|envelope| envelope.envelope_decodable());
+    let envelope_message_number_matches = envelope
+        .as_ref()
+        .is_some_and(|envelope| envelope.envelope_message_number_matches());
+    let send_intent_prepared = remote_auth.remote_peer_authentication_ready
+        && remote_auth.bound_stream_session_ready
+        && remote_auth.outbound_envelope_io_boundary_ready
+        && stored_outbound_envelope_ready;
+    let ack_wait_registered = send_intent_prepared;
+    let event_summary = if send_intent_prepared {
+        vec![RedactedTransportRuntimeEvent::transfer_failed(
+            TransportTransferDirection::Send,
+            TransportRuntimeError::SendFailed,
+        )
+        .to_string()]
+    } else {
+        Vec::new()
+    };
+    let redacted_send_result_event_recorded = !event_summary.is_empty();
+    let next_blocker = if send_intent_prepared {
+        "none".to_string()
+    } else if !remote_auth.remote_peer_authentication_ready {
+        remote_auth.next_blocker.clone()
+    } else if !stored_outbound_envelope_ready {
+        "StoredOutboundEnvelopeRequired".to_string()
+    } else {
+        "OutboundEnvelopeSendIntentBlocked".to_string()
+    };
+    if next_blocker != "none" && !blockers.iter().any(|blocker| blocker == &next_blocker) {
+        blockers.push(next_blocker.clone());
+    }
+
+    Ok(ProductionOnionOutboundEnvelopeSendPrepareResult {
+        warning: "Outbound envelope send prepare boundary only. A stored encrypted envelope can be matched to the verified pairwise stream session, but no stream dial, stream send, envelope I/O, or message transport was attempted.",
+        preparation_only: true,
+        remote_peer_authentication_ready: remote_auth.remote_peer_authentication_ready,
+        bound_stream_session_ready: remote_auth.bound_stream_session_ready,
+        outbound_envelope_io_boundary_ready: remote_auth.outbound_envelope_io_boundary_ready,
+        stored_outbound_envelope_ready,
+        envelope_decodable,
+        envelope_message_number_matches,
+        send_intent_prepared,
+        ack_wait_registered,
+        redacted_send_result_event_recorded,
+        event_summary,
+        next_blocker,
+        blockers,
+        raw_endpoint_returned: false,
+        raw_path_returned: false,
+        onion_secret_returned: false,
+        peer_proof_returned: false,
+        session_transcript_returned: false,
+        envelope_payload_returned: false,
+        key_material_exposed: envelope
+            .as_ref()
+            .is_some_and(|envelope| envelope.key_material_exposed()),
+        network_io_attempted: false,
+        stream_accept_attempted: false,
+        stream_dial_attempted: false,
+        stream_read_write_attempted: false,
+        stream_send_attempted: false,
+        envelope_io_opened: false,
+        runtime_messaging_enabled: envelope
+            .as_ref()
+            .is_some_and(|envelope| envelope.runtime_messaging_enabled()),
+    })
+}
+
+async fn run_production_onion_outbound_envelope_send_attempt(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    state: &ProductionOnionClientRuntimeState,
+    profile: String,
+    passphrase: String,
+    rendezvous_endpoint: String,
+    message_number: u64,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionOutboundEnvelopeSendAttemptResult, String> {
+    let persistent_client_ready = run_production_onion_persistent_client_ready(state)?;
+    let prepare = run_production_onion_outbound_envelope_send_prepare(
+        &app_data_root,
+        &app_cache_root,
+        profile.clone(),
+        passphrase.clone(),
+        rendezvous_endpoint.clone(),
+        message_number,
+        persistent_client_ready,
+    )?;
+    let mut blockers = prepare.blockers.clone();
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut event_summary = Vec::new();
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let event_summary = Vec::new();
+    let next_blocker;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut send_attempt_started = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let send_attempt_started = false;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut send_attempt_succeeded = false;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let send_attempt_succeeded = false;
+
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    {
+        let _ = state;
+        next_blocker = "ManualClientAttemptFeatureNotEnabled".to_string();
+        if !blockers.iter().any(|blocker| blocker == &next_blocker) {
+            blockers.push(next_blocker.clone());
+        }
+        return Ok(ProductionOnionOutboundEnvelopeSendAttemptResult {
+            warning: "Outbound envelope send attempt is feature-disabled in this build. No stream dial, stream send, envelope I/O, or message transport was attempted.",
+            preparation_only: false,
+            manual_client_attempt_feature_compiled: false,
+            manual_network_permission_enabled: manual_network_permission,
+            persistent_client_ready,
+            send_intent_prepared: prepare.send_intent_prepared,
+            send_attempt_started,
+            send_attempt_succeeded,
+            ack_wait_registered: prepare.ack_wait_registered,
+            redacted_send_result_event_recorded: !event_summary.is_empty(),
+            event_summary,
+            next_blocker,
+            blockers,
+            raw_endpoint_returned: false,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            peer_proof_returned: false,
+            session_transcript_returned: false,
+            envelope_payload_returned: false,
+            key_material_exposed: prepare.key_material_exposed,
+            network_io_attempted: false,
+            stream_accept_attempted: false,
+            stream_dial_attempted: false,
+            stream_read_write_attempted: false,
+            stream_send_attempted: false,
+            envelope_io_opened: false,
+            runtime_messaging_enabled: false,
+        });
+    }
+
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        use another_dimension_core::production::production_message_outbound_envelope_export;
+        use another_dimension_storage::production::ProfilePassphrase;
+        use another_dimension_transport::{arti_adapter_spike, InMemoryTransportRuntimeEventSink};
+
+        if !manual_network_permission {
+            next_blocker = "ManualNetworkPermissionMissing".to_string();
+        } else if !persistent_client_ready {
+            next_blocker = "PersistentClientNotReady".to_string();
+        } else if !prepare.send_intent_prepared {
+            next_blocker = prepare.next_blocker.clone();
+        } else if state
+            .send_in_progress
+            .swap(true, std::sync::atomic::Ordering::AcqRel)
+        {
+            next_blocker = "OutboundEnvelopeSendAlreadyInProgress".to_string();
+        } else {
+            let envelope = sanitize_production_profile(profile)
+                .and_then(|sanitized_profile| {
+                    let passphrase = ProfilePassphrase::new(passphrase.trim())
+                        .map_err(|_| "invalid production profile passphrase".to_string())?;
+                    let store_path =
+                        production_profile_store_path(&app_data_root, &sanitized_profile)?;
+                    production_message_outbound_envelope_export(
+                        &store_path,
+                        sanitized_profile,
+                        &passphrase,
+                        message_number,
+                    )
+                    .map_err(|_| "stored outbound envelope unavailable".to_string())
+                });
+            match envelope {
+                Ok(envelope) => {
+                    let mut owner = match state.owner.lock() {
+                        Ok(mut guard) => guard.take(),
+                        Err(_) => None,
+                    };
+                    match owner.as_mut() {
+                        Some(owner) => {
+                            let mut sink = InMemoryTransportRuntimeEventSink::default();
+                            send_attempt_started = true;
+                            let result = owner
+                        .write_outbound_envelope_once(
+                                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                                    &rendezvous_endpoint,
+                                    envelope.export_payload().as_bytes(),
+                                    &mut sink,
+                                )
+                                .await;
+                            event_summary.extend(sink.events().iter().map(ToString::to_string));
+                            match result {
+                                Ok(()) => {
+                                    send_attempt_succeeded = true;
+                                    next_blocker = "AwaitingRemoteAck".to_string();
+                                }
+                                Err(error) => {
+                                    next_blocker = format!("{error:?}");
+                                }
+                            }
+                        }
+                        None => {
+                            next_blocker = "PersistentClientOwnerUnavailable".to_string();
+                        }
+                    }
+                    if let Ok(mut guard) = state.owner.lock() {
+                        *guard = owner;
+                    }
+                }
+                Err(error) => {
+                    next_blocker = error;
+                }
+            }
+            state
+                .send_in_progress
+                .store(false, std::sync::atomic::Ordering::Release);
+        }
+
+        if next_blocker != "none" && !blockers.iter().any(|blocker| blocker == &next_blocker) {
+            blockers.push(next_blocker.clone());
+        }
+        Ok(ProductionOnionOutboundEnvelopeSendAttemptResult {
+            warning: "Outbound envelope send attempt boundary. It may attempt one bounded onion stream dial and encrypted envelope write only when manual network permission, a retained Tor client, verified pairwise session, and stored outbound envelope are all ready. It returns only redacted status.",
+            preparation_only: false,
+            manual_client_attempt_feature_compiled: true,
+            manual_network_permission_enabled: manual_network_permission,
+            persistent_client_ready,
+            send_intent_prepared: prepare.send_intent_prepared,
+            send_attempt_started,
+            send_attempt_succeeded,
+            ack_wait_registered: prepare.ack_wait_registered && send_attempt_started,
+            redacted_send_result_event_recorded: !event_summary.is_empty(),
+            event_summary,
+            next_blocker,
+            blockers,
+            raw_endpoint_returned: false,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            peer_proof_returned: false,
+            session_transcript_returned: false,
+            envelope_payload_returned: false,
+            key_material_exposed: prepare.key_material_exposed,
+            network_io_attempted: send_attempt_started,
+            stream_accept_attempted: false,
+            stream_dial_attempted: send_attempt_started,
+            stream_read_write_attempted: send_attempt_started,
+            stream_send_attempted: send_attempt_succeeded,
+            envelope_io_opened: send_attempt_started,
+            runtime_messaging_enabled: false,
+        })
+    }
+}
+
 fn run_production_profile_list(
     app_data_root: impl AsRef<std::path::Path>,
 ) -> Result<ProductionProfileListResult, String> {
@@ -1299,12 +5280,17 @@ fn run_production_pairing_session_draft_save(
     passphrase: String,
     local_payload: String,
     remote_payload: String,
+    safety_confirmed: bool,
 ) -> Result<ProductionPairingSessionDraftResult, String> {
     use another_dimension_core::production::{
         production_pairing_session_save_draft, production_pairing_session_status,
     };
     use another_dimension_pairing::PairingPayload;
     use another_dimension_storage::production::ProfilePassphrase;
+
+    if !safety_confirmed {
+        return Err("safety number verification is required before saving session draft".to_string());
+    }
 
     let profile = sanitize_production_profile(profile)?;
     let passphrase = ProfilePassphrase::new(passphrase.trim())
@@ -1349,6 +5335,39 @@ fn run_production_pairing_session_draft_save(
         transport_io_opened: save.transport_io_opened() || status.transport_io_opened(),
         runtime_messaging_enabled: save.runtime_messaging_enabled()
             || status.runtime_messaging_enabled(),
+    })
+}
+
+fn run_production_pairing_safety_preview(
+    local_payload: String,
+    remote_payload: String,
+) -> Result<ProductionPairingSafetyPreviewResult, String> {
+    use another_dimension_crypto::derive_production_safety_material;
+    use another_dimension_pairing::{transcript, PairingPayload};
+
+    let local_payload = PairingPayload::decode(&sanitize_pairing_payload(local_payload)?)
+        .map_err(|_| "invalid local pairing payload")?;
+    let remote_payload = PairingPayload::decode(&sanitize_pairing_payload(remote_payload)?)
+        .map_err(|_| "invalid remote pairing payload")?;
+    let safety_transcript =
+        transcript(&local_payload, &remote_payload).map_err(|_| "safety transcript failed")?;
+    let safety = derive_production_safety_material(&safety_transcript);
+
+    Ok(ProductionPairingSafetyPreviewResult {
+        warning: "Compare this safety number with the other person out-of-band before saving the session draft.",
+        payloads_decodable: true,
+        safety_transcript_bound: !safety_transcript.is_empty(),
+        safety_number: safety.number,
+        safety_phrase: safety.phrase,
+        safety_confirmed: false,
+        payloads_returned: false,
+        safety_transcript_returned: false,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
     })
 }
 
@@ -2021,6 +6040,501 @@ fn sanitize_envelope_payload(payload: String) -> Result<String, String> {
     Ok(payload.to_string())
 }
 
+#[allow(clippy::too_many_arguments)]
+async fn run_production_two_profile_real_onion_roundtrip(
+    _app_data_root: impl AsRef<std::path::Path>,
+    _app_cache_root: impl AsRef<std::path::Path>,
+    profile_a: String,
+    profile_b: String,
+    _passphrase: String,
+    message: String,
+    message_ttl_seconds: u64,
+    manual_network_permission: bool,
+) -> Result<ProductionTwoProfileRealOnionRoundtripResult, String> {
+    let profile_a = sanitize_production_profile(profile_a)?;
+    let profile_b = sanitize_production_profile(profile_b)?;
+    if profile_a == profile_b {
+        return Err("real onion roundtrip requires two distinct profiles".to_string());
+    }
+    let profile_a_name = profile_a.as_str().to_string();
+    let profile_b_name = profile_b.as_str().to_string();
+    let message_ttl_seconds = sanitize_production_message_ttl_seconds(message_ttl_seconds)?;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let passphrase = _passphrase.trim().to_string();
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let message = sanitize_production_roundtrip_message(message)?;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let _ = sanitize_production_roundtrip_message(message)?;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let message_text =
+        String::from_utf8(message.clone()).map_err(|_| "real onion message must be UTF-8")?;
+
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    {
+        let mut blockers = vec!["ManualClientAttemptFeatureNotEnabled".to_string()];
+        if manual_network_permission {
+            blockers.push("ManualOnionClientFeatureRequired".to_string());
+        }
+        return Ok(ProductionTwoProfileRealOnionRoundtripResult {
+            warning: "Real onion roundtrip is feature-disabled in this build. No Tor bootstrap, onion service launch, stream I/O, or message transport was attempted.",
+            manual_client_attempt_feature_compiled: false,
+            manual_network_permission_enabled: manual_network_permission,
+            sender_profile: profile_a_name,
+            receiver_profile: profile_b_name,
+            message_number: 0,
+            message_ttl_seconds,
+            profile_a_unlocked: false,
+            profile_b_unlocked: false,
+            profile_a_client_bootstrapped: false,
+            profile_b_client_bootstrapped: false,
+            profile_a_onion_service_launched: false,
+            profile_b_onion_service_launched: false,
+            profile_a_endpoint_ready: false,
+            profile_b_endpoint_ready: false,
+            pairing_payloads_exported: false,
+            session_drafts_saved: false,
+            handshake_completed: false,
+            sender_session_ready: false,
+            receiver_session_ready: false,
+            message_number_reserved: false,
+            encrypted_envelope_exported: false,
+            send_attempt_started: false,
+            send_attempt_succeeded: false,
+            receive_attempt_started: false,
+            receive_attempt_succeeded: false,
+            inbound_message_stored: false,
+            received_status_verified: false,
+            received_export_matches_input: false,
+            event_summary: Vec::new(),
+            next_blocker: "ManualClientAttemptFeatureNotEnabled".to_string(),
+            blockers,
+            local_endpoint_returned: false,
+            peer_endpoint_returned: false,
+            envelope_payload_returned: false,
+            plaintext_returned_to_frontend: false,
+            store_path_returned: false,
+            passphrase_retained: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        });
+    }
+
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        use another_dimension_protocol::Envelope;
+        use another_dimension_transport::{
+            arti_adapter_spike, InMemoryTransportRuntimeEventSink,
+        };
+
+        if !manual_network_permission {
+            return Ok(ProductionTwoProfileRealOnionRoundtripResult {
+                warning: "Real onion roundtrip requires the manual network permission checkbox. No Tor bootstrap, onion service launch, stream I/O, or message transport was attempted.",
+                manual_client_attempt_feature_compiled: true,
+                manual_network_permission_enabled: false,
+                sender_profile: profile_a_name,
+                receiver_profile: profile_b_name,
+                message_number: 0,
+                message_ttl_seconds,
+                profile_a_unlocked: false,
+                profile_b_unlocked: false,
+                profile_a_client_bootstrapped: false,
+                profile_b_client_bootstrapped: false,
+                profile_a_onion_service_launched: false,
+                profile_b_onion_service_launched: false,
+                profile_a_endpoint_ready: false,
+                profile_b_endpoint_ready: false,
+                pairing_payloads_exported: false,
+                session_drafts_saved: false,
+                handshake_completed: false,
+                sender_session_ready: false,
+                receiver_session_ready: false,
+                message_number_reserved: false,
+                encrypted_envelope_exported: false,
+                send_attempt_started: false,
+                send_attempt_succeeded: false,
+                receive_attempt_started: false,
+                receive_attempt_succeeded: false,
+                inbound_message_stored: false,
+                received_status_verified: false,
+                received_export_matches_input: false,
+                event_summary: Vec::new(),
+                next_blocker: "ManualNetworkPermissionMissing".to_string(),
+                blockers: vec!["ManualNetworkPermissionMissing".to_string()],
+                local_endpoint_returned: false,
+                peer_endpoint_returned: false,
+                envelope_payload_returned: false,
+                plaintext_returned_to_frontend: false,
+                store_path_returned: false,
+                passphrase_retained: false,
+                key_material_exposed: false,
+                network_io_attempted: false,
+                transport_io_opened: false,
+                runtime_messaging_enabled: false,
+            });
+        }
+
+        let profile_a_unlock = run_production_profile_unlock(
+            &_app_data_root,
+            profile_a_name.clone(),
+            passphrase.clone(),
+        )?;
+        let profile_b_unlock = run_production_profile_unlock(
+            &_app_data_root,
+            profile_b_name.clone(),
+            passphrase.clone(),
+        )?;
+
+        let mut event_summary = Vec::new();
+        let mut profile_a_owner = build_real_onion_roundtrip_owner(
+            _app_data_root.as_ref(),
+            _app_cache_root.as_ref(),
+            &profile_a_name,
+            &mut event_summary,
+        )
+        .await?;
+        let mut profile_b_owner = build_real_onion_roundtrip_owner(
+            _app_data_root.as_ref(),
+            _app_cache_root.as_ref(),
+            &profile_b_name,
+            &mut event_summary,
+        )
+        .await?;
+
+        let profile_a_client_bootstrapped = profile_a_owner.summary().has_bootstrapped_client();
+        let profile_b_client_bootstrapped = profile_b_owner.summary().has_bootstrapped_client();
+        let mut launch_sink = InMemoryTransportRuntimeEventSink::default();
+        profile_a_owner
+            .launch_onion_service_once(
+                arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                &production_onion_service_nickname(&profile_a),
+                &mut launch_sink,
+            )
+            .map_err(|_| "profile A onion service launch failed")?;
+        profile_b_owner
+            .launch_onion_service_once(
+                arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                &production_onion_service_nickname(&profile_b),
+                &mut launch_sink,
+            )
+            .map_err(|_| "profile B onion service launch failed")?;
+        event_summary.extend(launch_sink.events().iter().map(ToString::to_string));
+
+        let profile_a_endpoint = profile_a_owner
+            .retained_onion_endpoint()
+            .ok_or_else(|| "profile A onion endpoint unavailable".to_string())?;
+        let profile_b_endpoint = profile_b_owner
+            .retained_onion_endpoint()
+            .ok_or_else(|| "profile B onion endpoint unavailable".to_string())?;
+
+        let profile_a_payload = run_production_pairing_payload_export(
+            &_app_data_root,
+            profile_a_name.clone(),
+            passphrase.clone(),
+            profile_a_endpoint.clone(),
+        )?;
+        let profile_b_payload = run_production_pairing_payload_export(
+            &_app_data_root,
+            profile_b_name.clone(),
+            passphrase.clone(),
+            profile_b_endpoint.clone(),
+        )?;
+        let profile_a_draft = run_production_pairing_session_draft_save(
+            &_app_data_root,
+            profile_a_name.clone(),
+            passphrase.clone(),
+            profile_a_payload.pairing_payload.clone(),
+            profile_b_payload.pairing_payload.clone(),
+            true,
+        )?;
+        let profile_b_draft = run_production_pairing_session_draft_save(
+            &_app_data_root,
+            profile_b_name.clone(),
+            passphrase.clone(),
+            profile_b_payload.pairing_payload,
+            profile_a_payload.pairing_payload,
+            true,
+        )?;
+
+        let profile_a_init = run_production_handshake_init_export(
+            &_app_data_root,
+            profile_a_name.clone(),
+            passphrase.clone(),
+        )?;
+        let mut profile_b_init = None;
+        let (sender_profile, receiver_profile, sender_owner, mut receiver_owner, receiver_endpoint, init_payload) =
+            if profile_a_init.output_payload_created {
+                (
+                    profile_a_name.clone(),
+                    profile_b_name.clone(),
+                    profile_a_owner,
+                    profile_b_owner,
+                    profile_b_endpoint,
+                    profile_a_init.output_payload,
+                )
+            } else {
+                let init = run_production_handshake_init_export(
+                    &_app_data_root,
+                    profile_b_name.clone(),
+                    passphrase.clone(),
+                )?;
+                if !init.output_payload_created {
+                    return Err("real onion handshake init was not created".to_string());
+                }
+                let output_payload = init.output_payload.clone();
+                profile_b_init = Some(init);
+                (
+                    profile_b_name.clone(),
+                    profile_a_name.clone(),
+                    profile_b_owner,
+                    profile_a_owner,
+                    profile_a_endpoint,
+                    output_payload,
+                )
+            };
+
+        let reply = run_production_handshake_reply_export(
+            &_app_data_root,
+            receiver_profile.clone(),
+            passphrase.clone(),
+            init_payload,
+        )?;
+        let finish = run_production_handshake_finish_export(
+            &_app_data_root,
+            sender_profile.clone(),
+            passphrase.clone(),
+            reply.output_payload,
+        )?;
+        let finish_import = run_production_handshake_finish_import(
+            &_app_data_root,
+            receiver_profile.clone(),
+            passphrase.clone(),
+            finish.output_payload,
+        )?;
+        let sender_state = run_production_session_state_check(
+            &_app_data_root,
+            sender_profile.clone(),
+            passphrase.clone(),
+        )?;
+        let receiver_state = run_production_session_state_check(
+            &_app_data_root,
+            receiver_profile.clone(),
+            passphrase.clone(),
+        )?;
+        let message_number = run_production_message_number_reserve(
+            &_app_data_root,
+            sender_profile.clone(),
+            passphrase.clone(),
+        )?;
+        let sender_profile_result = sender_profile.clone();
+        let receiver_profile_result = receiver_profile.clone();
+        let outbound = run_production_message_envelope_export(
+            &_app_data_root,
+            sender_profile,
+            passphrase.clone(),
+            message_number,
+            false,
+            message_text,
+            message_ttl_seconds,
+        )?;
+        let outbound_payload = outbound.envelope_payload.clone();
+
+        let mut receive_sink = InMemoryTransportRuntimeEventSink::default();
+        let mut send_sink = InMemoryTransportRuntimeEventSink::default();
+        let receive_future = async {
+            receiver_owner
+                .accept_inbound_rend_request_once(
+                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                    &mut receive_sink,
+                )
+                .await?;
+            receiver_owner
+                .read_accepted_inbound_stream_once(
+                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                    4096,
+                    &mut receive_sink,
+                )
+                .await
+        };
+        let send_future = async {
+            sender_owner
+                .write_outbound_envelope_once(
+                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                    &receiver_endpoint,
+                    outbound_payload.as_bytes(),
+                    &mut send_sink,
+                )
+                .await
+        };
+        let (received_bytes_result, send_result) = tokio::join!(receive_future, send_future);
+        event_summary.extend(send_sink.events().iter().map(ToString::to_string));
+        event_summary.extend(receive_sink.events().iter().map(ToString::to_string));
+
+        let received_bytes = received_bytes_result.map_err(|_| "real onion receive failed")?;
+        send_result.map_err(|_| "real onion send failed")?;
+        let received_payload = String::from_utf8(received_bytes)
+            .map_err(|_| "real onion received envelope was not valid UTF-8")?;
+        let received_payload = sanitize_envelope_payload(received_payload)?;
+        let received_envelope = Envelope::decode(&received_payload)
+            .map_err(|_| "real onion received envelope decode failed")?;
+        let inbound = run_production_message_envelope_import(
+            &_app_data_root,
+            receiver_profile.clone(),
+            passphrase.clone(),
+            received_envelope.message_number,
+            received_payload,
+            message_ttl_seconds,
+        )?;
+        let received = run_production_message_received_export(
+            &_app_data_root,
+            receiver_profile,
+            passphrase,
+            received_envelope.message_number,
+        )?;
+
+        Ok(ProductionTwoProfileRealOnionRoundtripResult {
+            warning: "real onion two-profile roundtrip attempted with explicit manual network permission; result returns redacted transport status only",
+            manual_client_attempt_feature_compiled: true,
+            manual_network_permission_enabled: true,
+            sender_profile: sender_profile_result,
+            receiver_profile: receiver_profile_result,
+            message_number,
+            message_ttl_seconds,
+            profile_a_unlocked: profile_a_unlock.storage_opened
+                && profile_a_unlock.profile_marker_present,
+            profile_b_unlocked: profile_b_unlock.storage_opened
+                && profile_b_unlock.profile_marker_present,
+            profile_a_client_bootstrapped,
+            profile_b_client_bootstrapped,
+            profile_a_onion_service_launched: true,
+            profile_b_onion_service_launched: true,
+            profile_a_endpoint_ready: true,
+            profile_b_endpoint_ready: true,
+            pairing_payloads_exported: profile_a_payload.pairing_payload_exported
+                && profile_b_payload.pairing_payload_exported,
+            session_drafts_saved: profile_a_draft.session_draft_present
+                && profile_b_draft.session_draft_present,
+            handshake_completed: finish.transport_state_persisted
+                && finish_import.transport_state_persisted,
+            sender_session_ready: sender_state.ready_for_message_envelope,
+            receiver_session_ready: receiver_state.session_transport_state_present
+                && receiver_state.runtime_material_reconstructable,
+            message_number_reserved: outbound.message_number_reserved,
+            encrypted_envelope_exported: outbound.encrypted_envelope_present,
+            send_attempt_started: true,
+            send_attempt_succeeded: true,
+            receive_attempt_started: true,
+            receive_attempt_succeeded: true,
+            inbound_message_stored: inbound.received_message_written,
+            received_status_verified: inbound.received_message_matches_session
+                && received.received_message_matches_session,
+            received_export_matches_input: received.received_message.as_bytes() == message.as_slice(),
+            event_summary,
+            next_blocker: "none".to_string(),
+            blockers: Vec::new(),
+            local_endpoint_returned: false,
+            peer_endpoint_returned: false,
+            envelope_payload_returned: false,
+            plaintext_returned_to_frontend: false,
+            store_path_returned: false,
+            passphrase_retained: false,
+            key_material_exposed: profile_a_unlock.key_material_exposed
+                || profile_b_unlock.key_material_exposed
+                || profile_a_payload.key_material_exposed
+                || profile_b_payload.key_material_exposed
+                || profile_a_draft.key_material_exposed
+                || profile_b_draft.key_material_exposed
+                || profile_a_init.key_material_exposed
+                || profile_b_init
+                    .as_ref()
+                    .is_some_and(|result| result.key_material_exposed)
+                || reply.key_material_exposed
+                || finish.key_material_exposed
+                || finish_import.key_material_exposed
+                || sender_state.key_material_exposed
+                || receiver_state.key_material_exposed
+                || outbound.key_material_exposed
+                || inbound.key_material_exposed
+                || received.key_material_exposed,
+            network_io_attempted: true,
+            transport_io_opened: true,
+            runtime_messaging_enabled: true,
+        })
+    }
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+async fn build_real_onion_roundtrip_owner(
+    app_data_root: &std::path::Path,
+    app_cache_root: &std::path::Path,
+    profile: &str,
+    event_summary: &mut Vec<String>,
+) -> Result<another_dimension_transport::arti_adapter_spike::PersistentArtiClientOwner, String> {
+    use another_dimension_transport::{
+        arti_adapter_spike, probe_app_private_state_cache_dirs, verify_transport_backup_exclusion,
+        BridgeCensorshipConfiguration, BridgeRequirement, InMemoryTransportRuntimeEventSink,
+        TransportBootstrapExecutionSkeleton, TransportBootstrapPolicy, TransportCrashRedactionPolicy,
+        TransportLogRedactionPolicy, TransportRuntimePermissionPreflight,
+    };
+
+    let transport_root = app_data_root
+        .join("profiles")
+        .join(profile)
+        .join("real-onion-roundtrip");
+    let cache_root = app_cache_root
+        .join("profiles")
+        .join(profile)
+        .join("real-onion-roundtrip");
+    let dirs =
+        probe_app_private_state_cache_dirs(transport_root.join("arti-state"), cache_root.join("arti-cache"))
+            .map_err(|_| "real onion state/cache dirs unavailable")?;
+    let _ = mark_transport_backup_exclusion(&dirs);
+    let backup_exclusion =
+        verify_transport_backup_exclusion(&dirs).map_err(|_| "real onion backup exclusion not verified")?;
+    let bridge_ready = BridgeCensorshipConfiguration::NoBridgeRequired
+        .check(BridgeRequirement::ExplicitlyNotRequiredForThisBuild)
+        .map_err(|_| "real onion bridge readiness failed")?;
+    let runtime_ready = TransportRuntimePermissionPreflight::from_fully_verified_preflight(
+        &dirs,
+        true,
+        &backup_exclusion,
+        bridge_ready,
+        TransportLogRedactionPolicy::RedactedTransportEventsOnly,
+        TransportCrashRedactionPolicy::SensitivePathsAndIdentifiersRedacted,
+    )
+    .check()
+    .map_err(|_| "real onion runtime preflight failed")?;
+    let policy = TransportBootstrapPolicy::high_risk_default();
+    let skeleton = TransportBootstrapExecutionSkeleton::new(runtime_ready, policy);
+    let arti_dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+        dirs.state_dir().to_path_buf(),
+        dirs.cache_dir().to_path_buf(),
+    )
+    .map_err(|_| "real onion Arti dirs rejected")?;
+    let adapter =
+        arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
+            arti_dirs, skeleton,
+        )
+        .map_err(|_| "real onion Arti adapter unavailable")?;
+    let mut owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
+    let mut sink = InMemoryTransportRuntimeEventSink::default();
+    let bootstrap_result = owner
+        .bootstrap_and_keep_client(
+            arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+            &mut sink,
+        )
+        .await;
+    event_summary.extend(sink.events().iter().map(ToString::to_string));
+    bootstrap_result.map_err(|_| {
+        format!(
+            "real onion bootstrap failed after redacted events: {}",
+            event_summary.join("; ")
+        )
+    })?;
+    Ok(owner)
+}
+
 fn run_production_two_profile_roundtrip(
     app_data_root: impl AsRef<std::path::Path>,
     profile_a: String,
@@ -2064,6 +6578,7 @@ fn run_production_two_profile_roundtrip(
         passphrase.clone(),
         profile_a_payload.pairing_payload.clone(),
         profile_b_payload.pairing_payload.clone(),
+        true,
     )?;
     let profile_b_draft = run_production_pairing_session_draft_save(
         &app_data_root,
@@ -2071,6 +6586,7 @@ fn run_production_two_profile_roundtrip(
         passphrase.clone(),
         profile_b_payload.pairing_payload,
         profile_a_payload.pairing_payload,
+        true,
     )?;
 
     let profile_a_init = run_production_handshake_init_export(
@@ -2596,15 +7112,37 @@ fn unique_production_roundtrip_dir() -> Result<std::path::PathBuf, String> {
 }
 
 pub fn run() {
+    install_manual_onion_tls_provider();
     tauri::Builder::default()
+        .manage(ProductionOnionClientRuntimeState::default())
         .invoke_handler(tauri::generate_handler![
             prototype_status,
             production_message_retention_policy,
+            production_onion_backup_exclusion_prepare,
+            production_onion_bootstrap_preflight_check,
+            production_onion_client_bootstrap_once,
+            production_onion_client_attempt_gate_check,
+            production_onion_descriptor_publication_attempt,
+            production_onion_descriptor_publication_prepare,
+            production_onion_inbound_envelope_receive_attempt,
+            production_onion_inbound_stream_prepare,
+            production_onion_launch_preflight_check,
+            production_onion_service_launch_attempt,
+            production_onion_outbound_stream_prepare,
+            production_onion_persistent_client_start,
+            production_onion_persistent_client_status,
+            production_onion_preflight_check,
+            production_onion_outbound_envelope_send_attempt,
+            production_onion_outbound_envelope_send_prepare,
+            production_onion_remote_peer_authentication_prepare,
+            production_onion_stream_adapter_closeout_prepare,
+            production_onion_key_record_prepare,
             production_profile_unlock,
             production_profile_list,
             production_message_retention_preference_get,
             production_message_retention_preference_set,
             production_pairing_payload_export,
+            production_pairing_safety_preview,
             production_pairing_session_draft_save,
             production_session_state_check,
             production_two_profile_session_status,
@@ -2618,12 +7156,23 @@ pub fn run() {
             production_message_transcript_export,
             production_local_roundtrip,
             production_two_profile_roundtrip,
+            production_two_profile_real_onion_roundtrip,
             production_two_profile_message_roundtrip,
             dev_local_demo,
             dev_local_message_loop
         ])
         .run(tauri::generate_context!())
         .expect("failed to run desktop prototype shell");
+}
+
+fn install_manual_onion_tls_provider() {
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        static INSTALL: std::sync::Once = std::sync::Once::new();
+        INSTALL.call_once(|| {
+            let _ = rustls::crypto::ring::default_provider().install_default();
+        });
+    }
 }
 
 #[cfg(test)]
@@ -2638,9 +7187,22 @@ mod tests {
         run_production_message_retention_preference_get,
         run_production_message_retention_preference_set,
         run_production_message_received_export, run_production_message_transcript_export,
-        run_production_pairing_payload_export,
+        run_production_onion_backup_exclusion_prepare,
+        run_production_onion_bootstrap_preflight_check, run_production_onion_client_bootstrap_once,
+        run_production_onion_client_attempt_gate_check,
+        run_production_onion_descriptor_publication_attempt,
+        run_production_onion_descriptor_publication_prepare,
+        run_production_onion_inbound_stream_prepare, run_production_onion_key_record_prepare,
+        run_production_onion_launch_preflight_check,
+        run_production_onion_launch_preflight_check_with_persistent_client,
+        run_production_onion_outbound_stream_prepare,
+        run_production_onion_persistent_client_start, run_production_onion_persistent_client_status,
+        run_production_onion_preflight_check, run_production_onion_service_launch_attempt,
+        run_production_onion_stream_adapter_closeout_prepare,
+        run_production_pairing_payload_export, run_production_pairing_safety_preview,
         run_production_pairing_session_draft_save, run_production_profile_list,
-        run_production_profile_unlock, run_production_session_state_check,
+        run_production_profile_unlock,
+        run_production_session_state_check, ProductionOnionClientRuntimeState,
         run_production_two_profile_message_roundtrip, run_production_two_profile_roundtrip,
         run_production_two_profile_session_status, sanitize_envelope_payload,
         sanitize_handshake_payload, sanitize_loop_messages, sanitize_pairing_payload,
@@ -2770,6 +7332,1232 @@ replay check: no replayed messages after message 2
         let profile = sanitize_production_profile("alice".to_string()).expect("profile");
         let path = production_profile_store_path("/tmp/app-data", &profile).expect("path");
         assert!(path.ends_with("profiles/alice.db"));
+    }
+
+    #[test]
+    fn production_onion_backup_exclusion_prepare_is_explicit_and_redacted() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        let result = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+
+        assert!(result.state_cache_dirs_accessible);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize backup exclusion");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn production_onion_bootstrap_preflight_prepares_skeleton_without_bootstrap() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+
+        let result = run_production_onion_bootstrap_preflight_check(&data_root, &cache_root);
+
+        assert!(result.bootstrap_preflight_only);
+        assert!(result.state_cache_dirs_accessible);
+        assert!(result.backup_exclusion_verified);
+        assert!(result.runtime_preflight_ready);
+        assert!(result.bootstrap_policy_ready);
+        assert_eq!(result.timeout_seconds, 45);
+        assert_eq!(result.retry_max_attempts, 2);
+        assert!(!result.silent_retry_allowed);
+        assert!(result.censorship_classification_ready);
+        assert!(!result.persistent_client_ready);
+        assert!(!result.manual_bootstrap_attempt_enabled);
+        assert_eq!(result.next_blocker, "ManualBootstrapAttemptNotEnabled");
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize bootstrap preflight");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_onion_client_attempt_gate_is_feature_closed_without_network() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        let result = tauri::async_runtime::block_on(run_production_onion_client_attempt_gate_check(
+            &data_root,
+            &cache_root,
+        ));
+
+        assert!(result.attempt_gate_only);
+        assert!(!result.manual_network_permission_enabled);
+        assert!(!result.client_attempt_started);
+        assert!(!result.persistent_client_ready);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize client attempt gate");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_onion_client_bootstrap_once_requires_feature_or_manual_permission() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        let result = tauri::async_runtime::block_on(run_production_onion_client_bootstrap_once(
+            &data_root,
+            &cache_root,
+            false,
+        ));
+
+        assert!(!result.manual_network_permission_enabled);
+        assert!(!result.client_attempt_started);
+        assert!(!result.client_bootstrap_succeeded);
+        assert!(!result.persistent_client_ready);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize client once result");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_onion_persistent_client_status_is_redacted_without_network() {
+        let state = ProductionOnionClientRuntimeState::default();
+
+        let result = run_production_onion_persistent_client_status(&state);
+
+        assert!(!result.persistent_client_ready);
+        assert!(!result.bootstrap_in_progress);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize client status");
+        assert!(!serialized.contains(".onion"));
+    }
+
+    #[test]
+    fn production_onion_persistent_client_start_requires_feature_or_manual_permission() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+        let state = ProductionOnionClientRuntimeState::default();
+
+        let result = tauri::async_runtime::block_on(run_production_onion_persistent_client_start(
+            &data_root,
+            &cache_root,
+            &state,
+            false,
+        ));
+
+        assert!(!result.manual_network_permission_enabled);
+        assert!(!result.client_bootstrap_started);
+        assert!(!result.client_bootstrap_succeeded);
+        assert!(!result.persistent_client_ready);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize persistent client start");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn production_onion_key_record_prepare_can_follow_backup_exclusion() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        let unlock = run_production_profile_unlock(
+            &data_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+        assert!(unlock.profile_marker_present);
+
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+
+        let result = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("onion key record prepare");
+
+        assert!(result.backup_exclusion_verified);
+        assert!(result.profile_transport_unlock_ready);
+        assert!(result.key_record_written);
+        assert!(result.key_material_ready);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn production_onion_launch_preflight_reaches_persistent_client_blocker_without_network() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        run_production_profile_unlock(
+            &data_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = run_production_onion_launch_preflight_check(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("launch preflight check");
+
+        assert!(result.launch_preflight_only);
+        assert!(result.profile_transport_unlock_ready);
+        assert!(result.backup_exclusion_verified);
+        assert!(result.key_record_present);
+        assert!(result.key_material_ready);
+        assert!(!result.persistent_client_ready);
+        assert!(result.endpoint_publication_policy_ready);
+        assert!(result.endpoint_update_policy_ready);
+        assert!(result.redacted_events_only);
+        assert!(!result.ready_for_onion_launch);
+        assert_eq!(result.next_blocker, "PersistentClientNotReady");
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize launch preflight");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn production_onion_launch_preflight_accepts_retained_client_boundary_without_launch() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        run_production_profile_unlock(
+            &data_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = run_production_onion_launch_preflight_check_with_persistent_client(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            true,
+        )
+        .expect("launch preflight check");
+
+        assert!(result.launch_preflight_only);
+        assert!(result.persistent_client_ready);
+        assert!(result.ready_for_onion_launch);
+        assert_eq!(result.next_blocker, "none");
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn production_onion_service_launch_attempt_requires_explicit_manual_permission() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+        let state = ProductionOnionClientRuntimeState::default();
+
+        run_production_profile_unlock(
+            &data_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = run_production_onion_service_launch_attempt(
+            &data_root,
+            &cache_root,
+            &state,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            false,
+        )
+        .expect("launch attempt");
+
+        assert!(!result.manual_network_permission_enabled);
+        assert!(result.profile_transport_unlock_ready);
+        assert!(result.backup_exclusion_verified);
+        assert!(result.key_record_present);
+        assert!(result.key_material_ready);
+        assert!(!result.launch_attempt_started);
+        assert!(!result.launch_attempt_succeeded);
+        assert!(!result.redacted_launch_result_event_recorded);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.descriptor_body_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.descriptor_publish_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize launch attempt");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn production_onion_descriptor_publication_prepare_blocks_without_persistent_client() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        run_production_profile_unlock(
+            &data_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = run_production_onion_descriptor_publication_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            false,
+        )
+        .expect("descriptor publication prepare");
+
+        assert!(result.preparation_only);
+        assert!(result.profile_transport_unlock_ready);
+        assert!(result.key_material_ready);
+        assert!(!result.persistent_client_ready);
+        assert!(!result.launch_preflight_ready);
+        assert!(!result.descriptor_preparation_ready);
+        assert_eq!(result.next_blocker, "PersistentClientNotReady");
+        assert!(!result.descriptor_body_returned);
+        assert!(!result.network_io_attempted);
+        assert!(!result.descriptor_publish_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize descriptor prepare");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn production_onion_descriptor_publication_attempt_requires_manual_permission() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        run_production_profile_unlock(
+            &data_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = run_production_onion_descriptor_publication_attempt(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            false,
+            false,
+        )
+        .expect("descriptor publication attempt");
+
+        assert!(!result.preparation_only);
+        assert!(!result.manual_network_permission_enabled);
+        assert!(!result.persistent_client_ready);
+        assert!(!result.publish_attempt_started);
+        assert!(!result.publish_attempt_succeeded);
+        assert!(!result.redacted_publish_result_event_recorded);
+        assert_eq!(result.next_blocker, "ManualNetworkPermissionMissing");
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.descriptor_body_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.descriptor_publish_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize descriptor attempt");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(all(target_os = "macos", feature = "manual-onion-client-attempt"))]
+    #[test]
+    fn production_onion_descriptor_publication_prepare_reaches_redacted_boundary_without_publish() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        run_production_profile_unlock(
+            &data_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = run_production_onion_descriptor_publication_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            true,
+        )
+        .expect("descriptor publication prepare");
+
+        assert!(result.manual_client_attempt_feature_compiled);
+        assert!(result.persistent_client_ready);
+        assert!(result.launch_preflight_ready);
+        assert!(result.onion_hosting_gate_ready);
+        assert!(result.descriptor_publication_gate_ready);
+        assert!(result.fail_closed_adapter_ready);
+        assert!(result.redacted_context_ready);
+        assert!(result.descriptor_preparation_ready);
+        assert_eq!(result.next_blocker, "none");
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.descriptor_body_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.descriptor_publish_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn production_onion_inbound_stream_prepare_blocks_without_persistent_client() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        run_production_profile_unlock(
+            &data_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = run_production_onion_inbound_stream_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            false,
+        )
+        .expect("inbound stream prepare");
+
+        assert!(result.preparation_only);
+        assert!(!result.persistent_client_ready);
+        assert!(!result.launch_preflight_ready);
+        assert!(!result.inbound_stream_preparation_ready);
+        assert_eq!(result.next_blocker, "PersistentClientNotReady");
+        assert!(!result.stream_id_returned);
+        assert!(!result.network_io_attempted);
+        assert!(!result.descriptor_publish_attempted);
+        assert!(!result.stream_accept_attempted);
+        assert!(!result.stream_read_write_attempted);
+        assert!(!result.envelope_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize inbound prepare");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(all(target_os = "macos", feature = "manual-onion-client-attempt"))]
+    #[test]
+    fn production_onion_inbound_stream_prepare_reaches_gate_without_accepting_stream() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        run_production_profile_unlock(
+            &data_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = run_production_onion_inbound_stream_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            true,
+        )
+        .expect("inbound stream prepare");
+
+        assert!(result.manual_client_attempt_feature_compiled);
+        assert!(result.persistent_client_ready);
+        assert!(result.launch_preflight_ready);
+        assert!(result.descriptor_publication_gate_ready);
+        assert!(result.descriptor_preparation_ready);
+        assert!(result.inbound_stream_gate_ready);
+        assert!(result.fail_closed_adapter_ready);
+        assert!(result.inbound_stream_preparation_ready);
+        assert_eq!(result.next_blocker, "none");
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.descriptor_body_returned);
+        assert!(!result.stream_id_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.descriptor_publish_attempted);
+        assert!(!result.stream_accept_attempted);
+        assert!(!result.stream_read_write_attempted);
+        assert!(!result.envelope_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(all(target_os = "macos", feature = "manual-onion-client-attempt"))]
+    #[test]
+    fn production_onion_inbound_envelope_receive_attempt_requires_manual_permission() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+        let state = ProductionOnionClientRuntimeState::default();
+
+        run_production_profile_unlock(
+            &data_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = tauri::async_runtime::block_on(
+            super::run_production_onion_inbound_envelope_receive_attempt(
+                &data_root,
+                &cache_root,
+                &state,
+                "alice".to_string(),
+                "correct-passphrase".to_string(),
+                false,
+            ),
+        )
+        .expect("inbound envelope receive attempt");
+
+        assert!(!result.preparation_only);
+        assert!(result.manual_client_attempt_feature_compiled);
+        assert!(!result.manual_network_permission_enabled);
+        assert!(!result.persistent_client_ready);
+        assert!(!result.receive_attempt_started);
+        assert!(!result.receive_attempt_succeeded);
+        assert!(!result.received_envelope_ready);
+        assert!(!result.inbound_import_attempted);
+        assert_eq!(result.next_blocker, "ManualNetworkPermissionMissing");
+        assert!(result
+            .blockers
+            .contains(&"ManualNetworkPermissionMissing".to_string()));
+        assert!(result.event_summary.is_empty());
+        assert!(!result.raw_endpoint_returned);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.descriptor_body_returned);
+        assert!(!result.stream_id_returned);
+        assert!(!result.envelope_payload_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.descriptor_publish_attempted);
+        assert!(!result.stream_accept_attempted);
+        assert!(!result.stream_read_write_attempted);
+        assert!(!result.envelope_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize receive attempt");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains(".onion"));
+        assert!(!serialized.contains("ADENV1"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_onion_outbound_stream_prepare_reaches_gate_without_dial_or_send() {
+        let result =
+            run_production_onion_outbound_stream_prepare("alice.onion".to_string())
+                .expect("outbound stream prepare");
+
+        assert!(result.preparation_only);
+        assert!(result.endpoint_accepted);
+        assert!(result.pairwise_endpoint_ready);
+        assert!(result.high_risk_onion_policy_ready);
+        assert!(result.outbound_stream_gate_ready);
+        assert!(result.fail_closed_adapter_ready);
+        assert!(result.outbound_stream_preparation_ready);
+        assert_eq!(result.next_blocker, "none");
+        assert!(!result.raw_endpoint_returned);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.stream_id_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.stream_dial_attempted);
+        assert!(!result.stream_send_attempted);
+        assert!(!result.envelope_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize outbound prepare");
+        assert!(!serialized.contains("alice.onion"));
+    }
+
+    #[test]
+    fn production_onion_outbound_stream_prepare_rejects_non_onion_endpoint() {
+        assert!(run_production_onion_outbound_stream_prepare(
+            "alice.example".to_string()
+        )
+        .is_err());
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn production_onion_stream_adapter_closeout_blocks_without_persistent_client() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        run_production_profile_unlock(
+            &data_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = run_production_onion_stream_adapter_closeout_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "alice.onion".to_string(),
+            false,
+        )
+        .expect("stream adapter closeout prepare");
+
+        assert!(result.preparation_only);
+        assert!(!result.persistent_client_ready);
+        assert!(!result.inbound_stream_preparation_ready);
+        assert!(result.outbound_stream_preparation_ready);
+        assert!(!result.stream_adapter_closeout_ready);
+        assert!(!result.remote_peer_authentication_next);
+        assert!(!result.verified_pairwise_session_after_remote_authentication);
+        assert_eq!(result.next_blocker, "PersistentClientNotReady");
+        assert!(!result.raw_endpoint_returned);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.descriptor_body_returned);
+        assert!(!result.stream_id_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.descriptor_publish_attempted);
+        assert!(!result.stream_accept_attempted);
+        assert!(!result.stream_dial_attempted);
+        assert!(!result.stream_read_write_attempted);
+        assert!(!result.stream_send_attempted);
+        assert!(!result.envelope_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize stream closeout");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("alice.onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(all(target_os = "macos", feature = "manual-onion-client-attempt"))]
+    #[test]
+    fn production_onion_stream_adapter_closeout_reaches_remote_auth_boundary_without_io() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        run_production_profile_unlock(
+            &data_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = run_production_onion_stream_adapter_closeout_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "alice.onion".to_string(),
+            true,
+        )
+        .expect("stream adapter closeout prepare");
+
+        assert!(result.preparation_only);
+        assert!(result.manual_client_attempt_feature_compiled);
+        assert!(result.persistent_client_ready);
+        assert!(result.inbound_stream_preparation_ready);
+        assert!(result.outbound_stream_preparation_ready);
+        assert!(result.stream_adapter_closeout_ready);
+        assert!(result.remote_peer_authentication_next);
+        assert!(result.verified_pairwise_session_after_remote_authentication);
+        assert_eq!(result.next_blocker, "none");
+        assert!(!result.raw_endpoint_returned);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.descriptor_body_returned);
+        assert!(!result.stream_id_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.descriptor_publish_attempted);
+        assert!(!result.stream_accept_attempted);
+        assert!(!result.stream_dial_attempted);
+        assert!(!result.stream_read_write_attempted);
+        assert!(!result.stream_send_attempted);
+        assert!(!result.envelope_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize stream closeout");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("alice.onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(all(target_os = "macos", feature = "manual-onion-client-attempt"))]
+    #[test]
+    fn production_onion_remote_peer_authentication_blocks_without_peer_proof() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        run_production_profile_unlock(
+            &data_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = super::run_production_onion_remote_peer_authentication_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "alice.onion".to_string(),
+            true,
+        )
+        .expect("remote peer authentication prepare");
+
+        assert!(result.preparation_only);
+        assert!(result.stream_adapter_closeout_ready);
+        assert!(result.remote_peer_authentication_required);
+        assert!(!result.stored_pairwise_session_ready);
+        assert!(!result.remote_peer_authentication_ready);
+        assert!(!result.verified_pairwise_session_binding_ready);
+        assert!(!result.bound_stream_session_ready);
+        assert!(!result.outbound_envelope_io_boundary_ready);
+        assert_eq!(result.next_blocker, "RemotePeerAuthenticationRequired");
+        assert!(!result.raw_endpoint_returned);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.peer_proof_returned);
+        assert!(!result.session_transcript_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.stream_accept_attempted);
+        assert!(!result.stream_dial_attempted);
+        assert!(!result.stream_read_write_attempted);
+        assert!(!result.stream_send_attempted);
+        assert!(!result.envelope_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize remote auth prepare");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("alice.onion"));
+        assert!(!serialized.contains("peer-proof"));
+        assert!(!serialized.contains("session-transcript"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(all(target_os = "macos", feature = "manual-onion-client-attempt"))]
+    #[test]
+    fn production_onion_remote_peer_authentication_uses_verified_pairwise_session_boundary() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        let roundtrip = run_production_two_profile_roundtrip(
+            &data_root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "transport auth bridge".to_string(),
+            86_400,
+        )
+        .expect("two-profile roundtrip");
+        assert!(roundtrip.sender_session_ready);
+        assert!(roundtrip.receiver_session_ready);
+
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = super::run_production_onion_remote_peer_authentication_prepare(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "bob.onion".to_string(),
+            true,
+        )
+        .expect("remote peer authentication prepare");
+
+        assert!(result.preparation_only);
+        assert!(result.stream_adapter_closeout_ready);
+        assert!(result.remote_peer_authentication_required);
+        assert!(result.stored_pairwise_session_ready);
+        assert!(
+            result.remote_peer_authentication_ready,
+            "next_blocker={}; blockers={:?}",
+            result.next_blocker,
+            result.blockers
+        );
+        assert!(result.verified_pairwise_session_binding_ready);
+        assert!(result.bound_stream_session_ready);
+        assert!(result.outbound_envelope_io_boundary_ready);
+        assert_eq!(result.next_blocker, "none");
+        assert!(!result.raw_endpoint_returned);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.peer_proof_returned);
+        assert!(!result.session_transcript_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.stream_accept_attempted);
+        assert!(!result.stream_dial_attempted);
+        assert!(!result.stream_read_write_attempted);
+        assert!(!result.stream_send_attempted);
+        assert!(!result.envelope_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize remote auth prepare");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("bob.onion"));
+        assert!(!serialized.contains("transport auth bridge"));
+        assert!(!serialized.contains("ADPAIR2"));
+        assert!(!serialized.contains("ADENV1"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(all(target_os = "macos", feature = "manual-onion-client-attempt"))]
+    #[test]
+    fn production_onion_outbound_envelope_send_prepare_uses_stored_envelope_without_send() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        let roundtrip = run_production_two_profile_roundtrip(
+            &data_root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "transport send intent".to_string(),
+            86_400,
+        )
+        .expect("two-profile roundtrip");
+        assert_eq!(roundtrip.message_number, 1);
+        assert!(roundtrip.encrypted_envelope_exported);
+
+        let backup = run_production_onion_backup_exclusion_prepare(&data_root, &cache_root);
+        assert!(backup.backup_exclusion_verified);
+        let key_record = run_production_onion_key_record_prepare(
+            &data_root,
+            &cache_root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("key record prepare");
+        assert!(key_record.key_material_ready);
+
+        let result = super::run_production_onion_outbound_envelope_send_prepare(
+            &data_root,
+            &cache_root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            format!("{}.onion", roundtrip.receiver_profile),
+            1,
+            true,
+        )
+        .expect("outbound envelope send prepare");
+
+        assert!(result.preparation_only);
+        assert!(
+            result.remote_peer_authentication_ready,
+            "next_blocker={}; blockers={:?}",
+            result.next_blocker,
+            result.blockers
+        );
+        assert!(result.bound_stream_session_ready);
+        assert!(result.outbound_envelope_io_boundary_ready);
+        assert!(result.stored_outbound_envelope_ready);
+        assert!(result.envelope_decodable);
+        assert!(result.envelope_message_number_matches);
+        assert!(result.send_intent_prepared);
+        assert!(result.ack_wait_registered);
+        assert!(result.redacted_send_result_event_recorded);
+        assert_eq!(result.event_summary.len(), 1);
+        assert!(result.event_summary[0].contains("TransferFailed"));
+        assert!(result.event_summary[0].contains("SendFailed"));
+        assert_eq!(result.next_blocker, "none");
+        assert!(!result.raw_endpoint_returned);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.peer_proof_returned);
+        assert!(!result.session_transcript_returned);
+        assert!(!result.envelope_payload_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.stream_accept_attempted);
+        assert!(!result.stream_dial_attempted);
+        assert!(!result.stream_read_write_attempted);
+        assert!(!result.stream_send_attempted);
+        assert!(!result.envelope_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize send prepare");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains(format!("{}.onion", roundtrip.receiver_profile).as_str()));
+        assert!(!serialized.contains("transport send intent"));
+        assert!(!serialized.contains("ADENV1"));
+        assert!(!serialized.contains("ADPAIR2"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(all(target_os = "macos", feature = "manual-onion-client-attempt"))]
+    #[test]
+    fn production_onion_outbound_envelope_send_attempt_requires_manual_permission() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+        let state = ProductionOnionClientRuntimeState::default();
+
+        let roundtrip = run_production_two_profile_roundtrip(
+            &data_root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "transport send attempt".to_string(),
+            86_400,
+        )
+        .expect("two-profile roundtrip");
+        assert_eq!(roundtrip.message_number, 1);
+        assert!(roundtrip.encrypted_envelope_exported);
+
+        let result =
+            tauri::async_runtime::block_on(super::run_production_onion_outbound_envelope_send_attempt(
+                &data_root,
+                &cache_root,
+                &state,
+                roundtrip.sender_profile.clone(),
+                "correct-passphrase".to_string(),
+                format!("{}.onion", roundtrip.receiver_profile),
+                1,
+                false,
+            ))
+            .expect("outbound envelope send attempt");
+
+        assert!(!result.preparation_only);
+        assert!(result.manual_client_attempt_feature_compiled);
+        assert!(!result.manual_network_permission_enabled);
+        assert!(!result.send_attempt_started);
+        assert!(!result.send_attempt_succeeded);
+        assert_eq!(result.next_blocker, "ManualNetworkPermissionMissing");
+        assert!(result.blockers.contains(&"ManualNetworkPermissionMissing".to_string()));
+        assert!(result.event_summary.is_empty());
+        assert!(!result.raw_endpoint_returned);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.peer_proof_returned);
+        assert!(!result.session_transcript_returned);
+        assert!(!result.envelope_payload_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.stream_accept_attempted);
+        assert!(!result.stream_dial_attempted);
+        assert!(!result.stream_read_write_attempted);
+        assert!(!result.stream_send_attempted);
+        assert!(!result.envelope_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize send attempt");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains(format!("{}.onion", roundtrip.receiver_profile).as_str()));
+        assert!(!serialized.contains("transport send attempt"));
+        assert!(!serialized.contains("ADENV1"));
+        assert!(!serialized.contains("ADPAIR2"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_onion_preflight_is_explicit_and_redacted() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        let result = run_production_onion_preflight_check(&data_root, &cache_root);
+
+        assert!(result.preflight_only);
+        assert!(result.manual_network_action);
+        assert!(!result.ready_for_onion_launch);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        assert!(result
+            .blockers
+            .iter()
+            .any(|blocker| blocker.contains("onion launch preflight blocked")));
+        let serialized = serde_json::to_string(&result).expect("serialize preflight");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_onion_key_record_prepare_blocks_without_backup_exclusion() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let result = run_production_onion_key_record_prepare(
+            root.join("data"),
+            root.join("cache"),
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("onion key record prepare result");
+
+        assert!(!result.storage_opened);
+        assert!(!result.profile_transport_unlock_ready);
+        assert!(!result.backup_exclusion_verified);
+        assert!(!result.lifecycle_ready);
+        assert!(!result.key_record_written);
+        assert!(!result.key_material_ready);
+        assert!(!result.raw_path_returned);
+        assert!(!result.onion_secret_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        assert!(result
+            .blockers
+            .iter()
+            .any(|blocker| blocker.contains("backup exclusion")));
+        let serialized = serde_json::to_string(&result).expect("serialize result");
+        assert!(!serialized.contains(root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]
@@ -2992,6 +8780,7 @@ replay check: no replayed messages after message 2
             "correct-passphrase".to_string(),
             alice_payload,
             bob_payload,
+            true,
         )
         .expect("session draft save");
 
@@ -3018,6 +8807,69 @@ replay check: no replayed messages after message 2
         let serialized = serde_json::to_string(&result).expect("serialize result");
         assert!(!serialized.contains("ADPAIR2"));
         assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("/tmp"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_pairing_safety_preview_is_redacted_and_required_for_draft_save() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        for profile in ["alice", "bob"] {
+            run_production_profile_unlock(
+                &root,
+                profile.to_string(),
+                "correct-passphrase".to_string(),
+            )
+            .expect("profile unlock");
+        }
+        let alice_payload = run_production_pairing_payload_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "alice.onion".to_string(),
+        )
+        .expect("alice payload")
+        .pairing_payload;
+        let bob_payload = run_production_pairing_payload_export(
+            &root,
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "bob.onion".to_string(),
+        )
+        .expect("bob payload")
+        .pairing_payload;
+
+        assert!(run_production_pairing_session_draft_save(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            alice_payload.clone(),
+            bob_payload.clone(),
+            false,
+        )
+        .is_err());
+
+        let result = run_production_pairing_safety_preview(alice_payload, bob_payload)
+            .expect("safety preview");
+
+        assert!(result.payloads_decodable);
+        assert!(result.safety_transcript_bound);
+        assert!(!result.safety_number.is_empty());
+        assert!(!result.safety_phrase.is_empty());
+        assert!(!result.safety_confirmed);
+        assert!(!result.payloads_returned);
+        assert!(!result.safety_transcript_returned);
+        assert!(!result.store_path_returned);
+        assert!(!result.passphrase_retained);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize safety preview");
+        assert!(!serialized.contains("ADPAIR2"));
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("alice.onion"));
+        assert!(!serialized.contains("bob.onion"));
         assert!(!serialized.contains("/tmp"));
         let _ = std::fs::remove_dir_all(root);
     }
@@ -3073,6 +8925,7 @@ replay check: no replayed messages after message 2
             "correct-passphrase".to_string(),
             alice_payload.clone(),
             bob_payload.clone(),
+            true,
         )
         .expect("alice draft");
         run_production_pairing_session_draft_save(
@@ -3081,6 +8934,7 @@ replay check: no replayed messages after message 2
             "correct-passphrase".to_string(),
             bob_payload,
             alice_payload,
+            true,
         )
         .expect("bob draft");
         let draft_state = run_production_session_state_check(
@@ -3202,6 +9056,7 @@ replay check: no replayed messages after message 2
             "correct-passphrase".to_string(),
             alice_payload.clone(),
             bob_payload.clone(),
+            true,
         )
         .expect("alice draft");
         run_production_pairing_session_draft_save(
@@ -3210,6 +9065,7 @@ replay check: no replayed messages after message 2
             "correct-passphrase".to_string(),
             bob_payload,
             alice_payload,
+            true,
         )
         .expect("bob draft");
 
@@ -3335,6 +9191,7 @@ replay check: no replayed messages after message 2
             "correct-passphrase".to_string(),
             alice_payload.clone(),
             bob_payload.clone(),
+            true,
         )
         .expect("alice draft");
         run_production_pairing_session_draft_save(
@@ -3343,6 +9200,7 @@ replay check: no replayed messages after message 2
             "correct-passphrase".to_string(),
             bob_payload,
             alice_payload,
+            true,
         )
         .expect("bob draft");
 
@@ -3694,8 +9552,9 @@ replay check: no replayed messages after message 2
         assert!(result.handshake_completed);
         assert!(result.sender_session_ready);
         assert!(result.receiver_session_ready);
-        assert_eq!(result.sender_profile, "alice");
-        assert_eq!(result.receiver_profile, "bob");
+        assert_ne!(result.sender_profile, result.receiver_profile);
+        assert!(["alice", "bob"].contains(&result.sender_profile.as_str()));
+        assert!(["alice", "bob"].contains(&result.receiver_profile.as_str()));
         assert_eq!(result.message_number, 1);
         assert_eq!(result.message_ttl_seconds, 86_400);
         assert!(result.message_number_reserved);
