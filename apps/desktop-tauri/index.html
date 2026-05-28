@@ -11,8 +11,17 @@
       <section class="status-panel" aria-labelledby="app-title">
         <p class="eyebrow">Onion-routed private chat</p>
         <h1 id="app-title">Another Dimension Chat</h1>
+        <details class="system-settings-panel">
+          <summary data-i18n="systemPanel">System panel</summary>
         <div class="theme-control" aria-label="Display mode">
-          <span>Display mode</span>
+          <span data-i18n="displayMode">Display mode</span>
+          <label class="language-control" for="language-selector">
+            <span data-i18n="language">Language</span>
+            <select id="language-selector" autocomplete="off">
+              <option value="en">English</option>
+              <option value="ko">한국어</option>
+            </select>
+          </label>
           <button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>
         </div>
         <section class="status-summary" aria-label="Current app state">
@@ -309,10 +318,11 @@
             </div>
           </dl>
         </section>
-        <section class="demo-panel" aria-labelledby="demo-title">
+        </details>
+        <section class="demo-panel" aria-labelledby="production-two-profile-title">
           <section class="production-workflow" aria-labelledby="production-two-profile-title">
             <div>
-              <p class="eyebrow">Darkroom chat</p>
+              <p class="eyebrow" data-i18n="darkroomChat">Darkroom chat</p>
               <h3 id="production-two-profile-title">Alice / Bob room</h3>
             </div>
             <dl class="room-identity-bar" aria-label="Room identity">
@@ -333,6 +343,11 @@
                 <dd id="room-identity-transport">local harness</dd>
               </div>
             </dl>
+            <button id="toggle-chat-settings" type="button" class="settings-toggle" data-i18n="roomSettings">
+              Room settings
+            </button>
+            <details class="chat-settings-panel" open>
+              <summary data-i18n="roomSettings">Room settings</summary>
             <div class="chat-room-controls" aria-label="Room controls">
               <label class="loop-label" for="production-two-profile-a">Profile A</label>
               <input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />
@@ -370,34 +385,7 @@
                 <span id="production-two-profile-step-reply-detail">After send, swap direction and write the reply.</span>
               </li>
             </ol>
-            <label class="loop-label" for="production-two-profile-message">Write message</label>
-            <textarea id="production-two-profile-message" rows="3" placeholder="Message from alice to bob">hello between app-data profiles</textarea>
-            <div class="loop-actions chat-primary-actions">
-              <button id="check-production-two-profile-session-status-inline" type="button">
-                Check sessions
-              </button>
-              <button id="run-production-two-profile-message-roundtrip" type="button">
-                Send
-              </button>
-              <button id="start-production-two-profile-onion-receive" type="button">
-                Start receiving
-              </button>
-              <button id="stop-production-two-profile-onion-receive" type="button">
-                Stop receiving
-              </button>
-              <p id="production-two-profile-readiness" class="action-readiness" aria-live="polite">
-                Blocked: passphrase required
-              </p>
-            </div>
-            <div class="chat-compose-tools" aria-label="Compose tools">
-              <button id="swap-two-profile-direction" type="button" class="flow-control is-secondary">
-                Swap
-              </button>
-              <button id="edit-two-profile-message" type="button" class="flow-control is-secondary">
-                Edit
-              </button>
-            </div>
-            <details class="chat-setup-controls">
+            <details class="chat-setup-controls" open>
               <summary>Onion setup</summary>
               <div class="loop-actions">
                 <button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>
@@ -432,6 +420,7 @@
                   Run real onion roundtrip
                 </button>
               </div>
+            </details>
             </details>
             <p id="production-two-profile-state" class="demo-state" aria-live="polite">
               Two-profile roundtrip idle
@@ -471,16 +460,43 @@
               </dl>
             </details>
             <div class="chat-transcript-toolbar">
-              <p class="loop-label">Transcript</p>
+              <p class="loop-label" data-i18n="transcript">Transcript</p>
               <div class="loop-actions">
-                <button id="load-production-two-profile-transcript" type="button">Sync</button>
-                <button id="reply-latest-two-profile-message" type="button">Reply</button>
-                <button id="review-pending-two-profile-message" type="button">Review</button>
+                <button id="load-production-two-profile-transcript" type="button" data-i18n="sync">Sync</button>
+                <button id="reply-latest-two-profile-message" type="button" data-i18n="reply">Reply</button>
+                <button id="review-pending-two-profile-message" type="button" data-i18n="review">Review</button>
               </div>
             </div>
             <ol id="production-two-profile-transcript" class="message-transcript" aria-live="polite">
               <li class="is-empty">No two-profile messages yet.</li>
             </ol>
+            <label class="loop-label chat-message-label" for="production-two-profile-message" data-i18n="writeMessage">Write message</label>
+            <textarea id="production-two-profile-message" rows="3" placeholder="Message from alice to bob">hello between app-data profiles</textarea>
+            <div class="loop-actions chat-primary-actions">
+              <button id="check-production-two-profile-session-status-inline" type="button" data-i18n="checkSessions">
+                Check sessions
+              </button>
+              <button id="run-production-two-profile-message-roundtrip" type="button" data-i18n="send">
+                Send
+              </button>
+              <button id="start-production-two-profile-onion-receive" type="button" data-i18n="startReceiving">
+                Start receiving
+              </button>
+              <button id="stop-production-two-profile-onion-receive" type="button" data-i18n="stopReceiving">
+                Stop receiving
+              </button>
+              <p id="production-two-profile-readiness" class="action-readiness" aria-live="polite">
+                Blocked: passphrase required
+              </p>
+            </div>
+            <div class="chat-compose-tools" aria-label="Compose tools">
+              <button id="swap-two-profile-direction" type="button" class="flow-control is-secondary" data-i18n="swap">
+                Swap
+              </button>
+              <button id="edit-two-profile-message" type="button" class="flow-control is-secondary" data-i18n="edit">
+                Edit
+              </button>
+            </div>
             <label class="loop-label" for="production-two-profile-transcript-export">Conversation TSV</label>
             <textarea id="production-two-profile-transcript-export" rows="5" readonly></textarea>
             <details class="followup-actions" aria-label="Post-roundtrip actions">
@@ -496,6 +512,8 @@
               </div>
             </details>
           </section>
+          <details id="local-diagnostic-tools" class="dev-diagnostic-panel">
+            <summary>Developer local diagnostics</summary>
           <div>
             <p class="eyebrow">Local diagnostic only</p>
             <h2 id="demo-title">Alice/Bob dev-insecure flow</h2>
@@ -570,6 +588,7 @@
               </div>
             </dl>
           </section>
+          </details>
           <details class="advanced-panel">
             <summary>Manual production payload tools</summary>
             <div class="advanced-stack">
@@ -935,6 +954,8 @@
           </section>
             </div>
           </details>
+          <details id="local-loop-tools" class="dev-diagnostic-panel">
+            <summary>Local loop diagnostics</summary>
           <section class="loop-panel" aria-labelledby="loop-title">
             <div>
               <p class="eyebrow">Repeatable local loop</p>
@@ -970,6 +991,7 @@ second local loop message</textarea>
             </dl>
           </section>
           <pre id="demo-output" class="is-idle">Demo has not run yet.</pre>
+          </details>
         </section>
       </section>
     </main>

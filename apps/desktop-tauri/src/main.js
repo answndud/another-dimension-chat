@@ -34,6 +34,8 @@ import {
   productionTwoProfileConversationCompare,
   productionTwoProfileCurrentAction,
   productionTwoProfileMessageResultView,
+  productionTwoProfileOutboundNeedsEndpointRefresh,
+  productionTwoProfileOutboundStatusLabel,
   productionTwoProfileReplySelectionView,
   productionTwoProfileResultView,
   productionTwoProfileResumeTarget,
@@ -48,10 +50,12 @@ import {
 } from "./message-envelope-slots.js";
 import { combinedTwoProfileTranscriptTsv } from "./transcript-export.js";
 import { transcriptRetentionView } from "./transcript-retention.js";
+import { applyStaticTranslations, normalizeLanguage, translate } from "./i18n.js";
 import "./styles.css";
 
 const fields = {
   themeToggle: document.querySelector("#theme-toggle"),
+  languageSelector: document.querySelector("#language-selector"),
   appReleaseSummary: document.querySelector("#app-release-summary"),
   localCapabilitySummary: document.querySelector("#local-capability-summary"),
   mainBlockerSummary: document.querySelector("#main-blocker-summary"),
@@ -261,6 +265,7 @@ const fields = {
   productionMessageBoundary: document.querySelector("#production-message-boundary"),
   productionTwoProfileA: document.querySelector("#production-two-profile-a"),
   productionTwoProfileB: document.querySelector("#production-two-profile-b"),
+  toggleChatSettings: document.querySelector("#toggle-chat-settings"),
   productionTwoProfileDirection: document.querySelector("#production-two-profile-direction"),
   productionTwoProfileStepSession: document.querySelector("#production-two-profile-step-session"),
   productionTwoProfileStepSessionDetail: document.querySelector(
@@ -346,6 +351,7 @@ const fields = {
   swapTwoProfileDirection: document.querySelector("#swap-two-profile-direction"),
   editTwoProfileMessage: document.querySelector("#edit-two-profile-message"),
   manualProductionTools: document.querySelector(".advanced-panel"),
+  localDiagnosticTools: document.querySelector("#local-diagnostic-tools"),
   localDiagnosticPanel: document.querySelector("#demo-title"),
   productionRoundtripMessage: document.querySelector("#production-roundtrip-message"),
   runProductionRoundtrip: document.querySelector("#run-production-roundtrip"),
@@ -424,14 +430,142 @@ const localPreviewRetentionPolicy = {
 };
 
 const themeStorageKey = "another-dimension-theme";
+const languageStorageKey = "another-dimension-language";
+let currentLanguage = normalizeLanguage(window.localStorage?.getItem(languageStorageKey) ?? "en");
+
+function t(key) {
+  return translate(currentLanguage, key);
+}
+
+function localizedOutboundStatus(label) {
+  const normalized = String(label ?? "").trim().toLowerCase();
+  const labels = {
+    pending: "pending",
+    sent: "sent",
+    canceled: "canceled",
+    "send timeout": "sendTimeout",
+    "stale endpoint": "staleEndpoint",
+    "tor bootstrap": "torBootstrap",
+    "permission off": "permissionOff",
+    "peer offline": "peerOffline",
+  };
+  return labels[normalized] ? t(labels[normalized]) : label;
+}
+
+function localizedRetentionLabel(entry) {
+  const retentionView = transcriptRetentionView(entry);
+  if (retentionView.state === "is-expired") {
+    return t("retentionExpired");
+  }
+  if (retentionView.state === "is-unknown") {
+    return t("retentionLegacy");
+  }
+  const ttlSeconds = Number.parseInt(entry?.ttlSeconds ?? entry?.ttl_seconds ?? 0, 10);
+  const duration = Number.isInteger(ttlSeconds) && ttlSeconds > 0
+    ? retentionView.label.replace("retention: ", "").replace(" active", "")
+    : "";
+  return duration ? `${duration} ${t("retentionActive")}` : t("retentionActive");
+}
+
+function localizedChatStatus(message) {
+  const text = String(message ?? "").trim();
+  const lower = text.toLowerCase();
+  if (!text) {
+    return "";
+  }
+  if (lower.includes("running") || lower.includes("already running") || lower.includes("in progress")) {
+    if (lower.includes("receive")) {
+      return t("statusReceiving");
+    }
+    if (lower.includes("send") || lower.includes("message")) {
+      return t("statusSending");
+    }
+    if (lower.includes("check")) {
+      return t("statusChecking");
+    }
+    return t("statusBusy");
+  }
+  if (lower.includes("passphrase")) {
+    return t("statusNeedPassphrase");
+  }
+  if (lower.includes("profile") || lower.includes("direction")) {
+    return t("statusNeedProfiles");
+  }
+  if (lower.includes("message required") || lower.includes("write a message") || lower.includes("write first")) {
+    return t("statusNeedMessage");
+  }
+  if (lower.includes("endpoint not checked")) {
+    return t("endpointNotChecked");
+  }
+  if (lower.includes("endpoint missing")) {
+    return t("endpointMissing");
+  }
+  if (lower.includes("endpoint stale")) {
+    return t("endpointStale");
+  }
+  if (lower.includes("endpoint ready")) {
+    return t("endpointReady");
+  }
+  if (lower.includes("ready")) {
+    return t("statusReady");
+  }
+  if (lower.includes("recovered") || lower.includes("resumed")) {
+    return t("statusRecovered");
+  }
+  if (lower.includes("loaded") || lower.includes("updated")) {
+    return t("statusLoaded");
+  }
+  if (lower.includes("incomplete") || lower.includes("rebuild") || lower.includes("setup")) {
+    return t("statusSetup");
+  }
+  if (lower.includes("failed") || lower.includes("blocked")) {
+    return t("statusFailed");
+  }
+  if (lower.includes("completed") || lower.includes("sent")) {
+    return t("statusSent");
+  }
+  if (lower.includes("receive mode stopped")) {
+    return t("statusStopped");
+  }
+  if (lower.includes("receiv")) {
+    return t("statusReceiving");
+  }
+  if (lower.includes("peer connected")) {
+    return t("statusPeerConnected");
+  }
+  if (lower.includes("retry")) {
+    return t("statusRetry");
+  }
+  if (lower.includes("canceled")) {
+    return t("statusCanceled");
+  }
+  return text;
+}
 
 function applyTheme(theme) {
   const mode = theme === "light" ? "light" : "dark";
   document.documentElement.dataset.theme = mode;
   if (fields.themeToggle) {
-    fields.themeToggle.textContent = mode === "dark" ? "Dark mode" : "Light mode";
+    fields.themeToggle.textContent = mode === "dark" ? t("darkMode") : t("lightMode");
     fields.themeToggle.setAttribute("aria-pressed", String(mode === "dark"));
   }
+}
+
+function applyLanguage(language) {
+  currentLanguage = normalizeLanguage(language);
+  window.localStorage?.setItem(languageStorageKey, currentLanguage);
+  if (fields.languageSelector) {
+    fields.languageSelector.value = currentLanguage;
+  }
+  applyStaticTranslations(document, currentLanguage);
+  applyTheme(document.documentElement.dataset.theme);
+  renderProductionTwoProfileConversationList();
+  renderRoomIdentityBar(productionTwoProfileInput(), twoProfileSessionsReadyForInput(productionTwoProfileInput()));
+  applyProductionActionState();
+}
+
+function initializeLanguage() {
+  applyLanguage(currentLanguage);
 }
 
 function initializeTheme() {
@@ -467,7 +601,7 @@ function setProductionRoundtripState(message) {
 }
 
 function setProductionTwoProfileState(message) {
-  setText(fields.productionTwoProfileState, message);
+  setText(fields.productionTwoProfileState, localizedChatStatus(message));
 }
 
 function setProductionProfileState(message) {
@@ -594,22 +728,22 @@ function setOpenManualProductionToolsLabel(label = "Open manual tools") {
 }
 
 function setReviewPendingTwoProfileLabel(label = "Review") {
-  setText(fields.reviewPendingTwoProfileMessage, label);
+  setText(fields.reviewPendingTwoProfileMessage, chatReviewButtonLabel(label));
 }
 
 function chatReplyButtonLabel(label = "Reply") {
   if (label === "Reply to latest" || label === "Use selected reply") {
-    return "Reply";
+    return t("reply");
   }
   if (label === "Reply target set") {
-    return "Reply set";
+    return t("replyTarget");
   }
-  return label;
+  return label === "Reply" ? t("reply") : label;
 }
 
 function chatReviewButtonLabel(label = "Review") {
   if (label === "Review pending") {
-    return "Review";
+    return t("review");
   }
   if (label === "Open import tools") {
     return "Import";
@@ -620,7 +754,7 @@ function chatReviewButtonLabel(label = "Review") {
   if (label === "Open export tools") {
     return "Export";
   }
-  return label;
+  return label === "Review" ? t("review") : label;
 }
 
 function setReplyLatestTwoProfileLabel(label = "Reply") {
@@ -635,6 +769,7 @@ function setProductionMessageManualCurrent(target) {
 
 function revealManualProductionTools() {
   if (fields.manualProductionTools) {
+    fields.manualProductionTools.classList.add("is-revealed");
     fields.manualProductionTools.open = true;
   }
 }
@@ -660,6 +795,7 @@ function setTwoProfileComposeCurrent(current) {
 }
 
 function setProductionFollowupActions(enabled, message) {
+  fields.productionTwoProfileNextStep?.closest(".followup-actions")?.classList.toggle("is-revealed", enabled);
   setText(fields.productionTwoProfileNextStep, message);
   setOpenManualProductionToolsLabel();
   setActionButtonState(
@@ -677,28 +813,28 @@ function setProductionTwoProfileReadiness(message, state = "blocked") {
   if (!node) {
     return;
   }
-  node.textContent = message;
+  node.textContent = localizedChatStatus(message);
   node.classList.remove("is-ready", "is-setup", "is-compose", "is-blocked");
   node.classList.add(`is-${state}`);
 }
 
 function renderRoomIdentityBar(input, sessionsReady) {
-  const route = input.profileA && input.profileB ? `${input.profileA} -> ${input.profileB}` : "profiles missing";
+  const route = input.profileA && input.profileB ? `${input.profileA} -> ${input.profileB}` : t("profilesMissing");
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   const activeEndpointState = twoProfilePeerEndpointState(input);
   const pairState = sessionsReady
-    ? "stored session"
+    ? t("storedSession")
     : sessionStatus
-      ? "incomplete"
-      : "not checked";
-  const verifyState = sessionsReady ? "safety confirmed" : "pending";
+      ? t("incomplete")
+      : t("notChecked");
+  const verifyState = sessionsReady ? t("safetyConfirmed") : t("pending");
   const transportState = activeEndpointState.ready
     ? fields.manualOnionNetworkPermission?.checked
-      ? "peer endpoint ready"
-      : "endpoint ready; permission off"
+      ? t("endpointReady")
+      : t("endpointReadyPermissionOff")
     : activeEndpointState.stale
-      ? "endpoint stale; refresh"
-    : activeEndpointState.reason;
+      ? t("endpointStale")
+    : localizedChatStatus(activeEndpointState.reason);
 
   setText(fields.roomIdentityRoute, route);
   setText(fields.roomIdentityPair, pairState);
@@ -708,7 +844,7 @@ function renderRoomIdentityBar(input, sessionsReady) {
 
 function renderAppStateSummary(status) {
   const releaseSummary = status.secure_release
-    ? "Ready: secure-release claim present"
+    ? "Unexpected: secure-release claim present"
     : "Blocked: secure-release claim closed";
   const localCapabilitySummary = status.usable_messaging
     ? "Ready: runtime messaging path enabled"
@@ -983,7 +1119,14 @@ function storedPeerEndpointTransportState(input = productionTwoProfileInput()) {
 }
 
 function latestTwoProfileOutboundOnionMessage(input = productionTwoProfileInput()) {
-  const latest = latestProductionTwoProfileSuccess;
+  const retryableEntry = latestTwoProfileRetryableOutboundEntry(input);
+  const latest = retryableEntry
+    ? {
+        profileA: retryableEntry.sender,
+        profileB: retryableEntry.receiver,
+        messageNumber: retryableEntry.messageNumber,
+      }
+    : latestProductionTwoProfileSuccess;
   if (
     !latest ||
     latest.profileA !== input.profileA ||
@@ -1296,6 +1439,9 @@ function appendProductionTwoProfileConversationStatus(
     ttlSeconds: retention.ttlSeconds,
     expiresAtMs: retention.expiresAtMs,
     expired: retention.expired === true,
+    outboundDeliveryState: retention.outboundDeliveryState,
+    outboundFailureKind: retention.outboundFailureKind,
+    outboundRetryable: retention.outboundRetryable === true,
   };
   const key = twoProfileConversationKey(entry);
   const existing = productionTwoProfileConversationEntries.get(key) ?? {
@@ -1309,12 +1455,17 @@ function appendProductionTwoProfileConversationStatus(
     existing.expiresAtMs = entry.expiresAtMs;
     existing.expired = entry.expired;
   }
+  if (normalizedKind === "sent") {
+    existing.outboundDeliveryState = entry.outboundDeliveryState || existing.outboundDeliveryState || "pending";
+    existing.outboundFailureKind = entry.outboundFailureKind || "";
+    existing.outboundRetryable = entry.outboundRetryable === true;
+  }
   productionTwoProfileConversationEntries.set(key, existing);
   renderProductionTwoProfileConversationList();
 }
 
 function twoProfileRetentionLabel(entry) {
-  return transcriptRetentionView(entry).label;
+  return localizedRetentionLabel(entry);
 }
 
 function renderProductionTwoProfileConversationList() {
@@ -1329,7 +1480,7 @@ function renderProductionTwoProfileConversationList() {
   if (entries.length === 0) {
     const empty = document.createElement("li");
     empty.className = "is-empty";
-    empty.textContent = "No two-profile messages yet.";
+    empty.textContent = t("emptyConversation");
     target.append(empty);
     return;
   }
@@ -1340,11 +1491,21 @@ function renderProductionTwoProfileConversationList() {
     const key = twoProfileConversationKey(entry);
     const delivered = twoProfileConversationDelivered(entry);
     const inboundOnly = !entry.statuses.has("sent") && entry.statuses.has("received");
+    const outboundPending = twoProfileConversationOutboundRetryable(entry);
+    const outboundCanceled = entry.outboundDeliveryState === "canceled";
     const senderEnvelopeSlotPresent = messageEnvelopeSlotReadyForEntry(entry.sender, entry);
     const selected = key === selectedTwoProfileConversationKey;
     const currentReplyTarget = key === replyTargetKey;
     const currentReviewTarget = selected && !currentReplyTarget && !delivered;
-    item.className = delivered ? "is-delivered" : inboundOnly ? "is-inbound-only" : "is-pending-receive";
+    item.className = delivered
+      ? "is-delivered"
+      : inboundOnly
+        ? "is-inbound-only"
+        : outboundCanceled
+          ? "is-canceled"
+          : outboundPending
+            ? "is-pending-send"
+            : "is-pending-receive";
     item.classList.toggle("is-selected", selected);
     item.classList.toggle("is-reply-target", currentReplyTarget);
     item.classList.toggle("is-review-target", currentReviewTarget);
@@ -1381,10 +1542,10 @@ function renderProductionTwoProfileConversationList() {
     const status = document.createElement("span");
     status.className = `transcript-status ${delivered ? "is-delivered" : inboundOnly ? "is-inbound-only" : "is-pending-receive"}`;
     status.textContent = delivered
-      ? "delivered"
+      ? t("delivered")
       : inboundOnly
-        ? "received"
-        : "pending";
+        ? t("received")
+        : localizedOutboundStatus(productionTwoProfileOutboundStatusLabel(entry));
 
     const slot = document.createElement("span");
     slot.className = `transcript-slot ${senderEnvelopeSlotPresent ? "is-present" : "is-missing"}`;
@@ -1401,22 +1562,48 @@ function renderProductionTwoProfileConversationList() {
     const action = document.createElement("span");
     action.className = `transcript-action ${actionView.state}`;
     action.textContent = currentReplyTarget
-      ? "reply target"
+      ? t("replyTarget")
       : actionView.state === "is-reply"
-        ? "reply ready"
+        ? t("replyReady")
         : actionView.state === "is-ready"
-          ? "action ready"
-          : "waiting";
+          ? t("actionReady")
+          : t("waiting");
 
     const details = document.createElement("span");
     details.className = "transcript-details";
-    details.textContent = `${slot.textContent} / ${actionView.rowLabel}`;
+    details.textContent = `${slot.textContent} / ${actionView.rowLabel}${entry.outboundFailureKind ? ` / ${entry.outboundFailureKind}` : ""}`;
 
     const body = document.createElement("span");
     body.className = "transcript-body";
     body.textContent = entry.message;
 
     item.append(meta, body, status, retention, action, details);
+    if (!delivered && outboundPending && entry.sender === productionTwoProfileInput().profileA) {
+      const actions = document.createElement("span");
+      actions.className = "transcript-row-actions";
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.textContent = productionTwoProfileOutboundNeedsEndpointRefresh(entry)
+        ? t("refreshEndpoint")
+        : t("retrySend");
+      retry.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (productionTwoProfileOutboundNeedsEndpointRefresh(entry)) {
+          refreshTwoProfileOutboundEndpointThenRetry(entry);
+        } else {
+          retryTwoProfileOutboundEntry(entry);
+        }
+      });
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.textContent = t("cancel");
+      cancel.addEventListener("click", (event) => {
+        event.stopPropagation();
+        cancelTwoProfileOutboundEntry(entry);
+      });
+      actions.append(retry, cancel);
+      item.append(actions);
+    }
     if (selected) {
       const review = document.createElement("span");
       review.className = `transcript-review ${
@@ -1431,6 +1618,7 @@ function renderProductionTwoProfileConversationList() {
     }
     target.append(item);
   }
+  updateMinimalChatMode();
 }
 
 function latestTwoProfileConversationEntry() {
@@ -1438,6 +1626,17 @@ function latestTwoProfileConversationEntry() {
     productionTwoProfileConversationCompare(left, right, "desc"),
   );
   return entries[0] ?? null;
+}
+
+function updateMinimalChatMode(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
+  const hasConversation = productionTwoProfileConversationEntries.size > 0;
+  const chatStarted = Boolean(hasConversation || latestProductionTwoProfileSuccess);
+  document.body.classList.toggle("is-chat-active", chatStarted);
+  document.body.classList.toggle("is-chat-empty", !hasConversation);
+  if (chatStarted) {
+    document.querySelector(".chat-settings-panel")?.removeAttribute("open");
+    document.querySelector(".chat-diagnostics")?.removeAttribute("open");
+  }
 }
 
 function twoProfileConversationDelivered(entry) {
@@ -1448,9 +1647,34 @@ function twoProfileConversationReplyable(entry) {
   return Boolean(entry?.statuses?.has("received"));
 }
 
+function twoProfileConversationOutboundRetryable(entry) {
+  return Boolean(
+    entry?.statuses?.has("sent") &&
+      !entry.statuses?.has("received") &&
+      entry.outboundRetryable === true &&
+      entry.outboundDeliveryState !== "canceled",
+  );
+}
+
+function twoProfileConversationPendingReviewable(entry) {
+  return Boolean(!twoProfileConversationReplyable(entry) && entry?.outboundDeliveryState !== "canceled");
+}
+
 function latestTwoProfilePendingConversationEntry() {
   const entries = [...productionTwoProfileConversationEntries.values()]
-    .filter((entry) => !twoProfileConversationReplyable(entry))
+    .filter(twoProfileConversationPendingReviewable)
+    .sort((left, right) => productionTwoProfileConversationCompare(left, right, "desc"));
+  return entries[0] ?? null;
+}
+
+function latestTwoProfileRetryableOutboundEntry(input = productionTwoProfileInput()) {
+  const entries = [...productionTwoProfileConversationEntries.values()]
+    .filter(
+      (entry) =>
+        twoProfileConversationOutboundRetryable(entry) &&
+        entry.sender === input.profileA &&
+        entry.receiver === input.profileB,
+    )
     .sort((left, right) => productionTwoProfileConversationCompare(left, right, "desc"));
   return entries[0] ?? null;
 }
@@ -1515,7 +1739,7 @@ function selectTwoProfileConversationMessage(sender, receiver, messageNumber, me
 
 function selectedTwoProfilePendingConversationEntry() {
   const selectedEntry = selectedTwoProfileConversationEntry();
-  return selectedEntry && !twoProfileConversationReplyable(selectedEntry)
+  return selectedEntry && twoProfileConversationPendingReviewable(selectedEntry)
     ? selectedEntry
     : null;
 }
@@ -1618,6 +1842,9 @@ function renderProductionTwoProfileTranscriptEntries(entries) {
         ttlSeconds: entry.ttlSeconds,
         expiresAtMs: entry.expiresAtMs,
         expired: entry.expired,
+        outboundDeliveryState: entry.outboundDeliveryState,
+        outboundFailureKind: entry.outboundFailureKind,
+        outboundRetryable: entry.outboundRetryable,
       },
     );
   }
@@ -1642,6 +1869,9 @@ function renderProductionTranscriptEntries(profile, entries) {
         ttlSeconds: entry.ttl_seconds,
         expiresAtMs: entry.expires_at_ms,
         expired: entry.expired,
+        outboundDeliveryState: entry.outbound_delivery_state,
+        outboundFailureKind: entry.outbound_failure_kind,
+        outboundRetryable: entry.outbound_retryable === true,
       },
     );
   }
@@ -2618,6 +2848,10 @@ function focusAfterProductionBusyAction(target) {
 }
 
 function focusLocalDiagnostic() {
+  if (fields.localDiagnosticTools) {
+    fields.localDiagnosticTools.classList.add("is-revealed");
+    fields.localDiagnosticTools.open = true;
+  }
   fields.localDiagnosticPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
   fields.runDemo?.focus();
 }
@@ -2868,11 +3102,12 @@ function autoSelectLatestDeliveredReply(options = {}) {
 function autoSelectTwoProfileResumeTarget(sessionStatus) {
   const target = productionTwoProfileResumeTarget({
     sessionsReady: Boolean(sessionStatus?.both_ready_for_message_envelope),
+    hasRetryableOutbound: Boolean(latestTwoProfileRetryableOutboundEntry()),
     hasPendingConversation: Boolean(latestTwoProfilePendingConversationEntry()),
     hasDeliveredConversation: Boolean(latestTwoProfileDeliveredConversationEntry()),
     hasMessageDraft: Boolean(productionTwoProfileInput().message),
   });
-  if (target === "pending-review") {
+  if (target === "retry-send" || target === "pending-review") {
     return autoSelectPendingTwoProfileConversation() ? target : null;
   }
   if (target === "reply-latest") {
@@ -3187,6 +3422,7 @@ function applyProductionActionState() {
   renderProductionTwoProfileDirection(twoProfile);
   renderProductionTwoProfileFlow(twoProfile);
   renderRoomIdentityBar(twoProfile, twoProfileSessionsReady);
+  updateMinimalChatMode(twoProfile, twoProfileSessionsReady);
   const twoProfileReadiness = twoProfilePrimaryReadiness(
     twoProfile,
     busy,
@@ -5945,6 +6181,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
       rememberTwoProfileSessionStatus(input, status);
       renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
     }
+    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
   } catch (error) {
     setProductionTwoProfileState("Onion envelope send failed");
     setText(fields.productionTwoProfileWarning, `Onion envelope send failed without returning secrets. ${error}`);
@@ -5954,6 +6191,65 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
     if (fields.sendProductionTwoProfileLatestOnionEnvelope) {
       fields.sendProductionTwoProfileLatestOnionEnvelope.disabled = false;
     }
+    applyProductionActionState();
+  }
+}
+
+async function retryTwoProfileOutboundEntry(entry) {
+  const input = productionTwoProfileInput();
+  if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
+    setProductionTwoProfileState("Retry send needs direction");
+    setText(fields.productionTwoProfileWarning, "Select the sender -> receiver direction for this pending message before retry send.");
+    return;
+  }
+  latestProductionTwoProfileSuccess = {
+    profileA: entry.sender,
+    profileB: entry.receiver,
+    messageNumber: Number.parseInt(entry.messageNumber, 10),
+    messageLength: String(entry.message ?? "").length,
+    fingerprint: twoProfileInputFingerprint(input),
+  };
+  await sendProductionTwoProfileLatestOnionEnvelope();
+  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+}
+
+async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
+  const input = productionTwoProfileInput();
+  if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
+    setProductionTwoProfileState("Endpoint refresh needs direction");
+    setText(fields.productionTwoProfileWarning, "Select the sender -> receiver direction for this pending message before refreshing the endpoint.");
+    return;
+  }
+  await refreshProductionTwoProfilePeerEndpoints();
+  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+}
+
+async function cancelTwoProfileOutboundEntry(entry) {
+  const input = productionTwoProfileInput();
+  if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
+    setProductionTwoProfileState("Cancel send needs direction");
+    setText(fields.productionTwoProfileWarning, "Select the sender -> receiver direction for this pending message before cancel.");
+    return;
+  }
+  productionBusyAction = "two-profile-outbound-cancel";
+  applyProductionActionState();
+  try {
+    await invoke("production_message_outbound_cancel_pending", {
+      profile: entry.sender,
+      passphrase: input.passphrase,
+      messageNumber: Number.parseInt(entry.messageNumber, 10),
+    });
+    setProductionTwoProfileState("Pending send canceled");
+    setText(
+      fields.productionTwoProfileWarning,
+      `Canceled pending send for message #${entry.messageNumber}. Transcript and session state remain stored.`,
+    );
+    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+  } catch (error) {
+    setProductionTwoProfileState("Cancel send failed");
+    setText(fields.productionTwoProfileWarning, `Cancel failed without exposing local data. ${String(error)}`);
+  } finally {
+    productionBusyAction = null;
     applyProductionActionState();
   }
 }
@@ -7422,6 +7718,9 @@ function twoProfileTranscriptEntriesFromProfile(profile, counterpartProfile, ent
     ttlSeconds: entry.ttl_seconds,
     expiresAtMs: entry.expires_at_ms,
     expired: entry.expired,
+    outboundDeliveryState: entry.outbound_delivery_state,
+    outboundFailureKind: entry.outbound_failure_kind,
+    outboundRetryable: entry.outbound_retryable === true,
   }));
 }
 
@@ -7902,6 +8201,21 @@ if (fields.runDemo) {
 
 if (fields.themeToggle) {
   fields.themeToggle.addEventListener("click", toggleTheme);
+}
+
+if (fields.languageSelector) {
+  fields.languageSelector.addEventListener("change", () => {
+    applyLanguage(fields.languageSelector.value);
+  });
+}
+
+if (fields.toggleChatSettings) {
+  fields.toggleChatSettings.addEventListener("click", () => {
+    const panel = document.querySelector(".chat-settings-panel");
+    if (panel) {
+      panel.open = !panel.open;
+    }
+  });
 }
 
 if (fields.checkOnionPreflight) {
@@ -8511,6 +8825,7 @@ if (fields.resetLoop) {
   fields.resetLoop.addEventListener("click", resetLoopView);
 }
 
+initializeLanguage();
 initializeTheme();
 loadProductionMessageRetentionPolicy();
 renderPrototypeStatus();

@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
     "build": "vite build",
-    "test:state": "node --test src/action-state.test.js src/message-envelope-slots.test.js src/transcript-export.test.js src/transcript-retention.test.js",
+    "test:state": "node --test src/action-state.test.js src/i18n.test.js src/message-envelope-slots.test.js src/transcript-export.test.js src/transcript-retention.test.js",
     "preview": "vite preview --host 127.0.0.1 --port 1420 --strictPort",
-    "tauri": "node scripts/with-cargo-target.mjs tauri"
+    "tauri": "node scripts/with-cargo-target.mjs tauri",
+    "tauri:build": "node scripts/with-cargo-target.mjs tauri build",
+    "tauri:build:beta-onion": "node scripts/with-cargo-target.mjs tauri build --features manual-onion-client-attempt"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",

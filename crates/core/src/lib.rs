@@ -738,6 +738,9 @@ pub mod production {
         ttl_seconds: u64,
         expires_at_ms: Option<u128>,
         expired: bool,
+        outbound_delivery_state: Option<&'static str>,
+        outbound_failure_kind: Option<String>,
+        outbound_retryable: bool,
     }
 
     #[derive(Clone, Debug, Eq, PartialEq)]
@@ -2790,6 +2793,18 @@ pub mod production {
         pub fn expired(&self) -> bool {
             self.expired
         }
+
+        pub fn outbound_delivery_state(&self) -> Option<&'static str> {
+            self.outbound_delivery_state
+        }
+
+        pub fn outbound_failure_kind(&self) -> Option<&str> {
+            self.outbound_failure_kind.as_deref()
+        }
+
+        pub fn outbound_retryable(&self) -> bool {
+            self.outbound_retryable
+        }
     }
 
     impl ProductionMessageTranscriptExport {
@@ -3306,6 +3321,41 @@ pub mod production {
         plaintext: Vec<u8>,
         created_at_ms: u128,
         ttl_seconds: u64,
+        delivery_state: OutboundDeliveryState,
+        failure_kind: Option<String>,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    enum OutboundDeliveryState {
+        Pending,
+        Sent,
+        Failed,
+        Canceled,
+    }
+
+    impl OutboundDeliveryState {
+        fn tag(self) -> &'static str {
+            match self {
+                Self::Pending => "pending",
+                Self::Sent => "sent",
+                Self::Failed => "failed",
+                Self::Canceled => "canceled",
+            }
+        }
+
+        fn parse(value: &str) -> Result<Self, ProductionSessionError> {
+            match value {
+                "pending" => Ok(Self::Pending),
+                "sent" => Ok(Self::Sent),
+                "failed" => Ok(Self::Failed),
+                "canceled" => Ok(Self::Canceled),
+                _ => Err(ProductionSessionError::UnexpectedEnvelope),
+            }
+        }
+
+        fn retryable(self) -> bool {
+            matches!(self, Self::Pending | Self::Failed)
+        }
     }
 
     impl SentMessageRecord {
@@ -3339,11 +3389,29 @@ pub mod production {
                 plaintext: plaintext.to_vec(),
                 created_at_ms,
                 ttl_seconds,
+                delivery_state: OutboundDeliveryState::Pending,
+                failure_kind: None,
             })
         }
 
+        fn with_delivery_state(
+            mut self,
+            delivery_state: OutboundDeliveryState,
+            failure_kind: Option<String>,
+        ) -> Self {
+            self.delivery_state = delivery_state;
+            self.failure_kind = failure_kind
+                .map(|kind| sanitize_outbound_failure_kind(&kind))
+                .filter(|kind| !kind.is_empty());
+            self
+        }
+
         fn encode(&self) -> String {
-            if self.created_at_ms == 0 && self.ttl_seconds == 0 {
+            if self.delivery_state == OutboundDeliveryState::Pending
+                && self.failure_kind.is_none()
+                && self.created_at_ms == 0
+                && self.ttl_seconds == 0
+            {
                 format!(
                     "ADSENTMSG1|{}|{}|{}|{}",
                     self.contact_id.as_str(),
@@ -3351,7 +3419,9 @@ pub mod production {
                     message_type_tag(&self.message_type),
                     encode_hex(&self.plaintext)
                 )
-            } else {
+            } else if self.delivery_state == OutboundDeliveryState::Pending
+                && self.failure_kind.is_none()
+            {
                 format!(
                     "ADSENTMSG2|{}|{}|{}|{}|{}|{}",
                     self.contact_id.as_str(),
@@ -3360,6 +3430,18 @@ pub mod production {
                     self.created_at_ms,
                     self.ttl_seconds,
                     encode_hex(&self.plaintext)
+                )
+            } else {
+                format!(
+                    "ADSENTMSG3|{}|{}|{}|{}|{}|{}|{}|{}",
+                    self.contact_id.as_str(),
+                    self.message_number,
+                    message_type_tag(&self.message_type),
+                    self.created_at_ms,
+                    self.ttl_seconds,
+                    encode_hex(&self.plaintext),
+                    self.delivery_state.tag(),
+                    self.failure_kind.as_deref().unwrap_or("none")
                 )
             }
         }
@@ -3401,6 +3483,36 @@ pub mod production {
                         created_at_ms,
                         ttl_seconds,
                     )
+                }
+                Some("ADSENTMSG3") if parts.len() == 9 => {
+                    let contact_id = ContactId::new(parts[1])
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let message_number = parts[2]
+                        .parse::<u64>()
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let message_type = parse_message_type_tag(parts[3])?;
+                    let created_at_ms = parts[4]
+                        .parse::<u128>()
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let ttl_seconds = parts[5]
+                        .parse::<u64>()
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let plaintext = decode_hex(parts[6])
+                        .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+                    let delivery_state = OutboundDeliveryState::parse(parts[7])?;
+                    let failure_kind = match parts[8] {
+                        "none" => None,
+                        value => Some(sanitize_outbound_failure_kind(value)),
+                    };
+                    Ok(Self::new_with_retention(
+                        contact_id,
+                        message_number,
+                        message_type,
+                        &plaintext,
+                        created_at_ms,
+                        ttl_seconds,
+                    )?
+                    .with_delivery_state(delivery_state, failure_kind))
                 }
                 _ => Err(ProductionSessionError::UnexpectedEnvelope),
             }
@@ -5734,6 +5846,58 @@ pub mod production {
         })
     }
 
+    pub fn production_message_outbound_mark_send_succeeded(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        message_number: u64,
+    ) -> Result<(), ProductionSessionError> {
+        update_outbound_delivery_state(
+            store_path,
+            profile,
+            passphrase,
+            message_number,
+            OutboundDeliveryState::Sent,
+            None,
+            false,
+        )
+    }
+
+    pub fn production_message_outbound_mark_send_failed(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        message_number: u64,
+        failure_kind: &str,
+    ) -> Result<(), ProductionSessionError> {
+        update_outbound_delivery_state(
+            store_path,
+            profile,
+            passphrase,
+            message_number,
+            OutboundDeliveryState::Failed,
+            Some(failure_kind),
+            false,
+        )
+    }
+
+    pub fn production_message_outbound_cancel_pending(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        message_number: u64,
+    ) -> Result<(), ProductionSessionError> {
+        update_outbound_delivery_state(
+            store_path,
+            profile,
+            passphrase,
+            message_number,
+            OutboundDeliveryState::Canceled,
+            None,
+            true,
+        )
+    }
+
     pub fn production_endpoint_update_control_envelope_export(
         store_path: impl AsRef<std::path::Path>,
         profile: ProfileName,
@@ -6395,6 +6559,9 @@ pub mod production {
                     ttl_seconds: sent.ttl_seconds,
                     expires_at_ms: sent.expires_at_ms(),
                     expired: sent.is_expired_at(observed_at_ms),
+                    outbound_delivery_state: Some(sent.delivery_state.tag()),
+                    outbound_failure_kind: sent.failure_kind.clone(),
+                    outbound_retryable: sent.delivery_state.retryable(),
                     plaintext: sent.plaintext,
                 });
             }
@@ -6429,6 +6596,9 @@ pub mod production {
                     ttl_seconds: received.ttl_seconds,
                     expires_at_ms: received.expires_at_ms(),
                     expired: received.is_expired_at(observed_at_ms),
+                    outbound_delivery_state: None,
+                    outbound_failure_kind: None,
+                    outbound_retryable: false,
                     plaintext: received.plaintext,
                 });
             }
@@ -7292,6 +7462,88 @@ pub mod production {
             MessageType::Data,
         ))?;
         Ok(true)
+    }
+
+    fn update_outbound_delivery_state(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+        message_number: u64,
+        delivery_state: OutboundDeliveryState,
+        failure_kind: Option<&str>,
+        delete_envelope: bool,
+    ) -> Result<(), ProductionSessionError> {
+        if message_number == 0 {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        if purge_expired_outbound_message_if_needed(
+            &store,
+            &material,
+            message_number,
+            production_now_ms(),
+        )? {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let sent_record_id = production_sent_message_record_id(
+            &material.channel_id,
+            &material.remote_contact_id,
+            message_number,
+        );
+        let record = store
+            .get(&sent_record_id)?
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)?;
+        if record.kind != ProductionRecordKind::SentMessage {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let state = String::from_utf8(record.sealed_body)
+            .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+        let sent = SentMessageRecord::decode(&state)?;
+        if sent.contact_id != material.remote_contact_id
+            || sent.message_number != message_number
+            || sent.message_type != MessageType::Data
+            || sent.plaintext.is_empty()
+        {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let updated = sent.with_delivery_state(
+            delivery_state,
+            failure_kind.map(sanitize_outbound_failure_kind),
+        );
+        let updated_record = EncryptedRecord::new(
+            ProductionRecordKind::SentMessage,
+            EncryptedRecordScope::contact(profile, material.remote_contact_id.clone()),
+            b"sqlcipher-page-encryption-v1".to_vec(),
+            updated.encode().into_bytes(),
+        )
+        .map_err(ProductionStorageError::from)?;
+        store.put(&sent_record_id, &updated_record)?;
+        if delete_envelope {
+            store.delete(&production_message_envelope_record_id(
+                &material.channel_id,
+                message_number,
+                MessageType::Data,
+            ))?;
+        }
+        Ok(())
+    }
+
+    fn sanitize_outbound_failure_kind(value: &str) -> String {
+        let normalized = value
+            .chars()
+            .filter(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | ':'))
+            .take(64)
+            .collect::<String>();
+        if normalized.is_empty() {
+            "send-failed".to_string()
+        } else {
+            normalized
+        }
     }
 
     fn production_identity_private_key_record_id() -> EncryptedRecordId {
@@ -9496,6 +9748,65 @@ pub mod production {
             assert!(!export.key_material_exposed());
             assert!(!export.transport_io_opened());
             assert!(!export.runtime_messaging_enabled());
+            let pending_transcript = production_message_transcript_export(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+            )
+            .expect("pending transcript");
+            let pending_entry = pending_transcript
+                .entries()
+                .iter()
+                .find(|entry| entry.direction() == "sent" && entry.message_number() == 1)
+                .expect("pending sent transcript entry");
+            assert_eq!(pending_entry.outbound_delivery_state(), Some("pending"));
+            assert!(pending_entry.outbound_retryable());
+            assert_eq!(pending_entry.outbound_failure_kind(), None);
+
+            production_message_outbound_mark_send_failed(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+                1,
+                "peer-offline",
+            )
+            .expect("mark send failed");
+            let failed_transcript = production_message_transcript_export(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+            )
+            .expect("failed transcript");
+            let failed_entry = failed_transcript
+                .entries()
+                .iter()
+                .find(|entry| entry.direction() == "sent" && entry.message_number() == 1)
+                .expect("failed sent transcript entry");
+            assert_eq!(failed_entry.outbound_delivery_state(), Some("failed"));
+            assert!(failed_entry.outbound_retryable());
+            assert_eq!(failed_entry.outbound_failure_kind(), Some("peer-offline"));
+
+            production_message_outbound_mark_send_succeeded(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+                1,
+            )
+            .expect("mark send succeeded");
+            let sent_transcript = production_message_transcript_export(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+            )
+            .expect("sent transcript");
+            let sent_entry = sent_transcript
+                .entries()
+                .iter()
+                .find(|entry| entry.direction() == "sent" && entry.message_number() == 1)
+                .expect("sent transcript entry");
+            assert_eq!(sent_entry.outbound_delivery_state(), Some("sent"));
+            assert!(!sent_entry.outbound_retryable());
+            assert_eq!(sent_entry.outbound_failure_kind(), None);
             let (inbound_store, inbound_profile) = if outbound_profile == alice {
                 (&bob_store, bob.clone())
             } else {
@@ -9834,6 +10145,122 @@ pub mod production {
                 .get(&expired_index_id)
                 .expect("read expired index")
                 .is_none());
+            let expired_failed_message_number = 46;
+            let expired_failed_index_id = production_local_message_index_record_id(
+                &outbound_material.channel_id,
+                &outbound_material.remote_contact_id,
+                expired_failed_message_number,
+            );
+            let expired_failed_pending_id = production_message_envelope_record_id(
+                &outbound_material.channel_id,
+                expired_failed_message_number,
+                MessageType::Data,
+            );
+            let expired_failed_sent_id = production_sent_message_record_id(
+                &outbound_material.channel_id,
+                &outbound_material.remote_contact_id,
+                expired_failed_message_number,
+            );
+            outbound_store_after_expiry
+                .put(
+                    &expired_failed_index_id,
+                    &EncryptedRecord::new(
+                        ProductionRecordKind::LocalMessageIndex,
+                        EncryptedRecordScope::contact(
+                            outbound_profile.clone(),
+                            outbound_material.remote_contact_id.clone(),
+                        ),
+                        b"sqlcipher-page-encryption-v1".to_vec(),
+                        LocalMessageIndexEntry::new(
+                            outbound_material.remote_contact_id.clone(),
+                            expired_failed_message_number,
+                            MessageType::Data,
+                        )
+                        .expect("expired failed index")
+                        .encode()
+                        .into_bytes(),
+                    )
+                    .expect("expired failed index record"),
+                )
+                .expect("write expired failed index");
+            outbound_store_after_expiry
+                .put(
+                    &expired_failed_pending_id,
+                    &EncryptedRecord::new(
+                        ProductionRecordKind::MessageEnvelope,
+                        EncryptedRecordScope::contact(
+                            outbound_profile.clone(),
+                            outbound_material.remote_contact_id.clone(),
+                        ),
+                        b"sqlcipher-page-encryption-v1".to_vec(),
+                        PendingOutboundMessageRecord::new(
+                            outbound_material.remote_contact_id.clone(),
+                            expired_failed_message_number,
+                            MessageType::Data,
+                            b"expired failed",
+                        )
+                        .expect("expired failed pending")
+                        .encode()
+                        .into_bytes(),
+                    )
+                    .expect("expired failed pending record"),
+                )
+                .expect("write expired failed pending");
+            outbound_store_after_expiry
+                .put(
+                    &expired_failed_sent_id,
+                    &EncryptedRecord::new(
+                        ProductionRecordKind::SentMessage,
+                        EncryptedRecordScope::contact(
+                            outbound_profile.clone(),
+                            outbound_material.remote_contact_id.clone(),
+                        ),
+                        b"sqlcipher-page-encryption-v1".to_vec(),
+                        SentMessageRecord::new_with_retention(
+                            outbound_material.remote_contact_id.clone(),
+                            expired_failed_message_number,
+                            MessageType::Data,
+                            b"expired failed",
+                            expired_created_at_ms,
+                            expired_ttl_seconds,
+                        )
+                        .expect("expired failed sent")
+                        .with_delivery_state(
+                            OutboundDeliveryState::Failed,
+                            Some("peer-offline".to_string()),
+                        )
+                        .encode()
+                        .into_bytes(),
+                    )
+                    .expect("expired failed sent record"),
+                )
+                .expect("write expired failed sent");
+            drop(outbound_store_after_expiry);
+            let failed_purged_transcript = production_message_transcript_export(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+            )
+            .expect("purge expired failed transcript export");
+            assert_eq!(failed_purged_transcript.expired_messages_purged(), 1);
+            assert_eq!(failed_purged_transcript.entries().len(), 1);
+            assert_eq!(failed_purged_transcript.entries()[0].message_number(), 1);
+            let outbound_store_after_failed_expiry = LockedProfileStore::new(outbound_store)
+                .unlock(&passphrase)
+                .expect("unlock outbound after failed expiry");
+            assert!(outbound_store_after_failed_expiry
+                .get(&expired_failed_sent_id)
+                .expect("read expired failed sent")
+                .is_none());
+            assert!(outbound_store_after_failed_expiry
+                .get(&expired_failed_pending_id)
+                .expect("read expired failed pending")
+                .is_none());
+            assert!(outbound_store_after_failed_expiry
+                .get(&expired_failed_index_id)
+                .expect("read expired failed index")
+                .is_none());
+            let outbound_store_after_expiry = outbound_store_after_failed_expiry;
             let write_expired_outbound = |message_number: u64| -> (
                 EncryptedRecordId,
                 EncryptedRecordId,

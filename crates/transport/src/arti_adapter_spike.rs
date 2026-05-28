@@ -334,6 +334,7 @@ enum PersistentOnionServiceHandle {
         >,
     },
     #[cfg(test)]
+    #[allow(dead_code)]
     Test,
 }
 

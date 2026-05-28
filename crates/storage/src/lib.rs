@@ -955,17 +955,15 @@ pub mod production {
 
         #[test]
         fn encrypted_record_rejects_plaintext_allowed_and_in_memory_only_kinds() {
-            for kind in [ProductionRecordKind::SchemaMarker] {
-                assert!(matches!(
-                    EncryptedRecord::new(
-                        kind,
-                        EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile")),
-                        vec![1],
-                        vec![2],
-                    ),
-                    Err(ProductionStoragePolicyError::EncryptedRecordForbidden { .. })
-                ));
-            }
+            assert!(matches!(
+                EncryptedRecord::new(
+                    ProductionRecordKind::SchemaMarker,
+                    EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile")),
+                    vec![1],
+                    vec![2],
+                ),
+                Err(ProductionStoragePolicyError::EncryptedRecordForbidden { .. })
+            ));
         }
 
         #[test]
