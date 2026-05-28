@@ -962,6 +962,8 @@ pub struct ProductionOnionReceiveLoopStatusResult {
     message_import_count: u64,
     endpoint_update_count: u64,
     active_after_import: bool,
+    continues_after_import: bool,
+    multi_message_receive_ready: bool,
     restart_generation_isolated: bool,
     retry_wait_cancellable: bool,
     runtime_state: &'static str,
@@ -4784,6 +4786,15 @@ fn run_production_onion_receive_loop_status(
         message_import_count,
         endpoint_update_count,
         active_after_import: enabled && worker_running && message_import_count > 0,
+        continues_after_import: enabled
+            && worker_running
+            && !stop_requested
+            && message_import_count > 0,
+        multi_message_receive_ready: enabled
+            && worker_running
+            && !stop_requested
+            && message_import_count > 1
+            && import_sequence >= message_import_count,
         restart_generation_isolated: generation > 1
             && enabled
             && !stop_requested
@@ -10416,6 +10427,8 @@ replay check: no replayed messages after message 2
         assert_eq!(initial.message_import_count, 0);
         assert_eq!(initial.endpoint_update_count, 0);
         assert!(!initial.active_after_import);
+        assert!(!initial.continues_after_import);
+        assert!(!initial.multi_message_receive_ready);
         assert!(!initial.restart_generation_isolated);
         assert!(initial.retry_wait_cancellable);
         assert!(!initial.last_attempt_succeeded);
@@ -10459,6 +10472,8 @@ replay check: no replayed messages after message 2
         assert_eq!(started.worker_start_count, 0);
         assert_eq!(started.duplicate_start_block_count, 0);
         assert!(!started.active_after_import);
+        assert!(!started.continues_after_import);
+        assert!(!started.multi_message_receive_ready);
         assert!(!started.restart_generation_isolated);
         assert!(started.retry_wait_cancellable);
         assert!(!started.network_io_attempted);
@@ -10514,6 +10529,8 @@ replay check: no replayed messages after message 2
         assert!(!finished.worker_running);
         assert!(finished.stop_confirmed);
         assert!(!finished.active_after_import);
+        assert!(!finished.continues_after_import);
+        assert!(!finished.multi_message_receive_ready);
         assert!(!finished.restart_generation_isolated);
         assert_eq!(finished.worker_start_count, 1);
         assert_eq!(finished.duplicate_start_block_count, 1);
@@ -10534,6 +10551,8 @@ replay check: no replayed messages after message 2
         assert_eq!(restarted.message_import_count, 0);
         assert_eq!(restarted.endpoint_update_count, 0);
         assert!(!restarted.active_after_import);
+        assert!(!restarted.continues_after_import);
+        assert!(!restarted.multi_message_receive_ready);
         assert!(restarted.restart_generation_isolated);
     }
 
@@ -10624,6 +10643,8 @@ replay check: no replayed messages after message 2
         assert_eq!(imported.message_import_count, 1);
         assert_eq!(imported.endpoint_update_count, 0);
         assert!(imported.active_after_import);
+        assert!(imported.continues_after_import);
+        assert!(!imported.multi_message_receive_ready);
         assert!(imported.last_attempt_started);
         assert!(imported.last_attempt_succeeded);
         assert!(imported.last_network_io_attempted);
@@ -10645,6 +10666,8 @@ replay check: no replayed messages after message 2
         assert_eq!(endpoint_updated.import_sequence, 2);
         assert_eq!(endpoint_updated.message_import_count, 1);
         assert_eq!(endpoint_updated.endpoint_update_count, 1);
+        assert!(endpoint_updated.continues_after_import);
+        assert!(!endpoint_updated.multi_message_receive_ready);
         assert_eq!(endpoint_updated.runtime_state, "message-imported");
 
         run_production_onion_receive_loop_record_attempt_error(&state);
@@ -10685,6 +10708,8 @@ replay check: no replayed messages after message 2
         assert_eq!(second_imported.message_import_count, 2);
         assert_eq!(second_imported.endpoint_update_count, 1);
         assert!(second_imported.active_after_import);
+        assert!(second_imported.continues_after_import);
+        assert!(second_imported.multi_message_receive_ready);
         assert_eq!(second_imported.last_failure_kind, "none");
         assert!(!second_imported.last_failure_retryable);
         assert_eq!(second_imported.runtime_state, "message-imported");
@@ -10696,6 +10721,8 @@ replay check: no replayed messages after message 2
         let stopped = run_production_onion_receive_loop_status(&state, false);
         assert!(stopped.stop_confirmed);
         assert!(!stopped.active_after_import);
+        assert!(!stopped.continues_after_import);
+        assert!(!stopped.multi_message_receive_ready);
         assert!(!stopped.restart_generation_isolated);
         assert!(!stopped.profile_selected);
         assert!(!stopped.raw_profile_returned);
