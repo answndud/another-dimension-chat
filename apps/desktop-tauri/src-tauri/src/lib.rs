@@ -187,6 +187,11 @@ pub struct ProductionTwoProfileRealOnionRoundtripResult {
     second_inbound_message_stored: bool,
     consecutive_receive_attempts: u64,
     consecutive_messages_imported: u64,
+    receive_mode_runtime_state: &'static str,
+    receive_mode_runtime_label: &'static str,
+    receive_mode_import_sequence: u64,
+    receive_mode_message_import_count: u64,
+    receive_mode_endpoint_update_count: u64,
     received_status_verified: bool,
     received_export_matches_input: bool,
     second_received_status_verified: bool,
@@ -7517,6 +7522,11 @@ async fn run_production_two_profile_real_onion_roundtrip(
             second_inbound_message_stored: false,
             consecutive_receive_attempts: 0,
             consecutive_messages_imported: 0,
+            receive_mode_runtime_state: "stopped",
+            receive_mode_runtime_label: "Receive mode stopped",
+            receive_mode_import_sequence: 0,
+            receive_mode_message_import_count: 0,
+            receive_mode_endpoint_update_count: 0,
             received_status_verified: false,
             received_export_matches_input: false,
             second_received_status_verified: false,
@@ -7581,6 +7591,11 @@ async fn run_production_two_profile_real_onion_roundtrip(
                 second_inbound_message_stored: false,
                 consecutive_receive_attempts: 0,
                 consecutive_messages_imported: 0,
+                receive_mode_runtime_state: "stopped",
+                receive_mode_runtime_label: "Receive mode stopped",
+                receive_mode_import_sequence: 0,
+                receive_mode_message_import_count: 0,
+                receive_mode_endpoint_update_count: 0,
                 received_status_verified: false,
                 received_export_matches_input: false,
                 second_received_status_verified: false,
@@ -7655,6 +7670,11 @@ async fn run_production_two_profile_real_onion_roundtrip(
                 second_inbound_message_stored: false,
                 consecutive_receive_attempts: 0,
                 consecutive_messages_imported: 0,
+                receive_mode_runtime_state: "stopped",
+                receive_mode_runtime_label: "Receive mode stopped",
+                receive_mode_import_sequence: 0,
+                receive_mode_message_import_count: 0,
+                receive_mode_endpoint_update_count: 0,
                 received_status_verified: false,
                 received_export_matches_input: false,
                 second_received_status_verified: false,
@@ -7978,6 +7998,8 @@ async fn run_production_two_profile_real_onion_roundtrip(
             passphrase,
             second_received_envelope.message_number,
         )?;
+        let consecutive_messages_imported = (inbound.received_message_written as u64)
+            + (second_inbound.received_message_written as u64);
 
         Ok(ProductionTwoProfileRealOnionRoundtripResult {
             warning: "real onion two-profile roundtrip attempted with explicit manual network permission; result returns redacted transport status only",
@@ -8020,8 +8042,20 @@ async fn run_production_two_profile_real_onion_roundtrip(
             inbound_message_stored: inbound.received_message_written,
             second_inbound_message_stored: second_inbound.received_message_written,
             consecutive_receive_attempts: 2,
-            consecutive_messages_imported: (inbound.received_message_written as u64)
-                + (second_inbound.received_message_written as u64),
+            consecutive_messages_imported,
+            receive_mode_runtime_state: if consecutive_messages_imported > 0 {
+                "message-imported"
+            } else {
+                "receiving"
+            },
+            receive_mode_runtime_label: if consecutive_messages_imported > 0 {
+                "Receive mode imported message or endpoint update"
+            } else {
+                "Receive mode receiving"
+            },
+            receive_mode_import_sequence: consecutive_messages_imported,
+            receive_mode_message_import_count: consecutive_messages_imported,
+            receive_mode_endpoint_update_count: 0,
             received_status_verified: inbound.received_message_matches_session
                 && received.received_message_matches_session,
             second_received_status_verified: second_inbound.received_message_matches_session
