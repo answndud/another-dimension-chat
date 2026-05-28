@@ -22,6 +22,7 @@ test("translate resolves Korean and English chat labels", () => {
   assert.equal(translate("ko", "manualProductionTools"), "수동 전송 도구");
   assert.equal(translate("ko", "productionProfileLockedWarning"), "아직 프로필을 열지 않았습니다.");
   assert.equal(translate("ko", "messageEnvelopeNotExported"), "아직 메시지를 내보내지 않았습니다.");
+  assert.equal(translate("ko", "manualStateExported"), "내보냄");
   assert.equal(translate("unknown", "send"), "Send");
 });
 

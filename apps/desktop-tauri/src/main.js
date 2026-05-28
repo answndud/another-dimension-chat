@@ -608,6 +608,78 @@ function localizedBoundaryStatus(message) {
   return text;
 }
 
+function localizedManualStatus(message) {
+  const text = String(message ?? "").trim();
+  if (!text || currentLanguage !== "ko") {
+    return text;
+  }
+  const lower = text.toLowerCase();
+  const subjectMap = [
+    ["pairing payload", "페어링 정보"],
+    ["session draft", "세션 초안"],
+    ["session state", "세션 상태"],
+    ["remote qr text", "상대 QR 텍스트"],
+    ["safety check", "안전 번호 확인"],
+    ["handshake init", "핸드셰이크 시작값"],
+    ["handshake reply", "핸드셰이크 응답값"],
+    ["handshake finish", "핸드셰이크 완료값"],
+    ["handshake import", "핸드셰이크 가져오기"],
+    ["handshake step", "핸드셰이크 단계"],
+    ["message envelope", "메시지 봉투"],
+    ["message export", "메시지 내보내기"],
+    ["message import", "메시지 가져오기"],
+    ["received message", "받은 메시지"],
+    ["received export", "받은 메시지 확인"],
+    ["transcript load", "대화 불러오기"],
+    ["transcript recovery", "대화 복구"],
+    ["stored transcript", "저장된 대화"],
+    ["remote envelope slot", "상대 메시지 슬롯"],
+    ["envelope store", "메시지 저장"],
+    ["envelope relay", "메시지 전달"],
+    ["roundtrip", "왕복 테스트"],
+    ["profile", "프로필"],
+  ];
+  const stateMap = [
+    ["needs profile and payload", "manualStateNeedsInput"],
+    ["needs profile and envelope", "manualStateNeedsInput"],
+    ["needs profile", "manualStateNeedsInput"],
+    ["needs payloads", "manualStateNeedsInput"],
+    ["needs payload", "manualStateNeedsInput"],
+    ["needs envelope", "manualStateNeedsInput"],
+    ["needs input", "manualStateNeedsInput"],
+    ["needs init", "manualStateNeedsInput"],
+    ["needs reply", "manualStateNeedsInput"],
+    ["needs finish", "manualStateNeedsInput"],
+    ["needs safety check", "manualStateNeedsInput"],
+    ["needs supported peer", "manualStateNeedsInput"],
+    ["blocked", "manualStateBlocked"],
+    ["exporting", "manualStateRunning"],
+    ["importing", "manualStateRunning"],
+    ["saving", "manualStateRunning"],
+    ["checking", "manualStateRunning"],
+    ["loading", "manualStateRunning"],
+    ["running", "manualStateRunning"],
+    ["applied", "manualStateApplied"],
+    ["stored", "manualStateStored"],
+    ["loaded", "manualStateLoaded"],
+    ["relayed", "manualStateRelayed"],
+    ["exported", "manualStateExported"],
+    ["imported", "manualStateImported"],
+    ["completed", "manualStateCompleted"],
+    ["checked", "manualStateChecked"],
+    ["saved", "manualStateSaved"],
+    ["recovered", "manualStateRecovered"],
+    ["unavailable", "manualStateUnavailable"],
+    ["expired", "manualStateExpired"],
+    ["ready", "manualStateReady"],
+    ["idle", "waiting"],
+    ["failed", "manualStateFailed"],
+  ];
+  const subject = subjectMap.find(([pattern]) => lower.includes(pattern))?.[1] ?? text;
+  const stateKey = stateMap.find(([pattern]) => lower.includes(pattern))?.[1];
+  return stateKey ? `${subject} ${t(stateKey)}` : text;
+}
+
 function applyTheme(theme) {
   const mode = theme === "light" ? "light" : "dark";
   document.documentElement.dataset.theme = mode;
@@ -667,7 +739,7 @@ function setLoopState(message) {
 }
 
 function setProductionRoundtripState(message) {
-  setText(fields.productionRoundtripState, message);
+  setText(fields.productionRoundtripState, localizedManualStatus(message));
 }
 
 function setProductionTwoProfileState(message) {
@@ -675,15 +747,15 @@ function setProductionTwoProfileState(message) {
 }
 
 function setProductionProfileState(message) {
-  setText(fields.productionProfileState, message);
+  setText(fields.productionProfileState, localizedManualStatus(message));
 }
 
 function setProductionPairingState(message) {
-  setText(fields.productionPairingState, message);
+  setText(fields.productionPairingState, localizedManualStatus(message));
 }
 
 function setProductionMessageState(message) {
-  setText(fields.productionMessageState, message);
+  setText(fields.productionMessageState, localizedManualStatus(message));
 }
 
 function setOnionPreflightState(message) {
@@ -820,13 +892,13 @@ function chatReviewButtonLabel(label = "Review") {
     return t("review");
   }
   if (label === "Open import tools") {
-    return "Import";
+    return t("import");
   }
   if (label === "Open envelope input") {
-    return "Envelope";
+    return t("envelope");
   }
   if (label === "Open export tools") {
-    return "Export";
+    return t("export");
   }
   return label === "Review" ? t("review") : label;
 }
@@ -4237,7 +4309,7 @@ function resetProductionPairingView(options = {}) {
     latestProductionTwoProfileSessionStatus = null;
   }
   setProductionPairingState("Pairing payload idle");
-  setText(fields.productionPairingWarning, "Pairing payload has not been exported yet.");
+  setText(fields.productionPairingWarning, t("pairingNotExported"));
   if (fields.productionPairingPayload) {
     fields.productionPairingPayload.value = "";
   }
@@ -4250,10 +4322,10 @@ function resetProductionPairingView(options = {}) {
   setHandshakePayload(fields.productionHandshakeInitPayload, "");
   setHandshakePayload(fields.productionHandshakeReplyPayload, "");
   setHandshakePayload(fields.productionHandshakeFinishPayload, "");
-  setText(fields.productionPairingStorage, "Not checked yet");
-  setText(fields.productionPairingSession, "Not checked yet");
-  setText(fields.productionHandshakeState, "Not checked yet");
-  setText(fields.productionPairingBoundary, "Not checked yet");
+  setText(fields.productionPairingStorage, t("notCheckedYet"));
+  setText(fields.productionPairingSession, t("notCheckedYet"));
+  setText(fields.productionHandshakeState, t("notCheckedYet"));
+  setText(fields.productionPairingBoundary, t("notCheckedYet"));
   applyProductionActionState();
 }
 
@@ -4261,18 +4333,20 @@ function resetProductionMessageView() {
   resetProductionMessageImportState();
   resetProductionMessageTranscript();
   setProductionMessageState("Message flow idle");
-  setText(fields.productionMessageWarning, "Message envelope has not been exported yet.");
+  setText(fields.productionMessageWarning, t("messageEnvelopeNotExported"));
   if (fields.productionMessageEnvelope) {
     fields.productionMessageEnvelope.value = "";
   }
-  setText(fields.productionMessageActiveStatus, "Not checked yet");
+  setText(fields.productionMessageActiveStatus, t("notCheckedYet"));
   setText(
     fields.productionMessageManualCheck,
-    "Manual check: verify active profile, message number, and envelope source.",
+    currentLanguage === "ko"
+      ? "수동 확인: 현재 프로필, 메시지 번호, 메시지 출처를 확인하세요."
+      : "Manual check: verify active profile, message number, and envelope source.",
   );
-  setText(fields.productionMessageOutbound, "Not checked yet");
-  setText(fields.productionMessageInbound, "Not checked yet");
-  setText(fields.productionMessageBoundary, "Not checked yet");
+  setText(fields.productionMessageOutbound, t("notCheckedYet"));
+  setText(fields.productionMessageInbound, t("notCheckedYet"));
+  setText(fields.productionMessageBoundary, t("notCheckedYet"));
   setProductionMessageManualCurrent(null);
   applyProductionActionState();
 }
