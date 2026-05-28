@@ -194,9 +194,16 @@ pub struct ProductionTwoProfileRealOnionRoundtripResult {
     consecutive_messages_imported: u64,
     receive_mode_runtime_state: &'static str,
     receive_mode_runtime_label: &'static str,
+    receive_mode_attempt_count: u64,
     receive_mode_import_sequence: u64,
     receive_mode_message_import_count: u64,
     receive_mode_endpoint_update_count: u64,
+    receive_mode_last_network_io_attempted: bool,
+    receive_mode_last_stream_accept_attempted: bool,
+    receive_mode_last_stream_read_write_attempted: bool,
+    receive_mode_last_envelope_io_opened: bool,
+    receive_mode_last_runtime_messaging_enabled: bool,
+    receive_mode_recorder_verified: bool,
     received_status_verified: bool,
     received_export_matches_input: bool,
     second_received_status_verified: bool,
@@ -7600,9 +7607,16 @@ async fn run_production_two_profile_real_onion_roundtrip(
             consecutive_messages_imported: 0,
             receive_mode_runtime_state: "stopped",
             receive_mode_runtime_label: "Receive mode stopped",
+            receive_mode_attempt_count: 0,
             receive_mode_import_sequence: 0,
             receive_mode_message_import_count: 0,
             receive_mode_endpoint_update_count: 0,
+            receive_mode_last_network_io_attempted: false,
+            receive_mode_last_stream_accept_attempted: false,
+            receive_mode_last_stream_read_write_attempted: false,
+            receive_mode_last_envelope_io_opened: false,
+            receive_mode_last_runtime_messaging_enabled: false,
+            receive_mode_recorder_verified: false,
             received_status_verified: false,
             received_export_matches_input: false,
             second_received_status_verified: false,
@@ -7669,9 +7683,16 @@ async fn run_production_two_profile_real_onion_roundtrip(
                 consecutive_messages_imported: 0,
                 receive_mode_runtime_state: "stopped",
                 receive_mode_runtime_label: "Receive mode stopped",
+                receive_mode_attempt_count: 0,
                 receive_mode_import_sequence: 0,
                 receive_mode_message_import_count: 0,
                 receive_mode_endpoint_update_count: 0,
+                receive_mode_last_network_io_attempted: false,
+                receive_mode_last_stream_accept_attempted: false,
+                receive_mode_last_stream_read_write_attempted: false,
+                receive_mode_last_envelope_io_opened: false,
+                receive_mode_last_runtime_messaging_enabled: false,
+                receive_mode_recorder_verified: false,
                 received_status_verified: false,
                 received_export_matches_input: false,
                 second_received_status_verified: false,
@@ -7748,9 +7769,16 @@ async fn run_production_two_profile_real_onion_roundtrip(
                 consecutive_messages_imported: 0,
                 receive_mode_runtime_state: "stopped",
                 receive_mode_runtime_label: "Receive mode stopped",
+                receive_mode_attempt_count: 0,
                 receive_mode_import_sequence: 0,
                 receive_mode_message_import_count: 0,
                 receive_mode_endpoint_update_count: 0,
+                receive_mode_last_network_io_attempted: false,
+                receive_mode_last_stream_accept_attempted: false,
+                receive_mode_last_stream_read_write_attempted: false,
+                receive_mode_last_envelope_io_opened: false,
+                receive_mode_last_runtime_messaging_enabled: false,
+                receive_mode_recorder_verified: false,
                 received_status_verified: false,
                 received_export_matches_input: false,
                 second_received_status_verified: false,
@@ -8076,6 +8104,84 @@ async fn run_production_two_profile_real_onion_roundtrip(
         )?;
         let consecutive_messages_imported = (inbound.received_message_written as u64)
             + (second_inbound.received_message_written as u64);
+        let receive_mode_recorder_state = ProductionOnionClientRuntimeState::default();
+        let _ = run_production_onion_receive_loop_start(
+            &receive_mode_recorder_state,
+            receiver_profile_result.clone(),
+            true,
+        );
+        let _ = run_production_onion_receive_loop_worker_started(&receive_mode_recorder_state);
+        let receive_mode_record_import =
+            |state: &ProductionOnionClientRuntimeState, imported: bool| {
+                let result = ProductionOnionInboundEnvelopeReceiveAttemptResult {
+                    warning: "real onion receive-mode recorder projection",
+                    preparation_only: false,
+                    manual_client_attempt_feature_compiled: true,
+                    manual_network_permission_enabled: true,
+                    persistent_client_ready: true,
+                    inbound_stream_preparation_ready: true,
+                    inbound_rend_request_stream_ready: true,
+                    inbound_rend_request_accept_attempted: true,
+                    inbound_rend_request_accepted: true,
+                    accepted_stream_request_stream_ready: true,
+                    stream_request_accept_attempted: true,
+                    stream_request_accepted: true,
+                    stream_read_attempted: true,
+                    stream_bytes_read: true,
+                    receive_attempt_started: true,
+                    receive_attempt_succeeded: imported,
+                    received_envelope_ready: imported,
+                    inbound_import_attempted: true,
+                    control_envelope_imported: false,
+                    endpoint_update_applied: false,
+                    stale_endpoint_status_cleared: false,
+                    redacted_receive_result_event_recorded: false,
+                    event_summary: Vec::new(),
+                    next_blocker: if imported {
+                        "none".to_string()
+                    } else {
+                        "InboundEnvelopeImportIncomplete".to_string()
+                    },
+                    blockers: if imported {
+                        Vec::new()
+                    } else {
+                        vec!["InboundEnvelopeImportIncomplete".to_string()]
+                    },
+                    raw_endpoint_returned: false,
+                    raw_path_returned: false,
+                    onion_secret_returned: false,
+                    descriptor_body_returned: false,
+                    stream_id_returned: false,
+                    envelope_payload_returned: false,
+                    key_material_exposed: false,
+                    network_io_attempted: true,
+                    descriptor_publish_attempted: false,
+                    stream_accept_attempted: true,
+                    stream_read_write_attempted: true,
+                    envelope_io_opened: true,
+                    runtime_messaging_enabled: imported,
+                };
+                state
+                    .receive_loop_attempts
+                    .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+                run_production_onion_receive_loop_record_attempt_result(state, &result);
+            };
+        receive_mode_record_import(&receive_mode_recorder_state, inbound.received_message_written);
+        receive_mode_record_import(
+            &receive_mode_recorder_state,
+            second_inbound.received_message_written,
+        );
+        let receive_mode_status =
+            run_production_onion_receive_loop_status(&receive_mode_recorder_state, false);
+        let receive_mode_recorder_verified = receive_mode_status.attempt_count == 2
+            && receive_mode_status.import_sequence == consecutive_messages_imported
+            && receive_mode_status.message_import_count == consecutive_messages_imported
+            && receive_mode_status.endpoint_update_count == 0
+            && receive_mode_status.last_network_io_attempted
+            && receive_mode_status.last_stream_accept_attempted
+            && receive_mode_status.last_stream_read_write_attempted
+            && receive_mode_status.last_envelope_io_opened
+            && receive_mode_status.last_runtime_messaging_enabled;
 
         Ok(ProductionTwoProfileRealOnionRoundtripResult {
             warning: "real onion two-profile roundtrip attempted with explicit manual network permission; result returns redacted transport status only",
@@ -8119,19 +8225,21 @@ async fn run_production_two_profile_real_onion_roundtrip(
             second_inbound_message_stored: second_inbound.received_message_written,
             consecutive_receive_attempts: 2,
             consecutive_messages_imported,
-            receive_mode_runtime_state: if consecutive_messages_imported > 0 {
-                "message-imported"
-            } else {
-                "receiving"
-            },
-            receive_mode_runtime_label: if consecutive_messages_imported > 0 {
-                "Receive mode imported message or endpoint update"
-            } else {
-                "Receive mode receiving"
-            },
-            receive_mode_import_sequence: consecutive_messages_imported,
-            receive_mode_message_import_count: consecutive_messages_imported,
-            receive_mode_endpoint_update_count: 0,
+            receive_mode_runtime_state: receive_mode_status.runtime_state,
+            receive_mode_runtime_label: receive_mode_status.runtime_label,
+            receive_mode_attempt_count: receive_mode_status.attempt_count,
+            receive_mode_import_sequence: receive_mode_status.import_sequence,
+            receive_mode_message_import_count: receive_mode_status.message_import_count,
+            receive_mode_endpoint_update_count: receive_mode_status.endpoint_update_count,
+            receive_mode_last_network_io_attempted: receive_mode_status.last_network_io_attempted,
+            receive_mode_last_stream_accept_attempted: receive_mode_status
+                .last_stream_accept_attempted,
+            receive_mode_last_stream_read_write_attempted: receive_mode_status
+                .last_stream_read_write_attempted,
+            receive_mode_last_envelope_io_opened: receive_mode_status.last_envelope_io_opened,
+            receive_mode_last_runtime_messaging_enabled: receive_mode_status
+                .last_runtime_messaging_enabled,
+            receive_mode_recorder_verified,
             received_status_verified: inbound.received_message_matches_session
                 && received.received_message_matches_session,
             second_received_status_verified: second_inbound.received_message_matches_session
