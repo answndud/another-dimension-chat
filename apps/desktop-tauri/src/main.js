@@ -5970,6 +5970,30 @@ async function startProductionTwoProfileOnionReceive() {
     return;
   }
 
+  let backendLoop = null;
+  try {
+    backendLoop = await invoke("production_onion_receive_loop_start", {
+      profile: profileB,
+      manualNetworkPermission,
+    });
+  } catch (error) {
+    setProductionTwoProfileState("Receive mode failed");
+    setText(fields.productionTwoProfileWarning, `Receive mode start failed without returning secrets. ${error}`);
+    return;
+  }
+  if (backendLoop.duplicate_loop_blocked || !backendLoop.enabled) {
+    setProductionTwoProfileState("Receive mode already running");
+    setText(
+      fields.productionTwoProfileWarning,
+      "Backend receive loop is already enabled for this runtime. Stop receiving before starting another loop.",
+    );
+    setText(
+      fields.productionTwoProfileBoundary,
+      `enabled=${backendLoop.enabled} profile_selected=${backendLoop.profile_selected} in_flight=${backendLoop.receive_attempt_in_flight} attempts=${backendLoop.attempt_count} generation=${backendLoop.generation} duplicate=${backendLoop.duplicate_loop_blocked} app_launch_network=${backendLoop.starts_network_on_app_launch} raw_profile=${backendLoop.raw_profile_returned} passphrase=${backendLoop.passphrase_retained} key_material=${backendLoop.key_material_exposed} network=${backendLoop.network_io_attempted} transport=${backendLoop.transport_io_opened} runtime=${backendLoop.runtime_messaging_enabled}`,
+    );
+    return;
+  }
+
   const generation = productionTwoProfileOnionReceiveMode.generation + 1;
   productionTwoProfileOnionReceiveMode = {
     enabled: true,
@@ -5986,8 +6010,11 @@ async function startProductionTwoProfileOnionReceive() {
   setText(fields.productionTwoProfileWarning, `Receive mode enabled for ${profileB}. Bounded receive attempts will repeat until stopped.`);
   setText(fields.productionTwoProfileProfiles, `receiver=${profileB}`);
   setText(fields.productionTwoProfileSession, "Using retained onion service and stored receiver session");
-  setText(fields.productionTwoProfileMessageState, "Receive mode waiting for first bounded attempt");
-  setText(fields.productionTwoProfileBoundary, "Receive mode enabled by explicit user action");
+  setText(fields.productionTwoProfileMessageState, `Receive mode waiting for first bounded attempt; backend_attempts=${backendLoop.attempt_count}`);
+  setText(
+    fields.productionTwoProfileBoundary,
+    `backend_enabled=${backendLoop.enabled} profile_selected=${backendLoop.profile_selected} in_flight=${backendLoop.receive_attempt_in_flight} generation=${backendLoop.generation} explicit_start=${backendLoop.explicit_user_start_required} app_launch_network=${backendLoop.starts_network_on_app_launch} raw_profile=${backendLoop.raw_profile_returned} passphrase=${backendLoop.passphrase_retained} key_material=${backendLoop.key_material_exposed} network=${backendLoop.network_io_attempted} transport=${backendLoop.transport_io_opened} runtime=${backendLoop.runtime_messaging_enabled}`,
+  );
   applyProductionActionState();
   runProductionTwoProfileOnionReceiveAttempt();
 }
@@ -6186,6 +6213,16 @@ function stopProductionTwoProfileOnionReceive() {
   );
   setText(fields.productionTwoProfileMessageState, "Receive mode stopped");
   applyProductionActionState();
+  invoke("production_onion_receive_loop_stop")
+    .then((backendLoop) => {
+      setText(
+        fields.productionTwoProfileBoundary,
+        `backend_enabled=${backendLoop.enabled} stop_requested=${backendLoop.stop_requested} profile_selected=${backendLoop.profile_selected} in_flight=${backendLoop.receive_attempt_in_flight} attempts=${backendLoop.attempt_count} generation=${backendLoop.generation} app_launch_network=${backendLoop.starts_network_on_app_launch} raw_profile=${backendLoop.raw_profile_returned} passphrase=${backendLoop.passphrase_retained} key_material=${backendLoop.key_material_exposed} network=${backendLoop.network_io_attempted} transport=${backendLoop.transport_io_opened} runtime=${backendLoop.runtime_messaging_enabled}`,
+      );
+    })
+    .catch((error) => {
+      setText(fields.productionTwoProfileBoundary, `Backend receive loop stop failed without returning secrets. ${error}`);
+    });
 }
 
 async function runProductionTwoProfileRoundtrip() {

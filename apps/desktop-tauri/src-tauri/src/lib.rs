@@ -5,6 +5,11 @@ use tauri::Manager;
 
 #[derive(Default)]
 struct ProductionOnionClientRuntimeState {
+    receive_loop_enabled: std::sync::atomic::AtomicBool,
+    receive_loop_stop_requested: std::sync::atomic::AtomicBool,
+    receive_loop_attempts: std::sync::atomic::AtomicU64,
+    receive_loop_generation: std::sync::atomic::AtomicU64,
+    receive_loop_profile: std::sync::Mutex<Option<String>>,
     #[cfg(feature = "manual-onion-client-attempt")]
     owner: std::sync::Mutex<Option<another_dimension_transport::arti_adapter_spike::PersistentArtiClientOwner>>,
     #[cfg(feature = "manual-onion-client-attempt")]
@@ -904,6 +909,26 @@ pub struct ProductionOnionInboundEnvelopeReceiveAttemptResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionOnionReceiveLoopStatusResult {
+    warning: &'static str,
+    enabled: bool,
+    stop_requested: bool,
+    profile_selected: bool,
+    receive_attempt_in_flight: bool,
+    attempt_count: u64,
+    generation: u64,
+    duplicate_loop_blocked: bool,
+    explicit_user_start_required: bool,
+    starts_network_on_app_launch: bool,
+    raw_profile_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionOnionOutboundStreamPrepareResult {
     warning: &'static str,
     preparation_only: bool,
@@ -1358,6 +1383,34 @@ fn production_onion_inbound_stream_prepare(
         "production onion inbound stream prepare failed without exposing profile, path, or key details"
             .to_string()
     })
+}
+
+#[tauri::command]
+fn production_onion_receive_loop_status(
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+) -> Result<ProductionOnionReceiveLoopStatusResult, String> {
+    Ok(run_production_onion_receive_loop_status(&state, false))
+}
+
+#[tauri::command]
+fn production_onion_receive_loop_start(
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+    profile: String,
+    manual_network_permission: bool,
+) -> Result<ProductionOnionReceiveLoopStatusResult, String> {
+    let profile = sanitize_production_profile(profile)?;
+    Ok(run_production_onion_receive_loop_start(
+        &state,
+        profile.as_str().to_string(),
+        manual_network_permission,
+    ))
+}
+
+#[tauri::command]
+fn production_onion_receive_loop_stop(
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+) -> Result<ProductionOnionReceiveLoopStatusResult, String> {
+    Ok(run_production_onion_receive_loop_stop(&state))
 }
 
 #[tauri::command]
@@ -4555,6 +4608,107 @@ fn run_production_onion_inbound_stream_prepare(
     })
 }
 
+fn run_production_onion_receive_loop_status(
+    state: &ProductionOnionClientRuntimeState,
+    duplicate_loop_blocked: bool,
+) -> ProductionOnionReceiveLoopStatusResult {
+    let profile_selected = state
+        .receive_loop_profile
+        .lock()
+        .map(|guard| guard.is_some())
+        .unwrap_or(false);
+    ProductionOnionReceiveLoopStatusResult {
+        warning: "Receive loop runtime status is local and redacted. It does not start network work.",
+        enabled: state
+            .receive_loop_enabled
+            .load(std::sync::atomic::Ordering::Acquire),
+        stop_requested: state
+            .receive_loop_stop_requested
+            .load(std::sync::atomic::Ordering::Acquire),
+        profile_selected,
+        receive_attempt_in_flight: {
+            #[cfg(feature = "manual-onion-client-attempt")]
+            {
+                state
+                    .receive_in_progress
+                    .load(std::sync::atomic::Ordering::Acquire)
+            }
+            #[cfg(not(feature = "manual-onion-client-attempt"))]
+            {
+                false
+            }
+        },
+        attempt_count: state
+            .receive_loop_attempts
+            .load(std::sync::atomic::Ordering::Acquire),
+        generation: state
+            .receive_loop_generation
+            .load(std::sync::atomic::Ordering::Acquire),
+        duplicate_loop_blocked,
+        explicit_user_start_required: true,
+        starts_network_on_app_launch: false,
+        raw_profile_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
+    }
+}
+
+fn run_production_onion_receive_loop_start(
+    state: &ProductionOnionClientRuntimeState,
+    profile: String,
+    manual_network_permission: bool,
+) -> ProductionOnionReceiveLoopStatusResult {
+    if !manual_network_permission {
+        return run_production_onion_receive_loop_status(state, false);
+    }
+    if state
+        .receive_loop_enabled
+        .compare_exchange(
+            false,
+            true,
+            std::sync::atomic::Ordering::AcqRel,
+            std::sync::atomic::Ordering::Acquire,
+        )
+        .is_err()
+    {
+        return run_production_onion_receive_loop_status(state, true);
+    }
+    state
+        .receive_loop_stop_requested
+        .store(false, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_attempts
+        .store(0, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_generation
+        .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+    if let Ok(mut guard) = state.receive_loop_profile.lock() {
+        *guard = Some(profile);
+    }
+    run_production_onion_receive_loop_status(state, false)
+}
+
+fn run_production_onion_receive_loop_stop(
+    state: &ProductionOnionClientRuntimeState,
+) -> ProductionOnionReceiveLoopStatusResult {
+    state
+        .receive_loop_stop_requested
+        .store(true, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_enabled
+        .store(false, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_generation
+        .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+    if let Ok(mut guard) = state.receive_loop_profile.lock() {
+        *guard = None;
+    }
+    run_production_onion_receive_loop_status(state, false)
+}
+
 async fn run_production_onion_inbound_envelope_receive_attempt(
     app_data_root: impl AsRef<std::path::Path>,
     app_cache_root: impl AsRef<std::path::Path>,
@@ -4575,6 +4729,14 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
         passphrase,
         persistent_client_ready,
     )?;
+    if state
+        .receive_loop_enabled
+        .load(std::sync::atomic::Ordering::Acquire)
+    {
+        state
+            .receive_loop_attempts
+            .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+    }
     let mut blockers = prepare.blockers.clone();
     #[cfg(feature = "manual-onion-client-attempt")]
     let mut event_summary = Vec::new();
@@ -8065,6 +8227,9 @@ pub fn run() {
             production_onion_descriptor_publication_attempt,
             production_onion_descriptor_publication_prepare,
             production_onion_inbound_envelope_receive_attempt,
+            production_onion_receive_loop_status,
+            production_onion_receive_loop_start,
+            production_onion_receive_loop_stop,
             production_onion_inbound_stream_prepare,
             production_onion_launch_preflight_check,
             production_onion_service_launch_attempt,
@@ -8144,8 +8309,9 @@ mod tests {
         run_production_onion_launch_preflight_check_with_persistent_client,
         run_production_onion_outbound_stream_prepare,
         run_production_onion_persistent_client_start, run_production_onion_persistent_client_status,
-        run_production_onion_preflight_check, run_production_onion_service_launch_attempt,
-        run_production_onion_stream_adapter_closeout_prepare,
+        run_production_onion_preflight_check, run_production_onion_receive_loop_start,
+        run_production_onion_receive_loop_status, run_production_onion_receive_loop_stop,
+        run_production_onion_service_launch_attempt, run_production_onion_stream_adapter_closeout_prepare,
         run_production_pairing_payload_export, run_production_pairing_safety_preview,
         run_production_pairing_session_draft_save,
         run_production_pairing_session_remote_endpoint_mark_send_failure,
@@ -9517,6 +9683,66 @@ replay check: no replayed messages after message 2
         assert!(!serialized.contains("ADENV1"));
         assert!(!serialized.contains("ADPAIR2"));
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_onion_receive_loop_status_tracks_start_stop_without_network() {
+        let state = ProductionOnionClientRuntimeState::default();
+        let initial = run_production_onion_receive_loop_status(&state, false);
+        assert!(!initial.enabled);
+        assert!(!initial.profile_selected);
+        assert!(!initial.receive_attempt_in_flight);
+        assert_eq!(initial.attempt_count, 0);
+        assert!(initial.explicit_user_start_required);
+        assert!(!initial.starts_network_on_app_launch);
+        assert!(!initial.raw_profile_returned);
+        assert!(!initial.passphrase_retained);
+        assert!(!initial.key_material_exposed);
+        assert!(!initial.network_io_attempted);
+        assert!(!initial.transport_io_opened);
+        assert!(!initial.runtime_messaging_enabled);
+
+        let blocked = run_production_onion_receive_loop_start(
+            &state,
+            "alice".to_string(),
+            false,
+        );
+        assert!(!blocked.enabled);
+        assert!(!blocked.profile_selected);
+
+        let started = run_production_onion_receive_loop_start(
+            &state,
+            "alice".to_string(),
+            true,
+        );
+        assert!(started.enabled);
+        assert!(started.profile_selected);
+        assert!(!started.duplicate_loop_blocked);
+        assert_eq!(started.attempt_count, 0);
+        assert!(!started.network_io_attempted);
+
+        let duplicate = run_production_onion_receive_loop_start(
+            &state,
+            "bob".to_string(),
+            true,
+        );
+        assert!(duplicate.enabled);
+        assert!(duplicate.profile_selected);
+        assert!(duplicate.duplicate_loop_blocked);
+        assert!(!duplicate.raw_profile_returned);
+
+        state
+            .receive_loop_attempts
+            .fetch_add(2, std::sync::atomic::Ordering::AcqRel);
+        let running = run_production_onion_receive_loop_status(&state, false);
+        assert_eq!(running.attempt_count, 2);
+
+        let stopped = run_production_onion_receive_loop_stop(&state);
+        assert!(!stopped.enabled);
+        assert!(stopped.stop_requested);
+        assert!(!stopped.profile_selected);
+        assert_eq!(stopped.attempt_count, 2);
+        assert!(!stopped.starts_network_on_app_launch);
     }
 
     #[test]
