@@ -19,6 +19,7 @@ import {
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
   productionMessageTtlInputValue,
+  productionOnionReceiveFailureMessage,
   productionOnionReceiveRuntimeView,
   productionPairingPayloadView,
   productionProfileMessageReadiness,
@@ -626,6 +627,33 @@ test("productionOnionReceiveRuntimeView maps receive loop states", () => {
       { persistent_client_ready: true, inbound_stream_preparation_ready: true, receive_attempt_started: true },
     ).state,
     "failed-retryable",
+  );
+});
+
+test("productionOnionReceiveFailureMessage maps retry states", () => {
+  assert.equal(
+    productionOnionReceiveFailureMessage({ last_failure_kind: "manual-permission" }),
+    "Receive mode is paused until manual onion network permission is enabled again.",
+  );
+  assert.equal(
+    productionOnionReceiveFailureMessage({ last_failure_kind: "persistent-client" }),
+    "Receive mode needs the persistent Tor client to be started again.",
+  );
+  assert.equal(
+    productionOnionReceiveFailureMessage({ last_failure_kind: "peer-offline" }),
+    "No inbound peer stream is available yet; receive mode will keep retrying.",
+  );
+  assert.equal(
+    productionOnionReceiveFailureMessage({ last_failure_kind: "receive-timeout" }),
+    "Receive attempt timed out; receive mode will retry while enabled.",
+  );
+  assert.equal(
+    productionOnionReceiveFailureMessage({ last_failure_kind: "feature-disabled" }),
+    "This build does not include the manual onion client attempt feature.",
+  );
+  assert.equal(
+    productionOnionReceiveFailureMessage({ last_failure_kind: "unexpected" }),
+    "Receive mode hit a retryable backend boundary and will keep polling.",
   );
 });
 

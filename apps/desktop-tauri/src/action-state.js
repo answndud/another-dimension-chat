@@ -224,6 +224,29 @@ export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
   };
 }
 
+export function productionOnionReceiveFailureMessage(backendLoop = {}) {
+  switch (backendLoop.last_failure_kind) {
+    case "none":
+      return "Receive worker is waiting for inbound onion traffic.";
+    case "manual-permission":
+      return "Receive mode is paused until manual onion network permission is enabled again.";
+    case "persistent-client":
+      return "Receive mode needs the persistent Tor client to be started again.";
+    case "peer-offline":
+      return "No inbound peer stream is available yet; receive mode will keep retrying.";
+    case "receive-timeout":
+      return "Receive attempt timed out; receive mode will retry while enabled.";
+    case "busy":
+      return "A receive attempt is already active; duplicate work is blocked.";
+    case "import":
+      return "A received envelope was not fully imported; receive mode will retry.";
+    case "feature-disabled":
+      return "This build does not include the manual onion client attempt feature.";
+    default:
+      return "Receive mode hit a retryable backend boundary and will keep polling.";
+  }
+}
+
 export function productionTwoProfileConversationActionView(entry, senderEnvelopeSlotPresent = false) {
   if (!entry) {
     return {
