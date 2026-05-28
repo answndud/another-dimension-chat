@@ -591,6 +591,15 @@ test("productionOnionReceiveRuntimeView maps receive loop states", () => {
     "receiving",
   );
   assert.deepEqual(
+    productionOnionReceiveRuntimeView({ enabled: true, stopRequested: true, runtimeState: "stopped" }),
+    {
+      state: "stopped",
+      label: "Receive mode stopping",
+      retryable: false,
+      duplicateBlocked: true,
+    },
+  );
+  assert.deepEqual(
     productionOnionReceiveRuntimeView({
       enabled: true,
       runtimeState: "bootstrapping",
