@@ -848,6 +848,7 @@ textarea[readonly] {
 }
 
 .chat-primary-actions #run-production-two-profile-message-roundtrip,
+.chat-primary-actions #run-production-two-profile-roundtrip-inline,
 .chat-primary-actions #start-production-two-profile-onion-receive {
   border-color: var(--accent-cyan);
 }
@@ -1243,7 +1244,13 @@ body.is-chat-active #production-two-profile-message {
 body.is-chat-active .chat-primary-actions {
   order: 6;
   display: grid;
-  grid-template-columns: minmax(92px, 0.9fr) minmax(92px, 1fr) minmax(92px, 1fr) minmax(92px, 1fr) auto;
+  grid-template-columns:
+    minmax(84px, 1fr)
+    minmax(72px, 0.85fr)
+    minmax(72px, 0.85fr)
+    minmax(84px, 1fr)
+    minmax(84px, 1fr)
+    auto;
   gap: 6px;
   border: 0;
   padding: 6px 0 0;
