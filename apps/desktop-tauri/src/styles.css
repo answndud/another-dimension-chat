@@ -811,6 +811,31 @@ textarea[readonly] {
   padding-top: 10px;
 }
 
+.setup-primary-actions {
+  justify-content: start;
+}
+
+.setup-primary-actions button {
+  min-width: min(100%, 220px);
+}
+
+.onion-advanced-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.onion-advanced-controls summary {
+  min-height: 30px;
+  padding: 6px 9px;
+  opacity: 0.72;
+  font-size: 11px;
+}
+
+.onion-advanced-controls[open] {
+  border-top: 1px solid var(--panel-border);
+  padding-top: 10px;
+}
+
 .chat-primary-actions {
   align-items: center;
   border: 1px solid var(--panel-border);

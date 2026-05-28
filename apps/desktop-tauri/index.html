@@ -412,9 +412,13 @@
               </li>
             </ol>
             <details class="chat-setup-controls" open>
-              <summary data-i18n="onionSetup">Onion setup</summary>
-              <div class="loop-actions">
+              <summary data-i18n="localSetup">Local setup</summary>
+              <div class="loop-actions setup-primary-actions">
                 <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Run two-profile setup</button>
+              </div>
+              <details class="onion-advanced-controls">
+                <summary data-i18n="advancedOnionSetup">Advanced onion setup</summary>
+                <div class="loop-actions">
                 <button id="start-production-two-profile-onion-bootstrap" type="button">
                   <span data-i18n="startTorBootstrap">Start Tor bootstrap</span>
                 </button>
@@ -445,7 +449,8 @@
                 <button id="run-production-two-profile-real-onion-roundtrip" type="button">
                   <span data-i18n="runRealOnionRoundtrip">Run real onion roundtrip</span>
                 </button>
-              </div>
+                </div>
+              </details>
             </details>
             </details>
             <p id="production-two-profile-state" class="demo-state" aria-live="polite">
