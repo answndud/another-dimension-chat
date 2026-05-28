@@ -1272,16 +1272,13 @@ body.is-chat-active .message-transcript .transcript-row-actions .transcript-canc
 }
 
 body.is-chat-active .chat-message-label {
-  order: 4;
-  margin: 0 0 4px;
-  font-size: 10px;
-  opacity: 0.58;
+  display: none;
 }
 
 body.is-chat-active #production-two-profile-message {
-  order: 5;
-  height: 42px;
-  min-height: 42px;
+  order: 4;
+  height: 46px;
+  min-height: 46px;
   resize: none;
   border-color: color-mix(in srgb, var(--accent-cyan) 48%, var(--input-border));
   background: color-mix(in srgb, var(--input-bg) 88%, var(--panel));
@@ -1289,7 +1286,7 @@ body.is-chat-active #production-two-profile-message {
 }
 
 body.is-chat-active .chat-primary-actions {
-  order: 6;
+  order: 5;
   display: grid;
   grid-template-columns:
     minmax(84px, 1fr)
@@ -1314,11 +1311,14 @@ body.is-chat-active .chat-primary-actions.is-setup-mode:not(.has-session-check-i
 
 body.is-chat-active .chat-primary-actions.is-send-mode {
   grid-template-columns:
-    minmax(72px, 1fr)
     minmax(84px, 1fr)
     minmax(84px, 1fr)
     minmax(84px, 1fr)
     auto;
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode #check-production-two-profile-session-status-inline {
+  display: none;
 }
 
 body.is-chat-active .chat-primary-actions button {
