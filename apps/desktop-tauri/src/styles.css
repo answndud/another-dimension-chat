@@ -1064,10 +1064,25 @@ body.is-chat-active .settings-toggle {
   z-index: 21;
   top: 54px;
   right: 14px;
+  width: 30px;
+  min-width: 30px;
   min-height: 30px;
-  padding: 6px 9px;
-  opacity: 0.72;
-  font-size: 11px;
+  overflow: hidden;
+  padding: 0;
+  opacity: 0.58;
+  font-size: 0;
+}
+
+body.is-chat-active .settings-toggle::before {
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  content: "...";
+}
+
+body.is-chat-active .settings-toggle:hover,
+body.is-chat-active .settings-toggle:focus-visible {
+  opacity: 0.9;
 }
 
 body.is-chat-active .chat-settings-panel > summary {
