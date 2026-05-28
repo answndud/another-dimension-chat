@@ -158,6 +158,7 @@ pub struct ProductionTwoProfileRealOnionRoundtripResult {
     sender_profile: String,
     receiver_profile: String,
     message_number: u64,
+    second_message_number: u64,
     message_ttl_seconds: u64,
     profile_a_unlocked: bool,
     profile_b_unlocked: bool,
@@ -173,14 +174,23 @@ pub struct ProductionTwoProfileRealOnionRoundtripResult {
     sender_session_ready: bool,
     receiver_session_ready: bool,
     message_number_reserved: bool,
+    second_message_number_reserved: bool,
     encrypted_envelope_exported: bool,
+    second_encrypted_envelope_exported: bool,
     send_attempt_started: bool,
     send_attempt_succeeded: bool,
+    second_send_attempt_succeeded: bool,
     receive_attempt_started: bool,
     receive_attempt_succeeded: bool,
+    second_receive_attempt_succeeded: bool,
     inbound_message_stored: bool,
+    second_inbound_message_stored: bool,
+    consecutive_receive_attempts: u64,
+    consecutive_messages_imported: u64,
     received_status_verified: bool,
     received_export_matches_input: bool,
+    second_received_status_verified: bool,
+    second_received_export_matches_input: bool,
     event_summary: Vec<String>,
     next_blocker: String,
     blockers: Vec<String>,
@@ -7478,6 +7488,7 @@ async fn run_production_two_profile_real_onion_roundtrip(
             sender_profile: profile_a_name,
             receiver_profile: profile_b_name,
             message_number: 0,
+            second_message_number: 0,
             message_ttl_seconds,
             profile_a_unlocked: false,
             profile_b_unlocked: false,
@@ -7493,14 +7504,23 @@ async fn run_production_two_profile_real_onion_roundtrip(
             sender_session_ready: false,
             receiver_session_ready: false,
             message_number_reserved: false,
+            second_message_number_reserved: false,
             encrypted_envelope_exported: false,
+            second_encrypted_envelope_exported: false,
             send_attempt_started: false,
             send_attempt_succeeded: false,
+            second_send_attempt_succeeded: false,
             receive_attempt_started: false,
             receive_attempt_succeeded: false,
+            second_receive_attempt_succeeded: false,
             inbound_message_stored: false,
+            second_inbound_message_stored: false,
+            consecutive_receive_attempts: 0,
+            consecutive_messages_imported: 0,
             received_status_verified: false,
             received_export_matches_input: false,
+            second_received_status_verified: false,
+            second_received_export_matches_input: false,
             event_summary: Vec::new(),
             next_blocker: "ManualClientAttemptFeatureNotEnabled".to_string(),
             blockers,
@@ -7532,6 +7552,7 @@ async fn run_production_two_profile_real_onion_roundtrip(
                 sender_profile: profile_a_name,
                 receiver_profile: profile_b_name,
                 message_number: 0,
+                second_message_number: 0,
                 message_ttl_seconds,
                 profile_a_unlocked: false,
                 profile_b_unlocked: false,
@@ -7547,14 +7568,23 @@ async fn run_production_two_profile_real_onion_roundtrip(
                 sender_session_ready: false,
                 receiver_session_ready: false,
                 message_number_reserved: false,
+                second_message_number_reserved: false,
                 encrypted_envelope_exported: false,
+                second_encrypted_envelope_exported: false,
                 send_attempt_started: false,
                 send_attempt_succeeded: false,
+                second_send_attempt_succeeded: false,
                 receive_attempt_started: false,
                 receive_attempt_succeeded: false,
+                second_receive_attempt_succeeded: false,
                 inbound_message_stored: false,
+                second_inbound_message_stored: false,
+                consecutive_receive_attempts: 0,
+                consecutive_messages_imported: 0,
                 received_status_verified: false,
                 received_export_matches_input: false,
+                second_received_status_verified: false,
+                second_received_export_matches_input: false,
                 event_summary: Vec::new(),
                 next_blocker: "ManualNetworkPermissionMissing".to_string(),
                 blockers: vec!["ManualNetworkPermissionMissing".to_string()],
@@ -7594,6 +7624,7 @@ async fn run_production_two_profile_real_onion_roundtrip(
                 sender_profile: profile_a_name.clone(),
                 receiver_profile: profile_b_name.clone(),
                 message_number: 0,
+                second_message_number: 0,
                 message_ttl_seconds,
                 profile_a_unlocked: profile_a_unlock.storage_opened
                     && profile_a_unlock.profile_marker_present,
@@ -7611,14 +7642,23 @@ async fn run_production_two_profile_real_onion_roundtrip(
                 sender_session_ready: false,
                 receiver_session_ready: false,
                 message_number_reserved: false,
+                second_message_number_reserved: false,
                 encrypted_envelope_exported: false,
+                second_encrypted_envelope_exported: false,
                 send_attempt_started: false,
                 send_attempt_succeeded: false,
+                second_send_attempt_succeeded: false,
                 receive_attempt_started: false,
                 receive_attempt_succeeded: false,
+                second_receive_attempt_succeeded: false,
                 inbound_message_stored: false,
+                second_inbound_message_stored: false,
+                consecutive_receive_attempts: 0,
+                consecutive_messages_imported: 0,
                 received_status_verified: false,
                 received_export_matches_input: false,
+                second_received_status_verified: false,
+                second_received_export_matches_input: false,
                 event_summary,
                 next_blocker,
                 blockers,
@@ -7807,11 +7847,11 @@ async fn run_production_two_profile_real_onion_roundtrip(
         let receiver_profile_result = receiver_profile.clone();
         let outbound = run_production_message_envelope_export(
             &_app_data_root,
-            sender_profile,
+            sender_profile.clone(),
             passphrase.clone(),
             message_number,
             false,
-            message_text,
+            message_text.clone(),
             message_ttl_seconds,
         )?;
         let outbound_payload = outbound.envelope_payload.clone();
@@ -7864,9 +7904,79 @@ async fn run_production_two_profile_real_onion_roundtrip(
         )?;
         let received = run_production_message_received_export(
             &_app_data_root,
+            receiver_profile.clone(),
+            passphrase.clone(),
+            received_envelope.message_number,
+        )?;
+        let second_message_number = run_production_message_number_reserve(
+            &_app_data_root,
+            sender_profile.clone(),
+            passphrase.clone(),
+        )?;
+        let second_outbound = run_production_message_envelope_export(
+            &_app_data_root,
+            sender_profile.clone(),
+            passphrase.clone(),
+            second_message_number,
+            false,
+            message_text,
+            message_ttl_seconds,
+        )?;
+        let second_outbound_payload = second_outbound.envelope_payload.clone();
+
+        let mut second_receive_sink = InMemoryTransportRuntimeEventSink::default();
+        let mut second_send_sink = InMemoryTransportRuntimeEventSink::default();
+        let second_receive_future = async {
+            receiver_owner
+                .accept_inbound_rend_request_once(
+                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                    &mut second_receive_sink,
+                )
+                .await?;
+            receiver_owner
+                .read_accepted_inbound_stream_once(
+                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                    4096,
+                    &mut second_receive_sink,
+                )
+                .await
+        };
+        let second_send_future = async {
+            sender_owner
+                .write_outbound_envelope_once(
+                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                    &receiver_endpoint,
+                    second_outbound_payload.as_bytes(),
+                    &mut second_send_sink,
+                )
+                .await
+        };
+        let (second_received_bytes_result, second_send_result) =
+            tokio::join!(second_receive_future, second_send_future);
+        event_summary.extend(second_send_sink.events().iter().map(ToString::to_string));
+        event_summary.extend(second_receive_sink.events().iter().map(ToString::to_string));
+
+        let second_received_bytes =
+            second_received_bytes_result.map_err(|_| "real onion second receive failed")?;
+        second_send_result.map_err(|_| "real onion second send failed")?;
+        let second_received_payload = String::from_utf8(second_received_bytes)
+            .map_err(|_| "real onion second received envelope was not valid UTF-8")?;
+        let second_received_payload = sanitize_envelope_payload(second_received_payload)?;
+        let second_received_envelope = Envelope::decode(&second_received_payload)
+            .map_err(|_| "real onion second received envelope decode failed")?;
+        let second_inbound = run_production_message_envelope_import(
+            &_app_data_root,
+            receiver_profile.clone(),
+            passphrase.clone(),
+            second_received_envelope.message_number,
+            second_received_payload,
+            message_ttl_seconds,
+        )?;
+        let second_received = run_production_message_received_export(
+            &_app_data_root,
             receiver_profile,
             passphrase,
-            received_envelope.message_number,
+            second_received_envelope.message_number,
         )?;
 
         Ok(ProductionTwoProfileRealOnionRoundtripResult {
@@ -7876,6 +7986,7 @@ async fn run_production_two_profile_real_onion_roundtrip(
             sender_profile: sender_profile_result,
             receiver_profile: receiver_profile_result,
             message_number,
+            second_message_number,
             message_ttl_seconds,
             profile_a_unlocked: profile_a_unlock.storage_opened
                 && profile_a_unlock.profile_marker_present,
@@ -7897,15 +8008,27 @@ async fn run_production_two_profile_real_onion_roundtrip(
             receiver_session_ready: receiver_state.session_transport_state_present
                 && receiver_state.runtime_material_reconstructable,
             message_number_reserved: outbound.message_number_reserved,
+            second_message_number_reserved: second_outbound.message_number_reserved,
             encrypted_envelope_exported: outbound.encrypted_envelope_present,
+            second_encrypted_envelope_exported: second_outbound.encrypted_envelope_present,
             send_attempt_started: true,
             send_attempt_succeeded: true,
+            second_send_attempt_succeeded: true,
             receive_attempt_started: true,
             receive_attempt_succeeded: true,
+            second_receive_attempt_succeeded: true,
             inbound_message_stored: inbound.received_message_written,
+            second_inbound_message_stored: second_inbound.received_message_written,
+            consecutive_receive_attempts: 2,
+            consecutive_messages_imported: (inbound.received_message_written as u64)
+                + (second_inbound.received_message_written as u64),
             received_status_verified: inbound.received_message_matches_session
                 && received.received_message_matches_session,
+            second_received_status_verified: second_inbound.received_message_matches_session
+                && second_received.received_message_matches_session,
             received_export_matches_input: received.received_message.as_bytes() == message.as_slice(),
+            second_received_export_matches_input: second_received.received_message.as_bytes()
+                == message.as_slice(),
             event_summary,
             next_blocker: "none".to_string(),
             blockers: Vec::new(),
@@ -7932,7 +8055,10 @@ async fn run_production_two_profile_real_onion_roundtrip(
                 || receiver_state.key_material_exposed
                 || outbound.key_material_exposed
                 || inbound.key_material_exposed
-                || received.key_material_exposed,
+                || received.key_material_exposed
+                || second_outbound.key_material_exposed
+                || second_inbound.key_material_exposed
+                || second_received.key_material_exposed,
             network_io_attempted: true,
             transport_io_opened: true,
             runtime_messaging_enabled: true,
