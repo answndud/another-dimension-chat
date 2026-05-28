@@ -20,6 +20,7 @@ import {
   productionMessageEnvelopeImportView,
   productionMessageTtlInputValue,
   productionOnionReceiveFailureMessage,
+  productionOnionReceiveLoopRefreshPlan,
   productionOnionReceiveRuntimeView,
   productionPairingPayloadView,
   productionProfileMessageReadiness,
@@ -627,6 +628,64 @@ test("productionOnionReceiveRuntimeView maps receive loop states", () => {
       { persistent_client_ready: true, inbound_stream_preparation_ready: true, receive_attempt_started: true },
     ).state,
     "failed-retryable",
+  );
+});
+
+test("productionOnionReceiveLoopRefreshPlan uses cumulative counters", () => {
+  assert.deepEqual(
+    productionOnionReceiveLoopRefreshPlan(
+      {
+        lastProcessedImportSequence: 2,
+        lastProcessedMessageImportCount: 1,
+        lastProcessedEndpointUpdateCount: 1,
+      },
+      {
+        import_sequence: 3,
+        message_import_count: 2,
+        endpoint_update_count: 1,
+        last_attempt_succeeded: false,
+        last_endpoint_update_applied: false,
+      },
+    ),
+    {
+      transcriptChanged: true,
+      messageImported: true,
+      endpointUpdated: false,
+      importSequence: 3,
+      messageImportCount: 2,
+      endpointUpdateCount: 1,
+    },
+  );
+  assert.deepEqual(
+    productionOnionReceiveLoopRefreshPlan(
+      {
+        lastProcessedImportSequence: 2,
+        lastProcessedMessageImportCount: 1,
+        lastProcessedEndpointUpdateCount: 1,
+      },
+      {
+        import_sequence: 3,
+        message_import_count: 1,
+        endpoint_update_count: 2,
+        last_attempt_succeeded: false,
+        last_endpoint_update_applied: false,
+      },
+    ),
+    {
+      transcriptChanged: true,
+      messageImported: false,
+      endpointUpdated: true,
+      importSequence: 3,
+      messageImportCount: 1,
+      endpointUpdateCount: 2,
+    },
+  );
+  assert.equal(
+    productionOnionReceiveLoopRefreshPlan(
+      { lastProcessedImportSequence: 3, lastProcessedMessageImportCount: 2 },
+      { import_sequence: 3, message_import_count: 2, endpoint_update_count: 0 },
+    ).transcriptChanged,
+    false,
   );
 });
 

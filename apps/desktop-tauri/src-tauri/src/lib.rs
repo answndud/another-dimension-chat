@@ -10,6 +10,8 @@ struct ProductionOnionClientRuntimeState {
     receive_loop_attempts: std::sync::atomic::AtomicU64,
     receive_loop_generation: std::sync::atomic::AtomicU64,
     receive_loop_import_sequence: std::sync::atomic::AtomicU64,
+    receive_loop_message_imports: std::sync::atomic::AtomicU64,
+    receive_loop_endpoint_updates: std::sync::atomic::AtomicU64,
     receive_loop_worker_running: std::sync::atomic::AtomicBool,
     receive_loop_last_attempt_started: std::sync::atomic::AtomicBool,
     receive_loop_last_attempt_succeeded: std::sync::atomic::AtomicBool,
@@ -926,6 +928,8 @@ pub struct ProductionOnionReceiveLoopStatusResult {
     attempt_count: u64,
     generation: u64,
     import_sequence: u64,
+    message_import_count: u64,
+    endpoint_update_count: u64,
     last_attempt_started: bool,
     last_attempt_succeeded: bool,
     last_endpoint_update_applied: bool,
@@ -4701,6 +4705,12 @@ fn run_production_onion_receive_loop_status(
         import_sequence: state
             .receive_loop_import_sequence
             .load(std::sync::atomic::Ordering::Acquire),
+        message_import_count: state
+            .receive_loop_message_imports
+            .load(std::sync::atomic::Ordering::Acquire),
+        endpoint_update_count: state
+            .receive_loop_endpoint_updates
+            .load(std::sync::atomic::Ordering::Acquire),
         last_attempt_started: state
             .receive_loop_last_attempt_started
             .load(std::sync::atomic::Ordering::Acquire),
@@ -4753,6 +4763,12 @@ fn run_production_onion_receive_loop_start(
         .store(0, std::sync::atomic::Ordering::Release);
     state
         .receive_loop_import_sequence
+        .store(0, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_message_imports
+        .store(0, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_endpoint_updates
         .store(0, std::sync::atomic::Ordering::Release);
     state
         .receive_loop_last_attempt_started
@@ -4864,6 +4880,16 @@ fn run_production_onion_receive_loop_record_attempt_result(
     if result.receive_attempt_succeeded || result.endpoint_update_applied {
         state
             .receive_loop_import_sequence
+            .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+    }
+    if result.receive_attempt_succeeded {
+        state
+            .receive_loop_message_imports
+            .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+    }
+    if result.endpoint_update_applied {
+        state
+            .receive_loop_endpoint_updates
             .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
     }
 }
@@ -10007,6 +10033,8 @@ replay check: no replayed messages after message 2
         assert_eq!(initial.attempt_count, 0);
         assert_eq!(initial.import_sequence, 0);
         assert!(!initial.last_attempt_started);
+        assert_eq!(initial.message_import_count, 0);
+        assert_eq!(initial.endpoint_update_count, 0);
         assert!(!initial.last_attempt_succeeded);
         assert!(!initial.last_endpoint_update_applied);
         assert_eq!(initial.last_next_blocker, None);
@@ -10161,14 +10189,29 @@ replay check: no replayed messages after message 2
         run_production_onion_receive_loop_record_attempt_result(&state, &imported_result);
         let imported = run_production_onion_receive_loop_status(&state, false);
         assert_eq!(imported.import_sequence, 1);
+        assert_eq!(imported.message_import_count, 1);
+        assert_eq!(imported.endpoint_update_count, 0);
         assert!(imported.last_attempt_started);
         assert!(imported.last_attempt_succeeded);
         assert_eq!(imported.last_failure_kind, "none");
         assert!(!imported.last_failure_retryable);
 
+        let endpoint_update_result = ProductionOnionInboundEnvelopeReceiveAttemptResult {
+            receive_attempt_succeeded: false,
+            endpoint_update_applied: true,
+            ..imported_result
+        };
+        run_production_onion_receive_loop_record_attempt_result(&state, &endpoint_update_result);
+        let endpoint_updated = run_production_onion_receive_loop_status(&state, false);
+        assert_eq!(endpoint_updated.import_sequence, 2);
+        assert_eq!(endpoint_updated.message_import_count, 1);
+        assert_eq!(endpoint_updated.endpoint_update_count, 1);
+
         run_production_onion_receive_loop_record_attempt_error(&state);
         let errored = run_production_onion_receive_loop_status(&state, false);
-        assert_eq!(errored.import_sequence, 1);
+        assert_eq!(errored.import_sequence, 2);
+        assert_eq!(errored.message_import_count, 1);
+        assert_eq!(errored.endpoint_update_count, 1);
         assert_eq!(errored.last_failure_kind, "attempt-failed");
         assert!(errored.last_failure_retryable);
 
@@ -10176,7 +10219,9 @@ replay check: no replayed messages after message 2
             *guard = Some("InboundEnvelopeDecodeFailed".to_string());
         }
         let import_failed = run_production_onion_receive_loop_status(&state, false);
-        assert_eq!(import_failed.import_sequence, 1);
+        assert_eq!(import_failed.import_sequence, 2);
+        assert_eq!(import_failed.message_import_count, 1);
+        assert_eq!(import_failed.endpoint_update_count, 1);
         assert_eq!(import_failed.last_failure_kind, "import");
         assert!(import_failed.last_failure_retryable);
 

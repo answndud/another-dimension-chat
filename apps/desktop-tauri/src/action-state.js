@@ -224,6 +224,26 @@ export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
   };
 }
 
+export function productionOnionReceiveLoopRefreshPlan(mode = {}, backendLoop = {}) {
+  const importSequence = Number.parseInt(backendLoop.import_sequence ?? 0, 10);
+  const messageImportCount = Number.parseInt(backendLoop.message_import_count ?? 0, 10);
+  const endpointUpdateCount = Number.parseInt(backendLoop.endpoint_update_count ?? 0, 10);
+  const lastImportSequence = Number.parseInt(mode.lastProcessedImportSequence ?? 0, 10);
+  const lastMessageImportCount = Number.parseInt(mode.lastProcessedMessageImportCount ?? 0, 10);
+  const lastEndpointUpdateCount = Number.parseInt(mode.lastProcessedEndpointUpdateCount ?? 0, 10);
+  const transcriptChanged = importSequence > lastImportSequence;
+  const messageImported = messageImportCount > lastMessageImportCount;
+  const endpointUpdated = endpointUpdateCount > lastEndpointUpdateCount;
+  return {
+    transcriptChanged,
+    messageImported,
+    endpointUpdated,
+    importSequence: Number.isFinite(importSequence) ? importSequence : 0,
+    messageImportCount: Number.isFinite(messageImportCount) ? messageImportCount : 0,
+    endpointUpdateCount: Number.isFinite(endpointUpdateCount) ? endpointUpdateCount : 0,
+  };
+}
+
 export function productionOnionReceiveFailureMessage(backendLoop = {}) {
   switch (backendLoop.last_failure_kind) {
     case "none":
