@@ -1694,10 +1694,10 @@ function renderProductionTwoProfileConversationList() {
         currentReplyTarget ? "is-reply-target" : currentReviewTarget ? "is-review-target" : "is-selected"
       }`;
       review.textContent = currentReplyTarget
-        ? `reply target: ${entry.receiver} -> ${entry.sender}`
+        ? `${t("replyTarget")}: ${entry.receiver} -> ${entry.sender}`
         : delivered
-        ? `reply candidate: ${entry.receiver} -> ${entry.sender}`
-        : `review target set: message #${entry.messageNumber}`;
+        ? `${t("replyCandidate")}: ${entry.receiver} -> ${entry.sender}`
+        : `${t("reviewTargetSet")}: #${entry.messageNumber}`;
       item.append(review);
     }
     target.append(item);
