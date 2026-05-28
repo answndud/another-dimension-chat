@@ -930,6 +930,8 @@ pub struct ProductionOnionReceiveLoopStatusResult {
     last_attempt_succeeded: bool,
     last_endpoint_update_applied: bool,
     last_next_blocker: Option<String>,
+    last_failure_kind: &'static str,
+    last_failure_retryable: bool,
     duplicate_loop_blocked: bool,
     explicit_user_start_required: bool,
     starts_network_on_app_launch: bool,
@@ -4665,6 +4667,8 @@ fn run_production_onion_receive_loop_status(
     let stop_requested = state
         .receive_loop_stop_requested
         .load(std::sync::atomic::Ordering::Acquire);
+    let (last_failure_kind, last_failure_retryable) =
+        production_onion_receive_loop_failure_view(last_next_blocker.as_deref());
     ProductionOnionReceiveLoopStatusResult {
         warning: if worker_running {
             "Receive loop worker was started by explicit user action. Status is redacted."
@@ -4707,6 +4711,8 @@ fn run_production_onion_receive_loop_status(
             .receive_loop_last_endpoint_update_applied
             .load(std::sync::atomic::Ordering::Acquire),
         last_next_blocker,
+        last_failure_kind,
+        last_failure_retryable,
         duplicate_loop_blocked,
         explicit_user_start_required: true,
         starts_network_on_app_launch: false,
@@ -4767,6 +4773,36 @@ fn run_production_onion_receive_loop_start(
         *guard = Some(profile);
     }
     run_production_onion_receive_loop_status(state, false)
+}
+
+fn production_onion_receive_loop_failure_view(
+    next_blocker: Option<&str>,
+) -> (&'static str, bool) {
+    match next_blocker.unwrap_or("none") {
+        "none" => ("none", false),
+        "ManualNetworkPermissionMissing" => ("manual-permission", true),
+        "ManualClientAttemptFeatureNotEnabled" => ("feature-disabled", false),
+        "PersistentClientNotReady" | "PersistentClientOwnerUnavailable" => {
+            ("persistent-client", true)
+        }
+        "InboundEnvelopeReceiveAlreadyInProgress" => ("busy", true),
+        "InboundEnvelopeImportIncomplete"
+        | "InboundControlEnvelopeImportIncomplete"
+        | "InboundAckEnvelopeImportUnsupported" => ("import", true),
+        blocker if blocker.contains("Timeout") || blocker.contains("timeout") => {
+            ("receive-timeout", true)
+        }
+        blocker
+            if blocker.contains("Accept")
+                || blocker.contains("Rend")
+                || blocker.contains("Stream")
+                || blocker.contains("Unavailable") =>
+        {
+            ("peer-offline", true)
+        }
+        "ReceiveLoopAttemptFailed" => ("attempt-failed", true),
+        _ => ("unknown-retryable", true),
+    }
 }
 
 fn run_production_onion_receive_loop_worker_started(
@@ -9887,6 +9923,8 @@ replay check: no replayed messages after message 2
         assert!(!initial.last_attempt_succeeded);
         assert!(!initial.last_endpoint_update_applied);
         assert_eq!(initial.last_next_blocker, None);
+        assert_eq!(initial.last_failure_kind, "none");
+        assert!(!initial.last_failure_retryable);
         assert!(initial.explicit_user_start_required);
         assert!(!initial.starts_network_on_app_launch);
         assert!(!initial.raw_profile_returned);
@@ -9935,6 +9973,13 @@ replay check: no replayed messages after message 2
             .fetch_add(2, std::sync::atomic::Ordering::AcqRel);
         let running = run_production_onion_receive_loop_status(&state, false);
         assert_eq!(running.attempt_count, 2);
+
+        if let Ok(mut guard) = state.receive_loop_last_next_blocker.lock() {
+            *guard = Some("PersistentClientNotReady".to_string());
+        }
+        let retryable = run_production_onion_receive_loop_status(&state, false);
+        assert_eq!(retryable.last_failure_kind, "persistent-client");
+        assert!(retryable.last_failure_retryable);
 
         let stopped = run_production_onion_receive_loop_stop(&state);
         assert!(!stopped.enabled);
