@@ -12,6 +12,8 @@ struct ProductionOnionClientRuntimeState {
     receive_loop_import_sequence: std::sync::atomic::AtomicU64,
     receive_loop_message_imports: std::sync::atomic::AtomicU64,
     receive_loop_endpoint_updates: std::sync::atomic::AtomicU64,
+    receive_loop_worker_starts: std::sync::atomic::AtomicU64,
+    receive_loop_duplicate_start_blocks: std::sync::atomic::AtomicU64,
     receive_loop_worker_running: std::sync::atomic::AtomicBool,
     receive_loop_last_attempt_started: std::sync::atomic::AtomicBool,
     receive_loop_last_attempt_succeeded: std::sync::atomic::AtomicBool,
@@ -954,9 +956,12 @@ pub struct ProductionOnionReceiveLoopStatusResult {
     receive_attempt_in_flight: bool,
     attempt_count: u64,
     generation: u64,
+    worker_start_count: u64,
+    duplicate_start_block_count: u64,
     import_sequence: u64,
     message_import_count: u64,
     endpoint_update_count: u64,
+    active_after_import: bool,
     runtime_state: &'static str,
     runtime_label: &'static str,
     last_attempt_started: bool,
@@ -4722,6 +4727,9 @@ fn run_production_onion_receive_loop_status(
     let import_sequence = state
         .receive_loop_import_sequence
         .load(std::sync::atomic::Ordering::Acquire);
+    let message_import_count = state
+        .receive_loop_message_imports
+        .load(std::sync::atomic::Ordering::Acquire);
     let last_attempt_succeeded = state
         .receive_loop_last_attempt_succeeded
         .load(std::sync::atomic::Ordering::Acquire);
@@ -4757,13 +4765,18 @@ fn run_production_onion_receive_loop_status(
         generation: state
             .receive_loop_generation
             .load(std::sync::atomic::Ordering::Acquire),
-        import_sequence,
-        message_import_count: state
-            .receive_loop_message_imports
+        worker_start_count: state
+            .receive_loop_worker_starts
             .load(std::sync::atomic::Ordering::Acquire),
+        duplicate_start_block_count: state
+            .receive_loop_duplicate_start_blocks
+            .load(std::sync::atomic::Ordering::Acquire),
+        import_sequence,
+        message_import_count,
         endpoint_update_count: state
             .receive_loop_endpoint_updates
             .load(std::sync::atomic::Ordering::Acquire),
+        active_after_import: enabled && worker_running && message_import_count > 0,
         last_attempt_started: state
             .receive_loop_last_attempt_started
             .load(std::sync::atomic::Ordering::Acquire),
@@ -4819,6 +4832,9 @@ fn run_production_onion_receive_loop_start(
         )
         .is_err()
     {
+        state
+            .receive_loop_duplicate_start_blocks
+            .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
         return run_production_onion_receive_loop_status(state, true);
     }
     state
@@ -4835,6 +4851,12 @@ fn run_production_onion_receive_loop_start(
         .store(0, std::sync::atomic::Ordering::Release);
     state
         .receive_loop_endpoint_updates
+        .store(0, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_worker_starts
+        .store(0, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_duplicate_start_blocks
         .store(0, std::sync::atomic::Ordering::Release);
     state
         .receive_loop_last_attempt_started
@@ -4963,6 +4985,9 @@ fn run_production_onion_receive_loop_worker_started(
     state
         .receive_loop_worker_running
         .store(true, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_worker_starts
+        .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
     run_production_onion_receive_loop_status(state, false)
 }
 
@@ -10366,10 +10391,13 @@ replay check: no replayed messages after message 2
         assert_eq!(initial.runtime_label, "Receive mode stopped");
         assert!(!initial.receive_attempt_in_flight);
         assert_eq!(initial.attempt_count, 0);
+        assert_eq!(initial.worker_start_count, 0);
+        assert_eq!(initial.duplicate_start_block_count, 0);
         assert_eq!(initial.import_sequence, 0);
         assert!(!initial.last_attempt_started);
         assert_eq!(initial.message_import_count, 0);
         assert_eq!(initial.endpoint_update_count, 0);
+        assert!(!initial.active_after_import);
         assert!(!initial.last_attempt_succeeded);
         assert!(!initial.last_endpoint_update_applied);
         assert!(!initial.last_network_io_attempted);
@@ -10408,11 +10436,15 @@ replay check: no replayed messages after message 2
         assert_eq!(started.runtime_state, "receiving");
         assert!(!started.duplicate_loop_blocked);
         assert_eq!(started.attempt_count, 0);
+        assert_eq!(started.worker_start_count, 0);
+        assert_eq!(started.duplicate_start_block_count, 0);
+        assert!(!started.active_after_import);
         assert!(!started.network_io_attempted);
 
         let worker_started = run_production_onion_receive_loop_worker_started(&state);
         assert!(worker_started.worker_running);
         assert_eq!(worker_started.runtime_state, "receiving");
+        assert_eq!(worker_started.worker_start_count, 1);
 
         let duplicate = run_production_onion_receive_loop_start(
             &state,
@@ -10423,6 +10455,8 @@ replay check: no replayed messages after message 2
         assert!(duplicate.profile_selected);
         assert!(duplicate.worker_running);
         assert!(duplicate.duplicate_loop_blocked);
+        assert_eq!(duplicate.worker_start_count, 1);
+        assert_eq!(duplicate.duplicate_start_block_count, 1);
         assert!(!duplicate.raw_profile_returned);
 
         state
@@ -10430,6 +10464,8 @@ replay check: no replayed messages after message 2
             .fetch_add(2, std::sync::atomic::Ordering::AcqRel);
         let running = run_production_onion_receive_loop_status(&state, false);
         assert_eq!(running.attempt_count, 2);
+        assert_eq!(running.worker_start_count, 1);
+        assert_eq!(running.duplicate_start_block_count, 1);
 
         if let Ok(mut guard) = state.receive_loop_last_next_blocker.lock() {
             *guard = Some("PersistentClientNotReady".to_string());
@@ -10447,12 +10483,16 @@ replay check: no replayed messages after message 2
         assert!(stopped.worker_running);
         assert!(!stopped.stop_confirmed);
         assert_eq!(stopped.attempt_count, 2);
+        assert_eq!(stopped.worker_start_count, 1);
+        assert_eq!(stopped.duplicate_start_block_count, 1);
         assert!(!stopped.starts_network_on_app_launch);
 
         run_production_onion_receive_loop_worker_finished(&state);
         let finished = run_production_onion_receive_loop_status(&state, false);
         assert!(!finished.worker_running);
         assert!(finished.stop_confirmed);
+        assert_eq!(finished.worker_start_count, 1);
+        assert_eq!(finished.duplicate_start_block_count, 1);
     }
 
     #[test]
@@ -10541,6 +10581,7 @@ replay check: no replayed messages after message 2
         assert_eq!(imported.import_sequence, 1);
         assert_eq!(imported.message_import_count, 1);
         assert_eq!(imported.endpoint_update_count, 0);
+        assert!(imported.active_after_import);
         assert!(imported.last_attempt_started);
         assert!(imported.last_attempt_succeeded);
         assert!(imported.last_network_io_attempted);
@@ -10601,6 +10642,7 @@ replay check: no replayed messages after message 2
         assert_eq!(second_imported.import_sequence, 3);
         assert_eq!(second_imported.message_import_count, 2);
         assert_eq!(second_imported.endpoint_update_count, 1);
+        assert!(second_imported.active_after_import);
         assert_eq!(second_imported.last_failure_kind, "none");
         assert!(!second_imported.last_failure_retryable);
         assert_eq!(second_imported.runtime_state, "message-imported");
@@ -10611,6 +10653,7 @@ replay check: no replayed messages after message 2
         run_production_onion_receive_loop_worker_finished(&state);
         let stopped = run_production_onion_receive_loop_status(&state, false);
         assert!(stopped.stop_confirmed);
+        assert!(!stopped.active_after_import);
         assert!(!stopped.profile_selected);
         assert!(!stopped.raw_profile_returned);
         assert!(!stopped.passphrase_retained);
