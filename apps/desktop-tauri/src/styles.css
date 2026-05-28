@@ -631,6 +631,63 @@ textarea[readonly] {
   font-weight: 650;
 }
 
+.connection-guide {
+  order: 0;
+  display: grid;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 34%, var(--panel-border));
+  padding: 10px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 9%, transparent), transparent 68%),
+    color-mix(in srgb, var(--panel-strong) 80%, var(--bg));
+}
+
+.connection-guide-head {
+  display: grid;
+  gap: 5px;
+}
+
+.connection-guide-head .eyebrow,
+.connection-guide-head p {
+  margin: 0;
+}
+
+.connection-guide-head p:not(.eyebrow) {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.connection-guide ol {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--panel-border);
+}
+
+.connection-guide li {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 9px;
+  background: color-mix(in srgb, var(--panel) 90%, var(--bg));
+}
+
+.connection-guide strong {
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.connection-guide span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 #production-two-profile-title::after {
   display: none;
   margin-top: 4px;
@@ -983,6 +1040,7 @@ body.is-chat-active .chat-setup-controls,
 body.is-chat-active .chat-diagnostics,
 body.is-chat-active #production-two-profile-flow,
 body.is-chat-active #production-two-profile-state,
+body.is-chat-active .connection-guide,
 body.is-chat-active .chat-transcript-toolbar .loop-label,
 body.is-chat-active .chat-compose-tools,
 body.is-chat-active label[for="production-two-profile-transcript-export"],
@@ -1631,6 +1689,10 @@ pre.is-failed {
   }
 
   .compact-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .connection-guide ol {
     grid-template-columns: 1fr;
   }
 
