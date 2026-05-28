@@ -8531,6 +8531,8 @@ mod tests {
         run_production_onion_outbound_stream_prepare,
         run_production_onion_persistent_client_start, run_production_onion_persistent_client_status,
         run_production_onion_preflight_check, run_production_onion_receive_loop_start,
+        run_production_onion_receive_loop_record_attempt_error,
+        run_production_onion_receive_loop_record_attempt_result,
         run_production_onion_receive_loop_status, run_production_onion_receive_loop_stop,
         run_production_onion_receive_loop_worker_finished,
         run_production_onion_receive_loop_worker_started,
@@ -8541,6 +8543,7 @@ mod tests {
         run_production_pairing_session_remote_endpoint_update, run_production_profile_list,
         run_production_profile_unlock,
         run_production_session_state_check, ProductionOnionClientRuntimeState,
+        ProductionOnionInboundEnvelopeReceiveAttemptResult,
         run_production_two_profile_message_roundtrip, run_production_two_profile_roundtrip,
         run_production_two_profile_session_status, sanitize_envelope_payload,
         sanitize_handshake_payload, sanitize_loop_messages, sanitize_pairing_payload,
@@ -9994,6 +9997,105 @@ replay check: no replayed messages after message 2
         let finished = run_production_onion_receive_loop_status(&state, false);
         assert!(!finished.worker_running);
         assert!(finished.stop_confirmed);
+    }
+
+    #[test]
+    fn production_onion_receive_loop_records_lifecycle_results() {
+        let state = ProductionOnionClientRuntimeState::default();
+        let started = run_production_onion_receive_loop_start(&state, "alice".to_string(), true);
+        assert!(started.enabled);
+        let worker = run_production_onion_receive_loop_worker_started(&state);
+        assert!(worker.worker_running);
+
+        let retry_result = ProductionOnionInboundEnvelopeReceiveAttemptResult {
+            warning: "test retry",
+            preparation_only: false,
+            manual_client_attempt_feature_compiled: true,
+            manual_network_permission_enabled: true,
+            persistent_client_ready: false,
+            inbound_stream_preparation_ready: false,
+            inbound_rend_request_stream_ready: false,
+            inbound_rend_request_accept_attempted: false,
+            inbound_rend_request_accepted: false,
+            accepted_stream_request_stream_ready: false,
+            stream_request_accept_attempted: false,
+            stream_request_accepted: false,
+            stream_read_attempted: false,
+            stream_bytes_read: false,
+            receive_attempt_started: false,
+            receive_attempt_succeeded: false,
+            received_envelope_ready: false,
+            inbound_import_attempted: false,
+            control_envelope_imported: false,
+            endpoint_update_applied: false,
+            stale_endpoint_status_cleared: false,
+            redacted_receive_result_event_recorded: false,
+            event_summary: Vec::new(),
+            next_blocker: "PersistentClientNotReady".to_string(),
+            blockers: vec!["PersistentClientNotReady".to_string()],
+            raw_endpoint_returned: false,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            descriptor_body_returned: false,
+            stream_id_returned: false,
+            envelope_payload_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            descriptor_publish_attempted: false,
+            stream_accept_attempted: false,
+            stream_read_write_attempted: false,
+            envelope_io_opened: false,
+            runtime_messaging_enabled: false,
+        };
+        run_production_onion_receive_loop_record_attempt_result(&state, &retry_result);
+        let retry = run_production_onion_receive_loop_status(&state, false);
+        assert_eq!(retry.import_sequence, 0);
+        assert_eq!(retry.last_next_blocker.as_deref(), Some("PersistentClientNotReady"));
+        assert_eq!(retry.last_failure_kind, "persistent-client");
+        assert!(retry.last_failure_retryable);
+
+        let imported_result = ProductionOnionInboundEnvelopeReceiveAttemptResult {
+            next_blocker: "none".to_string(),
+            blockers: Vec::new(),
+            persistent_client_ready: true,
+            inbound_stream_preparation_ready: true,
+            inbound_rend_request_stream_ready: true,
+            inbound_rend_request_accept_attempted: true,
+            inbound_rend_request_accepted: true,
+            accepted_stream_request_stream_ready: true,
+            stream_request_accept_attempted: true,
+            stream_request_accepted: true,
+            stream_read_attempted: true,
+            stream_bytes_read: true,
+            receive_attempt_started: true,
+            receive_attempt_succeeded: true,
+            received_envelope_ready: true,
+            inbound_import_attempted: true,
+            ..retry_result
+        };
+        run_production_onion_receive_loop_record_attempt_result(&state, &imported_result);
+        let imported = run_production_onion_receive_loop_status(&state, false);
+        assert_eq!(imported.import_sequence, 1);
+        assert!(imported.last_attempt_started);
+        assert!(imported.last_attempt_succeeded);
+        assert_eq!(imported.last_failure_kind, "none");
+        assert!(!imported.last_failure_retryable);
+
+        run_production_onion_receive_loop_record_attempt_error(&state);
+        let errored = run_production_onion_receive_loop_status(&state, false);
+        assert_eq!(errored.import_sequence, 1);
+        assert_eq!(errored.last_failure_kind, "attempt-failed");
+        assert!(errored.last_failure_retryable);
+
+        let stopping = run_production_onion_receive_loop_stop(&state);
+        assert!(!stopping.stop_confirmed);
+        run_production_onion_receive_loop_worker_finished(&state);
+        let stopped = run_production_onion_receive_loop_status(&state, false);
+        assert!(stopped.stop_confirmed);
+        assert!(!stopped.profile_selected);
+        assert!(!stopped.raw_profile_returned);
+        assert!(!stopped.passphrase_retained);
+        assert!(!stopped.key_material_exposed);
     }
 
     #[test]
