@@ -7639,7 +7639,6 @@ async fn run_production_two_profile_real_onion_roundtrip(
 
     #[cfg(feature = "manual-onion-client-attempt")]
     {
-        use another_dimension_protocol::Envelope;
         use another_dimension_transport::{
             arti_adapter_spike, InMemoryTransportRuntimeEventSink,
         };
@@ -7720,6 +7719,18 @@ async fn run_production_two_profile_real_onion_roundtrip(
         )?;
         let profile_b_unlock = run_production_profile_unlock(
             &_app_data_root,
+            profile_b_name.clone(),
+            passphrase.clone(),
+        )?;
+        let profile_a_key_record = run_production_onion_key_record_prepare(
+            &_app_data_root,
+            &_app_cache_root,
+            profile_a_name.clone(),
+            passphrase.clone(),
+        )?;
+        let profile_b_key_record = run_production_onion_key_record_prepare(
+            &_app_data_root,
+            &_app_cache_root,
             profile_b_name.clone(),
             passphrase.clone(),
         )?;
@@ -7903,7 +7914,7 @@ async fn run_production_two_profile_real_onion_roundtrip(
             passphrase.clone(),
         )?;
         let mut profile_b_init = None;
-        let (sender_profile, receiver_profile, sender_owner, mut receiver_owner, receiver_endpoint, init_payload) =
+        let (sender_profile, receiver_profile, sender_owner, receiver_owner, receiver_endpoint, init_payload) =
             if profile_a_init.output_payload_created {
                 (
                     profile_a_name.clone(),
@@ -7978,59 +7989,54 @@ async fn run_production_two_profile_real_onion_roundtrip(
             message_text.clone(),
             message_ttl_seconds,
         )?;
-        let outbound_payload = outbound.envelope_payload.clone();
-
-        let mut receive_sink = InMemoryTransportRuntimeEventSink::default();
-        let mut send_sink = InMemoryTransportRuntimeEventSink::default();
-        let receive_future = async {
-            receiver_owner
-                .accept_inbound_rend_request_once(
-                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
-                    &mut receive_sink,
-                )
-                .await?;
-            receiver_owner
-                .read_accepted_inbound_stream_once(
-                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
-                    4096,
-                    &mut receive_sink,
-                )
-                .await
-        };
-        let send_future = async {
-            sender_owner
-                .write_outbound_envelope_once(
-                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
-                    &receiver_endpoint,
-                    outbound_payload.as_bytes(),
-                    &mut send_sink,
-                )
-                .await
-        };
-        let (received_bytes_result, send_result) = tokio::join!(receive_future, send_future);
-        event_summary.extend(send_sink.events().iter().map(ToString::to_string));
-        event_summary.extend(receive_sink.events().iter().map(ToString::to_string));
-
-        let received_bytes = received_bytes_result.map_err(|_| "real onion receive failed")?;
-        send_result.map_err(|_| "real onion send failed")?;
-        let received_payload = String::from_utf8(received_bytes)
-            .map_err(|_| "real onion received envelope was not valid UTF-8")?;
-        let received_payload = sanitize_envelope_payload(received_payload)?;
-        let received_envelope = Envelope::decode(&received_payload)
-            .map_err(|_| "real onion received envelope decode failed")?;
-        let inbound = run_production_message_envelope_import(
+        let sender_runtime_state = ProductionOnionClientRuntimeState::default();
+        let receiver_runtime_state = ProductionOnionClientRuntimeState::default();
+        if let Ok(mut guard) = sender_runtime_state.owner.lock() {
+            *guard = Some(sender_owner);
+        }
+        if let Ok(mut guard) = receiver_runtime_state.owner.lock() {
+            *guard = Some(receiver_owner);
+        }
+        let _ = run_production_onion_receive_loop_start(
+            &receiver_runtime_state,
+            receiver_profile.clone(),
+            true,
+        );
+        let _ = run_production_onion_receive_loop_worker_started(&receiver_runtime_state);
+        let receive_future = run_production_onion_inbound_envelope_receive_attempt(
             &_app_data_root,
+            &_app_cache_root,
+            &receiver_runtime_state,
             receiver_profile.clone(),
             passphrase.clone(),
-            received_envelope.message_number,
-            received_payload,
-            message_ttl_seconds,
-        )?;
+            true,
+        );
+        let send_future = run_production_onion_outbound_envelope_send_attempt(
+            &_app_data_root,
+            &_app_cache_root,
+            &sender_runtime_state,
+            sender_profile.clone(),
+            passphrase.clone(),
+            receiver_endpoint.clone(),
+            message_number,
+            true,
+        );
+        let (inbound_result, send_result) = tokio::join!(receive_future, send_future);
+        let inbound_attempt = inbound_result.map_err(|_| "real onion receive attempt failed")?;
+        let send_attempt = send_result.map_err(|_| "real onion send attempt failed")?;
+        event_summary.extend(send_attempt.event_summary.iter().cloned());
+        event_summary.extend(inbound_attempt.event_summary.iter().cloned());
+        if !send_attempt.send_attempt_succeeded {
+            return Err("real onion send failed".to_string());
+        }
+        if !inbound_attempt.receive_attempt_succeeded {
+            return Err("real onion receive failed".to_string());
+        }
         let received = run_production_message_received_export(
             &_app_data_root,
             receiver_profile.clone(),
             passphrase.clone(),
-            received_envelope.message_number,
+            message_number,
         )?;
         let second_message_number = run_production_message_number_reserve(
             &_app_data_root,
@@ -8046,136 +8052,50 @@ async fn run_production_two_profile_real_onion_roundtrip(
             message_text,
             message_ttl_seconds,
         )?;
-        let second_outbound_payload = second_outbound.envelope_payload.clone();
-
-        let mut second_receive_sink = InMemoryTransportRuntimeEventSink::default();
-        let mut second_send_sink = InMemoryTransportRuntimeEventSink::default();
-        let second_receive_future = async {
-            receiver_owner
-                .accept_inbound_rend_request_once(
-                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
-                    &mut second_receive_sink,
-                )
-                .await?;
-            receiver_owner
-                .read_accepted_inbound_stream_once(
-                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
-                    4096,
-                    &mut second_receive_sink,
-                )
-                .await
-        };
-        let second_send_future = async {
-            sender_owner
-                .write_outbound_envelope_once(
-                    arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
-                    &receiver_endpoint,
-                    second_outbound_payload.as_bytes(),
-                    &mut second_send_sink,
-                )
-                .await
-        };
-        let (second_received_bytes_result, second_send_result) =
-            tokio::join!(second_receive_future, second_send_future);
-        event_summary.extend(second_send_sink.events().iter().map(ToString::to_string));
-        event_summary.extend(second_receive_sink.events().iter().map(ToString::to_string));
-
-        let second_received_bytes =
-            second_received_bytes_result.map_err(|_| "real onion second receive failed")?;
-        second_send_result.map_err(|_| "real onion second send failed")?;
-        let second_received_payload = String::from_utf8(second_received_bytes)
-            .map_err(|_| "real onion second received envelope was not valid UTF-8")?;
-        let second_received_payload = sanitize_envelope_payload(second_received_payload)?;
-        let second_received_envelope = Envelope::decode(&second_received_payload)
-            .map_err(|_| "real onion second received envelope decode failed")?;
-        let second_inbound = run_production_message_envelope_import(
+        let second_receive_future = run_production_onion_inbound_envelope_receive_attempt(
             &_app_data_root,
+            &_app_cache_root,
+            &receiver_runtime_state,
             receiver_profile.clone(),
             passphrase.clone(),
-            second_received_envelope.message_number,
-            second_received_payload,
-            message_ttl_seconds,
-        )?;
+            true,
+        );
+        let second_send_future = run_production_onion_outbound_envelope_send_attempt(
+            &_app_data_root,
+            &_app_cache_root,
+            &sender_runtime_state,
+            sender_profile.clone(),
+            passphrase.clone(),
+            receiver_endpoint,
+            second_message_number,
+            true,
+        );
+        let (second_inbound_result, second_send_result) =
+            tokio::join!(second_receive_future, second_send_future);
+        let second_inbound_attempt =
+            second_inbound_result.map_err(|_| "real onion second receive attempt failed")?;
+        let second_send_attempt =
+            second_send_result.map_err(|_| "real onion second send attempt failed")?;
+        event_summary.extend(second_send_attempt.event_summary.iter().cloned());
+        event_summary.extend(second_inbound_attempt.event_summary.iter().cloned());
+        if !second_send_attempt.send_attempt_succeeded {
+            return Err("real onion second send failed".to_string());
+        }
+        if !second_inbound_attempt.receive_attempt_succeeded {
+            return Err("real onion second receive failed".to_string());
+        }
         let second_received = run_production_message_received_export(
             &_app_data_root,
             receiver_profile,
             passphrase,
-            second_received_envelope.message_number,
+            second_message_number,
         )?;
-        let consecutive_messages_imported = (inbound.received_message_written as u64)
-            + (second_inbound.received_message_written as u64);
-        let receive_mode_recorder_state = ProductionOnionClientRuntimeState::default();
-        let _ = run_production_onion_receive_loop_start(
-            &receive_mode_recorder_state,
-            receiver_profile_result.clone(),
-            true,
-        );
-        let _ = run_production_onion_receive_loop_worker_started(&receive_mode_recorder_state);
-        let receive_mode_record_import =
-            |state: &ProductionOnionClientRuntimeState, imported: bool| {
-                let result = ProductionOnionInboundEnvelopeReceiveAttemptResult {
-                    warning: "real onion receive-mode recorder projection",
-                    preparation_only: false,
-                    manual_client_attempt_feature_compiled: true,
-                    manual_network_permission_enabled: true,
-                    persistent_client_ready: true,
-                    inbound_stream_preparation_ready: true,
-                    inbound_rend_request_stream_ready: true,
-                    inbound_rend_request_accept_attempted: true,
-                    inbound_rend_request_accepted: true,
-                    accepted_stream_request_stream_ready: true,
-                    stream_request_accept_attempted: true,
-                    stream_request_accepted: true,
-                    stream_read_attempted: true,
-                    stream_bytes_read: true,
-                    receive_attempt_started: true,
-                    receive_attempt_succeeded: imported,
-                    received_envelope_ready: imported,
-                    inbound_import_attempted: true,
-                    control_envelope_imported: false,
-                    endpoint_update_applied: false,
-                    stale_endpoint_status_cleared: false,
-                    redacted_receive_result_event_recorded: false,
-                    event_summary: Vec::new(),
-                    next_blocker: if imported {
-                        "none".to_string()
-                    } else {
-                        "InboundEnvelopeImportIncomplete".to_string()
-                    },
-                    blockers: if imported {
-                        Vec::new()
-                    } else {
-                        vec!["InboundEnvelopeImportIncomplete".to_string()]
-                    },
-                    raw_endpoint_returned: false,
-                    raw_path_returned: false,
-                    onion_secret_returned: false,
-                    descriptor_body_returned: false,
-                    stream_id_returned: false,
-                    envelope_payload_returned: false,
-                    key_material_exposed: false,
-                    network_io_attempted: true,
-                    descriptor_publish_attempted: false,
-                    stream_accept_attempted: true,
-                    stream_read_write_attempted: true,
-                    envelope_io_opened: true,
-                    runtime_messaging_enabled: imported,
-                };
-                state
-                    .receive_loop_attempts
-                    .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-                run_production_onion_receive_loop_record_attempt_result(state, &result);
-            };
-        receive_mode_record_import(&receive_mode_recorder_state, inbound.received_message_written);
-        receive_mode_record_import(
-            &receive_mode_recorder_state,
-            second_inbound.received_message_written,
-        );
         let receive_mode_status =
-            run_production_onion_receive_loop_status(&receive_mode_recorder_state, false);
+            run_production_onion_receive_loop_status(&receiver_runtime_state, false);
+        let consecutive_messages_imported = receive_mode_status.message_import_count;
         let receive_mode_recorder_verified = receive_mode_status.attempt_count == 2
-            && receive_mode_status.import_sequence == consecutive_messages_imported
-            && receive_mode_status.message_import_count == consecutive_messages_imported
+            && receive_mode_status.import_sequence == 2
+            && receive_mode_status.message_import_count == 2
             && receive_mode_status.endpoint_update_count == 0
             && receive_mode_status.last_network_io_attempted
             && receive_mode_status.last_stream_accept_attempted
@@ -8215,14 +8135,14 @@ async fn run_production_two_profile_real_onion_roundtrip(
             second_message_number_reserved: second_outbound.message_number_reserved,
             encrypted_envelope_exported: outbound.encrypted_envelope_present,
             second_encrypted_envelope_exported: second_outbound.encrypted_envelope_present,
-            send_attempt_started: true,
-            send_attempt_succeeded: true,
-            second_send_attempt_succeeded: true,
-            receive_attempt_started: true,
-            receive_attempt_succeeded: true,
-            second_receive_attempt_succeeded: true,
-            inbound_message_stored: inbound.received_message_written,
-            second_inbound_message_stored: second_inbound.received_message_written,
+            send_attempt_started: send_attempt.send_attempt_started,
+            send_attempt_succeeded: send_attempt.send_attempt_succeeded,
+            second_send_attempt_succeeded: second_send_attempt.send_attempt_succeeded,
+            receive_attempt_started: inbound_attempt.receive_attempt_started,
+            receive_attempt_succeeded: inbound_attempt.receive_attempt_succeeded,
+            second_receive_attempt_succeeded: second_inbound_attempt.receive_attempt_succeeded,
+            inbound_message_stored: inbound_attempt.received_envelope_ready,
+            second_inbound_message_stored: second_inbound_attempt.received_envelope_ready,
             consecutive_receive_attempts: 2,
             consecutive_messages_imported,
             receive_mode_runtime_state: receive_mode_status.runtime_state,
@@ -8240,9 +8160,9 @@ async fn run_production_two_profile_real_onion_roundtrip(
             receive_mode_last_runtime_messaging_enabled: receive_mode_status
                 .last_runtime_messaging_enabled,
             receive_mode_recorder_verified,
-            received_status_verified: inbound.received_message_matches_session
+            received_status_verified: inbound_attempt.received_envelope_ready
                 && received.received_message_matches_session,
-            second_received_status_verified: second_inbound.received_message_matches_session
+            second_received_status_verified: second_inbound_attempt.received_envelope_ready
                 && second_received.received_message_matches_session,
             received_export_matches_input: received.received_message.as_bytes() == message.as_slice(),
             second_received_export_matches_input: second_received.received_message.as_bytes()
@@ -8258,6 +8178,8 @@ async fn run_production_two_profile_real_onion_roundtrip(
             passphrase_retained: false,
             key_material_exposed: profile_a_unlock.key_material_exposed
                 || profile_b_unlock.key_material_exposed
+                || profile_a_key_record.key_material_exposed
+                || profile_b_key_record.key_material_exposed
                 || profile_a_payload.key_material_exposed
                 || profile_b_payload.key_material_exposed
                 || profile_a_draft.key_material_exposed
@@ -8272,10 +8194,8 @@ async fn run_production_two_profile_real_onion_roundtrip(
                 || sender_state.key_material_exposed
                 || receiver_state.key_material_exposed
                 || outbound.key_material_exposed
-                || inbound.key_material_exposed
                 || received.key_material_exposed
                 || second_outbound.key_material_exposed
-                || second_inbound.key_material_exposed
                 || second_received.key_material_exposed,
             network_io_attempted: true,
             transport_io_opened: true,
