@@ -498,6 +498,26 @@ function localizedChatStatus(message) {
   if (!text) {
     return "";
   }
+  const exact = {
+    "two-profile roundtrip idle": "waiting",
+    "two-profile roundtrip running": "statusBusy",
+    "two-profile roundtrip completed": "statusSent",
+    "two-profile roundtrip failed": "statusFailed",
+    "stored-session message running": "statusSending",
+    "stored-session message completed": "statusSent",
+    "stored-session message failed": "statusFailed",
+    "sessions checking": "statusChecking",
+    "sessions ready": "statusReady",
+    "sessions incomplete": "statusSetup",
+    "conversation loading": "statusChecking",
+    "conversation loaded": "statusLoaded",
+    "conversation resumed": "statusRecovered",
+    "resume needs session check": "statusSetup",
+    "resume needs review": "statusRetry",
+  };
+  if (exact[lower]) {
+    return t(exact[lower]);
+  }
   if (lower.includes("running") || lower.includes("already running") || lower.includes("in progress")) {
     if (lower.includes("receive")) {
       return t("statusReceiving");
@@ -540,14 +560,14 @@ function localizedChatStatus(message) {
   if (lower.includes("loaded") || lower.includes("updated")) {
     return t("statusLoaded");
   }
-  if (lower.includes("incomplete") || lower.includes("rebuild") || lower.includes("setup")) {
-    return t("statusSetup");
-  }
   if (lower.includes("failed") || lower.includes("blocked")) {
     return t("statusFailed");
   }
   if (lower.includes("completed") || lower.includes("sent")) {
     return t("statusSent");
+  }
+  if (lower.includes("incomplete") || lower.includes("rebuild") || lower.includes("setup")) {
+    return t("statusSetup");
   }
   if (lower.includes("receive mode stopped")) {
     return t("statusStopped");
@@ -2595,7 +2615,7 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   if (busy) {
     return {
-      message: currentLanguage === "ko" ? "작업 중: 현재 작업이 끝날 때까지 기다리세요" : "Running: production action in progress",
+      message: currentLanguage === "ko" ? "작업 중" : "Working",
       state: "blocked",
     };
   }
@@ -2603,16 +2623,16 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
     return { message: messageRetentionPolicyBlocker(), state: "blocked" };
   }
   if (!input.profileA) {
-    return { message: currentLanguage === "ko" ? "내 프로필을 입력하세요" : "Blocked: Profile A required", state: "blocked" };
+    return { message: currentLanguage === "ko" ? "내 프로필 필요" : "Profile A required", state: "blocked" };
   }
   if (!input.profileB) {
-    return { message: currentLanguage === "ko" ? "상대 프로필을 입력하세요" : "Blocked: Profile B required", state: "blocked" };
+    return { message: currentLanguage === "ko" ? "상대 프로필 필요" : "Profile B required", state: "blocked" };
   }
   if (input.profileA === input.profileB) {
-    return { message: currentLanguage === "ko" ? "두 프로필은 서로 달라야 합니다" : "Blocked: profiles must be distinct", state: "blocked" };
+    return { message: currentLanguage === "ko" ? "서로 다른 프로필 필요" : "Use two different profiles", state: "blocked" };
   }
   if (!input.passphrase) {
-    return { message: currentLanguage === "ko" ? "패스프레이즈를 입력하세요" : "Blocked: passphrase required", state: "blocked" };
+    return { message: currentLanguage === "ko" ? "암호 필요" : "Passphrase required", state: "blocked" };
   }
   if (!input.messageTtlSeconds) {
     return { message: messageTtlInputBlocker(), state: "blocked" };
@@ -2623,37 +2643,37 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
       message: sessionsReady
         ? selectedReplyTarget
           ? currentLanguage === "ko"
-            ? `#${selectedReplyTarget.messageNumber}에 답장을 작성하세요`
-            : `Ready: write reply to message #${selectedReplyTarget.messageNumber}`
+            ? `#${selectedReplyTarget.messageNumber} 답장 작성`
+            : `Reply to #${selectedReplyTarget.messageNumber}`
           : currentLanguage === "ko"
-            ? "연결이 복구됐습니다. 메시지를 작성하세요"
-            : "Ready: stored session recovered; write a message"
+            ? "메시지 작성"
+            : "Write a message"
         : sessionStatus
           ? currentLanguage === "ko"
-            ? "연결을 다시 만들 첫 메시지를 작성하세요"
-            : "Ready: write setup message to rebuild sessions"
+            ? "첫 메시지 작성"
+            : "Write first message"
           : currentLanguage === "ko"
-            ? "첫 메시지를 작성한 뒤 연결 설정을 실행하세요"
-            : "Ready: write first message, then run full setup",
+            ? "첫 메시지 작성"
+            : "Write first message",
       state: "compose",
     };
   }
   if (sessionsReady) {
     return {
       message: currentLanguage === "ko"
-        ? `${input.profileA} -> ${input.profileB} 메시지를 보낼 수 있습니다`
-        : `Ready: send stored-session message ${input.profileA} -> ${input.profileB}`,
+        ? "보낼 수 있음"
+        : "Ready to send",
       state: "ready",
     };
   }
   return {
     message: sessionStatus
       ? currentLanguage === "ko"
-        ? `${input.profileA} -> ${input.profileB} 연결을 다시 설정하세요`
-        : `Ready: run full setup to rebuild sessions for ${input.profileA} -> ${input.profileB}`
+        ? "연결 재설정 필요"
+        : "Rebuild connection"
       : currentLanguage === "ko"
-        ? `${input.profileA} -> ${input.profileB} 연결 설정을 실행하세요`
-        : `Ready: run full setup for ${input.profileA} -> ${input.profileB}`,
+        ? "연결 만들기 필요"
+        : "Create connection",
     state: "setup",
   };
 }
