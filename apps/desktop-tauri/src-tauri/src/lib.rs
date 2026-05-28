@@ -10305,6 +10305,22 @@ replay check: no replayed messages after message 2
         assert!(import_failed.last_failure_retryable);
         assert_eq!(import_failed.runtime_state, "failed-retryable");
 
+        let second_imported_result = ProductionOnionInboundEnvelopeReceiveAttemptResult {
+            receive_attempt_succeeded: true,
+            endpoint_update_applied: false,
+            next_blocker: "none".to_string(),
+            blockers: Vec::new(),
+            ..endpoint_update_result
+        };
+        run_production_onion_receive_loop_record_attempt_result(&state, &second_imported_result);
+        let second_imported = run_production_onion_receive_loop_status(&state, false);
+        assert_eq!(second_imported.import_sequence, 3);
+        assert_eq!(second_imported.message_import_count, 2);
+        assert_eq!(second_imported.endpoint_update_count, 1);
+        assert_eq!(second_imported.last_failure_kind, "none");
+        assert!(!second_imported.last_failure_retryable);
+        assert_eq!(second_imported.runtime_state, "message-imported");
+
         let stopping = run_production_onion_receive_loop_stop(&state);
         assert!(!stopping.stop_confirmed);
         assert!(!production_onion_receive_loop_should_continue(&state));
