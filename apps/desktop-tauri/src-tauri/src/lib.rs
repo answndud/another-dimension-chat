@@ -4787,7 +4787,12 @@ fn production_onion_receive_loop_failure_view(
         }
         "InboundEnvelopeReceiveAlreadyInProgress" => ("busy", true),
         "InboundEnvelopeImportIncomplete"
+        | "InboundEnvelopeImportFailed"
+        | "InboundEnvelopeDecodeFailed"
+        | "InboundEnvelopeSanitizeFailed"
+        | "InboundEnvelopeUtf8Failed"
         | "InboundControlEnvelopeImportIncomplete"
+        | "InboundControlEnvelopeImportFailed"
         | "InboundAckEnvelopeImportUnsupported" => ("import", true),
         blocker if blocker.contains("Timeout") || blocker.contains("timeout") => {
             ("receive-timeout", true)
@@ -4997,6 +5002,9 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
     let mut event_summary = Vec::new();
     #[cfg(not(feature = "manual-onion-client-attempt"))]
     let event_summary = Vec::new();
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let mut next_blocker;
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
     let next_blocker;
     #[cfg(feature = "manual-onion-client-attempt")]
     let mut receive_attempt_started = false;
@@ -5122,6 +5130,7 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
         {
             next_blocker = "InboundEnvelopeReceiveAlreadyInProgress".to_string();
         } else {
+            next_blocker = "none".to_string();
             let mut owner = match state.owner.lock() {
                 Ok(mut guard) => guard.take(),
                 Err(_) => None,
@@ -5157,63 +5166,102 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
                                 Ok(envelope_bytes) => {
                                     stream_request_accepted = true;
                                     stream_bytes_read = !envelope_bytes.is_empty();
-                                    let envelope_payload = String::from_utf8(envelope_bytes)
-                                        .map_err(|_| "inbound envelope was not valid UTF-8")?;
-                                    let envelope_payload =
-                                        sanitize_envelope_payload(envelope_payload)?;
-                                    let envelope = another_dimension_protocol::Envelope::decode(
-                                        &envelope_payload,
-                                    )
-                                    .map_err(|_| "inbound envelope decode failed")?;
-                                    inbound_import_attempted = true;
-                                    match envelope.message_type {
-                                        another_dimension_protocol::MessageType::Data => {
-                                            let retention =
-                                                run_production_message_retention_preference_get(
-                                                    app_data_root.as_ref(),
-                                                    profile_for_import.clone(),
-                                                    passphrase_for_import.clone(),
-                                                )?;
-                                            let import = run_production_message_envelope_import(
-                                                app_data_root.as_ref(),
-                                                profile_for_import.clone(),
-                                                passphrase_for_import.clone(),
-                                                envelope.message_number,
-                                                envelope_payload,
-                                                retention.message_ttl_seconds,
-                                            )?;
-                                            received_envelope_ready =
-                                                import.received_message_written
-                                                    && import.received_message_record_present
-                                                    && import.received_message_record_decodable;
-                                            next_blocker = if received_envelope_ready {
-                                                "none".to_string()
-                                            } else {
-                                                "InboundEnvelopeImportIncomplete".to_string()
-                                            };
-                                        }
-                                        another_dimension_protocol::MessageType::Control => {
-                                            let import =
-                                                run_production_endpoint_update_control_envelope_import(
-                                                    app_data_root.as_ref(),
-                                                    profile_for_import.clone(),
-                                                    passphrase_for_import.clone(),
-                                                    envelope_payload,
-                                                )?;
-                                            control_envelope_imported = true;
-                                            endpoint_update_applied = import.endpoint_update_applied;
-                                            stale_endpoint_status_cleared =
-                                                import.stale_endpoint_status_cleared;
-                                            received_envelope_ready = endpoint_update_applied;
-                                            next_blocker = if endpoint_update_applied {
-                                                "none".to_string()
-                                            } else {
-                                                "InboundControlEnvelopeImportIncomplete".to_string()
-                                            };
-                                        }
-                                        another_dimension_protocol::MessageType::Ack => {
+                                    let envelope_payload = match String::from_utf8(envelope_bytes)
+                                    {
+                                        Ok(payload) => match sanitize_envelope_payload(payload) {
+                                            Ok(payload) => Some(payload),
+                                            Err(_) => {
+                                                next_blocker =
+                                                    "InboundEnvelopeSanitizeFailed".to_string();
+                                                None
+                                            }
+                                        },
+                                        Err(_) => {
                                             next_blocker =
-                                                "InboundAckEnvelopeImportUnsupported".to_string();
+                                                "InboundEnvelopeUtf8Failed".to_string();
+                                            None
+                                        }
+                                    };
+                                    if let Some(envelope_payload) = envelope_payload {
+                                        match another_dimension_protocol::Envelope::decode(
+                                            &envelope_payload,
+                                        ) {
+                                            Ok(envelope) => {
+                                                inbound_import_attempted = true;
+                                                match envelope.message_type {
+                                                    another_dimension_protocol::MessageType::Data => {
+                                                        match run_production_message_retention_preference_get(
+                                                            app_data_root.as_ref(),
+                                                            profile_for_import.clone(),
+                                                            passphrase_for_import.clone(),
+                                                        )
+                                                        .and_then(|retention| {
+                                                            run_production_message_envelope_import(
+                                                                app_data_root.as_ref(),
+                                                                profile_for_import.clone(),
+                                                                passphrase_for_import.clone(),
+                                                                envelope.message_number,
+                                                                envelope_payload,
+                                                                retention.message_ttl_seconds,
+                                                            )
+                                                        }) {
+                                                            Ok(import) => {
+                                                                received_envelope_ready =
+                                                                    import.received_message_written
+                                                                        && import.received_message_record_present
+                                                                        && import.received_message_record_decodable;
+                                                                next_blocker = if received_envelope_ready {
+                                                                    "none".to_string()
+                                                                } else {
+                                                                    "InboundEnvelopeImportIncomplete".to_string()
+                                                                };
+                                                            }
+                                                            Err(_) => {
+                                                                next_blocker =
+                                                                    "InboundEnvelopeImportFailed".to_string();
+                                                            }
+                                                        }
+                                                    }
+                                                    another_dimension_protocol::MessageType::Control => {
+                                                        match run_production_endpoint_update_control_envelope_import(
+                                                            app_data_root.as_ref(),
+                                                            profile_for_import.clone(),
+                                                            passphrase_for_import.clone(),
+                                                            envelope_payload,
+                                                        ) {
+                                                            Ok(import) => {
+                                                                control_envelope_imported = true;
+                                                                endpoint_update_applied =
+                                                                    import.endpoint_update_applied;
+                                                                stale_endpoint_status_cleared =
+                                                                    import.stale_endpoint_status_cleared;
+                                                                received_envelope_ready =
+                                                                    endpoint_update_applied;
+                                                                next_blocker = if endpoint_update_applied {
+                                                                    "none".to_string()
+                                                                } else {
+                                                                    "InboundControlEnvelopeImportIncomplete"
+                                                                        .to_string()
+                                                                };
+                                                            }
+                                                            Err(_) => {
+                                                                next_blocker =
+                                                                    "InboundControlEnvelopeImportFailed"
+                                                                        .to_string();
+                                                            }
+                                                        }
+                                                    }
+                                                    another_dimension_protocol::MessageType::Ack => {
+                                                        next_blocker =
+                                                            "InboundAckEnvelopeImportUnsupported"
+                                                                .to_string();
+                                                    }
+                                                }
+                                            }
+                                            Err(_) => {
+                                                next_blocker =
+                                                    "InboundEnvelopeDecodeFailed".to_string();
+                                            }
                                         }
                                     }
                                 }
@@ -10123,6 +10171,14 @@ replay check: no replayed messages after message 2
         assert_eq!(errored.import_sequence, 1);
         assert_eq!(errored.last_failure_kind, "attempt-failed");
         assert!(errored.last_failure_retryable);
+
+        if let Ok(mut guard) = state.receive_loop_last_next_blocker.lock() {
+            *guard = Some("InboundEnvelopeDecodeFailed".to_string());
+        }
+        let import_failed = run_production_onion_receive_loop_status(&state, false);
+        assert_eq!(import_failed.import_sequence, 1);
+        assert_eq!(import_failed.last_failure_kind, "import");
+        assert!(import_failed.last_failure_retryable);
 
         let stopping = run_production_onion_receive_loop_stop(&state);
         assert!(!stopping.stop_confirmed);
