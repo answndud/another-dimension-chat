@@ -673,6 +673,9 @@ test("productionOnionReceiveLoopRefreshPlan uses cumulative counters", () => {
       transcriptChanged: true,
       messageImported: true,
       endpointUpdated: false,
+      newImportCount: 1,
+      newMessageImportCount: 1,
+      newEndpointUpdateCount: 0,
       importSequence: 3,
       messageImportCount: 2,
       endpointUpdateCount: 1,
@@ -697,6 +700,9 @@ test("productionOnionReceiveLoopRefreshPlan uses cumulative counters", () => {
       transcriptChanged: true,
       messageImported: false,
       endpointUpdated: true,
+      newImportCount: 1,
+      newMessageImportCount: 0,
+      newEndpointUpdateCount: 1,
       importSequence: 3,
       messageImportCount: 1,
       endpointUpdateCount: 2,
@@ -727,6 +733,43 @@ test("productionOnionReceiveLoopRefreshPlan uses cumulative counters", () => {
   assert.equal(afterRetryFailure.transcriptChanged, true);
   assert.equal(afterRetryFailure.messageImported, true);
   assert.equal(afterRetryFailure.endpointUpdated, false);
+  assert.equal(afterRetryFailure.newImportCount, 1);
+  assert.equal(afterRetryFailure.newMessageImportCount, 1);
+  assert.equal(afterRetryFailure.newEndpointUpdateCount, 0);
+  const multiImportPoll = productionOnionReceiveLoopRefreshPlan(
+    {
+      lastProcessedImportSequence: 4,
+      lastProcessedMessageImportCount: 3,
+      lastProcessedEndpointUpdateCount: 1,
+    },
+    {
+      import_sequence: 7,
+      message_import_count: 5,
+      endpoint_update_count: 2,
+    },
+  );
+  assert.equal(multiImportPoll.transcriptChanged, true);
+  assert.equal(multiImportPoll.messageImported, true);
+  assert.equal(multiImportPoll.endpointUpdated, true);
+  assert.equal(multiImportPoll.newImportCount, 3);
+  assert.equal(multiImportPoll.newMessageImportCount, 2);
+  assert.equal(multiImportPoll.newEndpointUpdateCount, 1);
+  const staleCounterPoll = productionOnionReceiveLoopRefreshPlan(
+    {
+      lastProcessedImportSequence: 7,
+      lastProcessedMessageImportCount: 5,
+      lastProcessedEndpointUpdateCount: 2,
+    },
+    {
+      import_sequence: 6,
+      message_import_count: 4,
+      endpoint_update_count: 1,
+    },
+  );
+  assert.equal(staleCounterPoll.transcriptChanged, false);
+  assert.equal(staleCounterPoll.newImportCount, 0);
+  assert.equal(staleCounterPoll.newMessageImportCount, 0);
+  assert.equal(staleCounterPoll.newEndpointUpdateCount, 0);
 });
 
 test("productionOnionReceiveFailureMessage maps retry states", () => {

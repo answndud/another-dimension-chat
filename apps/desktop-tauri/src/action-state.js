@@ -231,16 +231,28 @@ export function productionOnionReceiveLoopRefreshPlan(mode = {}, backendLoop = {
   const lastImportSequence = Number.parseInt(mode.lastProcessedImportSequence ?? 0, 10);
   const lastMessageImportCount = Number.parseInt(mode.lastProcessedMessageImportCount ?? 0, 10);
   const lastEndpointUpdateCount = Number.parseInt(mode.lastProcessedEndpointUpdateCount ?? 0, 10);
-  const transcriptChanged = importSequence > lastImportSequence;
-  const messageImported = messageImportCount > lastMessageImportCount;
-  const endpointUpdated = endpointUpdateCount > lastEndpointUpdateCount;
+  const safeImportSequence = Number.isFinite(importSequence) ? importSequence : 0;
+  const safeMessageImportCount = Number.isFinite(messageImportCount) ? messageImportCount : 0;
+  const safeEndpointUpdateCount = Number.isFinite(endpointUpdateCount) ? endpointUpdateCount : 0;
+  const safeLastImportSequence = Number.isFinite(lastImportSequence) ? lastImportSequence : 0;
+  const safeLastMessageImportCount = Number.isFinite(lastMessageImportCount) ? lastMessageImportCount : 0;
+  const safeLastEndpointUpdateCount = Number.isFinite(lastEndpointUpdateCount) ? lastEndpointUpdateCount : 0;
+  const newImportCount = Math.max(0, safeImportSequence - safeLastImportSequence);
+  const newMessageImportCount = Math.max(0, safeMessageImportCount - safeLastMessageImportCount);
+  const newEndpointUpdateCount = Math.max(0, safeEndpointUpdateCount - safeLastEndpointUpdateCount);
+  const transcriptChanged = newImportCount > 0;
+  const messageImported = newMessageImportCount > 0;
+  const endpointUpdated = newEndpointUpdateCount > 0;
   return {
     transcriptChanged,
     messageImported,
     endpointUpdated,
-    importSequence: Number.isFinite(importSequence) ? importSequence : 0,
-    messageImportCount: Number.isFinite(messageImportCount) ? messageImportCount : 0,
-    endpointUpdateCount: Number.isFinite(endpointUpdateCount) ? endpointUpdateCount : 0,
+    newImportCount,
+    newMessageImportCount,
+    newEndpointUpdateCount,
+    importSequence: safeImportSequence,
+    messageImportCount: safeMessageImportCount,
+    endpointUpdateCount: safeEndpointUpdateCount,
   };
 }
 
