@@ -3538,6 +3538,8 @@ function applyProductionActionState() {
     busy || productionTwoProfileOnionReceiveMode.enabled || !manualNetworkPermission || !hasTwoProfileSessionStatusInput,
     busy
       ? "Wait for the active production action."
+      : productionTwoProfileOnionReceiveMode.stopRequested
+        ? `Receive mode is stopping for ${productionTwoProfileOnionReceiveMode.profile}. Wait for backend exit confirmation.`
       : productionTwoProfileOnionReceiveMode.enabled
         ? `Receive mode is already enabled for ${productionTwoProfileOnionReceiveMode.profile}.`
       : !manualNetworkPermission
@@ -3549,8 +3551,10 @@ function applyProductionActionState() {
   );
   setActionButtonState(
     fields.stopProductionTwoProfileOnionReceive,
-    !productionTwoProfileOnionReceiveMode.enabled,
-    productionTwoProfileOnionReceiveMode.enabled
+    !productionTwoProfileOnionReceiveMode.enabled || productionTwoProfileOnionReceiveMode.stopRequested,
+    productionTwoProfileOnionReceiveMode.stopRequested
+      ? "Receive mode stop is waiting for backend worker exit confirmation."
+      : productionTwoProfileOnionReceiveMode.enabled
       ? "Stop receive mode before another receive attempt."
       : "Receive mode is stopped.",
     false,
@@ -6145,6 +6149,29 @@ function scheduleProductionTwoProfileOnionReceiveStopConfirmation(delayMs = 500)
   }, delayMs);
 }
 
+function markProductionTwoProfileOnionReceiveStopped(backendLoop = null) {
+  const nextGeneration = Math.max(
+    productionTwoProfileOnionReceiveMode.generation,
+    Number.parseInt(backendLoop?.generation ?? 0, 10) || 0,
+  );
+  productionTwoProfileOnionReceiveMode = {
+    enabled: false,
+    profile: "",
+    passphrase: "",
+    timer: null,
+    attempt: backendLoop?.attempt_count ?? 0,
+    inFlight: false,
+    stopRequested: false,
+    runtimeState: "stopped",
+    runtimeLabel: "Receive mode stopped",
+    lastProcessedImportSequence: productionTwoProfileOnionReceiveMode.lastProcessedImportSequence,
+    lastProcessedMessageImportCount: productionTwoProfileOnionReceiveMode.lastProcessedMessageImportCount,
+    lastProcessedEndpointUpdateCount: productionTwoProfileOnionReceiveMode.lastProcessedEndpointUpdateCount,
+    generation: nextGeneration,
+  };
+  setProductionTwoProfileOnionReceiveRuntimeState("stopped");
+}
+
 async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
   try {
     const backendLoop = await invoke("production_onion_receive_loop_status");
@@ -6157,8 +6184,17 @@ async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
     );
     if (!backendLoop.stop_confirmed) {
       scheduleProductionTwoProfileOnionReceiveStopConfirmation();
+    } else {
+      markProductionTwoProfileOnionReceiveStopped(backendLoop);
+      setText(fields.productionTwoProfileMessageState, "Receive mode stopped; backend worker exit confirmed");
     }
   } catch (error) {
+    productionTwoProfileOnionReceiveMode = {
+      ...productionTwoProfileOnionReceiveMode,
+      stopRequested: false,
+      runtimeState: "failed-retryable",
+      runtimeLabel: "Receive mode stop confirmation failed",
+    };
     setText(fields.productionTwoProfileBoundary, `Backend receive loop stop confirmation failed without returning secrets. ${error}`);
   } finally {
     applyProductionActionState();
@@ -6168,31 +6204,24 @@ async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
 function stopProductionTwoProfileOnionReceive() {
   const profile = productionTwoProfileOnionReceiveMode.profile;
   clearProductionTwoProfileOnionReceiveTimer();
-  productionTwoProfileOnionReceiveMode.stopRequested = true;
-  const generation = productionTwoProfileOnionReceiveMode.generation + 1;
   productionTwoProfileOnionReceiveMode = {
-    enabled: false,
-    profile: "",
+    ...productionTwoProfileOnionReceiveMode,
+    enabled: true,
+    profile,
     passphrase: "",
     timer: null,
-    attempt: 0,
-    inFlight: false,
-    stopRequested: false,
+    stopRequested: true,
     runtimeState: "stopped",
-    runtimeLabel: "Receive mode stopped",
-    lastProcessedImportSequence: productionTwoProfileOnionReceiveMode.lastProcessedImportSequence,
-    lastProcessedMessageImportCount: productionTwoProfileOnionReceiveMode.lastProcessedMessageImportCount,
-    lastProcessedEndpointUpdateCount: productionTwoProfileOnionReceiveMode.lastProcessedEndpointUpdateCount,
-    generation,
+    runtimeLabel: "Receive mode stopping",
   };
   setProductionTwoProfileOnionReceiveRuntimeState("stopped");
   setText(
     fields.productionTwoProfileWarning,
     profile
-      ? `Receive mode stopped for ${profile}. No further receive attempts will run until Start receiving is clicked again.`
+      ? `Receive mode stop requested for ${profile}. Waiting for backend worker exit before Start receiving is available again.`
       : "Receive mode is already stopped.",
   );
-  setText(fields.productionTwoProfileMessageState, "Receive mode stopped");
+  setText(fields.productionTwoProfileMessageState, "Receive mode stopping; backend worker exit not confirmed yet");
   applyProductionActionState();
   invoke("production_onion_receive_loop_stop")
     .then((backendLoop) => {
@@ -6203,11 +6232,25 @@ function stopProductionTwoProfileOnionReceive() {
       if (!backendLoop.stop_confirmed) {
         scheduleProductionTwoProfileOnionReceiveStopConfirmation();
       } else {
+        markProductionTwoProfileOnionReceiveStopped(backendLoop);
         setText(fields.productionTwoProfileMessageState, "Receive mode stopped; backend worker exit confirmed");
+        setText(
+          fields.productionTwoProfileWarning,
+          profile
+            ? `Receive mode stopped for ${profile}. No further receive attempts will run until Start receiving is clicked again.`
+            : "Receive mode is already stopped.",
+        );
       }
     })
     .catch((error) => {
+      productionTwoProfileOnionReceiveMode = {
+        ...productionTwoProfileOnionReceiveMode,
+        stopRequested: false,
+        runtimeState: "failed-retryable",
+        runtimeLabel: "Receive mode stop failed",
+      };
       setText(fields.productionTwoProfileBoundary, `Backend receive loop stop failed without returning secrets. ${error}`);
+      applyProductionActionState();
     });
 }
 
