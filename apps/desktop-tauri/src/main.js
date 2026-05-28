@@ -5974,6 +5974,7 @@ async function startProductionTwoProfileOnionReceive() {
   try {
     backendLoop = await invoke("production_onion_receive_loop_start", {
       profile: profileB,
+      passphrase,
       manualNetworkPermission,
     });
   } catch (error) {
@@ -5989,7 +5990,7 @@ async function startProductionTwoProfileOnionReceive() {
     );
     setText(
       fields.productionTwoProfileBoundary,
-      `enabled=${backendLoop.enabled} profile_selected=${backendLoop.profile_selected} in_flight=${backendLoop.receive_attempt_in_flight} attempts=${backendLoop.attempt_count} generation=${backendLoop.generation} duplicate=${backendLoop.duplicate_loop_blocked} app_launch_network=${backendLoop.starts_network_on_app_launch} raw_profile=${backendLoop.raw_profile_returned} passphrase=${backendLoop.passphrase_retained} key_material=${backendLoop.key_material_exposed} network=${backendLoop.network_io_attempted} transport=${backendLoop.transport_io_opened} runtime=${backendLoop.runtime_messaging_enabled}`,
+      productionTwoProfileOnionReceiveBackendBoundary(backendLoop),
     );
     return;
   }
@@ -5998,7 +5999,7 @@ async function startProductionTwoProfileOnionReceive() {
   productionTwoProfileOnionReceiveMode = {
     enabled: true,
     profile: profileB,
-    passphrase,
+    passphrase: "",
     timer: null,
     attempt: 0,
     inFlight: false,
@@ -6010,13 +6011,13 @@ async function startProductionTwoProfileOnionReceive() {
   setText(fields.productionTwoProfileWarning, `Receive mode enabled for ${profileB}. Bounded receive attempts will repeat until stopped.`);
   setText(fields.productionTwoProfileProfiles, `receiver=${profileB}`);
   setText(fields.productionTwoProfileSession, "Using retained onion service and stored receiver session");
-  setText(fields.productionTwoProfileMessageState, `Receive mode waiting for first bounded attempt; backend_attempts=${backendLoop.attempt_count}`);
+  setText(fields.productionTwoProfileMessageState, `Receive mode waiting for backend bounded attempts; backend_attempts=${backendLoop.attempt_count}`);
   setText(
     fields.productionTwoProfileBoundary,
-    `backend_enabled=${backendLoop.enabled} profile_selected=${backendLoop.profile_selected} in_flight=${backendLoop.receive_attempt_in_flight} generation=${backendLoop.generation} explicit_start=${backendLoop.explicit_user_start_required} app_launch_network=${backendLoop.starts_network_on_app_launch} raw_profile=${backendLoop.raw_profile_returned} passphrase=${backendLoop.passphrase_retained} key_material=${backendLoop.key_material_exposed} network=${backendLoop.network_io_attempted} transport=${backendLoop.transport_io_opened} runtime=${backendLoop.runtime_messaging_enabled}`,
+    productionTwoProfileOnionReceiveBackendBoundary(backendLoop),
   );
   applyProductionActionState();
-  runProductionTwoProfileOnionReceiveAttempt();
+  scheduleProductionTwoProfileOnionReceiveStatusPoll(1_000);
 }
 
 function clearProductionTwoProfileOnionReceiveTimer() {
@@ -6031,6 +6032,72 @@ function setProductionTwoProfileOnionReceiveRuntimeState(runtimeState, result = 
   const view = productionOnionReceiveRuntimeView(productionTwoProfileOnionReceiveMode, result);
   setProductionTwoProfileState(view.label);
   return view;
+}
+
+function productionTwoProfileOnionReceiveBackendBoundary(backendLoop) {
+  return `backend_enabled=${backendLoop.enabled} worker=${backendLoop.worker_running} stop_requested=${backendLoop.stop_requested} profile_selected=${backendLoop.profile_selected} in_flight=${backendLoop.receive_attempt_in_flight} attempts=${backendLoop.attempt_count} generation=${backendLoop.generation} last_started=${backendLoop.last_attempt_started} last_succeeded=${backendLoop.last_attempt_succeeded} endpoint_update=${backendLoop.last_endpoint_update_applied} next=${backendLoop.last_next_blocker || "none"} explicit_start=${backendLoop.explicit_user_start_required} duplicate=${backendLoop.duplicate_loop_blocked} app_launch_network=${backendLoop.starts_network_on_app_launch} raw_profile=${backendLoop.raw_profile_returned} passphrase=${backendLoop.passphrase_retained} key_material=${backendLoop.key_material_exposed} network=${backendLoop.network_io_attempted} transport=${backendLoop.transport_io_opened} runtime=${backendLoop.runtime_messaging_enabled}`;
+}
+
+function scheduleProductionTwoProfileOnionReceiveStatusPoll(delayMs = TWO_PROFILE_ONION_RECEIVE_RETRY_MS) {
+  if (
+    !productionTwoProfileOnionReceiveMode.enabled ||
+    productionTwoProfileOnionReceiveMode.stopRequested
+  ) {
+    return;
+  }
+  clearProductionTwoProfileOnionReceiveTimer();
+  productionTwoProfileOnionReceiveMode.timer = setTimeout(() => {
+    productionTwoProfileOnionReceiveMode.timer = null;
+    pollProductionTwoProfileOnionReceiveLoopStatus();
+  }, delayMs);
+}
+
+async function pollProductionTwoProfileOnionReceiveLoopStatus() {
+  if (!productionTwoProfileOnionReceiveMode.enabled || productionTwoProfileOnionReceiveMode.stopRequested) {
+    return;
+  }
+  try {
+    const backendLoop = await invoke("production_onion_receive_loop_status");
+    const previousAttempt = productionTwoProfileOnionReceiveMode.attempt;
+    productionTwoProfileOnionReceiveMode.attempt = backendLoop.attempt_count;
+    productionTwoProfileOnionReceiveMode.inFlight =
+      backendLoop.worker_running || backendLoop.receive_attempt_in_flight;
+    const runtimeState = backendLoop.last_endpoint_update_applied || backendLoop.last_attempt_succeeded
+      ? "message-imported"
+      : backendLoop.receive_attempt_in_flight
+        ? "peer-connected"
+        : backendLoop.worker_running
+          ? "receiving"
+          : backendLoop.enabled
+            ? "failed-retryable"
+            : "stopped";
+    const runtimeView = setProductionTwoProfileOnionReceiveRuntimeState(runtimeState);
+    setText(
+      fields.productionTwoProfileMessageState,
+      `state=${runtimeView.state} backend_attempts=${backendLoop.attempt_count} last_started=${backendLoop.last_attempt_started} last_succeeded=${backendLoop.last_attempt_succeeded} endpoint_update=${backendLoop.last_endpoint_update_applied} next=${backendLoop.last_next_blocker || "none"}`,
+    );
+    setText(fields.productionTwoProfileBoundary, productionTwoProfileOnionReceiveBackendBoundary(backendLoop));
+    if (
+      backendLoop.attempt_count !== previousAttempt &&
+      (backendLoop.last_attempt_succeeded || backendLoop.last_endpoint_update_applied)
+    ) {
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+      if (backendLoop.last_attempt_succeeded) {
+        selectLatestReceivedReplyForProfile(productionTwoProfileOnionReceiveMode.profile, { focusReply: "none" });
+      }
+    }
+    if (backendLoop.enabled && !productionTwoProfileOnionReceiveMode.stopRequested) {
+      scheduleProductionTwoProfileOnionReceiveStatusPoll();
+    }
+  } catch (error) {
+    setProductionTwoProfileState("Receive mode failed");
+    productionTwoProfileOnionReceiveMode.runtimeState = "failed-retryable";
+    setText(fields.productionTwoProfileWarning, `Receive loop status failed without returning secrets. ${error}`);
+    setText(fields.productionTwoProfileBoundary, "Backend receive loop status failed.");
+    scheduleProductionTwoProfileOnionReceiveStatusPoll();
+  } finally {
+    applyProductionActionState();
+  }
 }
 
 function scheduleProductionTwoProfileOnionReceiveAttempt(delayMs = TWO_PROFILE_ONION_RECEIVE_RETRY_MS) {
@@ -6217,7 +6284,7 @@ function stopProductionTwoProfileOnionReceive() {
     .then((backendLoop) => {
       setText(
         fields.productionTwoProfileBoundary,
-        `backend_enabled=${backendLoop.enabled} stop_requested=${backendLoop.stop_requested} profile_selected=${backendLoop.profile_selected} in_flight=${backendLoop.receive_attempt_in_flight} attempts=${backendLoop.attempt_count} generation=${backendLoop.generation} app_launch_network=${backendLoop.starts_network_on_app_launch} raw_profile=${backendLoop.raw_profile_returned} passphrase=${backendLoop.passphrase_retained} key_material=${backendLoop.key_material_exposed} network=${backendLoop.network_io_attempted} transport=${backendLoop.transport_io_opened} runtime=${backendLoop.runtime_messaging_enabled}`,
+        productionTwoProfileOnionReceiveBackendBoundary(backendLoop),
       );
     })
     .catch((error) => {
