@@ -16,6 +16,11 @@ struct ProductionOnionClientRuntimeState {
     receive_loop_last_attempt_started: std::sync::atomic::AtomicBool,
     receive_loop_last_attempt_succeeded: std::sync::atomic::AtomicBool,
     receive_loop_last_endpoint_update_applied: std::sync::atomic::AtomicBool,
+    receive_loop_last_network_io_attempted: std::sync::atomic::AtomicBool,
+    receive_loop_last_stream_accept_attempted: std::sync::atomic::AtomicBool,
+    receive_loop_last_stream_read_write_attempted: std::sync::atomic::AtomicBool,
+    receive_loop_last_envelope_io_opened: std::sync::atomic::AtomicBool,
+    receive_loop_last_runtime_messaging_enabled: std::sync::atomic::AtomicBool,
     receive_loop_last_next_blocker: std::sync::Mutex<Option<String>>,
     receive_loop_profile: std::sync::Mutex<Option<String>>,
     #[cfg(feature = "manual-onion-client-attempt")]
@@ -950,6 +955,11 @@ pub struct ProductionOnionReceiveLoopStatusResult {
     last_attempt_started: bool,
     last_attempt_succeeded: bool,
     last_endpoint_update_applied: bool,
+    last_network_io_attempted: bool,
+    last_stream_accept_attempted: bool,
+    last_stream_read_write_attempted: bool,
+    last_envelope_io_opened: bool,
+    last_runtime_messaging_enabled: bool,
     last_next_blocker: Option<String>,
     last_failure_kind: &'static str,
     last_failure_retryable: bool,
@@ -4750,6 +4760,21 @@ fn run_production_onion_receive_loop_status(
         last_attempt_started: state
             .receive_loop_last_attempt_started
             .load(std::sync::atomic::Ordering::Acquire),
+        last_network_io_attempted: state
+            .receive_loop_last_network_io_attempted
+            .load(std::sync::atomic::Ordering::Acquire),
+        last_stream_accept_attempted: state
+            .receive_loop_last_stream_accept_attempted
+            .load(std::sync::atomic::Ordering::Acquire),
+        last_stream_read_write_attempted: state
+            .receive_loop_last_stream_read_write_attempted
+            .load(std::sync::atomic::Ordering::Acquire),
+        last_envelope_io_opened: state
+            .receive_loop_last_envelope_io_opened
+            .load(std::sync::atomic::Ordering::Acquire),
+        last_runtime_messaging_enabled: state
+            .receive_loop_last_runtime_messaging_enabled
+            .load(std::sync::atomic::Ordering::Acquire),
         runtime_state,
         runtime_label,
         last_attempt_succeeded,
@@ -4812,6 +4837,21 @@ fn run_production_onion_receive_loop_start(
         .store(false, std::sync::atomic::Ordering::Release);
     state
         .receive_loop_last_endpoint_update_applied
+        .store(false, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_last_network_io_attempted
+        .store(false, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_last_stream_accept_attempted
+        .store(false, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_last_stream_read_write_attempted
+        .store(false, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_last_envelope_io_opened
+        .store(false, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_last_runtime_messaging_enabled
         .store(false, std::sync::atomic::Ordering::Release);
     if let Ok(mut guard) = state.receive_loop_last_next_blocker.lock() {
         *guard = None;
@@ -4958,6 +4998,26 @@ fn run_production_onion_receive_loop_record_attempt_result(
         result.endpoint_update_applied,
         std::sync::atomic::Ordering::Release,
     );
+    state.receive_loop_last_network_io_attempted.store(
+        result.network_io_attempted,
+        std::sync::atomic::Ordering::Release,
+    );
+    state.receive_loop_last_stream_accept_attempted.store(
+        result.stream_accept_attempted,
+        std::sync::atomic::Ordering::Release,
+    );
+    state.receive_loop_last_stream_read_write_attempted.store(
+        result.stream_read_write_attempted,
+        std::sync::atomic::Ordering::Release,
+    );
+    state.receive_loop_last_envelope_io_opened.store(
+        result.envelope_io_opened,
+        std::sync::atomic::Ordering::Release,
+    );
+    state.receive_loop_last_runtime_messaging_enabled.store(
+        result.runtime_messaging_enabled,
+        std::sync::atomic::Ordering::Release,
+    );
     if let Ok(mut guard) = state.receive_loop_last_next_blocker.lock() {
         *guard = Some(result.next_blocker.clone());
     }
@@ -4989,6 +5049,21 @@ fn run_production_onion_receive_loop_record_attempt_error(
         .store(false, std::sync::atomic::Ordering::Release);
     state
         .receive_loop_last_endpoint_update_applied
+        .store(false, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_last_network_io_attempted
+        .store(false, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_last_stream_accept_attempted
+        .store(false, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_last_stream_read_write_attempted
+        .store(false, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_last_envelope_io_opened
+        .store(false, std::sync::atomic::Ordering::Release);
+    state
+        .receive_loop_last_runtime_messaging_enabled
         .store(false, std::sync::atomic::Ordering::Release);
     if let Ok(mut guard) = state.receive_loop_last_next_blocker.lock() {
         *guard = Some("ReceiveLoopAttemptFailed".to_string());
@@ -5433,12 +5508,13 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
             stream_id_returned: false,
             envelope_payload_returned: false,
             key_material_exposed: false,
-            network_io_attempted: false,
+            network_io_attempted: receive_attempt_started,
             descriptor_publish_attempted: false,
-            stream_accept_attempted: false,
-            stream_read_write_attempted: false,
-            envelope_io_opened: false,
-            runtime_messaging_enabled: false,
+            stream_accept_attempted: inbound_rend_request_accept_attempted
+                || stream_request_accept_attempted,
+            stream_read_write_attempted: stream_read_attempted,
+            envelope_io_opened: inbound_import_attempted || control_envelope_imported,
+            runtime_messaging_enabled: received_envelope_ready,
         })
     }
 }
@@ -10268,6 +10344,11 @@ replay check: no replayed messages after message 2
         assert_eq!(initial.endpoint_update_count, 0);
         assert!(!initial.last_attempt_succeeded);
         assert!(!initial.last_endpoint_update_applied);
+        assert!(!initial.last_network_io_attempted);
+        assert!(!initial.last_stream_accept_attempted);
+        assert!(!initial.last_stream_read_write_attempted);
+        assert!(!initial.last_envelope_io_opened);
+        assert!(!initial.last_runtime_messaging_enabled);
         assert_eq!(initial.last_next_blocker, None);
         assert_eq!(initial.last_failure_kind, "none");
         assert!(!initial.last_failure_retryable);
@@ -10420,6 +10501,11 @@ replay check: no replayed messages after message 2
             receive_attempt_succeeded: true,
             received_envelope_ready: true,
             inbound_import_attempted: true,
+            network_io_attempted: true,
+            stream_accept_attempted: true,
+            stream_read_write_attempted: true,
+            envelope_io_opened: true,
+            runtime_messaging_enabled: true,
             ..retry_result
         };
         run_production_onion_receive_loop_record_attempt_result(&state, &imported_result);
@@ -10429,6 +10515,11 @@ replay check: no replayed messages after message 2
         assert_eq!(imported.endpoint_update_count, 0);
         assert!(imported.last_attempt_started);
         assert!(imported.last_attempt_succeeded);
+        assert!(imported.last_network_io_attempted);
+        assert!(imported.last_stream_accept_attempted);
+        assert!(imported.last_stream_read_write_attempted);
+        assert!(imported.last_envelope_io_opened);
+        assert!(imported.last_runtime_messaging_enabled);
         assert_eq!(imported.last_failure_kind, "none");
         assert!(!imported.last_failure_retryable);
         assert_eq!(imported.runtime_state, "message-imported");
@@ -10450,6 +10541,11 @@ replay check: no replayed messages after message 2
         assert_eq!(errored.import_sequence, 2);
         assert_eq!(errored.message_import_count, 1);
         assert_eq!(errored.endpoint_update_count, 1);
+        assert!(!errored.last_network_io_attempted);
+        assert!(!errored.last_stream_accept_attempted);
+        assert!(!errored.last_stream_read_write_attempted);
+        assert!(!errored.last_envelope_io_opened);
+        assert!(!errored.last_runtime_messaging_enabled);
         assert_eq!(errored.last_failure_kind, "attempt-failed");
         assert!(errored.last_failure_retryable);
         assert_eq!(errored.runtime_state, "failed-retryable");
