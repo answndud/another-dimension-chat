@@ -1718,7 +1718,17 @@ function renderProductionTwoProfileConversationList() {
     meta.textContent = `${entry.sender} -> ${entry.receiver} / #${entry.messageNumber}`;
 
     const status = document.createElement("span");
-    status.className = `transcript-status ${delivered ? "is-delivered" : inboundOnly ? "is-inbound-only" : "is-pending-receive"}`;
+    status.className = `transcript-status ${
+      delivered
+        ? "is-delivered"
+        : inboundOnly
+          ? "is-inbound-only"
+          : outboundCanceled
+            ? "is-canceled"
+            : outboundPending
+              ? "is-pending-send"
+              : "is-pending-receive"
+    }`;
     status.textContent = delivered
       ? t("delivered")
       : inboundOnly
@@ -1761,6 +1771,7 @@ function renderProductionTwoProfileConversationList() {
       actions.className = "transcript-row-actions";
       const retry = document.createElement("button");
       retry.type = "button";
+      retry.className = "transcript-retry";
       retry.textContent = productionTwoProfileOutboundNeedsEndpointRefresh(entry)
         ? t("refreshEndpoint")
         : t("retrySend");
@@ -1774,6 +1785,7 @@ function renderProductionTwoProfileConversationList() {
       });
       const cancel = document.createElement("button");
       cancel.type = "button";
+      cancel.className = "transcript-cancel";
       cancel.textContent = t("cancel");
       cancel.addEventListener("click", (event) => {
         event.stopPropagation();
