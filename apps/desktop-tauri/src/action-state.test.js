@@ -590,6 +590,19 @@ test("productionOnionReceiveRuntimeView maps receive loop states", () => {
     productionOnionReceiveRuntimeView({ enabled: true, inFlight: true, runtimeState: "receiving" }).state,
     "receiving",
   );
+  assert.deepEqual(
+    productionOnionReceiveRuntimeView({
+      enabled: true,
+      runtimeState: "bootstrapping",
+      runtimeLabel: "Receive mode waiting for Tor bootstrap",
+    }),
+    {
+      state: "bootstrapping",
+      label: "Receive mode waiting for Tor bootstrap",
+      retryable: false,
+      duplicateBlocked: false,
+    },
+  );
   assert.equal(
     productionOnionReceiveRuntimeView(
       { enabled: true },

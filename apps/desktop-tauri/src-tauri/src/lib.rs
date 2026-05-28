@@ -930,6 +930,8 @@ pub struct ProductionOnionReceiveLoopStatusResult {
     import_sequence: u64,
     message_import_count: u64,
     endpoint_update_count: u64,
+    runtime_state: &'static str,
+    runtime_label: &'static str,
     last_attempt_started: bool,
     last_attempt_succeeded: bool,
     last_endpoint_update_applied: bool,
@@ -4673,6 +4675,38 @@ fn run_production_onion_receive_loop_status(
         .load(std::sync::atomic::Ordering::Acquire);
     let (last_failure_kind, last_failure_retryable) =
         production_onion_receive_loop_failure_view(last_next_blocker.as_deref());
+    let receive_attempt_in_flight = {
+        #[cfg(feature = "manual-onion-client-attempt")]
+        {
+            state
+                .receive_in_progress
+                .load(std::sync::atomic::Ordering::Acquire)
+        }
+        #[cfg(not(feature = "manual-onion-client-attempt"))]
+        {
+            false
+        }
+    };
+    let import_sequence = state
+        .receive_loop_import_sequence
+        .load(std::sync::atomic::Ordering::Acquire);
+    let last_attempt_succeeded = state
+        .receive_loop_last_attempt_succeeded
+        .load(std::sync::atomic::Ordering::Acquire);
+    let last_endpoint_update_applied = state
+        .receive_loop_last_endpoint_update_applied
+        .load(std::sync::atomic::Ordering::Acquire);
+    let (runtime_state, runtime_label) = production_onion_receive_loop_runtime_view(
+        enabled,
+        stop_requested,
+        worker_running,
+        receive_attempt_in_flight,
+        last_attempt_succeeded,
+        last_endpoint_update_applied,
+        last_failure_kind,
+        last_failure_retryable,
+        last_next_blocker.as_deref(),
+    );
     ProductionOnionReceiveLoopStatusResult {
         warning: if worker_running {
             "Receive loop worker was started by explicit user action. Status is redacted."
@@ -4684,27 +4718,14 @@ fn run_production_onion_receive_loop_status(
         profile_selected,
         worker_running,
         stop_confirmed: stop_requested && !enabled && !worker_running,
-        receive_attempt_in_flight: {
-            #[cfg(feature = "manual-onion-client-attempt")]
-            {
-                state
-                    .receive_in_progress
-                    .load(std::sync::atomic::Ordering::Acquire)
-            }
-            #[cfg(not(feature = "manual-onion-client-attempt"))]
-            {
-                false
-            }
-        },
+        receive_attempt_in_flight,
         attempt_count: state
             .receive_loop_attempts
             .load(std::sync::atomic::Ordering::Acquire),
         generation: state
             .receive_loop_generation
             .load(std::sync::atomic::Ordering::Acquire),
-        import_sequence: state
-            .receive_loop_import_sequence
-            .load(std::sync::atomic::Ordering::Acquire),
+        import_sequence,
         message_import_count: state
             .receive_loop_message_imports
             .load(std::sync::atomic::Ordering::Acquire),
@@ -4714,12 +4735,10 @@ fn run_production_onion_receive_loop_status(
         last_attempt_started: state
             .receive_loop_last_attempt_started
             .load(std::sync::atomic::Ordering::Acquire),
-        last_attempt_succeeded: state
-            .receive_loop_last_attempt_succeeded
-            .load(std::sync::atomic::Ordering::Acquire),
-        last_endpoint_update_applied: state
-            .receive_loop_last_endpoint_update_applied
-            .load(std::sync::atomic::Ordering::Acquire),
+        runtime_state,
+        runtime_label,
+        last_attempt_succeeded,
+        last_endpoint_update_applied,
         last_next_blocker,
         last_failure_kind,
         last_failure_retryable,
@@ -4824,6 +4843,56 @@ fn production_onion_receive_loop_failure_view(
         "ReceiveLoopAttemptFailed" => ("attempt-failed", true),
         _ => ("unknown-retryable", true),
     }
+}
+
+fn production_onion_receive_loop_runtime_view(
+    enabled: bool,
+    stop_requested: bool,
+    worker_running: bool,
+    receive_attempt_in_flight: bool,
+    last_attempt_succeeded: bool,
+    last_endpoint_update_applied: bool,
+    last_failure_kind: &str,
+    last_failure_retryable: bool,
+    last_next_blocker: Option<&str>,
+) -> (&'static str, &'static str) {
+    if stop_requested || (!enabled && !worker_running) {
+        return ("stopped", "Receive mode stopped");
+    }
+    if last_attempt_succeeded || last_endpoint_update_applied {
+        return ("message-imported", "Receive mode imported message or endpoint update");
+    }
+    if receive_attempt_in_flight {
+        return ("peer-connected", "Receive mode peer connected");
+    }
+    match last_failure_kind {
+        "persistent-client" => {
+            return ("bootstrapping", "Receive mode waiting for Tor bootstrap");
+        }
+        "peer-offline" | "receive-timeout" if worker_running => {
+            return ("receiving", "Receive mode receiving");
+        }
+        _ => {}
+    }
+    if last_next_blocker
+        .map(|blocker| {
+            blocker.contains("Descriptor")
+                || blocker.contains("Launch")
+                || blocker.contains("InboundStream")
+                || blocker.contains("Publication")
+                || blocker.contains("Service")
+        })
+        .unwrap_or(false)
+    {
+        return ("launching-service", "Receive mode waiting for onion service");
+    }
+    if last_failure_retryable {
+        return ("failed-retryable", "Receive mode retryable failure");
+    }
+    if worker_running || enabled {
+        return ("receiving", "Receive mode receiving");
+    }
+    ("stopped", "Receive mode stopped")
 }
 
 fn run_production_onion_receive_loop_worker_started(
@@ -10029,6 +10098,8 @@ replay check: no replayed messages after message 2
         assert!(!initial.profile_selected);
         assert!(!initial.worker_running);
         assert!(!initial.stop_confirmed);
+        assert_eq!(initial.runtime_state, "stopped");
+        assert_eq!(initial.runtime_label, "Receive mode stopped");
         assert!(!initial.receive_attempt_in_flight);
         assert_eq!(initial.attempt_count, 0);
         assert_eq!(initial.import_sequence, 0);
@@ -10065,12 +10136,14 @@ replay check: no replayed messages after message 2
         assert!(started.enabled);
         assert!(started.profile_selected);
         assert!(!started.worker_running);
+        assert_eq!(started.runtime_state, "receiving");
         assert!(!started.duplicate_loop_blocked);
         assert_eq!(started.attempt_count, 0);
         assert!(!started.network_io_attempted);
 
         let worker_started = run_production_onion_receive_loop_worker_started(&state);
         assert!(worker_started.worker_running);
+        assert_eq!(worker_started.runtime_state, "receiving");
 
         let duplicate = run_production_onion_receive_loop_start(
             &state,
@@ -10095,10 +10168,12 @@ replay check: no replayed messages after message 2
         let retryable = run_production_onion_receive_loop_status(&state, false);
         assert_eq!(retryable.last_failure_kind, "persistent-client");
         assert!(retryable.last_failure_retryable);
+        assert_eq!(retryable.runtime_state, "bootstrapping");
 
         let stopped = run_production_onion_receive_loop_stop(&state);
         assert!(!stopped.enabled);
         assert!(stopped.stop_requested);
+        assert_eq!(stopped.runtime_state, "stopped");
         assert!(!stopped.profile_selected);
         assert!(stopped.worker_running);
         assert!(!stopped.stop_confirmed);
@@ -10166,6 +10241,7 @@ replay check: no replayed messages after message 2
         assert_eq!(retry.last_next_blocker.as_deref(), Some("PersistentClientNotReady"));
         assert_eq!(retry.last_failure_kind, "persistent-client");
         assert!(retry.last_failure_retryable);
+        assert_eq!(retry.runtime_state, "bootstrapping");
 
         let imported_result = ProductionOnionInboundEnvelopeReceiveAttemptResult {
             next_blocker: "none".to_string(),
@@ -10195,6 +10271,7 @@ replay check: no replayed messages after message 2
         assert!(imported.last_attempt_succeeded);
         assert_eq!(imported.last_failure_kind, "none");
         assert!(!imported.last_failure_retryable);
+        assert_eq!(imported.runtime_state, "message-imported");
 
         let endpoint_update_result = ProductionOnionInboundEnvelopeReceiveAttemptResult {
             receive_attempt_succeeded: false,
@@ -10206,6 +10283,7 @@ replay check: no replayed messages after message 2
         assert_eq!(endpoint_updated.import_sequence, 2);
         assert_eq!(endpoint_updated.message_import_count, 1);
         assert_eq!(endpoint_updated.endpoint_update_count, 1);
+        assert_eq!(endpoint_updated.runtime_state, "message-imported");
 
         run_production_onion_receive_loop_record_attempt_error(&state);
         let errored = run_production_onion_receive_loop_status(&state, false);
@@ -10214,6 +10292,7 @@ replay check: no replayed messages after message 2
         assert_eq!(errored.endpoint_update_count, 1);
         assert_eq!(errored.last_failure_kind, "attempt-failed");
         assert!(errored.last_failure_retryable);
+        assert_eq!(errored.runtime_state, "failed-retryable");
 
         if let Ok(mut guard) = state.receive_loop_last_next_blocker.lock() {
             *guard = Some("InboundEnvelopeDecodeFailed".to_string());
@@ -10224,6 +10303,7 @@ replay check: no replayed messages after message 2
         assert_eq!(import_failed.endpoint_update_count, 1);
         assert_eq!(import_failed.last_failure_kind, "import");
         assert!(import_failed.last_failure_retryable);
+        assert_eq!(import_failed.runtime_state, "failed-retryable");
 
         let stopping = run_production_onion_receive_loop_stop(&state);
         assert!(!stopping.stop_confirmed);
