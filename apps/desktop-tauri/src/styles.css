@@ -1061,21 +1061,39 @@ body.is-chat-active #production-two-profile-title {
 }
 
 body.is-chat-active .room-identity-bar {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 6px;
-  opacity: 0.72;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 3px;
+  opacity: 0.54;
 }
 
 body.is-chat-active .room-identity-bar div {
-  padding: 4px 6px;
+  display: inline-flex;
+  min-width: 0;
+  gap: 4px;
+  border: 0;
+  padding: 0;
+  background: transparent;
 }
 
 body.is-chat-active .room-identity-bar dt {
-  font-size: 9px;
+  display: none;
 }
 
 body.is-chat-active .room-identity-bar dd {
-  font-size: 11px;
+  max-width: 22ch;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.is-chat-active .room-identity-bar div:nth-child(3),
+body.is-chat-active .room-identity-bar div:nth-child(4) {
+  display: none;
 }
 
 body.is-chat-active .chat-setup-controls,
