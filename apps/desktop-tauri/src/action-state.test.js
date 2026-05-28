@@ -19,6 +19,7 @@ import {
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
   productionMessageTtlInputValue,
+  productionOnionReceiveRuntimeView,
   productionPairingPayloadView,
   productionProfileMessageReadiness,
   productionProfilePreset,
@@ -574,6 +575,58 @@ test("productionMessageTtlInputValue accepts only explicit policy values", () =>
   assert.equal(productionMessageTtlInputValue("999", [3600, 86400, 604800], 604800), null);
   assert.equal(productionMessageTtlInputValue("86400", [], 604800), null);
   assert.equal(productionMessageTtlInputValue("86400", [3600], 604800), null);
+});
+
+test("productionOnionReceiveRuntimeView maps receive loop states", () => {
+  assert.deepEqual(productionOnionReceiveRuntimeView({ enabled: false }), {
+    state: "stopped",
+    label: "Receive mode stopped",
+    retryable: false,
+    duplicateBlocked: false,
+  });
+  assert.equal(
+    productionOnionReceiveRuntimeView({ enabled: true, inFlight: true, runtimeState: "receiving" }).state,
+    "receiving",
+  );
+  assert.equal(
+    productionOnionReceiveRuntimeView(
+      { enabled: true },
+      { persistent_client_ready: false },
+    ).state,
+    "bootstrapping",
+  );
+  assert.equal(
+    productionOnionReceiveRuntimeView(
+      { enabled: true },
+      { persistent_client_ready: true, inbound_stream_preparation_ready: false },
+    ).state,
+    "launching-service",
+  );
+  assert.equal(
+    productionOnionReceiveRuntimeView(
+      { enabled: true },
+      {
+        persistent_client_ready: true,
+        inbound_stream_preparation_ready: true,
+        inbound_rend_request_accepted: true,
+      },
+    ).state,
+    "peer-connected",
+  );
+  assert.equal(
+    productionOnionReceiveRuntimeView(
+      { enabled: true },
+      { receive_attempt_succeeded: true },
+    ).state,
+    "message-imported",
+  );
+  assert.equal(
+    productionOnionReceiveRuntimeView(
+      { enabled: true },
+      { persistent_client_ready: true, inbound_stream_preparation_ready: true, receive_attempt_started: true },
+    ).state,
+    "failed-retryable",
+  );
 });
 
 test("productionManualNextActions follows pairing and message readiness", () => {

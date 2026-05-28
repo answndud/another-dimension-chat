@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process";
-import { homedir } from "node:os";
 import { join } from "node:path";
 
 const [command, ...args] = process.argv.slice(2);
@@ -11,7 +10,8 @@ if (!command) {
 
 const env = { ...process.env };
 if (!env.CARGO_TARGET_DIR) {
-  const cacheRoot = env.AD_BUILD_CACHE_DIR || join(env.XDG_CACHE_HOME || join(homedir(), ".cache"), "another-dimension-chat");
+  const tempRoot = env.TMPDIR || "/tmp";
+  const cacheRoot = env.AD_BUILD_CACHE_DIR || join(tempRoot, "another-dimension-chat");
   env.CARGO_TARGET_DIR = join(cacheRoot, "cargo-target");
 }
 
