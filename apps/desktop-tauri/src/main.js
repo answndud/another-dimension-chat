@@ -381,6 +381,7 @@ let productionTwoProfileOnionReceiveMode = {
   inFlight: false,
   stopRequested: false,
   runtimeState: "stopped",
+  runtimeLabel: "Receive mode stopped",
   lastProcessedImportSequence: 0,
   lastProcessedMessageImportCount: 0,
   lastProcessedEndpointUpdateCount: 0,
@@ -6010,6 +6011,7 @@ async function startProductionTwoProfileOnionReceive() {
     inFlight: false,
     stopRequested: false,
     runtimeState: "receiving",
+    runtimeLabel: "Receive mode receiving",
     lastProcessedImportSequence: 0,
     lastProcessedMessageImportCount: 0,
     lastProcessedEndpointUpdateCount: 0,
@@ -6037,13 +6039,14 @@ function clearProductionTwoProfileOnionReceiveTimer() {
 
 function setProductionTwoProfileOnionReceiveRuntimeState(runtimeState, result = null) {
   productionTwoProfileOnionReceiveMode.runtimeState = runtimeState;
+  productionTwoProfileOnionReceiveMode.runtimeLabel = result?.runtime_label || "";
   const view = productionOnionReceiveRuntimeView(productionTwoProfileOnionReceiveMode, result);
   setProductionTwoProfileState(view.label);
   return view;
 }
 
 function productionTwoProfileOnionReceiveBackendBoundary(backendLoop) {
-  return `backend_enabled=${backendLoop.enabled} worker=${backendLoop.worker_running} stop_requested=${backendLoop.stop_requested} stop_confirmed=${backendLoop.stop_confirmed} profile_selected=${backendLoop.profile_selected} in_flight=${backendLoop.receive_attempt_in_flight} attempts=${backendLoop.attempt_count} generation=${backendLoop.generation} import_seq=${backendLoop.import_sequence} message_imports=${backendLoop.message_import_count ?? 0} endpoint_updates=${backendLoop.endpoint_update_count ?? 0} last_started=${backendLoop.last_attempt_started} last_succeeded=${backendLoop.last_attempt_succeeded} endpoint_update=${backendLoop.last_endpoint_update_applied} failure=${backendLoop.last_failure_kind} retryable=${backendLoop.last_failure_retryable} next=${backendLoop.last_next_blocker || "none"} explicit_start=${backendLoop.explicit_user_start_required} duplicate=${backendLoop.duplicate_loop_blocked} app_launch_network=${backendLoop.starts_network_on_app_launch} raw_profile=${backendLoop.raw_profile_returned} passphrase=${backendLoop.passphrase_retained} key_material=${backendLoop.key_material_exposed} network=${backendLoop.network_io_attempted} transport=${backendLoop.transport_io_opened} runtime=${backendLoop.runtime_messaging_enabled}`;
+  return `backend_enabled=${backendLoop.enabled} worker=${backendLoop.worker_running} stop_requested=${backendLoop.stop_requested} stop_confirmed=${backendLoop.stop_confirmed} profile_selected=${backendLoop.profile_selected} in_flight=${backendLoop.receive_attempt_in_flight} attempts=${backendLoop.attempt_count} generation=${backendLoop.generation} import_seq=${backendLoop.import_sequence} message_imports=${backendLoop.message_import_count ?? 0} endpoint_updates=${backendLoop.endpoint_update_count ?? 0} runtime_state=${backendLoop.runtime_state || "unknown"} last_started=${backendLoop.last_attempt_started} last_succeeded=${backendLoop.last_attempt_succeeded} endpoint_update=${backendLoop.last_endpoint_update_applied} failure=${backendLoop.last_failure_kind} retryable=${backendLoop.last_failure_retryable} next=${backendLoop.last_next_blocker || "none"} explicit_start=${backendLoop.explicit_user_start_required} duplicate=${backendLoop.duplicate_loop_blocked} app_launch_network=${backendLoop.starts_network_on_app_launch} raw_profile=${backendLoop.raw_profile_returned} passphrase=${backendLoop.passphrase_retained} key_material=${backendLoop.key_material_exposed} network=${backendLoop.network_io_attempted} transport=${backendLoop.transport_io_opened} runtime=${backendLoop.runtime_messaging_enabled}`;
 }
 
 function scheduleProductionTwoProfileOnionReceiveStatusPoll(delayMs = TWO_PROFILE_ONION_RECEIVE_RETRY_MS) {
@@ -6070,7 +6073,7 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
     productionTwoProfileOnionReceiveMode.inFlight =
       backendLoop.worker_running || backendLoop.receive_attempt_in_flight;
     const refreshPlan = productionOnionReceiveLoopRefreshPlan(productionTwoProfileOnionReceiveMode, backendLoop);
-    const runtimeState = refreshPlan.transcriptChanged
+    const inferredRuntimeState = refreshPlan.transcriptChanged
       ? "message-imported"
       : backendLoop.receive_attempt_in_flight
         ? "peer-connected"
@@ -6079,10 +6082,18 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
           : backendLoop.enabled
             ? "failed-retryable"
             : "stopped";
-    const runtimeView = setProductionTwoProfileOnionReceiveRuntimeState(runtimeState);
+    const runtimeState = refreshPlan.transcriptChanged
+      ? "message-imported"
+      : backendLoop.runtime_state || inferredRuntimeState;
+    const runtimeView = setProductionTwoProfileOnionReceiveRuntimeState(
+      runtimeState,
+      refreshPlan.transcriptChanged
+        ? { runtime_label: "Receive mode imported message or endpoint update" }
+        : backendLoop,
+    );
     setText(
       fields.productionTwoProfileMessageState,
-      `state=${runtimeView.state} backend_attempts=${backendLoop.attempt_count} import_seq=${backendLoop.import_sequence} message_imports=${backendLoop.message_import_count ?? 0} endpoint_updates=${backendLoop.endpoint_update_count ?? 0} failure=${backendLoop.last_failure_kind} retryable=${backendLoop.last_failure_retryable} last_started=${backendLoop.last_attempt_started} last_succeeded=${backendLoop.last_attempt_succeeded} endpoint_update=${backendLoop.last_endpoint_update_applied} next=${backendLoop.last_next_blocker || "none"}`,
+      `state=${runtimeView.state} backend_state=${backendLoop.runtime_state || "unknown"} backend_attempts=${backendLoop.attempt_count} import_seq=${backendLoop.import_sequence} message_imports=${backendLoop.message_import_count ?? 0} endpoint_updates=${backendLoop.endpoint_update_count ?? 0} failure=${backendLoop.last_failure_kind} retryable=${backendLoop.last_failure_retryable} last_started=${backendLoop.last_attempt_started} last_succeeded=${backendLoop.last_attempt_succeeded} endpoint_update=${backendLoop.last_endpoint_update_applied} next=${backendLoop.last_next_blocker || "none"}`,
     );
     if (runtimeState === "failed-retryable") {
       setText(fields.productionTwoProfileWarning, productionOnionReceiveFailureMessage(backendLoop));
@@ -6168,6 +6179,7 @@ function stopProductionTwoProfileOnionReceive() {
     inFlight: false,
     stopRequested: false,
     runtimeState: "stopped",
+    runtimeLabel: "Receive mode stopped",
     lastProcessedImportSequence: productionTwoProfileOnionReceiveMode.lastProcessedImportSequence,
     lastProcessedMessageImportCount: productionTwoProfileOnionReceiveMode.lastProcessedMessageImportCount,
     lastProcessedEndpointUpdateCount: productionTwoProfileOnionReceiveMode.lastProcessedEndpointUpdateCount,

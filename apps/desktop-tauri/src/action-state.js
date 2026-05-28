@@ -161,7 +161,7 @@ export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
   if (mode?.inFlight && !result) {
     return {
       state: mode.runtimeState || "receiving",
-      label: `Receive mode ${mode.runtimeState || "receiving"}`,
+      label: mode.runtimeLabel || `Receive mode ${mode.runtimeState || "receiving"}`,
       retryable: false,
       duplicateBlocked: true,
     };
@@ -169,7 +169,7 @@ export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
   if (!result) {
     return {
       state: mode.runtimeState || "receiving",
-      label: `Receive mode ${mode.runtimeState || "receiving"}`,
+      label: mode.runtimeLabel || `Receive mode ${mode.runtimeState || "receiving"}`,
       retryable: false,
       duplicateBlocked: false,
     };
