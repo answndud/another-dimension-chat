@@ -284,6 +284,7 @@ const fields = {
   productionTwoProfilePassphrase: document.querySelector("#production-two-profile-passphrase"),
   productionTwoProfileMessageTtl: document.querySelector("#production-two-profile-message-ttl"),
   productionTwoProfileMessage: document.querySelector("#production-two-profile-message"),
+  chatPrimaryActions: document.querySelector(".chat-primary-actions"),
   roomIdentityRoute: document.querySelector("#room-identity-route"),
   roomIdentityPair: document.querySelector("#room-identity-pair"),
   roomIdentityVerify: document.querySelector("#room-identity-verify"),
@@ -1790,10 +1791,24 @@ function updateMinimalChatMode(input = productionTwoProfileInput(), sessionsRead
   const chatStarted = Boolean(hasConversation || latestProductionTwoProfileSuccess);
   document.body.classList.toggle("is-chat-active", chatStarted);
   document.body.classList.toggle("is-chat-empty", !hasConversation);
+  updateChatPrimaryActionMode(input, sessionsReady);
   if (chatStarted) {
     document.querySelector(".chat-settings-panel")?.removeAttribute("open");
     document.querySelector(".chat-diagnostics")?.removeAttribute("open");
   }
+}
+
+function updateChatPrimaryActionMode(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
+  const actionBar = fields.chatPrimaryActions;
+  if (!actionBar) {
+    return;
+  }
+  const canCheckSession = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase);
+  const hasDraft = Boolean(String(input.message ?? "").trim());
+  actionBar.classList.toggle("is-setup-mode", !sessionsReady);
+  actionBar.classList.toggle("is-send-mode", sessionsReady);
+  actionBar.classList.toggle("has-session-check-input", canCheckSession);
+  actionBar.classList.toggle("has-message-draft", hasDraft);
 }
 
 function twoProfileConversationDelivered(entry) {

@@ -876,6 +876,21 @@ textarea[readonly] {
   margin-left: auto;
 }
 
+.chat-primary-actions.is-setup-mode #run-production-two-profile-message-roundtrip,
+.chat-primary-actions.is-setup-mode #start-production-two-profile-onion-receive,
+.chat-primary-actions.is-setup-mode #stop-production-two-profile-onion-receive,
+.chat-primary-actions.is-send-mode #run-production-two-profile-roundtrip-inline {
+  display: none;
+}
+
+.chat-primary-actions.is-setup-mode #check-production-two-profile-session-status-inline {
+  opacity: 0.7;
+}
+
+.chat-primary-actions.is-setup-mode:not(.has-session-check-input) #check-production-two-profile-session-status-inline {
+  display: none;
+}
+
 .production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-a"],
 .production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-a,
 .production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-b"],
@@ -1255,6 +1270,23 @@ body.is-chat-active .chat-primary-actions {
   border: 0;
   padding: 6px 0 0;
   background: transparent;
+}
+
+body.is-chat-active .chat-primary-actions.is-setup-mode {
+  grid-template-columns: minmax(132px, 1fr) minmax(92px, 0.72fr) auto;
+}
+
+body.is-chat-active .chat-primary-actions.is-setup-mode:not(.has-session-check-input) {
+  grid-template-columns: minmax(132px, 1fr) auto;
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode {
+  grid-template-columns:
+    minmax(72px, 1fr)
+    minmax(84px, 1fr)
+    minmax(84px, 1fr)
+    minmax(84px, 1fr)
+    auto;
 }
 
 body.is-chat-active .chat-primary-actions button {
