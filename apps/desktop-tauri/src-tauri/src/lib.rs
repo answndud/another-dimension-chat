@@ -962,6 +962,8 @@ pub struct ProductionOnionReceiveLoopStatusResult {
     message_import_count: u64,
     endpoint_update_count: u64,
     active_after_import: bool,
+    restart_generation_isolated: bool,
+    retry_wait_cancellable: bool,
     runtime_state: &'static str,
     runtime_label: &'static str,
     last_attempt_started: bool,
@@ -4730,6 +4732,21 @@ fn run_production_onion_receive_loop_status(
     let message_import_count = state
         .receive_loop_message_imports
         .load(std::sync::atomic::Ordering::Acquire);
+    let attempt_count = state
+        .receive_loop_attempts
+        .load(std::sync::atomic::Ordering::Acquire);
+    let generation = state
+        .receive_loop_generation
+        .load(std::sync::atomic::Ordering::Acquire);
+    let worker_start_count = state
+        .receive_loop_worker_starts
+        .load(std::sync::atomic::Ordering::Acquire);
+    let duplicate_start_block_count = state
+        .receive_loop_duplicate_start_blocks
+        .load(std::sync::atomic::Ordering::Acquire);
+    let endpoint_update_count = state
+        .receive_loop_endpoint_updates
+        .load(std::sync::atomic::Ordering::Acquire);
     let last_attempt_succeeded = state
         .receive_loop_last_attempt_succeeded
         .load(std::sync::atomic::Ordering::Acquire);
@@ -4759,24 +4776,24 @@ fn run_production_onion_receive_loop_status(
         worker_running,
         stop_confirmed: stop_requested && !enabled && !worker_running,
         receive_attempt_in_flight,
-        attempt_count: state
-            .receive_loop_attempts
-            .load(std::sync::atomic::Ordering::Acquire),
-        generation: state
-            .receive_loop_generation
-            .load(std::sync::atomic::Ordering::Acquire),
-        worker_start_count: state
-            .receive_loop_worker_starts
-            .load(std::sync::atomic::Ordering::Acquire),
-        duplicate_start_block_count: state
-            .receive_loop_duplicate_start_blocks
-            .load(std::sync::atomic::Ordering::Acquire),
+        attempt_count,
+        generation,
+        worker_start_count,
+        duplicate_start_block_count,
         import_sequence,
         message_import_count,
-        endpoint_update_count: state
-            .receive_loop_endpoint_updates
-            .load(std::sync::atomic::Ordering::Acquire),
+        endpoint_update_count,
         active_after_import: enabled && worker_running && message_import_count > 0,
+        restart_generation_isolated: generation > 1
+            && enabled
+            && !stop_requested
+            && attempt_count == 0
+            && import_sequence == 0
+            && message_import_count == 0
+            && endpoint_update_count == 0
+            && worker_start_count == 0
+            && duplicate_start_block_count == 0,
+        retry_wait_cancellable: true,
         last_attempt_started: state
             .receive_loop_last_attempt_started
             .load(std::sync::atomic::Ordering::Acquire),
@@ -9002,6 +9019,7 @@ mod tests {
         run_production_onion_receive_loop_status, run_production_onion_receive_loop_stop,
         run_production_onion_receive_loop_worker_finished,
         run_production_onion_receive_loop_worker_started,
+        production_onion_receive_loop_wait_or_stop,
         production_onion_receive_loop_retry_wait_millis,
         production_onion_receive_loop_should_continue,
         run_production_onion_service_launch_attempt, run_production_onion_stream_adapter_closeout_prepare,
@@ -10398,6 +10416,8 @@ replay check: no replayed messages after message 2
         assert_eq!(initial.message_import_count, 0);
         assert_eq!(initial.endpoint_update_count, 0);
         assert!(!initial.active_after_import);
+        assert!(!initial.restart_generation_isolated);
+        assert!(initial.retry_wait_cancellable);
         assert!(!initial.last_attempt_succeeded);
         assert!(!initial.last_endpoint_update_applied);
         assert!(!initial.last_network_io_attempted);
@@ -10439,6 +10459,8 @@ replay check: no replayed messages after message 2
         assert_eq!(started.worker_start_count, 0);
         assert_eq!(started.duplicate_start_block_count, 0);
         assert!(!started.active_after_import);
+        assert!(!started.restart_generation_isolated);
+        assert!(started.retry_wait_cancellable);
         assert!(!started.network_io_attempted);
 
         let worker_started = run_production_onion_receive_loop_worker_started(&state);
@@ -10491,8 +10513,28 @@ replay check: no replayed messages after message 2
         let finished = run_production_onion_receive_loop_status(&state, false);
         assert!(!finished.worker_running);
         assert!(finished.stop_confirmed);
+        assert!(!finished.active_after_import);
+        assert!(!finished.restart_generation_isolated);
         assert_eq!(finished.worker_start_count, 1);
         assert_eq!(finished.duplicate_start_block_count, 1);
+
+        let restarted = run_production_onion_receive_loop_start(
+            &state,
+            "alice".to_string(),
+            true,
+        );
+        assert!(restarted.enabled);
+        assert!(!restarted.stop_requested);
+        assert!(restarted.profile_selected);
+        assert_eq!(restarted.generation, 3);
+        assert_eq!(restarted.attempt_count, 0);
+        assert_eq!(restarted.worker_start_count, 0);
+        assert_eq!(restarted.duplicate_start_block_count, 0);
+        assert_eq!(restarted.import_sequence, 0);
+        assert_eq!(restarted.message_import_count, 0);
+        assert_eq!(restarted.endpoint_update_count, 0);
+        assert!(!restarted.active_after_import);
+        assert!(restarted.restart_generation_isolated);
     }
 
     #[test]
@@ -10654,6 +10696,7 @@ replay check: no replayed messages after message 2
         let stopped = run_production_onion_receive_loop_status(&state, false);
         assert!(stopped.stop_confirmed);
         assert!(!stopped.active_after_import);
+        assert!(!stopped.restart_generation_isolated);
         assert!(!stopped.profile_selected);
         assert!(!stopped.raw_profile_returned);
         assert!(!stopped.passphrase_retained);
@@ -10686,6 +10729,25 @@ replay check: no replayed messages after message 2
         assert_eq!(
             production_onion_receive_loop_retry_wait_millis("unknown-retryable"),
             2_000
+        );
+    }
+
+    #[test]
+    fn production_onion_receive_loop_wait_stops_without_sleeping_full_interval() {
+        let state = ProductionOnionClientRuntimeState::default();
+        let started = run_production_onion_receive_loop_start(&state, "alice".to_string(), true);
+        assert!(started.enabled);
+        let stopping = run_production_onion_receive_loop_stop(&state);
+        assert!(stopping.stop_requested);
+
+        let began = std::time::Instant::now();
+        let should_continue = tauri::async_runtime::block_on(
+            production_onion_receive_loop_wait_or_stop(&state, 3_000),
+        );
+        assert!(!should_continue);
+        assert!(
+            began.elapsed() < std::time::Duration::from_millis(250),
+            "stop request should cancel receive loop retry wait promptly"
         );
     }
 
