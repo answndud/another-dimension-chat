@@ -4880,6 +4880,45 @@ fn run_production_onion_receive_loop_record_attempt_error(
     }
 }
 
+fn production_onion_receive_loop_should_continue(
+    state: &ProductionOnionClientRuntimeState,
+) -> bool {
+    state
+        .receive_loop_enabled
+        .load(std::sync::atomic::Ordering::Acquire)
+        && !state
+            .receive_loop_stop_requested
+            .load(std::sync::atomic::Ordering::Acquire)
+}
+
+fn production_onion_receive_loop_retry_wait_millis(
+    last_failure_kind: &str,
+) -> u64 {
+    match last_failure_kind {
+        "manual-permission" | "persistent-client" => 1_000,
+        "busy" => 500,
+        "receive-timeout" | "peer-offline" | "attempt-failed" => 3_000,
+        "feature-disabled" => 5_000,
+        _ => 2_000,
+    }
+}
+
+async fn production_onion_receive_loop_wait_or_stop(
+    state: &ProductionOnionClientRuntimeState,
+    total_wait_millis: u64,
+) -> bool {
+    let mut remaining = total_wait_millis;
+    while remaining > 0 {
+        if !production_onion_receive_loop_should_continue(state) {
+            return false;
+        }
+        let step = remaining.min(100);
+        tokio::time::sleep(std::time::Duration::from_millis(step)).await;
+        remaining -= step;
+    }
+    production_onion_receive_loop_should_continue(state)
+}
+
 fn spawn_production_onion_receive_loop_worker(
     app: tauri::AppHandle,
     app_data_root: std::path::PathBuf,
@@ -4890,13 +4929,7 @@ fn spawn_production_onion_receive_loop_worker(
     tauri::async_runtime::spawn(async move {
         loop {
             let state = app.state::<ProductionOnionClientRuntimeState>();
-            if !state
-                .receive_loop_enabled
-                .load(std::sync::atomic::Ordering::Acquire)
-                || state
-                    .receive_loop_stop_requested
-                    .load(std::sync::atomic::Ordering::Acquire)
-            {
+            if !production_onion_receive_loop_should_continue(&state) {
                 run_production_onion_receive_loop_worker_finished(&state);
                 break;
             }
@@ -4915,17 +4948,18 @@ fn spawn_production_onion_receive_loop_worker(
                 Err(_) => run_production_onion_receive_loop_record_attempt_error(&state),
             }
 
-            if !state
-                .receive_loop_enabled
-                .load(std::sync::atomic::Ordering::Acquire)
-                || state
-                    .receive_loop_stop_requested
-                    .load(std::sync::atomic::Ordering::Acquire)
-            {
+            if !production_onion_receive_loop_should_continue(&state) {
                 run_production_onion_receive_loop_worker_finished(&state);
                 break;
             }
-            tokio::time::sleep(std::time::Duration::from_millis(3_000)).await;
+            let failure_kind = run_production_onion_receive_loop_status(&state, false)
+                .last_failure_kind
+                .to_string();
+            let wait_millis = production_onion_receive_loop_retry_wait_millis(&failure_kind);
+            if !production_onion_receive_loop_wait_or_stop(&state, wait_millis).await {
+                run_production_onion_receive_loop_worker_finished(&state);
+                break;
+            }
         }
     });
 }
@@ -8536,6 +8570,8 @@ mod tests {
         run_production_onion_receive_loop_status, run_production_onion_receive_loop_stop,
         run_production_onion_receive_loop_worker_finished,
         run_production_onion_receive_loop_worker_started,
+        production_onion_receive_loop_retry_wait_millis,
+        production_onion_receive_loop_should_continue,
         run_production_onion_service_launch_attempt, run_production_onion_stream_adapter_closeout_prepare,
         run_production_pairing_payload_export, run_production_pairing_safety_preview,
         run_production_pairing_session_draft_save,
@@ -10004,6 +10040,7 @@ replay check: no replayed messages after message 2
         let state = ProductionOnionClientRuntimeState::default();
         let started = run_production_onion_receive_loop_start(&state, "alice".to_string(), true);
         assert!(started.enabled);
+        assert!(production_onion_receive_loop_should_continue(&state));
         let worker = run_production_onion_receive_loop_worker_started(&state);
         assert!(worker.worker_running);
 
@@ -10089,6 +10126,7 @@ replay check: no replayed messages after message 2
 
         let stopping = run_production_onion_receive_loop_stop(&state);
         assert!(!stopping.stop_confirmed);
+        assert!(!production_onion_receive_loop_should_continue(&state));
         run_production_onion_receive_loop_worker_finished(&state);
         let stopped = run_production_onion_receive_loop_status(&state, false);
         assert!(stopped.stop_confirmed);
@@ -10096,6 +10134,35 @@ replay check: no replayed messages after message 2
         assert!(!stopped.raw_profile_returned);
         assert!(!stopped.passphrase_retained);
         assert!(!stopped.key_material_exposed);
+    }
+
+    #[test]
+    fn production_onion_receive_loop_retry_waits_are_bounded_by_failure_kind() {
+        assert_eq!(
+            production_onion_receive_loop_retry_wait_millis("manual-permission"),
+            1_000
+        );
+        assert_eq!(
+            production_onion_receive_loop_retry_wait_millis("persistent-client"),
+            1_000
+        );
+        assert_eq!(production_onion_receive_loop_retry_wait_millis("busy"), 500);
+        assert_eq!(
+            production_onion_receive_loop_retry_wait_millis("peer-offline"),
+            3_000
+        );
+        assert_eq!(
+            production_onion_receive_loop_retry_wait_millis("receive-timeout"),
+            3_000
+        );
+        assert_eq!(
+            production_onion_receive_loop_retry_wait_millis("feature-disabled"),
+            5_000
+        );
+        assert_eq!(
+            production_onion_receive_loop_retry_wait_millis("unknown-retryable"),
+            2_000
+        );
     }
 
     #[test]
