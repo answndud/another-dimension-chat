@@ -141,6 +141,89 @@ export function productionMessageTtlInputValue(value, allowedTtlSeconds, fallbac
   return null;
 }
 
+export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
+  if (!mode?.enabled) {
+    return {
+      state: "stopped",
+      label: "Receive mode stopped",
+      retryable: false,
+      duplicateBlocked: false,
+    };
+  }
+  if (mode?.stopRequested) {
+    return {
+      state: "stopped",
+      label: "Receive mode stopping",
+      retryable: false,
+      duplicateBlocked: true,
+    };
+  }
+  if (mode?.inFlight && !result) {
+    return {
+      state: mode.runtimeState || "receiving",
+      label: `Receive mode ${mode.runtimeState || "receiving"}`,
+      retryable: false,
+      duplicateBlocked: true,
+    };
+  }
+  if (!result) {
+    return {
+      state: mode.runtimeState || "receiving",
+      label: `Receive mode ${mode.runtimeState || "receiving"}`,
+      retryable: false,
+      duplicateBlocked: false,
+    };
+  }
+  if (result.receive_attempt_succeeded || result.endpoint_update_applied) {
+    return {
+      state: "message-imported",
+      label: result.endpoint_update_applied
+        ? "Receive mode imported endpoint update"
+        : "Receive mode imported message",
+      retryable: false,
+      duplicateBlocked: false,
+    };
+  }
+  if (result.stream_request_accepted || result.inbound_rend_request_accepted) {
+    return {
+      state: "peer-connected",
+      label: "Receive mode peer connected",
+      retryable: true,
+      duplicateBlocked: false,
+    };
+  }
+  if (!result.persistent_client_ready) {
+    return {
+      state: "bootstrapping",
+      label: "Receive mode waiting for Tor bootstrap",
+      retryable: true,
+      duplicateBlocked: false,
+    };
+  }
+  if (!result.inbound_stream_preparation_ready) {
+    return {
+      state: "launching-service",
+      label: "Receive mode waiting for onion service",
+      retryable: true,
+      duplicateBlocked: false,
+    };
+  }
+  if (result.receive_attempt_started) {
+    return {
+      state: "failed-retryable",
+      label: "Receive mode retryable failure",
+      retryable: true,
+      duplicateBlocked: false,
+    };
+  }
+  return {
+    state: "receiving",
+    label: "Receive mode receiving",
+    retryable: true,
+    duplicateBlocked: false,
+  };
+}
+
 export function productionTwoProfileConversationActionView(entry, senderEnvelopeSlotPresent = false) {
   if (!entry) {
     return {
