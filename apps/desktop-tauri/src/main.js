@@ -379,6 +379,7 @@ let productionTwoProfileOnionReceiveMode = {
   inFlight: false,
   stopRequested: false,
   runtimeState: "stopped",
+  lastProcessedImportSequence: 0,
   generation: 0,
 };
 let latestProductionMessageImport = null;
@@ -6005,6 +6006,7 @@ async function startProductionTwoProfileOnionReceive() {
     inFlight: false,
     stopRequested: false,
     runtimeState: "receiving",
+    lastProcessedImportSequence: 0,
     generation,
   };
   setProductionTwoProfileOnionReceiveRuntimeState("receiving");
@@ -6035,7 +6037,7 @@ function setProductionTwoProfileOnionReceiveRuntimeState(runtimeState, result = 
 }
 
 function productionTwoProfileOnionReceiveBackendBoundary(backendLoop) {
-  return `backend_enabled=${backendLoop.enabled} worker=${backendLoop.worker_running} stop_requested=${backendLoop.stop_requested} profile_selected=${backendLoop.profile_selected} in_flight=${backendLoop.receive_attempt_in_flight} attempts=${backendLoop.attempt_count} generation=${backendLoop.generation} last_started=${backendLoop.last_attempt_started} last_succeeded=${backendLoop.last_attempt_succeeded} endpoint_update=${backendLoop.last_endpoint_update_applied} next=${backendLoop.last_next_blocker || "none"} explicit_start=${backendLoop.explicit_user_start_required} duplicate=${backendLoop.duplicate_loop_blocked} app_launch_network=${backendLoop.starts_network_on_app_launch} raw_profile=${backendLoop.raw_profile_returned} passphrase=${backendLoop.passphrase_retained} key_material=${backendLoop.key_material_exposed} network=${backendLoop.network_io_attempted} transport=${backendLoop.transport_io_opened} runtime=${backendLoop.runtime_messaging_enabled}`;
+  return `backend_enabled=${backendLoop.enabled} worker=${backendLoop.worker_running} stop_requested=${backendLoop.stop_requested} stop_confirmed=${backendLoop.stop_confirmed} profile_selected=${backendLoop.profile_selected} in_flight=${backendLoop.receive_attempt_in_flight} attempts=${backendLoop.attempt_count} generation=${backendLoop.generation} import_seq=${backendLoop.import_sequence} last_started=${backendLoop.last_attempt_started} last_succeeded=${backendLoop.last_attempt_succeeded} endpoint_update=${backendLoop.last_endpoint_update_applied} next=${backendLoop.last_next_blocker || "none"} explicit_start=${backendLoop.explicit_user_start_required} duplicate=${backendLoop.duplicate_loop_blocked} app_launch_network=${backendLoop.starts_network_on_app_launch} raw_profile=${backendLoop.raw_profile_returned} passphrase=${backendLoop.passphrase_retained} key_material=${backendLoop.key_material_exposed} network=${backendLoop.network_io_attempted} transport=${backendLoop.transport_io_opened} runtime=${backendLoop.runtime_messaging_enabled}`;
 }
 
 function scheduleProductionTwoProfileOnionReceiveStatusPoll(delayMs = TWO_PROFILE_ONION_RECEIVE_RETRY_MS) {
@@ -6058,7 +6060,6 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
   }
   try {
     const backendLoop = await invoke("production_onion_receive_loop_status");
-    const previousAttempt = productionTwoProfileOnionReceiveMode.attempt;
     productionTwoProfileOnionReceiveMode.attempt = backendLoop.attempt_count;
     productionTwoProfileOnionReceiveMode.inFlight =
       backendLoop.worker_running || backendLoop.receive_attempt_in_flight;
@@ -6074,16 +6075,30 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
     const runtimeView = setProductionTwoProfileOnionReceiveRuntimeState(runtimeState);
     setText(
       fields.productionTwoProfileMessageState,
-      `state=${runtimeView.state} backend_attempts=${backendLoop.attempt_count} last_started=${backendLoop.last_attempt_started} last_succeeded=${backendLoop.last_attempt_succeeded} endpoint_update=${backendLoop.last_endpoint_update_applied} next=${backendLoop.last_next_blocker || "none"}`,
+      `state=${runtimeView.state} backend_attempts=${backendLoop.attempt_count} import_seq=${backendLoop.import_sequence} last_started=${backendLoop.last_attempt_started} last_succeeded=${backendLoop.last_attempt_succeeded} endpoint_update=${backendLoop.last_endpoint_update_applied} next=${backendLoop.last_next_blocker || "none"}`,
     );
     setText(fields.productionTwoProfileBoundary, productionTwoProfileOnionReceiveBackendBoundary(backendLoop));
     if (
-      backendLoop.attempt_count !== previousAttempt &&
+      backendLoop.import_sequence > productionTwoProfileOnionReceiveMode.lastProcessedImportSequence &&
       (backendLoop.last_attempt_succeeded || backendLoop.last_endpoint_update_applied)
     ) {
+      productionTwoProfileOnionReceiveMode.lastProcessedImportSequence = backendLoop.import_sequence;
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
       if (backendLoop.last_attempt_succeeded) {
         selectLatestReceivedReplyForProfile(productionTwoProfileOnionReceiveMode.profile, { focusReply: "none" });
+      }
+      if (backendLoop.last_endpoint_update_applied) {
+        const input = productionTwoProfileInput();
+        if (input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase) {
+          const status = await invoke("production_two_profile_session_status", {
+            profileA: input.profileA,
+            profileB: input.profileB,
+            passphrase: input.passphrase,
+          });
+          rememberTwoProfileSessionStatus(input, status);
+          renderProductionTwoProfileSessionStatusResult(status);
+          renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
+        }
       }
     }
     if (backendLoop.enabled && !productionTwoProfileOnionReceiveMode.stopRequested) {
@@ -6100,157 +6115,30 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
   }
 }
 
-function scheduleProductionTwoProfileOnionReceiveAttempt(delayMs = TWO_PROFILE_ONION_RECEIVE_RETRY_MS) {
-  if (
-    !productionTwoProfileOnionReceiveMode.enabled ||
-    productionTwoProfileOnionReceiveMode.stopRequested ||
-    productionTwoProfileOnionReceiveMode.inFlight
-  ) {
-    return;
-  }
+function scheduleProductionTwoProfileOnionReceiveStopConfirmation(delayMs = 500) {
   clearProductionTwoProfileOnionReceiveTimer();
   productionTwoProfileOnionReceiveMode.timer = setTimeout(() => {
     productionTwoProfileOnionReceiveMode.timer = null;
-    runProductionTwoProfileOnionReceiveAttempt();
+    pollProductionTwoProfileOnionReceiveStopConfirmation();
   }, delayMs);
 }
 
-async function runProductionTwoProfileOnionReceiveAttempt() {
-  if (!productionTwoProfileOnionReceiveMode.enabled) {
-    return;
-  }
-  if (productionTwoProfileOnionReceiveMode.stopRequested) {
-    return;
-  }
-  if (productionTwoProfileOnionReceiveMode.inFlight) {
-    const view = productionOnionReceiveRuntimeView(productionTwoProfileOnionReceiveMode);
-    setProductionTwoProfileState(view.label);
-    setText(fields.productionTwoProfileWarning, "Receive mode already has a bounded attempt in flight.");
-    setText(fields.productionTwoProfileMessageState, "Duplicate receive attempt blocked");
-    applyProductionActionState();
-    return;
-  }
-  const { profile, passphrase } = productionTwoProfileOnionReceiveMode;
-  const generation = productionTwoProfileOnionReceiveMode.generation;
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
-  if (!manualNetworkPermission) {
-    setProductionTwoProfileOnionReceiveRuntimeState("failed-retryable");
-    setText(
-      fields.productionTwoProfileWarning,
-      "Manual onion network permission is disabled. Receive mode remains enabled but will not attempt network work until permission is restored or stopped.",
-    );
-    setText(fields.productionTwoProfileMessageState, "Receive mode paused before network attempt");
-    setText(fields.productionTwoProfileBoundary, "No network attempt made while manual permission is disabled");
-    applyProductionActionState();
-    scheduleProductionTwoProfileOnionReceiveAttempt();
-    return;
-  }
-  if (productionBusyAction) {
-    setProductionTwoProfileOnionReceiveRuntimeState("receiving");
-    setText(fields.productionTwoProfileWarning, "Receive mode is waiting for the active production action to finish.");
-    setText(fields.productionTwoProfileMessageState, "Next bounded receive attempt queued");
-    applyProductionActionState();
-    scheduleProductionTwoProfileOnionReceiveAttempt();
-    return;
-  }
-
-  productionTwoProfileOnionReceiveMode.attempt += 1;
-  const attempt = productionTwoProfileOnionReceiveMode.attempt;
-  productionTwoProfileOnionReceiveMode.inFlight = true;
-  productionTwoProfileOnionReceiveMode.runtimeState = "receiving";
-  productionBusyAction = "two-profile-onion-receive";
-  setProductionTwoProfileOnionReceiveRuntimeState("receiving");
-  setText(fields.productionTwoProfileWarning, `Running bounded onion receive attempt #${attempt} for ${profile}.`);
-  setText(fields.productionTwoProfileProfiles, `receiver=${profile}`);
-  setText(fields.productionTwoProfileSession, "Using retained onion service and stored receiver session");
-  setText(fields.productionTwoProfileMessageState, `Attempt #${attempt}: waiting for inbound accept/read/import`);
-  setText(fields.productionTwoProfileBoundary, "Receive attempt in progress with manual network permission");
-  applyProductionActionState();
+async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
   try {
-    const result = await invoke("production_onion_inbound_envelope_receive_attempt", {
-      profile,
-      passphrase,
-      manualNetworkPermission,
-    });
-    setOnionInboundStreamState(
-      result.receive_attempt_succeeded
-        ? "Envelope receive attempt read"
-        : result.receive_attempt_started
-          ? "Envelope receive attempt failed closed"
-          : "Envelope receive attempt blocked",
-    );
-    setText(fields.onionPreflightWarning, result.warning);
-    setText(
-      fields.onionInboundEnvelopeReceiveAttempt,
-      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} inbound_prepared=${result.inbound_stream_preparation_ready} rend_stream=${result.inbound_rend_request_stream_ready} rend_accept_attempted=${result.inbound_rend_request_accept_attempted} rend_accepted=${result.inbound_rend_request_accepted} stream_requests=${result.accepted_stream_request_stream_ready} stream_accept_attempted=${result.stream_request_accept_attempted} stream_accepted=${result.stream_request_accepted} stream_read_attempted=${result.stream_read_attempted} stream_bytes=${result.stream_bytes_read} started=${result.receive_attempt_started} succeeded=${result.receive_attempt_succeeded} received_envelope=${result.received_envelope_ready} import_attempted=${result.inbound_import_attempted} control_imported=${result.control_envelope_imported} endpoint_update=${result.endpoint_update_applied} stale_cleared=${result.stale_endpoint_status_cleared} event_recorded=${result.redacted_receive_result_event_recorded} events=${result.event_summary.join("; ") || "none"} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} stream_id=${result.stream_id_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} accept=${result.stream_accept_attempted} read_write=${result.stream_read_write_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
-    const runtimeView = setProductionTwoProfileOnionReceiveRuntimeState(
-      result.endpoint_update_applied || result.receive_attempt_succeeded
-        ? "message-imported"
-        : result.stream_request_accepted || result.inbound_rend_request_accepted
-          ? "peer-connected"
-          : result.receive_attempt_started
-            ? "failed-retryable"
-            : "receiving",
-      result,
-    );
-    setText(fields.productionTwoProfileWarning, result.warning);
-    setText(
-      fields.productionTwoProfileSession,
-      `receiver=${profile} attempt=${attempt} inbound_prepared=${result.inbound_stream_preparation_ready} received=${result.received_envelope_ready} control_imported=${result.control_envelope_imported}`,
-    );
+    const backendLoop = await invoke("production_onion_receive_loop_status");
+    setText(fields.productionTwoProfileBoundary, productionTwoProfileOnionReceiveBackendBoundary(backendLoop));
     setText(
       fields.productionTwoProfileMessageState,
-      `state=${runtimeView.state} attempt=${attempt} started=${result.receive_attempt_started} succeeded=${result.receive_attempt_succeeded} import=${result.inbound_import_attempted} control_imported=${result.control_envelope_imported} endpoint_update=${result.endpoint_update_applied} next=${result.next_blocker}`,
+      backendLoop.stop_confirmed
+        ? "Receive mode stopped; backend worker exit confirmed"
+        : `Receive mode stopping; worker=${backendLoop.worker_running} in_flight=${backendLoop.receive_attempt_in_flight}`,
     );
-    setText(
-      fields.productionTwoProfileBoundary,
-      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} endpoint_update=${result.endpoint_update_applied} stale_cleared=${result.stale_endpoint_status_cleared} events=${result.event_summary.join("; ") || "none"} blockers=${result.blockers.join("; ") || "none"} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} descriptor_body=${result.descriptor_body_returned} stream_id=${result.stream_id_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network=${result.network_io_attempted} publish=${result.descriptor_publish_attempted} accept=${result.stream_accept_attempted} read_write=${result.stream_read_write_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
-    if (result.endpoint_update_applied) {
-      const input = productionTwoProfileInput();
-      if (input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase) {
-        const status = await invoke("production_two_profile_session_status", {
-          profileA: input.profileA,
-          profileB: input.profileB,
-          passphrase: input.passphrase,
-        });
-        rememberTwoProfileSessionStatus(input, status);
-        renderProductionTwoProfileSessionStatusResult(status);
-        renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
-      }
-      setText(
-        fields.productionTwoProfileWarning,
-        `Receive attempt #${attempt} imported an encrypted endpoint update for ${profile}. Peer endpoint state refreshed.`,
-      );
-    } else if (result.receive_attempt_succeeded || result.received_envelope_ready) {
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
-      if (selectLatestReceivedReplyForProfile(profile, { focusReply: "none" })) {
-        setProductionTwoProfileState("Receive mode imported message");
-        setText(
-          fields.productionTwoProfileWarning,
-          `Receive attempt #${attempt} imported a message for ${profile}. Reply target selected in the chat transcript.`,
-        );
-      }
+    if (!backendLoop.stop_confirmed) {
+      scheduleProductionTwoProfileOnionReceiveStopConfirmation();
     }
   } catch (error) {
-    setProductionTwoProfileState("Receive mode failed");
-    productionTwoProfileOnionReceiveMode.runtimeState = "failed-retryable";
-    setText(fields.productionTwoProfileWarning, `Receive attempt failed without returning secrets. ${error}`);
-    setText(fields.productionTwoProfileBoundary, "Failed before or during bounded onion receive attempt.");
+    setText(fields.productionTwoProfileBoundary, `Backend receive loop stop confirmation failed without returning secrets. ${error}`);
   } finally {
-    if (productionTwoProfileOnionReceiveMode.generation !== generation) {
-      if (productionBusyAction === "two-profile-onion-receive") {
-        productionBusyAction = null;
-      }
-      applyProductionActionState();
-      return;
-    }
-    productionTwoProfileOnionReceiveMode.inFlight = false;
-    productionBusyAction = null;
-    if (productionTwoProfileOnionReceiveMode.enabled && !productionTwoProfileOnionReceiveMode.stopRequested) {
-      scheduleProductionTwoProfileOnionReceiveAttempt();
-    }
     applyProductionActionState();
   }
 }
@@ -6269,6 +6157,7 @@ function stopProductionTwoProfileOnionReceive() {
     inFlight: false,
     stopRequested: false,
     runtimeState: "stopped",
+    lastProcessedImportSequence: productionTwoProfileOnionReceiveMode.lastProcessedImportSequence,
     generation,
   };
   setProductionTwoProfileOnionReceiveRuntimeState("stopped");
@@ -6286,6 +6175,11 @@ function stopProductionTwoProfileOnionReceive() {
         fields.productionTwoProfileBoundary,
         productionTwoProfileOnionReceiveBackendBoundary(backendLoop),
       );
+      if (!backendLoop.stop_confirmed) {
+        scheduleProductionTwoProfileOnionReceiveStopConfirmation();
+      } else {
+        setText(fields.productionTwoProfileMessageState, "Receive mode stopped; backend worker exit confirmed");
+      }
     })
     .catch((error) => {
       setText(fields.productionTwoProfileBoundary, `Backend receive loop stop failed without returning secrets. ${error}`);
