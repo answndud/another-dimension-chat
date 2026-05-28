@@ -289,6 +289,7 @@ const fields = {
   roomIdentityVerify: document.querySelector("#room-identity-verify"),
   roomIdentityTransport: document.querySelector("#room-identity-transport"),
   runProductionTwoProfileRoundtrip: document.querySelector("#run-production-two-profile-roundtrip"),
+  runProductionTwoProfileRoundtripInline: document.querySelector("#run-production-two-profile-roundtrip-inline"),
   checkProductionTwoProfileSessionStatusInline: document.querySelector(
     "#check-production-two-profile-session-status-inline",
   ),
@@ -3803,6 +3804,22 @@ function applyProductionActionState() {
   );
   setActionButtonState(
     fields.runProductionTwoProfileRoundtrip,
+    !availability.runTwoProfileRoundtrip,
+    busy
+      ? "Wait for the active production action."
+      : !hasMessageRetentionPolicy
+        ? retentionPolicyBlocker
+      : twoProfileNeedsSessionCheck
+        ? "Check recovered sessions before running full setup."
+      : twoProfileSessionsReady
+        ? "Stored sessions are ready; send a stored-session message instead."
+        : twoProfileSessionsIncomplete
+          ? twoProfileSessionRebuildMessage(twoProfile)
+        : "Enter two profiles, passphrase, and message first.",
+    twoProfileCurrentAction === "full-setup",
+  );
+  setActionButtonState(
+    fields.runProductionTwoProfileRoundtripInline,
     !availability.runTwoProfileRoundtrip,
     busy
       ? "Wait for the active production action."
@@ -8888,6 +8905,13 @@ if (fields.runProductionRoundtrip) {
 
 if (fields.runProductionTwoProfileRoundtrip) {
   fields.runProductionTwoProfileRoundtrip.addEventListener(
+    "click",
+    runProductionTwoProfileRoundtrip,
+  );
+}
+
+if (fields.runProductionTwoProfileRoundtripInline) {
+  fields.runProductionTwoProfileRoundtripInline.addEventListener(
     "click",
     runProductionTwoProfileRoundtrip,
   );
