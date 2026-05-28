@@ -1190,10 +1190,17 @@ body.is-chat-active #production-two-profile-transcript:focus-within {
 }
 
 body.is-chat-active .message-transcript li {
+  position: relative;
   width: min(58%, 520px);
   border-radius: 3px;
   padding: 8px 10px;
   box-shadow: none;
+}
+
+body.is-chat-active .message-transcript li.is-pending-send,
+body.is-chat-active .message-transcript li.is-pending-receive,
+body.is-chat-active .message-transcript li.is-canceled {
+  padding-right: 46px;
 }
 
 body.is-chat-active .message-transcript li.is-delivered,
@@ -1218,8 +1225,21 @@ body.is-chat-active .message-transcript .transcript-details {
 }
 
 body.is-chat-active .message-transcript .transcript-status {
-  padding: 1px 5px;
-  font-size: 9px;
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  opacity: 0.68;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+body.is-chat-active .message-transcript .transcript-status.is-delivered,
+body.is-chat-active .message-transcript .transcript-status.is-inbound-only {
+  display: none;
 }
 
 body.is-chat-active .message-transcript .transcript-body {
@@ -1229,14 +1249,26 @@ body.is-chat-active .message-transcript .transcript-body {
 
 body.is-chat-active .message-transcript .transcript-row-actions {
   display: flex;
-  gap: 5px;
-  margin-top: 4px;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 2px;
+  opacity: 0.78;
 }
 
 body.is-chat-active .message-transcript .transcript-row-actions button {
-  min-height: 24px;
-  padding: 3px 7px;
-  font-size: 10px;
+  min-height: 22px;
+  border-color: color-mix(in srgb, var(--panel-border) 70%, transparent);
+  padding: 2px 6px;
+  background: transparent;
+  font-size: 9px;
+}
+
+body.is-chat-active .message-transcript .transcript-row-actions .transcript-retry {
+  color: var(--accent-cyan);
+}
+
+body.is-chat-active .message-transcript .transcript-row-actions .transcript-cancel {
+  color: var(--text-muted);
 }
 
 body.is-chat-active .chat-message-label {
