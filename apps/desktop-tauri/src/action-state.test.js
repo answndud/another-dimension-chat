@@ -700,6 +700,24 @@ test("productionOnionReceiveLoopRefreshPlan uses cumulative counters", () => {
     ).transcriptChanged,
     false,
   );
+  const afterRetryFailure = productionOnionReceiveLoopRefreshPlan(
+    {
+      lastProcessedImportSequence: 3,
+      lastProcessedMessageImportCount: 2,
+      lastProcessedEndpointUpdateCount: 1,
+    },
+    {
+      import_sequence: 4,
+      message_import_count: 3,
+      endpoint_update_count: 1,
+      runtime_state: "failed-retryable",
+      last_attempt_succeeded: false,
+      last_endpoint_update_applied: false,
+    },
+  );
+  assert.equal(afterRetryFailure.transcriptChanged, true);
+  assert.equal(afterRetryFailure.messageImported, true);
+  assert.equal(afterRetryFailure.endpointUpdated, false);
 });
 
 test("productionOnionReceiveFailureMessage maps retry states", () => {
