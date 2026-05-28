@@ -4851,6 +4851,15 @@ fn run_production_onion_receive_loop_start(
         return run_production_onion_receive_loop_status(state, false);
     }
     if state
+        .receive_loop_worker_running
+        .load(std::sync::atomic::Ordering::Acquire)
+    {
+        state
+            .receive_loop_duplicate_start_blocks
+            .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+        return run_production_onion_receive_loop_status(state, true);
+    }
+    if state
         .receive_loop_enabled
         .compare_exchange(
             false,
@@ -10524,6 +10533,19 @@ replay check: no replayed messages after message 2
         assert_eq!(stopped.duplicate_start_block_count, 1);
         assert!(!stopped.starts_network_on_app_launch);
 
+        let blocked_restart_while_stopping = run_production_onion_receive_loop_start(
+            &state,
+            "alice".to_string(),
+            true,
+        );
+        assert!(!blocked_restart_while_stopping.enabled);
+        assert!(blocked_restart_while_stopping.stop_requested);
+        assert!(blocked_restart_while_stopping.worker_running);
+        assert!(blocked_restart_while_stopping.duplicate_loop_blocked);
+        assert_eq!(blocked_restart_while_stopping.worker_start_count, 1);
+        assert_eq!(blocked_restart_while_stopping.duplicate_start_block_count, 2);
+        assert!(!blocked_restart_while_stopping.starts_network_on_app_launch);
+
         run_production_onion_receive_loop_worker_finished(&state);
         let finished = run_production_onion_receive_loop_status(&state, false);
         assert!(!finished.worker_running);
@@ -10533,7 +10555,7 @@ replay check: no replayed messages after message 2
         assert!(!finished.multi_message_receive_ready);
         assert!(!finished.restart_generation_isolated);
         assert_eq!(finished.worker_start_count, 1);
-        assert_eq!(finished.duplicate_start_block_count, 1);
+        assert_eq!(finished.duplicate_start_block_count, 2);
 
         let restarted = run_production_onion_receive_loop_start(
             &state,
