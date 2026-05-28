@@ -539,24 +539,24 @@
             </details>
           </section>
           <details id="local-diagnostic-tools" class="dev-diagnostic-panel">
-            <summary>Developer local diagnostics</summary>
+            <summary data-i18n="developerDiagnostics">Developer local diagnostics</summary>
           <div>
-            <p class="eyebrow">Local diagnostic only</p>
-            <h2 id="demo-title">Alice/Bob dev-insecure flow</h2>
+            <p class="eyebrow" data-i18n="localDiagnosticOnly">Local diagnostic only</p>
+            <h2 id="demo-title" data-i18n="devInsecureFlow">Alice/Bob dev-insecure flow</h2>
           </div>
-          <button id="run-demo" type="button">Run local demo</button>
-          <p id="demo-state" class="demo-state" aria-live="polite">Demo idle</p>
+          <button id="run-demo" type="button" data-i18n="runLocalDemo">Run local demo</button>
+          <p id="demo-state" class="demo-state" aria-live="polite" data-i18n="demoIdle">Demo idle</p>
           <p id="demo-hint" class="demo-hint">
             First run may take longer while Cargo builds the dev-insecure local demo.
           </p>
-          <p id="demo-warning" class="demo-warning">Warning has not run yet.</p>
+          <p id="demo-warning" class="demo-warning" data-i18n="warningNotRun">Warning has not run yet.</p>
           <ol id="demo-steps" class="demo-steps" aria-label="Local demo flow steps">
             <li>Steps have not run yet.</li>
           </ol>
           <section class="simulation-panel" aria-labelledby="simulation-title">
             <div>
-              <p class="eyebrow">Local peer simulation</p>
-              <h3 id="simulation-title">Alice and Bob state</h3>
+              <p class="eyebrow" data-i18n="localPeerSimulation">Local peer simulation</p>
+              <h3 id="simulation-title" data-i18n="aliceBobState">Alice and Bob state</h3>
             </div>
             <div id="flow-controls" class="flow-controls" aria-label="Local flow controls"></div>
             <div class="peer-grid" aria-label="Local peer panels">
@@ -564,16 +564,16 @@
                 <h4>Alice</h4>
                 <dl>
                   <div>
-                    <dt>Profile</dt>
-                    <dd id="alice-profile">Waiting for local demo</dd>
+                    <dt data-i18n="profiles">Profile</dt>
+                    <dd id="alice-profile" data-i18n="waitingLocalDemo">Waiting for local demo</dd>
                   </div>
                   <div>
-                    <dt>Contact</dt>
-                    <dd id="alice-contact">Waiting for pairing</dd>
+                    <dt data-i18n="contact">Contact</dt>
+                    <dd id="alice-contact" data-i18n="waitingPairing">Waiting for pairing</dd>
                   </div>
                   <div>
-                    <dt>Inbox</dt>
-                    <dd id="alice-inbox">No local message state</dd>
+                    <dt data-i18n="inbox">Inbox</dt>
+                    <dd id="alice-inbox" data-i18n="noLocalMessageState">No local message state</dd>
                   </div>
                 </dl>
               </article>
@@ -581,442 +581,442 @@
                 <h4>Bob</h4>
                 <dl>
                   <div>
-                    <dt>Profile</dt>
-                    <dd id="bob-profile">Waiting for local demo</dd>
+                    <dt data-i18n="profiles">Profile</dt>
+                    <dd id="bob-profile" data-i18n="waitingLocalDemo">Waiting for local demo</dd>
                   </div>
                   <div>
-                    <dt>Contact</dt>
-                    <dd id="bob-contact">Waiting for pairing</dd>
+                    <dt data-i18n="contact">Contact</dt>
+                    <dd id="bob-contact" data-i18n="waitingPairing">Waiting for pairing</dd>
                   </div>
                   <div>
-                    <dt>Inbox</dt>
-                    <dd id="bob-inbox">No local message state</dd>
+                    <dt data-i18n="inbox">Inbox</dt>
+                    <dd id="bob-inbox" data-i18n="noLocalMessageState">No local message state</dd>
                   </div>
                 </dl>
               </article>
             </div>
             <dl class="flow-summary">
               <div>
-                <dt>Safety number</dt>
-                <dd id="simulation-safety-number">Not shown yet</dd>
+                <dt data-i18n="safetyNumber">Safety number</dt>
+                <dd id="simulation-safety-number" data-i18n="notShownYet">Not shown yet</dd>
               </div>
               <div>
-                <dt>Safety phrase</dt>
-                <dd id="simulation-safety-phrase">Not shown yet</dd>
+                <dt data-i18n="safetyPhrase">Safety phrase</dt>
+                <dd id="simulation-safety-phrase" data-i18n="notShownYet">Not shown yet</dd>
               </div>
               <div>
-                <dt>Message</dt>
-                <dd id="simulation-message">Not received yet</dd>
+                <dt data-i18n="message">Message</dt>
+                <dd id="simulation-message" data-i18n="notReceivedYet">Not received yet</dd>
               </div>
               <div>
-                <dt>Replay check</dt>
-                <dd id="simulation-replay">Not checked yet</dd>
+                <dt data-i18n="replayCheck">Replay check</dt>
+                <dd id="simulation-replay" data-i18n="notCheckedYet">Not checked yet</dd>
               </div>
             </dl>
           </section>
           </details>
           <details class="advanced-panel">
-            <summary>Manual production payload tools</summary>
+            <summary data-i18n="manualProductionTools">Manual production payload tools</summary>
             <div class="advanced-stack">
               <dl class="manual-relay-summary" aria-label="Manual production relay status">
                 <div>
-                  <dt>Current</dt>
+                  <dt data-i18n="current">Current</dt>
                   <dd class="is-current-manual manual-current-action">
                     <span id="production-manual-current">
                       Profile | Next: enter profile and passphrase.
                     </span>
-                    <button id="focus-production-current-action" type="button" class="flow-control is-secondary">Focus</button>
+                    <button id="focus-production-current-action" type="button" class="flow-control is-secondary" data-i18n="focus">Focus</button>
                   </dd>
                 </div>
                 <div>
-                  <dt>Route</dt>
+                  <dt data-i18n="route">Route</dt>
                   <dd id="production-manual-route">Active=alice Remote=bob</dd>
                 </div>
                 <div>
-                  <dt>Direction</dt>
+                  <dt data-i18n="direction">Direction</dt>
                   <dd id="production-manual-direction">
                     Fill local copies the active output field into the matching local input; Fill remote copies
                     the stored counterpart payload into the matching remote input.
                   </dd>
                 </div>
                 <div>
-                  <dt>Slots</dt>
+                  <dt data-i18n="slots">Slots</dt>
                   <dd id="production-manual-slots">No active or counterpart relay slots stored</dd>
                 </div>
                 <div>
-                  <dt>Mode</dt>
+                  <dt data-i18n="mode">Mode</dt>
                   <dd id="production-manual-mode">Manual relay uses local memory slots only.</dd>
                 </div>
                 <div>
-                  <dt>Policy</dt>
+                  <dt data-i18n="policy">Policy</dt>
                   <dd id="production-manual-policy">
                     manual_only=true auto_send=false auto_import=false button_confirmed_profile_switch=true background_profile_switch=false network_io=false
                   </dd>
                 </div>
                 <div>
-                  <dt>Both sessions</dt>
-                  <dd id="production-two-profile-session-status">Not checked yet</dd>
+                  <dt data-i18n="bothSessions">Both sessions</dt>
+                  <dd id="production-two-profile-session-status" data-i18n="notCheckedYet">Not checked yet</dd>
                 </div>
               </dl>
               <div class="loop-actions">
-                <button id="check-production-two-profile-session-status" type="button">
+                <button id="check-production-two-profile-session-status" type="button" data-i18n="checkBothSessions">
                   Check both sessions
                 </button>
               </div>
               <section class="loop-panel" aria-labelledby="production-profile-title">
                 <div>
-                  <p class="eyebrow">Production profile</p>
-                  <h3 id="production-profile-title">Persistent local store</h3>
+                  <p class="eyebrow" data-i18n="productionProfile">Production profile</p>
+                  <h3 id="production-profile-title" data-i18n="persistentLocalStore">Persistent local store</h3>
                 </div>
-                <label class="loop-label" for="production-profile-name">Profile</label>
+                <label class="loop-label" for="production-profile-name" data-i18n="profiles">Profile</label>
                 <select id="production-profile-selector"></select>
                 <input id="production-profile-name" type="text" value="alice" autocomplete="username" />
                 <div class="loop-actions" aria-label="Manual profile presets">
-                  <button id="use-alice-production-profile" type="button" class="flow-control is-secondary">
+                  <button id="use-alice-production-profile" type="button" class="flow-control is-secondary" data-i18n="useAlice">
                     Use Alice
                   </button>
-                  <button id="use-bob-production-profile" type="button" class="flow-control is-secondary">
+                  <button id="use-bob-production-profile" type="button" class="flow-control is-secondary" data-i18n="useBob">
                     Use Bob
                   </button>
                 </div>
-                <label class="loop-label" for="production-profile-passphrase">Passphrase</label>
+                <label class="loop-label" for="production-profile-passphrase" data-i18n="passphrase">Passphrase</label>
                 <input
                   id="production-profile-passphrase"
                   type="password"
                   autocomplete="current-password"
                 />
                 <div class="loop-actions">
-                  <button id="unlock-production-profile" type="button">Unlock profile</button>
+                  <button id="unlock-production-profile" type="button" data-i18n="unlockProfile">Unlock profile</button>
                 </div>
-                <p id="production-profile-state" class="demo-state" aria-live="polite">
+                <p id="production-profile-state" class="demo-state" aria-live="polite" data-i18n="profileLocked">
                   Profile locked
                 </p>
-                <p id="production-profile-next-action" class="demo-hint">
+                <p id="production-profile-next-action" class="demo-hint" data-i18n="nextEnterProfilePassphrase">
                   Next: enter profile and passphrase.
                 </p>
-                <p id="production-profile-warning" class="demo-warning">
+                <p id="production-profile-warning" class="demo-warning" data-i18n="productionProfileLockedWarning">
                   Production profile has not been unlocked yet.
                 </p>
                 <dl class="flow-summary">
                   <div>
-                    <dt>Storage</dt>
-                    <dd id="production-profile-storage">Not checked yet</dd>
+                    <dt data-i18n="storage">Storage</dt>
+                    <dd id="production-profile-storage" data-i18n="notCheckedYet">Not checked yet</dd>
                   </div>
                   <div>
-                    <dt>Identity</dt>
-                    <dd id="production-profile-identity">Not checked yet</dd>
+                    <dt data-i18n="identity">Identity</dt>
+                    <dd id="production-profile-identity" data-i18n="notCheckedYet">Not checked yet</dd>
                   </div>
                   <div>
-                    <dt>Boundary</dt>
-                    <dd id="production-profile-boundary">Not checked yet</dd>
+                    <dt data-i18n="boundary">Boundary</dt>
+                    <dd id="production-profile-boundary" data-i18n="notCheckedYet">Not checked yet</dd>
                   </div>
                 </dl>
               </section>
               <section class="loop-panel" aria-labelledby="production-pairing-title">
                 <div>
-                  <p class="eyebrow">Production pairing</p>
-                  <h3 id="production-pairing-title">Public payload export</h3>
+                  <p class="eyebrow" data-i18n="productionPairing">Production pairing</p>
+                  <h3 id="production-pairing-title" data-i18n="publicPayloadExport">Public payload export</h3>
                 </div>
                 <div class="tool-step">
-                  <label class="loop-label" for="production-pairing-endpoint">Onion endpoint</label>
+                  <label class="loop-label" for="production-pairing-endpoint" data-i18n="onionEndpoint">Onion endpoint</label>
                   <input id="production-pairing-endpoint" type="text" value="alice.onion" />
                   <div class="loop-actions">
-                    <button id="export-production-pairing" type="button">Export pairing</button>
+                    <button id="export-production-pairing" type="button" data-i18n="exportPairing">Export pairing</button>
                   </div>
-                  <p id="production-pairing-state" class="demo-state" aria-live="polite">
+                  <p id="production-pairing-state" class="demo-state" aria-live="polite" data-i18n="pairingPayloadIdle">
                     Pairing payload idle
                   </p>
-                  <p id="production-pairing-next-action" class="demo-hint">
+                  <p id="production-pairing-next-action" class="demo-hint" data-i18n="nextEnterProfilePassphrase">
                     Next: enter profile and passphrase.
                   </p>
-                  <p id="production-pairing-warning" class="demo-warning">
+                  <p id="production-pairing-warning" class="demo-warning" data-i18n="pairingNotExported">
                     Pairing payload has not been exported yet.
                   </p>
                   <ol id="production-pairing-flow" class="demo-steps compact-flow" aria-label="Pairing guided flow">
                     <li id="production-pairing-step-export" class="is-running">
-                      <strong>1 Export</strong>
+                      <strong data-i18n="pairingStepExport">1 Export</strong>
                       <span id="production-pairing-step-export-detail">Export a local QR payload.</span>
                     </li>
                     <li id="production-pairing-step-remote" class="is-pending">
-                      <strong>2 Remote</strong>
+                      <strong data-i18n="pairingStepRemote">2 Remote</strong>
                       <span id="production-pairing-step-remote-detail">Paste or load the remote QR payload.</span>
                     </li>
                     <li id="production-pairing-step-safety" class="is-pending">
-                      <strong>3 Verify</strong>
+                      <strong data-i18n="pairingStepVerify">3 Verify</strong>
                       <span id="production-pairing-step-safety-detail">Compare the safety number out-of-band.</span>
                     </li>
                     <li id="production-pairing-step-draft" class="is-pending">
-                      <strong>4 Draft</strong>
+                      <strong data-i18n="pairingStepDraft">4 Draft</strong>
                       <span id="production-pairing-step-draft-detail">Save the session draft after verification.</span>
                     </li>
                   </ol>
                 </div>
                 <div class="tool-step">
-                  <label class="loop-label" for="production-pairing-payload">Pairing payload</label>
+                  <label class="loop-label" for="production-pairing-payload" data-i18n="pairingPayload">Pairing payload</label>
                   <textarea id="production-pairing-payload" rows="5" readonly></textarea>
                   <div class="qr-pairing-panel" aria-label="Pairing QR">
                     <canvas id="production-pairing-qr" width="224" height="224"></canvas>
-                    <p id="production-pairing-qr-status" class="demo-hint">QR appears after pairing export.</p>
+                    <p id="production-pairing-qr-status" class="demo-hint" data-i18n="qrAfterPairingExport">QR appears after pairing export.</p>
                   </div>
                   <div class="loop-actions">
-                    <button id="use-production-pairing-payload" type="button" class="flow-control is-secondary">Fill local</button>
-                    <button id="store-production-pairing-payload" type="button" class="flow-control is-secondary">Store pairing</button>
-                    <button id="load-production-pairing-payload" type="button" class="flow-control is-secondary">Fill remote</button>
-                    <button id="relay-production-pairing-payload" type="button">Relay to peer</button>
+                    <button id="use-production-pairing-payload" type="button" class="flow-control is-secondary" data-i18n="fillLocal">Fill local</button>
+                    <button id="store-production-pairing-payload" type="button" class="flow-control is-secondary" data-i18n="storePairing">Store pairing</button>
+                    <button id="load-production-pairing-payload" type="button" class="flow-control is-secondary" data-i18n="fillRemote">Fill remote</button>
+                    <button id="relay-production-pairing-payload" type="button" data-i18n="relayToPeer">Relay to peer</button>
                   </div>
-                  <label class="loop-label" for="production-remote-pairing-qr-payload">Remote QR text</label>
+                  <label class="loop-label" for="production-remote-pairing-qr-payload" data-i18n="remoteQrText">Remote QR text</label>
                   <textarea id="production-remote-pairing-qr-payload" rows="3"></textarea>
                   <div class="loop-actions">
-                    <button id="use-production-remote-pairing-qr" type="button" class="flow-control is-secondary">Use QR text</button>
+                    <button id="use-production-remote-pairing-qr" type="button" class="flow-control is-secondary" data-i18n="useQrText">Use QR text</button>
                   </div>
-                  <label class="loop-label" for="production-remote-pairing-payload">Remote payload</label>
+                  <label class="loop-label" for="production-remote-pairing-payload" data-i18n="remotePayload">Remote payload</label>
                   <textarea id="production-remote-pairing-payload" rows="5"></textarea>
                   <div class="loop-actions">
-                    <button id="check-production-pairing-safety" type="button">Check safety</button>
+                    <button id="check-production-pairing-safety" type="button" data-i18n="checkSafety">Check safety</button>
                     <label class="inline-toggle">
                       <input id="production-pairing-safety-verified" type="checkbox" />
-                      Safety verified
+                      <span data-i18n="safetyVerified">Safety verified</span>
                     </label>
                   </div>
                   <dl class="flow-summary">
                     <div>
-                      <dt>Safety number</dt>
-                      <dd id="production-pairing-safety-number">Not checked yet</dd>
+                      <dt data-i18n="safetyNumber">Safety number</dt>
+                      <dd id="production-pairing-safety-number" data-i18n="notCheckedYet">Not checked yet</dd>
                     </div>
                     <div>
-                      <dt>Safety phrase</dt>
-                      <dd id="production-pairing-safety-phrase">Not checked yet</dd>
+                      <dt data-i18n="safetyPhrase">Safety phrase</dt>
+                      <dd id="production-pairing-safety-phrase" data-i18n="notCheckedYet">Not checked yet</dd>
                     </div>
                     <div>
-                      <dt>Safety boundary</dt>
+                      <dt data-i18n="safetyBoundary">Safety boundary</dt>
                       <dd id="production-pairing-safety-boundary">verified=false network_io=false</dd>
                     </div>
                   </dl>
                   <div class="loop-actions">
-                    <button id="save-production-session-draft" type="button">Save draft</button>
+                    <button id="save-production-session-draft" type="button" data-i18n="saveDraft">Save draft</button>
                   </div>
                 </div>
                 <div class="tool-step">
-                  <label class="loop-label" for="production-handshake-init-payload">Handshake init</label>
+                  <label class="loop-label" for="production-handshake-init-payload" data-i18n="handshakeInit">Handshake init</label>
                   <textarea id="production-handshake-init-payload" rows="3" readonly></textarea>
                   <div class="loop-actions">
-                    <button id="use-production-handshake-init" type="button" class="flow-control is-secondary">Fill local</button>
-                    <button id="store-production-handshake-init" type="button" class="flow-control is-secondary">Store init</button>
-                    <button id="load-production-handshake-init" type="button" class="flow-control is-secondary">Fill remote</button>
-                    <button id="relay-production-handshake-init" type="button">Relay to peer</button>
+                    <button id="use-production-handshake-init" type="button" class="flow-control is-secondary" data-i18n="fillLocal">Fill local</button>
+                    <button id="store-production-handshake-init" type="button" class="flow-control is-secondary" data-i18n="storeInit">Store init</button>
+                    <button id="load-production-handshake-init" type="button" class="flow-control is-secondary" data-i18n="fillRemote">Fill remote</button>
+                    <button id="relay-production-handshake-init" type="button" data-i18n="relayToPeer">Relay to peer</button>
                   </div>
-                  <label class="loop-label" for="production-remote-handshake-init-payload">
+                  <label class="loop-label" for="production-remote-handshake-init-payload" data-i18n="remoteHandshakeInit">
                     Remote handshake init
                   </label>
                   <textarea id="production-remote-handshake-init-payload" rows="3"></textarea>
-                  <label class="loop-label" for="production-handshake-reply-payload">Handshake reply</label>
+                  <label class="loop-label" for="production-handshake-reply-payload" data-i18n="handshakeReply">Handshake reply</label>
                   <textarea id="production-handshake-reply-payload" rows="3" readonly></textarea>
                   <div class="loop-actions">
-                    <button id="use-production-handshake-reply" type="button" class="flow-control is-secondary">Fill local</button>
-                    <button id="store-production-handshake-reply" type="button" class="flow-control is-secondary">Store reply</button>
-                    <button id="load-production-handshake-reply" type="button" class="flow-control is-secondary">Fill remote</button>
-                    <button id="relay-production-handshake-reply" type="button">Relay to peer</button>
+                    <button id="use-production-handshake-reply" type="button" class="flow-control is-secondary" data-i18n="fillLocal">Fill local</button>
+                    <button id="store-production-handshake-reply" type="button" class="flow-control is-secondary" data-i18n="storeReply">Store reply</button>
+                    <button id="load-production-handshake-reply" type="button" class="flow-control is-secondary" data-i18n="fillRemote">Fill remote</button>
+                    <button id="relay-production-handshake-reply" type="button" data-i18n="relayToPeer">Relay to peer</button>
                   </div>
-                  <label class="loop-label" for="production-remote-handshake-reply-payload">
+                  <label class="loop-label" for="production-remote-handshake-reply-payload" data-i18n="remoteHandshakeReply">
                     Remote handshake reply
                   </label>
                   <textarea id="production-remote-handshake-reply-payload" rows="3"></textarea>
-                  <label class="loop-label" for="production-handshake-finish-payload">Handshake finish</label>
+                  <label class="loop-label" for="production-handshake-finish-payload" data-i18n="handshakeFinish">Handshake finish</label>
                   <textarea id="production-handshake-finish-payload" rows="3" readonly></textarea>
                   <div class="loop-actions">
-                    <button id="use-production-handshake-finish" type="button" class="flow-control is-secondary">Fill local</button>
-                    <button id="store-production-handshake-finish" type="button" class="flow-control is-secondary">Store finish</button>
-                    <button id="load-production-handshake-finish" type="button" class="flow-control is-secondary">Fill remote</button>
-                    <button id="relay-production-handshake-finish" type="button">Relay to peer</button>
+                    <button id="use-production-handshake-finish" type="button" class="flow-control is-secondary" data-i18n="fillLocal">Fill local</button>
+                    <button id="store-production-handshake-finish" type="button" class="flow-control is-secondary" data-i18n="storeFinish">Store finish</button>
+                    <button id="load-production-handshake-finish" type="button" class="flow-control is-secondary" data-i18n="fillRemote">Fill remote</button>
+                    <button id="relay-production-handshake-finish" type="button" data-i18n="relayToPeer">Relay to peer</button>
                   </div>
-                  <label class="loop-label" for="production-remote-handshake-finish-payload">
+                  <label class="loop-label" for="production-remote-handshake-finish-payload" data-i18n="remoteHandshakeFinish">
                     Remote handshake finish
                   </label>
                   <textarea id="production-remote-handshake-finish-payload" rows="3"></textarea>
                   <div class="loop-actions">
-                    <button id="export-production-handshake-init" type="button">Export init</button>
-                    <button id="export-production-handshake-reply" type="button">Export reply</button>
-                    <button id="export-production-handshake-finish" type="button">Export finish</button>
-                    <button id="import-production-handshake-finish" type="button">Import finish</button>
-                    <button id="check-production-session-state" type="button">Check session</button>
+                    <button id="export-production-handshake-init" type="button" data-i18n="exportInit">Export init</button>
+                    <button id="export-production-handshake-reply" type="button" data-i18n="exportReply">Export reply</button>
+                    <button id="export-production-handshake-finish" type="button" data-i18n="exportFinish">Export finish</button>
+                    <button id="import-production-handshake-finish" type="button" data-i18n="importFinish">Import finish</button>
+                    <button id="check-production-session-state" type="button" data-i18n="checkSession">Check session</button>
                   </div>
                 </div>
                 <dl class="flow-summary">
                   <div>
-                    <dt>Storage</dt>
-                    <dd id="production-pairing-storage">Not checked yet</dd>
+                    <dt data-i18n="storage">Storage</dt>
+                    <dd id="production-pairing-storage" data-i18n="notCheckedYet">Not checked yet</dd>
                   </div>
                   <div>
-                    <dt>Session</dt>
-                    <dd id="production-pairing-session">Not checked yet</dd>
+                    <dt data-i18n="session">Session</dt>
+                    <dd id="production-pairing-session" data-i18n="notCheckedYet">Not checked yet</dd>
                   </div>
                   <div>
-                    <dt>Handshake</dt>
-                    <dd id="production-handshake-state">Not checked yet</dd>
+                    <dt data-i18n="handshake">Handshake</dt>
+                    <dd id="production-handshake-state" data-i18n="notCheckedYet">Not checked yet</dd>
                   </div>
                   <div>
-                    <dt>Boundary</dt>
-                    <dd id="production-pairing-boundary">Not checked yet</dd>
+                    <dt data-i18n="boundary">Boundary</dt>
+                    <dd id="production-pairing-boundary" data-i18n="notCheckedYet">Not checked yet</dd>
                   </div>
                 </dl>
               </section>
               <section class="loop-panel" aria-labelledby="production-message-title">
                 <div>
-                  <p class="eyebrow">Production message</p>
-                  <h3 id="production-message-title">Encrypted envelope path</h3>
+                  <p class="eyebrow" data-i18n="productionMessage">Production message</p>
+                  <h3 id="production-message-title" data-i18n="encryptedEnvelopePath">Encrypted envelope path</h3>
                 </div>
                 <div class="tool-step">
                   <label class="loop-label">
                     <input id="production-message-auto-number" type="checkbox" checked />
-                    Auto message number
+                    <span data-i18n="autoMessageNumber">Auto message number</span>
                   </label>
-                  <label class="loop-label" for="production-message-number">Message number</label>
+                  <label class="loop-label" for="production-message-number" data-i18n="messageNumber">Message number</label>
                   <input id="production-message-number" type="number" min="1" value="1" />
-                  <label class="loop-label" for="production-message-ttl">Retention</label>
+                  <label class="loop-label" for="production-message-ttl" data-i18n="retention">Retention</label>
                   <select id="production-message-ttl">
-                    <option value="">Loading retention policy</option>
+                    <option value="" data-i18n="loadingRetentionPolicy">Loading retention policy</option>
                   </select>
-                  <label class="loop-label" for="production-message-body">Message</label>
+                  <label class="loop-label" for="production-message-body" data-i18n="message">Message</label>
                   <textarea id="production-message-body" rows="3">hello over stored transport</textarea>
                   <div class="loop-actions">
-                    <button id="export-production-message-envelope" type="button">Export envelope</button>
+                    <button id="export-production-message-envelope" type="button" data-i18n="exportEnvelope">Export envelope</button>
                   </div>
-                  <p id="production-message-state" class="demo-state" aria-live="polite">
+                  <p id="production-message-state" class="demo-state" aria-live="polite" data-i18n="messageFlowIdle">
                     Message flow idle
                   </p>
-                  <p id="production-message-next-action" class="demo-hint">
+                  <p id="production-message-next-action" class="demo-hint" data-i18n="nextCompleteSessionExportEnvelope">
                     Next: complete session state, then export envelope.
                   </p>
-                  <p id="production-message-warning" class="demo-warning">
+                  <p id="production-message-warning" class="demo-warning" data-i18n="messageEnvelopeNotExported">
                     Message envelope has not been exported yet.
                   </p>
                 </div>
                 <div class="tool-step">
-                  <label class="loop-label" for="production-message-envelope">Envelope</label>
+                  <label class="loop-label" for="production-message-envelope" data-i18n="envelope">Envelope</label>
                   <textarea id="production-message-envelope" rows="5" readonly></textarea>
                   <div class="loop-actions">
-                    <button id="use-production-message-envelope" type="button" class="flow-control is-secondary">Fill local</button>
-                    <button id="store-production-message-envelope" type="button" class="flow-control is-secondary">Store envelope</button>
-                    <button id="load-production-message-envelope" type="button" class="flow-control is-secondary">Fill remote</button>
-                    <button id="relay-production-message-envelope" type="button">Relay to peer</button>
+                    <button id="use-production-message-envelope" type="button" class="flow-control is-secondary" data-i18n="fillLocal">Fill local</button>
+                    <button id="store-production-message-envelope" type="button" class="flow-control is-secondary" data-i18n="storeEnvelope">Store envelope</button>
+                    <button id="load-production-message-envelope" type="button" class="flow-control is-secondary" data-i18n="fillRemote">Fill remote</button>
+                    <button id="relay-production-message-envelope" type="button" data-i18n="relayToPeer">Relay to peer</button>
                   </div>
-                  <label class="loop-label" for="production-remote-message-envelope">Remote envelope</label>
+                  <label class="loop-label" for="production-remote-message-envelope" data-i18n="remoteEnvelope">Remote envelope</label>
                   <textarea id="production-remote-message-envelope" rows="5"></textarea>
                   <div class="loop-actions">
-                    <button id="import-production-message-envelope" type="button">Import envelope</button>
-                    <button id="export-production-received-message" type="button">Show plaintext</button>
+                    <button id="import-production-message-envelope" type="button" data-i18n="importEnvelope">Import envelope</button>
+                    <button id="export-production-received-message" type="button" data-i18n="showPlaintext">Show plaintext</button>
                   </div>
-                  <label class="loop-label" for="production-received-message">Received message</label>
+                  <label class="loop-label" for="production-received-message" data-i18n="receivedMessage">Received message</label>
                   <textarea id="production-received-message" rows="3" readonly></textarea>
-                  <p class="loop-label">Transcript</p>
+                  <p class="loop-label" data-i18n="transcript">Transcript</p>
                   <div class="loop-actions">
-                    <button id="load-production-message-transcript" type="button">Load transcript</button>
+                    <button id="load-production-message-transcript" type="button" data-i18n="loadTranscript">Load transcript</button>
                   </div>
                   <ol id="production-message-transcript" class="message-transcript" aria-live="polite">
-                    <li class="is-empty">No messages yet.</li>
+                    <li class="is-empty" data-i18n="emptyConversation">No messages yet.</li>
                   </ol>
-                  <label class="loop-label" for="production-message-transcript-export">Transcript export</label>
+                  <label class="loop-label" for="production-message-transcript-export" data-i18n="transcriptExport">Transcript export</label>
                   <textarea id="production-message-transcript-export" rows="5" readonly></textarea>
                 </div>
                 <dl class="flow-summary">
               <div>
-                <dt>Active status</dt>
-                <dd id="production-message-active-status">Not checked yet</dd>
+                <dt data-i18n="activeStatus">Active status</dt>
+                <dd id="production-message-active-status" data-i18n="notCheckedYet">Not checked yet</dd>
               </div>
               <div>
-                <dt>Manual check</dt>
+                <dt data-i18n="manualCheck">Manual check</dt>
                 <dd id="production-message-manual-check">
                   Manual check: verify active profile, message number, and envelope source.
                 </dd>
               </div>
               <div>
-                <dt>Outbound</dt>
-                <dd id="production-message-outbound">Not checked yet</dd>
+                <dt data-i18n="outbound">Outbound</dt>
+                <dd id="production-message-outbound" data-i18n="notCheckedYet">Not checked yet</dd>
               </div>
               <div>
-                <dt>Inbound</dt>
-                <dd id="production-message-inbound">Not checked yet</dd>
+                <dt data-i18n="inbound">Inbound</dt>
+                <dd id="production-message-inbound" data-i18n="notCheckedYet">Not checked yet</dd>
               </div>
               <div>
-                <dt>Boundary</dt>
-                <dd id="production-message-boundary">Not checked yet</dd>
+                <dt data-i18n="boundary">Boundary</dt>
+                <dd id="production-message-boundary" data-i18n="notCheckedYet">Not checked yet</dd>
               </div>
             </dl>
           </section>
           <section class="loop-panel" aria-labelledby="production-roundtrip-title">
             <div>
-              <p class="eyebrow">Production core local roundtrip</p>
-              <h3 id="production-roundtrip-title">Encrypted message path</h3>
+              <p class="eyebrow" data-i18n="productionCoreRoundtrip">Production core local roundtrip</p>
+              <h3 id="production-roundtrip-title" data-i18n="encryptedMessagePath">Encrypted message path</h3>
             </div>
-            <label class="loop-label" for="production-roundtrip-message">Message</label>
+            <label class="loop-label" for="production-roundtrip-message" data-i18n="message">Message</label>
             <textarea id="production-roundtrip-message" rows="3">hello from production core</textarea>
             <div class="loop-actions">
-              <button id="run-production-roundtrip" type="button">Run core roundtrip</button>
+              <button id="run-production-roundtrip" type="button" data-i18n="runCoreRoundtrip">Run core roundtrip</button>
             </div>
-            <p id="production-roundtrip-state" class="demo-state" aria-live="polite">
+            <p id="production-roundtrip-state" class="demo-state" aria-live="polite" data-i18n="roundtripIdle">
               Roundtrip idle
             </p>
-            <p id="production-roundtrip-warning" class="demo-warning">
+            <p id="production-roundtrip-warning" class="demo-warning" data-i18n="roundtripNotRun">
               Production roundtrip has not run yet.
             </p>
             <dl class="flow-summary">
               <div>
-                <dt>Session</dt>
-                <dd id="production-roundtrip-session">Not checked yet</dd>
+                <dt data-i18n="session">Session</dt>
+                <dd id="production-roundtrip-session" data-i18n="notCheckedYet">Not checked yet</dd>
               </div>
               <div>
-                <dt>Envelope</dt>
-                <dd id="production-roundtrip-envelope">Not checked yet</dd>
+                <dt data-i18n="envelope">Envelope</dt>
+                <dd id="production-roundtrip-envelope" data-i18n="notCheckedYet">Not checked yet</dd>
               </div>
               <div>
-                <dt>Receive</dt>
-                <dd id="production-roundtrip-receive">Not checked yet</dd>
+                <dt data-i18n="receive">Receive</dt>
+                <dd id="production-roundtrip-receive" data-i18n="notCheckedYet">Not checked yet</dd>
               </div>
               <div>
-                <dt>Boundary</dt>
-                <dd id="production-roundtrip-boundary">Not checked yet</dd>
+                <dt data-i18n="boundary">Boundary</dt>
+                <dd id="production-roundtrip-boundary" data-i18n="notCheckedYet">Not checked yet</dd>
               </div>
             </dl>
           </section>
             </div>
           </details>
           <details id="local-loop-tools" class="dev-diagnostic-panel">
-            <summary>Local loop diagnostics</summary>
+            <summary data-i18n="localLoopDiagnostics">Local loop diagnostics</summary>
           <section class="loop-panel" aria-labelledby="loop-title">
             <div>
-              <p class="eyebrow">Repeatable local loop</p>
-              <h3 id="loop-title">Local message loop</h3>
+              <p class="eyebrow" data-i18n="repeatableLocalLoop">Repeatable local loop</p>
+              <h3 id="loop-title" data-i18n="localMessageLoop">Local message loop</h3>
             </div>
-            <label class="loop-label" for="loop-messages">Local dev messages</label>
+            <label class="loop-label" for="loop-messages" data-i18n="localDevMessages">Local dev messages</label>
             <textarea id="loop-messages" rows="4">first local loop message
 second local loop message</textarea>
             <div class="loop-actions">
-              <button id="run-loop" type="button">Run local loop</button>
-              <button id="reset-loop" type="button" class="flow-control is-secondary">
+              <button id="run-loop" type="button" data-i18n="runLocalLoop">Run local loop</button>
+              <button id="reset-loop" type="button" class="flow-control is-secondary" data-i18n="resetLoopView">
                 Reset loop view
               </button>
             </div>
-            <p id="loop-state" class="demo-state" aria-live="polite">Loop idle</p>
-            <p id="loop-warning" class="demo-warning">Loop has not run yet.</p>
+            <p id="loop-state" class="demo-state" aria-live="polite" data-i18n="loopIdle">Loop idle</p>
+            <p id="loop-warning" class="demo-warning" data-i18n="loopNotRun">Loop has not run yet.</p>
             <ol id="loop-results" class="loop-results" aria-label="Local loop message results">
-              <li>Messages have not run yet.</li>
+              <li data-i18n="messagesNotRun">Messages have not run yet.</li>
             </ol>
             <dl class="flow-summary">
               <div>
-                <dt>Replay summary</dt>
-                <dd id="loop-replay">Not checked yet</dd>
+                <dt data-i18n="replaySummary">Replay summary</dt>
+                <dd id="loop-replay" data-i18n="notCheckedYet">Not checked yet</dd>
               </div>
               <div>
-                <dt>Expiry summary</dt>
-                <dd id="loop-expiry">Not checked yet</dd>
+                <dt data-i18n="expirySummary">Expiry summary</dt>
+                <dd id="loop-expiry" data-i18n="notCheckedYet">Not checked yet</dd>
               </div>
               <div>
-                <dt>Storage guard</dt>
-                <dd id="loop-storage">Not checked yet</dd>
+                <dt data-i18n="storageGuard">Storage guard</dt>
+                <dd id="loop-storage" data-i18n="notCheckedYet">Not checked yet</dd>
               </div>
             </dl>
           </section>
-          <pre id="demo-output" class="is-idle">Demo has not run yet.</pre>
+          <pre id="demo-output" class="is-idle" data-i18n="demoNotRun">Demo has not run yet.</pre>
           </details>
         </section>
       </section>
