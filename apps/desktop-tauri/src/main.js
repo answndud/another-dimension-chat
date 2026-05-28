@@ -6403,7 +6403,9 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       manualNetworkPermission,
     });
     setProductionTwoProfileState(
-      result.received_export_matches_input ? "Real onion roundtrip completed" : "Real onion roundtrip needs review",
+      result.received_export_matches_input && result.second_received_export_matches_input
+        ? "Real onion roundtrip completed"
+        : "Real onion roundtrip needs review",
     );
     setText(fields.productionTwoProfileWarning, result.warning);
     setText(
@@ -6416,13 +6418,13 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     );
     setText(
       fields.productionTwoProfileMessageState,
-      `reserved=${result.message_number_reserved} envelope=${result.encrypted_envelope_exported} send=${result.send_attempt_succeeded} receive=${result.receive_attempt_succeeded} inbound=${result.inbound_message_stored} status=${result.received_status_verified} match=${result.received_export_matches_input}`,
+      `first=#${result.message_number} reserved=${result.message_number_reserved} envelope=${result.encrypted_envelope_exported} send=${result.send_attempt_succeeded} receive=${result.receive_attempt_succeeded} inbound=${result.inbound_message_stored} status=${result.received_status_verified} match=${result.received_export_matches_input} second=#${result.second_message_number} reserved=${result.second_message_number_reserved} envelope=${result.second_encrypted_envelope_exported} send=${result.second_send_attempt_succeeded} receive=${result.second_receive_attempt_succeeded} inbound=${result.second_inbound_message_stored} status=${result.second_received_status_verified} match=${result.second_received_export_matches_input} consecutive_receive=${result.consecutive_receive_attempts} imported=${result.consecutive_messages_imported}`,
     );
     setText(
       fields.productionTwoProfileBoundary,
       `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} events=${result.event_summary.join("; ") || "none"} endpoint_returned=${result.local_endpoint_returned || result.peer_endpoint_returned} envelope_payload=${result.envelope_payload_returned} plaintext=${result.plaintext_returned_to_frontend} path=${result.store_path_returned} passphrase=${result.passphrase_retained} key_material=${result.key_material_exposed} network=${result.network_io_attempted} transport=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
     );
-    if (result.received_export_matches_input) {
+    if (result.received_export_matches_input && result.second_received_export_matches_input) {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
     }
   } catch (error) {
