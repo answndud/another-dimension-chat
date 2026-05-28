@@ -3982,7 +3982,7 @@ fn parse_local_loop_messages(args: &[String]) -> Result<Vec<String>, String> {
                 index += 1;
                 let message = args
                     .get(index)
-                    .ok_or_else(|| local_loop_help())?
+                    .ok_or_else(local_loop_help)?
                     .trim()
                     .to_string();
                 if message.is_empty() {

@@ -50,6 +50,9 @@ export function productionTwoProfileResumeTarget(state) {
   if (!state?.sessionsReady) {
     return null;
   }
+  if (state?.hasRetryableOutbound) {
+    return "retry-send";
+  }
   if (state?.hasPendingConversation) {
     return "pending-review";
   }
@@ -312,6 +315,29 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
       manualButtonLabel: "Open manual tools",
     };
   }
+  if (sentCopyPresent && entry.outboundDeliveryState === "canceled") {
+    return {
+      nextAction: `Canceled: message #${entry.messageNumber} remains in the transcript. Next: write a new message from ${entry.sender}.`,
+      rowLabel: "action: canceled",
+      state: "is-waiting",
+      focusTarget: "message",
+      manualTarget: null,
+      manualButtonLabel: "Open manual tools",
+    };
+  }
+  if (sentCopyPresent && entry.outboundRetryable === true) {
+    const needsEndpointRefresh = productionTwoProfileOutboundNeedsEndpointRefresh(entry);
+    return {
+      nextAction: needsEndpointRefresh
+        ? `Stale endpoint: refresh ${entry.receiver}'s endpoint before retrying message #${entry.messageNumber}.`
+        : `Retry send: message #${entry.messageNumber} can be sent again or canceled.`,
+      rowLabel: needsEndpointRefresh ? "action: refresh endpoint" : "action: retry send",
+      state: "is-ready",
+      focusTarget: needsEndpointRefresh ? "refresh-endpoint" : "retry-send",
+      manualTarget: null,
+      manualButtonLabel: "Open manual tools",
+    };
+  }
   if (sentCopyPresent && senderEnvelopeSlotPresent) {
     return {
       nextAction: `Next: import envelope for message #${entry.messageNumber} into ${entry.receiver}.`,
@@ -340,6 +366,42 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
     manualTarget: "outbound",
     manualButtonLabel: "Open export tools",
   };
+}
+
+export function productionTwoProfileOutboundStatusLabel(entry) {
+  if (entry?.outboundDeliveryState === "canceled") {
+    return "canceled";
+  }
+  if (entry?.outboundDeliveryState === "sent") {
+    return "sent";
+  }
+  if (entry?.outboundDeliveryState === "failed") {
+    const failure = String(entry.outboundFailureKind ?? "").toLowerCase();
+    if (failure.includes("timeout")) {
+      return "send timeout";
+    }
+    if (failure.includes("stale") || failure.includes("refresh")) {
+      return "stale endpoint";
+    }
+    if (failure.includes("persistentclientnotready") || failure.includes("bootstrap")) {
+      return "Tor bootstrap";
+    }
+    if (failure.includes("manualnetworkpermission")) {
+      return "permission off";
+    }
+    return "peer offline";
+  }
+  return "pending";
+}
+
+export function productionTwoProfileOutboundNeedsEndpointRefresh(entry) {
+  const failure = String(entry?.outboundFailureKind ?? "").toLowerCase();
+  return Boolean(
+    entry?.outboundDeliveryState === "failed" &&
+      (failure.includes("stale") ||
+        failure.includes("refresh") ||
+        failure.includes("endpoint")),
+  );
 }
 
 export function productionTwoProfileConversationCompare(left, right, direction = "asc") {

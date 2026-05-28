@@ -38,6 +38,8 @@ required_files=(
   "$APP_DIR/index.html"
   "$APP_DIR/src/action-state.js"
   "$APP_DIR/src/action-state.test.js"
+  "$APP_DIR/src/i18n.js"
+  "$APP_DIR/src/i18n.test.js"
   "$APP_DIR/src/main.js"
   "$APP_DIR/src/transcript-export.js"
   "$APP_DIR/src/transcript-export.test.js"
@@ -61,6 +63,19 @@ done
 
 require_contains "$TAURI_DIR/tauri.conf.json" '"frontendDist": "../dist"'
 require_contains "$TAURI_DIR/tauri.conf.json" '"devUrl": "http://localhost:1420"'
+require_contains "$TAURI_DIR/tauri.conf.json" '"active": true'
+require_contains "$TAURI_DIR/tauri.conf.json" '"resources": \[\]'
+require_contains "$APP_DIR/package.json" '"tauri:build"'
+require_contains "$APP_DIR/package.json" '"tauri:build:beta-onion"'
+require_contains "$APP_DIR/package.json" 'manual-onion-client-attempt'
+require_contains "$APP_DIR/README.md" 'Build an installable desktop beta'
+require_contains "$APP_DIR/README.md" 'manual-onion-client-attempt'
+require_contains "$APP_DIR/README.md" 'app.path().app_data_dir()'
+require_contains "$APP_DIR/README.md" '<app-data>/profiles/<profile>/'
+require_contains "$APP_DIR/README.md" 'no destructive migration step'
+require_contains "$APP_DIR/README.md" 'No Tor bootstrap, onion hosting, descriptor publication, stream I/O, or envelope I/O starts on app launch'
+require_contains "$APP_DIR/index.html" 'Developer local diagnostics'
+require_contains "$APP_DIR/index.html" 'Manual production payload tools'
 require_contains "$TAURI_DIR/src/lib.rs" 'prototype_status'
 require_contains "$TAURI_DIR/src/lib.rs" 'dev_local_demo'
 require_contains "$TAURI_DIR/src/lib.rs" 'dev_local_message_loop'
@@ -185,6 +200,10 @@ require_contains "$APP_DIR/src/main.js" 'invoke("production_onion_descriptor_pub
 require_contains "$APP_DIR/src/main.js" 'invoke("production_onion_outbound_envelope_send_attempt"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_onion_outbound_envelope_send_prepare"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_onion_service_launch_attempt"'
+require_contains "$APP_DIR/src/main.js" 'fields.startProductionTwoProfileOnionReceive.addEventListener'
+require_contains "$APP_DIR/src/main.js" 'fields.startProductionTwoProfileOnionBootstrap.addEventListener'
+require_contains "$APP_DIR/src/main.js" 'fields.launchProductionTwoProfileOnionEndpoint.addEventListener'
+require_contains "$APP_DIR/src/main.js" 'fields.sendProductionTwoProfileLatestOnionEnvelope.addEventListener'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_received_export"'
 require_contains "$APP_DIR/src/main.js" 'invoke("production_message_transcript_export"'
 require_contains "$APP_DIR/src/main.js" 'createdAtMs'
@@ -229,12 +248,13 @@ require_contains "$TAURI_DIR/src/lib.rs" 'production_two_profile_roundtrip'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_two_profile_roundtrip'
 require_contains "$TAURI_DIR/src/lib.rs" 'production_two_profile_message_roundtrip'
 require_contains "$TAURI_DIR/src/lib.rs" 'run_production_two_profile_message_roundtrip'
-require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'Run two-profile roundtrip'
-require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'Tauri two-profile runtime smoke passed'
-require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'plaintext_returned=false'
-require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'key_material=false'
-require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'network_io=false'
-require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'transport_io=false'
+require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'Tauri chat-first headless smoke passed'
+require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'Alice / Bob room'
+require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'npm run build'
+require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'Darkroom chat'
+require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" '다크룸 채팅'
+require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" 'Room settings'
+require_contains "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh" '방 설정'
 require_contains "$APP_DIR/src/main.js" 'unlockProductionProfile'
 require_contains "$APP_DIR/src/main.js" 'loadProductionProfileList'
 require_contains "$APP_DIR/src/main.js" 'renderProductionProfileSelector'
@@ -395,11 +415,11 @@ require_contains "$APP_DIR/src/main.js" 'result.warning.trim()'
 require_contains "$APP_DIR/src/main.js" 'result.transcript.trim()'
 require_contains "$APP_DIR/src/main.js" 'Unexpected release claim'
 require_contains "$APP_DIR/src/main.js" 'Unexpected messaging status'
-require_contains "$APP_DIR/README.md" 'not a secure-release messaging UI'
+require_contains "$APP_DIR/README.md" 'not a secure-release claim'
 require_contains "$APP_DIR/README.md" 'dev_local_demo'
 require_contains "$APP_DIR/README.md" 'not production messaging'
-require_contains "$APP_DIR/README.md" 'Run the visible local demo shell'
-require_contains "$APP_DIR/README.md" 'first run may take longer while Cargo builds the `dev-insecure` CLI demo'
+require_contains "$APP_DIR/README.md" 'Build an installable desktop beta'
+require_contains "$APP_DIR/README.md" 'The first run may take longer while Cargo builds the `dev-insecure` CLI demo'
 require_contains "$APP_DIR/README.md" 'structured local flow steps'
 require_contains "$APP_DIR/README.md" 'Alice/Bob peer panels'
 require_contains "$APP_DIR/README.md" 'Reset local view'
@@ -407,11 +427,11 @@ require_contains "$APP_DIR/README.md" 'repeatable local loop'
 require_contains "$APP_DIR/README.md" 'demo local-loop'
 require_contains "$APP_DIR/README.md" 'dev store plaintext guard'
 require_contains "$APP_DIR/README.md" 'core, profile'
-require_contains "$APP_DIR/README.md" 'does not link or call production core protocol'
-require_contains "$APP_DIR/README.md" 'static pre-network fail-closed copy'
+require_contains "$APP_DIR/README.md" 'security-sensitive protocol, storage, and transport work stays in Rust commands'
+require_contains "$APP_DIR/README.md" 'conservative pre-network copy'
 require_contains "$APP_DIR/README.md" 'production-session status'
 require_contains "$APP_DIR/README.md" 'static evaluation copy for the `snow` Noise XX synchronous boundary'
-require_contains "$APP_DIR/README.md" 'message actions stay local encrypted-store harnesses and do not open transport'
+require_contains "$APP_DIR/README.md" 'onion transport commands are separate explicit user-triggered actions'
 require_contains "$APP_DIR/README.md" 'production-self-test status'
 require_contains "$APP_DIR/README.md" 'does not execute from the Tauri shell or mark messaging usable'
 require_contains "$APP_DIR/README.md" 'production-session limits copy'
@@ -428,15 +448,15 @@ require_contains "$APP_DIR/README.md" 'session unlock-rejection status'
 require_contains "$APP_DIR/README.md" 'mirrors the CLI `production unlock` redacted disabled taxonomy as static copy'
 require_contains "$APP_DIR/README.md" 'does not execute the CLI command, expose profile/passphrase input, open storage, write session records, expose key material, or enable runtime messaging'
 require_contains "$APP_DIR/README.md" 'network-execution'
-require_contains "$APP_DIR/README.md" 'static disabled copy'
+require_contains "$APP_DIR/README.md" 'disabled-by-default copy'
 require_contains "$APP_DIR/README.md" 'experimental-transport'
-require_contains "$APP_DIR/README.md" 'static manual-gate summary copy'
+require_contains "$APP_DIR/README.md" 'manual-gate summary'
 require_contains "$APP_DIR/README.md" 'bootstrap-status classification'
 require_contains "$APP_DIR/README.md" 'network-disabled'
 require_contains "$APP_DIR/README.md" 'timeout-or-transient-network-failure'
 require_contains "$APP_DIR/README.md" 'does not expose raw Arti errors, paths, endpoints, bridge lines, descriptors, profile names, contact ids, or key material'
 require_contains "$APP_DIR/README.md" 'transport-I/O'
-require_contains "$APP_DIR/README.md" 'static disabled copy for onion hosting, stream I/O, envelope I/O, and messaging'
+require_contains "$APP_DIR/README.md" 'explicit onion commands report redacted attempt results'
 require_contains "$APP_DIR/README.md" 'static `ADREC1` spike copy'
 require_contains "$APP_DIR/README.md" 'does not claim complete production key management'
 require_contains "$APP_DIR/README.md" 'verification boundaries'
@@ -569,6 +589,12 @@ fi
 
 if grep -n -E '"[^"]*(available|ready|connected|bootstrapped|secure release|usable messaging)[^"]*"' "$TAURI_DIR/src/status.rs" >/dev/null; then
   echo "status adapter must not imply readiness or secure-release state" >&2
+  exit 1
+fi
+
+startup_block="$(awk 'found { print } /initializeLanguage\\(\\);/ { found = 1; print }' "$APP_DIR/src/main.js")"
+if printf '%s\n' "$startup_block" | grep -n -E 'invoke\("production_onion_|production_onion_receive_loop_start|production_onion_service_launch_attempt|production_onion_outbound_envelope_send_attempt|production_onion_inbound_envelope_receive_attempt' >/dev/null; then
+  echo "Tauri startup block must not invoke onion network commands" >&2
   exit 1
 fi
 

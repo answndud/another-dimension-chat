@@ -34,6 +34,8 @@ import {
   productionTwoProfileConversationCompare,
   productionTwoProfileCurrentAction,
   productionTwoProfileMessageResultView,
+  productionTwoProfileOutboundNeedsEndpointRefresh,
+  productionTwoProfileOutboundStatusLabel,
   productionTwoProfileReplySelectionView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
@@ -344,6 +346,15 @@ test("productionTwoProfileResumeTarget prefers pending review then latest reply"
       hasDeliveredConversation: true,
     }),
     null,
+  );
+  assert.equal(
+    productionTwoProfileResumeTarget({
+      sessionsReady: true,
+      hasRetryableOutbound: true,
+      hasPendingConversation: true,
+      hasDeliveredConversation: true,
+    }),
+    "retry-send",
   );
   assert.equal(
     productionTwoProfileResumeTarget({
@@ -1846,6 +1857,7 @@ test("productionTwoProfileConversationActionView maps row status to next action"
   );
 
   entry.statuses.add("sent");
+  entry.outboundDeliveryState = "sent";
   assert.deepEqual(
     productionTwoProfileConversationActionView(entry),
     {
@@ -1857,6 +1869,52 @@ test("productionTwoProfileConversationActionView maps row status to next action"
       manualButtonLabel: "Open envelope input",
     },
   );
+
+  entry.outboundDeliveryState = "failed";
+  entry.outboundFailureKind = "PersistentClientNotReady";
+  entry.outboundRetryable = true;
+  assert.deepEqual(
+    productionTwoProfileConversationActionView(entry),
+    {
+      nextAction: "Retry send: message #9 can be sent again or canceled.",
+      rowLabel: "action: retry send",
+      state: "is-ready",
+      focusTarget: "retry-send",
+      manualTarget: null,
+      manualButtonLabel: "Open manual tools",
+    },
+  );
+
+  entry.outboundFailureKind = "receive-timeout";
+  assert.deepEqual(
+    productionTwoProfileConversationActionView(entry),
+    {
+      nextAction: "Retry send: message #9 can be sent again or canceled.",
+      rowLabel: "action: retry send",
+      state: "is-ready",
+      focusTarget: "retry-send",
+      manualTarget: null,
+      manualButtonLabel: "Open manual tools",
+    },
+  );
+
+  entry.outboundDeliveryState = "canceled";
+  entry.outboundFailureKind = "";
+  entry.outboundRetryable = false;
+  assert.deepEqual(
+    productionTwoProfileConversationActionView(entry),
+    {
+      nextAction: "Canceled: message #9 remains in the transcript. Next: write a new message from alice.",
+      rowLabel: "action: canceled",
+      state: "is-waiting",
+      focusTarget: "message",
+      manualTarget: null,
+      manualButtonLabel: "Open manual tools",
+    },
+  );
+
+  entry.outboundDeliveryState = "sent";
+  entry.outboundRetryable = false;
 
   assert.deepEqual(
     productionTwoProfileConversationActionView(entry, true),
@@ -1899,6 +1957,56 @@ test("productionTwoProfileConversationActionView maps row status to next action"
       manualTarget: null,
       manualButtonLabel: "Open manual tools",
     },
+  );
+});
+
+test("productionTwoProfileOutboundStatusLabel maps durable retry and cancel states", () => {
+  assert.equal(
+    productionTwoProfileOutboundStatusLabel({
+      outboundDeliveryState: "failed",
+      outboundFailureKind: "receive-timeout",
+    }),
+    "send timeout",
+  );
+  assert.equal(
+    productionTwoProfileOutboundStatusLabel({
+      outboundDeliveryState: "failed",
+      outboundFailureKind: "PersistentClientNotReady",
+    }),
+    "Tor bootstrap",
+  );
+  assert.equal(
+    productionTwoProfileOutboundStatusLabel({
+      outboundDeliveryState: "failed",
+      outboundFailureKind: "ManualNetworkPermissionMissing",
+    }),
+    "permission off",
+  );
+  assert.equal(productionTwoProfileOutboundStatusLabel({ outboundDeliveryState: "sent" }), "sent");
+  assert.equal(
+    productionTwoProfileOutboundStatusLabel({ outboundDeliveryState: "canceled" }),
+    "canceled",
+  );
+  assert.equal(
+    productionTwoProfileOutboundNeedsEndpointRefresh({
+      outboundDeliveryState: "failed",
+      outboundFailureKind: "stored remote endpoint refresh required",
+    }),
+    true,
+  );
+  assert.equal(
+    productionTwoProfileOutboundNeedsEndpointRefresh({
+      outboundDeliveryState: "failed",
+      outboundFailureKind: "PersistentClientNotReady",
+    }),
+    false,
+  );
+  assert.equal(
+    productionTwoProfileOutboundNeedsEndpointRefresh({
+      outboundDeliveryState: "failed",
+      outboundFailureKind: "receive-timeout",
+    }),
+    false,
   );
 });
 

@@ -565,6 +565,9 @@ pub struct ProductionMessageTranscriptEntryResult {
     ttl_seconds: u64,
     expires_at_ms: Option<u128>,
     expired: bool,
+    outbound_delivery_state: Option<String>,
+    outbound_failure_kind: Option<String>,
+    outbound_retryable: bool,
 }
 
 #[derive(serde::Serialize)]
@@ -1657,10 +1660,17 @@ async fn production_onion_outbound_envelope_send_attempt(
     })?;
     apply_peer_endpoint_send_failure_result(
         &mut result,
-        app_data_root,
+        &app_data_root,
+        profile.clone(),
+        passphrase.clone(),
+        message_number,
+    );
+    apply_outbound_message_send_attempt_result(
+        &app_data_root,
         profile,
         passphrase,
         message_number,
+        &result,
     );
     Ok(result)
 }
@@ -1706,10 +1716,17 @@ async fn production_onion_outbound_envelope_send_stored_endpoint_attempt(
     })?;
     apply_peer_endpoint_send_failure_result(
         &mut result,
-        app_data_root,
+        &app_data_root,
+        profile.clone(),
+        passphrase.clone(),
+        message_number,
+    );
+    apply_outbound_message_send_attempt_result(
+        &app_data_root,
         profile,
         passphrase,
         message_number,
+        &result,
     );
     Ok(result)
 }
@@ -2154,6 +2171,44 @@ fn production_message_transcript_export(
         "production message transcript export failed without exposing profile, path, or key details"
             .to_string()
     })
+}
+
+#[tauri::command]
+fn production_message_outbound_cancel_pending(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+) -> Result<(), String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production outbound cancel failed without exposing local path details"
+    })?;
+    run_production_message_outbound_cancel_pending(
+        app_data_root,
+        profile,
+        passphrase,
+        message_number,
+    )
+}
+
+fn run_production_message_outbound_cancel_pending(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+) -> Result<(), String> {
+    use another_dimension_core::production::production_message_outbound_cancel_pending;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    production_message_outbound_cancel_pending(&store_path, profile, &passphrase, message_number)
+        .map_err(|_| {
+            "production outbound cancel failed without exposing profile, path, or key details"
+                .to_string()
+        })
 }
 
 #[tauri::command]
@@ -6845,6 +6900,9 @@ fn apply_peer_endpoint_send_failure_result(
     if !result.send_attempt_started || result.send_attempt_succeeded {
         return;
     }
+    if !send_result_recommends_peer_endpoint_refresh(result) {
+        return;
+    }
     if run_production_pairing_session_remote_endpoint_mark_send_failure(
         app_data_root,
         profile,
@@ -6856,6 +6914,57 @@ fn apply_peer_endpoint_send_failure_result(
         result.peer_endpoint_failure_recorded = true;
         result.peer_endpoint_refresh_recommended = true;
         result.retry_recommended_after_endpoint_refresh = true;
+    }
+}
+
+fn send_result_recommends_peer_endpoint_refresh(
+    result: &ProductionOnionOutboundEnvelopeSendAttemptResult,
+) -> bool {
+    let blocker = result.next_blocker.to_ascii_lowercase();
+    blocker.contains("endpoint") || blocker.contains("stale") || blocker.contains("refresh")
+}
+
+fn apply_outbound_message_send_attempt_result(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+    result: &ProductionOnionOutboundEnvelopeSendAttemptResult,
+) {
+    use another_dimension_core::production::{
+        production_message_outbound_mark_send_failed,
+        production_message_outbound_mark_send_succeeded,
+    };
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let Ok(profile) = sanitize_production_profile(profile) else {
+        return;
+    };
+    let Ok(passphrase) = ProfilePassphrase::new(passphrase.trim()) else {
+        return;
+    };
+    let Ok(store_path) = production_profile_store_path(app_data_root, &profile) else {
+        return;
+    };
+    if result.send_attempt_succeeded {
+        let _ = production_message_outbound_mark_send_succeeded(
+            &store_path,
+            profile,
+            &passphrase,
+            message_number,
+        );
+    } else if result.send_intent_prepared
+        || result.send_attempt_started
+        || result.envelope_io_opened
+        || result.next_blocker != "none"
+    {
+        let _ = production_message_outbound_mark_send_failed(
+            &store_path,
+            profile,
+            &passphrase,
+            message_number,
+            &result.next_blocker,
+        );
     }
 }
 
@@ -7530,6 +7639,9 @@ fn run_production_message_transcript_export(
                 ttl_seconds: entry.ttl_seconds(),
                 expires_at_ms: entry.expires_at_ms(),
                 expired: entry.expired(),
+                outbound_delivery_state: entry.outbound_delivery_state().map(str::to_string),
+                outbound_failure_kind: entry.outbound_failure_kind().map(str::to_string),
+                outbound_retryable: entry.outbound_retryable(),
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
@@ -8988,6 +9100,7 @@ pub fn run() {
             production_endpoint_update_control_envelope_import,
             production_message_received_export,
             production_message_transcript_export,
+            production_message_outbound_cancel_pending,
             production_local_roundtrip,
             production_two_profile_roundtrip,
             production_two_profile_real_onion_roundtrip,
@@ -9020,7 +9133,7 @@ mod tests {
         run_production_handshake_finish_import, run_production_handshake_init_export,
         run_production_handshake_reply_export, run_production_local_roundtrip,
         run_production_message_envelope_export, run_production_message_envelope_import,
-        run_production_message_retention_preference_get,
+        run_production_message_outbound_cancel_pending, run_production_message_retention_preference_get,
         run_production_message_retention_preference_set,
         run_production_message_received_export, run_production_message_transcript_export,
         run_production_onion_backup_exclusion_prepare,
@@ -9050,7 +9163,8 @@ mod tests {
         run_production_profile_unlock,
         run_production_session_state_check, ProductionOnionClientRuntimeState,
         ProductionOnionInboundEnvelopeReceiveAttemptResult,
-        run_production_two_profile_message_roundtrip, run_production_two_profile_roundtrip,
+        run_production_two_profile_message_roundtrip, run_production_two_profile_real_onion_roundtrip,
+        run_production_two_profile_roundtrip,
         run_production_two_profile_session_status, sanitize_envelope_payload,
         sanitize_handshake_payload, sanitize_loop_messages, sanitize_pairing_payload,
         sanitize_pairing_rendezvous_endpoint, sanitize_production_message_text,
@@ -9164,6 +9278,76 @@ replay check: no replayed messages after message 2
                 .expect("message"),
             b"production local"
         );
+    }
+
+    #[test]
+    fn production_two_profile_real_onion_roundtrip_requires_manual_permission_without_network() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+        let passphrase = "correct-passphrase";
+        let message = "manual permission required";
+
+        let result = tauri::async_runtime::block_on(run_production_two_profile_real_onion_roundtrip(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "bob".to_string(),
+            passphrase.to_string(),
+            message.to_string(),
+            3600,
+            false,
+        ))
+        .expect("real onion roundtrip permission gate");
+
+        #[cfg(feature = "manual-onion-client-attempt")]
+        {
+            assert!(result.manual_client_attempt_feature_compiled);
+            assert_eq!(result.next_blocker, "ManualNetworkPermissionMissing");
+        }
+        #[cfg(not(feature = "manual-onion-client-attempt"))]
+        {
+            assert!(!result.manual_client_attempt_feature_compiled);
+            assert_eq!(result.next_blocker, "ManualClientAttemptFeatureNotEnabled");
+        }
+        assert!(!result.manual_network_permission_enabled);
+        assert!(!result.profile_a_unlocked);
+        assert!(!result.profile_b_unlocked);
+        assert!(!result.profile_a_client_bootstrapped);
+        assert!(!result.profile_b_client_bootstrapped);
+        assert!(!result.profile_a_onion_service_launched);
+        assert!(!result.profile_b_onion_service_launched);
+        assert!(!result.profile_a_endpoint_ready);
+        assert!(!result.profile_b_endpoint_ready);
+        assert!(!result.pairing_payloads_exported);
+        assert!(!result.session_drafts_saved);
+        assert!(!result.handshake_completed);
+        assert!(!result.send_attempt_started);
+        assert!(!result.send_attempt_succeeded);
+        assert!(!result.receive_attempt_started);
+        assert!(!result.receive_attempt_succeeded);
+        assert!(!result.inbound_message_stored);
+        assert_eq!(result.receive_mode_runtime_state, "stopped");
+        assert_eq!(result.receive_mode_attempt_count, 0);
+        assert_eq!(result.receive_mode_message_import_count, 0);
+        assert!(!result.receive_mode_last_network_io_attempted);
+        assert!(!result.local_endpoint_returned);
+        assert!(!result.peer_endpoint_returned);
+        assert!(!result.envelope_payload_returned);
+        assert!(!result.plaintext_returned_to_frontend);
+        assert!(!result.store_path_returned);
+        assert!(!result.passphrase_retained);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        let serialized = serde_json::to_string(&result).expect("serialize real onion gate");
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(passphrase));
+        assert!(!serialized.contains(message));
+        assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]
@@ -11598,6 +11782,294 @@ replay check: no replayed messages after message 2
     }
 
     #[test]
+    fn production_onion_send_attempt_result_persists_failed_and_sent_resume_state() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let roundtrip = run_production_two_profile_roundtrip(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "session setup".to_string(),
+            86_400,
+        )
+        .expect("two profile setup");
+        assert!(roundtrip.sender_session_ready);
+        assert!(roundtrip.receiver_session_ready);
+
+        let outbound = run_production_message_envelope_export(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            0,
+            true,
+            "retry over onion".to_string(),
+            604_800,
+        )
+        .expect("outbound message");
+        let failed_attempt = super::ProductionOnionOutboundEnvelopeSendAttemptResult {
+            warning: "test send attempt",
+            preparation_only: false,
+            manual_client_attempt_feature_compiled: true,
+            manual_network_permission_enabled: true,
+            persistent_client_ready: true,
+            send_intent_prepared: true,
+            send_attempt_started: true,
+            send_attempt_succeeded: false,
+            peer_endpoint_failure_recorded: false,
+            peer_endpoint_refresh_recommended: false,
+            retry_recommended_after_endpoint_refresh: false,
+            ack_wait_registered: true,
+            redacted_send_result_event_recorded: true,
+            event_summary: vec!["TransferFailed(SendFailed)".to_string()],
+            next_blocker: "receive-timeout".to_string(),
+            blockers: vec!["receive-timeout".to_string()],
+            raw_endpoint_returned: false,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            peer_proof_returned: false,
+            session_transcript_returned: false,
+            envelope_payload_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: true,
+            stream_accept_attempted: false,
+            stream_dial_attempted: true,
+            stream_read_write_attempted: true,
+            stream_send_attempted: false,
+            envelope_io_opened: true,
+            runtime_messaging_enabled: false,
+        };
+        let mut failed_endpoint_attempt = failed_attempt;
+        super::apply_peer_endpoint_send_failure_result(
+            &mut failed_endpoint_attempt,
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            outbound.selected_message_number,
+        );
+        super::apply_outbound_message_send_attempt_result(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            outbound.selected_message_number,
+            &failed_endpoint_attempt,
+        );
+
+        assert!(!failed_endpoint_attempt.peer_endpoint_failure_recorded);
+        assert!(!failed_endpoint_attempt.peer_endpoint_refresh_recommended);
+        assert!(!failed_endpoint_attempt.retry_recommended_after_endpoint_refresh);
+        let failed_status = run_production_two_profile_session_status(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("failed status");
+        let sender_is_a = failed_status.profile_a == roundtrip.sender_profile;
+        assert_eq!(
+            if sender_is_a {
+                failed_status.profile_a_remote_endpoint_last_failed_message_number
+            } else {
+                failed_status.profile_b_remote_endpoint_last_failed_message_number
+            },
+            None
+        );
+        assert!(!if sender_is_a {
+            failed_status.profile_a_remote_endpoint_marked_stale
+        } else {
+            failed_status.profile_b_remote_endpoint_marked_stale
+        });
+
+        let failed_transcript = run_production_message_transcript_export(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("failed transcript");
+        let failed_entry = failed_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == outbound.selected_message_number)
+            .expect("failed entry");
+        assert_eq!(
+            failed_entry.outbound_delivery_state.as_deref(),
+            Some("failed")
+        );
+        assert_eq!(
+            failed_entry.outbound_failure_kind.as_deref(),
+            Some("receive-timeout")
+        );
+        assert!(failed_entry.outbound_retryable);
+
+        let succeeded_attempt = super::ProductionOnionOutboundEnvelopeSendAttemptResult {
+            send_attempt_succeeded: true,
+            stream_send_attempted: true,
+            next_blocker: "AwaitingRemoteAck".to_string(),
+            blockers: Vec::new(),
+            ..failed_endpoint_attempt
+        };
+        super::apply_outbound_message_send_attempt_result(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            outbound.selected_message_number,
+            &succeeded_attempt,
+        );
+        let sent_transcript = run_production_message_transcript_export(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("sent transcript");
+        let sent_entry = sent_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == outbound.selected_message_number)
+            .expect("sent entry");
+        assert_eq!(sent_entry.outbound_delivery_state.as_deref(), Some("sent"));
+        assert_eq!(sent_entry.outbound_failure_kind, None);
+        assert!(!sent_entry.outbound_retryable);
+
+        let blocked_outbound = run_production_message_envelope_export(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            0,
+            true,
+            "retry after bootstrap".to_string(),
+            604_800,
+        )
+        .expect("blocked outbound message");
+        let blocked_attempt = super::ProductionOnionOutboundEnvelopeSendAttemptResult {
+            warning: "test blocked send attempt",
+            preparation_only: false,
+            manual_client_attempt_feature_compiled: true,
+            manual_network_permission_enabled: true,
+            persistent_client_ready: false,
+            send_intent_prepared: true,
+            send_attempt_started: false,
+            send_attempt_succeeded: false,
+            peer_endpoint_failure_recorded: false,
+            peer_endpoint_refresh_recommended: false,
+            retry_recommended_after_endpoint_refresh: false,
+            ack_wait_registered: true,
+            redacted_send_result_event_recorded: false,
+            event_summary: Vec::new(),
+            next_blocker: "PersistentClientNotReady".to_string(),
+            blockers: vec!["PersistentClientNotReady".to_string()],
+            raw_endpoint_returned: false,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            peer_proof_returned: false,
+            session_transcript_returned: false,
+            envelope_payload_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            stream_accept_attempted: false,
+            stream_dial_attempted: false,
+            stream_read_write_attempted: false,
+            stream_send_attempted: false,
+            envelope_io_opened: false,
+            runtime_messaging_enabled: false,
+        };
+        super::apply_outbound_message_send_attempt_result(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            blocked_outbound.selected_message_number,
+            &blocked_attempt,
+        );
+        let blocked_transcript = run_production_message_transcript_export(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("blocked transcript");
+        let blocked_entry = blocked_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == blocked_outbound.selected_message_number)
+            .expect("blocked entry");
+        assert_eq!(
+            blocked_entry.outbound_delivery_state.as_deref(),
+            Some("failed")
+        );
+        assert_eq!(
+            blocked_entry.outbound_failure_kind.as_deref(),
+            Some("PersistentClientNotReady")
+        );
+        assert!(blocked_entry.outbound_retryable);
+        let resume_status = run_production_two_profile_session_status(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("resume status after blocked send");
+        assert!(resume_status.both_ready_for_message_envelope);
+
+        let endpoint_blocked_outbound = run_production_message_envelope_export(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            0,
+            true,
+            "retry after endpoint refresh".to_string(),
+            604_800,
+        )
+        .expect("endpoint blocked outbound message");
+        let mut endpoint_refresh_attempt = super::ProductionOnionOutboundEnvelopeSendAttemptResult {
+            next_blocker: "stored remote endpoint refresh required".to_string(),
+            blockers: vec!["stored remote endpoint refresh required".to_string()],
+            send_attempt_started: true,
+            send_attempt_succeeded: false,
+            peer_endpoint_failure_recorded: false,
+            peer_endpoint_refresh_recommended: false,
+            retry_recommended_after_endpoint_refresh: false,
+            ..blocked_attempt
+        };
+        super::apply_peer_endpoint_send_failure_result(
+            &mut endpoint_refresh_attempt,
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            endpoint_blocked_outbound.selected_message_number,
+        );
+        super::apply_outbound_message_send_attempt_result(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            endpoint_blocked_outbound.selected_message_number,
+            &endpoint_refresh_attempt,
+        );
+        assert!(endpoint_refresh_attempt.peer_endpoint_failure_recorded);
+        assert!(endpoint_refresh_attempt.peer_endpoint_refresh_recommended);
+        assert!(endpoint_refresh_attempt.retry_recommended_after_endpoint_refresh);
+        let endpoint_refresh_status = run_production_two_profile_session_status(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("endpoint refresh status");
+        let endpoint_sender_is_a = endpoint_refresh_status.profile_a == roundtrip.sender_profile;
+        assert!(if endpoint_sender_is_a {
+            endpoint_refresh_status.profile_a_remote_endpoint_marked_stale
+        } else {
+            endpoint_refresh_status.profile_b_remote_endpoint_marked_stale
+        });
+        assert_eq!(
+            if endpoint_sender_is_a {
+                endpoint_refresh_status.profile_a_remote_endpoint_last_failed_message_number
+            } else {
+                endpoint_refresh_status.profile_b_remote_endpoint_last_failed_message_number
+            },
+            Some(endpoint_blocked_outbound.selected_message_number)
+        );
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn production_message_sanitizers_reject_empty_or_wrong_payloads() {
         assert_eq!(
             sanitize_production_message_text(" hello ".to_string()).expect("message"),
@@ -12013,6 +12485,45 @@ replay check: no replayed messages after message 2
         assert!(!responder_reply_transcript.network_io_attempted);
         assert!(!responder_reply_transcript.transport_io_opened);
         assert!(!responder_reply_transcript.runtime_messaging_enabled);
+
+        let cancel_outbound = run_production_message_envelope_export(
+            &root,
+            initiator.to_string(),
+            "correct-passphrase".to_string(),
+            0,
+            true,
+            "cancel before retry".to_string(),
+            604_800,
+        )
+        .expect("cancel outbound");
+        run_production_message_outbound_cancel_pending(
+            &root,
+            initiator.to_string(),
+            "correct-passphrase".to_string(),
+            cancel_outbound.selected_message_number,
+        )
+        .expect("cancel pending outbound");
+        let canceled_transcript = run_production_message_transcript_export(
+            &root,
+            initiator.to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("canceled transcript");
+        let canceled_entry = canceled_transcript
+            .entries
+            .iter()
+            .find(|entry| {
+                entry.direction == "sent"
+                    && entry.message_number == cancel_outbound.selected_message_number
+                    && entry.message == "cancel before retry"
+            })
+            .expect("canceled transcript entry");
+        assert_eq!(
+            canceled_entry.outbound_delivery_state.as_deref(),
+            Some("canceled")
+        );
+        assert!(!canceled_entry.outbound_retryable);
+        assert_eq!(canceled_entry.outbound_failure_kind, None);
 
         let serialized = serde_json::to_string(&inbound).expect("serialize inbound");
         assert!(!serialized.contains("persistent hello"));
