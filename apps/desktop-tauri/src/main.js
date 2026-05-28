@@ -437,6 +437,13 @@ function t(key) {
   return translate(currentLanguage, key);
 }
 
+function formatTemplate(key, values = {}) {
+  return Object.entries(values).reduce(
+    (message, [name, value]) => message.replaceAll(`{${name}}`, String(value)),
+    t(key),
+  );
+}
+
 function localizedOutboundStatus(label) {
   const normalized = String(label ?? "").trim().toLowerCase();
   const labels = {
@@ -465,6 +472,22 @@ function localizedRetentionLabel(entry) {
     ? retentionView.label.replace("retention: ", "").replace(" active", "")
     : "";
   return duration ? `${duration} ${t("retentionActive")}` : t("retentionActive");
+}
+
+function localizedTtlLabel(ttlSeconds) {
+  const days = ttlSeconds / 86400;
+  if (Number.isInteger(days) && days >= 1) {
+    return days === 1 ? t("daySingular") : formatTemplate("dayPlural", { count: days });
+  }
+  const hours = ttlSeconds / 3600;
+  if (Number.isInteger(hours)) {
+    return hours === 1 ? t("hourSingular") : formatTemplate("hourPlural", { count: hours });
+  }
+  return `${ttlSeconds}s`;
+}
+
+function localizeTwoProfileMessage(key, values = {}) {
+  return formatTemplate(key, values);
 }
 
 function localizedChatStatus(message) {
@@ -542,6 +565,49 @@ function localizedChatStatus(message) {
   return text;
 }
 
+function localizedBoundaryStatus(message) {
+  const text = String(message ?? "").trim();
+  const normalized = text.toLowerCase().replace(/\s+/g, " ");
+  const exact = {
+    "no secure-release claim": "noSecureReleaseClaim",
+    "no runtime messaging path": "noRuntimeMessagingPath",
+    "core boundary only": "coreBoundaryOnly",
+    "profile boundary only": "profileBoundaryOnly",
+    "pairing boundary only": "pairingBoundaryOnly",
+    "snow noise xx synchronous evaluation boundary only": "productionSessionBoundary",
+    "cli production boundary self-test only": "productionSelfTestBoundary",
+    "read-only production skeleton blockers copy": "productionPreflightValue",
+    "store-write adapter boundary; product unlock disabled": "sessionDurableStateValue",
+    "high-risk passphrase required os-keystore-only rejected": "sessionUnlockPolicyValue",
+    "redacted product-unlock-disabled boundary copy": "sessionUnlockRejectionValue",
+    "pre-network fail-closed only": "transportValue",
+    "network execution disabled": "networkExecutionValue",
+    "manual bootstrap gate summary only": "experimentalTransportValue",
+    "hosting stream envelope messaging disabled": "transportIoValue",
+    "adrec1 storage spike only": "storageValue",
+    "lightweight checks only": "verificationValue",
+  };
+  if (exact[normalized]) {
+    return t(exact[normalized]);
+  }
+  if (normalized.includes("session e2ee false")) {
+    return t("preflightBlockersValue");
+  }
+  if (normalized.includes("no production e2ee claim")) {
+    return t("productionSessionLimitsValue");
+  }
+  if (normalized.includes("product unlock durable persistence")) {
+    return t("sessionUnlockLimitsValue");
+  }
+  if (normalized.includes("storage_opened=false")) {
+    return t("unlockRejectionFlagsValue");
+  }
+  if (normalized.includes("network-disabled") || normalized.includes("censorship-or-bridge-required")) {
+    return t("bootstrapStatusValue");
+  }
+  return text;
+}
+
 function applyTheme(theme) {
   const mode = theme === "light" ? "light" : "dark";
   document.documentElement.dataset.theme = mode;
@@ -561,6 +627,10 @@ function applyLanguage(language) {
   applyTheme(document.documentElement.dataset.theme);
   renderProductionTwoProfileConversationList();
   renderRoomIdentityBar(productionTwoProfileInput(), twoProfileSessionsReadyForInput(productionTwoProfileInput()));
+  renderPrototypeStatus();
+  renderMessageTtlControlOptions();
+  renderProductionTwoProfileFlow(productionTwoProfileInput());
+  renderProductionTwoProfileDirection(productionTwoProfileInput());
   applyProductionActionState();
 }
 
@@ -700,9 +770,11 @@ function messageRetentionPolicyBlocker() {
     return "";
   }
   if (productionMessageRetentionPolicy.status === "failed") {
-    return `Message retention policy unavailable: ${productionMessageRetentionPolicy.error ?? "load failed"}`;
+    return `${t("retentionPolicyUnavailable")}: ${productionMessageRetentionPolicy.error ?? "load failed"}`;
   }
-  return "Message retention policy loading; message actions are disabled.";
+  return currentLanguage === "ko"
+    ? "보관 정책을 불러오는 중입니다. 메시지 작업은 잠시 사용할 수 없습니다."
+    : "Message retention policy loading; message actions are disabled.";
 }
 
 function hasTauriRuntimeBridge() {
@@ -719,7 +791,9 @@ function applyLoadedMessageRetentionPolicy(defaultTtlSeconds, allowedTtlSeconds)
 
 function messageTtlInputBlocker() {
   return messageRetentionPolicyReady()
-    ? "Select a supported message retention value before continuing."
+    ? currentLanguage === "ko"
+      ? "계속하려면 지원되는 보관 기간을 선택하세요."
+      : "Select a supported message retention value before continuing."
     : messageRetentionPolicyBlocker();
 }
 
@@ -787,7 +861,7 @@ function setTwoProfileComposeLocked(locked) {
   }
   fields.productionTwoProfileMessage.readOnly = locked;
   fields.productionTwoProfileMessage.setAttribute("aria-busy", String(locked));
-  fields.productionTwoProfileMessage.title = locked ? "Two-profile action is running." : "";
+  fields.productionTwoProfileMessage.title = locked ? t("composeLocked") : "";
 }
 
 function setTwoProfileComposeCurrent(current) {
@@ -801,7 +875,7 @@ function setProductionFollowupActions(enabled, message) {
   setActionButtonState(
     fields.openManualProductionTools,
     !enabled,
-    "Next actions unlock after a completed local roundtrip.",
+    t("followupLocked"),
   );
   setDisabled(fields.focusLocalDiagnostic, !enabled);
   setDisabled(fields.swapTwoProfileDirection, !enabled);
@@ -844,14 +918,24 @@ function renderRoomIdentityBar(input, sessionsReady) {
 
 function renderAppStateSummary(status) {
   const releaseSummary = status.secure_release
-    ? "Unexpected: secure-release claim present"
-    : "Blocked: secure-release claim closed";
+    ? currentLanguage === "ko"
+      ? "예상치 못한 출시 보안 주장이 감지됨"
+      : "Unexpected: secure-release claim present"
+    : currentLanguage === "ko"
+      ? "정식 보안 출시 주장은 닫혀 있음"
+      : "Blocked: secure-release claim closed";
   const localCapabilitySummary = status.usable_messaging
-    ? "Ready: runtime messaging path enabled"
-    : "Local-only: encrypted app-data harness";
+    ? currentLanguage === "ko"
+      ? "런타임 메시지 경로 사용 가능"
+      : "Ready: runtime messaging path enabled"
+    : currentLanguage === "ko"
+      ? "로컬 암호화 저장 기반 테스트 가능"
+      : "Local-only: encrypted app-data harness";
   const mainBlockerSummary = status.network_execution_status?.includes("disabled")
-    ? "Blocked: runtime transport disabled"
-    : status.production_preflight_blockers;
+    ? currentLanguage === "ko"
+      ? "네트워크 전송은 수동 권한 전까지 꺼져 있음"
+      : "Blocked: runtime transport disabled"
+    : localizedBoundaryStatus(status.production_preflight_blockers);
 
   setText(fields.appReleaseSummary, releaseSummary);
   setText(fields.localCapabilitySummary, localCapabilitySummary);
@@ -1263,7 +1347,7 @@ function clearManualMessageDraftForReplySelection() {
 
 function resetProductionMessageTranscript() {
   productionTranscriptEntryKeys.clear();
-  resetTranscriptList(fields.productionMessageTranscript, "No messages yet.");
+  resetTranscriptList(fields.productionMessageTranscript, t("emptyConversation"));
   if (fields.productionMessageTranscriptExport) {
     fields.productionMessageTranscriptExport.value = "";
   }
@@ -1274,7 +1358,7 @@ function resetProductionTwoProfileTranscript(options = {}) {
     selectedTwoProfileConversationKey = null;
   }
   productionTwoProfileConversationEntries.clear();
-  resetTranscriptList(fields.productionTwoProfileTranscript, "No two-profile messages yet.");
+  resetTranscriptList(fields.productionTwoProfileTranscript, t("emptyConversation"));
   if (fields.productionTwoProfileTranscriptExport) {
     fields.productionTwoProfileTranscriptExport.value = "";
   }
@@ -2008,12 +2092,7 @@ function messageTtlInputValue(node) {
 }
 
 function retentionOptionLabel(ttlSeconds) {
-  const days = ttlSeconds / 86400;
-  if (Number.isInteger(days) && days >= 1) {
-    return days === 1 ? "1 day" : `${days} days`;
-  }
-  const hours = ttlSeconds / 3600;
-  return Number.isInteger(hours) ? `${hours} hour${hours === 1 ? "" : "s"}` : `${ttlSeconds}s`;
+  return localizedTtlLabel(ttlSeconds);
 }
 
 function renderMessageTtlControlOptions() {
@@ -2028,8 +2107,8 @@ function renderMessageTtlControlOptions() {
       option.value = "";
       option.textContent =
         productionMessageRetentionPolicy.status === "failed"
-          ? "Retention policy unavailable"
-          : "Loading retention policy";
+          ? t("retentionPolicyUnavailable")
+          : t("retentionPolicyLoading");
       control.replaceChildren(option);
       continue;
     }
@@ -2147,74 +2226,82 @@ async function saveProductionMessageRetentionPreference(profile, passphrase, ttl
 
 function twoProfileDirectionLabel(input) {
   if (!input.profileA || !input.profileB) {
-    return "Direction: enter Profile A and Profile B";
+    return currentLanguage === "ko" ? "전송 방향: 두 프로필을 입력하세요" : "Direction: enter Profile A and Profile B";
   }
   if (input.profileA === input.profileB) {
-    return "Direction blocked: profiles must be distinct";
+    return currentLanguage === "ko"
+      ? "전송 불가: 두 프로필은 서로 달라야 합니다"
+      : "Direction blocked: profiles must be distinct";
   }
-  return `Direction: ${input.profileA} -> ${input.profileB}`;
+  return currentLanguage === "ko"
+    ? `전송 방향: ${input.profileA} -> ${input.profileB}`
+    : `Direction: ${input.profileA} -> ${input.profileB}`;
 }
 
 function twoProfileComposePrompt(input = productionTwoProfileInput()) {
   if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
-    return "Write a stored-session message";
+    return currentLanguage === "ko" ? "메시지를 작성하세요" : "Write a stored-session message";
   }
   const selectedReplyTarget = selectedTwoProfileDeliveredReplyTarget(input);
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   const sessionsReady = twoProfileSessionsReadyForInput(input);
   const hasRecoveredConversation = Boolean(latestTwoProfileConversationEntry());
   if (!sessionsReady && !sessionStatus && hasRecoveredConversation) {
-    return "Check recovered sessions before writing";
+    return currentLanguage === "ko" ? "먼저 복구된 연결을 확인하세요" : "Check recovered sessions before writing";
   }
   if (!sessionsReady && sessionStatus) {
-    return "Write setup message to rebuild sessions";
+    return currentLanguage === "ko" ? "연결을 다시 만들 첫 메시지를 작성하세요" : "Write setup message to rebuild sessions";
   }
   if (selectedReplyTarget) {
-    return `Reply to message #${selectedReplyTarget.messageNumber} from ${input.profileA} to ${input.profileB}`;
+    return currentLanguage === "ko"
+      ? `#${selectedReplyTarget.messageNumber}에 답장: ${input.profileA} -> ${input.profileB}`
+      : `Reply to message #${selectedReplyTarget.messageNumber} from ${input.profileA} to ${input.profileB}`;
   }
   if (latestTwoProfileSuccessMatchesOppositeDirection(input)) {
-    return `Reply from ${input.profileA} to ${input.profileB}`;
+    return currentLanguage === "ko"
+      ? `답장 작성: ${input.profileA} -> ${input.profileB}`
+      : `Reply from ${input.profileA} to ${input.profileB}`;
   }
   if (latestTwoProfileSuccessMatchesDirection(input)) {
-    return `Next message from ${input.profileA} to ${input.profileB}`;
+    return currentLanguage === "ko"
+      ? `다음 메시지: ${input.profileA} -> ${input.profileB}`
+      : `Next message from ${input.profileA} to ${input.profileB}`;
   }
-  return `Message from ${input.profileA} to ${input.profileB}`;
+  return currentLanguage === "ko"
+    ? `${input.profileA}에서 ${input.profileB}에게 보낼 메시지`
+    : `Message from ${input.profileA} to ${input.profileB}`;
 }
 
 function twoProfileRecoveryMessage(action, error, input = productionTwoProfileInput()) {
   const detail = String(error ?? "").trim();
-  const suffix = detail ? ` Boundary detail: ${detail}` : "";
+  const suffix = detail ? ` ${t("boundaryDetailPrefix")}: ${detail}` : "";
   if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
-    return "Enter two distinct profiles before continuing.";
+    return t("recoveryNeedProfiles");
   }
   if (!input.passphrase) {
-    return "Enter the local passphrase before continuing.";
+    return t("recoveryNeedPassphrase");
   }
   if (action === "session-status") {
-    return (
-      "Session check did not complete. Verify the passphrase and that both profiles exist locally, " +
-      `or write a first message and run full two-profile setup.${suffix}`
-    );
+    return `${t("recoverySessionStatus")}${suffix}`;
   }
   if (action === "stored-message") {
-    return (
-      "Stored-session message could not run. Check sessions to distinguish missing local session state " +
-      `from an unlock failure, or run full two-profile setup again.${suffix}`
-    );
+    return `${t("recoveryStoredMessage")}${suffix}`;
   }
   if (action === "roundtrip") {
-    return (
-      "Full two-profile setup did not complete. Verify both profile names and passphrase, then retry setup. " +
-      `No network or transport send was attempted.${suffix}`
-    );
+    return `${t("recoveryRoundtrip")}${suffix}`;
   }
   if (action === "real-onion-roundtrip") {
-    return `Real onion transport did not complete. Retry after Tor bootstrap is reachable.${suffix}`;
+    return `${t("recoveryRealOnion")}${suffix}`;
   }
-  return `Two-profile action failed.${suffix}`;
+  return `${t("recoveryGeneric")}${suffix}`;
 }
 
 function twoProfileSessionRebuildMessage(input = productionTwoProfileInput()) {
+  if (currentLanguage === "ko") {
+    return input.message
+      ? "저장된 연결이 불완전합니다. 연결 설정을 다시 실행하세요."
+      : "저장된 연결이 불완전합니다. 첫 메시지를 작성한 뒤 연결 설정을 다시 실행하세요.";
+  }
   return input.message
     ? "Stored sessions are incomplete. Run full setup to rebuild session state."
     : "Stored sessions are incomplete. Write a setup message, then run full setup to rebuild session state.";
@@ -2311,21 +2398,23 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
       fields.productionTwoProfileStepSession,
       fields.productionTwoProfileStepSessionDetail,
       "running",
-      "Enter two distinct local profiles.",
+      currentLanguage === "ko" ? "서로 다른 두 프로필을 입력하세요." : "Enter two distinct local profiles.",
     );
   } else if (!input.passphrase) {
     setTwoProfileFlowStep(
       fields.productionTwoProfileStepSession,
       fields.productionTwoProfileStepSessionDetail,
       "running",
-      "Enter passphrase to unlock both local stores.",
+      currentLanguage === "ko" ? "두 로컬 저장소를 열 패스프레이즈를 입력하세요." : "Enter passphrase to unlock both local stores.",
     );
   } else if (sessionsReady) {
     setTwoProfileFlowStep(
       fields.productionTwoProfileStepSession,
       fields.productionTwoProfileStepSessionDetail,
       "complete",
-      `Stored sessions ready for ${input.profileA} -> ${input.profileB}.`,
+      currentLanguage === "ko"
+        ? `${input.profileA} -> ${input.profileB} 연결이 준비됐습니다.`
+        : `Stored sessions ready for ${input.profileA} -> ${input.profileB}.`,
     );
   } else if (sessionStatus) {
     setTwoProfileFlowStep(
@@ -2339,7 +2428,13 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
       fields.productionTwoProfileStepSession,
       fields.productionTwoProfileStepSessionDetail,
       "running",
-      hasMessage ? "Run full setup, or check sessions first." : "Check sessions, or write a first message.",
+      currentLanguage === "ko"
+        ? hasMessage
+          ? "연결 설정을 실행하거나 먼저 연결을 확인하세요."
+          : "연결을 확인하거나 첫 메시지를 작성하세요."
+        : hasMessage
+          ? "Run full setup, or check sessions first."
+          : "Check sessions, or write a first message.",
     );
   }
 
@@ -2348,9 +2443,13 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
     fields.productionTwoProfileStepComposeDetail,
     !authReady ? "pending" : hasMessage ? "complete" : "running",
     !authReady
-      ? "Waiting for profiles and passphrase."
+      ? currentLanguage === "ko"
+        ? "프로필과 패스프레이즈를 기다리는 중입니다."
+        : "Waiting for profiles and passphrase."
       : hasMessage
-        ? `Draft ready: ${input.message.length} chars.`
+        ? currentLanguage === "ko"
+          ? `작성됨: ${input.message.length}자`
+          : `Draft ready: ${input.message.length} chars.`
         : `${twoProfileComposePrompt(input)}.`,
   );
 
@@ -2362,14 +2461,24 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
     fields.productionTwoProfileStepSendDetail,
     sendRunning || sendReady ? "running" : sendComplete ? "complete" : "pending",
     sendRunning
-      ? "Stored-session message is running."
+      ? currentLanguage === "ko"
+        ? "저장된 연결로 메시지를 보내는 중입니다."
+        : "Stored-session message is running."
       : sendComplete
-        ? `Sent ${lastSuccess.messageLength} chars; compose buffer cleared.`
+        ? currentLanguage === "ko"
+          ? `${lastSuccess.messageLength}자를 보냈고 입력창을 비웠습니다.`
+          : `Sent ${lastSuccess.messageLength} chars; compose buffer cleared.`
         : sendReady
           ? selectedReplyTarget
-            ? `Send reply to message #${selectedReplyTarget.messageNumber}.`
-            : "Run stored-session message."
-          : "Waiting for ready session and draft.",
+            ? currentLanguage === "ko"
+              ? `#${selectedReplyTarget.messageNumber}에 답장을 보냅니다.`
+              : `Send reply to message #${selectedReplyTarget.messageNumber}.`
+            : currentLanguage === "ko"
+              ? "저장된 연결로 메시지를 보냅니다."
+              : "Run stored-session message."
+          : currentLanguage === "ko"
+            ? "연결 준비와 메시지 작성을 기다리는 중입니다."
+            : "Waiting for ready session and draft.",
   );
 
   setTwoProfileFlowStep(
@@ -2377,34 +2486,45 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
     fields.productionTwoProfileStepReplyDetail,
     selectedReplyTarget || lastSuccessOppositeDirection ? "running" : lastSuccess ? "complete" : "pending",
     selectedReplyTarget
-      ? `Reply target selected: message #${selectedReplyTarget.messageNumber} ${input.profileA} -> ${input.profileB}.`
+      ? currentLanguage === "ko"
+        ? `답장 대상 선택됨: #${selectedReplyTarget.messageNumber} ${input.profileA} -> ${input.profileB}`
+        : `Reply target selected: message #${selectedReplyTarget.messageNumber} ${input.profileA} -> ${input.profileB}.`
       : lastSuccessOppositeDirection
-      ? `Reply direction selected: ${input.profileA} -> ${input.profileB}.`
+      ? currentLanguage === "ko"
+        ? `답장 방향 선택됨: ${input.profileA} -> ${input.profileB}`
+        : `Reply direction selected: ${input.profileA} -> ${input.profileB}.`
       : lastSuccess
-        ? "Swap direction to reply."
-        : "Complete one sent message first.",
+        ? currentLanguage === "ko"
+          ? "답장하려면 방향을 바꾸세요."
+          : "Swap direction to reply."
+        : currentLanguage === "ko"
+          ? "먼저 메시지를 하나 보내세요."
+          : "Complete one sent message first.",
   );
 }
 
 function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetentionPolicy = true) {
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   if (busy) {
-    return { message: "Running: production action in progress", state: "blocked" };
+    return {
+      message: currentLanguage === "ko" ? "작업 중: 현재 작업이 끝날 때까지 기다리세요" : "Running: production action in progress",
+      state: "blocked",
+    };
   }
   if (!hasMessageRetentionPolicy) {
     return { message: messageRetentionPolicyBlocker(), state: "blocked" };
   }
   if (!input.profileA) {
-    return { message: "Blocked: Profile A required", state: "blocked" };
+    return { message: currentLanguage === "ko" ? "내 프로필을 입력하세요" : "Blocked: Profile A required", state: "blocked" };
   }
   if (!input.profileB) {
-    return { message: "Blocked: Profile B required", state: "blocked" };
+    return { message: currentLanguage === "ko" ? "상대 프로필을 입력하세요" : "Blocked: Profile B required", state: "blocked" };
   }
   if (input.profileA === input.profileB) {
-    return { message: "Blocked: profiles must be distinct", state: "blocked" };
+    return { message: currentLanguage === "ko" ? "두 프로필은 서로 달라야 합니다" : "Blocked: profiles must be distinct", state: "blocked" };
   }
   if (!input.passphrase) {
-    return { message: "Blocked: passphrase required", state: "blocked" };
+    return { message: currentLanguage === "ko" ? "패스프레이즈를 입력하세요" : "Blocked: passphrase required", state: "blocked" };
   }
   if (!input.messageTtlSeconds) {
     return { message: messageTtlInputBlocker(), state: "blocked" };
@@ -2414,24 +2534,38 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
     return {
       message: sessionsReady
         ? selectedReplyTarget
-          ? `Ready: write reply to message #${selectedReplyTarget.messageNumber}`
-          : "Ready: stored session recovered; write a message"
+          ? currentLanguage === "ko"
+            ? `#${selectedReplyTarget.messageNumber}에 답장을 작성하세요`
+            : `Ready: write reply to message #${selectedReplyTarget.messageNumber}`
+          : currentLanguage === "ko"
+            ? "연결이 복구됐습니다. 메시지를 작성하세요"
+            : "Ready: stored session recovered; write a message"
         : sessionStatus
-          ? "Ready: write setup message to rebuild sessions"
-          : "Ready: write first message, then run full setup",
+          ? currentLanguage === "ko"
+            ? "연결을 다시 만들 첫 메시지를 작성하세요"
+            : "Ready: write setup message to rebuild sessions"
+          : currentLanguage === "ko"
+            ? "첫 메시지를 작성한 뒤 연결 설정을 실행하세요"
+            : "Ready: write first message, then run full setup",
       state: "compose",
     };
   }
   if (sessionsReady) {
     return {
-      message: `Ready: send stored-session message ${input.profileA} -> ${input.profileB}`,
+      message: currentLanguage === "ko"
+        ? `${input.profileA} -> ${input.profileB} 메시지를 보낼 수 있습니다`
+        : `Ready: send stored-session message ${input.profileA} -> ${input.profileB}`,
       state: "ready",
     };
   }
   return {
     message: sessionStatus
-      ? `Ready: run full setup to rebuild sessions for ${input.profileA} -> ${input.profileB}`
-      : `Ready: run full setup for ${input.profileA} -> ${input.profileB}`,
+      ? currentLanguage === "ko"
+        ? `${input.profileA} -> ${input.profileB} 연결을 다시 설정하세요`
+        : `Ready: run full setup to rebuild sessions for ${input.profileA} -> ${input.profileB}`
+      : currentLanguage === "ko"
+        ? `${input.profileA} -> ${input.profileB} 연결 설정을 실행하세요`
+        : `Ready: run full setup for ${input.profileA} -> ${input.profileB}`,
     state: "setup",
   };
 }
@@ -4012,15 +4146,15 @@ function resetProductionRoundtripView() {
 
 function resetProductionTwoProfileView() {
   latestProductionTwoProfileSessionStatus = null;
-  setProductionTwoProfileState("Two-profile roundtrip idle");
-  setText(fields.productionTwoProfileWarning, "Two-profile app-data harness has not run yet.");
-  setText(fields.productionTwoProfileProfiles, "Not checked yet");
-  setText(fields.productionTwoProfileSession, "Not checked yet");
-  setText(fields.productionTwoProfileMessageState, "Not checked yet");
-  setText(fields.productionTwoProfileBoundary, "Not checked yet");
+  setProductionTwoProfileState(t("twoProfileIdle"));
+  setText(fields.productionTwoProfileWarning, t("twoProfileNotRun"));
+  setText(fields.productionTwoProfileProfiles, t("notCheckedYet"));
+  setText(fields.productionTwoProfileSession, t("notCheckedYet"));
+  setText(fields.productionTwoProfileMessageState, t("notCheckedYet"));
+  setText(fields.productionTwoProfileBoundary, t("notCheckedYet"));
   resetProductionTwoProfileTranscript();
   renderProductionTwoProfileMemory();
-  setProductionFollowupActions(false, "Next actions unlock after a completed local roundtrip.");
+  setProductionFollowupActions(false, t("followupLocked"));
   applyProductionActionState();
 }
 
@@ -4453,34 +4587,31 @@ async function renderPrototypeStatus() {
     const status = await invoke("prototype_status");
     renderAppStateSummary(status);
 
-    setText(
-      fields.releaseClaim,
-      status.secure_release ? "Unexpected release claim" : "No secure-release claim",
-    );
+    setText(fields.releaseClaim, status.secure_release ? "Unexpected release claim" : t("noSecureReleaseClaim"));
     setText(
       fields.messaging,
-      status.usable_messaging ? "Unexpected messaging status" : "No runtime messaging path",
+      status.usable_messaging ? "Unexpected messaging status" : t("noRuntimeMessagingPath"),
     );
-    setText(fields.core, status.core_status);
-    setText(fields.profile, status.profile_status);
-    setText(fields.pairing, status.pairing_status);
-    setText(fields.productionSession, status.production_session_status);
-    setText(fields.productionSelfTest, status.production_self_test_status);
-    setText(fields.productionSessionNonReadiness, status.production_session_non_readiness);
-    setText(fields.productionPreflight, status.production_preflight_status);
-    setText(fields.productionPreflightBlockers, status.production_preflight_blockers);
-    setText(fields.sessionDurableState, status.session_durable_state_status);
-    setText(fields.sessionUnlockPolicy, status.session_unlock_policy_status);
-    setText(fields.sessionUnlockNonReadiness, status.session_unlock_non_readiness);
-    setText(fields.sessionUnlockCliRejection, status.session_unlock_cli_rejection_status);
-    setText(fields.sessionUnlockCliRejectionFlags, status.session_unlock_cli_rejection_flags);
-    setText(fields.transport, status.transport_status);
-    setText(fields.networkExecution, status.network_execution_status);
-    setText(fields.experimentalTransport, status.experimental_transport_status);
-    setText(fields.bootstrapStatus, status.bootstrap_status_classification);
-    setText(fields.transportIo, status.transport_io_status);
-    setText(fields.storage, status.storage_status);
-    setText(fields.verification, status.verification_status);
+    setText(fields.core, localizedBoundaryStatus(status.core_status));
+    setText(fields.profile, localizedBoundaryStatus(status.profile_status));
+    setText(fields.pairing, localizedBoundaryStatus(status.pairing_status));
+    setText(fields.productionSession, localizedBoundaryStatus(status.production_session_status));
+    setText(fields.productionSelfTest, localizedBoundaryStatus(status.production_self_test_status));
+    setText(fields.productionSessionNonReadiness, localizedBoundaryStatus(status.production_session_non_readiness));
+    setText(fields.productionPreflight, localizedBoundaryStatus(status.production_preflight_status));
+    setText(fields.productionPreflightBlockers, localizedBoundaryStatus(status.production_preflight_blockers));
+    setText(fields.sessionDurableState, localizedBoundaryStatus(status.session_durable_state_status));
+    setText(fields.sessionUnlockPolicy, localizedBoundaryStatus(status.session_unlock_policy_status));
+    setText(fields.sessionUnlockNonReadiness, localizedBoundaryStatus(status.session_unlock_non_readiness));
+    setText(fields.sessionUnlockCliRejection, localizedBoundaryStatus(status.session_unlock_cli_rejection_status));
+    setText(fields.sessionUnlockCliRejectionFlags, localizedBoundaryStatus(status.session_unlock_cli_rejection_flags));
+    setText(fields.transport, localizedBoundaryStatus(status.transport_status));
+    setText(fields.networkExecution, localizedBoundaryStatus(status.network_execution_status));
+    setText(fields.experimentalTransport, localizedBoundaryStatus(status.experimental_transport_status));
+    setText(fields.bootstrapStatus, localizedBoundaryStatus(status.bootstrap_status_classification));
+    setText(fields.transportIo, localizedBoundaryStatus(status.transport_io_status));
+    setText(fields.storage, localizedBoundaryStatus(status.storage_status));
+    setText(fields.verification, localizedBoundaryStatus(status.verification_status));
   } catch (_error) {
     renderAppStateSummary({
       secure_release: false,
@@ -4489,43 +4620,40 @@ async function renderPrototypeStatus() {
       production_preflight_blockers:
         "session E2EE false transport send receive false storage rollback not-provided messaging false",
     });
-    setText(fields.releaseClaim, "No secure-release claim");
-    setText(fields.messaging, "No runtime messaging path");
-    setText(fields.core, "Core boundary only");
-    setText(fields.profile, "Profile boundary only");
-    setText(fields.pairing, "Pairing boundary only");
-    setText(fields.productionSession, "Snow Noise XX synchronous evaluation boundary only");
-    setText(fields.productionSelfTest, "CLI production boundary self-test only");
+    setText(fields.releaseClaim, t("noSecureReleaseClaim"));
+    setText(fields.messaging, t("noRuntimeMessagingPath"));
+    setText(fields.core, t("coreBoundaryOnly"));
+    setText(fields.profile, t("profileBoundaryOnly"));
+    setText(fields.pairing, t("pairingBoundaryOnly"));
+    setText(fields.productionSession, t("productionSessionBoundary"));
+    setText(fields.productionSelfTest, t("productionSelfTestBoundary"));
     setText(
       fields.productionSessionNonReadiness,
-      "No production E2EE claim network transport durable persistence or async messaging",
+      t("productionSessionLimitsValue"),
     );
-    setText(fields.productionPreflight, "Read-only production skeleton blockers copy");
+    setText(fields.productionPreflight, t("productionPreflightValue"));
     setText(
       fields.productionPreflightBlockers,
-      "Session E2EE false transport send receive false storage rollback not-provided messaging false",
+      t("preflightBlockersValue"),
     );
-    setText(fields.sessionDurableState, "Store-write adapter boundary; product unlock disabled");
-    setText(fields.sessionUnlockPolicy, "High-risk passphrase required OS-keystore-only rejected");
+    setText(fields.sessionDurableState, t("sessionDurableStateValue"));
+    setText(fields.sessionUnlockPolicy, t("sessionUnlockPolicyValue"));
     setText(
       fields.sessionUnlockNonReadiness,
-      "Product unlock durable persistence rollback runtime messaging disabled",
+      t("sessionUnlockLimitsValue"),
     );
-    setText(fields.sessionUnlockCliRejection, "Redacted product-unlock-disabled boundary copy");
+    setText(fields.sessionUnlockCliRejection, t("sessionUnlockRejectionValue"));
     setText(
       fields.sessionUnlockCliRejectionFlags,
-      "Storage_opened=false session_records_written=false key_material_exposed=false runtime_messaging=false",
+      t("unlockRejectionFlagsValue"),
     );
-    setText(fields.transport, "Pre-network fail-closed only");
-    setText(fields.networkExecution, "Network execution disabled");
-    setText(fields.experimentalTransport, "Manual bootstrap gate summary only");
-    setText(
-      fields.bootstrapStatus,
-      "Network-disabled; censorship-or-bridge-required; timeout-or-transient-network-failure",
-    );
-    setText(fields.transportIo, "Hosting stream envelope messaging disabled");
-    setText(fields.storage, "ADREC1 storage spike only");
-    setText(fields.verification, "Lightweight checks only");
+    setText(fields.transport, t("transportValue"));
+    setText(fields.networkExecution, t("networkExecutionValue"));
+    setText(fields.experimentalTransport, t("experimentalTransportValue"));
+    setText(fields.bootstrapStatus, t("bootstrapStatusValue"));
+    setText(fields.transportIo, t("transportIoValue"));
+    setText(fields.storage, t("storageValue"));
+    setText(fields.verification, t("verificationValue"));
   }
 }
 
@@ -6588,18 +6716,18 @@ async function runProductionTwoProfileRoundtrip() {
     setProductionTwoProfileState("Two-profile roundtrip needs input");
     setText(
       fields.productionTwoProfileWarning,
-      "Enter two distinct profiles, the production passphrase, and a message.",
+      t("inputRequiredSetup"),
     );
     return;
   }
 
   setProductionTwoProfileState("Two-profile roundtrip running");
-  setText(fields.productionTwoProfileWarning, "Running app-data local production harness.");
-  setText(fields.productionTwoProfileProfiles, "Waiting for profile unlock and payload export");
-  setText(fields.productionTwoProfileSession, "Waiting for session draft and handshake");
-  setText(fields.productionTwoProfileMessageState, "Waiting for encrypted envelope and receive");
-  setText(fields.productionTwoProfileBoundary, "Waiting for boundary flags");
-  setProductionFollowupActions(false, "Roundtrip running. Follow-up actions are locked.");
+  setText(fields.productionTwoProfileWarning, t("setupRunningWarning"));
+  setText(fields.productionTwoProfileProfiles, t("setupProfilesWaiting"));
+  setText(fields.productionTwoProfileSession, t("setupSessionWaiting"));
+  setText(fields.productionTwoProfileMessageState, t("setupMessageWaiting"));
+  setText(fields.productionTwoProfileBoundary, t("setupBoundaryWaiting"));
+  setProductionFollowupActions(false, t("setupFollowupLocked"));
   productionBusyAction = "two-profile-roundtrip";
   applyProductionActionState();
   if (fields.runProductionTwoProfileRoundtrip) {
@@ -6637,11 +6765,11 @@ async function runProductionTwoProfileRoundtrip() {
   } catch (error) {
     setProductionTwoProfileState("Two-profile roundtrip failed");
     setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("roundtrip", error));
-    setText(fields.productionTwoProfileProfiles, "Failed");
-    setText(fields.productionTwoProfileSession, "Failed");
-    setText(fields.productionTwoProfileMessageState, "Failed");
-    setText(fields.productionTwoProfileBoundary, "Failed");
-    setProductionFollowupActions(false, "Verify profiles/passphrase, then retry full setup.");
+    setText(fields.productionTwoProfileProfiles, t("statusFailed"));
+    setText(fields.productionTwoProfileSession, t("statusFailed"));
+    setText(fields.productionTwoProfileMessageState, t("statusFailed"));
+    setText(fields.productionTwoProfileBoundary, t("statusFailed"));
+    setProductionFollowupActions(false, t("setupRetryHint"));
   } finally {
     productionBusyAction = null;
     if (fields.runProductionTwoProfileRoundtrip) {
@@ -6671,18 +6799,18 @@ async function runProductionTwoProfileMessageRoundtrip() {
     setProductionTwoProfileState("Stored-session message needs input");
     setText(
       fields.productionTwoProfileWarning,
-      "Enter two distinct profiles with existing sessions, the production passphrase, and a message.",
+      t("inputRequiredMessage"),
     );
     return;
   }
 
   setProductionTwoProfileState("Stored-session message running");
-  setText(fields.productionTwoProfileWarning, "Reusing existing encrypted session state.");
-  setText(fields.productionTwoProfileProfiles, "Using existing encrypted profile stores");
-  setText(fields.productionTwoProfileSession, "Checking stored sender and receiver sessions");
-  setText(fields.productionTwoProfileMessageState, "Waiting for encrypted envelope and receive");
-  setText(fields.productionTwoProfileBoundary, "Waiting for boundary flags");
-  setProductionFollowupActions(false, "Stored-session message running. Follow-up actions are locked.");
+  setText(fields.productionTwoProfileWarning, t("messageRunningWarning"));
+  setText(fields.productionTwoProfileProfiles, t("messageProfilesWaiting"));
+  setText(fields.productionTwoProfileSession, t("messageSessionWaiting"));
+  setText(fields.productionTwoProfileMessageState, t("setupMessageWaiting"));
+  setText(fields.productionTwoProfileBoundary, t("setupBoundaryWaiting"));
+  setProductionFollowupActions(false, t("messageFollowupLocked"));
   productionBusyAction = "two-profile-message-roundtrip";
   applyProductionActionState();
   try {
@@ -6706,18 +6834,18 @@ async function runProductionTwoProfileMessageRoundtrip() {
     } else {
       setText(
         fields.productionTwoProfileWarning,
-        "Stored-session message completed and conversation refreshed from encrypted local stores.",
+        t("messageCompletedRecovered"),
       );
     }
     await loadProductionProfileList();
   } catch (error) {
     setProductionTwoProfileState("Stored-session message failed");
     setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("stored-message", error));
-    setText(fields.productionTwoProfileProfiles, "Existing profiles not usable");
-    setText(fields.productionTwoProfileSession, "Stored session check failed");
-    setText(fields.productionTwoProfileMessageState, "Message not sent");
-    setText(fields.productionTwoProfileBoundary, "Failed without returning local path details");
-    setProductionFollowupActions(false, "Check sessions, verify passphrase, or run full setup.");
+    setText(fields.productionTwoProfileProfiles, t("messageProfilesFailed"));
+    setText(fields.productionTwoProfileSession, t("messageSessionFailed"));
+    setText(fields.productionTwoProfileMessageState, t("messageNotSent"));
+    setText(fields.productionTwoProfileBoundary, t("boundaryFailedNoPath"));
+    setProductionFollowupActions(false, t("messageRetryHint"));
   } finally {
     productionBusyAction = null;
     applyProductionActionState();
@@ -6977,11 +7105,12 @@ async function refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase) {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
       const currentInput = productionTwoProfileInput();
       setProductionTwoProfileState("Sessions recovered after profile unlock");
+      const route = `${currentInput.profileA} -> ${currentInput.profileB}`;
       setText(
         fields.productionTwoProfileWarning,
         currentInput.message
-          ? `Stored sessions recovered for ${currentInput.profileA} -> ${currentInput.profileB}. Run stored-session message.`
-          : `Stored sessions recovered for ${currentInput.profileA} -> ${currentInput.profileB}. Write a message to continue.`,
+          ? localizeTwoProfileMessage("sessionsRecoveredSend", { route })
+          : localizeTwoProfileMessage("sessionsRecoveredWrite", { route }),
       );
       return true;
     }

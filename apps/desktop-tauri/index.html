@@ -9,11 +9,11 @@
   <body>
     <main class="shell">
       <section class="status-panel" aria-labelledby="app-title">
-        <p class="eyebrow">Onion-routed private chat</p>
+        <p class="eyebrow" data-i18n="appTagline">Onion-routed private chat</p>
         <h1 id="app-title">Another Dimension Chat</h1>
         <details class="system-settings-panel">
           <summary data-i18n="systemPanel">System panel</summary>
-        <div class="theme-control" aria-label="Display mode">
+        <div class="theme-control" aria-label="Display mode" data-i18n-aria-label="displayMode">
           <span data-i18n="displayMode">Display mode</span>
           <label class="language-control" for="language-selector">
             <span data-i18n="language">Language</span>
@@ -24,154 +24,154 @@
           </label>
           <button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>
         </div>
-        <section class="status-summary" aria-label="Current app state">
+        <section class="status-summary" aria-label="Current app state" data-i18n-aria-label="currentAppState">
           <article>
-            <span>Release</span>
+            <span data-i18n="release">Release</span>
             <strong id="app-release-summary">Blocked: secure-release claim closed</strong>
           </article>
           <article>
-            <span>Local capability</span>
+            <span data-i18n="localCapability">Local capability</span>
             <strong id="local-capability-summary">Local-only: encrypted app-data harness</strong>
           </article>
           <article>
-            <span>Main blocker</span>
+            <span data-i18n="mainBlocker">Main blocker</span>
             <strong id="main-blocker-summary">Blocked: runtime transport disabled</strong>
           </article>
         </section>
         <details class="boundary-details">
-          <summary>Boundary details</summary>
+          <summary data-i18n="boundaryDetails">Boundary details</summary>
           <dl id="status-list" class="status-list">
             <div>
-              <dt>Release claim</dt>
-              <dd id="release-claim">No secure-release claim</dd>
+              <dt data-i18n="releaseClaim">Release claim</dt>
+              <dd id="release-claim" data-i18n="noSecureReleaseClaim">No secure-release claim</dd>
             </div>
             <div>
-              <dt>Messaging surface</dt>
-              <dd id="messaging">No runtime messaging path</dd>
+              <dt data-i18n="messagingSurface">Messaging surface</dt>
+              <dd id="messaging" data-i18n="noRuntimeMessagingPath">No runtime messaging path</dd>
             </div>
             <div>
-              <dt>Core</dt>
-              <dd id="core">Core boundary only</dd>
+              <dt data-i18n="core">Core</dt>
+              <dd id="core" data-i18n="coreBoundaryOnly">Core boundary only</dd>
             </div>
             <div>
-              <dt>Profile</dt>
-              <dd id="profile">Profile boundary only</dd>
+              <dt data-i18n="profiles">Profile</dt>
+              <dd id="profile" data-i18n="profileBoundaryOnly">Profile boundary only</dd>
             </div>
             <div>
-              <dt>Pairing</dt>
-              <dd id="pairing">Pairing boundary only</dd>
+              <dt data-i18n="pair">Pairing</dt>
+              <dd id="pairing" data-i18n="pairingBoundaryOnly">Pairing boundary only</dd>
             </div>
             <div>
-              <dt>Production session</dt>
-              <dd id="production-session">Snow Noise XX synchronous evaluation boundary only</dd>
+              <dt data-i18n="productionSession">Production session</dt>
+              <dd id="production-session" data-i18n="productionSessionBoundary">Snow Noise XX synchronous evaluation boundary only</dd>
             </div>
             <div>
-              <dt>Production self-test</dt>
-              <dd id="production-self-test">CLI production boundary self-test only</dd>
+              <dt data-i18n="productionSelfTest">Production self-test</dt>
+              <dd id="production-self-test" data-i18n="productionSelfTestBoundary">CLI production boundary self-test only</dd>
             </div>
             <div>
-              <dt>Production session limits</dt>
-              <dd id="production-session-non-readiness">
+              <dt data-i18n="productionSessionLimits">Production session limits</dt>
+              <dd id="production-session-non-readiness" data-i18n="productionSessionLimitsValue">
                 No production E2EE claim network transport durable persistence or async messaging
               </dd>
             </div>
             <div>
-              <dt>Production preflight</dt>
-              <dd id="production-preflight">Read-only production skeleton blockers copy</dd>
+              <dt data-i18n="productionPreflight">Production preflight</dt>
+              <dd id="production-preflight" data-i18n="productionPreflightValue">Read-only production skeleton blockers copy</dd>
             </div>
             <div>
-              <dt>Preflight blockers</dt>
-              <dd id="production-preflight-blockers">
+              <dt data-i18n="preflightBlockers">Preflight blockers</dt>
+              <dd id="production-preflight-blockers" data-i18n="preflightBlockersValue">
                 session E2EE false transport send receive false storage rollback not-provided messaging false
               </dd>
             </div>
             <div>
-              <dt>Session durable state</dt>
-              <dd id="session-durable-state">Store-write adapter boundary; product unlock disabled</dd>
+              <dt data-i18n="sessionDurableState">Session durable state</dt>
+              <dd id="session-durable-state" data-i18n="sessionDurableStateValue">Store-write adapter boundary; product unlock disabled</dd>
             </div>
             <div>
-              <dt>Session unlock policy</dt>
-              <dd id="session-unlock-policy">High-risk passphrase required OS-keystore-only rejected</dd>
+              <dt data-i18n="sessionUnlockPolicy">Session unlock policy</dt>
+              <dd id="session-unlock-policy" data-i18n="sessionUnlockPolicyValue">High-risk passphrase required OS-keystore-only rejected</dd>
             </div>
             <div>
-              <dt>Session unlock limits</dt>
-              <dd id="session-unlock-non-readiness">
+              <dt data-i18n="sessionUnlockLimits">Session unlock limits</dt>
+              <dd id="session-unlock-non-readiness" data-i18n="sessionUnlockLimitsValue">
                 Product unlock durable persistence rollback runtime messaging disabled
               </dd>
             </div>
             <div>
-              <dt>Session unlock rejection</dt>
-              <dd id="session-unlock-cli-rejection">Redacted product-unlock-disabled boundary copy</dd>
+              <dt data-i18n="sessionUnlockRejection">Session unlock rejection</dt>
+              <dd id="session-unlock-cli-rejection" data-i18n="sessionUnlockRejectionValue">Redacted product-unlock-disabled boundary copy</dd>
             </div>
             <div>
-              <dt>Unlock rejection flags</dt>
-              <dd id="session-unlock-cli-rejection-flags">
+              <dt data-i18n="unlockRejectionFlags">Unlock rejection flags</dt>
+              <dd id="session-unlock-cli-rejection-flags" data-i18n="unlockRejectionFlagsValue">
                 Storage_opened=false session_records_written=false key_material_exposed=false
                 runtime_messaging=false
               </dd>
             </div>
             <div>
-              <dt>Transport</dt>
-              <dd id="transport">Pre-network fail-closed only</dd>
+              <dt data-i18n="transport">Transport</dt>
+              <dd id="transport" data-i18n="transportValue">Pre-network fail-closed only</dd>
             </div>
             <div>
-              <dt>Network execution</dt>
-              <dd id="network-execution">Network execution disabled</dd>
+              <dt data-i18n="networkExecution">Network execution</dt>
+              <dd id="network-execution" data-i18n="networkExecutionValue">Network execution disabled</dd>
             </div>
             <div>
-              <dt>Experimental transport</dt>
-              <dd id="experimental-transport">Manual bootstrap gate summary only</dd>
+              <dt data-i18n="experimentalTransport">Experimental transport</dt>
+              <dd id="experimental-transport" data-i18n="experimentalTransportValue">Manual bootstrap gate summary only</dd>
             </div>
             <div>
-              <dt>bootstrap status</dt>
-              <dd id="bootstrap-status">
+              <dt data-i18n="bootstrapStatus">bootstrap status</dt>
+              <dd id="bootstrap-status" data-i18n="bootstrapStatusValue">
                 network-disabled; censorship-or-bridge-required;
                 timeout-or-transient-network-failure
               </dd>
             </div>
             <div>
-              <dt>Transport I/O</dt>
-              <dd id="transport-io">Hosting stream envelope messaging disabled</dd>
+              <dt data-i18n="transportIo">Transport I/O</dt>
+              <dd id="transport-io" data-i18n="transportIoValue">Hosting stream envelope messaging disabled</dd>
             </div>
             <div>
-              <dt>Storage</dt>
-              <dd id="storage">ADREC1 storage spike only</dd>
+              <dt data-i18n="storage">Storage</dt>
+              <dd id="storage" data-i18n="storageValue">ADREC1 storage spike only</dd>
             </div>
             <div>
-              <dt>Verification</dt>
-              <dd id="verification">Lightweight checks only</dd>
+              <dt data-i18n="verification">Verification</dt>
+              <dd id="verification" data-i18n="verificationValue">Lightweight checks only</dd>
             </div>
           </dl>
         </details>
         <section class="production-workflow" aria-labelledby="onion-preflight-title">
           <div>
-            <p class="eyebrow">Onion transport</p>
-            <h3 id="onion-preflight-title">Tor preflight</h3>
+            <p class="eyebrow" data-i18n="onionTransport">Onion transport</p>
+            <h3 id="onion-preflight-title" data-i18n="torPreflight">Tor preflight</h3>
           </div>
           <div class="loop-actions">
-            <button id="check-onion-preflight" type="button">Check Tor preflight</button>
-            <button id="prepare-onion-backup-exclusion" type="button">Prepare backup exclusion</button>
-            <button id="check-onion-client-preflight" type="button">Check client preflight</button>
-            <button id="check-onion-client-attempt-gate" type="button">Check client gate</button>
+            <button id="check-onion-preflight" type="button" data-i18n="checkTorPreflight">Check Tor preflight</button>
+            <button id="prepare-onion-backup-exclusion" type="button" data-i18n="prepareBackupExclusion">Prepare backup exclusion</button>
+            <button id="check-onion-client-preflight" type="button" data-i18n="checkClientPreflight">Check client preflight</button>
+            <button id="check-onion-client-attempt-gate" type="button" data-i18n="checkClientGate">Check client gate</button>
             <label class="inline-toggle">
               <input id="manual-onion-network-permission" type="checkbox" />
-              Manual network permission
+              <span data-i18n="manualNetworkPermission">Manual network permission</span>
             </label>
-            <button id="run-onion-client-once" type="button">Run client once</button>
-            <button id="check-onion-persistent-client" type="button">Check client state</button>
-            <button id="start-onion-persistent-client" type="button">Start persistent client</button>
-            <button id="prepare-onion-key-record" type="button">Prepare key record</button>
-            <button id="check-onion-launch-preflight" type="button">Check launch preflight</button>
-            <button id="attempt-onion-service-launch" type="button">Attempt onion launch</button>
-            <button id="prepare-onion-descriptor-publication" type="button">Prepare descriptor</button>
-            <button id="attempt-onion-descriptor-publication" type="button">Attempt descriptor publish</button>
-            <button id="prepare-onion-inbound-stream" type="button">Prepare inbound stream</button>
-            <button id="attempt-onion-inbound-envelope-receive" type="button">Attempt envelope receive</button>
-            <button id="prepare-onion-outbound-stream" type="button">Prepare outbound stream</button>
-            <button id="prepare-onion-stream-closeout" type="button">Prepare stream closeout</button>
-            <button id="prepare-onion-remote-auth" type="button">Check remote auth boundary</button>
-            <button id="prepare-onion-outbound-envelope-send" type="button">Prepare envelope send</button>
-            <button id="attempt-onion-outbound-envelope-send" type="button">Attempt envelope send</button>
+            <button id="run-onion-client-once" type="button" data-i18n="runClientOnce">Run client once</button>
+            <button id="check-onion-persistent-client" type="button" data-i18n="checkClientState">Check client state</button>
+            <button id="start-onion-persistent-client" type="button" data-i18n="startPersistentClient">Start persistent client</button>
+            <button id="prepare-onion-key-record" type="button" data-i18n="prepareKeyRecord">Prepare key record</button>
+            <button id="check-onion-launch-preflight" type="button" data-i18n="checkLaunchPreflight">Check launch preflight</button>
+            <button id="attempt-onion-service-launch" type="button" data-i18n="attemptOnionLaunch">Attempt onion launch</button>
+            <button id="prepare-onion-descriptor-publication" type="button" data-i18n="prepareDescriptor">Prepare descriptor</button>
+            <button id="attempt-onion-descriptor-publication" type="button" data-i18n="attemptDescriptorPublish">Attempt descriptor publish</button>
+            <button id="prepare-onion-inbound-stream" type="button" data-i18n="prepareInboundStream">Prepare inbound stream</button>
+            <button id="attempt-onion-inbound-envelope-receive" type="button" data-i18n="attemptEnvelopeReceive">Attempt envelope receive</button>
+            <button id="prepare-onion-outbound-stream" type="button" data-i18n="prepareOutboundStream">Prepare outbound stream</button>
+            <button id="prepare-onion-stream-closeout" type="button" data-i18n="prepareStreamCloseout">Prepare stream closeout</button>
+            <button id="prepare-onion-remote-auth" type="button" data-i18n="checkRemoteAuthBoundary">Check remote auth boundary</button>
+            <button id="prepare-onion-outbound-envelope-send" type="button" data-i18n="prepareEnvelopeSend">Prepare envelope send</button>
+            <button id="attempt-onion-outbound-envelope-send" type="button" data-i18n="attemptEnvelopeSend">Attempt envelope send</button>
           </div>
           <p id="onion-preflight-state" class="demo-state" aria-live="polite">
             Onion preflight idle
@@ -181,139 +181,139 @@
           </p>
           <dl class="flow-summary">
             <div>
-              <dt>Runtime</dt>
-              <dd id="onion-preflight-runtime">Not checked yet</dd>
+              <dt data-i18n="runtime">Runtime</dt>
+              <dd id="onion-preflight-runtime" data-i18n="notCheckedYet">Not checked yet</dd>
             </div>
             <div>
-              <dt>Launch gate</dt>
-              <dd id="onion-preflight-launch">Not checked yet</dd>
+              <dt data-i18n="launchGate">Launch gate</dt>
+              <dd id="onion-preflight-launch" data-i18n="notCheckedYet">Not checked yet</dd>
             </div>
             <div>
-              <dt>Events</dt>
-              <dd id="onion-preflight-events">Not checked yet</dd>
+              <dt data-i18n="events">Events</dt>
+              <dd id="onion-preflight-events" data-i18n="notCheckedYet">Not checked yet</dd>
             </div>
             <div>
-              <dt>Boundary</dt>
+              <dt data-i18n="boundary">Boundary</dt>
               <dd id="onion-preflight-boundary">network_io=false transport_io=false runtime=false</dd>
             </div>
             <div>
-              <dt>Backup exclusion</dt>
-              <dd id="onion-backup-exclusion-state">Not prepared</dd>
+              <dt data-i18n="backupExclusion">Backup exclusion</dt>
+              <dd id="onion-backup-exclusion-state" data-i18n="notPrepared">Not prepared</dd>
             </div>
             <div>
-              <dt>Backup boundary</dt>
+              <dt data-i18n="backupBoundary">Backup boundary</dt>
               <dd id="onion-backup-exclusion-boundary">raw_path=false network_io=false</dd>
             </div>
             <div>
-              <dt>Client preflight</dt>
-              <dd id="onion-client-preflight-state">Not checked yet</dd>
+              <dt data-i18n="clientPreflight">Client preflight</dt>
+              <dd id="onion-client-preflight-state" data-i18n="notCheckedYet">Not checked yet</dd>
             </div>
             <div>
-              <dt>Client boundary</dt>
+              <dt data-i18n="clientBoundary">Client boundary</dt>
               <dd id="onion-client-preflight-boundary">persistent_client=false network_io=false</dd>
             </div>
             <div>
-              <dt>Client gate</dt>
-              <dd id="onion-client-attempt-gate-state">Not checked yet</dd>
+              <dt data-i18n="clientGate">Client gate</dt>
+              <dd id="onion-client-attempt-gate-state" data-i18n="notCheckedYet">Not checked yet</dd>
             </div>
             <div>
-              <dt>Client gate boundary</dt>
+              <dt data-i18n="clientGateBoundary">Client gate boundary</dt>
               <dd id="onion-client-attempt-gate-boundary">manual_permission=false network_io=false</dd>
             </div>
             <div>
-              <dt>Client once</dt>
-              <dd id="onion-client-once-state">Not run</dd>
+              <dt data-i18n="clientOnce">Client once</dt>
+              <dd id="onion-client-once-state" data-i18n="notRun">Not run</dd>
             </div>
             <div>
-              <dt>Client once boundary</dt>
+              <dt data-i18n="clientOnceBoundary">Client once boundary</dt>
               <dd id="onion-client-once-boundary">manual_permission=false network_io=false</dd>
             </div>
             <div>
-              <dt>Persistent client</dt>
-              <dd id="onion-persistent-client-state">Not retained</dd>
+              <dt data-i18n="persistentClient">Persistent client</dt>
+              <dd id="onion-persistent-client-state" data-i18n="notRetained">Not retained</dd>
             </div>
             <div>
-              <dt>Persistent boundary</dt>
+              <dt data-i18n="persistentBoundary">Persistent boundary</dt>
               <dd id="onion-persistent-client-boundary">persistent_client=false network_io=false</dd>
             </div>
             <div>
-              <dt>Key record</dt>
-              <dd id="onion-key-record-state">Not prepared</dd>
+              <dt data-i18n="keyRecord">Key record</dt>
+              <dd id="onion-key-record-state" data-i18n="notPrepared">Not prepared</dd>
             </div>
             <div>
-              <dt>Key boundary</dt>
+              <dt data-i18n="keyBoundary">Key boundary</dt>
               <dd id="onion-key-record-boundary">profile_unlock=false key_material=false network_io=false</dd>
             </div>
             <div>
-              <dt>Launch preflight</dt>
-              <dd id="onion-launch-preflight-state">Not checked yet</dd>
+              <dt data-i18n="launchPreflight">Launch preflight</dt>
+              <dd id="onion-launch-preflight-state" data-i18n="notCheckedYet">Not checked yet</dd>
             </div>
             <div>
-              <dt>Launch boundary</dt>
+              <dt data-i18n="launchBoundary">Launch boundary</dt>
               <dd id="onion-launch-preflight-boundary">persistent_client=false launch=false network_io=false</dd>
             </div>
             <div>
-              <dt>Launch attempt</dt>
+              <dt data-i18n="launchAttempt">Launch attempt</dt>
               <dd id="onion-service-launch-attempt">manual_permission=false launch=false publish=false</dd>
             </div>
             <div>
-              <dt>Descriptor prep</dt>
-              <dd id="onion-descriptor-publication-state">Not prepared</dd>
+              <dt data-i18n="descriptorPrep">Descriptor prep</dt>
+              <dd id="onion-descriptor-publication-state" data-i18n="notPrepared">Not prepared</dd>
             </div>
             <div>
-              <dt>Descriptor boundary</dt>
+              <dt data-i18n="descriptorBoundary">Descriptor boundary</dt>
               <dd id="onion-descriptor-publication-boundary">descriptor_body=false publish=false</dd>
             </div>
             <div>
-              <dt>Descriptor attempt</dt>
+              <dt data-i18n="descriptorAttempt">Descriptor attempt</dt>
               <dd id="onion-descriptor-publication-attempt">manual_permission=false publish=false</dd>
             </div>
             <div>
-              <dt>Inbound stream</dt>
-              <dd id="onion-inbound-stream-state">Not prepared</dd>
+              <dt data-i18n="inboundStream">Inbound stream</dt>
+              <dd id="onion-inbound-stream-state" data-i18n="notPrepared">Not prepared</dd>
             </div>
             <div>
-              <dt>Inbound boundary</dt>
+              <dt data-i18n="inboundBoundary">Inbound boundary</dt>
               <dd id="onion-inbound-stream-boundary">accept=false read_write=false</dd>
             </div>
             <div>
-              <dt>Envelope receive attempt</dt>
+              <dt data-i18n="envelopeReceiveAttempt">Envelope receive attempt</dt>
               <dd id="onion-inbound-envelope-receive-attempt">network_io=false accept=false read_write=false</dd>
             </div>
             <div>
-              <dt>Outbound stream</dt>
-              <dd id="onion-outbound-stream-state">Not prepared</dd>
+              <dt data-i18n="outboundStream">Outbound stream</dt>
+              <dd id="onion-outbound-stream-state" data-i18n="notPrepared">Not prepared</dd>
             </div>
             <div>
-              <dt>Outbound boundary</dt>
+              <dt data-i18n="outboundBoundary">Outbound boundary</dt>
               <dd id="onion-outbound-stream-boundary">dial=false send=false</dd>
             </div>
             <div>
-              <dt>Stream closeout</dt>
-              <dd id="onion-stream-closeout-state">Not prepared</dd>
+              <dt data-i18n="streamCloseout">Stream closeout</dt>
+              <dd id="onion-stream-closeout-state" data-i18n="notPrepared">Not prepared</dd>
             </div>
             <div>
-              <dt>Stream closeout boundary</dt>
+              <dt data-i18n="streamCloseoutBoundary">Stream closeout boundary</dt>
               <dd id="onion-stream-closeout-boundary">inbound=false outbound=false</dd>
             </div>
             <div>
-              <dt>Remote auth</dt>
-              <dd id="onion-remote-auth-state">Not checked yet</dd>
+              <dt data-i18n="remoteAuth">Remote auth</dt>
+              <dd id="onion-remote-auth-state" data-i18n="notCheckedYet">Not checked yet</dd>
             </div>
             <div>
-              <dt>Remote auth boundary</dt>
+              <dt data-i18n="remoteAuthBoundary">Remote auth boundary</dt>
               <dd id="onion-remote-auth-boundary">peer_proof=false session_binding=false</dd>
             </div>
             <div>
-              <dt>Envelope send prep</dt>
-              <dd id="onion-outbound-envelope-send-state">Not prepared</dd>
+              <dt data-i18n="envelopeSendPrep">Envelope send prep</dt>
+              <dd id="onion-outbound-envelope-send-state" data-i18n="notPrepared">Not prepared</dd>
             </div>
             <div>
-              <dt>Envelope send boundary</dt>
+              <dt data-i18n="envelopeSendBoundary">Envelope send boundary</dt>
               <dd id="onion-outbound-envelope-send-boundary">stored_envelope=false send=false</dd>
             </div>
             <div>
-              <dt>Envelope send attempt</dt>
+              <dt data-i18n="envelopeSendAttempt">Envelope send attempt</dt>
               <dd id="onion-outbound-envelope-send-attempt">network_io=false dial=false send=false</dd>
             </div>
           </dl>
@@ -323,45 +323,71 @@
           <section class="production-workflow" aria-labelledby="production-two-profile-title">
             <div>
               <p class="eyebrow" data-i18n="darkroomChat">Darkroom chat</p>
-              <h3 id="production-two-profile-title">Alice / Bob room</h3>
+              <h3 id="production-two-profile-title" data-i18n="chatRoomTitle">Alice / Bob room</h3>
             </div>
             <dl class="room-identity-bar" aria-label="Room identity">
               <div>
-                <dt>Route</dt>
+                <dt data-i18n="route">Route</dt>
                 <dd id="room-identity-route">alice -> bob</dd>
               </div>
               <div>
-                <dt>Pair</dt>
+                <dt data-i18n="pair">Pair</dt>
                 <dd id="room-identity-pair">not checked</dd>
               </div>
               <div>
-                <dt>Verify</dt>
+                <dt data-i18n="verify">Verify</dt>
                 <dd id="room-identity-verify">pending</dd>
               </div>
               <div>
-                <dt>Transport</dt>
+                <dt data-i18n="transport">Transport</dt>
                 <dd id="room-identity-transport">local harness</dd>
               </div>
             </dl>
+            <section class="connection-guide" aria-labelledby="connection-guide-title">
+              <div class="connection-guide-head">
+                <p id="connection-guide-title" class="eyebrow" data-i18n="connectionGuideTitle">How to start</p>
+                <p data-i18n="connectionGuideOnion">
+                  For onion transport, enable Manual network permission first, then use Start receiving or the onion setup buttons. Nothing network-related starts by itself.
+                </p>
+              </div>
+              <ol>
+                <li>
+                  <strong data-i18n="connectionGuideProfile">1. Choose two local profiles</strong>
+                  <span data-i18n="connectionGuideProfileText">Use Alice/Bob for a local test, or enter new names for a fresh conversation.</span>
+                </li>
+                <li>
+                  <strong data-i18n="connectionGuidePassphrase">2. Enter one passphrase</strong>
+                  <span data-i18n="connectionGuidePassphraseText">The same passphrase unlocks both local encrypted stores on this device.</span>
+                </li>
+                <li>
+                  <strong data-i18n="connectionGuideSetup">3. Run setup once</strong>
+                  <span data-i18n="connectionGuideSetupText">Click Run two-profile setup to create the pair, verify safety material, and save the local session.</span>
+                </li>
+                <li>
+                  <strong data-i18n="connectionGuideChat">4. Send, receive, resume</strong>
+                  <span data-i18n="connectionGuideChatText">After setup, use Send and Sync. Quit and reopen, enter the same profiles/passphrase, then Sync to continue.</span>
+                </li>
+              </ol>
+            </section>
             <button id="toggle-chat-settings" type="button" class="settings-toggle" data-i18n="roomSettings">
               Room settings
             </button>
             <details class="chat-settings-panel" open>
               <summary data-i18n="roomSettings">Room settings</summary>
             <div class="chat-room-controls" aria-label="Room controls">
-              <label class="loop-label" for="production-two-profile-a">Profile A</label>
+              <label class="loop-label" for="production-two-profile-a" data-i18n="profileA">Profile A</label>
               <input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />
-              <label class="loop-label" for="production-two-profile-b">Profile B</label>
+              <label class="loop-label" for="production-two-profile-b" data-i18n="profileB">Profile B</label>
               <input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />
-              <label class="loop-label" for="production-two-profile-passphrase">Passphrase</label>
+              <label class="loop-label" for="production-two-profile-passphrase" data-i18n="passphrase">Passphrase</label>
               <input
                 id="production-two-profile-passphrase"
                 type="password"
                 autocomplete="current-password"
               />
-              <label class="loop-label" for="production-two-profile-message-ttl">Retention</label>
+              <label class="loop-label" for="production-two-profile-message-ttl" data-i18n="retention">Retention</label>
               <select id="production-two-profile-message-ttl">
-                <option value="">Loading retention policy</option>
+                <option value="" data-i18n="loadingRetentionPolicy">Loading retention policy</option>
               </select>
               <p id="production-two-profile-direction" class="demo-state" aria-live="polite">
                 Direction: alice -> bob
@@ -369,55 +395,55 @@
             </div>
             <ol id="production-two-profile-flow" class="demo-steps compact-flow" aria-label="Two-profile guided flow">
               <li id="production-two-profile-step-session" class="is-running">
-                <strong>1 Session</strong>
+                <strong data-i18n="sessionStep">1 Session</strong>
                 <span id="production-two-profile-step-session-detail">Enter passphrase, then run full setup or check sessions.</span>
               </li>
               <li id="production-two-profile-step-compose" class="is-pending">
-                <strong>2 Compose</strong>
+                <strong data-i18n="composeStep">2 Compose</strong>
                 <span id="production-two-profile-step-compose-detail">Write a message for the current direction.</span>
               </li>
               <li id="production-two-profile-step-send" class="is-pending">
-                <strong>3 Send</strong>
+                <strong data-i18n="sendStep">3 Send</strong>
                 <span id="production-two-profile-step-send-detail">Run stored-session message after the session and draft are ready.</span>
               </li>
               <li id="production-two-profile-step-reply" class="is-pending">
-                <strong>4 Reply</strong>
+                <strong data-i18n="replyStep">4 Reply</strong>
                 <span id="production-two-profile-step-reply-detail">After send, swap direction and write the reply.</span>
               </li>
             </ol>
             <details class="chat-setup-controls" open>
-              <summary>Onion setup</summary>
+              <summary data-i18n="onionSetup">Onion setup</summary>
               <div class="loop-actions">
-                <button id="run-production-two-profile-roundtrip" type="button">Run two-profile roundtrip</button>
+                <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Run two-profile setup</button>
                 <button id="start-production-two-profile-onion-bootstrap" type="button">
-                  Start Tor bootstrap
+                  <span data-i18n="startTorBootstrap">Start Tor bootstrap</span>
                 </button>
                 <button id="prepare-production-two-profile-onion-key" type="button">
-                  Prepare onion key
+                  <span data-i18n="prepareOnionKey">Prepare onion key</span>
                 </button>
                 <button id="launch-production-two-profile-onion-endpoint" type="button">
-                  Launch onion endpoint
+                  <span data-i18n="launchOnionEndpoint">Launch onion endpoint</span>
                 </button>
                 <button id="prepare-production-two-profile-onion-pairing" type="button">
-                  Prepare onion pairing
+                  <span data-i18n="prepareOnionPairing">Prepare onion pairing</span>
                 </button>
                 <button id="save-production-two-profile-onion-sessions" type="button">
-                  Save onion sessions
+                  <span data-i18n="saveOnionSessions">Save onion sessions</span>
                 </button>
                 <button id="refresh-production-two-profile-peer-endpoints" type="button">
-                  Refresh peer endpoints
+                  <span data-i18n="refreshPeerEndpoints">Refresh peer endpoints</span>
                 </button>
                 <button id="send-production-two-profile-endpoint-update" type="button">
-                  Send endpoint update
+                  <span data-i18n="sendEndpointUpdate">Send endpoint update</span>
                 </button>
                 <button id="complete-production-two-profile-onion-handshake" type="button">
-                  Complete onion handshake
+                  <span data-i18n="completeOnionHandshake">Complete onion handshake</span>
                 </button>
                 <button id="send-production-two-profile-latest-onion-envelope" type="button">
-                  Send latest over onion
+                  <span data-i18n="sendLatestOverOnion">Send latest over onion</span>
                 </button>
                 <button id="run-production-two-profile-real-onion-roundtrip" type="button">
-                  Run real onion roundtrip
+                  <span data-i18n="runRealOnionRoundtrip">Run real onion roundtrip</span>
                 </button>
               </div>
             </details>
@@ -426,36 +452,36 @@
               Two-profile roundtrip idle
             </p>
             <details class="chat-diagnostics">
-              <summary>Room status</summary>
+              <summary data-i18n="roomStatus">Room status</summary>
               <p id="production-two-profile-warning" class="demo-warning">
                 Two-profile app-data harness has not run yet.
               </p>
               <dl class="flow-summary">
                 <div>
-                  <dt>Profiles</dt>
-                  <dd id="production-two-profile-profiles">Not checked yet</dd>
+                  <dt data-i18n="profiles">Profiles</dt>
+                  <dd id="production-two-profile-profiles" data-i18n="notCheckedYet">Not checked yet</dd>
                 </div>
                 <div>
-                  <dt>Session</dt>
-                  <dd id="production-two-profile-session">Not checked yet</dd>
+                  <dt data-i18n="session">Session</dt>
+                  <dd id="production-two-profile-session" data-i18n="notCheckedYet">Not checked yet</dd>
                 </div>
                 <div>
-                  <dt>Message</dt>
-                  <dd id="production-two-profile-message-state">Not checked yet</dd>
+                  <dt data-i18n="message">Message</dt>
+                  <dd id="production-two-profile-message-state" data-i18n="notCheckedYet">Not checked yet</dd>
                 </div>
                 <div>
-                  <dt>Safety boundary</dt>
-                  <dd id="production-two-profile-boundary">Not checked yet</dd>
+                  <dt data-i18n="safetyBoundary">Safety boundary</dt>
+                  <dd id="production-two-profile-boundary" data-i18n="notCheckedYet">Not checked yet</dd>
                 </div>
               </dl>
               <dl class="flow-summary" aria-label="Conversation compose context">
                 <div>
-                  <dt>Compose context</dt>
-                  <dd id="production-two-profile-current-input">No successful run yet</dd>
+                  <dt data-i18n="composeContext">Compose context</dt>
+                  <dd id="production-two-profile-current-input" data-i18n="noSuccessfulRun">No successful run yet</dd>
                 </div>
                 <div>
-                  <dt>Last success</dt>
-                  <dd id="production-two-profile-last-success">No successful roundtrip in this app session</dd>
+                  <dt data-i18n="lastSuccess">Last success</dt>
+                  <dd id="production-two-profile-last-success" data-i18n="noSuccessfulRoundtrip">No successful roundtrip in this app session</dd>
                 </div>
               </dl>
             </details>
@@ -468,10 +494,10 @@
               </div>
             </div>
             <ol id="production-two-profile-transcript" class="message-transcript" aria-live="polite">
-              <li class="is-empty">No two-profile messages yet.</li>
+              <li class="is-empty" data-i18n="emptyConversation">No two-profile messages yet.</li>
             </ol>
             <label class="loop-label chat-message-label" for="production-two-profile-message" data-i18n="writeMessage">Write message</label>
-            <textarea id="production-two-profile-message" rows="3" placeholder="Message from alice to bob">hello between app-data profiles</textarea>
+            <textarea id="production-two-profile-message" rows="3" placeholder="Message from alice to bob"></textarea>
             <div class="loop-actions chat-primary-actions">
               <button id="check-production-two-profile-session-status-inline" type="button" data-i18n="checkSessions">
                 Check sessions
@@ -497,17 +523,17 @@
                 Edit
               </button>
             </div>
-            <label class="loop-label" for="production-two-profile-transcript-export">Conversation TSV</label>
+            <label class="loop-label" for="production-two-profile-transcript-export" data-i18n="conversationTsv">Conversation TSV</label>
             <textarea id="production-two-profile-transcript-export" rows="5" readonly></textarea>
             <details class="followup-actions" aria-label="Post-roundtrip actions">
-              <summary>Advanced follow-up</summary>
+              <summary data-i18n="advancedFollowup">Advanced follow-up</summary>
               <p id="production-two-profile-next-step">Next actions unlock after a completed local roundtrip.</p>
               <div class="loop-actions">
                 <button id="open-manual-production-tools" type="button" class="flow-control is-secondary">
-                  Open manual tools
+                  <span data-i18n="openManualTools">Open manual tools</span>
                 </button>
                 <button id="focus-local-diagnostic" type="button" class="flow-control is-secondary">
-                  Review diagnostic
+                  <span data-i18n="reviewDiagnostic">Review diagnostic</span>
                 </button>
               </div>
             </details>
