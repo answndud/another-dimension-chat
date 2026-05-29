@@ -372,7 +372,7 @@
             <button id="toggle-chat-settings" type="button" class="settings-toggle" data-i18n="roomSettings">
               Room settings
             </button>
-            <details class="chat-settings-panel" open>
+            <details class="chat-settings-panel">
               <summary data-i18n="roomSettings">Room settings</summary>
             <div class="chat-room-controls" aria-label="Room controls">
               <label class="loop-label" for="production-two-profile-a" data-i18n="profileA">My profile</label>
@@ -411,7 +411,7 @@
                 <span id="production-two-profile-step-reply-detail">After send, swap direction and write the reply.</span>
               </li>
             </ol>
-            <details class="chat-setup-controls" open>
+            <details class="chat-setup-controls">
               <summary data-i18n="localSetup">Local setup</summary>
               <div class="loop-actions setup-primary-actions">
                 <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Create saved connection</button>
@@ -490,6 +490,22 @@
                 </div>
               </dl>
             </details>
+            <section class="chat-empty-state" aria-labelledby="chat-empty-title">
+              <p class="eyebrow" data-i18n="connectionNeeded">Connection needed</p>
+              <h4 id="chat-empty-title" data-i18n="peerNotConnected">No peer connected yet</h4>
+              <p data-i18n="peerExchangeHint">
+                Exchange invite codes with the other device, then compare the verification phrase before sending sensitive messages.
+              </p>
+              <p class="retention-note" data-i18n="retentionDeviceHint">
+                Message retention applies on this device. The other device follows its own setting.
+              </p>
+              <div class="loop-actions">
+                <button id="start-peer-connection" type="button" data-i18n="connectPeer">Connect a peer</button>
+                <button id="enter-peer-code" type="button" class="flow-control is-secondary" data-i18n="enterPeerCode">
+                  Enter peer code
+                </button>
+              </div>
+            </section>
             <div class="chat-transcript-toolbar">
               <p class="loop-label" data-i18n="transcript">Transcript</p>
               <div class="loop-actions">
