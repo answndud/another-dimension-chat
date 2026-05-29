@@ -1992,8 +1992,11 @@ function renderProductionTwoProfileConversationList() {
     const inboundOnly = !entry.statuses.has("sent") && entry.statuses.has("received");
     const outboundPending = twoProfileConversationOutboundRetryable(entry);
     const outboundCanceled = entry.outboundDeliveryState === "canceled";
+    const replyable = twoProfileConversationReplyable(entry);
+    const reviewable = twoProfileConversationPendingReviewable(entry);
+    const selectable = replyable || reviewable;
     const senderEnvelopeSlotPresent = messageEnvelopeSlotReadyForEntry(entry.sender, entry);
-    const selected = key === selectedTwoProfileConversationKey;
+    const selected = selectable && key === selectedTwoProfileConversationKey;
     const currentReplyTarget = key === replyTargetKey;
     const currentReviewTarget = selected && !currentReplyTarget && !delivered;
     item.className = delivered
@@ -2005,12 +2008,15 @@ function renderProductionTwoProfileConversationList() {
           : outboundPending
             ? "is-pending-send"
             : "is-pending-receive";
+    item.classList.toggle("is-actionable", selectable);
     item.classList.toggle("is-selected", selected);
     item.classList.toggle("is-reply-target", currentReplyTarget);
     item.classList.toggle("is-review-target", currentReviewTarget);
-    item.tabIndex = 0;
-    item.setAttribute("role", "button");
-    item.setAttribute("aria-pressed", selected ? "true" : "false");
+    if (selectable) {
+      item.tabIndex = 0;
+      item.setAttribute("role", "button");
+      item.setAttribute("aria-pressed", selected ? "true" : "false");
+    }
     if (currentReplyTarget) {
       item.setAttribute("aria-current", "true");
     }
@@ -2020,19 +2026,23 @@ function renderProductionTwoProfileConversationList() {
         ? `Reply target set for message ${entry.messageNumber}: write reply from ${entry.receiver} to ${entry.sender}`
       : delivered && selected
         ? `Selected delivered message ${entry.messageNumber}: use selected reply from ${entry.receiver} to ${entry.sender}`
-        : delivered
+      : delivered
         ? `Delivered message ${entry.messageNumber}: select to reply from ${entry.receiver} to ${entry.sender}`
       : currentReviewTarget
         ? `Review target set for pending message ${entry.messageNumber}: continue manual relay for ${entry.sender} to ${entry.receiver}`
-        : `Pending message ${entry.messageNumber}: select to review manual relay for ${entry.sender} to ${entry.receiver}`,
+      : reviewable
+        ? `Pending message ${entry.messageNumber}: select to review manual relay for ${entry.sender} to ${entry.receiver}`
+        : `Message ${entry.messageNumber} from ${entry.sender} to ${entry.receiver}`,
     );
-    item.addEventListener("click", () => selectTwoProfileConversationEntry(entry));
-    item.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        selectTwoProfileConversationEntry(entry);
-      }
-    });
+    if (selectable) {
+      item.addEventListener("click", () => selectTwoProfileConversationEntry(entry));
+      item.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          selectTwoProfileConversationEntry(entry);
+        }
+      });
+    }
 
     const meta = document.createElement("strong");
     meta.className = "transcript-meta";
