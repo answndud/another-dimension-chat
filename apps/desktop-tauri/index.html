@@ -374,21 +374,36 @@
             </button>
             <details class="chat-settings-panel">
               <summary data-i18n="roomSettings">Room settings</summary>
-            <div class="chat-room-controls" aria-label="Room controls">
-              <label class="loop-label" for="production-two-profile-a" data-i18n="profileA">My profile</label>
-              <input id="production-two-profile-a" type="text" autocomplete="username" />
-              <label class="loop-label" for="production-two-profile-b" data-i18n="profileB">Peer connection</label>
-              <input id="production-two-profile-b" type="text" autocomplete="off" />
-              <label class="loop-label" for="production-two-profile-passphrase" data-i18n="passphrase">Passphrase</label>
-              <input
-                id="production-two-profile-passphrase"
-                type="password"
-                autocomplete="current-password"
-              />
-              <label class="loop-label" for="production-two-profile-message-ttl" data-i18n="retention">Retention</label>
-              <select id="production-two-profile-message-ttl">
-                <option value="" data-i18n="loadingRetentionPolicy">Loading retention policy</option>
-              </select>
+            <div class="chat-room-controls connection-wizard" aria-label="Connection setup">
+              <section class="connection-wizard-step" data-wizard-step="profile">
+                <p class="wizard-step-label" data-i18n="wizardStepProfile">Step 1 / 4 - My anonymous ID</p>
+                <label class="loop-label" for="production-two-profile-a" data-i18n="profileA">My profile</label>
+                <input id="production-two-profile-a" type="text" autocomplete="username" />
+              </section>
+              <section class="connection-wizard-step" data-wizard-step="peer">
+                <p class="wizard-step-label" data-i18n="wizardStepPeer">Step 2 / 4 - Peer invite code</p>
+                <label class="loop-label" for="production-two-profile-b" data-i18n="profileB">Peer connection</label>
+                <input id="production-two-profile-b" type="text" autocomplete="off" />
+              </section>
+              <section class="connection-wizard-step" data-wizard-step="passphrase">
+                <p class="wizard-step-label" data-i18n="wizardStepPassphrase">Step 3 / 4 - Connection passphrase</p>
+                <label class="loop-label" for="production-two-profile-passphrase" data-i18n="passphrase">Passphrase</label>
+                <input
+                  id="production-two-profile-passphrase"
+                  type="password"
+                  autocomplete="current-password"
+                />
+              </section>
+              <section class="connection-wizard-step" data-wizard-step="retention">
+                <p class="wizard-step-label" data-i18n="wizardStepRetention">Step 4 / 4 - Message retention</p>
+                <label class="loop-label" for="production-two-profile-message-ttl" data-i18n="retention">Retention</label>
+                <select id="production-two-profile-message-ttl">
+                  <option value="" data-i18n="loadingRetentionPolicy">Loading retention policy</option>
+                </select>
+                <p class="retention-note" data-i18n="retentionDeviceHint">
+                  Message retention applies on this device. The other device follows its own setting.
+                </p>
+              </section>
               <p id="production-two-profile-direction" class="demo-state" aria-live="polite">
                 Direction: enter your profile and peer connection
               </p>

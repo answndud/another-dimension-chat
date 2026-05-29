@@ -725,12 +725,42 @@ textarea[readonly] {
 
 .chat-room-controls {
   display: grid;
-  grid-template-columns: max-content minmax(110px, 1fr) max-content minmax(110px, 1fr);
-  gap: 8px 10px;
-  align-items: center;
+  gap: 8px;
   border: 1px solid var(--panel-border);
   padding: 10px;
   background: color-mix(in srgb, var(--panel-strong) 72%, var(--bg));
+}
+
+.connection-wizard-step {
+  display: grid;
+  gap: 6px;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 70%, transparent);
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel) 88%, var(--bg));
+  opacity: 0.62;
+}
+
+.connection-wizard-step.is-current {
+  border-color: color-mix(in srgb, var(--accent-cyan) 52%, var(--panel-border));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-cyan) 7%, transparent), transparent 74%),
+    color-mix(in srgb, var(--panel-strong) 82%, var(--bg));
+  opacity: 1;
+}
+
+.connection-wizard-step.is-complete {
+  opacity: 0.8;
+}
+
+.connection-wizard-step.is-locked {
+  display: none;
+}
+
+.wizard-step-label {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 760;
 }
 
 .chat-room-controls .loop-label {
@@ -745,7 +775,6 @@ textarea[readonly] {
 }
 
 .chat-room-controls #production-two-profile-direction {
-  grid-column: 1 / -1;
   margin: 0;
   border-top: 1px solid var(--panel-border);
   padding-top: 8px;
