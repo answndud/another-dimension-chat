@@ -266,6 +266,7 @@ const fields = {
   productionTwoProfileA: document.querySelector("#production-two-profile-a"),
   productionTwoProfileB: document.querySelector("#production-two-profile-b"),
   toggleChatSettings: document.querySelector("#toggle-chat-settings"),
+  openDeveloperTools: document.querySelector("#open-developer-tools"),
   startPeerConnection: document.querySelector("#start-peer-connection"),
   enterPeerCode: document.querySelector("#enter-peer-code"),
   productionTwoProfileDirection: document.querySelector("#production-two-profile-direction"),
@@ -980,6 +981,9 @@ function setProductionMessageManualCurrent(target) {
 }
 
 function revealManualProductionTools() {
+  document.body.classList.add("is-developer-mode");
+  document.querySelector(".chat-diagnostics")?.classList.add("is-revealed");
+  document.querySelector("#local-diagnostic-tools")?.classList.add("is-revealed");
   if (fields.manualProductionTools) {
     fields.manualProductionTools.classList.add("is-revealed");
     fields.manualProductionTools.open = true;
@@ -8640,6 +8644,12 @@ if (fields.toggleChatSettings) {
     if (panel) {
       panel.open = !panel.open;
     }
+  });
+}
+
+if (fields.openDeveloperTools) {
+  fields.openDeveloperTools.addEventListener("click", () => {
+    openManualProductionTools();
   });
 }
 
