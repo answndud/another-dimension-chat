@@ -14,7 +14,7 @@ test("translate resolves Korean and English chat labels", () => {
   assert.equal(translate("en", "send"), "Send");
   assert.equal(translate("ko", "send"), "보내기");
   assert.equal(translate("ko", "retrySend"), "다시 보내기");
-  assert.equal(translate("ko", "peerOffline"), "상대가 오프라인");
+  assert.equal(translate("ko", "peerOffline"), "상대 오프라인, 다시 보내기");
   assert.equal(translate("ko", "statusNeedPassphrase"), "연결 코드 필요");
   assert.equal(translate("ko", "boundaryDetails"), "상세 경계 정보");
   assert.equal(translate("ko", "connectionGuideTitle"), "처음 연결하는 순서");
