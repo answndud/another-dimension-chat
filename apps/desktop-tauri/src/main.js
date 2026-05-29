@@ -1365,8 +1365,8 @@ function confirmCurrentTwoProfileSafety() {
     return;
   }
   setProductionTwoProfileState("Verification confirmed");
-  setText(fields.productionTwoProfileWarning, t("phraseConfirmed"));
   applyProductionActionState();
+  setText(fields.productionTwoProfileWarning, t("messageInputUnlocked"));
   fields.productionTwoProfileMessage?.focus();
 }
 
@@ -2680,6 +2680,7 @@ function twoProfileComposePrompt(input = productionTwoProfileInput()) {
   const selectedReplyTarget = selectedTwoProfileDeliveredReplyTarget(input);
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   const sessionsReady = twoProfileSessionsReadyForInput(input);
+  const safetyConfirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
   const hasRecoveredConversation = Boolean(latestTwoProfileConversationEntry());
   if (!sessionsReady && !sessionStatus && hasRecoveredConversation) {
     return currentLanguage === "ko" ? "먼저 복구된 연결을 확인하세요" : "Check recovered sessions before writing";
@@ -2701,6 +2702,9 @@ function twoProfileComposePrompt(input = productionTwoProfileInput()) {
     return currentLanguage === "ko"
       ? `다음 메시지: ${input.profileA} -> ${input.profileB}`
       : `Next message from ${input.profileA} to ${input.profileB}`;
+  }
+  if (safetyConfirmed) {
+    return t("readyMessagePlaceholder");
   }
   return currentLanguage === "ko"
     ? `${input.profileA}에서 ${input.profileB}에게 보낼 메시지`
