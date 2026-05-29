@@ -1319,9 +1319,9 @@ body.is-chat-active .chat-transcript-toolbar {
 
 body.is-chat-active .chat-transcript-toolbar .loop-actions {
   gap: 4px;
-  opacity: 0.24;
+  opacity: 0;
   pointer-events: auto;
-  transform: translateY(7px);
+  transform: translateY(3px);
   transition:
     opacity 120ms ease,
     transform 120ms ease;
@@ -1329,8 +1329,12 @@ body.is-chat-active .chat-transcript-toolbar .loop-actions {
 
 body.is-chat-active .chat-transcript-toolbar:hover .loop-actions,
 body.is-chat-active .chat-transcript-toolbar:focus-within .loop-actions {
-  opacity: 0.9;
+  opacity: 0.82;
   transform: translateY(5px);
+}
+
+body.is-chat-active .chat-transcript-toolbar button:disabled {
+  display: none;
 }
 
 body.is-chat-active .chat-transcript-toolbar button {
@@ -1420,14 +1424,20 @@ body.is-chat-active .message-transcript .transcript-row-actions {
   justify-content: flex-end;
   gap: 4px;
   margin-top: 2px;
-  opacity: 0.78;
+  opacity: 0.56;
+  transition: opacity 120ms ease;
+}
+
+body.is-chat-active .message-transcript li:hover .transcript-row-actions,
+body.is-chat-active .message-transcript li:focus-within .transcript-row-actions {
+  opacity: 0.95;
 }
 
 body.is-chat-active .message-transcript .transcript-row-actions button {
   min-height: 22px;
-  border-color: color-mix(in srgb, var(--panel-border) 70%, transparent);
+  border-color: color-mix(in srgb, var(--panel-border) 50%, transparent);
   padding: 2px 6px;
-  background: transparent;
+  background: color-mix(in srgb, var(--panel) 48%, transparent);
   font-size: 9px;
 }
 
