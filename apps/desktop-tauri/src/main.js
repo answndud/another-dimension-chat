@@ -3039,8 +3039,8 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
         ? "연결 재설정 필요"
         : "Rebuild connection"
       : currentLanguage === "ko"
-        ? "연결 만들기 필요"
-        : "Create connection",
+        ? "채팅방 만들기 필요"
+        : "Create room",
     state: "setup",
   };
 }
@@ -4163,19 +4163,19 @@ function applyProductionActionState() {
   setActionButtonState(
     fields.checkProductionTwoProfileSessionStatus,
     busy || !hasTwoProfileSessionStatusInput,
-    busy ? "Wait for the active production action." : "Enter your profile, peer connection, and passphrase first.",
+    busy ? "Wait for the active production action." : "Create or paste an invite code first.",
     twoProfileCurrentAction === "check-session",
   );
   setActionButtonState(
     fields.checkProductionTwoProfileSessionStatusInline,
     busy || !hasTwoProfileSessionStatusInput,
-    busy ? "Wait for the active production action." : "Enter your profile, peer connection, and passphrase first.",
+    busy ? "Wait for the active production action." : "Create or paste an invite code first.",
     twoProfileCurrentAction === "check-session",
   );
   setActionButtonState(
     fields.loadProductionTwoProfileTranscript,
     busy || !hasTwoProfileSessionStatusInput,
-    busy ? "Wait for the active production action." : "Enter your profile, peer connection, and passphrase first.",
+    busy ? "Wait for the active production action." : "Create or paste an invite code first.",
   );
   const pendingConversation = latestTwoProfilePendingConversationEntry();
   const selectedPendingConversation = selectedTwoProfilePendingConversationEntry();
@@ -4217,12 +4217,12 @@ function applyProductionActionState() {
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
       : twoProfileNeedsSessionCheck
-        ? "Check recovered sessions before creating the connection again."
+        ? "Check recovered room before creating it again."
       : twoProfileSessionsReady
-        ? "Stored sessions are ready; send a stored-session message instead."
-        : twoProfileSessionsIncomplete
-          ? twoProfileSessionRebuildMessage(twoProfile)
-        : "Enter your profile, peer connection, passphrase, and message first.",
+        ? "Room is ready; send a message instead."
+      : twoProfileSessionsIncomplete
+        ? twoProfileSessionRebuildMessage(twoProfile)
+        : "Create or paste an invite code, then write a first message.",
     twoProfileCurrentAction === "full-setup",
   );
   setActionButtonState(
@@ -4233,12 +4233,12 @@ function applyProductionActionState() {
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
       : twoProfileNeedsSessionCheck
-        ? "Check recovered sessions before creating the connection again."
+        ? "Check recovered room before creating it again."
       : twoProfileSessionsReady
-        ? "Stored sessions are ready; send a stored-session message instead."
-        : twoProfileSessionsIncomplete
-          ? twoProfileSessionRebuildMessage(twoProfile)
-        : "Enter your profile, peer connection, passphrase, and message first.",
+        ? "Room is ready; send a message instead."
+      : twoProfileSessionsIncomplete
+        ? twoProfileSessionRebuildMessage(twoProfile)
+        : "Create or paste an invite code, then write a first message.",
     twoProfileCurrentAction === "full-setup",
   );
   setText(
@@ -4259,8 +4259,8 @@ function applyProductionActionState() {
       : latestReplySelected && twoProfileReplyDraftReady
         ? "Send reply to the latest delivered message."
       : hasTwoProfileInput
-        ? "Create the saved connection once before sending with stored sessions."
-        : "Enter your profile, peer connection, passphrase, and message first.",
+        ? "Create the room once before sending."
+        : "Create or paste an invite code, then write a message.",
     manualPrimaryActions.sendReply ||
       (!state.hasTwoProfileReplySelected && twoProfileCurrentAction === "stored-message"),
   );
@@ -4307,7 +4307,7 @@ function applyProductionActionState() {
       : !manualNetworkPermission
         ? "Enable manual onion network permission before preparing onion pairing."
       : !hasTwoProfileSessionStatusInput
-        ? "Enter your profile, peer connection, and passphrase first."
+        ? "Create or paste an invite code first."
         : "Launch both local onion endpoints, export both pairing payloads, and preview safety.",
     false,
   );
@@ -4324,7 +4324,7 @@ function applyProductionActionState() {
       : twoProfileSessionsReady
         ? "Alice/Bob sessions are already message-ready; send a stored-session message instead."
       : !hasTwoProfileSessionStatusInput
-        ? "Enter your profile, peer connection, and passphrase first."
+        ? "Create or paste an invite code first."
       : !currentPairingSafetyVerified()
         ? "Verify the safety number before saving Alice/Bob onion sessions."
       : !(fields.productionPairingPayload?.value ?? "").trim() ||
@@ -4341,7 +4341,7 @@ function applyProductionActionState() {
       : !manualNetworkPermission
         ? "Enable manual onion network permission before refreshing peer endpoints."
       : !hasTwoProfileSessionStatusInput
-        ? "Enter your profile, peer connection, and passphrase first."
+        ? "Create or paste an invite code first."
       : !latestTwoProfileSessionStatusForCurrentInput(twoProfile)
         ? "Check or save onion sessions before refreshing peer endpoints."
         : "Launch fresh local endpoints and apply them to existing peer session records.",
@@ -4365,7 +4365,7 @@ function applyProductionActionState() {
       : !manualNetworkPermission
         ? "Enable manual onion network permission before sending an endpoint update over onion."
       : !hasTwoProfileSessionStatusInput
-        ? "Enter your profile, peer connection, and passphrase first."
+        ? "Create or paste an invite code first."
       : !twoProfileSessionsReady
         ? "Complete the verified session handshake first."
       : !storedEndpointTransportState.ready
@@ -4387,7 +4387,7 @@ function applyProductionActionState() {
       : twoProfileSessionsReady
         ? "Alice/Bob sessions are message-ready; send a stored-session message instead."
       : !hasTwoProfileSessionStatusInput
-        ? "Enter your profile, peer connection, and passphrase first."
+        ? "Create or paste an invite code first."
         : "Complete Alice/Bob local handshake and persist transport state.",
     false,
   );
@@ -4418,7 +4418,7 @@ function applyProductionActionState() {
       : !manualNetworkPermission
         ? "Enable manual onion network permission before receiving."
       : !hasTwoProfileSessionStatusInput
-        ? "Enter your profile, peer connection, and passphrase first."
+        ? "Create or paste an invite code first."
         : `Start explicit receive mode for ${twoProfile.profileB}.`,
     false,
   );
@@ -7916,22 +7916,22 @@ async function checkProductionTwoProfileSessionStatus() {
     setText(
       fields.productionTwoProfileSessionStatus,
       currentLanguage === "ko"
-        ? "내 프로필, 상대 연결, 패스프레이즈를 먼저 입력하세요."
-        : "Enter your profile, peer connection, and passphrase first.",
+        ? "초대 코드를 먼저 만들거나 붙여넣으세요."
+        : "Create or paste an invite code first.",
     );
     setProductionTwoProfileState("Session check needs input");
     setText(
-      fields.productionTwoProfileWarning,
-      currentLanguage === "ko"
-        ? "저장된 연결을 확인하려면 내 프로필, 상대 연결, 패스프레이즈를 입력하세요."
-        : "Enter your profile, peer connection, and passphrase before checking the saved connection.",
+        fields.productionTwoProfileWarning,
+        currentLanguage === "ko"
+          ? "채팅방을 확인하려면 초대 코드를 먼저 만들거나 붙여넣으세요."
+          : "Create or paste an invite code before checking the room.",
     );
     return;
   }
 
   setText(fields.productionTwoProfileSessionStatus, "Checking encrypted local stores");
   setProductionTwoProfileState("Sessions checking");
-  setText(fields.productionTwoProfileWarning, "Checking stored sessions after explicit local unlock.");
+  setText(fields.productionTwoProfileWarning, "Checking the saved room on this device.");
   productionBusyAction = "two-profile-session-status";
   let postCheckFocus = null;
   applyProductionActionState();
@@ -7958,8 +7958,8 @@ async function checkProductionTwoProfileSessionStatus() {
       setText(
         fields.productionTwoProfileWarning,
         hasDraft
-          ? `Stored sessions ready for ${currentInput.profileA} -> ${currentInput.profileB}. Run stored-session message.`
-          : `Stored sessions ready for ${currentInput.profileA} -> ${currentInput.profileB}. Write a message to continue.`,
+          ? "Room is ready. Send the message."
+          : "Room is ready. Write a message to continue.",
       );
       postCheckFocus = hasDraft
         ? fields.runProductionTwoProfileMessageRoundtrip
@@ -8016,8 +8016,8 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       setText(
         fields.productionTwoProfileWarning,
         currentLanguage === "ko"
-          ? "대화를 불러오려면 내 프로필, 상대 연결, 패스프레이즈를 입력하세요."
-          : "Enter your profile, peer connection, and passphrase before loading the conversation.",
+          ? "대화를 불러오려면 초대 코드를 먼저 만들거나 붙여넣으세요."
+          : "Create or paste an invite code before loading the conversation.",
       );
     }
     return;
