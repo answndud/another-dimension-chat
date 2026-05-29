@@ -1027,8 +1027,8 @@ body.is-chat-active .demo-panel {
 
 body.is-chat-active .production-workflow[aria-labelledby="production-two-profile-title"] {
   position: relative;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   min-height: calc(100vh - 24px);
   border-color: color-mix(in srgb, var(--accent-cyan) 48%, var(--panel-border));
   padding: 10px;
@@ -1060,16 +1060,27 @@ body.is-chat-active #production-two-profile-title {
 }
 
 body.is-chat-active .room-identity-bar {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  position: absolute;
+  top: 33px;
+  right: 52px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, auto);
+  justify-content: end;
+  align-items: center;
+  width: auto;
+  max-width: calc(100% - 104px);
   gap: 6px;
   margin-top: 3px;
+  border: 0;
+  background: transparent;
   opacity: 0.54;
 }
 
 body.is-chat-active .room-identity-bar div {
-  display: inline-flex;
+  display: flex;
+  align-items: center;
+  width: auto;
   min-width: 0;
   gap: 4px;
   border: 0;
@@ -1086,6 +1097,7 @@ body.is-chat-active .room-identity-bar dd {
   overflow: hidden;
   color: var(--text-muted);
   font-size: 10px;
+  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1216,6 +1228,7 @@ body.is-chat-active .chat-transcript-toolbar button {
 
 body.is-chat-active #production-two-profile-transcript {
   order: 3;
+  flex: 1 1 auto;
   min-height: 0;
   padding: 16px 0 14px;
   overflow-y: auto;
@@ -1880,7 +1893,10 @@ pre.is-failed {
   }
 
   body.is-chat-active .room-identity-bar {
-    justify-content: flex-start;
+    top: 32px;
+    right: 42px;
+    max-width: calc(100% - 58px);
+    justify-content: start;
     gap: 5px;
   }
 
