@@ -1567,6 +1567,30 @@ body.is-chat-active .message-transcript .transcript-body {
   line-height: 1.4;
 }
 
+body.is-chat-active .message-transcript li:not(.is-actionable) {
+  cursor: default;
+}
+
+body.is-chat-active .message-transcript li.is-actionable {
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+body.is-chat-active .message-transcript li.is-actionable:hover {
+  border-color: color-mix(in srgb, var(--accent-cyan) 24%, var(--panel-border));
+}
+
+body.is-chat-active .message-transcript li.is-actionable.is-pending-send:hover,
+body.is-chat-active .message-transcript li.is-actionable.is-pending-receive:hover {
+  border-color: color-mix(in srgb, var(--warning) 46%, var(--panel-border));
+}
+
+body.is-chat-active .message-transcript li.is-selected:not(.is-reply-target, .is-review-target) {
+  border-color: color-mix(in srgb, var(--accent-cyan) 28%, var(--panel-border));
+  background: color-mix(in srgb, var(--panel) 88%, var(--accent-cyan));
+}
+
 body.is-chat-active .message-transcript .transcript-row-actions {
   display: flex;
   justify-content: flex-end;
