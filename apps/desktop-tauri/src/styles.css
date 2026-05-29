@@ -2764,6 +2764,21 @@ body.is-developer-mode .onion-advanced-controls {
   width: 100%;
 }
 
+.system-settings-panel[open] > .status-summary,
+.system-settings-panel[open] > .boundary-details,
+.system-settings-panel[open] > .production-workflow {
+  display: none;
+}
+
+body.is-developer-mode .system-settings-panel[open] > .status-summary {
+  display: grid;
+}
+
+body.is-developer-mode .system-settings-panel[open] > .boundary-details,
+body.is-developer-mode .system-settings-panel[open] > .production-workflow {
+  display: block;
+}
+
 body.is-developer-mode .chat-diagnostics.is-revealed,
 body.is-developer-mode .dev-diagnostic-panel.is-revealed,
 body.is-developer-mode .advanced-panel.is-revealed {
