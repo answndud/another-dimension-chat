@@ -703,12 +703,16 @@ textarea[readonly] {
 
 .chat-settings-panel {
   order: 7;
-  display: grid;
+  display: none;
   gap: 10px;
 }
 
 .settings-toggle {
   order: 1;
+  position: fixed;
+  z-index: 25;
+  top: 86px;
+  right: max(24px, calc((100vw - 1180px) / 2));
   width: fit-content;
   min-height: 34px;
   border-color: var(--panel-border);
@@ -719,8 +723,35 @@ textarea[readonly] {
 }
 
 .chat-settings-panel[open] {
-  border-top: 1px solid var(--panel-border);
-  padding-top: 10px;
+  position: fixed;
+  z-index: 24;
+  top: 128px;
+  right: max(24px, calc((100vw - 1180px) / 2));
+  display: grid;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(680px, calc(100vh - 112px));
+  overflow-y: auto;
+  border: 1px solid var(--panel-border);
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel) 97%, transparent);
+  box-shadow: 0 22px 54px rgb(0 0 0 / 34%);
+}
+
+.chat-settings-panel > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 30px;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 74%, transparent);
+  padding: 6px 9px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.chat-settings-panel > summary::after {
+  color: var(--text-muted);
+  font-size: 13px;
+  content: "x";
 }
 
 .chat-room-controls {
@@ -1195,14 +1226,11 @@ body.is-chat-active .followup-actions {
   display: none;
 }
 
-body.is-chat-active .chat-settings-panel {
-  position: fixed;
-  z-index: 19;
+body.is-chat-active .chat-settings-panel[open] {
   top: 52px;
   right: 14px;
-  display: grid;
-  justify-items: end;
-  max-width: min(440px, calc(100vw - 28px));
+  width: min(440px, calc(100vw - 28px));
+  max-height: calc(100vh - 68px);
 }
 
 body.is-chat-active .settings-toggle {
@@ -1232,25 +1260,11 @@ body.is-chat-active .settings-toggle:focus-visible {
 }
 
 body.is-chat-active .chat-settings-panel > summary {
-  display: none;
-}
-
-body:not(.is-chat-active) .chat-settings-panel > summary {
-  display: none;
-}
-
-body.is-chat-active .chat-settings-panel > summary {
-  min-height: 30px;
-  padding: 6px 9px;
   opacity: 0.62;
-  font-size: 11px;
 }
 
 body.is-chat-active .chat-settings-panel[open] {
-  border: 1px solid var(--panel-border);
-  padding: 10px;
   background: color-mix(in srgb, var(--panel) 96%, transparent);
-  box-shadow: 0 20px 44px rgb(0 0 0 / 28%);
 }
 
 body.is-chat-active .chat-settings-panel[open] .chat-room-controls,
