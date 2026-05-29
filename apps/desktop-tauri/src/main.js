@@ -988,8 +988,6 @@ function setProductionMessageManualCurrent(target) {
 
 function revealManualProductionTools() {
   document.body.classList.add("is-developer-mode");
-  document.querySelector(".chat-diagnostics")?.classList.add("is-revealed");
-  document.querySelector("#local-diagnostic-tools")?.classList.add("is-revealed");
   if (fields.manualProductionTools) {
     fields.manualProductionTools.classList.add("is-revealed");
     fields.manualProductionTools.open = true;
@@ -3457,6 +3455,7 @@ function focusAfterProductionBusyAction(target) {
 }
 
 function focusLocalDiagnostic() {
+  document.body.classList.add("is-developer-mode");
   if (fields.localDiagnosticTools) {
     fields.localDiagnosticTools.classList.add("is-revealed");
     fields.localDiagnosticTools.open = true;
