@@ -2968,10 +2968,11 @@ body.has-ready-session .connection-pending-state {
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state {
   order: 4;
   display: grid;
-  gap: 12px;
-  width: min(520px, 100%);
+  gap: 10px;
+  justify-self: center;
+  width: min(390px, 100%);
   border: 1px solid color-mix(in srgb, var(--warning) 40%, var(--panel-border));
-  padding: 16px;
+  padding: 18px;
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--warning) 10%, transparent), transparent 72%),
     color-mix(in srgb, var(--panel-strong) 76%, var(--bg));
@@ -2984,11 +2985,12 @@ body.has-ready-session.needs-safety-confirmation .safety-confirm-state p {
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state h4 {
   color: var(--text-primary);
-  font-size: 16px;
+  font-size: 19px;
   line-height: 1.25;
 }
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state p:not(.eyebrow) {
+  max-width: 30ch;
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.45;
@@ -2998,24 +3000,26 @@ body.has-ready-session.needs-safety-confirmation .safety-confirm-state .safety-p
   width: 100%;
   max-width: 100%;
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 24%, var(--panel-border));
-  padding: 10px 12px;
+  padding: 12px;
   color: var(--text-primary);
   background: color-mix(in srgb, var(--bg) 76%, var(--panel));
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state .safety-lock-note {
-  color: var(--warning);
+  display: none;
 }
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state button {
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   border-color: var(--accent-cyan);
   background: color-mix(in srgb, var(--accent-cyan) 14%, var(--button-bg));
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 13.5px;
 }
 
 body.has-ready-session.needs-safety-confirmation #production-two-profile-message,
