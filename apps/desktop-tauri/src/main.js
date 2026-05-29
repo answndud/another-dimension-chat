@@ -485,6 +485,26 @@ function localizedReceiveFailureMessage(message) {
   return exact[normalized] ? t(exact[normalized]) : localizedChatStatus(normalized);
 }
 
+function localizedSendFailureMessage(error) {
+  const text = String(error ?? "").toLowerCase();
+  if (text.includes("timeout")) {
+    return t("sendTimeout");
+  }
+  if (text.includes("stale") || text.includes("refresh") || text.includes("endpoint")) {
+    return t("staleEndpoint");
+  }
+  if (text.includes("persistentclientnotready") || text.includes("bootstrap")) {
+    return t("torBootstrap");
+  }
+  if (text.includes("manualnetworkpermission") || text.includes("permission")) {
+    return t("permissionOff");
+  }
+  if (text.includes("offline") || text.includes("peer")) {
+    return t("peerOffline");
+  }
+  return t("sendFailedGeneric");
+}
+
 function localizedRetentionLabel(entry) {
   const retentionView = transcriptRetentionView(entry);
   if (retentionView.state === "is-expired") {
@@ -6858,7 +6878,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
   } catch (error) {
     setProductionTwoProfileState("Onion envelope send failed");
-    setText(fields.productionTwoProfileWarning, `Onion envelope send failed without returning secrets. ${error}`);
+    setText(fields.productionTwoProfileWarning, localizedSendFailureMessage(error));
     setText(fields.productionTwoProfileBoundary, "Failed before or during bounded onion send attempt.");
   } finally {
     productionBusyAction = null;
@@ -6873,9 +6893,11 @@ async function retryTwoProfileOutboundEntry(entry) {
   const input = productionTwoProfileInput();
   if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
     setProductionTwoProfileState("Retry send needs direction");
-    setText(fields.productionTwoProfileWarning, "Select the sender -> receiver direction for this pending message before retry send.");
+    setText(fields.productionTwoProfileWarning, t("sendRetryWrongDirection"));
     return;
   }
+  setProductionTwoProfileState("Retry send running");
+  setText(fields.productionTwoProfileWarning, t("sendRetrying"));
   latestProductionTwoProfileSuccess = {
     profileA: entry.sender,
     profileB: entry.receiver,
@@ -6891,7 +6913,7 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
   const input = productionTwoProfileInput();
   if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
     setProductionTwoProfileState("Endpoint refresh needs direction");
-    setText(fields.productionTwoProfileWarning, "Select the sender -> receiver direction for this pending message before refreshing the endpoint.");
+    setText(fields.productionTwoProfileWarning, t("sendRefreshWrongDirection"));
     return;
   }
   await refreshProductionTwoProfilePeerEndpoints();
@@ -6902,7 +6924,7 @@ async function cancelTwoProfileOutboundEntry(entry) {
   const input = productionTwoProfileInput();
   if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
     setProductionTwoProfileState("Cancel send needs direction");
-    setText(fields.productionTwoProfileWarning, "Select the sender -> receiver direction for this pending message before cancel.");
+    setText(fields.productionTwoProfileWarning, t("sendCancelWrongDirection"));
     return;
   }
   productionBusyAction = "two-profile-outbound-cancel";
@@ -6914,10 +6936,7 @@ async function cancelTwoProfileOutboundEntry(entry) {
       messageNumber: Number.parseInt(entry.messageNumber, 10),
     });
     setProductionTwoProfileState("Pending send canceled");
-    setText(
-      fields.productionTwoProfileWarning,
-      `Canceled pending send for message #${entry.messageNumber}. Transcript and session state remain stored.`,
-    );
+    setText(fields.productionTwoProfileWarning, t("sendCanceledNotice"));
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
   } catch (error) {
     setProductionTwoProfileState("Cancel send failed");
