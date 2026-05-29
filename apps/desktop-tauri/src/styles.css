@@ -917,14 +917,41 @@ textarea[readonly] {
 
 .onion-advanced-controls summary {
   min-height: 30px;
+  border-color: color-mix(in srgb, var(--panel-border) 58%, transparent);
   padding: 6px 9px;
-  opacity: 0.72;
-  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.62;
+  font-size: 10px;
 }
 
 .onion-advanced-controls[open] {
   border-top: 1px solid var(--panel-border);
   padding-top: 10px;
+}
+
+.onion-advanced-controls[open] summary {
+  opacity: 0.86;
+}
+
+.advanced-network-note {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.onion-advanced-controls .loop-actions {
+  gap: 5px;
+}
+
+.onion-advanced-controls .loop-actions button {
+  min-width: 0;
+  min-height: 28px;
+  border-color: color-mix(in srgb, var(--panel-border) 62%, transparent);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 10px;
 }
 
 .chat-primary-actions {
