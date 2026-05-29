@@ -873,6 +873,40 @@ function openChatSettingsPanel(focusTarget = fields.productionTwoProfileA) {
   focusTarget?.focus();
 }
 
+function updateConnectionWizard(input = productionTwoProfileInput()) {
+  const steps = [...document.querySelectorAll(".connection-wizard-step[data-wizard-step]")];
+  if (steps.length === 0) {
+    return;
+  }
+  const activeStep = !input.profileA
+    ? "profile"
+    : !input.profileB || input.profileA === input.profileB
+      ? "peer"
+      : !input.passphrase
+        ? "passphrase"
+        : "retention";
+  const completeSteps = new Set();
+  if (input.profileA) {
+    completeSteps.add("profile");
+  }
+  if (input.profileA && input.profileB && input.profileA !== input.profileB) {
+    completeSteps.add("peer");
+  }
+  if (input.passphrase) {
+    completeSteps.add("passphrase");
+  }
+  if (input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase && input.messageTtlSeconds) {
+    completeSteps.add("retention");
+  }
+  steps.forEach((step) => {
+    const name = step.dataset.wizardStep;
+    const current = name === activeStep;
+    step.classList.toggle("is-current", current);
+    step.classList.toggle("is-complete", !current && completeSteps.has(name));
+    step.classList.toggle("is-locked", !current && !completeSteps.has(name));
+  });
+}
+
 function messageRetentionPolicyReady() {
   return (
     productionMessageRetentionPolicy.status === "loaded" &&
@@ -3762,6 +3796,7 @@ function applyProductionActionState() {
   setTwoProfileComposeLocked(twoProfileComposeLocked);
   renderProductionTwoProfileDirection(twoProfile);
   renderProductionTwoProfileFlow(twoProfile);
+  updateConnectionWizard(twoProfile);
   renderRoomIdentityBar(twoProfile, twoProfileSessionsReady);
   updateMinimalChatMode(twoProfile, twoProfileSessionsReady);
   const twoProfileReadiness = twoProfilePrimaryReadiness(
