@@ -290,6 +290,7 @@ const fields = {
   chatPrimaryActions: document.querySelector(".chat-primary-actions"),
   twoProfileSafetyPhrase: document.querySelector("#two-profile-safety-phrase"),
   confirmTwoProfileSafety: document.querySelector("#confirm-two-profile-safety"),
+  roomStatusSummary: document.querySelector("#room-status-summary"),
   roomIdentityRoute: document.querySelector("#room-identity-route"),
   roomIdentityPair: document.querySelector("#room-identity-pair"),
   roomIdentityVerify: document.querySelector("#room-identity-verify"),
@@ -735,6 +736,7 @@ function applyLanguage(language) {
   applyTheme(document.documentElement.dataset.theme);
   renderProductionTwoProfileConversationList();
   renderRoomIdentityBar(productionTwoProfileInput(), twoProfileSessionsReadyForInput(productionTwoProfileInput()));
+  renderRoomStatusSummary(productionTwoProfileInput(), twoProfileSessionsReadyForInput(productionTwoProfileInput()));
   renderPrototypeStatus();
   renderMessageTtlControlOptions();
   renderProductionTwoProfileFlow(productionTwoProfileInput());
@@ -1060,6 +1062,22 @@ function renderRoomIdentityBar(input, sessionsReady) {
   setText(fields.roomIdentityPair, pairState);
   setText(fields.roomIdentityVerify, verifyState);
   setText(fields.roomIdentityTransport, transportState);
+}
+
+function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
+  const hasConnectionCode = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB);
+  const safetyConfirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
+  const pendingConversation = latestTwoProfilePendingConversationEntry();
+  const key = pendingConversation
+    ? "roomStatusPending"
+    : !hasConnectionCode
+      ? "roomStatusNoConnection"
+      : !sessionsReady
+        ? "roomStatusCodeReady"
+        : !safetyConfirmed
+          ? "roomStatusVerify"
+          : "roomStatusReady";
+  setText(fields.roomStatusSummary, t(key));
 }
 
 function renderTwoProfileSafetyConfirm(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
@@ -3928,6 +3946,7 @@ function applyProductionActionState() {
   renderProductionTwoProfileFlow(twoProfile);
   updateConnectionWizard(twoProfile);
   renderRoomIdentityBar(twoProfile, twoProfileSessionsReady);
+  renderRoomStatusSummary(twoProfile, twoProfileSessionsReady);
   renderTwoProfileSafetyConfirm(twoProfile, twoProfileSessionsReady);
   updateMinimalChatMode(twoProfile, twoProfileSessionsReady);
   const twoProfileReadiness = twoProfilePrimaryReadiness(
@@ -4134,6 +4153,10 @@ function applyProductionActionState() {
         : "Enter your profile, peer connection, passphrase, and message first.",
     twoProfileCurrentAction === "full-setup",
   );
+  setText(
+    fields.runProductionTwoProfileRoundtripInline,
+    twoProfileNeedsSessionCheck ? t("roomActionResume") : t("roomActionCreate"),
+  );
   setActionButtonState(
     fields.runProductionTwoProfileMessageRoundtrip,
     !availability.runTwoProfileMessageRoundtrip || (twoProfileSessionsReady && !twoProfileSafetyConfirmed),
@@ -4153,6 +4176,7 @@ function applyProductionActionState() {
     manualPrimaryActions.sendReply ||
       (!state.hasTwoProfileReplySelected && twoProfileCurrentAction === "stored-message"),
   );
+  setText(fields.runProductionTwoProfileMessageRoundtrip, t("roomActionSend"));
   setActionButtonState(
     fields.startProductionTwoProfileOnionBootstrap,
     busy || !manualNetworkPermission,
