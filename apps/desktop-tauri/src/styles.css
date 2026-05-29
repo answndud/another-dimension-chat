@@ -1490,10 +1490,11 @@ body.is-chat-active .message-transcript .transcript-details {
 body.is-chat-active .message-transcript .transcript-status {
   position: static;
   justify-self: end;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  opacity: 0.72;
+  border: 1px solid color-mix(in srgb, var(--warning) 34%, transparent);
+  border-radius: 999px;
+  padding: 1px 5px;
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+  opacity: 0.86;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0;
@@ -1507,11 +1508,17 @@ body.is-chat-active .message-transcript .transcript-status.is-inbound-only {
 
 body.is-chat-active .message-transcript li.is-pending-send .transcript-status {
   color: var(--warning);
-  opacity: 0.88;
+}
+
+body.is-chat-active .message-transcript li.is-pending-receive .transcript-status {
+  color: var(--warning);
 }
 
 body.is-chat-active .message-transcript li.is-canceled .transcript-status {
+  border-color: color-mix(in srgb, var(--text-muted) 24%, transparent);
+  background: transparent;
   color: var(--text-muted);
+  opacity: 0.62;
 }
 
 body.is-chat-active .message-transcript .transcript-body {
