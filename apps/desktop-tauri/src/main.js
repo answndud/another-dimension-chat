@@ -266,6 +266,8 @@ const fields = {
   productionTwoProfileA: document.querySelector("#production-two-profile-a"),
   productionTwoProfileB: document.querySelector("#production-two-profile-b"),
   toggleChatSettings: document.querySelector("#toggle-chat-settings"),
+  startPeerConnection: document.querySelector("#start-peer-connection"),
+  enterPeerCode: document.querySelector("#enter-peer-code"),
   productionTwoProfileDirection: document.querySelector("#production-two-profile-direction"),
   productionTwoProfileStepSession: document.querySelector("#production-two-profile-step-session"),
   productionTwoProfileStepSessionDetail: document.querySelector(
@@ -857,6 +859,18 @@ function setActionButtonState(node, disabled, reason, current = false) {
   node.disabled = disabled;
   node.title = disabled ? reason : "";
   node.classList.toggle("is-current-action", !disabled && current);
+}
+
+function openChatSettingsPanel(focusTarget = fields.productionTwoProfileA) {
+  const panel = document.querySelector(".chat-settings-panel");
+  if (panel) {
+    panel.open = true;
+  }
+  const setupPanel = document.querySelector(".chat-setup-controls");
+  if (setupPanel) {
+    setupPanel.open = false;
+  }
+  focusTarget?.focus();
 }
 
 function messageRetentionPolicyReady() {
@@ -8561,6 +8575,18 @@ if (fields.toggleChatSettings) {
     if (panel) {
       panel.open = !panel.open;
     }
+  });
+}
+
+if (fields.startPeerConnection) {
+  fields.startPeerConnection.addEventListener("click", () => {
+    openChatSettingsPanel(fields.productionTwoProfileA?.value ? fields.productionTwoProfileB : fields.productionTwoProfileA);
+  });
+}
+
+if (fields.enterPeerCode) {
+  fields.enterPeerCode.addEventListener("click", () => {
+    openChatSettingsPanel(fields.productionTwoProfileB);
   });
 }
 

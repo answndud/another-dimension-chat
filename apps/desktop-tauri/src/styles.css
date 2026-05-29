@@ -594,20 +594,23 @@ textarea[readonly] {
 
 .room-identity-bar {
   order: 0;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1px;
-  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 8px 0 0;
   border: 1px solid var(--panel-border);
-  background: var(--panel-border);
+  padding: 8px;
+  background: color-mix(in srgb, var(--panel-strong) 82%, var(--bg));
 }
 
 .room-identity-bar div {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
   min-width: 0;
-  padding: 6px 8px;
-  background: color-mix(in srgb, var(--panel-strong) 86%, var(--bg));
+  padding: 0;
+  background: transparent;
 }
 
 .room-identity-bar dt,
@@ -633,7 +636,7 @@ textarea[readonly] {
 
 .connection-guide {
   order: 0;
-  display: grid;
+  display: none;
   gap: 8px;
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 22%, var(--panel-border));
   padding: 8px;
@@ -699,7 +702,7 @@ textarea[readonly] {
 }
 
 .chat-settings-panel {
-  order: 1;
+  order: 7;
   display: grid;
   gap: 10px;
 }
@@ -763,26 +766,26 @@ textarea[readonly] {
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > .chat-transcript-toolbar {
-  order: 2;
+  order: 3;
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > .loop-label:not([for]) + .loop-actions {
-  order: 2;
+  order: 3;
   justify-content: flex-end;
   max-width: 100%;
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-transcript {
-  order: 3;
-  min-height: clamp(100px, 15vh, 200px);
+  order: 4;
+  min-height: clamp(220px, 36vh, 520px);
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-message"] {
-  order: 4;
+  order: 5;
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-message {
-  order: 5;
+  order: 6;
   height: 70px;
   min-height: 64px;
   font-family: inherit;
@@ -790,11 +793,11 @@ textarea[readonly] {
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-message + .loop-actions {
-  order: 6;
+  order: 7;
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > .chat-compose-tools {
-  order: 6;
+  order: 7;
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > .chat-setup-controls {
@@ -872,6 +875,48 @@ textarea[readonly] {
   margin-left: auto;
 }
 
+.chat-empty-state {
+  order: 2;
+  display: grid;
+  gap: 8px;
+  max-width: 720px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 34%, var(--panel-border));
+  padding: 14px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-cyan) 8%, transparent), transparent 70%),
+    color-mix(in srgb, var(--panel-strong) 76%, var(--bg));
+}
+
+.chat-empty-state h4,
+.chat-empty-state p {
+  margin: 0;
+}
+
+.chat-empty-state h4 {
+  color: var(--text-primary);
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.chat-empty-state p:not(.eyebrow) {
+  max-width: 62ch;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.chat-empty-state .retention-note {
+  color: var(--text-muted);
+}
+
+.chat-empty-state .loop-actions {
+  justify-content: flex-start;
+}
+
+.chat-empty-state button {
+  min-width: 140px;
+}
+
 .chat-primary-actions #production-two-profile-readiness {
   margin-left: auto;
 }
@@ -908,7 +953,7 @@ textarea[readonly] {
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > .chat-settings-panel {
-  order: 1;
+  order: 7;
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > .chat-message-label {
@@ -1109,6 +1154,7 @@ body.is-chat-active .room-identity-bar div:nth-child(4) {
 
 body.is-chat-active .chat-setup-controls,
 body.is-chat-active .chat-diagnostics,
+body.is-chat-active .chat-empty-state,
 body.is-chat-active #production-two-profile-flow,
 body.is-chat-active #production-two-profile-state,
 body.is-chat-active .connection-guide,
