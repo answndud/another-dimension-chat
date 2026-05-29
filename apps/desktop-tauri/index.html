@@ -323,12 +323,12 @@
           <section class="production-workflow" aria-labelledby="production-two-profile-title">
             <div>
               <p class="eyebrow" data-i18n="darkroomChat">Darkroom chat</p>
-              <h3 id="production-two-profile-title" data-i18n="chatRoomTitle">Alice / Bob room</h3>
+              <h3 id="production-two-profile-title" data-i18n="chatRoomTitle">Private room</h3>
             </div>
             <dl class="room-identity-bar" aria-label="Room identity">
               <div>
                 <dt data-i18n="route">Route</dt>
-                <dd id="room-identity-route">alice -> bob</dd>
+                <dd id="room-identity-route">not set</dd>
               </div>
               <div>
                 <dt data-i18n="pair">Pair</dt>
@@ -352,20 +352,20 @@
               </div>
               <ol>
                 <li>
-                  <strong data-i18n="connectionGuideProfile">1. Pick two profiles</strong>
-                  <span data-i18n="connectionGuideProfileText">Keep Alice/Bob for a local test, or type two new names.</span>
+                  <strong data-i18n="connectionGuideProfile">1. Create or unlock your profile</strong>
+                  <span data-i18n="connectionGuideProfileText">Use the profile name that belongs to this device.</span>
                 </li>
                 <li>
-                  <strong data-i18n="connectionGuidePassphrase">2. Enter one passphrase</strong>
-                  <span data-i18n="connectionGuidePassphraseText">Use the same passphrase when you reopen this room.</span>
+                  <strong data-i18n="connectionGuidePassphrase">2. Add the peer connection</strong>
+                  <span data-i18n="connectionGuidePassphraseText">Use the peer name from their invite or QR exchange.</span>
                 </li>
                 <li>
-                  <strong data-i18n="connectionGuideSetup">3. Create connection</strong>
-                  <span data-i18n="connectionGuideSetupText">Click Create connection once to pair, verify, and save the local session.</span>
+                  <strong data-i18n="connectionGuideSetup">3. Confirm passphrase</strong>
+                  <span data-i18n="connectionGuideSetupText">Enter the local passphrase, then create the saved connection.</span>
                 </li>
                 <li>
                   <strong data-i18n="connectionGuideChat">4. Send and continue</strong>
-                  <span data-i18n="connectionGuideChatText">After that, write a message and Send. Reopen with the same details, then Sync.</span>
+                  <span data-i18n="connectionGuideChatText">After that, write a message and send. Reopen this profile to continue.</span>
                 </li>
               </ol>
             </section>
@@ -375,10 +375,10 @@
             <details class="chat-settings-panel" open>
               <summary data-i18n="roomSettings">Room settings</summary>
             <div class="chat-room-controls" aria-label="Room controls">
-              <label class="loop-label" for="production-two-profile-a" data-i18n="profileA">Profile A</label>
-              <input id="production-two-profile-a" type="text" value="alice" autocomplete="username" />
-              <label class="loop-label" for="production-two-profile-b" data-i18n="profileB">Profile B</label>
-              <input id="production-two-profile-b" type="text" value="bob" autocomplete="username" />
+              <label class="loop-label" for="production-two-profile-a" data-i18n="profileA">My profile</label>
+              <input id="production-two-profile-a" type="text" autocomplete="username" />
+              <label class="loop-label" for="production-two-profile-b" data-i18n="profileB">Peer connection</label>
+              <input id="production-two-profile-b" type="text" autocomplete="off" />
               <label class="loop-label" for="production-two-profile-passphrase" data-i18n="passphrase">Passphrase</label>
               <input
                 id="production-two-profile-passphrase"
@@ -390,13 +390,13 @@
                 <option value="" data-i18n="loadingRetentionPolicy">Loading retention policy</option>
               </select>
               <p id="production-two-profile-direction" class="demo-state" aria-live="polite">
-                Direction: alice -> bob
+                Direction: enter your profile and peer connection
               </p>
             </div>
-            <ol id="production-two-profile-flow" class="demo-steps compact-flow" aria-label="Two-profile guided flow">
+            <ol id="production-two-profile-flow" class="demo-steps compact-flow" aria-label="Connection guided flow">
               <li id="production-two-profile-step-session" class="is-running">
                 <strong data-i18n="sessionStep">1 Session</strong>
-                <span id="production-two-profile-step-session-detail">Enter passphrase, then run full setup or check sessions.</span>
+                <span id="production-two-profile-step-session-detail">Enter your profile, peer connection, and passphrase.</span>
               </li>
               <li id="production-two-profile-step-compose" class="is-pending">
                 <strong data-i18n="composeStep">2 Compose</strong>
@@ -414,7 +414,7 @@
             <details class="chat-setup-controls" open>
               <summary data-i18n="localSetup">Local setup</summary>
               <div class="loop-actions setup-primary-actions">
-                <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Run two-profile setup</button>
+                <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Create saved connection</button>
               </div>
               <details class="onion-advanced-controls">
                 <summary data-i18n="advancedOnionSetup">Advanced onion setup</summary>
@@ -454,12 +454,12 @@
             </details>
             </details>
             <p id="production-two-profile-state" class="demo-state" aria-live="polite">
-              Two-profile roundtrip idle
+              Waiting for connection
             </p>
             <details class="chat-diagnostics">
               <summary data-i18n="roomStatus">Room status</summary>
               <p id="production-two-profile-warning" class="demo-warning">
-                Two-profile app-data harness has not run yet.
+                No saved connection has run yet.
               </p>
               <dl class="flow-summary">
                 <div>
@@ -499,10 +499,10 @@
               </div>
             </div>
             <ol id="production-two-profile-transcript" class="message-transcript" aria-live="polite">
-              <li class="is-empty" data-i18n="emptyConversation">No two-profile messages yet.</li>
+              <li class="is-empty" data-i18n="emptyConversation">No messages yet.</li>
             </ol>
             <label class="loop-label chat-message-label" for="production-two-profile-message" data-i18n="writeMessage">Write message</label>
-            <textarea id="production-two-profile-message" rows="3" placeholder="Message from alice to bob"></textarea>
+            <textarea id="production-two-profile-message" rows="3" placeholder="Write a message"></textarea>
             <div class="loop-actions chat-primary-actions">
               <button id="run-production-two-profile-roundtrip-inline" type="button" data-i18n="createConnection">
                 Create connection
