@@ -828,6 +828,11 @@ textarea[readonly] {
   font-size: 14px;
 }
 
+#copy-invite-code {
+  width: fit-content;
+  min-width: 112px;
+}
+
 .chat-room-controls #production-two-profile-direction {
   margin: 0;
   border-top: 1px solid var(--panel-border);

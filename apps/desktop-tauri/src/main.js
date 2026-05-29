@@ -269,6 +269,7 @@ const fields = {
   openDeveloperTools: document.querySelector("#open-developer-tools"),
   createInviteCode: document.querySelector("#create-invite-code"),
   startPeerConnection: document.querySelector("#start-peer-connection"),
+  copyInviteCode: document.querySelector("#copy-invite-code"),
   productionTwoProfileDirection: document.querySelector("#production-two-profile-direction"),
   productionTwoProfileStepSession: document.querySelector("#production-two-profile-step-session"),
   productionTwoProfileStepSessionDetail: document.querySelector(
@@ -1200,7 +1201,31 @@ function generateInviteCode() {
   return chars.join("").replace(/(.{4})(?=.)/g, "$1-").toLowerCase();
 }
 
-function createInviteCode() {
+async function copyCurrentInviteCode(options = {}) {
+  const code = (fields.productionTwoProfileB?.value ?? "").trim();
+  if (!code) {
+    setProductionTwoProfileState("Invite code missing");
+    setText(fields.productionTwoProfileWarning, t("inviteCodeMissing"));
+    openChatSettingsPanel(fields.productionTwoProfileB);
+    return false;
+  }
+  try {
+    await navigator.clipboard.writeText(code);
+    setProductionTwoProfileState("Invite code copied");
+    setText(fields.productionTwoProfileWarning, t("inviteCodeCopied"));
+    return true;
+  } catch {
+    fields.productionTwoProfileB?.select?.();
+    setProductionTwoProfileState("Invite code selected");
+    setText(
+      fields.productionTwoProfileWarning,
+      options.quiet ? t("inviteCodeCreatedHint") : t("inviteCodeCopyFallback"),
+    );
+    return false;
+  }
+}
+
+async function createInviteCode() {
   let code;
   try {
     code = generateInviteCode();
@@ -1219,6 +1244,7 @@ function createInviteCode() {
   fields.productionTwoProfileB?.select?.();
   setProductionTwoProfileState("Invite code created");
   setText(fields.productionTwoProfileWarning, t("inviteCodeCreatedHint"));
+  await copyCurrentInviteCode({ quiet: true });
 }
 
 function syncTwoProfileDerivedConnectionFields() {
@@ -8825,6 +8851,12 @@ if (fields.startPeerConnection) {
 
 if (fields.createInviteCode) {
   fields.createInviteCode.addEventListener("click", createInviteCode);
+}
+
+if (fields.copyInviteCode) {
+  fields.copyInviteCode.addEventListener("click", () => {
+    copyCurrentInviteCode();
+  });
 }
 
 if (fields.checkOnionPreflight) {
