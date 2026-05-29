@@ -1124,16 +1124,36 @@ function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsRe
   const hasConnectionCode = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB);
   const safetyConfirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
   const pendingConversation = latestTwoProfilePendingConversationEntry();
-  const key = pendingConversation
-    ? "roomStatusPending"
+  const receiving = productionTwoProfileOnionReceiveMode.enabled;
+  const state = pendingConversation
+    ? "pending"
     : !hasConnectionCode
-      ? "roomStatusNoConnection"
+      ? "disconnected"
       : !sessionsReady
-        ? "roomStatusCodeReady"
+        ? "code-ready"
         : !safetyConfirmed
-          ? "roomStatusVerify"
-          : "roomStatusReady";
-  setText(fields.roomStatusSummary, t(key));
+          ? "verify"
+          : "ready";
+  const keyByState = {
+    pending: "roomStatusShortPending",
+    disconnected: "roomStatusShortNoConnection",
+    "code-ready": "roomStatusShortCodeReady",
+    verify: "roomStatusShortVerify",
+    ready: "roomStatusShortReady",
+  };
+  const label = t(keyByState[state]);
+  const receiveLabel = receiving ? ` · ${t("roomStatusShortReceiving")}` : "";
+  setText(fields.roomStatusSummary, `${label}${receiveLabel}`);
+  fields.roomStatusSummary?.classList.remove(
+    "is-disconnected",
+    "is-code-ready",
+    "is-verify",
+    "is-ready",
+    "is-pending",
+    "is-receiving",
+  );
+  fields.roomStatusSummary?.classList.add(`is-${state}`);
+  fields.roomStatusSummary?.classList.toggle("is-receiving", receiving);
 }
 
 function renderTwoProfileSafetyConfirm(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
