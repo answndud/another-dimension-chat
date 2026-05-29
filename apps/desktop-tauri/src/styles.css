@@ -1372,7 +1372,7 @@ body.is-chat-active .message-transcript li {
 body.is-chat-active .message-transcript li.is-pending-send,
 body.is-chat-active .message-transcript li.is-pending-receive,
 body.is-chat-active .message-transcript li.is-canceled {
-  padding-right: 46px;
+  padding-right: 10px;
 }
 
 body.is-chat-active .message-transcript li.is-delivered,
@@ -1397,16 +1397,16 @@ body.is-chat-active .message-transcript .transcript-details {
 }
 
 body.is-chat-active .message-transcript .transcript-status {
-  position: absolute;
-  top: 6px;
-  right: 7px;
+  position: static;
+  justify-self: end;
   border: 0;
   padding: 0;
   background: transparent;
-  opacity: 0.68;
-  font-size: 8px;
+  opacity: 0.72;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0;
+  text-transform: lowercase;
 }
 
 body.is-chat-active .message-transcript .transcript-status.is-delivered,
@@ -1423,8 +1423,11 @@ body.is-chat-active .message-transcript .transcript-row-actions {
   display: flex;
   justify-content: flex-end;
   gap: 4px;
-  margin-top: 2px;
-  opacity: 0.56;
+  align-items: center;
+  margin-top: -1px;
+  padding-top: 2px;
+  border-top: 1px solid color-mix(in srgb, var(--panel-border) 22%, transparent);
+  opacity: 0.68;
   transition: opacity 120ms ease;
 }
 
@@ -1434,11 +1437,13 @@ body.is-chat-active .message-transcript li:focus-within .transcript-row-actions 
 }
 
 body.is-chat-active .message-transcript .transcript-row-actions button {
-  min-height: 22px;
-  border-color: color-mix(in srgb, var(--panel-border) 50%, transparent);
-  padding: 2px 6px;
-  background: color-mix(in srgb, var(--panel) 48%, transparent);
-  font-size: 9px;
+  min-height: 20px;
+  border-color: transparent;
+  padding: 1px 0 1px 8px;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 650;
+  text-transform: lowercase;
 }
 
 body.is-chat-active .message-transcript .transcript-row-actions .transcript-retry {
