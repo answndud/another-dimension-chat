@@ -113,6 +113,9 @@ pub struct ProductionTwoProfileRoundtripResult {
     receiver_profile: String,
     message_number: u64,
     message_ttl_seconds: u64,
+    safety_number: String,
+    safety_phrase: String,
+    safety_confirmed: bool,
     profile_a_unlocked: bool,
     profile_b_unlocked: bool,
     pairing_payloads_exported: bool,
@@ -8510,6 +8513,10 @@ fn run_production_two_profile_roundtrip(
         passphrase.clone(),
         format!("{profile_b_name}.onion"),
     )?;
+    let safety = run_production_pairing_safety_preview(
+        profile_a_payload.pairing_payload.clone(),
+        profile_b_payload.pairing_payload.clone(),
+    )?;
     let profile_a_draft = run_production_pairing_session_draft_save(
         &app_data_root,
         profile_a_name.clone(),
@@ -8623,6 +8630,9 @@ fn run_production_two_profile_roundtrip(
         receiver_profile: receiver_profile_result,
         message_number,
         message_ttl_seconds,
+        safety_number: safety.safety_number,
+        safety_phrase: safety.safety_phrase,
+        safety_confirmed: false,
         profile_a_unlocked: profile_a_unlock.storage_opened
             && profile_a_unlock.profile_marker_present
             && profile_a_unlock.identity_private_key_present,

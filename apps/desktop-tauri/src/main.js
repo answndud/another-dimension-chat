@@ -288,6 +288,8 @@ const fields = {
   productionTwoProfileMessageTtl: document.querySelector("#production-two-profile-message-ttl"),
   productionTwoProfileMessage: document.querySelector("#production-two-profile-message"),
   chatPrimaryActions: document.querySelector(".chat-primary-actions"),
+  twoProfileSafetyPhrase: document.querySelector("#two-profile-safety-phrase"),
+  confirmTwoProfileSafety: document.querySelector("#confirm-two-profile-safety"),
   roomIdentityRoute: document.querySelector("#room-identity-route"),
   roomIdentityPair: document.querySelector("#room-identity-pair"),
   roomIdentityVerify: document.querySelector("#room-identity-verify"),
@@ -381,6 +383,7 @@ const fields = {
 let latestSimulation = null;
 let latestProductionSessionState = null;
 let latestProductionTwoProfileSessionStatus = null;
+let latestProductionTwoProfileSafety = null;
 let latestProductionTwoProfileSuccess = null;
 let latestProductionTwoProfileOnionEndpoints = null;
 let productionTwoProfileOnionReceiveMode = {
@@ -1038,12 +1041,13 @@ function renderRoomIdentityBar(input, sessionsReady) {
   const route = input.profileA && input.profileB ? `${input.profileA} -> ${input.profileB}` : t("profilesMissing");
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   const activeEndpointState = twoProfilePeerEndpointState(input);
+  const safetyConfirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
   const pairState = sessionsReady
     ? t("storedSession")
     : sessionStatus
       ? t("incomplete")
       : t("notChecked");
-  const verifyState = sessionsReady ? t("safetyConfirmed") : t("pending");
+  const verifyState = safetyConfirmed ? t("phraseConfirmed") : sessionsReady ? t("phraseNotConfirmed") : t("pending");
   const transportState = activeEndpointState.ready
     ? fields.manualOnionNetworkPermission?.checked
       ? t("endpointReady")
@@ -1056,6 +1060,16 @@ function renderRoomIdentityBar(input, sessionsReady) {
   setText(fields.roomIdentityPair, pairState);
   setText(fields.roomIdentityVerify, verifyState);
   setText(fields.roomIdentityTransport, transportState);
+}
+
+function renderTwoProfileSafetyConfirm(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
+  const safety = twoProfileSafetyForInput(input);
+  const confirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
+  document.body.classList.toggle("has-confirmed-safety", confirmed);
+  document.body.classList.toggle("needs-safety-confirmation", sessionsReady && !confirmed);
+  const phrase = safety?.safetyPhrase || safety?.safetyNumber || "";
+  setText(fields.twoProfileSafetyPhrase, phrase || t("verificationPhraseUnavailable"));
+  setDisabled(fields.confirmTwoProfileSafety, !sessionsReady || confirmed);
 }
 
 function renderAppStateSummary(status) {
@@ -1206,6 +1220,78 @@ function latestTwoProfileSessionStatusForCurrentInput(input = productionTwoProfi
   return latestProductionTwoProfileSessionStatus.fingerprint === currentFingerprint
     ? latestProductionTwoProfileSessionStatus.result
     : null;
+}
+
+function twoProfileSafetyStorageKey(input = productionTwoProfileInput()) {
+  const fingerprint = twoProfileSessionStatusFingerprint(input);
+  if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
+    return null;
+  }
+  return `ad.chatSafetyConfirmed.v1.${encodeURIComponent(fingerprint)}`;
+}
+
+function rememberTwoProfileSafety(input, result) {
+  if (!result?.safety_phrase && !result?.safety_number) {
+    return;
+  }
+  latestProductionTwoProfileSafety = {
+    fingerprint: twoProfileSessionStatusFingerprint(input),
+    safetyNumber: String(result.safety_number ?? ""),
+    safetyPhrase: String(result.safety_phrase ?? ""),
+  };
+}
+
+function twoProfileSafetyForInput(input = productionTwoProfileInput()) {
+  if (
+    latestProductionTwoProfileSafety &&
+    latestProductionTwoProfileSafety.fingerprint === twoProfileSessionStatusFingerprint(input)
+  ) {
+    return latestProductionTwoProfileSafety;
+  }
+  return null;
+}
+
+function twoProfileSafetyConfirmedForInput(input = productionTwoProfileInput()) {
+  const key = twoProfileSafetyStorageKey(input);
+  if (!key) {
+    return false;
+  }
+  try {
+    return window.localStorage.getItem(key) === "confirmed";
+  } catch {
+    return false;
+  }
+}
+
+function confirmTwoProfileSafetyForInput(input = productionTwoProfileInput()) {
+  const key = twoProfileSafetyStorageKey(input);
+  if (!key) {
+    return false;
+  }
+  try {
+    window.localStorage.setItem(key, "confirmed");
+  } catch {
+    return false;
+  }
+  return true;
+}
+
+function confirmCurrentTwoProfileSafety() {
+  const input = productionTwoProfileInput();
+  if (!twoProfileSessionsReadyForInput(input)) {
+    setProductionTwoProfileState("Verification unavailable");
+    setText(fields.productionTwoProfileWarning, t("connectionPendingHint"));
+    return;
+  }
+  if (!confirmTwoProfileSafetyForInput(input)) {
+    setProductionTwoProfileState("Verification unavailable");
+    setText(fields.productionTwoProfileWarning, t("verificationPhraseUnavailable"));
+    return;
+  }
+  setProductionTwoProfileState("Verification confirmed");
+  setText(fields.productionTwoProfileWarning, t("phraseConfirmed"));
+  applyProductionActionState();
+  fields.productionTwoProfileMessage?.focus();
 }
 
 function rememberTwoProfileSessionStatus(input, result) {
@@ -1967,10 +2053,13 @@ function updateMinimalChatMode(input = productionTwoProfileInput(), sessionsRead
   const hasConversation = productionTwoProfileConversationEntries.size > 0;
   const chatStarted = Boolean(hasConversation || latestProductionTwoProfileSuccess);
   const hasConnectionCode = Boolean(input.profileB);
+  const safetyConfirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
   document.body.classList.toggle("is-chat-active", chatStarted);
   document.body.classList.toggle("is-chat-empty", !hasConversation);
   document.body.classList.toggle("has-connection-code", hasConnectionCode);
   document.body.classList.toggle("has-ready-session", sessionsReady);
+  document.body.classList.toggle("has-confirmed-safety", safetyConfirmed);
+  document.body.classList.toggle("needs-safety-confirmation", sessionsReady && !safetyConfirmed);
   updateChatPrimaryActionMode(input, sessionsReady);
   if (chatStarted) {
     document.querySelector(".chat-settings-panel")?.removeAttribute("open");
@@ -2805,6 +2894,9 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
   }
   if (!input.messageTtlSeconds) {
     return { message: messageTtlInputBlocker(), state: "blocked" };
+  }
+  if (sessionsReady && !twoProfileSafetyConfirmedForInput(input)) {
+    return { message: t("phraseNotConfirmed"), state: "blocked" };
   }
   if (!input.message) {
     const selectedReplyTarget = selectedTwoProfileDeliveredReplyTarget(input);
@@ -3778,6 +3870,7 @@ function applyProductionActionState() {
     !knownTwoProfileSessionStatus &&
     (!twoProfile.message || latestConversation);
   const twoProfileNeedsSetup = hasTwoProfileInput && !twoProfileSessionsReady && !twoProfileNeedsSessionCheck;
+  const twoProfileSafetyConfirmed = twoProfileSessionsReady && twoProfileSafetyConfirmedForInput(twoProfile);
   const twoProfileCurrentAction = productionTwoProfileCurrentAction({
     input: twoProfile,
     busy,
@@ -3818,7 +3911,8 @@ function applyProductionActionState() {
   });
   const twoProfileComposeLocked =
     productionBusyAction === "two-profile-roundtrip" ||
-    productionBusyAction === "two-profile-message-roundtrip";
+    productionBusyAction === "two-profile-message-roundtrip" ||
+    (twoProfileSessionsReady && !twoProfileSafetyConfirmed);
 
   if (fields.productionMessageNumber) {
     fields.productionMessageNumber.disabled = message.autoMessageNumber;
@@ -3834,6 +3928,7 @@ function applyProductionActionState() {
   renderProductionTwoProfileFlow(twoProfile);
   updateConnectionWizard(twoProfile);
   renderRoomIdentityBar(twoProfile, twoProfileSessionsReady);
+  renderTwoProfileSafetyConfirm(twoProfile, twoProfileSessionsReady);
   updateMinimalChatMode(twoProfile, twoProfileSessionsReady);
   const twoProfileReadiness = twoProfilePrimaryReadiness(
     twoProfile,
@@ -4041,11 +4136,13 @@ function applyProductionActionState() {
   );
   setActionButtonState(
     fields.runProductionTwoProfileMessageRoundtrip,
-    !availability.runTwoProfileMessageRoundtrip,
+    !availability.runTwoProfileMessageRoundtrip || (twoProfileSessionsReady && !twoProfileSafetyConfirmed),
     busy
       ? "Wait for the active production action."
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
+      : twoProfileSessionsReady && !twoProfileSafetyConfirmed
+        ? t("sendLockedUntilVerified")
       : selectedDeliveredReplyReady && twoProfileReplyDraftReady
         ? `Send reply to selected message #${selectedConversation.messageNumber}.`
       : latestReplySelected && twoProfileReplyDraftReady
@@ -4440,6 +4537,7 @@ function resetProductionRoundtripView() {
 
 function resetProductionTwoProfileView() {
   latestProductionTwoProfileSessionStatus = null;
+  latestProductionTwoProfileSafety = null;
   setProductionTwoProfileState(t("twoProfileIdle"));
   setText(fields.productionTwoProfileWarning, t("twoProfileNotRun"));
   setText(fields.productionTwoProfileProfiles, t("notCheckedYet"));
@@ -4606,6 +4704,7 @@ function renderProductionTwoProfileResult(result) {
   setText(fields.productionTwoProfileMessageState, view.message);
   setText(fields.productionTwoProfileBoundary, view.boundary);
   if (view.canContinue) {
+    rememberTwoProfileSafety(input, result);
     latestProductionTwoProfileSuccess = {
       profileA: input.profileA,
       profileB: input.profileB,
@@ -7100,6 +7199,12 @@ async function runProductionTwoProfileMessageRoundtrip() {
     );
     return;
   }
+  if (!twoProfileSafetyConfirmedForInput({ profileA, profileB, passphrase })) {
+    setProductionTwoProfileState("Verification required");
+    setText(fields.productionTwoProfileWarning, t("sendLockedUntilVerified"));
+    applyProductionActionState();
+    return;
+  }
 
   setProductionTwoProfileState("Stored-session message running");
   setText(fields.productionTwoProfileWarning, t("messageRunningWarning"));
@@ -9152,6 +9257,10 @@ if (fields.runProductionTwoProfileMessageRoundtrip) {
     "click",
     runProductionTwoProfileMessageRoundtrip,
   );
+}
+
+if (fields.confirmTwoProfileSafety) {
+  fields.confirmTwoProfileSafety.addEventListener("click", confirmCurrentTwoProfileSafety);
 }
 
 if (fields.startProductionTwoProfileOnionBootstrap) {
