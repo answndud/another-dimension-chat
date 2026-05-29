@@ -2377,3 +2377,21 @@ label[for="production-two-profile-transcript-export"],
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.onion-advanced-controls {
+  display: none;
+}
+
+body.is-developer-mode .onion-advanced-controls {
+  display: grid;
+}
+
+.theme-control #open-developer-tools {
+  width: 100%;
+}
+
+body.is-developer-mode .chat-diagnostics,
+body.is-developer-mode .dev-diagnostic-panel,
+body.is-developer-mode .advanced-panel {
+  display: grid;
+}
