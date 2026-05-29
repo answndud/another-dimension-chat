@@ -8957,12 +8957,23 @@ if (fields.toggleChatSettings) {
   fields.toggleChatSettings.setAttribute("aria-expanded", "false");
   fields.toggleChatSettings.addEventListener("click", () => {
     const panel = document.querySelector(".chat-settings-panel");
+    const systemPanel = document.querySelector(".system-settings-panel");
     if (panel) {
       panel.open = !panel.open;
       fields.toggleChatSettings.setAttribute("aria-expanded", panel.open ? "true" : "false");
+      if (panel.open && systemPanel) {
+        systemPanel.open = false;
+      }
     }
   });
 }
+
+document.querySelector(".system-settings-panel")?.addEventListener("toggle", (event) => {
+  if (!event.currentTarget.open) {
+    return;
+  }
+  closeChatSettingsPanel();
+});
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && document.querySelector(".chat-settings-panel")?.open) {
