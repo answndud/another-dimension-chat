@@ -728,11 +728,12 @@ textarea[readonly] {
   top: 128px;
   right: max(24px, calc((100vw - 1180px) / 2));
   display: grid;
-  width: min(420px, calc(100vw - 32px));
+  gap: 10px;
+  width: min(390px, calc(100vw - 32px));
   max-height: min(680px, calc(100vh - 112px));
   overflow-y: auto;
   border: 1px solid var(--panel-border);
-  padding: 10px;
+  padding: 12px;
   background: color-mix(in srgb, var(--panel) 97%, transparent);
   box-shadow: 0 22px 54px rgb(0 0 0 / 34%);
 }
@@ -754,21 +755,28 @@ textarea[readonly] {
   content: "x";
 }
 
+.connection-modal-copy {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .chat-room-controls {
   display: grid;
-  gap: 8px;
-  border: 1px solid var(--panel-border);
-  padding: 10px;
-  background: color-mix(in srgb, var(--panel-strong) 72%, var(--bg));
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  background: transparent;
 }
 
 .connection-wizard-step {
   display: grid;
-  gap: 6px;
+  gap: 7px;
   border: 1px solid color-mix(in srgb, var(--panel-border) 70%, transparent);
   padding: 10px;
   background: color-mix(in srgb, var(--panel) 88%, var(--bg));
-  opacity: 0.62;
+  opacity: 0.78;
 }
 
 .connection-wizard-step.is-current {
@@ -780,7 +788,12 @@ textarea[readonly] {
 }
 
 .connection-wizard-step.is-complete {
-  opacity: 0.8;
+  opacity: 0.72;
+}
+
+.connection-wizard-step[data-wizard-step="retention"] {
+  border-color: color-mix(in srgb, var(--panel-border) 46%, transparent);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
 }
 
 .connection-wizard-step.is-locked {
@@ -794,8 +807,9 @@ textarea[readonly] {
 .wizard-step-label {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 760;
+  text-transform: uppercase;
 }
 
 .chat-room-controls .loop-label {
@@ -807,6 +821,11 @@ textarea[readonly] {
 .chat-room-controls input,
 .chat-room-controls select {
   min-width: 0;
+}
+
+.chat-room-controls input {
+  min-height: 42px;
+  font-size: 14px;
 }
 
 .chat-room-controls #production-two-profile-direction {
@@ -1233,7 +1252,7 @@ body.is-chat-active .followup-actions {
 body.is-chat-active .chat-settings-panel[open] {
   top: 52px;
   right: 14px;
-  width: min(440px, calc(100vw - 28px));
+  width: min(390px, calc(100vw - 28px));
   max-height: calc(100vh - 68px);
 }
 
