@@ -2148,15 +2148,19 @@ pre.is-failed {
   white-space: nowrap;
 }
 
+.room-status-summary {
+  max-width: min(680px, calc(100vw - 128px));
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .room-identity-bar {
-  width: auto;
-  max-width: calc(100% - 104px);
-  gap: 6px;
-  margin-top: 4px;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  opacity: 0.64;
+  display: none;
 }
 
 .room-identity-bar div {
