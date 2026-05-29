@@ -2590,12 +2590,12 @@ body.has-ready-session .connection-pending-state {
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state {
   order: 4;
   display: grid;
-  gap: 10px;
+  gap: 12px;
   width: min(520px, 100%);
-  border: 1px solid color-mix(in srgb, var(--warning) 28%, var(--panel-border));
-  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, var(--panel-border));
+  padding: 16px;
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--warning) 7%, transparent), transparent 72%),
+    linear-gradient(90deg, color-mix(in srgb, var(--warning) 10%, transparent), transparent 72%),
     color-mix(in srgb, var(--panel-strong) 76%, var(--bg));
 }
 
@@ -2617,18 +2617,27 @@ body.has-ready-session.needs-safety-confirmation .safety-confirm-state p:not(.ey
 }
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state .safety-phrase {
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 24%, var(--panel-border));
-  padding: 8px 10px;
+  padding: 10px 12px;
   color: var(--text-primary);
   background: color-mix(in srgb, var(--bg) 76%, var(--panel));
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 
+body.has-ready-session.needs-safety-confirmation .safety-confirm-state .safety-lock-note {
+  color: var(--warning);
+}
+
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state button {
-  width: fit-content;
-  min-width: 148px;
+  width: 100%;
+  min-height: 42px;
+  border-color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 14%, var(--button-bg));
+  color: var(--text-primary);
+  font-size: 13px;
 }
 
 body.has-ready-session.needs-safety-confirmation #production-two-profile-message,
