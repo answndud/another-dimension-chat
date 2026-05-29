@@ -1041,20 +1041,21 @@ function setProductionTwoProfileReadiness(message, state = "blocked") {
 }
 
 function renderRoomIdentityBar(input, sessionsReady) {
-  const route = input.profileA && input.profileB ? `${input.profileA} -> ${input.profileB}` : t("profilesMissing");
+  const hasConnectionCode = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB);
+  const route = hasConnectionCode ? t("roomPeerLinked") : t("roomPeerMissing");
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   const activeEndpointState = twoProfilePeerEndpointState(input);
   const safetyConfirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
   const pairState = sessionsReady
-    ? t("storedSession")
+    ? t("roomReady")
     : sessionStatus
-      ? t("incomplete")
-      : t("notChecked");
-  const verifyState = safetyConfirmed ? t("phraseConfirmed") : sessionsReady ? t("phraseNotConfirmed") : t("pending");
+      ? t("roomNeedsCreate")
+      : t("roomNeedsCode");
+  const verifyState = safetyConfirmed ? t("roomVerified") : sessionsReady ? t("roomVerifyNeeded") : t("pending");
   const transportState = activeEndpointState.ready
     ? fields.manualOnionNetworkPermission?.checked
-      ? t("endpointReady")
-      : t("endpointReadyPermissionOff")
+      ? t("roomNetworkReady")
+      : t("roomNetworkOff")
     : activeEndpointState.stale
       ? t("endpointStale")
     : localizedChatStatus(activeEndpointState.reason);
@@ -2675,17 +2676,17 @@ async function saveProductionMessageRetentionPreference(profile, passphrase, ttl
 function twoProfileDirectionLabel(input) {
   if (!input.profileA || !input.profileB) {
     return currentLanguage === "ko"
-      ? "상태: 연결 코드를 입력하세요"
-      : "Status: enter a connection code";
+      ? "상태: 초대 코드를 만들거나 붙여넣으세요"
+      : "Status: create or paste an invite code";
   }
   if (input.profileA === input.profileB) {
     return currentLanguage === "ko"
-      ? "전송 불가: 연결 코드를 다시 확인하세요"
-      : "Blocked: verify the connection code";
+      ? "전송 불가: 초대 코드를 다시 확인하세요"
+      : "Blocked: verify the invite code";
   }
   return currentLanguage === "ko"
-    ? "상태: 연결 코드 준비됨"
-    : "Status: connection code ready";
+    ? "상태: 초대 코드 준비됨"
+    : "Status: invite code ready";
 }
 
 function twoProfileComposePrompt(input = productionTwoProfileInput()) {
