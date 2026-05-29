@@ -861,14 +861,14 @@ function setActionButtonState(node, disabled, reason, current = false) {
   node.classList.toggle("is-current-action", !disabled && current);
 }
 
-function openChatSettingsPanel(focusTarget = fields.productionTwoProfileA) {
+function openChatSettingsPanel(focusTarget = fields.productionTwoProfileB) {
   const panel = document.querySelector(".chat-settings-panel");
   if (panel) {
     panel.open = true;
   }
   const setupPanel = document.querySelector(".chat-setup-controls");
   if (setupPanel) {
-    setupPanel.open = false;
+    setupPanel.open = true;
   }
   focusTarget?.focus();
 }
@@ -878,25 +878,13 @@ function updateConnectionWizard(input = productionTwoProfileInput()) {
   if (steps.length === 0) {
     return;
   }
-  const activeStep = !input.profileA
-    ? "profile"
-    : !input.profileB || input.profileA === input.profileB
-      ? "peer"
-      : !input.passphrase
-        ? "passphrase"
-        : "retention";
+  const activeStep = input.profileB ? "retention" : "code";
   const completeSteps = new Set();
-  if (input.profileA) {
-    completeSteps.add("profile");
-  }
-  if (input.profileA && input.profileB && input.profileA !== input.profileB) {
-    completeSteps.add("peer");
-  }
-  if (input.passphrase) {
-    completeSteps.add("passphrase");
-  }
   if (input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase && input.messageTtlSeconds) {
+    completeSteps.add("code");
     completeSteps.add("retention");
+  } else if (input.profileB) {
+    completeSteps.add("code");
   }
   steps.forEach((step) => {
     const name = step.dataset.wizardStep;
@@ -1151,6 +1139,47 @@ function syncProductionProfilePassphraseFromTwoProfile() {
 
 function syncProductionTwoProfilePassphraseFromProfile() {
   syncProductionPassphrases("profile");
+}
+
+let latestDerivedConnectionCode = "";
+
+function connectionCodeSlug(value) {
+  const slug = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32);
+  return slug || "shared-code";
+}
+
+function syncTwoProfileDerivedConnectionFields() {
+  const code = (fields.productionTwoProfileB?.value ?? "").trim();
+  const profile = fields.productionTwoProfileA;
+  const passphrase = fields.productionTwoProfilePassphrase;
+  if (!profile || !passphrase) {
+    return;
+  }
+  if (!code) {
+    if (profile.value.startsWith("local-")) {
+      profile.value = "";
+    }
+    if (passphrase.value === latestDerivedConnectionCode) {
+      passphrase.value = "";
+    }
+    latestDerivedConnectionCode = "";
+    syncProductionProfilePassphraseFromTwoProfile();
+    return;
+  }
+  const derivedProfile = `local-${connectionCodeSlug(code)}`;
+  if (!profile.value || profile.value.startsWith("local-")) {
+    profile.value = derivedProfile;
+  }
+  if (!passphrase.value || passphrase.value === latestDerivedConnectionCode) {
+    passphrase.value = code;
+  }
+  latestDerivedConnectionCode = code;
+  syncProductionProfilePassphraseFromTwoProfile();
 }
 
 function twoProfileSessionStatusFingerprint(input = productionTwoProfileInput()) {
@@ -2459,17 +2488,17 @@ async function saveProductionMessageRetentionPreference(profile, passphrase, ttl
 function twoProfileDirectionLabel(input) {
   if (!input.profileA || !input.profileB) {
     return currentLanguage === "ko"
-      ? "전송 방향: 내 프로필과 상대 연결을 입력하세요"
-      : "Direction: enter your profile and peer connection";
+      ? "상태: 연결 코드를 입력하세요"
+      : "Status: enter a connection code";
   }
   if (input.profileA === input.profileB) {
     return currentLanguage === "ko"
-      ? "전송 불가: 내 프로필과 상대 연결은 달라야 합니다"
-      : "Direction blocked: profile and peer must be distinct";
+      ? "전송 불가: 연결 코드를 다시 확인하세요"
+      : "Blocked: verify the connection code";
   }
   return currentLanguage === "ko"
-    ? `전송 방향: ${input.profileA} -> ${input.profileB}`
-    : `Direction: ${input.profileA} -> ${input.profileB}`;
+    ? "상태: 연결 코드 준비됨"
+    : "Status: connection code ready";
 }
 
 function twoProfileComposePrompt(input = productionTwoProfileInput()) {
@@ -2633,8 +2662,8 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
       fields.productionTwoProfileStepSessionDetail,
       "running",
       currentLanguage === "ko"
-        ? "내 프로필과 상대 연결을 입력하세요."
-        : "Enter your profile and peer connection.",
+        ? "연결 코드를 입력하세요."
+        : "Enter a connection code.",
     );
   } else if (!input.passphrase) {
     setTwoProfileFlowStep(
@@ -2642,8 +2671,8 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
       fields.productionTwoProfileStepSessionDetail,
       "running",
       currentLanguage === "ko"
-        ? "내 프로필을 열 패스프레이즈를 입력하세요."
-        : "Enter the passphrase for this profile.",
+        ? "연결 코드를 입력하세요."
+        : "Enter a connection code.",
     );
   } else if (sessionsReady) {
     setTwoProfileFlowStep(
@@ -2682,8 +2711,8 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
     !authReady ? "pending" : hasMessage ? "complete" : "running",
     !authReady
       ? currentLanguage === "ko"
-        ? "내 프로필, 상대 연결, 패스프레이즈를 기다리는 중입니다."
-        : "Waiting for profile, peer connection, and passphrase."
+        ? "연결 코드를 기다리는 중입니다."
+        : "Waiting for a connection code."
       : hasMessage
         ? currentLanguage === "ko"
           ? `작성됨: ${input.message.length}자`
@@ -4550,6 +4579,7 @@ function productionRoundtripMessage() {
 }
 
 function productionTwoProfileInput() {
+  syncTwoProfileDerivedConnectionFields();
   return {
     profileA: (fields.productionTwoProfileA?.value ?? "").trim(),
     profileB: (fields.productionTwoProfileB?.value ?? "").trim(),
@@ -8615,7 +8645,7 @@ if (fields.toggleChatSettings) {
 
 if (fields.startPeerConnection) {
   fields.startPeerConnection.addEventListener("click", () => {
-    openChatSettingsPanel(fields.productionTwoProfileA?.value ? fields.productionTwoProfileB : fields.productionTwoProfileA);
+    openChatSettingsPanel(fields.productionTwoProfileB);
   });
 }
 
