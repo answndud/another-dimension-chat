@@ -2489,10 +2489,31 @@ body.is-developer-mode .onion-advanced-controls {
   width: 100%;
 }
 
-body.is-developer-mode .chat-diagnostics,
-body.is-developer-mode .dev-diagnostic-panel,
-body.is-developer-mode .advanced-panel {
+body.is-developer-mode .chat-diagnostics.is-revealed,
+body.is-developer-mode .dev-diagnostic-panel.is-revealed,
+body.is-developer-mode .advanced-panel.is-revealed {
   display: grid;
+}
+
+body.is-chat-active.is-developer-mode .chat-diagnostics.is-revealed,
+body.is-chat-active.is-developer-mode .dev-diagnostic-panel.is-revealed,
+body.is-chat-active.is-developer-mode .advanced-panel.is-revealed {
+  order: 7;
+  max-height: min(46vh, 420px);
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 82%, transparent);
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel) 96%, var(--bg));
+  box-shadow: 0 18px 34px rgb(0 0 0 / 22%);
+}
+
+body.is-chat-active.is-developer-mode .chat-diagnostics.is-revealed summary,
+body.is-chat-active.is-developer-mode .dev-diagnostic-panel.is-revealed summary,
+body.is-chat-active.is-developer-mode .advanced-panel.is-revealed summary {
+  min-height: 30px;
+  padding: 6px 9px;
+  color: var(--text-muted);
+  font-size: 10px;
 }
 
 .connection-setup-actions {
