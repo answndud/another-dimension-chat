@@ -1155,9 +1155,29 @@ body.is-chat-active .system-settings-panel {
 
 body.is-chat-active .system-settings-panel > summary {
   min-height: 30px;
+  max-width: 30px;
+  overflow: hidden;
   padding: 6px 9px;
-  opacity: 0.44;
-  font-size: 11px;
+  opacity: 0.56;
+  font-size: 0;
+  transition:
+    max-width 140ms ease,
+    opacity 120ms ease;
+  white-space: nowrap;
+}
+
+body.is-chat-active .system-settings-panel > summary:hover,
+body.is-chat-active .system-settings-panel > summary:focus-visible,
+body.is-chat-active .system-settings-panel[open] > summary {
+  max-width: 132px;
+  opacity: 0.94;
+  font-size: 10px;
+}
+
+body.is-chat-active .system-settings-panel > summary:hover::before,
+body.is-chat-active .system-settings-panel > summary:focus-visible::before,
+body.is-chat-active .system-settings-panel[open] > summary::before {
+  display: none;
 }
 
 body.is-chat-active .system-settings-panel[open] {
@@ -1293,25 +1313,37 @@ body.is-chat-active .settings-toggle {
   z-index: 21;
   top: 24px;
   right: 14px;
-  width: 24px;
-  min-width: 24px;
+  width: 28px;
+  min-width: 28px;
   min-height: 24px;
   overflow: hidden;
   padding: 0;
-  opacity: 0.58;
+  opacity: 0.68;
   font-size: 0;
+  transition:
+    width 140ms ease,
+    opacity 120ms ease;
+  white-space: nowrap;
 }
 
 body.is-chat-active .settings-toggle::before {
   color: var(--text-secondary);
   font-size: 14px;
   line-height: 1;
-  content: "...";
+  content: "+";
 }
 
 body.is-chat-active .settings-toggle:hover,
 body.is-chat-active .settings-toggle:focus-visible {
-  opacity: 0.9;
+  width: 86px;
+  padding: 0 8px;
+  opacity: 0.94;
+  font-size: 10px;
+}
+
+body.is-chat-active .settings-toggle:hover::before,
+body.is-chat-active .settings-toggle:focus-visible::before {
+  display: none;
 }
 
 body.is-chat-active .chat-settings-panel > summary {
