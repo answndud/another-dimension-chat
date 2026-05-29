@@ -2916,24 +2916,30 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pendi
   line-height: 1.45;
 }
 
+body.is-chat-empty.has-connection-code:not(.has-ready-session) .chat-transcript-toolbar,
+body.is-chat-empty.has-connection-code:not(.has-ready-session) #production-two-profile-transcript {
+  display: none;
+}
+
 body.is-chat-empty.has-connection-code:not(.has-ready-session) #production-two-profile-message {
   display: none;
 }
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .chat-primary-actions {
+  order: 3;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   justify-self: center;
-  width: min(430px, 100%);
-  padding-top: 10px;
+  width: min(390px, 100%);
+  padding-top: 8px;
 }
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .chat-primary-actions #run-production-two-profile-roundtrip-inline {
-  min-height: 42px;
+  min-height: 44px;
   border-color: var(--accent-cyan);
   background: color-mix(in srgb, var(--accent-cyan) 14%, var(--button-bg));
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 13.5px;
 }
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .chat-primary-actions #check-production-two-profile-session-status-inline,
