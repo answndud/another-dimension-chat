@@ -873,11 +873,20 @@ function openChatSettingsPanel(focusTarget = fields.productionTwoProfileB) {
   if (panel) {
     panel.open = true;
   }
+  fields.toggleChatSettings?.setAttribute("aria-expanded", "true");
   const setupPanel = document.querySelector(".chat-setup-controls");
   if (setupPanel && "open" in setupPanel) {
     setupPanel.open = true;
   }
   focusTarget?.focus();
+}
+
+function closeChatSettingsPanel() {
+  const panel = document.querySelector(".chat-settings-panel");
+  if (panel) {
+    panel.open = false;
+  }
+  fields.toggleChatSettings?.setAttribute("aria-expanded", "false");
 }
 
 function updateConnectionWizard(input = productionTwoProfileInput()) {
@@ -8858,13 +8867,34 @@ if (fields.languageSelector) {
 }
 
 if (fields.toggleChatSettings) {
+  fields.toggleChatSettings.setAttribute("aria-expanded", "false");
   fields.toggleChatSettings.addEventListener("click", () => {
     const panel = document.querySelector(".chat-settings-panel");
     if (panel) {
       panel.open = !panel.open;
+      fields.toggleChatSettings.setAttribute("aria-expanded", panel.open ? "true" : "false");
     }
   });
 }
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && document.querySelector(".chat-settings-panel")?.open) {
+    closeChatSettingsPanel();
+    fields.toggleChatSettings?.focus();
+  }
+});
+
+document.addEventListener("pointerdown", (event) => {
+  const panel = document.querySelector(".chat-settings-panel");
+  if (!panel?.open || !document.body.classList.contains("is-chat-active")) {
+    return;
+  }
+  const target = event.target;
+  if (panel.contains(target) || fields.toggleChatSettings?.contains(target)) {
+    return;
+  }
+  closeChatSettingsPanel();
+});
 
 if (fields.openDeveloperTools) {
   fields.openDeveloperTools.addEventListener("click", () => {

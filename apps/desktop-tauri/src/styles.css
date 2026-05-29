@@ -733,6 +733,7 @@ textarea[readonly] {
   max-height: min(680px, calc(100vh - 112px));
   overflow-y: auto;
   border: 1px solid var(--panel-border);
+  border-radius: 4px;
   padding: 12px;
   background: color-mix(in srgb, var(--panel) 97%, transparent);
   box-shadow: 0 22px 54px rgb(0 0 0 / 34%);
@@ -1302,15 +1303,21 @@ body.is-chat-active .followup-actions {
 }
 
 body.is-chat-active .chat-settings-panel[open] {
-  top: 52px;
+  z-index: 29;
+  top: 56px;
   right: 14px;
-  width: min(390px, calc(100vw - 28px));
-  max-height: calc(100vh - 68px);
+  width: min(360px, calc(100vw - 28px));
+  max-height: min(520px, calc(100vh - 76px));
+  border-color: color-mix(in srgb, var(--accent-cyan) 38%, var(--panel-border));
+  border-radius: 4px;
+  box-shadow:
+    0 24px 58px rgb(0 0 0 / 42%),
+    0 0 0 1px color-mix(in srgb, var(--accent-cyan) 8%, transparent);
 }
 
 body.is-chat-active .settings-toggle {
   position: fixed;
-  z-index: 21;
+  z-index: 30;
   top: 24px;
   right: 14px;
   width: 28px;
@@ -1334,7 +1341,8 @@ body.is-chat-active .settings-toggle::before {
 }
 
 body.is-chat-active .settings-toggle:hover,
-body.is-chat-active .settings-toggle:focus-visible {
+body.is-chat-active .settings-toggle:focus-visible,
+body.is-chat-active .settings-toggle[aria-expanded="true"] {
   width: 86px;
   padding: 0 8px;
   opacity: 0.94;
@@ -1342,7 +1350,8 @@ body.is-chat-active .settings-toggle:focus-visible {
 }
 
 body.is-chat-active .settings-toggle:hover::before,
-body.is-chat-active .settings-toggle:focus-visible::before {
+body.is-chat-active .settings-toggle:focus-visible::before,
+body.is-chat-active .settings-toggle[aria-expanded="true"]::before {
   display: none;
 }
 
@@ -1352,6 +1361,18 @@ body.is-chat-active .chat-settings-panel > summary {
 
 body.is-chat-active .chat-settings-panel[open] {
   background: color-mix(in srgb, var(--panel) 96%, transparent);
+}
+
+body.is-chat-active .chat-settings-panel[open] > summary {
+  position: sticky;
+  z-index: 1;
+  top: -12px;
+  margin: -12px -12px 0;
+  border-width: 0 0 1px;
+  border-color: color-mix(in srgb, var(--panel-border) 76%, transparent);
+  padding: 9px 12px;
+  background: color-mix(in srgb, var(--panel) 98%, transparent);
+  opacity: 1;
 }
 
 body.is-chat-active .chat-settings-panel[open] .chat-room-controls,
