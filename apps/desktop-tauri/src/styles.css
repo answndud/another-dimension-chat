@@ -1039,25 +1039,24 @@ body.is-chat-active .production-workflow[aria-labelledby="production-two-profile
 
 body.is-chat-active .production-workflow[aria-labelledby="production-two-profile-title"] > div:first-child {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 4px 12px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
   align-items: end;
-  border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 72%, transparent);
-  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 42%, transparent);
+  padding: 0 38px 5px 0;
 }
 
 body.is-chat-active .production-workflow[aria-labelledby="production-two-profile-title"] > div:first-child .eyebrow {
-  margin: 0;
-  padding: 2px 6px;
-  font-size: 10px;
+  display: none;
 }
 
 body.is-chat-active #production-two-profile-title {
   margin: 0;
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.2;
-  text-align: right;
+  opacity: 0.86;
+  text-align: left;
 }
 
 body.is-chat-active .room-identity-bar {
@@ -1112,7 +1111,7 @@ body.is-chat-active .followup-actions {
 body.is-chat-active .chat-settings-panel {
   position: fixed;
   z-index: 19;
-  top: 92px;
+  top: 52px;
   right: 14px;
   display: grid;
   justify-items: end;
@@ -1122,11 +1121,11 @@ body.is-chat-active .chat-settings-panel {
 body.is-chat-active .settings-toggle {
   position: fixed;
   z-index: 21;
-  top: 54px;
+  top: 24px;
   right: 14px;
-  width: 30px;
-  min-width: 30px;
-  min-height: 30px;
+  width: 24px;
+  min-width: 24px;
+  min-height: 24px;
   overflow: hidden;
   padding: 0;
   opacity: 0.58;
@@ -1135,7 +1134,7 @@ body.is-chat-active .settings-toggle {
 
 body.is-chat-active .settings-toggle::before {
   color: var(--text-secondary);
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1;
   content: "...";
 }
