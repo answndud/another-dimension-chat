@@ -1970,6 +1970,7 @@ function updateMinimalChatMode(input = productionTwoProfileInput(), sessionsRead
   document.body.classList.toggle("is-chat-active", chatStarted);
   document.body.classList.toggle("is-chat-empty", !hasConversation);
   document.body.classList.toggle("has-connection-code", hasConnectionCode);
+  document.body.classList.toggle("has-ready-session", sessionsReady);
   updateChatPrimaryActionMode(input, sessionsReady);
   if (chatStarted) {
     document.querySelector(".chat-settings-panel")?.removeAttribute("open");

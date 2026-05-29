@@ -32,6 +32,9 @@ const dictionaries = {
     wizardStepRetention: "Step 2 / 2 - Message retention",
     connectionCode: "Connection code",
     connectionCodePlaceholder: "Paste connection code",
+    connectionCodeReady: "Connection code ready",
+    connectionPendingHint:
+      "Create the connection, then compare the verification phrase before sending messages.",
     connectionCodeHint:
       "Paste one shared code from the other device. Internal profile and storage passphrase are prepared automatically.",
     retrySend: "retry send",
@@ -445,6 +448,8 @@ const dictionaries = {
     wizardStepRetention: "2 / 2 - 메시지 보관 기간",
     connectionCode: "연결 코드",
     connectionCodePlaceholder: "연결 코드 붙여넣기",
+    connectionCodeReady: "연결 코드 준비됨",
+    connectionPendingHint: "연결을 만든 뒤, 메시지를 보내기 전에 상대와 확인 문구를 비교하세요.",
     connectionCodeHint: "상대 기기와 공유한 코드 하나만 입력하세요. 내부 프로필과 저장 암호는 앱이 자동으로 준비합니다.",
     retrySend: "다시 보내기",
     refreshEndpoint: "엔드포인트 갱신",

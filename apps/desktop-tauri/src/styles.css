@@ -2451,10 +2451,55 @@ body.is-developer-mode .advanced-panel {
   opacity: 0.38;
 }
 
+.connection-pending-state {
+  display: none;
+}
+
 body.is-chat-empty:not(.has-connection-code) .chat-transcript-toolbar,
 body.is-chat-empty:not(.has-connection-code) #production-two-profile-message,
 body.is-chat-empty:not(.has-connection-code) .chat-primary-actions {
   display: none;
+}
+
+body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state {
+  order: 2;
+  display: grid;
+  gap: 8px;
+  justify-self: center;
+  width: min(430px, 100%);
+  margin: clamp(54px, 16vh, 160px) auto 0;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 18%, var(--panel-border));
+  padding: 20px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-cyan) 5%, transparent), transparent 110px),
+    color-mix(in srgb, var(--panel) 84%, var(--bg));
+}
+
+body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state h4,
+body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state p {
+  margin: 0;
+}
+
+body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state h4 {
+  color: var(--text-primary);
+  font-size: 18px;
+  line-height: 1.18;
+}
+
+body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state p:not(.eyebrow) {
+  max-width: 36ch;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+body.is-chat-empty.has-connection-code:not(.has-ready-session) #production-two-profile-message {
+  display: none;
+}
+
+body.is-chat-empty.has-connection-code:not(.has-ready-session) .chat-primary-actions {
+  justify-self: center;
+  width: min(430px, 100%);
 }
 
 body.is-chat-empty:not(.has-connection-code) #production-two-profile-transcript {
@@ -2463,5 +2508,14 @@ body.is-chat-empty:not(.has-connection-code) #production-two-profile-transcript 
 }
 
 body.is-chat-empty.has-connection-code .chat-empty-state {
+  display: none;
+}
+
+body.is-chat-empty.has-connection-code:not(.has-ready-session) #production-two-profile-transcript {
+  min-height: clamp(120px, 24vh, 260px);
+  opacity: 0.24;
+}
+
+body.has-ready-session .connection-pending-state {
   display: none;
 }
