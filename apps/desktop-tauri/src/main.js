@@ -1811,6 +1811,62 @@ function renderProductionTwoProfileConversationList() {
   updateMinimalChatMode();
 }
 
+function applyDevActiveChatMockFromUrl() {
+  if (!import.meta.env.DEV || window.location.search !== "?mock=active-chat") {
+    return;
+  }
+  if (fields.productionTwoProfileA) {
+    fields.productionTwoProfileA.value = "alice";
+  }
+  if (fields.productionTwoProfileB) {
+    fields.productionTwoProfileB.value = "bob";
+  }
+  if (fields.productionTwoProfilePassphrase) {
+    fields.productionTwoProfilePassphrase.value = "dev-layout-only";
+  }
+  if (fields.productionTwoProfileMessage) {
+    fields.productionTwoProfileMessage.value = "reply draft";
+  }
+  latestProductionTwoProfileSuccess = {
+    profileA: "alice",
+    profileB: "bob",
+    messageLength: 26,
+    messageNumber: 3,
+    fingerprint: twoProfileInputFingerprint(productionTwoProfileInput()),
+  };
+  rememberTwoProfileReadySessionFromRoundtrip(productionTwoProfileInput(), {
+    both_ready_for_message_envelope: true,
+    profile_a_ready_for_message_envelope: true,
+    profile_b_ready_for_message_envelope: true,
+    profile_a_pairing_present: true,
+    profile_b_pairing_present: true,
+    profile_a_transport_ready: true,
+    profile_b_transport_ready: true,
+  });
+  appendProductionTwoProfileConversationStatus("sent", "alice", "bob", 1, "meet at the usual relay window");
+  appendProductionTwoProfileConversationStatus("received", "bob", "alice", 1, "meet at the usual relay window");
+  appendProductionTwoProfileConversationStatus("sent", "bob", "alice", 2, "confirmed. rotating endpoint after this.");
+  appendProductionTwoProfileConversationStatus("received", "alice", "bob", 2, "confirmed. rotating endpoint after this.");
+  appendProductionTwoProfileConversationStatus(
+    "sent",
+    "alice",
+    "bob",
+    3,
+    "retryable outbound message with a long enough body to test wrapping on narrow layouts",
+    {
+      outboundDeliveryState: "failed",
+      outboundFailureKind: "peer offline",
+      outboundRetryable: true,
+    },
+  );
+  renderProductionTwoProfileDirection(productionTwoProfileInput());
+  renderRoomIdentityBar(productionTwoProfileInput(), true);
+  setProductionTwoProfileReadiness("Ready to send", "ready");
+  setProductionTwoProfileState("Conversation resumed");
+  setText(fields.productionTwoProfileWarning, "Dev layout mock only; no network or storage action ran.");
+  applyProductionActionState();
+}
+
 function latestTwoProfileConversationEntry() {
   const entries = [...productionTwoProfileConversationEntries.values()].sort((left, right) =>
     productionTwoProfileConversationCompare(left, right, "desc"),
@@ -9111,3 +9167,4 @@ resetProductionTwoProfileView();
 resetProductionRoundtripView();
 resetLoopView();
 loadProductionProfileList();
+applyDevActiveChatMockFromUrl();
