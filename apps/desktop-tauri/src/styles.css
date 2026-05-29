@@ -2460,6 +2460,21 @@ body.is-developer-mode .advanced-panel {
   line-height: 1.45;
 }
 
+.connection-next-steps {
+  display: grid;
+  gap: 5px;
+  margin: 4px 0 2px;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.connection-next-steps li::marker {
+  color: var(--accent-cyan);
+  font-weight: 800;
+}
+
 .chat-empty-state .loop-actions {
   width: 100%;
   display: grid;
