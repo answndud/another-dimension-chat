@@ -2812,28 +2812,28 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 
 .chat-empty-state {
   place-items: start;
-  width: min(430px, 100%);
+  width: min(390px, 100%);
   margin-top: clamp(64px, 18vh, 180px);
   border-color: color-mix(in srgb, var(--accent-cyan) 14%, var(--panel-border));
-  padding: 22px;
+  padding: 20px;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--panel-strong) 82%, transparent), transparent 120px),
     color-mix(in srgb, var(--panel) 82%, var(--bg));
 }
 
 .chat-empty-state h4 {
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1.18;
 }
 
 .chat-empty-state p:not(.eyebrow) {
-  max-width: 34ch;
+  max-width: 30ch;
   font-size: 12px;
   line-height: 1.45;
 }
 
 .connection-next-steps {
-  display: grid;
+  display: none;
   gap: 5px;
   margin: 4px 0 2px;
   padding-left: 18px;
@@ -2887,12 +2887,12 @@ body.is-chat-empty:not(.has-connection-code) .chat-primary-actions {
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state {
   order: 2;
   display: grid;
-  gap: 8px;
+  gap: 7px;
   justify-self: center;
-  width: min(430px, 100%);
+  width: min(390px, 100%);
   margin: clamp(54px, 16vh, 160px) auto 0;
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 18%, var(--panel-border));
-  padding: 20px;
+  padding: 18px;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--accent-cyan) 5%, transparent), transparent 110px),
     color-mix(in srgb, var(--panel) 84%, var(--bg));
@@ -2905,12 +2905,12 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pendi
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state h4 {
   color: var(--text-primary);
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1.18;
 }
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state p:not(.eyebrow) {
-  max-width: 36ch;
+  max-width: 30ch;
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.45;
