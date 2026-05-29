@@ -469,6 +469,22 @@ function localizedOutboundStatus(label) {
   return labels[normalized] ? t(labels[normalized]) : label;
 }
 
+function localizedReceiveFailureMessage(message) {
+  const normalized = String(message ?? "").trim();
+  const exact = {
+    "Receive worker is waiting for inbound onion traffic.": "receiveWaiting",
+    "Receive mode is paused until manual onion network permission is enabled again.": "receiveNeedsNetwork",
+    "Receive mode needs the persistent Tor client to be started again.": "receiveNeedsTor",
+    "No inbound peer stream is available yet; receive mode will keep retrying.": "receivePeerOffline",
+    "Receive attempt timed out; receive mode will retry while enabled.": "receiveTimeout",
+    "A receive attempt is already active; duplicate work is blocked.": "receiveBusy",
+    "A received envelope was not fully imported; receive mode will retry.": "receiveImportRetry",
+    "This build does not include the manual onion client attempt feature.": "receiveFeatureDisabled",
+    "Receive mode hit a retryable backend boundary and will keep polling.": "receiveRetrying",
+  };
+  return exact[normalized] ? t(exact[normalized]) : localizedChatStatus(normalized);
+}
+
 function localizedRetentionLabel(entry) {
   const retentionView = transcriptRetentionView(entry);
   if (retentionView.state === "is-expired") {
@@ -530,6 +546,16 @@ function localizedChatStatus(message) {
     "conversation resumed": "statusRecovered",
     "resume needs session check": "statusSetup",
     "resume needs review": "statusRetry",
+    "receive mode stopped": "statusStopped",
+    "receive mode stopping": "statusStopped",
+    "receive mode receiving": "statusReceiving",
+    "receive mode retryable failure": "receiveRetrying",
+    "receive mode peer connected": "statusPeerConnected",
+    "receive mode waiting for tor bootstrap": "receiveNeedsTor",
+    "receive mode waiting for onion service": "statusReceiving",
+    "receive mode imported message": "statusLoaded",
+    "receive mode imported endpoint update": "statusLoaded",
+    "receive mode imported message or endpoint update": "statusLoaded",
   };
   if (exact[lower]) {
     return t(exact[lower]);
@@ -7058,7 +7084,7 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
       `state=${runtimeView.state} backend_state=${backendLoop.runtime_state || "unknown"} backend_attempts=${backendLoop.attempt_count} worker_starts=${backendLoop.worker_start_count ?? 0} duplicate_blocks=${backendLoop.duplicate_start_block_count ?? 0} import_seq=${backendLoop.import_sequence} message_imports=${backendLoop.message_import_count ?? 0} endpoint_updates=${backendLoop.endpoint_update_count ?? 0} active_after_import=${backendLoop.active_after_import} continues_after_import=${backendLoop.continues_after_import} multi_message_ready=${backendLoop.multi_message_receive_ready} restart_isolated=${backendLoop.restart_generation_isolated} wait_cancellable=${backendLoop.retry_wait_cancellable} failure=${backendLoop.last_failure_kind} retryable=${backendLoop.last_failure_retryable} last_started=${backendLoop.last_attempt_started} last_succeeded=${backendLoop.last_attempt_succeeded} endpoint_update=${backendLoop.last_endpoint_update_applied} last_network=${backendLoop.last_network_io_attempted} last_accept=${backendLoop.last_stream_accept_attempted} last_stream=${backendLoop.last_stream_read_write_attempted} last_envelope=${backendLoop.last_envelope_io_opened} last_runtime=${backendLoop.last_runtime_messaging_enabled} next=${backendLoop.last_next_blocker || "none"}`,
     );
     if (runtimeState === "failed-retryable") {
-      setText(fields.productionTwoProfileWarning, productionOnionReceiveFailureMessage(backendLoop));
+      setText(fields.productionTwoProfileWarning, localizedReceiveFailureMessage(productionOnionReceiveFailureMessage(backendLoop)));
     } else if (refreshPlan.transcriptChanged) {
       setText(
         fields.productionTwoProfileWarning,
