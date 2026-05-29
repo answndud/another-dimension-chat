@@ -503,6 +503,14 @@ function localizedChatStatus(message) {
     "two-profile roundtrip running": "statusBusy",
     "two-profile roundtrip completed": "statusSent",
     "two-profile roundtrip failed": "statusFailed",
+    "waiting for connection": "waiting",
+    "connection setup blocked": "statusSetup",
+    "connection setup needs input": "statusSetup",
+    "connection setup running": "statusBusy",
+    "connection setup completed": "statusReady",
+    "connection setup failed": "statusFailed",
+    "connection action already running": "statusBusy",
+    "send needs input": "statusSetup",
     "stored-session message running": "statusSending",
     "stored-session message completed": "statusSent",
     "stored-session message failed": "statusFailed",
@@ -2402,12 +2410,14 @@ async function saveProductionMessageRetentionPreference(profile, passphrase, ttl
 
 function twoProfileDirectionLabel(input) {
   if (!input.profileA || !input.profileB) {
-    return currentLanguage === "ko" ? "전송 방향: 두 프로필을 입력하세요" : "Direction: enter Profile A and Profile B";
+    return currentLanguage === "ko"
+      ? "전송 방향: 내 프로필과 상대 연결을 입력하세요"
+      : "Direction: enter your profile and peer connection";
   }
   if (input.profileA === input.profileB) {
     return currentLanguage === "ko"
-      ? "전송 불가: 두 프로필은 서로 달라야 합니다"
-      : "Direction blocked: profiles must be distinct";
+      ? "전송 불가: 내 프로필과 상대 연결은 달라야 합니다"
+      : "Direction blocked: profile and peer must be distinct";
   }
   return currentLanguage === "ko"
     ? `전송 방향: ${input.profileA} -> ${input.profileB}`
@@ -2574,14 +2584,18 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
       fields.productionTwoProfileStepSession,
       fields.productionTwoProfileStepSessionDetail,
       "running",
-      currentLanguage === "ko" ? "서로 다른 두 프로필을 입력하세요." : "Enter two distinct local profiles.",
+      currentLanguage === "ko"
+        ? "내 프로필과 상대 연결을 입력하세요."
+        : "Enter your profile and peer connection.",
     );
   } else if (!input.passphrase) {
     setTwoProfileFlowStep(
       fields.productionTwoProfileStepSession,
       fields.productionTwoProfileStepSessionDetail,
       "running",
-      currentLanguage === "ko" ? "두 로컬 저장소를 열 패스프레이즈를 입력하세요." : "Enter passphrase to unlock both local stores.",
+      currentLanguage === "ko"
+        ? "내 프로필을 열 패스프레이즈를 입력하세요."
+        : "Enter the passphrase for this profile.",
     );
   } else if (sessionsReady) {
     setTwoProfileFlowStep(
@@ -2620,8 +2634,8 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
     !authReady ? "pending" : hasMessage ? "complete" : "running",
     !authReady
       ? currentLanguage === "ko"
-        ? "프로필과 패스프레이즈를 기다리는 중입니다."
-        : "Waiting for profiles and passphrase."
+        ? "내 프로필, 상대 연결, 패스프레이즈를 기다리는 중입니다."
+        : "Waiting for profile, peer connection, and passphrase."
       : hasMessage
         ? currentLanguage === "ko"
           ? `작성됨: ${input.message.length}자`
@@ -2691,13 +2705,16 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
     return { message: messageRetentionPolicyBlocker(), state: "blocked" };
   }
   if (!input.profileA) {
-    return { message: currentLanguage === "ko" ? "내 프로필 필요" : "Profile A required", state: "blocked" };
+    return { message: currentLanguage === "ko" ? "내 프로필 필요" : "My profile required", state: "blocked" };
   }
   if (!input.profileB) {
-    return { message: currentLanguage === "ko" ? "상대 프로필 필요" : "Profile B required", state: "blocked" };
+    return { message: currentLanguage === "ko" ? "상대 연결 필요" : "Peer connection required", state: "blocked" };
   }
   if (input.profileA === input.profileB) {
-    return { message: currentLanguage === "ko" ? "서로 다른 프로필 필요" : "Use two different profiles", state: "blocked" };
+    return {
+      message: currentLanguage === "ko" ? "상대 연결을 다르게 입력" : "Use a distinct peer connection",
+      state: "blocked",
+    };
   }
   if (!input.passphrase) {
     return { message: currentLanguage === "ko" ? "암호 필요" : "Passphrase required", state: "blocked" };
@@ -3859,19 +3876,19 @@ function applyProductionActionState() {
   setActionButtonState(
     fields.checkProductionTwoProfileSessionStatus,
     busy || !hasTwoProfileSessionStatusInput,
-    busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
+    busy ? "Wait for the active production action." : "Enter your profile, peer connection, and passphrase first.",
     twoProfileCurrentAction === "check-session",
   );
   setActionButtonState(
     fields.checkProductionTwoProfileSessionStatusInline,
     busy || !hasTwoProfileSessionStatusInput,
-    busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
+    busy ? "Wait for the active production action." : "Enter your profile, peer connection, and passphrase first.",
     twoProfileCurrentAction === "check-session",
   );
   setActionButtonState(
     fields.loadProductionTwoProfileTranscript,
     busy || !hasTwoProfileSessionStatusInput,
-    busy ? "Wait for the active production action." : "Enter distinct Profile A, Profile B, and passphrase first.",
+    busy ? "Wait for the active production action." : "Enter your profile, peer connection, and passphrase first.",
   );
   const pendingConversation = latestTwoProfilePendingConversationEntry();
   const selectedPendingConversation = selectedTwoProfilePendingConversationEntry();
@@ -3913,12 +3930,12 @@ function applyProductionActionState() {
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
       : twoProfileNeedsSessionCheck
-        ? "Check recovered sessions before running full setup."
+        ? "Check recovered sessions before creating the connection again."
       : twoProfileSessionsReady
         ? "Stored sessions are ready; send a stored-session message instead."
         : twoProfileSessionsIncomplete
           ? twoProfileSessionRebuildMessage(twoProfile)
-        : "Enter two profiles, passphrase, and message first.",
+        : "Enter your profile, peer connection, passphrase, and message first.",
     twoProfileCurrentAction === "full-setup",
   );
   setActionButtonState(
@@ -3929,12 +3946,12 @@ function applyProductionActionState() {
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
       : twoProfileNeedsSessionCheck
-        ? "Check recovered sessions before running full setup."
+        ? "Check recovered sessions before creating the connection again."
       : twoProfileSessionsReady
         ? "Stored sessions are ready; send a stored-session message instead."
         : twoProfileSessionsIncomplete
           ? twoProfileSessionRebuildMessage(twoProfile)
-        : "Enter two profiles, passphrase, and message first.",
+        : "Enter your profile, peer connection, passphrase, and message first.",
     twoProfileCurrentAction === "full-setup",
   );
   setActionButtonState(
@@ -3949,8 +3966,8 @@ function applyProductionActionState() {
       : latestReplySelected && twoProfileReplyDraftReady
         ? "Send reply to the latest delivered message."
       : hasTwoProfileInput
-        ? "Run full setup once before sending with stored sessions."
-        : "Enter two profiles, passphrase, and message first.",
+        ? "Create the saved connection once before sending with stored sessions."
+        : "Enter your profile, peer connection, passphrase, and message first.",
     manualPrimaryActions.sendReply ||
       (!state.hasTwoProfileReplySelected && twoProfileCurrentAction === "stored-message"),
   );
@@ -3996,7 +4013,7 @@ function applyProductionActionState() {
       : !manualNetworkPermission
         ? "Enable manual onion network permission before preparing onion pairing."
       : !hasTwoProfileSessionStatusInput
-        ? "Enter distinct Profile A, Profile B, and passphrase first."
+        ? "Enter your profile, peer connection, and passphrase first."
         : "Launch both local onion endpoints, export both pairing payloads, and preview safety.",
     false,
   );
@@ -4013,7 +4030,7 @@ function applyProductionActionState() {
       : twoProfileSessionsReady
         ? "Alice/Bob sessions are already message-ready; send a stored-session message instead."
       : !hasTwoProfileSessionStatusInput
-        ? "Enter distinct Profile A, Profile B, and passphrase first."
+        ? "Enter your profile, peer connection, and passphrase first."
       : !currentPairingSafetyVerified()
         ? "Verify the safety number before saving Alice/Bob onion sessions."
       : !(fields.productionPairingPayload?.value ?? "").trim() ||
@@ -4030,7 +4047,7 @@ function applyProductionActionState() {
       : !manualNetworkPermission
         ? "Enable manual onion network permission before refreshing peer endpoints."
       : !hasTwoProfileSessionStatusInput
-        ? "Enter distinct Profile A, Profile B, and passphrase first."
+        ? "Enter your profile, peer connection, and passphrase first."
       : !latestTwoProfileSessionStatusForCurrentInput(twoProfile)
         ? "Check or save onion sessions before refreshing peer endpoints."
         : "Launch fresh local endpoints and apply them to existing peer session records.",
@@ -4054,7 +4071,7 @@ function applyProductionActionState() {
       : !manualNetworkPermission
         ? "Enable manual onion network permission before sending an endpoint update over onion."
       : !hasTwoProfileSessionStatusInput
-        ? "Enter distinct Profile A, Profile B, and passphrase first."
+        ? "Enter your profile, peer connection, and passphrase first."
       : !twoProfileSessionsReady
         ? "Complete the verified session handshake first."
       : !storedEndpointTransportState.ready
@@ -4076,7 +4093,7 @@ function applyProductionActionState() {
       : twoProfileSessionsReady
         ? "Alice/Bob sessions are message-ready; send a stored-session message instead."
       : !hasTwoProfileSessionStatusInput
-        ? "Enter distinct Profile A, Profile B, and passphrase first."
+        ? "Enter your profile, peer connection, and passphrase first."
         : "Complete Alice/Bob local handshake and persist transport state.",
     false,
   );
@@ -4107,7 +4124,7 @@ function applyProductionActionState() {
       : !manualNetworkPermission
         ? "Enable manual onion network permission before receiving."
       : !hasTwoProfileSessionStatusInput
-        ? "Enter distinct Profile A, Profile B, and passphrase first."
+        ? "Enter your profile, peer connection, and passphrase first."
         : `Start explicit receive mode for ${twoProfile.profileB}.`,
     false,
   );
@@ -6581,7 +6598,7 @@ async function startProductionTwoProfileOnionReceive() {
   const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
   if (!profileB || !passphrase) {
     setProductionTwoProfileState("Receive mode needs receiver");
-    setText(fields.productionTwoProfileWarning, "Enter Profile B and passphrase before starting receive mode.");
+    setText(fields.productionTwoProfileWarning, "Enter the peer connection and passphrase before starting receive mode.");
     return;
   }
   if (!manualNetworkPermission) {
@@ -6895,19 +6912,19 @@ async function runProductionTwoProfileRoundtrip() {
   const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
   let postBusyFocus = null;
   if (!messageRetentionPolicyReady()) {
-    setProductionTwoProfileState("Two-profile roundtrip blocked");
+    setProductionTwoProfileState("Connection setup blocked");
     setText(fields.productionTwoProfileWarning, messageRetentionPolicyBlocker());
     applyProductionActionState();
     return;
   }
   if (!messageTtlSeconds) {
-    setProductionTwoProfileState("Two-profile roundtrip blocked");
+    setProductionTwoProfileState("Connection setup blocked");
     setText(fields.productionTwoProfileWarning, messageTtlInputBlocker());
     applyProductionActionState();
     return;
   }
   if (!profileA || !profileB || profileA === profileB || !passphrase || !message) {
-    setProductionTwoProfileState("Two-profile roundtrip needs input");
+    setProductionTwoProfileState("Connection setup needs input");
     setText(
       fields.productionTwoProfileWarning,
       t("inputRequiredSetup"),
@@ -6915,7 +6932,7 @@ async function runProductionTwoProfileRoundtrip() {
     return;
   }
 
-  setProductionTwoProfileState("Two-profile roundtrip running");
+  setProductionTwoProfileState("Connection setup running");
   setText(fields.productionTwoProfileWarning, t("setupRunningWarning"));
   setText(fields.productionTwoProfileProfiles, t("setupProfilesWaiting"));
   setText(fields.productionTwoProfileSession, t("setupSessionWaiting"));
@@ -6941,7 +6958,7 @@ async function runProductionTwoProfileRoundtrip() {
     } catch (error) {
       retentionPreferenceWarning = `Roundtrip completed, but retention preference was not saved: ${String(error)}`;
     }
-    setProductionTwoProfileState("Two-profile roundtrip completed");
+    setProductionTwoProfileState("Connection setup completed");
     const sentInput = { profileA, profileB };
     const view = renderProductionTwoProfileResult(result);
     if (view.canContinue) {
@@ -6957,7 +6974,7 @@ async function runProductionTwoProfileRoundtrip() {
     }
     await loadProductionProfileList();
   } catch (error) {
-    setProductionTwoProfileState("Two-profile roundtrip failed");
+    setProductionTwoProfileState("Connection setup failed");
     setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("roundtrip", error));
     setText(fields.productionTwoProfileProfiles, t("statusFailed"));
     setText(fields.productionTwoProfileSession, t("statusFailed"));
@@ -7142,7 +7159,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
 
 async function runTwoProfilePrimaryActionFromCompose() {
   if (productionBusyAction !== null) {
-    setProductionTwoProfileState("Two-profile action already running");
+    setProductionTwoProfileState("Connection action already running");
     setText(fields.productionTwoProfileWarning, "Wait for the active production action before sending again.");
     return;
   }
@@ -7157,7 +7174,7 @@ async function runTwoProfilePrimaryActionFromCompose() {
     return;
   }
 
-  setProductionTwoProfileState("Two-profile send needs input");
+  setProductionTwoProfileState("Send needs input");
   const input = productionTwoProfileInput();
   const readiness = twoProfilePrimaryReadiness(
     input,
@@ -7595,12 +7612,16 @@ async function checkProductionTwoProfileSessionStatus() {
   if (!profileA || !profileB || profileA === profileB || !passphrase) {
     setText(
       fields.productionTwoProfileSessionStatus,
-      "Enter distinct Profile A, Profile B, and passphrase first.",
+      currentLanguage === "ko"
+        ? "내 프로필, 상대 연결, 패스프레이즈를 먼저 입력하세요."
+        : "Enter your profile, peer connection, and passphrase first.",
     );
     setProductionTwoProfileState("Session check needs input");
     setText(
       fields.productionTwoProfileWarning,
-      "Enter distinct Profile A, Profile B, and passphrase before checking stored sessions.",
+      currentLanguage === "ko"
+        ? "저장된 연결을 확인하려면 내 프로필, 상대 연결, 패스프레이즈를 입력하세요."
+        : "Enter your profile, peer connection, and passphrase before checking the saved connection.",
     );
     return;
   }
@@ -7652,7 +7673,7 @@ async function checkProductionTwoProfileSessionStatus() {
   } catch (error) {
     latestProductionTwoProfileSessionStatus = null;
     setProductionTwoProfileState("Session check failed");
-    setText(fields.productionTwoProfileSessionStatus, "Two-profile session status failed");
+    setText(fields.productionTwoProfileSessionStatus, "Saved connection check failed");
     setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("session-status", error));
     setText(fields.productionPairingWarning, String(error));
     postCheckFocus = fields.checkProductionTwoProfileSessionStatusInline;
@@ -7691,7 +7712,9 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       setProductionTwoProfileState("Conversation load needs profiles");
       setText(
         fields.productionTwoProfileWarning,
-        "Enter distinct Profile A, Profile B, and passphrase before loading conversation.",
+        currentLanguage === "ko"
+          ? "대화를 불러오려면 내 프로필, 상대 연결, 패스프레이즈를 입력하세요."
+          : "Enter your profile, peer connection, and passphrase before loading the conversation.",
       );
     }
     return;
@@ -7699,7 +7722,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
 
   if (!quiet) {
     setProductionTwoProfileState("Conversation loading");
-    setText(fields.productionTwoProfileWarning, "Reading stored two-profile transcript after local unlock.");
+    setText(fields.productionTwoProfileWarning, "Reading stored conversation after local unlock.");
     productionBusyAction = "two-profile-transcript-load";
     applyProductionActionState();
   }
