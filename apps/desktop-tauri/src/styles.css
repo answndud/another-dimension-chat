@@ -2549,8 +2549,24 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session) #production-two-p
 }
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .chat-primary-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   justify-self: center;
   width: min(430px, 100%);
+  padding-top: 10px;
+}
+
+body.is-chat-empty.has-connection-code:not(.has-ready-session) .chat-primary-actions #run-production-two-profile-roundtrip-inline {
+  min-height: 42px;
+  border-color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 14%, var(--button-bg));
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+body.is-chat-empty.has-connection-code:not(.has-ready-session) .chat-primary-actions #check-production-two-profile-session-status-inline,
+body.is-chat-empty.has-connection-code:not(.has-ready-session) .chat-primary-actions #production-two-profile-readiness {
+  display: none;
 }
 
 body.is-chat-empty:not(.has-connection-code) #production-two-profile-transcript {
