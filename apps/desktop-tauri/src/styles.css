@@ -1590,6 +1590,8 @@ body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft) {
 
 body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft)
   #run-production-two-profile-message-roundtrip,
+body.is-chat-active .chat-primary-actions.is-send-mode.has-receive-enabled
+  #start-production-two-profile-onion-receive,
 body.is-chat-active .chat-primary-actions.is-send-mode #stop-production-two-profile-onion-receive:disabled {
   display: none;
 }
@@ -1611,6 +1613,54 @@ body.is-chat-active .chat-primary-actions.is-send-mode.has-message-draft
   border-color: color-mix(in srgb, var(--panel-border) 58%, transparent);
   background: transparent;
   color: var(--text-secondary);
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode.has-receive-enabled {
+  grid-template-columns:
+    minmax(116px, 1fr)
+    minmax(104px, 0.72fr)
+    auto;
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode.has-receive-enabled.has-message-draft {
+  grid-template-columns:
+    minmax(116px, 1fr)
+    minmax(104px, 0.72fr)
+    minmax(0, auto);
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode.has-receive-enabled
+  #stop-production-two-profile-onion-receive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  border-color: color-mix(in srgb, var(--success) 48%, var(--panel-border));
+  background: color-mix(in srgb, var(--success) 10%, var(--button-bg));
+  color: var(--text-primary);
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode.has-receive-enabled
+  #stop-production-two-profile-onion-receive::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  content: "";
+  box-shadow: 0 0 12px color-mix(in srgb, var(--success) 78%, transparent);
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode.is-receive-stopping
+  #stop-production-two-profile-onion-receive {
+  border-color: color-mix(in srgb, var(--warning) 54%, var(--panel-border));
+  background: color-mix(in srgb, var(--warning) 12%, var(--button-bg));
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode.is-receive-stopping
+  #stop-production-two-profile-onion-receive::before {
+  background: var(--warning);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--warning) 78%, transparent);
 }
 
 body.is-chat-active .chat-primary-actions button {

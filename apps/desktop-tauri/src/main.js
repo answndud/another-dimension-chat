@@ -2177,6 +2177,10 @@ function updateChatPrimaryActionMode(input = productionTwoProfileInput(), sessio
   actionBar.classList.toggle("is-send-mode", sessionsReady);
   actionBar.classList.toggle("has-session-check-input", canCheckSession);
   actionBar.classList.toggle("has-message-draft", hasDraft);
+  actionBar.classList.toggle("has-receive-enabled", productionTwoProfileOnionReceiveMode.enabled);
+  actionBar.classList.toggle("is-receive-stopping", productionTwoProfileOnionReceiveMode.stopRequested);
+  document.body.classList.toggle("is-receiving-messages", productionTwoProfileOnionReceiveMode.enabled);
+  document.body.classList.toggle("is-stopping-receive", productionTwoProfileOnionReceiveMode.stopRequested);
 }
 
 function twoProfileConversationDelivered(entry) {
