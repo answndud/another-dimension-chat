@@ -868,7 +868,7 @@ function openChatSettingsPanel(focusTarget = fields.productionTwoProfileB) {
     panel.open = true;
   }
   const setupPanel = document.querySelector(".chat-setup-controls");
-  if (setupPanel) {
+  if (setupPanel && "open" in setupPanel) {
     setupPanel.open = true;
   }
   focusTarget?.focus();
