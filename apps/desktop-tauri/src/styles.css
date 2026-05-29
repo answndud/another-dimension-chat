@@ -1177,9 +1177,9 @@ body.is-chat-active .system-settings-panel {
 
 body.is-chat-active .system-settings-panel > summary {
   min-height: 30px;
-  max-width: 30px;
+  max-width: 44px;
   overflow: hidden;
-  padding: 6px 9px;
+  padding: 6px 8px;
   opacity: 0.56;
   font-size: 0;
   transition:
@@ -1200,6 +1200,15 @@ body.is-chat-active .system-settings-panel > summary:hover::before,
 body.is-chat-active .system-settings-panel > summary:focus-visible::before,
 body.is-chat-active .system-settings-panel[open] > summary::before {
   display: none;
+}
+
+body.is-chat-active .system-settings-panel > summary::before {
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 760;
+  line-height: 1;
+  text-transform: lowercase;
+  content: "app";
 }
 
 body.is-chat-active .system-settings-panel[open] {
@@ -1346,8 +1355,8 @@ body.is-chat-active .settings-toggle {
   z-index: 30;
   top: 14px;
   right: 14px;
-  width: 28px;
-  min-width: 28px;
+  width: 48px;
+  min-width: 48px;
   min-height: 30px;
   overflow: hidden;
   padding: 0;
@@ -1361,9 +1370,11 @@ body.is-chat-active .settings-toggle {
 
 body.is-chat-active .settings-toggle::before {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 10px;
+  font-weight: 760;
   line-height: 1;
-  content: "...";
+  text-transform: lowercase;
+  content: "room";
 }
 
 body.is-chat-active .settings-toggle:hover,
@@ -2432,17 +2443,19 @@ pre.is-failed {
 
 .system-settings-panel > summary {
   min-height: 28px;
-  max-width: 28px;
+  max-width: 44px;
   overflow: hidden;
-  padding: 0;
+  padding: 0 8px;
   opacity: 0.52;
   font-size: 0;
 }
 
 .system-settings-panel > summary::before {
   color: var(--text-secondary);
-  font-size: 14px;
-  content: "?";
+  font-size: 10px;
+  font-weight: 760;
+  text-transform: lowercase;
+  content: "app";
 }
 
 .system-settings-panel[open] {
@@ -2586,8 +2599,8 @@ label[for="production-two-profile-transcript-export"],
   top: 14px;
   right: 14px;
   z-index: 27;
-  width: 28px;
-  min-width: 28px;
+  width: 48px;
+  min-width: 48px;
   min-height: 28px;
   overflow: hidden;
   padding: 0;
@@ -2597,9 +2610,11 @@ label[for="production-two-profile-transcript-export"],
 
 .settings-toggle::before {
   color: var(--text-secondary);
-  font-size: 15px;
+  font-size: 10px;
+  font-weight: 760;
   line-height: 1;
-  content: "...";
+  text-transform: lowercase;
+  content: "room";
 }
 
 .settings-toggle:hover,
