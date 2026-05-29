@@ -1897,6 +1897,21 @@ function twoProfileRetentionLabel(entry) {
   return localizedRetentionLabel(entry);
 }
 
+function twoProfileEmptyConversationMessage(input = productionTwoProfileInput()) {
+  const hasConnectionCode = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB);
+  if (!hasConnectionCode) {
+    return t("emptyConversationNoConnection");
+  }
+  const sessionsReady = twoProfileSessionsReadyForInput(input);
+  if (!sessionsReady) {
+    return t("emptyConversationCreateRoom");
+  }
+  if (!twoProfileSafetyConfirmedForInput(input)) {
+    return t("emptyConversationVerify");
+  }
+  return t("emptyConversationReady");
+}
+
 function renderProductionTwoProfileConversationList() {
   const target = fields.productionTwoProfileTranscript;
   if (!target) {
@@ -1909,7 +1924,7 @@ function renderProductionTwoProfileConversationList() {
   if (entries.length === 0) {
     const empty = document.createElement("li");
     empty.className = "is-empty";
-    empty.textContent = t("emptyConversation");
+    empty.textContent = twoProfileEmptyConversationMessage();
     target.append(empty);
     return;
   }
@@ -2675,7 +2690,9 @@ function twoProfileDirectionLabel(input) {
 
 function twoProfileComposePrompt(input = productionTwoProfileInput()) {
   if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
-    return currentLanguage === "ko" ? "메시지를 작성하세요" : "Write a stored-session message";
+    return currentLanguage === "ko"
+      ? "초대 코드를 먼저 만들거나 붙여넣으세요"
+      : "Create or paste an invite code first";
   }
   const selectedReplyTarget = selectedTwoProfileDeliveredReplyTarget(input);
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
@@ -2687,6 +2704,14 @@ function twoProfileComposePrompt(input = productionTwoProfileInput()) {
   }
   if (!sessionsReady && sessionStatus) {
     return currentLanguage === "ko" ? "연결을 다시 만들 첫 메시지를 작성하세요" : "Write setup message to rebuild sessions";
+  }
+  if (!sessionsReady) {
+    return currentLanguage === "ko" ? "채팅방을 만든 뒤 메시지를 작성하세요" : "Create the room before writing";
+  }
+  if (!safetyConfirmed) {
+    return currentLanguage === "ko"
+      ? "확인 문구를 비교한 뒤 메시지를 작성하세요"
+      : "Compare the verification phrase before writing";
   }
   if (selectedReplyTarget) {
     return currentLanguage === "ko"
