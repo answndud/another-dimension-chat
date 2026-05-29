@@ -267,8 +267,8 @@ const fields = {
   productionTwoProfileB: document.querySelector("#production-two-profile-b"),
   toggleChatSettings: document.querySelector("#toggle-chat-settings"),
   openDeveloperTools: document.querySelector("#open-developer-tools"),
+  createInviteCode: document.querySelector("#create-invite-code"),
   startPeerConnection: document.querySelector("#start-peer-connection"),
-  enterPeerCode: document.querySelector("#enter-peer-code"),
   productionTwoProfileDirection: document.querySelector("#production-two-profile-direction"),
   productionTwoProfileStepSession: document.querySelector("#production-two-profile-step-session"),
   productionTwoProfileStepSessionDetail: document.querySelector(
@@ -1187,6 +1187,38 @@ function connectionCodeSlug(value) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 32);
   return slug || "shared-code";
+}
+
+function generateInviteCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint8Array(16);
+  if (!window.crypto?.getRandomValues) {
+    throw new Error(t("inviteCodeUnavailable"));
+  }
+  window.crypto.getRandomValues(bytes);
+  const chars = Array.from(bytes, (byte) => alphabet[byte & 31]);
+  return chars.join("").replace(/(.{4})(?=.)/g, "$1-").toLowerCase();
+}
+
+function createInviteCode() {
+  let code;
+  try {
+    code = generateInviteCode();
+  } catch (error) {
+    setProductionTwoProfileState("Invite code unavailable");
+    setText(fields.productionTwoProfileWarning, String(error));
+    return;
+  }
+  if (fields.productionTwoProfileB) {
+    fields.productionTwoProfileB.value = code;
+  }
+  syncTwoProfileDerivedConnectionFields();
+  renderProductionTwoProfileDirection(productionTwoProfileInput());
+  applyProductionActionState();
+  openChatSettingsPanel(fields.productionTwoProfileB);
+  fields.productionTwoProfileB?.select?.();
+  setProductionTwoProfileState("Invite code created");
+  setText(fields.productionTwoProfileWarning, t("inviteCodeCreatedHint"));
 }
 
 function syncTwoProfileDerivedConnectionFields() {
@@ -8791,10 +8823,8 @@ if (fields.startPeerConnection) {
   });
 }
 
-if (fields.enterPeerCode) {
-  fields.enterPeerCode.addEventListener("click", () => {
-    openChatSettingsPanel(fields.productionTwoProfileB);
-  });
+if (fields.createInviteCode) {
+  fields.createInviteCode.addEventListener("click", createInviteCode);
 }
 
 if (fields.checkOnionPreflight) {

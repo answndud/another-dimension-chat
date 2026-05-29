@@ -2457,16 +2457,20 @@ body.is-developer-mode .advanced-panel {
 
 .chat-empty-state .loop-actions {
   width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
 }
 
-.chat-empty-state #start-peer-connection {
+.chat-empty-state #create-invite-code {
   width: 100%;
   min-height: 38px;
   border-color: var(--accent-cyan);
 }
 
-.chat-empty-state #enter-peer-code {
-  display: none;
+.chat-empty-state #start-peer-connection {
+  width: 100%;
+  min-height: 38px;
 }
 
 .chat-empty-state + .chat-transcript-toolbar,
