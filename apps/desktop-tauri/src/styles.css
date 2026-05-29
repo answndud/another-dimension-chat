@@ -797,6 +797,27 @@ textarea[readonly] {
   background: color-mix(in srgb, var(--panel) 70%, transparent);
 }
 
+.settings-language-step {
+  border-color: color-mix(in srgb, var(--panel-border) 46%, transparent);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+}
+
+.chat-settings-panel .language-control {
+  display: grid;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.chat-settings-panel .language-control select {
+  width: 100%;
+  min-height: 38px;
+  font-size: 12px;
+  text-transform: none;
+}
+
 .connection-wizard-step.is-locked {
   display: none;
 }

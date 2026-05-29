@@ -15,13 +15,6 @@
           <summary data-i18n="systemPanel" data-i18n-title="systemPanel" title="System panel">System panel</summary>
         <div class="theme-control" aria-label="Display mode" data-i18n-aria-label="displayMode">
           <span data-i18n="displayMode">Display mode</span>
-          <label class="language-control" for="language-selector">
-            <span data-i18n="language">Language</span>
-            <select id="language-selector" autocomplete="off">
-              <option value="en">English</option>
-              <option value="ko">한국어</option>
-            </select>
-          </label>
           <button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>
           <button id="open-developer-tools" type="button" class="flow-control is-secondary" data-i18n="openDeveloperTools">
             Developer tools
@@ -402,7 +395,7 @@
                 </p>
               </section>
               <section class="connection-wizard-step" data-wizard-step="retention">
-                <p class="wizard-step-label" data-i18n="wizardStepRetention">Step 2 / 2 - Message retention</p>
+                <p class="wizard-step-label" data-i18n="wizardStepRetention">Message lifetime</p>
                 <label class="loop-label" for="production-two-profile-message-ttl" data-i18n="retention">Retention</label>
                 <select id="production-two-profile-message-ttl">
                   <option value="" data-i18n="loadingRetentionPolicy">Loading retention policy</option>
@@ -410,6 +403,16 @@
                 <p class="retention-note" data-i18n="retentionDeviceHint">
                   Message retention applies on this device. The other device follows its own setting.
                 </p>
+              </section>
+              <section class="connection-wizard-step settings-language-step">
+                <p class="wizard-step-label" data-i18n="wizardStepLanguage">Language</p>
+                <label class="language-control" for="language-selector">
+                  <span data-i18n="language">Language</span>
+                  <select id="language-selector" autocomplete="off">
+                    <option value="en">English</option>
+                    <option value="ko">한국어</option>
+                  </select>
+                </label>
               </section>
               <div class="connection-wizard-internal" aria-hidden="true">
                 <input id="production-two-profile-a" type="hidden" />
