@@ -1494,14 +1494,43 @@ body.is-chat-active .chat-primary-actions.is-setup-mode:not(.has-session-check-i
 
 body.is-chat-active .chat-primary-actions.is-send-mode {
   grid-template-columns:
-    minmax(84px, 1fr)
-    minmax(84px, 1fr)
-    minmax(84px, 1fr)
+    minmax(116px, 1fr)
+    minmax(78px, 0.58fr)
+    minmax(78px, 0.58fr)
     auto;
 }
 
 body.is-chat-active .chat-primary-actions.is-send-mode #check-production-two-profile-session-status-inline {
   display: none;
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft) {
+  grid-template-columns: minmax(116px, 1fr) minmax(78px, 0.58fr) auto;
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft)
+  #run-production-two-profile-message-roundtrip,
+body.is-chat-active .chat-primary-actions.is-send-mode #stop-production-two-profile-onion-receive:disabled {
+  display: none;
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode.has-message-draft
+  #run-production-two-profile-message-roundtrip,
+body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft)
+  #start-production-two-profile-onion-receive {
+  min-height: 34px;
+  border-color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 14%, var(--button-bg));
+  color: var(--text-primary);
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode.has-message-draft
+  #start-production-two-profile-onion-receive,
+body.is-chat-active .chat-primary-actions.is-send-mode.has-message-draft
+  #stop-production-two-profile-onion-receive {
+  border-color: color-mix(in srgb, var(--panel-border) 58%, transparent);
+  background: transparent;
+  color: var(--text-secondary);
 }
 
 body.is-chat-active .chat-primary-actions button {
