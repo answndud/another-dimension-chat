@@ -1407,6 +1407,11 @@ body.is-chat-active .chat-transcript-toolbar .loop-actions {
     transform 120ms ease;
 }
 
+body.is-chat-active .chat-transcript-toolbar.has-conversation-action .loop-actions {
+  opacity: 0.46;
+  transform: translateY(5px);
+}
+
 body.is-chat-active .chat-transcript-toolbar:hover .loop-actions,
 body.is-chat-active .chat-transcript-toolbar:focus-within .loop-actions {
   opacity: 0.82;
@@ -1425,6 +1430,42 @@ body.is-chat-active .chat-transcript-toolbar button {
   background: color-mix(in srgb, var(--panel) 72%, transparent);
   opacity: 1;
   font-size: 9px;
+}
+
+body.is-chat-active .chat-transcript-toolbar #load-production-two-profile-transcript {
+  max-width: 0;
+  border-width: 0;
+  padding-right: 0;
+  padding-left: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+body.is-chat-active .chat-transcript-toolbar:hover #load-production-two-profile-transcript,
+body.is-chat-active .chat-transcript-toolbar:focus-within #load-production-two-profile-transcript {
+  max-width: 72px;
+  border-width: 1px;
+  padding-right: 6px;
+  padding-left: 6px;
+  opacity: 0.72;
+  pointer-events: auto;
+}
+
+body.is-chat-active .chat-transcript-toolbar.has-reply-action #reply-latest-two-profile-message {
+  border-color: color-mix(in srgb, var(--accent-cyan) 42%, transparent);
+  color: var(--accent-cyan);
+}
+
+body.is-chat-active .chat-transcript-toolbar.has-pending-action #review-pending-two-profile-message {
+  border-color: color-mix(in srgb, var(--warning) 46%, transparent);
+  color: var(--warning);
+}
+
+body.is-chat-active
+  .chat-transcript-toolbar.has-selected-pending-action
+  #review-pending-two-profile-message {
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
 }
 
 body.is-chat-active #production-two-profile-transcript {

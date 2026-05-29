@@ -288,6 +288,7 @@ const fields = {
   productionTwoProfilePassphrase: document.querySelector("#production-two-profile-passphrase"),
   productionTwoProfileMessageTtl: document.querySelector("#production-two-profile-message-ttl"),
   productionTwoProfileMessage: document.querySelector("#production-two-profile-message"),
+  chatTranscriptToolbar: document.querySelector(".chat-transcript-toolbar"),
   chatPrimaryActions: document.querySelector(".chat-primary-actions"),
   twoProfileSafetyPhrase: document.querySelector("#two-profile-safety-phrase"),
   confirmTwoProfileSafety: document.querySelector("#confirm-two-profile-safety"),
@@ -4245,6 +4246,13 @@ function applyProductionActionState() {
     selectedDeliveredReplyReady,
     hasTwoProfileReplyDraftInput: state.hasTwoProfileReplyDraftInput,
   });
+  fields.chatTranscriptToolbar?.classList.toggle("has-pending-action", Boolean(pendingConversation));
+  fields.chatTranscriptToolbar?.classList.toggle("has-selected-pending-action", pendingSelected);
+  fields.chatTranscriptToolbar?.classList.toggle("has-reply-action", Boolean(replySelection.canSelect));
+  fields.chatTranscriptToolbar?.classList.toggle(
+    "has-conversation-action",
+    Boolean(pendingConversation || replySelection.canSelect),
+  );
   setReplyLatestTwoProfileLabel(replySelection.label);
   setReviewPendingTwoProfileLabel(
     chatReviewButtonLabel(
