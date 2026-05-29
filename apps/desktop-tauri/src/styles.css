@@ -787,6 +787,10 @@ textarea[readonly] {
   display: none;
 }
 
+.connection-wizard-internal {
+  display: none;
+}
+
 .wizard-step-label {
   margin: 0;
   color: var(--text-secondary);
