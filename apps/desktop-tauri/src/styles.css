@@ -1169,7 +1169,7 @@ body.is-chat-active .system-settings-panel {
   position: fixed;
   z-index: 30;
   top: 14px;
-  right: 50px;
+  right: 112px;
   display: grid;
   justify-items: end;
   max-width: min(420px, calc(100vw - 28px));
@@ -2329,7 +2329,7 @@ pre.is-failed {
 
   body.is-chat-active .system-settings-panel {
     top: 8px;
-    right: 44px;
+    right: 108px;
     max-width: calc(100vw - 16px);
   }
 
@@ -2434,7 +2434,7 @@ pre.is-failed {
   position: fixed;
   z-index: 26;
   top: 14px;
-  right: 52px;
+  right: 112px;
   display: grid;
   justify-items: end;
   max-width: min(420px, calc(100vw - 28px));
@@ -2499,7 +2499,7 @@ pre.is-failed {
   gap: 2px;
   align-items: end;
   border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 42%, transparent);
-  padding: 0 76px 6px 0;
+  padding: 0 148px 6px 0;
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > div:first-child .eyebrow {
@@ -2507,7 +2507,7 @@ pre.is-failed {
 }
 
 #production-two-profile-title {
-  max-width: calc(100vw - 128px);
+  max-width: calc(100vw - 196px);
   overflow: hidden;
   font-size: 15px;
   line-height: 1.2;
@@ -2517,7 +2517,7 @@ pre.is-failed {
 
 .room-status-summary {
   justify-self: start;
-  max-width: min(420px, calc(100vw - 128px));
+  max-width: min(420px, calc(100vw - 196px));
   margin: 2px 0 0;
   border: 1px solid color-mix(in srgb, var(--panel-border) 44%, transparent);
   border-radius: 999px;
