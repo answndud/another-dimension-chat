@@ -1449,6 +1449,17 @@ body.is-chat-active .message-transcript li {
   box-shadow: none;
 }
 
+body.is-chat-active .message-transcript li.is-pending-send {
+  border-color: color-mix(in srgb, var(--warning) 42%, var(--panel-border));
+  background: color-mix(in srgb, var(--panel) 84%, var(--warning));
+}
+
+body.is-chat-active .message-transcript li.is-canceled {
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--panel-border));
+  background: color-mix(in srgb, var(--panel) 92%, var(--bg));
+  opacity: 0.76;
+}
+
 body.is-chat-active .message-transcript li.is-pending-send,
 body.is-chat-active .message-transcript li.is-pending-receive,
 body.is-chat-active .message-transcript li.is-canceled {
@@ -1494,6 +1505,15 @@ body.is-chat-active .message-transcript .transcript-status.is-inbound-only {
   display: none;
 }
 
+body.is-chat-active .message-transcript li.is-pending-send .transcript-status {
+  color: var(--warning);
+  opacity: 0.88;
+}
+
+body.is-chat-active .message-transcript li.is-canceled .transcript-status {
+  color: var(--text-muted);
+}
+
 body.is-chat-active .message-transcript .transcript-body {
   font-size: 14px;
   line-height: 1.4;
@@ -1509,6 +1529,10 @@ body.is-chat-active .message-transcript .transcript-row-actions {
   border-top: 1px solid color-mix(in srgb, var(--panel-border) 22%, transparent);
   opacity: 0.68;
   transition: opacity 120ms ease;
+}
+
+body.is-chat-active .message-transcript li.is-pending-send .transcript-row-actions {
+  border-top-color: color-mix(in srgb, var(--warning) 26%, transparent);
 }
 
 body.is-chat-active .message-transcript li:hover .transcript-row-actions,
@@ -1527,11 +1551,24 @@ body.is-chat-active .message-transcript .transcript-row-actions button {
 }
 
 body.is-chat-active .message-transcript .transcript-row-actions .transcript-retry {
+  min-height: 22px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 48%, transparent);
+  border-radius: 3px;
+  padding: 2px 7px;
+  background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
   color: var(--accent-cyan);
 }
 
 body.is-chat-active .message-transcript .transcript-row-actions .transcript-cancel {
+  padding-left: 6px;
   color: var(--text-muted);
+  opacity: 0.72;
+}
+
+body.is-chat-active .message-transcript .transcript-row-actions .transcript-cancel:hover,
+body.is-chat-active .message-transcript .transcript-row-actions .transcript-cancel:focus-visible {
+  color: var(--danger);
+  opacity: 1;
 }
 
 body.is-chat-active .chat-message-label {
