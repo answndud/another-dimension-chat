@@ -2455,6 +2455,10 @@ body.is-developer-mode .advanced-panel {
   display: none;
 }
 
+.safety-confirm-state {
+  display: none;
+}
+
 body.is-chat-empty:not(.has-connection-code) .chat-transcript-toolbar,
 body.is-chat-empty:not(.has-connection-code) #production-two-profile-message,
 body.is-chat-empty:not(.has-connection-code) .chat-primary-actions {
@@ -2517,5 +2521,58 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session) #production-two-p
 }
 
 body.has-ready-session .connection-pending-state {
+  display: none;
+}
+
+body.has-ready-session.needs-safety-confirmation .safety-confirm-state {
+  order: 4;
+  display: grid;
+  gap: 10px;
+  width: min(520px, 100%);
+  border: 1px solid color-mix(in srgb, var(--warning) 28%, var(--panel-border));
+  padding: 14px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--warning) 7%, transparent), transparent 72%),
+    color-mix(in srgb, var(--panel-strong) 76%, var(--bg));
+}
+
+body.has-ready-session.needs-safety-confirmation .safety-confirm-state h4,
+body.has-ready-session.needs-safety-confirmation .safety-confirm-state p {
+  margin: 0;
+}
+
+body.has-ready-session.needs-safety-confirmation .safety-confirm-state h4 {
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+body.has-ready-session.needs-safety-confirmation .safety-confirm-state p:not(.eyebrow) {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+body.has-ready-session.needs-safety-confirmation .safety-confirm-state .safety-phrase {
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 24%, var(--panel-border));
+  padding: 8px 10px;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg) 76%, var(--panel));
+  overflow-wrap: anywhere;
+}
+
+body.has-ready-session.needs-safety-confirmation .safety-confirm-state button {
+  width: fit-content;
+  min-width: 148px;
+}
+
+body.has-ready-session.needs-safety-confirmation #production-two-profile-message,
+body.has-ready-session.needs-safety-confirmation .chat-primary-actions.is-send-mode {
+  display: none;
+}
+
+body.has-confirmed-safety .safety-confirm-state {
   display: none;
 }
