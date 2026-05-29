@@ -2395,3 +2395,17 @@ body.is-developer-mode .dev-diagnostic-panel,
 body.is-developer-mode .advanced-panel {
   display: grid;
 }
+
+.connection-setup-actions {
+  border-top: 1px solid var(--panel-border);
+  padding-top: 10px;
+}
+
+.connection-setup-actions .setup-primary-actions button {
+  width: 100%;
+  min-width: 0;
+}
+
+.chat-settings-panel .connection-setup-actions > summary {
+  display: none;
+}
