@@ -1966,8 +1966,10 @@ function latestTwoProfileConversationEntry() {
 function updateMinimalChatMode(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
   const hasConversation = productionTwoProfileConversationEntries.size > 0;
   const chatStarted = Boolean(hasConversation || latestProductionTwoProfileSuccess);
+  const hasConnectionCode = Boolean(input.profileB);
   document.body.classList.toggle("is-chat-active", chatStarted);
   document.body.classList.toggle("is-chat-empty", !hasConversation);
+  document.body.classList.toggle("has-connection-code", hasConnectionCode);
   updateChatPrimaryActionMode(input, sessionsReady);
   if (chatStarted) {
     document.querySelector(".chat-settings-panel")?.removeAttribute("open");

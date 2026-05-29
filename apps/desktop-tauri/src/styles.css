@@ -2450,3 +2450,18 @@ body.is-developer-mode .advanced-panel {
 .chat-empty-state + .chat-transcript-toolbar + #production-two-profile-transcript {
   opacity: 0.38;
 }
+
+body.is-chat-empty:not(.has-connection-code) .chat-transcript-toolbar,
+body.is-chat-empty:not(.has-connection-code) #production-two-profile-message,
+body.is-chat-empty:not(.has-connection-code) .chat-primary-actions {
+  display: none;
+}
+
+body.is-chat-empty:not(.has-connection-code) #production-two-profile-transcript {
+  min-height: clamp(120px, 26vh, 280px);
+  opacity: 0.24;
+}
+
+body.is-chat-empty.has-connection-code .chat-empty-state {
+  display: none;
+}
