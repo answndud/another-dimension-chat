@@ -2409,3 +2409,44 @@ body.is-developer-mode .advanced-panel {
 .chat-settings-panel .connection-setup-actions > summary {
   display: none;
 }
+
+.chat-empty-state {
+  place-items: start;
+  width: min(430px, 100%);
+  margin-top: clamp(64px, 18vh, 180px);
+  border-color: color-mix(in srgb, var(--accent-cyan) 14%, var(--panel-border));
+  padding: 22px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-strong) 82%, transparent), transparent 120px),
+    color-mix(in srgb, var(--panel) 82%, var(--bg));
+}
+
+.chat-empty-state h4 {
+  font-size: 18px;
+  line-height: 1.18;
+}
+
+.chat-empty-state p:not(.eyebrow) {
+  max-width: 34ch;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.chat-empty-state .loop-actions {
+  width: 100%;
+}
+
+.chat-empty-state #start-peer-connection {
+  width: 100%;
+  min-height: 38px;
+  border-color: var(--accent-cyan);
+}
+
+.chat-empty-state #enter-peer-code {
+  display: none;
+}
+
+.chat-empty-state + .chat-transcript-toolbar,
+.chat-empty-state + .chat-transcript-toolbar + #production-two-profile-transcript {
+  opacity: 0.38;
+}
