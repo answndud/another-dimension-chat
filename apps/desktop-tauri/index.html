@@ -398,7 +398,7 @@
                   Copy code
                 </button>
                 <p class="retention-note" data-i18n="connectionCodeHint">
-                  Paste one shared code from the other device. Internal profile and storage passphrase are prepared automatically.
+                  Use the same invite code on both devices. The app keeps the local setup out of view.
                 </p>
               </section>
               <section class="connection-wizard-step" data-wizard-step="retention">
@@ -416,12 +416,12 @@
                 <input id="production-two-profile-passphrase" type="hidden" />
               </div>
               <p id="production-two-profile-direction" class="demo-state" aria-live="polite">
-                Direction: enter your profile and peer connection
+                Status: create or paste an invite code
               </p>
             </div>
             <div class="chat-setup-controls connection-setup-actions">
               <div class="loop-actions setup-primary-actions">
-                <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Create saved connection</button>
+                <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Create room</button>
               </div>
               <details class="onion-advanced-controls">
                 <summary data-i18n="advancedOnionSetup">Advanced onion setup</summary>
@@ -463,7 +463,7 @@
             <ol id="production-two-profile-flow" class="demo-steps compact-flow" aria-label="Connection guided flow">
               <li id="production-two-profile-step-session" class="is-running">
                 <strong data-i18n="sessionStep">1 Session</strong>
-                <span id="production-two-profile-step-session-detail">Enter your profile, peer connection, and passphrase.</span>
+                <span id="production-two-profile-step-session-detail">Create or paste an invite code.</span>
               </li>
               <li id="production-two-profile-step-compose" class="is-pending">
                 <strong data-i18n="composeStep">2 Compose</strong>
@@ -484,7 +484,7 @@
             <details class="chat-diagnostics">
               <summary data-i18n="roomStatus">Room status</summary>
               <p id="production-two-profile-warning" class="demo-warning">
-                No saved connection has run yet.
+                No room has been created yet.
               </p>
               <dl class="flow-summary">
                 <div>
@@ -575,7 +575,7 @@
             <textarea id="production-two-profile-message" rows="3" placeholder="Write a message"></textarea>
             <div class="loop-actions chat-primary-actions">
               <button id="run-production-two-profile-roundtrip-inline" type="button" data-i18n="createConnection">
-                Create connection
+                Create room
               </button>
               <button id="check-production-two-profile-session-status-inline" type="button" data-i18n="checkSessions">
                 Check sessions
