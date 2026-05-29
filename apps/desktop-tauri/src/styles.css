@@ -2471,14 +2471,41 @@ pre.is-failed {
 }
 
 .room-status-summary {
-  max-width: min(680px, calc(100vw - 128px));
+  justify-self: start;
+  max-width: min(420px, calc(100vw - 128px));
   margin: 2px 0 0;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 44%, transparent);
+  border-radius: 999px;
+  padding: 2px 8px;
   overflow: hidden;
   color: var(--text-secondary);
+  background: color-mix(in srgb, var(--panel) 74%, transparent);
   font-size: 11px;
+  font-weight: 750;
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.room-status-summary.is-ready {
+  border-color: color-mix(in srgb, var(--success) 44%, transparent);
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 8%, transparent);
+}
+
+.room-status-summary.is-verify,
+.room-status-summary.is-pending {
+  border-color: color-mix(in srgb, var(--warning) 48%, transparent);
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 9%, transparent);
+}
+
+.room-status-summary.is-disconnected {
+  color: var(--text-muted);
+}
+
+.room-status-summary.is-receiving {
+  border-color: color-mix(in srgb, var(--success) 58%, transparent);
 }
 
 .room-identity-bar {
