@@ -1837,6 +1837,86 @@ pre.is-failed {
     margin-left: 0;
   }
 
+  body.is-chat-active .shell {
+    padding: 8px;
+  }
+
+  body.is-chat-active .demo-panel,
+  body.is-chat-active .status-panel,
+  body.is-chat-active .production-workflow[aria-labelledby="production-two-profile-title"] {
+    min-height: calc(100vh - 16px);
+  }
+
+  body.is-chat-active .production-workflow[aria-labelledby="production-two-profile-title"] {
+    padding: 8px;
+  }
+
+  body.is-chat-active .production-workflow[aria-labelledby="production-two-profile-title"] > div:first-child {
+    padding-right: 32px;
+  }
+
+  body.is-chat-active #production-two-profile-title {
+    max-width: calc(100vw - 88px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.is-chat-active .system-settings-panel {
+    top: 8px;
+    right: 8px;
+    max-width: calc(100vw - 16px);
+  }
+
+  body.is-chat-active .chat-settings-panel {
+    top: 44px;
+    right: 8px;
+    max-width: calc(100vw - 16px);
+  }
+
+  body.is-chat-active .settings-toggle {
+    top: 22px;
+    right: 8px;
+  }
+
+  body.is-chat-active .room-identity-bar {
+    justify-content: flex-start;
+    gap: 5px;
+  }
+
+  body.is-chat-active .room-identity-bar dd {
+    max-width: min(42vw, 18ch);
+  }
+
+  body.is-chat-active .chat-transcript-toolbar .loop-actions {
+    width: auto;
+    max-width: calc(100vw - 32px);
+    transform: translateY(6px);
+  }
+
+  body.is-chat-active .chat-transcript-toolbar button {
+    flex: 0 1 auto;
+    min-height: 20px;
+    padding: 2px 5px;
+    font-size: 8px;
+  }
+
+  body.is-chat-active .message-transcript li {
+    width: min(86%, 520px);
+  }
+
+  body.is-chat-active .chat-primary-actions.is-setup-mode,
+  body.is-chat-active .chat-primary-actions.is-setup-mode:not(.has-session-check-input),
+  body.is-chat-active .chat-primary-actions.is-send-mode {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  body.is-chat-active .chat-primary-actions #production-two-profile-readiness {
+    grid-column: 1 / -1;
+    max-width: none;
+    text-align: left;
+  }
+
   .compact-flow {
     grid-template-columns: 1fr;
   }
