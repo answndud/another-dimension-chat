@@ -2842,6 +2842,36 @@ body.is-chat-active.is-developer-mode .advanced-panel.is-revealed summary {
   min-width: 0;
 }
 
+.room-receive-controls {
+  display: grid;
+  gap: 7px;
+  border-top: 1px solid color-mix(in srgb, var(--panel-border) 54%, transparent);
+  padding-top: 10px;
+}
+
+.room-receive-controls p {
+  margin: 0;
+}
+
+.room-receive-controls .loop-actions {
+  justify-content: flex-end;
+}
+
+.room-receive-controls button {
+  min-width: 0;
+  min-height: 28px;
+  border-color: color-mix(in srgb, var(--panel-border) 56%, transparent);
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.room-receive-controls #stop-production-two-profile-onion-receive:not(:disabled) {
+  border-color: color-mix(in srgb, var(--success) 46%, var(--panel-border));
+  color: var(--text-secondary);
+}
+
 .chat-settings-panel .connection-setup-actions > summary {
   display: none;
 }
