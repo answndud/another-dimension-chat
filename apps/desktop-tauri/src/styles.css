@@ -2627,8 +2627,8 @@ label[for="production-two-profile-transcript-export"],
 .chat-settings-panel[open] {
   top: 52px;
   right: 14px;
-  width: min(430px, calc(100vw - 28px));
-  max-height: calc(100vh - 68px);
+  width: min(360px, calc(100vw - 28px));
+  max-height: min(520px, calc(100vh - 68px));
 }
 
 .chat-settings-panel[open] .chat-setup-controls {
