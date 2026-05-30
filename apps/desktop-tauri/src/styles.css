@@ -2925,9 +2925,9 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 }
 
 .connection-next-steps {
-  display: none;
-  gap: 5px;
-  margin: 4px 0 2px;
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 4px;
   padding-left: 18px;
   color: var(--text-secondary);
   font-size: 11px;
@@ -2942,7 +2942,7 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 .chat-empty-state .loop-actions {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 
@@ -2954,7 +2954,10 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 
 .chat-empty-state #start-peer-connection {
   width: 100%;
-  min-height: 38px;
+  min-height: 34px;
+  border-color: color-mix(in srgb, var(--panel-border) 58%, transparent);
+  background: transparent;
+  color: var(--text-secondary);
 }
 
 .chat-empty-state + .chat-transcript-toolbar,
