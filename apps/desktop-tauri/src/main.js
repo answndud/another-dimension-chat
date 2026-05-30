@@ -1167,24 +1167,10 @@ function renderTwoProfileSafetyConfirm(input = productionTwoProfileInput(), sess
 }
 
 function renderAppStateSummary(status) {
-  const releaseSummary = status.secure_release
-    ? currentLanguage === "ko"
-      ? "예상치 못한 출시 보안 주장이 감지됨"
-      : "Unexpected: secure-release claim present"
-    : currentLanguage === "ko"
-      ? "정식 보안 출시 주장은 닫혀 있음"
-      : "Blocked: secure-release claim closed";
-  const localCapabilitySummary = status.usable_messaging
-    ? currentLanguage === "ko"
-      ? "런타임 메시지 경로 사용 가능"
-      : "Ready: runtime messaging path enabled"
-    : currentLanguage === "ko"
-      ? "로컬 암호화 저장 기반 테스트 가능"
-      : "Local-only: encrypted app-data harness";
+  const releaseSummary = status.secure_release ? t("appReleaseSummaryUnexpected") : t("appReleaseSummarySafe");
+  const localCapabilitySummary = status.usable_messaging ? t("runtimeMessagingSummary") : t("localCapabilitySummary");
   const mainBlockerSummary = status.network_execution_status?.includes("disabled")
-    ? currentLanguage === "ko"
-      ? "네트워크 전송은 수동 권한 전까지 꺼져 있음"
-      : "Blocked: runtime transport disabled"
+    ? t("mainBlockerSummary")
     : localizedBoundaryStatus(status.production_preflight_blockers);
 
   setText(fields.appReleaseSummary, releaseSummary);

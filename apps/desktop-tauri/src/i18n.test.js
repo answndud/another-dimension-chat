@@ -17,6 +17,7 @@ test("translate resolves Korean and English chat labels", () => {
   assert.equal(translate("ko", "peerOffline"), "상대가 오프라인입니다");
   assert.equal(translate("ko", "statusNeedPassphrase"), "연결 코드 필요");
   assert.equal(translate("ko", "boundaryDetails"), "기술 경계");
+  assert.equal(translate("ko", "mainBlockerSummary"), "네트워크는 직접 시작하기 전까지 꺼져 있습니다");
   assert.equal(translate("ko", "connectionGuideTitle"), "처음 연결하는 순서");
   assert.equal(translate("ko", "networkExecutionValue"), "네트워크 작업은 권한 체크와 버튼 클릭 전에는 실행되지 않습니다");
   assert.equal(translate("ko", "manualProductionTools"), "수동 전송 도구");

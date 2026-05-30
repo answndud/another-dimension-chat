@@ -319,7 +319,7 @@ require_contains "$APP_DIR/index.html" '<button id="theme-toggle" type="button" 
 require_contains "$APP_DIR/src/main.js" 'themeStorageKey'
 require_contains "$APP_DIR/src/main.js" 'toggleTheme'
 require_contains "$APP_DIR/src/main.js" 'renderAppStateSummary'
-require_contains "$APP_DIR/src/main.js" 'Blocked: runtime transport disabled'
+require_contains "$APP_DIR/src/i18n.js" 'mainBlockerSummary'
 require_contains "$APP_DIR/src/action-state.js" 'productionTwoProfileReadiness'
 require_contains "$APP_DIR/src/action-state.js" 'productionTwoProfileConversationActionView'
 require_contains "$APP_DIR/src/main.js" 'renderProductionTwoProfileResult'
