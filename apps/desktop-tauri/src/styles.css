@@ -3083,14 +3083,15 @@ body.has-ready-session .connection-pending-state {
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state {
   order: 4;
   display: grid;
-  gap: 10px;
+  gap: 11px;
   justify-self: center;
   width: min(390px, 100%);
-  border: 1px solid color-mix(in srgb, var(--warning) 40%, var(--panel-border));
+  border: 1px solid color-mix(in srgb, var(--warning) 58%, var(--panel-border));
   padding: 18px;
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--warning) 10%, transparent), transparent 72%),
+    linear-gradient(90deg, color-mix(in srgb, var(--warning) 14%, transparent), transparent 72%),
     color-mix(in srgb, var(--panel-strong) 76%, var(--bg));
+  box-shadow: 0 18px 44px rgb(0 0 0 / 24%);
 }
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state h4,
@@ -3100,32 +3101,51 @@ body.has-ready-session.needs-safety-confirmation .safety-confirm-state p {
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state h4 {
   color: var(--text-primary);
-  font-size: 19px;
+  font-size: 20px;
   line-height: 1.25;
 }
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state p:not(.eyebrow) {
-  max-width: 30ch;
+  max-width: 34ch;
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.45;
 }
 
-body.has-ready-session.needs-safety-confirmation .safety-confirm-state .safety-phrase {
-  width: 100%;
-  max-width: 100%;
-  border: 1px solid color-mix(in srgb, var(--accent-cyan) 24%, var(--panel-border));
-  padding: 12px;
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--bg) 76%, var(--panel));
-  font-size: 14px;
-  font-weight: 750;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
+body.has-ready-session.needs-safety-confirmation .safety-confirm-state .safety-lock-note {
+  border-left: 2px solid color-mix(in srgb, var(--warning) 80%, var(--panel-border));
+  padding: 2px 0 2px 10px;
+  color: var(--warning);
 }
 
-body.has-ready-session.needs-safety-confirmation .safety-confirm-state .safety-lock-note {
-  display: none;
+body.has-ready-session.needs-safety-confirmation .safety-confirm-state p.safety-phrase {
+  justify-self: stretch;
+  width: 100%;
+  max-width: none;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 36%, var(--panel-border));
+  padding: 13px;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg) 76%, var(--panel));
+  font-size: 15px;
+  font-weight: 780;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+body.has-ready-session.needs-safety-confirmation .safety-confirm-checks {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+body.has-ready-session.needs-safety-confirmation .safety-confirm-checks li::marker {
+  color: var(--warning);
+  font-weight: 800;
 }
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state button {
