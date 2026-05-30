@@ -2972,17 +2972,49 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 
 .connection-next-steps {
   display: grid;
-  gap: 6px;
-  margin: 6px 0 4px;
-  padding-left: 18px;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
   color: var(--text-secondary);
   font-size: 11px;
   line-height: 1.35;
+  list-style: none;
 }
 
-.connection-next-steps li::marker {
+.connection-next-steps li {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 58%, transparent);
+  border-radius: 8px;
+  padding: 10px 10px 10px 34px;
+  background: color-mix(in srgb, var(--panel) 58%, transparent);
+}
+
+.connection-next-steps li::before {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 52%, transparent);
+  border-radius: 999px;
   color: var(--accent-cyan);
-  font-weight: 800;
+  font-size: 9px;
+  font-weight: 820;
+  content: counter(list-item);
+}
+
+.connection-next-steps strong {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.connection-next-steps span {
+  max-width: 36ch;
 }
 
 .chat-empty-state .loop-actions {
@@ -3030,9 +3062,10 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pendi
   display: grid;
   gap: 7px;
   justify-self: center;
-  width: min(390px, 100%);
-  margin: clamp(54px, 16vh, 160px) auto 0;
+  width: min(440px, 100%);
+  margin: clamp(42px, 12vh, 120px) auto 0;
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 18%, var(--panel-border));
+  border-radius: 8px;
   padding: 18px;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--accent-cyan) 5%, transparent), transparent 110px),
@@ -3071,7 +3104,7 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session) .chat-primary-act
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   justify-self: center;
-  width: min(390px, 100%);
+  width: min(440px, 100%);
   padding-top: 8px;
 }
 
