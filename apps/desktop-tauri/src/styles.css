@@ -1599,6 +1599,20 @@ body.is-chat-active .message-transcript .transcript-status {
   text-transform: lowercase;
 }
 
+body.is-chat-active .message-transcript .transcript-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  align-items: center;
+  min-height: 22px;
+  margin-top: 1px;
+}
+
+body.is-chat-active .message-transcript .transcript-footer:has(.transcript-status.is-delivered),
+body.is-chat-active .message-transcript .transcript-footer:has(.transcript-status.is-inbound-only) {
+  display: none;
+}
+
 body.is-chat-active .message-transcript .transcript-status.is-delivered,
 body.is-chat-active .message-transcript .transcript-status.is-inbound-only {
   display: none;
@@ -1650,18 +1664,19 @@ body.is-chat-active .message-transcript li.is-selected:not(.is-reply-target, .is
 
 body.is-chat-active .message-transcript .transcript-row-actions {
   display: flex;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   gap: 4px;
   align-items: center;
-  margin-top: -1px;
-  padding-top: 2px;
-  border-top: 1px solid color-mix(in srgb, var(--panel-border) 22%, transparent);
-  opacity: 0.68;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  opacity: 0.78;
   transition: opacity 120ms ease;
 }
 
 body.is-chat-active .message-transcript li.is-pending-send .transcript-row-actions {
-  border-top-color: color-mix(in srgb, var(--warning) 26%, transparent);
+  border-top-color: transparent;
 }
 
 body.is-chat-active .message-transcript li:hover .transcript-row-actions,
@@ -1670,19 +1685,22 @@ body.is-chat-active .message-transcript li:focus-within .transcript-row-actions 
 }
 
 body.is-chat-active .message-transcript .transcript-row-actions button {
+  width: auto;
+  min-width: 0;
   min-height: 20px;
   border-color: transparent;
-  padding: 1px 0 1px 8px;
+  padding: 1px 0 1px 6px;
   background: transparent;
   font-size: 10px;
   font-weight: 650;
   text-transform: lowercase;
+  white-space: nowrap;
 }
 
 body.is-chat-active .message-transcript .transcript-row-actions .transcript-retry {
   min-height: 22px;
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 48%, transparent);
-  border-radius: 3px;
+  border-radius: 999px;
   padding: 2px 7px;
   background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
   color: var(--accent-cyan);
@@ -2047,6 +2065,7 @@ body.is-chat-active .chat-primary-actions.is-send-mode #production-two-profile-r
 .message-transcript .transcript-status,
 .message-transcript .transcript-retention,
 .message-transcript .transcript-action,
+.message-transcript .transcript-footer,
 .message-transcript .transcript-review,
 .message-transcript .transcript-details {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
@@ -2139,6 +2158,13 @@ body.is-chat-active .chat-primary-actions.is-send-mode #production-two-profile-r
   font-size: 14px;
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.message-transcript .transcript-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
 }
 
 .message-transcript .transcript-row-actions {
