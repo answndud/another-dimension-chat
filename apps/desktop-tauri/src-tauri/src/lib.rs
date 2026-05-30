@@ -11644,6 +11644,105 @@ replay check: no replayed messages after message 2
     }
 
     #[test]
+    fn production_two_profile_resume_reloads_status_and_transcripts_after_new_command_invocations()
+    {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let setup = run_production_two_profile_roundtrip(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "resume after restart".to_string(),
+            86_400,
+        )
+        .expect("two profile setup");
+        assert!(setup.handshake_completed);
+        assert!(setup.sender_session_ready);
+        assert!(setup.receiver_session_ready);
+        assert!(setup.inbound_message_stored);
+        assert!(!setup.network_io_attempted);
+        assert!(!setup.transport_io_opened);
+        assert!(!setup.runtime_messaging_enabled);
+
+        let resumed_status = run_production_two_profile_session_status(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("resumed status");
+        assert!(resumed_status.profile_a_ready_for_message_envelope);
+        assert!(resumed_status.profile_b_ready_for_message_envelope);
+        assert!(resumed_status.both_ready_for_message_envelope);
+        assert!(resumed_status.profile_a_remote_endpoint_state_present);
+        assert!(resumed_status.profile_b_remote_endpoint_state_present);
+        assert!(resumed_status.profile_a_session_transport_state_present);
+        assert!(resumed_status.profile_b_session_transport_state_present);
+        assert!(resumed_status.profile_a_runtime_material_reconstructable);
+        assert!(resumed_status.profile_b_runtime_material_reconstructable);
+        assert!(!resumed_status.profile_a_remote_endpoint_marked_stale);
+        assert!(!resumed_status.profile_b_remote_endpoint_marked_stale);
+        assert!(!resumed_status.store_path_returned);
+        assert!(!resumed_status.passphrase_retained);
+        assert!(!resumed_status.key_material_exposed);
+        assert!(!resumed_status.network_io_attempted);
+        assert!(!resumed_status.transport_io_opened);
+        assert!(!resumed_status.runtime_messaging_enabled);
+
+        let sender_transcript = run_production_message_transcript_export(
+            &root,
+            setup.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("sender transcript after resume");
+        let receiver_transcript = run_production_message_transcript_export(
+            &root,
+            setup.receiver_profile.clone(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("receiver transcript after resume");
+        assert_eq!(sender_transcript.entries.len(), 1);
+        assert_eq!(receiver_transcript.entries.len(), 1);
+        assert_eq!(sender_transcript.expired_messages_purged, 0);
+        assert_eq!(receiver_transcript.expired_messages_purged, 0);
+        assert_eq!(sender_transcript.entries[0].direction, "sent");
+        assert_eq!(receiver_transcript.entries[0].direction, "received");
+        assert_eq!(
+            sender_transcript.entries[0].message_number,
+            setup.message_number
+        );
+        assert_eq!(
+            receiver_transcript.entries[0].message_number,
+            setup.message_number
+        );
+        assert_eq!(sender_transcript.entries[0].message, "resume after restart");
+        assert_eq!(
+            receiver_transcript.entries[0].message,
+            "resume after restart"
+        );
+        assert_eq!(sender_transcript.entries[0].ttl_seconds, 86_400);
+        assert_eq!(receiver_transcript.entries[0].ttl_seconds, 86_400);
+        assert!(sender_transcript.plaintext_returned_after_unlock);
+        assert!(receiver_transcript.plaintext_returned_after_unlock);
+        assert!(!sender_transcript.key_material_exposed);
+        assert!(!receiver_transcript.key_material_exposed);
+        assert!(!sender_transcript.network_io_attempted);
+        assert!(!receiver_transcript.network_io_attempted);
+        assert!(!sender_transcript.transport_io_opened);
+        assert!(!receiver_transcript.transport_io_opened);
+        assert!(!sender_transcript.runtime_messaging_enabled);
+        assert!(!receiver_transcript.runtime_messaging_enabled);
+
+        let serialized_status =
+            serde_json::to_string(&resumed_status).expect("serialize resumed status");
+        assert!(!serialized_status.contains("correct-passphrase"));
+        assert!(!serialized_status.contains("/tmp"));
+        assert!(!serialized_status.contains("resume after restart"));
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn production_remote_endpoint_update_keeps_existing_session_without_transport_io() {
         let root = unique_production_roundtrip_dir().expect("temp root");
         for profile in ["alice", "bob"] {
