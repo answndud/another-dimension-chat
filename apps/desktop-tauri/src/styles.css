@@ -3164,15 +3164,25 @@ body.has-ready-session .connection-pending-state {
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state {
   order: 4;
   display: grid;
-  gap: 11px;
+  gap: 12px;
   justify-self: center;
-  width: min(390px, 100%);
-  border: 1px solid color-mix(in srgb, var(--warning) 58%, var(--panel-border));
-  padding: 18px;
+  width: min(460px, 100%);
+  border: 1px solid color-mix(in srgb, var(--warning) 74%, var(--panel-border));
+  border-radius: 8px;
+  padding: 20px;
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--warning) 14%, transparent), transparent 72%),
+    linear-gradient(180deg, color-mix(in srgb, var(--warning) 16%, transparent), transparent 130px),
     color-mix(in srgb, var(--panel-strong) 76%, var(--bg));
   box-shadow: 0 18px 44px rgb(0 0 0 / 24%);
+}
+
+body.has-ready-session.needs-safety-confirmation .safety-confirm-state .eyebrow {
+  width: fit-content;
+  border: 1px solid color-mix(in srgb, var(--warning) 66%, transparent);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
 }
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state h4,
@@ -3182,33 +3192,37 @@ body.has-ready-session.needs-safety-confirmation .safety-confirm-state p {
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state h4 {
   color: var(--text-primary);
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1.25;
 }
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state p:not(.eyebrow) {
-  max-width: 34ch;
+  max-width: 44ch;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
 }
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state .safety-lock-note {
-  border-left: 2px solid color-mix(in srgb, var(--warning) 80%, var(--panel-border));
-  padding: 2px 0 2px 10px;
+  border: 1px solid color-mix(in srgb, var(--warning) 62%, var(--panel-border));
+  border-radius: 8px;
+  padding: 9px 10px;
   color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+  font-weight: 720;
 }
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state p.safety-phrase {
   justify-self: stretch;
   width: 100%;
   max-width: none;
-  border: 1px solid color-mix(in srgb, var(--accent-cyan) 36%, var(--panel-border));
-  padding: 13px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 48%, var(--panel-border));
+  border-radius: 8px;
+  padding: 15px;
   color: var(--text-primary);
   background: color-mix(in srgb, var(--bg) 76%, var(--panel));
-  font-size: 15px;
-  font-weight: 780;
+  font-size: 16px;
+  font-weight: 820;
   line-height: 1.35;
   overflow-wrap: anywhere;
   text-align: center;
@@ -3216,11 +3230,11 @@ body.has-ready-session.needs-safety-confirmation .safety-confirm-state p.safety-
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-checks {
   display: grid;
-  gap: 5px;
+  gap: 7px;
   margin: 0;
-  padding-left: 18px;
+  padding-left: 20px;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.35;
 }
 
@@ -3231,11 +3245,12 @@ body.has-ready-session.needs-safety-confirmation .safety-confirm-checks li::mark
 
 body.has-ready-session.needs-safety-confirmation .safety-confirm-state button {
   width: 100%;
-  min-height: 44px;
-  border-color: var(--accent-cyan);
-  background: color-mix(in srgb, var(--accent-cyan) 14%, var(--button-bg));
+  min-height: 46px;
+  border-color: color-mix(in srgb, var(--warning) 72%, var(--accent-cyan));
+  background: color-mix(in srgb, var(--warning) 16%, var(--button-bg));
   color: var(--text-primary);
   font-size: 13.5px;
+  font-weight: 780;
 }
 
 body.has-ready-session.needs-safety-confirmation #production-two-profile-message,
