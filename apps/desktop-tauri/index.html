@@ -544,14 +544,26 @@
                 Exchange invite codes with the other device, then compare the verification phrase before sending sensitive messages.
               </p>
               <ol class="connection-next-steps" aria-label="Connection steps" data-i18n-aria-label="connectionSteps">
-                <li data-i18n="connectionStepCode">Use the same invite code on both devices.</li>
-                <li data-i18n="connectionStepRoom">Create the room on each device.</li>
-                <li data-i18n="connectionStepVerify">Compare the verification phrase before messaging.</li>
+                <li>
+                  <strong data-i18n="connectionStepCode">Use the same invite code on both devices.</strong>
+                  <div class="loop-actions">
+                    <button id="create-invite-code" type="button" data-i18n="createInviteCode">Create invite code</button>
+                    <button id="start-peer-connection" type="button" class="flow-control is-secondary" data-i18n="connectPeer">Connect a peer</button>
+                  </div>
+                </li>
+                <li>
+                  <strong data-i18n="connectionStepRoom">Create the room on each device.</strong>
+                  <span data-i18n="connectionPendingHint">
+                    Use this same code on the other device, then create the room.
+                  </span>
+                </li>
+                <li>
+                  <strong data-i18n="connectionStepVerify">Compare the verification phrase before messaging.</strong>
+                  <span data-i18n="sendLockedUntilVerified">
+                    Messages stay locked until this phrase matches on both devices.
+                  </span>
+                </li>
               </ol>
-              <div class="loop-actions">
-                <button id="create-invite-code" type="button" data-i18n="createInviteCode">Create invite code</button>
-                <button id="start-peer-connection" type="button" class="flow-control is-secondary" data-i18n="connectPeer">Connect a peer</button>
-              </div>
             </section>
             <section class="connection-pending-state" aria-labelledby="connection-pending-title">
               <p class="eyebrow" data-i18n="connectionCode">Connection code</p>
