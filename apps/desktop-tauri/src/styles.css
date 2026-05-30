@@ -1465,8 +1465,8 @@ body.is-chat-active .chat-transcript-toolbar .loop-actions {
 }
 
 body.is-chat-active .chat-transcript-toolbar.has-conversation-action .loop-actions {
-  opacity: 0.46;
-  transform: translateY(5px);
+  opacity: 0;
+  transform: translateY(3px);
 }
 
 body.is-chat-active .chat-transcript-toolbar:hover .loop-actions,
