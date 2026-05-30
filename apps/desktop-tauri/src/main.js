@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import * as QRCode from "qrcode";
 import {
+  chatNoticeForProductionState,
+  chatNoticeForSendReceiveText,
   productionActionAvailability,
   productionCounterpartProfile,
   productionHandshakeFinishImportView,
@@ -29,6 +31,7 @@ import {
   productionReceivedMessageExportView,
   productionSessionDraftView,
   productionSessionStateView,
+  productionInviteCodeProfiles,
   productionTwoProfilePairFromProfiles,
   productionTwoProfileConversationActionView,
   productionTwoProfileConversationCompare,
@@ -36,9 +39,13 @@ import {
   productionTwoProfileMessageResultView,
   productionTwoProfileOutboundNeedsEndpointRefresh,
   productionTwoProfileOutboundStatusLabel,
+  productionTwoProfileRealOnionResultView,
+  productionTwoProfileRealOnionResumeProfile,
+  productionTwoProfileRealOnionUserView,
   productionTwoProfileReplySelectionView,
   productionTwoProfileResultView,
   productionTwoProfileResumeTarget,
+  productionTwoProfileSendAttemptUserView,
   productionTwoProfileSessionSummaryView,
   productionTwoProfileSessionStatusView,
 } from "./action-state.js";
@@ -98,6 +105,7 @@ const fields = {
   onionClientAttemptGateState: document.querySelector("#onion-client-attempt-gate-state"),
   onionClientAttemptGateBoundary: document.querySelector("#onion-client-attempt-gate-boundary"),
   manualOnionNetworkPermission: document.querySelector("#manual-onion-network-permission"),
+  roomNetworkPermission: document.querySelector("#room-network-permission"),
   runOnionClientOnce: document.querySelector("#run-onion-client-once"),
   onionClientOnceState: document.querySelector("#onion-client-once-state"),
   onionClientOnceBoundary: document.querySelector("#onion-client-once-boundary"),
@@ -266,10 +274,14 @@ const fields = {
   productionTwoProfileA: document.querySelector("#production-two-profile-a"),
   productionTwoProfileB: document.querySelector("#production-two-profile-b"),
   toggleChatSettings: document.querySelector("#toggle-chat-settings"),
+  closeChatSettings: document.querySelector("#close-chat-settings"),
+  openPrivateDeliverySettings: document.querySelector("#open-private-delivery-settings"),
+  closeAppSettings: document.querySelector("#close-app-settings"),
   openDeveloperTools: document.querySelector("#open-developer-tools"),
   createInviteCode: document.querySelector("#create-invite-code"),
   startPeerConnection: document.querySelector("#start-peer-connection"),
   copyInviteCode: document.querySelector("#copy-invite-code"),
+  copyPendingInviteCode: document.querySelector("#copy-pending-invite-code"),
   productionTwoProfileDirection: document.querySelector("#production-two-profile-direction"),
   productionTwoProfileStepSession: document.querySelector("#production-two-profile-step-session"),
   productionTwoProfileStepSessionDetail: document.querySelector(
@@ -292,6 +304,7 @@ const fields = {
   chatPrimaryActions: document.querySelector(".chat-primary-actions"),
   twoProfileSafetyPhrase: document.querySelector("#two-profile-safety-phrase"),
   confirmTwoProfileSafety: document.querySelector("#confirm-two-profile-safety"),
+  rejectTwoProfileSafety: document.querySelector("#reject-two-profile-safety"),
   roomStatusSummary: document.querySelector("#room-status-summary"),
   roomIdentityRoute: document.querySelector("#room-identity-route"),
   roomIdentityPair: document.querySelector("#room-identity-pair"),
@@ -354,6 +367,7 @@ const fields = {
   replyLatestTwoProfileMessage: document.querySelector("#reply-latest-two-profile-message"),
   reviewPendingTwoProfileMessage: document.querySelector("#review-pending-two-profile-message"),
   productionTwoProfileTranscript: document.querySelector("#production-two-profile-transcript"),
+  chatDeliveryNotice: document.querySelector("#chat-delivery-notice"),
   productionTwoProfileTranscriptExport: document.querySelector("#production-two-profile-transcript-export"),
   productionTwoProfileNextStep: document.querySelector("#production-two-profile-next-step"),
   openManualProductionTools: document.querySelector("#open-manual-production-tools"),
@@ -398,7 +412,7 @@ let productionTwoProfileOnionReceiveMode = {
   inFlight: false,
   stopRequested: false,
   runtimeState: "stopped",
-  runtimeLabel: "Receive mode stopped",
+  runtimeLabel: "Message listening stopped",
   lastProcessedImportSequence: 0,
   lastProcessedMessageImportCount: 0,
   lastProcessedEndpointUpdateCount: 0,
@@ -408,6 +422,8 @@ let latestProductionMessageImport = null;
 let latestProductionPairingSafety = null;
 let productionBusyAction = null;
 let latestProductionManualFocusTarget = null;
+let latestChatDeliveryNoticeKey = "";
+let latestChatDeliveryNoticeTone = "neutral";
 let twoProfileAutoResumeTimer = null;
 let latestTwoProfileAutoResumeFingerprint = null;
 let selectedTwoProfileConversationKey = null;
@@ -421,6 +437,20 @@ const productionPayloadSlots = {
   handshakeFinish: new Map(),
   messageEnvelope: new Map(),
 };
+
+function manualNetworkPermissionEnabled() {
+  return fields.roomNetworkPermission?.checked === true || fields.manualOnionNetworkPermission?.checked === true;
+}
+
+function setManualNetworkPermission(enabled) {
+  const checked = Boolean(enabled);
+  if (fields.roomNetworkPermission) {
+    fields.roomNetworkPermission.checked = checked;
+  }
+  if (fields.manualOnionNetworkPermission) {
+    fields.manualOnionNetworkPermission.checked = checked;
+  }
+}
 
 const manualRemotePayloadFields = [
   { kind: "pairing", field: () => fields.productionRemotePairingPayload },
@@ -482,6 +512,15 @@ function localizedReceiveFailureMessage(message) {
     "A received envelope was not fully imported; receive mode will retry.": "receiveImportRetry",
     "This build does not include the manual onion client attempt feature.": "receiveFeatureDisabled",
     "Receive mode hit a retryable backend boundary and will keep polling.": "receiveRetrying",
+    "Waiting for new messages.": "receiveWaiting",
+    "Turn on network permission before listening for messages.": "receiveNeedsNetwork",
+    "Tor needs to be started again before messages can arrive.": "receiveNeedsTor",
+    "Peer is offline; listening will retry.": "receivePeerOffline",
+    "No message arrived before timeout; listening will retry.": "receiveTimeout",
+    "Already listening for messages.": "receiveBusy",
+    "A message could not be imported; listening will retry.": "receiveImportRetry",
+    "Message listening is not available in this build.": "receiveFeatureDisabled",
+    "Message listening hit a retryable error and will keep trying.": "receiveRetrying",
   };
   return exact[normalized] ? t(exact[normalized]) : localizedChatStatus(normalized);
 }
@@ -504,6 +543,29 @@ function localizedSendFailureMessage(error) {
     return t("peerOffline");
   }
   return t("sendFailedGeneric");
+}
+
+function localizedSendAttemptMessage(result) {
+  if (result?.send_attempt_succeeded) {
+    return t("chatNoticeSent");
+  }
+  if (result?.peer_endpoint_refresh_recommended || result?.retry_recommended_after_endpoint_refresh) {
+    return t("chatNoticeRefreshAddress");
+  }
+  return localizedSendFailureMessage(result?.next_blocker || result?.warning || "");
+}
+
+function setChatDeliveryNoticeForSendAttempt(result) {
+  if (result?.send_attempt_succeeded) {
+    setChatDeliveryNoticeByKey("chatNoticeSent", "success");
+    return;
+  }
+  if (result?.peer_endpoint_refresh_recommended || result?.retry_recommended_after_endpoint_refresh) {
+    setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning");
+    return;
+  }
+  const key = chatNoticeForSendReceiveText(result?.next_blocker || result?.warning || "")?.key ?? "sendFailedGeneric";
+  setChatDeliveryNoticeByKey(key, "warning");
 }
 
 function localizedRetentionLabel(entry) {
@@ -577,6 +639,23 @@ function localizedChatStatus(message) {
     "receive mode imported message": "statusLoaded",
     "receive mode imported endpoint update": "statusLoaded",
     "receive mode imported message or endpoint update": "statusLoaded",
+    "message listening stopped": "statusStopped",
+    "message listening stopping": "statusStopped",
+    "listening for new messages": "statusReceiving",
+    "message listening will retry": "receiveRetrying",
+    "peer connected": "statusPeerConnected",
+    "waiting for tor restart": "receiveNeedsTor",
+    "waiting for local address": "statusReceiving",
+    "peer address updated": "statusLoaded",
+    "new message received": "statusLoaded",
+    "private delivery running": "statusSending",
+    "private delivery sent": "statusSent",
+    "private delivery completed": "statusSent",
+    "private delivery failed": "statusFailed",
+    "private delivery blocked": "statusFailed",
+    "private delivery needs review": "statusRetry",
+    "private delivery not ready": "statusSetup",
+    "private delivery needs message": "statusNeedMessage",
   };
   if (exact[lower]) {
     return t(exact[lower]);
@@ -648,6 +727,77 @@ function localizedChatStatus(message) {
     return t("statusCanceled");
   }
   return text;
+}
+
+function localizedTwoProfileUserViewText(value) {
+  const text = String(value ?? "");
+  const exact = {
+    "Room is ready.": "userRoomReady",
+    "Room is saved.": "userRoomSaved",
+    "Message was sent.": "userMessageSent",
+    "Waiting for the other device to receive it.": "userWaitingPeerReceive",
+    "Private delivery finished. Technical details are available in diagnostics.": "userDeliveryFinished",
+    "Peer address needs to be refreshed.": "userPeerAddressRefreshSession",
+    "Message is still saved. Refresh the address, then retry or cancel.": "userMessageSavedRefresh",
+    "No message was deleted.": "userNoMessageDeleted",
+    "Network permission is off.": "userNetworkPermissionOff",
+    "Message is still saved.": "userMessageSaved",
+    "No private delivery was attempted.": "userNoDeliveryAttempted",
+    "The other device may be offline.": "userOtherDeviceMaybeOffline",
+    "Message is still saved. Retry or cancel it from the conversation.": "userMessageSavedRetryCancel",
+    "The failed send stayed retryable.": "userFailedSendRetryable",
+    "Private delivery is not ready.": "userDeliveryNotReady",
+    "Message is still saved. Retry when the room is ready.": "userMessageSavedRetryWhenReady",
+    "Both devices exchanged messages.": "userBothDevicesExchanged",
+    "Message delivered. You can continue the conversation.": "userDeliveredContinue",
+    "Private delivery completed without showing private details.": "userDeliveryCompletedNoDetails",
+    "Turn on private delivery before trying again.": "userTurnOnPrivateDelivery",
+    "Some delivery work finished, but not all messages were confirmed.": "userSomeDeliveryWorkFinished",
+    "Review the conversation, then retry or cancel any pending message.": "userReviewRetryCancelPending",
+    "No private details were shown in the chat view.": "userNoPrivateDetailsChat",
+    "Private delivery setup did not finish.": "userDeliverySetupDidNotFinish",
+    "Try again after the private route is ready.": "userTryAgainRouteReady",
+    "Peer address update was sent.": "userPeerAddressUpdateSent",
+    "Wait for the other device to receive it.": "userWaitPeerAddressReceive",
+    "Peer address update finished without showing private details.": "userPeerAddressUpdateNoDetails",
+    "Existing room state was kept.": "userExistingRoomKept",
+    "Updating the saved peer address.": "userUpdatingPeerAddress",
+    "No chat message is being sent.": "userNoChatMessageSent",
+    "Peer address update is running after your explicit action.": "userPeerAddressUpdateRunning",
+    "Sending saved message.": "userSendingSavedMessage",
+    "Trying private delivery.": "userTryingPrivateDelivery",
+    "Private delivery is running after your explicit action.": "userDeliveryRunningExplicit",
+    "Connecting both devices.": "userConnectingBothDevices",
+    "Room is being prepared.": "userRoomBeingPrepared",
+    "Failed before or during bounded onion send attempt.": "userDeliveryFailedKept",
+  };
+  if (exact[text]) {
+    return t(exact[text]);
+  }
+  const messageNumberPatterns = [
+    [/^Message (#\d+) was sent\.$/, "userMessageNumberSent"],
+    [/^Message (#\d+) is still saved\. Refresh the address, then retry or cancel\.$/, "userMessageNumberSavedRefresh"],
+    [/^Message (#\d+) is still saved\.$/, "userMessageNumberSaved"],
+    [/^Message (#\d+) is still saved\. Retry or cancel it from the conversation\.$/, "userMessageNumberSavedRetryCancel"],
+    [/^Message (#\d+) is still saved\. Retry when the room is ready\.$/, "userMessageNumberSavedRetryWhenReady"],
+  ];
+  for (const [pattern, key] of messageNumberPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return formatTemplate(key, { number: match[1] });
+    }
+  }
+  return localizedChatStatus(text);
+}
+
+function localizedTwoProfileUserView(view) {
+  return {
+    state: localizedChatStatus(view?.state),
+    profiles: localizedTwoProfileUserViewText(view?.profiles),
+    session: localizedTwoProfileUserViewText(view?.session),
+    message: localizedTwoProfileUserViewText(view?.message),
+    boundary: localizedTwoProfileUserViewText(view?.boundary),
+  };
 }
 
 function localizedBoundaryStatus(message) {
@@ -789,6 +939,9 @@ function applyLanguage(language) {
   renderMessageTtlControlOptions();
   renderProductionTwoProfileFlow(productionTwoProfileInput());
   renderProductionTwoProfileDirection(productionTwoProfileInput());
+  if (latestChatDeliveryNoticeKey) {
+    setChatDeliveryNoticeByKey(latestChatDeliveryNoticeKey, latestChatDeliveryNoticeTone);
+  }
   applyProductionActionState();
 }
 
@@ -811,6 +964,44 @@ function setText(node, value) {
   if (node) {
     node.textContent = value;
   }
+  if (node === fields.productionTwoProfileWarning) {
+    updateChatDeliveryNoticeFromText(value);
+  }
+}
+
+function setChatDeliveryNotice(message = "", tone = "neutral") {
+  if (!fields.chatDeliveryNotice) {
+    return;
+  }
+  const text = String(message ?? "").trim();
+  fields.chatDeliveryNotice.textContent = text;
+  fields.chatDeliveryNotice.className = [
+    "chat-delivery-notice",
+    text ? "is-visible" : "",
+    tone ? `is-${tone}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function setChatDeliveryNoticeByKey(key, tone = "neutral") {
+  latestChatDeliveryNoticeKey = key || "";
+  latestChatDeliveryNoticeTone = tone || "neutral";
+  setChatDeliveryNotice(key ? t(key) : "", tone);
+}
+
+function updateChatDeliveryNoticeFromText(value) {
+  const notice = chatNoticeForSendReceiveText(value);
+  if (notice) {
+    setChatDeliveryNoticeByKey(notice.key, notice.tone);
+  }
+}
+
+function updateChatDeliveryNoticeFromState(message) {
+  const notice = chatNoticeForProductionState(message);
+  if (notice) {
+    setChatDeliveryNoticeByKey(notice.key, notice.tone);
+  }
 }
 
 function setDemoState(state, message) {
@@ -830,6 +1021,7 @@ function setProductionRoundtripState(message) {
 
 function setProductionTwoProfileState(message) {
   setText(fields.productionTwoProfileState, localizedChatStatus(message));
+  updateChatDeliveryNoticeFromState(message);
 }
 
 function setProductionProfileState(message) {
@@ -920,12 +1112,24 @@ function openChatSettingsPanel(focusTarget = fields.productionTwoProfileB) {
   if (panel) {
     panel.open = true;
   }
+  document.body.classList.add("is-chat-settings-open");
   fields.toggleChatSettings?.setAttribute("aria-expanded", "true");
   const setupPanel = document.querySelector(".chat-setup-controls");
   if (setupPanel && "open" in setupPanel) {
     setupPanel.open = true;
   }
+  const targetDetails = focusTarget?.closest?.("details");
+  if (targetDetails && "open" in targetDetails) {
+    targetDetails.open = true;
+  }
   focusTarget?.focus();
+}
+
+function openPrivateDeliverySettings() {
+  openChatSettingsPanel(fields.roomNetworkPermission);
+  setProductionTwoProfileState("Private delivery permission needed");
+  setText(fields.productionTwoProfileWarning, t("privateDeliveryPermissionRequired"));
+  setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning");
 }
 
 function closeChatSettingsPanel() {
@@ -933,7 +1137,16 @@ function closeChatSettingsPanel() {
   if (panel) {
     panel.open = false;
   }
+  document.body.classList.remove("is-chat-settings-open");
   fields.toggleChatSettings?.setAttribute("aria-expanded", "false");
+}
+
+function closeAppSettingsPanel() {
+  const panel = document.querySelector(".system-settings-panel");
+  if (panel) {
+    panel.open = false;
+  }
+  document.body.classList.remove("is-app-settings-open");
 }
 
 function updateConnectionWizard(input = productionTwoProfileInput()) {
@@ -1106,13 +1319,17 @@ function renderRoomIdentityBar(input, sessionsReady) {
       ? t("roomNeedsCreate")
       : t("roomNeedsCode");
   const verifyState = safetyConfirmed ? t("roomVerified") : sessionsReady ? t("roomVerifyNeeded") : t("pending");
-  const transportState = activeEndpointState.ready
-    ? fields.manualOnionNetworkPermission?.checked
-      ? t("roomNetworkReady")
-      : t("roomNetworkOff")
-    : activeEndpointState.stale
-      ? t("endpointStale")
-    : localizedChatStatus(activeEndpointState.reason);
+  const transportState = productionTwoProfileOnionReceiveMode.stopRequested
+    ? t("roomReceivingStopping")
+    : productionTwoProfileOnionReceiveMode.enabled
+      ? t("roomReceivingOn")
+      : activeEndpointState.ready
+        ? manualNetworkPermissionEnabled()
+          ? t("roomNetworkReady")
+          : t("roomNetworkOff")
+        : activeEndpointState.stale
+          ? t("endpointStale")
+      : localizedChatStatus(activeEndpointState.reason);
 
   setText(fields.roomIdentityRoute, route);
   setText(fields.roomIdentityPair, pairState);
@@ -1123,10 +1340,13 @@ function renderRoomIdentityBar(input, sessionsReady) {
 function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
   const hasConnectionCode = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB);
   const safetyConfirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
+  const retryableOutbound = latestTwoProfileRetryableOutboundEntry(input);
   const pendingConversation = latestTwoProfilePendingConversationEntry();
   const receiving = productionTwoProfileOnionReceiveMode.enabled;
-  const state = pendingConversation
+  const state = retryableOutbound
     ? "pending"
+    : pendingConversation
+      ? "waiting"
     : !hasConnectionCode
       ? "disconnected"
       : !sessionsReady
@@ -1136,6 +1356,7 @@ function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsRe
           : "ready";
   const keyByState = {
     pending: "roomStatusShortPending",
+    waiting: "roomStatusShortWaiting",
     disconnected: "roomStatusShortNoConnection",
     "code-ready": "roomStatusShortCodeReady",
     verify: "roomStatusShortVerify",
@@ -1150,6 +1371,7 @@ function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsRe
     "is-verify",
     "is-ready",
     "is-pending",
+    "is-waiting",
     "is-receiving",
   );
   fields.roomStatusSummary?.classList.add(`is-${state}`);
@@ -1240,15 +1462,48 @@ function syncProductionTwoProfilePassphraseFromProfile() {
 }
 
 let latestDerivedConnectionCode = "";
+let latestCreatedInviteCode = "";
+let latestConnectionCodeRole = "";
 
 function connectionCodeSlug(value) {
-  const slug = String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 32);
-  return slug || "shared-code";
+  return productionInviteCodeProfiles(value).slug;
+}
+
+function isDerivedConnectionProfile(value) {
+  return /^(local|inviter|joiner|peer)-/.test(String(value ?? "").trim().toLowerCase());
+}
+
+function connectionCodeRoleStorageKey(code) {
+  const slug = connectionCodeSlug(code);
+  return `ad.connectionCodeRole.v1.${encodeURIComponent(slug)}`;
+}
+
+function rememberConnectionCodeRole(code, role) {
+  latestConnectionCodeRole = role;
+  try {
+    window.localStorage.setItem(connectionCodeRoleStorageKey(code), role);
+  } catch {
+    // Role persistence is a UI convenience only; the room can still be recreated manually.
+  }
+}
+
+function connectionCodeRoleFor(code) {
+  if (!code) {
+    return "";
+  }
+  if (latestConnectionCodeRole && code === latestDerivedConnectionCode) {
+    return latestConnectionCodeRole;
+  }
+  try {
+    const stored = window.localStorage.getItem(connectionCodeRoleStorageKey(code));
+    if (stored === "inviter" || stored === "joiner") {
+      latestConnectionCodeRole = stored;
+      return stored;
+    }
+  } catch {
+    // Fall through to the conservative pasted-code role.
+  }
+  return code === latestCreatedInviteCode ? "inviter" : "joiner";
 }
 
 function generateInviteCode() {
@@ -1298,11 +1553,11 @@ async function createInviteCode() {
   if (fields.productionTwoProfileB) {
     fields.productionTwoProfileB.value = code;
   }
+  latestCreatedInviteCode = code;
+  rememberConnectionCodeRole(code, "inviter");
   syncTwoProfileDerivedConnectionFields();
   renderProductionTwoProfileDirection(productionTwoProfileInput());
   applyProductionActionState();
-  openChatSettingsPanel(fields.productionTwoProfileB);
-  fields.productionTwoProfileB?.select?.();
   setProductionTwoProfileState("Invite code created");
   setText(fields.productionTwoProfileWarning, t("inviteCodeCreatedHint"));
   await copyCurrentInviteCode({ quiet: true });
@@ -1316,19 +1571,30 @@ function syncTwoProfileDerivedConnectionFields() {
     return;
   }
   if (!code) {
-    if (profile.value.startsWith("local-")) {
+    if (isDerivedConnectionProfile(profile.value)) {
       profile.value = "";
+    }
+    if (fields.productionTwoProfileB) {
+      delete fields.productionTwoProfileB.dataset.connectionCode;
+      delete fields.productionTwoProfileB.dataset.peerProfile;
     }
     if (passphrase.value === latestDerivedConnectionCode) {
       passphrase.value = "";
     }
     latestDerivedConnectionCode = "";
+    latestConnectionCodeRole = "";
     syncProductionProfilePassphraseFromTwoProfile();
     return;
   }
-  const derivedProfile = `local-${connectionCodeSlug(code)}`;
-  if (!profile.value || profile.value.startsWith("local-")) {
-    profile.value = derivedProfile;
+  const role = connectionCodeRoleFor(code);
+  rememberConnectionCodeRole(code, role);
+  const { localProfile, peerProfile } = productionInviteCodeProfiles(code, role);
+  if (!profile.value || isDerivedConnectionProfile(profile.value)) {
+    profile.value = localProfile;
+  }
+  if (fields.productionTwoProfileB) {
+    fields.productionTwoProfileB.dataset.connectionCode = code;
+    fields.productionTwoProfileB.dataset.peerProfile = peerProfile;
   }
   if (!passphrase.value || passphrase.value === latestDerivedConnectionCode) {
     passphrase.value = code;
@@ -1429,6 +1695,12 @@ function confirmCurrentTwoProfileSafety() {
   applyProductionActionState();
   setText(fields.productionTwoProfileWarning, t("messageInputUnlocked"));
   fields.productionTwoProfileMessage?.focus();
+}
+
+function rejectCurrentTwoProfileSafety() {
+  setProductionTwoProfileState("Verification mismatch");
+  setText(fields.productionTwoProfileWarning, t("phraseMismatchWarning"));
+  openChatSettingsPanel(fields.productionTwoProfileB);
 }
 
 function rememberTwoProfileSessionStatus(input, result) {
@@ -1644,16 +1916,24 @@ function rememberTwoProfileReadySessionFromRoundtrip(input, result) {
   if (!input.profileA || !input.profileB) {
     return;
   }
+  const profileAReady = Boolean(
+    result.sender_session_ready ?? result.profile_a_ready_for_message_envelope,
+  );
+  const profileBReady = Boolean(
+    result.receiver_session_ready ?? result.profile_b_ready_for_message_envelope,
+  );
   rememberTwoProfileSessionStatus(input, {
     profile_a: input.profileA,
     profile_b: input.profileB,
-    profile_a_ready_for_message_envelope: Boolean(result.sender_session_ready),
-    profile_b_ready_for_message_envelope: Boolean(result.receiver_session_ready),
-    both_ready_for_message_envelope: Boolean(result.sender_session_ready && result.receiver_session_ready),
-    profile_a_session_transport_state_present: Boolean(result.sender_session_ready),
-    profile_b_session_transport_state_present: Boolean(result.receiver_session_ready),
-    profile_a_runtime_material_reconstructable: Boolean(result.sender_session_ready),
-    profile_b_runtime_material_reconstructable: Boolean(result.receiver_session_ready),
+    profile_a_ready_for_message_envelope: profileAReady,
+    profile_b_ready_for_message_envelope: profileBReady,
+    both_ready_for_message_envelope: Boolean(
+      result.both_ready_for_message_envelope ?? (profileAReady && profileBReady),
+    ),
+    profile_a_session_transport_state_present: profileAReady,
+    profile_b_session_transport_state_present: profileBReady,
+    profile_a_runtime_material_reconstructable: profileAReady,
+    profile_b_runtime_material_reconstructable: profileBReady,
     profile_a_outbound_envelope_io_ready: false,
     profile_b_outbound_envelope_io_ready: false,
     store_path_returned: Boolean(result.store_path_returned),
@@ -1687,6 +1967,10 @@ function applyProductionProfilePreset(peer) {
 }
 
 function applyTwoProfilePairFromProfile(profile) {
+  if (twoProfileInviteCodeModeActive()) {
+    setText(fields.productionTwoProfileWarning, t("inviteCodeProfileSelectionIgnored"));
+    return false;
+  }
   const preset = productionProfilePreset(profile);
   const counterpart = productionCounterpartProfile(profile);
   if (!preset || !counterpart || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
@@ -2028,17 +2312,13 @@ function renderProductionTwoProfileConversationList() {
     }
     item.setAttribute(
       "aria-label",
-      currentReplyTarget
-        ? `Reply target set for message ${entry.messageNumber}: write reply from ${entry.receiver} to ${entry.sender}`
-      : delivered && selected
-        ? `Selected delivered message ${entry.messageNumber}: use selected reply from ${entry.receiver} to ${entry.sender}`
-      : delivered
-        ? `Delivered message ${entry.messageNumber}: select to reply from ${entry.receiver} to ${entry.sender}`
-      : currentReviewTarget
-        ? `Review target set for pending message ${entry.messageNumber}: continue manual relay for ${entry.sender} to ${entry.receiver}`
-      : reviewable
-        ? `Pending message ${entry.messageNumber}: select to review manual relay for ${entry.sender} to ${entry.receiver}`
-        : `Message ${entry.messageNumber} from ${entry.sender} to ${entry.receiver}`,
+      twoProfileConversationAriaLabel(entry, {
+        currentReplyTarget,
+        currentReviewTarget,
+        delivered,
+        reviewable,
+        selected,
+      }),
     );
     if (selectable) {
       item.addEventListener("click", () => selectTwoProfileConversationEntry(entry));
@@ -2055,6 +2335,7 @@ function renderProductionTwoProfileConversationList() {
     meta.textContent = `${entry.sender} -> ${entry.receiver} / #${entry.messageNumber}`;
 
     const status = document.createElement("span");
+    const outboundStatusLabel = productionTwoProfileOutboundStatusLabel(entry);
     status.className = `transcript-status ${
       delivered
         ? "is-delivered"
@@ -2070,7 +2351,7 @@ function renderProductionTwoProfileConversationList() {
       ? t("delivered")
       : inboundOnly
         ? t("received")
-        : localizedOutboundStatus(productionTwoProfileOutboundStatusLabel(entry));
+        : localizedOutboundStatus(outboundStatusLabel);
 
     const slot = document.createElement("span");
     slot.className = `transcript-slot ${senderEnvelopeSlotPresent ? "is-present" : "is-missing"}`;
@@ -2102,11 +2383,25 @@ function renderProductionTwoProfileConversationList() {
     body.className = "transcript-body";
     body.textContent = entry.message;
 
+    const deliveryNote = document.createElement("span");
+    deliveryNote.className = `transcript-delivery-note ${status.className.replace("transcript-status", "").trim()}`;
+    deliveryNote.textContent = delivered
+      ? ""
+      : inboundOnly
+        ? ""
+        : outboundCanceled
+          ? t("canceled")
+          : localizedOutboundStatus(outboundStatusLabel);
+
     const footer = document.createElement("span");
     footer.className = "transcript-footer";
     footer.append(status);
 
-    item.append(meta, body, footer, retention, action, details);
+    item.append(meta, body);
+    if (deliveryNote.textContent) {
+      item.append(deliveryNote);
+    }
+    item.append(footer, retention, action, details);
     if (!delivered && outboundPending && entry.sender === productionTwoProfileInput().profileA) {
       const actions = document.createElement("span");
       actions.className = "transcript-row-actions";
@@ -2114,7 +2409,7 @@ function renderProductionTwoProfileConversationList() {
       retry.type = "button";
       retry.className = "transcript-retry";
       retry.textContent = productionTwoProfileOutboundNeedsEndpointRefresh(entry)
-        ? t("refreshEndpoint")
+        ? t("refreshAndRetry")
         : t("retrySend");
       retry.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -2127,7 +2422,7 @@ function renderProductionTwoProfileConversationList() {
       const cancel = document.createElement("button");
       cancel.type = "button";
       cancel.className = "transcript-cancel";
-      cancel.textContent = t("cancel");
+      cancel.textContent = t("cancelSend");
       cancel.addEventListener("click", (event) => {
         event.stopPropagation();
         cancelTwoProfileOutboundEntry(entry);
@@ -2144,75 +2439,12 @@ function renderProductionTwoProfileConversationList() {
         ? `${t("replyTarget")}: ${entry.receiver} -> ${entry.sender}`
         : delivered
         ? `${t("replyCandidate")}: ${entry.receiver} -> ${entry.sender}`
-        : `${t("reviewTargetSet")}: #${entry.messageNumber}`;
+        : twoProfileConversationUserActionMessage(entry);
       item.append(review);
     }
     target.append(item);
   }
   updateMinimalChatMode();
-}
-
-function applyDevActiveChatMockFromUrl() {
-  if (!import.meta.env.DEV) {
-    return;
-  }
-  const mock = new URLSearchParams(window.location.search).get("mock");
-  if (mock !== "active-chat" && mock !== "verified-chat") {
-    return;
-  }
-  if (fields.productionTwoProfileA) {
-    fields.productionTwoProfileA.value = "alice";
-  }
-  if (fields.productionTwoProfileB) {
-    fields.productionTwoProfileB.value = "bob";
-  }
-  if (fields.productionTwoProfilePassphrase) {
-    fields.productionTwoProfilePassphrase.value = "dev-layout-only";
-  }
-  if (fields.productionTwoProfileMessage) {
-    fields.productionTwoProfileMessage.value = "reply draft";
-  }
-  latestProductionTwoProfileSuccess = {
-    profileA: "alice",
-    profileB: "bob",
-    messageLength: 26,
-    messageNumber: 3,
-    fingerprint: twoProfileInputFingerprint(productionTwoProfileInput()),
-  };
-  rememberTwoProfileReadySessionFromRoundtrip(productionTwoProfileInput(), {
-    both_ready_for_message_envelope: true,
-    profile_a_ready_for_message_envelope: true,
-    profile_b_ready_for_message_envelope: true,
-    profile_a_pairing_present: true,
-    profile_b_pairing_present: true,
-    profile_a_transport_ready: true,
-    profile_b_transport_ready: true,
-  });
-  if (mock === "verified-chat") {
-    confirmTwoProfileSafetyForInput(productionTwoProfileInput());
-  }
-  appendProductionTwoProfileConversationStatus("sent", "alice", "bob", 1, "meet at the usual relay window");
-  appendProductionTwoProfileConversationStatus("received", "bob", "alice", 1, "meet at the usual relay window");
-  appendProductionTwoProfileConversationStatus("sent", "bob", "alice", 2, "confirmed. rotating endpoint after this.");
-  appendProductionTwoProfileConversationStatus("received", "alice", "bob", 2, "confirmed. rotating endpoint after this.");
-  appendProductionTwoProfileConversationStatus(
-    "sent",
-    "alice",
-    "bob",
-    3,
-    "retryable outbound message with a long enough body to test wrapping on narrow layouts",
-    {
-      outboundDeliveryState: "failed",
-      outboundFailureKind: "peer offline",
-      outboundRetryable: true,
-    },
-  );
-  renderProductionTwoProfileDirection(productionTwoProfileInput());
-  renderRoomIdentityBar(productionTwoProfileInput(), true);
-  setProductionTwoProfileReadiness("Ready to send", "ready");
-  setProductionTwoProfileState("Conversation resumed");
-  setText(fields.productionTwoProfileWarning, "Dev layout mock only; no network or storage action ran.");
-  applyProductionActionState();
 }
 
 function latestTwoProfileConversationEntry() {
@@ -2224,7 +2456,7 @@ function latestTwoProfileConversationEntry() {
 
 function updateMinimalChatMode(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
   const hasConversation = productionTwoProfileConversationEntries.size > 0;
-  const chatStarted = Boolean(hasConversation || latestProductionTwoProfileSuccess);
+  const chatStarted = Boolean(hasConversation || latestProductionTwoProfileSuccess || sessionsReady);
   const hasConnectionCode = Boolean(input.profileB);
   const safetyConfirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
   document.body.classList.toggle("is-chat-active", chatStarted);
@@ -2235,7 +2467,7 @@ function updateMinimalChatMode(input = productionTwoProfileInput(), sessionsRead
   document.body.classList.toggle("needs-safety-confirmation", sessionsReady && !safetyConfirmed);
   updateChatPrimaryActionMode(input, sessionsReady);
   if (chatStarted) {
-    document.querySelector(".chat-settings-panel")?.removeAttribute("open");
+    closeChatSettingsPanel();
     document.querySelector(".chat-diagnostics")?.removeAttribute("open");
   }
 }
@@ -2251,8 +2483,10 @@ function updateChatPrimaryActionMode(input = productionTwoProfileInput(), sessio
   actionBar.classList.toggle("is-send-mode", sessionsReady);
   actionBar.classList.toggle("has-session-check-input", canCheckSession);
   actionBar.classList.toggle("has-message-draft", hasDraft);
+  document.body.classList.toggle("has-message-draft", hasDraft);
   actionBar.classList.toggle("has-receive-enabled", productionTwoProfileOnionReceiveMode.enabled);
   actionBar.classList.toggle("is-receive-stopping", productionTwoProfileOnionReceiveMode.stopRequested);
+  document.body.classList.toggle("has-private-delivery-permission", manualNetworkPermissionEnabled());
   document.body.classList.toggle("is-receiving-messages", productionTwoProfileOnionReceiveMode.enabled);
   document.body.classList.toggle("is-stopping-receive", productionTwoProfileOnionReceiveMode.stopRequested);
 }
@@ -2415,6 +2649,89 @@ function twoProfileConversationActionView(entry) {
 
 function selectedTwoProfileNextActionMessage(entry) {
   return twoProfileConversationActionView(entry).nextAction;
+}
+
+function retryableTwoProfileOutboundWarning(entry) {
+  if (!entry) {
+    return "";
+  }
+  const number = Number.parseInt(entry.messageNumber, 10);
+  const label = Number.isInteger(number) ? `#${number}` : "";
+  if (productionTwoProfileOutboundNeedsEndpointRefresh(entry)) {
+    return currentLanguage === "ko"
+      ? `메시지 ${label} 전송이 멈췄습니다. 상대 주소를 갱신한 뒤 다시 보내거나 취소할 수 있습니다.`
+      : `Message ${label} is waiting. Refresh the peer address, then retry or cancel this send.`;
+  }
+  return currentLanguage === "ko"
+    ? `메시지 ${label} 전송이 실패했습니다. 다시 보내거나 취소할 수 있습니다.`
+    : `Message ${label} failed to send. You can retry or cancel it.`;
+}
+
+function twoProfileConversationUserActionMessage(entry) {
+  if (!entry) {
+    return "";
+  }
+  const number = Number.parseInt(entry.messageNumber, 10);
+  const label = Number.isInteger(number) ? `#${number}` : "";
+  if (twoProfileConversationOutboundRetryable(entry)) {
+    return retryableTwoProfileOutboundWarning(entry);
+  }
+  if (entry.outboundDeliveryState === "canceled") {
+    return currentLanguage === "ko"
+      ? `메시지 ${label} 전송을 취소했습니다. 대화 내용은 이 기기에 남아 있습니다.`
+      : `Message ${label} send was canceled. The conversation stays saved on this device.`;
+  }
+  if (entry.statuses?.has("sent") && !entry.statuses?.has("received")) {
+    return currentLanguage === "ko"
+      ? `메시지 ${label}가 전송 대기 중입니다. 상대가 수신하면 상태가 갱신됩니다.`
+      : `Message ${label} is waiting for delivery. The status will update after the peer receives it.`;
+  }
+  return selectedTwoProfileNextActionMessage(entry);
+}
+
+function twoProfileConversationAriaLabel(entry, state = {}) {
+  if (!entry) {
+    return "";
+  }
+  const number = Number.parseInt(entry.messageNumber, 10);
+  const label = Number.isInteger(number) ? `#${number}` : "";
+  if (state.currentReplyTarget) {
+    return currentLanguage === "ko"
+      ? `메시지 ${label}에 답장 작성 중`
+      : `Writing a reply to message ${label}`;
+  }
+  if (state.delivered && state.selected) {
+    return currentLanguage === "ko"
+      ? `선택된 전달 완료 메시지 ${label}. 답장을 작성할 수 있습니다.`
+      : `Selected delivered message ${label}. You can write a reply.`;
+  }
+  if (state.delivered) {
+    return currentLanguage === "ko"
+      ? `전달 완료 메시지 ${label}. 선택하면 답장할 수 있습니다.`
+      : `Delivered message ${label}. Select it to reply.`;
+  }
+  if (state.currentReviewTarget || state.reviewable) {
+    return twoProfileConversationUserActionMessage(entry);
+  }
+  return currentLanguage === "ko" ? `메시지 ${label}` : `Message ${label}`;
+}
+
+function showRetryableTwoProfileOutboundNotice(entry) {
+  if (!entry) {
+    return;
+  }
+  if (productionTwoProfileOutboundNeedsEndpointRefresh(entry)) {
+    setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning");
+    return;
+  }
+  const status = productionTwoProfileOutboundStatusLabel(entry);
+  if (status === "send timeout") {
+    setChatDeliveryNoticeByKey("sendTimeout", "warning");
+  } else if (status === "permission off") {
+    setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning");
+  } else {
+    setChatDeliveryNoticeByKey("peerOffline", "warning");
+  }
 }
 
 function selectedTwoProfileManualFocusTarget(entry) {
@@ -2805,21 +3122,15 @@ function twoProfileComposePrompt(input = productionTwoProfileInput()) {
       : `Reply to message #${selectedReplyTarget.messageNumber} from ${input.profileA} to ${input.profileB}`;
   }
   if (latestTwoProfileSuccessMatchesOppositeDirection(input)) {
-    return currentLanguage === "ko"
-      ? `답장 작성: ${input.profileA} -> ${input.profileB}`
-      : `Reply from ${input.profileA} to ${input.profileB}`;
+    return currentLanguage === "ko" ? "답장 작성" : "Write a reply";
   }
   if (latestTwoProfileSuccessMatchesDirection(input)) {
-    return currentLanguage === "ko"
-      ? `다음 메시지: ${input.profileA} -> ${input.profileB}`
-      : `Next message from ${input.profileA} to ${input.profileB}`;
+    return currentLanguage === "ko" ? "메시지 작성" : "Write a message";
   }
   if (safetyConfirmed) {
     return t("readyMessagePlaceholder");
   }
-  return currentLanguage === "ko"
-    ? `${input.profileA}에서 ${input.profileB}에게 보낼 메시지`
-    : `Message from ${input.profileA} to ${input.profileB}`;
+  return currentLanguage === "ko" ? "메시지 작성" : "Write a message";
 }
 
 function twoProfileRecoveryMessage(action, error, input = productionTwoProfileInput()) {
@@ -2849,12 +3160,12 @@ function twoProfileRecoveryMessage(action, error, input = productionTwoProfileIn
 function twoProfileSessionRebuildMessage(input = productionTwoProfileInput()) {
   if (currentLanguage === "ko") {
     return input.message
-      ? "저장된 연결이 불완전합니다. 연결 설정을 다시 실행하세요."
-      : "저장된 연결이 불완전합니다. 첫 메시지를 작성한 뒤 연결 설정을 다시 실행하세요.";
+      ? "채팅방 상태가 불완전합니다. 채팅방을 다시 만드세요."
+      : "채팅방 상태가 불완전합니다. 채팅방을 다시 만든 뒤 메시지를 작성하세요.";
   }
   return input.message
-    ? "Stored sessions are incomplete. Run full setup to rebuild session state."
-    : "Stored sessions are incomplete. Write a setup message, then run full setup to rebuild session state.";
+    ? "Room state is incomplete. Create the room again."
+    : "Room state is incomplete. Create the room again, then write a message.";
 }
 
 function renderProductionTwoProfileDirection(input = productionTwoProfileInput()) {
@@ -2967,8 +3278,8 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
       fields.productionTwoProfileStepSessionDetail,
       "complete",
       currentLanguage === "ko"
-        ? `${input.profileA} -> ${input.profileB} 연결이 준비됐습니다.`
-        : `Stored sessions ready for ${input.profileA} -> ${input.profileB}.`,
+        ? "채팅방이 준비됐습니다."
+        : "Room is ready.",
     );
   } else if (sessionStatus) {
     setTwoProfileFlowStep(
@@ -2984,11 +3295,11 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
       "running",
       currentLanguage === "ko"
         ? hasMessage
-          ? "연결 설정을 실행하거나 먼저 연결을 확인하세요."
+          ? "채팅방을 만들거나 먼저 상태를 확인하세요."
           : "연결을 확인하거나 첫 메시지를 작성하세요."
         : hasMessage
-          ? "Run full setup, or check sessions first."
-          : "Check sessions, or write a first message.",
+          ? "Create the room, or check the room first."
+          : "Check the room, or write a first message.",
     );
   }
 
@@ -3016,8 +3327,8 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
     sendRunning || sendReady ? "running" : sendComplete ? "complete" : "pending",
     sendRunning
       ? currentLanguage === "ko"
-        ? "저장된 연결로 메시지를 보내는 중입니다."
-        : "Stored-session message is running."
+        ? "메시지를 보내는 중입니다."
+        : "Sending message."
       : sendComplete
         ? currentLanguage === "ko"
           ? `${lastSuccess.messageLength}자를 보냈고 입력창을 비웠습니다.`
@@ -3028,11 +3339,11 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
               ? `#${selectedReplyTarget.messageNumber}에 답장을 보냅니다.`
               : `Send reply to message #${selectedReplyTarget.messageNumber}.`
             : currentLanguage === "ko"
-              ? "저장된 연결로 메시지를 보냅니다."
-              : "Run stored-session message."
+              ? "메시지를 보냅니다."
+              : "Send message."
           : currentLanguage === "ko"
-            ? "연결 준비와 메시지 작성을 기다리는 중입니다."
-            : "Waiting for ready session and draft.",
+            ? "채팅방 준비와 메시지 작성을 기다리는 중입니다."
+            : "Waiting for a ready room and message.",
   );
 
   setTwoProfileFlowStep(
@@ -3041,16 +3352,16 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
     selectedReplyTarget || lastSuccessOppositeDirection ? "running" : lastSuccess ? "complete" : "pending",
     selectedReplyTarget
       ? currentLanguage === "ko"
-        ? `답장 대상 선택됨: #${selectedReplyTarget.messageNumber} ${input.profileA} -> ${input.profileB}`
-        : `Reply target selected: message #${selectedReplyTarget.messageNumber} ${input.profileA} -> ${input.profileB}.`
+        ? `답장 대상 선택됨: #${selectedReplyTarget.messageNumber}`
+        : `Reply target selected: message #${selectedReplyTarget.messageNumber}.`
       : lastSuccessOppositeDirection
       ? currentLanguage === "ko"
-        ? `답장 방향 선택됨: ${input.profileA} -> ${input.profileB}`
-        : `Reply direction selected: ${input.profileA} -> ${input.profileB}.`
+        ? "답장을 작성할 수 있습니다."
+        : "Ready to write a reply."
       : lastSuccess
         ? currentLanguage === "ko"
-          ? "답장하려면 방향을 바꾸세요."
-          : "Swap direction to reply."
+          ? "이 채팅방에서 계속 작성하세요."
+          : "Keep writing in this room."
         : currentLanguage === "ko"
           ? "먼저 메시지를 하나 보내세요."
           : "Complete one sent message first.",
@@ -3069,10 +3380,10 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
     return { message: messageRetentionPolicyBlocker(), state: "blocked" };
   }
   if (!input.profileA) {
-    return { message: currentLanguage === "ko" ? "내 프로필 필요" : "My profile required", state: "blocked" };
+    return { message: currentLanguage === "ko" ? "초대 코드 필요" : "Invite code needed", state: "blocked" };
   }
   if (!input.profileB) {
-    return { message: currentLanguage === "ko" ? "상대 연결 필요" : "Peer connection required", state: "blocked" };
+    return { message: currentLanguage === "ko" ? "초대 코드 필요" : "Invite code needed", state: "blocked" };
   }
   if (input.profileA === input.profileB) {
     return {
@@ -3081,10 +3392,22 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
     };
   }
   if (!input.passphrase) {
-    return { message: currentLanguage === "ko" ? "암호 필요" : "Passphrase required", state: "blocked" };
+    return { message: currentLanguage === "ko" ? "초대 코드 필요" : "Invite code needed", state: "blocked" };
   }
   if (!input.messageTtlSeconds) {
     return { message: messageTtlInputBlocker(), state: "blocked" };
+  }
+  if (!sessionsReady) {
+    return {
+      message: sessionStatus
+        ? currentLanguage === "ko"
+          ? "연결 재설정 필요"
+          : "Rebuild connection"
+        : currentLanguage === "ko"
+          ? "채팅방 만들기 가능"
+          : "Ready to create room",
+      state: "setup",
+    };
   }
   if (sessionsReady && !twoProfileSafetyConfirmedForInput(input)) {
     return { message: t("phraseNotConfirmed"), state: "blocked" };
@@ -3100,13 +3423,9 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
           : currentLanguage === "ko"
             ? "메시지 작성"
             : "Write a message"
-        : sessionStatus
-          ? currentLanguage === "ko"
-            ? "첫 메시지 작성"
-            : "Write first message"
-          : currentLanguage === "ko"
-            ? "첫 메시지 작성"
-            : "Write first message",
+        : currentLanguage === "ko"
+          ? "메시지 작성"
+          : "Write a message",
       state: "compose",
     };
   }
@@ -3118,16 +3437,7 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
       state: "ready",
     };
   }
-  return {
-    message: sessionStatus
-      ? currentLanguage === "ko"
-        ? "연결 재설정 필요"
-        : "Rebuild connection"
-      : currentLanguage === "ko"
-        ? "채팅방 만들기 필요"
-        : "Create room",
-    state: "setup",
-  };
+  return { message: currentLanguage === "ko" ? "보낼 수 있음" : "Ready to send", state: "ready" };
 }
 
 function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
@@ -3538,6 +3848,8 @@ function focusAfterProductionBusyAction(target) {
     focusProductionCurrentAction();
   } else if (target === "reply-composer") {
     fields.productionTwoProfileMessage?.focus();
+  } else if (target === "verify-safety") {
+    fields.confirmTwoProfileSafety?.focus();
   }
 }
 
@@ -3563,12 +3875,38 @@ function editTwoProfileMessage() {
   fields.productionTwoProfileMessage?.focus();
 }
 
+function twoProfileInviteCodeModeActive() {
+  return Boolean(
+    fields.productionTwoProfileB?.dataset.connectionCode &&
+      fields.productionTwoProfileB?.dataset.peerProfile,
+  );
+}
+
+function keepTwoProfileInviteCodeDirection(reason = "compose") {
+  const input = productionTwoProfileInput();
+  renderProductionTwoProfileDirection(input);
+  renderProductionTwoProfileMemory(input);
+  setProductionTwoProfileState(reason === "swap" ? "Room identity fixed" : "Reply ready");
+  setText(
+    fields.productionTwoProfileWarning,
+    reason === "swap" ? t("inviteCodeDirectionFixed") : t("inviteCodeReplyFromThisDevice"),
+  );
+  setProductionFollowupActions(false, "");
+  applyProductionActionState();
+  fields.productionTwoProfileMessage?.focus();
+  return true;
+}
+
 function swapTwoProfileDirection() {
   const profileA = fields.productionTwoProfileA?.value ?? "";
   const profileB = fields.productionTwoProfileB?.value ?? "";
   if (!fields.productionTwoProfileA || !fields.productionTwoProfileB || !profileA || !profileB) {
     setProductionTwoProfileState("Swap needs profiles");
     setText(fields.productionTwoProfileWarning, "Enter both profiles before swapping direction.");
+    return;
+  }
+  if (twoProfileInviteCodeModeActive()) {
+    keepTwoProfileInviteCodeDirection("swap");
     return;
   }
   fields.productionTwoProfileA.value = profileB;
@@ -3606,6 +3944,10 @@ function replyToLatestTwoProfileMessage() {
     setText(fields.productionTwoProfileWarning, "Load a stored conversation before selecting a reply direction.");
     return false;
   }
+  if (twoProfileInviteCodeModeActive()) {
+    setSelectedTwoProfileConversationEntry(target);
+    return keepTwoProfileInviteCodeDirection("reply");
+  }
   setSelectedTwoProfileConversationEntry(target);
   fields.productionTwoProfileA.value = target.receiver;
   fields.productionTwoProfileB.value = target.sender;
@@ -3642,6 +3984,18 @@ function selectTwoProfileConversationEntryForReview(entry, options = {}) {
     return false;
   }
   const focusManual = options.focusManual !== false;
+  if (twoProfileInviteCodeModeActive()) {
+    setSelectedTwoProfileConversationEntry(entry);
+    renderProductionTwoProfileDirection(productionTwoProfileInput());
+    renderProductionTwoProfileMemory(productionTwoProfileInput());
+    setProductionTwoProfileState("Conversation item selected");
+    setText(fields.productionTwoProfileWarning, twoProfileConversationUserActionMessage(entry));
+    applyProductionActionState();
+    if (focusManual) {
+      fields.productionTwoProfileMessage?.focus();
+    }
+    return true;
+  }
   if (twoProfileConversationReplyable(entry)) {
     setProductionTwoProfileState("Conversation item received");
     setText(fields.productionTwoProfileWarning, `Message #${entry.messageNumber} is already received; write a reply instead.`);
@@ -3660,11 +4014,16 @@ function selectTwoProfileConversationEntryForReview(entry, options = {}) {
   const nextAction = selectedTwoProfileNextActionMessage(entry);
   setText(
     fields.productionTwoProfileWarning,
-    `Pending message #${entry.messageNumber} selected: ${input.profileA} -> ${input.profileB}. Manual relay/import review is prepared below.`,
+    twoProfileConversationOutboundRetryable(entry)
+      ? retryableTwoProfileOutboundWarning(entry)
+      : `Pending message #${entry.messageNumber} selected: ${input.profileA} -> ${input.profileB}. Manual relay/import review is prepared below.`,
   );
+  if (twoProfileConversationOutboundRetryable(entry)) {
+    showRetryableTwoProfileOutboundNotice(entry);
+  }
   setProductionFollowupActions(true, nextAction);
   const review = applyPendingConversationToManualMessageReview(entry, { focusManual, deferFocus: true });
-  if (review?.twoProfileWarning) {
+  if (review?.twoProfileWarning && !twoProfileConversationOutboundRetryable(entry)) {
     setText(fields.productionTwoProfileWarning, review.twoProfileWarning);
   }
   applyProductionActionState();
@@ -3811,11 +4170,40 @@ function autoSelectTwoProfileResumeTarget(sessionStatus) {
   return target;
 }
 
+function twoProfileResumeWarningForTarget(target, baseWarning, staleMessageEnvelopeSlotsPruned = 0, expiredMessagesPurged = 0) {
+  if (target === "retry-send") {
+    const entry = selectedTwoProfileConversationEntry() ?? latestTwoProfileRetryableOutboundEntry();
+    showRetryableTwoProfileOutboundNotice(entry);
+    return retryableTwoProfileOutboundWarning(entry);
+  }
+  if (target === "pending-review") {
+    const selected = selectedTwoProfileConversationEntry() ?? latestTwoProfilePendingConversationEntry();
+    return selected
+      ? currentLanguage === "ko"
+        ? `메시지 #${selected.messageNumber}가 아직 완료되지 않았습니다. 대화는 저장되어 있으며 필요한 작업을 이어갈 수 있습니다.`
+        : `Message #${selected.messageNumber} is still pending. The conversation is saved and ready to continue.`
+      : baseWarning;
+  }
+  if (target === "reply-latest") {
+    return appendExpiredMessagesPurged(
+      appendStaleMessageEnvelopeSlotsPruned(
+        "Stored conversation recovered. Latest delivered message is selected as the reply target.",
+        staleMessageEnvelopeSlotsPruned,
+      ),
+      expiredMessagesPurged,
+    );
+  }
+  return baseWarning;
+}
+
 function selectTwoProfileReplyDirection(sentInput) {
   const sender = String(sentInput?.profileA ?? "").trim();
   const receiver = String(sentInput?.profileB ?? "").trim();
   if (!sender || !receiver || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
     return false;
+  }
+  if (twoProfileInviteCodeModeActive()) {
+    return keepTwoProfileInviteCodeDirection("reply");
   }
   fields.productionTwoProfileA.value = receiver;
   fields.productionTwoProfileB.value = sender;
@@ -3842,6 +4230,10 @@ function selectReplyAfterDeliveredReview(entry, options = {}) {
     !fields.productionTwoProfileB
   ) {
     return false;
+  }
+  if (twoProfileInviteCodeModeActive()) {
+    setSelectedTwoProfileConversationEntry(entry);
+    return keepTwoProfileInviteCodeDirection("reply");
   }
   setSelectedTwoProfileConversationEntry(entry);
   fields.productionTwoProfileA.value = entry.receiver;
@@ -3999,7 +4391,14 @@ function applyProductionActionState() {
       twoProfile.messageTtlSeconds &&
       twoProfile.message,
   );
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  const hasTwoProfileSetupInput = Boolean(
+    twoProfile.profileA &&
+      twoProfile.profileB &&
+      twoProfile.profileA !== twoProfile.profileB &&
+      twoProfile.passphrase &&
+      twoProfile.messageTtlSeconds,
+  );
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   const hasTwoProfileSessionStatusInput = Boolean(
     twoProfile.profileA &&
       twoProfile.profileB &&
@@ -4035,6 +4434,7 @@ function applyProductionActionState() {
     hasImportedMessage,
     hasReceivedExportInput,
     hasReceivedMessage,
+    hasTwoProfileSetupInput,
     hasTwoProfileInput,
     hasTwoProfileSessionsReady: twoProfileSessionsReadyForInput(twoProfile),
     activeProfile: activeProductionProfileName(),
@@ -4061,7 +4461,7 @@ function applyProductionActionState() {
     !twoProfileSessionsReady &&
     !knownTwoProfileSessionStatus &&
     (!twoProfile.message || latestConversation);
-  const twoProfileNeedsSetup = hasTwoProfileInput && !twoProfileSessionsReady && !twoProfileNeedsSessionCheck;
+  const twoProfileNeedsSetup = hasTwoProfileSetupInput && !twoProfileSessionsReady && !twoProfileNeedsSessionCheck;
   const twoProfileSafetyConfirmed = twoProfileSessionsReady && twoProfileSafetyConfirmedForInput(twoProfile);
   const twoProfileCurrentAction = productionTwoProfileCurrentAction({
     input: twoProfile,
@@ -4315,7 +4715,7 @@ function applyProductionActionState() {
         ? "Room is ready; send a message instead."
       : twoProfileSessionsIncomplete
         ? twoProfileSessionRebuildMessage(twoProfile)
-        : "Create or paste an invite code, then write a first message.",
+        : "Create or paste an invite code first.",
     twoProfileCurrentAction === "full-setup",
   );
   setActionButtonState(
@@ -4331,7 +4731,7 @@ function applyProductionActionState() {
         ? "Room is ready; send a message instead."
       : twoProfileSessionsIncomplete
         ? twoProfileSessionRebuildMessage(twoProfile)
-        : "Create or paste an invite code, then write a first message.",
+        : "Create or paste an invite code first.",
     twoProfileCurrentAction === "full-setup",
   );
   setText(
@@ -4501,28 +4901,53 @@ function applyProductionActionState() {
   );
   setActionButtonState(
     fields.startProductionTwoProfileOnionReceive,
-    busy || productionTwoProfileOnionReceiveMode.enabled || !manualNetworkPermission || !hasTwoProfileSessionStatusInput,
+    busy ||
+      productionTwoProfileOnionReceiveMode.enabled ||
+      !manualNetworkPermission ||
+      !hasTwoProfileSessionStatusInput ||
+      !twoProfileSessionsReady ||
+      !twoProfileSafetyConfirmed,
     busy
       ? "Wait for the active production action."
       : productionTwoProfileOnionReceiveMode.stopRequested
-        ? `Receive mode is stopping for ${productionTwoProfileOnionReceiveMode.profile}. Wait for backend exit confirmation.`
+        ? t("receiveStopPending")
       : productionTwoProfileOnionReceiveMode.enabled
-        ? `Receive mode is already enabled for ${productionTwoProfileOnionReceiveMode.profile}.`
+        ? t("receiveAlreadyListening")
       : !manualNetworkPermission
-        ? "Enable manual onion network permission before receiving."
+        ? t("receivePermissionRequired")
       : !hasTwoProfileSessionStatusInput
-        ? "Create or paste an invite code first."
-        : `Start explicit receive mode for ${twoProfile.profileB}.`,
+        ? t("receiveNeedsRoom")
+      : !twoProfileSessionsReady
+        ? t("receiveNeedsReadyRoom")
+      : !twoProfileSafetyConfirmed
+        ? t("receiveNeedsVerification")
+        : t("startReceiving"),
     false,
   );
   setActionButtonState(
     fields.stopProductionTwoProfileOnionReceive,
     !productionTwoProfileOnionReceiveMode.enabled || productionTwoProfileOnionReceiveMode.stopRequested,
     productionTwoProfileOnionReceiveMode.stopRequested
-      ? "Receive mode stop is waiting for backend worker exit confirmation."
+      ? t("receiveStopPending")
       : productionTwoProfileOnionReceiveMode.enabled
-      ? "Stop receive mode before another receive attempt."
-      : "Receive mode is stopped.",
+      ? t("stopReceiving")
+      : t("receiveStopped"),
+    false,
+  );
+  setActionButtonState(
+    fields.openPrivateDeliverySettings,
+    busy || manualNetworkPermission || !hasTwoProfileSessionStatusInput || !twoProfileSessionsReady || !twoProfileSafetyConfirmed,
+    busy
+      ? "Wait for the active production action."
+      : manualNetworkPermission
+        ? t("privateDelivery")
+      : !hasTwoProfileSessionStatusInput
+        ? t("receiveNeedsRoom")
+      : !twoProfileSessionsReady
+        ? t("receiveNeedsReadyRoom")
+      : !twoProfileSafetyConfirmed
+        ? t("receiveNeedsVerification")
+        : t("privateDeliveryPermissionRequired"),
     false,
   );
   setActionButtonState(
@@ -4789,6 +5214,10 @@ function renderProductionProfileSelector(profiles) {
     fields.productionProfileSelector.value = profiles[0];
     fields.productionProfileName.value = profiles[0];
   }
+  if (twoProfileInviteCodeModeActive()) {
+    applyProductionActionState();
+    return;
+  }
   const pair = productionTwoProfilePairFromProfiles(
     profiles,
     fields.productionTwoProfileA?.value,
@@ -4890,9 +5319,11 @@ function productionRoundtripMessage() {
 
 function productionTwoProfileInput() {
   syncTwoProfileDerivedConnectionFields();
+  const connectionCode = (fields.productionTwoProfileB?.value ?? "").trim();
+  const derivedPeerProfile = fields.productionTwoProfileB?.dataset.peerProfile ?? "";
   return {
     profileA: (fields.productionTwoProfileA?.value ?? "").trim(),
-    profileB: (fields.productionTwoProfileB?.value ?? "").trim(),
+    profileB: (derivedPeerProfile || connectionCode).trim(),
     passphrase:
       fields.productionTwoProfilePassphrase?.value || fields.productionProfilePassphrase?.value || "",
     messageTtlSeconds: messageTtlInputValue(fields.productionTwoProfileMessageTtl),
@@ -4926,6 +5357,60 @@ function renderProductionTwoProfileResult(result) {
   }
   setProductionFollowupActions(view.canContinue, view.nextStep);
   return view;
+}
+
+function renderProductionTwoProfileRoomSetupResult(result) {
+  const input = productionTwoProfileInput();
+  const canContinue = Boolean(
+    result.profile_a_ready_for_message_envelope &&
+      result.profile_b_ready_for_message_envelope &&
+      result.both_ready_for_message_envelope &&
+      result.safety_phrase &&
+      !result.plaintext_returned_to_frontend &&
+      !result.store_path_returned &&
+      !result.passphrase_retained &&
+      !result.key_material_exposed &&
+      !result.network_io_attempted &&
+      !result.transport_io_opened &&
+      !result.runtime_messaging_enabled,
+  );
+  setText(
+    fields.productionTwoProfileProfiles,
+    `profiles=${result.profile_a}/${result.profile_b} payloads=${result.pairing_payloads_exported}`,
+  );
+  setText(
+    fields.productionTwoProfileSession,
+    `drafts=${result.session_drafts_saved} handshake=${result.handshake_completed} ready=${result.both_ready_for_message_envelope}`,
+  );
+  setText(
+    fields.productionTwoProfileMessageState,
+    currentLanguage === "ko"
+      ? "메시지는 아직 보내지 않았습니다. 확인 문구를 비교한 뒤 메시지를 작성하세요."
+      : "No message sent yet. Compare the verification phrase, then write a message.",
+  );
+  setText(
+    fields.productionTwoProfileBoundary,
+    `plaintext=${result.plaintext_returned_to_frontend} store_path=${result.store_path_returned} passphrase=${result.passphrase_retained} key_material=${result.key_material_exposed} network=${result.network_io_attempted} transport=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+  );
+  if (canContinue) {
+    rememberTwoProfileSafety(input, result);
+    rememberTwoProfileReadySessionFromRoundtrip(input, result);
+    renderProductionTwoProfileMemory(input);
+  }
+  setProductionFollowupActions(
+    canContinue,
+    currentLanguage === "ko"
+      ? "다음: 확인 문구가 일치하는지 비교한 뒤 메시지를 보내세요."
+      : "Next: compare the verification phrase, then send a message.",
+  );
+  return {
+    canContinue,
+    nextStep: canContinue
+      ? currentLanguage === "ko"
+        ? "확인 문구 비교 후 메시지 작성"
+        : "Compare phrase, then compose"
+      : result.warning,
+  };
 }
 
 function renderProductionTwoProfileMessageResult(result) {
@@ -5458,7 +5943,7 @@ async function checkOnionClientAttemptGate() {
 }
 
 async function runOnionClientOnce() {
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   setOnionClientOnceState("Client once running");
   setText(
     fields.onionClientOnceBoundary,
@@ -5516,7 +6001,7 @@ async function checkOnionPersistentClient() {
 }
 
 async function startOnionPersistentClient() {
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   setOnionPersistentClientState("Persistent client start running");
   setText(
     fields.onionPersistentClientBoundary,
@@ -5548,7 +6033,7 @@ async function startOnionPersistentClient() {
 }
 
 async function startProductionTwoProfileOnionBootstrap() {
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!manualNetworkPermission) {
     setProductionTwoProfileState("Tor bootstrap blocked");
     setText(fields.productionTwoProfileWarning, "Enable manual onion network permission before starting Tor bootstrap.");
@@ -5666,7 +6151,7 @@ async function prepareProductionTwoProfileOnionKey() {
 
 async function launchProductionTwoProfileOnionEndpoint() {
   const { profileA, passphrase } = productionTwoProfileInput();
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!profileA || !passphrase) {
     setProductionTwoProfileState("Onion endpoint needs profile");
     setText(fields.productionTwoProfileWarning, "Enter profile A and passphrase before launching the local onion endpoint.");
@@ -5760,7 +6245,7 @@ async function launchProductionTwoProfileOnionEndpoint() {
 
 async function prepareProductionTwoProfileOnionPairing() {
   const { profileA, profileB, passphrase } = productionTwoProfileInput();
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!profileA || !profileB || profileA === profileB || !passphrase) {
     setProductionTwoProfileState("Onion pairing needs profiles");
     setText(fields.productionTwoProfileWarning, "Enter two distinct profiles and passphrase before preparing onion pairing.");
@@ -5974,21 +6459,21 @@ async function saveProductionTwoProfileOnionSessions() {
 
 async function refreshProductionTwoProfilePeerEndpoints() {
   const { profileA, profileB, passphrase } = productionTwoProfileInput();
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!profileA || !profileB || profileA === profileB || !passphrase) {
     setProductionTwoProfileState("Endpoint refresh needs profiles");
-    setText(fields.productionTwoProfileWarning, "Enter two distinct profiles and passphrase before refreshing peer endpoints.");
-    return;
+    setText(fields.productionTwoProfileWarning, t("refreshAddressNeedsRoom"));
+    return false;
   }
   if (!manualNetworkPermission) {
     setProductionTwoProfileState("Endpoint refresh blocked");
-    setText(fields.productionTwoProfileWarning, "Enable manual onion network permission before refreshing endpoints.");
-    return;
+    setText(fields.productionTwoProfileWarning, t("privateDeliveryPermissionRequired"));
+    return false;
   }
   if (!latestTwoProfileSessionStatusForCurrentInput({ profileA, profileB, passphrase })) {
     setProductionTwoProfileState("Endpoint refresh needs session");
-    setText(fields.productionTwoProfileWarning, "Check or save onion sessions before applying refreshed peer endpoints.");
-    return;
+    setText(fields.productionTwoProfileWarning, t("refreshAddressNeedsReadyRoom"));
+    return false;
   }
 
   const launchEndpoint = async (profile) => {
@@ -6005,7 +6490,7 @@ async function refreshProductionTwoProfilePeerEndpoints() {
 
   productionBusyAction = "two-profile-peer-endpoint-refresh";
   setProductionTwoProfileState("Endpoint refresh running");
-  setText(fields.productionTwoProfileWarning, "Launching fresh local onion endpoints and applying them to existing peer session records.");
+  setText(fields.productionTwoProfileWarning, t("refreshAddressRunning"));
   setText(fields.productionTwoProfileProfiles, `a=${profileA} b=${profileB}`);
   setText(fields.productionTwoProfileSession, "Existing encrypted session drafts are kept; only peer endpoint records are updated");
   setText(fields.productionTwoProfileMessageState, "No message transport attempted");
@@ -6045,7 +6530,7 @@ async function refreshProductionTwoProfilePeerEndpoints() {
     setProductionTwoProfileState(
       status.both_ready_for_message_envelope ? "Peer endpoints refreshed" : "Peer endpoints refreshed; session needs review",
     );
-    setText(fields.productionTwoProfileWarning, "Stored peer endpoints were refreshed without redoing pairing.");
+    setText(fields.productionTwoProfileWarning, t("refreshAddressComplete"));
     setText(
       fields.productionTwoProfileProfiles,
       `a_endpoint=${profileALaunch.onion_endpoint_returned} b_endpoint=${profileBLaunch.onion_endpoint_returned}`,
@@ -6059,10 +6544,12 @@ async function refreshProductionTwoProfilePeerEndpoints() {
       fields.productionTwoProfileBoundary,
       `a_changed=${profileAUpdate.remote_endpoint_changed} b_changed=${profileBUpdate.remote_endpoint_changed} existing_session=${profileAUpdate.update_channel_existing_encrypted_session && profileBUpdate.update_channel_existing_encrypted_session} a_retained=${profileALaunch.onion_service_retained} b_retained=${profileBLaunch.onion_service_retained} raw_endpoint=${profileAUpdate.remote_endpoint_returned || profileBUpdate.remote_endpoint_returned} raw_path=${profileAUpdate.store_path_returned || profileBUpdate.store_path_returned || profileALaunch.raw_path_returned || profileBLaunch.raw_path_returned} onion_secret=${profileALaunch.onion_secret_returned || profileBLaunch.onion_secret_returned} key_material=${profileAUpdate.key_material_exposed || profileBUpdate.key_material_exposed || profileALaunch.key_material_exposed || profileBLaunch.key_material_exposed} network=${profileALaunch.network_io_attempted || profileBLaunch.network_io_attempted} transport=${profileAUpdate.transport_io_opened || profileBUpdate.transport_io_opened || profileALaunch.transport_io_opened || profileBLaunch.transport_io_opened} runtime=${profileAUpdate.runtime_messaging_enabled || profileBUpdate.runtime_messaging_enabled || profileALaunch.runtime_messaging_enabled || profileBLaunch.runtime_messaging_enabled}`,
     );
+    return true;
   } catch (error) {
     setProductionTwoProfileState("Endpoint refresh failed");
-    setText(fields.productionTwoProfileWarning, `Endpoint refresh failed without returning endpoint, path, or key details. ${error}`);
-    setText(fields.productionTwoProfileBoundary, "Existing session state was not intentionally deleted or re-paired.");
+    setText(fields.productionTwoProfileWarning, t("refreshAddressFailed"));
+    setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Existing room state was kept."));
+    return false;
   } finally {
     productionBusyAction = null;
     if (fields.refreshProductionTwoProfilePeerEndpoints) {
@@ -6079,47 +6566,50 @@ async function sendProductionTwoProfileEndpointUpdate() {
   const storedEndpointTransportState = storedPeerEndpointTransportState(input);
   if (!input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
     setProductionTwoProfileState("Endpoint update needs profiles");
-    setText(fields.productionTwoProfileWarning, "Enter two distinct profiles and passphrase before sending an endpoint update.");
+    setText(fields.productionTwoProfileWarning, t("refreshAddressNeedsRoom"));
     return;
   }
   if (!twoProfileSessionsReadyForInput(input)) {
     setProductionTwoProfileState("Endpoint update needs session");
-    setText(fields.productionTwoProfileWarning, "Complete the verified session handshake before sending an endpoint update.");
+    setText(fields.productionTwoProfileWarning, t("refreshAddressNeedsReadyRoom"));
     return;
   }
   if (!storedEndpointTransportState.ready) {
     setProductionTwoProfileState("Endpoint update needs peer endpoint");
     setText(
       fields.productionTwoProfileWarning,
-      `Stored peer endpoint is not ready: ${storedEndpointTransportState.reason}. Refresh peer endpoints before sending an endpoint update over onion.`,
+      t("chatNoticeRefreshAddress"),
     );
     return;
   }
   if (!localEndpoint) {
     setProductionTwoProfileState("Endpoint update needs local endpoint");
-    setText(fields.productionTwoProfileWarning, "Refresh or prepare onion endpoints before sending an endpoint update.");
+    setText(fields.productionTwoProfileWarning, t("chatNoticeRefreshAddress"));
     return;
   }
   if (!latestMessage || latestMessage.profileA !== input.profileA || latestMessage.profileB !== input.profileB) {
     setProductionTwoProfileState("Endpoint update needs message baseline");
-    setText(fields.productionTwoProfileWarning, "Send a stored-session message first so the endpoint update uses the next session message number.");
+    setText(fields.productionTwoProfileWarning, t("refreshAddressNeedsMessage"));
     return;
   }
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!manualNetworkPermission) {
     setProductionTwoProfileState("Endpoint update blocked");
-    setText(fields.productionTwoProfileWarning, "Enable manual onion network permission before sending an endpoint update over onion.");
+    setText(fields.productionTwoProfileWarning, t("privateDeliveryPermissionRequired"));
     return;
   }
 
   const updateMessageNumber = latestMessage.messageNumber + 1;
   productionBusyAction = "two-profile-endpoint-update-control";
-  setProductionTwoProfileState("Endpoint update running");
-  setText(fields.productionTwoProfileWarning, `Sending endpoint update control message #${updateMessageNumber} over onion.`);
-  setText(fields.productionTwoProfileProfiles, `sender=${input.profileA} receiver=${input.profileB}`);
-  setText(fields.productionTwoProfileSession, "Using existing encrypted session control envelope and stored peer endpoint");
-  setText(fields.productionTwoProfileMessageState, "Waiting for bounded onion endpoint update send attempt");
-  setText(fields.productionTwoProfileBoundary, "Endpoint update control send in progress with manual network permission");
+  setProductionTwoProfileState("Peer address update running");
+  setText(fields.productionTwoProfileWarning, t("refreshAddressSending"));
+  setText(fields.productionTwoProfileProfiles, localizedTwoProfileUserViewText("Room is ready."));
+  setText(fields.productionTwoProfileSession, localizedTwoProfileUserViewText("Updating the saved peer address."));
+  setText(fields.productionTwoProfileMessageState, localizedTwoProfileUserViewText("No chat message is being sent."));
+  setText(
+    fields.productionTwoProfileBoundary,
+    localizedTwoProfileUserViewText("Peer address update is running after your explicit action."),
+  );
   applyProductionActionState();
   if (fields.sendProductionTwoProfileEndpointUpdate) {
     fields.sendProductionTwoProfileEndpointUpdate.disabled = true;
@@ -6140,32 +6630,36 @@ async function sendProductionTwoProfileEndpointUpdate() {
     });
     rememberTwoProfileSessionStatus(input, status);
     renderProductionTwoProfileSessionStatusResult(status);
+    const userView = localizedTwoProfileUserView(productionTwoProfileSendAttemptUserView(result, updateMessageNumber));
     setProductionTwoProfileState(
       result.send_attempt_succeeded
-        ? "Endpoint update sent"
+        ? "Peer address update sent"
         : result.peer_endpoint_refresh_recommended
-          ? "Peer endpoint refresh needed"
-          : "Endpoint update blocked",
+          ? "Peer address refresh needed"
+          : userView.state,
     );
-    setText(fields.productionTwoProfileWarning, result.warning);
+    setText(
+      fields.productionTwoProfileWarning,
+      result.send_attempt_succeeded ? t("chatNoticeEndpointUpdated") : localizedSendAttemptMessage(result),
+    );
     setText(
       fields.productionTwoProfileSession,
-      `control_message=${updateMessageNumber} created=${result.endpoint_update_created} encrypted=${result.encrypted_control_envelope_written} intent=${result.send_intent_prepared}`,
+      result.send_attempt_succeeded ? localizedTwoProfileUserViewText("Peer address update was sent.") : userView.session,
     );
     setText(
       fields.productionTwoProfileMessageState,
-      result.peer_endpoint_refresh_recommended
-        ? `started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} next=refresh peer endpoints, then retry control message #${updateMessageNumber}`
-        : `started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} next=${result.next_blocker}`,
+      result.send_attempt_succeeded ? localizedTwoProfileUserViewText("Wait for the other device to receive it.") : userView.message,
     );
     setText(
       fields.productionTwoProfileBoundary,
-      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} endpoint_failure_recorded=${result.peer_endpoint_failure_recorded} refresh=${result.peer_endpoint_refresh_recommended} retry_after_refresh=${result.retry_recommended_after_endpoint_refresh} events=${result.event_summary.join("; ") || "none"} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} peer_proof=${result.peer_proof_returned} transcript=${result.session_transcript_returned} envelope_payload=${result.envelope_payload_returned} endpoint_plaintext=${result.endpoint_plaintext_exposed} key_material=${result.key_material_exposed || status.key_material_exposed} network=${result.network_io_attempted || status.network_io_attempted} dial=${result.stream_dial_attempted} read_write=${result.stream_read_write_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled || status.runtime_messaging_enabled}`,
+      result.send_attempt_succeeded
+        ? localizedTwoProfileUserViewText("Peer address update finished without showing private details.")
+        : userView.boundary,
     );
   } catch (error) {
-    setProductionTwoProfileState("Endpoint update failed");
-    setText(fields.productionTwoProfileWarning, `Endpoint update failed without returning endpoint, path, or key details. ${error}`);
-    setText(fields.productionTwoProfileBoundary, "Existing session state was not intentionally deleted or re-paired.");
+    setProductionTwoProfileState("Peer address update failed");
+    setText(fields.productionTwoProfileWarning, localizedSendFailureMessage(error));
+    setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Existing room state was kept."));
   } finally {
     productionBusyAction = null;
     if (fields.sendProductionTwoProfileEndpointUpdate) {
@@ -6373,7 +6867,7 @@ async function checkOnionLaunchPreflight() {
 
 async function attemptOnionServiceLaunch() {
   const { profile, passphrase } = productionProfileInput();
-  const manualNetworkPermission = Boolean(fields.manualOnionNetworkPermission?.checked);
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!profile || !passphrase) {
     setText(fields.onionServiceLaunchAttempt, "Enter profile and passphrase in the profile unlock panel first.");
     return;
@@ -6449,7 +6943,7 @@ async function prepareOnionDescriptorPublication() {
 
 async function attemptOnionDescriptorPublication() {
   const { profile, passphrase } = productionProfileInput();
-  const manualNetworkPermission = Boolean(fields.manualOnionNetworkPermission?.checked);
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!profile || !passphrase) {
     setText(fields.onionDescriptorPublicationAttempt, "Enter profile and passphrase in the profile unlock panel first.");
     return;
@@ -6520,7 +7014,7 @@ async function prepareOnionInboundStream() {
 
 async function attemptOnionInboundEnvelopeReceive() {
   const { profile, passphrase } = productionProfileInput();
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!profile || !passphrase) {
     setOnionInboundStreamState("Envelope receive attempt needs profile");
     setText(fields.onionInboundEnvelopeReceiveAttempt, "Enter profile and passphrase first.");
@@ -6754,7 +7248,7 @@ async function prepareOnionOutboundEnvelopeSend() {
 async function attemptOnionOutboundEnvelopeSend() {
   const { profile, passphrase, messageNumber } = productionMessageInput();
   const rendezvousEndpoint = (fields.productionPairingEndpoint?.value ?? "").trim();
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!profile || !passphrase) {
     setOnionOutboundEnvelopeSendState("Envelope send attempt needs profile");
     setText(fields.onionOutboundEnvelopeSendAttempt, "Enter profile and passphrase first.");
@@ -6814,39 +7308,32 @@ async function attemptOnionOutboundEnvelopeSend() {
 async function sendProductionTwoProfileLatestOnionEnvelope() {
   const input = productionTwoProfileInput();
   const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(input);
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!manualNetworkPermission) {
-    setProductionTwoProfileState("Onion send blocked");
-    setText(fields.productionTwoProfileWarning, "Enable manual onion network permission before sending over onion.");
+    openPrivateDeliverySettings();
     return;
   }
   if (!latestOnionOutbound) {
-    setProductionTwoProfileState("Onion send needs latest message");
+    setProductionTwoProfileState("Private delivery needs message");
     const peerEndpointState = twoProfilePeerEndpointState(input);
     setText(
       fields.productionTwoProfileWarning,
       peerEndpointState.ready
-        ? "Send a stored-session message before attempting onion send."
-        : `Peer endpoint is not ready: ${peerEndpointState.reason}. Prepare onion pairing endpoints or relaunch the endpoint before sending.`,
+        ? t("inputRequiredMessage")
+        : t("chatNoticeRefreshAddress"),
     );
+    setChatDeliveryNoticeByKey(peerEndpointState.ready ? "sendFailedGeneric" : "chatNoticeRefreshAddress", "warning");
     return;
   }
 
   productionBusyAction = "two-profile-onion-envelope-send";
-  setProductionTwoProfileState("Onion envelope send running");
-  setText(
-    fields.productionTwoProfileWarning,
-    `Attempting one bounded onion stream send for message #${latestOnionOutbound.messageNumber}.`,
-  );
-  setText(fields.productionTwoProfileProfiles, `sender=${input.profileA} receiver=${input.profileB}`);
-  setText(
-    fields.productionTwoProfileSession,
-    latestOnionOutbound.useStoredEndpoint
-      ? "Using stored outbound envelope and encrypted stored peer endpoint"
-      : "Using stored outbound envelope and current peer endpoint",
-  );
-  setText(fields.productionTwoProfileMessageState, "Waiting for onion stream send attempt");
-  setText(fields.productionTwoProfileBoundary, "Onion send attempt in progress with manual network permission");
+  setProductionTwoProfileState("Private delivery running");
+  setText(fields.productionTwoProfileWarning, t("chatNoticeSending"));
+  setChatDeliveryNoticeByKey("chatNoticeSending", "progress");
+  setText(fields.productionTwoProfileProfiles, localizedTwoProfileUserViewText("Room is ready."));
+  setText(fields.productionTwoProfileSession, localizedTwoProfileUserViewText("Sending saved message."));
+  setText(fields.productionTwoProfileMessageState, localizedTwoProfileUserViewText("Trying private delivery."));
+  setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Private delivery is running after your explicit action."));
   applyProductionActionState();
   if (fields.sendProductionTwoProfileLatestOnionEnvelope) {
     fields.sendProductionTwoProfileLatestOnionEnvelope.disabled = true;
@@ -6874,33 +7361,22 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
           ? "Envelope send attempt failed closed"
           : "Envelope send attempt blocked",
     );
-    setProductionTwoProfileState(
-      result.send_attempt_succeeded
-        ? "Onion envelope send attempted"
-        : result.peer_endpoint_refresh_recommended
-          ? "Peer endpoint refresh needed"
-          : "Onion envelope send blocked",
-    );
+    const userView = localizedTwoProfileUserView(productionTwoProfileSendAttemptUserView(
+      result,
+      latestOnionOutbound.messageNumber,
+    ));
+    setProductionTwoProfileState(userView.state);
     setText(fields.onionPreflightWarning, result.warning);
     setText(
       fields.onionOutboundEnvelopeSendAttempt,
       `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} send_intent=${result.send_intent_prepared} started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} ack_wait=${result.ack_wait_registered} event_recorded=${result.redacted_send_result_event_recorded} events=${result.event_summary.join("; ") || "none"} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} peer_proof=${result.peer_proof_returned} transcript=${result.session_transcript_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} accept=${result.stream_accept_attempted} dial=${result.stream_dial_attempted} read_write=${result.stream_read_write_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
     );
-    setText(fields.productionTwoProfileWarning, result.warning);
-    setText(
-      fields.productionTwoProfileSession,
-      `message=${latestOnionOutbound.messageNumber} intent=${result.send_intent_prepared} ack_wait=${result.ack_wait_registered} endpoint_failure_recorded=${result.peer_endpoint_failure_recorded}`,
-    );
-    setText(
-      fields.productionTwoProfileMessageState,
-      result.peer_endpoint_refresh_recommended
-        ? `started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} next=refresh peer endpoints, then retry message #${latestOnionOutbound.messageNumber}`
-        : `started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} next=${result.next_blocker}`,
-    );
-    setText(
-      fields.productionTwoProfileBoundary,
-      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} endpoint_failure_recorded=${result.peer_endpoint_failure_recorded} refresh=${result.peer_endpoint_refresh_recommended} retry_after_refresh=${result.retry_recommended_after_endpoint_refresh} events=${result.event_summary.join("; ") || "none"} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} peer_proof=${result.peer_proof_returned} transcript=${result.session_transcript_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network=${result.network_io_attempted} dial=${result.stream_dial_attempted} read_write=${result.stream_read_write_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    setText(fields.productionTwoProfileWarning, localizedSendAttemptMessage(result));
+    setChatDeliveryNoticeForSendAttempt(result);
+    setText(fields.productionTwoProfileProfiles, userView.profiles);
+    setText(fields.productionTwoProfileSession, userView.session);
+    setText(fields.productionTwoProfileMessageState, userView.message);
+    setText(fields.productionTwoProfileBoundary, userView.boundary);
     if (result.peer_endpoint_failure_recorded) {
       const status = await invoke("production_two_profile_session_status", {
         profileA: input.profileA,
@@ -6912,9 +7388,25 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
     }
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
   } catch (error) {
-    setProductionTwoProfileState("Onion envelope send failed");
+    try {
+      await markTwoProfileOutboundSendFailed(
+        latestOnionOutbound.profile,
+        latestOnionOutbound.passphrase,
+        latestOnionOutbound.messageNumber,
+        outboundSendFailureKindFromError(error),
+      );
+    } catch {
+      // Keep the user-facing failure path available even if state refresh fails.
+    }
+    setProductionTwoProfileState("Private delivery failed");
     setText(fields.productionTwoProfileWarning, localizedSendFailureMessage(error));
-    setText(fields.productionTwoProfileBoundary, "Failed before or during bounded onion send attempt.");
+    updateChatDeliveryNoticeFromText(error);
+    setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Failed before or during bounded onion send attempt."));
+    try {
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+    } catch {
+      applyProductionActionState();
+    }
   } finally {
     productionBusyAction = null;
     if (fields.sendProductionTwoProfileLatestOnionEnvelope) {
@@ -6922,6 +7414,34 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
     }
     applyProductionActionState();
   }
+}
+
+async function markTwoProfileOutboundSendFailed(profile, passphrase, messageNumber, failureKind) {
+  const normalizedNumber = Number.parseInt(messageNumber, 10);
+  if (!profile || !passphrase || !Number.isInteger(normalizedNumber) || normalizedNumber < 1) {
+    return false;
+  }
+  await invoke("production_message_outbound_mark_send_failed", {
+    profile,
+    passphrase,
+    messageNumber: normalizedNumber,
+    failureKind,
+  });
+  return true;
+}
+
+function outboundSendFailureKindFromError(error) {
+  const text = String(error ?? "").toLowerCase();
+  if (text.includes("manualnetworkpermission") || text.includes("network permission")) {
+    return "ManualNetworkPermissionMissing";
+  }
+  if (text.includes("timeout")) {
+    return "receive-timeout";
+  }
+  if (text.includes("stale") || text.includes("refresh") || text.includes("endpoint")) {
+    return "stored remote endpoint refresh required";
+  }
+  return "peer offline";
 }
 
 async function retryTwoProfileOutboundEntry(entry) {
@@ -6951,8 +7471,12 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
     setText(fields.productionTwoProfileWarning, t("sendRefreshWrongDirection"));
     return;
   }
-  await refreshProductionTwoProfilePeerEndpoints();
-  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+  const refreshed = await refreshProductionTwoProfilePeerEndpoints();
+  if (refreshed) {
+    await retryTwoProfileOutboundEntry(entry);
+  } else {
+    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+  }
 }
 
 async function cancelTwoProfileOutboundEntry(entry) {
@@ -6983,45 +7507,49 @@ async function cancelTwoProfileOutboundEntry(entry) {
 }
 
 async function startProductionTwoProfileOnionReceive() {
-  const { profileB, passphrase } = productionTwoProfileInput();
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
-  if (!profileB || !passphrase) {
-    setProductionTwoProfileState("Receive mode needs receiver");
-    setText(fields.productionTwoProfileWarning, "Enter the peer connection and passphrase before starting receive mode.");
+  const input = productionTwoProfileInput();
+  const { profileA, profileB, passphrase } = input;
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
+  if (!profileA || !profileB || profileA === profileB || !passphrase) {
+    setProductionTwoProfileState("Message listening needs room");
+    setText(fields.productionTwoProfileWarning, t("receiveNeedsRoom"));
+    return;
+  }
+  if (!twoProfileSessionsReadyForInput(input)) {
+    setProductionTwoProfileState("Message listening needs ready room");
+    setText(fields.productionTwoProfileWarning, t("receiveNeedsReadyRoom"));
+    return;
+  }
+  if (!twoProfileSafetyConfirmedForInput(input)) {
+    setProductionTwoProfileState("Verification required");
+    setText(fields.productionTwoProfileWarning, t("receiveNeedsVerification"));
     return;
   }
   if (!manualNetworkPermission) {
-    setProductionTwoProfileState("Receive mode blocked");
-    setText(fields.productionTwoProfileWarning, "Enable manual onion network permission before receiving.");
+    openPrivateDeliverySettings();
     return;
   }
   if (productionTwoProfileOnionReceiveMode.enabled) {
-    setProductionTwoProfileState("Receive mode already running");
-    setText(
-      fields.productionTwoProfileWarning,
-      `Receive mode is already enabled for ${productionTwoProfileOnionReceiveMode.profile}. Stop it before starting again.`,
-    );
+    setProductionTwoProfileState("Message listening already running");
+    setText(fields.productionTwoProfileWarning, t("receiveAlreadyListening"));
     return;
   }
 
   let backendLoop = null;
   try {
     backendLoop = await invoke("production_onion_receive_loop_start", {
-      profile: profileB,
+      profile: profileA,
       passphrase,
       manualNetworkPermission,
     });
   } catch (error) {
-    setProductionTwoProfileState("Receive mode failed");
-    setText(fields.productionTwoProfileWarning, `Receive mode start failed without returning secrets. ${error}`);
+    setProductionTwoProfileState("Message listening failed");
+    setText(fields.productionTwoProfileWarning, t("receiveStartFailed"));
     return;
   }
   if (backendLoop.duplicate_loop_blocked || !backendLoop.enabled) {
-    setProductionTwoProfileState("Receive mode already running");
-    setText(
-      fields.productionTwoProfileWarning,
-      "Backend receive loop is already enabled for this runtime. Stop receiving before starting another loop.",
-    );
+    setProductionTwoProfileState("Message listening already running");
+    setText(fields.productionTwoProfileWarning, t("receiveAlreadyListening"));
     setText(
       fields.productionTwoProfileBoundary,
       productionTwoProfileOnionReceiveBackendBoundary(backendLoop),
@@ -7032,29 +7560,31 @@ async function startProductionTwoProfileOnionReceive() {
   const generation = productionTwoProfileOnionReceiveMode.generation + 1;
   productionTwoProfileOnionReceiveMode = {
     enabled: true,
-    profile: profileB,
+    profile: profileA,
     passphrase: "",
     timer: null,
     attempt: 0,
     inFlight: false,
     stopRequested: false,
     runtimeState: "receiving",
-    runtimeLabel: "Receive mode receiving",
+    runtimeLabel: "Listening for new messages",
     lastProcessedImportSequence: 0,
     lastProcessedMessageImportCount: 0,
     lastProcessedEndpointUpdateCount: 0,
     generation,
   };
   setProductionTwoProfileOnionReceiveRuntimeState("receiving");
-  setText(fields.productionTwoProfileWarning, `Receive mode enabled for ${profileB}. Bounded receive attempts will repeat until stopped.`);
-  setText(fields.productionTwoProfileProfiles, `receiver=${profileB}`);
-  setText(fields.productionTwoProfileSession, "Using retained onion service and stored receiver session");
-  setText(fields.productionTwoProfileMessageState, `Receive mode waiting for backend bounded attempts; backend_attempts=${backendLoop.attempt_count}`);
+  setText(fields.productionTwoProfileWarning, t("receiveStarted"));
+  setChatDeliveryNoticeByKey("chatNoticeReceiving", "success");
+  setText(fields.productionTwoProfileProfiles, currentLanguage === "ko" ? `내 ID=${profileA}` : `local=${profileA}`);
+  setText(fields.productionTwoProfileSession, t("receiveUsingLocalRoom"));
+  setText(fields.productionTwoProfileMessageState, t("receiveWaiting"));
   setText(
     fields.productionTwoProfileBoundary,
     productionTwoProfileOnionReceiveBackendBoundary(backendLoop),
   );
   applyProductionActionState();
+  renderRoomIdentityBar(input, true);
   scheduleProductionTwoProfileOnionReceiveStatusPoll(1_000);
 }
 
@@ -7080,15 +7610,43 @@ function productionTwoProfileOnionReceiveBackendBoundary(backendLoop) {
 function productionTwoProfileOnionReceiveImportSummary(refreshPlan) {
   const parts = [];
   if (refreshPlan.newMessageImportCount > 0) {
-    parts.push(`${refreshPlan.newMessageImportCount} message${refreshPlan.newMessageImportCount === 1 ? "" : "s"}`);
+    parts.push(
+      currentLanguage === "ko"
+        ? `메시지 ${refreshPlan.newMessageImportCount}개`
+        : `${refreshPlan.newMessageImportCount} message${refreshPlan.newMessageImportCount === 1 ? "" : "s"}`,
+    );
   }
   if (refreshPlan.newEndpointUpdateCount > 0) {
-    parts.push(`${refreshPlan.newEndpointUpdateCount} endpoint update${refreshPlan.newEndpointUpdateCount === 1 ? "" : "s"}`);
+    parts.push(
+      currentLanguage === "ko"
+        ? `상대 주소 갱신 ${refreshPlan.newEndpointUpdateCount}건`
+        : `${refreshPlan.newEndpointUpdateCount} endpoint update${refreshPlan.newEndpointUpdateCount === 1 ? "" : "s"}`,
+    );
   }
   if (parts.length === 0 && refreshPlan.newImportCount > 0) {
-    parts.push(`${refreshPlan.newImportCount} import event${refreshPlan.newImportCount === 1 ? "" : "s"}`);
+    parts.push(
+      currentLanguage === "ko"
+        ? `수신 이벤트 ${refreshPlan.newImportCount}건`
+        : `${refreshPlan.newImportCount} import event${refreshPlan.newImportCount === 1 ? "" : "s"}`,
+    );
   }
-  return parts.length > 0 ? parts.join(" and ") : "no new imports";
+  return parts.length > 0
+    ? parts.join(currentLanguage === "ko" ? ", " : " and ")
+    : currentLanguage === "ko"
+      ? "새 수신 없음"
+      : "no new imports";
+}
+
+function productionTwoProfileOnionReceiveUserNotice(refreshPlan) {
+  const eventText = t(refreshPlan.messageImported ? "chatNoticeReceived" : "chatNoticeEndpointUpdated");
+  const importSummary = productionTwoProfileOnionReceiveImportSummary(refreshPlan);
+  const hasMultipleImports =
+    refreshPlan.newMessageImportCount > 1 ||
+    refreshPlan.newEndpointUpdateCount > 1 ||
+    (refreshPlan.newImportCount > 1 && importSummary);
+  return hasMultipleImports
+    ? `${eventText} (${importSummary}). ${t("receiveStillListening")}`
+    : `${eventText} ${t("receiveStillListening")}`;
 }
 
 function scheduleProductionTwoProfileOnionReceiveStatusPoll(delayMs = TWO_PROFILE_ONION_RECEIVE_RETRY_MS) {
@@ -7130,31 +7688,48 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
     const runtimeView = setProductionTwoProfileOnionReceiveRuntimeState(
       runtimeState,
       refreshPlan.transcriptChanged
-        ? { runtime_label: "Receive mode imported message or endpoint update" }
+        ? { runtime_label: refreshPlan.messageImported ? "New message received" : "Peer address updated" }
         : backendLoop,
     );
     setText(
       fields.productionTwoProfileMessageState,
-      `state=${runtimeView.state} backend_state=${backendLoop.runtime_state || "unknown"} backend_attempts=${backendLoop.attempt_count} worker_starts=${backendLoop.worker_start_count ?? 0} duplicate_blocks=${backendLoop.duplicate_start_block_count ?? 0} import_seq=${backendLoop.import_sequence} message_imports=${backendLoop.message_import_count ?? 0} endpoint_updates=${backendLoop.endpoint_update_count ?? 0} active_after_import=${backendLoop.active_after_import} continues_after_import=${backendLoop.continues_after_import} multi_message_ready=${backendLoop.multi_message_receive_ready} restart_isolated=${backendLoop.restart_generation_isolated} wait_cancellable=${backendLoop.retry_wait_cancellable} failure=${backendLoop.last_failure_kind} retryable=${backendLoop.last_failure_retryable} last_started=${backendLoop.last_attempt_started} last_succeeded=${backendLoop.last_attempt_succeeded} endpoint_update=${backendLoop.last_endpoint_update_applied} last_network=${backendLoop.last_network_io_attempted} last_accept=${backendLoop.last_stream_accept_attempted} last_stream=${backendLoop.last_stream_read_write_attempted} last_envelope=${backendLoop.last_envelope_io_opened} last_runtime=${backendLoop.last_runtime_messaging_enabled} next=${backendLoop.last_next_blocker || "none"}`,
+      localizedChatStatus(runtimeView.label),
     );
     if (runtimeState === "failed-retryable") {
-      setText(fields.productionTwoProfileWarning, localizedReceiveFailureMessage(productionOnionReceiveFailureMessage(backendLoop)));
+      const receiveFailureMessage = productionOnionReceiveFailureMessage(backendLoop);
+      setText(fields.productionTwoProfileWarning, localizedReceiveFailureMessage(receiveFailureMessage));
+      const receiveNotice = chatNoticeForSendReceiveText(receiveFailureMessage) ??
+        chatNoticeForProductionState("Message listening will retry") ?? {
+          key: "receiveRetrying",
+          tone: "warning",
+        };
+      setChatDeliveryNoticeByKey(receiveNotice.key, receiveNotice.tone);
     } else if (refreshPlan.transcriptChanged) {
-      setText(
-        fields.productionTwoProfileWarning,
-        `Receive mode imported ${productionTwoProfileOnionReceiveImportSummary(refreshPlan)} and remains active.`,
+      setText(fields.productionTwoProfileWarning, productionTwoProfileOnionReceiveUserNotice(refreshPlan));
+      setChatDeliveryNoticeByKey(
+        refreshPlan.messageImported ? "chatNoticeReceived" : "chatNoticeEndpointUpdated",
+        "success",
       );
     } else if (runtimeState === "receiving") {
-      setText(fields.productionTwoProfileWarning, "Receive mode is active. Backend worker is polling bounded onion receive attempts.");
+      setText(fields.productionTwoProfileWarning, t("receiveStarted"));
     }
     setText(fields.productionTwoProfileBoundary, productionTwoProfileOnionReceiveBackendBoundary(backendLoop));
     if (refreshPlan.transcriptChanged) {
       productionTwoProfileOnionReceiveMode.lastProcessedImportSequence = refreshPlan.importSequence;
       productionTwoProfileOnionReceiveMode.lastProcessedMessageImportCount = refreshPlan.messageImportCount;
       productionTwoProfileOnionReceiveMode.lastProcessedEndpointUpdateCount = refreshPlan.endpointUpdateCount;
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+      await loadProductionTwoProfileTranscript({
+        quiet: true,
+        refreshSessionStatus: refreshPlan.endpointUpdated === true,
+      });
       if (refreshPlan.messageImported) {
-        selectLatestReceivedReplyForProfile(productionTwoProfileOnionReceiveMode.profile, { focusReply: "none" });
+        const replySelected = selectLatestReceivedReplyForProfile(productionTwoProfileOnionReceiveMode.profile, {
+          focusReply: "none",
+        });
+        if (replySelected) {
+          setText(fields.productionTwoProfileWarning, t("replyReadyAfterReceive"));
+          setChatDeliveryNoticeByKey("replyReadyAfterReceive", "success");
+        }
       }
       if (refreshPlan.endpointUpdated) {
         const input = productionTwoProfileInput();
@@ -7170,13 +7745,18 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
         }
       }
     }
+    if (!backendLoop.enabled && !backendLoop.worker_running) {
+      markProductionTwoProfileOnionReceiveStopped(backendLoop);
+      setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted");
+      return;
+    }
     if (backendLoop.enabled && !productionTwoProfileOnionReceiveMode.stopRequested) {
       scheduleProductionTwoProfileOnionReceiveStatusPoll();
     }
   } catch (error) {
-    setProductionTwoProfileState("Receive mode failed");
+    setProductionTwoProfileState("Message listening failed");
     productionTwoProfileOnionReceiveMode.runtimeState = "failed-retryable";
-    setText(fields.productionTwoProfileWarning, `Receive loop status failed without returning secrets. ${error}`);
+    setText(fields.productionTwoProfileWarning, t("receiveStatusFailed"));
     setText(fields.productionTwoProfileBoundary, "Backend receive loop status failed.");
     scheduleProductionTwoProfileOnionReceiveStatusPoll();
   } finally {
@@ -7206,7 +7786,7 @@ function markProductionTwoProfileOnionReceiveStopped(backendLoop = null) {
     inFlight: false,
     stopRequested: false,
     runtimeState: "stopped",
-    runtimeLabel: "Receive mode stopped",
+    runtimeLabel: "Message listening stopped",
     lastProcessedImportSequence: productionTwoProfileOnionReceiveMode.lastProcessedImportSequence,
     lastProcessedMessageImportCount: productionTwoProfileOnionReceiveMode.lastProcessedMessageImportCount,
     lastProcessedEndpointUpdateCount: productionTwoProfileOnionReceiveMode.lastProcessedEndpointUpdateCount,
@@ -7221,22 +7801,20 @@ async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
     setText(fields.productionTwoProfileBoundary, productionTwoProfileOnionReceiveBackendBoundary(backendLoop));
     setText(
       fields.productionTwoProfileMessageState,
-      backendLoop.stop_confirmed
-        ? "Receive mode stopped; backend worker exit confirmed"
-        : `Receive mode stopping; worker=${backendLoop.worker_running} in_flight=${backendLoop.receive_attempt_in_flight}`,
+      backendLoop.stop_confirmed ? t("receiveStopped") : t("receiveStopping"),
     );
     if (!backendLoop.stop_confirmed) {
       scheduleProductionTwoProfileOnionReceiveStopConfirmation();
     } else {
       markProductionTwoProfileOnionReceiveStopped(backendLoop);
-      setText(fields.productionTwoProfileMessageState, "Receive mode stopped; backend worker exit confirmed");
+      setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
     }
   } catch (error) {
     productionTwoProfileOnionReceiveMode = {
       ...productionTwoProfileOnionReceiveMode,
       stopRequested: false,
       runtimeState: "failed-retryable",
-      runtimeLabel: "Receive mode stop confirmation failed",
+      runtimeLabel: "Message listening stop failed",
     };
     setText(fields.productionTwoProfileBoundary, `Backend receive loop stop confirmation failed without returning secrets. ${error}`);
   } finally {
@@ -7255,16 +7833,11 @@ function stopProductionTwoProfileOnionReceive() {
     timer: null,
     stopRequested: true,
     runtimeState: "stopped",
-    runtimeLabel: "Receive mode stopping",
+    runtimeLabel: "Message listening stopping",
   };
   setProductionTwoProfileOnionReceiveRuntimeState("stopped");
-  setText(
-    fields.productionTwoProfileWarning,
-    profile
-      ? `Receive mode stop requested for ${profile}. Waiting for backend worker exit before Start receiving is available again.`
-      : "Receive mode is already stopped.",
-  );
-  setText(fields.productionTwoProfileMessageState, "Receive mode stopping; backend worker exit not confirmed yet");
+  setText(fields.productionTwoProfileWarning, profile ? t("receiveStopPending") : t("receiveStopped"));
+  setText(fields.productionTwoProfileMessageState, t("receiveStopping"));
   applyProductionActionState();
   invoke("production_onion_receive_loop_stop")
     .then((backendLoop) => {
@@ -7276,13 +7849,8 @@ function stopProductionTwoProfileOnionReceive() {
         scheduleProductionTwoProfileOnionReceiveStopConfirmation();
       } else {
         markProductionTwoProfileOnionReceiveStopped(backendLoop);
-        setText(fields.productionTwoProfileMessageState, "Receive mode stopped; backend worker exit confirmed");
-        setText(
-          fields.productionTwoProfileWarning,
-          profile
-            ? `Receive mode stopped for ${profile}. No further receive attempts will run until Start receiving is clicked again.`
-            : "Receive mode is already stopped.",
-        );
+        setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
+        setText(fields.productionTwoProfileWarning, t("receiveStopped"));
       }
     })
     .catch((error) => {
@@ -7290,15 +7858,16 @@ function stopProductionTwoProfileOnionReceive() {
         ...productionTwoProfileOnionReceiveMode,
         stopRequested: false,
         runtimeState: "failed-retryable",
-        runtimeLabel: "Receive mode stop failed",
+        runtimeLabel: "Message listening stop failed",
       };
+      setText(fields.productionTwoProfileWarning, t("receiveStopFailed"));
       setText(fields.productionTwoProfileBoundary, `Backend receive loop stop failed without returning secrets. ${error}`);
       applyProductionActionState();
     });
 }
 
 async function runProductionTwoProfileRoundtrip() {
-  const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
+  const { profileA, profileB, passphrase, messageTtlSeconds } = productionTwoProfileInput();
   let postBusyFocus = null;
   if (!messageRetentionPolicyReady()) {
     setProductionTwoProfileState("Connection setup blocked");
@@ -7312,12 +7881,9 @@ async function runProductionTwoProfileRoundtrip() {
     applyProductionActionState();
     return;
   }
-  if (!profileA || !profileB || profileA === profileB || !passphrase || !message) {
+  if (!profileA || !profileB || profileA === profileB || !passphrase) {
     setProductionTwoProfileState("Connection setup needs input");
-    setText(
-      fields.productionTwoProfileWarning,
-      t("inputRequiredSetup"),
-    );
+    setText(fields.productionTwoProfileWarning, t("inputRequiredSetup"));
     return;
   }
 
@@ -7325,7 +7891,10 @@ async function runProductionTwoProfileRoundtrip() {
   setText(fields.productionTwoProfileWarning, t("setupRunningWarning"));
   setText(fields.productionTwoProfileProfiles, t("setupProfilesWaiting"));
   setText(fields.productionTwoProfileSession, t("setupSessionWaiting"));
-  setText(fields.productionTwoProfileMessageState, t("setupMessageWaiting"));
+  setText(
+    fields.productionTwoProfileMessageState,
+    currentLanguage === "ko" ? "메시지 없이 채팅방을 준비하는 중" : "Preparing room without sending a message",
+  );
   setText(fields.productionTwoProfileBoundary, t("setupBoundaryWaiting"));
   setProductionFollowupActions(false, t("setupFollowupLocked"));
   productionBusyAction = "two-profile-roundtrip";
@@ -7334,12 +7903,10 @@ async function runProductionTwoProfileRoundtrip() {
     fields.runProductionTwoProfileRoundtrip.disabled = true;
   }
   try {
-    const result = await invoke("production_two_profile_roundtrip", {
+    const result = await invoke("production_two_profile_room_setup", {
       profileA,
       profileB,
       passphrase,
-      message,
-      messageTtlSeconds,
     });
     let retentionPreferenceWarning = null;
     try {
@@ -7348,13 +7915,16 @@ async function runProductionTwoProfileRoundtrip() {
       retentionPreferenceWarning = `Roundtrip completed, but retention preference was not saved: ${String(error)}`;
     }
     setProductionTwoProfileState("Connection setup completed");
-    const sentInput = { profileA, profileB };
-    const view = renderProductionTwoProfileResult(result);
+    const view = renderProductionTwoProfileRoomSetupResult(result);
     if (view.canContinue) {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
-      postBusyFocus = selectReplyAfterSentMessageResult(result, sentInput, message, "First message")
-        ? "reply-composer"
-        : null;
+      setText(
+        fields.productionTwoProfileWarning,
+        currentLanguage === "ko"
+          ? "채팅방을 만들었습니다. 확인 문구를 비교한 뒤 메시지를 보낼 수 있습니다."
+          : "Room created. Compare the verification phrase before sending a message.",
+      );
+      postBusyFocus = "verify-safety";
     } else {
       setText(fields.productionTwoProfileWarning, result.warning);
     }
@@ -7382,7 +7952,6 @@ async function runProductionTwoProfileRoundtrip() {
 
 async function runProductionTwoProfileMessageRoundtrip() {
   const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
-  let postBusyFocus = null;
   if (!messageRetentionPolicyReady()) {
     setProductionTwoProfileState("Stored-session message blocked");
     setText(fields.productionTwoProfileWarning, messageRetentionPolicyBlocker());
@@ -7410,7 +7979,7 @@ async function runProductionTwoProfileMessageRoundtrip() {
     return;
   }
 
-  setProductionTwoProfileState("Stored-session message running");
+  setProductionTwoProfileState("Message send running");
   setText(fields.productionTwoProfileWarning, t("messageRunningWarning"));
   setText(fields.productionTwoProfileProfiles, t("messageProfilesWaiting"));
   setText(fields.productionTwoProfileSession, t("messageSessionWaiting"));
@@ -7421,31 +7990,84 @@ async function runProductionTwoProfileMessageRoundtrip() {
   applyProductionActionState();
   try {
     await saveProductionMessageRetentionPreference(profileA, passphrase, messageTtlSeconds);
-    const result = await invoke("production_two_profile_message_roundtrip", {
-      profileA,
-      profileB,
+    const result = await invoke("production_message_envelope_export", {
+      profile: profileA,
       passphrase,
+      messageNumber: 0,
+      autoMessageNumber: true,
       message,
       messageTtlSeconds,
     });
-    setProductionTwoProfileState("Stored-session message completed");
+    const messageNumber = Number.parseInt(result.selected_message_number, 10);
+    const messageText = message;
+    setProductionTwoProfileState("Message saved");
     setText(fields.productionTwoProfileWarning, result.warning);
-    const sentInput = { profileA, profileB };
-    const view = renderProductionTwoProfileMessageResult(result);
+    latestProductionTwoProfileSuccess = {
+      profileA,
+      profileB,
+      messageLength: messageText.length,
+      messageNumber,
+      fingerprint: twoProfileInputFingerprint({ profileA, profileB, passphrase, message: messageText }),
+    };
+    if (fields.productionMessageEnvelope) {
+      fields.productionMessageEnvelope.value = result.envelope_payload;
+    }
+    if (fields.productionMessageNumber) {
+      fields.productionMessageNumber.value = String(messageNumber);
+    }
+    storeMessageEnvelopeSlot(profileA, result.envelope_payload, {
+      receiver: profileB,
+      messageNumber,
+      message: messageText,
+    });
+    appendProductionTwoProfileConversationStatus("sent", profileA, profileB, messageNumber, messageText, {
+      ttlSeconds: result.message_ttl_seconds,
+      outboundDeliveryState: "pending",
+      outboundRetryable: true,
+    });
+    selectTwoProfileConversationMessage(profileA, profileB, messageNumber, messageText);
+    if (fields.productionTwoProfileMessage) {
+      fields.productionTwoProfileMessage.value = "";
+      renderProductionTwoProfileDirection(productionTwoProfileInput());
+    }
+    setText(fields.productionTwoProfileSession, t("messageSavedForDelivery"));
+    setText(fields.productionTwoProfileMessageState, t("messageWaitingForDelivery"));
+    setText(fields.productionTwoProfileBoundary, productionMessageEnvelopeExportView(result).boundary);
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
-    if (view.canContinue) {
-      postBusyFocus = selectReplyAfterSentMessageResult(result, sentInput, message, "Stored-session message")
-        ? "reply-composer"
-        : null;
+    if (manualNetworkPermissionEnabled()) {
+      const onionInput = { profileA, profileB, passphrase };
+      if (latestTwoProfileOutboundOnionMessage(onionInput)) {
+        setText(fields.productionTwoProfileWarning, t("onionDeliveryStarting"));
+        await sendProductionTwoProfileLatestOnionEnvelope();
+      } else {
+        const peerEndpointState = twoProfilePeerEndpointState(onionInput);
+        const failureKind = peerEndpointState.stale
+          ? "stored remote endpoint refresh required"
+          : "peer-endpoint-missing";
+        await markTwoProfileOutboundSendFailed(
+          profileA,
+          passphrase,
+          messageNumber,
+          failureKind,
+        );
+        setText(fields.productionTwoProfileWarning, t("onionDeliveryNeedsPeerAddress"));
+        setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning");
+        await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+      }
     } else {
-      setText(
-        fields.productionTwoProfileWarning,
-        t("messageCompletedRecovered"),
+      await markTwoProfileOutboundSendFailed(
+        profileA,
+        passphrase,
+        messageNumber,
+        "ManualNetworkPermissionMissing",
       );
+      setText(fields.productionTwoProfileWarning, t("messageSavedPrivateDeliveryOff"));
+      setChatDeliveryNoticeByKey("messageSavedPrivateDeliveryOff", "muted");
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
     }
     await loadProductionProfileList();
   } catch (error) {
-    setProductionTwoProfileState("Stored-session message failed");
+    setProductionTwoProfileState("Message send failed");
     setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("stored-message", error));
     setText(fields.productionTwoProfileProfiles, t("messageProfilesFailed"));
     setText(fields.productionTwoProfileSession, t("messageSessionFailed"));
@@ -7455,31 +8077,29 @@ async function runProductionTwoProfileMessageRoundtrip() {
   } finally {
     productionBusyAction = null;
     applyProductionActionState();
-    focusAfterProductionBusyAction(postBusyFocus);
   }
 }
 
 async function runProductionTwoProfileRealOnionRoundtrip() {
   const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
-  const manualNetworkPermission = fields.manualOnionNetworkPermission?.checked === true;
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!profileA || !profileB || profileA === profileB || !passphrase || !message || !messageTtlSeconds) {
     setProductionTwoProfileState("Real onion roundtrip needs input");
-    setText(fields.productionTwoProfileWarning, "Enter two distinct profiles, passphrase, retention, and message.");
+    setText(fields.productionTwoProfileWarning, t("privateDeliveryNeedsMessage"));
     return;
   }
   if (!manualNetworkPermission) {
-    setProductionTwoProfileState("Real onion roundtrip blocked");
-    setText(fields.productionTwoProfileWarning, "Enable manual onion network permission before running real onion roundtrip.");
+    openPrivateDeliverySettings();
     return;
   }
 
-  setProductionTwoProfileState("Real onion roundtrip running");
-  setText(fields.productionTwoProfileWarning, "Launching two explicit onion runtimes and sending one encrypted message.");
-  setText(fields.productionTwoProfileProfiles, "Preparing encrypted profile stores and onion endpoints");
-  setText(fields.productionTwoProfileSession, "Pairing with real onion endpoints");
-  setText(fields.productionTwoProfileMessageState, "Waiting for onion send and receive");
-  setText(fields.productionTwoProfileBoundary, "Network roundtrip in progress");
-  setProductionFollowupActions(false, "Real onion roundtrip running. Follow-up actions are locked.");
+  setProductionTwoProfileState("Private delivery running");
+  setText(fields.productionTwoProfileWarning, t("chatNoticeSending"));
+  setText(fields.productionTwoProfileProfiles, localizedTwoProfileUserViewText("Room is being prepared."));
+  setText(fields.productionTwoProfileSession, localizedTwoProfileUserViewText("Connecting both devices."));
+  setText(fields.productionTwoProfileMessageState, localizedTwoProfileUserViewText("Trying private delivery."));
+  setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Private delivery is running after your explicit action."));
+  setProductionFollowupActions(false, t("privateDeliveryFollowupLocked"));
   productionBusyAction = "two-profile-real-onion-roundtrip";
   applyProductionActionState();
   if (fields.runProductionTwoProfileRealOnionRoundtrip) {
@@ -7494,33 +8114,48 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       messageTtlSeconds,
       manualNetworkPermission,
     });
-    setProductionTwoProfileState(
-      result.received_export_matches_input && result.second_received_export_matches_input
-        ? "Real onion roundtrip completed"
-        : "Real onion roundtrip needs review",
+    const view = productionTwoProfileRealOnionResultView(result);
+    const userView = localizedTwoProfileUserView(productionTwoProfileRealOnionUserView(result));
+    const realOnionNotice = view.complete
+      ? { key: "chatNoticeSent", tone: "success" }
+      : chatNoticeForSendReceiveText(result.next_blocker || result.warning || userView.message) ?? {
+          key: "sendFailedGeneric",
+          tone: "warning",
+        };
+    setProductionTwoProfileState(userView.state);
+    setText(fields.productionTwoProfileWarning, t(realOnionNotice.key));
+    setChatDeliveryNoticeByKey(realOnionNotice.key, realOnionNotice.tone);
+    setText(fields.productionTwoProfileProfiles, userView.profiles);
+    setText(fields.productionTwoProfileSession, userView.session);
+    setText(fields.productionTwoProfileMessageState, userView.message);
+    setText(fields.productionTwoProfileBoundary, userView.boundary);
+    rememberTwoProfileReadySessionFromRoundtrip({ profileA, profileB, passphrase }, result);
+    const latestRoundtripMessageNumber = Number.parseInt(
+      result.second_message_number || result.message_number,
+      10,
     );
-    setText(fields.productionTwoProfileWarning, result.warning);
-    setText(
-      fields.productionTwoProfileProfiles,
-      `a_unlock=${result.profile_a_unlocked} b_unlock=${result.profile_b_unlocked} a_client=${result.profile_a_client_bootstrapped} b_client=${result.profile_b_client_bootstrapped} a_service=${result.profile_a_onion_service_launched} b_service=${result.profile_b_onion_service_launched} a_endpoint=${result.profile_a_endpoint_ready} b_endpoint=${result.profile_b_endpoint_ready}`,
-    );
-    setText(
-      fields.productionTwoProfileSession,
-      `pairing=${result.pairing_payloads_exported} drafts=${result.session_drafts_saved} handshake=${result.handshake_completed} sender=${result.sender_session_ready} receiver=${result.receiver_session_ready}`,
-    );
-    setText(
-      fields.productionTwoProfileMessageState,
-      `first=#${result.message_number} reserved=${result.message_number_reserved} envelope=${result.encrypted_envelope_exported} send=${result.send_attempt_succeeded} receive=${result.receive_attempt_succeeded} inbound=${result.inbound_message_stored} status=${result.received_status_verified} match=${result.received_export_matches_input} second=#${result.second_message_number} reserved=${result.second_message_number_reserved} envelope=${result.second_encrypted_envelope_exported} send=${result.second_send_attempt_succeeded} receive=${result.second_receive_attempt_succeeded} inbound=${result.second_inbound_message_stored} status=${result.second_received_status_verified} match=${result.second_received_export_matches_input} consecutive_receive=${result.consecutive_receive_attempts} imported=${result.consecutive_messages_imported} receive_mode=${result.receive_mode_runtime_state} attempts=${result.receive_mode_attempt_count} sequence=${result.receive_mode_import_sequence} message_imports=${result.receive_mode_message_import_count} endpoint_updates=${result.receive_mode_endpoint_update_count} recorder=${result.receive_mode_recorder_verified} last_network=${result.receive_mode_last_network_io_attempted} last_accept=${result.receive_mode_last_stream_accept_attempted} last_stream=${result.receive_mode_last_stream_read_write_attempted} last_envelope=${result.receive_mode_last_envelope_io_opened} last_runtime=${result.receive_mode_last_runtime_messaging_enabled}`,
-    );
-    setText(
-      fields.productionTwoProfileBoundary,
-      `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} events=${result.event_summary.join("; ") || "none"} endpoint_returned=${result.local_endpoint_returned || result.peer_endpoint_returned} envelope_payload=${result.envelope_payload_returned} plaintext=${result.plaintext_returned_to_frontend} path=${result.store_path_returned} passphrase=${result.passphrase_retained} key_material=${result.key_material_exposed} network=${result.network_io_attempted} transport=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
-    if (result.received_export_matches_input && result.second_received_export_matches_input) {
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+    if (Number.isInteger(latestRoundtripMessageNumber) && latestRoundtripMessageNumber > 0) {
+      latestProductionTwoProfileSuccess = {
+        profileA: result.sender_profile || profileA,
+        profileB: result.receiver_profile || profileB,
+        messageLength: message.length,
+        messageNumber: latestRoundtripMessageNumber,
+        fingerprint: twoProfileInputFingerprint(productionTwoProfileInput()),
+      };
+    }
+    if (view.touchedTranscript) {
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+    }
+    if (view.complete) {
+      if (fields.productionTwoProfileMessage) {
+        fields.productionTwoProfileMessage.value = "";
+        renderProductionTwoProfileDirection(productionTwoProfileInput());
+      }
+      const resumeProfile = productionTwoProfileRealOnionResumeProfile(result, { profileB });
+      selectLatestReceivedReplyForProfile(resumeProfile, { focusReply: "none" });
     }
   } catch (error) {
-    setProductionTwoProfileState("Real onion roundtrip failed");
+    setProductionTwoProfileState("Private delivery failed");
     const detail = String(error ?? "");
     const redactedStage = detail.includes("redacted stage:")
       ? detail.split("redacted stage:").slice(1).join("redacted stage:").trim()
@@ -7529,19 +8164,19 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     setText(
       fields.productionTwoProfileProfiles,
       redactedStage.includes("bootstrap")
-        ? "Profile stores opened before Tor bootstrap completed"
-        : "Real onion profile setup failed",
+        ? "Room is saved."
+        : "Room setup did not finish.",
     );
     setText(
       fields.productionTwoProfileSession,
       redactedStage.includes("bootstrap")
-        ? "Session setup blocked until local onion endpoint exists"
-        : "Real onion session setup failed",
+        ? t("torBootstrap")
+        : "Private delivery setup did not finish.",
     );
-    setText(fields.productionTwoProfileMessageState, "Real onion message not delivered");
+    setText(fields.productionTwoProfileMessageState, "Message was not delivered. Retry when private delivery is ready.");
     setText(
       fields.productionTwoProfileBoundary,
-      redactedStage || "Failed without returning endpoint, payload, path, or key details",
+      "Failed without showing private details in the chat view.",
     );
   } finally {
     productionBusyAction = null;
@@ -8167,17 +8802,14 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       const resumeTarget = ready ? autoSelectTwoProfileResumeTarget(sessionStatus) : null;
       setText(
         fields.productionTwoProfileWarning,
-        ready && resumeTarget === "reply-latest"
-          ? appendExpiredMessagesPurged(
-              appendStaleMessageEnvelopeSlotsPruned(
-                "Stored conversation recovered. Latest delivered message is selected as the reply target.",
-                staleMessageEnvelopeSlotsPruned,
-              ),
+        ready
+          ? twoProfileResumeWarningForTarget(
+              resumeTarget,
+              resumeWarning,
+              staleMessageEnvelopeSlotsPruned,
               expiredMessagesPurged,
             )
-          : ready
-            ? resumeWarning
-            : loadedWarning,
+          : loadedWarning,
       );
       if (ready && resumeTarget !== "pending-review") {
         renderProductionTwoProfileMemory();
@@ -8188,33 +8820,24 @@ async function loadProductionTwoProfileTranscript(options = {}) {
     } else if (autoResume && sessionStatus?.both_ready_for_message_envelope) {
       setProductionTwoProfileState("Conversation resumed");
       const resumeTarget = autoSelectTwoProfileResumeTarget(sessionStatus);
-      if (resumeTarget === "reply-latest") {
-        setText(
-          fields.productionTwoProfileWarning,
-          appendExpiredMessagesPurged(
-            appendStaleMessageEnvelopeSlotsPruned(
-              "Stored conversation and message-ready sessions recovered after local unlock. Latest delivered message is selected for reply.",
-              staleMessageEnvelopeSlotsPruned,
-            ),
-            expiredMessagesPurged,
-          ),
-        );
-      } else if (resumeTarget === "pending-review") {
-        setText(
-          fields.productionTwoProfileWarning,
-          resumeWarning,
-        );
-      } else {
-        setText(
-          fields.productionTwoProfileWarning,
-          appendExpiredMessagesPurged(
-            appendStaleMessageEnvelopeSlotsPruned(
-              "Stored conversation and message-ready sessions recovered after local unlock. Write a message to continue.",
-              staleMessageEnvelopeSlotsPruned,
-            ),
-            expiredMessagesPurged,
-          ),
-        );
+      const autoResumeBaseWarning = appendExpiredMessagesPurged(
+        appendStaleMessageEnvelopeSlotsPruned(
+          "Stored conversation and message-ready sessions recovered after local unlock. Write a message to continue.",
+          staleMessageEnvelopeSlotsPruned,
+        ),
+        expiredMessagesPurged,
+      );
+      setText(
+        fields.productionTwoProfileWarning,
+        twoProfileResumeWarningForTarget(
+          resumeTarget,
+          autoResumeBaseWarning,
+          staleMessageEnvelopeSlotsPruned,
+          expiredMessagesPurged,
+        ),
+      );
+      if (resumeTarget !== "pending-review") {
+        renderProductionTwoProfileMemory();
       }
     } else if (autoResume) {
       setProductionTwoProfileState("Resume needs session check");
@@ -8952,8 +9575,11 @@ if (fields.toggleChatSettings) {
     const panel = document.querySelector(".chat-settings-panel");
     const systemPanel = document.querySelector(".system-settings-panel");
     if (panel) {
-      panel.open = !panel.open;
-      fields.toggleChatSettings.setAttribute("aria-expanded", panel.open ? "true" : "false");
+      if (panel.open) {
+        closeChatSettingsPanel();
+      } else {
+        openChatSettingsPanel();
+      }
       if (panel.open && systemPanel) {
         systemPanel.open = false;
       }
@@ -8961,34 +9587,74 @@ if (fields.toggleChatSettings) {
   });
 }
 
-document.querySelector(".system-settings-panel")?.addEventListener("toggle", (event) => {
-  if (!event.currentTarget.open) {
-    return;
-  }
-  closeChatSettingsPanel();
-});
-
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && document.querySelector(".chat-settings-panel")?.open) {
+if (fields.closeChatSettings) {
+  fields.closeChatSettings.addEventListener("click", () => {
     closeChatSettingsPanel();
     fields.toggleChatSettings?.focus();
+  });
+}
+
+if (fields.openPrivateDeliverySettings) {
+  fields.openPrivateDeliverySettings.addEventListener("click", openPrivateDeliverySettings);
+}
+
+document.querySelector(".chat-settings-panel")?.addEventListener("toggle", (event) => {
+  const open = Boolean(event.currentTarget.open);
+  document.body.classList.toggle("is-chat-settings-open", open);
+  fields.toggleChatSettings?.setAttribute("aria-expanded", open ? "true" : "false");
+});
+
+document.querySelector(".system-settings-panel")?.addEventListener("toggle", (event) => {
+  const open = Boolean(event.currentTarget.open);
+  document.body.classList.toggle("is-app-settings-open", open);
+  if (open) {
+    closeChatSettingsPanel();
+  }
+});
+
+if (fields.closeAppSettings) {
+  fields.closeAppSettings.addEventListener("click", () => {
+    closeAppSettingsPanel();
+    document.querySelector(".system-settings-panel > summary")?.focus();
+  });
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") {
+    return;
+  }
+  if (document.querySelector(".chat-settings-panel")?.open) {
+    closeChatSettingsPanel();
+    fields.toggleChatSettings?.focus();
+  }
+  if (document.querySelector(".system-settings-panel")?.open) {
+    closeAppSettingsPanel();
+    document.querySelector(".system-settings-panel > summary")?.focus();
   }
 });
 
 document.addEventListener("pointerdown", (event) => {
-  const panel = document.querySelector(".chat-settings-panel");
-  if (!panel?.open) {
-    return;
-  }
   const target = event.target;
-  if (panel.contains(target) || fields.toggleChatSettings?.contains(target)) {
-    return;
+  const chatPanel = document.querySelector(".chat-settings-panel");
+  if (chatPanel?.open) {
+    if (chatPanel.contains(target) || fields.toggleChatSettings?.contains(target)) {
+      return;
+    }
+    closeChatSettingsPanel();
   }
-  closeChatSettingsPanel();
+  const appPanel = document.querySelector(".system-settings-panel");
+  const appSummary = document.querySelector(".system-settings-panel > summary");
+  if (appPanel?.open) {
+    if (appPanel.contains(target) || appSummary?.contains(target)) {
+      return;
+    }
+    closeAppSettingsPanel();
+  }
 });
 
 if (fields.openDeveloperTools) {
   fields.openDeveloperTools.addEventListener("click", () => {
+    closeAppSettingsPanel();
     openManualProductionTools();
   });
 }
@@ -9005,6 +9671,12 @@ if (fields.createInviteCode) {
 
 if (fields.copyInviteCode) {
   fields.copyInviteCode.addEventListener("click", () => {
+    copyCurrentInviteCode();
+  });
+}
+
+if (fields.copyPendingInviteCode) {
+  fields.copyPendingInviteCode.addEventListener("click", () => {
     copyCurrentInviteCode();
   });
 }
@@ -9133,6 +9805,7 @@ for (const input of [
   fields.productionTwoProfileMessageTtl,
   fields.productionTwoProfileMessage,
   fields.manualOnionNetworkPermission,
+  fields.roomNetworkPermission,
 ]) {
   if (input) {
     input.addEventListener("input", () => {
@@ -9142,6 +9815,16 @@ for (const input of [
     input.addEventListener("change", () => {
       applyProductionActionState();
       scheduleTwoProfileAutoResume();
+    });
+  }
+}
+
+for (const input of [fields.manualOnionNetworkPermission, fields.roomNetworkPermission]) {
+  if (input) {
+    input.addEventListener("change", () => {
+      setManualNetworkPermission(input.checked);
+      renderRoomIdentityBar(productionTwoProfileInput(), twoProfileSessionsReadyForInput(productionTwoProfileInput()));
+      applyProductionActionState();
     });
   }
 }
@@ -9499,6 +10182,10 @@ if (fields.confirmTwoProfileSafety) {
   fields.confirmTwoProfileSafety.addEventListener("click", confirmCurrentTwoProfileSafety);
 }
 
+if (fields.rejectTwoProfileSafety) {
+  fields.rejectTwoProfileSafety.addEventListener("click", rejectCurrentTwoProfileSafety);
+}
+
 if (fields.startProductionTwoProfileOnionBootstrap) {
   fields.startProductionTwoProfileOnionBootstrap.addEventListener(
     "click",
@@ -9639,4 +10326,3 @@ resetProductionTwoProfileView();
 resetProductionRoundtripView();
 resetLoopView();
 loadProductionProfileList();
-applyDevActiveChatMockFromUrl();

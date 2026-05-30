@@ -1,23 +1,43 @@
 export function productionTwoProfileReadiness(input, busy) {
   if (busy) {
-    return "Running: production action in progress";
+    return "Running: action in progress";
   }
   if (!input.profileA) {
-    return "Blocked: Profile A required";
+    return "Invite code needed";
   }
   if (!input.profileB) {
-    return "Blocked: Profile B required";
+    return "Invite code needed";
   }
   if (input.profileA === input.profileB) {
-    return "Blocked: profiles must be distinct";
+    return "Invite code must be different from this device";
   }
   if (!input.passphrase) {
-    return "Blocked: passphrase required";
+    return "Invite code needed";
   }
-  if (!input.message) {
-    return "Blocked: message required";
-  }
-  return "Ready: local encrypted roundtrip can run";
+  return "Ready: room can be created";
+}
+
+export function productionInviteCodeProfiles(code, role = "joiner") {
+  const connectionCode = String(code ?? "").trim();
+  const slug =
+    connectionCode
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 32) || "shared-code";
+  const normalizedRole = role === "inviter" ? "inviter" : "joiner";
+  const peerRole = normalizedRole === "inviter" ? "joiner" : "inviter";
+  return {
+    connectionCode,
+    role: normalizedRole,
+    slug,
+    localProfile: `${normalizedRole}-${slug}`,
+    peerProfile: `${peerRole}-${slug}`,
+  };
+}
+
+export function productionInviteCodeProfileName(value) {
+  return /^(inviter|joiner)-/.test(String(value ?? "").trim().toLowerCase());
 }
 
 export function productionTwoProfileCurrentAction(state) {
@@ -34,10 +54,10 @@ export function productionTwoProfileCurrentAction(state) {
   if (!input.messageTtlSeconds) {
     return null;
   }
-  if (!input.message) {
-    return "compose";
-  }
   if (state?.sessionsReady) {
+    if (!input.message) {
+      return "compose";
+    }
     return "stored-message";
   }
   if (!state?.hasKnownSessionStatus && state?.hasRecoveredConversation) {
@@ -95,6 +115,9 @@ export function productionTwoProfilePairFromProfiles(profiles, currentA, current
   const profileA = String(currentA ?? "").trim();
   const profileB = String(currentB ?? "").trim();
   const saved = new Set(savedProfiles);
+  if (productionInviteCodeProfileName(profileA) && profileB && !saved.has(profileB)) {
+    return { profileA, profileB, changed: false };
+  }
   if (profileA && profileB && profileA !== profileB && saved.has(profileA) && saved.has(profileB)) {
     return { profileA, profileB, changed: false };
   }
@@ -148,7 +171,7 @@ export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
   if (!mode?.enabled) {
     return {
       state: "stopped",
-      label: "Receive mode stopped",
+      label: "Message listening stopped",
       retryable: false,
       duplicateBlocked: false,
     };
@@ -156,7 +179,7 @@ export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
   if (mode?.stopRequested) {
     return {
       state: "stopped",
-      label: "Receive mode stopping",
+      label: "Message listening stopping",
       retryable: false,
       duplicateBlocked: true,
     };
@@ -164,7 +187,7 @@ export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
   if (mode?.inFlight && !result) {
     return {
       state: mode.runtimeState || "receiving",
-      label: mode.runtimeLabel || `Receive mode ${mode.runtimeState || "receiving"}`,
+      label: mode.runtimeLabel || "Listening for new messages",
       retryable: false,
       duplicateBlocked: true,
     };
@@ -172,7 +195,7 @@ export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
   if (!result) {
     return {
       state: mode.runtimeState || "receiving",
-      label: mode.runtimeLabel || `Receive mode ${mode.runtimeState || "receiving"}`,
+      label: mode.runtimeLabel || "Listening for new messages",
       retryable: false,
       duplicateBlocked: false,
     };
@@ -180,9 +203,7 @@ export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
   if (result.receive_attempt_succeeded || result.endpoint_update_applied) {
     return {
       state: "message-imported",
-      label: result.endpoint_update_applied
-        ? "Receive mode imported endpoint update"
-        : "Receive mode imported message",
+      label: result.endpoint_update_applied ? "Peer address updated" : "New message received",
       retryable: false,
       duplicateBlocked: false,
     };
@@ -190,7 +211,7 @@ export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
   if (result.stream_request_accepted || result.inbound_rend_request_accepted) {
     return {
       state: "peer-connected",
-      label: "Receive mode peer connected",
+      label: "Peer connected",
       retryable: true,
       duplicateBlocked: false,
     };
@@ -198,7 +219,7 @@ export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
   if (!result.persistent_client_ready) {
     return {
       state: "bootstrapping",
-      label: "Receive mode waiting for Tor bootstrap",
+      label: "Waiting for Tor restart",
       retryable: true,
       duplicateBlocked: false,
     };
@@ -206,7 +227,7 @@ export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
   if (!result.inbound_stream_preparation_ready) {
     return {
       state: "launching-service",
-      label: "Receive mode waiting for onion service",
+      label: "Waiting for local address",
       retryable: true,
       duplicateBlocked: false,
     };
@@ -214,14 +235,14 @@ export function productionOnionReceiveRuntimeView(mode = {}, result = null) {
   if (result.receive_attempt_started) {
     return {
       state: "failed-retryable",
-      label: "Receive mode retryable failure",
+      label: "Message listening will retry",
       retryable: true,
       duplicateBlocked: false,
     };
   }
   return {
     state: "receiving",
-    label: "Receive mode receiving",
+    label: "Listening for new messages",
     retryable: true,
     duplicateBlocked: false,
   };
@@ -262,23 +283,23 @@ export function productionOnionReceiveLoopRefreshPlan(mode = {}, backendLoop = {
 export function productionOnionReceiveFailureMessage(backendLoop = {}) {
   switch (backendLoop.last_failure_kind) {
     case "none":
-      return "Receive worker is waiting for inbound onion traffic.";
+      return "Waiting for new messages.";
     case "manual-permission":
-      return "Receive mode is paused until manual onion network permission is enabled again.";
+      return "Turn on network permission before listening for messages.";
     case "persistent-client":
-      return "Receive mode needs the persistent Tor client to be started again.";
+      return "Tor needs to be started again before messages can arrive.";
     case "peer-offline":
-      return "No inbound peer stream is available yet; receive mode will keep retrying.";
+      return "Peer is offline; listening will retry.";
     case "receive-timeout":
-      return "Receive attempt timed out; receive mode will retry while enabled.";
+      return "No message arrived before timeout; listening will retry.";
     case "busy":
-      return "A receive attempt is already active; duplicate work is blocked.";
+      return "Already listening for messages.";
     case "import":
-      return "A received envelope was not fully imported; receive mode will retry.";
+      return "A message could not be imported; listening will retry.";
     case "feature-disabled":
-      return "This build does not include the manual onion client attempt feature.";
+      return "Message listening is not available in this build.";
     default:
-      return "Receive mode hit a retryable backend boundary and will keep polling.";
+      return "Message listening hit a retryable error and will keep trying.";
   }
 }
 
@@ -329,9 +350,9 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
     const needsEndpointRefresh = productionTwoProfileOutboundNeedsEndpointRefresh(entry);
     return {
       nextAction: needsEndpointRefresh
-        ? `Stale endpoint: refresh ${entry.receiver}'s endpoint before retrying message #${entry.messageNumber}.`
+        ? `Stale address: refresh the peer address, then retry message #${entry.messageNumber}.`
         : `Retry send: message #${entry.messageNumber} can be sent again or canceled.`,
-      rowLabel: needsEndpointRefresh ? "action: refresh endpoint" : "action: retry send",
+      rowLabel: needsEndpointRefresh ? "action: refresh address and retry" : "action: retry send",
       state: "is-ready",
       focusTarget: needsEndpointRefresh ? "refresh-endpoint" : "retry-send",
       manualTarget: null,
@@ -380,7 +401,7 @@ export function productionTwoProfileOutboundStatusLabel(entry) {
     if (failure.includes("timeout")) {
       return "send timeout";
     }
-    if (failure.includes("stale") || failure.includes("refresh")) {
+    if (failure.includes("stale") || failure.includes("refresh") || failure.includes("endpoint")) {
       return "stale endpoint";
     }
     if (failure.includes("persistentclientnotready") || failure.includes("bootstrap")) {
@@ -754,6 +775,7 @@ export function productionActionAvailability(state) {
     hasOutboundMessageInput,
     hasInboundEnvelopeInput,
     hasReceivedExportInput,
+    hasTwoProfileSetupInput,
     hasTwoProfileInput,
     hasTwoProfileSessionsReady,
     hasMessageRetentionPolicy = true,
@@ -775,7 +797,7 @@ export function productionActionAvailability(state) {
       !busy && hasMessageRetentionPolicy && selectedMessageInputMatches && hasInboundEnvelopeInput,
     exportReceivedMessage: !busy && hasReceivedExportInput,
     runTwoProfileRoundtrip:
-      !busy && hasMessageRetentionPolicy && hasTwoProfileInput && !hasTwoProfileSessionsReady,
+      !busy && hasMessageRetentionPolicy && hasTwoProfileSetupInput && !hasTwoProfileSessionsReady,
     runTwoProfileMessageRoundtrip:
       !busy && hasMessageRetentionPolicy && hasTwoProfileInput && hasTwoProfileSessionsReady,
     usePairingPayload: !busy && hasLocalPairingPayload,
@@ -1060,6 +1082,342 @@ export function productionTwoProfileMessageResultView(result) {
       ? "Next: continue from the delivered message and write a stored-session reply."
       : "Review stored-session result rows before continuing.",
   };
+}
+
+export function productionTwoProfileRealOnionResultView(result) {
+  const firstDelivered = Boolean(
+    result?.message_number_reserved &&
+      result?.encrypted_envelope_exported &&
+      result?.send_attempt_succeeded &&
+      result?.receive_attempt_succeeded &&
+      result?.inbound_message_stored &&
+      result?.received_status_verified &&
+      result?.received_export_matches_input,
+  );
+  const secondDelivered = Boolean(
+    result?.second_message_number_reserved &&
+      result?.second_encrypted_envelope_exported &&
+      result?.second_send_attempt_succeeded &&
+      result?.second_receive_attempt_succeeded &&
+      result?.second_inbound_message_stored &&
+      result?.second_received_status_verified &&
+      result?.second_received_export_matches_input,
+  );
+  const receiveRecorderReady = Boolean(
+    result?.receive_mode_recorder_verified &&
+      Number(result?.consecutive_receive_attempts ?? 0) >= 2 &&
+      Number(result?.consecutive_messages_imported ?? 0) >= 2 &&
+      Number(result?.receive_mode_attempt_count ?? 0) >= 2 &&
+      Number(result?.receive_mode_import_sequence ?? 0) >= 2 &&
+      Number(result?.receive_mode_message_import_count ?? 0) >= 2 &&
+      result?.receive_mode_last_network_io_attempted &&
+      result?.receive_mode_last_stream_accept_attempted &&
+      result?.receive_mode_last_stream_read_write_attempted &&
+      result?.receive_mode_last_envelope_io_opened &&
+      result?.receive_mode_last_runtime_messaging_enabled,
+  );
+  const redactedBoundaryContained = Boolean(
+    !result?.local_endpoint_returned &&
+      !result?.peer_endpoint_returned &&
+      !result?.envelope_payload_returned &&
+      !result?.plaintext_returned_to_frontend &&
+      !result?.store_path_returned &&
+      !result?.passphrase_retained &&
+      !result?.key_material_exposed,
+  );
+  const complete = firstDelivered && secondDelivered && receiveRecorderReady && redactedBoundaryContained;
+  const touchedTranscript = Boolean(
+    result?.message_number_reserved ||
+      result?.second_message_number_reserved ||
+      result?.encrypted_envelope_exported ||
+      result?.second_encrypted_envelope_exported ||
+      result?.send_attempt_started ||
+      result?.second_send_attempt_succeeded ||
+      result?.inbound_message_stored ||
+      result?.second_inbound_message_stored ||
+      Number(result?.receive_mode_message_import_count ?? 0) > 0,
+  );
+
+  return {
+    complete,
+    touchedTranscript,
+    state: complete ? "Real onion roundtrip completed" : "Real onion roundtrip needs review",
+    message:
+      `first=#${result?.message_number ?? 0} delivered=${firstDelivered} ` +
+      `second=#${result?.second_message_number ?? 0} delivered=${secondDelivered} ` +
+      `receive_attempts=${result?.consecutive_receive_attempts ?? 0} ` +
+      `imported=${result?.consecutive_messages_imported ?? 0} ` +
+      `recorder=${receiveRecorderReady} ` +
+      `redacted=${redactedBoundaryContained}`,
+    boundary:
+      `feature=${result?.manual_client_attempt_feature_compiled === true} ` +
+      `permission=${result?.manual_network_permission_enabled === true} ` +
+      `next=${result?.next_blocker ?? "unknown"} ` +
+      `endpoint_returned=${Boolean(result?.local_endpoint_returned || result?.peer_endpoint_returned)} ` +
+      `envelope_payload=${result?.envelope_payload_returned === true} ` +
+      `plaintext=${result?.plaintext_returned_to_frontend === true} ` +
+      `path=${result?.store_path_returned === true} ` +
+      `passphrase=${result?.passphrase_retained === true} ` +
+      `key_material=${result?.key_material_exposed === true} ` +
+      `network=${result?.network_io_attempted === true} ` +
+      `transport=${result?.transport_io_opened === true} ` +
+      `runtime=${result?.runtime_messaging_enabled === true}`,
+  };
+}
+
+export function productionTwoProfileSendAttemptUserView(result, messageNumber = 0) {
+  const number = Number.parseInt(messageNumber, 10);
+  const label = Number.isInteger(number) && number > 0 ? `#${number}` : "";
+  if (result?.send_attempt_succeeded) {
+    return {
+      state: "Private delivery sent",
+      profiles: "Room is ready.",
+      session: label ? `Message ${label} was sent.` : "Message was sent.",
+      message: "Waiting for the other device to receive it.",
+      boundary: "Private delivery finished. Technical details are available in diagnostics.",
+    };
+  }
+  if (result?.peer_endpoint_refresh_recommended || result?.retry_recommended_after_endpoint_refresh) {
+    return {
+      state: "Peer address refresh needed",
+      profiles: "Room is saved.",
+      session: "Peer address needs to be refreshed.",
+      message: label
+        ? `Message ${label} is still saved. Refresh the address, then retry or cancel.`
+        : "Message is still saved. Refresh the address, then retry or cancel.",
+      boundary: "No message was deleted.",
+    };
+  }
+  if (result?.manual_network_permission_enabled === false) {
+    return {
+      state: "Private delivery blocked",
+      profiles: "Room is saved.",
+      session: "Network permission is off.",
+      message: label ? `Message ${label} is still saved.` : "Message is still saved.",
+      boundary: "No private delivery was attempted.",
+    };
+  }
+  if (result?.send_attempt_started) {
+    return {
+      state: "Private delivery failed",
+      profiles: "Room is saved.",
+      session: "The other device may be offline.",
+      message: label
+        ? `Message ${label} is still saved. Retry or cancel it from the conversation.`
+        : "Message is still saved. Retry or cancel it from the conversation.",
+      boundary: "The failed send stayed retryable.",
+    };
+  }
+  return {
+    state: "Private delivery blocked",
+    profiles: "Room is saved.",
+    session: "Private delivery is not ready.",
+    message: label
+      ? `Message ${label} is still saved. Retry when the room is ready.`
+      : "Message is still saved. Retry when the room is ready.",
+    boundary: "No message was deleted.",
+  };
+}
+
+export function productionTwoProfileRealOnionUserView(result) {
+  const detailed = productionTwoProfileRealOnionResultView(result);
+  if (detailed.complete) {
+    return {
+      state: "Private delivery completed",
+      profiles: "Room is ready.",
+      session: "Both devices exchanged messages.",
+      message: "Message delivered. You can continue the conversation.",
+      boundary: "Private delivery completed without showing private details.",
+    };
+  }
+  if (result?.manual_network_permission_enabled === false) {
+    return {
+      state: "Private delivery blocked",
+      profiles: "Room is saved.",
+      session: "Network permission is off.",
+      message: "Turn on private delivery before trying again.",
+      boundary: "No private delivery was attempted.",
+    };
+  }
+  if (detailed.touchedTranscript) {
+    return {
+      state: "Private delivery needs review",
+      profiles: "Room is saved.",
+      session: "Some delivery work finished, but not all messages were confirmed.",
+      message: "Review the conversation, then retry or cancel any pending message.",
+      boundary: "No private details were shown in the chat view.",
+    };
+  }
+  return {
+    state: "Private delivery not ready",
+    profiles: "Room is saved.",
+    session: "Private delivery setup did not finish.",
+    message: "Try again after the private route is ready.",
+    boundary: "No private details were shown in the chat view.",
+  };
+}
+
+export function productionTwoProfileRealOnionResumeProfile(result, input = {}) {
+  const receiver = String(result?.receiver_profile ?? "").trim();
+  if (receiver) {
+    return receiver;
+  }
+  return String(input?.profileB ?? "").trim();
+}
+
+export function chatNoticeForSendReceiveText(value) {
+  const text = String(value ?? "").trim();
+  if (!text) {
+    return null;
+  }
+  const lower = text.toLowerCase();
+  if (
+    lower.includes("phrase is different") ||
+    lower.includes("verification mismatch") ||
+    text.includes("문구가 다르")
+  ) {
+    return { key: "chatNoticeVerificationMismatch", tone: "danger" };
+  }
+  if (
+    lower.includes("locked") ||
+    lower.includes("verify") ||
+    lower.includes("verification required") ||
+    text.includes("확인 문구") ||
+    text.includes("잠긴")
+  ) {
+    return { key: "sendLockedUntilVerified", tone: "warning" };
+  }
+  if (lower.includes("canceled") || lower.includes("cancelled") || text.includes("취소")) {
+    return { key: "sendCanceledNotice", tone: "muted" };
+  }
+  if (
+    lower.includes("peer offline") ||
+    lower.includes("peer is offline") ||
+    lower.includes("connection refused") ||
+    text.includes("상대가 오프라인")
+  ) {
+    return { key: "peerOffline", tone: "warning" };
+  }
+  if (
+    lower.includes("endpoint update") ||
+    lower.includes("peer address updated") ||
+    text.includes("상대 주소가 갱신")
+  ) {
+    return { key: "chatNoticeEndpointUpdated", tone: "success" };
+  }
+  if (
+    lower.includes("network permission") ||
+    lower.includes("manual onion network permission") ||
+    text.includes("네트워크 권한")
+  ) {
+    return { key: "chatNoticeNetworkPermission", tone: "warning" };
+  }
+  if (
+    lower.includes("bootstrap") ||
+    lower.includes("private route") ||
+    lower.includes("tor restart") ||
+    text.includes("비공개 경로")
+  ) {
+    return { key: "torBootstrap", tone: "warning" };
+  }
+  if (
+    lower.includes("peer onion address is not ready") ||
+    lower.includes("stale endpoint") ||
+    lower.includes("refresh") ||
+    lower.includes("endpoint") ||
+    text.includes("주소")
+  ) {
+    return { key: "chatNoticeRefreshAddress", tone: "warning" };
+  }
+  if (lower.includes("timeout") || text.includes("시간 초과")) {
+    return { key: "sendTimeout", tone: "warning" };
+  }
+  if (
+    lower.includes("retrying send") ||
+    lower.includes("attempting onion delivery") ||
+    lower.includes("send running") ||
+    lower.includes("sending") ||
+    text.includes("전송 다시 시도") ||
+    text.includes("전송을 시도") ||
+    text.includes("전송 중")
+  ) {
+    return { key: "chatNoticeSending", tone: "progress" };
+  }
+  if (
+    lower.includes("receive mode stopped") ||
+    lower.includes("message listening stopped") ||
+    lower.includes("stop receiving") ||
+    lower.includes("stop listening") ||
+    text.includes("수신을 중지")
+  ) {
+    return { key: "chatNoticeReceiveStopped", tone: "muted" };
+  }
+  if (
+    lower.includes("receive mode enabled") ||
+    lower.includes("receive mode is active") ||
+    lower.includes("listening for new messages") ||
+    lower.includes("waiting for messages") ||
+    lower.includes("polling") ||
+    lower.includes("keep this window open") ||
+    text.includes("메시지 대기") ||
+    text.includes("새 메시지를 기다리는 중") ||
+    text.includes("수신 중")
+  ) {
+    return { key: "chatNoticeReceiving", tone: "success" };
+  }
+  if (
+    lower.includes("conversation updated after import") ||
+    lower.includes("imported message") ||
+    lower.includes("message received") ||
+    text.includes("수신됨")
+  ) {
+    return { key: "chatNoticeReceived", tone: "success" };
+  }
+  if (
+    lower.includes("sent") ||
+    lower.includes("delivered") ||
+    lower.includes("completed") ||
+    text.includes("전송됨") ||
+    text.includes("전달됨")
+  ) {
+    return { key: "chatNoticeSent", tone: "success" };
+  }
+  if (lower.includes("failed") || text.includes("실패")) {
+    return { key: "sendFailedGeneric", tone: "warning" };
+  }
+  return null;
+}
+
+export function chatNoticeForProductionState(message) {
+  const lower = String(message ?? "").toLowerCase();
+  if (!lower) {
+    return null;
+  }
+  if (lower.includes("receive mode stopped") || lower.includes("message listening stopped")) {
+    return { key: "chatNoticeReceiveStopped", tone: "muted" };
+  }
+  if (
+    lower.includes("receive mode") ||
+    lower.includes("listening for new messages") ||
+    lower.includes("message listening will retry")
+  ) {
+    return lower.includes("retry")
+      ? { key: "receiveRetrying", tone: "warning" }
+      : { key: "chatNoticeReceiving", tone: "success" };
+  }
+  if (lower.includes("send") && (lower.includes("running") || lower.includes("retry"))) {
+    return { key: "chatNoticeSending", tone: "progress" };
+  }
+  if (lower.includes("send") && lower.includes("failed")) {
+    return { key: "sendFailedGeneric", tone: "warning" };
+  }
+  if (lower.includes("pending send canceled")) {
+    return { key: "sendCanceledNotice", tone: "muted" };
+  }
+  if (lower.includes("conversation updated after import")) {
+    return { key: "chatNoticeReceived", tone: "success" };
+  }
+  return null;
 }
 
 export function productionSessionStateView(result) {
