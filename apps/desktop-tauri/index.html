@@ -394,26 +394,6 @@
                   Use the same invite code on both devices. The app keeps the local setup out of view.
                 </p>
               </section>
-              <section class="connection-wizard-step" data-wizard-step="retention">
-                <p class="wizard-step-label" data-i18n="wizardStepRetention">Message lifetime</p>
-                <label class="loop-label" for="production-two-profile-message-ttl" data-i18n="retention">Retention</label>
-                <select id="production-two-profile-message-ttl">
-                  <option value="" data-i18n="loadingRetentionPolicy">Loading retention policy</option>
-                </select>
-                <p class="retention-note" data-i18n="retentionDeviceHint">
-                  Message retention applies on this device. The other device follows its own setting.
-                </p>
-              </section>
-              <section class="connection-wizard-step settings-language-step">
-                <p class="wizard-step-label" data-i18n="wizardStepLanguage">Language</p>
-                <label class="language-control" for="language-selector">
-                  <span data-i18n="language">Language</span>
-                  <select id="language-selector" autocomplete="off">
-                    <option value="en">English</option>
-                    <option value="ko">한국어</option>
-                  </select>
-                </label>
-              </section>
               <div class="connection-wizard-internal" aria-hidden="true">
                 <input id="production-two-profile-a" type="hidden" />
                 <input id="production-two-profile-passphrase" type="hidden" />
@@ -426,6 +406,29 @@
               <div class="loop-actions setup-primary-actions">
                 <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Create room</button>
               </div>
+              <details class="room-secondary-options">
+                <summary data-i18n="roomOptions">Room options</summary>
+                <section class="connection-wizard-step" data-wizard-step="retention">
+                  <p class="wizard-step-label" data-i18n="wizardStepRetention">Message lifetime</p>
+                  <label class="loop-label" for="production-two-profile-message-ttl" data-i18n="retention">Retention</label>
+                  <select id="production-two-profile-message-ttl">
+                    <option value="" data-i18n="loadingRetentionPolicy">Loading retention policy</option>
+                  </select>
+                  <p class="retention-note" data-i18n="retentionDeviceHint">
+                    Message retention applies on this device. The other device follows its own setting.
+                  </p>
+                </section>
+                <section class="connection-wizard-step settings-language-step">
+                  <p class="wizard-step-label" data-i18n="wizardStepLanguage">Language</p>
+                  <label class="language-control" for="language-selector">
+                    <span data-i18n="language">Language</span>
+                    <select id="language-selector" autocomplete="off">
+                      <option value="en">English</option>
+                      <option value="ko">한국어</option>
+                    </select>
+                  </label>
+                </section>
+              </details>
               <section class="room-receive-controls" aria-label="Receive controls" data-i18n-aria-label="receiveControls">
                 <p class="retention-note" data-i18n="receiveControlHint">
                   Receiving stays off until you start it.
