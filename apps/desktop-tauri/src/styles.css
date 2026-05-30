@@ -1800,7 +1800,7 @@ body.is-chat-active .chat-primary-actions.is-send-mode #check-production-two-pro
 }
 
 body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft) {
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: none;
 }
 
 body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft)
@@ -1816,20 +1816,11 @@ body.is-chat-active .chat-primary-actions.is-send-mode #stop-production-two-prof
 
 body.is-chat-active .chat-primary-actions.is-send-mode.has-message-draft
   #run-production-two-profile-message-roundtrip {
+  justify-self: stretch;
   min-height: 34px;
   border-color: var(--accent-cyan);
   background: color-mix(in srgb, var(--accent-cyan) 14%, var(--button-bg));
   color: var(--text-primary);
-}
-
-body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft)
-  #start-production-two-profile-onion-receive {
-  justify-self: end;
-  min-height: 28px;
-  border-color: color-mix(in srgb, var(--panel-border) 58%, transparent);
-  background: transparent;
-  color: var(--text-secondary);
-  opacity: 0.78;
 }
 
 body.is-chat-active .chat-primary-actions.is-send-mode.has-message-draft
