@@ -8995,7 +8995,7 @@ document.addEventListener("keydown", (event) => {
 
 document.addEventListener("pointerdown", (event) => {
   const panel = document.querySelector(".chat-settings-panel");
-  if (!panel?.open || !document.body.classList.contains("is-chat-active")) {
+  if (!panel?.open) {
     return;
   }
   const target = event.target;
