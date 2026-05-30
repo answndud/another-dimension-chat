@@ -138,6 +138,31 @@ pub struct ProductionTwoProfileRoundtripResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionTwoProfileRoomSetupResult {
+    warning: &'static str,
+    profile_a: String,
+    profile_b: String,
+    safety_number: String,
+    safety_phrase: String,
+    safety_confirmed: bool,
+    profile_a_unlocked: bool,
+    profile_b_unlocked: bool,
+    pairing_payloads_exported: bool,
+    session_drafts_saved: bool,
+    handshake_completed: bool,
+    profile_a_ready_for_message_envelope: bool,
+    profile_b_ready_for_message_envelope: bool,
+    both_ready_for_message_envelope: bool,
+    plaintext_returned_to_frontend: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionTwoProfileMessageRoundtripResult {
     warning: &'static str,
     sender_profile: String,
@@ -1693,15 +1718,30 @@ async fn production_onion_outbound_envelope_send_stored_endpoint_attempt(
     let app_cache_root = app.path().app_cache_dir().map_err(|_| {
         "production onion outbound envelope send stored-endpoint attempt failed without exposing local path details"
     })?;
-    let rendezvous_endpoint = run_production_pairing_session_remote_endpoint_for_transport(
+    let persistent_client_ready = run_production_onion_persistent_client_ready(&state)
+        .unwrap_or(false);
+    let rendezvous_endpoint = match run_production_pairing_session_remote_endpoint_for_transport(
         &app_data_root,
         profile.clone(),
         passphrase.clone(),
-    )
-    .map_err(|_| {
-        "production onion outbound envelope send stored-endpoint attempt failed without exposing endpoint, profile, path, or key details"
-            .to_string()
-    })?;
+    ) {
+        Ok(endpoint) => endpoint,
+        Err(error) => {
+            let result = stored_endpoint_unavailable_outbound_send_result(
+                error,
+                manual_network_permission,
+                persistent_client_ready,
+            );
+            apply_outbound_message_send_attempt_result(
+                &app_data_root,
+                profile,
+                passphrase,
+                message_number,
+                &result,
+            );
+            return Ok(result);
+        }
+    };
     let mut result = run_production_onion_outbound_envelope_send_attempt(
         &app_data_root,
         app_cache_root,
@@ -1732,6 +1772,47 @@ async fn production_onion_outbound_envelope_send_stored_endpoint_attempt(
         &result,
     );
     Ok(result)
+}
+
+fn stored_endpoint_unavailable_outbound_send_result(
+    next_blocker: String,
+    manual_network_permission: bool,
+    persistent_client_ready: bool,
+) -> ProductionOnionOutboundEnvelopeSendAttemptResult {
+    let refresh_recommended = next_blocker.to_ascii_lowercase().contains("refresh")
+        || next_blocker.to_ascii_lowercase().contains("stale");
+    ProductionOnionOutboundEnvelopeSendAttemptResult {
+        warning: "Stored peer onion endpoint is not ready. The message remains saved and can be retried after the endpoint is refreshed.",
+        preparation_only: false,
+        manual_client_attempt_feature_compiled: cfg!(feature = "manual-onion-client-attempt"),
+        manual_network_permission_enabled: manual_network_permission,
+        persistent_client_ready,
+        send_intent_prepared: false,
+        send_attempt_started: false,
+        send_attempt_succeeded: false,
+        peer_endpoint_failure_recorded: false,
+        peer_endpoint_refresh_recommended: refresh_recommended,
+        retry_recommended_after_endpoint_refresh: refresh_recommended,
+        ack_wait_registered: false,
+        redacted_send_result_event_recorded: false,
+        event_summary: Vec::new(),
+        next_blocker: next_blocker.clone(),
+        blockers: vec![next_blocker],
+        raw_endpoint_returned: false,
+        raw_path_returned: false,
+        onion_secret_returned: false,
+        peer_proof_returned: false,
+        session_transcript_returned: false,
+        envelope_payload_returned: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        stream_accept_attempted: false,
+        stream_dial_attempted: false,
+        stream_read_write_attempted: false,
+        stream_send_attempted: false,
+        envelope_io_opened: false,
+        runtime_messaging_enabled: false,
+    }
 }
 
 #[tauri::command]
@@ -2194,6 +2275,59 @@ fn production_message_outbound_cancel_pending(
     )
 }
 
+#[tauri::command]
+fn production_message_outbound_mark_send_failed(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+    failure_kind: String,
+) -> Result<(), String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production outbound failure mark failed without exposing local path details"
+    })?;
+    run_production_message_outbound_mark_send_failed(
+        app_data_root,
+        profile,
+        passphrase,
+        message_number,
+        failure_kind,
+    )
+}
+
+fn run_production_message_outbound_mark_send_failed(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    message_number: u64,
+    failure_kind: String,
+) -> Result<(), String> {
+    use another_dimension_core::production::production_message_outbound_mark_send_failed;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let failure_kind = failure_kind.trim();
+    let failure_kind = if failure_kind.is_empty() {
+        "peer-endpoint-missing"
+    } else {
+        failure_kind
+    };
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    production_message_outbound_mark_send_failed(
+        &store_path,
+        profile,
+        &passphrase,
+        message_number,
+        failure_kind,
+    )
+    .map_err(|_| {
+        "production outbound failure mark failed without exposing profile, path, or key details"
+            .to_string()
+    })
+}
+
 fn run_production_message_outbound_cancel_pending(
     app_data_root: impl AsRef<std::path::Path>,
     profile: String,
@@ -2244,6 +2378,23 @@ fn production_two_profile_roundtrip(
     )
     .map_err(|_| {
             "production two-profile roundtrip failed without exposing profile, path, or key details"
+                .to_string()
+        })
+}
+
+#[tauri::command]
+fn production_two_profile_room_setup(
+    app: tauri::AppHandle,
+    profile_a: String,
+    profile_b: String,
+    passphrase: String,
+) -> Result<ProductionTwoProfileRoomSetupResult, String> {
+    let app_data_root = app.path().app_data_dir().map_err(|_| {
+        "production two-profile room setup failed without exposing local path details"
+    })?;
+    run_production_two_profile_room_setup(app_data_root, profile_a, profile_b, passphrase)
+        .map_err(|_| {
+            "production two-profile room setup failed without exposing profile, path, or key details"
                 .to_string()
         })
 }
@@ -5521,7 +5672,9 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
                                                                 received_envelope_ready =
                                                                     import.received_message_written
                                                                         && import.received_message_record_present
-                                                                        && import.received_message_record_decodable;
+                                                                        && import.received_message_record_decodable
+                                                                        && import
+                                                                            .received_message_matches_session;
                                                                 next_blocker = if received_envelope_ready {
                                                                     "none".to_string()
                                                                 } else {
@@ -8732,6 +8885,206 @@ fn run_production_two_profile_roundtrip(
     })
 }
 
+fn run_production_two_profile_room_setup(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile_a: String,
+    profile_b: String,
+    passphrase: String,
+) -> Result<ProductionTwoProfileRoomSetupResult, String> {
+    let profile_a = sanitize_production_profile(profile_a)?;
+    let profile_b = sanitize_production_profile(profile_b)?;
+    if profile_a == profile_b {
+        return Err("two-profile room setup requires two distinct profiles".to_string());
+    }
+    let profile_a_name = profile_a.as_str().to_string();
+    let profile_b_name = profile_b.as_str().to_string();
+    let passphrase = passphrase.trim().to_string();
+
+    let profile_a_unlock =
+        run_production_profile_unlock(&app_data_root, profile_a_name.clone(), passphrase.clone())?;
+    let profile_b_unlock =
+        run_production_profile_unlock(&app_data_root, profile_b_name.clone(), passphrase.clone())?;
+    let profile_a_payload = run_production_pairing_payload_export(
+        &app_data_root,
+        profile_a_name.clone(),
+        passphrase.clone(),
+        format!("{profile_a_name}.onion"),
+    )?;
+    let profile_b_payload = run_production_pairing_payload_export(
+        &app_data_root,
+        profile_b_name.clone(),
+        passphrase.clone(),
+        format!("{profile_b_name}.onion"),
+    )?;
+    let safety = run_production_pairing_safety_preview(
+        profile_a_payload.pairing_payload.clone(),
+        profile_b_payload.pairing_payload.clone(),
+    )?;
+    let profile_a_draft = run_production_pairing_session_draft_save(
+        &app_data_root,
+        profile_a_name.clone(),
+        passphrase.clone(),
+        profile_a_payload.pairing_payload.clone(),
+        profile_b_payload.pairing_payload.clone(),
+        true,
+    )?;
+    let profile_b_draft = run_production_pairing_session_draft_save(
+        &app_data_root,
+        profile_b_name.clone(),
+        passphrase.clone(),
+        profile_b_payload.pairing_payload,
+        profile_a_payload.pairing_payload,
+        true,
+    )?;
+
+    let profile_a_init = run_production_handshake_init_export(
+        &app_data_root,
+        profile_a_name.clone(),
+        passphrase.clone(),
+    )?;
+    let mut profile_b_init = None;
+    let (sender_profile, receiver_profile, init_payload) = if profile_a_init.output_payload_created
+    {
+        (
+            profile_a_name.clone(),
+            profile_b_name.clone(),
+            profile_a_init.output_payload,
+        )
+    } else {
+        let init = run_production_handshake_init_export(
+            &app_data_root,
+            profile_b_name.clone(),
+            passphrase.clone(),
+        )?;
+        if !init.output_payload_created {
+            return Err("two-profile handshake init was not created".to_string());
+        }
+        let output_payload = init.output_payload.clone();
+        profile_b_init = Some(init);
+        (
+            profile_b_name.clone(),
+            profile_a_name.clone(),
+            output_payload,
+        )
+    };
+    let reply = run_production_handshake_reply_export(
+        &app_data_root,
+        receiver_profile.clone(),
+        passphrase.clone(),
+        init_payload,
+    )?;
+    let finish = run_production_handshake_finish_export(
+        &app_data_root,
+        sender_profile,
+        passphrase.clone(),
+        reply.output_payload,
+    )?;
+    let finish_import = run_production_handshake_finish_import(
+        &app_data_root,
+        receiver_profile,
+        passphrase.clone(),
+        finish.output_payload,
+    )?;
+    let profile_a_state = run_production_session_state_check(
+        &app_data_root,
+        profile_a_name.clone(),
+        passphrase.clone(),
+    )?;
+    let profile_b_state = run_production_session_state_check(
+        &app_data_root,
+        profile_b_name.clone(),
+        passphrase,
+    )?;
+
+    Ok(ProductionTwoProfileRoomSetupResult {
+        warning: "two-profile room setup completed locally; no message, network, Tor, or secure-release claim",
+        profile_a: profile_a_name,
+        profile_b: profile_b_name,
+        safety_number: safety.safety_number,
+        safety_phrase: safety.safety_phrase,
+        safety_confirmed: false,
+        profile_a_unlocked: profile_a_unlock.storage_opened
+            && profile_a_unlock.profile_marker_present
+            && profile_a_unlock.identity_private_key_present,
+        profile_b_unlocked: profile_b_unlock.storage_opened
+            && profile_b_unlock.profile_marker_present
+            && profile_b_unlock.identity_private_key_present,
+        pairing_payloads_exported: profile_a_payload.pairing_payload_exported
+            && profile_b_payload.pairing_payload_exported,
+        session_drafts_saved: profile_a_draft.session_draft_present
+            && profile_b_draft.session_draft_present,
+        handshake_completed: finish.transport_state_persisted
+            && finish_import.transport_state_persisted,
+        profile_a_ready_for_message_envelope: profile_a_state.ready_for_message_envelope,
+        profile_b_ready_for_message_envelope: profile_b_state.ready_for_message_envelope,
+        both_ready_for_message_envelope: profile_a_state.ready_for_message_envelope
+            && profile_b_state.ready_for_message_envelope,
+        plaintext_returned_to_frontend: false,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: profile_a_unlock.key_material_exposed
+            || profile_b_unlock.key_material_exposed
+            || profile_a_payload.key_material_exposed
+            || profile_b_payload.key_material_exposed
+            || profile_a_draft.key_material_exposed
+            || profile_b_draft.key_material_exposed
+            || profile_a_init.key_material_exposed
+            || profile_b_init
+                .as_ref()
+                .is_some_and(|result| result.key_material_exposed)
+            || reply.key_material_exposed
+            || finish.key_material_exposed
+            || finish_import.key_material_exposed
+            || profile_a_state.key_material_exposed
+            || profile_b_state.key_material_exposed,
+        network_io_attempted: profile_a_unlock.network_io_attempted
+            || profile_b_unlock.network_io_attempted
+            || profile_a_payload.network_io_attempted
+            || profile_b_payload.network_io_attempted
+            || profile_a_draft.network_io_attempted
+            || profile_b_draft.network_io_attempted
+            || profile_a_init.network_io_attempted
+            || profile_b_init
+                .as_ref()
+                .is_some_and(|result| result.network_io_attempted)
+            || reply.network_io_attempted
+            || finish.network_io_attempted
+            || finish_import.network_io_attempted
+            || profile_a_state.network_io_attempted
+            || profile_b_state.network_io_attempted,
+        transport_io_opened: profile_a_unlock.transport_io_opened
+            || profile_b_unlock.transport_io_opened
+            || profile_a_payload.transport_io_opened
+            || profile_b_payload.transport_io_opened
+            || profile_a_draft.transport_io_opened
+            || profile_b_draft.transport_io_opened
+            || profile_a_init.transport_io_opened
+            || profile_b_init
+                .as_ref()
+                .is_some_and(|result| result.transport_io_opened)
+            || reply.transport_io_opened
+            || finish.transport_io_opened
+            || finish_import.transport_io_opened
+            || profile_a_state.transport_io_opened
+            || profile_b_state.transport_io_opened,
+        runtime_messaging_enabled: profile_a_unlock.runtime_messaging_enabled
+            || profile_b_unlock.runtime_messaging_enabled
+            || profile_a_payload.runtime_messaging_enabled
+            || profile_b_payload.runtime_messaging_enabled
+            || profile_a_draft.runtime_messaging_enabled
+            || profile_b_draft.runtime_messaging_enabled
+            || profile_a_init.runtime_messaging_enabled
+            || profile_b_init
+                .as_ref()
+                .is_some_and(|result| result.runtime_messaging_enabled)
+            || reply.runtime_messaging_enabled
+            || finish.runtime_messaging_enabled
+            || finish_import.runtime_messaging_enabled
+            || profile_a_state.runtime_messaging_enabled
+            || profile_b_state.runtime_messaging_enabled,
+    })
+}
+
 fn run_production_two_profile_message_roundtrip(
     app_data_root: impl AsRef<std::path::Path>,
     profile_a: String,
@@ -9111,7 +9464,9 @@ pub fn run() {
             production_message_received_export,
             production_message_transcript_export,
             production_message_outbound_cancel_pending,
+            production_message_outbound_mark_send_failed,
             production_local_roundtrip,
+            production_two_profile_room_setup,
             production_two_profile_roundtrip,
             production_two_profile_real_onion_roundtrip,
             production_two_profile_message_roundtrip,
@@ -9174,7 +9529,7 @@ mod tests {
         run_production_session_state_check, ProductionOnionClientRuntimeState,
         ProductionOnionInboundEnvelopeReceiveAttemptResult,
         run_production_two_profile_message_roundtrip, run_production_two_profile_real_onion_roundtrip,
-        run_production_two_profile_roundtrip,
+        run_production_two_profile_room_setup, run_production_two_profile_roundtrip,
         run_production_two_profile_session_status, sanitize_envelope_payload,
         sanitize_handshake_payload, sanitize_loop_messages, sanitize_pairing_payload,
         sanitize_pairing_rendezvous_endpoint, sanitize_production_message_text,
@@ -9332,15 +9687,38 @@ replay check: no replayed messages after message 2
         assert!(!result.pairing_payloads_exported);
         assert!(!result.session_drafts_saved);
         assert!(!result.handshake_completed);
+        assert!(!result.sender_session_ready);
+        assert!(!result.receiver_session_ready);
+        assert!(!result.message_number_reserved);
+        assert!(!result.second_message_number_reserved);
+        assert!(!result.encrypted_envelope_exported);
+        assert!(!result.second_encrypted_envelope_exported);
         assert!(!result.send_attempt_started);
         assert!(!result.send_attempt_succeeded);
+        assert!(!result.second_send_attempt_succeeded);
         assert!(!result.receive_attempt_started);
         assert!(!result.receive_attempt_succeeded);
+        assert!(!result.second_receive_attempt_succeeded);
         assert!(!result.inbound_message_stored);
+        assert!(!result.second_inbound_message_stored);
+        assert_eq!(result.consecutive_receive_attempts, 0);
+        assert_eq!(result.consecutive_messages_imported, 0);
         assert_eq!(result.receive_mode_runtime_state, "stopped");
         assert_eq!(result.receive_mode_attempt_count, 0);
+        assert_eq!(result.receive_mode_import_sequence, 0);
         assert_eq!(result.receive_mode_message_import_count, 0);
+        assert_eq!(result.receive_mode_endpoint_update_count, 0);
         assert!(!result.receive_mode_last_network_io_attempted);
+        assert!(!result.receive_mode_last_stream_accept_attempted);
+        assert!(!result.receive_mode_last_stream_read_write_attempted);
+        assert!(!result.receive_mode_last_envelope_io_opened);
+        assert!(!result.receive_mode_last_runtime_messaging_enabled);
+        assert!(!result.receive_mode_recorder_verified);
+        assert!(!result.received_status_verified);
+        assert!(!result.received_export_matches_input);
+        assert!(!result.second_received_status_verified);
+        assert!(!result.second_received_export_matches_input);
+        assert!(result.event_summary.is_empty());
         assert!(!result.local_endpoint_returned);
         assert!(!result.peer_endpoint_returned);
         assert!(!result.envelope_payload_returned);
@@ -9357,6 +9735,178 @@ replay check: no replayed messages after message 2
         assert!(!serialized.contains(passphrase));
         assert!(!serialized.contains(message));
         assert!(!serialized.contains(".onion"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(all(target_os = "macos", feature = "manual-onion-client-attempt"))]
+    #[test]
+    #[ignore = "requires explicit Tor bootstrap and local onion stream I/O"]
+    fn production_two_profile_real_onion_roundtrip_smoke_delivers_or_fails_closed() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+
+        let result = tauri::async_runtime::block_on(run_production_two_profile_real_onion_roundtrip(
+            &data_root,
+            &cache_root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "real onion smoke".to_string(),
+            3600,
+            true,
+        ))
+        .expect("real onion roundtrip smoke");
+
+        assert!(result.manual_client_attempt_feature_compiled);
+        assert!(result.manual_network_permission_enabled);
+        if result.next_blocker != "none" {
+            assert!(
+                result.next_blocker == "ProfileABootstrapTimeout"
+                    || result.next_blocker == "ProfileBBootstrapTimeout",
+                "unexpected real onion blocker: {}",
+                result.next_blocker
+            );
+            assert!(result.blockers.contains(&"BootstrapTimeout".to_string()));
+            assert!(!result.profile_a_onion_service_launched);
+            assert!(!result.profile_b_onion_service_launched);
+            assert!(!result.profile_a_endpoint_ready);
+            assert!(!result.profile_b_endpoint_ready);
+            assert!(!result.pairing_payloads_exported);
+            assert!(!result.session_drafts_saved);
+            assert!(!result.handshake_completed);
+            assert!(!result.message_number_reserved);
+            assert!(!result.second_message_number_reserved);
+            assert!(!result.encrypted_envelope_exported);
+            assert!(!result.second_encrypted_envelope_exported);
+            assert!(!result.send_attempt_started);
+            assert!(!result.send_attempt_succeeded);
+            assert!(!result.second_send_attempt_succeeded);
+            assert!(!result.receive_attempt_started);
+            assert!(!result.receive_attempt_succeeded);
+            assert!(!result.second_receive_attempt_succeeded);
+            assert!(!result.inbound_message_stored);
+            assert!(!result.second_inbound_message_stored);
+            assert_eq!(result.consecutive_receive_attempts, 0);
+            assert_eq!(result.consecutive_messages_imported, 0);
+            assert_eq!(result.receive_mode_attempt_count, 0);
+            assert_eq!(result.receive_mode_import_sequence, 0);
+            assert_eq!(result.receive_mode_message_import_count, 0);
+            assert!(!result.receive_mode_recorder_verified);
+            assert!(!result.received_status_verified);
+            assert!(!result.received_export_matches_input);
+            assert!(!result.second_received_status_verified);
+            assert!(!result.second_received_export_matches_input);
+            assert!(!result.local_endpoint_returned);
+            assert!(!result.peer_endpoint_returned);
+            assert!(!result.envelope_payload_returned);
+            assert!(!result.plaintext_returned_to_frontend);
+            assert!(!result.store_path_returned);
+            assert!(!result.passphrase_retained);
+            assert!(!result.transport_io_opened);
+            assert!(!result.runtime_messaging_enabled);
+
+            let serialized =
+                serde_json::to_string(&result).expect("serialize blocked real onion smoke");
+            assert!(!serialized.contains("correct-passphrase"));
+            assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+            assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+            assert!(!serialized.contains("ADENV1"));
+            assert!(!serialized.contains("ADPAIR2"));
+            assert!(!serialized.contains(".onion"));
+            assert!(!serialized.contains("real onion smoke"));
+
+            let _ = std::fs::remove_dir_all(root);
+            return;
+        }
+
+        assert!(result.profile_a_client_bootstrapped);
+        assert!(result.profile_b_client_bootstrapped);
+        assert!(result.profile_a_onion_service_launched);
+        assert!(result.profile_b_onion_service_launched);
+        assert!(result.profile_a_endpoint_ready);
+        assert!(result.profile_b_endpoint_ready);
+        assert!(result.pairing_payloads_exported);
+        assert!(result.session_drafts_saved);
+        assert!(result.handshake_completed);
+        assert!(result.sender_session_ready);
+        assert!(result.receiver_session_ready);
+        assert!(result.message_number_reserved);
+        assert!(result.second_message_number_reserved);
+        assert!(result.encrypted_envelope_exported);
+        assert!(result.second_encrypted_envelope_exported);
+        assert!(result.send_attempt_started);
+        assert!(result.send_attempt_succeeded);
+        assert!(result.second_send_attempt_succeeded);
+        assert!(result.receive_attempt_started);
+        assert!(result.receive_attempt_succeeded);
+        assert!(result.second_receive_attempt_succeeded);
+        assert!(result.inbound_message_stored);
+        assert!(result.second_inbound_message_stored);
+        assert_eq!(result.consecutive_receive_attempts, 2);
+        assert_eq!(result.consecutive_messages_imported, 2);
+        assert_eq!(result.receive_mode_attempt_count, 2);
+        assert_eq!(result.receive_mode_import_sequence, 2);
+        assert_eq!(result.receive_mode_message_import_count, 2);
+        assert_eq!(result.receive_mode_endpoint_update_count, 0);
+        assert!(result.receive_mode_last_network_io_attempted);
+        assert!(result.receive_mode_last_stream_accept_attempted);
+        assert!(result.receive_mode_last_stream_read_write_attempted);
+        assert!(result.receive_mode_last_envelope_io_opened);
+        assert!(result.receive_mode_last_runtime_messaging_enabled);
+        assert!(result.receive_mode_recorder_verified);
+        assert!(result.received_status_verified);
+        assert!(result.received_export_matches_input);
+        assert!(result.second_received_status_verified);
+        assert!(result.second_received_export_matches_input);
+        assert_eq!(result.next_blocker, "none");
+        assert!(result.blockers.is_empty());
+        assert!(!result.local_endpoint_returned);
+        assert!(!result.peer_endpoint_returned);
+        assert!(!result.envelope_payload_returned);
+        assert!(!result.plaintext_returned_to_frontend);
+        assert!(!result.store_path_returned);
+        assert!(!result.passphrase_retained);
+        assert!(!result.key_material_exposed);
+        assert!(result.network_io_attempted);
+        assert!(result.transport_io_opened);
+        assert!(result.runtime_messaging_enabled);
+
+        let sender_transcript = run_production_message_transcript_export(
+            &data_root,
+            result.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("sender transcript after real onion smoke");
+        let receiver_transcript = run_production_message_transcript_export(
+            &data_root,
+            result.receiver_profile.clone(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("receiver transcript after real onion smoke");
+        assert_eq!(sender_transcript.entries.len(), 2);
+        assert_eq!(receiver_transcript.entries.len(), 2);
+        assert!(sender_transcript
+            .entries
+            .iter()
+            .all(|entry| entry.direction == "sent"));
+        assert!(receiver_transcript
+            .entries
+            .iter()
+            .all(|entry| entry.direction == "received"));
+        assert!(receiver_transcript.entries.iter().all(|entry| {
+            entry.message == "real onion smoke" && entry.ttl_seconds == 3600 && !entry.expired
+        }));
+
+        let serialized = serde_json::to_string(&result).expect("serialize real onion smoke");
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains("ADENV1"));
+        assert!(!serialized.contains("ADPAIR2"));
+        assert!(!serialized.contains(".onion"));
+        assert!(!serialized.contains("real onion smoke"));
+
         let _ = std::fs::remove_dir_all(root);
     }
 
@@ -12116,6 +12666,59 @@ replay check: no replayed messages after message 2
         .expect("resume status after blocked send");
         assert!(resume_status.both_ready_for_message_envelope);
 
+        let unavailable_endpoint_outbound = run_production_message_envelope_export(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            0,
+            true,
+            "retry after endpoint unavailable".to_string(),
+            604_800,
+        )
+        .expect("unavailable endpoint outbound message");
+        let unavailable_endpoint_attempt = super::stored_endpoint_unavailable_outbound_send_result(
+            "stored remote endpoint unavailable".to_string(),
+            true,
+            true,
+        );
+        super::apply_outbound_message_send_attempt_result(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            unavailable_endpoint_outbound.selected_message_number,
+            &unavailable_endpoint_attempt,
+        );
+        assert!(!unavailable_endpoint_attempt.send_attempt_started);
+        assert!(!unavailable_endpoint_attempt.network_io_attempted);
+        assert_eq!(
+            unavailable_endpoint_attempt.next_blocker,
+            "stored remote endpoint unavailable"
+        );
+        let unavailable_endpoint_transcript = run_production_message_transcript_export(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("unavailable endpoint transcript");
+        let unavailable_endpoint_entry = unavailable_endpoint_transcript
+            .entries
+            .iter()
+            .find(|entry| {
+                entry.message_number == unavailable_endpoint_outbound.selected_message_number
+            })
+            .expect("unavailable endpoint entry");
+        assert_eq!(
+            unavailable_endpoint_entry
+                .outbound_delivery_state
+                .as_deref(),
+            Some("failed")
+        );
+        assert_eq!(
+            unavailable_endpoint_entry.outbound_failure_kind.as_deref(),
+            Some("storedremoteendpointunavailable")
+        );
+        assert!(unavailable_endpoint_entry.outbound_retryable);
+
         let endpoint_blocked_outbound = run_production_message_envelope_export(
             &root,
             roundtrip.sender_profile.clone(),
@@ -12174,6 +12777,45 @@ replay check: no replayed messages after message 2
             },
             Some(endpoint_blocked_outbound.selected_message_number)
         );
+
+        let missing_endpoint_outbound = run_production_message_envelope_export(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            0,
+            true,
+            "retry after missing endpoint".to_string(),
+            604_800,
+        )
+        .expect("missing endpoint outbound message");
+        super::run_production_message_outbound_mark_send_failed(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            missing_endpoint_outbound.selected_message_number,
+            "peer-endpoint-missing".to_string(),
+        )
+        .expect("mark missing endpoint failure");
+        let missing_endpoint_transcript = run_production_message_transcript_export(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("missing endpoint transcript");
+        let missing_endpoint_entry = missing_endpoint_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == missing_endpoint_outbound.selected_message_number)
+            .expect("missing endpoint entry");
+        assert_eq!(
+            missing_endpoint_entry.outbound_delivery_state.as_deref(),
+            Some("failed")
+        );
+        assert_eq!(
+            missing_endpoint_entry.outbound_failure_kind.as_deref(),
+            Some("peer-endpoint-missing")
+        );
+        assert!(missing_endpoint_entry.outbound_retryable);
 
         let _ = std::fs::remove_dir_all(root);
     }
@@ -12685,6 +13327,36 @@ replay check: no replayed messages after message 2
     #[test]
     fn production_two_profile_roundtrip_uses_app_data_profiles_without_returning_plaintext() {
         let root = unique_production_roundtrip_dir().expect("temp root");
+        let setup = run_production_two_profile_room_setup(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("room setup");
+        assert!(setup.profile_a_unlocked);
+        assert!(setup.profile_b_unlocked);
+        assert!(setup.pairing_payloads_exported);
+        assert!(setup.session_drafts_saved);
+        assert!(setup.handshake_completed);
+        assert!(setup.profile_a_ready_for_message_envelope);
+        assert!(setup.profile_b_ready_for_message_envelope);
+        assert!(setup.both_ready_for_message_envelope);
+        assert!(!setup.plaintext_returned_to_frontend);
+        assert!(!setup.store_path_returned);
+        assert!(!setup.passphrase_retained);
+        assert!(!setup.key_material_exposed);
+        assert!(!setup.network_io_attempted);
+        assert!(!setup.transport_io_opened);
+        assert!(!setup.runtime_messaging_enabled);
+        let empty_transcript = run_production_message_transcript_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("empty transcript after setup");
+        assert!(empty_transcript.entries.is_empty());
+
         let result = run_production_two_profile_roundtrip(
             &root,
             "alice".to_string(),
@@ -12864,6 +13536,273 @@ replay check: no replayed messages after message 2
                 && entry.message_number == second_reply.message_number
                 && entry.message == "second stored reply"
         }));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_two_profile_room_setup_accepts_invite_derived_profiles() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let setup = run_production_two_profile_room_setup(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "joiner-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+        )
+        .expect("invite-derived room setup");
+
+        assert_eq!(setup.profile_a, "inviter-abcd-2345");
+        assert_eq!(setup.profile_b, "joiner-abcd-2345");
+        assert!(setup.profile_a_unlocked);
+        assert!(setup.profile_b_unlocked);
+        assert!(setup.pairing_payloads_exported);
+        assert!(setup.session_drafts_saved);
+        assert!(setup.handshake_completed);
+        assert!(setup.profile_a_ready_for_message_envelope);
+        assert!(setup.profile_b_ready_for_message_envelope);
+        assert!(setup.both_ready_for_message_envelope);
+        assert!(!setup.plaintext_returned_to_frontend);
+        assert!(!setup.store_path_returned);
+        assert!(!setup.passphrase_retained);
+        assert!(!setup.key_material_exposed);
+        assert!(!setup.network_io_attempted);
+        assert!(!setup.transport_io_opened);
+        assert!(!setup.runtime_messaging_enabled);
+
+        let status = run_production_two_profile_session_status(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "joiner-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+        )
+        .expect("invite-derived status");
+        assert!(status.both_ready_for_message_envelope);
+        assert!(status.profile_a_remote_endpoint_state_present);
+        assert!(status.profile_b_remote_endpoint_state_present);
+
+        let transcript = run_production_message_transcript_export(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+        )
+        .expect("invite-derived transcript");
+        assert!(transcript.entries.is_empty());
+        assert_eq!(transcript.expired_messages_purged, 0);
+
+        let outbound = run_production_message_envelope_export(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+            0,
+            true,
+            "invite flow pending send".to_string(),
+            86_400,
+        )
+        .expect("invite-derived outbound");
+        assert!(outbound.message_number_reserved);
+        assert!(outbound.pending_message_record_written);
+        assert!(outbound.encrypted_envelope_present);
+        assert!(!outbound.plaintext_returned);
+        assert!(!outbound.network_send_attempted);
+
+        let inbound = run_production_message_envelope_import(
+            &root,
+            "joiner-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+            outbound.selected_message_number,
+            outbound.envelope_payload.clone(),
+            86_400,
+        )
+        .expect("invite-derived inbound import");
+        assert!(inbound.received_message_written);
+        assert!(inbound.received_message_record_present);
+        assert!(inbound.received_message_record_decodable);
+        assert!(inbound.received_message_matches_session);
+        assert!(!inbound.plaintext_returned);
+        assert!(!inbound.network_receive_attempted);
+        assert!(!inbound.transport_io_opened);
+        assert!(!inbound.runtime_messaging_enabled);
+        let receiver_transcript = run_production_message_transcript_export(
+            &root,
+            "joiner-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+        )
+        .expect("invite-derived receiver transcript");
+        let received_entry = receiver_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == outbound.selected_message_number)
+            .expect("invite-derived received entry");
+        assert_eq!(received_entry.direction, "received");
+        assert_eq!(received_entry.message, "invite flow pending send");
+        assert_eq!(received_entry.ttl_seconds, 86_400);
+        assert!(!received_entry.expired);
+
+        super::run_production_message_outbound_mark_send_failed(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+            outbound.selected_message_number,
+            "peer-endpoint-missing".to_string(),
+        )
+        .expect("mark invite-derived send failed");
+        let failed_transcript = run_production_message_transcript_export(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+        )
+        .expect("invite-derived failed transcript");
+        let failed_entry = failed_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == outbound.selected_message_number)
+            .expect("failed invite-derived entry");
+        assert_eq!(failed_entry.direction, "sent");
+        assert_eq!(
+            failed_entry.outbound_delivery_state.as_deref(),
+            Some("failed")
+        );
+        assert_eq!(
+            failed_entry.outbound_failure_kind.as_deref(),
+            Some("peer-endpoint-missing")
+        );
+        assert!(failed_entry.outbound_retryable);
+
+        let resumed_status = run_production_two_profile_session_status(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "joiner-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+        )
+        .expect("invite-derived resumed status");
+        assert!(resumed_status.both_ready_for_message_envelope);
+        let resumed_failed_transcript = run_production_message_transcript_export(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+        )
+        .expect("invite-derived resumed failed transcript");
+        assert_eq!(resumed_failed_transcript.expired_messages_purged, 0);
+        let resumed_failed_entry = resumed_failed_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == outbound.selected_message_number)
+            .expect("resumed failed invite-derived entry");
+        assert_eq!(resumed_failed_entry.direction, "sent");
+        assert_eq!(
+            resumed_failed_entry.outbound_delivery_state.as_deref(),
+            Some("failed")
+        );
+        assert_eq!(
+            resumed_failed_entry.outbound_failure_kind.as_deref(),
+            Some("peer-endpoint-missing")
+        );
+        assert!(resumed_failed_entry.outbound_retryable);
+        let resumed_receiver_transcript = run_production_message_transcript_export(
+            &root,
+            "joiner-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+        )
+        .expect("invite-derived resumed receiver transcript");
+        assert!(resumed_receiver_transcript.entries.iter().any(|entry| {
+            entry.direction == "received"
+                && entry.message_number == outbound.selected_message_number
+                && entry.message == "invite flow pending send"
+        }));
+
+        run_production_message_outbound_cancel_pending(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+            outbound.selected_message_number,
+        )
+        .expect("cancel invite-derived failed send");
+        let canceled_transcript = run_production_message_transcript_export(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+        )
+        .expect("invite-derived canceled transcript");
+        let canceled_entry = canceled_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == outbound.selected_message_number)
+            .expect("canceled invite-derived entry");
+        assert_eq!(
+            canceled_entry.outbound_delivery_state.as_deref(),
+            Some("canceled")
+        );
+        assert_eq!(canceled_entry.outbound_failure_kind, None);
+        assert!(!canceled_entry.outbound_retryable);
+        let canceled_status = run_production_two_profile_session_status(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "joiner-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+        )
+        .expect("invite-derived canceled status");
+        assert!(canceled_status.both_ready_for_message_envelope);
+        assert!(!canceled_status.profile_a_remote_endpoint_marked_stale);
+        assert_eq!(
+            canceled_status.profile_a_remote_endpoint_last_failed_message_number,
+            None
+        );
+        #[cfg(all(target_os = "macos", feature = "manual-onion-client-attempt"))]
+        {
+            let cache_root = root.join("cache");
+            let backup = run_production_onion_backup_exclusion_prepare(&root, &cache_root);
+            assert!(backup.backup_exclusion_verified);
+            let key_record = run_production_onion_key_record_prepare(
+                &root,
+                &cache_root,
+                "inviter-abcd-2345".to_string(),
+                "shared-invite-passphrase".to_string(),
+            )
+            .expect("invite-derived key record prepare");
+            assert!(key_record.key_material_ready);
+
+            let canceled_send_prepare =
+                super::run_production_onion_outbound_envelope_send_prepare(
+                    &root,
+                    &cache_root,
+                    "inviter-abcd-2345".to_string(),
+                    "shared-invite-passphrase".to_string(),
+                    "joiner-abcd-2345.onion".to_string(),
+                    outbound.selected_message_number,
+                    true,
+                )
+                .expect("canceled send prepare");
+            assert!(
+                canceled_send_prepare.remote_peer_authentication_ready,
+                "next_blocker={}; blockers={:?}",
+                canceled_send_prepare.next_blocker,
+                canceled_send_prepare.blockers
+            );
+            assert!(canceled_send_prepare.bound_stream_session_ready);
+            assert!(canceled_send_prepare.outbound_envelope_io_boundary_ready);
+            assert!(!canceled_send_prepare.stored_outbound_envelope_ready);
+            assert!(!canceled_send_prepare.send_intent_prepared);
+            assert!(!canceled_send_prepare.ack_wait_registered);
+            assert_eq!(
+                canceled_send_prepare.next_blocker,
+                "StoredOutboundEnvelopeRequired"
+            );
+            assert!(canceled_send_prepare
+                .blockers
+                .contains(&"StoredOutboundEnvelopeRequired".to_string()));
+            assert!(canceled_send_prepare.event_summary.is_empty());
+            assert!(!canceled_send_prepare.raw_endpoint_returned);
+            assert!(!canceled_send_prepare.raw_path_returned);
+            assert!(!canceled_send_prepare.envelope_payload_returned);
+            assert!(!canceled_send_prepare.key_material_exposed);
+            assert!(!canceled_send_prepare.network_io_attempted);
+            assert!(!canceled_send_prepare.stream_accept_attempted);
+            assert!(!canceled_send_prepare.stream_dial_attempted);
+            assert!(!canceled_send_prepare.stream_read_write_attempted);
+            assert!(!canceled_send_prepare.stream_send_attempted);
+            assert!(!canceled_send_prepare.envelope_io_opened);
+            assert!(!canceled_send_prepare.runtime_messaging_enabled);
+        }
+
         let _ = std::fs::remove_dir_all(root);
     }
 
