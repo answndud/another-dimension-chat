@@ -728,31 +728,46 @@ textarea[readonly] {
   top: 128px;
   right: max(24px, calc((100vw - 1180px) / 2));
   display: grid;
-  gap: 10px;
+  gap: 12px;
   width: min(390px, calc(100vw - 32px));
   max-height: min(680px, calc(100vh - 112px));
   overflow-y: auto;
   border: 1px solid var(--panel-border);
-  border-radius: 4px;
-  padding: 12px;
+  border-radius: 8px;
+  padding: 0 12px 12px;
   background: color-mix(in srgb, var(--panel) 97%, transparent);
   box-shadow: 0 22px 54px rgb(0 0 0 / 34%);
 }
 
 .chat-settings-panel > summary {
+  position: sticky;
+  z-index: 2;
+  top: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 30px;
-  border: 1px solid color-mix(in srgb, var(--panel-border) 74%, transparent);
-  padding: 6px 9px;
-  color: var(--text-secondary);
-  font-size: 11px;
+  min-height: 38px;
+  border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 62%, transparent);
+  padding: 0;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--panel) 97%, transparent);
+  font-size: 12px;
+  font-weight: 780;
+  list-style: none;
+}
+
+.chat-settings-panel > summary::-webkit-details-marker {
+  display: none;
 }
 
 .chat-settings-panel > summary::after {
-  color: var(--text-muted);
-  font-size: 13px;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 56%, transparent);
+  color: var(--text-secondary);
+  font-size: 12px;
   content: "x";
 }
 
@@ -765,7 +780,7 @@ textarea[readonly] {
 
 .chat-room-controls {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   border: 0;
   padding: 0;
   background: transparent;
@@ -775,6 +790,7 @@ textarea[readonly] {
   display: grid;
   gap: 7px;
   border: 1px solid color-mix(in srgb, var(--panel-border) 70%, transparent);
+  border-radius: 8px;
   padding: 10px;
   background: color-mix(in srgb, var(--panel) 88%, var(--bg));
   opacity: 0.78;
@@ -805,14 +821,16 @@ textarea[readonly] {
 .room-secondary-options {
   display: grid;
   gap: 8px;
-  border-top: 1px solid color-mix(in srgb, var(--panel-border) 48%, transparent);
-  padding-top: 8px;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 52%, transparent);
+  border-radius: 8px;
+  padding: 8px;
+  background: color-mix(in srgb, var(--panel) 48%, transparent);
 }
 
 .room-secondary-options > summary {
   min-height: 28px;
-  border-color: color-mix(in srgb, var(--panel-border) 48%, transparent);
-  padding: 5px 8px;
+  border: 0;
+  padding: 0;
   color: var(--text-muted);
   font-size: 10px;
   opacity: 0.78;
@@ -2879,8 +2897,10 @@ body.is-chat-active.is-developer-mode .advanced-panel.is-revealed summary {
 }
 
 .connection-setup-actions {
-  border-top: 1px solid var(--panel-border);
-  padding-top: 10px;
+  display: grid;
+  gap: 10px;
+  border-top: 0;
+  padding-top: 0;
 }
 
 .connection-setup-actions .setup-primary-actions button {
@@ -2891,8 +2911,10 @@ body.is-chat-active.is-developer-mode .advanced-panel.is-revealed summary {
 .room-receive-controls {
   display: grid;
   gap: 7px;
-  border-top: 1px solid color-mix(in srgb, var(--panel-border) 54%, transparent);
-  padding-top: 10px;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 52%, transparent);
+  border-radius: 8px;
+  padding: 9px;
+  background: color-mix(in srgb, var(--panel) 48%, transparent);
 }
 
 .room-receive-controls p {
