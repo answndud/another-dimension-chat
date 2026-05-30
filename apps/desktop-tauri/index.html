@@ -16,6 +16,13 @@
         <div class="theme-control" aria-label="Display mode" data-i18n-aria-label="displayMode">
           <span data-i18n="displayMode">Display mode</span>
           <button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>
+          <label class="language-control" for="language-selector">
+            <span data-i18n="language">Language</span>
+            <select id="language-selector" autocomplete="off">
+              <option value="en">English</option>
+              <option value="ko">한국어</option>
+            </select>
+          </label>
           <button id="open-developer-tools" type="button" class="flow-control is-secondary" data-i18n="openDeveloperTools">
             Developer tools
           </button>
@@ -418,16 +425,6 @@
                     Message retention applies on this device. The other device follows its own setting.
                   </p>
                 </section>
-                <section class="connection-wizard-step settings-language-step">
-                  <p class="wizard-step-label" data-i18n="wizardStepLanguage">Language</p>
-                  <label class="language-control" for="language-selector">
-                    <span data-i18n="language">Language</span>
-                    <select id="language-selector" autocomplete="off">
-                      <option value="en">English</option>
-                      <option value="ko">한국어</option>
-                    </select>
-                  </label>
-                </section>
               </details>
               <section class="room-receive-controls" aria-label="Receive controls" data-i18n-aria-label="receiveControls">
                 <p class="retention-note" data-i18n="receiveControlHint">
@@ -602,7 +599,12 @@
               <li class="is-empty" data-i18n="emptyConversation">No messages yet.</li>
             </ol>
             <label class="loop-label chat-message-label" for="production-two-profile-message" data-i18n="writeMessage">Write message</label>
-            <textarea id="production-two-profile-message" rows="3" placeholder="Write a message"></textarea>
+            <textarea
+              id="production-two-profile-message"
+              rows="3"
+              data-i18n-placeholder="readyMessagePlaceholder"
+              placeholder="Write your first message"
+            ></textarea>
             <div class="loop-actions chat-primary-actions">
               <button id="run-production-two-profile-roundtrip-inline" type="button" data-i18n="createConnection">
                 Create room

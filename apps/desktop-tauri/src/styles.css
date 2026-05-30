@@ -139,11 +139,10 @@ h1 {
 }
 
 .theme-control {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  justify-content: space-between;
   margin: -6px 0 14px;
   color: var(--text-muted);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
@@ -157,6 +156,17 @@ h1 {
   display: inline-flex;
   gap: 8px;
   align-items: center;
+}
+
+.theme-control .language-control,
+.theme-control #open-developer-tools {
+  grid-column: 1 / -1;
+}
+
+.theme-control .language-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, auto);
+  width: 100%;
 }
 
 .language-control select {
@@ -809,11 +819,6 @@ textarea[readonly] {
 }
 
 .connection-wizard-step[data-wizard-step="retention"] {
-  border-color: color-mix(in srgb, var(--panel-border) 46%, transparent);
-  background: color-mix(in srgb, var(--panel) 70%, transparent);
-}
-
-.settings-language-step {
   border-color: color-mix(in srgb, var(--panel-border) 46%, transparent);
   background: color-mix(in srgb, var(--panel) 70%, transparent);
 }
