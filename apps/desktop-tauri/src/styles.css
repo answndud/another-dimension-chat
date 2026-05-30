@@ -1284,10 +1284,10 @@ body.is-chat-active .production-workflow[aria-labelledby="production-two-profile
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 24px);
-  border-color: color-mix(in srgb, var(--accent-cyan) 48%, var(--panel-border));
+  border-color: color-mix(in srgb, var(--accent-cyan) 28%, var(--panel-border));
   padding: 10px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel-strong) 72%, transparent), transparent 160px),
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-strong) 52%, transparent), transparent 130px),
     color-mix(in srgb, var(--panel) 94%, var(--bg));
 }
 
@@ -1296,7 +1296,7 @@ body.is-chat-active .production-workflow[aria-labelledby="production-two-profile
   grid-template-columns: minmax(0, 1fr);
   gap: 2px;
   align-items: end;
-  border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 42%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 24%, transparent);
   padding: 0 38px 5px 0;
 }
 
@@ -1307,9 +1307,9 @@ body.is-chat-active .production-workflow[aria-labelledby="production-two-profile
 body.is-chat-active #production-two-profile-title {
   margin: 0;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.2;
-  opacity: 0.86;
+  opacity: 0.58;
   text-align: left;
 }
 
@@ -1359,6 +1359,17 @@ body.is-chat-active .room-identity-bar dd {
 body.is-chat-active .room-identity-bar div:nth-child(3),
 body.is-chat-active .room-identity-bar div:nth-child(4) {
   display: none;
+}
+
+body.is-chat-active.has-confirmed-safety .room-identity-bar {
+  display: none;
+}
+
+body.is-chat-active.has-confirmed-safety .room-status-summary {
+  border-color: color-mix(in srgb, var(--success) 26%, transparent);
+  padding: 1px 7px;
+  opacity: 0.72;
+  font-size: 10px;
 }
 
 body.is-chat-active .chat-setup-controls,
@@ -1489,7 +1500,7 @@ body.is-chat-active .chat-transcript-toolbar.has-conversation-action .loop-actio
 
 body.is-chat-active .chat-transcript-toolbar:hover .loop-actions,
 body.is-chat-active .chat-transcript-toolbar:focus-within .loop-actions {
-  opacity: 0.82;
+  opacity: 0.62;
   transform: translateY(5px);
 }
 
@@ -1547,10 +1558,10 @@ body.is-chat-active #production-two-profile-transcript {
   order: 3;
   flex: 1 1 auto;
   min-height: 0;
-  padding: 16px 0 14px;
+  padding: 18px 0 16px;
   overflow-y: auto;
   align-content: end;
-  border-top: 1px solid color-mix(in srgb, var(--panel-border) 48%, transparent);
+  border-top: 0;
 }
 
 body.is-chat-active #production-two-profile-transcript:focus-within {
