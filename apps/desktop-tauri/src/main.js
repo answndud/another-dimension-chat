@@ -2163,7 +2163,11 @@ function renderProductionTwoProfileConversationList() {
 }
 
 function applyDevActiveChatMockFromUrl() {
-  if (!import.meta.env.DEV || window.location.search !== "?mock=active-chat") {
+  if (!import.meta.env.DEV) {
+    return;
+  }
+  const mock = new URLSearchParams(window.location.search).get("mock");
+  if (mock !== "active-chat" && mock !== "verified-chat") {
     return;
   }
   if (fields.productionTwoProfileA) {
@@ -2194,6 +2198,9 @@ function applyDevActiveChatMockFromUrl() {
     profile_a_transport_ready: true,
     profile_b_transport_ready: true,
   });
+  if (mock === "verified-chat") {
+    confirmTwoProfileSafetyForInput(productionTwoProfileInput());
+  }
   appendProductionTwoProfileConversationStatus("sent", "alice", "bob", 1, "meet at the usual relay window");
   appendProductionTwoProfileConversationStatus("received", "bob", "alice", 1, "meet at the usual relay window");
   appendProductionTwoProfileConversationStatus("sent", "bob", "alice", 2, "confirmed. rotating endpoint after this.");
