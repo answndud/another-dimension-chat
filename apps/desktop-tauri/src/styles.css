@@ -802,6 +802,26 @@ textarea[readonly] {
   background: color-mix(in srgb, var(--panel) 70%, transparent);
 }
 
+.room-secondary-options {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--panel-border) 48%, transparent);
+  padding-top: 8px;
+}
+
+.room-secondary-options > summary {
+  min-height: 28px;
+  border-color: color-mix(in srgb, var(--panel-border) 48%, transparent);
+  padding: 5px 8px;
+  color: var(--text-muted);
+  font-size: 10px;
+  opacity: 0.78;
+}
+
+.room-secondary-options[open] {
+  gap: 9px;
+}
+
 .chat-settings-panel .language-control {
   display: grid;
   gap: 6px;
