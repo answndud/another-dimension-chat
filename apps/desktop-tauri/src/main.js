@@ -7708,16 +7708,12 @@ async function refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase) {
     rememberTwoProfileSessionStatus(input, result);
     renderProductionTwoProfileSessionStatusResult(result);
     if (result.both_ready_for_message_envelope) {
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
-      const currentInput = productionTwoProfileInput();
-      setProductionTwoProfileState("Sessions recovered after profile unlock");
-      const route = `${currentInput.profileA} -> ${currentInput.profileB}`;
-      setText(
-        fields.productionTwoProfileWarning,
-        currentInput.message
-          ? localizeTwoProfileMessage("sessionsRecoveredSend", { route })
-          : localizeTwoProfileMessage("sessionsRecoveredWrite", { route }),
-      );
+      await loadProductionTwoProfileTranscript({
+        quiet: true,
+        refreshSessionStatus: false,
+        autoResume: true,
+      });
+      setProductionTwoProfileState("Conversation resumed after profile unlock");
       return true;
     }
     setProductionTwoProfileState("Sessions incomplete after profile unlock");
