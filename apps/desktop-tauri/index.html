@@ -426,6 +426,19 @@
               <div class="loop-actions setup-primary-actions">
                 <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Create room</button>
               </div>
+              <section class="room-receive-controls" aria-label="Receive controls" data-i18n-aria-label="receiveControls">
+                <p class="retention-note" data-i18n="receiveControlHint">
+                  Receiving stays off until you start it.
+                </p>
+                <div class="loop-actions">
+                  <button id="start-production-two-profile-onion-receive" type="button" data-i18n="startReceiving">
+                    Start receiving
+                  </button>
+                  <button id="stop-production-two-profile-onion-receive" type="button" data-i18n="stopReceiving">
+                    Stop receiving
+                  </button>
+                </div>
+              </section>
               <details class="onion-advanced-controls">
                 <summary data-i18n="advancedOnionSetup">Advanced onion setup</summary>
                 <p class="advanced-network-note" data-i18n="advancedOnionNote">
@@ -572,12 +585,6 @@
               </button>
               <button id="run-production-two-profile-message-roundtrip" type="button" data-i18n="send">
                 Send
-              </button>
-              <button id="start-production-two-profile-onion-receive" type="button" data-i18n="startReceiving">
-                Start receiving
-              </button>
-              <button id="stop-production-two-profile-onion-receive" type="button" data-i18n="stopReceiving">
-                Stop receiving
               </button>
               <p id="production-two-profile-readiness" class="action-readiness" aria-live="polite">
                 Blocked: passphrase required
