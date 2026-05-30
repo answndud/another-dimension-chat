@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  chatNoticeForProductionState,
+  chatNoticeForSendReceiveText,
   productionActionAvailability,
   productionCounterpartProfile,
   productionHandshakeFinishImportView,
@@ -29,6 +31,8 @@ import {
   productionReceivedMessageExportView,
   productionSessionDraftView,
   productionSessionStateView,
+  productionInviteCodeProfileName,
+  productionInviteCodeProfiles,
   productionTwoProfilePairFromProfiles,
   productionTwoProfileConversationActionView,
   productionTwoProfileConversationCompare,
@@ -36,10 +40,14 @@ import {
   productionTwoProfileMessageResultView,
   productionTwoProfileOutboundNeedsEndpointRefresh,
   productionTwoProfileOutboundStatusLabel,
+  productionTwoProfileRealOnionResultView,
+  productionTwoProfileRealOnionResumeProfile,
+  productionTwoProfileRealOnionUserView,
   productionTwoProfileReplySelectionView,
   productionTwoProfileResultView,
   productionTwoProfileReadiness,
   productionTwoProfileResumeTarget,
+  productionTwoProfileSendAttemptUserView,
   productionTwoProfileSessionSummaryView,
   productionTwoProfileSessionStatusView,
 } from "./action-state.js";
@@ -63,6 +71,7 @@ const baseState = {
   hasImportedMessage: false,
   hasReceivedExportInput: false,
   hasReceivedMessage: false,
+  hasTwoProfileSetupInput: false,
   hasTwoProfileInput: false,
 };
 
@@ -106,6 +115,53 @@ const completeTwoProfileMessageResult = {
   network_io_attempted: false,
   transport_io_opened: false,
   runtime_messaging_enabled: false,
+};
+
+const completeRealOnionResult = {
+  manual_client_attempt_feature_compiled: true,
+  manual_network_permission_enabled: true,
+  message_number: 1,
+  second_message_number: 2,
+  message_number_reserved: true,
+  second_message_number_reserved: true,
+  encrypted_envelope_exported: true,
+  second_encrypted_envelope_exported: true,
+  send_attempt_started: true,
+  send_attempt_succeeded: true,
+  second_send_attempt_succeeded: true,
+  receive_attempt_started: true,
+  receive_attempt_succeeded: true,
+  second_receive_attempt_succeeded: true,
+  inbound_message_stored: true,
+  second_inbound_message_stored: true,
+  consecutive_receive_attempts: 2,
+  consecutive_messages_imported: 2,
+  receive_mode_attempt_count: 2,
+  receive_mode_import_sequence: 2,
+  receive_mode_message_import_count: 2,
+  receive_mode_last_network_io_attempted: true,
+  receive_mode_last_stream_accept_attempted: true,
+  receive_mode_last_stream_read_write_attempted: true,
+  receive_mode_last_envelope_io_opened: true,
+  receive_mode_last_runtime_messaging_enabled: true,
+  receive_mode_recorder_verified: true,
+  received_status_verified: true,
+  received_export_matches_input: true,
+  second_received_status_verified: true,
+  second_received_export_matches_input: true,
+  next_blocker: "none",
+  blockers: [],
+  event_summary: [],
+  local_endpoint_returned: false,
+  peer_endpoint_returned: false,
+  envelope_payload_returned: false,
+  plaintext_returned_to_frontend: false,
+  store_path_returned: false,
+  passphrase_retained: false,
+  key_material_exposed: false,
+  network_io_attempted: true,
+  transport_io_opened: true,
+  runtime_messaging_enabled: true,
 };
 
 const safeProfileUnlockResult = {
@@ -278,20 +334,52 @@ const safeReceivedMessageExportResult = {
 test("productionTwoProfileReadiness blocks incomplete inputs in priority order", () => {
   assert.equal(
     productionTwoProfileReadiness({ profileA: "", profileB: "", passphrase: "", message: "" }, false),
-    "Blocked: Profile A required",
+    "Invite code needed",
   );
   assert.equal(
     productionTwoProfileReadiness({ profileA: "alice", profileB: "alice", passphrase: "p", message: "m" }, false),
-    "Blocked: profiles must be distinct",
+    "Invite code must be different from this device",
   );
   assert.equal(
     productionTwoProfileReadiness({ profileA: "alice", profileB: "bob", passphrase: "", message: "m" }, false),
-    "Blocked: passphrase required",
+    "Invite code needed",
   );
   assert.equal(
     productionTwoProfileReadiness({ profileA: "alice", profileB: "bob", passphrase: "p", message: "m" }, true),
-    "Running: production action in progress",
+    "Running: action in progress",
   );
+});
+
+test("productionInviteCodeProfiles derives opposite roles from one invite code", () => {
+  assert.deepEqual(productionInviteCodeProfiles("ABCD-2345", "inviter"), {
+    connectionCode: "ABCD-2345",
+    role: "inviter",
+    slug: "abcd-2345",
+    localProfile: "inviter-abcd-2345",
+    peerProfile: "joiner-abcd-2345",
+  });
+  assert.deepEqual(productionInviteCodeProfiles("ABCD-2345", "joiner"), {
+    connectionCode: "ABCD-2345",
+    role: "joiner",
+    slug: "abcd-2345",
+    localProfile: "joiner-abcd-2345",
+    peerProfile: "inviter-abcd-2345",
+  });
+});
+
+test("productionInviteCodeProfiles normalizes pasted codes for profile names", () => {
+  assert.equal(
+    productionInviteCodeProfiles("  one time code: 1234!  ", "unexpected").localProfile,
+    "joiner-one-time-code-1234",
+  );
+  assert.equal(productionInviteCodeProfiles("", "inviter").peerProfile, "joiner-shared-code");
+});
+
+test("productionInviteCodeProfileName detects hidden invite-code identities", () => {
+  assert.equal(productionInviteCodeProfileName("inviter-abcd-2345"), true);
+  assert.equal(productionInviteCodeProfileName("joiner-abcd-2345"), true);
+  assert.equal(productionInviteCodeProfileName("alice"), false);
+  assert.equal(productionInviteCodeProfileName("local-abcd"), false);
 });
 
 test("productionTwoProfileCurrentAction selects the next top-level control", () => {
@@ -320,21 +408,21 @@ test("productionTwoProfileCurrentAction selects the next top-level control", () 
   );
   assert.equal(
     productionTwoProfileCurrentAction({
-      input: { ...input, message: "hello" },
+      input,
       hasMessageRetentionPolicy: true,
       sessionsReady: false,
-      hasRecoveredConversation: true,
+      hasKnownSessionStatus: true,
     }),
-    "check-session",
+    "full-setup",
   );
   assert.equal(
     productionTwoProfileCurrentAction({
       input: { ...input, message: "hello" },
       hasMessageRetentionPolicy: true,
       sessionsReady: false,
-      hasKnownSessionStatus: true,
+      hasRecoveredConversation: true,
     }),
-    "full-setup",
+    "check-session",
   );
 });
 
@@ -384,6 +472,53 @@ test("productionTwoProfileResumeTarget prefers pending review then latest reply"
   );
 });
 
+test("chatNoticeForSendReceiveText maps recovery text to user-facing notice keys", () => {
+  assert.deepEqual(
+    chatNoticeForSendReceiveText("Verification mismatch: phrase is different."),
+    { key: "chatNoticeVerificationMismatch", tone: "danger" },
+  );
+  assert.deepEqual(
+    chatNoticeForSendReceiveText("Messages stay locked until this phrase matches."),
+    { key: "sendLockedUntilVerified", tone: "warning" },
+  );
+  assert.deepEqual(
+    chatNoticeForSendReceiveText("stored peer onion address is not ready; refresh endpoint"),
+    { key: "chatNoticeRefreshAddress", tone: "warning" },
+  );
+  assert.deepEqual(
+    chatNoticeForSendReceiveText("Peer is offline; listening will retry."),
+    { key: "peerOffline", tone: "warning" },
+  );
+  assert.deepEqual(
+    chatNoticeForSendReceiveText("ProfileABootstrapTimeout"),
+    { key: "torBootstrap", tone: "warning" },
+  );
+  assert.deepEqual(
+    chatNoticeForSendReceiveText("Message received after import"),
+    { key: "chatNoticeReceived", tone: "success" },
+  );
+  assert.deepEqual(chatNoticeForSendReceiveText(""), null);
+});
+
+test("chatNoticeForProductionState maps terse runtime states without string drift", () => {
+  assert.deepEqual(
+    chatNoticeForProductionState("Message listening stopped"),
+    { key: "chatNoticeReceiveStopped", tone: "muted" },
+  );
+  assert.deepEqual(
+    chatNoticeForProductionState("Message listening will retry"),
+    { key: "receiveRetrying", tone: "warning" },
+  );
+  assert.deepEqual(
+    chatNoticeForProductionState("Private delivery running"),
+    null,
+  );
+  assert.deepEqual(
+    chatNoticeForProductionState("Stored send failed"),
+    { key: "sendFailedGeneric", tone: "warning" },
+  );
+});
+
 test("productionProfilePreset maps known manual peers to profile and endpoint defaults", () => {
   assert.deepEqual(productionProfilePreset(" Alice "), {
     profile: "alice",
@@ -428,6 +563,17 @@ test("productionTwoProfilePairFromProfiles preserves one saved side when choosin
   assert.deepEqual(
     productionTwoProfilePairFromProfiles(["me", "peer", "third"], "alice", "peer"),
     { profileA: "me", profileB: "peer", changed: true },
+  );
+});
+
+test("productionTwoProfilePairFromProfiles preserves invite-code rooms", () => {
+  assert.deepEqual(
+    productionTwoProfilePairFromProfiles(
+      ["inviter-abcd-2345", "joiner-abcd-2345"],
+      "inviter-abcd-2345",
+      "ABCD-2345",
+    ),
+    { profileA: "inviter-abcd-2345", profileB: "ABCD-2345", changed: false },
   );
 });
 
@@ -479,6 +625,7 @@ test("productionActionAvailability routes two-profile send by stored session rea
     {
       setup: productionActionAvailability({
         ...baseState,
+        hasTwoProfileSetupInput: true,
         hasTwoProfileInput: true,
         hasTwoProfileSessionsReady: false,
       }).runTwoProfileRoundtrip,
@@ -498,6 +645,7 @@ test("productionActionAvailability routes two-profile send by stored session rea
     {
       setup: productionActionAvailability({
         ...baseState,
+        hasTwoProfileSetupInput: true,
         hasTwoProfileInput: true,
         hasTwoProfileSessionsReady: true,
       }).runTwoProfileRoundtrip,
@@ -510,6 +658,29 @@ test("productionActionAvailability routes two-profile send by stored session rea
     {
       setup: false,
       storedSend: true,
+    },
+  );
+});
+
+test("productionActionAvailability can create a two-profile room before a message draft exists", () => {
+  assert.deepEqual(
+    {
+      setupWithoutMessage: productionActionAvailability({
+        ...baseState,
+        hasTwoProfileSetupInput: true,
+        hasTwoProfileInput: false,
+        hasTwoProfileSessionsReady: false,
+      }).runTwoProfileRoundtrip,
+      storedSendWithoutMessage: productionActionAvailability({
+        ...baseState,
+        hasTwoProfileSetupInput: true,
+        hasTwoProfileInput: false,
+        hasTwoProfileSessionsReady: true,
+      }).runTwoProfileMessageRoundtrip,
+    },
+    {
+      setupWithoutMessage: true,
+      storedSendWithoutMessage: false,
     },
   );
 });
@@ -563,6 +734,7 @@ test("productionActionAvailability blocks message actions until retention policy
       setup: productionActionAvailability({
         ...baseState,
         hasMessageRetentionPolicy: false,
+        hasTwoProfileSetupInput: true,
         hasTwoProfileInput: true,
         hasTwoProfileSessionsReady: false,
       }).runTwoProfileRoundtrip,
@@ -593,7 +765,7 @@ test("productionMessageTtlInputValue accepts only explicit policy values", () =>
 test("productionOnionReceiveRuntimeView maps receive loop states", () => {
   assert.deepEqual(productionOnionReceiveRuntimeView({ enabled: false }), {
     state: "stopped",
-    label: "Receive mode stopped",
+    label: "Message listening stopped",
     retryable: false,
     duplicateBlocked: false,
   });
@@ -605,7 +777,7 @@ test("productionOnionReceiveRuntimeView maps receive loop states", () => {
     productionOnionReceiveRuntimeView({ enabled: true, stopRequested: true, runtimeState: "stopped" }),
     {
       state: "stopped",
-      label: "Receive mode stopping",
+      label: "Message listening stopping",
       retryable: false,
       duplicateBlocked: true,
     },
@@ -614,11 +786,11 @@ test("productionOnionReceiveRuntimeView maps receive loop states", () => {
     productionOnionReceiveRuntimeView({
       enabled: true,
       runtimeState: "bootstrapping",
-      runtimeLabel: "Receive mode waiting for Tor bootstrap",
+      runtimeLabel: "Waiting for Tor restart",
     }),
     {
       state: "bootstrapping",
-      label: "Receive mode waiting for Tor bootstrap",
+      label: "Waiting for Tor restart",
       retryable: false,
       duplicateBlocked: false,
     },
@@ -786,27 +958,27 @@ test("productionOnionReceiveLoopRefreshPlan uses cumulative counters", () => {
 test("productionOnionReceiveFailureMessage maps retry states", () => {
   assert.equal(
     productionOnionReceiveFailureMessage({ last_failure_kind: "manual-permission" }),
-    "Receive mode is paused until manual onion network permission is enabled again.",
+    "Turn on network permission before listening for messages.",
   );
   assert.equal(
     productionOnionReceiveFailureMessage({ last_failure_kind: "persistent-client" }),
-    "Receive mode needs the persistent Tor client to be started again.",
+    "Tor needs to be started again before messages can arrive.",
   );
   assert.equal(
     productionOnionReceiveFailureMessage({ last_failure_kind: "peer-offline" }),
-    "No inbound peer stream is available yet; receive mode will keep retrying.",
+    "Peer is offline; listening will retry.",
   );
   assert.equal(
     productionOnionReceiveFailureMessage({ last_failure_kind: "receive-timeout" }),
-    "Receive attempt timed out; receive mode will retry while enabled.",
+    "No message arrived before timeout; listening will retry.",
   );
   assert.equal(
     productionOnionReceiveFailureMessage({ last_failure_kind: "feature-disabled" }),
-    "This build does not include the manual onion client attempt feature.",
+    "Message listening is not available in this build.",
   );
   assert.equal(
     productionOnionReceiveFailureMessage({ last_failure_kind: "unexpected" }),
-    "Receive mode hit a retryable backend boundary and will keep polling.",
+    "Message listening hit a retryable error and will keep trying.",
   );
 });
 
@@ -1719,6 +1891,132 @@ test("productionTwoProfileMessageResultView formats stored-session message round
   assert.match(blocked.boundary, /^Review:/);
 });
 
+test("productionTwoProfileRealOnionResultView requires two delivered imports and recorder evidence", () => {
+  const view = productionTwoProfileRealOnionResultView(completeRealOnionResult);
+
+  assert.equal(view.complete, true);
+  assert.equal(view.touchedTranscript, true);
+  assert.equal(view.state, "Real onion roundtrip completed");
+  assert.match(view.message, /first=#1 delivered=true/);
+  assert.match(view.message, /second=#2 delivered=true/);
+  assert.match(view.message, /receive_attempts=2/);
+  assert.match(view.message, /imported=2/);
+  assert.match(view.message, /recorder=true/);
+  assert.match(view.message, /redacted=true/);
+  assert.match(view.boundary, /feature=true/);
+  assert.match(view.boundary, /permission=true/);
+  assert.match(view.boundary, /endpoint_returned=false/);
+  assert.match(view.boundary, /plaintext=false/);
+});
+
+test("productionTwoProfileRealOnionResultView keeps partial success in review state", () => {
+  const missingSecondImport = productionTwoProfileRealOnionResultView({
+    ...completeRealOnionResult,
+    second_inbound_message_stored: false,
+    second_received_export_matches_input: false,
+  });
+
+  assert.equal(missingSecondImport.complete, false);
+  assert.equal(missingSecondImport.touchedTranscript, true);
+  assert.equal(missingSecondImport.state, "Real onion roundtrip needs review");
+  assert.match(missingSecondImport.message, /second=#2 delivered=false/);
+
+  const missingRecorder = productionTwoProfileRealOnionResultView({
+    ...completeRealOnionResult,
+    receive_mode_recorder_verified: false,
+    receive_mode_message_import_count: 1,
+  });
+
+  assert.equal(missingRecorder.complete, false);
+  assert.equal(missingRecorder.touchedTranscript, true);
+  assert.match(missingRecorder.message, /recorder=false/);
+
+  const leakedBoundary = productionTwoProfileRealOnionResultView({
+    ...completeRealOnionResult,
+    key_material_exposed: true,
+  });
+
+  assert.equal(leakedBoundary.complete, false);
+  assert.equal(leakedBoundary.touchedTranscript, true);
+  assert.equal(leakedBoundary.state, "Real onion roundtrip needs review");
+  assert.match(leakedBoundary.message, /redacted=false/);
+  assert.match(leakedBoundary.boundary, /key_material=true/);
+});
+
+test("productionTwoProfileSendAttemptUserView hides transport internals from chat status", () => {
+  const startedFailure = productionTwoProfileSendAttemptUserView(
+    {
+      manual_client_attempt_feature_compiled: true,
+      manual_network_permission_enabled: true,
+      persistent_client_ready: true,
+      send_intent_prepared: true,
+      send_attempt_started: true,
+      send_attempt_succeeded: false,
+      ack_wait_registered: true,
+      peer_endpoint_refresh_recommended: false,
+      retry_recommended_after_endpoint_refresh: false,
+      next_blocker: "SyntheticInternalBlocker",
+      blockers: ["SyntheticInternalBlocker"],
+      event_summary: ["TransferFailed(SendFailed)"],
+      raw_endpoint_returned: false,
+      key_material_exposed: false,
+    },
+    9,
+  );
+  const visible = Object.values(startedFailure).join(" ");
+  assert.equal(startedFailure.state, "Private delivery failed");
+  assert.match(startedFailure.message, /Message #9 is still saved/);
+  assert.doesNotMatch(visible, /send_intent|ack_wait|persistent_client|blocker|endpoint|key_material|TransferFailed/i);
+
+  const refresh = productionTwoProfileSendAttemptUserView(
+    {
+      manual_network_permission_enabled: true,
+      send_attempt_started: true,
+      send_attempt_succeeded: false,
+      peer_endpoint_refresh_recommended: true,
+      retry_recommended_after_endpoint_refresh: true,
+      next_blocker: "stored remote endpoint refresh required",
+    },
+    10,
+  );
+  assert.equal(refresh.state, "Peer address refresh needed");
+  assert.match(refresh.message, /Refresh the address, then retry or cancel/);
+});
+
+test("productionTwoProfileRealOnionUserView keeps real delivery summary chat-safe", () => {
+  const complete = productionTwoProfileRealOnionUserView(completeRealOnionResult);
+  assert.equal(complete.state, "Private delivery completed");
+  assert.equal(complete.message, "Message delivered. You can continue the conversation.");
+  assert.doesNotMatch(Object.values(complete).join(" "), /a_unlock|send_intent|blockers|endpoint|key_material|runtime/i);
+
+  const partial = productionTwoProfileRealOnionUserView({
+    ...completeRealOnionResult,
+    second_inbound_message_stored: false,
+    next_blocker: "SyntheticInternalBlocker",
+    blockers: ["SyntheticInternalBlocker"],
+  });
+  assert.equal(partial.state, "Private delivery needs review");
+  assert.match(partial.message, /retry or cancel/);
+  assert.doesNotMatch(Object.values(partial).join(" "), /SyntheticInternalBlocker|blockers|endpoint|key_material/i);
+});
+
+test("productionTwoProfileRealOnionResumeProfile follows actual receiver after role fallback", () => {
+  assert.equal(
+    productionTwoProfileRealOnionResumeProfile(
+      { ...completeRealOnionResult, sender_profile: "joiner-room", receiver_profile: "inviter-room" },
+      { profileB: "joiner-room" },
+    ),
+    "inviter-room",
+  );
+  assert.equal(
+    productionTwoProfileRealOnionResumeProfile(
+      { ...completeRealOnionResult, receiver_profile: "" },
+      { profileB: "joiner-room" },
+    ),
+    "joiner-room",
+  );
+});
+
 test("productionProfileUnlockView formats storage identity and boundary flags", () => {
   const view = productionProfileUnlockView(safeProfileUnlockResult);
 
@@ -1898,6 +2196,19 @@ test("productionTwoProfileConversationActionView maps row status to next action"
     },
   );
 
+  entry.outboundFailureKind = "stored remote endpoint refresh required";
+  assert.deepEqual(
+    productionTwoProfileConversationActionView(entry),
+    {
+      nextAction: "Stale address: refresh the peer address, then retry message #9.",
+      rowLabel: "action: refresh address and retry",
+      state: "is-ready",
+      focusTarget: "refresh-endpoint",
+      manualTarget: null,
+      manualButtonLabel: "Open manual tools",
+    },
+  );
+
   entry.outboundDeliveryState = "canceled";
   entry.outboundFailureKind = "";
   entry.outboundRetryable = false;
@@ -1993,6 +2304,20 @@ test("productionTwoProfileOutboundStatusLabel maps durable retry and cancel stat
       outboundFailureKind: "stored remote endpoint refresh required",
     }),
     true,
+  );
+  assert.equal(
+    productionTwoProfileOutboundStatusLabel({
+      outboundDeliveryState: "failed",
+      outboundFailureKind: "peer-endpoint-missing",
+    }),
+    "stale endpoint",
+  );
+  assert.equal(
+    productionTwoProfileOutboundStatusLabel({
+      outboundDeliveryState: "failed",
+      outboundFailureKind: "storedremoteendpointunavailable",
+    }),
+    "stale endpoint",
   );
   assert.equal(
     productionTwoProfileOutboundNeedsEndpointRefresh({

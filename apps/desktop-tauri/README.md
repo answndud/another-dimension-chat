@@ -52,6 +52,13 @@ cd apps/desktop-tauri
 npm run tauri:build:beta-onion
 ```
 
+Run the local development shell with the manual onion networking attempt feature compiled in:
+
+```bash
+cd apps/desktop-tauri
+npm run tauri:dev:beta-onion
+```
+
 The `manual-onion-client-attempt` feature only compiles the explicit onion attempt path. It does not start Tor, launch an onion service, publish descriptors, receive, or send on app startup. Network work still requires the in-app manual network permission and an explicit user action.
 
 Local beta artifacts can be copied to `apps/desktop-tauri/beta-artifacts/` for tester handoff. That directory is ignored and must not be committed.
