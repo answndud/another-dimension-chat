@@ -2116,7 +2116,11 @@ function renderProductionTwoProfileConversationList() {
     body.className = "transcript-body";
     body.textContent = entry.message;
 
-    item.append(meta, body, status, retention, action, details);
+    const footer = document.createElement("span");
+    footer.className = "transcript-footer";
+    footer.append(status);
+
+    item.append(meta, body, footer, retention, action, details);
     if (!delivered && outboundPending && entry.sender === productionTwoProfileInput().profileA) {
       const actions = document.createElement("span");
       actions.className = "transcript-row-actions";
@@ -2143,7 +2147,7 @@ function renderProductionTwoProfileConversationList() {
         cancelTwoProfileOutboundEntry(entry);
       });
       actions.append(retry, cancel);
-      item.append(actions);
+      footer.append(actions);
     }
     if (selected) {
       const review = document.createElement("span");
