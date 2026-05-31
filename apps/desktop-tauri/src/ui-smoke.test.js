@@ -390,8 +390,10 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(mainJs, /primaryAction\.action === "enable-private-delivery"/);
   assert.match(mainJs, /primaryAction\.action === "refresh-and-retry"/);
   assert.match(mainJs, /primaryAction\.action === "refresh-and-retry" && twoProfileInviteCodeModeActive\(\)/);
-  assert.match(mainJs, /retry\.disabled = !outboundActionState\.canRunNow/);
-  assert.match(mainJs, /cancel\.disabled = !outboundActionState\.canRunNow/);
+  assert.doesNotMatch(mainJs, /retry\.disabled = !outboundActionState\.canRunNow/);
+  assert.doesNotMatch(mainJs, /cancel\.disabled = !outboundActionState\.canRunNow/);
+  assert.match(mainJs, /retry\.title = outboundActionState\.disabledReason \|\| ""/);
+  assert.match(mainJs, /cancel\.title = outboundActionState\.disabledReason \|\| ""/);
   assert.match(mainJs, /deliveryNeedsNetworkPermission/);
   assert.match(mainJs, /deliveryNeedsRoute/);
   assert.match(mainJs, /setChatDeliveryNoticeByKey\("chatNoticeNetworkPermission", "warning"\)/);
