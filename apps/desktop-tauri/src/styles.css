@@ -4304,16 +4304,16 @@ body.has-ready-session.has-confirmed-safety:not(.has-private-route) .connection-
 }
 
 .private-route-exchange {
-  order: 6;
+  order: 4;
   display: grid;
-  gap: 7px;
+  gap: 5px;
   justify-self: end;
-  width: min(420px, 100%);
-  margin: 0 0 8px auto;
+  width: min(360px, 100%);
+  margin: 0 0 2px auto;
   border: 0;
-  border-left: 1px solid color-mix(in srgb, var(--accent-cyan) 38%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--accent-cyan) 28%, transparent);
   border-radius: 0;
-  padding: 0 0 0 10px;
+  padding: 0 0 0 8px;
   background: transparent;
 }
 
@@ -4344,7 +4344,7 @@ body.has-ready-session.has-confirmed-safety:not(.has-private-route) .connection-
   display: block;
   margin: 0;
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 800;
   line-height: 1.22;
 }
@@ -4357,9 +4357,9 @@ body.has-ready-session.has-confirmed-safety:not(.has-private-route) .connection-
 }
 
 .private-route-exchange .exchange-instruction {
-  max-width: 32ch;
+  max-width: 36ch;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 10.5px;
 }
 
 .private-route-steps {
@@ -4406,20 +4406,21 @@ body.has-ready-session.has-confirmed-safety:not(.has-private-route) .connection-
 }
 
 .private-route-exchange .route-code-display {
-  min-height: 46px;
+  min-height: 34px;
   resize: none;
 }
 
 .private-route-actions {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 6px;
+  gap: 5px;
 }
 
 .private-route-actions button {
   width: 100%;
-  min-height: 30px;
-  font-size: 11px;
+  min-height: 26px;
+  padding: 3px 8px;
+  font-size: 10.5px;
 }
 
 @media (max-width: 720px) {
@@ -4437,9 +4438,9 @@ body:not(.has-local-private-route-code) #copy-private-route-code {
 }
 
 body.has-local-private-route-code .private-route-exchange #local-private-route-code {
-  min-height: 36px;
-  padding-block: 7px;
-  font-size: 11px;
+  min-height: 30px;
+  padding-block: 6px;
+  font-size: 10.5px;
   opacity: 0.68;
 }
 

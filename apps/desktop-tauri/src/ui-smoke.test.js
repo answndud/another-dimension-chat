@@ -643,8 +643,10 @@ test("private route exchange highlights the next route action", () => {
   assert.match(stylesCss, /\.private-route-exchange button\.is-secondary-flow-action/);
   assert.match(stylesCss, /\.private-route-exchange \.eyebrow,[\s\S]{0,220}\.private-route-steps,[\s\S]{0,180}\.private-route-exchange label[\s\S]{0,180}clip:\s*rect\(0 0 0 0\)/);
   assert.match(stylesCss, /\.private-route-exchange h4[\s\S]{0,180}display:\s*block/);
-  assert.match(stylesCss, /\.private-route-exchange \.route-code-display \{[\s\S]{0,80}min-height:\s*46px/);
-  assert.match(stylesCss, /body\.has-local-private-route-code \.private-route-exchange #local-private-route-code[\s\S]{0,120}min-height:\s*36px/);
+  assert.match(stylesCss, /\.private-route-exchange \{[\s\S]{0,160}order:\s*4/);
+  assert.match(stylesCss, /\.private-route-exchange \{[\s\S]{0,220}width:\s*min\(360px,\s*100%\)/);
+  assert.match(stylesCss, /\.private-route-exchange \.route-code-display \{[\s\S]{0,80}min-height:\s*34px/);
+  assert.match(stylesCss, /body\.has-local-private-route-code \.private-route-exchange #local-private-route-code[\s\S]{0,120}min-height:\s*30px/);
   assert.match(stylesCss, /\.private-route-actions[\s\S]{0,120}grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(0,\s*1fr\)/);
 });
 
