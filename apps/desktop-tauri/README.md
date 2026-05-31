@@ -61,6 +61,23 @@ npm run tauri:dev:beta-onion
 
 The `manual-onion-client-attempt` feature only compiles the explicit onion attempt path. It does not start Tor, launch an onion service, publish descriptors, receive, or send on app startup. Network work still requires the in-app manual network permission and an explicit user action.
 
+Run two isolated local peer shells from separate terminals when testing one computer as two devices:
+
+```bash
+cd apps/desktop-tauri
+npm run tauri:dev:peer-a
+npm run tauri:dev:peer-b
+```
+
+Run the GUI-less preflight before opening those shells:
+
+```bash
+cd apps/desktop-tauri
+npm run test:local-peers
+```
+
+The GUI-less preflight checks the peer-a/peer-b app data roots and the invite-derived two-device handshake/recovery path without starting Vite, Tauri dev, or a desktop window.
+
 Local beta artifacts can be copied to `apps/desktop-tauri/beta-artifacts/` for tester handoff. That directory is ignored and must not be committed.
 
 Current local beta handoff:
