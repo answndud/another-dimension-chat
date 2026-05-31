@@ -434,8 +434,12 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(mainJs, /transcript-recovery-note/);
   assert.match(mainJs, /t\(outboundRecoveryReasonKey\(primaryAction, outboundStatusLabel\)\)/);
   assert.match(mainJs, /primaryAction\.action === "enable-private-delivery"/);
+  assert.match(mainJs, /primaryAction\.action === "prepare-private-route"/);
   assert.match(mainJs, /primaryAction\.action === "refresh-and-retry"/);
-  assert.match(mainJs, /primaryAction\.action === "refresh-and-retry" && twoProfileInviteCodeModeActive\(\)/);
+  assert.match(mainJs, /function runTwoProfileOutboundPrimaryAction/);
+  assert.match(functionBody(mainJs, "runTwoProfileOutboundPrimaryAction"), /preparePrivateDeliveryRoute\(\)/);
+  assert.match(functionBody(mainJs, "runTwoProfileOutboundPrimaryAction"), /refreshTwoProfileOutboundEndpointThenRetry\(entry\)/);
+  assert.match(mainJs, /retry\.textContent = outboundPrimaryActionLabel\(primaryAction\)/);
   assert.doesNotMatch(mainJs, /retry\.disabled = !outboundActionState\.canRunNow/);
   assert.doesNotMatch(mainJs, /cancel\.disabled = !outboundActionState\.canRunNow/);
   assert.match(mainJs, /retry\.title = outboundActionState\.disabledReason \|\| ""/);
@@ -444,6 +448,8 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(mainJs, /deliveryNeedsRoute/);
   assert.match(mainJs, /setChatDeliveryNoticeByKey\("chatNoticeNetworkPermission", "warning"\)/);
   assert.match(mainJs, /peerEndpointState\.stale \? "chatNoticeRefreshAddress" : "privateDeliveryRouteNeeded"/);
+  assert.match(functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry"), /peerEndpointState\.stale/);
+  assert.match(functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry"), /setChatDeliveryNoticeByKey\("chatNoticeRefreshAddress", "warning"\)/);
   assert.match(mainJs, /retryTwoProfileOutboundEntry\(entry\)/);
   assert.match(functionBody(mainJs, "retryTwoProfileOutboundEntry"), /setChatDeliveryNoticeByKey\("sendRetrying", "progress"\)/);
   assert.match(mainJs, /item\.append\(actions\)/);
