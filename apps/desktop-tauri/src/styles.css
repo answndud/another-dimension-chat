@@ -3157,17 +3157,27 @@ pre.is-failed {
   line-height: 1.35;
 }
 
+.current-invite-code-summary .inline-copy-button {
+  min-width: 0;
+  min-height: 22px;
+  border-color: color-mix(in srgb, var(--accent-cyan) 28%, var(--panel-border));
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
 .current-invite-code-summary[hidden] {
   display: none;
 }
 
 .current-invite-code-summary strong {
-  overflow: hidden;
+  overflow-wrap: anywhere;
   color: var(--text-secondary);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .room-status-summary.is-disconnected {
@@ -3563,13 +3573,13 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 .connection-choice-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 20%, var(--panel-border));
-  border-radius: 5px;
-  padding: 10px;
+  border-radius: 2px;
+  padding: 9px;
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--accent-cyan) 5%, transparent), transparent 72%),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-cyan) 4%, transparent), transparent 72%),
     color-mix(in srgb, var(--panel) 88%, var(--bg));
 }
 
@@ -3622,7 +3632,7 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 
 .connection-choice-card + .connection-choice-card {
   margin-top: 0;
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
 .connection-choice-card + .connection-choice-card::before {
@@ -3669,6 +3679,27 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 }
 
 .connection-choice-card .created-invite-code-display {
+  width: 100%;
+  min-height: 52px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 38%, var(--panel-border));
+  border-radius: 4px;
+  padding: 9px 10px;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--input-bg) 92%, var(--bg));
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  resize: none;
+}
+
+.settings-invite-code-label,
+.chat-settings-panel .settings-invite-code-display[hidden] {
+  display: none;
+}
+
+.chat-settings-panel .settings-invite-code-display:not([hidden]) {
+  display: block;
   width: 100%;
   min-height: 52px;
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 38%, var(--panel-border));
