@@ -672,13 +672,19 @@
                     readonly
                     aria-label="Current invite code"
                   ></textarea>
-                  <div class="invite-stage-actions">
-                    <button id="copy-pending-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
-                      Copy invite code
-                    </button>
-                    <button id="create-room-from-invite-code" type="button" data-i18n="createMyConnectionCode">
-                      Prepare this device
-                    </button>
+                  <div class="invite-stage-actions invite-copy-prepare-actions">
+                    <div class="invite-action-step">
+                      <span data-i18n="inviteCopyStep">1. Send code</span>
+                      <button id="copy-pending-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
+                        Copy invite code
+                      </button>
+                    </div>
+                    <div class="invite-action-step">
+                      <span data-i18n="invitePrepareStep">2. Prepare this device</span>
+                      <button id="create-room-from-invite-code" type="button" data-i18n="createMyConnectionCode">
+                        Prepare this device
+                      </button>
+                    </div>
                   </div>
                 </section>
                 <section class="invite-exchange-stage invite-stage-setup" aria-labelledby="connection-pending-title">

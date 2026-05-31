@@ -35,6 +35,8 @@ test("translate resolves Korean and English chat labels", () => {
     "{peer}는 자기 전용 로컬 데이터 폴더를 사용합니다. 코드를 교환하기 전에 다른 창은 반대 역할로 실행하세요.",
   );
   assert.equal(translate("ko", "inviteStageTitle"), "초대 코드 보내기");
+  assert.equal(translate("ko", "inviteCopyStep"), "1. 코드 보내기");
+  assert.equal(translate("ko", "invitePrepareStep"), "2. 이 기기 준비");
   assert.equal(translate("ko", "setupStageTitle"), "준비 코드 교환");
   assert.equal(translate("ko", "sessionStageTitle"), "채팅방 열기");
   assert.equal(translate("ko", "sendRecoveryPanelTitle"), "메시지가 전송되지 않음");
