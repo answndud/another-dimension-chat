@@ -482,6 +482,18 @@ test("network-off delivery notice includes a direct settings action", () => {
 
 test("composer keeps a visible status while send is blocked or waiting for text", () => {
   assert.match(mainJs, /twoProfilePrimaryReadiness/);
+  assert.match(mainJs, /function twoProfileComposerPrimaryIntent/);
+  assert.match(mainJs, /async function runProductionTwoProfileComposerPrimaryAction/);
+  assert.match(mainJs, /setText\(fields\.runProductionTwoProfileMessageRoundtrip, t\(composerPrimaryIntent\.labelKey\)\)/);
+  assert.match(mainJs, /fields\.runProductionTwoProfileMessageRoundtrip\.title = composerPrimaryIntent\.disabledReason/);
+  assert.doesNotMatch(
+    mainJs,
+    /!availability\.runTwoProfileMessageRoundtrip \|\| \(twoProfileSessionsReady && !twoProfileSafetyConfirmed\)/,
+  );
+  assert.match(mainJs, /intent\.action === "enable-private-delivery"/);
+  assert.match(mainJs, /intent\.action === "prepare-private-route"/);
+  assert.match(mainJs, /intent\.action === "verify"/);
+  assert.match(mainJs, /fields\.runProductionTwoProfileMessageRoundtrip\.addEventListener\([\s\S]{0,120}runProductionTwoProfileComposerPrimaryAction/);
   assert.match(mainJs, /setProductionTwoProfileReadiness\(twoProfileReadiness\.message, twoProfileReadiness\.state\)/);
   assert.match(mainJs, /deliveryNeedsNetworkPermission/);
   assert.match(mainJs, /deliveryNeedsRoute/);
