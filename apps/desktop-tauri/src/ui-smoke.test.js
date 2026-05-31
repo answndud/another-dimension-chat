@@ -430,7 +430,9 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(indexHtml, /id="send-recovery-panel"/);
   assert.match(mainJs, /sendRecoveryPanel:\s*document\.querySelector\("#send-recovery-panel"\)/);
   assert.match(mainJs, /function renderSendRecoveryPanel\(entry = null\)/);
-  assert.match(mainJs, /renderSendRecoveryPanel\(latestTwoProfileRetryableOutboundEntry\(\)\)/);
+  assert.match(mainJs, /function latestVisibleTwoProfileRetryableOutboundEntry/);
+  assert.match(mainJs, /latestTwoProfileRetryableOutboundEntry\(input\) \?\? latestAnyTwoProfileRetryableOutboundEntry\(\)/);
+  assert.match(mainJs, /renderSendRecoveryPanel\(latestVisibleTwoProfileRetryableOutboundEntry\(\)\)/);
   assert.match(mainJs, /send-recovery-actions/);
   assert.match(mainJs, /cancelTwoProfileOutboundEntry\(entry\)/);
   assert.match(stylesCss, /\.send-recovery-panel/);
@@ -458,6 +460,9 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry"), /setChatDeliveryNoticeByKey\("chatNoticeRefreshAddress", "warning"\)/);
   assert.match(mainJs, /retryTwoProfileOutboundEntry\(entry\)/);
   assert.match(functionBody(mainJs, "retryTwoProfileOutboundEntry"), /setChatDeliveryNoticeByKey\("sendRetrying", "progress"\)/);
+  assert.match(functionBody(mainJs, "sendProductionTwoProfileLatestOnionEnvelope"), /latestTwoProfileOutboundDeliveryCandidate\(input\)/);
+  assert.match(functionBody(mainJs, "sendProductionTwoProfileLatestOnionEnvelope"), /markTwoProfileOutboundSendFailed\(/);
+  assert.match(functionBody(mainJs, "sendProductionTwoProfileLatestOnionEnvelope"), /showLatestRetryableOutboundNotice\(input\)/);
   assert.match(mainJs, /item\.append\(actions\)/);
   assert.match(mainJs, /transcript-recovery-summary/);
   assert.match(mainJs, /transcript-recovery-status/);
@@ -466,7 +471,7 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(mainJs, /setChatDeliveryNoticeForPendingOutbound/);
   assert.match(mainJs, /function showLatestRetryableOutboundNotice/);
   assert.match(functionBody(mainJs, "showRetryableTwoProfileOutboundNotice"), /renderSendRecoveryPanel\(entry\)/);
-  assert.match(functionBody(mainJs, "showLatestRetryableOutboundNotice"), /latestTwoProfileRetryableOutboundEntry\(input\)/);
+  assert.match(functionBody(mainJs, "showLatestRetryableOutboundNotice"), /latestVisibleTwoProfileRetryableOutboundEntry\(input\)/);
   assert.match(functionBody(mainJs, "showLatestRetryableOutboundNotice"), /renderSendRecoveryPanel\(entry\)/);
   assert.match(functionBody(mainJs, "showLatestRetryableOutboundNotice"), /renderSendRecoveryPanel\(null\)/);
   assert.match(functionBody(mainJs, "sendProductionTwoProfileLatestOnionEnvelope"), /showLatestRetryableOutboundNotice\(input\)/);

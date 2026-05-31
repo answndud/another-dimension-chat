@@ -1166,6 +1166,11 @@ function renderSendRecoveryPanel(entry = null) {
   const statusLabel = productionTwoProfileOutboundStatusLabel(entry);
   const primaryAction = productionTwoProfileOutboundPrimaryAction(entry);
   const recoveryClass = outboundRecoveryClass(primaryAction, statusLabel);
+  const outboundActionState = productionTwoProfileOutboundActionState(
+    entry,
+    productionTwoProfileInput(),
+    twoProfileInviteCodeModeActive(),
+  );
   fields.sendRecoveryPanel.className = `send-recovery-panel ${recoveryClass}`;
 
   const title = document.createElement("strong");
@@ -1182,7 +1187,8 @@ function renderSendRecoveryPanel(entry = null) {
 
   const reason = document.createElement("p");
   reason.className = "send-recovery-reason";
-  reason.textContent = t(outboundRecoveryReasonKey(primaryAction, statusLabel));
+  reason.textContent =
+    outboundActionState.disabledReason || t(outboundRecoveryReasonKey(primaryAction, statusLabel));
 
   const actions = document.createElement("div");
   actions.className = "send-recovery-actions";
@@ -3045,7 +3051,7 @@ function storedPeerEndpointTransportState(input = productionTwoProfileInput()) {
   return { ready: false, reason: "endpoint not checked" };
 }
 
-function latestTwoProfileOutboundOnionMessage(input = productionTwoProfileInput()) {
+function latestTwoProfileOutboundDeliveryCandidate(input = productionTwoProfileInput()) {
   const retryableEntry = latestTwoProfileRetryableOutboundEntry(input);
   const latest = retryableEntry
     ? {
@@ -3061,6 +3067,14 @@ function latestTwoProfileOutboundOnionMessage(input = productionTwoProfileInput(
     !Number.isInteger(latest.messageNumber) ||
     latest.messageNumber < 1
   ) {
+    return null;
+  }
+  return latest;
+}
+
+function latestTwoProfileOutboundOnionMessage(input = productionTwoProfileInput()) {
+  const latest = latestTwoProfileOutboundDeliveryCandidate(input);
+  if (!latest) {
     return null;
   }
   const peerEndpoint = latestTwoProfilePeerOnionEndpoint(input);
@@ -3439,7 +3453,7 @@ function renderProductionTwoProfileConversationList() {
     renderSendRecoveryPanel(null);
     return;
   }
-  renderSendRecoveryPanel(latestTwoProfileRetryableOutboundEntry());
+  renderSendRecoveryPanel(latestVisibleTwoProfileRetryableOutboundEntry());
   const replyTarget = selectedTwoProfileDeliveredReplyTarget(productionTwoProfileInput());
   const replyTargetKey = replyTarget ? twoProfileConversationKey(replyTarget) : null;
   for (const entry of entries) {
@@ -3736,6 +3750,17 @@ function latestTwoProfileRetryableOutboundEntry(input = productionTwoProfileInpu
   return entries[0] ?? null;
 }
 
+function latestAnyTwoProfileRetryableOutboundEntry() {
+  const entries = [...productionTwoProfileConversationEntries.values()]
+    .filter(twoProfileConversationOutboundRetryable)
+    .sort((left, right) => productionTwoProfileConversationCompare(left, right, "desc"));
+  return entries[0] ?? null;
+}
+
+function latestVisibleTwoProfileRetryableOutboundEntry(input = productionTwoProfileInput()) {
+  return latestTwoProfileRetryableOutboundEntry(input) ?? latestAnyTwoProfileRetryableOutboundEntry();
+}
+
 function latestTwoProfileDeliveredConversationEntry() {
   const entries = [...productionTwoProfileConversationEntries.values()]
     .filter((entry) => twoProfileConversationReplyable(entry))
@@ -3930,7 +3955,7 @@ function showRetryableTwoProfileOutboundNotice(entry) {
 }
 
 function showLatestRetryableOutboundNotice(input = productionTwoProfileInput()) {
-  const entry = latestTwoProfileRetryableOutboundEntry(input);
+  const entry = latestVisibleTwoProfileRetryableOutboundEntry(input);
   if (!entry) {
     renderSendRecoveryPanel(null);
     return false;
@@ -8943,12 +8968,30 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
   const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(input);
   const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!manualNetworkPermission) {
+    const pending = latestVisibleTwoProfileRetryableOutboundEntry(input);
+    if (pending) {
+      setChatDeliveryNoticeForPendingOutbound(pending);
+    } else {
+      setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning");
+    }
     openPrivateDeliverySettings();
     return;
   }
   if (!latestOnionOutbound) {
-    setProductionTwoProfileState("Private delivery needs message");
+    const latestCandidate = latestTwoProfileOutboundDeliveryCandidate(input);
     const peerEndpointState = twoProfilePeerEndpointState(input);
+    if (latestCandidate) {
+      await markTwoProfileOutboundSendFailed(
+        input.profileA,
+        input.passphrase,
+        latestCandidate.messageNumber,
+        peerEndpointState.stale ? "stored remote endpoint refresh required" : "peer-endpoint-missing",
+      );
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+      showLatestRetryableOutboundNotice(input);
+      return;
+    }
+    setProductionTwoProfileState("Private delivery needs message");
     setText(
       fields.productionTwoProfileWarning,
       peerEndpointState.ready
