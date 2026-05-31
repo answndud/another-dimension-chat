@@ -1054,7 +1054,7 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
   }
   const statusLabel = document.createElement("strong");
   statusLabel.className = "chat-delivery-notice-label";
-  statusLabel.textContent = t(primaryAction ? "sendStatusLabel" : "roomStatusLabel");
+  statusLabel.textContent = t(primaryAction ? "sendRecoveryPanelTitle" : "roomStatusLabel");
   const messageText = document.createElement("span");
   messageText.className = "chat-delivery-notice-text";
   messageText.textContent = text;
@@ -1066,6 +1066,12 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     fields.chatDeliveryNotice.append(codeText);
   }
   if (primaryAction) {
+    const reason = document.createElement("span");
+    reason.className = "chat-delivery-notice-chip";
+    reason.textContent = t(outboundRecoveryReasonKey(primaryAction, productionTwoProfileOutboundStatusLabel(pendingEntry)));
+    const next = document.createElement("span");
+    next.className = "chat-delivery-notice-chip is-next";
+    next.textContent = `${t("sendRecoveryNext")}: ${outboundPrimaryActionLabel(primaryAction)}`;
     const actions = document.createElement("span");
     actions.className = "chat-delivery-notice-actions";
     const retry = document.createElement("button");
@@ -1081,7 +1087,7 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     cancel.textContent = t("cancelSend");
     cancel.addEventListener("click", () => cancelTwoProfileOutboundEntry(pendingEntry));
     actions.append(retry, cancel);
-    fields.chatDeliveryNotice.append(actions);
+    fields.chatDeliveryNotice.append(reason, next, actions);
     return;
   }
   if (latestChatDeliveryNoticeKey === "privateDeliveryRouteNeeded") {
