@@ -14036,7 +14036,7 @@ replay check: no replayed messages after message 2
 
         let outbound = run_production_message_envelope_export(
             initiator_root,
-            initiator_profile,
+            initiator_profile.clone(),
             passphrase.clone(),
             0,
             true,
@@ -14056,13 +14056,88 @@ replay check: no replayed messages after message 2
         .expect("isolated inbound");
         assert!(inbound.received_message_written);
         let receiver_transcript =
-            run_production_message_transcript_export(responder_root, responder_profile, passphrase)
+            run_production_message_transcript_export(responder_root, responder_profile, passphrase.clone())
                 .expect("isolated receiver transcript");
         assert!(receiver_transcript.entries.iter().any(|entry| {
             entry.direction == "received"
                 && entry.message_number == outbound.selected_message_number
                 && entry.message == "isolated invite hello"
         }));
+
+        super::run_production_message_outbound_mark_send_failed(
+            initiator_root,
+            initiator_profile.clone(),
+            passphrase.clone(),
+            outbound.selected_message_number,
+            "peer-endpoint-missing".to_string(),
+        )
+        .expect("mark isolated outbound failed");
+        let failed_transcript = run_production_message_transcript_export(
+            initiator_root,
+            initiator_profile.clone(),
+            passphrase.clone(),
+        )
+        .expect("isolated failed sender transcript");
+        let failed_entry = failed_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == outbound.selected_message_number)
+            .expect("isolated failed sender entry");
+        assert_eq!(failed_entry.outbound_delivery_state.as_deref(), Some("failed"));
+        assert_eq!(
+            failed_entry.outbound_failure_kind.as_deref(),
+            Some("peer-endpoint-missing")
+        );
+        assert!(failed_entry.outbound_retryable);
+
+        let resumed_state = run_production_session_state_check(
+            initiator_root,
+            initiator_profile.clone(),
+            passphrase.clone(),
+        )
+        .expect("isolated sender resumed state");
+        assert!(resumed_state.ready_for_message_envelope);
+        let resumed_failed_transcript = run_production_message_transcript_export(
+            initiator_root,
+            initiator_profile.clone(),
+            passphrase.clone(),
+        )
+        .expect("isolated resumed failed sender transcript");
+        let resumed_failed_entry = resumed_failed_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == outbound.selected_message_number)
+            .expect("isolated resumed failed sender entry");
+        assert_eq!(
+            resumed_failed_entry.outbound_delivery_state.as_deref(),
+            Some("failed")
+        );
+        assert!(resumed_failed_entry.outbound_retryable);
+
+        run_production_message_outbound_cancel_pending(
+            initiator_root,
+            initiator_profile.clone(),
+            passphrase.clone(),
+            outbound.selected_message_number,
+        )
+        .expect("cancel isolated failed outbound");
+        let canceled_transcript = run_production_message_transcript_export(
+            initiator_root,
+            initiator_profile,
+            passphrase,
+        )
+        .expect("isolated canceled sender transcript");
+        let canceled_entry = canceled_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == outbound.selected_message_number)
+            .expect("isolated canceled sender entry");
+        assert_eq!(
+            canceled_entry.outbound_delivery_state.as_deref(),
+            Some("canceled")
+        );
+        assert_eq!(canceled_entry.outbound_failure_kind, None);
+        assert!(!canceled_entry.outbound_retryable);
 
         let _ = std::fs::remove_dir_all(root_a);
         let _ = std::fs::remove_dir_all(root_b);
