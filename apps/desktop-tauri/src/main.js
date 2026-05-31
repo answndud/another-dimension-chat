@@ -283,6 +283,7 @@ const fields = {
   openDeveloperTools: document.querySelector("#open-developer-tools"),
   createInviteCode: document.querySelector("#create-invite-code"),
   createInviteCodeSettings: document.querySelector("#create-invite-code-settings"),
+  createdInviteCodeDisplay: document.querySelector("#created-invite-code-display"),
   receivedInviteCode: document.querySelector("#received-invite-code"),
   createRoomFromReceivedCode: document.querySelector("#create-room-from-received-code"),
   copyInviteCode: document.querySelector("#copy-invite-code"),
@@ -406,6 +407,7 @@ const fields = {
   reviewPendingTwoProfileMessage: document.querySelector("#review-pending-two-profile-message"),
   productionTwoProfileTranscript: document.querySelector("#production-two-profile-transcript"),
   chatDeliveryNotice: document.querySelector("#chat-delivery-notice"),
+  sendRecoveryPanel: document.querySelector("#send-recovery-panel"),
   productionTwoProfileTranscriptExport: document.querySelector("#production-two-profile-transcript-export"),
   productionTwoProfileNextStep: document.querySelector("#production-two-profile-next-step"),
   openManualProductionTools: document.querySelector("#open-manual-production-tools"),
@@ -1160,6 +1162,66 @@ function setChatDeliveryNoticeForPendingOutbound(entry) {
   });
 }
 
+function renderSendRecoveryPanel(entry = null) {
+  if (!fields.sendRecoveryPanel) {
+    return;
+  }
+  fields.sendRecoveryPanel.replaceChildren();
+  if (!entry || !twoProfileConversationOutboundRetryable(entry)) {
+    fields.sendRecoveryPanel.hidden = true;
+    return;
+  }
+  fields.sendRecoveryPanel.hidden = false;
+  const statusLabel = productionTwoProfileOutboundStatusLabel(entry);
+  const primaryAction = productionTwoProfileOutboundPrimaryAction(entry);
+  const recoveryClass = outboundRecoveryClass(primaryAction, statusLabel);
+  fields.sendRecoveryPanel.className = `send-recovery-panel ${recoveryClass}`;
+
+  const title = document.createElement("strong");
+  title.className = "send-recovery-title";
+  title.textContent = t("sendRecoveryPanelTitle");
+
+  const status = document.createElement("span");
+  status.className = "send-recovery-status";
+  status.textContent = localizedOutboundStatus(statusLabel);
+
+  const message = document.createElement("p");
+  message.className = "send-recovery-message";
+  message.textContent = entry.message;
+
+  const reason = document.createElement("p");
+  reason.className = "send-recovery-reason";
+  reason.textContent = t(outboundRecoveryReasonKey(primaryAction, statusLabel));
+
+  const actions = document.createElement("div");
+  actions.className = "send-recovery-actions";
+  const retry = document.createElement("button");
+  retry.type = "button";
+  retry.className = "send-recovery-primary";
+  retry.textContent = t(
+    primaryAction.action === "refresh-and-retry" && twoProfileInviteCodeModeActive()
+      ? "preparePrivateRoute"
+      : primaryAction.labelKey,
+  );
+  retry.addEventListener("click", () => {
+    if (primaryAction.action === "enable-private-delivery") {
+      selectTwoProfileOutboundActionDirection(entry, "retry");
+      openPrivateDeliverySettings();
+    } else if (primaryAction.action === "refresh-and-retry") {
+      refreshTwoProfileOutboundEndpointThenRetry(entry);
+    } else {
+      retryTwoProfileOutboundEntry(entry);
+    }
+  });
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "send-recovery-cancel";
+  cancel.textContent = t("cancelSend");
+  cancel.addEventListener("click", () => cancelTwoProfileOutboundEntry(entry));
+  actions.append(retry, cancel);
+  fields.sendRecoveryPanel.append(title, status, message, reason, actions);
+}
+
 function outboundRecoveryClass(primaryAction, statusLabel = "") {
   const status = String(statusLabel ?? "").trim().toLowerCase();
   if (primaryAction?.action === "enable-private-delivery") {
@@ -1863,6 +1925,10 @@ function renderCurrentInviteCodeDisplay() {
     fields.pendingInviteCodeDisplay.value = code;
     fields.pendingInviteCodeDisplay.hidden = !code;
   }
+  if (fields.createdInviteCodeDisplay) {
+    fields.createdInviteCodeDisplay.value = code && connectionCodeRoleFor(code) === "inviter" ? code : "";
+    fields.createdInviteCodeDisplay.hidden = !fields.createdInviteCodeDisplay.value;
+  }
   if (fields.currentInviteCodeSummary) {
     fields.currentInviteCodeSummary.hidden = !code;
   }
@@ -1950,6 +2016,12 @@ function renderReceivedInviteCodeActionState() {
 }
 
 function focusCurrentInviteCodeDisplay() {
+  if (fields.createdInviteCodeDisplay && !fields.createdInviteCodeDisplay.hidden) {
+    fields.createdInviteCodeDisplay.scrollIntoView?.({ block: "center", behavior: "smooth" });
+    fields.createdInviteCodeDisplay.focus?.({ preventScroll: true });
+    fields.createdInviteCodeDisplay.select?.();
+    return;
+  }
   fields.pendingInviteCodeDisplay?.scrollIntoView?.({ block: "center", behavior: "smooth" });
   fields.pendingInviteCodeDisplay?.focus?.({ preventScroll: true });
   fields.pendingInviteCodeDisplay?.select?.();
@@ -1972,7 +2044,10 @@ async function copyCurrentInviteCode(options = {}) {
     }
     return true;
   } catch {
-    if (fields.pendingInviteCodeDisplay && !fields.pendingInviteCodeDisplay.hidden) {
+    if (fields.createdInviteCodeDisplay && !fields.createdInviteCodeDisplay.hidden) {
+      fields.createdInviteCodeDisplay.focus?.();
+      fields.createdInviteCodeDisplay.select?.();
+    } else if (fields.pendingInviteCodeDisplay && !fields.pendingInviteCodeDisplay.hidden) {
       fields.pendingInviteCodeDisplay.focus?.();
       fields.pendingInviteCodeDisplay.select?.();
     } else {
@@ -3328,8 +3403,10 @@ function renderProductionTwoProfileConversationList() {
     empty.className = "is-empty";
     empty.textContent = twoProfileEmptyConversationMessage();
     target.append(empty);
+    renderSendRecoveryPanel(null);
     return;
   }
+  renderSendRecoveryPanel(latestTwoProfileRetryableOutboundEntry());
   const replyTarget = selectedTwoProfileDeliveredReplyTarget(productionTwoProfileInput());
   const replyTargetKey = replyTarget ? twoProfileConversationKey(replyTarget) : null;
   for (const entry of entries) {

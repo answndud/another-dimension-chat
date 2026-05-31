@@ -578,6 +578,15 @@
                   <strong data-i18n="connectionChoiceCreate">Create my invite code</strong>
                   <span data-i18n="connectionChoiceCreateText">Share this code with the other device.</span>
                   <button id="create-invite-code" type="button" data-i18n="createInviteCode">Create my invite code</button>
+                  <textarea
+                    id="created-invite-code-display"
+                    class="invite-code-display created-invite-code-display"
+                    rows="2"
+                    readonly
+                    hidden
+                    aria-label="Created invite code"
+                    data-i18n-aria-label="createdInviteCode"
+                  ></textarea>
                 </article>
                 <article class="connection-choice-card">
                   <strong data-i18n="connectionChoiceEnter">Enter received code</strong>
@@ -723,6 +732,12 @@
               <li class="is-empty" data-i18n="emptyConversation">No messages yet.</li>
             </ol>
             <p id="chat-delivery-notice" class="chat-delivery-notice" aria-live="polite"></p>
+            <section
+              id="send-recovery-panel"
+              class="send-recovery-panel"
+              aria-live="polite"
+              hidden
+            ></section>
             <label class="loop-label chat-message-label" for="production-two-profile-message" data-i18n="writeMessage">Write message</label>
             <textarea
               id="production-two-profile-message"

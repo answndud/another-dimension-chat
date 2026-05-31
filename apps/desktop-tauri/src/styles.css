@@ -1947,12 +1947,116 @@ body.is-chat-active .message-transcript .transcript-recovery-note.is-peer-offlin
   color: var(--text-muted);
 }
 
+.send-recovery-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
+  align-items: center;
+  margin: 0 0 10px auto;
+  width: min(720px, 100%);
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 34%, var(--panel-border));
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--panel-strong) 86%, var(--bg));
+}
+
+.send-recovery-panel[hidden] {
+  display: none;
+}
+
+.send-recovery-title,
+.send-recovery-status {
+  font-size: 11px;
+  font-weight: 820;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.send-recovery-title {
+  color: var(--text-primary);
+}
+
+.send-recovery-status {
+  justify-self: end;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 36%, transparent);
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: var(--accent-cyan);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.send-recovery-message,
+.send-recovery-reason {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.send-recovery-message {
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.send-recovery-reason {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.send-recovery-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.send-recovery-actions button {
+  width: auto;
+  min-width: max-content;
+  min-height: 32px;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: lowercase;
+}
+
+.send-recovery-primary {
+  border-color: color-mix(in srgb, var(--accent-cyan) 50%, var(--panel-border));
+  background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
+  color: var(--accent-cyan);
+}
+
+.send-recovery-cancel {
+  border-color: color-mix(in srgb, var(--panel-border) 48%, transparent);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.send-recovery-cancel:hover,
+.send-recovery-cancel:focus-visible {
+  color: var(--danger);
+}
+
 @media (max-width: 720px) {
   .chat-delivery-notice {
     grid-template-columns: 1fr;
   }
 
   .chat-delivery-notice-actions {
+    justify-content: flex-start;
+  }
+
+  .send-recovery-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .send-recovery-status,
+  .send-recovery-actions {
+    justify-self: start;
     justify-content: flex-start;
   }
 }
@@ -3519,6 +3623,25 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 
 .connection-choice-card #create-invite-code {
   border-color: var(--accent-cyan);
+}
+
+.connection-choice-card .created-invite-code-display {
+  width: 100%;
+  min-height: 52px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 38%, var(--panel-border));
+  border-radius: 4px;
+  padding: 9px 10px;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--input-bg) 92%, var(--bg));
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  resize: none;
+}
+
+.connection-choice-card .created-invite-code-display[hidden] {
+  display: none;
 }
 
 .connection-choice-card #create-room-from-received-code {
