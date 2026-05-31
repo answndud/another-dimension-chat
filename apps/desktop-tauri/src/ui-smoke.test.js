@@ -436,6 +436,23 @@ test("network-off delivery notice includes a direct settings action", () => {
   assert.match(stylesCss, /\.chat-delivery-notice-action/);
 });
 
+test("composer keeps a visible status while send is blocked or waiting for text", () => {
+  assert.match(mainJs, /twoProfilePrimaryReadiness/);
+  assert.match(mainJs, /setProductionTwoProfileReadiness\(twoProfileReadiness\.message, twoProfileReadiness\.state\)/);
+  assert.match(mainJs, /deliveryNeedsNetworkPermission/);
+  assert.match(mainJs, /deliveryNeedsRoute/);
+  assert.match(stylesCss, /body\.is-chat-active \.chat-primary-actions\.is-send-mode #production-two-profile-readiness[\s\S]{0,180}display:\s*block/);
+  assert.match(stylesCss, /body\.is-chat-active \.chat-primary-actions\.is-send-mode:not\(\.has-message-draft\)[\s\S]{0,140}display:\s*grid/);
+  assert.match(
+    stylesCss,
+    /body\.is-chat-active \.chat-primary-actions\.is-send-mode:not\(\.has-message-draft\)[\s\S]{0,160}#run-production-two-profile-message-roundtrip[\s\S]{0,80}display:\s*none/,
+  );
+  assert.doesNotMatch(
+    stylesCss,
+    /body\.is-chat-active \.chat-primary-actions\.is-send-mode #production-two-profile-readiness\s*\{\s*display:\s*none/,
+  );
+});
+
 test("ready rooms surface listening as the next idle chat action", () => {
   assert.match(mainJs, /setChatDeliveryNoticeByKey\("chatNoticeReceiveStopped", "muted"\)/);
   assert.match(
