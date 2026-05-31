@@ -22,6 +22,7 @@ mkdirSync(appCacheRoot, { recursive: true });
 
 const env = {
   ...process.env,
+  ANOTHER_DIMENSION_DEV_PEER_LABEL: peer,
   ANOTHER_DIMENSION_APP_DATA_DIR: appDataRoot,
   ANOTHER_DIMENSION_APP_CACHE_DIR: appCacheRoot,
 };
@@ -33,6 +34,7 @@ const noBeforeDevConfig = JSON.stringify({
 });
 
 console.log(`Launching ${peer}`);
+console.log(`App label: ${peer}`);
 console.log(`App data: ${appDataRoot}`);
 console.log(`App cache: ${appCacheRoot}`);
 

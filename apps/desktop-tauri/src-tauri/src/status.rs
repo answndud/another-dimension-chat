@@ -22,6 +22,7 @@ pub struct PrototypeStatus {
     transport_io_status: String,
     storage_status: &'static str,
     verification_status: &'static str,
+    local_dev_peer_label: String,
 }
 
 pub fn redacted_prototype_status() -> PrototypeStatus {
@@ -86,7 +87,20 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         ),
         storage_status: "ADREC1 storage spike only",
         verification_status: "lightweight checks only",
+        local_dev_peer_label: local_dev_peer_label(),
     }
+}
+
+fn local_dev_peer_label() -> String {
+    #[cfg(debug_assertions)]
+    {
+        let label = std::env::var("ANOTHER_DIMENSION_DEV_PEER_LABEL").unwrap_or_default();
+        let trimmed = label.trim();
+        if matches!(trimmed, "peer-a" | "peer-b") {
+            return trimmed.to_string();
+        }
+    }
+    String::new()
 }
 
 #[cfg(test)]
@@ -116,5 +130,6 @@ mod tests {
         assert!(status
             .transport_io_status
             .contains("reviewed session protocol decision plus durable state persistence plan"));
+        assert!(status.local_dev_peer_label.is_empty());
     }
 }
