@@ -401,6 +401,13 @@ export function productionTwoProfileOutboundStatusLabel(entry) {
     if (failure.includes("timeout")) {
       return "send timeout";
     }
+    if (
+      failure.includes("peer-endpoint-missing") ||
+      failure.includes("endpoint-missing") ||
+      failure.includes("endpointunavailable")
+    ) {
+      return "route missing";
+    }
     if (failure.includes("stale") || failure.includes("refresh") || failure.includes("endpoint")) {
       return "stale endpoint";
     }
@@ -465,6 +472,14 @@ export function productionTwoProfileOutboundPrimaryAction(entry) {
       recoveryKey: "sendRecoveryPermissionOff",
     };
   }
+  if (status === "route missing") {
+    return {
+      action: "refresh-and-retry",
+      labelKey: "preparePrivateRoute",
+      noticeKey: "privateDeliveryRouteNeeded",
+      recoveryKey: "sendRecoveryRouteMissing",
+    };
+  }
   if (productionTwoProfileOutboundNeedsEndpointRefresh(entry)) {
     return {
       action: "refresh-and-retry",
@@ -481,7 +496,7 @@ export function productionTwoProfileOutboundPrimaryAction(entry) {
       recoveryKey: "sendRecoveryPeerOffline",
     };
   }
-  if (status === "timeout") {
+  if (status === "send timeout") {
     return {
       action: "retry",
       labelKey: "retrySend",

@@ -13758,6 +13758,58 @@ replay check: no replayed messages after message 2
                 && entry.message == "invite flow pending send"
         }));
 
+        let route_update = run_production_pairing_session_remote_endpoint_update(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+            "joiner-route.onion".to_string(),
+        )
+        .expect("save invite-derived peer route code");
+        assert!(route_update.remote_endpoint_state_written);
+        assert!(route_update.update_channel_existing_encrypted_session);
+        assert!(!route_update.remote_endpoint_returned);
+        assert!(!route_update.network_io_attempted);
+        assert!(!route_update.transport_io_opened);
+        let route_status = run_production_two_profile_session_status(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "joiner-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+        )
+        .expect("invite-derived route status");
+        assert!(route_status.both_ready_for_message_envelope);
+        assert!(route_status.profile_a_remote_endpoint_state_present);
+        assert!(!route_status.profile_a_remote_endpoint_marked_stale);
+        assert!(!route_status.profile_a_remote_endpoint_refresh_recommended);
+        assert_eq!(
+            route_status.profile_a_remote_endpoint_last_failed_message_number,
+            None
+        );
+        let route_for_transport =
+            super::run_production_pairing_session_remote_endpoint_for_transport(
+                &root,
+                "inviter-abcd-2345".to_string(),
+                "shared-invite-passphrase".to_string(),
+            )
+            .expect("invite-derived route for retry");
+        assert_eq!(route_for_transport, "joiner-route.onion");
+        let retryable_after_route = run_production_message_transcript_export(
+            &root,
+            "inviter-abcd-2345".to_string(),
+            "shared-invite-passphrase".to_string(),
+        )
+        .expect("invite-derived retryable transcript after route");
+        let retryable_entry = retryable_after_route
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == outbound.selected_message_number)
+            .expect("retryable invite-derived entry after route");
+        assert_eq!(
+            retryable_entry.outbound_delivery_state.as_deref(),
+            Some("failed")
+        );
+        assert!(retryable_entry.outbound_retryable);
+
         run_production_message_outbound_cancel_pending(
             &root,
             "inviter-abcd-2345".to_string(),
@@ -13853,6 +13905,167 @@ replay check: no replayed messages after message 2
         }
 
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_isolated_invite_roots_exchange_payloads_without_peer_private_profile() {
+        let root_a = unique_production_roundtrip_dir().expect("temp root a");
+        let root_b = unique_production_roundtrip_dir().expect("temp root b");
+        let passphrase = "shared-invite-passphrase".to_string();
+        let inviter = "inviter-abcd-2345".to_string();
+        let joiner = "joiner-abcd-2345".to_string();
+
+        run_production_profile_unlock(&root_a, inviter.clone(), passphrase.clone())
+            .expect("unlock inviter");
+        run_production_profile_unlock(&root_b, joiner.clone(), passphrase.clone())
+            .expect("unlock joiner");
+        let inviter_profiles = run_production_profile_list(&root_a).expect("list inviter root");
+        let joiner_profiles = run_production_profile_list(&root_b).expect("list joiner root");
+        assert_eq!(inviter_profiles.profiles, vec![inviter.clone()]);
+        assert_eq!(joiner_profiles.profiles, vec![joiner.clone()]);
+
+        let inviter_payload = run_production_pairing_payload_export(
+            &root_a,
+            inviter.clone(),
+            passphrase.clone(),
+            "inviter-route.onion".to_string(),
+        )
+        .expect("inviter payload")
+        .pairing_payload;
+        let joiner_payload = run_production_pairing_payload_export(
+            &root_b,
+            joiner.clone(),
+            passphrase.clone(),
+            "joiner-route.onion".to_string(),
+        )
+        .expect("joiner payload")
+        .pairing_payload;
+
+        run_production_pairing_session_draft_save(
+            &root_a,
+            inviter.clone(),
+            passphrase.clone(),
+            inviter_payload.clone(),
+            joiner_payload.clone(),
+            true,
+        )
+        .expect("save inviter draft");
+        run_production_pairing_session_draft_save(
+            &root_b,
+            joiner.clone(),
+            passphrase.clone(),
+            joiner_payload,
+            inviter_payload,
+            true,
+        )
+        .expect("save joiner draft");
+        assert_eq!(
+            run_production_profile_list(&root_a)
+                .expect("list inviter root after draft")
+                .profiles,
+            vec![inviter.clone()]
+        );
+        assert_eq!(
+            run_production_profile_list(&root_b)
+                .expect("list joiner root after draft")
+                .profiles,
+            vec![joiner.clone()]
+        );
+
+        let inviter_init =
+            run_production_handshake_init_export(&root_a, inviter.clone(), passphrase.clone())
+                .expect("inviter init");
+        let (initiator_root, initiator_profile, responder_root, responder_profile, init_payload) =
+            if inviter_init.output_payload_created {
+                (
+                    &root_a,
+                    inviter.clone(),
+                    &root_b,
+                    joiner.clone(),
+                    inviter_init.output_payload,
+                )
+            } else {
+                let joiner_init =
+                    run_production_handshake_init_export(&root_b, joiner.clone(), passphrase.clone())
+                        .expect("joiner init");
+                assert!(joiner_init.output_payload_created);
+                (
+                    &root_b,
+                    joiner.clone(),
+                    &root_a,
+                    inviter.clone(),
+                    joiner_init.output_payload,
+                )
+            };
+        let reply = run_production_handshake_reply_export(
+            responder_root,
+            responder_profile.clone(),
+            passphrase.clone(),
+            init_payload,
+        )
+        .expect("joiner reply");
+        assert!(reply.output_payload_created);
+        let finish = run_production_handshake_finish_export(
+            initiator_root,
+            initiator_profile.clone(),
+            passphrase.clone(),
+            reply.output_payload,
+        )
+        .expect("inviter finish");
+        assert!(finish.transport_state_persisted);
+        let finish_import = run_production_handshake_finish_import(
+            responder_root,
+            responder_profile.clone(),
+            passphrase.clone(),
+            finish.output_payload,
+        )
+        .expect("joiner finish import");
+        assert!(finish_import.transport_state_persisted);
+
+        let inviter_state = run_production_session_state_check(
+            &root_a,
+            inviter.clone(),
+            passphrase.clone(),
+        )
+        .expect("inviter state");
+        let joiner_state =
+            run_production_session_state_check(&root_b, joiner.clone(), passphrase.clone())
+                .expect("joiner state");
+        assert!(inviter_state.ready_for_message_envelope);
+        assert!(joiner_state.ready_for_message_envelope);
+
+        let outbound = run_production_message_envelope_export(
+            initiator_root,
+            initiator_profile,
+            passphrase.clone(),
+            0,
+            true,
+            "isolated invite hello".to_string(),
+            86_400,
+        )
+        .expect("isolated outbound");
+        assert!(outbound.encrypted_envelope_present);
+        let inbound = run_production_message_envelope_import(
+            responder_root,
+            responder_profile.clone(),
+            passphrase.clone(),
+            outbound.selected_message_number,
+            outbound.envelope_payload,
+            86_400,
+        )
+        .expect("isolated inbound");
+        assert!(inbound.received_message_written);
+        let receiver_transcript =
+            run_production_message_transcript_export(responder_root, responder_profile, passphrase)
+                .expect("isolated receiver transcript");
+        assert!(receiver_transcript.entries.iter().any(|entry| {
+            entry.direction == "received"
+                && entry.message_number == outbound.selected_message_number
+                && entry.message == "isolated invite hello"
+        }));
+
+        let _ = std::fs::remove_dir_all(root_a);
+        let _ = std::fs::remove_dir_all(root_b);
     }
 
     #[test]
