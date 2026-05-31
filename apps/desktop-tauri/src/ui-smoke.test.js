@@ -262,6 +262,19 @@ test("invite setup screen shows one exchange stage at a time", () => {
   assert.match(indexHtml, /id="pending-invite-code-display"/);
   assert.match(indexHtml, /id="copy-pending-invite-code"/);
   assert.match(indexHtml, /id="create-room-from-invite-code"/);
+  assert.match(indexHtml, /class="invite-stage-actions invite-copy-prepare-actions"/);
+  assert.match(indexHtml, /data-i18n="inviteCopyStep"/);
+  assert.match(indexHtml, /data-i18n="invitePrepareStep"/);
+  assert.match(i18nJs, /inviteCopyStep: "1\. 코드 보내기"/);
+  assert.match(i18nJs, /invitePrepareStep: "2\. 이 기기 준비"/);
+  assert.match(mainJs, /function inviteCodeCopyIsNextAction\(\)/);
+  assert.match(mainJs, /copiedInviteCode !== code/);
+  assert.match(mainJs, /inviteCodeCopyIsNextAction\(\) \? fields\.copyPendingInviteCode : fields\.createRoomFromInviteCode/);
+  assert.match(mainJs, /document\.body\.classList\.toggle\("has-copied-invite-code"/);
+  assert.match(stylesCss, /\.invite-copy-prepare-actions/);
+  assert.match(stylesCss, /\.invite-action-step/);
+  assert.match(stylesCss, /has-copied-invite-code:not\(\.has-ready-session\) \.invite-stage-invite \.invite-action-step:first-child/);
+  assert.match(stylesCss, /@media \(max-width: 680px\)[\s\S]{0,160}\.invite-copy-prepare-actions/);
   const localSetupHideRuleStart = stylesCss.indexOf(
     "body.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)\n" +
       "  .connection-pending-state\n" +

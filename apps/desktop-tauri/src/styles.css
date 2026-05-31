@@ -4299,6 +4299,49 @@ body.has-connection-code:not(.has-ready-session) .invite-stage-actions {
   align-items: center;
 }
 
+body.has-connection-code:not(.has-ready-session) .invite-copy-prepare-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+
+body.has-connection-code:not(.has-ready-session) .invite-action-step {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 60%, transparent);
+  border-radius: 4px;
+  padding: 8px;
+  background: color-mix(in srgb, var(--bg) 52%, transparent);
+}
+
+body.has-connection-code:not(.has-ready-session) .invite-action-step > span {
+  display: block;
+  color: var(--text-muted);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+body.has-connection-code:not(.has-ready-session) .invite-action-step button {
+  width: 100%;
+}
+
+body.has-copied-invite-code:not(.has-ready-session) .invite-stage-invite .invite-action-step:first-child {
+  border-color: color-mix(in srgb, var(--accent-cyan) 28%, var(--panel-border));
+  opacity: 0.72;
+}
+
+@media (max-width: 680px) {
+  body.has-connection-code:not(.has-ready-session) .invite-copy-prepare-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 body.has-connection-code:not(.has-ready-session) .invite-stage-invite {
   display: grid;
 }

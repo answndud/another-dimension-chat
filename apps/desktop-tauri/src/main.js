@@ -1436,12 +1436,17 @@ function setInviteSetupActionVisibility(primaryNode) {
   primaryNode?.classList.remove("is-flow-hidden");
 }
 
+function inviteCodeCopyIsNextAction() {
+  const code = currentInviteCodeForRoom();
+  return Boolean(code && connectionCodeRoleFor(code) === "inviter" && copiedInviteCode !== code && !latestLocalInviteSetupCode);
+}
+
 function inviteSetupPrimaryActionNode() {
   if (!currentInviteCodeForRoom() || twoProfileSessionsReadyForInput()) {
     return null;
   }
   if (!latestLocalInviteSetupCode) {
-    return fields.createRoomFromInviteCode;
+    return inviteCodeCopyIsNextAction() ? fields.copyPendingInviteCode : fields.createRoomFromInviteCode;
   }
   if (!latestLocalInviteSessionCode) {
     return (fields.peerInviteSetupCode?.value ?? "").trim()
@@ -1916,6 +1921,7 @@ function syncProductionTwoProfilePassphraseFromProfile() {
 
 let latestDerivedConnectionCode = "";
 let latestCreatedInviteCode = "";
+let copiedInviteCode = "";
 let latestConnectionCodeRole = "";
 
 function connectionCodeSlug(value) {
@@ -1972,6 +1978,8 @@ function generateInviteCode() {
 
 function renderCurrentInviteCodeDisplay() {
   const code = (fields.productionTwoProfileB?.value ?? "").trim();
+  const inviterCode = code && connectionCodeRoleFor(code) === "inviter";
+  const copiedCurrentInviteCode = Boolean(inviterCode && copiedInviteCode === code);
   if (fields.pendingInviteCodeDisplay) {
     fields.pendingInviteCodeDisplay.value = code;
     fields.pendingInviteCodeDisplay.hidden = !code;
@@ -1991,6 +1999,7 @@ function renderCurrentInviteCodeDisplay() {
     fields.currentInviteCodeText.textContent = code;
   }
   renderConnectionDeviceRole();
+  document.body.classList.toggle("has-copied-invite-code", copiedCurrentInviteCode);
   fields.copyInviteCode?.toggleAttribute("disabled", !code);
   fields.copyCurrentInviteCodeSummary?.toggleAttribute("disabled", !code);
   fields.copyPendingInviteCode?.toggleAttribute("disabled", !code);
@@ -2093,6 +2102,9 @@ async function copyCurrentInviteCode(options = {}) {
   }
   try {
     await navigator.clipboard.writeText(code);
+    copiedInviteCode = code;
+    renderCurrentInviteCodeDisplay();
+    applyProductionActionState();
     setProductionTwoProfileState("Invite code copied");
     setText(fields.productionTwoProfileWarning, t("inviteCodeCopied"));
     if (!latestLocalInviteSetupCode && fields.createRoomFromInviteCode && !fields.createRoomFromInviteCode.disabled) {
@@ -2182,6 +2194,7 @@ async function createInviteCode() {
     fields.productionTwoProfileB.value = code;
   }
   latestCreatedInviteCode = code;
+  copiedInviteCode = "";
   rememberConnectionCodeRole(code, "inviter");
   syncTwoProfileDerivedConnectionFields();
   renderProductionTwoProfileDirection(productionTwoProfileInput());
@@ -2205,6 +2218,7 @@ async function createRoomFromReceivedInviteCode() {
     fields.productionTwoProfileB.value = code;
   }
   rememberConnectionCodeRole(code, "joiner");
+  copiedInviteCode = "";
   syncTwoProfileDerivedConnectionFields();
   renderProductionTwoProfileDirection(productionTwoProfileInput());
   applyProductionActionState();
