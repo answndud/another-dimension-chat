@@ -426,8 +426,12 @@ test("private route preparation is a first-class chat action", () => {
   assert.match(mainJs, /fields\.preparePrivateRoute\.addEventListener\("click", preparePrivateDeliveryRoute\)/);
   assert.match(mainJs, /function renderPrivateRouteExchangeState/);
   assert.match(mainJs, /function focusLocalPrivateRouteCodeDisplay\(\)/);
+  assert.match(mainJs, /function focusPeerPrivateRouteCodeInput\(\)/);
+  assert.match(mainJs, /function focusPrivateRouteNextAction/);
   assert.match(mainJs, /setActionButtonState\(\s*fields\.preparePrivateRoute/);
-  assert.match(mainJs, /twoProfileInviteCodeModeActive\(\)[\s\S]{0,120}prepareInviteRoomPrivateRouteExchange\(input\)/);
+  assert.match(mainJs, /nextRouteAction === "paste-peer"/);
+  assert.match(mainJs, /nextRouteAction === "apply-peer"/);
+  assert.match(mainJs, /twoProfileInviteCodeModeActive\(\)[\s\S]{0,420}prepareInviteRoomPrivateRouteExchange\(input\)/);
   assert.match(mainJs, /await refreshProductionTwoProfilePeerEndpoints\(\)/);
   assert.match(mainJs, /latestChatDeliveryNoticeKey === "privateDeliveryRouteNeeded"/);
   assert.match(mainJs, /t\("preparePrivateRoute"\)/);
@@ -446,8 +450,10 @@ test("private route exchange highlights the next route action", () => {
   assert.match(mainJs, /routeInstructionShare/);
   assert.match(mainJs, /routeInstructionUse/);
   assert.match(mainJs, /routeInstructionReady/);
+  assert.match(mainJs, /fields\.privateRouteExchange\.scrollIntoView/);
   assert.match(mainJs, /latestLocalPrivateRouteCode[\s\S]{0,120}fields\.preparePrivateRoute/);
   assert.match(mainJs, /peerPrivateRouteCode\?\.value[\s\S]{0,120}fields\.applyPeerPrivateRouteCode/);
+  assert.match(mainJs, /focusPeerPrivateRouteCodeInput\(\)/);
   assert.match(mainJs, /setFlowActionPriority\(routeExchangePrimaryActionNode\(twoProfile\)/);
   assert.match(stylesCss, /\.private-route-exchange button\.is-primary-flow-action/);
   assert.match(stylesCss, /\.private-route-exchange button\.is-secondary-flow-action/);
