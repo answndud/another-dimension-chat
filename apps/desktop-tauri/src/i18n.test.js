@@ -29,11 +29,11 @@ test("translate resolves Korean and English chat labels", () => {
   assert.equal(translate("ko", "connectionChoiceEnterText"), "상대 기기에서 받은 코드를 사용합니다.");
   assert.equal(
     translate("ko", "connectionModalCopy"),
-    "초대 코드를 만들거나 받은 코드를 붙여넣으세요. 두 기기에서 같은 코드를 사용합니다.",
+    "초대 코드를 만들거나 받은 코드를 붙여넣으세요. 이 기기에는 이 기기의 연결 정보만 저장됩니다.",
   );
   assert.equal(
     translate("ko", "connectionPendingHint"),
-    "이 코드를 상대에게 보내세요. 그다음 이 기기에서도 채팅방을 만드세요.",
+    "이 초대 코드를 상대 기기에 보내세요. 그다음 이 기기를 준비하고 연결 코드를 교환하세요.",
   );
   assert.equal(translate("ko", "phraseDoesNotMatch"), "문구가 다릅니다");
   assert.equal(translate("ko", "onionDeliveryStarting"), "메시지를 저장했습니다. 비공개 전송을 시도합니다.");
@@ -51,11 +51,14 @@ test("translate resolves Korean and English chat labels", () => {
   assert.equal(translate("ko", "allowPrivateDelivery"), "내가 보내기나 받기를 누를 때만 네트워크 전송 허용");
   assert.equal(translate("ko", "privateDeliveryPermissionRequired"), "보내거나 받기 전에 비공개 전송을 허용하세요.");
   assert.equal(translate("ko", "enablePrivateDelivery"), "비공개 전송 켜기");
-  assert.equal(translate("ko", "privateDeliveryNeedsMessage"), "비공개 전송을 시도하기 전에 채팅방을 만들고 메시지를 작성하세요.");
+  assert.equal(
+    translate("ko", "privateDeliveryNeedsMessage"),
+    "비공개 전송을 시도하기 전에 이 기기 준비를 끝내고 메시지를 작성하세요.",
+  );
   assert.equal(translate("ko", "refreshAddressFailed"), "상대 주소를 갱신하지 못했습니다. 채팅방 상태는 그대로 유지했습니다.");
   assert.equal(translate("ko", "chatNoticeReceiving"), "새 메시지를 기다리는 중입니다.");
   assert.equal(translate("ko", "receiveStarted"), "새 메시지를 기다리는 중입니다. 이 창을 열어 두세요.");
-  assert.equal(translate("ko", "receiveNeedsReadyRoom"), "메시지를 받으려면 먼저 채팅방을 만드세요.");
+  assert.equal(translate("ko", "receiveNeedsReadyRoom"), "메시지를 받으려면 먼저 이 기기 준비를 끝내세요.");
   assert.equal(translate("ko", "receiveNeedsVerification"), "메시지를 받기 전에 확인 문구를 비교하세요.");
   assert.equal(translate("ko", "receiveStopPending"), "중지하는 중입니다. 완료되면 다시 메시지를 받을 수 있습니다.");
   assert.equal(translate("ko", "advancedOnionSetup"), "개발자용 경로 도구");

@@ -11,6 +11,7 @@
       <section class="status-panel" aria-labelledby="app-title">
         <p class="eyebrow" data-i18n="appTagline">Private 1:1 chat</p>
         <h1 id="app-title">Another Dimension Chat</h1>
+        <p id="local-dev-peer-label" class="local-dev-peer-label" hidden></p>
         <details class="system-settings-panel" role="dialog" aria-modal="true" aria-labelledby="app-settings-title">
           <summary id="app-settings-title" data-i18n="systemPanel" data-i18n-title="systemPanel" title="App settings">App settings</summary>
           <button
@@ -341,6 +342,10 @@
               <p id="room-status-summary" class="room-status-summary" data-i18n="roomStatusNoConnection">
                 Not connected. Create or paste an invite code to start.
               </p>
+              <p id="current-invite-code-summary" class="current-invite-code-summary" hidden>
+                <span data-i18n="currentInviteCode">Invite code</span>
+                <strong id="current-invite-code-text"></strong>
+              </p>
             </div>
             <dl class="room-identity-bar" aria-label="Room identity">
               <div>
@@ -373,8 +378,8 @@
                   <span data-i18n="connectionGuideProfileText">Create a code or paste the one from the other device.</span>
                 </li>
                 <li>
-                  <strong data-i18n="connectionGuidePassphrase">2. Create the room</strong>
-                  <span data-i18n="connectionGuidePassphraseText">Use the same code on both devices.</span>
+                  <strong data-i18n="connectionGuidePassphrase">2. Prepare this device</strong>
+                  <span data-i18n="connectionGuidePassphraseText">This device creates its own connection code.</span>
                 </li>
                 <li>
                   <strong data-i18n="connectionGuideSetup">3. Compare the phrase</strong>
@@ -403,7 +408,7 @@
                 x
               </button>
               <p class="connection-modal-copy" data-i18n="connectionModalCopy">
-                Create a code or paste the one you received. Both devices use the same code.
+                Create a code or paste the one you received. This device stores only its own local identity.
               </p>
               <div class="chat-room-controls connection-wizard" aria-label="Connection setup">
                 <section class="connection-wizard-step" data-wizard-step="code">
@@ -425,7 +430,7 @@
                     </button>
                   </div>
                   <p class="retention-note" data-i18n="connectionCodeHint">
-                    Use the same invite code on both devices. The app keeps the local setup out of view.
+                    One person creates an invite code. The other person pastes it here.
                   </p>
                 </section>
                 <div class="connection-wizard-internal" aria-hidden="true">
@@ -439,7 +444,7 @@
               </div>
               <div class="chat-setup-controls connection-setup-actions">
                 <div class="loop-actions setup-primary-actions">
-                  <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Create room</button>
+                    <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Prepare this device</button>
                 </div>
                 <details class="room-secondary-options">
                   <summary data-i18n="roomOptions">Room options</summary>
@@ -585,18 +590,28 @@
                     placeholder="Paste invite code"
                   />
                   <button id="create-room-from-received-code" type="button" class="flow-control is-secondary" data-i18n="createConnection">
-                    Create room
+                    Prepare this device
                   </button>
                 </article>
               </div>
             </section>
             <section class="connection-pending-state" aria-labelledby="connection-pending-title">
+              <ol class="room-setup-progress" aria-label="Room setup progress" data-i18n-aria-label="roomSetupProgress">
+                <li id="room-setup-step-invite" data-i18n="roomSetupStepInvite">Invite code</li>
+                <li id="room-setup-step-setup" data-i18n="roomSetupStepSetup">Device setup</li>
+                <li id="room-setup-step-verify" data-i18n="roomSetupStepVerify">Verify phrase</li>
+                <li id="room-setup-step-route" data-i18n="roomSetupStepRoute">Delivery codes</li>
+                <li id="room-setup-step-chat" data-i18n="roomSetupStepChat">Send message</li>
+              </ol>
               <p class="eyebrow" data-i18n="connectionCode">Connection code</p>
               <h4 id="connection-pending-title" data-i18n="connectionCodeReady">Connection code ready</h4>
               <p data-i18n="connectionPendingHint">
-                  Use this same code on the other device, then create the room.
+                Send this invite code to the other device. Then prepare this device and exchange connection codes.
               </p>
               <p id="pending-connection-device-role" class="device-role-note" aria-live="polite"></p>
+              <p id="connection-exchange-instruction" class="exchange-instruction" aria-live="polite">
+                Copy this invite code to the other device, then prepare this device.
+              </p>
               <textarea
                 id="pending-invite-code-display"
                 class="invite-code-display"
@@ -604,12 +619,66 @@
                 readonly
                 aria-label="Current invite code"
               ></textarea>
+              <label class="loop-label local-invite-setup-label" for="local-invite-setup-code" data-i18n="localInviteSetupCode">
+                My connection code
+              </label>
+              <textarea
+                id="local-invite-setup-code"
+                class="invite-code-display local-invite-setup-code"
+                rows="3"
+                readonly
+                data-i18n-placeholder="localInviteSetupCodeNotReady"
+                placeholder="Create this device connection code first"
+              ></textarea>
+              <label class="loop-label peer-invite-setup-label" for="peer-invite-setup-code" data-i18n="peerInviteSetupCode">
+                Their connection code
+              </label>
+              <textarea
+                id="peer-invite-setup-code"
+                class="invite-code-display peer-invite-setup-code"
+                rows="3"
+                data-i18n-placeholder="peerInviteSetupCodePlaceholder"
+                placeholder="Paste the other device connection code"
+              ></textarea>
+              <label class="loop-label local-invite-session-label" for="local-invite-session-code" data-i18n="localInviteSessionCode">
+                My connection code
+              </label>
+              <textarea
+                id="local-invite-session-code"
+                class="invite-code-display local-invite-session-code"
+                rows="3"
+                readonly
+                data-i18n-placeholder="localInviteSessionCodeNotReady"
+                placeholder="Confirm the verification phrase to create the next connection code"
+              ></textarea>
+              <label class="loop-label peer-invite-session-label" for="peer-invite-session-code" data-i18n="peerInviteSessionCode">
+                Their connection code
+              </label>
+              <textarea
+                id="peer-invite-session-code"
+                class="invite-code-display peer-invite-session-code"
+                rows="3"
+                data-i18n-placeholder="peerInviteSessionCodePlaceholder"
+                placeholder="Paste the other device connection code"
+              ></textarea>
               <div class="connection-pending-actions">
                 <button id="copy-pending-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
                   Copy invite code
                 </button>
                 <button id="create-room-from-invite-code" type="button" data-i18n="createConnection">
-                  Create room
+                  Prepare this device
+                </button>
+                <button id="copy-local-invite-setup-code" type="button" class="flow-control is-secondary" data-i18n="copyLocalInviteSetupCode">
+                  Copy connection code
+                </button>
+                <button id="use-peer-invite-setup-code" type="button" class="flow-control is-secondary" data-i18n="usePeerInviteSetupCode">
+                  Use connection code
+                </button>
+                <button id="copy-local-invite-session-code" type="button" class="flow-control is-secondary" data-i18n="copyLocalInviteSessionCode">
+                  Copy connection code
+                </button>
+                <button id="use-peer-invite-session-code" type="button" class="flow-control is-secondary" data-i18n="usePeerInviteSessionCode">
+                  Use connection code
                 </button>
               </div>
             </section>
@@ -657,7 +726,7 @@
             ></textarea>
             <div class="loop-actions chat-primary-actions">
               <button id="run-production-two-profile-roundtrip-inline" type="button" data-i18n="createConnection">
-                Create room
+                Prepare this device
               </button>
               <button id="check-production-two-profile-session-status-inline" type="button" data-i18n="checkSessions">
                 Check room
@@ -677,11 +746,56 @@
                 <button id="open-private-delivery-settings" type="button" class="flow-control is-secondary" data-i18n="enablePrivateDelivery">
                   Turn on private delivery
                 </button>
+                <button id="prepare-private-route" type="button" data-i18n="preparePrivateRoute">
+                  Prepare private route
+                </button>
                 <button id="start-production-two-profile-onion-receive" type="button" data-i18n="startReceiving">
                   Listen for messages
                 </button>
                 <button id="stop-production-two-profile-onion-receive" type="button" data-i18n="stopReceiving">
                   Stop listening
+                </button>
+              </div>
+            </section>
+            <section id="private-route-exchange" class="private-route-exchange" aria-labelledby="private-route-exchange-title" hidden>
+              <div>
+                <p class="eyebrow" data-i18n="privateRouteCode">Delivery code</p>
+                <h4 id="private-route-exchange-title" data-i18n="privateRouteExchangeTitle">Exchange delivery codes</h4>
+                <p data-i18n="privateRouteExchangeHint">
+                  Share this delivery code with the other device, then paste the delivery code from that device.
+                </p>
+                <p id="private-route-instruction" class="exchange-instruction" aria-live="polite">
+                  Create this device delivery code first.
+                </p>
+              </div>
+              <ol class="private-route-steps" aria-label="Private route steps" data-i18n-aria-label="privateRouteSteps">
+                <li id="private-route-step-local" data-i18n="privateRouteStepLocal">Create my delivery code</li>
+                <li id="private-route-step-copy" data-i18n="privateRouteStepCopy">Send it to the other device</li>
+                <li id="private-route-step-peer" data-i18n="privateRouteStepPeer">Paste their delivery code</li>
+              </ol>
+              <label class="loop-label" for="local-private-route-code" data-i18n="myPrivateRouteCode">My delivery code</label>
+              <textarea
+                id="local-private-route-code"
+                class="route-code-display"
+                rows="2"
+                readonly
+                data-i18n-placeholder="privateRouteCodeNotReady"
+                placeholder="Delivery code not created yet"
+              ></textarea>
+              <label class="loop-label" for="peer-private-route-code" data-i18n="peerPrivateRouteCode">Their delivery code</label>
+              <input
+                id="peer-private-route-code"
+                type="text"
+                autocomplete="off"
+                data-i18n-placeholder="peerPrivateRouteCodePlaceholder"
+                placeholder="Paste their delivery code"
+              />
+              <div class="loop-actions private-route-actions">
+                <button id="copy-private-route-code" type="button" class="flow-control is-secondary" data-i18n="copyPrivateRouteCode">
+                  Copy delivery code
+                </button>
+                <button id="apply-peer-private-route-code" type="button" data-i18n="applyPeerPrivateRouteCode">
+                  Use delivery code
                 </button>
               </div>
             </section>
