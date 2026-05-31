@@ -3,6 +3,34 @@ mod status;
 pub use status::PrototypeStatus;
 use tauri::Manager;
 
+fn production_app_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    #[cfg(debug_assertions)]
+    if let Ok(path) = std::env::var("ANOTHER_DIMENSION_APP_DATA_DIR") {
+        let trimmed = path.trim();
+        if !trimmed.is_empty() {
+            return Ok(std::path::PathBuf::from(trimmed));
+        }
+    }
+
+    app.path()
+        .app_data_dir()
+        .map_err(|_| "failed to resolve app data directory".to_string())
+}
+
+fn production_app_cache_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    #[cfg(debug_assertions)]
+    if let Ok(path) = std::env::var("ANOTHER_DIMENSION_APP_CACHE_DIR") {
+        let trimmed = path.trim();
+        if !trimmed.is_empty() {
+            return Ok(std::path::PathBuf::from(trimmed));
+        }
+    }
+
+    app.path()
+        .app_cache_dir()
+        .map_err(|_| "failed to resolve app cache directory".to_string())
+}
+
 #[derive(Default)]
 struct ProductionOnionClientRuntimeState {
     receive_loop_enabled: std::sync::atomic::AtomicBool,
@@ -1222,10 +1250,10 @@ fn production_message_retention_policy() -> ProductionMessageRetentionPolicyResu
 fn production_onion_backup_exclusion_prepare(
     app: tauri::AppHandle,
 ) -> Result<ProductionOnionBackupExclusionPrepareResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion backup exclusion prepare failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion backup exclusion prepare failed without exposing local path details"
     })?;
     Ok(run_production_onion_backup_exclusion_prepare(
@@ -1238,13 +1266,9 @@ fn production_onion_backup_exclusion_prepare(
 fn production_onion_preflight_check(
     app: tauri::AppHandle,
 ) -> Result<ProductionOnionPreflightCheckResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production onion preflight failed without exposing local path details")?;
-    let app_cache_root = app
-        .path()
-        .app_cache_dir()
+    let app_cache_root = production_app_cache_dir(&app)
         .map_err(|_| "production onion preflight failed without exposing local path details")?;
     Ok(run_production_onion_preflight_check(
         app_data_root,
@@ -1256,13 +1280,9 @@ fn production_onion_preflight_check(
 fn production_onion_bootstrap_preflight_check(
     app: tauri::AppHandle,
 ) -> Result<ProductionOnionBootstrapPreflightCheckResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production onion bootstrap preflight failed without exposing local path details")?;
-    let app_cache_root = app
-        .path()
-        .app_cache_dir()
+    let app_cache_root = production_app_cache_dir(&app)
         .map_err(|_| "production onion bootstrap preflight failed without exposing local path details")?;
     Ok(run_production_onion_bootstrap_preflight_check(
         app_data_root,
@@ -1275,13 +1295,9 @@ async fn production_onion_client_bootstrap_once(
     app: tauri::AppHandle,
     manual_network_permission: bool,
 ) -> Result<ProductionOnionClientBootstrapOnceResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production onion client attempt failed without exposing local path details")?;
-    let app_cache_root = app
-        .path()
-        .app_cache_dir()
+    let app_cache_root = production_app_cache_dir(&app)
         .map_err(|_| "production onion client attempt failed without exposing local path details")?;
     Ok(run_production_onion_client_bootstrap_once(
         app_data_root,
@@ -1304,10 +1320,10 @@ async fn production_onion_persistent_client_start(
     state: tauri::State<'_, ProductionOnionClientRuntimeState>,
     manual_network_permission: bool,
 ) -> Result<ProductionOnionPersistentClientStartResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion persistent client start failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion persistent client start failed without exposing local path details"
     })?;
     Ok(run_production_onion_persistent_client_start(
@@ -1323,10 +1339,10 @@ async fn production_onion_persistent_client_start(
 async fn production_onion_client_attempt_gate_check(
     app: tauri::AppHandle,
 ) -> Result<ProductionOnionClientAttemptGateResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion client attempt gate failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion client attempt gate failed without exposing local path details"
     })?;
     Ok(run_production_onion_client_attempt_gate_check(
@@ -1343,13 +1359,9 @@ fn production_onion_launch_preflight_check(
     profile: String,
     passphrase: String,
 ) -> Result<ProductionOnionLaunchPreflightCheckResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production onion launch preflight failed without exposing local path details")?;
-    let app_cache_root = app
-        .path()
-        .app_cache_dir()
+    let app_cache_root = production_app_cache_dir(&app)
         .map_err(|_| "production onion launch preflight failed without exposing local path details")?;
     let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
     run_production_onion_launch_preflight_check_with_persistent_client(
@@ -1373,13 +1385,9 @@ fn production_onion_service_launch_attempt(
     passphrase: String,
     manual_network_permission: bool,
 ) -> Result<ProductionOnionServiceLaunchAttemptResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production onion service launch failed without exposing local path details")?;
-    let app_cache_root = app
-        .path()
-        .app_cache_dir()
+    let app_cache_root = production_app_cache_dir(&app)
         .map_err(|_| "production onion service launch failed without exposing local path details")?;
     run_production_onion_service_launch_attempt(
         app_data_root,
@@ -1402,10 +1410,10 @@ fn production_onion_descriptor_publication_prepare(
     profile: String,
     passphrase: String,
 ) -> Result<ProductionOnionDescriptorPublicationPrepareResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion descriptor publication prepare failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion descriptor publication prepare failed without exposing local path details"
     })?;
     let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
@@ -1430,10 +1438,10 @@ fn production_onion_descriptor_publication_attempt(
     passphrase: String,
     manual_network_permission: bool,
 ) -> Result<ProductionOnionDescriptorPublicationAttemptResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion descriptor publication attempt failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion descriptor publication attempt failed without exposing local path details"
     })?;
     let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
@@ -1458,10 +1466,10 @@ fn production_onion_inbound_stream_prepare(
     profile: String,
     passphrase: String,
 ) -> Result<ProductionOnionInboundStreamPrepareResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion inbound stream prepare failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion inbound stream prepare failed without exposing local path details"
     })?;
     let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
@@ -1494,10 +1502,10 @@ async fn production_onion_receive_loop_start(
     manual_network_permission: bool,
 ) -> Result<ProductionOnionReceiveLoopStatusResult, String> {
     let profile = sanitize_production_profile(profile)?;
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion receive loop start failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion receive loop start failed without exposing local path details"
     })?;
     let started = run_production_onion_receive_loop_start(
@@ -1535,10 +1543,10 @@ async fn production_onion_inbound_envelope_receive_attempt(
     passphrase: String,
     manual_network_permission: bool,
 ) -> Result<ProductionOnionInboundEnvelopeReceiveAttemptResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion inbound envelope receive attempt failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion inbound envelope receive attempt failed without exposing local path details"
     })?;
     run_production_onion_inbound_envelope_receive_attempt(
@@ -1574,10 +1582,10 @@ fn production_onion_stream_adapter_closeout_prepare(
     passphrase: String,
     rendezvous_endpoint: String,
 ) -> Result<ProductionOnionStreamAdapterCloseoutPrepareResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion stream adapter closeout prepare failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion stream adapter closeout prepare failed without exposing local path details"
     })?;
     let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
@@ -1603,10 +1611,10 @@ fn production_onion_remote_peer_authentication_prepare(
     passphrase: String,
     rendezvous_endpoint: String,
 ) -> Result<ProductionOnionRemotePeerAuthenticationPrepareResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion remote peer authentication prepare failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion remote peer authentication prepare failed without exposing local path details"
     })?;
     let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
@@ -1633,10 +1641,10 @@ fn production_onion_outbound_envelope_send_prepare(
     rendezvous_endpoint: String,
     message_number: u64,
 ) -> Result<ProductionOnionOutboundEnvelopeSendPrepareResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion outbound envelope send prepare failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion outbound envelope send prepare failed without exposing local path details"
     })?;
     let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
@@ -1665,10 +1673,10 @@ async fn production_onion_outbound_envelope_send_attempt(
     message_number: u64,
     manual_network_permission: bool,
 ) -> Result<ProductionOnionOutboundEnvelopeSendAttemptResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion outbound envelope send attempt failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion outbound envelope send attempt failed without exposing local path details"
     })?;
     let mut result = run_production_onion_outbound_envelope_send_attempt(
@@ -1712,10 +1720,10 @@ async fn production_onion_outbound_envelope_send_stored_endpoint_attempt(
     message_number: u64,
     manual_network_permission: bool,
 ) -> Result<ProductionOnionOutboundEnvelopeSendAttemptResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion outbound envelope send stored-endpoint attempt failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion outbound envelope send stored-endpoint attempt failed without exposing local path details"
     })?;
     let persistent_client_ready = run_production_onion_persistent_client_ready(&state)
@@ -1825,10 +1833,10 @@ async fn production_onion_endpoint_update_control_send_stored_endpoint_attempt(
     local_rendezvous_endpoint: String,
     manual_network_permission: bool,
 ) -> Result<ProductionOnionEndpointUpdateControlSendAttemptResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production onion endpoint update send attempt failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion endpoint update send attempt failed without exposing local path details"
     })?;
     let mut result = run_production_onion_endpoint_update_control_send_stored_endpoint_attempt(
@@ -1862,13 +1870,9 @@ fn production_onion_key_record_prepare(
     profile: String,
     passphrase: String,
 ) -> Result<ProductionOnionKeyRecordPrepareResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production onion key record prepare failed without exposing local path details")?;
-    let app_cache_root = app
-        .path()
-        .app_cache_dir()
+    let app_cache_root = production_app_cache_dir(&app)
         .map_err(|_| "production onion key record prepare failed without exposing local path details")?;
     run_production_onion_key_record_prepare(app_data_root, app_cache_root, profile, passphrase)
         .map_err(|_| {
@@ -1883,9 +1887,7 @@ fn production_profile_unlock(
     profile: String,
     passphrase: String,
 ) -> Result<ProductionProfileUnlockResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production profile unlock failed without exposing local path details")?;
     run_production_profile_unlock(app_data_root, profile, passphrase).map_err(|_| {
         "production profile unlock failed without exposing profile, path, or key details"
@@ -1895,9 +1897,7 @@ fn production_profile_unlock(
 
 #[tauri::command]
 fn production_profile_list(app: tauri::AppHandle) -> Result<ProductionProfileListResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production profile list failed without exposing local path details")?;
     run_production_profile_list(app_data_root).map_err(|_| {
         "production profile list failed without exposing local path details".to_string()
@@ -1910,7 +1910,7 @@ fn production_message_retention_preference_get(
     profile: String,
     passphrase: String,
 ) -> Result<ProductionMessageRetentionPreferenceResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production message retention preference load failed without exposing local path details"
     })?;
     run_production_message_retention_preference_get(app_data_root, profile, passphrase).map_err(
@@ -1928,7 +1928,7 @@ fn production_message_retention_preference_set(
     passphrase: String,
     message_ttl_seconds: u64,
 ) -> Result<ProductionMessageRetentionPreferenceResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production message retention preference save failed without exposing local path details"
     })?;
     run_production_message_retention_preference_set(
@@ -1950,7 +1950,7 @@ fn production_pairing_payload_export(
     passphrase: String,
     rendezvous_endpoint: String,
 ) -> Result<ProductionPairingPayloadExportResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production pairing payload export failed without exposing local path details"
     })?;
     run_production_pairing_payload_export(app_data_root, profile, passphrase, rendezvous_endpoint)
@@ -1969,7 +1969,7 @@ fn production_pairing_session_draft_save(
     remote_payload: String,
     safety_confirmed: bool,
 ) -> Result<ProductionPairingSessionDraftResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production pairing session draft save failed without exposing local path details"
     })?;
     run_production_pairing_session_draft_save(
@@ -1993,7 +1993,7 @@ fn production_pairing_session_remote_endpoint_update(
     passphrase: String,
     rendezvous_endpoint: String,
 ) -> Result<ProductionPairingSessionRemoteEndpointUpdateResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production pairing session remote endpoint update failed without exposing local path details"
     })?;
     run_production_pairing_session_remote_endpoint_update(
@@ -2025,9 +2025,7 @@ fn production_session_state_check(
     profile: String,
     passphrase: String,
 ) -> Result<ProductionSessionStateCheckResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production session state check failed without exposing local path details")?;
     run_production_session_state_check(app_data_root, profile, passphrase).map_err(|_| {
         "production session state check failed without exposing profile, path, or key details"
@@ -2042,7 +2040,7 @@ fn production_two_profile_session_status(
     profile_b: String,
     passphrase: String,
 ) -> Result<ProductionTwoProfileSessionStatusResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production two-profile session status failed without exposing local path details"
     })?;
     run_production_two_profile_session_status(app_data_root, profile_a, profile_b, passphrase)
@@ -2053,14 +2051,29 @@ fn production_two_profile_session_status(
 }
 
 #[tauri::command]
+fn production_invite_room_session_status(
+    app: tauri::AppHandle,
+    local_profile: String,
+    peer_profile: String,
+    passphrase: String,
+) -> Result<ProductionTwoProfileSessionStatusResult, String> {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production invite room session status failed without exposing local path details"
+    })?;
+    run_production_two_profile_session_status(app_data_root, local_profile, peer_profile, passphrase)
+        .map_err(|_| {
+            "production invite room session status failed without exposing profile, path, or key details"
+                .to_string()
+        })
+}
+
+#[tauri::command]
 fn production_handshake_init_export(
     app: tauri::AppHandle,
     profile: String,
     passphrase: String,
 ) -> Result<ProductionHandshakePayloadResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production handshake init failed without exposing local path details")?;
     run_production_handshake_init_export(app_data_root, profile, passphrase).map_err(|_| {
         "production handshake init failed without exposing profile, path, or key details"
@@ -2075,9 +2088,7 @@ fn production_handshake_reply_export(
     passphrase: String,
     init_payload: String,
 ) -> Result<ProductionHandshakePayloadResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production handshake reply failed without exposing local path details")?;
     run_production_handshake_reply_export(app_data_root, profile, passphrase, init_payload).map_err(
         |_| {
@@ -2094,9 +2105,7 @@ fn production_handshake_finish_export(
     passphrase: String,
     reply_payload: String,
 ) -> Result<ProductionHandshakePayloadResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production handshake finish failed without exposing local path details")?;
     run_production_handshake_finish_export(app_data_root, profile, passphrase, reply_payload)
         .map_err(|_| {
@@ -2112,9 +2121,7 @@ fn production_handshake_finish_import(
     passphrase: String,
     finish_payload: String,
 ) -> Result<ProductionHandshakeFinishImportResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production handshake import failed without exposing local path details")?;
     run_production_handshake_finish_import(app_data_root, profile, passphrase, finish_payload)
         .map_err(|_| {
@@ -2133,9 +2140,7 @@ fn production_message_envelope_export(
     message: String,
     message_ttl_seconds: u64,
 ) -> Result<ProductionMessageEnvelopeExportResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production message export failed without exposing local path details")?;
     run_production_message_envelope_export(
         app_data_root,
@@ -2161,9 +2166,7 @@ fn production_message_envelope_import(
     envelope_payload: String,
     message_ttl_seconds: u64,
 ) -> Result<ProductionMessageEnvelopeImportResult, String> {
-    let app_data_root = app
-        .path()
-        .app_data_dir()
+    let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production message import failed without exposing local path details")?;
     run_production_message_envelope_import(
         app_data_root,
@@ -2187,7 +2190,7 @@ fn production_endpoint_update_control_envelope_export(
     message_number: u64,
     local_rendezvous_endpoint: String,
 ) -> Result<ProductionEndpointUpdateControlEnvelopeExportResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production endpoint update export failed without exposing local path details"
     })?;
     run_production_endpoint_update_control_envelope_export(
@@ -2210,7 +2213,7 @@ fn production_endpoint_update_control_envelope_import(
     passphrase: String,
     envelope_payload: String,
 ) -> Result<ProductionEndpointUpdateControlEnvelopeImportResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production endpoint update import failed without exposing local path details"
     })?;
     run_production_endpoint_update_control_envelope_import(
@@ -2232,7 +2235,7 @@ fn production_message_received_export(
     passphrase: String,
     message_number: u64,
 ) -> Result<ProductionMessageReceivedExportResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production received message export failed without exposing local path details"
     })?;
     run_production_message_received_export(app_data_root, profile, passphrase, message_number)
@@ -2248,7 +2251,7 @@ fn production_message_transcript_export(
     profile: String,
     passphrase: String,
 ) -> Result<ProductionMessageTranscriptExportResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production message transcript export failed without exposing local path details"
     })?;
     run_production_message_transcript_export(app_data_root, profile, passphrase).map_err(|_| {
@@ -2264,7 +2267,7 @@ fn production_message_outbound_cancel_pending(
     passphrase: String,
     message_number: u64,
 ) -> Result<(), String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production outbound cancel failed without exposing local path details"
     })?;
     run_production_message_outbound_cancel_pending(
@@ -2283,7 +2286,7 @@ fn production_message_outbound_mark_send_failed(
     message_number: u64,
     failure_kind: String,
 ) -> Result<(), String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production outbound failure mark failed without exposing local path details"
     })?;
     run_production_message_outbound_mark_send_failed(
@@ -2365,7 +2368,7 @@ fn production_two_profile_roundtrip(
     message: String,
     message_ttl_seconds: u64,
 ) -> Result<ProductionTwoProfileRoundtripResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production two-profile roundtrip failed without exposing local path details"
     })?;
     run_production_two_profile_roundtrip(
@@ -2389,12 +2392,29 @@ fn production_two_profile_room_setup(
     profile_b: String,
     passphrase: String,
 ) -> Result<ProductionTwoProfileRoomSetupResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production two-profile room setup failed without exposing local path details"
     })?;
     run_production_two_profile_room_setup(app_data_root, profile_a, profile_b, passphrase)
         .map_err(|_| {
             "production two-profile room setup failed without exposing profile, path, or key details"
+                .to_string()
+        })
+}
+
+#[tauri::command]
+fn production_invite_room_setup(
+    app: tauri::AppHandle,
+    local_profile: String,
+    peer_profile: String,
+    passphrase: String,
+) -> Result<ProductionTwoProfileRoomSetupResult, String> {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production invite room setup failed without exposing local path details"
+    })?;
+    run_production_two_profile_room_setup(app_data_root, local_profile, peer_profile, passphrase)
+        .map_err(|_| {
+            "production invite room setup failed without exposing profile, path, or key details"
                 .to_string()
         })
 }
@@ -2408,7 +2428,7 @@ fn production_two_profile_message_roundtrip(
     message: String,
     message_ttl_seconds: u64,
 ) -> Result<ProductionTwoProfileMessageRoundtripResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production stored-session message roundtrip failed without exposing local path details"
     })?;
     run_production_two_profile_message_roundtrip(
@@ -2421,6 +2441,32 @@ fn production_two_profile_message_roundtrip(
     )
     .map_err(|_| {
         "production stored-session message roundtrip failed without exposing profile, path, or key details"
+            .to_string()
+        })
+}
+
+#[tauri::command]
+fn production_invite_room_message_send(
+    app: tauri::AppHandle,
+    local_profile: String,
+    peer_profile: String,
+    passphrase: String,
+    message: String,
+    message_ttl_seconds: u64,
+) -> Result<ProductionTwoProfileMessageRoundtripResult, String> {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production invite room message send failed without exposing local path details"
+    })?;
+    run_production_two_profile_message_roundtrip(
+        app_data_root,
+        local_profile,
+        peer_profile,
+        passphrase,
+        message,
+        message_ttl_seconds,
+    )
+    .map_err(|_| {
+        "production invite room message send failed without exposing profile, path, or key details"
             .to_string()
     })
 }
@@ -2435,10 +2481,10 @@ async fn production_two_profile_real_onion_roundtrip(
     message_ttl_seconds: u64,
     manual_network_permission: bool,
 ) -> Result<ProductionTwoProfileRealOnionRoundtripResult, String> {
-    let app_data_root = app.path().app_data_dir().map_err(|_| {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production real onion roundtrip failed without exposing local path details"
     })?;
-    let app_cache_root = app.path().app_cache_dir().map_err(|_| {
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production real onion roundtrip failed without exposing local path details"
     })?;
     run_production_two_profile_real_onion_roundtrip(
@@ -9452,6 +9498,7 @@ pub fn run() {
             production_pairing_session_draft_save,
             production_pairing_session_remote_endpoint_update,
             production_session_state_check,
+            production_invite_room_session_status,
             production_two_profile_session_status,
             production_handshake_init_export,
             production_handshake_reply_export,
@@ -9466,6 +9513,8 @@ pub fn run() {
             production_message_outbound_cancel_pending,
             production_message_outbound_mark_send_failed,
             production_local_roundtrip,
+            production_invite_room_setup,
+            production_invite_room_message_send,
             production_two_profile_room_setup,
             production_two_profile_roundtrip,
             production_two_profile_real_onion_roundtrip,

@@ -425,6 +425,78 @@ export function productionTwoProfileOutboundNeedsEndpointRefresh(entry) {
   );
 }
 
+export function productionTwoProfileOutboundActionState(entry, input = {}, inviteCodeMode = false) {
+  const sentCopyPresent = Boolean(entry?.statuses?.has?.("sent"));
+  const receivedCopyPresent = Boolean(entry?.statuses?.has?.("received"));
+  const canceled = entry?.outboundDeliveryState === "canceled";
+  const failed = entry?.outboundDeliveryState === "failed";
+  const retryable = entry?.outboundRetryable === true;
+  const showActions = Boolean(
+    sentCopyPresent &&
+      !receivedCopyPresent &&
+      !canceled &&
+      (failed || retryable),
+  );
+  const sameDirection = Boolean(
+    entry?.sender &&
+      entry?.receiver &&
+      entry.sender === input?.profileA &&
+      entry.receiver === input?.profileB,
+  );
+  return {
+    showActions,
+    sameDirection,
+    canApplyDirection: Boolean(showActions && !inviteCodeMode),
+    canRunNow: Boolean(showActions && (sameDirection || !inviteCodeMode)),
+    disabledReason:
+      showActions && inviteCodeMode && !sameDirection
+        ? "Only pending messages sent from this device can be retried or canceled here."
+        : "",
+  };
+}
+
+export function productionTwoProfileOutboundPrimaryAction(entry) {
+  const status = productionTwoProfileOutboundStatusLabel(entry);
+  if (status === "permission off") {
+    return {
+      action: "enable-private-delivery",
+      labelKey: "enablePrivateDelivery",
+      noticeKey: "messageSavedPrivateDeliveryOff",
+      recoveryKey: "sendRecoveryPermissionOff",
+    };
+  }
+  if (productionTwoProfileOutboundNeedsEndpointRefresh(entry)) {
+    return {
+      action: "refresh-and-retry",
+      labelKey: "refreshAndRetry",
+      noticeKey: "chatNoticeRefreshAddress",
+      recoveryKey: "sendRecoveryStaleEndpoint",
+    };
+  }
+  if (status === "peer offline") {
+    return {
+      action: "retry",
+      labelKey: "retrySend",
+      noticeKey: "sendFailedGeneric",
+      recoveryKey: "sendRecoveryPeerOffline",
+    };
+  }
+  if (status === "timeout") {
+    return {
+      action: "retry",
+      labelKey: "retrySend",
+      noticeKey: "sendFailedGeneric",
+      recoveryKey: "sendRecoveryTimeout",
+    };
+  }
+  return {
+    action: "retry",
+    labelKey: "retrySend",
+    noticeKey: "sendFailedGeneric",
+    recoveryKey: "sendRecoveryGeneric",
+  };
+}
+
 export function productionTwoProfileConversationCompare(left, right, direction = "asc") {
   const order = direction === "desc" ? -1 : 1;
   const normalize = (entry) => {
@@ -1277,6 +1349,14 @@ export function chatNoticeForSendReceiveText(value) {
     text.includes("문구가 다르")
   ) {
     return { key: "chatNoticeVerificationMismatch", tone: "danger" };
+  }
+  if (
+    lower.includes("verification confirmed") ||
+    lower.includes("write your first message") ||
+    text.includes("확인이 끝났") ||
+    text.includes("첫 메시지를 작성")
+  ) {
+    return { key: "messageInputUnlocked", tone: "success" };
   }
   if (
     lower.includes("locked") ||

@@ -33,6 +33,8 @@ import {
   productionSessionStateView,
   productionInviteCodeProfiles,
   productionTwoProfilePairFromProfiles,
+  productionTwoProfileOutboundActionState,
+  productionTwoProfileOutboundPrimaryAction,
   productionTwoProfileConversationActionView,
   productionTwoProfileConversationCompare,
   productionTwoProfileCurrentAction,
@@ -279,10 +281,16 @@ const fields = {
   closeAppSettings: document.querySelector("#close-app-settings"),
   openDeveloperTools: document.querySelector("#open-developer-tools"),
   createInviteCode: document.querySelector("#create-invite-code"),
-  startPeerConnection: document.querySelector("#start-peer-connection"),
+  createInviteCodeSettings: document.querySelector("#create-invite-code-settings"),
+  receivedInviteCode: document.querySelector("#received-invite-code"),
+  createRoomFromReceivedCode: document.querySelector("#create-room-from-received-code"),
   copyInviteCode: document.querySelector("#copy-invite-code"),
   copyPendingInviteCode: document.querySelector("#copy-pending-invite-code"),
+  createRoomFromInviteCode: document.querySelector("#create-room-from-invite-code"),
+  pendingInviteCodeDisplay: document.querySelector("#pending-invite-code-display"),
   productionTwoProfileDirection: document.querySelector("#production-two-profile-direction"),
+  connectionDeviceRole: document.querySelector("#connection-device-role"),
+  pendingConnectionDeviceRole: document.querySelector("#pending-connection-device-role"),
   productionTwoProfileStepSession: document.querySelector("#production-two-profile-step-session"),
   productionTwoProfileStepSessionDetail: document.querySelector(
     "#production-two-profile-step-session-detail",
@@ -969,12 +977,13 @@ function setText(node, value) {
   }
 }
 
-function setChatDeliveryNotice(message = "", tone = "neutral") {
+function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
   if (!fields.chatDeliveryNotice) {
     return;
   }
   const text = String(message ?? "").trim();
-  fields.chatDeliveryNotice.textContent = text;
+  const pendingEntry = options.pendingEntry ?? null;
+  const primaryAction = pendingEntry ? productionTwoProfileOutboundPrimaryAction(pendingEntry) : null;
   fields.chatDeliveryNotice.className = [
     "chat-delivery-notice",
     text ? "is-visible" : "",
@@ -982,12 +991,72 @@ function setChatDeliveryNotice(message = "", tone = "neutral") {
   ]
     .filter(Boolean)
     .join(" ");
+  fields.chatDeliveryNotice.replaceChildren();
+  if (!text) {
+    return;
+  }
+  const messageText = document.createElement("span");
+  messageText.textContent = text;
+  fields.chatDeliveryNotice.append(messageText);
+  if (primaryAction) {
+    const actions = document.createElement("span");
+    actions.className = "chat-delivery-notice-actions";
+    const retry = document.createElement("button");
+    retry.type = "button";
+    retry.className = "chat-delivery-notice-action";
+    retry.textContent = t(primaryAction.labelKey);
+    retry.addEventListener("click", () => {
+      if (primaryAction.action === "enable-private-delivery") {
+        selectTwoProfileOutboundActionDirection(pendingEntry, "retry");
+        openPrivateDeliverySettings();
+      } else if (primaryAction.action === "refresh-and-retry") {
+        refreshTwoProfileOutboundEndpointThenRetry(pendingEntry);
+      } else {
+        retryTwoProfileOutboundEntry(pendingEntry);
+      }
+    });
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "chat-delivery-notice-action is-cancel";
+    cancel.textContent = t("cancelSend");
+    cancel.addEventListener("click", () => cancelTwoProfileOutboundEntry(pendingEntry));
+    actions.append(retry, cancel);
+    fields.chatDeliveryNotice.append(actions);
+    return;
+  }
+  if (
+    latestChatDeliveryNoticeKey === "messageSavedPrivateDeliveryOff" ||
+    latestChatDeliveryNoticeKey === "chatNoticeNetworkPermission"
+  ) {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "chat-delivery-notice-action";
+    action.textContent = t("enablePrivateDelivery");
+    action.addEventListener("click", openPrivateDeliverySettings);
+    fields.chatDeliveryNotice.append(action);
+  } else if (latestChatDeliveryNoticeKey === "sendLockedUntilVerified") {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "chat-delivery-notice-action";
+    action.textContent = t("comparePhraseAction");
+    action.addEventListener("click", focusSafetyConfirmation);
+    fields.chatDeliveryNotice.append(action);
+  }
 }
 
 function setChatDeliveryNoticeByKey(key, tone = "neutral") {
   latestChatDeliveryNoticeKey = key || "";
   latestChatDeliveryNoticeTone = tone || "neutral";
   setChatDeliveryNotice(key ? t(key) : "", tone);
+}
+
+function setChatDeliveryNoticeForPendingOutbound(entry) {
+  const primaryAction = productionTwoProfileOutboundPrimaryAction(entry);
+  latestChatDeliveryNoticeKey = primaryAction.noticeKey || "sendFailedGeneric";
+  latestChatDeliveryNoticeTone = primaryAction.action === "enable-private-delivery" ? "muted" : "warning";
+  setChatDeliveryNotice(t(primaryAction.recoveryKey || "sendRecoveryGeneric"), latestChatDeliveryNoticeTone, {
+    pendingEntry: entry,
+  });
 }
 
 function updateChatDeliveryNoticeFromText(value) {
@@ -1127,9 +1196,16 @@ function openChatSettingsPanel(focusTarget = fields.productionTwoProfileB) {
 
 function openPrivateDeliverySettings() {
   openChatSettingsPanel(fields.roomNetworkPermission);
+  document.querySelector(".network-permission-toggle")?.classList.add("is-attention");
+  fields.roomNetworkPermission?.scrollIntoView?.({ block: "center", behavior: "smooth" });
   setProductionTwoProfileState("Private delivery permission needed");
   setText(fields.productionTwoProfileWarning, t("privateDeliveryPermissionRequired"));
   setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning");
+}
+
+function focusSafetyConfirmation() {
+  document.querySelector(".safety-confirm-state")?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  fields.confirmTwoProfileSafety?.focus?.({ preventScroll: true });
 }
 
 function closeChatSettingsPanel() {
@@ -1137,6 +1213,7 @@ function closeChatSettingsPanel() {
   if (panel) {
     panel.open = false;
   }
+  document.querySelector(".network-permission-toggle")?.classList.remove("is-attention");
   document.body.classList.remove("is-chat-settings-open");
   fields.toggleChatSettings?.setAttribute("aria-expanded", "false");
 }
@@ -1309,7 +1386,9 @@ function setProductionTwoProfileReadiness(message, state = "blocked") {
 
 function renderRoomIdentityBar(input, sessionsReady) {
   const hasConnectionCode = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB);
-  const route = hasConnectionCode ? t("roomPeerLinked") : t("roomPeerMissing");
+  const route = hasConnectionCode
+    ? t(connectionDeviceRoleKey() || "roomDeviceReady")
+    : t("roomDeviceMissing");
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   const activeEndpointState = twoProfilePeerEndpointState(input);
   const safetyConfirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
@@ -1335,6 +1414,7 @@ function renderRoomIdentityBar(input, sessionsReady) {
   setText(fields.roomIdentityPair, pairState);
   setText(fields.roomIdentityVerify, verifyState);
   setText(fields.roomIdentityTransport, transportState);
+  renderConnectionDeviceRole();
 }
 
 function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
@@ -1517,6 +1597,39 @@ function generateInviteCode() {
   return chars.join("").replace(/(.{4})(?=.)/g, "$1-").toLowerCase();
 }
 
+function renderCurrentInviteCodeDisplay() {
+  const code = (fields.productionTwoProfileB?.value ?? "").trim();
+  if (fields.pendingInviteCodeDisplay) {
+    fields.pendingInviteCodeDisplay.value = code;
+    fields.pendingInviteCodeDisplay.hidden = !code;
+  }
+  renderConnectionDeviceRole();
+  fields.copyInviteCode?.toggleAttribute("disabled", !code);
+  fields.copyPendingInviteCode?.toggleAttribute("disabled", !code);
+}
+
+function connectionDeviceRoleKey(code = (fields.productionTwoProfileB?.value ?? "").trim()) {
+  if (!code) {
+    return "";
+  }
+  return connectionCodeRoleFor(code) === "inviter" ? "deviceRoleInviter" : "deviceRoleJoiner";
+}
+
+function renderConnectionDeviceRole() {
+  const roleKey = connectionDeviceRoleKey();
+  const text = roleKey ? t(roleKey) : "";
+  setText(fields.connectionDeviceRole, text);
+  setText(fields.pendingConnectionDeviceRole, text);
+}
+
+function renderReceivedInviteCodeActionState() {
+  const code = (fields.receivedInviteCode?.value ?? "").trim();
+  if (fields.createRoomFromReceivedCode) {
+    fields.createRoomFromReceivedCode.disabled = !code;
+    fields.createRoomFromReceivedCode.title = code ? t("roomActionCreate") : t("inviteCodeMissing");
+  }
+}
+
 async function copyCurrentInviteCode(options = {}) {
   const code = (fields.productionTwoProfileB?.value ?? "").trim();
   if (!code) {
@@ -1531,7 +1644,12 @@ async function copyCurrentInviteCode(options = {}) {
     setText(fields.productionTwoProfileWarning, t("inviteCodeCopied"));
     return true;
   } catch {
-    fields.productionTwoProfileB?.select?.();
+    if (fields.pendingInviteCodeDisplay && !fields.pendingInviteCodeDisplay.hidden) {
+      fields.pendingInviteCodeDisplay.focus?.();
+      fields.pendingInviteCodeDisplay.select?.();
+    } else {
+      fields.productionTwoProfileB?.select?.();
+    }
     setProductionTwoProfileState("Invite code selected");
     setText(
       fields.productionTwoProfileWarning,
@@ -1560,7 +1678,30 @@ async function createInviteCode() {
   applyProductionActionState();
   setProductionTwoProfileState("Invite code created");
   setText(fields.productionTwoProfileWarning, t("inviteCodeCreatedHint"));
+  fields.pendingInviteCodeDisplay?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  fields.pendingInviteCodeDisplay?.focus?.({ preventScroll: true });
+  fields.pendingInviteCodeDisplay?.select?.();
   await copyCurrentInviteCode({ quiet: true });
+}
+
+async function createRoomFromReceivedInviteCode() {
+  const code = (fields.receivedInviteCode?.value ?? "").trim();
+  if (!code) {
+    setProductionTwoProfileState("Invite code missing");
+    setText(fields.productionTwoProfileWarning, t("inviteCodeMissing"));
+    fields.receivedInviteCode?.focus?.();
+    return;
+  }
+  if (fields.productionTwoProfileB) {
+    fields.productionTwoProfileB.value = code;
+  }
+  rememberConnectionCodeRole(code, "joiner");
+  syncTwoProfileDerivedConnectionFields();
+  renderProductionTwoProfileDirection(productionTwoProfileInput());
+  applyProductionActionState();
+  setProductionTwoProfileState("Received invite code ready");
+  setText(fields.productionTwoProfileWarning, t("receivedCodeReadyHint"));
+  await runProductionTwoProfileRoundtrip();
 }
 
 function syncTwoProfileDerivedConnectionFields() {
@@ -1584,6 +1725,7 @@ function syncTwoProfileDerivedConnectionFields() {
     latestDerivedConnectionCode = "";
     latestConnectionCodeRole = "";
     syncProductionProfilePassphraseFromTwoProfile();
+    renderCurrentInviteCodeDisplay();
     return;
   }
   const role = connectionCodeRoleFor(code);
@@ -1601,6 +1743,7 @@ function syncTwoProfileDerivedConnectionFields() {
   }
   latestDerivedConnectionCode = code;
   syncProductionProfilePassphraseFromTwoProfile();
+  renderCurrentInviteCodeDisplay();
 }
 
 function twoProfileSessionStatusFingerprint(input = productionTwoProfileInput()) {
@@ -1613,6 +1756,117 @@ function twoProfileAutoResumeFingerprint(input = productionTwoProfileInput()) {
 
 function resetTwoProfileAutoResumeAttempt() {
   latestTwoProfileAutoResumeFingerprint = null;
+}
+
+function inviteRoomCommandInput(input = productionTwoProfileInput()) {
+  return {
+    localProfile: input.profileA,
+    peerProfile: input.profileB,
+    passphrase: input.passphrase,
+  };
+}
+
+function inviteRoomMessageCommandInput(input = productionTwoProfileInput()) {
+  return {
+    ...inviteRoomCommandInput(input),
+    message: input.message,
+    messageTtlSeconds: input.messageTtlSeconds,
+  };
+}
+
+async function invokeInviteRoomSessionStatus(input = productionTwoProfileInput()) {
+  return invoke("production_invite_room_session_status", inviteRoomCommandInput(input));
+}
+
+async function invokeInviteRoomSetup(input = productionTwoProfileInput()) {
+  return invoke("production_invite_room_setup", inviteRoomCommandInput(input));
+}
+
+async function invokeInviteRoomMessageSend(input = productionTwoProfileInput()) {
+  return invoke("production_invite_room_message_send", inviteRoomMessageCommandInput(input));
+}
+
+async function saveInviteRoomOutboundMessage(input = productionTwoProfileInput()) {
+  const { profileA, profileB, passphrase, message, messageTtlSeconds } = input;
+  await saveProductionMessageRetentionPreference(profileA, passphrase, messageTtlSeconds);
+  const result = await invoke("production_message_envelope_export", {
+    profile: profileA,
+    passphrase,
+    messageNumber: 0,
+    autoMessageNumber: true,
+    message,
+    messageTtlSeconds,
+  });
+  const messageNumber = Number.parseInt(result.selected_message_number, 10);
+  const messageText = message;
+  latestProductionTwoProfileSuccess = {
+    profileA,
+    profileB,
+    messageLength: messageText.length,
+    messageNumber,
+    fingerprint: twoProfileInputFingerprint({ profileA, profileB, passphrase, message: messageText }),
+  };
+  if (fields.productionMessageEnvelope) {
+    fields.productionMessageEnvelope.value = result.envelope_payload;
+  }
+  if (fields.productionMessageNumber) {
+    fields.productionMessageNumber.value = String(messageNumber);
+  }
+  storeMessageEnvelopeSlot(profileA, result.envelope_payload, {
+    receiver: profileB,
+    messageNumber,
+    message: messageText,
+  });
+  appendProductionTwoProfileConversationStatus("sent", profileA, profileB, messageNumber, messageText, {
+    ttlSeconds: result.message_ttl_seconds,
+    outboundDeliveryState: "pending",
+    outboundRetryable: true,
+  });
+  selectTwoProfileConversationMessage(profileA, profileB, messageNumber, messageText);
+  if (fields.productionTwoProfileMessage) {
+    fields.productionTwoProfileMessage.value = "";
+    renderProductionTwoProfileDirection(productionTwoProfileInput());
+  }
+  setText(fields.productionTwoProfileSession, t("messageSavedForDelivery"));
+  setText(fields.productionTwoProfileMessageState, t("messageWaitingForDelivery"));
+  setText(fields.productionTwoProfileBoundary, productionMessageEnvelopeExportView(result).boundary);
+  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+  return { result, messageNumber, messageText };
+}
+
+async function completeInviteRoomOutboundDelivery(input, messageNumber) {
+  const { profileA, profileB, passphrase } = input;
+  if (manualNetworkPermissionEnabled()) {
+    const onionInput = { profileA, profileB, passphrase };
+    if (latestTwoProfileOutboundOnionMessage(onionInput)) {
+      setText(fields.productionTwoProfileWarning, t("onionDeliveryStarting"));
+      await sendProductionTwoProfileLatestOnionEnvelope();
+      return;
+    }
+    const peerEndpointState = twoProfilePeerEndpointState(onionInput);
+    const failureKind = peerEndpointState.stale
+      ? "stored remote endpoint refresh required"
+      : "peer-endpoint-missing";
+    await markTwoProfileOutboundSendFailed(
+      profileA,
+      passphrase,
+      messageNumber,
+      failureKind,
+    );
+    setText(fields.productionTwoProfileWarning, t("onionDeliveryNeedsPeerAddress"));
+    setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning");
+    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+    return;
+  }
+  await markTwoProfileOutboundSendFailed(
+    profileA,
+    passphrase,
+    messageNumber,
+    "ManualNetworkPermissionMissing",
+  );
+  setText(fields.productionTwoProfileWarning, t("messageSavedPrivateDeliveryOff"));
+  setChatDeliveryNoticeByKey("messageSavedPrivateDeliveryOff", "muted");
+  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
 }
 
 function latestTwoProfileSessionStatusForCurrentInput(input = productionTwoProfileInput()) {
@@ -2282,6 +2536,12 @@ function renderProductionTwoProfileConversationList() {
     const inboundOnly = !entry.statuses.has("sent") && entry.statuses.has("received");
     const outboundPending = twoProfileConversationOutboundRetryable(entry);
     const outboundCanceled = entry.outboundDeliveryState === "canceled";
+    const outboundActionState = productionTwoProfileOutboundActionState(
+      entry,
+      productionTwoProfileInput(),
+      twoProfileInviteCodeModeActive(),
+    );
+    const outboundNeedsAction = outboundActionState.showActions;
     const replyable = twoProfileConversationReplyable(entry);
     const reviewable = twoProfileConversationPendingReviewable(entry);
     const selectable = replyable || reviewable;
@@ -2383,6 +2643,7 @@ function renderProductionTwoProfileConversationList() {
     body.className = "transcript-body";
     body.textContent = entry.message;
 
+    const primaryAction = outboundNeedsAction ? productionTwoProfileOutboundPrimaryAction(entry) : null;
     const deliveryNote = document.createElement("span");
     deliveryNote.className = `transcript-delivery-note ${status.className.replace("transcript-status", "").trim()}`;
     deliveryNote.textContent = delivered
@@ -2392,6 +2653,9 @@ function renderProductionTwoProfileConversationList() {
         : outboundCanceled
           ? t("canceled")
           : localizedOutboundStatus(outboundStatusLabel);
+    const recoveryNote = document.createElement("span");
+    recoveryNote.className = "transcript-recovery-note";
+    recoveryNote.textContent = primaryAction?.recoveryKey ? t(primaryAction.recoveryKey) : "";
 
     const footer = document.createElement("span");
     footer.className = "transcript-footer";
@@ -2401,19 +2665,23 @@ function renderProductionTwoProfileConversationList() {
     if (deliveryNote.textContent) {
       item.append(deliveryNote);
     }
+    if (recoveryNote.textContent) {
+      item.append(recoveryNote);
+    }
     item.append(footer, retention, action, details);
-    if (!delivered && outboundPending && entry.sender === productionTwoProfileInput().profileA) {
+    if (outboundNeedsAction) {
       const actions = document.createElement("span");
       actions.className = "transcript-row-actions";
       const retry = document.createElement("button");
       retry.type = "button";
       retry.className = "transcript-retry";
-      retry.textContent = productionTwoProfileOutboundNeedsEndpointRefresh(entry)
-        ? t("refreshAndRetry")
-        : t("retrySend");
+      retry.textContent = t(primaryAction.labelKey);
       retry.addEventListener("click", (event) => {
         event.stopPropagation();
-        if (productionTwoProfileOutboundNeedsEndpointRefresh(entry)) {
+        if (primaryAction.action === "enable-private-delivery") {
+          selectTwoProfileOutboundActionDirection(entry, "retry");
+          openPrivateDeliverySettings();
+        } else if (primaryAction.action === "refresh-and-retry") {
           refreshTwoProfileOutboundEndpointThenRetry(entry);
         } else {
           retryTwoProfileOutboundEntry(entry);
@@ -3133,9 +3401,9 @@ function twoProfileComposePrompt(input = productionTwoProfileInput()) {
   return currentLanguage === "ko" ? "메시지 작성" : "Write a message";
 }
 
-function twoProfileRecoveryMessage(action, error, input = productionTwoProfileInput()) {
+function twoProfileRecoveryMessage(action, error, input = productionTwoProfileInput(), options = {}) {
   const detail = String(error ?? "").trim();
-  const suffix = detail ? ` ${t("boundaryDetailPrefix")}: ${detail}` : "";
+  const suffix = options.includeDetail && detail ? ` ${t("boundaryDetailPrefix")}: ${detail}` : "";
   if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
     return t("recoveryNeedProfiles");
   }
@@ -4680,6 +4948,16 @@ function applyProductionActionState() {
     "has-conversation-action",
     Boolean(pendingConversation || replySelection.canSelect),
   );
+  const retryableOutboundConversation = latestTwoProfileRetryableOutboundEntry(twoProfile);
+  if (!busy && retryableOutboundConversation) {
+    setChatDeliveryNoticeForPendingOutbound(retryableOutboundConversation);
+  } else if (!busy && twoProfileSessionsReady && !twoProfileSafetyConfirmed) {
+    setChatDeliveryNoticeByKey("sendLockedUntilVerified", "warning");
+  } else if (!busy && twoProfileSafetyConfirmed && latestChatDeliveryNoticeKey === "sendLockedUntilVerified") {
+    setChatDeliveryNoticeByKey("", "neutral");
+  } else if (!busy && !pendingConversation && latestChatDeliveryNoticeKey === "messageSavedPrivateDeliveryOff") {
+    setChatDeliveryNoticeByKey("", "neutral");
+  }
   setReplyLatestTwoProfileLabel(replySelection.label);
   setReviewPendingTwoProfileLabel(
     chatReviewButtonLabel(
@@ -4734,9 +5012,29 @@ function applyProductionActionState() {
         : "Create or paste an invite code first.",
     twoProfileCurrentAction === "full-setup",
   );
+  setActionButtonState(
+    fields.createRoomFromInviteCode,
+    !availability.runTwoProfileRoundtrip,
+    busy
+      ? "Wait for the active production action."
+      : !hasMessageRetentionPolicy
+        ? retentionPolicyBlocker
+      : twoProfileNeedsSessionCheck
+        ? "Check recovered room before creating it again."
+      : twoProfileSessionsReady
+        ? "Room is ready; send a message instead."
+      : twoProfileSessionsIncomplete
+        ? twoProfileSessionRebuildMessage(twoProfile)
+        : "Create or paste an invite code first.",
+    twoProfileCurrentAction === "full-setup",
+  );
   setText(
     fields.runProductionTwoProfileRoundtripInline,
     twoProfileNeedsSessionCheck ? t("roomActionResume") : t("roomActionCreate"),
+  );
+  setText(
+    fields.createRoomFromInviteCode,
+    t("roomActionCreate"),
   );
   setActionButtonState(
     fields.runProductionTwoProfileMessageRoundtrip,
@@ -7444,7 +7742,52 @@ function outboundSendFailureKindFromError(error) {
   return "peer offline";
 }
 
+function selectTwoProfileOutboundActionDirection(entry, action) {
+  if (!entry || !fields.productionTwoProfileA || !fields.productionTwoProfileB) {
+    return false;
+  }
+  const input = productionTwoProfileInput();
+  if (entry.sender === input.profileA && entry.receiver === input.profileB) {
+    setSelectedTwoProfileConversationEntry(entry);
+    return true;
+  }
+  if (twoProfileInviteCodeModeActive()) {
+    setSelectedTwoProfileConversationEntry(entry);
+    setProductionTwoProfileState(
+      action === "cancel" ? "Cancel send needs this device" : "Retry send needs this device",
+    );
+    setText(
+      fields.productionTwoProfileWarning,
+      currentLanguage === "ko"
+        ? "이 기기에서 보낸 대기 메시지만 여기서 다시 보내거나 취소할 수 있습니다."
+        : "Only pending messages sent from this device can be retried or canceled here.",
+    );
+    return false;
+  }
+  setSelectedTwoProfileConversationEntry(entry);
+  fields.productionTwoProfileA.value = entry.sender;
+  fields.productionTwoProfileB.value = entry.receiver;
+  if (fields.productionTwoProfileMessage) {
+    fields.productionTwoProfileMessage.value = "";
+  }
+  const nextInput = productionTwoProfileInput();
+  renderProductionTwoProfileDirection(nextInput);
+  renderProductionTwoProfileMemory(nextInput);
+  setProductionTwoProfileState(action === "cancel" ? "Cancel send selected" : "Retry send selected");
+  setText(
+    fields.productionTwoProfileWarning,
+    currentLanguage === "ko"
+      ? `메시지 #${entry.messageNumber} 방향을 선택했습니다: ${entry.sender} -> ${entry.receiver}.`
+      : `Selected message #${entry.messageNumber}: ${entry.sender} -> ${entry.receiver}.`,
+  );
+  applyProductionActionState();
+  return true;
+}
+
 async function retryTwoProfileOutboundEntry(entry) {
+  if (!selectTwoProfileOutboundActionDirection(entry, "retry")) {
+    return;
+  }
   const input = productionTwoProfileInput();
   if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
     setProductionTwoProfileState("Retry send needs direction");
@@ -7480,6 +7823,9 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
 }
 
 async function cancelTwoProfileOutboundEntry(entry) {
+  if (!selectTwoProfileOutboundActionDirection(entry, "cancel")) {
+    return;
+  }
   const input = productionTwoProfileInput();
   if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
     setProductionTwoProfileState("Cancel send needs direction");
@@ -7903,11 +8249,7 @@ async function runProductionTwoProfileRoundtrip() {
     fields.runProductionTwoProfileRoundtrip.disabled = true;
   }
   try {
-    const result = await invoke("production_two_profile_room_setup", {
-      profileA,
-      profileB,
-      passphrase,
-    });
+    const result = await invokeInviteRoomSetup({ profileA, profileB, passphrase });
     let retentionPreferenceWarning = null;
     try {
       await saveProductionMessageRetentionPreference(profileA, passphrase, messageTtlSeconds);
@@ -7989,82 +8331,16 @@ async function runProductionTwoProfileMessageRoundtrip() {
   productionBusyAction = "two-profile-message-roundtrip";
   applyProductionActionState();
   try {
-    await saveProductionMessageRetentionPreference(profileA, passphrase, messageTtlSeconds);
-    const result = await invoke("production_message_envelope_export", {
-      profile: profileA,
+    const { result, messageNumber } = await saveInviteRoomOutboundMessage({
+      profileA,
+      profileB,
       passphrase,
-      messageNumber: 0,
-      autoMessageNumber: true,
       message,
       messageTtlSeconds,
     });
-    const messageNumber = Number.parseInt(result.selected_message_number, 10);
-    const messageText = message;
     setProductionTwoProfileState("Message saved");
     setText(fields.productionTwoProfileWarning, result.warning);
-    latestProductionTwoProfileSuccess = {
-      profileA,
-      profileB,
-      messageLength: messageText.length,
-      messageNumber,
-      fingerprint: twoProfileInputFingerprint({ profileA, profileB, passphrase, message: messageText }),
-    };
-    if (fields.productionMessageEnvelope) {
-      fields.productionMessageEnvelope.value = result.envelope_payload;
-    }
-    if (fields.productionMessageNumber) {
-      fields.productionMessageNumber.value = String(messageNumber);
-    }
-    storeMessageEnvelopeSlot(profileA, result.envelope_payload, {
-      receiver: profileB,
-      messageNumber,
-      message: messageText,
-    });
-    appendProductionTwoProfileConversationStatus("sent", profileA, profileB, messageNumber, messageText, {
-      ttlSeconds: result.message_ttl_seconds,
-      outboundDeliveryState: "pending",
-      outboundRetryable: true,
-    });
-    selectTwoProfileConversationMessage(profileA, profileB, messageNumber, messageText);
-    if (fields.productionTwoProfileMessage) {
-      fields.productionTwoProfileMessage.value = "";
-      renderProductionTwoProfileDirection(productionTwoProfileInput());
-    }
-    setText(fields.productionTwoProfileSession, t("messageSavedForDelivery"));
-    setText(fields.productionTwoProfileMessageState, t("messageWaitingForDelivery"));
-    setText(fields.productionTwoProfileBoundary, productionMessageEnvelopeExportView(result).boundary);
-    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
-    if (manualNetworkPermissionEnabled()) {
-      const onionInput = { profileA, profileB, passphrase };
-      if (latestTwoProfileOutboundOnionMessage(onionInput)) {
-        setText(fields.productionTwoProfileWarning, t("onionDeliveryStarting"));
-        await sendProductionTwoProfileLatestOnionEnvelope();
-      } else {
-        const peerEndpointState = twoProfilePeerEndpointState(onionInput);
-        const failureKind = peerEndpointState.stale
-          ? "stored remote endpoint refresh required"
-          : "peer-endpoint-missing";
-        await markTwoProfileOutboundSendFailed(
-          profileA,
-          passphrase,
-          messageNumber,
-          failureKind,
-        );
-        setText(fields.productionTwoProfileWarning, t("onionDeliveryNeedsPeerAddress"));
-        setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning");
-        await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
-      }
-    } else {
-      await markTwoProfileOutboundSendFailed(
-        profileA,
-        passphrase,
-        messageNumber,
-        "ManualNetworkPermissionMissing",
-      );
-      setText(fields.productionTwoProfileWarning, t("messageSavedPrivateDeliveryOff"));
-      setChatDeliveryNoticeByKey("messageSavedPrivateDeliveryOff", "muted");
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
-    }
+    await completeInviteRoomOutboundDelivery({ profileA, profileB, passphrase }, messageNumber);
     await loadProductionProfileList();
   } catch (error) {
     setProductionTwoProfileState("Message send failed");
@@ -8335,11 +8611,7 @@ async function refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase) {
   }
 
   try {
-    const result = await invoke("production_two_profile_session_status", {
-      profileA: input.profileA,
-      profileB: input.profileB,
-      passphrase: input.passphrase,
-    });
+    const result = await invokeInviteRoomSessionStatus(input);
     rememberTwoProfileSessionStatus(input, result);
     renderProductionTwoProfileSessionStatusResult(result);
     if (result.both_ready_for_message_envelope) {
@@ -8665,11 +8937,7 @@ async function checkProductionTwoProfileSessionStatus() {
     fields.checkProductionTwoProfileSessionStatusInline.disabled = true;
   }
   try {
-    const result = await invoke("production_two_profile_session_status", {
-      profileA,
-      profileB,
-      passphrase,
-    });
+    const result = await invokeInviteRoomSessionStatus({ profileA, profileB, passphrase });
     rememberTwoProfileSessionStatus({ profileA, profileB }, result);
     renderProductionTwoProfileSessionStatusResult(result);
     setText(fields.productionPairingWarning, result.warning);
@@ -8717,11 +8985,7 @@ async function checkProductionTwoProfileSessionStatus() {
 }
 
 async function refreshTwoProfileSessionStatusAfterTranscript(input) {
-  const result = await invoke("production_two_profile_session_status", {
-    profileA: input.profileA,
-    profileB: input.profileB,
-    passphrase: input.passphrase,
-  });
+  const result = await invokeInviteRoomSessionStatus(input);
   rememberTwoProfileSessionStatus(input, result);
   renderProductionTwoProfileSessionStatusResult(result);
   setText(fields.productionPairingWarning, result.warning);
@@ -9659,14 +9923,27 @@ if (fields.openDeveloperTools) {
   });
 }
 
-if (fields.startPeerConnection) {
-  fields.startPeerConnection.addEventListener("click", () => {
-    openChatSettingsPanel(fields.productionTwoProfileB);
+if (fields.createRoomFromReceivedCode) {
+  fields.createRoomFromReceivedCode.addEventListener("click", createRoomFromReceivedInviteCode);
+}
+
+if (fields.receivedInviteCode) {
+  fields.receivedInviteCode.addEventListener("input", renderReceivedInviteCodeActionState);
+  fields.receivedInviteCode.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !fields.createRoomFromReceivedCode?.disabled) {
+      event.preventDefault();
+      createRoomFromReceivedInviteCode();
+    }
   });
+  renderReceivedInviteCodeActionState();
 }
 
 if (fields.createInviteCode) {
   fields.createInviteCode.addEventListener("click", createInviteCode);
+}
+
+if (fields.createInviteCodeSettings) {
+  fields.createInviteCodeSettings.addEventListener("click", createInviteCode);
 }
 
 if (fields.copyInviteCode) {
@@ -9679,6 +9956,10 @@ if (fields.copyPendingInviteCode) {
   fields.copyPendingInviteCode.addEventListener("click", () => {
     copyCurrentInviteCode();
   });
+}
+
+if (fields.createRoomFromInviteCode) {
+  fields.createRoomFromInviteCode.addEventListener("click", runProductionTwoProfileRoundtrip);
 }
 
 if (fields.checkOnionPreflight) {
@@ -9823,6 +10104,9 @@ for (const input of [fields.manualOnionNetworkPermission, fields.roomNetworkPerm
   if (input) {
     input.addEventListener("change", () => {
       setManualNetworkPermission(input.checked);
+      if (input === fields.roomNetworkPermission && input.checked) {
+        document.querySelector(".network-permission-toggle")?.classList.remove("is-attention");
+      }
       renderRoomIdentityBar(productionTwoProfileInput(), twoProfileSessionsReadyForInput(productionTwoProfileInput()));
       applyProductionActionState();
     });
