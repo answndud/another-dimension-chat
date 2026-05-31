@@ -8919,10 +8919,12 @@ async function retryTwoProfileOutboundEntry(entry) {
   if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
     setProductionTwoProfileState("Retry send needs direction");
     setText(fields.productionTwoProfileWarning, t("sendRetryWrongDirection"));
+    setChatDeliveryNoticeByKey("sendRetryWrongDirection", "warning");
     return;
   }
   setProductionTwoProfileState("Retry send running");
   setText(fields.productionTwoProfileWarning, t("sendRetrying"));
+  setChatDeliveryNoticeByKey("sendRetrying", "progress");
   latestProductionTwoProfileSuccess = {
     profileA: entry.sender,
     profileB: entry.receiver,
@@ -8980,9 +8982,13 @@ async function cancelTwoProfileOutboundEntry(entry) {
   if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
     setProductionTwoProfileState("Cancel send needs direction");
     setText(fields.productionTwoProfileWarning, t("sendCancelWrongDirection"));
+    setChatDeliveryNoticeByKey("sendCancelWrongDirection", "warning");
     return;
   }
   productionBusyAction = "two-profile-outbound-cancel";
+  setProductionTwoProfileState("Cancel send running");
+  setText(fields.productionTwoProfileWarning, t("sendCanceling"));
+  setChatDeliveryNoticeByKey("sendCanceling", "progress");
   applyProductionActionState();
   try {
     await invoke("production_message_outbound_cancel_pending", {
@@ -8992,10 +8998,12 @@ async function cancelTwoProfileOutboundEntry(entry) {
     });
     setProductionTwoProfileState("Pending send canceled");
     setText(fields.productionTwoProfileWarning, t("sendCanceledNotice"));
+    setChatDeliveryNoticeByKey("sendCanceledNotice", "success");
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
   } catch (error) {
     setProductionTwoProfileState("Cancel send failed");
-    setText(fields.productionTwoProfileWarning, `Cancel failed without exposing local data. ${String(error)}`);
+    setText(fields.productionTwoProfileWarning, `${t("sendCancelFailed")} ${String(error)}`);
+    setChatDeliveryNoticeByKey("sendCancelFailed", "warning");
   } finally {
     productionBusyAction = null;
     applyProductionActionState();
