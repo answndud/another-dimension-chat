@@ -2974,6 +2974,26 @@ function hidePrivateRouteExchangeIfReady(input = productionTwoProfileInput()) {
   renderPrivateRouteExchangeState(input);
 }
 
+async function ensurePrivateDeliveryRuntimeReady(input = productionTwoProfileInput()) {
+  const manualNetworkPermission = manualNetworkPermissionEnabled();
+  if (!manualNetworkPermission) {
+    throw new Error("ManualNetworkPermissionMissing");
+  }
+  const backup = await invoke("production_onion_backup_exclusion_prepare");
+  const key = await invoke("production_onion_key_record_prepare", {
+    profile: input.profileA,
+    passphrase: input.passphrase,
+  });
+  const status = await invoke("production_onion_persistent_client_status");
+  const client = status.persistent_client_ready
+    ? status
+    : await invoke("production_onion_persistent_client_start", { manualNetworkPermission });
+  if (!client.persistent_client_ready) {
+    throw new Error(client.next_blocker || "PersistentClientNotReady");
+  }
+  return { backup, key, client };
+}
+
 function storedPeerEndpointPresentForInput(input = productionTwoProfileInput()) {
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   if (!sessionStatus || !input.profileA) {
@@ -8040,12 +8060,13 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
   setText(fields.productionTwoProfileWarning, t("privateRouteCodeCreating"));
   setChatDeliveryNoticeByKey("privateRouteCodeCreating", "progress");
   setText(fields.productionTwoProfileProfiles, localizedTwoProfileUserViewText("Room is ready."));
-  setText(fields.productionTwoProfileSession, localizedTwoProfileUserViewText("Creating this device delivery code."));
+  setText(fields.productionTwoProfileSession, localizedTwoProfileUserViewText("Preparing private delivery, then creating this device delivery code."));
   setText(fields.productionTwoProfileMessageState, localizedTwoProfileUserViewText("No message transport attempted."));
   setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Local delivery code creation requires explicit network permission."));
   applyProductionActionState();
 
   try {
+    const runtime = await ensurePrivateDeliveryRuntimeReady(input);
     const result = await invoke("production_onion_service_launch_attempt", {
       profile: input.profileA,
       passphrase: input.passphrase,
@@ -8062,6 +8083,10 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
     setProductionTwoProfileState("Delivery code ready");
     setText(fields.productionTwoProfileWarning, t("privateRouteCodeReady"));
     setChatDeliveryNoticeByKey("privateRouteCodeReady", "muted");
+    setText(
+      fields.productionTwoProfileBoundary,
+      `backup=${runtime.backup.backup_exclusion_verified} key=${runtime.key.key_material_ready} persistent_client=${runtime.client.persistent_client_ready} endpoint=${result.onion_endpoint_returned} next=${result.next_blocker}`,
+    );
     focusLocalPrivateRouteCodeDisplay();
     return true;
   } catch (error) {
