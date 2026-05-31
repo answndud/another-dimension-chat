@@ -55,6 +55,18 @@ test("invite code creation is available from empty state and settings", () => {
   assert.match(mainJs, /fields\.createInviteCodeSettings\.addEventListener\("click",\s*createInviteCode\)/);
 });
 
+test("empty connection state stays minimal and action-first", () => {
+  assert.match(indexHtml, /class="chat-empty-state"/);
+  assert.match(indexHtml, /id="create-invite-code"/);
+  assert.match(indexHtml, /id="received-invite-code"/);
+  assert.match(indexHtml, /id="create-room-from-received-code"/);
+  assert.match(stylesCss, /\.chat-empty-state[\s\S]{0,180}background:\s*transparent/);
+  assert.match(stylesCss, /\.connection-choice-card span,[\s\S]{0,80}display:\s*none/);
+  assert.match(stylesCss, /\.connection-choice-card \.received-code-label[\s\S]{0,120}clip:\s*rect\(0 0 0 0\)/);
+  assert.match(i18nJs, /peerExchangeHint: "Create a code, or paste one\."/);
+  assert.match(i18nJs, /peerExchangeHint: "코드를 만들거나, 받은 코드를 붙여넣으세요\."/);
+});
+
 test("created invite code has a visible read-only display before room creation", () => {
   assert.match(indexHtml, /id="pending-invite-code-display"/);
   assert.match(indexHtml, /id="current-invite-code-summary"/);
