@@ -98,6 +98,8 @@ test("connection-code ready state prepares only this device as the next action",
   assert.match(indexHtml, /id="room-setup-step-verify"/);
   assert.match(indexHtml, /id="room-setup-step-route"/);
   assert.match(indexHtml, /id="room-setup-step-chat"/);
+  assert.match(indexHtml, /id="connection-step-counter"/);
+  assert.match(indexHtml, /data-i18n="createMyConnectionCode"/);
   assert.match(indexHtml, /id="local-invite-setup-code"/);
   assert.match(indexHtml, /id="copy-local-invite-setup-code"/);
   assert.match(indexHtml, /id="peer-invite-setup-code"/);
@@ -108,6 +110,7 @@ test("connection-code ready state prepares only this device as the next action",
   assert.match(indexHtml, /id="use-peer-invite-session-code"/);
   assert.match(indexHtml, /class="connection-pending-actions"/);
   assert.match(mainJs, /createRoomFromInviteCode:\s*document\.querySelector\("#create-room-from-invite-code"\)/);
+  assert.match(mainJs, /connectionStepCounter:\s*document\.querySelector\("#connection-step-counter"\)/);
   assert.match(mainJs, /roomSetupStepInvite:\s*document\.querySelector\("#room-setup-step-invite"\)/);
   assert.match(mainJs, /function renderRoomSetupProgress/);
   assert.match(mainJs, /renderRoomSetupProgress\(twoProfile, twoProfileSessionsReady\)/);
@@ -139,8 +142,13 @@ test("connection-code ready state prepares only this device as the next action",
   assert.match(mainJs, /setActionButtonState\(\s*fields\.usePeerInviteSetupCode/);
   assert.match(mainJs, /setActionButtonState\(\s*fields\.copyLocalInviteSessionCode/);
   assert.match(mainJs, /setActionButtonState\(\s*fields\.usePeerInviteSessionCode/);
-  assert.match(mainJs, /setText\(\s*fields\.createRoomFromInviteCode,\s*t\("prepareThisDevice"\)/);
+  assert.match(mainJs, /setText\(\s*fields\.createRoomFromInviteCode,\s*t\("createMyConnectionCode"\)/);
+  assert.match(mainJs, /setText\(fields\.connectionStepCounter, t\(stepKey\)\)/);
+  assert.match(i18nJs, /createMyConnectionCode/);
+  assert.match(i18nJs, /exchangeStepInvite/);
   assert.match(stylesCss, /#create-room-from-invite-code/);
+  assert.match(stylesCss, /\.connection-step-counter/);
+  assert.match(stylesCss, /p:not\(\.eyebrow, \.connection-step-counter\)/);
   assert.match(stylesCss, /\.room-setup-progress[\s\S]{0,80}display:\s*none/);
   assert.match(stylesCss, /body\.has-connection-code:not\(\.has-ready-session\) \.connection-pending-state > h4/);
   assert.match(stylesCss, /#connection-exchange-instruction[\s\S]{0,160}display:\s*block/);
