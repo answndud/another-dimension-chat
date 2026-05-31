@@ -183,7 +183,7 @@ test("invite flow copy does not regress to create-room or same-code wording", ()
   assert.doesNotMatch(mainJs, /Use the same invite code|same code/);
   assert.doesNotMatch(mainJs, /Ready to create room|Create the room|create the room|채팅방을 만든|채팅방 만들기 가능/);
   assert.doesNotMatch(mainJs, /setText\(\s*fields\.runProductionTwoProfileRoundtrip,\s*t\("runTwoProfileRoundtrip"\)/);
-  assert.match(indexHtml, /Prepare this device/);
+  assert.match(indexHtml, /Continue on this device/);
   assert.match(mainJs, /setText\(\s*fields\.runProductionTwoProfileRoundtrip,\s*twoProfileNeedsSessionCheck \? t\("roomActionResume"\) : t\("prepareThisDevice"\)/);
   assert.equal(indexHtml.includes("same code"), false);
 });
@@ -204,8 +204,8 @@ test("default invite setup copy stays user-facing and avoids developer terms", (
     `${indexHtml}\n${i18nJs}`,
     /setup code|session code|route code|설정 코드|세션 코드|경로 코드|전송 경로 코드/i,
   );
-  assert.match(i18nJs, /My connection code/);
-  assert.match(i18nJs, /Their connection code/);
+  assert.match(i18nJs, /My device code/);
+  assert.match(i18nJs, /Their device code/);
   assert.match(i18nJs, /My delivery code/);
   assert.match(i18nJs, /상대 코드/);
   assert.match(i18nJs, /상대 전송 코드/);
@@ -303,8 +303,8 @@ test("invite setup highlights only the next user action", () => {
   assert.match(stylesCss, /\.connection-pending-actions button:disabled/);
   assert.match(stylesCss, /\.exchange-instruction/);
   assert.match(stylesCss, /\.connection-pending-state > h4/);
-  assert.match(i18nJs, /이 연결 코드 보내기/);
-  assert.match(i18nJs, /상대 연결 코드가 입력됐습니다/);
+  assert.match(i18nJs, /내 기기 코드 보내기/);
+  assert.match(i18nJs, /상대 기기 코드가 입력됐습니다/);
 });
 
 test("invite setup flow stays isolated and waits for explicit verification", () => {

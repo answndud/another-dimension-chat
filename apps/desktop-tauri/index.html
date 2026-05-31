@@ -371,8 +371,8 @@
                   <span data-i18n="connectionGuideProfileText">Create a code or paste the one from the other device.</span>
                 </li>
                 <li>
-                  <strong data-i18n="connectionGuidePassphrase">2. Prepare this device</strong>
-                  <span data-i18n="connectionGuidePassphraseText">This device creates its own connection code.</span>
+                  <strong data-i18n="connectionGuidePassphrase">2. Continue on this device</strong>
+                  <span data-i18n="connectionGuidePassphraseText">This device creates its own device code.</span>
                 </li>
                 <li>
                   <strong data-i18n="connectionGuideSetup">3. Compare the phrase</strong>
@@ -405,14 +405,14 @@
               </p>
               <div class="chat-room-controls connection-wizard" aria-label="Connection setup">
                 <section class="connection-wizard-step" data-wizard-step="code">
-                  <p class="wizard-step-label" data-i18n="wizardStepCode">Step 1 / 2 - Connection code</p>
-                  <label class="loop-label" for="production-two-profile-b" data-i18n="connectionCode">Connection code</label>
+                  <p class="wizard-step-label" data-i18n="wizardStepCode">Step 1 / 2 - Invite code</p>
+                  <label class="loop-label" for="production-two-profile-b" data-i18n="connectionCode">Invite code</label>
                   <input
                     id="production-two-profile-b"
                     type="text"
                     autocomplete="off"
                     data-i18n-placeholder="connectionCodePlaceholder"
-                    placeholder="Paste connection code"
+                    placeholder="Paste invite code"
                   />
                   <div class="invite-code-actions">
                     <button id="create-invite-code-settings" type="button" data-i18n="createInviteCode">
@@ -437,7 +437,7 @@
               </div>
               <div class="chat-setup-controls connection-setup-actions">
                 <div class="loop-actions setup-primary-actions">
-                    <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Prepare this device</button>
+                    <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Continue on this device</button>
                 </div>
                 <details class="room-secondary-options">
                   <summary data-i18n="roomOptions">Room options</summary>
@@ -602,7 +602,7 @@
                     placeholder="Paste invite code"
                   />
                   <button id="create-room-from-received-code" type="button" class="flow-control is-secondary" data-i18n="createConnection">
-                    Prepare this device
+                    Continue on this device
                   </button>
                 </article>
               </div>
@@ -615,17 +615,17 @@
                 <li id="room-setup-step-route" data-i18n="roomSetupStepRoute">Delivery codes</li>
                 <li id="room-setup-step-chat" data-i18n="roomSetupStepChat">Send message</li>
               </ol>
-              <p class="eyebrow" data-i18n="connectionCode">Connection code</p>
+              <p class="eyebrow" data-i18n="connectionCode">Invite code</p>
               <p id="connection-step-counter" class="connection-step-counter" aria-live="polite">
                 Step 1 / 4
               </p>
-              <h4 id="connection-pending-title" data-i18n="connectionCodeReady">Connection code ready</h4>
+              <h4 id="connection-pending-title" data-i18n="connectionCodeReady">Invite code ready</h4>
               <p data-i18n="connectionPendingHint">
-                Send this invite code to the other device. Then prepare this device and exchange connection codes.
+                Send this invite code to the other device. Then continue on this device.
               </p>
               <p id="pending-connection-device-role" class="device-role-note" aria-live="polite"></p>
               <p id="connection-exchange-instruction" class="exchange-instruction" aria-live="polite">
-                Copy this invite code to the other device, then prepare this device.
+                Copy this invite code to the other device, then continue on this device.
               </p>
               <div class="connection-pending-actions">
                 <section class="invite-exchange-stage invite-stage-invite" aria-labelledby="connection-pending-title">
@@ -641,13 +641,13 @@
                       Copy invite code
                     </button>
                     <button id="create-room-from-invite-code" type="button" data-i18n="createMyConnectionCode">
-                      Create my code
+                      Continue on this device
                     </button>
                   </div>
                 </section>
                 <section class="invite-exchange-stage invite-stage-setup" aria-labelledby="connection-pending-title">
                   <label class="loop-label local-invite-setup-label" for="local-invite-setup-code" data-i18n="localInviteSetupCode">
-                    My code
+                    My device code
                   </label>
                   <textarea
                     id="local-invite-setup-code"
@@ -655,20 +655,20 @@
                     rows="3"
                     readonly
                     data-i18n-placeholder="localInviteSetupCodeNotReady"
-                    placeholder="Create my code first"
+                    placeholder="Continue on this device first"
                   ></textarea>
                   <button id="copy-local-invite-setup-code" type="button" class="flow-control is-secondary" data-i18n="copyLocalInviteSetupCode">
-                    Copy my code
+                    Copy my device code
                   </button>
                   <label class="loop-label peer-invite-setup-label" for="peer-invite-setup-code" data-i18n="peerInviteSetupCode">
-                    Their code
+                    Their device code
                   </label>
                   <textarea
                     id="peer-invite-setup-code"
                     class="invite-code-display peer-invite-setup-code"
                     rows="3"
                     data-i18n-placeholder="peerInviteSetupCodePlaceholder"
-                    placeholder="Paste their code"
+                    placeholder="Paste their device code"
                   ></textarea>
                   <button id="use-peer-invite-setup-code" type="button" class="flow-control is-secondary" data-i18n="usePeerInviteSetupCode">
                     Use their code
@@ -676,7 +676,7 @@
                 </section>
                 <section class="invite-exchange-stage invite-stage-session" aria-labelledby="connection-pending-title">
                   <label class="loop-label local-invite-session-label" for="local-invite-session-code" data-i18n="localInviteSessionCode">
-                    My code
+                    My confirmation code
                   </label>
                   <textarea
                     id="local-invite-session-code"
@@ -684,23 +684,23 @@
                     rows="3"
                     readonly
                     data-i18n-placeholder="localInviteSessionCodeNotReady"
-                    placeholder="Confirm the phrase to create my next code"
+                    placeholder="Confirm the phrase to create my confirmation code"
                   ></textarea>
                   <button id="copy-local-invite-session-code" type="button" class="flow-control is-secondary" data-i18n="copyLocalInviteSessionCode">
-                    Copy my code
+                    Copy my confirmation code
                   </button>
                   <label class="loop-label peer-invite-session-label" for="peer-invite-session-code" data-i18n="peerInviteSessionCode">
-                    Their code
+                    Their confirmation code
                   </label>
                   <textarea
                     id="peer-invite-session-code"
                     class="invite-code-display peer-invite-session-code"
                     rows="3"
                     data-i18n-placeholder="peerInviteSessionCodePlaceholder"
-                    placeholder="Paste their code"
+                    placeholder="Paste their confirmation code"
                   ></textarea>
                   <button id="use-peer-invite-session-code" type="button" class="flow-control is-secondary" data-i18n="usePeerInviteSessionCode">
-                    Use their code
+                    Open room
                   </button>
                 </section>
               </div>
@@ -755,7 +755,7 @@
             ></textarea>
             <div class="loop-actions chat-primary-actions">
               <button id="run-production-two-profile-roundtrip-inline" type="button" data-i18n="createConnection">
-                Prepare this device
+                Continue on this device
               </button>
               <button id="check-production-two-profile-session-status-inline" type="button" data-i18n="checkSessions">
                 Check room
