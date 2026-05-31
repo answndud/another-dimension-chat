@@ -462,7 +462,7 @@ require_contains "$APP_DIR/src/styles.css" 'body.is-chat-active .message-transcr
 require_contains "$APP_DIR/src/styles.css" 'body.is-chat-active .chat-transcript-toolbar.has-pending-action #review-pending-two-profile-message'
 require_contains "$APP_DIR/src/main.js" 'cancel.textContent = t("cancelSend")'
 require_contains "$APP_DIR/src/i18n.js" 'cancelSend: "전송 취소"'
-require_contains "$APP_DIR/src/i18n.js" 'Allow network delivery only when I press send or listen'
+require_contains "$APP_DIR/src/i18n.js" 'Allow private delivery when I press send or listen'
 require_contains "$APP_DIR/src/i18n.js" 'Allow private delivery before sending or listening'
 require_contains "$APP_DIR/src/styles.css" '.network-permission-toggle'
 require_contains "$APP_DIR/src/main.js" 'localizedSendAttemptMessage'

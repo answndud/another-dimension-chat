@@ -28,13 +28,6 @@
         <div class="theme-control" aria-label="Display mode" data-i18n-aria-label="displayMode">
           <span data-i18n="displayMode">Display mode</span>
           <button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>
-          <label class="language-control" for="language-selector">
-            <span data-i18n="language">Language</span>
-            <select id="language-selector" autocomplete="off">
-              <option value="en">English</option>
-              <option value="ko">한국어</option>
-            </select>
-          </label>
           <button id="open-developer-tools" type="button" class="flow-control is-secondary" data-i18n="openDeveloperTools">
             Developer details
           </button>
@@ -448,6 +441,16 @@
                 </div>
                 <details class="room-secondary-options">
                   <summary data-i18n="roomOptions">Room options</summary>
+                  <section class="connection-wizard-step" data-wizard-step="language">
+                    <p class="wizard-step-label" data-i18n="language">Language</p>
+                    <label class="language-control" for="language-selector">
+                      <span data-i18n="language">Language</span>
+                      <select id="language-selector" autocomplete="off">
+                        <option value="en">English</option>
+                        <option value="ko">한국어</option>
+                      </select>
+                    </label>
+                  </section>
                   <section class="connection-wizard-step" data-wizard-step="retention">
                     <p class="wizard-step-label" data-i18n="wizardStepRetention">Message lifetime</p>
                     <label class="loop-label" for="production-two-profile-message-ttl" data-i18n="retention">Retention</label>
