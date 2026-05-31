@@ -287,10 +287,12 @@ const fields = {
   receivedInviteCode: document.querySelector("#received-invite-code"),
   createRoomFromReceivedCode: document.querySelector("#create-room-from-received-code"),
   copyInviteCode: document.querySelector("#copy-invite-code"),
+  copyCurrentInviteCodeSummary: document.querySelector("#copy-current-invite-code-summary"),
   copyPendingInviteCode: document.querySelector("#copy-pending-invite-code"),
   createRoomFromInviteCode: document.querySelector("#create-room-from-invite-code"),
   connectionPendingTitle: document.querySelector("#connection-pending-title"),
   pendingInviteCodeDisplay: document.querySelector("#pending-invite-code-display"),
+  settingsInviteCodeDisplay: document.querySelector("#settings-invite-code-display"),
   connectionExchangeInstruction: document.querySelector("#connection-exchange-instruction"),
   localInviteSetupCode: document.querySelector("#local-invite-setup-code"),
   copyLocalInviteSetupCode: document.querySelector("#copy-local-invite-setup-code"),
@@ -1945,6 +1947,10 @@ function renderCurrentInviteCodeDisplay() {
     fields.pendingInviteCodeDisplay.value = code;
     fields.pendingInviteCodeDisplay.hidden = !code;
   }
+  if (fields.settingsInviteCodeDisplay) {
+    fields.settingsInviteCodeDisplay.value = code;
+    fields.settingsInviteCodeDisplay.hidden = !code;
+  }
   if (fields.createdInviteCodeDisplay) {
     fields.createdInviteCodeDisplay.value = code && connectionCodeRoleFor(code) === "inviter" ? code : "";
     fields.createdInviteCodeDisplay.hidden = !fields.createdInviteCodeDisplay.value;
@@ -1957,6 +1963,7 @@ function renderCurrentInviteCodeDisplay() {
   }
   renderConnectionDeviceRole();
   fields.copyInviteCode?.toggleAttribute("disabled", !code);
+  fields.copyCurrentInviteCodeSummary?.toggleAttribute("disabled", !code);
   fields.copyPendingInviteCode?.toggleAttribute("disabled", !code);
   fields.copyLocalInviteSetupCode?.toggleAttribute("disabled", !latestLocalInviteSetupCode);
   fields.copyLocalInviteSessionCode?.toggleAttribute("disabled", !latestLocalInviteSessionCode);
@@ -11341,6 +11348,12 @@ if (fields.createInviteCodeSettings) {
 
 if (fields.copyInviteCode) {
   fields.copyInviteCode.addEventListener("click", () => {
+    copyCurrentInviteCode();
+  });
+}
+
+if (fields.copyCurrentInviteCodeSummary) {
+  fields.copyCurrentInviteCodeSummary.addEventListener("click", () => {
     copyCurrentInviteCode();
   });
 }

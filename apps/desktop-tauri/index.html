@@ -338,6 +338,14 @@
               <p id="current-invite-code-summary" class="current-invite-code-summary" hidden>
                 <span data-i18n="currentInviteCode">Invite code</span>
                 <strong id="current-invite-code-text"></strong>
+                <button
+                  id="copy-current-invite-code-summary"
+                  type="button"
+                  class="inline-copy-button"
+                  data-i18n="copy"
+                >
+                  Copy
+                </button>
               </p>
             </div>
             <dl class="room-identity-bar" aria-label="Room identity">
@@ -422,6 +430,18 @@
                       Copy code
                     </button>
                   </div>
+                  <label class="loop-label settings-invite-code-label" for="settings-invite-code-display" data-i18n="currentInviteCode">
+                    Invite code
+                  </label>
+                  <textarea
+                    id="settings-invite-code-display"
+                    class="invite-code-display settings-invite-code-display"
+                    rows="2"
+                    readonly
+                    hidden
+                    data-i18n-placeholder="inviteCodeNotCreated"
+                    placeholder="Create or paste an invite code first"
+                  ></textarea>
                   <p class="retention-note" data-i18n="connectionCodeHint">
                     One person creates an invite code. The other person pastes it here.
                   </p>

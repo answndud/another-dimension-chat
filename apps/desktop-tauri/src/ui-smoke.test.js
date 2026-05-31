@@ -73,29 +73,39 @@ test("empty connection state stays minimal and action-first", () => {
 
 test("created invite code has a visible read-only display before room creation", () => {
   assert.match(indexHtml, /id="created-invite-code-display"/);
+  assert.match(indexHtml, /id="settings-invite-code-display"/);
   assert.match(indexHtml, /id="pending-invite-code-display"/);
   assert.match(indexHtml, /id="current-invite-code-summary"/);
   assert.match(indexHtml, /id="current-invite-code-text"/);
+  assert.match(indexHtml, /id="copy-current-invite-code-summary"/);
   assert.match(indexHtml, /class="invite-code-display"/);
   assert.match(indexHtml, /readonly/);
   assert.match(mainJs, /pendingInviteCodeDisplay:\s*document\.querySelector\("#pending-invite-code-display"\)/);
+  assert.match(mainJs, /settingsInviteCodeDisplay:\s*document\.querySelector\("#settings-invite-code-display"\)/);
   assert.match(mainJs, /createdInviteCodeDisplay:\s*document\.querySelector\("#created-invite-code-display"\)/);
   assert.match(mainJs, /currentInviteCodeSummary:\s*document\.querySelector\("#current-invite-code-summary"\)/);
   assert.match(mainJs, /currentInviteCodeText:\s*document\.querySelector\("#current-invite-code-text"\)/);
+  assert.match(mainJs, /copyCurrentInviteCodeSummary:\s*document\.querySelector\("#copy-current-invite-code-summary"\)/);
   assert.match(mainJs, /function renderCurrentInviteCodeDisplay\(\)/);
   assert.match(mainJs, /fields\.createdInviteCodeDisplay\.value = code && connectionCodeRoleFor\(code\) === "inviter" \? code : ""/);
   assert.match(mainJs, /fields\.pendingInviteCodeDisplay\.value = code/);
+  assert.match(mainJs, /fields\.settingsInviteCodeDisplay\.value = code/);
   assert.match(mainJs, /fields\.currentInviteCodeText\.textContent = code/);
+  assert.match(mainJs, /fields\.copyCurrentInviteCodeSummary\?\.toggleAttribute\("disabled", !code\)/);
   assert.match(mainJs, /fields\.pendingInviteCodeDisplay\?\.scrollIntoView/);
   assert.match(mainJs, /fields\.pendingInviteCodeDisplay\?\.select/);
+  assert.match(mainJs, /fields\.copyCurrentInviteCodeSummary\.addEventListener\("click"/);
   assert.match(mainJs, /function focusCurrentInviteCodeDisplay\(\)/);
   assert.match(mainJs, /setChatDeliveryNoticeByKey\("inviteCodeReadyNotice", "success"\)/);
   assert.match(mainJs, /setChatDeliveryNoticeByKey\("receivedInviteCodeReadyNotice", "success"\)/);
   assert.match(mainJs, /closeChatSettingsPanel\(\)/);
   assert.match(stylesCss, /\.connection-pending-state \.invite-code-display/);
   assert.match(stylesCss, /\.connection-choice-card \.created-invite-code-display/);
+  assert.match(stylesCss, /\.chat-settings-panel \.settings-invite-code-display:not\(\[hidden\]\)/);
   assert.match(stylesCss, /body\.has-connection-code:not\(\.has-ready-session\) \.connection-pending-state/);
   assert.match(stylesCss, /\.current-invite-code-summary/);
+  assert.match(stylesCss, /\.current-invite-code-summary \.inline-copy-button/);
+  assert.match(stylesCss, /\.current-invite-code-summary strong[\s\S]{0,140}overflow-wrap:\s*anywhere/);
 });
 
 test("connection-code ready state prepares only this device as the next action", () => {
