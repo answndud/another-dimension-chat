@@ -3930,14 +3930,17 @@ function showRetryableTwoProfileOutboundNotice(entry) {
   if (!entry) {
     return;
   }
+  renderSendRecoveryPanel(entry);
   setChatDeliveryNoticeForPendingOutbound(entry);
 }
 
 function showLatestRetryableOutboundNotice(input = productionTwoProfileInput()) {
   const entry = latestTwoProfileRetryableOutboundEntry(input);
   if (!entry) {
+    renderSendRecoveryPanel(null);
     return false;
   }
+  renderSendRecoveryPanel(entry);
   setChatDeliveryNoticeForPendingOutbound(entry);
   return true;
 }

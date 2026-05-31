@@ -1982,7 +1982,26 @@ body.is-chat-active .message-transcript .transcript-recovery-summary.is-address-
 }
 
 body.is-chat-active .send-recovery-panel {
+  order: 5;
+  display: grid;
+  width: min(640px, 100%);
+  margin: 2px 0 4px auto;
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--panel-border));
+  border-left-color: color-mix(in srgb, var(--danger) 72%, var(--panel-border));
+  border-radius: 4px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--panel) 92%, var(--bg));
+}
+
+body.is-chat-active .send-recovery-panel[hidden] {
   display: none;
+}
+
+body.is-chat-active .send-recovery-panel.is-permission-needed,
+body.is-chat-active .send-recovery-panel.is-route-needed,
+body.is-chat-active .send-recovery-panel.is-address-stale {
+  border-color: color-mix(in srgb, var(--accent-cyan) 26%, var(--panel-border));
+  border-left-color: color-mix(in srgb, var(--accent-cyan) 64%, var(--panel-border));
 }
 
 .send-recovery-title,
