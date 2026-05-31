@@ -1759,7 +1759,8 @@ function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsRe
   const retryableOutbound = latestTwoProfileRetryableOutboundEntry(input);
   const pendingConversation = latestTwoProfilePendingConversationEntry();
   const endpointState = twoProfilePeerEndpointState(input);
-  const needsPrivateRoute = Boolean(sessionsReady && safetyConfirmed && !endpointState.ready);
+  const needsDeliveryPermission = Boolean(sessionsReady && safetyConfirmed && !manualNetworkPermissionEnabled());
+  const needsPrivateRoute = Boolean(sessionsReady && safetyConfirmed && manualNetworkPermissionEnabled() && !endpointState.ready);
   const receiving = productionTwoProfileOnionReceiveMode.enabled;
   const state = retryableOutbound
     ? "pending"
@@ -1771,6 +1772,8 @@ function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsRe
         ? "code-ready"
     : !safetyConfirmed
       ? "verify"
+    : needsDeliveryPermission
+      ? "delivery-off"
     : needsPrivateRoute
       ? "route-needed"
       : "ready";
@@ -1780,6 +1783,7 @@ function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsRe
     disconnected: "roomStatusShortNoConnection",
     "code-ready": "roomStatusShortCodeReady",
     verify: "roomStatusShortVerify",
+    "delivery-off": "roomStatusShortDeliveryOff",
     "route-needed": "roomStatusShortRouteNeeded",
     ready: "roomStatusShortReady",
   };
@@ -1790,6 +1794,7 @@ function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsRe
     "is-disconnected",
     "is-code-ready",
     "is-verify",
+    "is-delivery-off",
     "is-route-needed",
     "is-ready",
     "is-pending",

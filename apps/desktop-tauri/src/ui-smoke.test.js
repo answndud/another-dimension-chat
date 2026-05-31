@@ -88,6 +88,8 @@ test("verification and private delivery stay explicit user actions", () => {
 test("message composer routes send, receive, retry, and route preparation through explicit helpers", () => {
   assert.match(mainJs, /function twoProfileComposerPrimaryIntent/);
   assert.match(mainJs, /async function runProductionTwoProfileComposerPrimaryAction/);
+  assert.match(mainJs, /needsDeliveryPermission/);
+  assert.match(mainJs, /roomStatusShortDeliveryOff/);
   assert.match(mainJs, /startProductionTwoProfileOnionReceive/);
   assert.match(mainJs, /preparePrivateDeliveryRoute/);
   assert.match(mainJs, /saveInviteRoomOutboundMessage/);
