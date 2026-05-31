@@ -3694,7 +3694,7 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pendi
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state .peer-invite-setup-code,
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state .local-invite-session-code,
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state .peer-invite-session-code {
-  min-height: 86px;
+  min-height: 58px;
 }
 
 body.is-chat-empty.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)
@@ -3887,6 +3887,34 @@ body.is-chat-empty.has-connection-code.has-local-invite-setup-code:not(.has-read
   background: transparent;
   color: var(--text-secondary);
   font-size: 11px;
+}
+
+body.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)
+  .connection-pending-state
+  .local-invite-setup-label,
+body.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)
+  .connection-pending-state
+  .peer-invite-setup-label,
+body.has-connection-code.has-local-invite-session-code:not(.has-ready-session)
+  .connection-pending-state
+  .local-invite-session-label,
+body.has-connection-code.has-invite-session-stage:not(.has-ready-session)
+  .connection-pending-state
+  .peer-invite-session-label {
+  position: absolute;
+  display: block;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+body.has-connection-code:not(.has-ready-session) .connection-pending-state .local-invite-setup-code,
+body.has-connection-code:not(.has-ready-session) .connection-pending-state .peer-invite-setup-code,
+body.has-connection-code:not(.has-ready-session) .connection-pending-state .local-invite-session-code,
+body.has-connection-code:not(.has-ready-session) .connection-pending-state .peer-invite-session-code {
+  min-height: 58px;
 }
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state #create-room-from-invite-code {
