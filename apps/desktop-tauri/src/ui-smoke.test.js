@@ -100,12 +100,15 @@ test("failed sends stay recoverable from the chat flow", () => {
   assert.match(mainJs, /function runTwoProfileOutboundPrimaryAction/);
   assert.match(mainJs, /function cancelTwoProfileOutboundEntry/);
   assert.match(mainJs, /setChatDeliveryNoticeForPendingOutbound/);
+  assert.match(mainJs, /chat-delivery-notice-chip/);
+  assert.match(mainJs, /t\(primaryAction \? "sendRecoveryPanelTitle" : "roomStatusLabel"\)/);
   assert.match(mainJs, /productionTwoProfileOutboundPrimaryAction\(entry\)/);
   assert.match(functionBody(mainJs, "runTwoProfileOutboundPrimaryAction"), /refreshTwoProfileOutboundEndpointThenRetry/);
   assert.match(functionBody(mainJs, "runTwoProfileOutboundPrimaryAction"), /retryTwoProfileOutboundEntry/);
   assert.match(functionBody(mainJs, "cancelTwoProfileOutboundEntry"), /sendCanceledNotice/);
   assert.match(i18nJs, /sendRecoveryPanelTitle: "message not sent"/);
   assert.match(i18nJs, /sendRecoveryPanelTitle: "메시지가 전송되지 않음"/);
+  assert.match(stylesCss, /\.chat-delivery-notice-chip/);
 });
 
 test("local peer development uses isolated app data roots", () => {

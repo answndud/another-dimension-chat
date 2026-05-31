@@ -1910,6 +1910,26 @@ body.is-chat-active .message-transcript .transcript-recovery-summary.is-address-
   user-select: all;
 }
 
+.chat-delivery-notice-chip {
+  grid-column: 2 / -1;
+  width: fit-content;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 58%, transparent);
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: color-mix(in srgb, var(--bg) 46%, transparent);
+  color: var(--text-secondary);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+  font-weight: 780;
+  line-height: 1.2;
+  text-transform: lowercase;
+}
+
+.chat-delivery-notice-chip.is-next {
+  border-color: color-mix(in srgb, var(--accent-cyan) 42%, var(--panel-border));
+  color: var(--accent-cyan);
+}
+
 .chat-delivery-notice-action {
   width: auto;
   min-width: max-content;
