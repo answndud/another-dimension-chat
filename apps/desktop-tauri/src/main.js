@@ -1051,6 +1051,12 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
   messageText.className = "chat-delivery-notice-text";
   messageText.textContent = text;
   fields.chatDeliveryNotice.append(statusLabel, messageText);
+  if (isCurrentInviteCodeNoticeKey() && (fields.productionTwoProfileB?.value ?? "").trim()) {
+    const codeText = document.createElement("code");
+    codeText.className = "chat-delivery-notice-code";
+    codeText.textContent = (fields.productionTwoProfileB?.value ?? "").trim();
+    fields.chatDeliveryNotice.append(codeText);
+  }
   if (primaryAction) {
     const actions = document.createElement("span");
     actions.className = "chat-delivery-notice-actions";
@@ -2038,7 +2044,11 @@ async function createRoomFromReceivedInviteCode() {
   setText(fields.productionTwoProfileWarning, t("receivedCodeReadyHint"));
   setChatDeliveryNoticeByKey("receivedInviteCodeReadyNotice", "success");
   closeChatSettingsPanel();
-  focusCurrentInviteCodeDisplay();
+  if (fields.createRoomFromInviteCode && !fields.createRoomFromInviteCode.disabled) {
+    fields.createRoomFromInviteCode.focus();
+  } else {
+    focusCurrentInviteCodeDisplay();
+  }
 }
 
 async function prepareInviteRoomLocalSetup() {
