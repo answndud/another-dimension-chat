@@ -2742,11 +2742,39 @@ function focusLocalPrivateRouteCodeDisplay() {
   fields.localPrivateRouteCode?.select?.();
 }
 
+function focusPeerPrivateRouteCodeInput() {
+  fields.peerPrivateRouteCode?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  fields.peerPrivateRouteCode?.focus?.({ preventScroll: true });
+}
+
 function showPrivateRouteExchange() {
   if (fields.privateRouteExchange) {
     fields.privateRouteExchange.hidden = false;
+    fields.privateRouteExchange.scrollIntoView?.({ block: "center", behavior: "smooth" });
   }
   document.body.classList.add("shows-private-route-exchange");
+}
+
+function focusPrivateRouteNextAction(input = productionTwoProfileInput()) {
+  showPrivateRouteExchange();
+  if (!manualNetworkPermissionEnabled()) {
+    openPrivateDeliverySettings();
+    return "permission";
+  }
+  if (twoProfilePeerEndpointState(input).ready) {
+    fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
+    return "ready";
+  }
+  if (!latestLocalPrivateRouteCode) {
+    fields.preparePrivateRoute?.focus?.({ preventScroll: true });
+    return "create-local";
+  }
+  if (!(fields.peerPrivateRouteCode?.value ?? "").trim()) {
+    focusPeerPrivateRouteCodeInput();
+    return "paste-peer";
+  }
+  fields.applyPeerPrivateRouteCode?.focus?.({ preventScroll: true });
+  return "apply-peer";
 }
 
 function renderPrivateRouteExchangeState(input = productionTwoProfileInput()) {
@@ -7936,6 +7964,17 @@ async function preparePrivateDeliveryRoute() {
   }
 
   if (twoProfileInviteCodeModeActive()) {
+    const nextRouteAction = focusPrivateRouteNextAction(input);
+    if (nextRouteAction === "paste-peer") {
+      setProductionTwoProfileState("Peer delivery code needed");
+      setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
+      setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted");
+      return;
+    }
+    if (nextRouteAction === "apply-peer") {
+      await applyPeerPrivateRouteCode();
+      return;
+    }
     await prepareInviteRoomPrivateRouteExchange(input);
     return;
   }
@@ -8903,12 +8942,23 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
     return;
   }
   if (twoProfileInviteCodeModeActive()) {
-    showPrivateRouteExchange();
     if (!twoProfilePeerEndpointState(input).ready) {
+      const nextRouteAction = focusPrivateRouteNextAction(input);
+      if (nextRouteAction === "create-local") {
+        await prepareInviteRoomPrivateRouteExchange(input);
+        await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+        return;
+      }
+      if (nextRouteAction === "apply-peer") {
+        const applied = await applyPeerPrivateRouteCode();
+        if (applied && twoProfilePeerEndpointState(productionTwoProfileInput()).ready) {
+          await retryTwoProfileOutboundEntry(entry);
+        }
+        return;
+      }
       setProductionTwoProfileState("Peer delivery code needed");
       setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
-      await prepareInviteRoomPrivateRouteExchange(input);
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+      setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted");
       return;
     }
     await retryTwoProfileOutboundEntry(entry);
