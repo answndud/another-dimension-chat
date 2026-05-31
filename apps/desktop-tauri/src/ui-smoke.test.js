@@ -655,8 +655,10 @@ test("chat header keeps only the compact user status visible", () => {
 test("private route preparation is a first-class chat action", () => {
   assert.match(indexHtml, /id="prepare-private-route"/);
   assert.match(indexHtml, /data-i18n="preparePrivateRoute"/);
-  assert.match(i18nJs, /Prepare delivery code/);
-  assert.match(i18nJs, /전송 코드 준비/);
+  assert.match(i18nJs, /Set up delivery/);
+  assert.match(i18nJs, /전송 준비/);
+  assert.match(i18nJs, /Receive messages/);
+  assert.match(i18nJs, /메시지 받기/);
   assert.match(indexHtml, /id="private-route-step-local"/);
   assert.match(indexHtml, /id="private-route-step-copy"/);
   assert.match(indexHtml, /id="private-route-step-peer"/);
