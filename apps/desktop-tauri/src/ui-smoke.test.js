@@ -335,10 +335,16 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(mainJs, /setChatDeliveryNoticeByKey\("chatNoticeNetworkPermission", "warning"\)/);
   assert.match(mainJs, /peerEndpointState\.stale \? "chatNoticeRefreshAddress" : "privateDeliveryRouteNeeded"/);
   assert.match(mainJs, /retryTwoProfileOutboundEntry\(entry\)/);
+  assert.match(functionBody(mainJs, "retryTwoProfileOutboundEntry"), /setChatDeliveryNoticeByKey\("sendRetrying", "progress"\)/);
   assert.match(mainJs, /item\.append\(actions\)/);
   assert.match(mainJs, /setChatDeliveryNoticeForPendingOutbound/);
   assert.match(mainJs, /options\.pendingEntry/);
   assert.match(mainJs, /cancelTwoProfileOutboundEntry\(pendingEntry\)/);
+  assert.match(functionBody(mainJs, "cancelTwoProfileOutboundEntry"), /setChatDeliveryNoticeByKey\("sendCanceling", "progress"\)/);
+  assert.match(functionBody(mainJs, "cancelTwoProfileOutboundEntry"), /setChatDeliveryNoticeByKey\("sendCanceledNotice", "success"\)/);
+  assert.match(functionBody(mainJs, "cancelTwoProfileOutboundEntry"), /setChatDeliveryNoticeByKey\("sendCancelFailed", "warning"\)/);
+  assert.match(i18nJs, /sendCanceling/);
+  assert.match(i18nJs, /sendCancelFailed/);
   assert.match(stylesCss, /\.chat-delivery-notice-actions/);
   assert.match(stylesCss, /\.chat-delivery-notice-label/);
   assert.match(stylesCss, /\.chat-delivery-notice-text/);
