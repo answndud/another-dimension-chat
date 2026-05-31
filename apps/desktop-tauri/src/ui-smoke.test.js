@@ -198,6 +198,7 @@ test("invite setup highlights only the next user action", () => {
   assert.match(functionBody(mainJs, "inviteSetupPrimaryActionNode"), /twoProfileSessionsReadyForInput\(\)/);
   assert.doesNotMatch(functionBody(mainJs, "inviteSetupPrimaryActionNode"), /session_ready/);
   assert.match(functionBody(mainJs, "copyCurrentInviteCode"), /fields\.createRoomFromInviteCode\.focus\(\)/);
+  assert.match(functionBody(mainJs, "createRoomFromReceivedInviteCode"), /fields\.createRoomFromInviteCode\.focus\(\)/);
   assert.match(functionBody(mainJs, "copyLocalInviteSetupCode"), /fields\.peerInviteSetupCode\?\.focus\(\)/);
   assert.match(functionBody(mainJs, "copyLocalInviteSessionCode"), /fields\.peerInviteSessionCode\?\.focus\(\)/);
   assert.match(indexHtml, /id="connection-exchange-instruction"/);
@@ -341,6 +342,7 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(stylesCss, /\.chat-delivery-notice-actions/);
   assert.match(stylesCss, /\.chat-delivery-notice-label/);
   assert.match(stylesCss, /\.chat-delivery-notice-text/);
+  assert.match(stylesCss, /\.chat-delivery-notice-code/);
   assert.match(stylesCss, /\.chat-delivery-notice\.is-route-needed/);
   assert.match(stylesCss, /\.transcript-recovery-note/);
   assert.match(stylesCss, /\.transcript-recovery-note\.is-timeout/);

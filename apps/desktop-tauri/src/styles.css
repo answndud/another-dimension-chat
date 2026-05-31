@@ -13,7 +13,7 @@
   --accent-hot: #aebcba;
   --accent-cyan: #9eb8bd;
   --success: #93aaa7;
-  --warning: #9ab4ba;
+  --warning: #6fa8b4;
   --danger: #c18087;
   --input-bg: #080c0d;
   --input-border: #314044;
@@ -50,7 +50,7 @@
   --accent-hot: #37484c;
   --accent-cyan: #60777c;
   --success: #4f6668;
-  --warning: #526b72;
+  --warning: #315d66;
   --danger: #8a5058;
   --input-bg: #fbfcfc;
   --input-border: #b8c2c4;
@@ -1682,8 +1682,10 @@ body.is-chat-active .message-transcript li {
 }
 
 body.is-chat-active .message-transcript li.is-pending-send {
-  border-color: color-mix(in srgb, var(--warning) 42%, var(--panel-border));
-  background: color-mix(in srgb, var(--panel) 84%, var(--warning));
+  border-color: color-mix(in srgb, var(--accent-cyan) 46%, var(--panel-border));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-cyan) 8%, transparent), transparent 68%),
+    color-mix(in srgb, var(--panel) 94%, var(--bg));
 }
 
 body.is-chat-active .message-transcript li.is-canceled {
@@ -1857,6 +1859,21 @@ body.is-chat-active .message-transcript .transcript-recovery-note.is-peer-offlin
   min-width: 0;
 }
 
+.chat-delivery-notice-code {
+  grid-column: 2 / -1;
+  overflow-wrap: anywhere;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 40%, var(--panel-border));
+  border-radius: 4px;
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--input-bg) 92%, var(--bg));
+  color: var(--text-primary);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.35;
+  user-select: all;
+}
+
 .chat-delivery-notice-action {
   width: auto;
   min-width: max-content;
@@ -1988,15 +2005,15 @@ body.is-chat-active .message-transcript li.is-selected:not(.is-reply-target, .is
 
 body.is-chat-active .message-transcript .transcript-row-actions {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
   justify-self: end;
-  margin-top: 3px;
+  margin-top: 5px;
   padding-top: 0;
   border-top: 0;
-  opacity: 0.88;
+  opacity: 1;
   transition: opacity 120ms ease;
 }
 
@@ -2012,12 +2029,10 @@ body.is-chat-active .message-transcript li:focus-within .transcript-row-actions 
 body.is-chat-active .message-transcript .transcript-row-actions button {
   width: auto;
   min-width: 0;
-  min-height: 20px;
-  border-color: transparent;
-  padding: 1px 0 1px 6px;
-  background: transparent;
-  font-size: 10px;
-  font-weight: 650;
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 760;
   text-transform: lowercase;
   white-space: nowrap;
 }
@@ -2025,8 +2040,7 @@ body.is-chat-active .message-transcript .transcript-row-actions button {
 body.is-chat-active .message-transcript .transcript-row-actions .transcript-retry {
   min-height: 22px;
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 48%, transparent);
-  border-radius: 999px;
-  padding: 2px 7px;
+  border-radius: 4px;
   background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
   color: var(--accent-cyan);
 }
@@ -2034,8 +2048,7 @@ body.is-chat-active .message-transcript .transcript-row-actions .transcript-retr
 body.is-chat-active .message-transcript .transcript-row-actions .transcript-cancel {
   min-height: 22px;
   border: 1px solid color-mix(in srgb, var(--panel-border) 42%, transparent);
-  border-radius: 999px;
-  padding: 2px 7px;
+  border-radius: 4px;
   color: var(--text-muted);
   opacity: 0.72;
 }
