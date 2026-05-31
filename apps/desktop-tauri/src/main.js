@@ -1070,20 +1070,9 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     const retry = document.createElement("button");
     retry.type = "button";
     retry.className = "chat-delivery-notice-action";
-    retry.textContent = t(
-      primaryAction.action === "refresh-and-retry" && twoProfileInviteCodeModeActive()
-        ? "preparePrivateRoute"
-        : primaryAction.labelKey,
-    );
+    retry.textContent = outboundPrimaryActionLabel(primaryAction);
     retry.addEventListener("click", () => {
-      if (primaryAction.action === "enable-private-delivery") {
-        selectTwoProfileOutboundActionDirection(pendingEntry, "retry");
-        openPrivateDeliverySettings();
-      } else if (primaryAction.action === "refresh-and-retry") {
-        refreshTwoProfileOutboundEndpointThenRetry(pendingEntry);
-      } else {
-        retryTwoProfileOutboundEntry(pendingEntry);
-      }
+      runTwoProfileOutboundPrimaryAction(pendingEntry, primaryAction);
     });
     const cancel = document.createElement("button");
     cancel.type = "button";
@@ -1200,20 +1189,9 @@ function renderSendRecoveryPanel(entry = null) {
   const retry = document.createElement("button");
   retry.type = "button";
   retry.className = "send-recovery-primary";
-  retry.textContent = t(
-    primaryAction.action === "refresh-and-retry" && twoProfileInviteCodeModeActive()
-      ? "preparePrivateRoute"
-      : primaryAction.labelKey,
-  );
+  retry.textContent = outboundPrimaryActionLabel(primaryAction);
   retry.addEventListener("click", () => {
-    if (primaryAction.action === "enable-private-delivery") {
-      selectTwoProfileOutboundActionDirection(entry, "retry");
-      openPrivateDeliverySettings();
-    } else if (primaryAction.action === "refresh-and-retry") {
-      refreshTwoProfileOutboundEndpointThenRetry(entry);
-    } else {
-      retryTwoProfileOutboundEntry(entry);
-    }
+    runTwoProfileOutboundPrimaryAction(entry, primaryAction);
   });
   const cancel = document.createElement("button");
   cancel.type = "button";
@@ -1224,12 +1202,37 @@ function renderSendRecoveryPanel(entry = null) {
   fields.sendRecoveryPanel.append(title, status, message, reason, actions);
 }
 
+function outboundPrimaryActionLabel(primaryAction) {
+  return t(primaryAction?.labelKey || "retrySend");
+}
+
+function runTwoProfileOutboundPrimaryAction(entry, primaryAction = productionTwoProfileOutboundPrimaryAction(entry)) {
+  if (primaryAction.action === "enable-private-delivery") {
+    selectTwoProfileOutboundActionDirection(entry, "retry");
+    openPrivateDeliverySettings();
+    return;
+  }
+  if (primaryAction.action === "prepare-private-route") {
+    selectTwoProfileOutboundActionDirection(entry, "retry");
+    preparePrivateDeliveryRoute();
+    return;
+  }
+  if (primaryAction.action === "refresh-and-retry") {
+    refreshTwoProfileOutboundEndpointThenRetry(entry);
+    return;
+  }
+  retryTwoProfileOutboundEntry(entry);
+}
+
 function outboundRecoveryClass(primaryAction, statusLabel = "") {
   const status = String(statusLabel ?? "").trim().toLowerCase();
   if (primaryAction?.action === "enable-private-delivery") {
     return "is-permission-needed";
   }
   if (status === "route missing") {
+    return "is-route-needed";
+  }
+  if (primaryAction?.action === "prepare-private-route") {
     return "is-route-needed";
   }
   if (primaryAction?.action === "refresh-and-retry") {
@@ -1250,6 +1253,9 @@ function outboundRecoveryReasonKey(primaryAction, statusLabel = "") {
     return "sendReasonPermissionOff";
   }
   if (status === "route missing") {
+    return "sendReasonRouteMissing";
+  }
+  if (primaryAction?.action === "prepare-private-route") {
     return "sendReasonRouteMissing";
   }
   if (primaryAction?.action === "refresh-and-retry") {
@@ -3603,21 +3609,10 @@ function renderProductionTwoProfileConversationList() {
       retry.type = "button";
       retry.className = "transcript-retry";
       retry.title = outboundActionState.disabledReason || "";
-      retry.textContent = t(
-        primaryAction.action === "refresh-and-retry" && twoProfileInviteCodeModeActive()
-          ? "preparePrivateRoute"
-          : primaryAction.labelKey,
-      );
+      retry.textContent = outboundPrimaryActionLabel(primaryAction);
       retry.addEventListener("click", (event) => {
         event.stopPropagation();
-        if (primaryAction.action === "enable-private-delivery") {
-          selectTwoProfileOutboundActionDirection(entry, "retry");
-          openPrivateDeliverySettings();
-        } else if (primaryAction.action === "refresh-and-retry") {
-          refreshTwoProfileOutboundEndpointThenRetry(entry);
-        } else {
-          retryTwoProfileOutboundEntry(entry);
-        }
+        runTwoProfileOutboundPrimaryAction(entry, primaryAction);
       });
       const cancel = document.createElement("button");
       cancel.type = "button";
@@ -9161,7 +9156,8 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
     return;
   }
   if (twoProfileInviteCodeModeActive()) {
-    if (!twoProfilePeerEndpointState(input).ready) {
+    const peerEndpointState = twoProfilePeerEndpointState(input);
+    if (!peerEndpointState.ready) {
       const nextRouteAction = focusPrivateRouteNextAction(input);
       if (nextRouteAction === "create-local") {
         await prepareInviteRoomPrivateRouteExchange(input);
@@ -9175,9 +9171,15 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
         }
         return;
       }
-      setProductionTwoProfileState("Peer delivery code needed");
-      setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
-      setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted");
+      if (peerEndpointState.stale) {
+        setProductionTwoProfileState("Peer address refresh needed");
+        setText(fields.productionTwoProfileWarning, t("chatNoticeRefreshAddress"));
+        setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning");
+      } else {
+        setProductionTwoProfileState("Peer delivery code needed");
+        setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
+        setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted");
+      }
       return;
     }
     await retryTwoProfileOutboundEntry(entry);

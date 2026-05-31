@@ -475,7 +475,7 @@ export function productionTwoProfileOutboundPrimaryAction(entry) {
   }
   if (status === "route missing") {
     return {
-      action: "refresh-and-retry",
+      action: "prepare-private-route",
       labelKey: "preparePrivateRoute",
       noticeKey: "privateDeliveryRouteNeeded",
       recoveryKey: "sendRecoveryRouteMissing",

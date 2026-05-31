@@ -2426,7 +2426,7 @@ test("productionTwoProfileOutboundPrimaryAction maps failure causes to direct us
       outboundFailureKind: "peer-endpoint-missing",
     }),
     {
-      action: "refresh-and-retry",
+      action: "prepare-private-route",
       labelKey: "preparePrivateRoute",
       noticeKey: "privateDeliveryRouteNeeded",
       recoveryKey: "sendRecoveryRouteMissing",
