@@ -472,9 +472,20 @@ test("verified rooms without a peer route do not look fully connected", () => {
   assert.match(mainJs, /needsPrivateRoute/);
   assert.match(mainJs, /"route-needed"/);
   assert.match(mainJs, /roomStatusShortRouteNeeded/);
+  assert.match(i18nJs, /Delivery code needed/);
+  assert.match(i18nJs, /전송 코드 필요/);
   assert.match(mainJs, /manualNetworkPermission \? "privateDeliveryRouteNeeded" : "chatNoticeNetworkPermission"/);
   assert.match(mainJs, /manualNetworkPermission \? "muted" : "warning"/);
   assert.match(stylesCss, /\.room-status-summary\.is-route-needed/);
+});
+
+test("chat header keeps only the compact user status visible", () => {
+  assert.match(indexHtml, /id="room-status-summary"/);
+  assert.match(indexHtml, /class="room-identity-bar"/);
+  assert.match(mainJs, /renderRoomStatusSummary\(twoProfile, twoProfileSessionsReady\)/);
+  assert.match(mainJs, /setText\(fields\.roomStatusSummary, `\$\{label\}\$\{receiveLabel\}`\)/);
+  assert.match(stylesCss, /body\.is-chat-active \.room-identity-bar,[\s\S]{0,180}body\.is-chat-active:not\(\.has-confirmed-safety\) \.room-identity-bar,[\s\S]{0,180}display:\s*none/);
+  assert.doesNotMatch(stylesCss, /body\.is-chat-active:not\(\.has-confirmed-safety\) \.room-identity-bar\s*\{\s*display:\s*flex/);
 });
 
 test("private route preparation is a first-class chat action", () => {

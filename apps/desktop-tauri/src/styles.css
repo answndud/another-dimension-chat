@@ -1447,10 +1447,8 @@ body.is-chat-active .room-identity-bar div:nth-child(4) {
   display: none;
 }
 
-body.is-chat-active:not(.has-confirmed-safety) .room-identity-bar {
-  display: flex;
-}
-
+body.is-chat-active .room-identity-bar,
+body.is-chat-active:not(.has-confirmed-safety) .room-identity-bar,
 body.is-chat-active.has-confirmed-safety .room-identity-bar {
   display: none;
 }
