@@ -2044,6 +2044,20 @@ body.is-chat-active .send-recovery-panel.is-address-stale {
   font-weight: 680;
 }
 
+.send-recovery-next {
+  grid-column: 1 / -1;
+  width: fit-content;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 34%, var(--panel-border));
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 7%, transparent);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.15;
+  text-transform: lowercase;
+}
+
 .send-recovery-actions {
   grid-column: 1 / -1;
   display: flex;
