@@ -68,15 +68,18 @@ test("empty connection state stays minimal and action-first", () => {
 });
 
 test("created invite code has a visible read-only display before room creation", () => {
+  assert.match(indexHtml, /id="created-invite-code-display"/);
   assert.match(indexHtml, /id="pending-invite-code-display"/);
   assert.match(indexHtml, /id="current-invite-code-summary"/);
   assert.match(indexHtml, /id="current-invite-code-text"/);
   assert.match(indexHtml, /class="invite-code-display"/);
   assert.match(indexHtml, /readonly/);
   assert.match(mainJs, /pendingInviteCodeDisplay:\s*document\.querySelector\("#pending-invite-code-display"\)/);
+  assert.match(mainJs, /createdInviteCodeDisplay:\s*document\.querySelector\("#created-invite-code-display"\)/);
   assert.match(mainJs, /currentInviteCodeSummary:\s*document\.querySelector\("#current-invite-code-summary"\)/);
   assert.match(mainJs, /currentInviteCodeText:\s*document\.querySelector\("#current-invite-code-text"\)/);
   assert.match(mainJs, /function renderCurrentInviteCodeDisplay\(\)/);
+  assert.match(mainJs, /fields\.createdInviteCodeDisplay\.value = code && connectionCodeRoleFor\(code\) === "inviter" \? code : ""/);
   assert.match(mainJs, /fields\.pendingInviteCodeDisplay\.value = code/);
   assert.match(mainJs, /fields\.currentInviteCodeText\.textContent = code/);
   assert.match(mainJs, /fields\.pendingInviteCodeDisplay\?\.scrollIntoView/);
@@ -86,6 +89,7 @@ test("created invite code has a visible read-only display before room creation",
   assert.match(mainJs, /setChatDeliveryNoticeByKey\("receivedInviteCodeReadyNotice", "success"\)/);
   assert.match(mainJs, /closeChatSettingsPanel\(\)/);
   assert.match(stylesCss, /\.connection-pending-state \.invite-code-display/);
+  assert.match(stylesCss, /\.connection-choice-card \.created-invite-code-display/);
   assert.match(stylesCss, /body\.has-connection-code:not\(\.has-ready-session\) \.connection-pending-state/);
   assert.match(stylesCss, /\.current-invite-code-summary/);
 });
@@ -391,6 +395,13 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(mainJs, /chat-delivery-notice-text/);
   assert.match(mainJs, /function outboundRecoveryClass/);
   assert.match(mainJs, /function outboundRecoveryReasonKey/);
+  assert.match(indexHtml, /id="send-recovery-panel"/);
+  assert.match(mainJs, /sendRecoveryPanel:\s*document\.querySelector\("#send-recovery-panel"\)/);
+  assert.match(mainJs, /function renderSendRecoveryPanel\(entry = null\)/);
+  assert.match(mainJs, /renderSendRecoveryPanel\(latestTwoProfileRetryableOutboundEntry\(\)\)/);
+  assert.match(mainJs, /send-recovery-actions/);
+  assert.match(mainJs, /cancelTwoProfileOutboundEntry\(entry\)/);
+  assert.match(stylesCss, /\.send-recovery-panel/);
   assert.match(mainJs, /outboundRecoveryClass\(primaryAction, productionTwoProfileOutboundStatusLabel\(pendingEntry\)\)/);
   assert.match(mainJs, /item\.classList\.toggle\("is-send-recovery", Boolean\(primaryAction\)\)/);
   assert.match(mainJs, /productionTwoProfileOutboundPrimaryAction\(entry\)/);
