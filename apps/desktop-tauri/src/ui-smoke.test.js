@@ -208,6 +208,14 @@ test("invite setup screen shows one exchange stage at a time", () => {
   assert.match(sessionStage, /\.peer-invite-setup-code/);
   assert.match(sessionStage, /#use-peer-invite-setup-code/);
   assert.match(sessionStage, /display:\s*none/);
+
+  const compactLabels = stylesCss.slice(stylesCss.lastIndexOf(".local-invite-setup-label,"));
+  assert.match(compactLabels, /has-local-invite-setup-code:not\(\.has-ready-session\)/);
+  assert.match(compactLabels, /\.local-invite-setup-label/);
+  assert.match(compactLabels, /has-invite-session-stage:not\(\.has-ready-session\)/);
+  assert.match(compactLabels, /\.peer-invite-session-label/);
+  assert.match(compactLabels, /clip:\s*rect\(0 0 0 0\)/);
+  assert.match(stylesCss, /\.peer-invite-session-code\s*\{[\s\S]{0,100}min-height:\s*58px/);
 });
 
 test("invite setup highlights only the next user action", () => {
@@ -234,7 +242,8 @@ test("invite setup highlights only the next user action", () => {
   assert.match(stylesCss, /\.connection-pending-state button\.is-primary-flow-action/);
   assert.match(stylesCss, /\.connection-pending-state button\.is-secondary-flow-action/);
   assert.match(stylesCss, /\.exchange-instruction/);
-  assert.match(i18nJs, /붙여넣은 상대 연결 코드를 사용한 뒤 확인 문구를 비교하세요/);
+  assert.match(i18nJs, /내 코드를 복사하고, 상대 코드를 붙여넣으세요/);
+  assert.match(i18nJs, /상대 코드를 사용하세요/);
 });
 
 test("invite setup flow stays isolated and waits for explicit verification", () => {
