@@ -3529,31 +3529,25 @@ body.is-chat-empty:not(.has-connection-code) .room-identity-bar {
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state {
   order: 2;
   display: grid;
-  gap: 7px;
+  gap: 8px;
   justify-self: center;
-  width: min(440px, 100%);
-  margin: clamp(42px, 12vh, 120px) auto 0;
-  border: 1px solid color-mix(in srgb, var(--accent-cyan) 18%, var(--panel-border));
-  border-radius: 8px;
-  padding: 18px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent-cyan) 5%, transparent), transparent 110px),
-    color-mix(in srgb, var(--panel) 84%, var(--bg));
+  width: min(360px, 100%);
+  margin: clamp(72px, 19vh, 180px) auto 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
 }
 
 body.has-connection-code:not(.has-ready-session) .connection-pending-state {
   order: 2;
   display: grid;
-  gap: 7px;
+  gap: 8px;
   justify-self: center;
-  width: min(440px, 100%);
-  margin: clamp(42px, 12vh, 120px) auto 0;
-  border: 1px solid color-mix(in srgb, var(--accent-cyan) 18%, var(--panel-border));
-  border-radius: 8px;
-  padding: 18px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent-cyan) 5%, transparent), transparent 110px),
-    color-mix(in srgb, var(--panel) 84%, var(--bg));
+  width: min(360px, 100%);
+  margin: clamp(72px, 19vh, 180px) auto 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
 }
 
 body.has-connection-code:not(.has-ready-session) .connection-pending-state h4,
@@ -3561,8 +3555,17 @@ body.has-connection-code:not(.has-ready-session) .connection-pending-state p {
   margin: 0;
 }
 
+body.has-connection-code:not(.has-ready-session) .connection-pending-state > .eyebrow,
+body.has-connection-code:not(.has-ready-session) .connection-pending-state > .device-role-note,
+body.has-connection-code:not(.has-ready-session) .connection-pending-state > h4,
+body.has-connection-code:not(.has-ready-session)
+  .connection-pending-state
+  > p:not(#connection-exchange-instruction, .eyebrow, .device-role-note) {
+  display: none;
+}
+
 .room-setup-progress {
-  display: grid;
+  display: none;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 4px;
   margin: 0 0 6px;
@@ -3595,22 +3598,30 @@ body.has-connection-code:not(.has-ready-session) .connection-pending-state p {
 }
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state h4 {
-  color: var(--text-primary);
-  font-size: 19px;
-  line-height: 1.18;
+  display: none;
 }
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state p:not(.eyebrow) {
-  max-width: 30ch;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.45;
+  display: none;
+}
+
+body.is-chat-empty.has-connection-code:not(.has-ready-session)
+  .connection-pending-state
+  #connection-exchange-instruction {
+  display: block;
+  max-width: 28ch;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state .invite-code-display {
   width: 100%;
-  min-height: 66px;
-  border: 1px solid color-mix(in srgb, var(--accent-cyan) 34%, var(--panel-border));
+  min-height: 48px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 36%, var(--panel-border));
   border-radius: 4px;
   padding: 10px;
   color: var(--text-primary);
@@ -3738,7 +3749,7 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pendi
 
 body.has-connection-code:not(.has-ready-session) .connection-pending-state .invite-code-display {
   width: 100%;
-  min-height: 66px;
+  min-height: 48px;
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 34%, var(--panel-border));
   border-radius: 4px;
   padding: 10px;
