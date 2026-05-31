@@ -250,9 +250,17 @@ test("invite setup highlights only the next user action", () => {
   assert.match(functionBody(mainJs, "createRoomFromReceivedInviteCode"), /fields\.createRoomFromInviteCode\.focus\(\)/);
   assert.match(functionBody(mainJs, "copyLocalInviteSetupCode"), /fields\.peerInviteSetupCode\?\.focus\(\)/);
   assert.match(functionBody(mainJs, "copyLocalInviteSessionCode"), /fields\.peerInviteSessionCode\?\.focus\(\)/);
+  assert.match(indexHtml, /id="connection-pending-title"/);
+  assert.match(mainJs, /connectionPendingTitle:\s*document\.querySelector\("#connection-pending-title"\)/);
   assert.match(indexHtml, /id="connection-exchange-instruction"/);
   assert.match(mainJs, /connectionExchangeInstruction:\s*document\.querySelector\("#connection-exchange-instruction"\)/);
   assert.match(mainJs, /function renderConnectionExchangeInstruction/);
+  assert.match(mainJs, /setConnectionExchangeText/);
+  assert.match(mainJs, /exchangeTitleInvite/);
+  assert.match(mainJs, /exchangeTitleSetupShare/);
+  assert.match(mainJs, /exchangeTitleSetupUse/);
+  assert.match(mainJs, /exchangeTitleSessionShare/);
+  assert.match(mainJs, /exchangeTitleSessionUse/);
   assert.match(mainJs, /exchangeInstructionInvite/);
   assert.match(mainJs, /exchangeInstructionSetupShare/);
   assert.match(mainJs, /exchangeInstructionSetupUse/);
@@ -265,8 +273,9 @@ test("invite setup highlights only the next user action", () => {
   assert.match(stylesCss, /\.connection-pending-state button\.is-primary-flow-action/);
   assert.match(stylesCss, /\.connection-pending-state button\.is-secondary-flow-action/);
   assert.match(stylesCss, /\.exchange-instruction/);
-  assert.match(i18nJs, /내 코드를 복사하고, 상대 코드를 붙여넣으세요/);
-  assert.match(i18nJs, /상대 코드를 사용하세요/);
+  assert.match(stylesCss, /\.connection-pending-state > h4/);
+  assert.match(i18nJs, /내 연결 코드 보내기/);
+  assert.match(i18nJs, /상대 기기의 코드를 사용하세요/);
 });
 
 test("invite setup flow stays isolated and waits for explicit verification", () => {

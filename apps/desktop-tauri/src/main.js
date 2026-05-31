@@ -288,6 +288,7 @@ const fields = {
   copyInviteCode: document.querySelector("#copy-invite-code"),
   copyPendingInviteCode: document.querySelector("#copy-pending-invite-code"),
   createRoomFromInviteCode: document.querySelector("#create-room-from-invite-code"),
+  connectionPendingTitle: document.querySelector("#connection-pending-title"),
   pendingInviteCodeDisplay: document.querySelector("#pending-invite-code-display"),
   connectionExchangeInstruction: document.querySelector("#connection-exchange-instruction"),
   localInviteSetupCode: document.querySelector("#local-invite-setup-code"),
@@ -1353,28 +1354,31 @@ function renderConnectionExchangeInstruction() {
   if (!fields.connectionExchangeInstruction) {
     return;
   }
+  const setConnectionExchangeText = (titleKey, instructionKey) => {
+    setText(fields.connectionPendingTitle, t(titleKey));
+    setText(fields.connectionExchangeInstruction, t(instructionKey));
+  };
   if (!currentInviteCodeForRoom()) {
+    setText(fields.connectionPendingTitle, t("connectionCodeReady"));
     setText(fields.connectionExchangeInstruction, "");
     return;
   }
   if (!latestLocalInviteSetupCode) {
-    setText(fields.connectionExchangeInstruction, t("exchangeInstructionInvite"));
+    setConnectionExchangeText("exchangeTitleInvite", "exchangeInstructionInvite");
     return;
   }
   if (!latestLocalInviteSessionCode) {
-    setText(
-      fields.connectionExchangeInstruction,
-      (fields.peerInviteSetupCode?.value ?? "").trim()
-        ? t("exchangeInstructionSetupUse")
-        : t("exchangeInstructionSetupShare"),
+    const peerCodeReady = Boolean((fields.peerInviteSetupCode?.value ?? "").trim());
+    setConnectionExchangeText(
+      peerCodeReady ? "exchangeTitleSetupUse" : "exchangeTitleSetupShare",
+      peerCodeReady ? "exchangeInstructionSetupUse" : "exchangeInstructionSetupShare",
     );
     return;
   }
-  setText(
-    fields.connectionExchangeInstruction,
-    (fields.peerInviteSessionCode?.value ?? "").trim()
-      ? t("exchangeInstructionSessionUse")
-      : t("exchangeInstructionSessionShare"),
+  const peerSessionCodeReady = Boolean((fields.peerInviteSessionCode?.value ?? "").trim());
+  setConnectionExchangeText(
+    peerSessionCodeReady ? "exchangeTitleSessionUse" : "exchangeTitleSessionShare",
+    peerSessionCodeReady ? "exchangeInstructionSessionUse" : "exchangeInstructionSessionShare",
   );
 }
 
