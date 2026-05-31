@@ -524,6 +524,8 @@ test("private route exchange highlights the next route action", () => {
   assert.match(mainJs, /routeInstructionShare/);
   assert.match(mainJs, /routeInstructionUse/);
   assert.match(mainJs, /routeInstructionReady/);
+  assert.match(i18nJs, /Copy mine\. Paste theirs\./);
+  assert.match(i18nJs, /내 코드를 복사하고, 상대 코드를 붙여넣으세요/);
   assert.match(mainJs, /fields\.privateRouteExchange\.scrollIntoView/);
   assert.match(mainJs, /latestLocalPrivateRouteCode[\s\S]{0,120}fields\.preparePrivateRoute/);
   assert.match(mainJs, /peerPrivateRouteCode\?\.value[\s\S]{0,120}fields\.applyPeerPrivateRouteCode/);
@@ -531,7 +533,9 @@ test("private route exchange highlights the next route action", () => {
   assert.match(mainJs, /setFlowActionPriority\(routeExchangePrimaryActionNode\(twoProfile\)/);
   assert.match(stylesCss, /\.private-route-exchange button\.is-primary-flow-action/);
   assert.match(stylesCss, /\.private-route-exchange button\.is-secondary-flow-action/);
-  assert.match(i18nJs, /붙여넣은 상대 전송 코드를 사용해 비공개 전송을 준비하세요/);
+  assert.match(stylesCss, /\.private-route-exchange \.eyebrow,[\s\S]{0,220}\.private-route-steps,[\s\S]{0,180}\.private-route-exchange label[\s\S]{0,180}clip:\s*rect\(0 0 0 0\)/);
+  assert.match(stylesCss, /\.private-route-exchange \.route-code-display \{[\s\S]{0,80}min-height:\s*46px/);
+  assert.match(stylesCss, /\.private-route-actions[\s\S]{0,120}grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(0,\s*1fr\)/);
 });
 
 test("invite rooms exchange visible delivery codes instead of silently refreshing both local endpoints", () => {
