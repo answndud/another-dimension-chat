@@ -9536,6 +9536,9 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
           rememberTwoProfileSessionStatus(input, status);
           renderProductionTwoProfileSessionStatusResult(status);
           renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
+          if (!refreshPlan.messageImported) {
+            showLatestRetryableOutboundNotice(input);
+          }
         }
       }
     }
