@@ -3795,18 +3795,7 @@ function showRetryableTwoProfileOutboundNotice(entry) {
   if (!entry) {
     return;
   }
-  if (productionTwoProfileOutboundNeedsEndpointRefresh(entry)) {
-    setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning");
-    return;
-  }
-  const status = productionTwoProfileOutboundStatusLabel(entry);
-  if (status === "send timeout") {
-    setChatDeliveryNoticeByKey("sendTimeout", "warning");
-  } else if (status === "permission off") {
-    setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning");
-  } else {
-    setChatDeliveryNoticeByKey("peerOffline", "warning");
-  }
+  setChatDeliveryNoticeForPendingOutbound(entry);
 }
 
 function selectedTwoProfileManualFocusTarget(entry) {

@@ -48,7 +48,7 @@ test("translate resolves Korean and English chat labels", () => {
   assert.equal(translate("ko", "roomStatusShortReceiving"), "수신 중");
   assert.equal(translate("ko", "emptyConversationVerify"), "메시지를 쓰기 전에 두 기기의 확인 문구를 비교하세요.");
   assert.equal(translate("ko", "startReceiving"), "받기");
-  assert.equal(translate("ko", "allowPrivateDelivery"), "내가 보내기나 받기를 누를 때만 네트워크 전송 허용");
+  assert.equal(translate("ko", "allowPrivateDelivery"), "보내기나 받기를 누를 때만 비공개 전송 허용");
   assert.equal(translate("ko", "privateDeliveryPermissionRequired"), "보내거나 받기 전에 비공개 전송을 허용하세요.");
   assert.equal(translate("ko", "enablePrivateDelivery"), "비공개 전송 켜기");
   assert.equal(

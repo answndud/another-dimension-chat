@@ -3729,12 +3729,6 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pendi
 
 body.is-chat-empty.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)
   .connection-pending-state
-  #pending-invite-code-display,
-body.is-chat-empty.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)
-  .connection-pending-state
-  #copy-pending-invite-code,
-body.is-chat-empty.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)
-  .connection-pending-state
   #create-room-from-invite-code,
 body.is-chat-empty.has-connection-code.has-local-invite-session-code:not(.has-ready-session)
   .connection-pending-state
@@ -3849,12 +3843,6 @@ body.has-connection-code.has-invite-session-stage:not(.has-ready-session)
   display: block;
 }
 
-body.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)
-  .connection-pending-state
-  #pending-invite-code-display,
-body.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)
-  .connection-pending-state
-  #copy-pending-invite-code,
 body.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)
   .connection-pending-state
   #create-room-from-invite-code,

@@ -192,12 +192,21 @@ test("default invite setup copy stays user-facing and avoids developer terms", (
 });
 
 test("invite setup screen shows one exchange stage at a time", () => {
-  const setupStage = stylesCss.slice(stylesCss.indexOf("#pending-invite-code-display"));
-  assert.match(setupStage, /has-local-invite-setup-code/);
-  assert.match(setupStage, /#pending-invite-code-display/);
-  assert.match(setupStage, /#copy-pending-invite-code/);
-  assert.match(setupStage, /#create-room-from-invite-code/);
-  assert.match(setupStage, /display:\s*none/);
+  assert.match(indexHtml, /id="pending-invite-code-display"/);
+  assert.match(indexHtml, /id="copy-pending-invite-code"/);
+  assert.match(indexHtml, /id="create-room-from-invite-code"/);
+  const localSetupHideRuleStart = stylesCss.indexOf(
+    "body.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)\n" +
+      "  .connection-pending-state\n" +
+      "  #create-room-from-invite-code",
+  );
+  const localSetupHideRuleEnd = stylesCss.indexOf("{\n  display: none;", localSetupHideRuleStart);
+  const localSetupHideRule = stylesCss.slice(localSetupHideRuleStart, localSetupHideRuleEnd + 20);
+  assert.notEqual(localSetupHideRuleStart, -1);
+  assert.doesNotMatch(localSetupHideRule, /#pending-invite-code-display/);
+  assert.doesNotMatch(localSetupHideRule, /#copy-pending-invite-code/);
+  assert.match(localSetupHideRule, /#create-room-from-invite-code/);
+  assert.match(localSetupHideRule, /display:\s*none/);
   assert.match(mainJs, /has-invite-session-stage/);
   assert.match(mainJs, /latestLocalInviteSessionCode \|\| \(setupSafetyReady && safetyConfirmed\)/);
   assert.match(stylesCss, /has-invite-session-stage:not\(\.has-ready-session\)[\s\S]{0,120}\.peer-invite-session-label/);
@@ -216,6 +225,20 @@ test("invite setup screen shows one exchange stage at a time", () => {
   assert.match(compactLabels, /\.peer-invite-session-label/);
   assert.match(compactLabels, /clip:\s*rect\(0 0 0 0\)/);
   assert.match(stylesCss, /\.peer-invite-session-code\s*\{[\s\S]{0,100}min-height:\s*58px/);
+});
+
+test("language choice lives in the room settings panel, not the app debug panel", () => {
+  const appSettings = indexHtml.slice(
+    indexHtml.indexOf('class="system-settings-panel"'),
+    indexHtml.indexOf('<section class="status-summary"'),
+  );
+  const roomSettings = indexHtml.slice(
+    indexHtml.indexOf('class="room-secondary-options"'),
+    indexHtml.indexOf('<section class="connection-wizard-step" data-wizard-step="retention"'),
+  );
+  assert.doesNotMatch(appSettings, /id="language-selector"/);
+  assert.match(roomSettings, /id="language-selector"/);
+  assert.match(stylesCss, /\.chat-settings-panel \.language-control/);
 });
 
 test("invite setup highlights only the next user action", () => {
