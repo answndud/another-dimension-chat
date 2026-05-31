@@ -3587,11 +3587,19 @@ body.has-connection-code:not(.has-ready-session) .connection-pending-state p {
 
 body.has-connection-code:not(.has-ready-session) .connection-pending-state > .eyebrow,
 body.has-connection-code:not(.has-ready-session) .connection-pending-state > .device-role-note,
-body.has-connection-code:not(.has-ready-session) .connection-pending-state > h4,
 body.has-connection-code:not(.has-ready-session)
   .connection-pending-state
   > p:not(#connection-exchange-instruction, .eyebrow, .device-role-note) {
   display: none;
+}
+
+body.has-connection-code:not(.has-ready-session) .connection-pending-state > h4 {
+  display: block;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.22;
 }
 
 .room-setup-progress {
@@ -3627,10 +3635,6 @@ body.has-connection-code:not(.has-ready-session)
   color: var(--success);
 }
 
-body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state h4 {
-  display: none;
-}
-
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state p:not(.eyebrow) {
   display: none;
 }
@@ -3646,6 +3650,23 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session)
   color: var(--text-muted);
   font-size: 11px;
   line-height: 1.4;
+}
+
+body.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)
+  .connection-pending-state
+  #pending-invite-code-display,
+body.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)
+  .connection-pending-state
+  #copy-pending-invite-code {
+  opacity: 0.68;
+}
+
+body.has-connection-code.has-local-invite-setup-code:not(.has-ready-session)
+  .connection-pending-state
+  #pending-invite-code-display {
+  min-height: 36px;
+  padding-block: 7px;
+  font-size: 11px;
 }
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state .invite-code-display {
