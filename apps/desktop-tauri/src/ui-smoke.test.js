@@ -190,6 +190,18 @@ test("connection-code ready state prepares only this device as the next action",
   assert.match(stylesCss, /#create-room-from-invite-code/);
   assert.match(stylesCss, /\.connection-step-counter/);
   assert.match(stylesCss, /\.invite-exchange-stage/);
+  assert.match(indexHtml, /data-i18n="inviteStageTitle"/);
+  assert.match(indexHtml, /data-i18n="setupStageTitle"/);
+  assert.match(indexHtml, /data-i18n="sessionStageTitle"/);
+  assert.match(indexHtml, /class="invite-stage-hint"/);
+  assert.match(stylesCss, /\.invite-exchange-stage h5/);
+  assert.match(stylesCss, /\.invite-exchange-stage \.invite-stage-hint/);
+  assert.match(i18nJs, /inviteStageTitle: "Send the invite code"/);
+  assert.match(i18nJs, /setupStageTitle: "Exchange setup codes"/);
+  assert.match(i18nJs, /sessionStageTitle: "Open the room"/);
+  assert.match(i18nJs, /inviteStageTitle: "초대 코드 보내기"/);
+  assert.match(i18nJs, /setupStageTitle: "준비 코드 교환"/);
+  assert.match(i18nJs, /sessionStageTitle: "채팅방 열기"/);
   assert.match(stylesCss, /\.invite-stage-invite \{[\s\S]{0,80}display:\s*grid/);
   assert.match(stylesCss, /has-local-invite-setup-code:not\(\.has-ready-session\) \.invite-stage-setup \{[\s\S]{0,80}display:\s*grid/);
   assert.match(stylesCss, /has-local-invite-session-code:not\(\.has-ready-session\) \.invite-stage-session/);
