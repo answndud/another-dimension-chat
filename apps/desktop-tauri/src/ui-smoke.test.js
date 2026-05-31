@@ -460,6 +460,9 @@ test("local peer dev scripts isolate app data roots", () => {
   assert.match(runLocalPeer, /ANOTHER_DIMENSION_APP_DATA_DIR/);
   assert.match(runLocalPeer, /ANOTHER_DIMENSION_APP_CACHE_DIR/);
   assert.match(runLocalPeer, /--print-paths/);
+  assert.match(verifyLocalPeerFlow, /function cleanPeerRoots/);
+  assert.match(verifyLocalPeerFlow, /assertPeerRootsCreatedAndDistinct/);
+  assert.match(verifyLocalPeerFlow, /rmSync\(peerRoot, \{ recursive: true, force: true \}\)/);
   assert.match(verifyLocalPeerFlow, /peer-a isolated paths/);
   assert.match(verifyLocalPeerFlow, /peer-b isolated paths/);
   assert.match(verifyLocalPeerFlow, /production_isolated_invite_roots_exchange_payloads_without_peer_private_profile/);
