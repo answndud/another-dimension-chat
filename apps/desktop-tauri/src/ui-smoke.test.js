@@ -217,10 +217,11 @@ test("default invite setup copy stays user-facing and avoids developer terms", (
   );
   assert.doesNotMatch(
     `${indexHtml}\n${i18nJs}`,
-    /setup code|session code|route code|설정 코드|세션 코드|경로 코드|전송 경로 코드/i,
+    /session code|route code|설정 코드|세션 코드|경로 코드|전송 경로 코드/i,
   );
-  assert.match(i18nJs, /My device code/);
-  assert.match(i18nJs, /Their device code/);
+  assert.match(i18nJs, /My setup code/);
+  assert.match(i18nJs, /Their setup code/);
+  assert.match(i18nJs, /My open code/);
   assert.match(i18nJs, /My delivery code/);
   assert.match(i18nJs, /상대 코드/);
   assert.match(i18nJs, /상대 전송 코드/);
@@ -318,8 +319,8 @@ test("invite setup highlights only the next user action", () => {
   assert.match(stylesCss, /\.connection-pending-actions button:disabled/);
   assert.match(stylesCss, /\.exchange-instruction/);
   assert.match(stylesCss, /\.connection-pending-state > h4/);
-  assert.match(i18nJs, /내 기기 코드 보내기/);
-  assert.match(i18nJs, /상대 기기 코드가 준비됐습니다/);
+  assert.match(i18nJs, /내 준비 코드 보내기/);
+  assert.match(i18nJs, /상대 준비 코드가 준비됐습니다/);
 });
 
 test("invite setup flow stays isolated and waits for explicit verification", () => {
