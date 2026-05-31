@@ -3563,8 +3563,14 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 .connection-choice-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
+  gap: 10px;
   width: 100%;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 20%, var(--panel-border));
+  border-radius: 5px;
+  padding: 10px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-cyan) 5%, transparent), transparent 72%),
+    color-mix(in srgb, var(--panel) 88%, var(--bg));
 }
 
 .connection-choice-card {
@@ -3596,13 +3602,27 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
   line-height: 1.35;
 }
 
+.connection-create-card {
+  gap: 8px;
+}
+
+.connection-received-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.connection-received-card span {
+  grid-column: 1 / -1;
+}
+
 .connection-verification-note {
   display: none;
 }
 
 .connection-choice-card + .connection-choice-card {
-  margin-top: 4px;
-  padding-top: 14px;
+  margin-top: 0;
+  padding-top: 10px;
 }
 
 .connection-choice-card + .connection-choice-card::before {
@@ -3635,6 +3655,13 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
   width: 100%;
   min-height: 40px;
   font-size: 12px;
+}
+
+.connection-received-card button {
+  width: auto;
+  min-width: max-content;
+  min-height: 40px;
+  padding-inline: 12px;
 }
 
 .connection-choice-card #create-invite-code {
