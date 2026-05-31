@@ -16,7 +16,23 @@ function functionBody(source, name) {
   const asyncStart = source.indexOf(`async function ${name}(`);
   const index = asyncStart >= 0 && (start < 0 || asyncStart < start) ? asyncStart : start;
   assert.notEqual(index, -1, `missing function ${name}`);
-  const brace = source.indexOf("{", index);
+  const paramsStart = source.indexOf("(", index);
+  assert.notEqual(paramsStart, -1, `missing function params ${name}`);
+  let parenDepth = 0;
+  let paramsEnd = -1;
+  for (let cursor = paramsStart; cursor < source.length; cursor += 1) {
+    if (source[cursor] === "(") {
+      parenDepth += 1;
+    } else if (source[cursor] === ")") {
+      parenDepth -= 1;
+      if (parenDepth === 0) {
+        paramsEnd = cursor;
+        break;
+      }
+    }
+  }
+  assert.notEqual(paramsEnd, -1, `unterminated function params ${name}`);
+  const brace = source.indexOf("{", paramsEnd);
   assert.notEqual(brace, -1, `missing function body ${name}`);
   let depth = 0;
   for (let cursor = brace; cursor < source.length; cursor += 1) {
@@ -181,6 +197,9 @@ test("invite setup highlights only the next user action", () => {
   assert.match(mainJs, /function inviteSetupPrimaryActionNode/);
   assert.match(functionBody(mainJs, "inviteSetupPrimaryActionNode"), /twoProfileSessionsReadyForInput\(\)/);
   assert.doesNotMatch(functionBody(mainJs, "inviteSetupPrimaryActionNode"), /session_ready/);
+  assert.match(functionBody(mainJs, "copyCurrentInviteCode"), /fields\.createRoomFromInviteCode\.focus\(\)/);
+  assert.match(functionBody(mainJs, "copyLocalInviteSetupCode"), /fields\.peerInviteSetupCode\?\.focus\(\)/);
+  assert.match(functionBody(mainJs, "copyLocalInviteSessionCode"), /fields\.peerInviteSessionCode\?\.focus\(\)/);
   assert.match(indexHtml, /id="connection-exchange-instruction"/);
   assert.match(mainJs, /connectionExchangeInstruction:\s*document\.querySelector\("#connection-exchange-instruction"\)/);
   assert.match(mainJs, /function renderConnectionExchangeInstruction/);

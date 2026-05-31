@@ -1924,6 +1924,9 @@ async function copyCurrentInviteCode(options = {}) {
     await navigator.clipboard.writeText(code);
     setProductionTwoProfileState("Invite code copied");
     setText(fields.productionTwoProfileWarning, t("inviteCodeCopied"));
+    if (!latestLocalInviteSetupCode && fields.createRoomFromInviteCode && !fields.createRoomFromInviteCode.disabled) {
+      fields.createRoomFromInviteCode.focus();
+    }
     return true;
   } catch {
     if (fields.pendingInviteCodeDisplay && !fields.pendingInviteCodeDisplay.hidden) {
@@ -1953,6 +1956,7 @@ async function copyLocalInviteSetupCode() {
     await navigator.clipboard.writeText(code);
     setProductionTwoProfileState("Connection code copied");
     setText(fields.productionTwoProfileWarning, t("localInviteSetupCodeCopied"));
+    fields.peerInviteSetupCode?.focus();
     return true;
   } catch {
     fields.localInviteSetupCode?.focus();
@@ -1977,6 +1981,7 @@ async function copyLocalInviteSessionCode() {
     setText(fields.productionTwoProfileWarning, t("localInviteSessionCodeCopied"));
     setChatDeliveryNoticeByKey("localInviteSessionCodeCopied", "success");
     applyProductionActionState();
+    fields.peerInviteSessionCode?.focus();
     return true;
   } catch {
     fields.localInviteSessionCode?.focus();
