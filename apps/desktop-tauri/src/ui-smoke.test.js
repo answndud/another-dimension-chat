@@ -97,6 +97,7 @@ test("message composer routes send, receive, retry, and route preparation throug
   assert.match(mainJs, /completeInviteRoomOutboundDelivery/);
   assert.match(functionBody(mainJs, "ensurePrivateDeliveryRuntimeReady"), /production_onion_persistent_client_start/);
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /ensurePrivateDeliveryRuntimeReady\(input\)/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /prepareInviteRoomPrivateRouteExchange\(input\)/);
   assert.match(functionBody(mainJs, "completeInviteRoomOutboundDelivery"), /showLatestRetryableOutboundNotice\(input\)/);
 });
 

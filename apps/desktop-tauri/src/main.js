@@ -9322,6 +9322,12 @@ async function startProductionTwoProfileOnionReceive() {
     setText(fields.productionTwoProfileWarning, t("receiveAlreadyListening"));
     return;
   }
+  if (!latestLocalPrivateRouteCode) {
+    const prepared = await prepareInviteRoomPrivateRouteExchange(input);
+    if (!prepared) {
+      return;
+    }
+  }
 
   let backendLoop = null;
   try {
