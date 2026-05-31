@@ -301,6 +301,7 @@ const fields = {
   usePeerInviteSessionCode: document.querySelector("#use-peer-invite-session-code"),
   currentInviteCodeSummary: document.querySelector("#current-invite-code-summary"),
   currentInviteCodeText: document.querySelector("#current-invite-code-text"),
+  connectionStepCounter: document.querySelector("#connection-step-counter"),
   roomSetupStepInvite: document.querySelector("#room-setup-step-invite"),
   roomSetupStepSetup: document.querySelector("#room-setup-step-setup"),
   roomSetupStepVerify: document.querySelector("#room-setup-step-verify"),
@@ -1355,17 +1356,19 @@ function renderConnectionExchangeInstruction() {
   if (!fields.connectionExchangeInstruction) {
     return;
   }
-  const setConnectionExchangeText = (titleKey, instructionKey) => {
+  const setConnectionExchangeText = (titleKey, instructionKey, stepKey) => {
     setText(fields.connectionPendingTitle, t(titleKey));
     setText(fields.connectionExchangeInstruction, t(instructionKey));
+    setText(fields.connectionStepCounter, t(stepKey));
   };
   if (!currentInviteCodeForRoom()) {
     setText(fields.connectionPendingTitle, t("connectionCodeReady"));
     setText(fields.connectionExchangeInstruction, "");
+    setText(fields.connectionStepCounter, "");
     return;
   }
   if (!latestLocalInviteSetupCode) {
-    setConnectionExchangeText("exchangeTitleInvite", "exchangeInstructionInvite");
+    setConnectionExchangeText("exchangeTitleInvite", "exchangeInstructionInvite", "exchangeStepInvite");
     return;
   }
   if (!latestLocalInviteSessionCode) {
@@ -1373,6 +1376,7 @@ function renderConnectionExchangeInstruction() {
     setConnectionExchangeText(
       peerCodeReady ? "exchangeTitleSetupUse" : "exchangeTitleSetupShare",
       peerCodeReady ? "exchangeInstructionSetupUse" : "exchangeInstructionSetupShare",
+      peerCodeReady ? "exchangeStepSetupUse" : "exchangeStepSetupShare",
     );
     return;
   }
@@ -1380,6 +1384,7 @@ function renderConnectionExchangeInstruction() {
   setConnectionExchangeText(
     peerSessionCodeReady ? "exchangeTitleSessionUse" : "exchangeTitleSessionShare",
     peerSessionCodeReady ? "exchangeInstructionSessionUse" : "exchangeInstructionSessionShare",
+    peerSessionCodeReady ? "exchangeStepSessionUse" : "exchangeStepSessionShare",
   );
 }
 
@@ -5992,7 +5997,7 @@ function applyProductionActionState() {
   );
   setText(
     fields.createRoomFromInviteCode,
-    t("prepareThisDevice"),
+    t("createMyConnectionCode"),
   );
   const peerEndpointState = twoProfilePeerEndpointState(twoProfile);
   const composerPrimaryIntent = twoProfileComposerPrimaryIntent({

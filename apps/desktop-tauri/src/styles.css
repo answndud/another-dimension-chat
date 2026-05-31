@@ -3589,7 +3589,7 @@ body.has-connection-code:not(.has-ready-session) .connection-pending-state > .ey
 body.has-connection-code:not(.has-ready-session) .connection-pending-state > .device-role-note,
 body.has-connection-code:not(.has-ready-session)
   .connection-pending-state
-  > p:not(#connection-exchange-instruction, .eyebrow, .device-role-note) {
+  > p:not(#connection-exchange-instruction, .eyebrow, .device-role-note, .connection-step-counter) {
   display: none;
 }
 
@@ -3600,6 +3600,19 @@ body.has-connection-code:not(.has-ready-session) .connection-pending-state > h4 
   font-size: 15px;
   font-weight: 800;
   line-height: 1.22;
+}
+
+.connection-step-counter {
+  width: fit-content;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 34%, transparent);
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: color-mix(in srgb, var(--accent-cyan) 7%, transparent);
+  color: var(--accent-cyan);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+  font-weight: 760;
+  line-height: 1.1;
 }
 
 .room-setup-progress {
@@ -3635,7 +3648,9 @@ body.has-connection-code:not(.has-ready-session) .connection-pending-state > h4 
   color: var(--success);
 }
 
-body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state p:not(.eyebrow) {
+body.is-chat-empty.has-connection-code:not(.has-ready-session)
+  .connection-pending-state
+  p:not(.eyebrow, .connection-step-counter) {
   display: none;
 }
 
