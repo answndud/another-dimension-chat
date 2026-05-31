@@ -3201,6 +3201,7 @@ pre.is-failed {
 }
 
 .room-status-summary.is-verify,
+.room-status-summary.is-delivery-off,
 .room-status-summary.is-route-needed,
 .room-status-summary.is-pending,
 .room-status-summary.is-waiting {
