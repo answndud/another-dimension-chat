@@ -538,6 +538,16 @@ test("ready rooms surface listening as the next idle chat action", () => {
   assert.match(stylesCss, /body\.is-chat-active\.is-receiving-messages \.room-receive-controls \{[\s\S]{0,80}display:\s*flex/);
 });
 
+test("chat transcript toolbar only surfaces reply in the active chat view", () => {
+  assert.match(indexHtml, /class="chat-transcript-toolbar"/);
+  assert.match(mainJs, /has-reply-action/);
+  assert.match(mainJs, /setReplyLatestTwoProfileLabel\(replySelection\.label\)/);
+  assert.match(stylesCss, /body\.is-chat-active \.chat-transcript-toolbar:not\(\.has-reply-action\) \{[\s\S]{0,80}display:\s*none/);
+  assert.match(stylesCss, /body\.is-chat-active \.chat-transcript-toolbar #load-production-two-profile-transcript \{[\s\S]{0,80}display:\s*none/);
+  assert.match(stylesCss, /body\.is-chat-active \.chat-transcript-toolbar #review-pending-two-profile-message \{[\s\S]{0,80}display:\s*none/);
+  assert.match(stylesCss, /body\.is-chat-active \.chat-transcript-toolbar\.has-reply-action #reply-latest-two-profile-message/);
+});
+
 test("verified rooms without a peer route do not look fully connected", () => {
   assert.match(mainJs, /needsPrivateRoute/);
   assert.match(mainJs, /"route-needed"/);
