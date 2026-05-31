@@ -2371,9 +2371,29 @@ test("productionTwoProfileOutboundActionState keeps retry and cancel visible for
     {
       showActions: true,
       sameDirection: false,
-      canApplyDirection: false,
-      canRunNow: false,
+      canApplyDirection: true,
+      canRunNow: true,
       disabledReason: "Only pending messages sent from this device can be retried or canceled here.",
+    },
+  );
+
+  assert.deepEqual(
+    productionTwoProfileOutboundActionState(
+      {
+        sender: "alice",
+        receiver: "bob",
+        statuses: new Set(),
+        outboundDeliveryState: "pending",
+        outboundRetryable: true,
+      },
+      { profileA: "alice", profileB: "bob" },
+    ),
+    {
+      showActions: true,
+      sameDirection: true,
+      canApplyDirection: true,
+      canRunNow: true,
+      disabledReason: "",
     },
   );
 });

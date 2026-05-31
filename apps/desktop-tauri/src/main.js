@@ -3479,8 +3479,7 @@ function renderProductionTwoProfileConversationList() {
       const retry = document.createElement("button");
       retry.type = "button";
       retry.className = "transcript-retry";
-      retry.disabled = !outboundActionState.canRunNow;
-      retry.title = retry.disabled ? outboundActionState.disabledReason : "";
+      retry.title = outboundActionState.disabledReason || "";
       retry.textContent = t(
         primaryAction.action === "refresh-and-retry" && twoProfileInviteCodeModeActive()
           ? "preparePrivateRoute"
@@ -3500,8 +3499,7 @@ function renderProductionTwoProfileConversationList() {
       const cancel = document.createElement("button");
       cancel.type = "button";
       cancel.className = "transcript-cancel";
-      cancel.disabled = !outboundActionState.canRunNow;
-      cancel.title = cancel.disabled ? outboundActionState.disabledReason : "";
+      cancel.title = outboundActionState.disabledReason || "";
       cancel.textContent = t("cancelSend");
       cancel.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -3589,9 +3587,10 @@ function twoProfileConversationReplyable(entry) {
 
 function twoProfileConversationOutboundRetryable(entry) {
   return Boolean(
-    entry?.statuses?.has("sent") &&
-      !entry.statuses?.has("received") &&
+    !entry?.statuses?.has("received") &&
       entry.outboundRetryable === true &&
+      entry.sender &&
+      entry.receiver &&
       entry.outboundDeliveryState !== "canceled",
   );
 }

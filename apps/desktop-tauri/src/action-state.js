@@ -437,12 +437,13 @@ export function productionTwoProfileOutboundActionState(entry, input = {}, invit
   const receivedCopyPresent = Boolean(entry?.statuses?.has?.("received"));
   const canceled = entry?.outboundDeliveryState === "canceled";
   const failed = entry?.outboundDeliveryState === "failed";
+  const pending = entry?.outboundDeliveryState === "pending";
   const retryable = entry?.outboundRetryable === true;
   const showActions = Boolean(
-    sentCopyPresent &&
+    (sentCopyPresent || pending || failed || retryable) &&
       !receivedCopyPresent &&
       !canceled &&
-      (failed || retryable),
+      (pending || failed || retryable),
   );
   const sameDirection = Boolean(
     entry?.sender &&
@@ -453,8 +454,8 @@ export function productionTwoProfileOutboundActionState(entry, input = {}, invit
   return {
     showActions,
     sameDirection,
-    canApplyDirection: Boolean(showActions && !inviteCodeMode),
-    canRunNow: Boolean(showActions && (sameDirection || !inviteCodeMode)),
+    canApplyDirection: Boolean(showActions),
+    canRunNow: Boolean(showActions),
     disabledReason:
       showActions && inviteCodeMode && !sameDirection
         ? "Only pending messages sent from this device can be retried or canceled here."
