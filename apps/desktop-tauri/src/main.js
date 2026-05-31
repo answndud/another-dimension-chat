@@ -3810,7 +3810,14 @@ function selectedTwoProfileDeliveredReplyTarget(input = productionTwoProfileInpu
     !entry ||
     !entry.statuses?.has("received") ||
     !input.profileA ||
-    !input.profileB ||
+    !input.profileB
+  ) {
+    return null;
+  }
+  if (twoProfileInviteCodeModeActive()) {
+    return entry;
+  }
+  if (
     input.profileA !== entry.receiver ||
     input.profileB !== entry.sender
   ) {
@@ -5780,16 +5787,21 @@ function applyProductionActionState() {
     !busy && latestProductionTwoProfileSuccess && hasTwoProfileSessionStatusInput && !twoProfile.message,
   );
   const selectedConversationDelivered = twoProfileConversationReplyable(selectedConversation);
-  const latestReplySelected = Boolean(
-    twoProfileConversationReplyable(latestConversation) &&
-      twoProfile.profileA === latestConversation.receiver &&
-      twoProfile.profileB === latestConversation.sender,
-  );
-  const selectedDeliveredReplyReady = Boolean(
-    selectedConversationDelivered &&
-      twoProfile.profileA === selectedConversation.receiver &&
-      twoProfile.profileB === selectedConversation.sender,
-  );
+  const inviteCodeReplyMode = twoProfileInviteCodeModeActive();
+  const latestReplySelected = inviteCodeReplyMode
+    ? Boolean(latestConversationDelivered)
+    : Boolean(
+        twoProfileConversationReplyable(latestConversation) &&
+          twoProfile.profileA === latestConversation.receiver &&
+          twoProfile.profileB === latestConversation.sender,
+      );
+  const selectedDeliveredReplyReady = inviteCodeReplyMode
+    ? Boolean(selectedConversationDelivered)
+    : Boolean(
+        selectedConversationDelivered &&
+          twoProfile.profileA === selectedConversation.receiver &&
+          twoProfile.profileB === selectedConversation.sender,
+      );
   const twoProfileReplyDraftReady = Boolean((selectedDeliveredReplyReady || latestReplySelected) && twoProfile.message);
   state.hasTwoProfileReplySelected = selectedDeliveredReplyReady || latestReplySelected;
   state.hasTwoProfileReplyDraftInput = twoProfileReplyDraftReady;
