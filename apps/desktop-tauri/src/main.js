@@ -1190,6 +1190,10 @@ function renderSendRecoveryPanel(entry = null) {
   reason.textContent =
     outboundActionState.disabledReason || t(outboundRecoveryReasonKey(primaryAction, statusLabel));
 
+  const next = document.createElement("span");
+  next.className = "send-recovery-next";
+  next.textContent = `${t("sendRecoveryNext")}: ${outboundPrimaryActionLabel(primaryAction)}`;
+
   const actions = document.createElement("div");
   actions.className = "send-recovery-actions";
   const retry = document.createElement("button");
@@ -1205,7 +1209,7 @@ function renderSendRecoveryPanel(entry = null) {
   cancel.textContent = t("cancelSend");
   cancel.addEventListener("click", () => cancelTwoProfileOutboundEntry(entry));
   actions.append(retry, cancel);
-  fields.sendRecoveryPanel.append(title, status, message, reason, actions);
+  fields.sendRecoveryPanel.append(title, status, message, reason, next, actions);
 }
 
 function outboundPrimaryActionLabel(primaryAction) {

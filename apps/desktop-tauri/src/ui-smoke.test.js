@@ -457,6 +457,8 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(indexHtml, /id="send-recovery-panel"/);
   assert.match(mainJs, /sendRecoveryPanel:\s*document\.querySelector\("#send-recovery-panel"\)/);
   assert.match(mainJs, /function renderSendRecoveryPanel\(entry = null\)/);
+  assert.match(functionBody(mainJs, "renderSendRecoveryPanel"), /next\.className = "send-recovery-next"/);
+  assert.match(functionBody(mainJs, "renderSendRecoveryPanel"), /`\$\{t\("sendRecoveryNext"\)\}: \$\{outboundPrimaryActionLabel\(primaryAction\)\}`/);
   assert.match(mainJs, /function latestVisibleTwoProfileRetryableOutboundEntry/);
   assert.match(mainJs, /latestTwoProfileRetryableOutboundEntry\(input\) \?\? latestAnyTwoProfileRetryableOutboundEntry\(\)/);
   assert.match(mainJs, /renderSendRecoveryPanel\(latestVisibleTwoProfileRetryableOutboundEntry\(\)\)/);
@@ -509,6 +511,10 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(functionBody(mainJs, "cancelTwoProfileOutboundEntry"), /setChatDeliveryNoticeByKey\("sendCancelFailed", "warning"\)/);
   assert.match(i18nJs, /sendCanceling/);
   assert.match(i18nJs, /sendCancelFailed/);
+  assert.match(i18nJs, /sendRecoveryPanelTitle: "message not sent"/);
+  assert.match(i18nJs, /sendRecoveryPanelTitle: "메시지가 전송되지 않음"/);
+  assert.match(i18nJs, /sendRecoveryNext: "next"/);
+  assert.match(i18nJs, /sendRecoveryNext: "다음"/);
   assert.match(i18nJs, /sendReasonPeerOffline/);
   assert.match(i18nJs, /상대 오프라인/);
   assert.match(stylesCss, /\.chat-delivery-notice-actions/);
@@ -516,6 +522,7 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(stylesCss, /\.chat-delivery-notice-text/);
   assert.match(stylesCss, /\.chat-delivery-notice-code/);
   assert.match(stylesCss, /\.chat-delivery-notice\.is-route-needed/);
+  assert.match(stylesCss, /\.send-recovery-next/);
   assert.match(stylesCss, /\.transcript-recovery-note/);
   assert.match(stylesCss, /\.transcript-recovery-summary/);
   assert.match(stylesCss, /\.transcript-recovery-summary\.is-address-stale/);
