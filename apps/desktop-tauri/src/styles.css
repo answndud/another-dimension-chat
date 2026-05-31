@@ -1770,6 +1770,11 @@ body.is-chat-active .message-transcript li.is-canceled .transcript-status {
   opacity: 0.62;
 }
 
+body.is-chat-active .message-transcript li.is-send-recovery .transcript-footer,
+body.is-chat-active .message-transcript li.is-send-recovery .transcript-delivery-note {
+  display: none;
+}
+
 body.is-chat-active .message-transcript .transcript-body {
   font-size: 14px;
   line-height: 1.4;
@@ -1811,18 +1816,19 @@ body.is-chat-active .message-transcript .transcript-delivery-note.is-canceled {
 body.is-chat-active .message-transcript .transcript-recovery-note {
   justify-self: end;
   max-width: min(100%, 520px);
-  border-left: 2px solid color-mix(in srgb, var(--accent-cyan) 46%, transparent);
-  padding: 2px 0 2px 8px;
+  border-left: 0;
+  padding: 1px 0 0;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 650;
-  line-height: 1.35;
+  line-height: 1.25;
   text-align: right;
+  text-transform: lowercase;
 }
 
 body.is-chat-active .message-transcript .transcript-recovery-note.is-timeout,
 body.is-chat-active .message-transcript .transcript-recovery-note.is-peer-offline {
-  border-left-color: color-mix(in srgb, var(--danger) 42%, transparent);
+  color: color-mix(in srgb, var(--danger) 68%, var(--text-secondary));
 }
 
 .chat-delivery-notice {
@@ -2007,10 +2013,10 @@ body.is-chat-active .message-transcript .transcript-row-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
   justify-self: end;
-  margin-top: 5px;
+  margin-top: 3px;
   padding-top: 0;
   border-top: 0;
   opacity: 1;
@@ -2029,9 +2035,9 @@ body.is-chat-active .message-transcript li:focus-within .transcript-row-actions 
 body.is-chat-active .message-transcript .transcript-row-actions button {
   width: auto;
   min-width: 0;
-  min-height: 28px;
-  padding: 4px 10px;
-  font-size: 11px;
+  min-height: 24px;
+  padding: 3px 9px;
+  font-size: 10.5px;
   font-weight: 760;
   text-transform: lowercase;
   white-space: nowrap;
