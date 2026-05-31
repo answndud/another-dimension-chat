@@ -541,6 +541,8 @@ test("ready rooms surface listening as the next idle chat action", () => {
     /twoProfilePeerEndpointState\(twoProfile\)\.ready[\s\S]{0,220}!productionTwoProfileOnionReceiveMode\.enabled[\s\S]{0,220}!twoProfile\.message/,
   );
   assert.match(mainJs, /latestChatDeliveryNoticeKey === "chatNoticeReceiveStopped"[\s\S]{0,180}t\("startReceiving"\)/);
+  assert.match(stylesCss, /body\.is-chat-active \.room-receive-controls \{[\s\S]{0,120}display:\s*none/);
+  assert.match(stylesCss, /body\.is-chat-active\.is-receiving-messages \.room-receive-controls \{[\s\S]{0,80}display:\s*flex/);
 });
 
 test("verified rooms without a peer route do not look fully connected", () => {
