@@ -2218,10 +2218,6 @@ body.is-chat-active .chat-primary-actions.is-send-mode #check-production-two-pro
   display: none;
 }
 
-body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft) {
-  display: none;
-}
-
 body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft)
   #run-production-two-profile-message-roundtrip {
   display: none;
@@ -2249,7 +2245,8 @@ body.is-chat-active .chat-primary-actions button {
 
 body.is-chat-active .chat-primary-actions #production-two-profile-readiness {
   align-self: center;
-  max-width: 180px;
+  justify-self: end;
+  max-width: min(240px, 100%);
   margin: 0;
   opacity: 0.72;
   overflow: hidden;
@@ -2260,7 +2257,23 @@ body.is-chat-active .chat-primary-actions #production-two-profile-readiness {
 }
 
 body.is-chat-active .chat-primary-actions.is-send-mode #production-two-profile-readiness {
-  display: none;
+  display: block;
+  grid-column: 1 / 2;
+  justify-self: end;
+  border-left: 2px solid currentColor;
+  padding-left: 8px;
+  text-align: right;
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: 2px;
+}
+
+body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft)
+  #production-two-profile-readiness {
+  opacity: 0.5;
 }
 
 .advanced-stack {
@@ -3236,11 +3249,7 @@ label[for="production-two-profile-transcript-export"],
 }
 
 .chat-primary-actions.is-send-mode {
-  grid-template-columns:
-    minmax(84px, 1fr)
-    minmax(84px, 1fr)
-    minmax(84px, 1fr)
-    auto;
+  grid-template-columns: minmax(116px, 1fr) auto;
 }
 
 .chat-primary-actions.is-send-mode #check-production-two-profile-session-status-inline {
@@ -3256,7 +3265,8 @@ label[for="production-two-profile-transcript-export"],
 
 .chat-primary-actions #production-two-profile-readiness {
   align-self: center;
-  max-width: 180px;
+  justify-self: end;
+  max-width: min(240px, 100%);
   margin: 0;
   opacity: 0.72;
   overflow: hidden;
@@ -3264,6 +3274,22 @@ label[for="production-two-profile-transcript-export"],
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.chat-primary-actions.is-send-mode:not(.has-message-draft) {
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: 2px;
+}
+
+.chat-primary-actions.is-send-mode:not(.has-message-draft) #run-production-two-profile-message-roundtrip {
+  display: none;
+}
+
+.chat-primary-actions.is-send-mode #production-two-profile-readiness {
+  display: block;
+  grid-column: 1 / 2;
+  border-left: 2px solid currentColor;
+  padding-left: 8px;
 }
 
 .onion-advanced-controls {
