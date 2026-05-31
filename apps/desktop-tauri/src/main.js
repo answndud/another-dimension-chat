@@ -410,7 +410,6 @@ const fields = {
   reviewPendingTwoProfileMessage: document.querySelector("#review-pending-two-profile-message"),
   productionTwoProfileTranscript: document.querySelector("#production-two-profile-transcript"),
   chatDeliveryNotice: document.querySelector("#chat-delivery-notice"),
-  sendRecoveryPanel: document.querySelector("#send-recovery-panel"),
   productionTwoProfileTranscriptExport: document.querySelector("#production-two-profile-transcript-export"),
   productionTwoProfileNextStep: document.querySelector("#production-two-profile-next-step"),
   openManualProductionTools: document.querySelector("#open-manual-production-tools"),
@@ -1158,65 +1157,6 @@ function setChatDeliveryNoticeForPendingOutbound(entry) {
   setChatDeliveryNotice(t(primaryAction.recoveryKey || "sendRecoveryGeneric"), latestChatDeliveryNoticeTone, {
     pendingEntry: entry,
   });
-}
-
-function renderSendRecoveryPanel(entry = null) {
-  if (!fields.sendRecoveryPanel) {
-    return;
-  }
-  fields.sendRecoveryPanel.replaceChildren();
-  if (!entry || !twoProfileConversationOutboundRetryable(entry)) {
-    fields.sendRecoveryPanel.hidden = true;
-    return;
-  }
-  fields.sendRecoveryPanel.hidden = false;
-  const statusLabel = productionTwoProfileOutboundStatusLabel(entry);
-  const primaryAction = productionTwoProfileOutboundPrimaryAction(entry);
-  const recoveryClass = outboundRecoveryClass(primaryAction, statusLabel);
-  const outboundActionState = productionTwoProfileOutboundActionState(
-    entry,
-    productionTwoProfileInput(),
-    twoProfileInviteCodeModeActive(),
-  );
-  fields.sendRecoveryPanel.className = `send-recovery-panel ${recoveryClass}`;
-
-  const title = document.createElement("strong");
-  title.className = "send-recovery-title";
-  title.textContent = t("sendRecoveryPanelTitle");
-
-  const status = document.createElement("span");
-  status.className = "send-recovery-status";
-  status.textContent = localizedOutboundStatus(statusLabel);
-
-  const message = document.createElement("p");
-  message.className = "send-recovery-message";
-  message.textContent = entry.message;
-
-  const reason = document.createElement("p");
-  reason.className = "send-recovery-reason";
-  reason.textContent =
-    outboundActionState.disabledReason || t(outboundRecoveryReasonKey(primaryAction, statusLabel));
-
-  const next = document.createElement("span");
-  next.className = "send-recovery-next";
-  next.textContent = `${t("sendRecoveryNext")}: ${outboundPrimaryActionLabel(primaryAction)}`;
-
-  const actions = document.createElement("div");
-  actions.className = "send-recovery-actions";
-  const retry = document.createElement("button");
-  retry.type = "button";
-  retry.className = "send-recovery-primary";
-  retry.textContent = outboundPrimaryActionLabel(primaryAction);
-  retry.addEventListener("click", () => {
-    runTwoProfileOutboundPrimaryAction(entry, primaryAction);
-  });
-  const cancel = document.createElement("button");
-  cancel.type = "button";
-  cancel.className = "send-recovery-cancel";
-  cancel.textContent = t("cancelSend");
-  cancel.addEventListener("click", () => cancelTwoProfileOutboundEntry(entry));
-  actions.append(retry, cancel);
-  fields.sendRecoveryPanel.append(title, status, message, reason, next, actions);
 }
 
 function outboundPrimaryActionLabel(primaryAction) {
@@ -3492,10 +3432,8 @@ function renderProductionTwoProfileConversationList() {
     empty.className = "is-empty";
     empty.textContent = twoProfileEmptyConversationMessage();
     target.append(empty);
-    renderSendRecoveryPanel(null);
     return;
   }
-  renderSendRecoveryPanel(latestVisibleTwoProfileRetryableOutboundEntry());
   const replyTarget = selectedTwoProfileDeliveredReplyTarget(productionTwoProfileInput());
   const replyTargetKey = replyTarget ? twoProfileConversationKey(replyTarget) : null;
   for (const entry of entries) {
@@ -3992,17 +3930,14 @@ function showRetryableTwoProfileOutboundNotice(entry) {
   if (!entry) {
     return;
   }
-  renderSendRecoveryPanel(entry);
   setChatDeliveryNoticeForPendingOutbound(entry);
 }
 
 function showLatestRetryableOutboundNotice(input = productionTwoProfileInput()) {
   const entry = latestVisibleTwoProfileRetryableOutboundEntry(input);
   if (!entry) {
-    renderSendRecoveryPanel(null);
     return false;
   }
-  renderSendRecoveryPanel(entry);
   setChatDeliveryNoticeForPendingOutbound(entry);
   return true;
 }

@@ -69,7 +69,7 @@ test("chat-first surface keeps setup and diagnostics out of the main path", () =
   assert.match(indexHtml, /class="room-secondary-options"/);
   assert.match(indexHtml, /class="system-settings-panel"/);
   assert.match(indexHtml, /id="chat-delivery-notice"/);
-  assert.match(indexHtml, /id="send-recovery-panel"/);
+  assert.doesNotMatch(indexHtml, /id="send-recovery-panel"/);
   assert.match(stylesCss, /body\.is-chat-active/);
   assert.match(stylesCss, /\.chat-settings-panel/);
   assert.doesNotMatch(indexHtml, /Use this same code|Both devices use the same code|Create room/);
@@ -98,7 +98,7 @@ test("message composer routes send, receive, retry, and route preparation throug
 });
 
 test("failed sends stay recoverable from the chat flow", () => {
-  assert.match(mainJs, /function renderSendRecoveryPanel\(entry = null\)/);
+  assert.doesNotMatch(mainJs, /function renderSendRecoveryPanel/);
   assert.match(mainJs, /function runTwoProfileOutboundPrimaryAction/);
   assert.match(mainJs, /function cancelTwoProfileOutboundEntry/);
   assert.match(mainJs, /setChatDeliveryNoticeForPendingOutbound/);
@@ -111,6 +111,7 @@ test("failed sends stay recoverable from the chat flow", () => {
   assert.match(i18nJs, /sendRecoveryPanelTitle: "message not sent"/);
   assert.match(i18nJs, /sendRecoveryPanelTitle: "메시지가 전송되지 않음"/);
   assert.match(stylesCss, /\.chat-delivery-notice-chip/);
+  assert.doesNotMatch(stylesCss, /\.send-recovery-panel/);
 });
 
 test("local peer development uses isolated app data roots", () => {
