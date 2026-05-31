@@ -4075,7 +4075,6 @@ body.has-ready-session.has-confirmed-safety:not(.has-private-route) .connection-
 }
 
 .private-route-exchange .eyebrow,
-.private-route-exchange h4,
 .private-route-exchange p:not(.exchange-instruction),
 .private-route-steps,
 .private-route-exchange label {
@@ -4085,6 +4084,15 @@ body.has-ready-session.has-confirmed-safety:not(.has-private-route) .connection-
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+.private-route-exchange h4 {
+  display: block;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.22;
 }
 
 .private-route-exchange p:not(.eyebrow) {
@@ -4172,6 +4180,13 @@ body.has-ready-session.has-confirmed-safety:not(.has-private-route) .connection-
 
 body:not(.has-local-private-route-code) #copy-private-route-code {
   opacity: 0.58;
+}
+
+body.has-local-private-route-code .private-route-exchange #local-private-route-code {
+  min-height: 36px;
+  padding-block: 7px;
+  font-size: 11px;
+  opacity: 0.68;
 }
 
 body.has-ready-session.has-confirmed-safety.has-private-delivery-permission:not(.has-private-route)
