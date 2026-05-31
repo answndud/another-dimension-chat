@@ -51,6 +51,9 @@ required_files=(
   "$APP_DIR/src/i18n.js"
   "$APP_DIR/src/i18n.test.js"
   "$APP_DIR/src/main.js"
+  "$APP_DIR/src/ui-smoke.test.js"
+  "$APP_DIR/scripts/noop-dev-server.mjs"
+  "$APP_DIR/scripts/run-local-peer.mjs"
   "$APP_DIR/src/transcript-export.js"
   "$APP_DIR/src/transcript-export.test.js"
   "$APP_DIR/src/transcript-retention.js"
@@ -78,7 +81,13 @@ require_contains "$TAURI_DIR/tauri.conf.json" '"resources": \[\]'
 require_contains "$APP_DIR/package.json" '"tauri:build"'
 require_contains "$APP_DIR/package.json" '"tauri:dev:beta-onion"'
 require_contains "$APP_DIR/package.json" '"tauri:build:beta-onion"'
+require_contains "$APP_DIR/package.json" '"tauri:dev:peer-a"'
+require_contains "$APP_DIR/package.json" '"tauri:dev:peer-b"'
 require_contains "$APP_DIR/package.json" 'manual-onion-client-attempt'
+require_contains "$APP_DIR/scripts/run-local-peer.mjs" 'another-dimension-dev-${peer}'
+require_contains "$APP_DIR/scripts/run-local-peer.mjs" 'ANOTHER_DIMENSION_APP_DATA_DIR'
+require_contains "$APP_DIR/scripts/run-local-peer.mjs" 'ANOTHER_DIMENSION_APP_CACHE_DIR'
+require_contains "$APP_DIR/scripts/noop-dev-server.mjs" 'process.exit(0)'
 require_contains "$APP_DIR/README.md" 'Build an installable desktop beta'
 require_contains "$APP_DIR/README.md" 'npm run tauri:dev:beta-onion'
 require_contains "$APP_DIR/README.md" 'manual-onion-client-attempt'

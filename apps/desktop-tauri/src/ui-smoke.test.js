@@ -140,6 +140,16 @@ test("network-off delivery notice includes a direct settings action", () => {
   assert.match(stylesCss, /\.chat-delivery-notice-action/);
 });
 
+test("local peer dev scripts isolate app data roots", () => {
+  const packageJson = readFileSync(join(appRoot, "package.json"), "utf8");
+  const runLocalPeer = readFileSync(join(appRoot, "scripts", "run-local-peer.mjs"), "utf8");
+  assert.match(packageJson, /"tauri:dev:peer-a": "node scripts\/run-local-peer\.mjs peer-a"/);
+  assert.match(packageJson, /"tauri:dev:peer-b": "node scripts\/run-local-peer\.mjs peer-b"/);
+  assert.match(runLocalPeer, /another-dimension-dev-\$\{peer\}/);
+  assert.match(runLocalPeer, /ANOTHER_DIMENSION_APP_DATA_DIR/);
+  assert.match(runLocalPeer, /ANOTHER_DIMENSION_APP_CACHE_DIR/);
+});
+
 test("dark chat palette avoids the removed gold warning colors", () => {
   assert.doesNotMatch(stylesCss, /#b8a46f/i);
   assert.doesNotMatch(stylesCss, /#746842/i);
