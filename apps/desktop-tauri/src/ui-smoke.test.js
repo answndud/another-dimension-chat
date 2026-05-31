@@ -189,11 +189,12 @@ test("default invite setup copy stays user-facing and avoids developer terms", (
     `${indexHtml}\n${i18nJs}`,
     /setup code|session code|route code|설정 코드|세션 코드|경로 코드|전송 경로 코드/i,
   );
-  assert.match(i18nJs, /My connection code/);
-  assert.match(i18nJs, /Their connection code/);
+  assert.match(i18nJs, /My code/);
+  assert.match(i18nJs, /Their code/);
   assert.match(i18nJs, /My delivery code/);
-  assert.match(i18nJs, /상대 연결 코드/);
+  assert.match(i18nJs, /상대 코드/);
   assert.match(i18nJs, /상대 전송 코드/);
+  assert.doesNotMatch(i18nJs, /reply code|connection reply|connection finish|응답 코드|완료 코드/i);
   assert.doesNotMatch(i18nJs, /peer profile|private profile|device profile|상대의 개인 프로필|이 기기 프로필/i);
   assert.match(i18nJs, /Preparing this device\. No peer identity is created here\./);
   assert.match(i18nJs, /이 기기를 준비하는 중입니다\. 여기서는 상대 기기의 정보를 만들지 않습니다\./);
@@ -282,8 +283,8 @@ test("invite setup highlights only the next user action", () => {
   assert.match(stylesCss, /\.connection-pending-state button\.is-secondary-flow-action/);
   assert.match(stylesCss, /\.exchange-instruction/);
   assert.match(stylesCss, /\.connection-pending-state > h4/);
-  assert.match(i18nJs, /내 연결 코드 보내기/);
-  assert.match(i18nJs, /상대 기기의 코드를 사용하세요/);
+  assert.match(i18nJs, /내 코드 보내기/);
+  assert.match(i18nJs, /붙여넣은 상대 코드를 사용하세요/);
 });
 
 test("invite setup flow stays isolated and waits for explicit verification", () => {
