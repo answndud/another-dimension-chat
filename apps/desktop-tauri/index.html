@@ -380,7 +380,7 @@
                 </li>
                 <li>
                   <strong data-i18n="connectionGuidePassphrase">2. Continue on this device</strong>
-                  <span data-i18n="connectionGuidePassphraseText">This device creates its own device code.</span>
+                  <span data-i18n="connectionGuidePassphraseText">This device creates its own setup code.</span>
                 </li>
                 <li>
                   <strong data-i18n="connectionGuideSetup">3. Compare the phrase</strong>
@@ -630,7 +630,7 @@
             <section class="connection-pending-state" aria-labelledby="connection-pending-title">
               <ol class="room-setup-progress" aria-label="Room setup progress" data-i18n-aria-label="roomSetupProgress">
                 <li id="room-setup-step-invite" data-i18n="roomSetupStepInvite">Invite code</li>
-                <li id="room-setup-step-setup" data-i18n="roomSetupStepSetup">Device setup</li>
+                <li id="room-setup-step-setup" data-i18n="roomSetupStepSetup">Setup code</li>
                 <li id="room-setup-step-verify" data-i18n="roomSetupStepVerify">Verify phrase</li>
                 <li id="room-setup-step-route" data-i18n="roomSetupStepRoute">Delivery codes</li>
                 <li id="room-setup-step-chat" data-i18n="roomSetupStepChat">Send message</li>
@@ -667,7 +667,7 @@
                 </section>
                 <section class="invite-exchange-stage invite-stage-setup" aria-labelledby="connection-pending-title">
                   <label class="loop-label local-invite-setup-label" for="local-invite-setup-code" data-i18n="localInviteSetupCode">
-                    My device code
+                    My setup code
                   </label>
                   <textarea
                     id="local-invite-setup-code"
@@ -678,17 +678,17 @@
                     placeholder="Continue on this device first"
                   ></textarea>
                   <button id="copy-local-invite-setup-code" type="button" class="flow-control is-secondary" data-i18n="copyLocalInviteSetupCode">
-                    Copy my device code
+                    Copy my setup code
                   </button>
                   <label class="loop-label peer-invite-setup-label" for="peer-invite-setup-code" data-i18n="peerInviteSetupCode">
-                    Their device code
+                    Their setup code
                   </label>
                   <textarea
                     id="peer-invite-setup-code"
                     class="invite-code-display peer-invite-setup-code"
                     rows="3"
                     data-i18n-placeholder="peerInviteSetupCodePlaceholder"
-                    placeholder="Paste their device code"
+                    placeholder="Paste their setup code"
                   ></textarea>
                   <button id="use-peer-invite-setup-code" type="button" class="flow-control is-secondary" data-i18n="usePeerInviteSetupCode">
                     Check their code
@@ -696,7 +696,7 @@
                 </section>
                 <section class="invite-exchange-stage invite-stage-session" aria-labelledby="connection-pending-title">
                   <label class="loop-label local-invite-session-label" for="local-invite-session-code" data-i18n="localInviteSessionCode">
-                    My confirmation code
+                    My open code
                   </label>
                   <textarea
                     id="local-invite-session-code"
@@ -704,20 +704,20 @@
                     rows="3"
                     readonly
                     data-i18n-placeholder="localInviteSessionCodeNotReady"
-                    placeholder="Confirm the phrase to create my confirmation code"
+                    placeholder="Confirm the phrase to create my open code"
                   ></textarea>
                   <button id="copy-local-invite-session-code" type="button" class="flow-control is-secondary" data-i18n="copyLocalInviteSessionCode">
-                    Copy my confirmation code
+                    Copy my open code
                   </button>
                   <label class="loop-label peer-invite-session-label" for="peer-invite-session-code" data-i18n="peerInviteSessionCode">
-                    Their confirmation code
+                    Their open code
                   </label>
                   <textarea
                     id="peer-invite-session-code"
                     class="invite-code-display peer-invite-session-code"
                     rows="3"
                     data-i18n-placeholder="peerInviteSessionCodePlaceholder"
-                    placeholder="Paste their confirmation code"
+                    placeholder="Paste their open code"
                   ></textarea>
                   <button id="use-peer-invite-session-code" type="button" class="flow-control is-secondary" data-i18n="usePeerInviteSessionCode">
                     Open room
