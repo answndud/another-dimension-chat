@@ -453,7 +453,10 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(mainJs, /recoverySummary\.append\(recoveryStatus, recoveryText\)/);
   assert.match(mainJs, /setChatDeliveryNoticeForPendingOutbound/);
   assert.match(mainJs, /function showLatestRetryableOutboundNotice/);
+  assert.match(functionBody(mainJs, "showRetryableTwoProfileOutboundNotice"), /renderSendRecoveryPanel\(entry\)/);
   assert.match(functionBody(mainJs, "showLatestRetryableOutboundNotice"), /latestTwoProfileRetryableOutboundEntry\(input\)/);
+  assert.match(functionBody(mainJs, "showLatestRetryableOutboundNotice"), /renderSendRecoveryPanel\(entry\)/);
+  assert.match(functionBody(mainJs, "showLatestRetryableOutboundNotice"), /renderSendRecoveryPanel\(null\)/);
   assert.match(functionBody(mainJs, "sendProductionTwoProfileLatestOnionEnvelope"), /showLatestRetryableOutboundNotice\(input\)/);
   assert.match(mainJs, /options\.pendingEntry/);
   assert.match(mainJs, /cancelTwoProfileOutboundEntry\(pendingEntry\)/);
@@ -472,7 +475,8 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(stylesCss, /\.transcript-recovery-note/);
   assert.match(stylesCss, /\.transcript-recovery-summary/);
   assert.match(stylesCss, /\.transcript-recovery-summary\.is-address-stale/);
-  assert.match(stylesCss, /body\.is-chat-active \.send-recovery-panel \{[\s\S]{0,80}display:\s*none/);
+  assert.match(stylesCss, /body\.is-chat-active \.send-recovery-panel \{[\s\S]{0,160}display:\s*grid/);
+  assert.match(stylesCss, /body\.is-chat-active \.send-recovery-panel\[hidden\] \{[\s\S]{0,80}display:\s*none/);
   assert.match(stylesCss, /li\.is-send-recovery \{[\s\S]{0,180}var\(--danger\)/);
   assert.match(stylesCss, /li\.is-send-recovery \.transcript-footer/);
   assert.doesNotMatch(stylesCss, /li\.is-send-recovery \.transcript-delivery-note\s*\{[\s\S]{0,80}display:\s*none/);
