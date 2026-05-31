@@ -527,6 +527,8 @@ test("chat header keeps only the compact user status visible", () => {
 test("private route preparation is a first-class chat action", () => {
   assert.match(indexHtml, /id="prepare-private-route"/);
   assert.match(indexHtml, /data-i18n="preparePrivateRoute"/);
+  assert.match(i18nJs, /Prepare delivery code/);
+  assert.match(i18nJs, /전송 코드 준비/);
   assert.match(indexHtml, /id="private-route-step-local"/);
   assert.match(indexHtml, /id="private-route-step-copy"/);
   assert.match(indexHtml, /id="private-route-step-peer"/);
@@ -553,15 +555,22 @@ test("private route preparation is a first-class chat action", () => {
 });
 
 test("private route exchange highlights the next route action", () => {
+  assert.match(indexHtml, /id="private-route-exchange-title"/);
+  assert.match(mainJs, /privateRouteExchangeTitle:\s*document\.querySelector\("#private-route-exchange-title"\)/);
   assert.match(indexHtml, /id="private-route-instruction"/);
   assert.match(mainJs, /privateRouteInstruction:\s*document\.querySelector\("#private-route-instruction"\)/);
   assert.match(mainJs, /function routeExchangePrimaryActionNode/);
+  assert.match(mainJs, /routeTitleCreate/);
+  assert.match(mainJs, /routeTitleShare/);
+  assert.match(mainJs, /routeTitleUse/);
+  assert.match(mainJs, /routeTitleReady/);
   assert.match(mainJs, /routeInstructionCreate/);
   assert.match(mainJs, /routeInstructionShare/);
   assert.match(mainJs, /routeInstructionUse/);
   assert.match(mainJs, /routeInstructionReady/);
-  assert.match(i18nJs, /Copy mine\. Paste theirs\./);
-  assert.match(i18nJs, /내 코드를 복사하고, 상대 코드를 붙여넣으세요/);
+  assert.match(i18nJs, /Send my delivery code/);
+  assert.match(i18nJs, /내 전송 코드 보내기/);
+  assert.match(i18nJs, /상대 기기의 코드를 사용하세요/);
   assert.match(mainJs, /fields\.privateRouteExchange\.scrollIntoView/);
   assert.match(mainJs, /latestLocalPrivateRouteCode[\s\S]{0,120}fields\.preparePrivateRoute/);
   assert.match(mainJs, /peerPrivateRouteCode\?\.value[\s\S]{0,120}fields\.applyPeerPrivateRouteCode/);
@@ -570,7 +579,9 @@ test("private route exchange highlights the next route action", () => {
   assert.match(stylesCss, /\.private-route-exchange button\.is-primary-flow-action/);
   assert.match(stylesCss, /\.private-route-exchange button\.is-secondary-flow-action/);
   assert.match(stylesCss, /\.private-route-exchange \.eyebrow,[\s\S]{0,220}\.private-route-steps,[\s\S]{0,180}\.private-route-exchange label[\s\S]{0,180}clip:\s*rect\(0 0 0 0\)/);
+  assert.match(stylesCss, /\.private-route-exchange h4[\s\S]{0,180}display:\s*block/);
   assert.match(stylesCss, /\.private-route-exchange \.route-code-display \{[\s\S]{0,80}min-height:\s*46px/);
+  assert.match(stylesCss, /body\.has-local-private-route-code \.private-route-exchange #local-private-route-code[\s\S]{0,120}min-height:\s*36px/);
   assert.match(stylesCss, /\.private-route-actions[\s\S]{0,120}grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(0,\s*1fr\)/);
 });
 

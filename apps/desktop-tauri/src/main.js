@@ -373,6 +373,7 @@ const fields = {
   ),
   preparePrivateRoute: document.querySelector("#prepare-private-route"),
   privateRouteExchange: document.querySelector("#private-route-exchange"),
+  privateRouteExchangeTitle: document.querySelector("#private-route-exchange-title"),
   privateRouteStepLocal: document.querySelector("#private-route-step-local"),
   privateRouteStepCopy: document.querySelector("#private-route-step-copy"),
   privateRouteStepPeer: document.querySelector("#private-route-step-peer"),
@@ -2807,22 +2808,28 @@ function renderPrivateRouteExchangeState(input = productionTwoProfileInput()) {
   const routeReady = twoProfilePeerEndpointState(input).ready;
   const hasLocal = Boolean(latestLocalPrivateRouteCode);
   const hasPeerDraft = Boolean((fields.peerPrivateRouteCode?.value ?? "").trim());
+  const titleKey = routeReady
+    ? "routeTitleReady"
+    : !hasLocal
+      ? "routeTitleCreate"
+      : hasPeerDraft
+        ? "routeTitleUse"
+        : "routeTitleShare";
+  const instructionKey = routeReady
+    ? "routeInstructionReady"
+    : !hasLocal
+      ? "routeInstructionCreate"
+      : hasPeerDraft
+        ? "routeInstructionUse"
+        : "routeInstructionShare";
   fields.privateRouteStepLocal?.classList.toggle("is-complete", hasLocal);
   fields.privateRouteStepLocal?.classList.toggle("is-current", !hasLocal);
   fields.privateRouteStepCopy?.classList.toggle("is-complete", hasLocal && hasPeerDraft);
   fields.privateRouteStepCopy?.classList.toggle("is-current", hasLocal && !hasPeerDraft && !routeReady);
   fields.privateRouteStepPeer?.classList.toggle("is-complete", routeReady);
   fields.privateRouteStepPeer?.classList.toggle("is-current", hasLocal && hasPeerDraft && !routeReady);
-  setText(
-    fields.privateRouteInstruction,
-    routeReady
-      ? t("routeInstructionReady")
-      : !hasLocal
-        ? t("routeInstructionCreate")
-        : hasPeerDraft
-          ? t("routeInstructionUse")
-          : t("routeInstructionShare"),
-  );
+  setText(fields.privateRouteExchangeTitle, t(titleKey));
+  setText(fields.privateRouteInstruction, t(instructionKey));
 }
 
 function hidePrivateRouteExchangeIfReady(input = productionTwoProfileInput()) {
