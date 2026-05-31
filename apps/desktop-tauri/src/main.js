@@ -3101,7 +3101,41 @@ function latestTwoProfileOutboundDeliveryCandidate(input = productionTwoProfileI
   ) {
     return null;
   }
+  if (!retryableEntry && twoProfileOutboundDeliveryCandidateSettled(latest)) {
+    return null;
+  }
   return latest;
+}
+
+function twoProfileOutboundDeliveryCandidateSettled(candidate) {
+  const entry = twoProfileConversationEntryForOutboundCandidate(candidate);
+  return Boolean(
+    entry &&
+      !twoProfileConversationOutboundRetryable(entry) &&
+      (entry.statuses?.has("received") ||
+        entry.outboundDeliveryState === "sent" ||
+        entry.outboundDeliveryState === "canceled"),
+  );
+}
+
+function twoProfileConversationEntryForOutboundCandidate(candidate) {
+  if (!candidate) {
+    return null;
+  }
+  const messageNumber = Number.parseInt(candidate.messageNumber, 10);
+  if (!Number.isInteger(messageNumber) || messageNumber < 1) {
+    return null;
+  }
+  const sender = String(candidate.profileA ?? "").trim().toLowerCase();
+  const receiver = String(candidate.profileB ?? "").trim().toLowerCase();
+  return (
+    [...productionTwoProfileConversationEntries.values()].find(
+      (entry) =>
+        entry.sender === sender &&
+        entry.receiver === receiver &&
+        Number.parseInt(entry.messageNumber, 10) === messageNumber,
+    ) ?? null
+  );
 }
 
 function latestTwoProfileOutboundOnionMessage(input = productionTwoProfileInput()) {
