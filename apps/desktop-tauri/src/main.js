@@ -2553,6 +2553,7 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
       "warning",
     );
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+    showLatestRetryableOutboundNotice(input);
     return;
   }
   await markTwoProfileOutboundSendFailed(
@@ -2564,6 +2565,7 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
   setText(fields.productionTwoProfileWarning, t("messageSavedPrivateDeliveryOff"));
   setChatDeliveryNoticeByKey("messageSavedPrivateDeliveryOff", "muted");
   await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+  showLatestRetryableOutboundNotice(input);
 }
 
 function latestTwoProfileSessionStatusForCurrentInput(input = productionTwoProfileInput()) {
@@ -3796,6 +3798,15 @@ function showRetryableTwoProfileOutboundNotice(entry) {
     return;
   }
   setChatDeliveryNoticeForPendingOutbound(entry);
+}
+
+function showLatestRetryableOutboundNotice(input = productionTwoProfileInput()) {
+  const entry = latestTwoProfileRetryableOutboundEntry(input);
+  if (!entry) {
+    return false;
+  }
+  setChatDeliveryNoticeForPendingOutbound(entry);
+  return true;
 }
 
 function selectedTwoProfileManualFocusTarget(entry) {
@@ -8822,6 +8833,9 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
       renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
     }
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+    if (!result.send_attempt_succeeded) {
+      showLatestRetryableOutboundNotice(input);
+    }
   } catch (error) {
     try {
       await markTwoProfileOutboundSendFailed(
@@ -8839,6 +8853,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
     setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Failed before or during bounded onion send attempt."));
     try {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+      showLatestRetryableOutboundNotice(input);
     } catch {
       applyProductionActionState();
     }

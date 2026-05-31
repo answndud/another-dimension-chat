@@ -364,6 +364,7 @@ test("invite room outbound send is grouped behind explicit helpers", () => {
   assert.match(mainJs, /completeInviteRoomOutboundDelivery\(\{ profileA, profileB, passphrase \}, messageNumber\)/);
   assert.match(mainJs, /ManualNetworkPermissionMissing/);
   assert.match(mainJs, /messageSavedPrivateDeliveryOff/);
+  assert.match(functionBody(mainJs, "completeInviteRoomOutboundDelivery"), /showLatestRetryableOutboundNotice\(input\)/);
 });
 
 test("failed send actions use direct recovery labels instead of a single generic retry", () => {
@@ -390,6 +391,9 @@ test("failed send actions use direct recovery labels instead of a single generic
   assert.match(functionBody(mainJs, "retryTwoProfileOutboundEntry"), /setChatDeliveryNoticeByKey\("sendRetrying", "progress"\)/);
   assert.match(mainJs, /item\.append\(actions\)/);
   assert.match(mainJs, /setChatDeliveryNoticeForPendingOutbound/);
+  assert.match(mainJs, /function showLatestRetryableOutboundNotice/);
+  assert.match(functionBody(mainJs, "showLatestRetryableOutboundNotice"), /latestTwoProfileRetryableOutboundEntry\(input\)/);
+  assert.match(functionBody(mainJs, "sendProductionTwoProfileLatestOnionEnvelope"), /showLatestRetryableOutboundNotice\(input\)/);
   assert.match(mainJs, /options\.pendingEntry/);
   assert.match(mainJs, /cancelTwoProfileOutboundEntry\(pendingEntry\)/);
   assert.match(functionBody(mainJs, "cancelTwoProfileOutboundEntry"), /setChatDeliveryNoticeByKey\("sendCanceling", "progress"\)/);
