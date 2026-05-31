@@ -344,7 +344,7 @@
             </div>
             <dl class="room-identity-bar" aria-label="Room identity">
               <div>
-                <dt data-i18n="roomPeer">Peer</dt>
+                <dt data-i18n="roomDevice">This device</dt>
                 <dd id="room-identity-route">not connected</dd>
               </div>
               <div>
@@ -416,9 +416,14 @@
                     data-i18n-placeholder="connectionCodePlaceholder"
                     placeholder="Paste connection code"
                   />
-                  <button id="copy-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
-                    Copy code
-                  </button>
+                  <div class="invite-code-actions">
+                    <button id="create-invite-code-settings" type="button" data-i18n="createInviteCode">
+                      Create my invite code
+                    </button>
+                    <button id="copy-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
+                      Copy code
+                    </button>
+                  </div>
                   <p class="retention-note" data-i18n="connectionCodeHint">
                     Use the same invite code on both devices. The app keeps the local setup out of view.
                   </p>
@@ -430,6 +435,7 @@
                 <p id="production-two-profile-direction" class="demo-state" aria-live="polite">
                   Status: create or paste an invite code
                 </p>
+                <p id="connection-device-role" class="device-role-note" aria-live="polite"></p>
               </div>
               <div class="chat-setup-controls connection-setup-actions">
                 <div class="loop-actions setup-primary-actions">
@@ -568,7 +574,19 @@
                 <article class="connection-choice-card">
                   <strong data-i18n="connectionChoiceEnter">Enter received code</strong>
                   <span data-i18n="connectionChoiceEnterText">Use the code from the other device.</span>
-                  <button id="start-peer-connection" type="button" class="flow-control is-secondary" data-i18n="connectPeer">Paste received code</button>
+                  <label class="received-code-label" for="received-invite-code" data-i18n="receivedCodeLabel">
+                    Received invite code
+                  </label>
+                  <input
+                    id="received-invite-code"
+                    type="text"
+                    autocomplete="off"
+                    data-i18n-placeholder="connectionCodePlaceholder"
+                    placeholder="Paste invite code"
+                  />
+                  <button id="create-room-from-received-code" type="button" class="flow-control is-secondary" data-i18n="createConnection">
+                    Create room
+                  </button>
                 </article>
               </div>
             </section>
@@ -578,9 +596,22 @@
               <p data-i18n="connectionPendingHint">
                   Use this same code on the other device, then create the room.
               </p>
-              <button id="copy-pending-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
-                Copy invite code
-              </button>
+              <p id="pending-connection-device-role" class="device-role-note" aria-live="polite"></p>
+              <textarea
+                id="pending-invite-code-display"
+                class="invite-code-display"
+                rows="2"
+                readonly
+                aria-label="Current invite code"
+              ></textarea>
+              <div class="connection-pending-actions">
+                <button id="copy-pending-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
+                  Copy invite code
+                </button>
+                <button id="create-room-from-invite-code" type="button" data-i18n="createConnection">
+                  Create room
+                </button>
+              </div>
             </section>
             <section class="safety-confirm-state" aria-labelledby="safety-confirm-title">
               <p class="eyebrow" data-i18n="verificationNeeded">Verification needed</p>
@@ -594,6 +625,10 @@
               <p id="two-profile-safety-phrase" class="safety-phrase" data-i18n="verificationPhraseUnavailable">
                 Verification phrase unavailable
               </p>
+              <ol class="safety-confirm-checks" aria-label="Verification checklist" data-i18n-aria-label="verificationChecklist">
+                <li data-i18n="verificationCheckSeparateChannel">Compare over a separate channel.</li>
+                <li data-i18n="verificationCheckExactMatch">Continue only if every word matches.</li>
+              </ol>
               <div class="safety-confirm-actions">
                 <button id="confirm-two-profile-safety" type="button" data-i18n="phraseMatches">Phrase matches</button>
                 <button id="reject-two-profile-safety" type="button" class="flow-control is-secondary" data-i18n="phraseDoesNotMatch">

@@ -34,6 +34,8 @@ import {
   productionInviteCodeProfileName,
   productionInviteCodeProfiles,
   productionTwoProfilePairFromProfiles,
+  productionTwoProfileOutboundActionState,
+  productionTwoProfileOutboundPrimaryAction,
   productionTwoProfileConversationActionView,
   productionTwoProfileConversationCompare,
   productionTwoProfileCurrentAction,
@@ -480,6 +482,10 @@ test("chatNoticeForSendReceiveText maps recovery text to user-facing notice keys
   assert.deepEqual(
     chatNoticeForSendReceiveText("Messages stay locked until this phrase matches."),
     { key: "sendLockedUntilVerified", tone: "warning" },
+  );
+  assert.deepEqual(
+    chatNoticeForSendReceiveText("Verification confirmed. You can write your first message."),
+    { key: "messageInputUnlocked", tone: "success" },
   );
   assert.deepEqual(
     chatNoticeForSendReceiveText("stored peer onion address is not ready; refresh endpoint"),
@@ -2332,6 +2338,92 @@ test("productionTwoProfileOutboundStatusLabel maps durable retry and cancel stat
       outboundFailureKind: "receive-timeout",
     }),
     false,
+  );
+});
+
+test("productionTwoProfileOutboundActionState keeps retry and cancel visible for retryable sends", () => {
+  const entry = {
+    sender: "alice",
+    receiver: "bob",
+    statuses: new Set(["sent"]),
+    outboundDeliveryState: "failed",
+    outboundRetryable: true,
+  };
+
+  assert.deepEqual(productionTwoProfileOutboundActionState(entry, { profileA: "alice", profileB: "bob" }), {
+    showActions: true,
+    sameDirection: true,
+    canApplyDirection: true,
+    canRunNow: true,
+    disabledReason: "",
+  });
+
+  assert.deepEqual(productionTwoProfileOutboundActionState(entry, { profileA: "bob", profileB: "alice" }), {
+    showActions: true,
+    sameDirection: false,
+    canApplyDirection: true,
+    canRunNow: true,
+    disabledReason: "",
+  });
+
+  assert.deepEqual(
+    productionTwoProfileOutboundActionState(entry, { profileA: "bob", profileB: "alice" }, true),
+    {
+      showActions: true,
+      sameDirection: false,
+      canApplyDirection: false,
+      canRunNow: false,
+      disabledReason: "Only pending messages sent from this device can be retried or canceled here.",
+    },
+  );
+});
+
+test("productionTwoProfileOutboundPrimaryAction maps failure causes to direct user actions", () => {
+  const base = {
+    sender: "alice",
+    receiver: "bob",
+    statuses: new Set(["sent"]),
+    outboundDeliveryState: "failed",
+    outboundRetryable: true,
+  };
+
+  assert.deepEqual(
+    productionTwoProfileOutboundPrimaryAction({
+      ...base,
+      outboundFailureKind: "ManualNetworkPermissionMissing",
+    }),
+    {
+      action: "enable-private-delivery",
+      labelKey: "enablePrivateDelivery",
+      noticeKey: "messageSavedPrivateDeliveryOff",
+      recoveryKey: "sendRecoveryPermissionOff",
+    },
+  );
+
+  assert.deepEqual(
+    productionTwoProfileOutboundPrimaryAction({
+      ...base,
+      outboundFailureKind: "stored remote endpoint refresh required",
+    }),
+    {
+      action: "refresh-and-retry",
+      labelKey: "refreshAndRetry",
+      noticeKey: "chatNoticeRefreshAddress",
+      recoveryKey: "sendRecoveryStaleEndpoint",
+    },
+  );
+
+  assert.deepEqual(
+    productionTwoProfileOutboundPrimaryAction({
+      ...base,
+      outboundFailureKind: "peer offline",
+    }),
+    {
+      action: "retry",
+      labelKey: "retrySend",
+      noticeKey: "sendFailedGeneric",
+      recoveryKey: "sendRecoveryPeerOffline",
+    },
   );
 });
 
