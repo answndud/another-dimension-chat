@@ -23,17 +23,17 @@ test("translate resolves Korean and English chat labels", () => {
   assert.equal(translate("ko", "connectionGuideTitle"), "비공개 채팅방 시작");
   assert.equal(translate("ko", "closeSettings"), "설정 닫기");
   assert.equal(translate("ko", "roomSettings"), "초대 코드");
-  assert.equal(translate("ko", "connectionChoiceCreate"), "이 기기에서 시작");
-  assert.equal(translate("ko", "connectionChoiceCreateText"), "초대 코드 하나를 만들어 상대에게 보냅니다.");
-  assert.equal(translate("ko", "connectionChoiceEnter"), "상대 코드로 참여");
-  assert.equal(translate("ko", "connectionChoiceEnterText"), "상대 기기에서 만든 초대 코드를 붙여넣습니다.");
+  assert.equal(translate("ko", "connectionChoiceCreate"), "내 코드 만들기");
+  assert.equal(translate("ko", "connectionChoiceCreateText"), "상대 기기에 아직 코드가 없을 때 선택하세요.");
+  assert.equal(translate("ko", "connectionChoiceEnter"), "받은 코드 붙여넣기");
+  assert.equal(translate("ko", "connectionChoiceEnterText"), "상대 기기에서 이미 코드를 만들었을 때 선택하세요.");
   assert.equal(
     translate("ko", "connectionModalCopy"),
     "초대 코드를 만들거나 받은 코드를 붙여넣으세요. 이 기기에는 이 기기의 연결 정보만 저장됩니다.",
   );
   assert.equal(
     translate("ko", "connectionPendingHint"),
-    "화면에 보이는 코드를 보내고, 강조된 작업을 이어가세요.",
+    "강조된 작업 하나만 진행하세요. 화면이 요청할 때 보이는 코드를 상대에게 보내면 됩니다.",
   );
   assert.equal(translate("ko", "phraseDoesNotMatch"), "일치하지 않음");
   assert.equal(translate("ko", "onionDeliveryStarting"), "메시지를 저장했습니다. 비공개 전송을 시도합니다.");

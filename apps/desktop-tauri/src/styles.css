@@ -3624,7 +3624,7 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 
 .connection-choice-card span {
   display: block;
-  max-width: 34ch;
+  max-width: 36ch;
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 680;
@@ -3636,13 +3636,9 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 }
 
 .connection-received-card {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   align-items: center;
-}
-
-.connection-received-card span {
-  grid-column: 1 / -1;
 }
 
 .connection-verification-note {
@@ -3687,8 +3683,8 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 }
 
 .connection-received-card button {
-  width: auto;
-  min-width: max-content;
+  width: 100%;
+  min-width: 0;
   min-height: 40px;
   padding-inline: 12px;
 }

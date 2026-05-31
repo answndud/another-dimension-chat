@@ -64,11 +64,16 @@ test("empty connection state stays minimal and action-first", () => {
   assert.match(indexHtml, /class="connection-choice-card connection-received-card"/);
   assert.match(stylesCss, /\.chat-empty-state[\s\S]{0,180}background:\s*transparent/);
   assert.match(stylesCss, /\.connection-choice-grid \{[\s\S]{0,180}border:\s*1px solid/);
-  assert.match(stylesCss, /\.connection-received-card \{[\s\S]{0,120}grid-template-columns:\s*minmax\(0, 1fr\) auto/);
+  assert.match(stylesCss, /\.connection-received-card \{[\s\S]{0,120}grid-template-columns:\s*minmax\(0, 1fr\)/);
+  assert.match(stylesCss, /\.connection-received-card button \{[\s\S]{0,120}width:\s*100%/);
   assert.match(stylesCss, /\.connection-choice-card span \{[\s\S]{0,120}display:\s*block/);
   assert.match(stylesCss, /\.connection-choice-card \.received-code-label[\s\S]{0,120}clip:\s*rect\(0 0 0 0\)/);
-  assert.match(i18nJs, /peerExchangeHint: "Start with one code\. Create yours, or paste theirs\."/);
-  assert.match(i18nJs, /peerExchangeHint: "코드 하나로 시작합니다\. 내 코드를 만들거나, 상대 코드를 붙여넣으세요\."/);
+  assert.match(i18nJs, /peerExchangeHint: "Choose one path: make a code for the other device, or paste the code you received\."/);
+  assert.match(i18nJs, /peerExchangeHint: "둘 중 하나만 선택하세요\. 내 코드를 만들거나, 받은 코드를 붙여넣으면 됩니다\."/);
+  assert.match(i18nJs, /connectionChoiceCreate: "Make my code"/);
+  assert.match(i18nJs, /connectionChoiceEnter: "Paste their code"/);
+  assert.match(i18nJs, /connectionChoiceCreate: "내 코드 만들기"/);
+  assert.match(i18nJs, /connectionChoiceEnter: "받은 코드 붙여넣기"/);
 });
 
 test("created invite code has a visible read-only display before room creation", () => {
@@ -193,7 +198,7 @@ test("invite flow copy does not regress to create-room or same-code wording", ()
   assert.doesNotMatch(mainJs, /Use the same invite code|same code/);
   assert.doesNotMatch(mainJs, /Ready to create room|Create the room|create the room|채팅방을 만든|채팅방 만들기 가능/);
   assert.doesNotMatch(mainJs, /setText\(\s*fields\.runProductionTwoProfileRoundtrip,\s*t\("runTwoProfileRoundtrip"\)/);
-  assert.match(indexHtml, /Continue on this device/);
+  assert.match(indexHtml, /Prepare this device/);
   assert.match(mainJs, /setText\(\s*fields\.runProductionTwoProfileRoundtrip,\s*twoProfileNeedsSessionCheck \? t\("roomActionResume"\) : t\("prepareThisDevice"\)/);
   assert.equal(indexHtml.includes("same code"), false);
 });
@@ -314,7 +319,7 @@ test("invite setup highlights only the next user action", () => {
   assert.match(stylesCss, /\.exchange-instruction/);
   assert.match(stylesCss, /\.connection-pending-state > h4/);
   assert.match(i18nJs, /내 기기 코드 보내기/);
-  assert.match(i18nJs, /상대 기기 코드가 입력됐습니다/);
+  assert.match(i18nJs, /상대 기기 코드가 준비됐습니다/);
 });
 
 test("invite setup flow stays isolated and waits for explicit verification", () => {

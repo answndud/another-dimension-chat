@@ -595,9 +595,9 @@
               </p>
               <div class="connection-choice-grid" aria-label="Connection choices" data-i18n-aria-label="connectionChoices">
                 <article class="connection-choice-card connection-create-card">
-                  <strong data-i18n="connectionChoiceCreate">Create my invite code</strong>
-                  <span data-i18n="connectionChoiceCreateText">Share this code with the other device.</span>
-                  <button id="create-invite-code" type="button" data-i18n="createInviteCode">Create my invite code</button>
+                  <strong data-i18n="connectionChoiceCreate">Make my code</strong>
+                  <span data-i18n="connectionChoiceCreateText">Use this when the other device has no code yet.</span>
+                  <button id="create-invite-code" type="button" data-i18n="createInviteCode">Make my invite code</button>
                   <textarea
                     id="created-invite-code-display"
                     class="invite-code-display created-invite-code-display"
@@ -609,8 +609,8 @@
                   ></textarea>
                 </article>
                 <article class="connection-choice-card connection-received-card">
-                  <strong data-i18n="connectionChoiceEnter">Enter received code</strong>
-                  <span data-i18n="connectionChoiceEnterText">Use the code from the other device.</span>
+                  <strong data-i18n="connectionChoiceEnter">Paste their code</strong>
+                  <span data-i18n="connectionChoiceEnterText">Use this when the other device already made a code.</span>
                   <label class="received-code-label" for="received-invite-code" data-i18n="receivedCodeLabel">
                     Received invite code
                   </label>
@@ -622,7 +622,7 @@
                     placeholder="Paste invite code"
                   />
                   <button id="create-room-from-received-code" type="button" class="flow-control is-secondary" data-i18n="createConnection">
-                    Continue on this device
+                    Prepare this device
                   </button>
                 </article>
               </div>
@@ -661,7 +661,7 @@
                       Copy invite code
                     </button>
                     <button id="create-room-from-invite-code" type="button" data-i18n="createMyConnectionCode">
-                      Continue on this device
+                      Prepare this device
                     </button>
                   </div>
                 </section>
@@ -691,7 +691,7 @@
                     placeholder="Paste their device code"
                   ></textarea>
                   <button id="use-peer-invite-setup-code" type="button" class="flow-control is-secondary" data-i18n="usePeerInviteSetupCode">
-                    Use their code
+                    Check their code
                   </button>
                 </section>
                 <section class="invite-exchange-stage invite-stage-session" aria-labelledby="connection-pending-title">
