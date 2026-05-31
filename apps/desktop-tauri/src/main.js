@@ -3562,6 +3562,17 @@ function renderProductionTwoProfileConversationList() {
       : primaryAction
         ? t(outboundRecoveryReasonKey(primaryAction, outboundStatusLabel))
         : "";
+    const recoverySummary = document.createElement("span");
+    recoverySummary.className = `transcript-recovery-summary ${recoveryClass}`.trim();
+    if (primaryAction) {
+      const recoveryStatus = document.createElement("strong");
+      recoveryStatus.className = "transcript-recovery-status";
+      recoveryStatus.textContent = localizedOutboundStatus(outboundStatusLabel);
+      const recoveryText = document.createElement("span");
+      recoveryText.className = "transcript-recovery-text";
+      recoveryText.textContent = recoveryNote.textContent;
+      recoverySummary.append(recoveryStatus, recoveryText);
+    }
 
     const footer = document.createElement("span");
     footer.className = "transcript-footer";
@@ -3570,6 +3581,9 @@ function renderProductionTwoProfileConversationList() {
     item.append(meta, body);
     if (deliveryNote.textContent) {
       item.append(deliveryNote);
+    }
+    if (primaryAction) {
+      item.append(recoverySummary);
     }
     if (recoveryNote.textContent) {
       item.append(recoveryNote);
