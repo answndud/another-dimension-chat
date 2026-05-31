@@ -1177,6 +1177,26 @@ function outboundRecoveryClass(primaryAction, statusLabel = "") {
   return "is-retryable-send";
 }
 
+function outboundRecoveryReasonKey(primaryAction, statusLabel = "") {
+  const status = String(statusLabel ?? "").trim().toLowerCase();
+  if (primaryAction?.action === "enable-private-delivery") {
+    return "sendReasonPermissionOff";
+  }
+  if (status === "route missing") {
+    return "sendReasonRouteMissing";
+  }
+  if (primaryAction?.action === "refresh-and-retry") {
+    return "sendReasonStaleEndpoint";
+  }
+  if (status === "send timeout") {
+    return "sendReasonTimeout";
+  }
+  if (status === "peer offline") {
+    return "sendReasonPeerOffline";
+  }
+  return "sendReasonGeneric";
+}
+
 function updateChatDeliveryNoticeFromText(value) {
   const notice = chatNoticeForSendReceiveText(value);
   if (notice) {
@@ -3301,12 +3321,15 @@ function renderProductionTwoProfileConversationList() {
     const inboundOnly = !entry.statuses.has("sent") && entry.statuses.has("received");
     const outboundPending = twoProfileConversationOutboundRetryable(entry);
     const outboundCanceled = entry.outboundDeliveryState === "canceled";
+    const outboundStatusLabel = productionTwoProfileOutboundStatusLabel(entry);
     const outboundActionState = productionTwoProfileOutboundActionState(
       entry,
       productionTwoProfileInput(),
       twoProfileInviteCodeModeActive(),
     );
     const outboundNeedsAction = outboundActionState.showActions;
+    const primaryAction = outboundNeedsAction ? productionTwoProfileOutboundPrimaryAction(entry) : null;
+    const recoveryClass = primaryAction ? outboundRecoveryClass(primaryAction, outboundStatusLabel) : "";
     const replyable = twoProfileConversationReplyable(entry);
     const reviewable = twoProfileConversationPendingReviewable(entry);
     const selectable = replyable || reviewable;
@@ -3327,6 +3350,7 @@ function renderProductionTwoProfileConversationList() {
     item.classList.toggle("is-selected", selected);
     item.classList.toggle("is-reply-target", currentReplyTarget);
     item.classList.toggle("is-review-target", currentReviewTarget);
+    item.classList.toggle("is-send-recovery", Boolean(primaryAction));
     if (selectable) {
       item.tabIndex = 0;
       item.setAttribute("role", "button");
@@ -3360,7 +3384,6 @@ function renderProductionTwoProfileConversationList() {
     meta.textContent = `${entry.sender} -> ${entry.receiver} / #${entry.messageNumber}`;
 
     const status = document.createElement("span");
-    const outboundStatusLabel = productionTwoProfileOutboundStatusLabel(entry);
     status.className = `transcript-status ${
       delivered
         ? "is-delivered"
@@ -3408,8 +3431,6 @@ function renderProductionTwoProfileConversationList() {
     body.className = "transcript-body";
     body.textContent = entry.message;
 
-    const primaryAction = outboundNeedsAction ? productionTwoProfileOutboundPrimaryAction(entry) : null;
-    const recoveryClass = primaryAction ? outboundRecoveryClass(primaryAction, outboundStatusLabel) : "";
     const deliveryNote = document.createElement("span");
     deliveryNote.className = `transcript-delivery-note ${status.className.replace("transcript-status", "").trim()} ${recoveryClass}`.trim();
     deliveryNote.textContent = delivered
@@ -3423,8 +3444,8 @@ function renderProductionTwoProfileConversationList() {
     recoveryNote.className = `transcript-recovery-note ${recoveryClass}`.trim();
     recoveryNote.textContent = outboundNeedsAction && !outboundActionState.canRunNow
       ? outboundActionState.disabledReason
-      : primaryAction?.recoveryKey
-        ? t(primaryAction.recoveryKey)
+      : primaryAction
+        ? t(outboundRecoveryReasonKey(primaryAction, outboundStatusLabel))
         : "";
 
     const footer = document.createElement("span");
