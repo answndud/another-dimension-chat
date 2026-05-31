@@ -71,6 +71,7 @@ const fields = {
   releaseClaim: document.querySelector("#release-claim"),
   messaging: document.querySelector("#messaging"),
   localDevPeerLabel: document.querySelector("#local-dev-peer-label"),
+  localPeerTestHint: document.querySelector("#local-peer-test-hint"),
   core: document.querySelector("#core"),
   profile: document.querySelector("#profile"),
   pairing: document.querySelector("#pairing"),
@@ -1834,9 +1835,21 @@ function renderAppStateSummary(status) {
   setText(fields.localCapabilitySummary, localCapabilitySummary);
   setText(fields.mainBlockerSummary, mainBlockerSummary);
   const devPeerLabel = String(status.local_dev_peer_label ?? "").trim();
+  const devPeerName =
+    devPeerLabel === "peer-a" ? t("localPeerA") : devPeerLabel === "peer-b" ? t("localPeerB") : devPeerLabel;
+  document.body.classList.toggle("is-local-dev-peer", Boolean(devPeerLabel));
   if (fields.localDevPeerLabel) {
     fields.localDevPeerLabel.hidden = !devPeerLabel;
-    fields.localDevPeerLabel.textContent = devPeerLabel ? `local test: ${devPeerLabel}` : "";
+    fields.localDevPeerLabel.textContent = devPeerLabel
+      ? formatTemplate("localPeerBadge", { peer: devPeerName })
+      : "";
+    fields.localDevPeerLabel.title = devPeerLabel ? t("localPeerBadgeTitle") : "";
+  }
+  if (fields.localPeerTestHint) {
+    fields.localPeerTestHint.hidden = !devPeerLabel;
+    fields.localPeerTestHint.textContent = devPeerLabel
+      ? formatTemplate("localPeerTestHint", { peer: devPeerName })
+      : "";
   }
 }
 
