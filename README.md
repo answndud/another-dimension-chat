@@ -81,6 +81,7 @@ scripts/
   demo_dev_cli.sh   readable Alice/Bob dev-insecure local demo
   smoke_dev_cli.sh  Alice/Bob CLI smoke flow
   verify_all.sh     canonical local verification entrypoint
+  verify_full.sh    heavier pre-release/audit verification
   verify_tauri_scaffold.sh
 
 reference/
@@ -143,6 +144,7 @@ scripts/verify_full.sh
 
 This additionally runs:
 
+- Tauri GUI-less local peer flow preflight.
 - CLI smoke flow.
 - `cargo test --workspace`
 - `cargo test --workspace --features dev-insecure`

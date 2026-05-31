@@ -17,6 +17,7 @@ run_step() {
 cd "$ROOT_DIR"
 
 run_step "light verification" scripts/verify_all.sh
+run_step "tauri local peer flow" npm --prefix apps/desktop-tauri run test:local-peers
 run_step "dev CLI smoke" scripts/smoke_dev_cli.sh
 run_step "default tests" cargo test --workspace
 run_step "dev-insecure tests" cargo test --workspace --features dev-insecure
