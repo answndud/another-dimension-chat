@@ -627,74 +627,82 @@
               <p id="connection-exchange-instruction" class="exchange-instruction" aria-live="polite">
                 Copy this invite code to the other device, then prepare this device.
               </p>
-              <textarea
-                id="pending-invite-code-display"
-                class="invite-code-display"
-                rows="2"
-                readonly
-                aria-label="Current invite code"
-              ></textarea>
-              <label class="loop-label local-invite-setup-label" for="local-invite-setup-code" data-i18n="localInviteSetupCode">
-                My code
-              </label>
-              <textarea
-                id="local-invite-setup-code"
-                class="invite-code-display local-invite-setup-code"
-                rows="3"
-                readonly
-                data-i18n-placeholder="localInviteSetupCodeNotReady"
-                placeholder="Create my code first"
-              ></textarea>
-              <label class="loop-label peer-invite-setup-label" for="peer-invite-setup-code" data-i18n="peerInviteSetupCode">
-                Their code
-              </label>
-              <textarea
-                id="peer-invite-setup-code"
-                class="invite-code-display peer-invite-setup-code"
-                rows="3"
-                data-i18n-placeholder="peerInviteSetupCodePlaceholder"
-                placeholder="Paste their code"
-              ></textarea>
-              <label class="loop-label local-invite-session-label" for="local-invite-session-code" data-i18n="localInviteSessionCode">
-                My code
-              </label>
-              <textarea
-                id="local-invite-session-code"
-                class="invite-code-display local-invite-session-code"
-                rows="3"
-                readonly
-                data-i18n-placeholder="localInviteSessionCodeNotReady"
-                placeholder="Confirm the phrase to create my next code"
-              ></textarea>
-              <label class="loop-label peer-invite-session-label" for="peer-invite-session-code" data-i18n="peerInviteSessionCode">
-                Their code
-              </label>
-              <textarea
-                id="peer-invite-session-code"
-                class="invite-code-display peer-invite-session-code"
-                rows="3"
-                data-i18n-placeholder="peerInviteSessionCodePlaceholder"
-                placeholder="Paste their code"
-              ></textarea>
               <div class="connection-pending-actions">
-                <button id="copy-pending-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
-                  Copy invite code
-                </button>
-                <button id="create-room-from-invite-code" type="button" data-i18n="createMyConnectionCode">
-                  Create my code
-                </button>
-                <button id="copy-local-invite-setup-code" type="button" class="flow-control is-secondary" data-i18n="copyLocalInviteSetupCode">
-                  Copy my code
-                </button>
-                <button id="use-peer-invite-setup-code" type="button" class="flow-control is-secondary" data-i18n="usePeerInviteSetupCode">
-                  Use their code
-                </button>
-                <button id="copy-local-invite-session-code" type="button" class="flow-control is-secondary" data-i18n="copyLocalInviteSessionCode">
-                  Copy my code
-                </button>
-                <button id="use-peer-invite-session-code" type="button" class="flow-control is-secondary" data-i18n="usePeerInviteSessionCode">
-                  Use their code
-                </button>
+                <section class="invite-exchange-stage invite-stage-invite" aria-labelledby="connection-pending-title">
+                  <textarea
+                    id="pending-invite-code-display"
+                    class="invite-code-display"
+                    rows="2"
+                    readonly
+                    aria-label="Current invite code"
+                  ></textarea>
+                  <div class="invite-stage-actions">
+                    <button id="copy-pending-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
+                      Copy invite code
+                    </button>
+                    <button id="create-room-from-invite-code" type="button" data-i18n="createMyConnectionCode">
+                      Create my code
+                    </button>
+                  </div>
+                </section>
+                <section class="invite-exchange-stage invite-stage-setup" aria-labelledby="connection-pending-title">
+                  <label class="loop-label local-invite-setup-label" for="local-invite-setup-code" data-i18n="localInviteSetupCode">
+                    My code
+                  </label>
+                  <textarea
+                    id="local-invite-setup-code"
+                    class="invite-code-display local-invite-setup-code"
+                    rows="3"
+                    readonly
+                    data-i18n-placeholder="localInviteSetupCodeNotReady"
+                    placeholder="Create my code first"
+                  ></textarea>
+                  <button id="copy-local-invite-setup-code" type="button" class="flow-control is-secondary" data-i18n="copyLocalInviteSetupCode">
+                    Copy my code
+                  </button>
+                  <label class="loop-label peer-invite-setup-label" for="peer-invite-setup-code" data-i18n="peerInviteSetupCode">
+                    Their code
+                  </label>
+                  <textarea
+                    id="peer-invite-setup-code"
+                    class="invite-code-display peer-invite-setup-code"
+                    rows="3"
+                    data-i18n-placeholder="peerInviteSetupCodePlaceholder"
+                    placeholder="Paste their code"
+                  ></textarea>
+                  <button id="use-peer-invite-setup-code" type="button" class="flow-control is-secondary" data-i18n="usePeerInviteSetupCode">
+                    Use their code
+                  </button>
+                </section>
+                <section class="invite-exchange-stage invite-stage-session" aria-labelledby="connection-pending-title">
+                  <label class="loop-label local-invite-session-label" for="local-invite-session-code" data-i18n="localInviteSessionCode">
+                    My code
+                  </label>
+                  <textarea
+                    id="local-invite-session-code"
+                    class="invite-code-display local-invite-session-code"
+                    rows="3"
+                    readonly
+                    data-i18n-placeholder="localInviteSessionCodeNotReady"
+                    placeholder="Confirm the phrase to create my next code"
+                  ></textarea>
+                  <button id="copy-local-invite-session-code" type="button" class="flow-control is-secondary" data-i18n="copyLocalInviteSessionCode">
+                    Copy my code
+                  </button>
+                  <label class="loop-label peer-invite-session-label" for="peer-invite-session-code" data-i18n="peerInviteSessionCode">
+                    Their code
+                  </label>
+                  <textarea
+                    id="peer-invite-session-code"
+                    class="invite-code-display peer-invite-session-code"
+                    rows="3"
+                    data-i18n-placeholder="peerInviteSessionCodePlaceholder"
+                    placeholder="Paste their code"
+                  ></textarea>
+                  <button id="use-peer-invite-session-code" type="button" class="flow-control is-secondary" data-i18n="usePeerInviteSessionCode">
+                    Use their code
+                  </button>
+                </section>
               </div>
             </section>
             <section class="safety-confirm-state" aria-labelledby="safety-confirm-title">

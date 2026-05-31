@@ -113,6 +113,9 @@ test("connection-code ready state prepares only this device as the next action",
   assert.match(indexHtml, /id="peer-invite-session-code"/);
   assert.match(indexHtml, /id="use-peer-invite-session-code"/);
   assert.match(indexHtml, /class="connection-pending-actions"/);
+  assert.match(indexHtml, /class="invite-exchange-stage invite-stage-invite"/);
+  assert.match(indexHtml, /class="invite-exchange-stage invite-stage-setup"/);
+  assert.match(indexHtml, /class="invite-exchange-stage invite-stage-session"/);
   assert.match(mainJs, /createRoomFromInviteCode:\s*document\.querySelector\("#create-room-from-invite-code"\)/);
   assert.match(mainJs, /connectionStepCounter:\s*document\.querySelector\("#connection-step-counter"\)/);
   assert.match(mainJs, /roomSetupStepInvite:\s*document\.querySelector\("#room-setup-step-invite"\)/);
@@ -152,6 +155,10 @@ test("connection-code ready state prepares only this device as the next action",
   assert.match(i18nJs, /exchangeStepInvite/);
   assert.match(stylesCss, /#create-room-from-invite-code/);
   assert.match(stylesCss, /\.connection-step-counter/);
+  assert.match(stylesCss, /\.invite-exchange-stage/);
+  assert.match(stylesCss, /\.invite-stage-invite \{[\s\S]{0,80}display:\s*grid/);
+  assert.match(stylesCss, /has-local-invite-setup-code:not\(\.has-ready-session\) \.invite-stage-setup \{[\s\S]{0,80}display:\s*grid/);
+  assert.match(stylesCss, /has-local-invite-session-code:not\(\.has-ready-session\) \.invite-stage-session/);
   assert.match(stylesCss, /p:not\(\.eyebrow, \.connection-step-counter\)/);
   assert.match(stylesCss, /\.room-setup-progress[\s\S]{0,80}display:\s*none/);
   assert.match(stylesCss, /body\.has-connection-code:not\(\.has-ready-session\) \.connection-pending-state > h4/);

@@ -4149,6 +4149,66 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pendi
   box-shadow: none;
 }
 
+body.has-connection-code:not(.has-ready-session) .invite-exchange-stage {
+  display: none;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 22%, var(--panel-border));
+  border-radius: 5px;
+  padding: 10px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-cyan) 5%, transparent), transparent 72%),
+    color-mix(in srgb, var(--panel) 88%, var(--bg));
+}
+
+body.has-connection-code:not(.has-ready-session) .invite-stage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+}
+
+body.has-connection-code:not(.has-ready-session) .invite-stage-invite {
+  display: grid;
+}
+
+body.has-connection-code.has-local-invite-setup-code:not(.has-ready-session) .invite-stage-invite,
+body.has-connection-code.has-invite-session-stage:not(.has-ready-session) .invite-stage-invite {
+  display: none;
+}
+
+body.has-connection-code.has-local-invite-setup-code:not(.has-ready-session) .invite-stage-setup {
+  display: grid;
+}
+
+body.has-connection-code.has-local-invite-session-code:not(.has-ready-session) .invite-stage-setup,
+body.has-connection-code.has-invite-session-stage:not(.has-ready-session) .invite-stage-setup {
+  display: none;
+}
+
+body.has-connection-code.has-local-invite-session-code:not(.has-ready-session) .invite-stage-session,
+body.has-connection-code.has-invite-session-stage:not(.has-ready-session) .invite-stage-session {
+  display: grid;
+}
+
+body.has-connection-code:not(.has-ready-session) .invite-exchange-stage .loop-label {
+  position: static;
+  display: block;
+  width: auto;
+  height: auto;
+  margin: 2px 0 -3px;
+  overflow: visible;
+  clip: auto;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: lowercase;
+  white-space: normal;
+}
+
+body.has-connection-code:not(.has-ready-session) .invite-exchange-stage .invite-code-display + button {
+  justify-self: start;
+}
+
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .chat-transcript-toolbar,
 body.is-chat-empty.has-connection-code:not(.has-ready-session) #production-two-profile-transcript {
   display: none;
