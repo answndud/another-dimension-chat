@@ -3920,13 +3920,18 @@ body.is-chat-empty.has-connection-code.has-local-invite-session-code:not(.has-re
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   align-items: center;
 }
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-actions button {
   min-height: 38px;
+}
+
+body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-actions button.is-flow-hidden,
+body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-actions button:disabled {
+  display: none;
 }
 
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state #copy-pending-invite-code {
@@ -4036,13 +4041,18 @@ body.has-connection-code.has-local-invite-session-code:not(.has-ready-session)
 
 body.has-connection-code:not(.has-ready-session) .connection-pending-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   align-items: center;
 }
 
 body.has-connection-code:not(.has-ready-session) .connection-pending-actions button {
   min-height: 38px;
+}
+
+body.has-connection-code:not(.has-ready-session) .connection-pending-actions button.is-flow-hidden,
+body.has-connection-code:not(.has-ready-session) .connection-pending-actions button:disabled {
+  display: none;
 }
 
 body.has-connection-code:not(.has-ready-session) .connection-pending-state #copy-pending-invite-code {
@@ -4122,6 +4132,9 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pendi
 body.has-connection-code:not(.has-ready-session) .connection-pending-state button.is-secondary-flow-action,
 body.is-chat-empty.has-connection-code:not(.has-ready-session) .connection-pending-state button.is-secondary-flow-action,
 .private-route-exchange button.is-secondary-flow-action {
+  justify-self: start;
+  width: fit-content;
+  min-height: 30px;
   border-color: color-mix(in srgb, var(--panel-border) 60%, transparent);
   background: transparent;
   color: var(--text-secondary);

@@ -256,6 +256,7 @@ test("language choice lives in the room settings panel, not the app debug panel"
 
 test("invite setup highlights only the next user action", () => {
   assert.match(mainJs, /function setFlowActionPriority/);
+  assert.match(mainJs, /function setInviteSetupActionVisibility/);
   assert.match(mainJs, /function inviteSetupPrimaryActionNode/);
   assert.match(functionBody(mainJs, "inviteSetupPrimaryActionNode"), /twoProfileSessionsReadyForInput\(\)/);
   assert.doesNotMatch(functionBody(mainJs, "inviteSetupPrimaryActionNode"), /session_ready/);
@@ -282,9 +283,13 @@ test("invite setup highlights only the next user action", () => {
   assert.match(mainJs, /latestLocalInviteSetupCode[\s\S]{0,160}fields\.createRoomFromInviteCode/);
   assert.match(mainJs, /peerInviteSetupCode\?\.value[\s\S]{0,120}fields\.usePeerInviteSetupCode/);
   assert.match(mainJs, /peerInviteSessionCode\?\.value[\s\S]{0,120}fields\.usePeerInviteSessionCode/);
-  assert.match(mainJs, /setFlowActionPriority\(inviteSetupPrimaryActionNode\(\)/);
+  assert.match(mainJs, /const invitePrimaryAction = inviteSetupPrimaryActionNode\(\)/);
+  assert.match(mainJs, /setInviteSetupActionVisibility\(invitePrimaryAction\)/);
+  assert.match(mainJs, /setFlowActionPriority\(invitePrimaryAction/);
   assert.match(stylesCss, /\.connection-pending-state button\.is-primary-flow-action/);
   assert.match(stylesCss, /\.connection-pending-state button\.is-secondary-flow-action/);
+  assert.match(stylesCss, /\.connection-pending-actions button\.is-flow-hidden/);
+  assert.match(stylesCss, /\.connection-pending-actions button:disabled/);
   assert.match(stylesCss, /\.exchange-instruction/);
   assert.match(stylesCss, /\.connection-pending-state > h4/);
   assert.match(i18nJs, /이 연결 코드 보내기/);

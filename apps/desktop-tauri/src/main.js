@@ -1397,6 +1397,26 @@ function setFlowActionPriority(primaryNode, nodes = []) {
   }
 }
 
+function setInviteSetupActionVisibility(primaryNode) {
+  const inviteCodeReady = Boolean(currentInviteCodeForRoom());
+  const setupCodeReady = Boolean(latestLocalInviteSetupCode);
+  const sessionCodeReady = Boolean(latestLocalInviteSessionCode);
+  const peerSetupCodeReady = Boolean((fields.peerInviteSetupCode?.value ?? "").trim());
+  const peerSessionCodeReady = Boolean((fields.peerInviteSessionCode?.value ?? "").trim());
+  const visibility = new Map([
+    [fields.copyPendingInviteCode, inviteCodeReady && !setupCodeReady],
+    [fields.createRoomFromInviteCode, inviteCodeReady && !setupCodeReady],
+    [fields.copyLocalInviteSetupCode, setupCodeReady && !sessionCodeReady && !peerSetupCodeReady],
+    [fields.usePeerInviteSetupCode, setupCodeReady && !sessionCodeReady && peerSetupCodeReady],
+    [fields.copyLocalInviteSessionCode, sessionCodeReady && !peerSessionCodeReady],
+    [fields.usePeerInviteSessionCode, sessionCodeReady && peerSessionCodeReady],
+  ]);
+  for (const [node, visible] of visibility) {
+    node?.classList.toggle("is-flow-hidden", !visible);
+  }
+  primaryNode?.classList.remove("is-flow-hidden");
+}
+
 function inviteSetupPrimaryActionNode() {
   if (!currentInviteCodeForRoom() || twoProfileSessionsReadyForInput()) {
     return null;
@@ -6056,7 +6076,9 @@ function applyProductionActionState() {
         : t("usePeerInviteSessionCode"),
   );
   renderConnectionExchangeInstruction();
-  setFlowActionPriority(inviteSetupPrimaryActionNode(), [
+  const invitePrimaryAction = inviteSetupPrimaryActionNode();
+  setInviteSetupActionVisibility(invitePrimaryAction);
+  setFlowActionPriority(invitePrimaryAction, [
     fields.copyPendingInviteCode,
     fields.createRoomFromInviteCode,
     fields.copyLocalInviteSetupCode,
