@@ -33,7 +33,7 @@ test("translate resolves Korean and English chat labels", () => {
   );
   assert.equal(
     translate("ko", "connectionPendingHint"),
-    "이 초대 코드를 상대 기기에 보내세요. 그다음 이 기기를 준비하고 연결 코드를 교환하세요.",
+    "이 코드를 보내고, 이 기기를 준비하세요.",
   );
   assert.equal(translate("ko", "phraseDoesNotMatch"), "문구가 다릅니다");
   assert.equal(translate("ko", "onionDeliveryStarting"), "메시지를 저장했습니다. 비공개 전송을 시도합니다.");

@@ -141,7 +141,13 @@ test("connection-code ready state prepares only this device as the next action",
   assert.match(mainJs, /setActionButtonState\(\s*fields\.usePeerInviteSessionCode/);
   assert.match(mainJs, /setText\(\s*fields\.createRoomFromInviteCode,\s*t\("prepareThisDevice"\)/);
   assert.match(stylesCss, /#create-room-from-invite-code/);
-  assert.match(stylesCss, /\.room-setup-progress/);
+  assert.match(stylesCss, /\.room-setup-progress[\s\S]{0,80}display:\s*none/);
+  assert.match(stylesCss, /body\.has-connection-code:not\(\.has-ready-session\) \.connection-pending-state > h4/);
+  assert.match(stylesCss, /#connection-exchange-instruction[\s\S]{0,160}display:\s*block/);
+  assert.match(
+    stylesCss,
+    /body\.is-chat-empty\.has-connection-code:not\(\.has-ready-session\) \.connection-pending-state[\s\S]{0,240}background:\s*transparent/,
+  );
   assert.match(stylesCss, /body\.has-ready-session\.needs-safety-confirmation \.connection-pending-state/);
   assert.match(stylesCss, /\.peer-invite-setup-code/);
   assert.match(stylesCss, /\.local-invite-session-code/);
