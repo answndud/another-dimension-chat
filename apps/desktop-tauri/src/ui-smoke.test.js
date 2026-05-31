@@ -450,13 +450,21 @@ test("delivery controls stay hidden until a room exists", () => {
 test("local peer dev scripts isolate app data roots", () => {
   const packageJson = readFileSync(join(appRoot, "package.json"), "utf8");
   const runLocalPeer = readFileSync(join(appRoot, "scripts", "run-local-peer.mjs"), "utf8");
+  const verifyLocalPeerFlow = readFileSync(join(appRoot, "scripts", "verify-local-peer-flow.mjs"), "utf8");
   assert.match(indexHtml, /id="local-dev-peer-label"/);
   assert.match(packageJson, /"tauri:dev:peer-a": "node scripts\/run-local-peer\.mjs peer-a"/);
   assert.match(packageJson, /"tauri:dev:peer-b": "node scripts\/run-local-peer\.mjs peer-b"/);
+  assert.match(packageJson, /"test:local-peers": "node scripts\/verify-local-peer-flow\.mjs"/);
   assert.match(runLocalPeer, /ANOTHER_DIMENSION_DEV_PEER_LABEL/);
   assert.match(runLocalPeer, /another-dimension-dev-\$\{peer\}/);
   assert.match(runLocalPeer, /ANOTHER_DIMENSION_APP_DATA_DIR/);
   assert.match(runLocalPeer, /ANOTHER_DIMENSION_APP_CACHE_DIR/);
+  assert.match(runLocalPeer, /--print-paths/);
+  assert.match(verifyLocalPeerFlow, /peer-a isolated paths/);
+  assert.match(verifyLocalPeerFlow, /peer-b isolated paths/);
+  assert.match(verifyLocalPeerFlow, /production_isolated_invite_roots_exchange_payloads_without_peer_private_profile/);
+  assert.match(verifyLocalPeerFlow, /production_two_profile_room_setup_accepts_invite_derived_profiles/);
+  assert.doesNotMatch(verifyLocalPeerFlow, /tauri dev|\bvite\b|\bpreview\b/);
   assert.match(mainJs, /localDevPeerLabel:\s*document\.querySelector\("#local-dev-peer-label"\)/);
   assert.match(mainJs, /local_dev_peer_label/);
   assert.match(stylesCss, /\.local-dev-peer-label/);

@@ -54,6 +54,7 @@ required_files=(
   "$APP_DIR/src/ui-smoke.test.js"
   "$APP_DIR/scripts/noop-dev-server.mjs"
   "$APP_DIR/scripts/run-local-peer.mjs"
+  "$APP_DIR/scripts/verify-local-peer-flow.mjs"
   "$APP_DIR/src/transcript-export.js"
   "$APP_DIR/src/transcript-export.test.js"
   "$APP_DIR/src/transcript-retention.js"
@@ -83,10 +84,13 @@ require_contains "$APP_DIR/package.json" '"tauri:dev:beta-onion"'
 require_contains "$APP_DIR/package.json" '"tauri:build:beta-onion"'
 require_contains "$APP_DIR/package.json" '"tauri:dev:peer-a"'
 require_contains "$APP_DIR/package.json" '"tauri:dev:peer-b"'
+require_contains "$APP_DIR/package.json" '"test:local-peers"'
 require_contains "$APP_DIR/package.json" 'manual-onion-client-attempt'
 require_contains "$APP_DIR/scripts/run-local-peer.mjs" 'another-dimension-dev-${peer}'
 require_contains "$APP_DIR/scripts/run-local-peer.mjs" 'ANOTHER_DIMENSION_APP_DATA_DIR'
 require_contains "$APP_DIR/scripts/run-local-peer.mjs" 'ANOTHER_DIMENSION_APP_CACHE_DIR'
+require_contains "$APP_DIR/scripts/verify-local-peer-flow.mjs" 'production_isolated_invite_roots_exchange_payloads_without_peer_private_profile'
+require_contains "$APP_DIR/scripts/verify-local-peer-flow.mjs" 'production_two_profile_room_setup_accepts_invite_derived_profiles'
 require_contains "$APP_DIR/scripts/noop-dev-server.mjs" 'process.exit(0)'
 require_contains "$APP_DIR/README.md" 'Build an installable desktop beta'
 require_contains "$APP_DIR/README.md" 'npm run tauri:dev:beta-onion'
