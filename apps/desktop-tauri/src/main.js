@@ -1111,6 +1111,13 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     action.textContent = t("comparePhraseAction");
     action.addEventListener("click", focusSafetyConfirmation);
     fields.chatDeliveryNotice.append(action);
+  } else if (latestChatDeliveryNoticeKey === "chatNoticeReceiveStopped") {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "chat-delivery-notice-action";
+    action.textContent = t("startReceiving");
+    action.addEventListener("click", startProductionTwoProfileOnionReceive);
+    fields.chatDeliveryNotice.append(action);
   } else if (isLocalInviteSessionCodeNoticeKey() && latestLocalInviteSessionCode) {
     const action = document.createElement("button");
     action.type = "button";
@@ -5733,6 +5740,17 @@ function applyProductionActionState() {
       manualNetworkPermission ? "privateDeliveryRouteNeeded" : "chatNoticeNetworkPermission",
       manualNetworkPermission ? "muted" : "warning",
     );
+  } else if (
+    !busy &&
+    twoProfileSessionsReady &&
+    twoProfileSafetyConfirmed &&
+    manualNetworkPermission &&
+    twoProfilePeerEndpointState(twoProfile).ready &&
+    !productionTwoProfileOnionReceiveMode.enabled &&
+    !productionTwoProfileOnionReceiveMode.stopRequested &&
+    !twoProfile.message
+  ) {
+    setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted");
   } else if (!busy && twoProfileSafetyConfirmed && latestChatDeliveryNoticeKey === "sendLockedUntilVerified") {
     setChatDeliveryNoticeByKey("", "neutral");
   } else if (
@@ -5740,7 +5758,8 @@ function applyProductionActionState() {
     !pendingConversation &&
     (latestChatDeliveryNoticeKey === "messageSavedPrivateDeliveryOff" ||
       latestChatDeliveryNoticeKey === "privateDeliveryRouteNeeded" ||
-      latestChatDeliveryNoticeKey === "chatNoticeNetworkPermission")
+      latestChatDeliveryNoticeKey === "chatNoticeNetworkPermission" ||
+      latestChatDeliveryNoticeKey === "chatNoticeReceiveStopped")
   ) {
     setChatDeliveryNoticeByKey("", "neutral");
   }

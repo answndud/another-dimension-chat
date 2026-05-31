@@ -387,11 +387,22 @@ test("network-off delivery notice includes a direct settings action", () => {
   assert.match(mainJs, /latestChatDeliveryNoticeKey === "messageSavedPrivateDeliveryOff"/);
   assert.match(mainJs, /latestChatDeliveryNoticeKey === "chatNoticeNetworkPermission"/);
   assert.match(mainJs, /latestChatDeliveryNoticeKey === "privateDeliveryRouteNeeded"/);
+  assert.match(mainJs, /latestChatDeliveryNoticeKey === "chatNoticeReceiveStopped"/);
   assert.match(mainJs, /isLocalInviteSessionCodeNoticeKey\(\) && latestLocalInviteSessionCode/);
   assert.match(mainJs, /action\.addEventListener\("click", copyLocalInviteSessionCode\)/);
   assert.match(mainJs, /className = "chat-delivery-notice-action"/);
   assert.match(mainJs, /action\.addEventListener\("click", openPrivateDeliverySettings\)/);
+  assert.match(mainJs, /action\.addEventListener\("click", startProductionTwoProfileOnionReceive\)/);
   assert.match(stylesCss, /\.chat-delivery-notice-action/);
+});
+
+test("ready rooms surface listening as the next idle chat action", () => {
+  assert.match(mainJs, /setChatDeliveryNoticeByKey\("chatNoticeReceiveStopped", "muted"\)/);
+  assert.match(
+    mainJs,
+    /twoProfilePeerEndpointState\(twoProfile\)\.ready[\s\S]{0,220}!productionTwoProfileOnionReceiveMode\.enabled[\s\S]{0,220}!twoProfile\.message/,
+  );
+  assert.match(mainJs, /latestChatDeliveryNoticeKey === "chatNoticeReceiveStopped"[\s\S]{0,180}t\("startReceiving"\)/);
 });
 
 test("verified rooms without a peer route do not look fully connected", () => {
