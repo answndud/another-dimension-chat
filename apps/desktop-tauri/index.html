@@ -595,9 +595,13 @@
               </p>
               <div class="connection-choice-grid" aria-label="Connection choices" data-i18n-aria-label="connectionChoices">
                 <article class="connection-choice-card connection-create-card">
+                  <span class="connection-choice-step" data-i18n="connectionChoiceCreateStep">Option A</span>
                   <strong data-i18n="connectionChoiceCreate">Make my code</strong>
                   <span data-i18n="connectionChoiceCreateText">Use this when the other device has no code yet.</span>
                   <button id="create-invite-code" type="button" data-i18n="createInviteCode">Make my invite code</button>
+                  <label class="invite-output-label" for="created-invite-code-display" data-i18n="createdInviteCode">
+                    Created invite code
+                  </label>
                   <textarea
                     id="created-invite-code-display"
                     class="invite-code-display created-invite-code-display"
@@ -607,8 +611,12 @@
                     aria-label="Created invite code"
                     data-i18n-aria-label="createdInviteCode"
                   ></textarea>
+                  <span class="connection-choice-hint" data-i18n="connectionChoiceCreateAfter">
+                    After it appears, send it to the other device.
+                  </span>
                 </article>
                 <article class="connection-choice-card connection-received-card">
+                  <span class="connection-choice-step" data-i18n="connectionChoiceEnterStep">Option B</span>
                   <strong data-i18n="connectionChoiceEnter">Paste their code</strong>
                   <span data-i18n="connectionChoiceEnterText">Use this when the other device already made a code.</span>
                   <label class="received-code-label" for="received-invite-code" data-i18n="receivedCodeLabel">
@@ -624,6 +632,9 @@
                   <button id="create-room-from-received-code" type="button" class="flow-control is-secondary" data-i18n="createConnection">
                     Prepare this device
                   </button>
+                  <span class="connection-choice-hint" data-i18n="connectionChoiceEnterAfter">
+                    Paste the code, then prepare this device.
+                  </span>
                 </article>
               </div>
             </section>

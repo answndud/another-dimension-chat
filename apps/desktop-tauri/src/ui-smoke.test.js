@@ -67,13 +67,28 @@ test("empty connection state stays minimal and action-first", () => {
   assert.match(stylesCss, /\.connection-received-card \{[\s\S]{0,120}grid-template-columns:\s*minmax\(0, 1fr\)/);
   assert.match(stylesCss, /\.connection-received-card button \{[\s\S]{0,120}width:\s*100%/);
   assert.match(stylesCss, /\.connection-choice-card span \{[\s\S]{0,120}display:\s*block/);
-  assert.match(stylesCss, /\.connection-choice-card \.received-code-label[\s\S]{0,120}clip:\s*rect\(0 0 0 0\)/);
+  assert.match(stylesCss, /\.connection-choice-card strong \{[\s\S]{0,120}font-size:\s*16px/);
+  assert.match(stylesCss, /\.connection-choice-card \.connection-choice-step/);
+  assert.match(stylesCss, /\.connection-choice-card \.invite-output-label,\s*\n\.connection-choice-card \.received-code-label/);
+  assert.doesNotMatch(stylesCss, /\.connection-choice-card \.received-code-label[\s\S]{0,140}clip:\s*rect\(0 0 0 0\)/);
+  assert.match(indexHtml, /data-i18n="connectionChoiceCreateStep"/);
+  assert.match(indexHtml, /data-i18n="connectionChoiceEnterStep"/);
+  assert.match(indexHtml, /data-i18n="connectionChoiceCreateAfter"/);
+  assert.match(indexHtml, /data-i18n="connectionChoiceEnterAfter"/);
   assert.match(i18nJs, /peerExchangeHint: "Choose one path: make a code for the other device, or paste the code you received\."/);
   assert.match(i18nJs, /peerExchangeHint: "둘 중 하나만 선택하세요\. 내 코드를 만들거나, 받은 코드를 붙여넣으면 됩니다\."/);
+  assert.match(i18nJs, /connectionChoiceCreateStep: "Option A"/);
+  assert.match(i18nJs, /connectionChoiceEnterStep: "Option B"/);
   assert.match(i18nJs, /connectionChoiceCreate: "Make my code"/);
   assert.match(i18nJs, /connectionChoiceEnter: "Paste their code"/);
+  assert.match(i18nJs, /connectionChoiceCreateAfter: "Your code appears here\. Send it to the other device\."/);
+  assert.match(i18nJs, /connectionChoiceEnterAfter: "Paste their code, then prepare this device\."/);
+  assert.match(i18nJs, /connectionChoiceCreateStep: "선택 A"/);
+  assert.match(i18nJs, /connectionChoiceEnterStep: "선택 B"/);
   assert.match(i18nJs, /connectionChoiceCreate: "내 코드 만들기"/);
   assert.match(i18nJs, /connectionChoiceEnter: "받은 코드 붙여넣기"/);
+  assert.match(i18nJs, /connectionChoiceCreateAfter: "내 코드가 여기에 표시됩니다\. 이 코드를 상대에게 보내세요\."/);
+  assert.match(i18nJs, /connectionChoiceEnterAfter: "상대 코드를 붙여넣은 뒤 이 기기를 준비하세요\."/);
 });
 
 test("created invite code has a visible read-only display before room creation", () => {

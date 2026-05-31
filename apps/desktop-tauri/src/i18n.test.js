@@ -24,9 +24,11 @@ test("translate resolves Korean and English chat labels", () => {
   assert.equal(translate("ko", "closeSettings"), "설정 닫기");
   assert.equal(translate("ko", "roomSettings"), "초대 코드");
   assert.equal(translate("ko", "connectionChoiceCreate"), "내 코드 만들기");
-  assert.equal(translate("ko", "connectionChoiceCreateText"), "상대 기기에 아직 코드가 없을 때 선택하세요.");
+  assert.equal(translate("ko", "connectionChoiceCreateText"), "상대 기기가 내 코드를 기다리고 있으면 여기서 시작하세요.");
   assert.equal(translate("ko", "connectionChoiceEnter"), "받은 코드 붙여넣기");
   assert.equal(translate("ko", "connectionChoiceEnterText"), "상대 기기에서 이미 코드를 만들었을 때 선택하세요.");
+  assert.equal(translate("ko", "connectionChoiceCreateAfter"), "내 코드가 여기에 표시됩니다. 이 코드를 상대에게 보내세요.");
+  assert.equal(translate("ko", "connectionChoiceEnterAfter"), "상대 코드를 붙여넣은 뒤 이 기기를 준비하세요.");
   assert.equal(
     translate("ko", "connectionModalCopy"),
     "초대 코드를 만들거나 받은 코드를 붙여넣으세요. 이 기기에는 이 기기의 연결 정보만 저장됩니다.",
