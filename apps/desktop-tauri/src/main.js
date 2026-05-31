@@ -1038,7 +1038,7 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
   }
   const text = String(message ?? "").trim();
   const pendingEntry = options.pendingEntry ?? null;
-  const primaryAction = pendingEntry ? productionTwoProfileOutboundPrimaryAction(pendingEntry) : null;
+  const primaryAction = pendingEntry ? currentTwoProfileOutboundPrimaryAction(pendingEntry) : null;
   fields.chatDeliveryNotice.className = [
     "chat-delivery-notice",
     text ? "is-visible" : "",
@@ -1151,7 +1151,7 @@ function setChatDeliveryNoticeByKey(key, tone = "neutral") {
 }
 
 function setChatDeliveryNoticeForPendingOutbound(entry) {
-  const primaryAction = productionTwoProfileOutboundPrimaryAction(entry);
+  const primaryAction = currentTwoProfileOutboundPrimaryAction(entry);
   latestChatDeliveryNoticeKey = primaryAction.noticeKey || "sendFailedGeneric";
   latestChatDeliveryNoticeTone = primaryAction.action === "enable-private-delivery" ? "muted" : "warning";
   setChatDeliveryNotice(t(primaryAction.recoveryKey || "sendRecoveryGeneric"), latestChatDeliveryNoticeTone, {
@@ -1159,11 +1159,41 @@ function setChatDeliveryNoticeForPendingOutbound(entry) {
   });
 }
 
+function currentTwoProfileOutboundPrimaryAction(entry, input = productionTwoProfileInput()) {
+  const primaryAction = productionTwoProfileOutboundPrimaryAction(entry);
+  const peerEndpointState = twoProfilePeerEndpointState(input);
+  if (primaryAction.action === "enable-private-delivery" && manualNetworkPermissionEnabled()) {
+    if (!peerEndpointState.ready) {
+      return {
+        action: "prepare-private-route",
+        labelKey: "preparePrivateRoute",
+        noticeKey: peerEndpointState.stale ? "chatNoticeRefreshAddress" : "privateDeliveryRouteNeeded",
+        recoveryKey: peerEndpointState.stale ? "sendRecoveryStaleEndpoint" : "sendRecoveryRouteMissing",
+      };
+    }
+    return {
+      action: "retry",
+      labelKey: "retrySend",
+      noticeKey: "sendFailedGeneric",
+      recoveryKey: "sendRecoveryGeneric",
+    };
+  }
+  if (primaryAction.action === "prepare-private-route" && peerEndpointState.ready) {
+    return {
+      action: "retry",
+      labelKey: "retrySend",
+      noticeKey: "sendFailedGeneric",
+      recoveryKey: "sendRecoveryGeneric",
+    };
+  }
+  return primaryAction;
+}
+
 function outboundPrimaryActionLabel(primaryAction) {
   return t(primaryAction?.labelKey || "retrySend");
 }
 
-function runTwoProfileOutboundPrimaryAction(entry, primaryAction = productionTwoProfileOutboundPrimaryAction(entry)) {
+function runTwoProfileOutboundPrimaryAction(entry, primaryAction = currentTwoProfileOutboundPrimaryAction(entry)) {
   if (primaryAction.action === "enable-private-delivery") {
     selectTwoProfileOutboundActionDirection(entry, "retry");
     openPrivateDeliverySettings();
@@ -3450,7 +3480,7 @@ function renderProductionTwoProfileConversationList() {
       twoProfileInviteCodeModeActive(),
     );
     const outboundNeedsAction = outboundActionState.showActions;
-    const primaryAction = outboundNeedsAction ? productionTwoProfileOutboundPrimaryAction(entry) : null;
+    const primaryAction = outboundNeedsAction ? currentTwoProfileOutboundPrimaryAction(entry) : null;
     const recoveryClass = primaryAction ? outboundRecoveryClass(primaryAction, outboundStatusLabel) : "";
     const replyable = twoProfileConversationReplyable(entry);
     const reviewable = twoProfileConversationPendingReviewable(entry);
@@ -4684,24 +4714,14 @@ function twoProfileComposerPrimaryIntent({
       disabledReason: t("sendLockedUntilVerified"),
     };
   }
-  if (!manualNetworkPermission) {
-    return {
-      action: "enable-private-delivery",
-      labelKey: "enablePrivateDelivery",
-      disabledReason: t("deliveryNeedsNetworkPermission"),
-    };
-  }
-  if (!peerEndpointState.ready) {
-    return {
-      action: "prepare-private-route",
-      labelKey: "preparePrivateRoute",
-      disabledReason: t("deliveryNeedsRoute"),
-    };
-  }
   return {
     action: "send",
     labelKey: "roomActionSend",
-    disabledReason: "",
+    disabledReason: !manualNetworkPermission
+      ? t("deliveryNeedsNetworkPermission")
+      : !peerEndpointState.ready
+        ? t("deliveryNeedsRoute")
+        : "",
   };
 }
 
