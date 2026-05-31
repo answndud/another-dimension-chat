@@ -2316,14 +2316,14 @@ test("productionTwoProfileOutboundStatusLabel maps durable retry and cancel stat
       outboundDeliveryState: "failed",
       outboundFailureKind: "peer-endpoint-missing",
     }),
-    "stale endpoint",
+    "route missing",
   );
   assert.equal(
     productionTwoProfileOutboundStatusLabel({
       outboundDeliveryState: "failed",
       outboundFailureKind: "storedremoteendpointunavailable",
     }),
-    "stale endpoint",
+    "route missing",
   );
   assert.equal(
     productionTwoProfileOutboundNeedsEndpointRefresh({
@@ -2403,6 +2403,19 @@ test("productionTwoProfileOutboundPrimaryAction maps failure causes to direct us
   assert.deepEqual(
     productionTwoProfileOutboundPrimaryAction({
       ...base,
+      outboundFailureKind: "peer-endpoint-missing",
+    }),
+    {
+      action: "refresh-and-retry",
+      labelKey: "preparePrivateRoute",
+      noticeKey: "privateDeliveryRouteNeeded",
+      recoveryKey: "sendRecoveryRouteMissing",
+    },
+  );
+
+  assert.deepEqual(
+    productionTwoProfileOutboundPrimaryAction({
+      ...base,
       outboundFailureKind: "stored remote endpoint refresh required",
     }),
     {
@@ -2423,6 +2436,19 @@ test("productionTwoProfileOutboundPrimaryAction maps failure causes to direct us
       labelKey: "retrySend",
       noticeKey: "sendFailedGeneric",
       recoveryKey: "sendRecoveryPeerOffline",
+    },
+  );
+
+  assert.deepEqual(
+    productionTwoProfileOutboundPrimaryAction({
+      ...base,
+      outboundFailureKind: "receive-timeout",
+    }),
+    {
+      action: "retry",
+      labelKey: "retrySend",
+      noticeKey: "sendFailedGeneric",
+      recoveryKey: "sendRecoveryTimeout",
     },
   );
 });
