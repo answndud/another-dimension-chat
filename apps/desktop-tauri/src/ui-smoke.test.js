@@ -60,7 +60,11 @@ test("empty connection state stays minimal and action-first", () => {
   assert.match(indexHtml, /id="create-invite-code"/);
   assert.match(indexHtml, /id="received-invite-code"/);
   assert.match(indexHtml, /id="create-room-from-received-code"/);
+  assert.match(indexHtml, /class="connection-choice-card connection-create-card"/);
+  assert.match(indexHtml, /class="connection-choice-card connection-received-card"/);
   assert.match(stylesCss, /\.chat-empty-state[\s\S]{0,180}background:\s*transparent/);
+  assert.match(stylesCss, /\.connection-choice-grid \{[\s\S]{0,180}border:\s*1px solid/);
+  assert.match(stylesCss, /\.connection-received-card \{[\s\S]{0,120}grid-template-columns:\s*minmax\(0, 1fr\) auto/);
   assert.match(stylesCss, /\.connection-choice-card span \{[\s\S]{0,120}display:\s*block/);
   assert.match(stylesCss, /\.connection-choice-card \.received-code-label[\s\S]{0,120}clip:\s*rect\(0 0 0 0\)/);
   assert.match(i18nJs, /peerExchangeHint: "Start with one code\. Create yours, or paste theirs\."/);
