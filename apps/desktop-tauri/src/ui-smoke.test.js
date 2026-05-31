@@ -402,6 +402,13 @@ test("verification state shows the safety checklist before unlocking messages", 
   assert.match(mainJs, /latestChatDeliveryNoticeKey === "sendLockedUntilVerified"/);
   assert.match(mainJs, /t\("comparePhraseAction"\)/);
   assert.match(stylesCss, /\.safety-confirm-checks/);
+  assert.match(i18nJs, /Messages unlock only after the phrase matches/);
+  assert.match(i18nJs, /문구가 같을 때만 메시지를 열 수 있습니다/);
+  assert.match(i18nJs, /Matches - unlock/);
+  assert.match(i18nJs, /일치함 - 메시지 열기/);
+  assert.match(stylesCss, /needs-safety-confirmation \.safety-confirm-state[\s\S]{0,260}width:\s*min\(360px,\s*100%\)/);
+  assert.match(stylesCss, /\.safety-confirm-state h4,[\s\S]{0,260}\.safety-confirm-checks[\s\S]{0,220}clip:\s*rect\(0 0 0 0\)/);
+  assert.match(stylesCss, /#reject-two-profile-safety \{[\s\S]{0,140}width:\s*fit-content/);
   assert.doesNotMatch(
     stylesCss,
     /needs-safety-confirmation[\s\S]{0,260}\.chat-delivery-notice[\s\S]{0,80}display:\s*none/,
