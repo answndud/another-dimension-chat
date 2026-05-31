@@ -61,10 +61,10 @@ test("empty connection state stays minimal and action-first", () => {
   assert.match(indexHtml, /id="received-invite-code"/);
   assert.match(indexHtml, /id="create-room-from-received-code"/);
   assert.match(stylesCss, /\.chat-empty-state[\s\S]{0,180}background:\s*transparent/);
-  assert.match(stylesCss, /\.connection-choice-card span,[\s\S]{0,80}display:\s*none/);
+  assert.match(stylesCss, /\.connection-choice-card span \{[\s\S]{0,120}display:\s*block/);
   assert.match(stylesCss, /\.connection-choice-card \.received-code-label[\s\S]{0,120}clip:\s*rect\(0 0 0 0\)/);
-  assert.match(i18nJs, /peerExchangeHint: "Create a code, or paste one\."/);
-  assert.match(i18nJs, /peerExchangeHint: "코드를 만들거나, 받은 코드를 붙여넣으세요\."/);
+  assert.match(i18nJs, /peerExchangeHint: "Start with one code\. Create yours, or paste theirs\."/);
+  assert.match(i18nJs, /peerExchangeHint: "코드 하나로 시작합니다\. 내 코드를 만들거나, 상대 코드를 붙여넣으세요\."/);
 });
 
 test("created invite code has a visible read-only display before room creation", () => {
@@ -193,8 +193,8 @@ test("default invite setup copy stays user-facing and avoids developer terms", (
     `${indexHtml}\n${i18nJs}`,
     /setup code|session code|route code|설정 코드|세션 코드|경로 코드|전송 경로 코드/i,
   );
-  assert.match(i18nJs, /My code/);
-  assert.match(i18nJs, /Their code/);
+  assert.match(i18nJs, /My connection code/);
+  assert.match(i18nJs, /Their connection code/);
   assert.match(i18nJs, /My delivery code/);
   assert.match(i18nJs, /상대 코드/);
   assert.match(i18nJs, /상대 전송 코드/);
@@ -287,8 +287,8 @@ test("invite setup highlights only the next user action", () => {
   assert.match(stylesCss, /\.connection-pending-state button\.is-secondary-flow-action/);
   assert.match(stylesCss, /\.exchange-instruction/);
   assert.match(stylesCss, /\.connection-pending-state > h4/);
-  assert.match(i18nJs, /내 코드 보내기/);
-  assert.match(i18nJs, /붙여넣은 상대 코드를 사용하세요/);
+  assert.match(i18nJs, /이 연결 코드 보내기/);
+  assert.match(i18nJs, /상대 연결 코드가 입력됐습니다/);
 });
 
 test("invite setup flow stays isolated and waits for explicit verification", () => {
