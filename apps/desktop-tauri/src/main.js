@@ -518,7 +518,6 @@ const localPreviewRetentionPolicy = {
 
 const themeStorageKey = "another-dimension-theme";
 const languageStorageKey = "another-dimension-language";
-const peerPrivateRouteReadyStoragePrefix = "another-dimension-peer-private-route-ready";
 let currentLanguage = normalizeLanguage(window.localStorage?.getItem(languageStorageKey) ?? "en");
 
 function t(key) {
@@ -2017,6 +2016,8 @@ function inviteLocalReadyStatusResult(input, session) {
     both_ready_for_message_envelope: ready,
     profile_a_remote_endpoint_state_present: Boolean(session?.remote_endpoint_state_present),
     profile_b_remote_endpoint_state_present: Boolean(session?.remote_endpoint_state_present),
+    profile_a_remote_endpoint_invite_placeholder: Boolean(session?.remote_endpoint_state_present),
+    profile_b_remote_endpoint_invite_placeholder: Boolean(session?.remote_endpoint_state_present),
     profile_a_remote_endpoint_marked_stale: Boolean(session?.remote_endpoint_marked_stale),
     profile_b_remote_endpoint_marked_stale: Boolean(session?.remote_endpoint_marked_stale),
     profile_a_remote_endpoint_refresh_recommended: Boolean(session?.remote_endpoint_refresh_recommended),
@@ -2585,41 +2586,6 @@ function twoProfileAutoResumeFingerprint(input = productionTwoProfileInput()) {
   return `${twoProfileSessionStatusFingerprint(input)}\n${input.passphrase ? "passphrase-present" : "passphrase-missing"}`;
 }
 
-function peerPrivateRouteReadyStorageKey(input = productionTwoProfileInput()) {
-  if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
-    return "";
-  }
-  return `${peerPrivateRouteReadyStoragePrefix}:${twoProfileSessionStatusFingerprint(input)}`;
-}
-
-function rememberPeerPrivateRouteReady(input = productionTwoProfileInput(), ready = true) {
-  const key = peerPrivateRouteReadyStorageKey(input);
-  if (!key) {
-    return;
-  }
-  try {
-    if (ready) {
-      window.localStorage?.setItem(key, "1");
-    } else {
-      window.localStorage?.removeItem(key);
-    }
-  } catch {
-    // Route readiness is only a UI guard; encrypted session state remains authoritative.
-  }
-}
-
-function peerPrivateRouteReadyForInput(input = productionTwoProfileInput()) {
-  const key = peerPrivateRouteReadyStorageKey(input);
-  if (!key) {
-    return false;
-  }
-  try {
-    return window.localStorage?.getItem(key) === "1";
-  } catch {
-    return false;
-  }
-}
-
 function resetTwoProfileAutoResumeAttempt() {
   latestTwoProfileAutoResumeFingerprint = null;
 }
@@ -3066,6 +3032,20 @@ function storedPeerEndpointStatusForInput(input = productionTwoProfileInput()) {
   return null;
 }
 
+function storedPeerEndpointInvitePlaceholderForInput(input = productionTwoProfileInput()) {
+  const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
+  if (!sessionStatus || !input.profileA) {
+    return false;
+  }
+  if (input.profileA === sessionStatus.profile_a) {
+    return sessionStatus.profile_a_remote_endpoint_invite_placeholder === true;
+  }
+  if (input.profileA === sessionStatus.profile_b) {
+    return sessionStatus.profile_b_remote_endpoint_invite_placeholder === true;
+  }
+  return false;
+}
+
 function twoProfilePeerEndpointState(input = productionTwoProfileInput()) {
   if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
     return { ready: false, reason: "profiles missing" };
@@ -3087,7 +3067,7 @@ function twoProfilePeerEndpointState(input = productionTwoProfileInput()) {
     };
   }
   if (storedPeerEndpointPresentForInput(input)) {
-    if (twoProfileInviteCodeModeActive() && !peerPrivateRouteReadyForInput(input)) {
+    if (twoProfileInviteCodeModeActive() && storedPeerEndpointInvitePlaceholderForInput(input)) {
       return {
         ready: false,
         reason: "peer delivery code missing",
@@ -3118,7 +3098,7 @@ function storedPeerEndpointTransportState(input = productionTwoProfileInput()) {
     };
   }
   if (storedPeerEndpointPresentForInput(input)) {
-    if (twoProfileInviteCodeModeActive() && !peerPrivateRouteReadyForInput(input)) {
+    if (twoProfileInviteCodeModeActive() && storedPeerEndpointInvitePlaceholderForInput(input)) {
       return { ready: false, reason: "peer delivery code missing" };
     }
     return { ready: true, reason: "stored endpoint ready" };
@@ -8231,9 +8211,6 @@ async function applyPeerPrivateRouteCode() {
       passphrase: input.passphrase,
       rendezvousEndpoint: peerRouteCode,
     });
-    if (update.remote_endpoint_state_written) {
-      rememberPeerPrivateRouteReady(input, true);
-    }
     const status = await invokeInviteRoomSessionStatus(input);
     rememberTwoProfileSessionStatus(input, status);
     renderProductionTwoProfileSessionStatusResult(status);
@@ -9623,7 +9600,6 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
       if (refreshPlan.endpointUpdated) {
         const input = productionTwoProfileInput();
         if (input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase) {
-          rememberPeerPrivateRouteReady(input, true);
           const status = await invoke("production_two_profile_session_status", {
             profileA: input.profileA,
             profileB: input.profileB,

@@ -428,6 +428,8 @@ pub struct ProductionTwoProfileSessionStatusResult {
     both_ready_for_message_envelope: bool,
     profile_a_remote_endpoint_state_present: bool,
     profile_b_remote_endpoint_state_present: bool,
+    profile_a_remote_endpoint_invite_placeholder: bool,
+    profile_b_remote_endpoint_invite_placeholder: bool,
     profile_a_remote_endpoint_marked_stale: bool,
     profile_b_remote_endpoint_marked_stale: bool,
     profile_a_remote_endpoint_refresh_recommended: bool,
@@ -7235,7 +7237,21 @@ fn run_production_two_profile_session_status(
     let profile_a_state =
         run_production_session_state_check(app_data_root, profile_a_name.clone(), passphrase.clone())?;
     let profile_b_state =
-        run_production_session_state_check(app_data_root, profile_b_name.clone(), passphrase)?;
+        run_production_session_state_check(app_data_root, profile_b_name.clone(), passphrase.clone())?;
+    let profile_a_endpoint_invite_placeholder =
+        production_remote_endpoint_matches_redacted_value(
+            app_data_root,
+            profile_a_name.clone(),
+            passphrase.clone(),
+            &format!("{profile_b_name}.onion"),
+        );
+    let profile_b_endpoint_invite_placeholder =
+        production_remote_endpoint_matches_redacted_value(
+            app_data_root,
+            profile_b_name.clone(),
+            passphrase,
+            &format!("{profile_a_name}.onion"),
+        );
     let key_material_exposed =
         profile_a_state.key_material_exposed || profile_b_state.key_material_exposed;
     let transport_io_opened =
@@ -7253,6 +7269,8 @@ fn run_production_two_profile_session_status(
             && profile_b_state.ready_for_message_envelope,
         profile_a_remote_endpoint_state_present: profile_a_state.remote_endpoint_state_present,
         profile_b_remote_endpoint_state_present: profile_b_state.remote_endpoint_state_present,
+        profile_a_remote_endpoint_invite_placeholder: profile_a_endpoint_invite_placeholder,
+        profile_b_remote_endpoint_invite_placeholder: profile_b_endpoint_invite_placeholder,
         profile_a_remote_endpoint_marked_stale: profile_a_state.remote_endpoint_marked_stale,
         profile_b_remote_endpoint_marked_stale: profile_b_state.remote_endpoint_marked_stale,
         profile_a_remote_endpoint_refresh_recommended: profile_a_state
@@ -7278,6 +7296,20 @@ fn run_production_two_profile_session_status(
         transport_io_opened,
         runtime_messaging_enabled,
     })
+}
+
+fn production_remote_endpoint_matches_redacted_value(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+    expected_endpoint: &str,
+) -> bool {
+    run_production_pairing_session_remote_endpoint_for_transport(
+        app_data_root,
+        profile,
+        passphrase,
+    )
+    .is_ok_and(|endpoint| endpoint == expected_endpoint)
 }
 
 fn run_production_handshake_init_export(
@@ -12176,6 +12208,8 @@ replay check: no replayed messages after message 2
         assert!(!draft_status.both_ready_for_message_envelope);
         assert!(draft_status.profile_a_remote_endpoint_state_present);
         assert!(draft_status.profile_b_remote_endpoint_state_present);
+        assert!(draft_status.profile_a_remote_endpoint_invite_placeholder);
+        assert!(draft_status.profile_b_remote_endpoint_invite_placeholder);
         assert!(!draft_status.profile_a_session_transport_state_present);
         assert!(!draft_status.profile_b_session_transport_state_present);
 
@@ -12230,6 +12264,8 @@ replay check: no replayed messages after message 2
         assert!(ready_status.both_ready_for_message_envelope);
         assert!(ready_status.profile_a_remote_endpoint_state_present);
         assert!(ready_status.profile_b_remote_endpoint_state_present);
+        assert!(ready_status.profile_a_remote_endpoint_invite_placeholder);
+        assert!(ready_status.profile_b_remote_endpoint_invite_placeholder);
         assert!(!ready_status.store_path_returned);
         assert!(!ready_status.passphrase_retained);
         assert!(!ready_status.key_material_exposed);
@@ -13627,6 +13663,8 @@ replay check: no replayed messages after message 2
         assert!(status.both_ready_for_message_envelope);
         assert!(status.profile_a_remote_endpoint_state_present);
         assert!(status.profile_b_remote_endpoint_state_present);
+        assert!(status.profile_a_remote_endpoint_invite_placeholder);
+        assert!(status.profile_b_remote_endpoint_invite_placeholder);
 
         let transcript = run_production_message_transcript_export(
             &root,
@@ -13779,6 +13817,7 @@ replay check: no replayed messages after message 2
         .expect("invite-derived route status");
         assert!(route_status.both_ready_for_message_envelope);
         assert!(route_status.profile_a_remote_endpoint_state_present);
+        assert!(!route_status.profile_a_remote_endpoint_invite_placeholder);
         assert!(!route_status.profile_a_remote_endpoint_marked_stale);
         assert!(!route_status.profile_a_remote_endpoint_refresh_recommended);
         assert_eq!(

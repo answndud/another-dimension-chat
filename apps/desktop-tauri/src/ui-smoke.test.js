@@ -104,11 +104,10 @@ test("message composer routes send, receive, retry, and route preparation throug
 });
 
 test("invite rooms require a real peer delivery code before private send", () => {
-  assert.match(mainJs, /peerPrivateRouteReadyStoragePrefix/);
-  assert.match(functionBody(mainJs, "twoProfilePeerEndpointState"), /twoProfileInviteCodeModeActive\(\) && !peerPrivateRouteReadyForInput\(input\)/);
-  assert.match(functionBody(mainJs, "storedPeerEndpointTransportState"), /twoProfileInviteCodeModeActive\(\) && !peerPrivateRouteReadyForInput\(input\)/);
-  assert.match(functionBody(mainJs, "applyPeerPrivateRouteCode"), /rememberPeerPrivateRouteReady\(input, true\)/);
-  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus"), /rememberPeerPrivateRouteReady\(input, true\)/);
+  assert.match(functionBody(mainJs, "inviteLocalReadyStatusResult"), /profile_a_remote_endpoint_invite_placeholder/);
+  assert.match(functionBody(mainJs, "storedPeerEndpointInvitePlaceholderForInput"), /profile_a_remote_endpoint_invite_placeholder/);
+  assert.match(functionBody(mainJs, "twoProfilePeerEndpointState"), /twoProfileInviteCodeModeActive\(\) && storedPeerEndpointInvitePlaceholderForInput\(input\)/);
+  assert.match(functionBody(mainJs, "storedPeerEndpointTransportState"), /twoProfileInviteCodeModeActive\(\) && storedPeerEndpointInvitePlaceholderForInput\(input\)/);
 });
 
 test("failed sends stay recoverable from the chat flow", () => {
