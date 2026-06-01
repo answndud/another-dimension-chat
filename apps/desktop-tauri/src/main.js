@@ -1069,26 +1069,43 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     fields.chatDeliveryNotice.append(codeText);
   }
   if (primaryAction) {
+    const outboundActionState = productionTwoProfileOutboundActionState(
+      pendingEntry,
+      productionTwoProfileInput(),
+      twoProfileInviteCodeModeActive(),
+    );
     const reason = document.createElement("span");
     reason.className = "chat-delivery-notice-chip";
     reason.textContent = t(outboundRecoveryReasonKey(primaryAction, productionTwoProfileOutboundStatusLabel(pendingEntry)));
     const next = document.createElement("span");
     next.className = "chat-delivery-notice-chip is-next";
-    next.textContent = `${t("sendRecoveryNext")}: ${outboundPrimaryActionLabel(primaryAction)}`;
+    next.textContent = outboundActionState.canRunNow
+      ? `${t("sendRecoveryNext")}: ${outboundPrimaryActionLabel(primaryAction)}`
+      : outboundActionState.disabledReason;
     const actions = document.createElement("span");
     actions.className = "chat-delivery-notice-actions";
     const retry = document.createElement("button");
     retry.type = "button";
     retry.className = "chat-delivery-notice-action";
     retry.textContent = outboundPrimaryActionLabel(primaryAction);
+    retry.disabled = !outboundActionState.canRunNow;
+    retry.title = outboundActionState.disabledReason || "";
     retry.addEventListener("click", () => {
-      runTwoProfileOutboundPrimaryAction(pendingEntry, primaryAction);
+      if (outboundActionState.canRunNow) {
+        runTwoProfileOutboundPrimaryAction(pendingEntry, primaryAction);
+      }
     });
     const cancel = document.createElement("button");
     cancel.type = "button";
     cancel.className = "chat-delivery-notice-action is-cancel";
     cancel.textContent = t("cancelSend");
-    cancel.addEventListener("click", () => cancelTwoProfileOutboundEntry(pendingEntry));
+    cancel.disabled = !outboundActionState.canRunNow;
+    cancel.title = outboundActionState.disabledReason || "";
+    cancel.addEventListener("click", () => {
+      if (outboundActionState.canRunNow) {
+        cancelTwoProfileOutboundEntry(pendingEntry);
+      }
+    });
     actions.append(retry, cancel);
     fields.chatDeliveryNotice.append(reason, next, actions);
     return;
@@ -3723,20 +3740,26 @@ function renderProductionTwoProfileConversationList() {
       const retry = document.createElement("button");
       retry.type = "button";
       retry.className = "transcript-retry";
+      retry.disabled = !outboundActionState.canRunNow;
       retry.title = outboundActionState.disabledReason || "";
       retry.textContent = outboundPrimaryActionLabel(primaryAction);
       retry.addEventListener("click", (event) => {
         event.stopPropagation();
-        runTwoProfileOutboundPrimaryAction(entry, primaryAction);
+        if (outboundActionState.canRunNow) {
+          runTwoProfileOutboundPrimaryAction(entry, primaryAction);
+        }
       });
       const cancel = document.createElement("button");
       cancel.type = "button";
       cancel.className = "transcript-cancel";
+      cancel.disabled = !outboundActionState.canRunNow;
       cancel.title = outboundActionState.disabledReason || "";
       cancel.textContent = t("cancelSend");
       cancel.addEventListener("click", (event) => {
         event.stopPropagation();
-        cancelTwoProfileOutboundEntry(entry);
+        if (outboundActionState.canRunNow) {
+          cancelTwoProfileOutboundEntry(entry);
+        }
       });
       actions.append(retry, cancel);
       item.append(actions);

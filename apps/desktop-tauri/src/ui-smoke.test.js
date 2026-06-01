@@ -131,6 +131,8 @@ test("failed sends stay recoverable from the chat flow", () => {
   assert.match(mainJs, /chat-delivery-notice-chip/);
   assert.match(mainJs, /t\(primaryAction \? "sendRecoveryPanelTitle" : "roomStatusLabel"\)/);
   assert.match(mainJs, /productionTwoProfileOutboundPrimaryAction\(entry\)/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /retry\.disabled = !outboundActionState\.canRunNow/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /cancel\.disabled = !outboundActionState\.canRunNow/);
   assert.match(functionBody(mainJs, "runTwoProfileOutboundPrimaryAction"), /refreshTwoProfileOutboundEndpointThenRetry/);
   assert.match(functionBody(mainJs, "runTwoProfileOutboundPrimaryAction"), /retryTwoProfileOutboundEntry/);
   assert.match(functionBody(mainJs, "cancelTwoProfileOutboundEntry"), /sendCanceledNotice/);
