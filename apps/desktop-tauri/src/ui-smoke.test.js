@@ -115,6 +115,8 @@ test("message composer routes send, receive, retry, and route preparation throug
   assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus"), /showLatestRetryableOutboundNotice\(input\)/);
   assert.match(functionBody(mainJs, "selectedTwoProfileDeliveredReplyTarget"), /twoProfileInviteCodeModeActive\(\)/);
   assert.match(functionBody(mainJs, "completeInviteRoomOutboundDelivery"), /showLatestRetryableOutboundNotice\(input\)/);
+  assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /autoSelectTwoProfileResumeTarget\(result\)/);
+  assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /twoProfileResumeWarningForTarget/);
 });
 
 test("invite rooms require a real peer delivery code before private send", () => {
