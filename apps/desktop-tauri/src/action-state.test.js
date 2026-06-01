@@ -7,6 +7,7 @@ import {
   productionTwoProfileOutboundActionState,
   productionTwoProfileOutboundPrimaryAction,
   productionTwoProfileResumeTarget,
+  productionTwoProfileShouldShowOutboundRecovery,
 } from "./action-state.js";
 
 test("invite code creates opposite local and peer roles", () => {
@@ -112,6 +113,23 @@ test("failed outbound messages stay retryable or cancelable from the active devi
     noticeKey: "messageSavedPrivateDeliveryOff",
     recoveryKey: "sendRecoveryPermissionOff",
   });
+});
+
+test("send recovery notice waits until the room is ready", () => {
+  assert.equal(
+    productionTwoProfileShouldShowOutboundRecovery({
+      sessionsReady: false,
+      hasRetryableOutbound: true,
+    }),
+    false,
+  );
+  assert.equal(
+    productionTwoProfileShouldShowOutboundRecovery({
+      sessionsReady: true,
+      hasRetryableOutbound: true,
+    }),
+    true,
+  );
 });
 
 test("receive runtime exposes stopped, waiting, connected, and imported states", () => {

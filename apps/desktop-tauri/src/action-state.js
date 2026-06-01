@@ -82,6 +82,10 @@ export function productionTwoProfileResumeTarget(state) {
   return "compose";
 }
 
+export function productionTwoProfileShouldShowOutboundRecovery(state) {
+  return Boolean(!state?.busy && state?.sessionsReady && state?.hasRetryableOutbound);
+}
+
 export function productionProfilePreset(peer) {
   const normalizedPeer = String(peer ?? "").trim().toLowerCase();
   if (normalizedPeer === "alice") {
