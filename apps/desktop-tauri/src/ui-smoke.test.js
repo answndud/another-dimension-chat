@@ -108,6 +108,7 @@ test("message composer routes send, receive, retry, and route preparation throug
   assert.match(functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"), /preparePrivateDeliveryRoute\(\)/);
   assert.match(functionBody(mainJs, "focusPrivateRouteNextAction"), /renderPrivateRouteExchangeState\(input\)/);
   assert.match(functionBody(mainJs, "preparePrivateDeliveryRoute"), /setChatDeliveryNoticeByKey\("peerPrivateRouteCodeMissing", "muted"\)/);
+  assert.match(functionBody(mainJs, "preparePrivateDeliveryRoute"), /showLatestRetryableOutboundNotice\(input\)/);
   assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /latestChatDeliveryNoticeKey === "privateDeliveryRouteReady"/);
   assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /latestChatDeliveryNoticeKey === "peerPrivateRouteCodeMissing"/);
   assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /startProductionTwoProfileOnionReceive/);
