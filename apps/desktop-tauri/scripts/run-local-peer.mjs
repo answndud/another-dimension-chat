@@ -27,9 +27,22 @@ const env = {
   ANOTHER_DIMENSION_APP_CACHE_DIR: appCacheRoot,
 };
 
-const noBeforeDevConfig = JSON.stringify({
+const peerTitle = peer === "peer-a" ? "Another Dimension Chat Peer A" : "Another Dimension Chat Peer B";
+const peerIdentifier = `chat.anotherdimension.prototype.${peer.replace("-", "")}`;
+const localPeerConfig = JSON.stringify({
+  productName: peerTitle,
+  identifier: peerIdentifier,
   build: {
     beforeDevCommand: "node scripts/noop-dev-server.mjs",
+  },
+  app: {
+    windows: [
+      {
+        title: peerTitle,
+        width: 1000,
+        height: 700,
+      },
+    ],
   },
 });
 
@@ -53,7 +66,7 @@ const child = spawn(
     "--no-dev-server-wait",
     "--no-watch",
     "--config",
-    noBeforeDevConfig,
+    localPeerConfig,
   ],
   {
     cwd: appRoot,
