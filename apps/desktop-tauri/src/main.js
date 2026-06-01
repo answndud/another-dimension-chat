@@ -2242,7 +2242,7 @@ async function prepareInviteRoomLocalSetup() {
   setText(fields.productionTwoProfileWarning, t("localInviteSetupRunning"));
   setText(fields.productionTwoProfileProfiles, localizedTwoProfileUserViewText("Preparing this device only."));
   setText(fields.productionTwoProfileSession, t("localInviteSetupWaiting"));
-  setText(fields.productionTwoProfileMessageState, t("messageWaitingForDelivery"));
+  setText(fields.productionTwoProfileMessageState, t("localInviteSetupWaiting"));
   setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("No peer private identity, network, or transport IO is opened."));
   applyProductionActionState();
 

@@ -58,6 +58,7 @@ test("invite setup remains a staged local-device exchange", () => {
   }
   assert.match(functionBody(mainJs, "prepareInviteRoomLocalSetup"), /production_pairing_payload_export/);
   assert.doesNotMatch(functionBody(mainJs, "prepareInviteRoomLocalSetup"), /production_invite_room_setup/);
+  assert.match(functionBody(mainJs, "prepareInviteRoomLocalSetup"), /productionTwoProfileMessageState, t\("localInviteSetupWaiting"\)/);
   assert.match(functionBody(mainJs, "usePeerInviteSetupCode"), /production_pairing_safety_preview/);
   assert.match(functionBody(mainJs, "saveInviteSessionDraftAfterSafetyConfirm"), /production_handshake_init_export/);
   assert.match(functionBody(mainJs, "usePeerInviteSessionCode"), /production_handshake_(reply|finish)_export/);
