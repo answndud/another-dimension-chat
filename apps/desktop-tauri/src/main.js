@@ -1117,6 +1117,13 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     action.textContent = t("preparePrivateRoute");
     action.addEventListener("click", preparePrivateDeliveryRoute);
     fields.chatDeliveryNotice.append(action);
+  } else if (latestChatDeliveryNoticeKey === "peerPrivateRouteCodeMissing" && latestLocalPrivateRouteCode) {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "chat-delivery-notice-action";
+    action.textContent = t("copyPrivateRouteCode");
+    action.addEventListener("click", copyLocalPrivateRouteCode);
+    fields.chatDeliveryNotice.append(action);
   } else if (latestChatDeliveryNoticeKey === "privateDeliveryRouteReady") {
     const action = document.createElement("button");
     action.type = "button";
@@ -2948,6 +2955,7 @@ function showPrivateRouteExchange() {
 
 function focusPrivateRouteNextAction(input = productionTwoProfileInput()) {
   showPrivateRouteExchange();
+  renderPrivateRouteExchangeState(input);
   if (!manualNetworkPermissionEnabled()) {
     openPrivateDeliverySettings();
     return "permission";
@@ -8342,7 +8350,7 @@ async function preparePrivateDeliveryRoute() {
     if (nextRouteAction === "paste-peer") {
       setProductionTwoProfileState("Peer delivery code needed");
       setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
-      setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted");
+      setChatDeliveryNoticeByKey("peerPrivateRouteCodeMissing", "muted");
       return;
     }
     if (nextRouteAction === "apply-peer") {
@@ -9362,7 +9370,7 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
       } else {
         setProductionTwoProfileState("Peer delivery code needed");
         setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
-        setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted");
+        setChatDeliveryNoticeByKey("peerPrivateRouteCodeMissing", "muted");
       }
       return;
     }
