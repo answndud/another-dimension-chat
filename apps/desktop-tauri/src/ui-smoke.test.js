@@ -117,6 +117,8 @@ test("message composer routes send, receive, retry, and route preparation throug
   assert.match(functionBody(mainJs, "completeInviteRoomOutboundDelivery"), /showLatestRetryableOutboundNotice\(input\)/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /autoSelectTwoProfileResumeTarget\(result\)/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /twoProfileResumeWarningForTarget/);
+  assert.match(functionBody(mainJs, "refreshTwoProfileSessionAfterProfileUnlock"), /autoSelectTwoProfileResumeTarget\(result\)/);
+  assert.match(functionBody(mainJs, "refreshTwoProfileSessionAfterProfileUnlock"), /Resume needs review after profile unlock/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /clearStaleSendRecoveryNotice/);
 });
 
