@@ -2372,7 +2372,7 @@ test("productionTwoProfileOutboundActionState keeps retry and cancel visible for
       showActions: true,
       sameDirection: false,
       canApplyDirection: true,
-      canRunNow: true,
+      canRunNow: false,
       disabledReason: "Only pending messages sent from this device can be retried or canceled here.",
     },
   );
