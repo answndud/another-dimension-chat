@@ -10563,16 +10563,28 @@ async function checkProductionTwoProfileSessionStatus() {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
       const currentInput = productionTwoProfileInput();
       const hasDraft = Boolean(currentInput.message);
-      setProductionTwoProfileState("Sessions ready");
-      setText(
-        fields.productionTwoProfileWarning,
-        hasDraft
-          ? "Room is ready. Send the message."
-          : "Room is ready. Write a message to continue.",
-      );
-      postCheckFocus = hasDraft
-        ? fields.runProductionTwoProfileMessageRoundtrip
-        : fields.productionTwoProfileMessage;
+      const resumeTarget = autoSelectTwoProfileResumeTarget(result);
+      if (resumeTarget === "retry-send" || resumeTarget === "pending-review") {
+        setProductionTwoProfileState("Resume needs review");
+        setText(
+          fields.productionTwoProfileWarning,
+          twoProfileResumeWarningForTarget(
+            resumeTarget,
+            "Room is ready. Continue the saved conversation.",
+          ),
+        );
+      } else {
+        setProductionTwoProfileState("Sessions ready");
+        setText(
+          fields.productionTwoProfileWarning,
+          hasDraft
+            ? "Room is ready. Send the message."
+            : "Room is ready. Write a message to continue.",
+        );
+        postCheckFocus = hasDraft
+          ? fields.runProductionTwoProfileMessageRoundtrip
+          : fields.productionTwoProfileMessage;
+      }
     } else {
       const currentInput = productionTwoProfileInput();
       setProductionTwoProfileState("Sessions incomplete");
