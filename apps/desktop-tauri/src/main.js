@@ -1029,7 +1029,11 @@ function isCurrentInviteCodeNoticeKey(key = latestChatDeliveryNoticeKey) {
 }
 
 function isLocalPrivateRouteCodeNoticeKey(key = latestChatDeliveryNoticeKey) {
-  return key === "privateRouteCodeReady" || key === "privateRouteCodeCopied";
+  return (
+    key === "privateRouteCodeReady" ||
+    key === "privateRouteCodeReadyForReceive" ||
+    key === "privateRouteCodeCopied"
+  );
 }
 
 function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
@@ -9411,8 +9415,9 @@ async function startProductionTwoProfileOnionReceive() {
       return;
     }
     setProductionTwoProfileState("Delivery code ready");
-    setText(fields.productionTwoProfileWarning, t("privateRouteCodeReady"));
-    setChatDeliveryNoticeByKey("privateRouteCodeReady", "success");
+    setText(fields.productionTwoProfileWarning, t("privateRouteCodeReadyForReceive"));
+    setChatDeliveryNoticeByKey("privateRouteCodeReadyForReceive", "success");
+    setText(fields.productionTwoProfileMessageState, t("receiveNotStartedAfterRouteCode"));
     return;
   }
 
