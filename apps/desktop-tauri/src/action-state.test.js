@@ -2449,6 +2449,19 @@ test("productionTwoProfileOutboundPrimaryAction maps failure causes to direct us
   assert.deepEqual(
     productionTwoProfileOutboundPrimaryAction({
       ...base,
+      outboundFailureKind: "PersistentClientNotReady",
+    }),
+    {
+      action: "prepare-private-route",
+      labelKey: "preparePrivateRoute",
+      noticeKey: "privateDeliveryRouteNeeded",
+      recoveryKey: "sendRecoveryTorBootstrap",
+    },
+  );
+
+  assert.deepEqual(
+    productionTwoProfileOutboundPrimaryAction({
+      ...base,
       outboundFailureKind: "peer offline",
     }),
     {

@@ -133,6 +133,7 @@ test("failed sends stay recoverable from the chat flow", () => {
   assert.match(mainJs, /productionTwoProfileOutboundPrimaryAction\(entry\)/);
   assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /retry\.disabled = !outboundActionState\.canRunNow/);
   assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /cancel\.disabled = !outboundActionState\.canRunNow/);
+  assert.match(functionBody(mainJs, "outboundRecoveryReasonKey"), /sendReasonTorBootstrap/);
   assert.match(functionBody(mainJs, "runTwoProfileOutboundPrimaryAction"), /refreshTwoProfileOutboundEndpointThenRetry/);
   assert.match(functionBody(mainJs, "runTwoProfileOutboundPrimaryAction"), /retryTwoProfileOutboundEntry/);
   assert.match(functionBody(mainJs, "cancelTwoProfileOutboundEntry"), /sendCanceledNotice/);

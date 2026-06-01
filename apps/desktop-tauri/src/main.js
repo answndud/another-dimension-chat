@@ -1276,6 +1276,9 @@ function outboundRecoveryReasonKey(primaryAction, statusLabel = "") {
   if (primaryAction?.action === "refresh-and-retry") {
     return "sendReasonStaleEndpoint";
   }
+  if (status === "tor bootstrap") {
+    return "sendReasonTorBootstrap";
+  }
   if (status === "send timeout") {
     return "sendReasonTimeout";
   }

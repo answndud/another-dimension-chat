@@ -489,6 +489,14 @@ export function productionTwoProfileOutboundPrimaryAction(entry) {
       recoveryKey: "sendRecoveryStaleEndpoint",
     };
   }
+  if (status === "Tor bootstrap") {
+    return {
+      action: "prepare-private-route",
+      labelKey: "preparePrivateRoute",
+      noticeKey: "privateDeliveryRouteNeeded",
+      recoveryKey: "sendRecoveryTorBootstrap",
+    };
+  }
   if (status === "peer offline") {
     return {
       action: "retry",
