@@ -4801,14 +4801,24 @@ function twoProfileComposerPrimaryIntent({
       disabledReason: t("sendLockedUntilVerified"),
     };
   }
+  if (!manualNetworkPermission) {
+    return {
+      action: "enable-private-delivery",
+      labelKey: "enablePrivateDelivery",
+      disabledReason: t("deliveryNeedsNetworkPermission"),
+    };
+  }
+  if (!peerEndpointState.ready) {
+    return {
+      action: "prepare-private-route",
+      labelKey: "preparePrivateRoute",
+      disabledReason: t("deliveryNeedsRoute"),
+    };
+  }
   return {
     action: "send",
     labelKey: "roomActionSend",
-    disabledReason: !manualNetworkPermission
-      ? t("deliveryNeedsNetworkPermission")
-      : !peerEndpointState.ready
-        ? t("deliveryNeedsRoute")
-        : "",
+    disabledReason: "",
   };
 }
 
