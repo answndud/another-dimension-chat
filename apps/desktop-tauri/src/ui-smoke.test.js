@@ -103,6 +103,14 @@ test("message composer routes send, receive, retry, and route preparation throug
   assert.match(functionBody(mainJs, "completeInviteRoomOutboundDelivery"), /showLatestRetryableOutboundNotice\(input\)/);
 });
 
+test("invite rooms require a real peer delivery code before private send", () => {
+  assert.match(mainJs, /peerPrivateRouteReadyStoragePrefix/);
+  assert.match(functionBody(mainJs, "twoProfilePeerEndpointState"), /twoProfileInviteCodeModeActive\(\) && !peerPrivateRouteReadyForInput\(input\)/);
+  assert.match(functionBody(mainJs, "storedPeerEndpointTransportState"), /twoProfileInviteCodeModeActive\(\) && !peerPrivateRouteReadyForInput\(input\)/);
+  assert.match(functionBody(mainJs, "applyPeerPrivateRouteCode"), /rememberPeerPrivateRouteReady\(input, true\)/);
+  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus"), /rememberPeerPrivateRouteReady\(input, true\)/);
+});
+
 test("failed sends stay recoverable from the chat flow", () => {
   assert.doesNotMatch(mainJs, /function renderSendRecoveryPanel/);
   assert.match(mainJs, /function runTwoProfileOutboundPrimaryAction/);
