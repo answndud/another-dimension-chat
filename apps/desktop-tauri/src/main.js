@@ -8363,7 +8363,13 @@ async function preparePrivateDeliveryRoute() {
 
   setChatDeliveryNoticeByKey("privateDeliveryRoutePreparing", "progress");
   const refreshed = await refreshProductionTwoProfilePeerEndpoints();
-  setChatDeliveryNoticeByKey(refreshed ? "privateDeliveryRouteReady" : "chatNoticeRefreshAddress", refreshed ? "success" : "warning");
+  if (refreshed && showLatestRetryableOutboundNotice(input)) {
+    return;
+  }
+  setChatDeliveryNoticeByKey(
+    refreshed ? "privateDeliveryRouteReady" : "chatNoticeRefreshAddress",
+    refreshed ? "success" : "warning",
+  );
 }
 
 async function sendProductionTwoProfileEndpointUpdate() {
