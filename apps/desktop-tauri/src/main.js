@@ -10255,7 +10255,12 @@ async function refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase) {
         refreshSessionStatus: false,
         autoResume: true,
       });
-      setProductionTwoProfileState("Conversation resumed after profile unlock");
+      const resumeTarget = autoSelectTwoProfileResumeTarget(result);
+      setProductionTwoProfileState(
+        resumeTarget === "retry-send" || resumeTarget === "pending-review"
+          ? "Resume needs review after profile unlock"
+          : "Conversation resumed after profile unlock",
+      );
       return true;
     }
     setProductionTwoProfileState("Sessions incomplete after profile unlock");
