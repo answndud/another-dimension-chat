@@ -1100,6 +1100,13 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     action.textContent = t("preparePrivateRoute");
     action.addEventListener("click", preparePrivateDeliveryRoute);
     fields.chatDeliveryNotice.append(action);
+  } else if (latestChatDeliveryNoticeKey === "privateDeliveryRouteReady") {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "chat-delivery-notice-action";
+    action.textContent = t("startReceiving");
+    action.addEventListener("click", startProductionTwoProfileOnionReceive);
+    fields.chatDeliveryNotice.append(action);
   } else if (
     latestChatDeliveryNoticeKey === "messageSavedPrivateDeliveryOff" ||
     latestChatDeliveryNoticeKey === "chatNoticeNetworkPermission"
