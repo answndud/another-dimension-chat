@@ -98,6 +98,8 @@ test("message composer routes send, receive, retry, and route preparation throug
   assert.match(functionBody(mainJs, "ensurePrivateDeliveryRuntimeReady"), /production_onion_persistent_client_start/);
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /ensurePrivateDeliveryRuntimeReady\(input\)/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /prepareInviteRoomPrivateRouteExchange\(input\)/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /privateRouteCodeReady/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /production_onion_receive_loop_start/);
   assert.match(mainJs, /action: "enable-private-delivery"/);
   assert.match(mainJs, /action: "prepare-private-route"/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"), /openPrivateDeliverySettings\(\)/);

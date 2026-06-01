@@ -9396,6 +9396,7 @@ async function startProductionTwoProfileOnionReceive() {
     return;
   }
   if (!manualNetworkPermission) {
+    setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning");
     openPrivateDeliverySettings();
     return;
   }
@@ -9409,6 +9410,10 @@ async function startProductionTwoProfileOnionReceive() {
     if (!prepared) {
       return;
     }
+    setProductionTwoProfileState("Delivery code ready");
+    setText(fields.productionTwoProfileWarning, t("privateRouteCodeReady"));
+    setChatDeliveryNoticeByKey("privateRouteCodeReady", "success");
+    return;
   }
 
   let backendLoop = null;
