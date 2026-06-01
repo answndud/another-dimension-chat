@@ -48,6 +48,7 @@ import {
   productionTwoProfileResultView,
   productionTwoProfileResumeTarget,
   productionTwoProfileSendAttemptUserView,
+  productionTwoProfileShouldShowOutboundRecovery,
   productionTwoProfileSessionSummaryView,
   productionTwoProfileSessionStatusView,
 } from "./action-state.js";
@@ -3885,15 +3886,8 @@ function latestTwoProfileRetryableOutboundEntry(input = productionTwoProfileInpu
   return entries[0] ?? null;
 }
 
-function latestAnyTwoProfileRetryableOutboundEntry() {
-  const entries = [...productionTwoProfileConversationEntries.values()]
-    .filter(twoProfileConversationOutboundRetryable)
-    .sort((left, right) => productionTwoProfileConversationCompare(left, right, "desc"));
-  return entries[0] ?? null;
-}
-
 function latestVisibleTwoProfileRetryableOutboundEntry(input = productionTwoProfileInput()) {
-  return latestTwoProfileRetryableOutboundEntry(input) ?? latestAnyTwoProfileRetryableOutboundEntry();
+  return latestTwoProfileRetryableOutboundEntry(input);
 }
 
 function latestTwoProfileDeliveredConversationEntry() {
@@ -4096,6 +4090,9 @@ function showRetryableTwoProfileOutboundNotice(entry) {
 }
 
 function showLatestRetryableOutboundNotice(input = productionTwoProfileInput()) {
+  if (!twoProfileSessionsReadyForInput(input)) {
+    return false;
+  }
   const entry = latestVisibleTwoProfileRetryableOutboundEntry(input);
   if (!entry) {
     return false;
@@ -6131,7 +6128,13 @@ function applyProductionActionState() {
     Boolean(pendingConversation || replySelection.canSelect),
   );
   const retryableOutboundConversation = latestTwoProfileRetryableOutboundEntry(twoProfile);
-  if (!busy && retryableOutboundConversation) {
+  if (
+    productionTwoProfileShouldShowOutboundRecovery({
+      busy,
+      sessionsReady: twoProfileSessionsReady,
+      hasRetryableOutbound: Boolean(retryableOutboundConversation),
+    })
+  ) {
     setChatDeliveryNoticeForPendingOutbound(retryableOutboundConversation);
   } else if (!busy && isLocalInviteSessionCodeNoticeKey() && latestLocalInviteSessionCode) {
     setChatDeliveryNoticeByKey(latestChatDeliveryNoticeKey, latestChatDeliveryNoticeTone);
