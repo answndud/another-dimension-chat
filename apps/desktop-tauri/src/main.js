@@ -4104,6 +4104,23 @@ function showLatestRetryableOutboundNotice(input = productionTwoProfileInput()) 
   return true;
 }
 
+function clearStaleSendRecoveryNotice(input = productionTwoProfileInput()) {
+  if (latestTwoProfileRetryableOutboundEntry(input)) {
+    return false;
+  }
+  const staleRecoveryNotice = new Set([
+    "sendFailedGeneric",
+    "messageSavedPrivateDeliveryOff",
+    "privateDeliveryRouteNeeded",
+    "chatNoticeRefreshAddress",
+  ]);
+  if (!staleRecoveryNotice.has(latestChatDeliveryNoticeKey)) {
+    return false;
+  }
+  setChatDeliveryNoticeByKey("", "neutral");
+  return true;
+}
+
 function selectedTwoProfileManualFocusTarget(entry) {
   return twoProfileConversationActionView(entry).focusTarget;
 }
@@ -10668,6 +10685,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       Number.parseInt(profileAResult.expired_messages_purged ?? 0, 10) +
       Number.parseInt(profileBResult.expired_messages_purged ?? 0, 10);
     const staleMessageEnvelopeSlotsPruned = renderProductionTwoProfileTranscriptEntries(entries);
+    clearStaleSendRecoveryNotice({ profileA, profileB, passphrase });
     const resumeWarning = appendStaleMessageEnvelopeSlotsPruned(
       appendExpiredMessagesPurged(
         "Stored conversation and message-ready sessions recovered after local unlock.",
