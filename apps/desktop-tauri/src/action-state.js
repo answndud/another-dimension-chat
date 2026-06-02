@@ -451,6 +451,13 @@ export function productionTwoProfileOutboundStatusLabel(entry) {
 
 export function productionTwoProfileOutboundNeedsEndpointRefresh(entry) {
   const failure = String(entry?.outboundFailureKind ?? "").toLowerCase();
+  const endpointMissing =
+    failure.includes("peer-endpoint-missing") ||
+    failure.includes("endpoint-missing") ||
+    failure.includes("endpointunavailable");
+  if (endpointMissing) {
+    return false;
+  }
   return Boolean(
     entry?.outboundDeliveryState === "failed" &&
       (failure.includes("stale") ||

@@ -235,6 +235,9 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /route_ready=/);
   assert.match(reportBody, /receive_state=/);
   assert.match(reportBody, /retryable_outbound_present=/);
+  assert.match(reportBody, /outbound_failure_class=/);
+  assert.match(reportBody, /outbound_recovery_action=/);
+  assert.match(reportBody, /receive_failure_kind=/);
   assert.match(reportBody, /redacted_boundary=/);
   assert.doesNotMatch(reportBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
   assert.doesNotMatch(reportBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
