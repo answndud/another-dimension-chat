@@ -431,6 +431,8 @@ let latestProductionTwoProfileSafety = null;
 let latestProductionTwoProfileSuccess = null;
 let latestProductionTwoProfileOnionEndpoints = null;
 let latestLocalPrivateRouteCode = "";
+const localPrivateRouteCodesByRoom = new Map();
+const peerPrivateRouteDraftsByRoom = new Map();
 let pendingPrivateRouteFollowup = null;
 let productionTwoProfileOnionReceiveMode = {
   enabled: false,
@@ -2476,6 +2478,7 @@ function clearCurrentInviteRoomInput() {
   if (fields.receivedInviteCode) {
     fields.receivedInviteCode.value = "";
   }
+  restorePrivateRouteExchangeForRoom(productionTwoProfileInput());
   renderCurrentInviteCodeDisplay();
   renderProductionTwoProfileDirection(productionTwoProfileInput());
   updateMinimalChatMode(productionTwoProfileInput(), false);
@@ -2808,6 +2811,7 @@ function syncTwoProfileDerivedConnectionFields() {
     latestConnectionCodeRole = "";
     syncProductionProfilePassphraseFromTwoProfile();
     renderCurrentInviteCodeDisplay();
+    restorePrivateRouteExchangeForRoom(productionTwoProfileInput());
     return;
   }
   const role = connectionCodeRoleFor(code);
@@ -2825,10 +2829,45 @@ function syncTwoProfileDerivedConnectionFields() {
   latestDerivedConnectionCode = code;
   syncProductionProfilePassphraseFromTwoProfile();
   renderCurrentInviteCodeDisplay();
+  restorePrivateRouteExchangeForRoom(productionTwoProfileInput());
 }
 
 function twoProfileSessionStatusFingerprint(input = productionTwoProfileInput()) {
   return `${input.profileA.toLowerCase()}\n${input.profileB.toLowerCase()}`;
+}
+
+function privateRouteRoomKey(input = productionTwoProfileInput()) {
+  if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
+    return "";
+  }
+  return twoProfileSessionStatusFingerprint(input);
+}
+
+function restorePrivateRouteExchangeForRoom(input = productionTwoProfileInput()) {
+  const roomKey = privateRouteRoomKey(input);
+  latestLocalPrivateRouteCode = roomKey ? localPrivateRouteCodesByRoom.get(roomKey) || "" : "";
+  if (fields.localPrivateRouteCode) {
+    fields.localPrivateRouteCode.value = latestLocalPrivateRouteCode;
+  }
+  if (fields.peerPrivateRouteCode) {
+    fields.peerPrivateRouteCode.value = roomKey ? peerPrivateRouteDraftsByRoom.get(roomKey) || "" : "";
+  }
+  fields.copyPrivateRouteCode?.toggleAttribute("disabled", !latestLocalPrivateRouteCode);
+  document.body.classList.toggle("has-local-private-route-code", Boolean(latestLocalPrivateRouteCode));
+  renderPrivateRouteExchangeState(input);
+}
+
+function rememberPeerPrivateRouteDraft(input = productionTwoProfileInput()) {
+  const roomKey = privateRouteRoomKey(input);
+  const value = String(fields.peerPrivateRouteCode?.value ?? "").trim();
+  if (!roomKey) {
+    return;
+  }
+  if (value) {
+    peerPrivateRouteDraftsByRoom.set(roomKey, value);
+  } else {
+    peerPrivateRouteDraftsByRoom.delete(roomKey);
+  }
 }
 
 function twoProfileAutoResumeFingerprint(input = productionTwoProfileInput()) {
@@ -3114,8 +3153,16 @@ function latestTwoProfileLocalOnionEndpoint(input = productionTwoProfileInput())
   return "";
 }
 
-function rememberLocalPrivateRouteCode(code) {
+function rememberLocalPrivateRouteCode(code, input = productionTwoProfileInput()) {
+  const roomKey = privateRouteRoomKey(input);
   latestLocalPrivateRouteCode = String(code ?? "").trim();
+  if (roomKey) {
+    if (latestLocalPrivateRouteCode) {
+      localPrivateRouteCodesByRoom.set(roomKey, latestLocalPrivateRouteCode);
+    } else {
+      localPrivateRouteCodesByRoom.delete(roomKey);
+    }
+  }
   if (fields.localPrivateRouteCode) {
     fields.localPrivateRouteCode.value = latestLocalPrivateRouteCode;
   }
@@ -8447,6 +8494,7 @@ async function applyPeerPrivateRouteCode() {
     fields.peerPrivateRouteCode?.focus();
     return false;
   }
+  rememberPeerPrivateRouteDraft(input);
 
   productionBusyAction = "invite-room-peer-route-code";
   setProductionTwoProfileState("Peer delivery saving");
@@ -12411,7 +12459,11 @@ if (fields.applyPeerPrivateRouteCode) {
   fields.applyPeerPrivateRouteCode.addEventListener("click", applyPeerPrivateRouteCode);
 }
 if (fields.peerPrivateRouteCode) {
-  fields.peerPrivateRouteCode.addEventListener("input", applyProductionActionState);
+  fields.peerPrivateRouteCode.addEventListener("input", () => {
+    rememberPeerPrivateRouteDraft(productionTwoProfileInput());
+    renderPrivateRouteExchangeState(productionTwoProfileInput());
+    applyProductionActionState();
+  });
   fields.peerPrivateRouteCode.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
