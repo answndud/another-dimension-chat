@@ -8837,6 +8837,219 @@ async fn run_production_two_profile_real_onion_roundtrip(
             true,
         );
         let _ = run_production_onion_receive_loop_worker_started(&receiver_runtime_state);
+        let build_transport_blocked_result =
+            |next_blocker: String,
+             blockers: Vec<String>,
+             message_number: u64,
+             second_message_number: u64,
+             first_outbound: &ProductionMessageEnvelopeExportResult,
+             second_outbound: Option<&ProductionMessageEnvelopeExportResult>,
+             first_send: Option<&ProductionOnionOutboundEnvelopeSendAttemptResult>,
+             first_receive: Option<&ProductionOnionInboundEnvelopeReceiveAttemptResult>,
+             second_send: Option<&ProductionOnionOutboundEnvelopeSendAttemptResult>,
+             second_receive: Option<&ProductionOnionInboundEnvelopeReceiveAttemptResult>,
+             first_received: Option<&ProductionMessageReceivedExportResult>,
+             event_summary_snapshot: Vec<String>| {
+                let receive_mode_status =
+                    run_production_onion_receive_loop_status(&receiver_runtime_state, false);
+                let send_network = first_send
+                    .map(|attempt| attempt.network_io_attempted)
+                    .unwrap_or(false)
+                    || second_send
+                        .map(|attempt| attempt.network_io_attempted)
+                        .unwrap_or(false);
+                let receive_network = first_receive
+                    .map(|attempt| attempt.network_io_attempted)
+                    .unwrap_or(false)
+                    || second_receive
+                        .map(|attempt| attempt.network_io_attempted)
+                        .unwrap_or(false);
+                let send_transport = first_send
+                    .map(|attempt| {
+                        attempt.stream_dial_attempted
+                            || attempt.stream_read_write_attempted
+                            || attempt.stream_send_attempted
+                            || attempt.envelope_io_opened
+                    })
+                    .unwrap_or(false)
+                    || second_send
+                        .map(|attempt| {
+                            attempt.stream_dial_attempted
+                                || attempt.stream_read_write_attempted
+                                || attempt.stream_send_attempted
+                                || attempt.envelope_io_opened
+                        })
+                        .unwrap_or(false);
+                let receive_transport = first_receive
+                    .map(|attempt| {
+                        attempt.stream_accept_attempted
+                            || attempt.stream_read_write_attempted
+                            || attempt.envelope_io_opened
+                    })
+                    .unwrap_or(false)
+                    || second_receive
+                        .map(|attempt| {
+                            attempt.stream_accept_attempted
+                                || attempt.stream_read_write_attempted
+                                || attempt.envelope_io_opened
+                        })
+                        .unwrap_or(false);
+                let runtime_messaging = first_send
+                    .map(|attempt| attempt.runtime_messaging_enabled)
+                    .unwrap_or(false)
+                    || first_receive
+                        .map(|attempt| attempt.runtime_messaging_enabled)
+                        .unwrap_or(false)
+                    || second_send
+                        .map(|attempt| attempt.runtime_messaging_enabled)
+                        .unwrap_or(false)
+                    || second_receive
+                        .map(|attempt| attempt.runtime_messaging_enabled)
+                        .unwrap_or(false);
+                let first_received_verified = first_receive
+                    .map(|attempt| attempt.received_envelope_ready)
+                    .unwrap_or(false)
+                    && first_received
+                        .map(|received| received.received_message_matches_session)
+                        .unwrap_or(false);
+                let first_received_matches = first_received
+                    .map(|received| received.received_message.as_bytes() == message.as_slice())
+                    .unwrap_or(false);
+
+                ProductionTwoProfileRealOnionRoundtripResult {
+                    warning: "Real onion roundtrip stopped during message transport. The transcript state is preserved and the result is redacted.",
+                    manual_client_attempt_feature_compiled: true,
+                    manual_network_permission_enabled: true,
+                    sender_profile: sender_profile_result.clone(),
+                    receiver_profile: receiver_profile_result.clone(),
+                    message_number,
+                    second_message_number,
+                    message_ttl_seconds,
+                    profile_a_unlocked: profile_a_unlock.storage_opened
+                        && profile_a_unlock.profile_marker_present,
+                    profile_b_unlocked: profile_b_unlock.storage_opened
+                        && profile_b_unlock.profile_marker_present,
+                    profile_a_client_bootstrapped,
+                    profile_b_client_bootstrapped,
+                    profile_a_onion_service_launched: true,
+                    profile_b_onion_service_launched: true,
+                    profile_a_endpoint_ready: true,
+                    profile_b_endpoint_ready: true,
+                    pairing_payloads_exported: profile_a_payload.pairing_payload_exported
+                        && profile_b_payload.pairing_payload_exported,
+                    session_drafts_saved: profile_a_draft.session_draft_present
+                        && profile_b_draft.session_draft_present,
+                    handshake_completed: finish.transport_state_persisted
+                        && finish_import.transport_state_persisted,
+                    sender_session_ready: sender_state.ready_for_message_envelope,
+                    receiver_session_ready: receiver_state.session_transport_state_present
+                        && receiver_state.runtime_material_reconstructable,
+                    message_number_reserved: first_outbound.message_number_reserved,
+                    second_message_number_reserved: second_outbound
+                        .map(|outbound| outbound.message_number_reserved)
+                        .unwrap_or(false),
+                    encrypted_envelope_exported: first_outbound.encrypted_envelope_present,
+                    second_encrypted_envelope_exported: second_outbound
+                        .map(|outbound| outbound.encrypted_envelope_present)
+                        .unwrap_or(false),
+                    send_attempt_started: first_send
+                        .map(|attempt| attempt.send_attempt_started)
+                        .unwrap_or(false),
+                    send_attempt_succeeded: first_send
+                        .map(|attempt| attempt.send_attempt_succeeded)
+                        .unwrap_or(false),
+                    second_send_attempt_succeeded: second_send
+                        .map(|attempt| attempt.send_attempt_succeeded)
+                        .unwrap_or(false),
+                    receive_attempt_started: first_receive
+                        .map(|attempt| attempt.receive_attempt_started)
+                        .unwrap_or(false),
+                    receive_attempt_succeeded: first_receive
+                        .map(|attempt| attempt.receive_attempt_succeeded)
+                        .unwrap_or(false),
+                    second_receive_attempt_succeeded: second_receive
+                        .map(|attempt| attempt.receive_attempt_succeeded)
+                        .unwrap_or(false),
+                    inbound_message_stored: first_receive
+                        .map(|attempt| attempt.received_envelope_ready)
+                        .unwrap_or(false),
+                    second_inbound_message_stored: second_receive
+                        .map(|attempt| attempt.received_envelope_ready)
+                        .unwrap_or(false),
+                    consecutive_receive_attempts: receive_mode_status.attempt_count,
+                    consecutive_messages_imported: receive_mode_status.message_import_count,
+                    receive_mode_runtime_state: receive_mode_status.runtime_state,
+                    receive_mode_runtime_label: receive_mode_status.runtime_label,
+                    receive_mode_attempt_count: receive_mode_status.attempt_count,
+                    receive_mode_import_sequence: receive_mode_status.import_sequence,
+                    receive_mode_message_import_count: receive_mode_status.message_import_count,
+                    receive_mode_endpoint_update_count: receive_mode_status.endpoint_update_count,
+                    receive_mode_last_network_io_attempted: receive_mode_status
+                        .last_network_io_attempted,
+                    receive_mode_last_stream_accept_attempted: receive_mode_status
+                        .last_stream_accept_attempted,
+                    receive_mode_last_stream_read_write_attempted: receive_mode_status
+                        .last_stream_read_write_attempted,
+                    receive_mode_last_envelope_io_opened: receive_mode_status
+                        .last_envelope_io_opened,
+                    receive_mode_last_runtime_messaging_enabled: receive_mode_status
+                        .last_runtime_messaging_enabled,
+                    receive_mode_recorder_verified: false,
+                    received_status_verified: first_received_verified,
+                    received_export_matches_input: first_received_matches,
+                    second_received_status_verified: false,
+                    second_received_export_matches_input: false,
+                    event_summary: event_summary_snapshot,
+                    next_blocker,
+                    blockers,
+                    local_endpoint_returned: false,
+                    peer_endpoint_returned: false,
+                    envelope_payload_returned: false,
+                    plaintext_returned_to_frontend: false,
+                    store_path_returned: false,
+                    passphrase_retained: false,
+                    key_material_exposed: profile_a_unlock.key_material_exposed
+                        || profile_b_unlock.key_material_exposed
+                        || profile_a_key_record.key_material_exposed
+                        || profile_b_key_record.key_material_exposed
+                        || profile_a_payload.key_material_exposed
+                        || profile_b_payload.key_material_exposed
+                        || profile_a_draft.key_material_exposed
+                        || profile_b_draft.key_material_exposed
+                        || profile_a_init.key_material_exposed
+                        || profile_b_init
+                            .as_ref()
+                            .map(|init| init.key_material_exposed)
+                            .unwrap_or(false)
+                        || reply.key_material_exposed
+                        || finish.key_material_exposed
+                        || finish_import.key_material_exposed
+                        || sender_state.key_material_exposed
+                        || receiver_state.key_material_exposed
+                        || first_outbound.key_material_exposed
+                        || second_outbound
+                            .map(|outbound| outbound.key_material_exposed)
+                            .unwrap_or(false)
+                        || first_send
+                            .map(|attempt| attempt.key_material_exposed)
+                            .unwrap_or(false)
+                        || first_receive
+                            .map(|attempt| attempt.key_material_exposed)
+                            .unwrap_or(false)
+                        || second_send
+                            .map(|attempt| attempt.key_material_exposed)
+                            .unwrap_or(false)
+                        || second_receive
+                            .map(|attempt| attempt.key_material_exposed)
+                            .unwrap_or(false)
+                        || first_received
+                            .map(|received| received.key_material_exposed)
+                            .unwrap_or(false),
+                    network_io_attempted: send_network || receive_network,
+                    transport_io_opened: send_transport || receive_transport,
+                    runtime_messaging_enabled: runtime_messaging,
+                }
+            };
         let receive_future = run_production_onion_inbound_envelope_receive_attempt(
             &_app_data_root,
             &_app_cache_root,
@@ -8861,10 +9074,50 @@ async fn run_production_two_profile_real_onion_roundtrip(
         event_summary.extend(send_attempt.event_summary.iter().cloned());
         event_summary.extend(inbound_attempt.event_summary.iter().cloned());
         if !send_attempt.send_attempt_succeeded {
-            return Err("real onion send failed".to_string());
+            let mut blockers = vec!["SendAttemptFailed".to_string()];
+            if send_attempt.next_blocker != "none"
+                && !blockers.iter().any(|blocker| blocker == &send_attempt.next_blocker)
+            {
+                blockers.push(send_attempt.next_blocker.clone());
+            }
+            return Ok(build_transport_blocked_result(
+                "SendAttemptFailed".to_string(),
+                blockers,
+                message_number,
+                0,
+                &outbound,
+                None,
+                Some(&send_attempt),
+                Some(&inbound_attempt),
+                None,
+                None,
+                None,
+                event_summary.clone(),
+            ));
         }
         if !inbound_attempt.receive_attempt_succeeded {
-            return Err("real onion receive failed".to_string());
+            let mut blockers = vec!["ReceiveAttemptFailed".to_string()];
+            if inbound_attempt.next_blocker != "none"
+                && !blockers
+                    .iter()
+                    .any(|blocker| blocker == &inbound_attempt.next_blocker)
+            {
+                blockers.push(inbound_attempt.next_blocker.clone());
+            }
+            return Ok(build_transport_blocked_result(
+                "ReceiveAttemptFailed".to_string(),
+                blockers,
+                message_number,
+                0,
+                &outbound,
+                None,
+                Some(&send_attempt),
+                Some(&inbound_attempt),
+                None,
+                None,
+                None,
+                event_summary.clone(),
+            ));
         }
         let received = run_production_message_received_export(
             &_app_data_root,
@@ -8913,10 +9166,52 @@ async fn run_production_two_profile_real_onion_roundtrip(
         event_summary.extend(second_send_attempt.event_summary.iter().cloned());
         event_summary.extend(second_inbound_attempt.event_summary.iter().cloned());
         if !second_send_attempt.send_attempt_succeeded {
-            return Err("real onion second send failed".to_string());
+            let mut blockers = vec!["SecondSendAttemptFailed".to_string()];
+            if second_send_attempt.next_blocker != "none"
+                && !blockers
+                    .iter()
+                    .any(|blocker| blocker == &second_send_attempt.next_blocker)
+            {
+                blockers.push(second_send_attempt.next_blocker.clone());
+            }
+            return Ok(build_transport_blocked_result(
+                "SecondSendAttemptFailed".to_string(),
+                blockers,
+                message_number,
+                second_message_number,
+                &outbound,
+                Some(&second_outbound),
+                Some(&send_attempt),
+                Some(&inbound_attempt),
+                Some(&second_send_attempt),
+                Some(&second_inbound_attempt),
+                Some(&received),
+                event_summary.clone(),
+            ));
         }
         if !second_inbound_attempt.receive_attempt_succeeded {
-            return Err("real onion second receive failed".to_string());
+            let mut blockers = vec!["SecondReceiveAttemptFailed".to_string()];
+            if second_inbound_attempt.next_blocker != "none"
+                && !blockers
+                    .iter()
+                    .any(|blocker| blocker == &second_inbound_attempt.next_blocker)
+            {
+                blockers.push(second_inbound_attempt.next_blocker.clone());
+            }
+            return Ok(build_transport_blocked_result(
+                "SecondReceiveAttemptFailed".to_string(),
+                blockers,
+                message_number,
+                second_message_number,
+                &outbound,
+                Some(&second_outbound),
+                Some(&send_attempt),
+                Some(&inbound_attempt),
+                Some(&second_send_attempt),
+                Some(&second_inbound_attempt),
+                Some(&received),
+                event_summary.clone(),
+            ));
         }
         let second_received = run_production_message_received_export(
             &_app_data_root,
@@ -10276,7 +10571,11 @@ replay check: no replayed messages after message 2
                     || result.next_blocker == "ProfileAOnionServiceLaunchFailed"
                     || result.next_blocker == "ProfileBOnionServiceLaunchFailed"
                     || result.next_blocker == "ProfileAEndpointUnavailable"
-                    || result.next_blocker == "ProfileBEndpointUnavailable",
+                    || result.next_blocker == "ProfileBEndpointUnavailable"
+                    || result.next_blocker == "SendAttemptFailed"
+                    || result.next_blocker == "ReceiveAttemptFailed"
+                    || result.next_blocker == "SecondSendAttemptFailed"
+                    || result.next_blocker == "SecondReceiveAttemptFailed",
                 "unexpected real onion blocker: {}",
                 result.next_blocker
             );
@@ -10286,6 +10585,14 @@ replay check: no replayed messages after message 2
                         .blockers
                         .contains(&"OnionServiceLaunchFailed".to_string())
                     || result.blockers.contains(&"EndpointUnavailable".to_string())
+                    || result.blockers.contains(&"SendAttemptFailed".to_string())
+                    || result.blockers.contains(&"ReceiveAttemptFailed".to_string())
+                    || result
+                        .blockers
+                        .contains(&"SecondSendAttemptFailed".to_string())
+                    || result
+                        .blockers
+                        .contains(&"SecondReceiveAttemptFailed".to_string())
             );
             match result.next_blocker.as_str() {
                 "ProfileABootstrapTimeout" | "ProfileBBootstrapTimeout" => {
@@ -10317,6 +10624,52 @@ replay check: no replayed messages after message 2
                     assert!(result.profile_b_onion_service_launched);
                     assert!(result.profile_a_endpoint_ready);
                     assert!(!result.profile_b_endpoint_ready);
+                }
+                "SendAttemptFailed"
+                | "ReceiveAttemptFailed"
+                | "SecondSendAttemptFailed"
+                | "SecondReceiveAttemptFailed" => {
+                    assert!(result.profile_a_onion_service_launched);
+                    assert!(result.profile_b_onion_service_launched);
+                    assert!(result.profile_a_endpoint_ready);
+                    assert!(result.profile_b_endpoint_ready);
+                    assert!(result.pairing_payloads_exported);
+                    assert!(result.session_drafts_saved);
+                    assert!(result.handshake_completed);
+                    assert!(result.sender_session_ready);
+                    assert!(result.receiver_session_ready);
+                    assert!(result.message_number_reserved);
+                    assert!(result.encrypted_envelope_exported);
+                    if result.next_blocker.starts_with("Second") {
+                        assert!(result.second_message_number_reserved);
+                        assert!(result.second_encrypted_envelope_exported);
+                        assert!(result.received_status_verified);
+                        assert!(result.received_export_matches_input);
+                    } else {
+                        assert!(!result.second_message_number_reserved);
+                        assert!(!result.second_encrypted_envelope_exported);
+                        assert!(!result.second_send_attempt_succeeded);
+                        assert!(!result.second_receive_attempt_succeeded);
+                    }
+                    assert!(!result.local_endpoint_returned);
+                    assert!(!result.peer_endpoint_returned);
+                    assert!(!result.envelope_payload_returned);
+                    assert!(!result.plaintext_returned_to_frontend);
+                    assert!(!result.store_path_returned);
+                    assert!(!result.passphrase_retained);
+
+                    let serialized =
+                        serde_json::to_string(&result).expect("serialize blocked real onion smoke");
+                    assert!(!serialized.contains("correct-passphrase"));
+                    assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
+                    assert!(!serialized.contains(cache_root.to_string_lossy().as_ref()));
+                    assert!(!serialized.contains("ADENV1"));
+                    assert!(!serialized.contains("ADPAIR2"));
+                    assert!(!serialized.contains(".onion"));
+                    assert!(!serialized.contains("real onion smoke"));
+
+                    let _ = std::fs::remove_dir_all(root);
+                    return;
                 }
                 _ => unreachable!("unexpected blocker already checked"),
             }
