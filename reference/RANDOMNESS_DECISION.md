@@ -26,7 +26,7 @@ Pairing nonces are included in canonical pairing payloads and are also used by t
 - File-name safe.
 - Distinguishable from development nonces.
 - Free of profile names, timestamps, process IDs, or endpoint data.
-- Small enough for QR pairing payloads.
+- Small enough for invite-code pairing payloads.
 
 This boundary does not expose a general-purpose random byte API to the rest of the project.
 

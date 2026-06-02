@@ -7,11 +7,13 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(scriptDir, "..");
 const repoRoot = resolve(appRoot, "../..");
 const peerRoots = ["peer-a", "peer-b"].map((peer) => join(repoRoot, `another-dimension-dev-${peer}`));
+const rendezvousRoot = join(repoRoot, "another-dimension-dev-rendezvous");
 
 function cleanPeerRoots() {
   for (const peerRoot of peerRoots) {
     rmSync(peerRoot, { recursive: true, force: true });
   }
+  rmSync(rendezvousRoot, { recursive: true, force: true });
 }
 
 function assertPeerRootsCreatedAndDistinct() {
@@ -22,6 +24,9 @@ function assertPeerRootsCreatedAndDistinct() {
     if (!existsSync(join(peerRoot, "app-data")) || !existsSync(join(peerRoot, "app-cache"))) {
       throw new Error(`peer root was not prepared: ${peerRoot}`);
     }
+  }
+  if (!existsSync(rendezvousRoot)) {
+    throw new Error(`rendezvous root was not prepared: ${rendezvousRoot}`);
   }
 }
 
@@ -70,6 +75,24 @@ async function main() {
     "src-tauri/Cargo.toml",
     "--lib",
     "production_two_profile_room_setup_accepts_invite_derived_profiles",
+  ]);
+  await run("resume after runtime reinitialization", process.execPath, [
+    "scripts/with-cargo-target.mjs",
+    "cargo",
+    "test",
+    "--manifest-path",
+    "src-tauri/Cargo.toml",
+    "--lib",
+    "production_two_profile_resume_keeps_retryable_send_after_runtime_reinitialization",
+  ]);
+  await run("private route update and retry state", process.execPath, [
+    "scripts/with-cargo-target.mjs",
+    "cargo",
+    "test",
+    "--manifest-path",
+    "src-tauri/Cargo.toml",
+    "--lib",
+    "production_onion_send_attempt_result_persists_failed_and_sent_resume_state",
   ]);
   cleanPeerRoots();
   console.log("\nlocal peer flow verification passed");

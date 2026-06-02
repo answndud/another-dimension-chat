@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -10,8 +11,9 @@ if (!command) {
 
 const env = { ...process.env };
 if (!env.CARGO_TARGET_DIR) {
-  const tempRoot = env.TMPDIR || "/tmp";
-  const cacheRoot = env.AD_BUILD_CACHE_DIR || join(tempRoot, "another-dimension-chat");
+  const scriptDir = dirname(fileURLToPath(import.meta.url));
+  const repoRoot = resolve(scriptDir, "../../..");
+  const cacheRoot = env.AD_BUILD_CACHE_DIR || join(repoRoot, ".build-cache");
   env.CARGO_TARGET_DIR = join(cacheRoot, "cargo-target");
 }
 

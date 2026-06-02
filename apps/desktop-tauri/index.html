@@ -13,7 +13,7 @@
         <h1 id="app-title">Another Dimension Chat</h1>
         <p id="local-dev-peer-label" class="local-dev-peer-label" hidden></p>
         <details class="system-settings-panel" role="dialog" aria-modal="true" aria-labelledby="app-settings-title">
-          <summary id="app-settings-title" data-i18n="systemPanel" data-i18n-title="systemPanel" title="App settings">App settings</summary>
+          <summary id="app-settings-title" data-i18n="systemPanel" data-i18n-title="systemPanel" title="Settings">Settings</summary>
           <button
             id="close-app-settings"
             type="button"
@@ -25,27 +25,78 @@
           >
             x
           </button>
-        <div class="theme-control" aria-label="Display mode" data-i18n-aria-label="displayMode">
-          <span data-i18n="displayMode">Display mode</span>
-          <button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>
-          <button id="open-developer-tools" type="button" class="flow-control is-secondary" data-i18n="openDeveloperTools">
-            Developer details
-          </button>
-        </div>
-        <section class="status-summary" aria-label="Current app state" data-i18n-aria-label="currentAppState">
-          <article>
-            <span data-i18n="release">Release</span>
-            <strong id="app-release-summary" data-i18n="appReleaseSummarySafe">No production security claim</strong>
-          </article>
-          <article>
-            <span data-i18n="localCapability">Local capability</span>
-            <strong id="local-capability-summary" data-i18n="localCapabilitySummary">Local encrypted storage checks</strong>
-          </article>
-          <article>
-            <span data-i18n="mainBlocker">Main blocker</span>
-            <strong id="main-blocker-summary" data-i18n="mainBlockerSummary">Network stays off until you start it</strong>
-          </article>
-        </section>
+          <div class="theme-control" aria-label="Display mode" data-i18n-aria-label="displayMode">
+            <span data-i18n="displayMode">Display mode</span>
+            <button id="theme-toggle" type="button" aria-pressed="true">Dark mode</button>
+            <label class="language-control" for="language-selector">
+              <span data-i18n="language">Language</span>
+              <select id="language-selector" autocomplete="off">
+                <option value="en">English</option>
+                <option value="ko">한국어</option>
+              </select>
+            </label>
+          </div>
+          <section class="status-summary" aria-label="Current app state" data-i18n-aria-label="currentAppState">
+            <article>
+              <span data-i18n="release">Release</span>
+              <strong id="app-release-summary" data-i18n="appReleaseSummarySafe">No production security claim</strong>
+              <p data-i18n="appReleaseSummaryHelp">
+                This preview can be tested, but it is not a finished secure release claim.
+              </p>
+            </article>
+            <article>
+              <span data-i18n="localCapability">Local capability</span>
+              <strong id="local-capability-summary" data-i18n="localCapabilitySummary">Local encrypted storage checks</strong>
+              <p data-i18n="localCapabilitySummaryHelp">
+                Room and message state stay on this device in local storage during this preview.
+              </p>
+            </article>
+            <article>
+              <span data-i18n="mainBlocker">Main blocker</span>
+              <strong id="main-blocker-summary" data-i18n="mainBlockerSummary">Network stays off until you start it</strong>
+              <p data-i18n="mainBlockerSummaryHelp">
+                Sending or receiving over the network only starts after you explicitly allow delivery and press an action.
+              </p>
+            </article>
+          </section>
+          <section class="settings-room-section" aria-labelledby="room-settings-heading">
+            <h2 id="room-settings-heading" data-i18n="roomSettings">Room settings</h2>
+            <div class="chat-room-controls connection-wizard" aria-label="Connection setup" hidden>
+              <div class="connection-wizard-internal" aria-hidden="true">
+                <input id="production-two-profile-a" type="hidden" />
+                <input id="production-two-profile-b" type="hidden" />
+                <input id="production-two-profile-passphrase" type="hidden" />
+              </div>
+              <p id="production-two-profile-direction" class="demo-state" aria-live="polite" hidden>
+                Status: create or paste an invite code
+              </p>
+              <p id="connection-device-role" class="device-role-note" aria-live="polite" hidden></p>
+            </div>
+            <div class="chat-setup-controls connection-setup-actions">
+              <div class="room-secondary-options">
+                <section class="connection-wizard-step" data-wizard-step="retention">
+                  <p class="wizard-step-label" data-i18n="wizardStepRetention">Message lifetime</p>
+                  <label class="loop-label" for="production-two-profile-message-ttl" data-i18n="retention">Retention</label>
+                  <select id="production-two-profile-message-ttl">
+                    <option value="" data-i18n="loadingRetentionPolicy">Loading retention policy</option>
+                  </select>
+                  <p class="retention-note" data-i18n="retentionDeviceHint">
+                    Message retention applies on this device. The other device follows its own setting.
+                  </p>
+                </section>
+                <section class="connection-wizard-step" data-wizard-step="network">
+                  <p class="wizard-step-label" data-i18n="privateDelivery">Private delivery</p>
+                  <label class="network-permission-toggle" for="room-network-permission">
+                    <input id="room-network-permission" type="checkbox" />
+                    <span data-i18n="allowPrivateDelivery">Allow private delivery when I press send or listen</span>
+                  </label>
+                  <p class="retention-note" data-i18n="privateDeliveryHint">
+                    Network stays off until this is enabled and you press a delivery action.
+                  </p>
+                </section>
+              </div>
+            </div>
+          </section>
         <details class="boundary-details">
           <summary data-i18n="boundaryDetails">Developer details</summary>
           <dl id="status-list" class="status-list">
@@ -156,6 +207,62 @@
             <p class="eyebrow" data-i18n="onionTransport">Onion transport</p>
             <h3 id="onion-preflight-title" data-i18n="torPreflight">Tor preflight</h3>
           </div>
+          <p class="advanced-network-note" data-i18n="deliveryNetworkDiagnosticsNote">
+            Developer diagnostics for the Tor/onion delivery path. This is not required for normal room settings.
+          </p>
+          <section class="onion-advanced-controls" aria-labelledby="advanced-delivery-controls-title">
+            <h4 id="advanced-delivery-controls-title" data-i18n="advancedOnionSetup">Private route tools</h4>
+            <p class="advanced-network-note" data-i18n="advancedOnionNote">
+              Optional network controls. Nothing starts unless you explicitly click a button.
+            </p>
+            <div class="delivery-control-groups">
+              <div class="delivery-control-group">
+                <strong data-i18n="deliveryControlsThisDevice">This device</strong>
+                <div class="loop-actions">
+                  <button id="start-production-two-profile-onion-bootstrap" type="button">
+                    <span data-i18n="startTorBootstrap">Start private route</span>
+                  </button>
+                  <button id="prepare-production-two-profile-onion-key" type="button">
+                    <span data-i18n="prepareOnionKey">Prepare local address</span>
+                  </button>
+                  <button id="launch-production-two-profile-onion-endpoint" type="button">
+                    <span data-i18n="launchOnionEndpoint">Open local address</span>
+                  </button>
+                  <button id="save-production-two-profile-onion-sessions" type="button">
+                    <span data-i18n="saveOnionSessions">Save private route</span>
+                  </button>
+                </div>
+              </div>
+              <div class="delivery-control-group">
+                <strong data-i18n="deliveryControlsPeer">Other device</strong>
+                <div class="loop-actions">
+                  <button id="prepare-production-two-profile-onion-pairing" type="button">
+                    <span data-i18n="prepareOnionPairing">Prepare peer address</span>
+                  </button>
+                  <button id="refresh-production-two-profile-peer-endpoints" type="button">
+                    <span data-i18n="refreshPeerEndpoints">Refresh peer endpoints</span>
+                  </button>
+                  <button id="send-production-two-profile-endpoint-update" type="button">
+                    <span data-i18n="sendEndpointUpdate">Send endpoint update</span>
+                  </button>
+                  <button id="complete-production-two-profile-onion-handshake" type="button">
+                    <span data-i18n="completeOnionHandshake">Confirm peer route</span>
+                  </button>
+                </div>
+              </div>
+              <div class="delivery-control-group">
+                <strong data-i18n="deliveryControlsMessage">Message delivery</strong>
+                <div class="loop-actions">
+                  <button id="send-production-two-profile-latest-onion-envelope" type="button">
+                    <span data-i18n="sendLatestOverOnion">Send waiting message</span>
+                  </button>
+                  <button id="run-production-two-profile-real-onion-roundtrip" type="button">
+                    <span data-i18n="runRealOnionRoundtrip">Test private delivery</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
           <div class="loop-actions">
             <button id="check-onion-preflight" type="button" data-i18n="checkTorPreflight">Check Tor preflight</button>
             <button id="prepare-onion-backup-exclusion" type="button" data-i18n="prepareBackupExclusion">Prepare backup exclusion</button>
@@ -330,22 +437,13 @@
         <section class="demo-panel" aria-labelledby="production-two-profile-title">
           <section class="production-workflow" aria-labelledby="production-two-profile-title">
             <div>
+              <button id="back-to-room-list" type="button" class="flow-control is-secondary room-list-back" data-i18n="backToRooms">
+                Room list
+              </button>
               <p class="eyebrow" data-i18n="darkroomChat">Darkroom chat</p>
               <h3 id="production-two-profile-title" data-i18n="chatRoomTitle">Private room</h3>
               <p id="room-status-summary" class="room-status-summary" data-i18n="roomStatusNoConnection">
                 Not connected. Create or paste an invite code to start.
-              </p>
-              <p id="current-invite-code-summary" class="current-invite-code-summary" hidden>
-                <span data-i18n="currentInviteCode">Invite code</span>
-                <strong id="current-invite-code-text"></strong>
-                <button
-                  id="copy-current-invite-code-summary"
-                  type="button"
-                  class="inline-copy-button"
-                  data-i18n="copy"
-                >
-                  Copy
-                </button>
               </p>
             </div>
             <dl class="room-identity-bar" aria-label="Room identity">
@@ -379,12 +477,12 @@
                   <span data-i18n="connectionGuideProfileText">Create a code or paste the one from the other device.</span>
                 </li>
                 <li>
-                  <strong data-i18n="connectionGuidePassphrase">2. Continue on this device</strong>
-                  <span data-i18n="connectionGuidePassphraseText">This device creates its own setup code.</span>
+                  <strong data-i18n="connectionGuidePassphrase">2. Join room</strong>
+                  <span data-i18n="connectionGuidePassphraseText">The invite code joins the room while both devices are online.</span>
                 </li>
                 <li>
-                  <strong data-i18n="connectionGuideSetup">3. Compare the phrase</strong>
-                  <span data-i18n="connectionGuideSetupText">Only unlock messages when the phrase matches.</span>
+                  <strong data-i18n="connectionGuideSetup">3. Room ready</strong>
+                  <span data-i18n="connectionGuideSetupText">The invite token verifies this room for messaging.</span>
                 </li>
                 <li>
                   <strong data-i18n="connectionGuideChat">4. Write a message</strong>
@@ -392,146 +490,6 @@
                 </li>
               </ol>
             </section>
-            <button id="toggle-chat-settings" type="button" class="settings-toggle" data-i18n="roomSettings" data-i18n-title="roomSettings" title="Invite code" aria-expanded="false">
-              Invite code
-            </button>
-            <details class="chat-settings-panel" role="dialog" aria-modal="true" aria-labelledby="chat-settings-title">
-              <summary id="chat-settings-title" data-i18n="roomSettings">Invite code</summary>
-              <button
-                id="close-chat-settings"
-                type="button"
-                class="modal-close-button"
-                data-i18n-title="closeSettings"
-                title="Close settings"
-                aria-label="Close settings"
-                data-i18n-aria-label="closeSettings"
-              >
-                x
-              </button>
-              <p class="connection-modal-copy" data-i18n="connectionModalCopy">
-                Create a code or paste the one you received. This device stores only its own local identity.
-              </p>
-              <div class="chat-room-controls connection-wizard" aria-label="Connection setup">
-                <section class="connection-wizard-step" data-wizard-step="code">
-                  <p class="wizard-step-label" data-i18n="wizardStepCode">Step 1 / 2 - Invite code</p>
-                  <label class="loop-label" for="production-two-profile-b" data-i18n="connectionCode">Invite code</label>
-                  <input
-                    id="production-two-profile-b"
-                    type="text"
-                    autocomplete="off"
-                    data-i18n-placeholder="connectionCodePlaceholder"
-                    placeholder="Paste invite code"
-                  />
-                  <div class="invite-code-actions">
-                    <button id="create-invite-code-settings" type="button" data-i18n="createInviteCode">
-                      Create my invite code
-                    </button>
-                    <button id="copy-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
-                      Copy code
-                    </button>
-                  </div>
-                  <label class="loop-label settings-invite-code-label" for="settings-invite-code-display" data-i18n="currentInviteCode">
-                    Invite code
-                  </label>
-                  <textarea
-                    id="settings-invite-code-display"
-                    class="invite-code-display settings-invite-code-display"
-                    rows="2"
-                    readonly
-                    hidden
-                    data-i18n-placeholder="inviteCodeNotCreated"
-                    placeholder="Create or paste an invite code first"
-                  ></textarea>
-                  <p class="retention-note" data-i18n="connectionCodeHint">
-                    One person creates an invite code. The other person pastes it here.
-                  </p>
-                </section>
-                <div class="connection-wizard-internal" aria-hidden="true">
-                  <input id="production-two-profile-a" type="hidden" />
-                  <input id="production-two-profile-passphrase" type="hidden" />
-                </div>
-                <p id="production-two-profile-direction" class="demo-state" aria-live="polite">
-                  Status: create or paste an invite code
-                </p>
-                <p id="connection-device-role" class="device-role-note" aria-live="polite"></p>
-              </div>
-              <div class="chat-setup-controls connection-setup-actions">
-                <div class="loop-actions setup-primary-actions">
-                    <button id="run-production-two-profile-roundtrip" type="button" data-i18n="runTwoProfileRoundtrip">Continue on this device</button>
-                </div>
-                <details class="room-secondary-options">
-                  <summary data-i18n="roomOptions">Room options</summary>
-                  <section class="connection-wizard-step" data-wizard-step="language">
-                    <p class="wizard-step-label" data-i18n="language">Language</p>
-                    <label class="language-control" for="language-selector">
-                      <span data-i18n="language">Language</span>
-                      <select id="language-selector" autocomplete="off">
-                        <option value="en">English</option>
-                        <option value="ko">한국어</option>
-                      </select>
-                    </label>
-                  </section>
-                  <section class="connection-wizard-step" data-wizard-step="retention">
-                    <p class="wizard-step-label" data-i18n="wizardStepRetention">Message lifetime</p>
-                    <label class="loop-label" for="production-two-profile-message-ttl" data-i18n="retention">Retention</label>
-                    <select id="production-two-profile-message-ttl">
-                      <option value="" data-i18n="loadingRetentionPolicy">Loading retention policy</option>
-                    </select>
-                    <p class="retention-note" data-i18n="retentionDeviceHint">
-                      Message retention applies on this device. The other device follows its own setting.
-                    </p>
-                  </section>
-                  <section class="connection-wizard-step" data-wizard-step="network">
-                    <p class="wizard-step-label" data-i18n="privateDelivery">Private delivery</p>
-                    <label class="network-permission-toggle" for="room-network-permission">
-                      <input id="room-network-permission" type="checkbox" />
-                      <span data-i18n="allowPrivateDelivery">Allow private delivery when I press send or listen</span>
-                    </label>
-                    <p class="retention-note" data-i18n="privateDeliveryHint">
-                      Network stays off until this is enabled and you press a delivery action.
-                    </p>
-                  </section>
-                </details>
-                <details class="onion-advanced-controls">
-                  <summary data-i18n="advancedOnionSetup">Private route tools</summary>
-                  <p class="advanced-network-note" data-i18n="advancedOnionNote">
-                    Optional network controls. Nothing starts unless you explicitly click a button.
-                  </p>
-                  <div class="loop-actions">
-                    <button id="start-production-two-profile-onion-bootstrap" type="button">
-                      <span data-i18n="startTorBootstrap">Start private route</span>
-                    </button>
-                    <button id="prepare-production-two-profile-onion-key" type="button">
-                      <span data-i18n="prepareOnionKey">Prepare local address</span>
-                    </button>
-                    <button id="launch-production-two-profile-onion-endpoint" type="button">
-                      <span data-i18n="launchOnionEndpoint">Open local address</span>
-                    </button>
-                    <button id="prepare-production-two-profile-onion-pairing" type="button">
-                      <span data-i18n="prepareOnionPairing">Prepare peer address</span>
-                    </button>
-                    <button id="save-production-two-profile-onion-sessions" type="button">
-                      <span data-i18n="saveOnionSessions">Save private route</span>
-                    </button>
-                    <button id="refresh-production-two-profile-peer-endpoints" type="button">
-                      <span data-i18n="refreshPeerEndpoints">Refresh peer endpoints</span>
-                    </button>
-                    <button id="send-production-two-profile-endpoint-update" type="button">
-                      <span data-i18n="sendEndpointUpdate">Send endpoint update</span>
-                    </button>
-                    <button id="complete-production-two-profile-onion-handshake" type="button">
-                      <span data-i18n="completeOnionHandshake">Confirm peer route</span>
-                    </button>
-                    <button id="send-production-two-profile-latest-onion-envelope" type="button">
-                      <span data-i18n="sendLatestOverOnion">Send waiting message</span>
-                    </button>
-                    <button id="run-production-two-profile-real-onion-roundtrip" type="button">
-                      <span data-i18n="runRealOnionRoundtrip">Test private delivery</span>
-                    </button>
-                  </div>
-                </details>
-              </div>
-            </details>
             <ol id="production-two-profile-flow" class="demo-steps compact-flow" aria-label="Connection guided flow">
               <li id="production-two-profile-step-session" class="is-running">
                 <strong data-i18n="sessionStep">1 Room</strong>
@@ -587,6 +545,30 @@
                 </div>
               </dl>
             </details>
+            <section class="room-list-panel" aria-labelledby="room-list-title">
+              <div class="room-list-header">
+                <div>
+                  <p class="eyebrow" data-i18n="rooms">Rooms</p>
+                  <h4 id="room-list-title" data-i18n="roomListTitle">Open a room</h4>
+                </div>
+                <button id="room-list-create-room" type="button" data-i18n="newRoom">New room</button>
+              </div>
+              <ol id="saved-room-list" class="saved-room-list" aria-live="polite">
+                <li class="is-empty" data-i18n="roomListEmpty">No rooms on this device yet.</li>
+              </ol>
+              <div class="room-list-join">
+                <input
+                  id="room-list-invite-code"
+                  type="text"
+                  autocomplete="off"
+                  data-i18n-placeholder="connectionCodePlaceholder"
+                  placeholder="Paste invite code"
+                />
+                <button id="room-list-join-room" type="button" class="flow-control is-secondary" data-i18n="createConnection">
+                  Join room
+                </button>
+              </div>
+            </section>
             <section class="chat-empty-state" aria-labelledby="chat-empty-title">
               <p class="eyebrow" data-i18n="connectionNeeded">Connection needed</p>
               <h4 id="chat-empty-title" data-i18n="peerNotConnected">No peer connected yet</h4>
@@ -612,6 +594,9 @@
                     aria-label="Created invite code"
                     data-i18n-aria-label="createdInviteCode"
                   ></textarea>
+                  <button id="copy-created-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
+                    Copy invite code
+                  </button>
                   <span class="connection-choice-hint" data-i18n="connectionChoiceCreateAfter">
                     After it appears, send it to the other device.
                   </span>
@@ -631,128 +616,29 @@
                     placeholder="Paste invite code"
                   />
                   <button id="create-room-from-received-code" type="button" class="flow-control is-secondary" data-i18n="createConnection">
-                    Prepare this device
+                    Join room
                   </button>
                   <span class="connection-choice-hint" data-i18n="connectionChoiceEnterAfter">
-                    Paste the code, then prepare this device.
+                    Paste the code to join the room.
                   </span>
                 </article>
               </div>
             </section>
-            <section class="connection-pending-state" aria-labelledby="connection-pending-title">
-              <ol class="room-setup-progress" aria-label="Room setup progress" data-i18n-aria-label="roomSetupProgress">
-                <li id="room-setup-step-invite" data-i18n="roomSetupStepInvite">Invite code</li>
-                <li id="room-setup-step-setup" data-i18n="roomSetupStepSetup">Setup code</li>
-                <li id="room-setup-step-verify" data-i18n="roomSetupStepVerify">Verify phrase</li>
-                <li id="room-setup-step-route" data-i18n="roomSetupStepRoute">Delivery codes</li>
-                <li id="room-setup-step-chat" data-i18n="roomSetupStepChat">Send message</li>
-              </ol>
-              <p class="eyebrow" data-i18n="connectionCode">Invite code</p>
-              <p id="connection-step-counter" class="connection-step-counter" aria-live="polite">
-                Step 1 / 4
-              </p>
-              <h4 id="connection-pending-title" data-i18n="connectionCodeReady">Invite code ready</h4>
-              <p data-i18n="connectionPendingHint">
-                Send this invite code to the other device. Then continue on this device.
-              </p>
-              <p id="pending-connection-device-role" class="device-role-note" aria-live="polite"></p>
-              <p id="connection-exchange-instruction" class="exchange-instruction" aria-live="polite">
-                Copy this invite code to the other device, then continue on this device.
-              </p>
-              <div class="connection-pending-actions">
-                <section class="invite-exchange-stage invite-stage-invite" aria-labelledby="connection-pending-title">
-                  <h5 data-i18n="inviteStageTitle">Send the invite code</h5>
-                  <p class="invite-stage-hint" data-i18n="inviteStageHint">
-                    Copy this code to the other device, then prepare this device.
-                  </p>
-                  <textarea
-                    id="pending-invite-code-display"
-                    class="invite-code-display"
-                    rows="2"
-                    readonly
-                    aria-label="Current invite code"
-                  ></textarea>
-                  <div class="invite-stage-actions invite-copy-prepare-actions">
-                    <div class="invite-action-step">
-                      <span data-i18n="inviteCopyStep">1. Send code</span>
-                      <button id="copy-pending-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
-                        Copy invite code
-                      </button>
-                    </div>
-                    <div class="invite-action-step">
-                      <span data-i18n="invitePrepareStep">2. Prepare this device</span>
-                      <button id="create-room-from-invite-code" type="button" data-i18n="createMyConnectionCode">
-                        Prepare this device
-                      </button>
-                    </div>
-                  </div>
-                </section>
-                <section class="invite-exchange-stage invite-stage-setup" aria-labelledby="connection-pending-title">
-                  <h5 data-i18n="setupStageTitle">Exchange setup codes</h5>
-                  <p class="invite-stage-hint" data-i18n="setupStageHint">
-                    Send my setup code, then paste the setup code from the other device.
-                  </p>
-                  <label class="loop-label local-invite-setup-label" for="local-invite-setup-code" data-i18n="localInviteSetupCode">
-                    My setup code
-                  </label>
-                  <textarea
-                    id="local-invite-setup-code"
-                    class="invite-code-display local-invite-setup-code"
-                    rows="3"
-                    readonly
-                    data-i18n-placeholder="localInviteSetupCodeNotReady"
-                    placeholder="Continue on this device first"
-                  ></textarea>
-                  <button id="copy-local-invite-setup-code" type="button" class="flow-control is-secondary" data-i18n="copyLocalInviteSetupCode">
-                    Copy my setup code
-                  </button>
-                  <label class="loop-label peer-invite-setup-label" for="peer-invite-setup-code" data-i18n="peerInviteSetupCode">
-                    Their setup code
-                  </label>
-                  <textarea
-                    id="peer-invite-setup-code"
-                    class="invite-code-display peer-invite-setup-code"
-                    rows="3"
-                    data-i18n-placeholder="peerInviteSetupCodePlaceholder"
-                    placeholder="Paste their setup code"
-                  ></textarea>
-                  <button id="use-peer-invite-setup-code" type="button" class="flow-control is-secondary" data-i18n="usePeerInviteSetupCode">
-                    Check their code
-                  </button>
-                </section>
-                <section class="invite-exchange-stage invite-stage-session" aria-labelledby="connection-pending-title">
-                  <h5 data-i18n="sessionStageTitle">Open the room</h5>
-                  <p class="invite-stage-hint" data-i18n="sessionStageHint">
-                    Send my open code, then paste the open code from the other device.
-                  </p>
-                  <label class="loop-label local-invite-session-label" for="local-invite-session-code" data-i18n="localInviteSessionCode">
-                    My open code
-                  </label>
-                  <textarea
-                    id="local-invite-session-code"
-                    class="invite-code-display local-invite-session-code"
-                    rows="3"
-                    readonly
-                    data-i18n-placeholder="localInviteSessionCodeNotReady"
-                    placeholder="Confirm the phrase to create my open code"
-                  ></textarea>
-                  <button id="copy-local-invite-session-code" type="button" class="flow-control is-secondary" data-i18n="copyLocalInviteSessionCode">
-                    Copy my open code
-                  </button>
-                  <label class="loop-label peer-invite-session-label" for="peer-invite-session-code" data-i18n="peerInviteSessionCode">
-                    Their open code
-                  </label>
-                  <textarea
-                    id="peer-invite-session-code"
-                    class="invite-code-display peer-invite-session-code"
-                    rows="3"
-                    data-i18n-placeholder="peerInviteSessionCodePlaceholder"
-                    placeholder="Paste their open code"
-                  ></textarea>
-                  <button id="use-peer-invite-session-code" type="button" class="flow-control is-secondary" data-i18n="usePeerInviteSessionCode">
-                    Open room
-                  </button>
-                </section>
+            <section id="room-invite-token-panel" class="room-invite-token-panel" aria-label="Room invite token">
+              <label class="loop-label" for="room-invite-token-display" data-i18n="currentInviteCode">
+                Invite code
+              </label>
+              <div class="room-invite-token-row">
+                <textarea
+                  id="room-invite-token-display"
+                  class="invite-code-display"
+                  rows="2"
+                  readonly
+                  aria-label="Current invite code"
+                ></textarea>
+                <button id="copy-room-invite-token" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
+                  Copy invite code
+                </button>
               </div>
             </section>
             <section class="safety-confirm-state" aria-labelledby="safety-confirm-title">
@@ -790,26 +676,27 @@
               <li class="is-empty" data-i18n="emptyConversation">No messages yet.</li>
             </ol>
             <p id="chat-delivery-notice" class="chat-delivery-notice" aria-live="polite"></p>
-            <label class="loop-label chat-message-label" for="production-two-profile-message" data-i18n="writeMessage">Write message</label>
-            <textarea
-              id="production-two-profile-message"
-              rows="3"
-              data-i18n-placeholder="readyMessagePlaceholder"
-              placeholder="Write your first message"
-            ></textarea>
-            <div class="loop-actions chat-primary-actions">
-              <button id="run-production-two-profile-roundtrip-inline" type="button" data-i18n="createConnection">
-                Continue on this device
-              </button>
-              <button id="check-production-two-profile-session-status-inline" type="button" data-i18n="checkSessions">
-                Check room
-              </button>
-              <button id="run-production-two-profile-message-roundtrip" type="button" data-i18n="send">
-                Send
-              </button>
-              <p id="production-two-profile-readiness" class="action-readiness" aria-live="polite">
-                Invite code needed
-              </p>
+            <div class="chat-composer">
+              <label class="loop-label chat-message-label" for="production-two-profile-message" data-i18n="writeMessage">Write message</label>
+              <textarea
+                id="production-two-profile-message"
+                rows="2"
+                placeholder=""
+              ></textarea>
+              <div class="loop-actions chat-primary-actions">
+                <button id="run-production-two-profile-roundtrip-inline" type="button" data-i18n="createConnection">
+                  Join room
+                </button>
+                <button id="check-production-two-profile-session-status-inline" type="button" data-i18n="checkSessions">
+                  Check room
+                </button>
+                <button id="run-production-two-profile-message-roundtrip" type="button" data-i18n="send">
+                  Send
+                </button>
+                <p id="production-two-profile-readiness" class="action-readiness" aria-live="polite">
+                  Invite code needed
+                </p>
+              </div>
             </div>
             <section class="room-receive-controls" aria-label="Receive controls" data-i18n-aria-label="receiveControls">
               <p class="retention-note" data-i18n="receiveControlHint">
@@ -1092,11 +979,11 @@
                   <ol id="production-pairing-flow" class="demo-steps compact-flow" aria-label="Pairing guided flow">
                     <li id="production-pairing-step-export" class="is-running">
                       <strong data-i18n="pairingStepExport">1 Export</strong>
-                      <span id="production-pairing-step-export-detail">Export a local QR payload.</span>
+                      <span id="production-pairing-step-export-detail">Export a local pairing payload.</span>
                     </li>
                     <li id="production-pairing-step-remote" class="is-pending">
                       <strong data-i18n="pairingStepRemote">2 Remote</strong>
-                      <span id="production-pairing-step-remote-detail">Paste or load the remote QR payload.</span>
+                      <span id="production-pairing-step-remote-detail">Paste or load the remote pairing payload.</span>
                     </li>
                     <li id="production-pairing-step-safety" class="is-pending">
                       <strong data-i18n="pairingStepVerify">3 Verify</strong>
@@ -1111,20 +998,11 @@
                 <div class="tool-step">
                   <label class="loop-label" for="production-pairing-payload" data-i18n="pairingPayload">Pairing payload</label>
                   <textarea id="production-pairing-payload" rows="5" readonly></textarea>
-                  <div class="qr-pairing-panel" aria-label="Pairing QR">
-                    <canvas id="production-pairing-qr" width="224" height="224"></canvas>
-                    <p id="production-pairing-qr-status" class="demo-hint" data-i18n="qrAfterPairingExport">QR appears after pairing export.</p>
-                  </div>
                   <div class="loop-actions">
                     <button id="use-production-pairing-payload" type="button" class="flow-control is-secondary" data-i18n="fillLocal">Fill local</button>
                     <button id="store-production-pairing-payload" type="button" class="flow-control is-secondary" data-i18n="storePairing">Store pairing</button>
                     <button id="load-production-pairing-payload" type="button" class="flow-control is-secondary" data-i18n="fillRemote">Fill remote</button>
                     <button id="relay-production-pairing-payload" type="button" data-i18n="relayToPeer">Relay to peer</button>
-                  </div>
-                  <label class="loop-label" for="production-remote-pairing-qr-payload" data-i18n="remoteQrText">Remote QR text</label>
-                  <textarea id="production-remote-pairing-qr-payload" rows="3"></textarea>
-                  <div class="loop-actions">
-                    <button id="use-production-remote-pairing-qr" type="button" class="flow-control is-secondary" data-i18n="useQrText">Use QR text</button>
                   </div>
                   <label class="loop-label" for="production-remote-pairing-payload" data-i18n="remotePayload">Remote payload</label>
                   <textarea id="production-remote-pairing-payload" rows="5"></textarea>

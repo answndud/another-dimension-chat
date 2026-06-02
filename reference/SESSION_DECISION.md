@@ -11,7 +11,7 @@ Do not implement message encryption until the first session-establishment test b
 The first prototype should start from the narrowest model:
 
 - 1:1 only.
-- In-person QR pairing only.
+- Invite-code pairing only.
 - Pairwise identity per contact.
 - Signed production pairing payloads.
 - Canonical safety transcript and production safety material.

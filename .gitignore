@@ -1,5 +1,7 @@
 # Rust build output
 /target/
+/.build-cache/
+/.vite/
 
 # Frontend build output and dependencies
 node_modules/

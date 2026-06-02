@@ -4,6 +4,7 @@ import {
   productionInviteCodeProfiles,
   productionOnionReceiveRuntimeView,
   productionTwoProfileCurrentAction,
+  productionTwoProfileLatestRetryableOutbound,
   productionTwoProfileOutboundActionState,
   productionTwoProfileOutboundPrimaryAction,
   productionTwoProfileResumeTarget,
@@ -14,16 +15,16 @@ test("invite code creates opposite local and peer roles", () => {
   assert.deepEqual(productionInviteCodeProfiles("ABCD-2345", "inviter"), {
     connectionCode: "ABCD-2345",
     role: "inviter",
-    slug: "abcd-2345",
-    localProfile: "inviter-abcd-2345",
-    peerProfile: "joiner-abcd-2345",
+    slug: "abcd-2345-1ufszcs",
+    localProfile: "inviter-abcd-2345-1ufszcs",
+    peerProfile: "joiner-abcd-2345-1ufszcs",
   });
   assert.deepEqual(productionInviteCodeProfiles("ABCD-2345", "joiner"), {
     connectionCode: "ABCD-2345",
     role: "joiner",
-    slug: "abcd-2345",
-    localProfile: "joiner-abcd-2345",
-    peerProfile: "inviter-abcd-2345",
+    slug: "abcd-2345-1ufszcs",
+    localProfile: "joiner-abcd-2345-1ufszcs",
+    peerProfile: "inviter-abcd-2345-1ufszcs",
   });
 });
 
@@ -113,6 +114,59 @@ test("failed outbound messages stay retryable or cancelable from the active devi
     noticeKey: "messageSavedPrivateDeliveryOff",
     recoveryKey: "sendRecoveryPermissionOff",
   });
+});
+
+test("latest retryable outbound only selects active-device failed sends", () => {
+  const input = { profileA: "alice", profileB: "bob" };
+  const entries = [
+    {
+      sender: "alice",
+      receiver: "bob",
+      messageNumber: 1,
+      createdAtMs: 100,
+      statuses: new Set(["sent"]),
+      outboundDeliveryState: "failed",
+      outboundRetryable: true,
+    },
+    {
+      sender: "bob",
+      receiver: "alice",
+      messageNumber: 2,
+      createdAtMs: 400,
+      statuses: new Set(["sent"]),
+      outboundDeliveryState: "failed",
+      outboundRetryable: true,
+    },
+    {
+      sender: "alice",
+      receiver: "bob",
+      messageNumber: 3,
+      createdAtMs: 300,
+      statuses: new Set(["sent", "received"]),
+      outboundDeliveryState: "failed",
+      outboundRetryable: true,
+    },
+    {
+      sender: "alice",
+      receiver: "bob",
+      messageNumber: 4,
+      createdAtMs: 500,
+      statuses: new Set(["sent"]),
+      outboundDeliveryState: "canceled",
+      outboundRetryable: false,
+    },
+    {
+      sender: "alice",
+      receiver: "bob",
+      messageNumber: 5,
+      createdAtMs: 250,
+      statuses: new Set(["sent"]),
+      outboundDeliveryState: "failed",
+      outboundRetryable: true,
+    },
+  ];
+
+  assert.equal(productionTwoProfileLatestRetryableOutbound(entries, input)?.messageNumber, 5);
 });
 
 test("send recovery notice waits until the room is ready", () => {
