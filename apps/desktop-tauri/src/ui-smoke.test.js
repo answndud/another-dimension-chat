@@ -227,6 +227,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   }
   assert.match(mainJs, /function buildFieldTestReport/);
   assert.match(mainJs, /function copyFieldTestReport/);
+  assert.match(mainJs, /function productionTwoProfileRealOnionSyntheticFailureResult/);
   assert.match(stylesCss, /\.field-test-report-panel/);
   assert.match(i18nJs, /fieldTestReport/);
   assert.match(i18nJs, /현장 테스트 리포트/);
@@ -238,7 +239,11 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /outbound_failure_class=/);
   assert.match(reportBody, /outbound_recovery_action=/);
   assert.match(reportBody, /receive_failure_kind=/);
+  assert.match(reportBody, /real_onion_next_blocker=/);
+  assert.match(reportBody, /real_onion_blockers=/);
+  assert.match(reportBody, /real_onion_network_io=/);
   assert.match(reportBody, /redacted_boundary=/);
+  assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /productionTwoProfileRealOnionSyntheticFailureResult/);
   assert.doesNotMatch(reportBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
   assert.doesNotMatch(reportBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
 });

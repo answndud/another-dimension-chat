@@ -83,7 +83,7 @@ Local beta artifacts can be copied to `apps/desktop-tauri/beta-artifacts/` for t
 Current local beta handoff:
 
 - Artifact: `apps/desktop-tauri/beta-artifacts/Another Dimension Chat_0.1.0_aarch64.dmg`
-- SHA-256: `f7fba9314d4f4c078e72b58bcc81a9ecd46f0692a16aa46cb7b6b9db669de77a`
+- SHA-256: `a8c66a277d631c55cc6502132dd582585d7ee203177e37ea794c1cf8efad5126`
 - Installed-app smoke covered fresh smoke profiles, local encrypted pair/verify/send/reply, quit/reopen/unlock transcript resume, and explicit receive start/stop after manual network permission.
 - This remains a local beta candidate. External Tor/onion success is environment-dependent and must be tested with explicit user action; no secure-release claim is made.
 - External Tor/onion field testing should record whether bootstrap, onion endpoint launch, endpoint exchange, send, receive, retry, and cancel complete or fail closed. Do not treat Tor blocking, timeout, or peer offline results as release-blocking security failures unless they expose secrets, silently start network work, or corrupt transcript/session state.
