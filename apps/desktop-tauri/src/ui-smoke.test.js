@@ -185,6 +185,15 @@ test("room transcript refresh is scoped to the current room", () => {
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /invokeInviteRoomSessionStatus/);
 });
 
+test("receive imports refresh room list metadata immediately", () => {
+  assert.match(mainJs, /function refreshCurrentRoomAfterReceiveImport/);
+  assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /rememberCurrentInviteRoomMetadata\(\)/);
+  assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /renderSavedInviteRooms\(\)/);
+  assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /renderRoomStatusSummary\(input, sessionsReady\)/);
+  assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /renderProductionTwoProfileMemory\(input\)/);
+  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus"), /refreshCurrentRoomAfterReceiveImport\(refreshPlan\)/);
+});
+
 test("private delivery receive controls require a real route", () => {
   assert.match(functionBody(mainJs, "updateChatPrimaryActionMode"), /"has-private-route",\s*twoProfilePeerEndpointState\(input\)\.ready/);
   assert.doesNotMatch(functionBody(mainJs, "updateChatPrimaryActionMode"), /twoProfileInviteCodeModeActive\(\) && sessionsReady/);

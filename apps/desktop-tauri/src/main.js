@@ -2199,6 +2199,18 @@ function rememberCurrentInviteRoomMetadata() {
   rememberInviteRoom(code, role, currentRoomConversationMetadata());
 }
 
+function refreshCurrentRoomAfterReceiveImport(refreshPlan = {}) {
+  const input = productionTwoProfileInput();
+  const sessionsReady = twoProfileSessionsReadyForInput(input);
+  rememberCurrentInviteRoomMetadata();
+  renderSavedInviteRooms();
+  renderRoomStatusSummary(input, sessionsReady);
+  renderRoomIdentityBar(input, sessionsReady);
+  if (refreshPlan.messageImported) {
+    renderProductionTwoProfileMemory(input);
+  }
+}
+
 function currentInviteRoomCode() {
   return (fields.productionTwoProfileB?.value ?? "").trim();
 }
@@ -10129,6 +10141,7 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
           }
         }
       }
+      refreshCurrentRoomAfterReceiveImport(refreshPlan);
     }
     if (!backendLoop.enabled && !backendLoop.worker_running) {
       markProductionTwoProfileOnionReceiveStopped(backendLoop);
