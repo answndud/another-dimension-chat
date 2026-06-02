@@ -177,6 +177,18 @@ test("delivery code save continues the original send or receive action", () => {
   assert.match(followupBody, /clearPrivateRouteFollowup\(\)/);
 });
 
+test("saved local delivery codes must be refreshed before sharing", () => {
+  assert.match(mainJs, /const activeLocalPrivateRouteCodesByRoom = new Map\(\)/);
+  assert.match(functionBody(mainJs, "restorePrivateRouteExchangeForRoom"), /updateLocalPrivateRouteCodeUi\(input\)/);
+  assert.match(functionBody(mainJs, "localPrivateRouteCodeIsActive"), /activeLocalPrivateRouteCodesByRoom\.get\(roomKey\)/);
+  assert.match(functionBody(mainJs, "routeExchangePrimaryActionNode"), /!localPrivateRouteCodeIsActive\(input\)/);
+  assert.match(functionBody(mainJs, "focusPrivateRouteNextAction"), /!localPrivateRouteCodeIsActive\(input\)/);
+  assert.match(functionBody(mainJs, "localPrivateRouteCodeStatusKey"), /privateRouteLocalStatusSaved/);
+  assert.match(functionBody(mainJs, "updateLocalPrivateRouteCodeUi"), /has-saved-local-private-route-code/);
+  assert.match(stylesCss, /:not\(\.exchange-instruction\):not\(\.route-code-status\)/);
+  assert.match(indexHtml, /id="private-route-local-status"/);
+});
+
 test("invite-code send path does not bypass private delivery gates", () => {
   const intentStart = mainJs.indexOf("function twoProfileComposerPrimaryIntent");
   const intentEnd = mainJs.indexOf("function renderProductionTwoProfileMemory", intentStart);

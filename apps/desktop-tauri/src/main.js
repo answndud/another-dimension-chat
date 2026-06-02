@@ -368,6 +368,7 @@ const fields = {
   privateRouteStepCopy: document.querySelector("#private-route-step-copy"),
   privateRouteStepPeer: document.querySelector("#private-route-step-peer"),
   privateRouteInstruction: document.querySelector("#private-route-instruction"),
+  privateRouteLocalStatus: document.querySelector("#private-route-local-status"),
   localPrivateRouteCode: document.querySelector("#local-private-route-code"),
   peerPrivateRouteCode: document.querySelector("#peer-private-route-code"),
   copyPrivateRouteCode: document.querySelector("#copy-private-route-code"),
@@ -432,6 +433,7 @@ let latestProductionTwoProfileSuccess = null;
 let latestProductionTwoProfileOnionEndpoints = null;
 let latestLocalPrivateRouteCode = "";
 const localPrivateRouteCodesByRoom = new Map();
+const activeLocalPrivateRouteCodesByRoom = new Map();
 const peerPrivateRouteDraftsByRoom = new Map();
 let pendingPrivateRouteFollowup = null;
 let productionTwoProfileOnionReceiveMode = {
@@ -1491,7 +1493,7 @@ function routeExchangePrimaryActionNode(input = productionTwoProfileInput()) {
   if (twoProfilePeerEndpointState(input).ready) {
     return null;
   }
-  if (!latestLocalPrivateRouteCode) {
+  if (!latestLocalPrivateRouteCode || !localPrivateRouteCodeIsActive(input)) {
     return fields.preparePrivateRoute;
   }
   return (fields.peerPrivateRouteCode?.value ?? "").trim()
@@ -2108,6 +2110,7 @@ function forgetInviteRoom(code) {
     const { localProfile, peerProfile } = productionInviteCodeProfiles(trimmedCode, role);
     const roomKey = privateRouteRoomKey({ profileA: localProfile, profileB: peerProfile });
     localPrivateRouteCodesByRoom.delete(roomKey);
+    activeLocalPrivateRouteCodesByRoom.delete(roomKey);
     peerPrivateRouteDraftsByRoom.delete(roomKey);
   }
   persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
@@ -2931,8 +2934,7 @@ function restorePrivateRouteExchangeForRoom(input = productionTwoProfileInput())
   if (fields.peerPrivateRouteCode) {
     fields.peerPrivateRouteCode.value = roomKey ? peerPrivateRouteDraftsByRoom.get(roomKey) || "" : "";
   }
-  fields.copyPrivateRouteCode?.toggleAttribute("disabled", !latestLocalPrivateRouteCode);
-  document.body.classList.toggle("has-local-private-route-code", Boolean(latestLocalPrivateRouteCode));
+  updateLocalPrivateRouteCodeUi(input);
   renderPrivateRouteExchangeState(input);
 }
 
@@ -3233,22 +3235,65 @@ function latestTwoProfileLocalOnionEndpoint(input = productionTwoProfileInput())
   return "";
 }
 
-function rememberLocalPrivateRouteCode(code, input = productionTwoProfileInput()) {
+function localPrivateRouteCodeIsActive(input = productionTwoProfileInput()) {
   const roomKey = privateRouteRoomKey(input);
+  return Boolean(
+    roomKey &&
+      latestLocalPrivateRouteCode &&
+      activeLocalPrivateRouteCodesByRoom.get(roomKey) === latestLocalPrivateRouteCode,
+  );
+}
+
+function localPrivateRouteCodeStatusKey(input = productionTwoProfileInput()) {
+  if (!latestLocalPrivateRouteCode) {
+    return "privateRouteLocalStatusEmpty";
+  }
+  if (!localPrivateRouteCodeIsActive(input)) {
+    return "privateRouteLocalStatusSaved";
+  }
+  if (
+    productionTwoProfileOnionReceiveMode.enabled &&
+    !productionTwoProfileOnionReceiveMode.stopRequested &&
+    productionTwoProfileOnionReceiveMode.profile === input.profileA
+  ) {
+    return "privateRouteLocalStatusListening";
+  }
+  return "privateRouteLocalStatusActive";
+}
+
+function updateLocalPrivateRouteCodeUi(input = productionTwoProfileInput()) {
+  const hasLocal = Boolean(latestLocalPrivateRouteCode);
+  const active = localPrivateRouteCodeIsActive(input);
+  const statusKey = localPrivateRouteCodeStatusKey(input);
+  fields.copyPrivateRouteCode?.toggleAttribute("disabled", !hasLocal || !active);
+  document.body.classList.toggle("has-local-private-route-code", hasLocal);
+  document.body.classList.toggle("has-active-local-private-route-code", hasLocal && active);
+  document.body.classList.toggle("has-saved-local-private-route-code", hasLocal && !active);
+  fields.localPrivateRouteCode?.classList.toggle("is-saved-route-code", hasLocal && !active);
+  fields.privateRouteLocalStatus?.setAttribute("data-route-status", statusKey);
+  setText(fields.privateRouteLocalStatus, t(statusKey));
+}
+
+function rememberLocalPrivateRouteCode(code, input = productionTwoProfileInput(), options = {}) {
+  const roomKey = privateRouteRoomKey(input);
+  const markActive = options.active !== false;
   latestLocalPrivateRouteCode = String(code ?? "").trim();
   if (roomKey) {
     if (latestLocalPrivateRouteCode) {
       localPrivateRouteCodesByRoom.set(roomKey, latestLocalPrivateRouteCode);
+      if (markActive) {
+        activeLocalPrivateRouteCodesByRoom.set(roomKey, latestLocalPrivateRouteCode);
+      }
     } else {
       localPrivateRouteCodesByRoom.delete(roomKey);
+      activeLocalPrivateRouteCodesByRoom.delete(roomKey);
     }
     persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
   }
   if (fields.localPrivateRouteCode) {
     fields.localPrivateRouteCode.value = latestLocalPrivateRouteCode;
   }
-  fields.copyPrivateRouteCode?.toggleAttribute("disabled", !latestLocalPrivateRouteCode);
-  document.body.classList.toggle("has-local-private-route-code", Boolean(latestLocalPrivateRouteCode));
+  updateLocalPrivateRouteCodeUi(input);
 }
 
 function focusLocalPrivateRouteCodeDisplay() {
@@ -3281,7 +3326,7 @@ function focusPrivateRouteNextAction(input = productionTwoProfileInput()) {
     fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
     return "ready";
   }
-  if (!latestLocalPrivateRouteCode) {
+  if (!latestLocalPrivateRouteCode || !localPrivateRouteCodeIsActive(input)) {
     fields.preparePrivateRoute?.focus?.({ preventScroll: true });
     return "create-local";
   }
@@ -3296,11 +3341,14 @@ function focusPrivateRouteNextAction(input = productionTwoProfileInput()) {
 function renderPrivateRouteExchangeState(input = productionTwoProfileInput()) {
   const routeReady = twoProfilePeerEndpointState(input).ready;
   const hasLocal = Boolean(latestLocalPrivateRouteCode);
+  const hasActiveLocal = localPrivateRouteCodeIsActive(input);
   const hasPeerDraft = Boolean((fields.peerPrivateRouteCode?.value ?? "").trim());
   const titleKey = routeReady
     ? "routeTitleReady"
     : !hasLocal
       ? "routeTitleCreate"
+      : !hasActiveLocal
+        ? "routeTitleRefresh"
       : hasPeerDraft
         ? "routeTitleUse"
         : "routeTitleShare";
@@ -3308,17 +3356,20 @@ function renderPrivateRouteExchangeState(input = productionTwoProfileInput()) {
     ? "routeInstructionReady"
     : !hasLocal
       ? "routeInstructionCreate"
+      : !hasActiveLocal
+        ? "routeInstructionSaved"
       : hasPeerDraft
         ? "routeInstructionUse"
         : "routeInstructionShare";
-  fields.privateRouteStepLocal?.classList.toggle("is-complete", hasLocal);
-  fields.privateRouteStepLocal?.classList.toggle("is-current", !hasLocal);
-  fields.privateRouteStepCopy?.classList.toggle("is-complete", hasLocal && hasPeerDraft);
-  fields.privateRouteStepCopy?.classList.toggle("is-current", hasLocal && !hasPeerDraft && !routeReady);
+  fields.privateRouteStepLocal?.classList.toggle("is-complete", hasActiveLocal);
+  fields.privateRouteStepLocal?.classList.toggle("is-current", !hasActiveLocal);
+  fields.privateRouteStepCopy?.classList.toggle("is-complete", hasActiveLocal && hasPeerDraft);
+  fields.privateRouteStepCopy?.classList.toggle("is-current", hasActiveLocal && !hasPeerDraft && !routeReady);
   fields.privateRouteStepPeer?.classList.toggle("is-complete", routeReady);
-  fields.privateRouteStepPeer?.classList.toggle("is-current", hasLocal && hasPeerDraft && !routeReady);
+  fields.privateRouteStepPeer?.classList.toggle("is-current", hasActiveLocal && hasPeerDraft && !routeReady);
   setText(fields.privateRouteExchangeTitle, t(titleKey));
   setText(fields.privateRouteInstruction, t(instructionKey));
+  updateLocalPrivateRouteCodeUi(input);
 }
 
 function hidePrivateRouteExchangeIfReady(input = productionTwoProfileInput()) {
@@ -6830,12 +6881,14 @@ function applyProductionActionState() {
   renderPrivateRouteExchangeState(twoProfile);
   setActionButtonState(
     fields.copyPrivateRouteCode,
-    busy || !latestLocalPrivateRouteCode,
+    busy || !latestLocalPrivateRouteCode || !localPrivateRouteCodeIsActive(twoProfile),
     busy
       ? "Wait for the active production action."
-      : latestLocalPrivateRouteCode
+      : !latestLocalPrivateRouteCode
+        ? t("privateRouteCodeNotReady")
+      : localPrivateRouteCodeIsActive(twoProfile)
         ? t("copyPrivateRouteCode")
-        : t("privateRouteCodeNotReady"),
+        : t("privateRouteLocalStatusSaved"),
   );
   setActionButtonState(
     fields.applyPeerPrivateRouteCode,
@@ -9848,6 +9901,7 @@ async function startProductionTwoProfileOnionReceive() {
     generation,
   };
   setProductionTwoProfileOnionReceiveRuntimeState("receiving");
+  updateLocalPrivateRouteCodeUi(input);
   setText(fields.productionTwoProfileWarning, t("receiveStarted"));
   setChatDeliveryNoticeByKey("chatNoticeReceiving", "success");
   setText(fields.productionTwoProfileProfiles, currentLanguage === "ko" ? `내 ID=${profileA}` : `local=${profileA}`);
@@ -10114,6 +10168,7 @@ function stopProductionTwoProfileOnionReceive() {
     runtimeLabel: "Message listening stopping",
   };
   setProductionTwoProfileOnionReceiveRuntimeState("stopped");
+  updateLocalPrivateRouteCodeUi(productionTwoProfileInput());
   setText(fields.productionTwoProfileWarning, profile ? t("receiveStopPending") : t("receiveStopped"));
   setText(fields.productionTwoProfileMessageState, t("receiveStopping"));
   applyProductionActionState();
