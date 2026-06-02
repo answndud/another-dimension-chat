@@ -78,6 +78,23 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(stylesCss, /body\.is-room-detail-mode\.is-chat-active \.room-list-back/);
 });
 
+test("saved room list shows receive runtime and restart intent", () => {
+  assert.match(mainJs, /function savedInviteRoomInput/);
+  assert.match(mainJs, /function savedInviteRoomReceiveState/);
+  assert.match(
+    functionBody(mainJs, "savedInviteRoomReceiveState"),
+    /productionTwoProfileOnionReceiveMode\.profile === input\.profileA/,
+  );
+  assert.match(functionBody(mainJs, "savedInviteRoomReceiveState"), /receiveIntentForRoom\(input\)/);
+  assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateListening/);
+  assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateReceivePaused/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /needs-receive-restart/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
+  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
+  assert.match(stylesCss, /\.saved-room-state\.is-listening/);
+  assert.match(stylesCss, /\.saved-room-state\.is-receive-paused/);
+});
+
 test("room list controls are wired to room flow instead of settings", () => {
   assert.match(mainJs, /fields\.roomListCreateRoom\.addEventListener\("click", createNewInviteRoomFromList\)/);
   assert.match(mainJs, /fields\.roomListJoinRoom\.addEventListener\("click", createRoomFromRoomListInviteCode\)/);
