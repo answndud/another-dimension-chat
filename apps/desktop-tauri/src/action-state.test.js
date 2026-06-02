@@ -8,7 +8,9 @@ import {
   productionTwoProfileCurrentAction,
   productionTwoProfileLatestRetryableOutbound,
   productionTwoProfileOutboundActionState,
+  productionTwoProfileOutboundNeedsEndpointRefresh,
   productionTwoProfileOutboundPrimaryAction,
+  productionTwoProfileOutboundStatusLabel,
   productionTwoProfileResumeTarget,
   productionTwoProfileShouldShowOutboundRecovery,
 } from "./action-state.js";
@@ -115,6 +117,54 @@ test("failed outbound messages stay retryable or cancelable from the active devi
     labelKey: "enablePrivateDelivery",
     noticeKey: "messageSavedPrivateDeliveryOff",
     recoveryKey: "sendRecoveryPermissionOff",
+  });
+});
+
+test("outbound failure classes keep missing route separate from stale endpoint", () => {
+  const missingRoute = {
+    statuses: new Set(["sent"]),
+    outboundDeliveryState: "failed",
+    outboundFailureKind: "peer-endpoint-missing",
+    outboundRetryable: true,
+  };
+  const staleEndpoint = {
+    statuses: new Set(["sent"]),
+    outboundDeliveryState: "failed",
+    outboundFailureKind: "stored remote endpoint refresh required",
+    outboundRetryable: true,
+  };
+  const timeout = {
+    statuses: new Set(["sent"]),
+    outboundDeliveryState: "failed",
+    outboundFailureKind: "receive-timeout",
+    outboundRetryable: true,
+  };
+
+  assert.equal(productionTwoProfileOutboundStatusLabel(missingRoute), "route missing");
+  assert.equal(productionTwoProfileOutboundNeedsEndpointRefresh(missingRoute), false);
+  assert.deepEqual(productionTwoProfileOutboundPrimaryAction(missingRoute), {
+    action: "prepare-private-route",
+    labelKey: "preparePrivateRoute",
+    noticeKey: "privateDeliveryRouteNeeded",
+    recoveryKey: "sendRecoveryRouteMissing",
+  });
+
+  assert.equal(productionTwoProfileOutboundStatusLabel(staleEndpoint), "stale endpoint");
+  assert.equal(productionTwoProfileOutboundNeedsEndpointRefresh(staleEndpoint), true);
+  assert.deepEqual(productionTwoProfileOutboundPrimaryAction(staleEndpoint), {
+    action: "refresh-and-retry",
+    labelKey: "refreshAndRetry",
+    noticeKey: "chatNoticeRefreshAddress",
+    recoveryKey: "sendRecoveryStaleEndpoint",
+  });
+
+  assert.equal(productionTwoProfileOutboundStatusLabel(timeout), "send timeout");
+  assert.equal(productionTwoProfileOutboundNeedsEndpointRefresh(timeout), false);
+  assert.deepEqual(productionTwoProfileOutboundPrimaryAction(timeout), {
+    action: "retry",
+    labelKey: "retrySend",
+    noticeKey: "sendFailedGeneric",
+    recoveryKey: "sendRecoveryTimeout",
   });
 });
 

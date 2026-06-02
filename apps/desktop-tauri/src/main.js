@@ -2559,6 +2559,11 @@ function fieldTestBoundarySummary(text) {
   return parts.length > 0 ? parts.join(" ") : "none";
 }
 
+function fieldTestBoundaryValue(text, key, fallback = "none") {
+  const match = String(text ?? "").match(new RegExp(`(?:^|\\s)${key}=([^\\s;]+)`));
+  return match ? fieldTestReportValue(match[1], fallback) : fallback;
+}
+
 function buildFieldTestReport(input = productionTwoProfileInput()) {
   const hasRoom = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase);
   const route = twoProfilePeerEndpointState(input);
@@ -2568,6 +2573,12 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const failedRows = entries.filter((entry) => entry.outboundDeliveryState === "failed").length;
   const canceledRows = entries.filter((entry) => entry.outboundDeliveryState === "canceled").length;
   const retryableOutbound = latestVisibleTwoProfileRetryableOutboundEntry(input);
+  const outboundFailureClass = retryableOutbound
+    ? productionTwoProfileOutboundStatusLabel(retryableOutbound)
+    : "none";
+  const outboundRecoveryAction = retryableOutbound
+    ? productionTwoProfileOutboundPrimaryAction(retryableOutbound).action
+    : "none";
   const receiveActiveInRoom = productionTwoProfileReceiveMatchesInput(input);
   const receiveMode = receiveActiveInRoom
     ? productionTwoProfileOnionReceiveMode
@@ -2579,6 +2590,10 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
         lastProcessedMessageImportCount: 0,
         lastProcessedEndpointUpdateCount: 0,
       };
+  const boundaryText = fields.productionTwoProfileBoundary?.textContent ?? "";
+  const receiveFailureKind = receiveActiveInRoom
+    ? fieldTestBoundaryValue(boundaryText, "failure")
+    : "none";
 
   return [
     "Another Dimension Chat beta field test report",
@@ -2604,10 +2619,13 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `failed_outbound_rows=${failedRows}`,
     `canceled_outbound_rows=${canceledRows}`,
     `retryable_outbound_present=${Boolean(retryableOutbound)}`,
+    `outbound_failure_class=${fieldTestReportValue(outboundFailureClass, "none")}`,
+    `outbound_recovery_action=${fieldTestReportValue(outboundRecoveryAction, "none")}`,
+    `receive_failure_kind=${fieldTestReportValue(receiveFailureKind, "none")}`,
     `delivery_notice_key=${fieldTestReportValue(latestChatDeliveryNoticeKey, "none")}`,
     `delivery_notice_tone=${fieldTestReportValue(latestChatDeliveryNoticeTone, "neutral")}`,
     `ui_state=${fieldTestReportValue(fields.productionTwoProfileState?.textContent)}`,
-    `redacted_boundary=${fieldTestBoundarySummary(fields.productionTwoProfileBoundary?.textContent)}`,
+    `redacted_boundary=${fieldTestBoundarySummary(boundaryText)}`,
   ].join("\n");
 }
 
