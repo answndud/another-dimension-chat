@@ -82,9 +82,11 @@ test("saved rooms can be listed and reopened", () => {
 test("saved room list shows receive runtime and restart intent", () => {
   assert.match(mainJs, /function savedInviteRoomInput/);
   assert.match(mainJs, /function savedInviteRoomReceiveState/);
+  assert.match(mainJs, /function productionTwoProfileReceiveMatchesInput/);
+  assert.match(mainJs, /function productionTwoProfileReceiveActiveInOtherRoom/);
   assert.match(
     functionBody(mainJs, "savedInviteRoomReceiveState"),
-    /productionTwoProfileOnionReceiveMode\.profile === input\.profileA/,
+    /productionTwoProfileReceiveMatchesInput\(input\)/,
   );
   assert.match(functionBody(mainJs, "savedInviteRoomReceiveState"), /receiveIntentForRoom\(input\)/);
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateListening/);
@@ -94,6 +96,20 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
   assert.match(stylesCss, /\.saved-room-state\.is-listening/);
   assert.match(stylesCss, /\.saved-room-state\.is-receive-paused/);
+});
+
+test("receive controls are scoped to the active room", () => {
+  assert.match(mainJs, /roomFingerprint: ""/);
+  assert.match(functionBody(mainJs, "productionTwoProfileReceiveMatchesInput"), /productionTwoProfileOnionReceiveMode\.roomFingerprint === roomFingerprint/);
+  assert.match(functionBody(mainJs, "updateChatPrimaryActionMode"), /is-receiving-other-room/);
+  assert.match(functionBody(mainJs, "renderRoomStatusSummary"), /productionTwoProfileReceiveMatchesInput\(input\)/);
+  assert.match(functionBody(mainJs, "renderRoomIdentityBar"), /roomReceivingOther/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /productionTwoProfileReceiveActiveInOtherRoom\(input\)/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /receiveOtherRoomActive/);
+  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /!productionTwoProfileReceiveMatchesInput\(input\)/);
+  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /receiveOtherRoomActive/);
+  assert.match(i18nJs, /roomReceivingOther/);
+  assert.match(i18nJs, /receiveOtherRoomActive/);
 });
 
 test("receive restart intent owns the room primary action", () => {

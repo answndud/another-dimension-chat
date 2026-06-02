@@ -438,6 +438,7 @@ const peerPrivateRouteDraftsByRoom = new Map();
 let pendingPrivateRouteFollowup = null;
 let productionTwoProfileOnionReceiveMode = {
   enabled: false,
+  roomFingerprint: "",
   profile: "",
   passphrase: "",
   timer: null,
@@ -1748,12 +1749,16 @@ function renderRoomIdentityBar(input, sessionsReady) {
       : t("roomNeedsCode");
   const verifyState = safetyConfirmed ? t("roomVerified") : sessionsReady ? t("roomVerifyNeeded") : t("pending");
   const inviteTokenRoomReady = twoProfileInviteCodeModeActive() && sessionsReady && safetyConfirmed;
+  const receivingCurrentRoom = productionTwoProfileReceiveMatchesInput(input);
+  const receivingOtherRoom = productionTwoProfileReceiveActiveInOtherRoom(input);
   const transportState = inviteTokenRoomReady
     ? t("roomReady")
-    : productionTwoProfileOnionReceiveMode.stopRequested
+    : receivingCurrentRoom && productionTwoProfileOnionReceiveMode.stopRequested
     ? t("roomReceivingStopping")
-    : productionTwoProfileOnionReceiveMode.enabled
+    : receivingCurrentRoom
       ? t("roomReceivingOn")
+      : receivingOtherRoom
+        ? t("roomReceivingOther")
       : activeEndpointState.ready
         ? manualNetworkPermissionEnabled()
           ? t("roomNetworkReady")
@@ -1782,7 +1787,7 @@ function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsRe
   const needsPrivateRoute = Boolean(
     sessionsReady && safetyConfirmed && !inviteTokenRoomReady && manualNetworkPermissionEnabled() && !endpointState.ready,
   );
-  const receiving = productionTwoProfileOnionReceiveMode.enabled;
+  const receiving = productionTwoProfileReceiveMatchesInput(input);
   const state = retryableOutbound
     ? "pending"
     : pendingConversation
@@ -2155,9 +2160,8 @@ function savedInviteRoomInput(room) {
 function savedInviteRoomReceiveState(room) {
   const input = savedInviteRoomInput(room);
   const listening = Boolean(
-    productionTwoProfileOnionReceiveMode.enabled &&
-      !productionTwoProfileOnionReceiveMode.stopRequested &&
-      productionTwoProfileOnionReceiveMode.profile === input.profileA,
+    productionTwoProfileReceiveMatchesInput(input) &&
+      !productionTwoProfileOnionReceiveMode.stopRequested,
   );
   if (listening) {
     return "listening";
@@ -2968,6 +2972,27 @@ function rememberReceiveIntentForRoom(input = productionTwoProfileInput(), enabl
 function receiveIntentForRoom(input = productionTwoProfileInput()) {
   const roomKey = privateRouteRoomKey(input);
   return Boolean(roomKey && savedReceiveIntentRooms().has(roomKey));
+}
+
+function receiveModeRoomFingerprint(input = productionTwoProfileInput()) {
+  return privateRouteRoomKey(input);
+}
+
+function productionTwoProfileReceiveMatchesInput(input = productionTwoProfileInput()) {
+  const roomFingerprint = receiveModeRoomFingerprint(input);
+  return Boolean(
+    productionTwoProfileOnionReceiveMode.enabled &&
+      roomFingerprint &&
+      productionTwoProfileOnionReceiveMode.roomFingerprint === roomFingerprint &&
+      productionTwoProfileOnionReceiveMode.profile === input.profileA,
+  );
+}
+
+function productionTwoProfileReceiveActiveInOtherRoom(input = productionTwoProfileInput()) {
+  return Boolean(
+    productionTwoProfileOnionReceiveMode.enabled &&
+      !productionTwoProfileReceiveMatchesInput(input),
+  );
 }
 
 function restorePrivateRouteExchangeForRoom(input = productionTwoProfileInput()) {
@@ -4253,16 +4278,19 @@ function updateChatPrimaryActionMode(input = productionTwoProfileInput(), sessio
   actionBar.classList.toggle("has-session-check-input", canCheckSession);
   actionBar.classList.toggle("has-message-draft", hasDraft);
   document.body.classList.toggle("has-message-draft", hasDraft);
-  actionBar.classList.toggle("has-receive-enabled", productionTwoProfileOnionReceiveMode.enabled);
-  actionBar.classList.toggle("is-receive-stopping", productionTwoProfileOnionReceiveMode.stopRequested);
+  const receivingCurrentRoom = productionTwoProfileReceiveMatchesInput(input);
+  const receivingOtherRoom = productionTwoProfileReceiveActiveInOtherRoom(input);
+  actionBar.classList.toggle("has-receive-enabled", receivingCurrentRoom);
+  actionBar.classList.toggle("is-receive-stopping", receivingCurrentRoom && productionTwoProfileOnionReceiveMode.stopRequested);
   document.body.classList.toggle("has-private-delivery-permission", manualNetworkPermissionEnabled());
   document.body.classList.toggle(
     "has-private-route",
     twoProfilePeerEndpointState(input).ready,
   );
   document.body.classList.toggle("has-local-private-route-code", Boolean(latestLocalPrivateRouteCode));
-  document.body.classList.toggle("is-receiving-messages", productionTwoProfileOnionReceiveMode.enabled);
-  document.body.classList.toggle("is-stopping-receive", productionTwoProfileOnionReceiveMode.stopRequested);
+  document.body.classList.toggle("is-receiving-messages", receivingCurrentRoom);
+  document.body.classList.toggle("is-receiving-other-room", receivingOtherRoom);
+  document.body.classList.toggle("is-stopping-receive", receivingCurrentRoom && productionTwoProfileOnionReceiveMode.stopRequested);
 }
 
 function twoProfileConversationDelivered(entry) {
@@ -6634,6 +6662,8 @@ function applyProductionActionState() {
     Boolean(pendingConversation || replySelection.canSelect),
   );
   const receiveIntent = receiveIntentForRoom(twoProfile);
+  const receivingCurrentRoom = productionTwoProfileReceiveMatchesInput(twoProfile);
+  const receivingOtherRoom = productionTwoProfileReceiveActiveInOtherRoom(twoProfile);
   const retryableOutboundConversation = latestTwoProfileRetryableOutboundEntry(twoProfile);
   if (
     productionTwoProfileShouldShowOutboundRecovery({
@@ -6990,7 +7020,8 @@ function applyProductionActionState() {
   setActionButtonState(
     fields.startProductionTwoProfileOnionReceive,
     busy ||
-      productionTwoProfileOnionReceiveMode.enabled ||
+      receivingCurrentRoom ||
+      receivingOtherRoom ||
       !manualNetworkPermission ||
       !hasTwoProfileSessionStatusInput ||
       !twoProfileSessionsReady ||
@@ -6998,10 +7029,12 @@ function applyProductionActionState() {
       !peerEndpointState.ready,
     busy
       ? "Wait for the active production action."
-      : productionTwoProfileOnionReceiveMode.stopRequested
+      : receivingCurrentRoom && productionTwoProfileOnionReceiveMode.stopRequested
         ? t("receiveStopPending")
-      : productionTwoProfileOnionReceiveMode.enabled
+      : receivingCurrentRoom
         ? t("receiveAlreadyListening")
+      : receivingOtherRoom
+        ? t("receiveOtherRoomActive")
       : !manualNetworkPermission
         ? t("receivePermissionRequired")
       : !hasTwoProfileSessionStatusInput
@@ -7013,16 +7046,18 @@ function applyProductionActionState() {
       : !peerEndpointState.ready
         ? t("privateDeliveryRouteNeeded")
         : t("startReceiving"),
-    receiveIntent && !productionTwoProfileOnionReceiveMode.enabled,
+    receiveIntent && !receivingCurrentRoom && !receivingOtherRoom,
   );
   setActionButtonState(
     fields.stopProductionTwoProfileOnionReceive,
-    !productionTwoProfileOnionReceiveMode.enabled || productionTwoProfileOnionReceiveMode.stopRequested,
-    productionTwoProfileOnionReceiveMode.stopRequested
+    !receivingCurrentRoom || productionTwoProfileOnionReceiveMode.stopRequested,
+    receivingCurrentRoom && productionTwoProfileOnionReceiveMode.stopRequested
       ? t("receiveStopPending")
-      : productionTwoProfileOnionReceiveMode.enabled
+      : receivingCurrentRoom
       ? t("stopReceiving")
-      : t("receiveStopped"),
+      : receivingOtherRoom
+        ? t("receiveOtherRoomActive")
+        : t("receiveStopped"),
     false,
   );
   setActionButtonState(
@@ -9898,6 +9933,12 @@ async function startProductionTwoProfileOnionReceive() {
     setText(fields.productionTwoProfileWarning, t("receiveNeedsVerification"));
     return;
   }
+  if (productionTwoProfileReceiveActiveInOtherRoom(input)) {
+    setProductionTwoProfileState("Message listening active in another room");
+    setText(fields.productionTwoProfileWarning, t("receiveOtherRoomActive"));
+    setChatDeliveryNoticeByKey("receiveOtherRoomActive", "warning");
+    return;
+  }
   rememberReceiveIntentForRoom(input, true);
   if (!manualNetworkPermission) {
     setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning");
@@ -9952,6 +9993,7 @@ async function startProductionTwoProfileOnionReceive() {
   const generation = productionTwoProfileOnionReceiveMode.generation + 1;
   productionTwoProfileOnionReceiveMode = {
     enabled: true,
+    roomFingerprint: receiveModeRoomFingerprint(input),
     profile: profileA,
     passphrase: "",
     timer: null,
@@ -10177,6 +10219,7 @@ function markProductionTwoProfileOnionReceiveStopped(backendLoop = null) {
   );
   productionTwoProfileOnionReceiveMode = {
     enabled: false,
+    roomFingerprint: "",
     profile: "",
     passphrase: "",
     timer: null,
@@ -10221,8 +10264,16 @@ async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
 }
 
 function stopProductionTwoProfileOnionReceive() {
+  const input = productionTwoProfileInput();
+  if (!productionTwoProfileReceiveMatchesInput(input)) {
+    setProductionTwoProfileState("Message listening active in another room");
+    setText(fields.productionTwoProfileWarning, t("receiveOtherRoomActive"));
+    setChatDeliveryNoticeByKey("receiveOtherRoomActive", "warning");
+    applyProductionActionState();
+    return;
+  }
   const profile = productionTwoProfileOnionReceiveMode.profile;
-  rememberReceiveIntentForRoom(productionTwoProfileInput(), false);
+  rememberReceiveIntentForRoom(input, false);
   clearProductionTwoProfileOnionReceiveTimer();
   productionTwoProfileOnionReceiveMode = {
     ...productionTwoProfileOnionReceiveMode,
