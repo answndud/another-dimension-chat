@@ -574,6 +574,21 @@ export function productionTwoProfileConversationCompare(left, right, direction =
   return order * leftKey.route.localeCompare(rightKey.route);
 }
 
+export function productionInviteRoomConversationMetadata(entries) {
+  const sortedEntries = (Array.isArray(entries) ? entries : []).slice().sort((left, right) =>
+    productionTwoProfileConversationCompare(left, right, "desc"),
+  );
+  const latest = sortedEntries.find((entry) => String(entry?.message ?? "").trim());
+  const preview = String(latest?.message ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return {
+    lastMessagePreview: preview.length > 72 ? `${preview.slice(0, 72)}...` : preview,
+    lastMessageAt: latest?.createdAtMs ? Number(latest.createdAtMs) : sortedEntries.length ? Date.now() : 0,
+    messageCount: sortedEntries.length,
+  };
+}
+
 export function productionTwoProfileRetryableOutboundEntries(entries, input = {}) {
   return (Array.isArray(entries) ? entries : [])
     .filter((entry) => productionTwoProfileOutboundActionState(entry, input, true).canRunNow)

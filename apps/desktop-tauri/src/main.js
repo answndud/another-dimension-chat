@@ -31,6 +31,7 @@ import {
   productionReceivedMessageExportView,
   productionSessionDraftView,
   productionSessionStateView,
+  productionInviteRoomConversationMetadata,
   productionInviteCodeProfiles,
   productionTwoProfileLatestRetryableOutbound,
   productionTwoProfilePairFromProfiles,
@@ -2104,21 +2105,8 @@ function savedInviteRoomState(room) {
   return { key: "saved", label: t("roomStateSaved") };
 }
 
-function truncateRoomPreview(value) {
-  const text = String(value ?? "").replace(/\s+/g, " ").trim();
-  return text.length > 72 ? `${text.slice(0, 72)}...` : text;
-}
-
 function currentRoomConversationMetadata() {
-  const entries = [...productionTwoProfileConversationEntries.values()].sort(
-    (left, right) => productionTwoProfileConversationCompare(left, right, "desc"),
-  );
-  const latest = entries.find((entry) => String(entry?.message ?? "").trim());
-  return {
-    lastMessagePreview: truncateRoomPreview(latest?.message ?? ""),
-    lastMessageAt: latest?.createdAtMs ? Number(latest.createdAtMs) : entries.length ? Date.now() : 0,
-    messageCount: entries.length,
-  };
+  return productionInviteRoomConversationMetadata([...productionTwoProfileConversationEntries.values()]);
 }
 
 function rememberCurrentInviteRoomMetadata() {

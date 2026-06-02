@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   productionInviteCodeProfiles,
+  productionInviteRoomConversationMetadata,
   productionOnionReceiveLoopRefreshPlan,
   productionOnionReceiveRuntimeView,
   productionTwoProfileCurrentAction,
@@ -242,6 +243,53 @@ test("receive loop refresh plan reloads transcript for new imports and endpoint 
       importSequence: 4,
       messageImportCount: 2,
       endpointUpdateCount: 1,
+    },
+  );
+});
+
+test("room list metadata follows latest imported conversation entry", () => {
+  const entries = [
+    {
+      sender: "alice",
+      receiver: "bob",
+      messageNumber: 1,
+      message: "older outbound",
+      createdAtMs: 100,
+    },
+    {
+      sender: "bob",
+      receiver: "alice",
+      messageNumber: 2,
+      message: "latest   receive\nimport",
+      createdAtMs: 300,
+    },
+  ];
+
+  assert.deepEqual(productionInviteRoomConversationMetadata(entries), {
+    lastMessagePreview: "latest receive import",
+    lastMessageAt: 300,
+    messageCount: 2,
+  });
+  assert.equal(entries[0].messageNumber, 1);
+});
+
+test("room list metadata truncates long previews without losing message count", () => {
+  const longMessage = "a".repeat(80);
+
+  assert.deepEqual(
+    productionInviteRoomConversationMetadata([
+      {
+        sender: "alice",
+        receiver: "bob",
+        messageNumber: 1,
+        message: longMessage,
+        createdAtMs: 200,
+      },
+    ]),
+    {
+      lastMessagePreview: `${"a".repeat(72)}...`,
+      lastMessageAt: 200,
+      messageCount: 1,
     },
   );
 });
