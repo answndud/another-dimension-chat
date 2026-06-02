@@ -8507,9 +8507,13 @@ async fn run_production_two_profile_real_onion_roundtrip(
                               blockers: Vec<String>,
                               event_summary: Vec<String>,
                               profile_a_client_bootstrapped: bool,
-                              profile_b_client_bootstrapped: bool| {
+                              profile_b_client_bootstrapped: bool,
+                              profile_a_onion_service_launched: bool,
+                              profile_b_onion_service_launched: bool,
+                              profile_a_endpoint_ready: bool,
+                              profile_b_endpoint_ready: bool| {
             ProductionTwoProfileRealOnionRoundtripResult {
-                warning: "Real onion roundtrip stopped before endpoint launch. Retry when Tor bootstrap is reachable; result is redacted and no message transport was attempted.",
+                warning: "Real onion roundtrip stopped before message transport. Retry when the reported blocker is resolved; result is redacted and no message transport was attempted.",
                 manual_client_attempt_feature_compiled: true,
                 manual_network_permission_enabled: true,
                 sender_profile: profile_a_name.clone(),
@@ -8523,10 +8527,10 @@ async fn run_production_two_profile_real_onion_roundtrip(
                     && profile_b_unlock.profile_marker_present,
                 profile_a_client_bootstrapped,
                 profile_b_client_bootstrapped,
-                profile_a_onion_service_launched: false,
-                profile_b_onion_service_launched: false,
-                profile_a_endpoint_ready: false,
-                profile_b_endpoint_ready: false,
+                profile_a_onion_service_launched,
+                profile_b_onion_service_launched,
+                profile_a_endpoint_ready,
+                profile_b_endpoint_ready,
                 pairing_payloads_exported: false,
                 session_drafts_saved: false,
                 handshake_completed: false,
@@ -8597,6 +8601,10 @@ async fn run_production_two_profile_real_onion_roundtrip(
                     event_summary,
                     false,
                     false,
+                    false,
+                    false,
+                    false,
+                    false,
                 ));
             }
         };
@@ -8617,6 +8625,10 @@ async fn run_production_two_profile_real_onion_roundtrip(
                     event_summary,
                     true,
                     false,
+                    false,
+                    false,
+                    false,
+                    false,
                 ));
             }
         };
@@ -8624,28 +8636,82 @@ async fn run_production_two_profile_real_onion_roundtrip(
         let profile_a_client_bootstrapped = profile_a_owner.summary().has_bootstrapped_client();
         let profile_b_client_bootstrapped = profile_b_owner.summary().has_bootstrapped_client();
         let mut launch_sink = InMemoryTransportRuntimeEventSink::default();
-        profile_a_owner
+        if profile_a_owner
             .launch_onion_service_once(
                 arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
                 &production_onion_service_nickname(&profile_a),
                 &mut launch_sink,
             )
-            .map_err(|_| "profile A onion service launch failed")?;
-        profile_b_owner
+            .is_err()
+        {
+            event_summary.extend(launch_sink.events().iter().map(ToString::to_string));
+            return Ok(blocked_result(
+                "ProfileAOnionServiceLaunchFailed".to_string(),
+                vec!["OnionServiceLaunchFailed".to_string()],
+                event_summary,
+                profile_a_client_bootstrapped,
+                profile_b_client_bootstrapped,
+                false,
+                false,
+                false,
+                false,
+            ));
+        }
+        if profile_b_owner
             .launch_onion_service_once(
                 arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
                 &production_onion_service_nickname(&profile_b),
                 &mut launch_sink,
             )
-            .map_err(|_| "profile B onion service launch failed")?;
+            .is_err()
+        {
+            event_summary.extend(launch_sink.events().iter().map(ToString::to_string));
+            return Ok(blocked_result(
+                "ProfileBOnionServiceLaunchFailed".to_string(),
+                vec!["OnionServiceLaunchFailed".to_string()],
+                event_summary,
+                profile_a_client_bootstrapped,
+                profile_b_client_bootstrapped,
+                true,
+                false,
+                false,
+                false,
+            ));
+        }
         event_summary.extend(launch_sink.events().iter().map(ToString::to_string));
 
-        let profile_a_endpoint = profile_a_owner
-            .retained_onion_endpoint()
-            .ok_or_else(|| "profile A onion endpoint unavailable".to_string())?;
-        let profile_b_endpoint = profile_b_owner
-            .retained_onion_endpoint()
-            .ok_or_else(|| "profile B onion endpoint unavailable".to_string())?;
+        let profile_a_endpoint = match profile_a_owner.retained_onion_endpoint() {
+            Some(endpoint) => endpoint,
+            None => {
+                return Ok(blocked_result(
+                    "ProfileAEndpointUnavailable".to_string(),
+                    vec!["EndpointUnavailable".to_string()],
+                    event_summary,
+                    profile_a_client_bootstrapped,
+                    profile_b_client_bootstrapped,
+                    true,
+                    true,
+                    false,
+                    false,
+                ));
+            }
+        };
+        let profile_b_endpoint = match profile_b_owner.retained_onion_endpoint() {
+            Some(endpoint) => endpoint,
+            None => {
+                return Ok(blocked_result(
+                    "ProfileBEndpointUnavailable".to_string(),
+                    vec!["EndpointUnavailable".to_string()],
+                    event_summary,
+                    profile_a_client_bootstrapped,
+                    profile_b_client_bootstrapped,
+                    true,
+                    true,
+                    true,
+                    false,
+                ));
+            }
+        };
 
         let profile_a_payload = run_production_pairing_payload_export(
             &_app_data_root,
@@ -10206,15 +10272,54 @@ replay check: no replayed messages after message 2
         if result.next_blocker != "none" {
             assert!(
                 result.next_blocker == "ProfileABootstrapTimeout"
-                    || result.next_blocker == "ProfileBBootstrapTimeout",
+                    || result.next_blocker == "ProfileBBootstrapTimeout"
+                    || result.next_blocker == "ProfileAOnionServiceLaunchFailed"
+                    || result.next_blocker == "ProfileBOnionServiceLaunchFailed"
+                    || result.next_blocker == "ProfileAEndpointUnavailable"
+                    || result.next_blocker == "ProfileBEndpointUnavailable",
                 "unexpected real onion blocker: {}",
                 result.next_blocker
             );
-            assert!(result.blockers.contains(&"BootstrapTimeout".to_string()));
-            assert!(!result.profile_a_onion_service_launched);
-            assert!(!result.profile_b_onion_service_launched);
-            assert!(!result.profile_a_endpoint_ready);
-            assert!(!result.profile_b_endpoint_ready);
+            assert!(
+                result.blockers.contains(&"BootstrapTimeout".to_string())
+                    || result
+                        .blockers
+                        .contains(&"OnionServiceLaunchFailed".to_string())
+                    || result.blockers.contains(&"EndpointUnavailable".to_string())
+            );
+            match result.next_blocker.as_str() {
+                "ProfileABootstrapTimeout" | "ProfileBBootstrapTimeout" => {
+                    assert!(!result.profile_a_onion_service_launched);
+                    assert!(!result.profile_b_onion_service_launched);
+                    assert!(!result.profile_a_endpoint_ready);
+                    assert!(!result.profile_b_endpoint_ready);
+                }
+                "ProfileAOnionServiceLaunchFailed" => {
+                    assert!(!result.profile_a_onion_service_launched);
+                    assert!(!result.profile_b_onion_service_launched);
+                    assert!(!result.profile_a_endpoint_ready);
+                    assert!(!result.profile_b_endpoint_ready);
+                }
+                "ProfileBOnionServiceLaunchFailed" => {
+                    assert!(result.profile_a_onion_service_launched);
+                    assert!(!result.profile_b_onion_service_launched);
+                    assert!(!result.profile_a_endpoint_ready);
+                    assert!(!result.profile_b_endpoint_ready);
+                }
+                "ProfileAEndpointUnavailable" => {
+                    assert!(result.profile_a_onion_service_launched);
+                    assert!(result.profile_b_onion_service_launched);
+                    assert!(!result.profile_a_endpoint_ready);
+                    assert!(!result.profile_b_endpoint_ready);
+                }
+                "ProfileBEndpointUnavailable" => {
+                    assert!(result.profile_a_onion_service_launched);
+                    assert!(result.profile_b_onion_service_launched);
+                    assert!(result.profile_a_endpoint_ready);
+                    assert!(!result.profile_b_endpoint_ready);
+                }
+                _ => unreachable!("unexpected blocker already checked"),
+            }
             assert!(!result.pairing_payloads_exported);
             assert!(!result.session_drafts_saved);
             assert!(!result.handshake_completed);
