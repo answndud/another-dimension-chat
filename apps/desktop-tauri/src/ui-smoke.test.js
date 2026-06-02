@@ -8,6 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = join(here, "..");
 const indexHtml = readFileSync(join(appRoot, "index.html"), "utf8");
 const mainJs = readFileSync(join(here, "main.js"), "utf8");
+const i18nJs = readFileSync(join(here, "i18n.js"), "utf8");
 const stylesCss = readFileSync(join(here, "styles.css"), "utf8");
 
 function functionBody(source, name) {
@@ -93,6 +94,19 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
   assert.match(stylesCss, /\.saved-room-state\.is-listening/);
   assert.match(stylesCss, /\.saved-room-state\.is-receive-paused/);
+});
+
+test("receive restart intent owns the room primary action", () => {
+  assert.match(mainJs, /function twoProfileComposerPrimaryIntent/);
+  assert.match(mainJs, /receiveIntentForRoom\(input\)[\s\S]*action: "start-receiving"/);
+  assert.match(mainJs, /action: "start-receiving"[\s\S]*labelKey: "startReceiving"/);
+  const actionBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
+  assert.match(actionBody, /intent\.action === "start-receiving"/);
+  assert.match(actionBody, /await startProductionTwoProfileOnionReceive\(\)/);
+  assert.match(actionBody, /input\.message \? "send-draft" : "receive"/);
+  assert.match(functionBody(mainJs, "applyProductionActionState"), /composerPrimaryAvailableWithoutDraft/);
+  assert.match(i18nJs, /receiveIntentRestartReady/);
+  assert.match(i18nJs, /chatNoticeReceiveRestart/);
 });
 
 test("room list controls are wired to room flow instead of settings", () => {
@@ -184,7 +198,7 @@ test("private delivery receive controls require a real route", () => {
 
 test("delivery code save continues the original send or receive action", () => {
   assert.match(mainJs, /let pendingPrivateRouteFollowup = null/);
-  assert.match(functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"), /rememberPrivateRouteFollowup\("send-draft", input\)/);
+  assert.match(functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"), /rememberPrivateRouteFollowup\(input\.message \? "send-draft" : "receive", input\)/);
   assert.match(functionBody(mainJs, "applyPeerPrivateRouteCode"), /continueAfterPeerPrivateRouteSaved\(input\)/);
   const followupBody = functionBody(mainJs, "continueAfterPeerPrivateRouteSaved");
   assert.match(followupBody, /latestTwoProfileRetryableOutboundEntry\(input\)/);
@@ -262,7 +276,7 @@ test("composer and delivery-route controls stay on the chat delivery path", () =
 
   const composerBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
   assert.match(composerBody, /enablePrivateDeliveryPermission\(\)/);
-  assert.match(composerBody, /rememberPrivateRouteFollowup\("send-draft", input\)/);
+  assert.match(composerBody, /rememberPrivateRouteFollowup\(input\.message \? "send-draft" : "receive", input\)/);
   assert.match(composerBody, /await preparePrivateDeliveryRoute\(\)/);
   assert.match(composerBody, /focusSafetyConfirmation\(\)/);
   assert.match(composerBody, /await runProductionTwoProfileMessageRoundtrip\(\)/);
