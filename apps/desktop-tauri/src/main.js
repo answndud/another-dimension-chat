@@ -396,6 +396,9 @@ const fields = {
   reviewPendingTwoProfileMessage: document.querySelector("#review-pending-two-profile-message"),
   productionTwoProfileTranscript: document.querySelector("#production-two-profile-transcript"),
   chatDeliveryNotice: document.querySelector("#chat-delivery-notice"),
+  fieldTestReport: document.querySelector("#field-test-report"),
+  refreshFieldTestReport: document.querySelector("#refresh-field-test-report"),
+  copyFieldTestReport: document.querySelector("#copy-field-test-report"),
   productionTwoProfileTranscriptExport: document.querySelector("#production-two-profile-transcript-export"),
   productionTwoProfileNextStep: document.querySelector("#production-two-profile-next-step"),
   openManualProductionTools: document.querySelector("#open-manual-production-tools"),
@@ -2495,6 +2498,143 @@ async function copyCurrentInviteCode(options = {}) {
       fields.productionTwoProfileWarning,
       options.quiet ? t("inviteCodeCreatedHint") : t("inviteCodeCopyFallback"),
     );
+    return false;
+  }
+}
+
+function fieldTestReportValue(value, fallback = "unknown") {
+  const text = String(value ?? "").trim();
+  if (!text) {
+    return fallback;
+  }
+  return text
+    .replace(/[^\w .:/#=-]+/g, "-")
+    .replace(/\s+/g, " ")
+    .slice(0, 96);
+}
+
+function fieldTestBoundarySummary(text) {
+  const source = String(text ?? "");
+  const allowedKeys = [
+    "permission",
+    "persistent_client",
+    "send_intent",
+    "started",
+    "succeeded",
+    "ack_wait",
+    "event_recorded",
+    "network_io",
+    "accept",
+    "dial",
+    "read_write",
+    "send",
+    "envelope_io",
+    "runtime",
+    "backend_enabled",
+    "worker",
+    "in_flight",
+    "attempts",
+    "message_imports",
+    "endpoint_updates",
+    "last_started",
+    "last_succeeded",
+    "last_network",
+    "failure",
+    "retryable",
+    "next",
+    "app_launch_network",
+    "raw_profile",
+    "passphrase",
+    "key_material",
+    "network",
+    "transport",
+  ];
+  const parts = [];
+  for (const key of allowedKeys) {
+    const match = source.match(new RegExp(`(?:^|\\s)${key}=([^\\s;]+)`));
+    if (match) {
+      parts.push(`${key}=${fieldTestReportValue(match[1])}`);
+    }
+  }
+  return parts.length > 0 ? parts.join(" ") : "none";
+}
+
+function buildFieldTestReport(input = productionTwoProfileInput()) {
+  const hasRoom = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase);
+  const route = twoProfilePeerEndpointState(input);
+  const entries = [...productionTwoProfileConversationEntries.values()];
+  const sentRows = entries.filter((entry) => entry.statuses?.has("sent")).length;
+  const receivedRows = entries.filter((entry) => entry.statuses?.has("received")).length;
+  const failedRows = entries.filter((entry) => entry.outboundDeliveryState === "failed").length;
+  const canceledRows = entries.filter((entry) => entry.outboundDeliveryState === "canceled").length;
+  const retryableOutbound = latestVisibleTwoProfileRetryableOutboundEntry(input);
+  const receiveActiveInRoom = productionTwoProfileReceiveMatchesInput(input);
+  const receiveMode = receiveActiveInRoom
+    ? productionTwoProfileOnionReceiveMode
+    : {
+        enabled: false,
+        runtimeState: "stopped",
+        attempt: 0,
+        inFlight: false,
+        lastProcessedMessageImportCount: 0,
+        lastProcessedEndpointUpdateCount: 0,
+      };
+
+  return [
+    "Another Dimension Chat beta field test report",
+    "report_version=1",
+    `language=${fieldTestReportValue(currentLanguage)}`,
+    `room_present=${hasRoom}`,
+    `session_ready=${twoProfileSessionsReadyForInput(input)}`,
+    `safety_confirmed=${twoProfileSafetyConfirmedForInput(input)}`,
+    `manual_network_permission=${manualNetworkPermissionEnabled()}`,
+    `route_ready=${route.ready === true}`,
+    `route_stale=${route.stale === true}`,
+    `route_source=${fieldTestReportValue(route.source)}`,
+    `route_reason=${fieldTestReportValue(route.reason)}`,
+    `receive_enabled=${receiveMode.enabled === true}`,
+    `receive_state=${fieldTestReportValue(receiveMode.runtimeState, "stopped")}`,
+    `receive_in_flight=${receiveMode.inFlight === true}`,
+    `receive_attempts=${Number.parseInt(receiveMode.attempt ?? 0, 10) || 0}`,
+    `receive_message_imports=${Number.parseInt(receiveMode.lastProcessedMessageImportCount ?? 0, 10) || 0}`,
+    `receive_endpoint_updates=${Number.parseInt(receiveMode.lastProcessedEndpointUpdateCount ?? 0, 10) || 0}`,
+    `conversation_rows=${entries.length}`,
+    `sent_rows=${sentRows}`,
+    `received_rows=${receivedRows}`,
+    `failed_outbound_rows=${failedRows}`,
+    `canceled_outbound_rows=${canceledRows}`,
+    `retryable_outbound_present=${Boolean(retryableOutbound)}`,
+    `delivery_notice_key=${fieldTestReportValue(latestChatDeliveryNoticeKey, "none")}`,
+    `delivery_notice_tone=${fieldTestReportValue(latestChatDeliveryNoticeTone, "neutral")}`,
+    `ui_state=${fieldTestReportValue(fields.productionTwoProfileState?.textContent)}`,
+    `redacted_boundary=${fieldTestBoundarySummary(fields.productionTwoProfileBoundary?.textContent)}`,
+  ].join("\n");
+}
+
+function refreshFieldTestReport() {
+  if (!fields.fieldTestReport) {
+    return "";
+  }
+  const report = buildFieldTestReport();
+  fields.fieldTestReport.value = report;
+  return report;
+}
+
+async function copyFieldTestReport() {
+  const report = refreshFieldTestReport();
+  if (!report) {
+    return false;
+  }
+  try {
+    await navigator.clipboard.writeText(report);
+    setProductionTwoProfileState("Field test report copied");
+    setText(fields.productionTwoProfileWarning, t("fieldTestReportCopied"));
+    return true;
+  } catch {
+    fields.fieldTestReport?.focus?.();
+    fields.fieldTestReport?.select?.();
+    setProductionTwoProfileState("Field test report selected");
+    setText(fields.productionTwoProfileWarning, t("fieldTestReportCopyFallback"));
     return false;
   }
 }
@@ -12769,6 +12909,14 @@ if (fields.loadProductionTwoProfileTranscript) {
   fields.loadProductionTwoProfileTranscript.addEventListener("click", () =>
     loadProductionTwoProfileTranscript(),
   );
+}
+
+if (fields.refreshFieldTestReport) {
+  fields.refreshFieldTestReport.addEventListener("click", refreshFieldTestReport);
+}
+
+if (fields.copyFieldTestReport) {
+  fields.copyFieldTestReport.addEventListener("click", copyFieldTestReport);
 }
 
 if (fields.replyLatestTwoProfileMessage) {

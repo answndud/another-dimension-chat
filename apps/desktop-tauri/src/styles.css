@@ -1521,6 +1521,35 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
   margin-top: 10px;
 }
 
+.field-test-report-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  border-top: 1px solid var(--panel-border);
+  padding-top: 12px;
+}
+
+.field-test-report-panel h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.field-test-report-panel p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.field-test-report-panel textarea {
+  min-height: 150px;
+  resize: vertical;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .chat-transcript-toolbar {
   display: none;
   flex-wrap: wrap;

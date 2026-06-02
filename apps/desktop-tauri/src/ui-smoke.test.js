@@ -221,6 +221,25 @@ test("private delivery receive controls require a real route", () => {
   assert.match(stylesCss, /body\.is-chat-active:not\(\.has-private-route\)[\s\S]*#start-production-two-profile-onion-receive/);
 });
 
+test("field test report is redacted and copyable from room diagnostics", () => {
+  for (const id of ["field-test-report", "refresh-field-test-report", "copy-field-test-report"]) {
+    assert.match(indexHtml, new RegExp(`id="${id}"`));
+  }
+  assert.match(mainJs, /function buildFieldTestReport/);
+  assert.match(mainJs, /function copyFieldTestReport/);
+  assert.match(stylesCss, /\.field-test-report-panel/);
+  assert.match(i18nJs, /fieldTestReport/);
+  assert.match(i18nJs, /현장 테스트 리포트/);
+
+  const reportBody = functionBody(mainJs, "buildFieldTestReport");
+  assert.match(reportBody, /route_ready=/);
+  assert.match(reportBody, /receive_state=/);
+  assert.match(reportBody, /retryable_outbound_present=/);
+  assert.match(reportBody, /redacted_boundary=/);
+  assert.doesNotMatch(reportBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
+  assert.doesNotMatch(reportBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
+});
+
 test("delivery code save continues the original send or receive action", () => {
   assert.match(mainJs, /let pendingPrivateRouteFollowup = null/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"), /rememberPrivateRouteFollowup\(input\.message \? "send-draft" : "receive", input\)/);
