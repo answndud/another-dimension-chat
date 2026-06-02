@@ -434,6 +434,7 @@ let latestProductionTwoProfileSessionStatus = null;
 let latestProductionTwoProfileSafety = null;
 let latestProductionTwoProfileSuccess = null;
 let latestProductionTwoProfileOnionEndpoints = null;
+let latestProductionTwoProfileRealOnionResult = null;
 let latestLocalPrivateRouteCode = "";
 const localPrivateRouteCodesByRoom = new Map();
 const activeLocalPrivateRouteCodesByRoom = new Map();
@@ -2564,6 +2565,56 @@ function fieldTestBoundaryValue(text, key, fallback = "none") {
   return match ? fieldTestReportValue(match[1], fallback) : fallback;
 }
 
+function latestRealOnionFieldTestResult(input = productionTwoProfileInput()) {
+  if (!latestProductionTwoProfileRealOnionResult) {
+    return null;
+  }
+  const fingerprint = twoProfileSessionStatusFingerprint(input);
+  return latestProductionTwoProfileRealOnionResult.roomFingerprint === fingerprint
+    ? latestProductionTwoProfileRealOnionResult.result
+    : null;
+}
+
+function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manualNetworkPermission) {
+  const detail = String(error ?? "").toLowerCase();
+  let nextBlocker = "RealOnionRoundtripCommandError";
+  let blocker = "CommandError";
+  if (detail.includes("permission")) {
+    nextBlocker = "ManualNetworkPermissionMissing";
+    blocker = "ManualNetworkPermissionMissing";
+  } else if (detail.includes("bootstrap")) {
+    nextBlocker = "BootstrapTimeout";
+    blocker = "BootstrapTimeout";
+  } else if (detail.includes("launch") || detail.includes("endpoint")) {
+    nextBlocker = "OnionServiceLaunchFailed";
+    blocker = "OnionServiceLaunchFailed";
+  } else if (detail.includes("send")) {
+    nextBlocker = "SendAttemptFailed";
+    blocker = "SendAttemptFailed";
+  } else if (detail.includes("receive")) {
+    nextBlocker = "ReceiveAttemptFailed";
+    blocker = "ReceiveAttemptFailed";
+  }
+  return {
+    manual_client_attempt_feature_compiled: true,
+    manual_network_permission_enabled: manualNetworkPermission === true,
+    sender_profile: String(input?.profileA ?? ""),
+    receiver_profile: String(input?.profileB ?? ""),
+    next_blocker: nextBlocker,
+    blockers: [blocker],
+    local_endpoint_returned: false,
+    peer_endpoint_returned: false,
+    envelope_payload_returned: false,
+    plaintext_returned_to_frontend: false,
+    store_path_returned: false,
+    passphrase_retained: false,
+    key_material_exposed: false,
+    network_io_attempted: manualNetworkPermission === true && blocker !== "ManualNetworkPermissionMissing",
+    transport_io_opened: false,
+    runtime_messaging_enabled: false,
+  };
+}
+
 function buildFieldTestReport(input = productionTwoProfileInput()) {
   const hasRoom = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase);
   const route = twoProfilePeerEndpointState(input);
@@ -2594,6 +2645,10 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const receiveFailureKind = receiveActiveInRoom
     ? fieldTestBoundaryValue(boundaryText, "failure")
     : "none";
+  const realOnionResult = latestRealOnionFieldTestResult(input);
+  const realOnionBlockers = Array.isArray(realOnionResult?.blockers)
+    ? realOnionResult.blockers.join("#")
+    : "none";
 
   return [
     "Another Dimension Chat beta field test report",
@@ -2622,6 +2677,12 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `outbound_failure_class=${fieldTestReportValue(outboundFailureClass, "none")}`,
     `outbound_recovery_action=${fieldTestReportValue(outboundRecoveryAction, "none")}`,
     `receive_failure_kind=${fieldTestReportValue(receiveFailureKind, "none")}`,
+    `real_onion_attempted=${Boolean(realOnionResult)}`,
+    `real_onion_next_blocker=${fieldTestReportValue(realOnionResult?.next_blocker, "none")}`,
+    `real_onion_blockers=${fieldTestReportValue(realOnionBlockers, "none")}`,
+    `real_onion_network_io=${realOnionResult?.network_io_attempted === true}`,
+    `real_onion_transport_io=${realOnionResult?.transport_io_opened === true}`,
+    `real_onion_runtime=${realOnionResult?.runtime_messaging_enabled === true}`,
     `delivery_notice_key=${fieldTestReportValue(latestChatDeliveryNoticeKey, "none")}`,
     `delivery_notice_tone=${fieldTestReportValue(latestChatDeliveryNoticeTone, "neutral")}`,
     `ui_state=${fieldTestReportValue(fields.productionTwoProfileState?.textContent)}`,
@@ -10693,6 +10754,10 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       messageTtlSeconds,
       manualNetworkPermission,
     });
+    latestProductionTwoProfileRealOnionResult = {
+      roomFingerprint: twoProfileSessionStatusFingerprint({ profileA, profileB }),
+      result,
+    };
     const view = productionTwoProfileRealOnionResultView(result);
     const userView = localizedTwoProfileUserView(productionTwoProfileRealOnionUserView(result));
     const realOnionNotice = view.complete
@@ -10734,6 +10799,14 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       selectLatestReceivedReplyForProfile(resumeProfile, { focusReply: "none" });
     }
   } catch (error) {
+    latestProductionTwoProfileRealOnionResult = {
+      roomFingerprint: twoProfileSessionStatusFingerprint({ profileA, profileB }),
+      result: productionTwoProfileRealOnionSyntheticFailureResult(
+        error,
+        { profileA, profileB },
+        manualNetworkPermission,
+      ),
+    };
     setProductionTwoProfileState("Private delivery failed");
     const detail = String(error ?? "");
     const redactedStage = detail.includes("redacted stage:")
