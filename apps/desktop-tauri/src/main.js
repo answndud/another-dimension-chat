@@ -8601,7 +8601,10 @@ async function preparePrivateDeliveryRoute() {
       await applyPeerPrivateRouteCode();
       return;
     }
-    await prepareInviteRoomPrivateRouteExchange(input);
+    const localRouteCreated = await prepareInviteRoomPrivateRouteExchange(input);
+    if (localRouteCreated && (fields.peerPrivateRouteCode?.value ?? "").trim()) {
+      await applyPeerPrivateRouteCode();
+    }
     return;
   }
 
