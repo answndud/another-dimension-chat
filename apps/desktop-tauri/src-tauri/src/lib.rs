@@ -8594,10 +8594,12 @@ async fn run_production_two_profile_real_onion_roundtrip(
         {
             Ok(owner) => owner,
             Err(error) => {
+                let (next_blocker, blockers) =
+                    classify_real_onion_bootstrap_blocker("ProfileA", &error);
                 event_summary.push(format!("redacted_stage={error}"));
                 return Ok(blocked_result(
-                    "ProfileABootstrapTimeout".to_string(),
-                    vec!["BootstrapTimeout".to_string()],
+                    next_blocker,
+                    blockers,
                     event_summary,
                     false,
                     false,
@@ -8618,10 +8620,12 @@ async fn run_production_two_profile_real_onion_roundtrip(
         {
             Ok(owner) => owner,
             Err(error) => {
+                let (next_blocker, blockers) =
+                    classify_real_onion_bootstrap_blocker("ProfileB", &error);
                 event_summary.push(format!("redacted_stage={error}"));
                 return Ok(blocked_result(
-                    "ProfileBBootstrapTimeout".to_string(),
-                    vec!["BootstrapTimeout".to_string()],
+                    next_blocker,
+                    blockers,
                     event_summary,
                     true,
                     false,
@@ -9331,6 +9335,25 @@ async fn run_production_two_profile_real_onion_roundtrip(
             runtime_messaging_enabled: true,
         })
     }
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+fn classify_real_onion_bootstrap_blocker(
+    profile_prefix: &str,
+    redacted_bootstrap_error: &str,
+) -> (String, Vec<String>) {
+    let blocker = if redacted_bootstrap_error.contains("RuntimeNetworkDisabled") {
+        "NetworkDisabled"
+    } else if redacted_bootstrap_error.contains("BootstrapTransientFailure") {
+        "BootstrapTransientFailure"
+    } else if redacted_bootstrap_error.contains("CensorshipOrBridgeRequired") {
+        "CensorshipOrBridgeRequired"
+    } else if redacted_bootstrap_error.contains("BootstrapTimeout") {
+        "BootstrapTimeout"
+    } else {
+        "BootstrapFailed"
+    };
+    (format!("{profile_prefix}{blocker}"), vec![blocker.to_string()])
 }
 
 #[cfg(feature = "manual-onion-client-attempt")]
@@ -10562,12 +10585,43 @@ replay check: no replayed messages after message 2
         ))
         .expect("real onion roundtrip smoke");
 
+        eprintln!(
+            "real_onion_field_smoke next={} blockers={} bootstrap_a={} bootstrap_b={} launch_a={} launch_b={} endpoint_a={} endpoint_b={} handshake={} first_send_started={} first_send_ok={} first_receive_started={} first_receive_ok={} second_send_ok={} second_receive_ok={} imports={} network={} transport={} runtime={}",
+            result.next_blocker,
+            result.blockers.join("#"),
+            result.profile_a_client_bootstrapped,
+            result.profile_b_client_bootstrapped,
+            result.profile_a_onion_service_launched,
+            result.profile_b_onion_service_launched,
+            result.profile_a_endpoint_ready,
+            result.profile_b_endpoint_ready,
+            result.handshake_completed,
+            result.send_attempt_started,
+            result.send_attempt_succeeded,
+            result.receive_attempt_started,
+            result.receive_attempt_succeeded,
+            result.second_send_attempt_succeeded,
+            result.second_receive_attempt_succeeded,
+            result.receive_mode_message_import_count,
+            result.network_io_attempted,
+            result.transport_io_opened,
+            result.runtime_messaging_enabled,
+        );
+
         assert!(result.manual_client_attempt_feature_compiled);
         assert!(result.manual_network_permission_enabled);
         if result.next_blocker != "none" {
             assert!(
                 result.next_blocker == "ProfileABootstrapTimeout"
                     || result.next_blocker == "ProfileBBootstrapTimeout"
+                    || result.next_blocker == "ProfileABootstrapTransientFailure"
+                    || result.next_blocker == "ProfileBBootstrapTransientFailure"
+                    || result.next_blocker == "ProfileANetworkDisabled"
+                    || result.next_blocker == "ProfileBNetworkDisabled"
+                    || result.next_blocker == "ProfileACensorshipOrBridgeRequired"
+                    || result.next_blocker == "ProfileBCensorshipOrBridgeRequired"
+                    || result.next_blocker == "ProfileABootstrapFailed"
+                    || result.next_blocker == "ProfileBBootstrapFailed"
                     || result.next_blocker == "ProfileAOnionServiceLaunchFailed"
                     || result.next_blocker == "ProfileBOnionServiceLaunchFailed"
                     || result.next_blocker == "ProfileAEndpointUnavailable"
@@ -10583,6 +10637,14 @@ replay check: no replayed messages after message 2
                 result.blockers.contains(&"BootstrapTimeout".to_string())
                     || result
                         .blockers
+                        .contains(&"BootstrapTransientFailure".to_string())
+                    || result.blockers.contains(&"NetworkDisabled".to_string())
+                    || result
+                        .blockers
+                        .contains(&"CensorshipOrBridgeRequired".to_string())
+                    || result.blockers.contains(&"BootstrapFailed".to_string())
+                    || result
+                        .blockers
                         .contains(&"OnionServiceLaunchFailed".to_string())
                     || result.blockers.contains(&"EndpointUnavailable".to_string())
                     || result.blockers.contains(&"SendAttemptFailed".to_string())
@@ -10595,7 +10657,16 @@ replay check: no replayed messages after message 2
                         .contains(&"SecondReceiveAttemptFailed".to_string())
             );
             match result.next_blocker.as_str() {
-                "ProfileABootstrapTimeout" | "ProfileBBootstrapTimeout" => {
+                "ProfileABootstrapTimeout"
+                | "ProfileBBootstrapTimeout"
+                | "ProfileABootstrapTransientFailure"
+                | "ProfileBBootstrapTransientFailure"
+                | "ProfileANetworkDisabled"
+                | "ProfileBNetworkDisabled"
+                | "ProfileACensorshipOrBridgeRequired"
+                | "ProfileBCensorshipOrBridgeRequired"
+                | "ProfileABootstrapFailed"
+                | "ProfileBBootstrapFailed" => {
                     assert!(!result.profile_a_onion_service_launched);
                     assert!(!result.profile_b_onion_service_launched);
                     assert!(!result.profile_a_endpoint_ready);

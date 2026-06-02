@@ -160,9 +160,8 @@ impl TransportBootstrapOutcome {
     pub fn runtime_error(self, policy: TransportBootstrapPolicy) -> TransportRuntimeError {
         match self {
             Self::Cancelled => TransportRuntimeError::BootstrapCancelled,
-            Self::TimedOut | Self::TransientNetworkFailure => {
-                TransportRuntimeError::BootstrapTimeout
-            }
+            Self::TimedOut => TransportRuntimeError::BootstrapTimeout,
+            Self::TransientNetworkFailure => TransportRuntimeError::BootstrapTransientFailure,
             Self::CensorshipOrBridgeRequired if policy.classify_censorship_separately() => {
                 TransportRuntimeError::CensorshipOrBridgeRequired
             }
