@@ -85,6 +85,15 @@ async function main() {
     "--lib",
     "production_two_profile_resume_keeps_retryable_send_after_runtime_reinitialization",
   ]);
+  await run("receive import transcript refresh state", process.execPath, [
+    "scripts/with-cargo-target.mjs",
+    "cargo",
+    "test",
+    "--manifest-path",
+    "src-tauri/Cargo.toml",
+    "--lib",
+    "production_receive_import_updates_transcript_and_receive_loop_refresh_counters",
+  ]);
   await run("private route update and retry state", process.execPath, [
     "scripts/with-cargo-target.mjs",
     "cargo",

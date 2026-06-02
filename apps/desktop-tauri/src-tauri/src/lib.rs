@@ -12885,6 +12885,138 @@ replay check: no replayed messages after message 2
     }
 
     #[test]
+    fn production_receive_import_updates_transcript_and_receive_loop_refresh_counters() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let setup = run_production_two_profile_roundtrip(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "initial room transcript".to_string(),
+            86_400,
+        )
+        .expect("two profile setup");
+        assert!(setup.sender_session_ready);
+        assert!(setup.receiver_session_ready);
+
+        let outbound = run_production_message_envelope_export(
+            &root,
+            setup.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            0,
+            true,
+            "receive refresh import".to_string(),
+            86_400,
+        )
+        .expect("outbound message");
+        assert!(outbound.encrypted_envelope_present);
+        assert!(!outbound.network_send_attempted);
+
+        let inbound = run_production_message_envelope_import(
+            &root,
+            setup.receiver_profile.clone(),
+            "correct-passphrase".to_string(),
+            outbound.selected_message_number,
+            outbound.envelope_payload,
+            86_400,
+        )
+        .expect("inbound import");
+        assert!(inbound.received_message_written);
+        assert!(inbound.received_message_record_present);
+        assert!(inbound.received_message_matches_session);
+        assert!(!inbound.plaintext_returned);
+        assert!(!inbound.network_receive_attempted);
+        assert!(!inbound.transport_io_opened);
+        assert!(!inbound.runtime_messaging_enabled);
+
+        let receive_state = ProductionOnionClientRuntimeState::default();
+        let started = run_production_onion_receive_loop_start(
+            &receive_state,
+            setup.receiver_profile.clone(),
+            true,
+        );
+        assert!(started.enabled);
+        let worker_started = run_production_onion_receive_loop_worker_started(&receive_state);
+        assert!(worker_started.worker_running);
+        let imported_result = ProductionOnionInboundEnvelopeReceiveAttemptResult {
+            warning: "test receive import",
+            preparation_only: false,
+            manual_client_attempt_feature_compiled: true,
+            manual_network_permission_enabled: true,
+            persistent_client_ready: true,
+            inbound_stream_preparation_ready: true,
+            inbound_rend_request_stream_ready: true,
+            inbound_rend_request_accept_attempted: true,
+            inbound_rend_request_accepted: true,
+            accepted_stream_request_stream_ready: true,
+            stream_request_accept_attempted: true,
+            stream_request_accepted: true,
+            stream_read_attempted: true,
+            stream_bytes_read: true,
+            receive_attempt_started: true,
+            receive_attempt_succeeded: true,
+            received_envelope_ready: true,
+            inbound_import_attempted: true,
+            control_envelope_imported: false,
+            endpoint_update_applied: false,
+            stale_endpoint_status_cleared: false,
+            redacted_receive_result_event_recorded: true,
+            event_summary: vec!["MessageImported".to_string()],
+            next_blocker: "none".to_string(),
+            blockers: Vec::new(),
+            raw_endpoint_returned: false,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            descriptor_body_returned: false,
+            stream_id_returned: false,
+            envelope_payload_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: true,
+            descriptor_publish_attempted: false,
+            stream_accept_attempted: true,
+            stream_read_write_attempted: true,
+            envelope_io_opened: true,
+            runtime_messaging_enabled: true,
+        };
+        run_production_onion_receive_loop_record_attempt_result(
+            &receive_state,
+            &imported_result,
+        );
+        let receive_status = run_production_onion_receive_loop_status(&receive_state, false);
+        assert_eq!(receive_status.import_sequence, 1);
+        assert_eq!(receive_status.message_import_count, 1);
+        assert_eq!(receive_status.endpoint_update_count, 0);
+        assert!(receive_status.active_after_import);
+        assert!(receive_status.continues_after_import);
+        assert_eq!(receive_status.runtime_state, "message-imported");
+        assert!(receive_status.last_attempt_succeeded);
+        assert!(receive_status.last_stream_read_write_attempted);
+        assert!(receive_status.last_envelope_io_opened);
+        assert!(receive_status.last_runtime_messaging_enabled);
+        assert!(!receive_status.passphrase_retained);
+        assert!(!receive_status.key_material_exposed);
+
+        let receiver_transcript = run_production_message_transcript_export(
+            &root,
+            setup.receiver_profile,
+            "correct-passphrase".to_string(),
+        )
+        .expect("receiver transcript after receive import");
+        assert!(receiver_transcript.entries.iter().any(|entry| {
+            entry.direction == "received"
+                && entry.message_number == outbound.selected_message_number
+                && entry.message == "receive refresh import"
+                && !entry.expired
+        }));
+        assert!(!receiver_transcript.key_material_exposed);
+        assert!(!receiver_transcript.network_io_attempted);
+        assert!(!receiver_transcript.transport_io_opened);
+        assert!(!receiver_transcript.runtime_messaging_enabled);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn production_remote_endpoint_update_keeps_existing_session_without_transport_io() {
         let root = unique_production_roundtrip_dir().expect("temp root");
         for profile in ["alice", "bob"] {

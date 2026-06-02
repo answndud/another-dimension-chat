@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   productionInviteCodeProfiles,
+  productionOnionReceiveLoopRefreshPlan,
   productionOnionReceiveRuntimeView,
   productionTwoProfileCurrentAction,
   productionTwoProfileLatestRetryableOutbound,
@@ -196,5 +197,51 @@ test("receive runtime exposes stopped, waiting, connected, and imported states",
   assert.equal(
     productionOnionReceiveRuntimeView({ enabled: true }, { receive_attempt_succeeded: true }).state,
     "message-imported",
+  );
+});
+
+test("receive loop refresh plan reloads transcript for new imports and endpoint updates", () => {
+  const mode = {
+    lastProcessedImportSequence: 2,
+    lastProcessedMessageImportCount: 1,
+    lastProcessedEndpointUpdateCount: 0,
+  };
+
+  assert.deepEqual(
+    productionOnionReceiveLoopRefreshPlan(mode, {
+      import_sequence: 2,
+      message_import_count: 1,
+      endpoint_update_count: 0,
+    }),
+    {
+      transcriptChanged: false,
+      messageImported: false,
+      endpointUpdated: false,
+      newImportCount: 0,
+      newMessageImportCount: 0,
+      newEndpointUpdateCount: 0,
+      importSequence: 2,
+      messageImportCount: 1,
+      endpointUpdateCount: 0,
+    },
+  );
+
+  assert.deepEqual(
+    productionOnionReceiveLoopRefreshPlan(mode, {
+      import_sequence: 4,
+      message_import_count: 2,
+      endpoint_update_count: 1,
+    }),
+    {
+      transcriptChanged: true,
+      messageImported: true,
+      endpointUpdated: true,
+      newImportCount: 2,
+      newMessageImportCount: 1,
+      newEndpointUpdateCount: 1,
+      importSequence: 4,
+      messageImportCount: 2,
+      endpointUpdateCount: 1,
+    },
   );
 });
