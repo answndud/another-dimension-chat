@@ -544,6 +544,23 @@
                   <dd id="production-two-profile-last-success" data-i18n="noSuccessfulRoundtrip">No successful roundtrip in this app session</dd>
                 </div>
               </dl>
+              <section class="field-test-report-panel" aria-labelledby="field-test-report-title">
+                <div>
+                  <h4 id="field-test-report-title" data-i18n="fieldTestReport">Field test report</h4>
+                  <p data-i18n="fieldTestReportHint">
+                    Redacted delivery status for beta testing. It does not include codes, messages, profiles, or local paths.
+                  </p>
+                </div>
+                <textarea id="field-test-report" rows="8" readonly></textarea>
+                <div class="loop-actions">
+                  <button id="refresh-field-test-report" type="button" class="flow-control is-secondary" data-i18n="refreshFieldTestReport">
+                    Refresh report
+                  </button>
+                  <button id="copy-field-test-report" type="button" data-i18n="copyFieldTestReport">
+                    Copy report
+                  </button>
+                </div>
+              </section>
             </details>
             <section class="room-list-panel" aria-labelledby="room-list-title">
               <div class="room-list-header">
