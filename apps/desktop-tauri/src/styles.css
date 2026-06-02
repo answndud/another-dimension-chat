@@ -4267,7 +4267,7 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session) #production-two-p
 }
 
 .private-route-exchange .eyebrow,
-.private-route-exchange p:not(.exchange-instruction),
+.private-route-exchange p:not(.exchange-instruction):not(.route-code-status),
 .private-route-steps,
 .private-route-exchange label {
   position: absolute;
@@ -4346,6 +4346,23 @@ body.is-chat-empty.has-connection-code:not(.has-ready-session) #production-two-p
 .private-route-exchange .route-code-display {
   min-height: 34px;
   resize: none;
+}
+
+.private-route-exchange .route-code-status {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.private-route-exchange .route-code-status[data-route-status="privateRouteLocalStatusSaved"],
+.private-route-exchange .route-code-display.is-saved-route-code {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--input-border));
+}
+
+.private-route-exchange .route-code-status[data-route-status="privateRouteLocalStatusSaved"] {
+  color: var(--warning);
 }
 
 .private-route-actions {
