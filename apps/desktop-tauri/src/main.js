@@ -5327,7 +5327,13 @@ function twoProfileComposerPrimaryIntent({
   manualNetworkPermission = manualNetworkPermissionEnabled(),
   peerEndpointState = twoProfilePeerEndpointState(input),
 } = {}) {
-  if (busy || !input.message || !sessionsReady) {
+  const restartReceive = Boolean(
+    receiveIntentForRoom(input) &&
+      !input.message &&
+      !productionTwoProfileOnionReceiveMode.enabled &&
+      !productionTwoProfileOnionReceiveMode.stopRequested,
+  );
+  if (busy || !sessionsReady || (!input.message && !restartReceive)) {
     return {
       action: "send",
       labelKey: "roomActionSend",
@@ -5353,6 +5359,13 @@ function twoProfileComposerPrimaryIntent({
       action: "prepare-private-route",
       labelKey: "preparePrivateRoute",
       disabledReason: t("deliveryNeedsRoute"),
+    };
+  }
+  if (restartReceive) {
+    return {
+      action: "start-receiving",
+      labelKey: "startReceiving",
+      disabledReason: t("receiveIntentRestartReady"),
     };
   }
   return {
@@ -6731,13 +6744,20 @@ function applyProductionActionState() {
     manualNetworkPermission,
     peerEndpointState,
   });
+  const composerPrimaryAvailableWithoutDraft = composerPrimaryIntent.action !== "send";
   setActionButtonState(
     fields.runProductionTwoProfileMessageRoundtrip,
-    !availability.runTwoProfileMessageRoundtrip,
+    composerPrimaryAvailableWithoutDraft
+      ? busy || !hasMessageRetentionPolicy
+      : !availability.runTwoProfileMessageRoundtrip,
     busy
       ? "Wait for the active production action."
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
+      : composerPrimaryIntent.action === "start-receiving"
+        ? t("receiveIntentRestartReady")
+      : composerPrimaryIntent.action !== "send"
+        ? composerPrimaryIntent.disabledReason
       : twoProfileSessionsReady && !twoProfileSafetyConfirmed
         ? t("sendLockedUntilVerified")
       : selectedDeliveredReplyReady && twoProfileReplyDraftReady
@@ -10399,9 +10419,14 @@ async function runProductionTwoProfileComposerPrimaryAction() {
     return;
   }
   if (intent.action === "prepare-private-route") {
-    rememberPrivateRouteFollowup("send-draft", input);
+    rememberPrivateRouteFollowup(input.message ? "send-draft" : "receive", input);
     setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted");
     await preparePrivateDeliveryRoute();
+    return;
+  }
+  if (intent.action === "start-receiving") {
+    setChatDeliveryNoticeByKey("chatNoticeReceiveRestart", "success");
+    await startProductionTwoProfileOnionReceive();
     return;
   }
   if (intent.action === "verify") {
