@@ -699,6 +699,7 @@ fn runtime_error_taxonomy_separates_preflight_bootstrap_and_onion_failures() {
 
     assert!(TransportRuntimeError::BootstrapCancelled.is_bootstrap_failure());
     assert!(TransportRuntimeError::BootstrapTimeout.is_bootstrap_failure());
+    assert!(TransportRuntimeError::BootstrapTransientFailure.is_bootstrap_failure());
     assert!(TransportRuntimeError::CensorshipOrBridgeRequired.is_bootstrap_failure());
     assert!(TransportRuntimeError::RuntimeNetworkDisabled.is_bootstrap_failure());
     assert!(!TransportRuntimeError::OnionServiceLaunchFailed.is_bootstrap_failure());
@@ -778,7 +779,7 @@ fn bootstrap_outcome_maps_cancellation_timeout_and_censorship() {
     );
     assert_eq!(
         TransportBootstrapOutcome::TransientNetworkFailure.runtime_error(policy),
-        TransportRuntimeError::BootstrapTimeout
+        TransportRuntimeError::BootstrapTransientFailure
     );
     assert_eq!(
         TransportBootstrapOutcome::CensorshipOrBridgeRequired.runtime_error(policy),
