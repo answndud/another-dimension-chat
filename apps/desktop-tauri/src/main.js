@@ -1536,6 +1536,10 @@ function enablePrivateDeliveryPermission() {
     setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteNeeded"));
     setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted");
     fields.preparePrivateRoute?.focus?.({ preventScroll: true });
+  } else if (sessionsReady && twoProfileSafetyConfirmedForInput(input) && receiveIntentForRoom(input)) {
+    setText(fields.productionTwoProfileWarning, t("chatNoticeReceiveStopped"));
+    setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted");
+    fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
   } else {
     setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteReady"));
     setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success");
@@ -1961,6 +1965,7 @@ function connectionCodeRoleStorageKey(code) {
 
 const lastInviteRoomStorageKey = "ad.lastInviteRoom.v1";
 const inviteRoomsStorageKey = "ad.inviteRooms.v1";
+const receiveIntentRoomsStorageKey = "ad.receiveIntentRooms.v1";
 
 function rememberConnectionCodeRole(code, role) {
   const normalizedRole = role === "inviter" ? "inviter" : "joiner";
@@ -2841,6 +2846,39 @@ function privateRouteRoomKey(input = productionTwoProfileInput()) {
     return "";
   }
   return twoProfileSessionStatusFingerprint(input);
+}
+
+function savedReceiveIntentRooms() {
+  try {
+    const parsed = JSON.parse(localStoreGet(receiveIntentRoomsStorageKey) ?? "[]");
+    return new Set(
+      (Array.isArray(parsed) ? parsed : [])
+        .map((value) => String(value ?? "").trim())
+        .filter(Boolean),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+function rememberReceiveIntentForRoom(input = productionTwoProfileInput(), enabled = true) {
+  const roomKey = privateRouteRoomKey(input);
+  if (!roomKey) {
+    return false;
+  }
+  const rooms = savedReceiveIntentRooms();
+  if (enabled) {
+    rooms.add(roomKey);
+  } else {
+    rooms.delete(roomKey);
+  }
+  localStoreSet(receiveIntentRoomsStorageKey, JSON.stringify([...rooms].slice(-48)));
+  return true;
+}
+
+function receiveIntentForRoom(input = productionTwoProfileInput()) {
+  const roomKey = privateRouteRoomKey(input);
+  return Boolean(roomKey && savedReceiveIntentRooms().has(roomKey));
 }
 
 function restorePrivateRouteExchangeForRoom(input = productionTwoProfileInput()) {
@@ -4570,6 +4608,10 @@ async function continueAfterPeerPrivateRouteSaved(input = productionTwoProfileIn
     String(input.message ?? "").trim()
   ) {
     await runProductionTwoProfileMessageRoundtrip();
+    return true;
+  }
+  if (receiveIntentForRoom(input)) {
+    await startProductionTwoProfileOnionReceive();
     return true;
   }
   return false;
@@ -6439,6 +6481,7 @@ function applyProductionActionState() {
     "has-conversation-action",
     Boolean(pendingConversation || replySelection.canSelect),
   );
+  const receiveIntent = receiveIntentForRoom(twoProfile);
   const retryableOutboundConversation = latestTwoProfileRetryableOutboundEntry(twoProfile);
   if (
     productionTwoProfileShouldShowOutboundRecovery({
@@ -6475,7 +6518,7 @@ function applyProductionActionState() {
     twoProfilePeerEndpointState(twoProfile).ready &&
     !productionTwoProfileOnionReceiveMode.enabled &&
     !productionTwoProfileOnionReceiveMode.stopRequested &&
-    !twoProfile.message
+    (receiveIntent || !twoProfile.message)
   ) {
     setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted");
   } else if (!busy && twoProfileSafetyConfirmed && latestChatDeliveryNoticeKey === "sendLockedUntilVerified") {
@@ -6809,7 +6852,7 @@ function applyProductionActionState() {
       : !peerEndpointState.ready
         ? t("privateDeliveryRouteNeeded")
         : t("startReceiving"),
-    false,
+    receiveIntent && !productionTwoProfileOnionReceiveMode.enabled,
   );
   setActionButtonState(
     fields.stopProductionTwoProfileOnionReceive,
@@ -9694,6 +9737,7 @@ async function startProductionTwoProfileOnionReceive() {
     setText(fields.productionTwoProfileWarning, t("receiveNeedsVerification"));
     return;
   }
+  rememberReceiveIntentForRoom(input, true);
   if (!manualNetworkPermission) {
     setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning");
     openPrivateDeliverySettings();
@@ -10014,6 +10058,7 @@ async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
 
 function stopProductionTwoProfileOnionReceive() {
   const profile = productionTwoProfileOnionReceiveMode.profile;
+  rememberReceiveIntentForRoom(productionTwoProfileInput(), false);
   clearProductionTwoProfileOnionReceiveTimer();
   productionTwoProfileOnionReceiveMode = {
     ...productionTwoProfileOnionReceiveMode,
