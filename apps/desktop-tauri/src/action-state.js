@@ -17,14 +17,37 @@ export function productionTwoProfileReadiness(input, busy) {
   return "Ready: room can be created";
 }
 
+function inviteCodeSlugChecksum(value) {
+  // UI-only checksum for local profile-name disambiguation; not security material.
+  let hash = 0x811c9dc5;
+  for (const char of String(value ?? "")) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36).padStart(7, "0").slice(0, 7);
+}
+
 export function productionInviteCodeProfiles(code, role = "joiner") {
   const connectionCode = String(code ?? "").trim();
-  const slug =
-    connectionCode
-      .toLowerCase()
+  const normalizedCode = connectionCode.toLowerCase();
+  const readableSlug =
+    normalizedCode
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
-      .slice(0, 32) || "shared-code";
+      .slice(0, 24)
+      .replace(/-+$/g, "") || "code";
+  const slugNeedsHash =
+    readableSlug !== normalizedCode ||
+    connectionCode !== normalizedCode ||
+    readableSlug.length !== normalizedCode.length ||
+    readableSlug.length > 24;
+  const slug = slugNeedsHash
+    ? `${readableSlug}-${inviteCodeSlugChecksum(connectionCode)}`
+    : connectionCode
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 32);
   const normalizedRole = role === "inviter" ? "inviter" : "joiner";
   const peerRole = normalizedRole === "inviter" ? "joiner" : "inviter";
   return {
@@ -549,6 +572,16 @@ export function productionTwoProfileConversationCompare(left, right, direction =
     return order * (leftKey.messageNumber - rightKey.messageNumber);
   }
   return order * leftKey.route.localeCompare(rightKey.route);
+}
+
+export function productionTwoProfileRetryableOutboundEntries(entries, input = {}) {
+  return (Array.isArray(entries) ? entries : [])
+    .filter((entry) => productionTwoProfileOutboundActionState(entry, input, true).canRunNow)
+    .sort((left, right) => productionTwoProfileConversationCompare(left, right, "desc"));
+}
+
+export function productionTwoProfileLatestRetryableOutbound(entries, input = {}) {
+  return productionTwoProfileRetryableOutboundEntries(entries, input)[0] ?? null;
 }
 
 export function productionTwoProfileReplySelectionView(state) {

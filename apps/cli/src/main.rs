@@ -312,7 +312,7 @@ boundary:
   production profile status is storage-only: it verifies an encrypted local profile marker but opens no messaging or transport
   production identity init is storage-only: it creates a production pairwise identity key but opens no messaging or transport
   production identity status is storage-only: it verifies the production pairwise identity key but opens no messaging or transport
-  production pairing payload create is storage-only: it signs a QR payload from stored keys and opens no messaging or transport
+  production pairing payload create is storage-only: it signs a pairing payload from stored keys and opens no messaging or transport
   production pairing session prepare is storage-only: it verifies payloads and local Noise key readiness without opening transport
   production pairing session save-draft is storage-only: it persists session draft records without opening transport
   production pairing session status is storage-only: it checks persisted session draft readiness without opening transport
@@ -2652,7 +2652,7 @@ fn production_pairing_payload_create_help() -> String {
     "usage:
   another-dimension production pairing payload create --profile <name> --store <path> --rendezvous-endpoint <onion> --out <path> --passphrase-stdin
 
-Reads the profile passphrase from stdin. Opens an encrypted local profile store, signs a production pairing payload with the stored pairwise identity key, stores the matching Noise static private key, and writes the QR payload to --out. This does not enable messaging, transport, or a long-lived unlock session."
+Reads the profile passphrase from stdin. Opens an encrypted local profile store, signs a production pairing payload with the stored pairwise identity key, stores the matching Noise static private key, and writes the pairing payload to --out. This does not enable messaging, transport, or a long-lived unlock session."
         .to_string()
 }
 
@@ -4196,7 +4196,7 @@ fn format_error(error: another_dimension_core::dev_insecure::CoreError) -> Strin
             "invalid pairing payload".to_string()
         }
         CoreError::Pairing(another_dimension_pairing::PairingError::PayloadTooLarge) => {
-            "pairing payload exceeds QR budget".to_string()
+            "pairing payload exceeds payload budget".to_string()
         }
         CoreError::Pairing(another_dimension_pairing::PairingError::RandomnessUnavailable) => {
             "secure randomness unavailable".to_string()

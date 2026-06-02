@@ -3,6 +3,38 @@ mod status;
 pub use status::PrototypeStatus;
 use tauri::Manager;
 
+#[cfg(debug_assertions)]
+fn debug_repo_root_from_current_dir() -> Option<std::path::PathBuf> {
+    let cwd = std::env::current_dir().ok()?;
+    if cwd.file_name().is_some_and(|name| name == "desktop-tauri")
+        && cwd.parent()?.file_name().is_some_and(|name| name == "apps")
+    {
+        return cwd.parent()?.parent().map(std::path::Path::to_path_buf);
+    }
+    if cwd.file_name().is_some_and(|name| name == "another-dimension") {
+        return Some(cwd);
+    }
+    None
+}
+
+#[cfg(debug_assertions)]
+fn debug_peer_label_from_app(app: &tauri::AppHandle) -> Option<&'static str> {
+    let identifier = app.config().identifier.as_str();
+    if identifier.ends_with(".peera") {
+        Some("peer-a")
+    } else if identifier.ends_with(".peerb") {
+        Some("peer-b")
+    } else {
+        None
+    }
+}
+
+#[cfg(debug_assertions)]
+fn debug_peer_root_from_app(app: &tauri::AppHandle) -> Option<std::path::PathBuf> {
+    let peer = debug_peer_label_from_app(app)?;
+    Some(debug_repo_root_from_current_dir()?.join(format!("another-dimension-dev-{peer}")))
+}
+
 fn production_app_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     #[cfg(debug_assertions)]
     if let Ok(path) = std::env::var("ANOTHER_DIMENSION_APP_DATA_DIR") {
@@ -10,6 +42,10 @@ fn production_app_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf,
         if !trimmed.is_empty() {
             return Ok(std::path::PathBuf::from(trimmed));
         }
+    }
+    #[cfg(debug_assertions)]
+    if let Some(peer_root) = debug_peer_root_from_app(app) {
+        return Ok(peer_root.join("app-data"));
     }
 
     app.path()
@@ -25,10 +61,221 @@ fn production_app_cache_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf
             return Ok(std::path::PathBuf::from(trimmed));
         }
     }
+    #[cfg(debug_assertions)]
+    if let Some(peer_root) = debug_peer_root_from_app(app) {
+        return Ok(peer_root.join("app-cache"));
+    }
 
     app.path()
         .app_cache_dir()
         .map_err(|_| "failed to resolve app cache directory".to_string())
+}
+
+#[cfg(debug_assertions)]
+fn dev_rendezvous_dir() -> Option<std::path::PathBuf> {
+    if let Ok(path) = std::env::var("ANOTHER_DIMENSION_DEV_RENDEZVOUS_DIR") {
+        let trimmed = path.trim();
+        if !trimmed.is_empty() {
+            return Some(std::path::PathBuf::from(trimmed));
+        }
+    }
+    Some(debug_repo_root_from_current_dir()?.join("another-dimension-dev-rendezvous"))
+}
+
+#[cfg(not(debug_assertions))]
+fn dev_rendezvous_dir() -> Option<std::path::PathBuf> {
+    None
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+struct DevInviteRoomRecord {
+    inviter_profile: String,
+    peer_profile: String,
+    created_at_ms: u128,
+    last_seen_at_ms: u128,
+    expires_at_ms: u128,
+    consumed: bool,
+}
+
+#[derive(serde::Serialize)]
+struct DevInviteRoomPresenceRefreshResult {
+    open: bool,
+    expires_at_ms: u128,
+}
+
+#[derive(Clone, serde::Deserialize, serde::Serialize)]
+struct DevInviteRoomMessageRecord {
+    sender_profile: String,
+    receiver_profile: String,
+    message_number: u64,
+    message: String,
+    created_at_ms: u128,
+    ttl_seconds: u64,
+    expires_at_ms: Option<u128>,
+}
+
+const DEV_INVITE_ROOM_TTL_MS: u128 = 10_000;
+
+fn now_unix_ms() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
+}
+
+fn invite_token_file_name(token: &str) -> String {
+    let mut out = String::with_capacity(token.len() * 2 + 12);
+    out.push_str("invite-");
+    for byte in token.as_bytes() {
+        out.push_str(&format!("{byte:02x}"));
+    }
+    out.push_str(".json");
+    out
+}
+
+fn dev_invite_room_record_path(token: &str) -> Option<std::path::PathBuf> {
+    dev_rendezvous_dir().map(|dir| dir.join(invite_token_file_name(token)))
+}
+
+fn dev_invite_room_messages_path(token: &str, receiver_profile: &str) -> Option<std::path::PathBuf> {
+    dev_rendezvous_dir().map(|dir| {
+        dir.join(format!(
+            "messages-{}-{}.json",
+            invite_token_file_name(token)
+                .trim_start_matches("invite-")
+                .trim_end_matches(".json"),
+            invite_token_file_name(receiver_profile)
+                .trim_start_matches("invite-")
+                .trim_end_matches(".json")
+        ))
+    })
+}
+
+fn write_dev_invite_room_record(token: &str, record: &DevInviteRoomRecord) -> Result<(), String> {
+    let Some(path) = dev_invite_room_record_path(token) else {
+        return Ok(());
+    };
+    let parent = path
+        .parent()
+        .ok_or_else(|| "dev invite rendezvous path invalid".to_string())?;
+    std::fs::create_dir_all(parent).map_err(|_| "dev invite rendezvous unavailable".to_string())?;
+    let payload = serde_json::to_vec(record)
+        .map_err(|_| "dev invite rendezvous record failed".to_string())?;
+    std::fs::write(path, payload).map_err(|_| "dev invite rendezvous unavailable".to_string())
+}
+
+fn read_dev_invite_room_record(token: &str) -> Result<Option<DevInviteRoomRecord>, String> {
+    let Some(path) = dev_invite_room_record_path(token) else {
+        return Ok(None);
+    };
+    if !path.exists() {
+        return Ok(None);
+    }
+    let payload =
+        std::fs::read(path).map_err(|_| "dev invite rendezvous unavailable".to_string())?;
+    serde_json::from_slice(&payload)
+        .map(Some)
+        .map_err(|_| "dev invite rendezvous record invalid".to_string())
+}
+
+fn dev_invite_room_is_enabled() -> bool {
+    dev_rendezvous_dir().is_some()
+}
+
+fn production_invite_role(profile: &str) -> &'static str {
+    if profile.starts_with("inviter-") {
+        "inviter"
+    } else {
+        "joiner"
+    }
+}
+
+fn register_dev_invite_room(
+    token: &str,
+    inviter_profile: &str,
+    peer_profile: &str,
+) -> Result<(), String> {
+    if !dev_invite_room_is_enabled() {
+        return Ok(());
+    }
+    let now = now_unix_ms();
+    let existing = read_dev_invite_room_record(token)?;
+    write_dev_invite_room_record(
+        token,
+        &DevInviteRoomRecord {
+            inviter_profile: inviter_profile.to_string(),
+            peer_profile: peer_profile.to_string(),
+            created_at_ms: existing
+                .as_ref()
+                .map(|record| record.created_at_ms)
+                .unwrap_or(now),
+            last_seen_at_ms: now,
+            expires_at_ms: now + DEV_INVITE_ROOM_TTL_MS,
+            consumed: false,
+        },
+    )
+}
+
+fn ensure_dev_invite_room_open(token: &str) -> Result<DevInviteRoomRecord, String> {
+    if !dev_invite_room_is_enabled() {
+        return Err("invite code cannot be checked because no room rendezvous is running".to_string());
+    }
+    let record = read_dev_invite_room_record(token)?
+        .ok_or_else(|| "invite code is not open; keep the room creator app connected".to_string())?;
+    if record.expires_at_ms <= now_unix_ms() {
+        return Err("invite code is not open; keep the room creator app connected".to_string());
+    }
+    Ok(record)
+}
+
+fn note_dev_invite_room_join(token: &str, mut record: DevInviteRoomRecord) -> Result<(), String> {
+    if !dev_invite_room_is_enabled() {
+        return Ok(());
+    }
+    record.consumed = false;
+    record.last_seen_at_ms = now_unix_ms();
+    write_dev_invite_room_record(token, &record)
+}
+
+fn read_dev_invite_room_messages(
+    token: &str,
+    receiver_profile: &str,
+) -> Result<Vec<DevInviteRoomMessageRecord>, String> {
+    let Some(path) = dev_invite_room_messages_path(token, receiver_profile) else {
+        return Ok(Vec::new());
+    };
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+    let payload =
+        std::fs::read(path).map_err(|_| "dev invite message relay unavailable".to_string())?;
+    serde_json::from_slice(&payload)
+        .map_err(|_| "dev invite message relay record invalid".to_string())
+}
+
+fn append_dev_invite_room_message(
+    token: &str,
+    message: DevInviteRoomMessageRecord,
+) -> Result<(), String> {
+    let Some(path) = dev_invite_room_messages_path(token, &message.receiver_profile) else {
+        return Ok(());
+    };
+    let parent = path
+        .parent()
+        .ok_or_else(|| "dev invite message relay path invalid".to_string())?;
+    std::fs::create_dir_all(parent)
+        .map_err(|_| "dev invite message relay unavailable".to_string())?;
+    let mut messages = read_dev_invite_room_messages(token, &message.receiver_profile)?;
+    if !messages.iter().any(|existing| {
+        existing.sender_profile == message.sender_profile
+            && existing.receiver_profile == message.receiver_profile
+            && existing.message_number == message.message_number
+    }) {
+        messages.push(message);
+    }
+    let payload = serde_json::to_vec(&messages)
+        .map_err(|_| "dev invite message relay record failed".to_string())?;
+    std::fs::write(path, payload).map_err(|_| "dev invite message relay unavailable".to_string())
 }
 
 #[derive(Default)]
@@ -614,7 +861,7 @@ pub struct ProductionMessageReceivedExportResult {
     runtime_messaging_enabled: bool,
 }
 
-#[derive(serde::Serialize)]
+#[derive(Clone, serde::Deserialize, serde::Serialize)]
 pub struct ProductionMessageTranscriptEntryResult {
     direction: String,
     message_number: u64,
@@ -2414,11 +2661,69 @@ fn production_invite_room_setup(
     let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production invite room setup failed without exposing local path details"
     })?;
-    run_production_two_profile_room_setup(app_data_root, local_profile, peer_profile, passphrase)
+    let role = production_invite_role(&local_profile);
+    let open_record = if role == "joiner" {
+        Some(ensure_dev_invite_room_open(&passphrase).map_err(|_| {
+            "production invite room setup failed because the invite code is not open".to_string()
+        })?)
+    } else {
+        None
+    };
+    let result = run_production_two_profile_room_setup(
+        app_data_root,
+        local_profile.clone(),
+        peer_profile.clone(),
+        passphrase.clone(),
+    )
         .map_err(|_| {
             "production invite room setup failed without exposing profile, path, or key details"
                 .to_string()
-        })
+        })?;
+    if role == "inviter" {
+        register_dev_invite_room(&passphrase, &local_profile, &peer_profile).map_err(|_| {
+            "production invite room setup failed because the invite room could not be opened"
+                .to_string()
+        })?;
+    } else if let Some(record) = open_record {
+        note_dev_invite_room_join(&passphrase, record).map_err(|_| {
+            "production invite room setup failed because the invite room could not be updated"
+                .to_string()
+        })?;
+    }
+    Ok(result)
+}
+
+#[tauri::command]
+fn production_invite_room_presence_refresh(
+    local_profile: String,
+    peer_profile: String,
+    passphrase: String,
+) -> Result<DevInviteRoomPresenceRefreshResult, String> {
+    if production_invite_role(&local_profile) != "inviter" || passphrase.trim().is_empty() {
+        return Ok(DevInviteRoomPresenceRefreshResult {
+            open: false,
+            expires_at_ms: 0,
+        });
+    }
+    let now = now_unix_ms();
+    let expires_at_ms = now + DEV_INVITE_ROOM_TTL_MS;
+    let mut record =
+        read_dev_invite_room_record(&passphrase)?.unwrap_or_else(|| DevInviteRoomRecord {
+            inviter_profile: local_profile.clone(),
+            peer_profile: peer_profile.clone(),
+            created_at_ms: now,
+            last_seen_at_ms: now,
+            expires_at_ms,
+            consumed: false,
+        });
+    record.consumed = false;
+    record.last_seen_at_ms = now;
+    record.expires_at_ms = expires_at_ms;
+    write_dev_invite_room_record(&passphrase, &record)?;
+    Ok(DevInviteRoomPresenceRefreshResult {
+        open: true,
+        expires_at_ms,
+    })
 }
 
 #[tauri::command]
@@ -2459,7 +2764,11 @@ fn production_invite_room_message_send(
     let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production invite room message send failed without exposing local path details"
     })?;
-    run_production_two_profile_message_roundtrip(
+    let local_profile_for_relay = local_profile.clone();
+    let peer_profile_for_relay = peer_profile.clone();
+    let passphrase_for_relay = passphrase.clone();
+    let message_for_relay = message.clone();
+    let result = run_production_two_profile_message_roundtrip(
         app_data_root,
         local_profile,
         peer_profile,
@@ -2470,7 +2779,26 @@ fn production_invite_room_message_send(
     .map_err(|_| {
         "production invite room message send failed without exposing profile, path, or key details"
             .to_string()
-    })
+    })?;
+    if dev_invite_room_is_enabled() {
+        let created_at_ms = now_unix_ms();
+        append_dev_invite_room_message(
+            &passphrase_for_relay,
+            DevInviteRoomMessageRecord {
+                sender_profile: local_profile_for_relay,
+                receiver_profile: peer_profile_for_relay,
+                message_number: result.message_number,
+                message: message_for_relay.trim().to_string(),
+                created_at_ms,
+                ttl_seconds: result.message_ttl_seconds,
+                expires_at_ms: Some(created_at_ms + u128::from(result.message_ttl_seconds) * 1000),
+            },
+        )
+        .map_err(|_| {
+            "production invite room message send failed because dev relay write failed".to_string()
+        })?;
+    }
+    Ok(result)
 }
 
 #[tauri::command]
@@ -7852,14 +8180,16 @@ fn run_production_message_transcript_export(
     use another_dimension_storage::production::ProfilePassphrase;
 
     let profile = sanitize_production_profile(profile)?;
-    let passphrase = ProfilePassphrase::new(passphrase.trim())
+    let profile_for_relay = profile.as_str().to_string();
+    let invite_token = passphrase.trim().to_string();
+    let passphrase = ProfilePassphrase::new(&invite_token)
         .map_err(|_| "invalid production profile passphrase")?;
     let store_path = production_profile_store_path(app_data_root, &profile)?;
     let export = production_message_transcript_export(&store_path, profile, &passphrase)
         .map_err(|_| "message transcript export failed")?;
     let transcript_tsv = production_message_transcript_tsv(export.entries())
         .map_err(|_| "message transcript export failed")?;
-    let entries = export
+    let mut entries = export
         .entries()
         .iter()
         .map(|entry| {
@@ -7879,6 +8209,36 @@ fn run_production_message_transcript_export(
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
+    let mut relay_expired_messages_purged = 0usize;
+    if dev_invite_room_is_enabled() {
+        let now = now_unix_ms();
+        entries.extend(
+            read_dev_invite_room_messages(&invite_token, &profile_for_relay)?
+                .into_iter()
+                .filter_map(|message| {
+                    let expired = message
+                        .expires_at_ms
+                        .is_some_and(|expires_at_ms| expires_at_ms <= now);
+                    if expired {
+                        relay_expired_messages_purged += 1;
+                        return None;
+                    }
+                    Some(ProductionMessageTranscriptEntryResult {
+                        direction: "received".to_string(),
+                        message_number: message.message_number,
+                        message: message.message,
+                        created_at_ms: message.created_at_ms,
+                        ttl_seconds: message.ttl_seconds,
+                        expires_at_ms: message.expires_at_ms,
+                        expired: false,
+                        outbound_delivery_state: None,
+                        outbound_failure_kind: None,
+                        outbound_retryable: false,
+                    })
+                }),
+        );
+        entries.sort_by_key(|entry| (entry.created_at_ms, entry.message_number));
+    }
 
     Ok(ProductionMessageTranscriptExportResult {
         warning: "message transcript exported after local unlock; no network or transport IO opened",
@@ -7886,7 +8246,7 @@ fn run_production_message_transcript_export(
         runtime_material_reconstructable: export.runtime_material_reconstructable(),
         entries,
         transcript_tsv,
-        expired_messages_purged: export.expired_messages_purged(),
+        expired_messages_purged: export.expired_messages_purged() + relay_expired_messages_purged,
         plaintext_returned_after_unlock: true,
         key_material_exposed: export.key_material_exposed(),
         network_io_attempted: export.network_io_attempted(),
@@ -9546,6 +9906,7 @@ pub fn run() {
             production_message_outbound_mark_send_failed,
             production_local_roundtrip,
             production_invite_room_setup,
+            production_invite_room_presence_refresh,
             production_invite_room_message_send,
             production_two_profile_room_setup,
             production_two_profile_roundtrip,
@@ -9617,6 +9978,7 @@ mod tests {
         sanitize_production_profile, sanitize_production_roundtrip_message,
         unique_production_roundtrip_dir,
     };
+    static DEV_RENDEZVOUS_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     #[test]
     fn demo_step_parser_extracts_cli_sections() {
@@ -12378,6 +12740,151 @@ replay check: no replayed messages after message 2
     }
 
     #[test]
+    fn production_two_profile_resume_keeps_retryable_send_after_runtime_reinitialization() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let setup = run_production_two_profile_roundtrip(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "initial room transcript".to_string(),
+            86_400,
+        )
+        .expect("two profile setup");
+        assert!(setup.sender_session_ready);
+        assert!(setup.receiver_session_ready);
+
+        let outbound = run_production_message_envelope_export(
+            &root,
+            setup.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            0,
+            true,
+            "retry after runtime restart".to_string(),
+            604_800,
+        )
+        .expect("outbound message");
+        assert!(outbound.pending_message_record_written);
+        assert!(outbound.encrypted_envelope_present);
+        assert!(!outbound.network_send_attempted);
+
+        super::run_production_message_outbound_mark_send_failed(
+            &root,
+            setup.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            outbound.selected_message_number,
+            "peer-endpoint-missing".to_string(),
+        )
+        .expect("mark outbound failed");
+        let failed_transcript = run_production_message_transcript_export(
+            &root,
+            setup.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("failed sender transcript");
+        let failed_entry = failed_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == outbound.selected_message_number)
+            .expect("failed sender entry");
+        assert_eq!(failed_entry.direction, "sent");
+        assert_eq!(failed_entry.message, "retry after runtime restart");
+        assert_eq!(
+            failed_entry.outbound_delivery_state.as_deref(),
+            Some("failed")
+        );
+        assert_eq!(
+            failed_entry.outbound_failure_kind.as_deref(),
+            Some("peer-endpoint-missing")
+        );
+        assert!(failed_entry.outbound_retryable);
+
+        let running_runtime = ProductionOnionClientRuntimeState::default();
+        let receive_started = run_production_onion_receive_loop_start(
+            &running_runtime,
+            setup.receiver_profile.clone(),
+            true,
+        );
+        assert!(receive_started.enabled);
+        assert!(receive_started.explicit_user_start_required);
+        assert!(!receive_started.starts_network_on_app_launch);
+        assert!(!receive_started.passphrase_retained);
+
+        let restarted_runtime = ProductionOnionClientRuntimeState::default();
+        let receive_after_restart = run_production_onion_receive_loop_status(&restarted_runtime, false);
+        assert!(!receive_after_restart.enabled);
+        assert!(!receive_after_restart.worker_running);
+        assert_eq!(receive_after_restart.runtime_state, "stopped");
+        assert!(receive_after_restart.explicit_user_start_required);
+        assert!(!receive_after_restart.starts_network_on_app_launch);
+        assert!(!receive_after_restart.passphrase_retained);
+        assert!(!receive_after_restart.key_material_exposed);
+        assert!(!receive_after_restart.network_io_attempted);
+
+        let resumed_status = run_production_two_profile_session_status(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("resumed status after runtime restart");
+        assert!(resumed_status.both_ready_for_message_envelope);
+        assert!(resumed_status.profile_a_runtime_material_reconstructable);
+        assert!(resumed_status.profile_b_runtime_material_reconstructable);
+        assert!(!resumed_status.passphrase_retained);
+        assert!(!resumed_status.key_material_exposed);
+        assert!(!resumed_status.network_io_attempted);
+        assert!(!resumed_status.transport_io_opened);
+        assert!(!resumed_status.runtime_messaging_enabled);
+
+        let resumed_sender_transcript = run_production_message_transcript_export(
+            &root,
+            setup.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("resumed sender transcript");
+        assert!(resumed_sender_transcript.entries.iter().any(|entry| {
+            entry.direction == "sent"
+                && entry.message_number == setup.message_number
+                && entry.message == "initial room transcript"
+        }));
+        let resumed_failed_entry = resumed_sender_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == outbound.selected_message_number)
+            .expect("resumed failed sender entry");
+        assert_eq!(
+            resumed_failed_entry.outbound_delivery_state.as_deref(),
+            Some("failed")
+        );
+        assert_eq!(
+            resumed_failed_entry.outbound_failure_kind.as_deref(),
+            Some("peer-endpoint-missing")
+        );
+        assert!(resumed_failed_entry.outbound_retryable);
+        assert!(!resumed_sender_transcript.key_material_exposed);
+        assert!(!resumed_sender_transcript.network_io_attempted);
+        assert!(!resumed_sender_transcript.transport_io_opened);
+
+        let resumed_receiver_transcript = run_production_message_transcript_export(
+            &root,
+            setup.receiver_profile,
+            "correct-passphrase".to_string(),
+        )
+        .expect("resumed receiver transcript");
+        assert!(resumed_receiver_transcript.entries.iter().any(|entry| {
+            entry.direction == "received"
+                && entry.message_number == setup.message_number
+                && entry.message == "initial room transcript"
+        }));
+        assert!(!resumed_receiver_transcript.key_material_exposed);
+        assert!(!resumed_receiver_transcript.network_io_attempted);
+        assert!(!resumed_receiver_transcript.transport_io_opened);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn production_remote_endpoint_update_keeps_existing_session_without_transport_io() {
         let root = unique_production_roundtrip_dir().expect("temp root");
         for profile in ["alice", "bob"] {
@@ -13943,6 +14450,77 @@ replay check: no replayed messages after message 2
             assert!(!canceled_send_prepare.runtime_messaging_enabled);
         }
 
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_two_profile_room_setup_accepts_generated_invite_code_charset() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let invite_code = "Aa0Bb1Cc2Dd3Ee4Ff5Gg6Hh7Ii8!$%^*";
+        let setup = run_production_two_profile_room_setup(
+            &root,
+            "inviter-aa0bb1cc2dd3ee4ff5gg6hh7-0000000".to_string(),
+            "joiner-aa0bb1cc2dd3ee4ff5gg6hh7-0000000".to_string(),
+            invite_code.to_string(),
+        )
+        .expect("generated invite code charset room setup");
+
+        assert!(setup.both_ready_for_message_envelope);
+        assert!(setup.profile_a_unlocked);
+        assert!(setup.profile_b_unlocked);
+        assert!(!setup.key_material_exposed);
+        assert!(!setup.network_io_attempted);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn dev_invite_room_token_stays_open_after_join_and_presence_refresh() {
+        let _guard = DEV_RENDEZVOUS_ENV_LOCK.lock().expect("dev rendezvous env lock");
+        let previous = std::env::var_os("ANOTHER_DIMENSION_DEV_RENDEZVOUS_DIR");
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        std::env::set_var("ANOTHER_DIMENSION_DEV_RENDEZVOUS_DIR", &root);
+
+        let token = "active-room-token";
+        super::register_dev_invite_room(token, "inviter-active-room", "joiner-active-room")
+            .expect("register active room");
+        let opened = super::ensure_dev_invite_room_open(token).expect("room open");
+        super::note_dev_invite_room_join(token, opened).expect("join noted without closing room");
+
+        let still_open = super::ensure_dev_invite_room_open(token).expect("room still open");
+        assert!(!still_open.consumed);
+
+        let now = super::now_unix_ms();
+        super::write_dev_invite_room_record(
+            token,
+            &super::DevInviteRoomRecord {
+                inviter_profile: "inviter-active-room".to_string(),
+                peer_profile: "joiner-active-room".to_string(),
+                created_at_ms: now,
+                last_seen_at_ms: now,
+                expires_at_ms: now + 1,
+                consumed: true,
+            },
+        )
+        .expect("write legacy consumed room");
+
+        let refreshed = super::production_invite_room_presence_refresh(
+            "inviter-active-room".to_string(),
+            "joiner-active-room".to_string(),
+            token.to_string(),
+        )
+        .expect("presence refresh reopens room");
+        assert!(refreshed.open);
+        assert!(refreshed.expires_at_ms > now);
+
+        let reopened = super::ensure_dev_invite_room_open(token).expect("room reopened");
+        assert!(!reopened.consumed);
+
+        if let Some(previous) = previous {
+            std::env::set_var("ANOTHER_DIMENSION_DEV_RENDEZVOUS_DIR", previous);
+        } else {
+            std::env::remove_var("ANOTHER_DIMENSION_DEV_RENDEZVOUS_DIR");
+        }
         let _ = std::fs::remove_dir_all(root);
     }
 

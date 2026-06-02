@@ -1,5 +1,7 @@
 # Keep local searches focused on source and docs even before this directory is a git repository.
 target/
+.build-cache/
+.vite/
 node_modules/
 apps/desktop-tauri/node_modules/
 apps/desktop-tauri/dist/

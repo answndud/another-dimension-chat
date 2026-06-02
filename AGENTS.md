@@ -3,7 +3,7 @@
 ## 프로젝트 방향
 
 - 이 프로젝트는 "서버 없는 채팅"이 아니라 `no central trusted server` 기반 고위험 1:1 보안 메신저를 목표로 한다.
-- v0.1 기본 범위는 1:1 text only, 대면 QR 페어링, safety number 검증, Tor/onion transport, 로컬 암호화 저장, disappearing messages다.
+- v0.1 기본 범위는 1:1 text only, 초대 코드 기반 페어링, safety number 검증, Tor/onion transport, 로컬 암호화 저장, disappearing messages다.
 - 전화번호, 이메일, 글로벌 계정, 검색 가능한 username, 중앙 contact discovery, 중앙 메시지 서버, 푸시 알림, 클라우드 백업은 v0.1 범위가 아니다.
 - Signal보다 일반적으로 더 안전하다고 주장하지 않는다. 특정 위협 모델에서 전화번호/중앙 identity/contact discovery/delivery 의존을 줄인다고만 표현한다.
 

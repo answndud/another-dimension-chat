@@ -42,9 +42,9 @@ The crates.io latest at the time of this decision is `3.0.0-pre.7`. That pre-rel
 Ed25519 is a reasonable first fit for the current pairing model:
 
 - Pairing payloads need compact identity signatures.
-- QR payload size matters.
+- Pairing payload size matters.
 - Signature verification should be deterministic and testable.
-- The first pairing path is in-person QR, not public directory lookup.
+- The first pairing path is invite-code based, not public directory lookup.
 - Pairwise identity per contact is already the project direction.
 
 This does not decide message encryption, ratcheting, key agreement, storage encryption, or transport anonymity.

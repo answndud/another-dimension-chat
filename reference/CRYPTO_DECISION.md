@@ -79,7 +79,7 @@ The first session-establishment decision boundary is tracked in [SESSION_DECISIO
 The current architecture points toward this first production boundary:
 
 - Pairwise identity per contact.
-- In-person QR pairing as the first supported setup path.
+- Invite-code pairing as the first supported setup path.
 - Pairing payload includes identity material, signed session setup material, rendezvous endpoint, and capability commitments.
 - Safety number derives from a canonical transcript that includes the identity and setup material.
 - Safety material display is derived from the canonical transcript with a reviewed hash crate, while message encryption is handled by a reviewed session construction, not by the CLI or UI.
@@ -93,7 +93,7 @@ Current shortlist outcome:
 
 | Candidate | Shortlist status | Reason |
 | --- | --- | --- |
-| `snow` Noise XX boundary | **Evaluate first** | Already present as a narrow transcript-bound smoke boundary. Fits the current 1:1, in-person QR, synchronous-first scope without adding mailbox, directory, group, or multi-device assumptions. |
+| `snow` Noise XX boundary | **Evaluate first** | Already present as a narrow transcript-bound smoke boundary. Fits the current 1:1, invite-code, synchronous-first scope without adding mailbox, directory, group, or multi-device assumptions. |
 | Maintained Signal-style protocol implementation | **Defer until deeper review** | Potentially closer to a mature E2EE messaging model, but adoption would require a reviewed Rust integration path, prekey/session storage decisions, compatibility expectations, and stronger release review. |
 | Direct `x25519-dalek` plus custom session logic | **Do not select** | Low-level primitives are not a protocol. Building a custom session or ratchet from primitives would violate the no-custom-crypto rule. |
 | Standalone Double Ratchet crates | **Do not select first** | A ratchet crate alone does not solve identity binding, setup authentication, prekey distribution, safety material, persistence, or transport binding. |
@@ -127,7 +127,7 @@ The v0.1 product direction avoids a central identity or message server. That mak
 
 Allowed options to evaluate:
 
-- Include the first prekey bundle in the in-person QR pairing payload.
+- Include the first prekey bundle in the invite-code pairing payload.
 - Require both users to be online for the first production session.
 - Publish prekey bundles through an anonymized, untrusted rendezvous mechanism in a later phase.
 
