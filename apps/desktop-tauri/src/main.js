@@ -532,6 +532,9 @@ function localStoreKey(key) {
     (key.startsWith("ad.connectionCodeRole.") ||
       key === "ad.lastInviteRoom.v1" ||
       key === "ad.inviteRooms.v1" ||
+      key === "ad.receiveIntentRooms.v1" ||
+      key === "ad.localPrivateRouteCodes.v1" ||
+      key === "ad.peerPrivateRouteDrafts.v1" ||
       key === themeStorageKey ||
       key === languageStorageKey)
   ) {
@@ -1966,6 +1969,36 @@ function connectionCodeRoleStorageKey(code) {
 const lastInviteRoomStorageKey = "ad.lastInviteRoom.v1";
 const inviteRoomsStorageKey = "ad.inviteRooms.v1";
 const receiveIntentRoomsStorageKey = "ad.receiveIntentRooms.v1";
+const localPrivateRouteCodesStorageKey = "ad.localPrivateRouteCodes.v1";
+const peerPrivateRouteDraftsStorageKey = "ad.peerPrivateRouteDrafts.v1";
+
+function hydratePrivateRouteMap(storageKey, target) {
+  target.clear();
+  try {
+    const parsed = JSON.parse(localStoreGet(storageKey) ?? "{}");
+    const entries = Object.entries(parsed && typeof parsed === "object" ? parsed : {});
+    for (const [roomKey, routeCode] of entries.slice(-48)) {
+      const key = String(roomKey ?? "").trim();
+      const value = String(routeCode ?? "").trim();
+      if (key && value) {
+        target.set(key, value);
+      }
+    }
+  } catch {
+    target.clear();
+  }
+}
+
+function persistPrivateRouteMap(storageKey, source) {
+  const entries = [...source.entries()]
+    .map(([roomKey, routeCode]) => [String(roomKey ?? "").trim(), String(routeCode ?? "").trim()])
+    .filter(([roomKey, routeCode]) => roomKey && routeCode)
+    .slice(-48);
+  localStoreSet(storageKey, JSON.stringify(Object.fromEntries(entries)));
+}
+
+hydratePrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
+hydratePrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
 
 function rememberConnectionCodeRole(code, role) {
   const normalizedRole = role === "inviter" ? "inviter" : "joiner";
@@ -2071,6 +2104,14 @@ function forgetInviteRoom(code) {
   if (!trimmedCode) {
     return;
   }
+  for (const role of ["inviter", "joiner"]) {
+    const { localProfile, peerProfile } = productionInviteCodeProfiles(trimmedCode, role);
+    const roomKey = privateRouteRoomKey({ profileA: localProfile, profileB: peerProfile });
+    localPrivateRouteCodesByRoom.delete(roomKey);
+    peerPrivateRouteDraftsByRoom.delete(roomKey);
+  }
+  persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
+  persistPrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
   const rooms = savedInviteRooms().filter((room) => room.code !== trimmedCode);
   localStoreSet(inviteRoomsStorageKey, JSON.stringify(roomListStoragePayload(rooms)));
   renderSavedInviteRooms();
@@ -2906,6 +2947,7 @@ function rememberPeerPrivateRouteDraft(input = productionTwoProfileInput()) {
   } else {
     peerPrivateRouteDraftsByRoom.delete(roomKey);
   }
+  persistPrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
 }
 
 function twoProfileAutoResumeFingerprint(input = productionTwoProfileInput()) {
@@ -3200,6 +3242,7 @@ function rememberLocalPrivateRouteCode(code, input = productionTwoProfileInput()
     } else {
       localPrivateRouteCodesByRoom.delete(roomKey);
     }
+    persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
   }
   if (fields.localPrivateRouteCode) {
     fields.localPrivateRouteCode.value = latestLocalPrivateRouteCode;
