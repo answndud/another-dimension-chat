@@ -1123,14 +1123,33 @@ body.is-room-list-mode .room-list-panel {
 }
 
 .saved-room-state.is-active,
-.saved-room-state.is-ready {
+.saved-room-state.is-ready,
+.saved-room-state.is-listening {
   border-color: color-mix(in srgb, var(--accent-cyan) 52%, var(--panel-border));
   color: var(--text-primary);
+}
+
+.saved-room-list-item.is-listening {
+  border-color: color-mix(in srgb, var(--success) 48%, var(--panel-border));
+}
+
+.saved-room-state.is-listening {
+  border-color: color-mix(in srgb, var(--success) 58%, var(--panel-border));
+  color: var(--success);
 }
 
 .saved-room-state.is-invite-open {
   border-color: color-mix(in srgb, var(--warning) 58%, var(--panel-border));
   color: var(--text-primary);
+}
+
+.saved-room-state.is-receive-paused,
+.saved-room-list-item.needs-receive-restart {
+  border-color: color-mix(in srgb, var(--warning) 52%, var(--panel-border));
+}
+
+.saved-room-state.is-receive-paused {
+  color: var(--warning);
 }
 
 .saved-room-remove {

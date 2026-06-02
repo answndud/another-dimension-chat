@@ -2142,8 +2142,38 @@ function savedInviteRoomLabel(room) {
   return `${role} ${shortSlug}`;
 }
 
+function savedInviteRoomInput(room) {
+  const code = String(room?.code ?? "").trim();
+  const role = room?.role === "inviter" ? "inviter" : room?.role === "joiner" ? "joiner" : "";
+  if (!code || !role) {
+    return { profileA: "", profileB: "", passphrase: "" };
+  }
+  const { localProfile, peerProfile } = productionInviteCodeProfiles(code, role);
+  return { profileA: localProfile, profileB: peerProfile, passphrase: code };
+}
+
+function savedInviteRoomReceiveState(room) {
+  const input = savedInviteRoomInput(room);
+  const listening = Boolean(
+    productionTwoProfileOnionReceiveMode.enabled &&
+      !productionTwoProfileOnionReceiveMode.stopRequested &&
+      productionTwoProfileOnionReceiveMode.profile === input.profileA,
+  );
+  if (listening) {
+    return "listening";
+  }
+  return receiveIntentForRoom(input) ? "paused" : "";
+}
+
 function savedInviteRoomState(room) {
   const currentCode = currentInviteRoomCode();
+  const receiveState = savedInviteRoomReceiveState(room);
+  if (receiveState === "listening") {
+    return { key: "listening", label: t("roomStateListening") };
+  }
+  if (receiveState === "paused") {
+    return { key: "receive-paused", label: t("roomStateReceivePaused") };
+  }
   if (room.code === currentCode && roomDetailOpen) {
     return { key: "active", label: t("roomStateActive") };
   }
@@ -2191,6 +2221,9 @@ function renderSavedInviteRooms() {
     const item = document.createElement("li");
     item.className = "saved-room-list-item";
     item.classList.toggle("is-current", room.code === currentCode);
+    const receiveState = savedInviteRoomReceiveState(room);
+    item.classList.toggle("is-listening", receiveState === "listening");
+    item.classList.toggle("needs-receive-restart", receiveState === "paused");
     const summary = document.createElement("span");
     summary.className = "saved-room-summary";
     const title = document.createElement("span");
@@ -9913,6 +9946,7 @@ async function startProductionTwoProfileOnionReceive() {
   );
   applyProductionActionState();
   renderRoomIdentityBar(input, true);
+  renderSavedInviteRooms();
   scheduleProductionTwoProfileOnionReceiveStatusPoll(1_000);
 }
 
@@ -10172,6 +10206,7 @@ function stopProductionTwoProfileOnionReceive() {
   setText(fields.productionTwoProfileWarning, profile ? t("receiveStopPending") : t("receiveStopped"));
   setText(fields.productionTwoProfileMessageState, t("receiveStopping"));
   applyProductionActionState();
+  renderSavedInviteRooms();
   invoke("production_onion_receive_loop_stop")
     .then((backendLoop) => {
       setText(
@@ -10184,6 +10219,7 @@ function stopProductionTwoProfileOnionReceive() {
         markProductionTwoProfileOnionReceiveStopped(backendLoop);
         setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
         setText(fields.productionTwoProfileWarning, t("receiveStopped"));
+        renderSavedInviteRooms();
       }
     })
     .catch((error) => {
@@ -10196,6 +10232,7 @@ function stopProductionTwoProfileOnionReceive() {
       setText(fields.productionTwoProfileWarning, t("receiveStopFailed"));
       setText(fields.productionTwoProfileBoundary, `Backend receive loop stop failed without returning secrets. ${error}`);
       applyProductionActionState();
+      renderSavedInviteRooms();
     });
 }
 
