@@ -66,6 +66,7 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(mainJs, /function rememberCurrentInviteRoomMetadata/);
   assert.match(mainJs, /function syncSavedInviteRoomMetadataFromLocalStores/);
   assert.match(mainJs, /let savedRoomMetadataSyncInFlight = false/);
+  assert.match(mainJs, /const savedRoomMetadataStartupSyncLimit = 8/);
   assert.match(mainJs, /function savedInviteRoomResumeRoom/);
   assert.match(mainJs, /createNewInviteRoomFromList/);
   assert.match(mainJs, /createRoomFromRoomListInviteCode/);
@@ -79,7 +80,10 @@ test("saved rooms can be listed and reopened", () => {
   assert.doesNotMatch(mainJs, /restoreLastInviteRoom\(\);/);
   assert.match(mainJs, /showRoomList\(\);\s*syncSavedInviteRoomMetadataFromLocalStores\(\);/);
   assert.match(functionBody(mainJs, "savedInviteRoomMetadataFromLocalStores"), /production_message_transcript_export/);
+  assert.match(functionBody(mainJs, "savedInviteRoomMetadataSyncCandidates"), /savedInviteRoomResumePriority\(right\) - savedInviteRoomResumePriority\(left\)/);
+  assert.match(functionBody(mainJs, "savedInviteRoomMetadataSyncCandidates"), /slice\(0, savedRoomMetadataStartupSyncLimit\)/);
   assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /rememberInviteRoom\(room\.code, room\.role/);
+  assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /savedInviteRoomMetadataSyncCandidates\(\)/);
   assert.match(indexHtml, /id="back-to-room-list"/);
   assert.match(stylesCss, /body\.is-room-list-mode [\s\S]*#production-two-profile-transcript/);
   assert.match(stylesCss, /body\.is-room-detail-mode \.room-list-panel/);

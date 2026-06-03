@@ -2048,6 +2048,8 @@ const inviteRoomsStorageKey = "ad.inviteRooms.v1";
 const receiveIntentRoomsStorageKey = "ad.receiveIntentRooms.v1";
 const localPrivateRouteCodesStorageKey = "ad.localPrivateRouteCodes.v1";
 const peerPrivateRouteDraftsStorageKey = "ad.peerPrivateRouteDrafts.v1";
+const savedInviteRoomStorageLimit = 24;
+const savedRoomMetadataStartupSyncLimit = 8;
 
 function hydratePrivateRouteMap(storageKey, target) {
   target.clear();
@@ -2156,7 +2158,7 @@ function savedInviteRooms() {
 }
 
 function roomListStoragePayload(rooms) {
-  return rooms.slice(0, 24).map((room) => ({
+  return rooms.slice(0, savedInviteRoomStorageLimit).map((room) => ({
     code: room.code,
     role: room.role,
     updatedAt: Number(room.updatedAt ?? 0),
@@ -2405,13 +2407,23 @@ async function savedInviteRoomMetadataFromLocalStores(room) {
   ]);
 }
 
+function savedInviteRoomMetadataSyncCandidates(rooms = savedInviteRooms()) {
+  return (Array.isArray(rooms) ? rooms : [])
+    .slice()
+    .sort((left, right) => {
+      const priority = savedInviteRoomResumePriority(right) - savedInviteRoomResumePriority(left);
+      return priority || Number(right.updatedAt ?? 0) - Number(left.updatedAt ?? 0);
+    })
+    .slice(0, savedRoomMetadataStartupSyncLimit);
+}
+
 async function syncSavedInviteRoomMetadataFromLocalStores() {
   if (savedRoomMetadataSyncInFlight) {
     return false;
   }
   savedRoomMetadataSyncInFlight = true;
   try {
-    for (const room of savedInviteRooms()) {
+    for (const room of savedInviteRoomMetadataSyncCandidates()) {
       try {
         const metadata = await savedInviteRoomMetadataFromLocalStores(room);
         if (metadata) {
