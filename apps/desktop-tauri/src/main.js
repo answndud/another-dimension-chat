@@ -2710,6 +2710,9 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `real_onion_retryable=${realOnionRecovery.retryable === true}`,
     `real_onion_wait_cancellable=${realOnionRecovery.waitCancellable === true}`,
     `real_onion_wait_cancelled=${realOnionWaitCancelled === true}`,
+    `real_onion_bootstrap_retry_limit=${Number.parseInt(realOnionResult?.bootstrap_retry_limit ?? 0, 10) || 0}`,
+    `real_onion_profile_a_bootstrap_attempts=${Number.parseInt(realOnionResult?.profile_a_bootstrap_attempts ?? 0, 10) || 0}`,
+    `real_onion_profile_b_bootstrap_attempts=${Number.parseInt(realOnionResult?.profile_b_bootstrap_attempts ?? 0, 10) || 0}`,
     `real_onion_network_io=${realOnionResult?.network_io_attempted === true}`,
     `real_onion_transport_io=${realOnionResult?.transport_io_opened === true}`,
     `real_onion_runtime=${realOnionResult?.runtime_messaging_enabled === true}`,
@@ -7329,9 +7332,13 @@ function applyProductionActionState() {
   const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(realOnionResult);
   const realOnionWaitCanceled = realOnionWaitCanceledForInput(twoProfile);
   const realOnionRoundtripActive = productionBusyAction === "two-profile-real-onion-roundtrip";
-  const realOnionRetryReady = realOnionRecovery.action === "retry-bootstrap" && !realOnionWaitCanceled;
+  const realOnionRetryReady =
+    realOnionRecovery.action === "retry-bootstrap" || realOnionRecovery.action === "bootstrap-cancelled";
   const realOnionCancelWaitReady =
-    realOnionRoundtripActive || (realOnionRetryReady && realOnionRecovery.waitCancellable === true);
+    realOnionRoundtripActive ||
+    (realOnionRecovery.action === "retry-bootstrap" &&
+      realOnionRecovery.waitCancellable === true &&
+      !realOnionWaitCanceled);
   const realOnionRunLabel = fields.runProductionTwoProfileRealOnionRoundtrip?.querySelector("[data-i18n]");
   if (realOnionRunLabel) {
     setText(realOnionRunLabel, t(realOnionRetryReady ? "retryPrivateDelivery" : "runRealOnionRoundtrip"));
@@ -10789,6 +10796,13 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     return;
   }
 
+  const previousRealOnionResult = latestRealOnionFieldTestResult({ profileA, profileB });
+  const previousRealOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(previousRealOnionResult);
+  const bootstrapRetryLimit =
+    previousRealOnionRecovery.action === "retry-bootstrap" ||
+    previousRealOnionRecovery.action === "bootstrap-cancelled"
+      ? 2
+      : 1;
   latestProductionTwoProfileRealOnionWaitCanceledFingerprint = "";
   setProductionTwoProfileState("Private delivery running");
   setText(fields.productionTwoProfileWarning, t("chatNoticeSending"));
@@ -10810,6 +10824,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       message,
       messageTtlSeconds,
       manualNetworkPermission,
+      bootstrapRetryLimit,
     });
     latestProductionTwoProfileRealOnionResult = {
       roomFingerprint: twoProfileSessionStatusFingerprint({ profileA, profileB }),
