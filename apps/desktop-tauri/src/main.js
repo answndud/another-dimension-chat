@@ -1136,6 +1136,15 @@ function isLocalPrivateRouteCodeNoticeKey(key = latestChatDeliveryNoticeKey) {
   );
 }
 
+function privateRouteRecoveryNoticeActive(key = latestChatDeliveryNoticeKey) {
+  return (
+    key === "sendRuntimeMismatch" ||
+    key === "privateRouteCodeReady" ||
+    key === "privateRouteCodeReadyForReceive" ||
+    key === "peerPrivateRouteCodeMissing"
+  );
+}
+
 function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
   if (!fields.chatDeliveryNotice) {
     return;
@@ -1216,7 +1225,7 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     action.type = "button";
     action.className = "chat-delivery-notice-action";
     action.textContent = t("preparePrivateRoute");
-    action.addEventListener("click", preparePrivateDeliveryRoute);
+    action.addEventListener("click", () => preparePrivateDeliveryRoute({ forceRefresh: true }));
     fields.chatDeliveryNotice.append(action);
   } else if (latestChatDeliveryNoticeKey === "peerPrivateRouteCodeMissing" && latestLocalPrivateRouteCode) {
     const action = document.createElement("button");
@@ -3689,14 +3698,15 @@ function showPrivateRouteExchange() {
   document.body.classList.add("shows-private-route-exchange");
 }
 
-function focusPrivateRouteNextAction(input = productionTwoProfileInput()) {
+function focusPrivateRouteNextAction(input = productionTwoProfileInput(), options = {}) {
+  const forceRefresh = options.forceRefresh === true;
   showPrivateRouteExchange();
-  renderPrivateRouteExchangeState(input);
+  renderPrivateRouteExchangeState(input, { forceRefresh });
   if (!manualNetworkPermissionEnabled()) {
     openPrivateDeliverySettings();
     return "permission";
   }
-  if (twoProfilePeerEndpointState(input).ready) {
+  if (twoProfilePeerEndpointState(input).ready && !forceRefresh) {
     fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
     return "ready";
   }
@@ -3712,8 +3722,8 @@ function focusPrivateRouteNextAction(input = productionTwoProfileInput()) {
   return "apply-peer";
 }
 
-function renderPrivateRouteExchangeState(input = productionTwoProfileInput()) {
-  const routeReady = twoProfilePeerEndpointState(input).ready;
+function renderPrivateRouteExchangeState(input = productionTwoProfileInput(), options = {}) {
+  const routeReady = twoProfilePeerEndpointState(input).ready && options.forceRefresh !== true;
   const hasLocal = Boolean(latestLocalPrivateRouteCode);
   const hasActiveLocal = localPrivateRouteCodeIsActive(input);
   const hasPeerDraft = Boolean((fields.peerPrivateRouteCode?.value ?? "").trim());
@@ -7256,9 +7266,15 @@ function applyProductionActionState() {
       twoProfileSafetyConfirmed &&
       !peerEndpointState.ready,
   );
+  const routeRecoveryReady = Boolean(
+    hasTwoProfileSessionStatusInput &&
+      twoProfileSessionsReady &&
+      twoProfileSafetyConfirmed &&
+      privateRouteRecoveryNoticeActive(),
+  );
   setActionButtonState(
     fields.preparePrivateRoute,
-    busy || !routePreparationReady || !manualNetworkPermission,
+    busy || !(routePreparationReady || routeRecoveryReady) || !manualNetworkPermission,
     busy
       ? "Wait for the active production action."
       : !twoProfileSessionsReady
@@ -7267,19 +7283,21 @@ function applyProductionActionState() {
         ? t("sendLockedUntilVerified")
       : !manualNetworkPermission
         ? t("privateDeliveryPermissionRequired")
+      : routeRecoveryReady
+        ? t("sendRuntimeMismatch")
       : peerEndpointState.ready
         ? "Private route is ready."
         : "Prepare local and peer address records after your explicit action.",
-    routePreparationReady && manualNetworkPermission,
+    (routePreparationReady || routeRecoveryReady) && manualNetworkPermission,
   );
   if (fields.privateRouteExchange) {
     const showRouteExchange =
-      routePreparationReady &&
+      (routePreparationReady || routeRecoveryReady) &&
       manualNetworkPermission &&
       (twoProfileInviteCodeModeActive() || document.body.classList.contains("shows-private-route-exchange"));
     fields.privateRouteExchange.hidden = !showRouteExchange;
   }
-  renderPrivateRouteExchangeState(twoProfile);
+  renderPrivateRouteExchangeState(twoProfile, { forceRefresh: routeRecoveryReady });
   setActionButtonState(
     fields.copyPrivateRouteCode,
     busy || !latestLocalPrivateRouteCode || !localPrivateRouteCodeIsActive(twoProfile),
@@ -7293,10 +7311,10 @@ function applyProductionActionState() {
   );
   setActionButtonState(
     fields.applyPeerPrivateRouteCode,
-    busy || !routePreparationReady || !manualNetworkPermission || !(fields.peerPrivateRouteCode?.value ?? "").trim(),
+    busy || !(routePreparationReady || routeRecoveryReady) || !manualNetworkPermission || !(fields.peerPrivateRouteCode?.value ?? "").trim(),
     busy
       ? "Wait for the active production action."
-      : !routePreparationReady
+      : !(routePreparationReady || routeRecoveryReady)
         ? t("refreshAddressNeedsReadyRoom")
       : !manualNetworkPermission
         ? t("privateDeliveryPermissionRequired")
@@ -9138,7 +9156,8 @@ async function copyLocalPrivateRouteCode() {
   }
 }
 
-async function preparePrivateDeliveryRoute() {
+async function preparePrivateDeliveryRoute(options = {}) {
+  const forceRefresh = options.forceRefresh === true;
   const input = productionTwoProfileInput();
   if (!input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
     openChatSettingsPanel(fields.productionTwoProfileB);
@@ -9161,7 +9180,7 @@ async function preparePrivateDeliveryRoute() {
     openPrivateDeliverySettings();
     return;
   }
-  if (twoProfilePeerEndpointState(input).ready) {
+  if (twoProfilePeerEndpointState(input).ready && !forceRefresh) {
     setProductionTwoProfileState("Private route ready");
     setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteReady"));
     setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success");
@@ -9169,7 +9188,7 @@ async function preparePrivateDeliveryRoute() {
   }
 
   if (twoProfileInviteCodeModeActive()) {
-    const nextRouteAction = focusPrivateRouteNextAction(input);
+    const nextRouteAction = focusPrivateRouteNextAction(input, { forceRefresh });
     if (nextRouteAction === "paste-peer") {
       setProductionTwoProfileState("Peer delivery code needed");
       setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
@@ -13142,7 +13161,9 @@ if (fields.sendProductionTwoProfileLatestOnionEnvelope) {
 }
 
 if (fields.preparePrivateRoute) {
-  fields.preparePrivateRoute.addEventListener("click", preparePrivateDeliveryRoute);
+  fields.preparePrivateRoute.addEventListener("click", () =>
+    preparePrivateDeliveryRoute({ forceRefresh: latestChatDeliveryNoticeKey === "sendRuntimeMismatch" }),
+  );
 }
 if (fields.copyPrivateRouteCode) {
   fields.copyPrivateRouteCode.addEventListener("click", copyLocalPrivateRouteCode);
