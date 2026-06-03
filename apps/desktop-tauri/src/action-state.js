@@ -590,6 +590,13 @@ export function productionInviteRoomConversationMetadata(entries) {
   const sortedEntries = (Array.isArray(entries) ? entries : []).slice().sort((left, right) =>
     productionTwoProfileConversationCompare(left, right, "desc"),
   );
+  const retryableOutboundEntries = sortedEntries.filter(
+    (entry) =>
+      entry?.outboundRetryable === true &&
+      entry?.outboundDeliveryState !== "canceled" &&
+      entry?.outboundDeliveryState !== "sent",
+  );
+  const latestRetryableOutbound = retryableOutboundEntries[0] ?? null;
   const latest = sortedEntries.find((entry) => String(entry?.message ?? "").trim());
   const preview = String(latest?.message ?? "")
     .replace(/\s+/g, " ")
@@ -598,6 +605,8 @@ export function productionInviteRoomConversationMetadata(entries) {
     lastMessagePreview: preview.length > 72 ? `${preview.slice(0, 72)}...` : preview,
     lastMessageAt: latest?.createdAtMs ? Number(latest.createdAtMs) : sortedEntries.length ? Date.now() : 0,
     messageCount: sortedEntries.length,
+    retryableOutboundCount: retryableOutboundEntries.length,
+    retryableOutboundMessageNumber: latestRetryableOutbound?.messageNumber ?? null,
   };
 }
 

@@ -2121,6 +2121,11 @@ function savedInviteRooms() {
           lastMessagePreview: String(room?.lastMessagePreview ?? "").trim(),
           lastMessageAt: Number(room?.lastMessageAt ?? 0),
           messageCount: Math.max(0, Number.parseInt(room?.messageCount ?? 0, 10) || 0),
+          retryableOutboundCount: Math.max(
+            0,
+            Number.parseInt(room?.retryableOutboundCount ?? 0, 10) || 0,
+          ),
+          retryableOutboundMessageNumber: Number.parseInt(room?.retryableOutboundMessageNumber ?? 0, 10) || 0,
         }))
         .filter((room) => room.code && room.role);
     }
@@ -2132,7 +2137,16 @@ function savedInviteRooms() {
     const code = String(saved?.code ?? "").trim();
     const role = saved?.role === "inviter" ? "inviter" : saved?.role === "joiner" ? "joiner" : "";
     if (code && role && !rooms.some((room) => room.code === code)) {
-      rooms.push({ code, role, updatedAt: 0, lastMessagePreview: "", lastMessageAt: 0, messageCount: 0 });
+      rooms.push({
+        code,
+        role,
+        updatedAt: 0,
+        lastMessagePreview: "",
+        lastMessageAt: 0,
+        messageCount: 0,
+        retryableOutboundCount: 0,
+        retryableOutboundMessageNumber: 0,
+      });
     }
   } catch {
     // Ignore legacy room migration failures.
@@ -2148,6 +2162,8 @@ function roomListStoragePayload(rooms) {
     lastMessagePreview: String(room.lastMessagePreview ?? "").trim(),
     lastMessageAt: Number(room.lastMessageAt ?? 0),
     messageCount: Math.max(0, Number.parseInt(room.messageCount ?? 0, 10) || 0),
+    retryableOutboundCount: Math.max(0, Number.parseInt(room.retryableOutboundCount ?? 0, 10) || 0),
+    retryableOutboundMessageNumber: Number.parseInt(room.retryableOutboundMessageNumber ?? 0, 10) || 0,
   }));
 }
 
@@ -2170,6 +2186,12 @@ function rememberInviteRoom(code, role, metadata = {}) {
       0,
       Number.parseInt(metadata.messageCount ?? existing.messageCount ?? 0, 10) || 0,
     ),
+    retryableOutboundCount: Math.max(
+      0,
+      Number.parseInt(metadata.retryableOutboundCount ?? existing.retryableOutboundCount ?? 0, 10) || 0,
+    ),
+    retryableOutboundMessageNumber:
+      Number.parseInt(metadata.retryableOutboundMessageNumber ?? existing.retryableOutboundMessageNumber ?? 0, 10) || 0,
   });
   localStoreSet(inviteRoomsStorageKey, JSON.stringify(roomListStoragePayload(rooms)));
   renderSavedInviteRooms();
@@ -2216,6 +2238,17 @@ function savedInviteRoomLabel(room) {
   return `${role} ${shortSlug}`;
 }
 
+function savedInviteRoomPreview(room) {
+  const preview = String(room?.lastMessagePreview ?? "").trim() || t("roomPreviewEmpty");
+  if (savedInviteRoomHasRetryableOutbound(room)) {
+    const messageNumber = Number.parseInt(room?.retryableOutboundMessageNumber ?? 0, 10) || "";
+    return messageNumber
+      ? formatTemplate("roomPreviewRetryableSendNumber", { number: messageNumber })
+      : formatTemplate("roomPreviewRetryableSend", { preview });
+  }
+  return preview;
+}
+
 function savedInviteRoomInput(room) {
   const code = String(room?.code ?? "").trim();
   const role = room?.role === "inviter" ? "inviter" : room?.role === "joiner" ? "joiner" : "";
@@ -2253,6 +2286,10 @@ function savedInviteRoomWaitingForPeerCode(room) {
   );
 }
 
+function savedInviteRoomHasRetryableOutbound(room) {
+  return Number.parseInt(room?.retryableOutboundCount ?? 0, 10) > 0;
+}
+
 function savedInviteRoomState(room) {
   const currentCode = currentInviteRoomCode();
   const receiveState = savedInviteRoomReceiveState(room);
@@ -2261,6 +2298,9 @@ function savedInviteRoomState(room) {
   }
   if (receiveState === "paused") {
     return { key: "receive-paused", label: t("roomStateReceivePaused") };
+  }
+  if (savedInviteRoomHasRetryableOutbound(room)) {
+    return { key: "retry-send", label: t("roomStateRetrySend") };
   }
   if (savedInviteRoomWaitingForPeerCode(room)) {
     return { key: "waiting-peer-code", label: t("roomStateWaitingPeerCode") };
@@ -2278,6 +2318,9 @@ function savedInviteRoomState(room) {
 }
 
 function savedInviteRoomListAction(room) {
+  if (savedInviteRoomHasRetryableOutbound(room)) {
+    return { action: "review-send", labelKey: "roomActionReviewSend" };
+  }
   if (savedInviteRoomWaitingForPeerCode(room)) {
     return { action: "paste-peer-code", labelKey: "roomActionPastePeerCode" };
   }
@@ -2295,6 +2338,16 @@ async function runSavedInviteRoomListAction(room, action) {
   if (action === "paste-peer-code") {
     rememberPrivateRouteFollowup("receive", productionTwoProfileInput());
     focusPrivateRouteNextAction(productionTwoProfileInput());
+    return true;
+  }
+  if (action === "review-send") {
+    const pending = latestVisibleTwoProfileRetryableOutboundEntry(productionTwoProfileInput());
+    if (pending) {
+      selectTwoProfileConversationEntry(pending);
+      showRetryableTwoProfileOutboundNotice(pending);
+    } else {
+      showLatestRetryableOutboundNotice(productionTwoProfileInput());
+    }
     return true;
   }
   if (action === "start-receiving") {
@@ -2355,6 +2408,7 @@ function renderSavedInviteRooms() {
     item.classList.toggle("is-listening", receiveState === "listening");
     item.classList.toggle("needs-receive-restart", receiveState === "paused");
     item.classList.toggle("is-waiting-peer-code", savedInviteRoomWaitingForPeerCode(room));
+    item.classList.toggle("has-retryable-send", savedInviteRoomHasRetryableOutbound(room));
     const summary = document.createElement("span");
     summary.className = "saved-room-summary";
     const title = document.createElement("span");
@@ -2362,7 +2416,7 @@ function renderSavedInviteRooms() {
     title.textContent = savedInviteRoomLabel(room);
     const preview = document.createElement("span");
     preview.className = "saved-room-preview";
-    preview.textContent = room.lastMessagePreview || t("roomPreviewEmpty");
+    preview.textContent = savedInviteRoomPreview(room);
     const meta = document.createElement("span");
     meta.className = "saved-room-meta";
     meta.textContent = `${savedInviteRoomShortSlug(room)} / ${formatTemplate("roomMessageCount", {

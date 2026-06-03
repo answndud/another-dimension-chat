@@ -386,6 +386,8 @@ test("room list metadata follows latest imported conversation entry", () => {
     lastMessagePreview: "latest receive import",
     lastMessageAt: 300,
     messageCount: 2,
+    retryableOutboundCount: 0,
+    retryableOutboundMessageNumber: null,
   });
   assert.equal(entries[0].messageNumber, 1);
 });
@@ -407,6 +409,40 @@ test("room list metadata truncates long previews without losing message count", 
       lastMessagePreview: `${"a".repeat(72)}...`,
       lastMessageAt: 200,
       messageCount: 1,
+      retryableOutboundCount: 0,
+      retryableOutboundMessageNumber: null,
+    },
+  );
+});
+
+test("room list metadata carries retryable outbound state", () => {
+  assert.deepEqual(
+    productionInviteRoomConversationMetadata([
+      {
+        sender: "alice",
+        receiver: "bob",
+        messageNumber: 3,
+        message: "still saved",
+        createdAtMs: 400,
+        outboundDeliveryState: "failed",
+        outboundRetryable: true,
+      },
+      {
+        sender: "alice",
+        receiver: "bob",
+        messageNumber: 2,
+        message: "sent",
+        createdAtMs: 300,
+        outboundDeliveryState: "sent",
+        outboundRetryable: true,
+      },
+    ]),
+    {
+      lastMessagePreview: "still saved",
+      lastMessageAt: 400,
+      messageCount: 2,
+      retryableOutboundCount: 1,
+      retryableOutboundMessageNumber: 3,
     },
   );
 });
