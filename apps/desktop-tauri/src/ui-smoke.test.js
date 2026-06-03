@@ -91,11 +91,16 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "savedInviteRoomReceiveState"), /receiveIntentForRoom\(input\)/);
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateListening/);
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateReceivePaused/);
+  assert.match(mainJs, /function savedInviteRoomWaitingForPeerCode/);
+  assert.match(functionBody(mainJs, "savedInviteRoomWaitingForPeerCode"), /activeLocalPrivateRouteCodesByRoom\.get\(roomKey\)/);
+  assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateWaitingPeerCode/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /needs-receive-restart/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /is-waiting-peer-code/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
   assert.match(stylesCss, /\.saved-room-state\.is-listening/);
   assert.match(stylesCss, /\.saved-room-state\.is-receive-paused/);
+  assert.match(stylesCss, /\.saved-room-state\.is-waiting-peer-code/);
 });
 
 test("receive controls are scoped to the active room", () => {
@@ -285,6 +290,7 @@ test("send diagnostics expose runtime owner match without raw profile names", ()
   assert.match(mainJs, /latestChatDeliveryNoticeKey === "sendRuntimeMismatch"/);
   assert.match(mainJs, /preparePrivateDeliveryRoute\(\{ forceRefresh: true \}\)/);
   assert.match(mainJs, /function privateRouteRecoveryNoticeActive/);
+  assert.match(functionBody(mainJs, "privateRouteRecoveryNoticeActive"), /privateRouteWaitingPeerCode/);
   assert.match(functionBody(mainJs, "applyProductionActionState"), /routeRecoveryReady/);
   assert.match(functionBody(mainJs, "buildFieldTestReport"), /sendAttemptBoundaryText/);
   assert.match(functionBody(mainJs, "buildFieldTestReport"), /send_runtime_owner_matches_send_profile=/);
