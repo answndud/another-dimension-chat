@@ -2290,31 +2290,58 @@ function savedInviteRoomHasRetryableOutbound(room) {
   return Number.parseInt(room?.retryableOutboundCount ?? 0, 10) > 0;
 }
 
-function savedInviteRoomState(room) {
-  const currentCode = currentInviteRoomCode();
-  const receiveState = savedInviteRoomReceiveState(room);
-  if (receiveState === "listening") {
-    return { key: "listening", label: t("roomStateListening") };
-  }
-  if (receiveState === "paused") {
-    return { key: "receive-paused", label: t("roomStateReceivePaused") };
-  }
+function savedInviteRoomResumePriority(room) {
   if (savedInviteRoomHasRetryableOutbound(room)) {
-    return { key: "retry-send", label: t("roomStateRetrySend") };
+    return 30;
+  }
+  if (savedInviteRoomReceiveState(room) === "paused") {
+    return 20;
   }
   if (savedInviteRoomWaitingForPeerCode(room)) {
-    return { key: "waiting-peer-code", label: t("roomStateWaitingPeerCode") };
+    return 10;
   }
-  if (room.code === currentCode && roomDetailOpen) {
-    return { key: "active", label: t("roomStateActive") };
-  }
-  if (room.code === currentCode && currentInviteCodeShareVisible) {
-    return { key: "invite-open", label: t("roomStateInviteOpen") };
-  }
-  if (room.messageCount > 0) {
-    return { key: "ready", label: t("roomStateReady") };
-  }
-  return { key: "saved", label: t("roomStateSaved") };
+  return 0;
+}
+
+function savedInviteRoomResumeRoom(rooms = savedInviteRooms()) {
+  return (Array.isArray(rooms) ? rooms : [])
+    .filter((room) => savedInviteRoomResumePriority(room) > 0)
+    .sort((left, right) => {
+      const priority = savedInviteRoomResumePriority(right) - savedInviteRoomResumePriority(left);
+      return priority || Number(right.updatedAt ?? 0) - Number(left.updatedAt ?? 0);
+    })[0] ?? null;
+}
+
+function savedInviteRoomState(room, options = {}) {
+  const currentCode = currentInviteRoomCode();
+  const receiveState = savedInviteRoomReceiveState(room);
+  const view = (() => {
+    if (receiveState === "listening") {
+      return { key: "listening", label: t("roomStateListening") };
+    }
+    if (receiveState === "paused") {
+      return { key: "receive-paused", label: t("roomStateReceivePaused") };
+    }
+    if (savedInviteRoomHasRetryableOutbound(room)) {
+      return { key: "retry-send", label: t("roomStateRetrySend") };
+    }
+    if (savedInviteRoomWaitingForPeerCode(room)) {
+      return { key: "waiting-peer-code", label: t("roomStateWaitingPeerCode") };
+    }
+    if (room.code === currentCode && roomDetailOpen) {
+      return { key: "active", label: t("roomStateActive") };
+    }
+    if (room.code === currentCode && currentInviteCodeShareVisible) {
+      return { key: "invite-open", label: t("roomStateInviteOpen") };
+    }
+    if (room.messageCount > 0) {
+      return { key: "ready", label: t("roomStateReady") };
+    }
+    return { key: "saved", label: t("roomStateSaved") };
+  })();
+  return options.resumeRecommended
+    ? { ...view, label: formatTemplate("roomStateResumeNext", { state: view.label }) }
+    : view;
 }
 
 function savedInviteRoomListAction(room) {
@@ -2400,10 +2427,13 @@ function renderSavedInviteRooms() {
     return;
   }
   const currentCode = currentInviteRoomCode();
+  const resumeRoom = savedInviteRoomResumeRoom(rooms);
   for (const room of rooms) {
     const item = document.createElement("li");
     item.className = "saved-room-list-item";
     item.classList.toggle("is-current", room.code === currentCode);
+    const resumeRecommended = Boolean(resumeRoom && room.code === resumeRoom.code && room.role === resumeRoom.role);
+    item.classList.toggle("is-resume-recommended", resumeRecommended);
     const receiveState = savedInviteRoomReceiveState(room);
     item.classList.toggle("is-listening", receiveState === "listening");
     item.classList.toggle("needs-receive-restart", receiveState === "paused");
@@ -2423,7 +2453,7 @@ function renderSavedInviteRooms() {
       count: room.messageCount,
     })}`;
     summary.append(title, preview, meta);
-    const stateView = savedInviteRoomState(room);
+    const stateView = savedInviteRoomState(room, { resumeRecommended });
     const state = document.createElement("span");
     state.className = `saved-room-state is-${stateView.key}`;
     state.textContent = stateView.label;
