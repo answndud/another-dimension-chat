@@ -241,6 +241,8 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /receive_failure_kind=/);
   assert.match(reportBody, /real_onion_next_blocker=/);
   assert.match(reportBody, /real_onion_blockers=/);
+  assert.match(reportBody, /real_onion_recovery_action=/);
+  assert.match(reportBody, /real_onion_wait_cancellable=/);
   assert.match(reportBody, /real_onion_network_io=/);
   assert.match(reportBody, /redacted_boundary=/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /productionTwoProfileRealOnionSyntheticFailureResult/);

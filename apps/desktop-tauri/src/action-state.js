@@ -1320,6 +1320,66 @@ export function productionTwoProfileRealOnionResultView(result) {
   };
 }
 
+export function productionTwoProfileRealOnionRecoveryPlan(result) {
+  if (!result) {
+    return {
+      action: "none",
+      retryable: false,
+      waitCancellable: false,
+      reason: "not-attempted",
+    };
+  }
+  if (result?.next_blocker === "none") {
+    return {
+      action: "none",
+      retryable: false,
+      waitCancellable: false,
+      reason: "complete",
+    };
+  }
+  const blockers = Array.isArray(result?.blockers) ? result.blockers : [];
+  const text = [result?.next_blocker, ...blockers].join(" ").toLowerCase();
+  if (text.includes("manualnetworkpermissionmissing") || result?.manual_network_permission_enabled === false) {
+    return {
+      action: "enable-private-delivery",
+      retryable: true,
+      waitCancellable: false,
+      reason: "manual-permission",
+    };
+  }
+  if (
+    text.includes("bootstraptimeout") ||
+    text.includes("bootstrapnetworkaccessfailed") ||
+    text.includes("censorshiporbridgerequired")
+  ) {
+    return {
+      action: "retry-bootstrap",
+      retryable: true,
+      waitCancellable: true,
+      reason: "network-bootstrap",
+    };
+  }
+  if (
+    text.includes("bootstraplocalstatefailed") ||
+    text.includes("bootstrapconfigurationfailed") ||
+    text.includes("bootstrapunsupported") ||
+    text.includes("bootstrapprotocolfailed")
+  ) {
+    return {
+      action: "inspect-diagnostics",
+      retryable: false,
+      waitCancellable: false,
+      reason: "local-bootstrap",
+    };
+  }
+  return {
+    action: "retry-private-delivery",
+    retryable: true,
+    waitCancellable: false,
+    reason: "delivery-failed",
+  };
+}
+
 export function productionTwoProfileSendAttemptUserView(result, messageNumber = 0) {
   const number = Number.parseInt(messageNumber, 10);
   const label = Number.isInteger(number) && number > 0 ? `#${number}` : "";
@@ -1376,6 +1436,7 @@ export function productionTwoProfileSendAttemptUserView(result, messageNumber = 
 
 export function productionTwoProfileRealOnionUserView(result) {
   const detailed = productionTwoProfileRealOnionResultView(result);
+  const recovery = productionTwoProfileRealOnionRecoveryPlan(result);
   if (detailed.complete) {
     return {
       state: "Private delivery completed",
@@ -1392,6 +1453,24 @@ export function productionTwoProfileRealOnionUserView(result) {
       session: "Network permission is off.",
       message: "Turn on private delivery before trying again.",
       boundary: "No private delivery was attempted.",
+    };
+  }
+  if (recovery.action === "retry-bootstrap") {
+    return {
+      state: "Private delivery waiting for network",
+      profiles: "Room is saved.",
+      session: "Delivery network did not finish starting.",
+      message: "Wait a moment, then retry private delivery or turn it off.",
+      boundary: "No message was sent and the wait can be cancelled.",
+    };
+  }
+  if (recovery.action === "inspect-diagnostics") {
+    return {
+      state: "Private delivery needs review",
+      profiles: "Room is saved.",
+      session: "Delivery network setup stopped before sending.",
+      message: "Review developer details before retrying private delivery.",
+      boundary: "No message was sent and private details stayed hidden.",
     };
   }
   if (detailed.touchedTranscript) {

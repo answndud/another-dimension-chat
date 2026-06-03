@@ -11,6 +11,8 @@ import {
   productionTwoProfileOutboundNeedsEndpointRefresh,
   productionTwoProfileOutboundPrimaryAction,
   productionTwoProfileOutboundStatusLabel,
+  productionTwoProfileRealOnionRecoveryPlan,
+  productionTwoProfileRealOnionUserView,
   productionTwoProfileResumeTarget,
   productionTwoProfileShouldShowOutboundRecovery,
 } from "./action-state.js";
@@ -249,6 +251,31 @@ test("receive runtime exposes stopped, waiting, connected, and imported states",
     productionOnionReceiveRuntimeView({ enabled: true }, { receive_attempt_succeeded: true }).state,
     "message-imported",
   );
+});
+
+test("real onion bootstrap timeout remains retryable and cancellable", () => {
+  const result = {
+    manual_network_permission_enabled: true,
+    next_blocker: "ProfileABootstrapTimeout",
+    blockers: ["BootstrapTimeout"],
+    network_io_attempted: true,
+    transport_io_opened: false,
+    runtime_messaging_enabled: false,
+  };
+
+  assert.deepEqual(productionTwoProfileRealOnionRecoveryPlan(result), {
+    action: "retry-bootstrap",
+    retryable: true,
+    waitCancellable: true,
+    reason: "network-bootstrap",
+  });
+  assert.deepEqual(productionTwoProfileRealOnionUserView(result), {
+    state: "Private delivery waiting for network",
+    profiles: "Room is saved.",
+    session: "Delivery network did not finish starting.",
+    message: "Wait a moment, then retry private delivery or turn it off.",
+    boundary: "No message was sent and the wait can be cancelled.",
+  });
 });
 
 test("receive loop refresh plan reloads transcript for new imports and endpoint updates", () => {
