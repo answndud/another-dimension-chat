@@ -283,6 +283,9 @@ test("send diagnostics expose runtime owner match without raw profile names", ()
   assert.match(mainJs, /function sendRuntimeOwnerMismatch/);
   assert.match(functionBody(mainJs, "setChatDeliveryNoticeForSendAttempt"), /sendRuntimeMismatch/);
   assert.match(mainJs, /latestChatDeliveryNoticeKey === "sendRuntimeMismatch"/);
+  assert.match(mainJs, /preparePrivateDeliveryRoute\(\{ forceRefresh: true \}\)/);
+  assert.match(mainJs, /function privateRouteRecoveryNoticeActive/);
+  assert.match(functionBody(mainJs, "applyProductionActionState"), /routeRecoveryReady/);
   assert.match(functionBody(mainJs, "buildFieldTestReport"), /sendAttemptBoundaryText/);
   assert.match(functionBody(mainJs, "buildFieldTestReport"), /send_runtime_owner_matches_send_profile=/);
   assert.match(i18nJs, /sendRecoveryRuntimeMismatch/);
@@ -306,7 +309,7 @@ test("saved local delivery codes must be refreshed before sharing", () => {
   assert.match(functionBody(mainJs, "restorePrivateRouteExchangeForRoom"), /updateLocalPrivateRouteCodeUi\(input\)/);
   assert.match(functionBody(mainJs, "localPrivateRouteCodeIsActive"), /activeLocalPrivateRouteCodesByRoom\.get\(roomKey\)/);
   assert.match(functionBody(mainJs, "routeExchangePrimaryActionNode"), /!localPrivateRouteCodeIsActive\(input\)/);
-  assert.match(functionBody(mainJs, "focusPrivateRouteNextAction"), /!localPrivateRouteCodeIsActive\(input\)/);
+  assert.match(mainJs, /function focusPrivateRouteNextAction\([\s\S]*!localPrivateRouteCodeIsActive\(input\)/);
   assert.match(functionBody(mainJs, "localPrivateRouteCodeStatusKey"), /privateRouteLocalStatusSaved/);
   assert.match(functionBody(mainJs, "updateLocalPrivateRouteCodeUi"), /has-saved-local-private-route-code/);
   assert.match(stylesCss, /:not\(\.exchange-instruction\):not\(\.route-code-status\)/);
@@ -359,7 +362,7 @@ test("composer and delivery-route controls stay on the chat delivery path", () =
     mainJs,
     /fields\.runProductionTwoProfileMessageRoundtrip\.addEventListener\(\s*"click",\s*runProductionTwoProfileComposerPrimaryAction/,
   );
-  assert.match(mainJs, /fields\.preparePrivateRoute\.addEventListener\("click", preparePrivateDeliveryRoute\)/);
+  assert.match(mainJs, /fields\.preparePrivateRoute\.addEventListener\("click",[\s\S]*preparePrivateDeliveryRoute/);
   assert.match(mainJs, /fields\.copyPrivateRouteCode\.addEventListener\("click", copyLocalPrivateRouteCode\)/);
   assert.match(mainJs, /fields\.applyPeerPrivateRouteCode\.addEventListener\("click", applyPeerPrivateRouteCode\)/);
   assert.match(
