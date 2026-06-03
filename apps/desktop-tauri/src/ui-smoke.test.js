@@ -101,14 +101,22 @@ test("saved room list shows receive runtime and restart intent", () => {
 test("receive controls are scoped to the active room", () => {
   assert.match(mainJs, /roomFingerprint: ""/);
   assert.match(functionBody(mainJs, "productionTwoProfileReceiveMatchesInput"), /productionTwoProfileOnionReceiveMode\.roomFingerprint === roomFingerprint/);
+  assert.match(mainJs, /function productionTwoProfileReceiveRuntimeMismatched/);
+  assert.match(functionBody(mainJs, "productionTwoProfileReceiveRuntimeMismatched"), /ownerProfileBound/);
+  assert.match(functionBody(mainJs, "productionTwoProfileReceiveRuntimeMismatched"), /ownerMatchesReceiveProfile/);
   assert.match(functionBody(mainJs, "updateChatPrimaryActionMode"), /is-receiving-other-room/);
+  assert.match(functionBody(mainJs, "updateChatPrimaryActionMode"), /is-receiving-runtime-mismatch/);
   assert.match(functionBody(mainJs, "renderRoomStatusSummary"), /productionTwoProfileReceiveMatchesInput\(input\)/);
+  assert.match(functionBody(mainJs, "renderRoomStatusSummary"), /roomStatusShortReceiveMismatch/);
   assert.match(functionBody(mainJs, "renderRoomIdentityBar"), /roomReceivingOther/);
+  assert.match(functionBody(mainJs, "renderRoomIdentityBar"), /roomReceivingMismatch/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /productionTwoProfileReceiveActiveInOtherRoom\(input\)/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /receiveOtherRoomActive/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /!productionTwoProfileReceiveMatchesInput\(input\)/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /receiveOtherRoomActive/);
   assert.match(i18nJs, /roomReceivingOther/);
+  assert.match(i18nJs, /roomReceivingMismatch/);
+  assert.match(i18nJs, /receiveRuntimeMismatch/);
   assert.match(i18nJs, /receiveOtherRoomActive/);
 });
 

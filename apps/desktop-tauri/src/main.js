@@ -460,6 +460,8 @@ let productionTwoProfileOnionReceiveMode = {
   lastProcessedMessageImportCount: 0,
   lastProcessedEndpointUpdateCount: 0,
   generation: 0,
+  ownerProfileBound: false,
+  ownerMatchesReceiveProfile: true,
 };
 let latestProductionMessageImport = null;
 let latestProductionPairingSafety = null;
@@ -1236,6 +1238,13 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     action.textContent = t("startReceiving");
     action.addEventListener("click", startProductionTwoProfileOnionReceive);
     fields.chatDeliveryNotice.append(action);
+  } else if (latestChatDeliveryNoticeKey === "receiveRuntimeMismatch") {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "chat-delivery-notice-action";
+    action.textContent = t("stopReceiving");
+    action.addEventListener("click", stopProductionTwoProfileOnionReceive);
+    fields.chatDeliveryNotice.append(action);
   } else if (isLocalPrivateRouteCodeNoticeKey() && latestLocalPrivateRouteCode) {
     const action = document.createElement("button");
     action.type = "button";
@@ -1770,10 +1779,13 @@ function renderRoomIdentityBar(input, sessionsReady) {
   const inviteTokenRoomReady = twoProfileInviteCodeModeActive() && sessionsReady && safetyConfirmed;
   const receivingCurrentRoom = productionTwoProfileReceiveMatchesInput(input);
   const receivingOtherRoom = productionTwoProfileReceiveActiveInOtherRoom(input);
+  const receivingRuntimeMismatch = productionTwoProfileReceiveRuntimeMismatched(input);
   const transportState = inviteTokenRoomReady
     ? t("roomReady")
     : receivingCurrentRoom && productionTwoProfileOnionReceiveMode.stopRequested
     ? t("roomReceivingStopping")
+    : receivingRuntimeMismatch
+      ? t("roomReceivingMismatch")
     : receivingCurrentRoom
       ? t("roomReceivingOn")
       : receivingOtherRoom
@@ -1807,6 +1819,7 @@ function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsRe
     sessionsReady && safetyConfirmed && !inviteTokenRoomReady && manualNetworkPermissionEnabled() && !endpointState.ready,
   );
   const receiving = productionTwoProfileReceiveMatchesInput(input);
+  const receivingRuntimeMismatch = productionTwoProfileReceiveRuntimeMismatched(input);
   const state = retryableOutbound
     ? "pending"
     : pendingConversation
@@ -1833,7 +1846,9 @@ function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsRe
     ready: "roomStatusShortReady",
   };
   const label = t(keyByState[state]);
-  const receiveLabel = receiving ? ` · ${t("roomStatusShortReceiving")}` : "";
+  const receiveLabel = receiving
+    ? ` · ${t(receivingRuntimeMismatch ? "roomStatusShortReceiveMismatch" : "roomStatusShortReceiving")}`
+    : "";
   setText(fields.roomStatusSummary, `${label}${receiveLabel}`);
   fields.roomStatusSummary?.classList.remove(
     "is-disconnected",
@@ -3252,6 +3267,14 @@ function productionTwoProfileReceiveActiveInOtherRoom(input = productionTwoProfi
   );
 }
 
+function productionTwoProfileReceiveRuntimeMismatched(input = productionTwoProfileInput()) {
+  return Boolean(
+    productionTwoProfileReceiveMatchesInput(input) &&
+      productionTwoProfileOnionReceiveMode.ownerProfileBound &&
+      !productionTwoProfileOnionReceiveMode.ownerMatchesReceiveProfile,
+  );
+}
+
 function restorePrivateRouteExchangeForRoom(input = productionTwoProfileInput()) {
   const roomKey = privateRouteRoomKey(input);
   latestLocalPrivateRouteCode = roomKey ? localPrivateRouteCodesByRoom.get(roomKey) || "" : "";
@@ -4547,6 +4570,7 @@ function updateChatPrimaryActionMode(input = productionTwoProfileInput(), sessio
   document.body.classList.toggle("has-local-private-route-code", Boolean(latestLocalPrivateRouteCode));
   document.body.classList.toggle("is-receiving-messages", receivingCurrentRoom);
   document.body.classList.toggle("is-receiving-other-room", receivingOtherRoom);
+  document.body.classList.toggle("is-receiving-runtime-mismatch", productionTwoProfileReceiveRuntimeMismatched(input));
   document.body.classList.toggle("is-stopping-receive", receivingCurrentRoom && productionTwoProfileOnionReceiveMode.stopRequested);
 }
 
@@ -6921,6 +6945,7 @@ function applyProductionActionState() {
   const receiveIntent = receiveIntentForRoom(twoProfile);
   const receivingCurrentRoom = productionTwoProfileReceiveMatchesInput(twoProfile);
   const receivingOtherRoom = productionTwoProfileReceiveActiveInOtherRoom(twoProfile);
+  const receivingRuntimeMismatch = productionTwoProfileReceiveRuntimeMismatched(twoProfile);
   const retryableOutboundConversation = latestTwoProfileRetryableOutboundEntry(twoProfile);
   if (
     productionTwoProfileShouldShowOutboundRecovery({
@@ -7288,6 +7313,8 @@ function applyProductionActionState() {
       ? "Wait for the active production action."
       : receivingCurrentRoom && productionTwoProfileOnionReceiveMode.stopRequested
         ? t("receiveStopPending")
+      : receivingRuntimeMismatch
+        ? t("receiveRuntimeMismatch")
       : receivingCurrentRoom
         ? t("receiveAlreadyListening")
       : receivingOtherRoom
@@ -7310,6 +7337,8 @@ function applyProductionActionState() {
     !receivingCurrentRoom || productionTwoProfileOnionReceiveMode.stopRequested,
     receivingCurrentRoom && productionTwoProfileOnionReceiveMode.stopRequested
       ? t("receiveStopPending")
+      : receivingRuntimeMismatch
+        ? t("receiveRuntimeMismatchStop")
       : receivingCurrentRoom
       ? t("stopReceiving")
       : receivingOtherRoom
@@ -10293,6 +10322,8 @@ async function startProductionTwoProfileOnionReceive() {
     lastProcessedMessageImportCount: 0,
     lastProcessedEndpointUpdateCount: 0,
     generation,
+    ownerProfileBound: backendLoop.owner_profile_bound === true,
+    ownerMatchesReceiveProfile: backendLoop.owner_matches_receive_profile !== false,
   };
   setProductionTwoProfileOnionReceiveRuntimeState("receiving");
   updateLocalPrivateRouteCodeUi(input);
@@ -10395,6 +10426,9 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
     productionTwoProfileOnionReceiveMode.attempt = backendLoop.attempt_count;
     productionTwoProfileOnionReceiveMode.inFlight =
       backendLoop.worker_running || backendLoop.receive_attempt_in_flight;
+    productionTwoProfileOnionReceiveMode.ownerProfileBound = backendLoop.owner_profile_bound === true;
+    productionTwoProfileOnionReceiveMode.ownerMatchesReceiveProfile =
+      backendLoop.owner_matches_receive_profile !== false;
     const refreshPlan = productionOnionReceiveLoopRefreshPlan(productionTwoProfileOnionReceiveMode, backendLoop);
     const inferredRuntimeState = refreshPlan.transcriptChanged
       ? "message-imported"
@@ -10433,10 +10467,15 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
         refreshPlan.messageImported ? "chatNoticeReceived" : "chatNoticeEndpointUpdated",
         "success",
       );
+    } else if (productionTwoProfileReceiveRuntimeMismatched()) {
+      setText(fields.productionTwoProfileWarning, t("receiveRuntimeMismatch"));
+      setChatDeliveryNoticeByKey("receiveRuntimeMismatch", "warning");
     } else if (runtimeState === "receiving") {
       setText(fields.productionTwoProfileWarning, t("receiveStarted"));
     }
     setText(fields.productionTwoProfileBoundary, productionTwoProfileOnionReceiveBackendBoundary(backendLoop));
+    renderRoomIdentityBar(productionTwoProfileInput(), twoProfileSessionsReadyForInput(productionTwoProfileInput()));
+    renderRoomStatusSummary(productionTwoProfileInput());
     if (refreshPlan.transcriptChanged) {
       productionTwoProfileOnionReceiveMode.lastProcessedImportSequence = refreshPlan.importSequence;
       productionTwoProfileOnionReceiveMode.lastProcessedMessageImportCount = refreshPlan.messageImportCount;
@@ -10519,6 +10558,8 @@ function markProductionTwoProfileOnionReceiveStopped(backendLoop = null) {
     lastProcessedMessageImportCount: productionTwoProfileOnionReceiveMode.lastProcessedMessageImportCount,
     lastProcessedEndpointUpdateCount: productionTwoProfileOnionReceiveMode.lastProcessedEndpointUpdateCount,
     generation: nextGeneration,
+    ownerProfileBound: false,
+    ownerMatchesReceiveProfile: true,
   };
   setProductionTwoProfileOnionReceiveRuntimeState("stopped");
 }
