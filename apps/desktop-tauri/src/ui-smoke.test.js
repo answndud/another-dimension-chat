@@ -222,7 +222,12 @@ test("private delivery receive controls require a real route", () => {
 });
 
 test("field test report is redacted and copyable from room diagnostics", () => {
-  for (const id of ["field-test-report", "refresh-field-test-report", "copy-field-test-report"]) {
+  for (const id of [
+    "field-test-report",
+    "refresh-field-test-report",
+    "copy-field-test-report",
+    "cancel-production-two-profile-real-onion-wait",
+  ]) {
     assert.match(indexHtml, new RegExp(`id="${id}"`));
   }
   assert.match(mainJs, /function buildFieldTestReport/);
@@ -243,9 +248,12 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /real_onion_blockers=/);
   assert.match(reportBody, /real_onion_recovery_action=/);
   assert.match(reportBody, /real_onion_wait_cancellable=/);
+  assert.match(reportBody, /real_onion_wait_cancelled=/);
   assert.match(reportBody, /real_onion_network_io=/);
   assert.match(reportBody, /redacted_boundary=/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /productionTwoProfileRealOnionSyntheticFailureResult/);
+  assert.match(functionBody(mainJs, "cancelProductionTwoProfileRealOnionWait"), /latestProductionTwoProfileRealOnionWaitCanceledFingerprint/);
+  assert.doesNotMatch(functionBody(mainJs, "cancelProductionTwoProfileRealOnionWait"), /invoke\(/);
   assert.doesNotMatch(reportBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
   assert.doesNotMatch(reportBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
 });
