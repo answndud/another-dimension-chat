@@ -699,6 +699,11 @@ fn runtime_error_taxonomy_separates_preflight_bootstrap_and_onion_failures() {
 
     assert!(TransportRuntimeError::BootstrapCancelled.is_bootstrap_failure());
     assert!(TransportRuntimeError::BootstrapTimeout.is_bootstrap_failure());
+    assert!(TransportRuntimeError::BootstrapNetworkAccessFailed.is_bootstrap_failure());
+    assert!(TransportRuntimeError::BootstrapLocalStateFailed.is_bootstrap_failure());
+    assert!(TransportRuntimeError::BootstrapConfigurationFailed.is_bootstrap_failure());
+    assert!(TransportRuntimeError::BootstrapUnsupported.is_bootstrap_failure());
+    assert!(TransportRuntimeError::BootstrapProtocolFailed.is_bootstrap_failure());
     assert!(TransportRuntimeError::BootstrapTransientFailure.is_bootstrap_failure());
     assert!(TransportRuntimeError::CensorshipOrBridgeRequired.is_bootstrap_failure());
     assert!(TransportRuntimeError::RuntimeNetworkDisabled.is_bootstrap_failure());
@@ -784,6 +789,37 @@ fn bootstrap_outcome_maps_cancellation_timeout_and_censorship() {
     assert_eq!(
         TransportBootstrapOutcome::CensorshipOrBridgeRequired.runtime_error(policy),
         TransportRuntimeError::CensorshipOrBridgeRequired
+    );
+}
+
+#[cfg(feature = "arti-manual-bootstrap")]
+#[test]
+fn arti_bootstrap_error_kinds_map_to_redacted_runtime_categories() {
+    use arti_client::ErrorKind;
+
+    assert_eq!(
+        arti_adapter_spike::classify_arti_bootstrap_error_kind(ErrorKind::TorAccessFailed),
+        TransportRuntimeError::BootstrapNetworkAccessFailed
+    );
+    assert_eq!(
+        arti_adapter_spike::classify_arti_bootstrap_error_kind(ErrorKind::CacheAccessFailed),
+        TransportRuntimeError::BootstrapLocalStateFailed
+    );
+    assert_eq!(
+        arti_adapter_spike::classify_arti_bootstrap_error_kind(ErrorKind::InvalidConfig),
+        TransportRuntimeError::BootstrapConfigurationFailed
+    );
+    assert_eq!(
+        arti_adapter_spike::classify_arti_bootstrap_error_kind(ErrorKind::FeatureDisabled),
+        TransportRuntimeError::BootstrapUnsupported
+    );
+    assert_eq!(
+        arti_adapter_spike::classify_arti_bootstrap_error_kind(ErrorKind::TorProtocolViolation),
+        TransportRuntimeError::BootstrapProtocolFailed
+    );
+    assert_eq!(
+        arti_adapter_spike::classify_arti_bootstrap_error_kind(ErrorKind::BootstrapRequired),
+        TransportRuntimeError::BootstrapTransientFailure
     );
 }
 
@@ -2503,6 +2539,27 @@ fn runtime_directory_probe_creates_and_checks_state_cache_dirs() {
     assert_eq!(ready.cache_dir(), cache_dir.as_path());
     assert!(state_dir.is_dir());
     assert!(cache_dir.is_dir());
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        assert_eq!(
+            fs::metadata(&state_dir)
+                .expect("state metadata")
+                .permissions()
+                .mode()
+                & 0o077,
+            0
+        );
+        assert_eq!(
+            fs::metadata(&cache_dir)
+                .expect("cache metadata")
+                .permissions()
+                .mode()
+                & 0o077,
+            0
+        );
+    }
     assert!(!state_dir
         .join(".another-dimension-transport-preflight")
         .exists());

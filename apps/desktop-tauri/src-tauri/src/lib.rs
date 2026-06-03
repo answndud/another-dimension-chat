@@ -9344,6 +9344,16 @@ fn classify_real_onion_bootstrap_blocker(
 ) -> (String, Vec<String>) {
     let blocker = if redacted_bootstrap_error.contains("RuntimeNetworkDisabled") {
         "NetworkDisabled"
+    } else if redacted_bootstrap_error.contains("BootstrapNetworkAccessFailed") {
+        "BootstrapNetworkAccessFailed"
+    } else if redacted_bootstrap_error.contains("BootstrapLocalStateFailed") {
+        "BootstrapLocalStateFailed"
+    } else if redacted_bootstrap_error.contains("BootstrapConfigurationFailed") {
+        "BootstrapConfigurationFailed"
+    } else if redacted_bootstrap_error.contains("BootstrapUnsupported") {
+        "BootstrapUnsupported"
+    } else if redacted_bootstrap_error.contains("BootstrapProtocolFailed") {
+        "BootstrapProtocolFailed"
     } else if redacted_bootstrap_error.contains("BootstrapTransientFailure") {
         "BootstrapTransientFailure"
     } else if redacted_bootstrap_error.contains("CensorshipOrBridgeRequired") {
@@ -10614,6 +10624,16 @@ replay check: no replayed messages after message 2
             assert!(
                 result.next_blocker == "ProfileABootstrapTimeout"
                     || result.next_blocker == "ProfileBBootstrapTimeout"
+                    || result.next_blocker == "ProfileABootstrapNetworkAccessFailed"
+                    || result.next_blocker == "ProfileBBootstrapNetworkAccessFailed"
+                    || result.next_blocker == "ProfileABootstrapLocalStateFailed"
+                    || result.next_blocker == "ProfileBBootstrapLocalStateFailed"
+                    || result.next_blocker == "ProfileABootstrapConfigurationFailed"
+                    || result.next_blocker == "ProfileBBootstrapConfigurationFailed"
+                    || result.next_blocker == "ProfileABootstrapUnsupported"
+                    || result.next_blocker == "ProfileBBootstrapUnsupported"
+                    || result.next_blocker == "ProfileABootstrapProtocolFailed"
+                    || result.next_blocker == "ProfileBBootstrapProtocolFailed"
                     || result.next_blocker == "ProfileABootstrapTransientFailure"
                     || result.next_blocker == "ProfileBBootstrapTransientFailure"
                     || result.next_blocker == "ProfileANetworkDisabled"
@@ -10635,6 +10655,21 @@ replay check: no replayed messages after message 2
             );
             assert!(
                 result.blockers.contains(&"BootstrapTimeout".to_string())
+                    || result
+                        .blockers
+                        .contains(&"BootstrapNetworkAccessFailed".to_string())
+                    || result
+                        .blockers
+                        .contains(&"BootstrapLocalStateFailed".to_string())
+                    || result
+                        .blockers
+                        .contains(&"BootstrapConfigurationFailed".to_string())
+                    || result
+                        .blockers
+                        .contains(&"BootstrapUnsupported".to_string())
+                    || result
+                        .blockers
+                        .contains(&"BootstrapProtocolFailed".to_string())
                     || result
                         .blockers
                         .contains(&"BootstrapTransientFailure".to_string())
@@ -10659,6 +10694,16 @@ replay check: no replayed messages after message 2
             match result.next_blocker.as_str() {
                 "ProfileABootstrapTimeout"
                 | "ProfileBBootstrapTimeout"
+                | "ProfileABootstrapNetworkAccessFailed"
+                | "ProfileBBootstrapNetworkAccessFailed"
+                | "ProfileABootstrapLocalStateFailed"
+                | "ProfileBBootstrapLocalStateFailed"
+                | "ProfileABootstrapConfigurationFailed"
+                | "ProfileBBootstrapConfigurationFailed"
+                | "ProfileABootstrapUnsupported"
+                | "ProfileBBootstrapUnsupported"
+                | "ProfileABootstrapProtocolFailed"
+                | "ProfileBBootstrapProtocolFailed"
                 | "ProfileABootstrapTransientFailure"
                 | "ProfileBBootstrapTransientFailure"
                 | "ProfileANetworkDisabled"

@@ -11,6 +11,11 @@ pub enum TransportError {
 pub enum TransportRuntimeError {
     BootstrapCancelled,
     BootstrapTimeout,
+    BootstrapNetworkAccessFailed,
+    BootstrapLocalStateFailed,
+    BootstrapConfigurationFailed,
+    BootstrapUnsupported,
+    BootstrapProtocolFailed,
     BootstrapTransientFailure,
     CensorshipOrBridgeRequired,
     StateDirectoryPermissionDenied,
@@ -304,6 +309,11 @@ impl TransportRuntimeError {
             self,
             Self::BootstrapCancelled
                 | Self::BootstrapTimeout
+                | Self::BootstrapNetworkAccessFailed
+                | Self::BootstrapLocalStateFailed
+                | Self::BootstrapConfigurationFailed
+                | Self::BootstrapUnsupported
+                | Self::BootstrapProtocolFailed
                 | Self::BootstrapTransientFailure
                 | Self::CensorshipOrBridgeRequired
                 | Self::RuntimeNetworkDisabled
