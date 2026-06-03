@@ -2173,7 +2173,7 @@ function roomListStoragePayload(rooms) {
   }));
 }
 
-function rememberInviteRoom(code, role, metadata = {}) {
+function rememberInviteRoom(code, role, metadata = {}, options = {}) {
   const trimmedCode = String(code ?? "").trim();
   const normalizedRole = role === "inviter" ? "inviter" : "joiner";
   if (!trimmedCode) {
@@ -2200,7 +2200,9 @@ function rememberInviteRoom(code, role, metadata = {}) {
       Number.parseInt(metadata.retryableOutboundMessageNumber ?? existing.retryableOutboundMessageNumber ?? 0, 10) || 0,
   });
   localStoreSet(inviteRoomsStorageKey, JSON.stringify(roomListStoragePayload(rooms)));
-  renderSavedInviteRooms();
+  if (options.render !== false) {
+    renderSavedInviteRooms();
+  }
 }
 
 function forgetInviteRoom(code) {
@@ -2458,7 +2460,7 @@ async function syncSavedInviteRoomMetadataFromLocalStores() {
       try {
         const metadata = await savedInviteRoomMetadataFromLocalStores(room);
         if (metadata) {
-          rememberInviteRoom(room.code, room.role, { ...metadata, updatedAt: room.updatedAt });
+          rememberInviteRoom(room.code, room.role, { ...metadata, updatedAt: room.updatedAt }, { render: false });
           refreshed += 1;
         }
       } catch {
@@ -2503,6 +2505,23 @@ function currentInviteRoomCode() {
   return (fields.productionTwoProfileB?.value ?? "").trim();
 }
 
+function savedInviteRoomListItemView(room, context = {}) {
+  const currentCode = context.currentCode ?? currentInviteRoomCode();
+  const resumeRoom = context.resumeRoom ?? null;
+  const receiveState = savedInviteRoomReceiveState(room);
+  const resumeRecommended = Boolean(resumeRoom && room.code === resumeRoom.code && room.role === resumeRoom.role);
+  return {
+    current: room.code === currentCode,
+    hasRetryableSend: savedInviteRoomHasRetryableOutbound(room),
+    nextAction: savedInviteRoomListAction(room),
+    preview: savedInviteRoomPreview(room),
+    receiveState,
+    resumeRecommended,
+    state: savedInviteRoomState(room, { resumeRecommended }),
+    waitingPeerCode: savedInviteRoomWaitingForPeerCode(room),
+  };
+}
+
 function renderSavedInviteRooms() {
   if (!fields.savedRoomList) {
     return;
@@ -2519,16 +2538,15 @@ function renderSavedInviteRooms() {
   const currentCode = currentInviteRoomCode();
   const resumeRoom = savedInviteRoomResumeRoom(rooms);
   for (const room of rooms) {
+    const view = savedInviteRoomListItemView(room, { currentCode, resumeRoom });
     const item = document.createElement("li");
     item.className = "saved-room-list-item";
-    item.classList.toggle("is-current", room.code === currentCode);
-    const resumeRecommended = Boolean(resumeRoom && room.code === resumeRoom.code && room.role === resumeRoom.role);
-    item.classList.toggle("is-resume-recommended", resumeRecommended);
-    const receiveState = savedInviteRoomReceiveState(room);
-    item.classList.toggle("is-listening", receiveState === "listening");
-    item.classList.toggle("needs-receive-restart", receiveState === "paused");
-    item.classList.toggle("is-waiting-peer-code", savedInviteRoomWaitingForPeerCode(room));
-    item.classList.toggle("has-retryable-send", savedInviteRoomHasRetryableOutbound(room));
+    item.classList.toggle("is-current", view.current);
+    item.classList.toggle("is-resume-recommended", view.resumeRecommended);
+    item.classList.toggle("is-listening", view.receiveState === "listening");
+    item.classList.toggle("needs-receive-restart", view.receiveState === "paused");
+    item.classList.toggle("is-waiting-peer-code", view.waitingPeerCode);
+    item.classList.toggle("has-retryable-send", view.hasRetryableSend);
     const summary = document.createElement("span");
     summary.className = "saved-room-summary";
     const title = document.createElement("span");
@@ -2536,17 +2554,16 @@ function renderSavedInviteRooms() {
     title.textContent = savedInviteRoomLabel(room);
     const preview = document.createElement("span");
     preview.className = "saved-room-preview";
-    preview.textContent = savedInviteRoomPreview(room);
+    preview.textContent = view.preview;
     const meta = document.createElement("span");
     meta.className = "saved-room-meta";
     meta.textContent = `${savedInviteRoomShortSlug(room)} / ${formatTemplate("roomMessageCount", {
       count: room.messageCount,
     })}`;
     summary.append(title, preview, meta);
-    const stateView = savedInviteRoomState(room, { resumeRecommended });
     const state = document.createElement("span");
-    state.className = `saved-room-state is-${stateView.key}`;
-    state.textContent = stateView.label;
+    state.className = `saved-room-state is-${view.state.key}`;
+    state.textContent = view.state.label;
     const open = document.createElement("button");
     open.type = "button";
     open.className = "flow-control is-secondary";
@@ -2554,15 +2571,14 @@ function renderSavedInviteRooms() {
     open.addEventListener("click", () => {
       openSavedInviteRoom(room);
     });
-    const nextActionView = savedInviteRoomListAction(room);
     const nextAction = document.createElement("button");
     nextAction.type = "button";
     nextAction.className = "flow-control saved-room-next-action";
-    nextAction.hidden = !nextActionView;
-    nextAction.textContent = nextActionView ? t(nextActionView.labelKey) : "";
+    nextAction.hidden = !view.nextAction;
+    nextAction.textContent = view.nextAction ? t(view.nextAction.labelKey) : "";
     nextAction.addEventListener("click", () => {
-      if (nextActionView) {
-        runSavedInviteRoomListAction(room, nextActionView.action);
+      if (view.nextAction) {
+        runSavedInviteRoomListAction(room, view.nextAction.action);
       }
     });
     const remove = document.createElement("button");

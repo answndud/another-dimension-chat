@@ -70,6 +70,7 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(mainJs, /roomListSyncStatus: document\.querySelector\("#room-list-sync-status"\)/);
   assert.match(mainJs, /const savedRoomMetadataStartupSyncLimit = 8/);
   assert.match(mainJs, /function savedInviteRoomResumeRoom/);
+  assert.match(mainJs, /function savedInviteRoomListItemView/);
   assert.match(mainJs, /createNewInviteRoomFromList/);
   assert.match(mainJs, /createRoomFromRoomListInviteCode/);
   assert.match(mainJs, /showRoomList\(\);/);
@@ -88,7 +89,7 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncRunning/);
   assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncComplete/);
   assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncPartial/);
-  assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /rememberInviteRoom\(room\.code, room\.role/);
+  assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /rememberInviteRoom\(room\.code, room\.role[\s\S]*render: false/);
   assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /savedInviteRoomMetadataSyncCandidates\(\)/);
   assert.match(indexHtml, /id="back-to-room-list"/);
   assert.match(stylesCss, /body\.is-room-list-mode [\s\S]*#production-two-profile-transcript/);
@@ -118,6 +119,7 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateRetrySend/);
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateWaitingPeerCode/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /needs-receive-restart/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /savedInviteRoomListItemView\(room, \{ currentCode, resumeRoom \}\)/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /is-waiting-peer-code/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /has-retryable-send/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /is-resume-recommended/);
@@ -172,7 +174,7 @@ test("room list controls are wired to room flow instead of settings", () => {
   assert.match(mainJs, /fields\.roomListCreateRoom\.addEventListener\("click", createNewInviteRoomFromList\)/);
   assert.match(mainJs, /fields\.roomListJoinRoom\.addEventListener\("click", createRoomFromRoomListInviteCode\)/);
   assert.match(mainJs, /fields\.backToRoomList\.addEventListener\("click", showRoomList\)/);
-  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /runSavedInviteRoomListAction\(room, nextActionView\.action\)/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /runSavedInviteRoomListAction\(room, view\.nextAction\.action\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /await openSavedInviteRoom\(room\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /focusPrivateRouteNextAction\(productionTwoProfileInput\(\)\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /showRetryableTwoProfileOutboundNotice\(pending\)/);
