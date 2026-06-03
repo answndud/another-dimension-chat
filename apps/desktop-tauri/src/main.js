@@ -43,6 +43,7 @@ import {
   productionTwoProfileMessageResultView,
   productionTwoProfileOutboundNeedsEndpointRefresh,
   productionTwoProfileOutboundStatusLabel,
+  productionTwoProfileRealOnionRecoveryPlan,
   productionTwoProfileRealOnionResultView,
   productionTwoProfileRealOnionResumeProfile,
   productionTwoProfileRealOnionUserView,
@@ -872,6 +873,13 @@ function localizedTwoProfileUserViewText(value) {
     "No private details were shown in the chat view.": "userNoPrivateDetailsChat",
     "Private delivery setup did not finish.": "userDeliverySetupDidNotFinish",
     "Try again after the private route is ready.": "userTryAgainRouteReady",
+    "Private delivery waiting for network": "userDeliveryWaitingNetwork",
+    "Delivery network did not finish starting.": "userDeliveryNetworkStartIncomplete",
+    "Wait a moment, then retry private delivery or turn it off.": "userWaitRetryOrDisableDelivery",
+    "No message was sent and the wait can be cancelled.": "userNoMessageSentWaitCancellable",
+    "Delivery network setup stopped before sending.": "userDeliveryNetworkSetupStopped",
+    "Review developer details before retrying private delivery.": "userReviewDeveloperDetailsBeforeRetry",
+    "No message was sent and private details stayed hidden.": "userNoMessageSentDetailsHidden",
     "Peer address update was sent.": "userPeerAddressUpdateSent",
     "Wait for the other device to receive it.": "userWaitPeerAddressReceive",
     "Peer address update finished without showing private details.": "userPeerAddressUpdateNoDetails",
@@ -2649,6 +2657,7 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const realOnionBlockers = Array.isArray(realOnionResult?.blockers)
     ? realOnionResult.blockers.join("#")
     : "none";
+  const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(realOnionResult);
 
   return [
     "Another Dimension Chat beta field test report",
@@ -2680,6 +2689,10 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `real_onion_attempted=${Boolean(realOnionResult)}`,
     `real_onion_next_blocker=${fieldTestReportValue(realOnionResult?.next_blocker, "none")}`,
     `real_onion_blockers=${fieldTestReportValue(realOnionBlockers, "none")}`,
+    `real_onion_recovery_action=${fieldTestReportValue(realOnionRecovery.action, "none")}`,
+    `real_onion_recovery_reason=${fieldTestReportValue(realOnionRecovery.reason, "none")}`,
+    `real_onion_retryable=${realOnionRecovery.retryable === true}`,
+    `real_onion_wait_cancellable=${realOnionRecovery.waitCancellable === true}`,
     `real_onion_network_io=${realOnionResult?.network_io_attempted === true}`,
     `real_onion_transport_io=${realOnionResult?.transport_io_opened === true}`,
     `real_onion_runtime=${realOnionResult?.runtime_messaging_enabled === true}`,
