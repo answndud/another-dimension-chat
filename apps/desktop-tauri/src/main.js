@@ -2277,6 +2277,33 @@ function savedInviteRoomState(room) {
   return { key: "saved", label: t("roomStateSaved") };
 }
 
+function savedInviteRoomListAction(room) {
+  if (savedInviteRoomWaitingForPeerCode(room)) {
+    return { action: "paste-peer-code", labelKey: "roomActionPastePeerCode" };
+  }
+  if (savedInviteRoomReceiveState(room) === "paused") {
+    return { action: "start-receiving", labelKey: "startReceiving" };
+  }
+  return null;
+}
+
+async function runSavedInviteRoomListAction(room, action) {
+  const opened = await openSavedInviteRoom(room);
+  if (!opened) {
+    return false;
+  }
+  if (action === "paste-peer-code") {
+    rememberPrivateRouteFollowup("receive", productionTwoProfileInput());
+    focusPrivateRouteNextAction(productionTwoProfileInput());
+    return true;
+  }
+  if (action === "start-receiving") {
+    await startProductionTwoProfileOnionReceive();
+    return true;
+  }
+  return false;
+}
+
 function currentRoomConversationMetadata() {
   return productionInviteRoomConversationMetadata([...productionTwoProfileConversationEntries.values()]);
 }
@@ -2353,6 +2380,17 @@ function renderSavedInviteRooms() {
     open.addEventListener("click", () => {
       openSavedInviteRoom(room);
     });
+    const nextActionView = savedInviteRoomListAction(room);
+    const nextAction = document.createElement("button");
+    nextAction.type = "button";
+    nextAction.className = "flow-control saved-room-next-action";
+    nextAction.hidden = !nextActionView;
+    nextAction.textContent = nextActionView ? t(nextActionView.labelKey) : "";
+    nextAction.addEventListener("click", () => {
+      if (nextActionView) {
+        runSavedInviteRoomListAction(room, nextActionView.action);
+      }
+    });
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "flow-control is-secondary saved-room-remove";
@@ -2360,7 +2398,7 @@ function renderSavedInviteRooms() {
     remove.addEventListener("click", () => {
       removeSavedInviteRoom(room);
     });
-    item.append(summary, state, open, remove);
+    item.append(summary, state, open, nextAction, remove);
     fields.savedRoomList.append(item);
   }
 }

@@ -101,6 +101,7 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(stylesCss, /\.saved-room-state\.is-listening/);
   assert.match(stylesCss, /\.saved-room-state\.is-receive-paused/);
   assert.match(stylesCss, /\.saved-room-state\.is-waiting-peer-code/);
+  assert.match(stylesCss, /\.saved-room-next-action/);
 });
 
 test("receive controls are scoped to the active room", () => {
@@ -129,6 +130,9 @@ test("receive restart intent owns the room primary action", () => {
   assert.match(mainJs, /function twoProfileComposerPrimaryIntent/);
   assert.match(mainJs, /receiveIntentForRoom\(input\)[\s\S]*action: "start-receiving"/);
   assert.match(mainJs, /action: "start-receiving"[\s\S]*labelKey: "startReceiving"/);
+  assert.match(mainJs, /function savedInviteRoomListAction/);
+  assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /savedInviteRoomReceiveState\(room\) === "paused"/);
+  assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /labelKey: "startReceiving"/);
   const actionBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
   assert.match(actionBody, /intent\.action === "start-receiving"/);
   assert.match(actionBody, /await startProductionTwoProfileOnionReceive\(\)/);
@@ -142,6 +146,9 @@ test("room list controls are wired to room flow instead of settings", () => {
   assert.match(mainJs, /fields\.roomListCreateRoom\.addEventListener\("click", createNewInviteRoomFromList\)/);
   assert.match(mainJs, /fields\.roomListJoinRoom\.addEventListener\("click", createRoomFromRoomListInviteCode\)/);
   assert.match(mainJs, /fields\.backToRoomList\.addEventListener\("click", showRoomList\)/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /runSavedInviteRoomListAction\(room, nextActionView\.action\)/);
+  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /await openSavedInviteRoom\(room\)/);
+  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /focusPrivateRouteNextAction\(productionTwoProfileInput\(\)\)/);
   assert.match(mainJs, /fields\.roomListInviteCode\.addEventListener\("input", renderReceivedInviteCodeActionState\)/);
   assert.match(
     mainJs,
