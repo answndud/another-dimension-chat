@@ -881,6 +881,9 @@ function localizedTwoProfileUserViewText(value) {
     "Delivery network did not finish starting.": "userDeliveryNetworkStartIncomplete",
     "Wait a moment, then retry private delivery or turn it off.": "userWaitRetryOrDisableDelivery",
     "No message was sent and the wait can be cancelled.": "userNoMessageSentWaitCancellable",
+    "Network wait canceled": "networkWaitCanceled",
+    "Retry private delivery when you are ready.": "retryPrivateDeliveryHint",
+    "No message was sent and the network wait was closed.": "networkWaitCanceledBoundary",
     "Delivery network setup stopped before sending.": "userDeliveryNetworkSetupStopped",
     "Review developer details before retrying private delivery.": "userReviewDeveloperDetailsBeforeRetry",
     "No message was sent and private details stayed hidden.": "userNoMessageSentDetailsHidden",
@@ -2599,6 +2602,9 @@ function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manua
   if (detail.includes("permission")) {
     nextBlocker = "ManualNetworkPermissionMissing";
     blocker = "ManualNetworkPermissionMissing";
+  } else if (detail.includes("cancel")) {
+    nextBlocker = "BootstrapCancelled";
+    blocker = "BootstrapCancelled";
   } else if (detail.includes("bootstrap")) {
     nextBlocker = "BootstrapTimeout";
     blocker = "BootstrapTimeout";
@@ -7322,8 +7328,10 @@ function applyProductionActionState() {
   const realOnionResult = latestRealOnionFieldTestResult(twoProfile);
   const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(realOnionResult);
   const realOnionWaitCanceled = realOnionWaitCanceledForInput(twoProfile);
+  const realOnionRoundtripActive = productionBusyAction === "two-profile-real-onion-roundtrip";
   const realOnionRetryReady = realOnionRecovery.action === "retry-bootstrap" && !realOnionWaitCanceled;
-  const realOnionCancelWaitReady = realOnionRetryReady && realOnionRecovery.waitCancellable === true;
+  const realOnionCancelWaitReady =
+    realOnionRoundtripActive || (realOnionRetryReady && realOnionRecovery.waitCancellable === true);
   const realOnionRunLabel = fields.runProductionTwoProfileRealOnionRoundtrip?.querySelector("[data-i18n]");
   if (realOnionRunLabel) {
     setText(realOnionRunLabel, t(realOnionRetryReady ? "retryPrivateDelivery" : "runRealOnionRoundtrip"));
@@ -7347,8 +7355,8 @@ function applyProductionActionState() {
   }
   setActionButtonState(
     fields.cancelProductionTwoProfileRealOnionWait,
-    busy || !realOnionCancelWaitReady,
-    busy
+    (busy && !realOnionRoundtripActive) || !realOnionCancelWaitReady,
+    busy && !realOnionRoundtripActive
       ? "Wait for the active production action."
       : realOnionWaitCanceled
         ? t("networkWaitCanceled")
@@ -10888,8 +10896,31 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
   }
 }
 
-function cancelProductionTwoProfileRealOnionWait() {
+async function cancelProductionTwoProfileRealOnionWait() {
   const input = productionTwoProfileInput();
+  if (productionBusyAction === "two-profile-real-onion-roundtrip") {
+    try {
+      const result = await invoke("production_two_profile_real_onion_wait_cancel");
+      if (result?.cancel_requested) {
+        latestProductionTwoProfileRealOnionWaitCanceledFingerprint = twoProfileSessionStatusFingerprint(input);
+        setProductionTwoProfileState("Private delivery wait cancel requested");
+        setText(fields.productionTwoProfileWarning, t("networkWaitCancelRequested"));
+        setText(fields.productionTwoProfileProfiles, localizedTwoProfileUserViewText("Room is saved."));
+        setText(fields.productionTwoProfileSession, t("networkWaitCancelRequested"));
+        setText(fields.productionTwoProfileMessageState, t("retryPrivateDeliveryHint"));
+        setText(fields.productionTwoProfileBoundary, t("networkWaitCanceledBoundary"));
+        setChatDeliveryNoticeByKey("networkWaitCancelRequested", "muted");
+        applyProductionActionState();
+        refreshFieldTestReport();
+        return true;
+      }
+    } catch {
+      setProductionTwoProfileState("Private delivery wait cancel failed");
+      setText(fields.productionTwoProfileWarning, t("networkWaitCancelFailed"));
+      applyProductionActionState();
+      return false;
+    }
+  }
   const result = latestRealOnionFieldTestResult(input);
   const recovery = productionTwoProfileRealOnionRecoveryPlan(result);
   if (recovery.action !== "retry-bootstrap" || recovery.waitCancellable !== true) {

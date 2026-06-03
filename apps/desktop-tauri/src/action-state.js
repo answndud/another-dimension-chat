@@ -1348,6 +1348,16 @@ export function productionTwoProfileRealOnionRecoveryPlan(result) {
     };
   }
   if (
+    text.includes("bootstrapcancelled")
+  ) {
+    return {
+      action: "bootstrap-cancelled",
+      retryable: true,
+      waitCancellable: false,
+      reason: "network-bootstrap-cancelled",
+    };
+  }
+  if (
     text.includes("bootstraptimeout") ||
     text.includes("bootstrapnetworkaccessfailed") ||
     text.includes("censorshiporbridgerequired")
@@ -1462,6 +1472,15 @@ export function productionTwoProfileRealOnionUserView(result) {
       session: "Delivery network did not finish starting.",
       message: "Wait a moment, then retry private delivery or turn it off.",
       boundary: "No message was sent and the wait can be cancelled.",
+    };
+  }
+  if (recovery.action === "bootstrap-cancelled") {
+    return {
+      state: "Private delivery wait canceled",
+      profiles: "Room is saved.",
+      session: "Network wait canceled",
+      message: "Retry private delivery when you are ready.",
+      boundary: "No message was sent and the network wait was closed.",
     };
   }
   if (recovery.action === "inspect-diagnostics") {
