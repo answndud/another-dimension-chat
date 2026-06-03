@@ -303,6 +303,8 @@ struct ProductionOnionClientRuntimeState {
     #[cfg(feature = "manual-onion-client-attempt")]
     owner: std::sync::Mutex<Option<another_dimension_transport::arti_adapter_spike::PersistentArtiClientOwner>>,
     #[cfg(feature = "manual-onion-client-attempt")]
+    owner_profile: std::sync::Mutex<Option<String>>,
+    #[cfg(feature = "manual-onion-client-attempt")]
     real_onion_roundtrip_owners: std::sync::Mutex<
         std::collections::HashMap<
             String,
@@ -4662,6 +4664,14 @@ fn run_production_onion_service_launch_attempt(
         if !manual_network_permission {
             next_blocker = "ManualNetworkPermissionMissing".to_string();
         } else {
+            let profile_name = profile.as_str().to_string();
+            let _promoted_cached_owner =
+                promote_cached_real_onion_roundtrip_owner_to_persistent_owner(
+                    state,
+                    app_data_root.as_ref(),
+                    app_cache_root.as_ref(),
+                    &profile_name,
+                );
             let mut guard = state
                 .owner
                 .lock()
@@ -4689,18 +4699,23 @@ fn run_production_onion_service_launch_attempt(
                             ) {
                                 Ok(_adapter) => {
                                     launch_adapter_ready = true;
-	                                    let mut sink = InMemoryTransportRuntimeEventSink::default();
-	                                    launch_attempt_started = true;
-	                                    let network_permission = arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike;
-	                                    let service_nickname = production_onion_service_nickname(&profile);
-	                                    match owner.launch_onion_service_once(
-	                                        network_permission,
-	                                        &service_nickname,
-	                                        &mut sink,
-	                                    ) {
-	                                        Ok(()) => {
-	                                            launch_attempt_succeeded = true;
-	                                            next_blocker = "none".to_string();
+                                    let mut sink = InMemoryTransportRuntimeEventSink::default();
+                                    launch_attempt_started = true;
+                                    let network_permission = arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike;
+                                    let service_nickname = production_onion_service_nickname(&profile);
+                                    match owner.launch_onion_service_once(
+                                        network_permission,
+                                        &service_nickname,
+                                        &mut sink,
+                                    ) {
+                                        Ok(()) => {
+                                            launch_attempt_succeeded = true;
+                                            if let Ok(mut profile_guard) =
+                                                state.owner_profile.lock()
+                                            {
+                                                *profile_guard = Some(profile_name.clone());
+                                            }
+                                            next_blocker = "none".to_string();
                                         }
                                         Err(error) => {
                                             next_blocker = format!("{error:?}");
@@ -9854,14 +9869,32 @@ fn promote_cached_real_onion_roundtrip_owner_to_persistent_owner(
     app_cache_root: &std::path::Path,
     profile: &str,
 ) -> bool {
-    let persistent_owner_ready = state
-        .owner
-        .lock()
-        .ok()
-        .and_then(|guard| guard.as_ref().map(|owner| owner.summary().has_bootstrapped_client()))
-        .unwrap_or(false);
-    if persistent_owner_ready {
-        return false;
+    let owner_profile = state.owner_profile.lock().ok().and_then(|guard| guard.clone());
+    let mut displaced_owner = None;
+    if let Ok(mut guard) = state.owner.lock() {
+        let persistent_owner_ready = guard
+            .as_ref()
+            .is_some_and(|owner| owner.summary().has_bootstrapped_client());
+        if persistent_owner_ready {
+            match owner_profile.as_deref() {
+                Some(bound_profile) if bound_profile != profile => {
+                    displaced_owner = guard.take();
+                }
+                _ => return false,
+            }
+        }
+    }
+    if let (Some(bound_profile), Some(owner)) = (owner_profile.as_deref(), displaced_owner) {
+        store_cached_real_onion_roundtrip_owner(
+            Some(state),
+            app_data_root,
+            app_cache_root,
+            bound_profile,
+            owner,
+        );
+        if let Ok(mut guard) = state.owner_profile.lock() {
+            *guard = None;
+        }
     }
 
     let Some(owner) =
@@ -9886,6 +9919,9 @@ fn promote_cached_real_onion_roundtrip_owner_to_persistent_owner(
                 false
             } else {
                 *guard = Some(owner);
+                if let Ok(mut profile_guard) = state.owner_profile.lock() {
+                    *profile_guard = Some(profile.to_string());
+                }
                 true
             }
         }
