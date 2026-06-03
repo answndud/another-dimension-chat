@@ -2713,6 +2713,8 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `real_onion_bootstrap_retry_limit=${Number.parseInt(realOnionResult?.bootstrap_retry_limit ?? 0, 10) || 0}`,
     `real_onion_profile_a_bootstrap_attempts=${Number.parseInt(realOnionResult?.profile_a_bootstrap_attempts ?? 0, 10) || 0}`,
     `real_onion_profile_b_bootstrap_attempts=${Number.parseInt(realOnionResult?.profile_b_bootstrap_attempts ?? 0, 10) || 0}`,
+    `real_onion_profile_a_bootstrap_reused=${realOnionResult?.profile_a_bootstrap_reused === true}`,
+    `real_onion_profile_b_bootstrap_reused=${realOnionResult?.profile_b_bootstrap_reused === true}`,
     `real_onion_network_io=${realOnionResult?.network_io_attempted === true}`,
     `real_onion_transport_io=${realOnionResult?.transport_io_opened === true}`,
     `real_onion_runtime=${realOnionResult?.runtime_messaging_enabled === true}`,
