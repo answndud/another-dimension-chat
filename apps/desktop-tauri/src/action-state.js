@@ -431,7 +431,8 @@ export function productionTwoProfileOutboundStatusLabel(entry) {
     if (
       failure.includes("peer-endpoint-missing") ||
       failure.includes("endpoint-missing") ||
-      failure.includes("endpointunavailable")
+      failure.includes("endpointunavailable") ||
+      failure.includes("runtimeownerprofilemismatch")
     ) {
       return "route missing";
     }
@@ -454,7 +455,8 @@ export function productionTwoProfileOutboundNeedsEndpointRefresh(entry) {
   const endpointMissing =
     failure.includes("peer-endpoint-missing") ||
     failure.includes("endpoint-missing") ||
-    failure.includes("endpointunavailable");
+    failure.includes("endpointunavailable") ||
+    failure.includes("runtimeownerprofilemismatch");
   if (endpointMissing) {
     return false;
   }
@@ -508,11 +510,14 @@ export function productionTwoProfileOutboundPrimaryAction(entry) {
     };
   }
   if (status === "route missing") {
+    const failure = String(entry?.outboundFailureKind ?? "").toLowerCase();
     return {
       action: "prepare-private-route",
       labelKey: "preparePrivateRoute",
       noticeKey: "privateDeliveryRouteNeeded",
-      recoveryKey: "sendRecoveryRouteMissing",
+      recoveryKey: failure.includes("runtimeownerprofilemismatch")
+        ? "sendRecoveryRuntimeMismatch"
+        : "sendRecoveryRouteMissing",
     };
   }
   if (productionTwoProfileOutboundNeedsEndpointRefresh(entry)) {

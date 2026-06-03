@@ -280,8 +280,13 @@ test("field test report is redacted and copyable from room diagnostics", () => {
 test("send diagnostics expose runtime owner match without raw profile names", () => {
   assert.match(mainJs, /owner_profile_bound=\$\{result\.owner_profile_bound === true\}/);
   assert.match(mainJs, /owner_matches_send=\$\{result\.owner_matches_send_profile === true\}/);
+  assert.match(mainJs, /function sendRuntimeOwnerMismatch/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNoticeForSendAttempt"), /sendRuntimeMismatch/);
+  assert.match(mainJs, /latestChatDeliveryNoticeKey === "sendRuntimeMismatch"/);
   assert.match(functionBody(mainJs, "buildFieldTestReport"), /sendAttemptBoundaryText/);
   assert.match(functionBody(mainJs, "buildFieldTestReport"), /send_runtime_owner_matches_send_profile=/);
+  assert.match(i18nJs, /sendRecoveryRuntimeMismatch/);
+  assert.match(i18nJs, /sendRuntimeMismatch/);
 });
 
 test("delivery code save continues the original send or receive action", () => {
