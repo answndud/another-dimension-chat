@@ -1065,6 +1065,20 @@ body.is-room-list-mode .room-list-panel {
   font-size: 12px;
 }
 
+.room-list-sync-status {
+  margin: -2px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.room-list-sync-status.is-progress {
+  color: var(--accent-cyan);
+}
+
+.room-list-sync-status.is-warning {
+  color: var(--warning);
+}
+
 .saved-room-list-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto auto auto;

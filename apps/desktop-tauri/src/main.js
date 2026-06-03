@@ -297,6 +297,7 @@ const fields = {
   roomListCreateRoom: document.querySelector("#room-list-create-room"),
   roomListInviteCode: document.querySelector("#room-list-invite-code"),
   roomListJoinRoom: document.querySelector("#room-list-join-room"),
+  roomListSyncStatus: document.querySelector("#room-list-sync-status"),
   savedRoomList: document.querySelector("#saved-room-list"),
   productionTwoProfileDirection: document.querySelector("#production-two-profile-direction"),
   connectionDeviceRole: document.querySelector("#connection-device-role"),
@@ -1087,6 +1088,7 @@ function applyLanguage(language) {
   applyStaticTranslations(document, currentLanguage);
   applyTheme(document.documentElement.dataset.theme);
   renderSavedInviteRooms();
+  renderSavedRoomMetadataSyncStatus();
   renderProductionTwoProfileConversationList();
   renderRoomIdentityBar(productionTwoProfileInput(), twoProfileSessionsReadyForInput(productionTwoProfileInput()));
   renderRoomStatusSummary(productionTwoProfileInput(), twoProfileSessionsReadyForInput(productionTwoProfileInput()));
@@ -2011,6 +2013,7 @@ let inviteRoomTranscriptRefreshTimer = null;
 let inviteRoomTranscriptRefreshFingerprint = "";
 let inviteRoomTranscriptRefreshInFlight = false;
 let savedRoomMetadataSyncInFlight = false;
+let savedRoomMetadataSyncStatus = { key: "", tone: "muted", values: {} };
 let roomDetailOpen = false;
 let currentInviteCodeShareVisible = false;
 
@@ -2417,23 +2420,58 @@ function savedInviteRoomMetadataSyncCandidates(rooms = savedInviteRooms()) {
     .slice(0, savedRoomMetadataStartupSyncLimit);
 }
 
+function renderSavedRoomMetadataSyncStatus() {
+  if (!fields.roomListSyncStatus) {
+    return;
+  }
+  const key = savedRoomMetadataSyncStatus.key;
+  fields.roomListSyncStatus.hidden = !key;
+  fields.roomListSyncStatus.className = [
+    "room-list-sync-status",
+    savedRoomMetadataSyncStatus.tone ? `is-${savedRoomMetadataSyncStatus.tone}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  fields.roomListSyncStatus.textContent = key ? formatTemplate(key, savedRoomMetadataSyncStatus.values) : "";
+}
+
+function setSavedRoomMetadataSyncStatus(key = "", tone = "muted", values = {}) {
+  savedRoomMetadataSyncStatus = { key, tone, values };
+  renderSavedRoomMetadataSyncStatus();
+}
+
 async function syncSavedInviteRoomMetadataFromLocalStores() {
   if (savedRoomMetadataSyncInFlight) {
     return false;
   }
+  const candidates = savedInviteRoomMetadataSyncCandidates();
+  if (!candidates.length) {
+    setSavedRoomMetadataSyncStatus("");
+    return false;
+  }
   savedRoomMetadataSyncInFlight = true;
+  setSavedRoomMetadataSyncStatus("roomListSyncRunning", "progress", { count: candidates.length });
+  let refreshed = 0;
+  let failed = 0;
   try {
-    for (const room of savedInviteRoomMetadataSyncCandidates()) {
+    for (const room of candidates) {
       try {
         const metadata = await savedInviteRoomMetadataFromLocalStores(room);
         if (metadata) {
           rememberInviteRoom(room.code, room.role, { ...metadata, updatedAt: room.updatedAt });
+          refreshed += 1;
         }
       } catch {
+        failed += 1;
         // A room may not have local transcript data yet; keep the saved list entry unchanged.
       }
     }
     renderSavedInviteRooms();
+    setSavedRoomMetadataSyncStatus(
+      failed ? "roomListSyncPartial" : "roomListSyncComplete",
+      failed ? "warning" : "muted",
+      { count: refreshed },
+    );
     return true;
   } finally {
     savedRoomMetadataSyncInFlight = false;
