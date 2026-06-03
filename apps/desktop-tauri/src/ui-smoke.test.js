@@ -32,6 +32,7 @@ test("main chat surface keeps invite, message, receive, and retry entry points",
     "room-list-invite-code",
     "back-to-room-list",
     "saved-room-list",
+    "room-list-sync-status",
     "copy-room-invite-token",
     "production-two-profile-message",
     "chat-delivery-notice",
@@ -66,6 +67,7 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(mainJs, /function rememberCurrentInviteRoomMetadata/);
   assert.match(mainJs, /function syncSavedInviteRoomMetadataFromLocalStores/);
   assert.match(mainJs, /let savedRoomMetadataSyncInFlight = false/);
+  assert.match(mainJs, /roomListSyncStatus: document\.querySelector\("#room-list-sync-status"\)/);
   assert.match(mainJs, /const savedRoomMetadataStartupSyncLimit = 8/);
   assert.match(mainJs, /function savedInviteRoomResumeRoom/);
   assert.match(mainJs, /createNewInviteRoomFromList/);
@@ -76,12 +78,16 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(mainJs, /removeRoomConfirm/);
   assert.match(stylesCss, /\.saved-room-preview/);
   assert.match(stylesCss, /\.saved-room-state/);
+  assert.match(stylesCss, /\.room-list-sync-status/);
   assert.match(stylesCss, /\.saved-room-list-item\.is-resume-recommended/);
   assert.doesNotMatch(mainJs, /restoreLastInviteRoom\(\);/);
   assert.match(mainJs, /showRoomList\(\);\s*syncSavedInviteRoomMetadataFromLocalStores\(\);/);
   assert.match(functionBody(mainJs, "savedInviteRoomMetadataFromLocalStores"), /production_message_transcript_export/);
   assert.match(functionBody(mainJs, "savedInviteRoomMetadataSyncCandidates"), /savedInviteRoomResumePriority\(right\) - savedInviteRoomResumePriority\(left\)/);
   assert.match(functionBody(mainJs, "savedInviteRoomMetadataSyncCandidates"), /slice\(0, savedRoomMetadataStartupSyncLimit\)/);
+  assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncRunning/);
+  assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncComplete/);
+  assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncPartial/);
   assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /rememberInviteRoom\(room\.code, room\.role/);
   assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /savedInviteRoomMetadataSyncCandidates\(\)/);
   assert.match(indexHtml, /id="back-to-room-list"/);
