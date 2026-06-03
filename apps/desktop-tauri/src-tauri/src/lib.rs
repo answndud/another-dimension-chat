@@ -1795,6 +1795,17 @@ async fn production_onion_receive_loop_start(
     let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion receive loop start failed without exposing local path details"
     })?;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let _promoted_cached_owner = if manual_network_permission {
+        promote_cached_real_onion_roundtrip_owner_to_persistent_owner(
+            &state,
+            &app_data_root,
+            &app_cache_root,
+            profile.as_str(),
+        )
+    } else {
+        false
+    };
     let started = run_production_onion_receive_loop_start(
         &state,
         profile.as_str().to_string(),
@@ -5987,6 +5998,17 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
     passphrase: String,
     manual_network_permission: bool,
 ) -> Result<ProductionOnionInboundEnvelopeReceiveAttemptResult, String> {
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let promoted_cached_owner = if manual_network_permission {
+        promote_cached_real_onion_roundtrip_owner_to_persistent_owner(
+            state,
+            app_data_root.as_ref(),
+            app_cache_root.as_ref(),
+            &profile,
+        )
+    } else {
+        false
+    };
     let persistent_client_ready = run_production_onion_persistent_client_ready(state)?;
     #[cfg(feature = "manual-onion-client-attempt")]
     let profile_for_import = profile.clone();
@@ -6012,6 +6034,10 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
     let mut event_summary = Vec::new();
     #[cfg(not(feature = "manual-onion-client-attempt"))]
     let event_summary = Vec::new();
+    #[cfg(feature = "manual-onion-client-attempt")]
+    if promoted_cached_owner {
+        event_summary.push("persistent_client_promoted_from_real_onion_cache".to_string());
+    }
     #[cfg(feature = "manual-onion-client-attempt")]
     let mut next_blocker;
     #[cfg(not(feature = "manual-onion-client-attempt"))]
@@ -6819,6 +6845,17 @@ async fn run_production_onion_outbound_envelope_send_attempt(
     message_number: u64,
     manual_network_permission: bool,
 ) -> Result<ProductionOnionOutboundEnvelopeSendAttemptResult, String> {
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let promoted_cached_owner = if manual_network_permission {
+        promote_cached_real_onion_roundtrip_owner_to_persistent_owner(
+            state,
+            app_data_root.as_ref(),
+            app_cache_root.as_ref(),
+            &profile,
+        )
+    } else {
+        false
+    };
     let persistent_client_ready = run_production_onion_persistent_client_ready(state)?;
     let prepare = run_production_onion_outbound_envelope_send_prepare(
         &app_data_root,
@@ -6835,6 +6872,10 @@ async fn run_production_onion_outbound_envelope_send_attempt(
     #[cfg(not(feature = "manual-onion-client-attempt"))]
     let event_summary = Vec::new();
     let next_blocker;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    if promoted_cached_owner {
+        event_summary.push("persistent_client_promoted_from_real_onion_cache".to_string());
+    }
     #[cfg(feature = "manual-onion-client-attempt")]
     let mut send_attempt_started = false;
     #[cfg(not(feature = "manual-onion-client-attempt"))]
@@ -7011,6 +7052,17 @@ async fn run_production_onion_endpoint_update_control_send_stored_endpoint_attem
     local_rendezvous_endpoint: String,
     manual_network_permission: bool,
 ) -> Result<ProductionOnionEndpointUpdateControlSendAttemptResult, String> {
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let promoted_cached_owner = if manual_network_permission {
+        promote_cached_real_onion_roundtrip_owner_to_persistent_owner(
+            state,
+            app_data_root.as_ref(),
+            _app_cache_root.as_ref(),
+            &profile,
+        )
+    } else {
+        false
+    };
     let persistent_client_ready = run_production_onion_persistent_client_ready(state)?;
     let mut blockers = Vec::new();
     #[cfg(feature = "manual-onion-client-attempt")]
@@ -7018,6 +7070,10 @@ async fn run_production_onion_endpoint_update_control_send_stored_endpoint_attem
     #[cfg(not(feature = "manual-onion-client-attempt"))]
     let event_summary = Vec::new();
     let next_blocker;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    if promoted_cached_owner {
+        event_summary.push("persistent_client_promoted_from_real_onion_cache".to_string());
+    }
     #[cfg(feature = "manual-onion-client-attempt")]
     let mut endpoint_update_created = false;
     #[cfg(not(feature = "manual-onion-client-attempt"))]
@@ -9778,6 +9834,61 @@ fn store_cached_real_onion_roundtrip_owner(
     let key = real_onion_roundtrip_owner_cache_key(app_data_root, app_cache_root, profile);
     if let Ok(mut guard) = runtime_state.real_onion_roundtrip_owners.lock() {
         guard.insert(key, owner);
+    }
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+fn promote_cached_real_onion_roundtrip_owner_to_persistent_owner(
+    state: &ProductionOnionClientRuntimeState,
+    app_data_root: &std::path::Path,
+    app_cache_root: &std::path::Path,
+    profile: &str,
+) -> bool {
+    let persistent_owner_ready = state
+        .owner
+        .lock()
+        .ok()
+        .and_then(|guard| guard.as_ref().map(|owner| owner.summary().has_bootstrapped_client()))
+        .unwrap_or(false);
+    if persistent_owner_ready {
+        return false;
+    }
+
+    let Some(owner) =
+        take_cached_real_onion_roundtrip_owner(Some(state), app_data_root, app_cache_root, profile)
+    else {
+        return false;
+    };
+
+    match state.owner.lock() {
+        Ok(mut guard) => {
+            if guard
+                .as_ref()
+                .is_some_and(|owner| owner.summary().has_bootstrapped_client())
+            {
+                store_cached_real_onion_roundtrip_owner(
+                    Some(state),
+                    app_data_root,
+                    app_cache_root,
+                    profile,
+                    owner,
+                );
+                false
+            } else {
+                *guard = Some(owner);
+                true
+            }
+        }
+        Err(_) => {
+            store_cached_real_onion_roundtrip_owner(
+                Some(state),
+                app_data_root,
+                app_cache_root,
+                profile,
+                owner,
+            );
+            false
+        }
     }
 }
 
