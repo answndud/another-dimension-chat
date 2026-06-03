@@ -303,6 +303,13 @@ struct ProductionOnionClientRuntimeState {
     #[cfg(feature = "manual-onion-client-attempt")]
     owner: std::sync::Mutex<Option<another_dimension_transport::arti_adapter_spike::PersistentArtiClientOwner>>,
     #[cfg(feature = "manual-onion-client-attempt")]
+    real_onion_roundtrip_owners: std::sync::Mutex<
+        std::collections::HashMap<
+            String,
+            another_dimension_transport::arti_adapter_spike::PersistentArtiClientOwner,
+        >,
+    >,
+    #[cfg(feature = "manual-onion-client-attempt")]
     bootstrap_in_progress: std::sync::atomic::AtomicBool,
     #[cfg(feature = "manual-onion-client-attempt")]
     send_in_progress: std::sync::atomic::AtomicBool,
@@ -501,6 +508,8 @@ pub struct ProductionTwoProfileRealOnionRoundtripResult {
     bootstrap_retry_limit: u8,
     profile_a_bootstrap_attempts: u8,
     profile_b_bootstrap_attempts: u8,
+    profile_a_bootstrap_reused: bool,
+    profile_b_bootstrap_reused: bool,
     profile_a_client_bootstrapped: bool,
     profile_b_client_bootstrapped: bool,
     profile_a_onion_service_launched: bool,
@@ -2873,6 +2882,7 @@ async fn production_two_profile_real_onion_roundtrip(
     let result = run_production_two_profile_real_onion_roundtrip_with_cancel(
         app_data_root,
         app_cache_root,
+        Some(&state),
         profile_a,
         profile_b,
         passphrase,
@@ -2983,6 +2993,7 @@ async fn run_production_two_profile_real_onion_roundtrip(
     run_production_two_profile_real_onion_roundtrip_with_cancel(
         app_data_root,
         app_cache_root,
+        None,
         profile_a,
         profile_b,
         passphrase,
@@ -8466,6 +8477,7 @@ fn sanitize_envelope_payload(payload: String) -> Result<String, String> {
 async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
     _app_data_root: impl AsRef<std::path::Path>,
     _app_cache_root: impl AsRef<std::path::Path>,
+    runtime_state: Option<&ProductionOnionClientRuntimeState>,
     profile_a: String,
     profile_b: String,
     _passphrase: String,
@@ -8485,6 +8497,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
     let profile_b_name = profile_b.as_str().to_string();
     let message_ttl_seconds = sanitize_production_message_ttl_seconds(message_ttl_seconds)?;
     let bootstrap_retry_limit = bootstrap_retry_limit.unwrap_or(1).clamp(1, 3);
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let _ = runtime_state;
     #[cfg(feature = "manual-onion-client-attempt")]
     let passphrase = _passphrase.trim().to_string();
     #[cfg(feature = "manual-onion-client-attempt")]
@@ -8513,6 +8527,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             bootstrap_retry_limit,
             profile_a_bootstrap_attempts: 0,
             profile_b_bootstrap_attempts: 0,
+            profile_a_bootstrap_reused: false,
+            profile_b_bootstrap_reused: false,
             profile_a_unlocked: false,
             profile_b_unlocked: false,
             profile_a_client_bootstrapped: false,
@@ -8591,6 +8607,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
                 bootstrap_retry_limit,
                 profile_a_bootstrap_attempts: 0,
                 profile_b_bootstrap_attempts: 0,
+                profile_a_bootstrap_reused: false,
+                profile_b_bootstrap_reused: false,
                 profile_a_unlocked: false,
                 profile_b_unlocked: false,
                 profile_a_client_bootstrapped: false,
@@ -8678,6 +8696,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
                               event_summary: Vec<String>,
                               profile_a_bootstrap_attempts: u8,
                               profile_b_bootstrap_attempts: u8,
+                              profile_a_bootstrap_reused: bool,
+                              profile_b_bootstrap_reused: bool,
                               profile_a_client_bootstrapped: bool,
                               profile_b_client_bootstrapped: bool,
                               profile_a_onion_service_launched: bool,
@@ -8696,6 +8716,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
                 bootstrap_retry_limit,
                 profile_a_bootstrap_attempts,
                 profile_b_bootstrap_attempts,
+                profile_a_bootstrap_reused,
+                profile_b_bootstrap_reused,
                 profile_a_unlocked: profile_a_unlock.storage_opened
                     && profile_a_unlock.profile_marker_present,
                 profile_b_unlocked: profile_b_unlock.storage_opened
@@ -8760,10 +8782,13 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
 
         let mut event_summary = Vec::new();
         let profile_a_bootstrap_attempts;
+        let profile_a_bootstrap_reused;
         let mut profile_b_bootstrap_attempts = 0;
+        let mut profile_b_bootstrap_reused = false;
         let mut profile_a_owner = match build_real_onion_roundtrip_owner_with_retries(
             _app_data_root.as_ref(),
             _app_cache_root.as_ref(),
+            runtime_state,
             &profile_a_name,
             &mut event_summary,
             bootstrap_retry_limit,
@@ -8771,8 +8796,9 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
         )
         .await
         {
-            Ok((owner, attempts)) => {
+            Ok((owner, attempts, reused)) => {
                 profile_a_bootstrap_attempts = attempts;
+                profile_a_bootstrap_reused = reused;
                 owner
             }
             Err((error, attempts)) => {
@@ -8787,6 +8813,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
                     profile_a_bootstrap_attempts,
                     profile_b_bootstrap_attempts,
                     false,
+                    profile_b_bootstrap_reused,
+                    false,
                     false,
                     false,
                     false,
@@ -8798,6 +8826,7 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
         let mut profile_b_owner = match build_real_onion_roundtrip_owner_with_retries(
             _app_data_root.as_ref(),
             _app_cache_root.as_ref(),
+            runtime_state,
             &profile_b_name,
             &mut event_summary,
             bootstrap_retry_limit,
@@ -8805,8 +8834,9 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
         )
         .await
         {
-            Ok((owner, attempts)) => {
+            Ok((owner, attempts, reused)) => {
                 profile_b_bootstrap_attempts = attempts;
+                profile_b_bootstrap_reused = reused;
                 owner
             }
             Err((error, attempts)) => {
@@ -8820,6 +8850,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
                     event_summary,
                     profile_a_bootstrap_attempts,
                     profile_b_bootstrap_attempts,
+                    profile_a_bootstrap_reused,
+                    profile_b_bootstrap_reused,
                     true,
                     false,
                     false,
@@ -8842,12 +8874,28 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             .is_err()
         {
             event_summary.extend(launch_sink.events().iter().map(ToString::to_string));
+            store_cached_real_onion_roundtrip_owner(
+                runtime_state,
+                _app_data_root.as_ref(),
+                _app_cache_root.as_ref(),
+                &profile_a_name,
+                profile_a_owner,
+            );
+            store_cached_real_onion_roundtrip_owner(
+                runtime_state,
+                _app_data_root.as_ref(),
+                _app_cache_root.as_ref(),
+                &profile_b_name,
+                profile_b_owner,
+            );
             return Ok(blocked_result(
                 "ProfileAOnionServiceLaunchFailed".to_string(),
                 vec!["OnionServiceLaunchFailed".to_string()],
                 event_summary,
                 profile_a_bootstrap_attempts,
                 profile_b_bootstrap_attempts,
+                profile_a_bootstrap_reused,
+                profile_b_bootstrap_reused,
                 profile_a_client_bootstrapped,
                 profile_b_client_bootstrapped,
                 false,
@@ -8865,12 +8913,28 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             .is_err()
         {
             event_summary.extend(launch_sink.events().iter().map(ToString::to_string));
+            store_cached_real_onion_roundtrip_owner(
+                runtime_state,
+                _app_data_root.as_ref(),
+                _app_cache_root.as_ref(),
+                &profile_a_name,
+                profile_a_owner,
+            );
+            store_cached_real_onion_roundtrip_owner(
+                runtime_state,
+                _app_data_root.as_ref(),
+                _app_cache_root.as_ref(),
+                &profile_b_name,
+                profile_b_owner,
+            );
             return Ok(blocked_result(
                 "ProfileBOnionServiceLaunchFailed".to_string(),
                 vec!["OnionServiceLaunchFailed".to_string()],
                 event_summary,
                 profile_a_bootstrap_attempts,
                 profile_b_bootstrap_attempts,
+                profile_a_bootstrap_reused,
+                profile_b_bootstrap_reused,
                 profile_a_client_bootstrapped,
                 profile_b_client_bootstrapped,
                 true,
@@ -8884,12 +8948,28 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
         let profile_a_endpoint = match profile_a_owner.retained_onion_endpoint() {
             Some(endpoint) => endpoint,
             None => {
+                store_cached_real_onion_roundtrip_owner(
+                    runtime_state,
+                    _app_data_root.as_ref(),
+                    _app_cache_root.as_ref(),
+                    &profile_a_name,
+                    profile_a_owner,
+                );
+                store_cached_real_onion_roundtrip_owner(
+                    runtime_state,
+                    _app_data_root.as_ref(),
+                    _app_cache_root.as_ref(),
+                    &profile_b_name,
+                    profile_b_owner,
+                );
                 return Ok(blocked_result(
                     "ProfileAEndpointUnavailable".to_string(),
                     vec!["EndpointUnavailable".to_string()],
                     event_summary,
                     profile_a_bootstrap_attempts,
                     profile_b_bootstrap_attempts,
+                    profile_a_bootstrap_reused,
+                    profile_b_bootstrap_reused,
                     profile_a_client_bootstrapped,
                     profile_b_client_bootstrapped,
                     true,
@@ -8902,12 +8982,28 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
         let profile_b_endpoint = match profile_b_owner.retained_onion_endpoint() {
             Some(endpoint) => endpoint,
             None => {
+                store_cached_real_onion_roundtrip_owner(
+                    runtime_state,
+                    _app_data_root.as_ref(),
+                    _app_cache_root.as_ref(),
+                    &profile_a_name,
+                    profile_a_owner,
+                );
+                store_cached_real_onion_roundtrip_owner(
+                    runtime_state,
+                    _app_data_root.as_ref(),
+                    _app_cache_root.as_ref(),
+                    &profile_b_name,
+                    profile_b_owner,
+                );
                 return Ok(blocked_result(
                     "ProfileBEndpointUnavailable".to_string(),
                     vec!["EndpointUnavailable".to_string()],
                     event_summary,
                     profile_a_bootstrap_attempts,
                     profile_b_bootstrap_attempts,
+                    profile_a_bootstrap_reused,
+                    profile_b_bootstrap_reused,
                     profile_a_client_bootstrapped,
                     profile_b_client_bootstrapped,
                     true,
@@ -9133,6 +9229,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
                     bootstrap_retry_limit,
                     profile_a_bootstrap_attempts,
                     profile_b_bootstrap_attempts,
+                    profile_a_bootstrap_reused,
+                    profile_b_bootstrap_reused,
                     profile_a_unlocked: profile_a_unlock.storage_opened
                         && profile_a_unlock.profile_marker_present,
                     profile_b_unlocked: profile_b_unlock.storage_opened
@@ -9288,6 +9386,15 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             {
                 blockers.push(send_attempt.next_blocker.clone());
             }
+            restore_real_onion_roundtrip_runtime_owners(
+                runtime_state,
+                _app_data_root.as_ref(),
+                _app_cache_root.as_ref(),
+                &sender_profile_result,
+                &receiver_profile_result,
+                &sender_runtime_state,
+                &receiver_runtime_state,
+            );
             return Ok(build_transport_blocked_result(
                 "SendAttemptFailed".to_string(),
                 blockers,
@@ -9312,6 +9419,15 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             {
                 blockers.push(inbound_attempt.next_blocker.clone());
             }
+            restore_real_onion_roundtrip_runtime_owners(
+                runtime_state,
+                _app_data_root.as_ref(),
+                _app_cache_root.as_ref(),
+                &sender_profile_result,
+                &receiver_profile_result,
+                &sender_runtime_state,
+                &receiver_runtime_state,
+            );
             return Ok(build_transport_blocked_result(
                 "ReceiveAttemptFailed".to_string(),
                 blockers,
@@ -9382,6 +9498,15 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             {
                 blockers.push(second_send_attempt.next_blocker.clone());
             }
+            restore_real_onion_roundtrip_runtime_owners(
+                runtime_state,
+                _app_data_root.as_ref(),
+                _app_cache_root.as_ref(),
+                &sender_profile_result,
+                &receiver_profile_result,
+                &sender_runtime_state,
+                &receiver_runtime_state,
+            );
             return Ok(build_transport_blocked_result(
                 "SecondSendAttemptFailed".to_string(),
                 blockers,
@@ -9406,6 +9531,15 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             {
                 blockers.push(second_inbound_attempt.next_blocker.clone());
             }
+            restore_real_onion_roundtrip_runtime_owners(
+                runtime_state,
+                _app_data_root.as_ref(),
+                _app_cache_root.as_ref(),
+                &sender_profile_result,
+                &receiver_profile_result,
+                &sender_runtime_state,
+                &receiver_runtime_state,
+            );
             return Ok(build_transport_blocked_result(
                 "SecondReceiveAttemptFailed".to_string(),
                 blockers,
@@ -9439,6 +9573,15 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             && receive_mode_status.last_stream_read_write_attempted
             && receive_mode_status.last_envelope_io_opened
             && receive_mode_status.last_runtime_messaging_enabled;
+        restore_real_onion_roundtrip_runtime_owners(
+            runtime_state,
+            _app_data_root.as_ref(),
+            _app_cache_root.as_ref(),
+            &sender_profile_result,
+            &receiver_profile_result,
+            &sender_runtime_state,
+            &receiver_runtime_state,
+        );
 
         Ok(ProductionTwoProfileRealOnionRoundtripResult {
             warning: "real onion two-profile roundtrip attempted with explicit manual network permission; result returns redacted transport status only",
@@ -9452,6 +9595,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             bootstrap_retry_limit,
             profile_a_bootstrap_attempts,
             profile_b_bootstrap_attempts,
+            profile_a_bootstrap_reused,
+            profile_b_bootstrap_reused,
             profile_a_unlocked: profile_a_unlock.storage_opened
                 && profile_a_unlock.profile_marker_present,
             profile_b_unlocked: profile_b_unlock.storage_opened
@@ -9584,9 +9729,97 @@ fn real_onion_bootstrap_error_retryable(redacted_bootstrap_error: &str) -> bool 
 }
 
 #[cfg(feature = "manual-onion-client-attempt")]
+fn real_onion_roundtrip_owner_cache_key(
+    app_data_root: &std::path::Path,
+    app_cache_root: &std::path::Path,
+    profile: &str,
+) -> String {
+    format!(
+        "{}|{}|{}",
+        app_data_root.display(),
+        app_cache_root.display(),
+        profile
+    )
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+fn take_cached_real_onion_roundtrip_owner(
+    runtime_state: Option<&ProductionOnionClientRuntimeState>,
+    app_data_root: &std::path::Path,
+    app_cache_root: &std::path::Path,
+    profile: &str,
+) -> Option<another_dimension_transport::arti_adapter_spike::PersistentArtiClientOwner> {
+    let runtime_state = runtime_state?;
+    let key = real_onion_roundtrip_owner_cache_key(app_data_root, app_cache_root, profile);
+    let mut guard = runtime_state.real_onion_roundtrip_owners.lock().ok()?;
+    guard.remove(&key).and_then(|owner| {
+        if owner.summary().has_bootstrapped_client() {
+            Some(owner)
+        } else {
+            None
+        }
+    })
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+fn store_cached_real_onion_roundtrip_owner(
+    runtime_state: Option<&ProductionOnionClientRuntimeState>,
+    app_data_root: &std::path::Path,
+    app_cache_root: &std::path::Path,
+    profile: &str,
+    owner: another_dimension_transport::arti_adapter_spike::PersistentArtiClientOwner,
+) {
+    if !owner.summary().has_bootstrapped_client() {
+        return;
+    }
+    let Some(runtime_state) = runtime_state else {
+        return;
+    };
+    let key = real_onion_roundtrip_owner_cache_key(app_data_root, app_cache_root, profile);
+    if let Ok(mut guard) = runtime_state.real_onion_roundtrip_owners.lock() {
+        guard.insert(key, owner);
+    }
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+fn restore_real_onion_roundtrip_runtime_owners(
+    runtime_state: Option<&ProductionOnionClientRuntimeState>,
+    app_data_root: &std::path::Path,
+    app_cache_root: &std::path::Path,
+    sender_profile: &str,
+    receiver_profile: &str,
+    sender_runtime_state: &ProductionOnionClientRuntimeState,
+    receiver_runtime_state: &ProductionOnionClientRuntimeState,
+) {
+    if let Ok(mut guard) = sender_runtime_state.owner.lock() {
+        if let Some(owner) = guard.take() {
+            store_cached_real_onion_roundtrip_owner(
+                runtime_state,
+                app_data_root,
+                app_cache_root,
+                sender_profile,
+                owner,
+            );
+        }
+    }
+    if let Ok(mut guard) = receiver_runtime_state.owner.lock() {
+        if let Some(owner) = guard.take() {
+            store_cached_real_onion_roundtrip_owner(
+                runtime_state,
+                app_data_root,
+                app_cache_root,
+                receiver_profile,
+                owner,
+            );
+        }
+    }
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
 async fn build_real_onion_roundtrip_owner_with_retries(
     app_data_root: &std::path::Path,
     app_cache_root: &std::path::Path,
+    runtime_state: Option<&ProductionOnionClientRuntimeState>,
     profile: &str,
     event_summary: &mut Vec<String>,
     bootstrap_retry_limit: u8,
@@ -9595,9 +9828,16 @@ async fn build_real_onion_roundtrip_owner_with_retries(
     (
         another_dimension_transport::arti_adapter_spike::PersistentArtiClientOwner,
         u8,
+        bool,
     ),
     (String, u8),
 > {
+    if let Some(owner) =
+        take_cached_real_onion_roundtrip_owner(runtime_state, app_data_root, app_cache_root, profile)
+    {
+        event_summary.push("bootstrap_reuse profile=redacted".to_string());
+        return Ok((owner, 0, true));
+    }
     let attempts = bootstrap_retry_limit.max(1);
     let mut last_error = String::new();
     for attempt in 1..=attempts {
@@ -9611,7 +9851,7 @@ async fn build_real_onion_roundtrip_owner_with_retries(
         )
         .await
         {
-            Ok(owner) => return Ok((owner, attempt)),
+            Ok(owner) => return Ok((owner, attempt, false)),
             Err(error) => {
                 let retryable = real_onion_bootstrap_error_retryable(&error)
                     && !error.contains("BootstrapCancelled")

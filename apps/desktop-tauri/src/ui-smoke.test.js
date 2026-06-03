@@ -252,6 +252,8 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /real_onion_bootstrap_retry_limit=/);
   assert.match(reportBody, /real_onion_profile_a_bootstrap_attempts=/);
   assert.match(reportBody, /real_onion_profile_b_bootstrap_attempts=/);
+  assert.match(reportBody, /real_onion_profile_a_bootstrap_reused=/);
+  assert.match(reportBody, /real_onion_profile_b_bootstrap_reused=/);
   assert.match(reportBody, /real_onion_network_io=/);
   assert.match(reportBody, /redacted_boundary=/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /productionTwoProfileRealOnionSyntheticFailureResult/);
