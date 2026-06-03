@@ -238,6 +238,8 @@ test("saved room removal is list-only and transcript switching rebuilds entries"
   assert.match(functionBody(mainJs, "renderProductionTwoProfileTranscriptEntries"), /resetProductionTwoProfileTranscript/);
   assert.match(functionBody(mainJs, "resetProductionTwoProfileTranscript"), /productionTwoProfileConversationEntries\.clear\(\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /rememberCurrentInviteRoomMetadata\(\)/);
+  assert.match(mainJs, /function reconcileCurrentInviteRoomMetadataFromTranscriptEntries/);
+  assert.match(functionBody(mainJs, "reconcileCurrentInviteRoomMetadataFromTranscriptEntries"), /productionInviteRoomConversationMetadata\(entries \?\? \[\]\)/);
 });
 
 test("room transcript refresh is scoped to the current room", () => {
@@ -248,6 +250,7 @@ test("room transcript refresh is scoped to the current room", () => {
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /transcriptInput/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /twoProfileTranscriptInputStillCurrent\(transcriptInput\)/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /invokeInviteRoomSessionStatus/);
+  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /reconcileCurrentInviteRoomMetadataFromTranscriptEntries\(entries\)/);
 });
 
 test("receive imports refresh room list metadata immediately", () => {

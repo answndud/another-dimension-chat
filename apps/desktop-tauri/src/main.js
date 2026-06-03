@@ -2396,6 +2396,16 @@ function currentRoomConversationMetadata() {
   return productionInviteRoomConversationMetadata([...productionTwoProfileConversationEntries.values()]);
 }
 
+function reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries) {
+  const code = currentInviteRoomCode();
+  const role = connectionCodeRoleFor(code);
+  if (!code || !role) {
+    return false;
+  }
+  rememberInviteRoom(code, role, productionInviteRoomConversationMetadata(entries ?? []));
+  return true;
+}
+
 async function savedInviteRoomMetadataFromLocalStores(room) {
   const input = savedInviteRoomInput(room);
   const { profileA, profileB, passphrase } = input;
@@ -11901,6 +11911,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       );
     }
     const staleMessageEnvelopeSlotsPruned = renderProductionTwoProfileTranscriptEntries(entries);
+    reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries);
     clearStaleSendRecoveryNotice({ profileA, profileB, passphrase });
     const resumeWarning = appendStaleMessageEnvelopeSlotsPruned(
       appendExpiredMessagesPurged(
