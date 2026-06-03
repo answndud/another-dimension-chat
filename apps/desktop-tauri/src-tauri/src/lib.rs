@@ -1331,6 +1331,8 @@ pub struct ProductionOnionReceiveLoopStatusResult {
     duplicate_loop_blocked: bool,
     explicit_user_start_required: bool,
     starts_network_on_app_launch: bool,
+    owner_profile_bound: bool,
+    owner_matches_receive_profile: bool,
     raw_profile_returned: bool,
     passphrase_retained: bool,
     key_material_exposed: bool,
@@ -5481,11 +5483,21 @@ fn run_production_onion_receive_loop_status(
     state: &ProductionOnionClientRuntimeState,
     duplicate_loop_blocked: bool,
 ) -> ProductionOnionReceiveLoopStatusResult {
-    let profile_selected = state
+    let selected_profile = state
         .receive_loop_profile
         .lock()
-        .map(|guard| guard.is_some())
-        .unwrap_or(false);
+        .ok()
+        .and_then(|guard| guard.clone());
+    let profile_selected = selected_profile.is_some();
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let owner_profile = state.owner_profile.lock().ok().and_then(|guard| guard.clone());
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let owner_profile: Option<String> = None;
+    let owner_profile_bound = owner_profile.is_some();
+    let owner_matches_receive_profile = match (owner_profile.as_deref(), selected_profile.as_deref()) {
+        (Some(owner_profile), Some(selected_profile)) => owner_profile == selected_profile,
+        _ => false,
+    };
     let last_next_blocker = state
         .receive_loop_last_next_blocker
         .lock()
@@ -5619,6 +5631,8 @@ fn run_production_onion_receive_loop_status(
         duplicate_loop_blocked,
         explicit_user_start_required: true,
         starts_network_on_app_launch: false,
+        owner_profile_bound,
+        owner_matches_receive_profile,
         raw_profile_returned: false,
         passphrase_retained: false,
         key_material_exposed: false,
