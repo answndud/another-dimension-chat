@@ -1499,6 +1499,8 @@ pub struct ProductionOnionOutboundEnvelopeSendAttemptResult {
     manual_network_permission_enabled: bool,
     persistent_client_ready: bool,
     persistent_client_promoted_from_real_onion_cache: bool,
+    owner_profile_bound: bool,
+    owner_matches_send_profile: bool,
     send_intent_prepared: bool,
     send_attempt_started: bool,
     send_attempt_succeeded: bool,
@@ -2101,6 +2103,8 @@ fn stored_endpoint_unavailable_outbound_send_result(
         manual_network_permission_enabled: manual_network_permission,
         persistent_client_ready,
         persistent_client_promoted_from_real_onion_cache: false,
+        owner_profile_bound: false,
+        owner_matches_send_profile: false,
         send_intent_prepared: false,
         send_attempt_started: false,
         send_attempt_succeeded: false,
@@ -6912,6 +6916,19 @@ async fn run_production_onion_outbound_envelope_send_attempt(
         event_summary.push("persistent_client_promoted_from_real_onion_cache".to_string());
     }
     #[cfg(feature = "manual-onion-client-attempt")]
+    let send_profile = sanitize_production_profile(profile.clone())
+        .ok()
+        .map(|profile| profile.as_str().to_string());
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let owner_profile = state.owner_profile.lock().ok().and_then(|guard| guard.clone());
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let owner_profile_bound = owner_profile.is_some();
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let owner_matches_send_profile = match (owner_profile.as_deref(), send_profile.as_deref()) {
+        (Some(owner_profile), Some(send_profile)) => owner_profile == send_profile,
+        _ => false,
+    };
+    #[cfg(feature = "manual-onion-client-attempt")]
     let mut send_attempt_started = false;
     #[cfg(not(feature = "manual-onion-client-attempt"))]
     let send_attempt_started = false;
@@ -6934,6 +6951,8 @@ async fn run_production_onion_outbound_envelope_send_attempt(
             manual_network_permission_enabled: manual_network_permission,
             persistent_client_ready,
             persistent_client_promoted_from_real_onion_cache: false,
+            owner_profile_bound: false,
+            owner_matches_send_profile: false,
             send_intent_prepared: prepare.send_intent_prepared,
             send_attempt_started,
             send_attempt_succeeded,
@@ -7050,6 +7069,8 @@ async fn run_production_onion_outbound_envelope_send_attempt(
             manual_network_permission_enabled: manual_network_permission,
             persistent_client_ready,
             persistent_client_promoted_from_real_onion_cache: promoted_cached_owner,
+            owner_profile_bound,
+            owner_matches_send_profile,
             send_intent_prepared: prepare.send_intent_prepared,
             send_attempt_started,
             send_attempt_succeeded,
@@ -14476,6 +14497,8 @@ replay check: no replayed messages after message 2
             manual_network_permission_enabled: true,
             persistent_client_ready: true,
             persistent_client_promoted_from_real_onion_cache: false,
+            owner_profile_bound: true,
+            owner_matches_send_profile: true,
             send_intent_prepared: true,
             send_attempt_started: true,
             send_attempt_succeeded: false,
@@ -14610,6 +14633,8 @@ replay check: no replayed messages after message 2
             manual_network_permission_enabled: true,
             persistent_client_ready: false,
             persistent_client_promoted_from_real_onion_cache: false,
+            owner_profile_bound: false,
+            owner_matches_send_profile: false,
             send_intent_prepared: true,
             send_attempt_started: false,
             send_attempt_succeeded: false,

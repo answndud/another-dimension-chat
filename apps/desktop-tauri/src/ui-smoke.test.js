@@ -265,6 +265,8 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /room_runtime_promoted_from_real_onion_cache=/);
   assert.match(reportBody, /room_runtime_owner_profile_bound=/);
   assert.match(reportBody, /room_runtime_owner_matches_receive_profile=/);
+  assert.match(reportBody, /send_runtime_owner_profile_bound=/);
+  assert.match(reportBody, /send_runtime_owner_matches_send_profile=/);
   assert.match(reportBody, /real_onion_network_io=/);
   assert.match(reportBody, /redacted_boundary=/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /productionTwoProfileRealOnionSyntheticFailureResult/);
@@ -273,6 +275,13 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(functionBody(mainJs, "cancelProductionTwoProfileRealOnionWait"), /production_two_profile_real_onion_wait_cancel/);
   assert.doesNotMatch(reportBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
   assert.doesNotMatch(reportBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
+});
+
+test("send diagnostics expose runtime owner match without raw profile names", () => {
+  assert.match(mainJs, /owner_profile_bound=\$\{result\.owner_profile_bound === true\}/);
+  assert.match(mainJs, /owner_matches_send=\$\{result\.owner_matches_send_profile === true\}/);
+  assert.match(functionBody(mainJs, "buildFieldTestReport"), /sendAttemptBoundaryText/);
+  assert.match(functionBody(mainJs, "buildFieldTestReport"), /send_runtime_owner_matches_send_profile=/);
 });
 
 test("delivery code save continues the original send or receive action", () => {
