@@ -308,6 +308,32 @@ struct ProductionOnionClientRuntimeState {
     send_in_progress: std::sync::atomic::AtomicBool,
     #[cfg(feature = "manual-onion-client-attempt")]
     receive_in_progress: std::sync::atomic::AtomicBool,
+    #[cfg(feature = "manual-onion-client-attempt")]
+    real_onion_roundtrip_generation: std::sync::atomic::AtomicU64,
+    #[cfg(feature = "manual-onion-client-attempt")]
+    real_onion_roundtrip_in_progress: std::sync::atomic::AtomicBool,
+    #[cfg(feature = "manual-onion-client-attempt")]
+    real_onion_roundtrip_cancel_requested: std::sync::atomic::AtomicBool,
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+struct RealOnionRoundtripCancelScope<'a> {
+    state: &'a ProductionOnionClientRuntimeState,
+    generation: u64,
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+impl RealOnionRoundtripCancelScope<'_> {
+    fn is_cancel_requested(&self) -> bool {
+        self.state
+            .real_onion_roundtrip_generation
+            .load(std::sync::atomic::Ordering::SeqCst)
+            == self.generation
+            && self
+                .state
+                .real_onion_roundtrip_cancel_requested
+                .load(std::sync::atomic::Ordering::SeqCst)
+    }
 }
 
 #[derive(serde::Serialize)]
@@ -2804,6 +2830,7 @@ fn production_invite_room_message_send(
 #[tauri::command]
 async fn production_two_profile_real_onion_roundtrip(
     app: tauri::AppHandle,
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
     profile_a: String,
     profile_b: String,
     passphrase: String,
@@ -2817,7 +2844,53 @@ async fn production_two_profile_real_onion_roundtrip(
     let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production real onion roundtrip failed without exposing local path details"
     })?;
-    run_production_two_profile_real_onion_roundtrip(
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let _ = &state;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let generation = state
+        .real_onion_roundtrip_generation
+        .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+        + 1;
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        state
+            .real_onion_roundtrip_cancel_requested
+            .store(false, std::sync::atomic::Ordering::SeqCst);
+        state
+            .real_onion_roundtrip_in_progress
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let cancel_scope = RealOnionRoundtripCancelScope {
+        state: &state,
+        generation,
+    };
+    #[cfg(feature = "manual-onion-client-attempt")]
+    let result = run_production_two_profile_real_onion_roundtrip_with_cancel(
+        app_data_root,
+        app_cache_root,
+        profile_a,
+        profile_b,
+        passphrase,
+        message,
+        message_ttl_seconds,
+        manual_network_permission,
+        Some(&cancel_scope),
+    )
+    .await
+    .map_err(|error| {
+        format!(
+            "production real onion roundtrip stopped at redacted stage: {error}"
+        )
+    });
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        state
+            .real_onion_roundtrip_in_progress
+            .store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    let result = run_production_two_profile_real_onion_roundtrip(
         app_data_root,
         app_cache_root,
         profile_a,
@@ -2832,7 +2905,86 @@ async fn production_two_profile_real_onion_roundtrip(
         format!(
             "production real onion roundtrip stopped at redacted stage: {error}"
         )
-    })
+    });
+    result
+}
+
+#[derive(serde::Serialize)]
+struct ProductionTwoProfileRealOnionWaitCancelResult {
+    warning: &'static str,
+    roundtrip_in_progress: bool,
+    cancel_requested: bool,
+    generation: u64,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[tauri::command]
+fn production_two_profile_real_onion_wait_cancel(
+    state: tauri::State<'_, ProductionOnionClientRuntimeState>,
+) -> Result<ProductionTwoProfileRealOnionWaitCancelResult, String> {
+    #[cfg(feature = "manual-onion-client-attempt")]
+    {
+        let in_progress = state
+            .real_onion_roundtrip_in_progress
+            .load(std::sync::atomic::Ordering::SeqCst);
+        if in_progress {
+            state
+                .real_onion_roundtrip_cancel_requested
+                .store(true, std::sync::atomic::Ordering::SeqCst);
+        }
+        return Ok(ProductionTwoProfileRealOnionWaitCancelResult {
+            warning: "Real onion wait cancel only requests cancellation for an explicit in-progress roundtrip. It does not start network work, delete messages, or expose private details.",
+            roundtrip_in_progress: in_progress,
+            cancel_requested: in_progress,
+            generation: state
+                .real_onion_roundtrip_generation
+                .load(std::sync::atomic::Ordering::SeqCst),
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        });
+    }
+    #[cfg(not(feature = "manual-onion-client-attempt"))]
+    {
+        let _ = state;
+        Ok(ProductionTwoProfileRealOnionWaitCancelResult {
+            warning: "Real onion wait cancel is unavailable in this build. No network work was started.",
+            roundtrip_in_progress: false,
+            cancel_requested: false,
+            generation: 0,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::too_many_arguments)]
+async fn run_production_two_profile_real_onion_roundtrip(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    profile_a: String,
+    profile_b: String,
+    passphrase: String,
+    message: String,
+    message_ttl_seconds: u64,
+    manual_network_permission: bool,
+) -> Result<ProductionTwoProfileRealOnionRoundtripResult, String> {
+    run_production_two_profile_real_onion_roundtrip_with_cancel(
+        app_data_root,
+        app_cache_root,
+        profile_a,
+        profile_b,
+        passphrase,
+        message,
+        message_ttl_seconds,
+        manual_network_permission,
+        None,
+    )
+    .await
 }
 
 #[tauri::command]
@@ -8303,7 +8455,7 @@ fn sanitize_envelope_payload(payload: String) -> Result<String, String> {
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn run_production_two_profile_real_onion_roundtrip(
+async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
     _app_data_root: impl AsRef<std::path::Path>,
     _app_cache_root: impl AsRef<std::path::Path>,
     profile_a: String,
@@ -8312,6 +8464,8 @@ async fn run_production_two_profile_real_onion_roundtrip(
     message: String,
     message_ttl_seconds: u64,
     manual_network_permission: bool,
+    #[cfg(feature = "manual-onion-client-attempt")] cancel_scope: Option<&RealOnionRoundtripCancelScope<'_>>,
+    #[cfg(not(feature = "manual-onion-client-attempt"))] _cancel_scope: Option<&()>,
 ) -> Result<ProductionTwoProfileRealOnionRoundtripResult, String> {
     let profile_a = sanitize_production_profile(profile_a)?;
     let profile_b = sanitize_production_profile(profile_b)?;
@@ -8589,6 +8743,7 @@ async fn run_production_two_profile_real_onion_roundtrip(
             _app_cache_root.as_ref(),
             &profile_a_name,
             &mut event_summary,
+            cancel_scope,
         )
         .await
         {
@@ -8615,6 +8770,7 @@ async fn run_production_two_profile_real_onion_roundtrip(
             _app_cache_root.as_ref(),
             &profile_b_name,
             &mut event_summary,
+            cancel_scope,
         )
         .await
         {
@@ -9342,7 +9498,9 @@ fn classify_real_onion_bootstrap_blocker(
     profile_prefix: &str,
     redacted_bootstrap_error: &str,
 ) -> (String, Vec<String>) {
-    let blocker = if redacted_bootstrap_error.contains("RuntimeNetworkDisabled") {
+    let blocker = if redacted_bootstrap_error.contains("BootstrapCancelled") {
+        "BootstrapCancelled"
+    } else if redacted_bootstrap_error.contains("RuntimeNetworkDisabled") {
         "NetworkDisabled"
     } else if redacted_bootstrap_error.contains("BootstrapNetworkAccessFailed") {
         "BootstrapNetworkAccessFailed"
@@ -9372,6 +9530,7 @@ async fn build_real_onion_roundtrip_owner(
     app_cache_root: &std::path::Path,
     profile: &str,
     event_summary: &mut Vec<String>,
+    cancel_scope: Option<&RealOnionRoundtripCancelScope<'_>>,
 ) -> Result<another_dimension_transport::arti_adapter_spike::PersistentArtiClientOwner, String> {
     use another_dimension_transport::{
         arti_adapter_spike, probe_app_private_state_cache_dirs, verify_transport_backup_exclusion,
@@ -9431,24 +9590,45 @@ async fn build_real_onion_roundtrip_owner(
     let mut sink = InMemoryTransportRuntimeEventSink::default();
     let bootstrap_timeout =
         std::time::Duration::from_secs(u64::from(policy.timeout().seconds() + 2));
-    let bootstrap_result = match tokio::time::timeout(
-        bootstrap_timeout,
-        owner.bootstrap_and_keep_client(
+    let bootstrap_result = {
+        let bootstrap_future = owner.bootstrap_and_keep_client(
             arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
             &mut sink,
-        ),
-    )
-    .await
-    {
-        Ok(result) => result,
-        Err(_) => {
-            event_summary.push(
-                "transport_event kind=BootstrapFailed runtime_error=Some(BootstrapTimeout) probe_error=None route_kind=None direction=None"
-                    .to_string(),
-            );
-            Err(arti_adapter_spike::PersistentArtiClientLifecycleError::BootstrapFailed(
-                another_dimension_transport::TransportRuntimeError::BootstrapTimeout,
-            ))
+        );
+        tokio::pin!(bootstrap_future);
+        let timeout_future = tokio::time::sleep(bootstrap_timeout);
+        tokio::pin!(timeout_future);
+        let cancel_future = async {
+            loop {
+                if cancel_scope
+                    .is_some_and(RealOnionRoundtripCancelScope::is_cancel_requested)
+                {
+                    return;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            }
+        };
+        tokio::pin!(cancel_future);
+        tokio::select! {
+            result = &mut bootstrap_future => result,
+            _ = &mut timeout_future => {
+                event_summary.push(
+                    "transport_event kind=BootstrapFailed runtime_error=Some(BootstrapTimeout) probe_error=None route_kind=None direction=None"
+                        .to_string(),
+                );
+                Err(arti_adapter_spike::PersistentArtiClientLifecycleError::BootstrapFailed(
+                    another_dimension_transport::TransportRuntimeError::BootstrapTimeout,
+                ))
+            },
+            _ = &mut cancel_future => {
+                event_summary.push(
+                    "transport_event kind=BootstrapFailed runtime_error=Some(BootstrapCancelled) probe_error=None route_kind=None direction=None"
+                        .to_string(),
+                );
+                Err(arti_adapter_spike::PersistentArtiClientLifecycleError::BootstrapFailed(
+                    another_dimension_transport::TransportRuntimeError::BootstrapCancelled,
+                ))
+            },
         }
     };
     event_summary.extend(sink.events().iter().map(ToString::to_string));
@@ -10305,6 +10485,7 @@ pub fn run() {
             production_two_profile_room_setup,
             production_two_profile_roundtrip,
             production_two_profile_real_onion_roundtrip,
+            production_two_profile_real_onion_wait_cancel,
             production_two_profile_message_roundtrip,
             dev_local_demo,
             dev_local_message_loop
@@ -10624,6 +10805,8 @@ replay check: no replayed messages after message 2
             assert!(
                 result.next_blocker == "ProfileABootstrapTimeout"
                     || result.next_blocker == "ProfileBBootstrapTimeout"
+                    || result.next_blocker == "ProfileABootstrapCancelled"
+                    || result.next_blocker == "ProfileBBootstrapCancelled"
                     || result.next_blocker == "ProfileABootstrapNetworkAccessFailed"
                     || result.next_blocker == "ProfileBBootstrapNetworkAccessFailed"
                     || result.next_blocker == "ProfileABootstrapLocalStateFailed"
@@ -10655,6 +10838,7 @@ replay check: no replayed messages after message 2
             );
             assert!(
                 result.blockers.contains(&"BootstrapTimeout".to_string())
+                    || result.blockers.contains(&"BootstrapCancelled".to_string())
                     || result
                         .blockers
                         .contains(&"BootstrapNetworkAccessFailed".to_string())

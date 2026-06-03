@@ -278,6 +278,31 @@ test("real onion bootstrap timeout remains retryable and cancellable", () => {
   });
 });
 
+test("real onion bootstrap cancel remains retryable without an active wait", () => {
+  const result = {
+    manual_network_permission_enabled: true,
+    next_blocker: "ProfileABootstrapCancelled",
+    blockers: ["BootstrapCancelled"],
+    network_io_attempted: true,
+    transport_io_opened: false,
+    runtime_messaging_enabled: false,
+  };
+
+  assert.deepEqual(productionTwoProfileRealOnionRecoveryPlan(result), {
+    action: "bootstrap-cancelled",
+    retryable: true,
+    waitCancellable: false,
+    reason: "network-bootstrap-cancelled",
+  });
+  assert.deepEqual(productionTwoProfileRealOnionUserView(result), {
+    state: "Private delivery wait canceled",
+    profiles: "Room is saved.",
+    session: "Network wait canceled",
+    message: "Retry private delivery when you are ready.",
+    boundary: "No message was sent and the network wait was closed.",
+  });
+});
+
 test("receive loop refresh plan reloads transcript for new imports and endpoint updates", () => {
   const mode = {
     lastProcessedImportSequence: 2,
