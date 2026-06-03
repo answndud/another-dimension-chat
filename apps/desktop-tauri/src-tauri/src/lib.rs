@@ -7765,6 +7765,11 @@ fn apply_outbound_message_send_attempt_result(
     let Ok(store_path) = production_profile_store_path(app_data_root, &profile) else {
         return;
     };
+    let failure_kind = if result.owner_profile_bound && !result.owner_matches_send_profile {
+        "RuntimeOwnerProfileMismatch"
+    } else {
+        &result.next_blocker
+    };
     if result.send_attempt_succeeded {
         let _ = production_message_outbound_mark_send_succeeded(
             &store_path,
@@ -7782,7 +7787,7 @@ fn apply_outbound_message_send_attempt_result(
             profile,
             &passphrase,
             message_number,
-            &result.next_blocker,
+            failure_kind,
         );
     }
 }
@@ -14688,6 +14693,80 @@ replay check: no replayed messages after message 2
             Some("PersistentClientNotReady")
         );
         assert!(blocked_entry.outbound_retryable);
+
+        let mismatch_outbound = run_production_message_envelope_export(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            0,
+            true,
+            "retry after runtime mismatch".to_string(),
+            604_800,
+        )
+        .expect("runtime mismatch outbound message");
+        let mismatch_attempt = super::ProductionOnionOutboundEnvelopeSendAttemptResult {
+            warning: "test runtime mismatch send attempt",
+            preparation_only: false,
+            manual_client_attempt_feature_compiled: true,
+            manual_network_permission_enabled: true,
+            persistent_client_ready: true,
+            persistent_client_promoted_from_real_onion_cache: false,
+            owner_profile_bound: true,
+            owner_matches_send_profile: false,
+            send_intent_prepared: true,
+            send_attempt_started: false,
+            send_attempt_succeeded: false,
+            peer_endpoint_failure_recorded: false,
+            peer_endpoint_refresh_recommended: false,
+            retry_recommended_after_endpoint_refresh: false,
+            ack_wait_registered: true,
+            redacted_send_result_event_recorded: false,
+            event_summary: Vec::new(),
+            next_blocker: "PersistentClientOwnerUnavailable".to_string(),
+            blockers: vec!["PersistentClientOwnerUnavailable".to_string()],
+            raw_endpoint_returned: false,
+            raw_path_returned: false,
+            onion_secret_returned: false,
+            peer_proof_returned: false,
+            session_transcript_returned: false,
+            envelope_payload_returned: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            stream_accept_attempted: false,
+            stream_dial_attempted: false,
+            stream_read_write_attempted: false,
+            stream_send_attempted: false,
+            envelope_io_opened: false,
+            runtime_messaging_enabled: false,
+        };
+        super::apply_outbound_message_send_attempt_result(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+            mismatch_outbound.selected_message_number,
+            &mismatch_attempt,
+        );
+        let mismatch_transcript = run_production_message_transcript_export(
+            &root,
+            roundtrip.sender_profile.clone(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("runtime mismatch transcript");
+        let mismatch_entry = mismatch_transcript
+            .entries
+            .iter()
+            .find(|entry| entry.message_number == mismatch_outbound.selected_message_number)
+            .expect("runtime mismatch entry");
+        assert_eq!(
+            mismatch_entry.outbound_delivery_state.as_deref(),
+            Some("failed")
+        );
+        assert_eq!(
+            mismatch_entry.outbound_failure_kind.as_deref(),
+            Some("RuntimeOwnerProfileMismatch")
+        );
+        assert!(mismatch_entry.outbound_retryable);
+
         let resume_status = run_production_two_profile_session_status(
             &root,
             "alice".to_string(),

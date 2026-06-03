@@ -151,6 +151,21 @@ test("outbound failure classes keep missing route separate from stale endpoint",
     recoveryKey: "sendRecoveryRouteMissing",
   });
 
+  const runtimeMismatch = {
+    statuses: new Set(["sent"]),
+    outboundDeliveryState: "failed",
+    outboundFailureKind: "RuntimeOwnerProfileMismatch",
+    outboundRetryable: true,
+  };
+  assert.equal(productionTwoProfileOutboundStatusLabel(runtimeMismatch), "route missing");
+  assert.equal(productionTwoProfileOutboundNeedsEndpointRefresh(runtimeMismatch), false);
+  assert.deepEqual(productionTwoProfileOutboundPrimaryAction(runtimeMismatch), {
+    action: "prepare-private-route",
+    labelKey: "preparePrivateRoute",
+    noticeKey: "privateDeliveryRouteNeeded",
+    recoveryKey: "sendRecoveryRuntimeMismatch",
+  });
+
   assert.equal(productionTwoProfileOutboundStatusLabel(staleEndpoint), "stale endpoint");
   assert.equal(productionTwoProfileOutboundNeedsEndpointRefresh(staleEndpoint), true);
   assert.deepEqual(productionTwoProfileOutboundPrimaryAction(staleEndpoint), {

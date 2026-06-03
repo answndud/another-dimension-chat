@@ -671,15 +671,26 @@ function localizedSendAttemptMessage(result) {
   if (result?.send_attempt_succeeded) {
     return t("chatNoticeSent");
   }
+  if (sendRuntimeOwnerMismatch(result)) {
+    return t("sendRuntimeMismatch");
+  }
   if (result?.peer_endpoint_refresh_recommended || result?.retry_recommended_after_endpoint_refresh) {
     return t("chatNoticeRefreshAddress");
   }
   return localizedSendFailureMessage(result?.next_blocker || result?.warning || "");
 }
 
+function sendRuntimeOwnerMismatch(result) {
+  return Boolean(result?.owner_profile_bound === true && result?.owner_matches_send_profile === false);
+}
+
 function setChatDeliveryNoticeForSendAttempt(result) {
   if (result?.send_attempt_succeeded) {
     setChatDeliveryNoticeByKey("chatNoticeSent", "success");
+    return;
+  }
+  if (sendRuntimeOwnerMismatch(result)) {
+    setChatDeliveryNoticeByKey("sendRuntimeMismatch", "warning");
     return;
   }
   if (result?.peer_endpoint_refresh_recommended || result?.retry_recommended_after_endpoint_refresh) {
@@ -1200,6 +1211,13 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     action.textContent = t("preparePrivateRoute");
     action.addEventListener("click", preparePrivateDeliveryRoute);
     fields.chatDeliveryNotice.append(action);
+  } else if (latestChatDeliveryNoticeKey === "sendRuntimeMismatch") {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "chat-delivery-notice-action";
+    action.textContent = t("preparePrivateRoute");
+    action.addEventListener("click", preparePrivateDeliveryRoute);
+    fields.chatDeliveryNotice.append(action);
   } else if (latestChatDeliveryNoticeKey === "peerPrivateRouteCodeMissing" && latestLocalPrivateRouteCode) {
     const action = document.createElement("button");
     action.type = "button";
@@ -1347,6 +1365,9 @@ function outboundRecoveryClass(primaryAction, statusLabel = "") {
 
 function outboundRecoveryReasonKey(primaryAction, statusLabel = "") {
   const status = String(statusLabel ?? "").trim().toLowerCase();
+  if (primaryAction?.recoveryKey === "sendRecoveryRuntimeMismatch") {
+    return "sendReasonRuntimeMismatch";
+  }
   if (primaryAction?.action === "enable-private-delivery") {
     return "sendReasonPermissionOff";
   }
