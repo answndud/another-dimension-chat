@@ -249,9 +249,13 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /real_onion_recovery_action=/);
   assert.match(reportBody, /real_onion_wait_cancellable=/);
   assert.match(reportBody, /real_onion_wait_cancelled=/);
+  assert.match(reportBody, /real_onion_bootstrap_retry_limit=/);
+  assert.match(reportBody, /real_onion_profile_a_bootstrap_attempts=/);
+  assert.match(reportBody, /real_onion_profile_b_bootstrap_attempts=/);
   assert.match(reportBody, /real_onion_network_io=/);
   assert.match(reportBody, /redacted_boundary=/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /productionTwoProfileRealOnionSyntheticFailureResult/);
+  assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /bootstrapRetryLimit/);
   assert.match(functionBody(mainJs, "cancelProductionTwoProfileRealOnionWait"), /latestProductionTwoProfileRealOnionWaitCanceledFingerprint/);
   assert.match(functionBody(mainJs, "cancelProductionTwoProfileRealOnionWait"), /production_two_profile_real_onion_wait_cancel/);
   assert.doesNotMatch(reportBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
