@@ -383,6 +383,9 @@ const fields = {
   runProductionTwoProfileRealOnionRoundtrip: document.querySelector(
     "#run-production-two-profile-real-onion-roundtrip",
   ),
+  cancelProductionTwoProfileRealOnionWait: document.querySelector(
+    "#cancel-production-two-profile-real-onion-wait",
+  ),
   productionTwoProfileReadiness: document.querySelector("#production-two-profile-readiness"),
   productionTwoProfileState: document.querySelector("#production-two-profile-state"),
   productionTwoProfileWarning: document.querySelector("#production-two-profile-warning"),
@@ -436,6 +439,7 @@ let latestProductionTwoProfileSafety = null;
 let latestProductionTwoProfileSuccess = null;
 let latestProductionTwoProfileOnionEndpoints = null;
 let latestProductionTwoProfileRealOnionResult = null;
+let latestProductionTwoProfileRealOnionWaitCanceledFingerprint = "";
 let latestLocalPrivateRouteCode = "";
 const localPrivateRouteCodesByRoom = new Map();
 const activeLocalPrivateRouteCodesByRoom = new Map();
@@ -2583,6 +2587,11 @@ function latestRealOnionFieldTestResult(input = productionTwoProfileInput()) {
     : null;
 }
 
+function realOnionWaitCanceledForInput(input = productionTwoProfileInput()) {
+  const fingerprint = twoProfileSessionStatusFingerprint(input);
+  return Boolean(fingerprint && latestProductionTwoProfileRealOnionWaitCanceledFingerprint === fingerprint);
+}
+
 function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manualNetworkPermission) {
   const detail = String(error ?? "").toLowerCase();
   let nextBlocker = "RealOnionRoundtripCommandError";
@@ -2658,6 +2667,7 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     ? realOnionResult.blockers.join("#")
     : "none";
   const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(realOnionResult);
+  const realOnionWaitCancelled = realOnionWaitCanceledForInput(input);
 
   return [
     "Another Dimension Chat beta field test report",
@@ -2693,6 +2703,7 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `real_onion_recovery_reason=${fieldTestReportValue(realOnionRecovery.reason, "none")}`,
     `real_onion_retryable=${realOnionRecovery.retryable === true}`,
     `real_onion_wait_cancellable=${realOnionRecovery.waitCancellable === true}`,
+    `real_onion_wait_cancelled=${realOnionWaitCancelled === true}`,
     `real_onion_network_io=${realOnionResult?.network_io_attempted === true}`,
     `real_onion_transport_io=${realOnionResult?.transport_io_opened === true}`,
     `real_onion_runtime=${realOnionResult?.runtime_messaging_enabled === true}`,
@@ -7308,6 +7319,15 @@ function applyProductionActionState() {
         : t("privateDeliveryPermissionRequired"),
     false,
   );
+  const realOnionResult = latestRealOnionFieldTestResult(twoProfile);
+  const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(realOnionResult);
+  const realOnionWaitCanceled = realOnionWaitCanceledForInput(twoProfile);
+  const realOnionRetryReady = realOnionRecovery.action === "retry-bootstrap" && !realOnionWaitCanceled;
+  const realOnionCancelWaitReady = realOnionRetryReady && realOnionRecovery.waitCancellable === true;
+  const realOnionRunLabel = fields.runProductionTwoProfileRealOnionRoundtrip?.querySelector("[data-i18n]");
+  if (realOnionRunLabel) {
+    setText(realOnionRunLabel, t(realOnionRetryReady ? "retryPrivateDelivery" : "runRealOnionRoundtrip"));
+  }
   setActionButtonState(
     fields.runProductionTwoProfileRealOnionRoundtrip,
     busy || !hasTwoProfileInput || !hasMessageRetentionPolicy || !manualNetworkPermission,
@@ -7317,8 +7337,23 @@ function applyProductionActionState() {
         ? "Enable manual onion network permission before running real onion roundtrip."
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
+      : realOnionRetryReady
+        ? t("retryPrivateDelivery")
       : "Enter two profiles, passphrase, and message first.",
     twoProfileCurrentAction === "real-onion-roundtrip",
+  );
+  if (fields.cancelProductionTwoProfileRealOnionWait) {
+    fields.cancelProductionTwoProfileRealOnionWait.hidden = !realOnionCancelWaitReady;
+  }
+  setActionButtonState(
+    fields.cancelProductionTwoProfileRealOnionWait,
+    busy || !realOnionCancelWaitReady,
+    busy
+      ? "Wait for the active production action."
+      : realOnionWaitCanceled
+        ? t("networkWaitCanceled")
+        : t("cancelNetworkWait"),
+    false,
   );
   setActionButtonState(
     fields.useProductionPairingPayload,
@@ -10746,6 +10781,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     return;
   }
 
+  latestProductionTwoProfileRealOnionWaitCanceledFingerprint = "";
   setProductionTwoProfileState("Private delivery running");
   setText(fields.productionTwoProfileWarning, t("chatNoticeSending"));
   setText(fields.productionTwoProfileProfiles, localizedTwoProfileUserViewText("Room is being prepared."));
@@ -10850,6 +10886,30 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     }
     applyProductionActionState();
   }
+}
+
+function cancelProductionTwoProfileRealOnionWait() {
+  const input = productionTwoProfileInput();
+  const result = latestRealOnionFieldTestResult(input);
+  const recovery = productionTwoProfileRealOnionRecoveryPlan(result);
+  if (recovery.action !== "retry-bootstrap" || recovery.waitCancellable !== true) {
+    setProductionTwoProfileState("Private delivery not waiting");
+    setText(fields.productionTwoProfileWarning, t("networkWaitNotActive"));
+    applyProductionActionState();
+    refreshFieldTestReport();
+    return false;
+  }
+  latestProductionTwoProfileRealOnionWaitCanceledFingerprint = twoProfileSessionStatusFingerprint(input);
+  setProductionTwoProfileState("Private delivery wait canceled");
+  setText(fields.productionTwoProfileWarning, t("networkWaitCanceledNotice"));
+  setText(fields.productionTwoProfileProfiles, localizedTwoProfileUserViewText("Room is saved."));
+  setText(fields.productionTwoProfileSession, t("networkWaitCanceled"));
+  setText(fields.productionTwoProfileMessageState, t("retryPrivateDeliveryHint"));
+  setText(fields.productionTwoProfileBoundary, t("networkWaitCanceledBoundary"));
+  setChatDeliveryNoticeByKey("networkWaitCanceledNotice", "muted");
+  applyProductionActionState();
+  refreshFieldTestReport();
+  return true;
 }
 
 async function runTwoProfilePrimaryActionFromCompose() {
@@ -13006,6 +13066,13 @@ if (fields.runProductionTwoProfileRealOnionRoundtrip) {
   fields.runProductionTwoProfileRealOnionRoundtrip.addEventListener(
     "click",
     runProductionTwoProfileRealOnionRoundtrip,
+  );
+}
+
+if (fields.cancelProductionTwoProfileRealOnionWait) {
+  fields.cancelProductionTwoProfileRealOnionWait.addEventListener(
+    "click",
+    cancelProductionTwoProfileRealOnionWait,
   );
 }
 
