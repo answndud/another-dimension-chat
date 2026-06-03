@@ -2010,6 +2010,7 @@ let inviteRoomPresenceRefreshTimer = null;
 let inviteRoomTranscriptRefreshTimer = null;
 let inviteRoomTranscriptRefreshFingerprint = "";
 let inviteRoomTranscriptRefreshInFlight = false;
+let savedRoomMetadataSyncInFlight = false;
 let roomDetailOpen = false;
 let currentInviteCodeShareVisible = false;
 
@@ -2386,6 +2387,45 @@ async function runSavedInviteRoomListAction(room, action) {
 
 function currentRoomConversationMetadata() {
   return productionInviteRoomConversationMetadata([...productionTwoProfileConversationEntries.values()]);
+}
+
+async function savedInviteRoomMetadataFromLocalStores(room) {
+  const input = savedInviteRoomInput(room);
+  const { profileA, profileB, passphrase } = input;
+  if (!profileA || !profileB || profileA === profileB || !passphrase) {
+    return null;
+  }
+  const [profileAResult, profileBResult] = await Promise.all([
+    invoke("production_message_transcript_export", { profile: profileA, passphrase }),
+    invoke("production_message_transcript_export", { profile: profileB, passphrase }),
+  ]);
+  return productionInviteRoomConversationMetadata([
+    ...twoProfileTranscriptEntriesFromProfile(profileA, profileB, profileAResult.entries),
+    ...twoProfileTranscriptEntriesFromProfile(profileB, profileA, profileBResult.entries),
+  ]);
+}
+
+async function syncSavedInviteRoomMetadataFromLocalStores() {
+  if (savedRoomMetadataSyncInFlight) {
+    return false;
+  }
+  savedRoomMetadataSyncInFlight = true;
+  try {
+    for (const room of savedInviteRooms()) {
+      try {
+        const metadata = await savedInviteRoomMetadataFromLocalStores(room);
+        if (metadata) {
+          rememberInviteRoom(room.code, room.role, { ...metadata, updatedAt: room.updatedAt });
+        }
+      } catch {
+        // A room may not have local transcript data yet; keep the saved list entry unchanged.
+      }
+    }
+    renderSavedInviteRooms();
+    return true;
+  } finally {
+    savedRoomMetadataSyncInFlight = false;
+  }
 }
 
 function rememberCurrentInviteRoomMetadata() {
@@ -13430,3 +13470,4 @@ resetLoopView();
 loadProductionProfileList();
 renderSavedInviteRooms();
 showRoomList();
+syncSavedInviteRoomMetadataFromLocalStores();
