@@ -64,6 +64,7 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(mainJs, /function openSavedInviteRoom/);
   assert.match(mainJs, /function removeSavedInviteRoom/);
   assert.match(mainJs, /function rememberCurrentInviteRoomMetadata/);
+  assert.match(mainJs, /function savedInviteRoomResumeRoom/);
   assert.match(mainJs, /createNewInviteRoomFromList/);
   assert.match(mainJs, /createRoomFromRoomListInviteCode/);
   assert.match(mainJs, /showRoomList\(\);/);
@@ -72,6 +73,7 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(mainJs, /removeRoomConfirm/);
   assert.match(stylesCss, /\.saved-room-preview/);
   assert.match(stylesCss, /\.saved-room-state/);
+  assert.match(stylesCss, /\.saved-room-list-item\.is-resume-recommended/);
   assert.doesNotMatch(mainJs, /restoreLastInviteRoom\(\);/);
   assert.match(indexHtml, /id="back-to-room-list"/);
   assert.match(stylesCss, /body\.is-room-list-mode [\s\S]*#production-two-profile-transcript/);
@@ -94,11 +96,16 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(mainJs, /function savedInviteRoomWaitingForPeerCode/);
   assert.match(functionBody(mainJs, "savedInviteRoomWaitingForPeerCode"), /activeLocalPrivateRouteCodesByRoom\.get\(roomKey\)/);
   assert.match(mainJs, /function savedInviteRoomHasRetryableOutbound/);
+  assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 30/);
+  assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 20/);
+  assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 10/);
+  assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateResumeNext/);
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateRetrySend/);
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateWaitingPeerCode/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /needs-receive-restart/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /is-waiting-peer-code/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /has-retryable-send/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /is-resume-recommended/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
   assert.match(stylesCss, /\.saved-room-state\.is-listening/);

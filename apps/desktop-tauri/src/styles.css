@@ -1081,6 +1081,16 @@ body.is-room-list-mode .room-list-panel {
   border-color: color-mix(in srgb, var(--accent-cyan) 48%, var(--panel-border));
 }
 
+.saved-room-list-item.is-resume-recommended {
+  border-color: color-mix(in srgb, var(--accent-cyan) 64%, var(--panel-border));
+  background: color-mix(in srgb, var(--accent-cyan) 8%, var(--panel) 92%);
+}
+
+.saved-room-list-item.is-resume-recommended .saved-room-next-action {
+  border-color: color-mix(in srgb, var(--accent-cyan) 72%, var(--panel-border));
+  color: var(--text-primary);
+}
+
 .saved-room-summary {
   display: grid;
   gap: 3px;
