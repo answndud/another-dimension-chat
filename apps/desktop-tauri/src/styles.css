@@ -1152,6 +1152,15 @@ body.is-room-list-mode .room-list-panel {
   color: var(--accent-cyan);
 }
 
+.saved-room-state.is-retry-send,
+.saved-room-list-item.has-retryable-send {
+  border-color: color-mix(in srgb, var(--warning) 58%, var(--panel-border));
+}
+
+.saved-room-state.is-retry-send {
+  color: var(--warning);
+}
+
 .saved-room-state.is-receive-paused,
 .saved-room-list-item.needs-receive-restart {
   border-color: color-mix(in srgb, var(--warning) 52%, var(--panel-border));

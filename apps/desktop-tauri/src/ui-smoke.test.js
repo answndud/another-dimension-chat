@@ -93,14 +93,18 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateReceivePaused/);
   assert.match(mainJs, /function savedInviteRoomWaitingForPeerCode/);
   assert.match(functionBody(mainJs, "savedInviteRoomWaitingForPeerCode"), /activeLocalPrivateRouteCodesByRoom\.get\(roomKey\)/);
+  assert.match(mainJs, /function savedInviteRoomHasRetryableOutbound/);
+  assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateRetrySend/);
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateWaitingPeerCode/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /needs-receive-restart/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /is-waiting-peer-code/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /has-retryable-send/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
   assert.match(stylesCss, /\.saved-room-state\.is-listening/);
   assert.match(stylesCss, /\.saved-room-state\.is-receive-paused/);
   assert.match(stylesCss, /\.saved-room-state\.is-waiting-peer-code/);
+  assert.match(stylesCss, /\.saved-room-state\.is-retry-send/);
   assert.match(stylesCss, /\.saved-room-next-action/);
 });
 
@@ -149,6 +153,7 @@ test("room list controls are wired to room flow instead of settings", () => {
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /runSavedInviteRoomListAction\(room, nextActionView\.action\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /await openSavedInviteRoom\(room\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /focusPrivateRouteNextAction\(productionTwoProfileInput\(\)\)/);
+  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /showRetryableTwoProfileOutboundNotice\(pending\)/);
   assert.match(mainJs, /fields\.roomListInviteCode\.addEventListener\("input", renderReceivedInviteCodeActionState\)/);
   assert.match(
     mainJs,
