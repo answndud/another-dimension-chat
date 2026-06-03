@@ -1143,6 +1143,15 @@ body.is-room-list-mode .room-list-panel {
   color: var(--text-primary);
 }
 
+.saved-room-state.is-waiting-peer-code,
+.saved-room-list-item.is-waiting-peer-code {
+  border-color: color-mix(in srgb, var(--accent-cyan) 46%, var(--panel-border));
+}
+
+.saved-room-state.is-waiting-peer-code {
+  color: var(--accent-cyan);
+}
+
 .saved-room-state.is-receive-paused,
 .saved-room-list-item.needs-receive-restart {
   border-color: color-mix(in srgb, var(--warning) 52%, var(--panel-border));

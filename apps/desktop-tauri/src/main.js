@@ -1140,6 +1140,7 @@ function privateRouteRecoveryNoticeActive(key = latestChatDeliveryNoticeKey) {
   return (
     key === "sendRuntimeMismatch" ||
     key === "privateRouteCodeReady" ||
+    key === "privateRouteWaitingPeerCode" ||
     key === "privateRouteCodeReadyForReceive" ||
     key === "peerPrivateRouteCodeMissing"
   );
@@ -1227,7 +1228,11 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     action.textContent = t("preparePrivateRoute");
     action.addEventListener("click", () => preparePrivateDeliveryRoute({ forceRefresh: true }));
     fields.chatDeliveryNotice.append(action);
-  } else if (latestChatDeliveryNoticeKey === "peerPrivateRouteCodeMissing" && latestLocalPrivateRouteCode) {
+  } else if (
+    (latestChatDeliveryNoticeKey === "peerPrivateRouteCodeMissing" ||
+      latestChatDeliveryNoticeKey === "privateRouteWaitingPeerCode") &&
+    latestLocalPrivateRouteCode
+  ) {
     const action = document.createElement("button");
     action.type = "button";
     action.className = "chat-delivery-notice-action";
@@ -2233,6 +2238,21 @@ function savedInviteRoomReceiveState(room) {
   return receiveIntentForRoom(input) ? "paused" : "";
 }
 
+function savedInviteRoomWaitingForPeerCode(room) {
+  const input = savedInviteRoomInput(room);
+  const roomKey = privateRouteRoomKey(input);
+  const localCode = roomKey ? localPrivateRouteCodesByRoom.get(roomKey) || "" : "";
+  const activeCode = roomKey ? activeLocalPrivateRouteCodesByRoom.get(roomKey) || "" : "";
+  const peerDraft = roomKey ? peerPrivateRouteDraftsByRoom.get(roomKey) || "" : "";
+  return Boolean(
+    roomKey &&
+      localCode &&
+      activeCode === localCode &&
+      !peerDraft &&
+      !twoProfilePeerEndpointState(input).ready,
+  );
+}
+
 function savedInviteRoomState(room) {
   const currentCode = currentInviteRoomCode();
   const receiveState = savedInviteRoomReceiveState(room);
@@ -2241,6 +2261,9 @@ function savedInviteRoomState(room) {
   }
   if (receiveState === "paused") {
     return { key: "receive-paused", label: t("roomStateReceivePaused") };
+  }
+  if (savedInviteRoomWaitingForPeerCode(room)) {
+    return { key: "waiting-peer-code", label: t("roomStateWaitingPeerCode") };
   }
   if (room.code === currentCode && roomDetailOpen) {
     return { key: "active", label: t("roomStateActive") };
@@ -2304,6 +2327,7 @@ function renderSavedInviteRooms() {
     const receiveState = savedInviteRoomReceiveState(room);
     item.classList.toggle("is-listening", receiveState === "listening");
     item.classList.toggle("needs-receive-restart", receiveState === "paused");
+    item.classList.toggle("is-waiting-peer-code", savedInviteRoomWaitingForPeerCode(room));
     const summary = document.createElement("span");
     summary.className = "saved-room-summary";
     const title = document.createElement("span");
@@ -3333,6 +3357,7 @@ function rememberPeerPrivateRouteDraft(input = productionTwoProfileInput()) {
     peerPrivateRouteDraftsByRoom.delete(roomKey);
   }
   persistPrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
+  renderSavedInviteRooms();
 }
 
 function twoProfileAutoResumeFingerprint(input = productionTwoProfileInput()) {
@@ -3677,6 +3702,7 @@ function rememberLocalPrivateRouteCode(code, input = productionTwoProfileInput()
     fields.localPrivateRouteCode.value = latestLocalPrivateRouteCode;
   }
   updateLocalPrivateRouteCodeUi(input);
+  renderSavedInviteRooms();
 }
 
 function focusLocalPrivateRouteCodeDisplay() {
@@ -9044,9 +9070,12 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
       fields.productionPairingEndpoint.value = result.local_onion_endpoint;
       fields.productionPairingEndpoint.dispatchEvent(new Event("input", { bubbles: true }));
     }
+    const noticeKey = (fields.peerPrivateRouteCode?.value ?? "").trim()
+      ? "privateRouteCodeReady"
+      : "privateRouteWaitingPeerCode";
     setProductionTwoProfileState("Delivery code ready");
-    setText(fields.productionTwoProfileWarning, t("privateRouteCodeReady"));
-    setChatDeliveryNoticeByKey("privateRouteCodeReady", "muted");
+    setText(fields.productionTwoProfileWarning, t(noticeKey));
+    setChatDeliveryNoticeByKey(noticeKey, "muted");
     setText(
       fields.productionTwoProfileBoundary,
       `backup=${runtime.backup.backup_exclusion_verified} key=${runtime.key.key_material_ready} persistent_client=${runtime.client.persistent_client_ready} endpoint=${result.onion_endpoint_returned} next=${result.next_blocker}`,
