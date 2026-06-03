@@ -9,7 +9,7 @@ use crate::{
     TransportRuntimeEventSink,
 };
 use another_dimension_identity::ProfileName;
-use arti_client::{config::TorClientConfigBuilder, TorClientConfig};
+use arti_client::{config::TorClientConfigBuilder, ErrorKind, HasKind, TorClientConfig};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -778,13 +778,60 @@ impl ManualArtiBootstrapAttemptGate {
                 sink.record(RedactedTransportRuntimeEvent::bootstrap_succeeded());
                 Ok(())
             }
-            Ok(Err(_error)) => self
-                .adapter
-                .execute_fail_closed(TransportBootstrapOutcome::TransientNetworkFailure, sink),
+            Ok(Err(error)) => {
+                let error = classify_arti_bootstrap_error_kind(error.kind());
+                sink.record(RedactedTransportRuntimeEvent::bootstrap_failed(error));
+                Err(error)
+            }
             Err(_elapsed) => self
                 .adapter
                 .execute_fail_closed(TransportBootstrapOutcome::TimedOut, sink),
         }
+    }
+}
+
+#[cfg(feature = "arti-manual-bootstrap")]
+pub(crate) fn classify_arti_bootstrap_error_kind(kind: ErrorKind) -> TransportRuntimeError {
+    match kind {
+        ErrorKind::TorAccessFailed
+        | ErrorKind::DirectoryExpired
+        | ErrorKind::RemoteNetworkTimeout
+        | ErrorKind::LocalNetworkError
+        | ErrorKind::CircuitCollapse
+        | ErrorKind::TorNetworkTimeout
+        | ErrorKind::TorDirectoryError
+        | ErrorKind::RelayTooBusy
+        | ErrorKind::CircuitRefused
+        | ErrorKind::NoPath
+        | ErrorKind::NoExit
+        | ErrorKind::TorDirectoryUnusable
+        | ErrorKind::ClockSkew => TransportRuntimeError::BootstrapNetworkAccessFailed,
+        ErrorKind::PersistentStateAccessFailed
+        | ErrorKind::LocalResourceAlreadyInUse
+        | ErrorKind::FsPermissions
+        | ErrorKind::PersistentStateCorrupted
+        | ErrorKind::CacheCorrupted
+        | ErrorKind::CacheAccessFailed
+        | ErrorKind::KeystoreCorrupted
+        | ErrorKind::KeystoreAccessFailed
+        | ErrorKind::ReactorShuttingDown
+        | ErrorKind::ArtiShuttingDown
+        | ErrorKind::NoHomeDirectory
+        | ErrorKind::LocalResourceExhausted
+        | ErrorKind::ExternalToolFailed => TransportRuntimeError::BootstrapLocalStateFailed,
+        ErrorKind::InvalidConfig | ErrorKind::InvalidConfigTransition | ErrorKind::BadApiUsage => {
+            TransportRuntimeError::BootstrapConfigurationFailed
+        }
+        ErrorKind::SoftwareDeprecated | ErrorKind::NotImplemented | ErrorKind::FeatureDisabled => {
+            TransportRuntimeError::BootstrapUnsupported
+        }
+        ErrorKind::TorProtocolViolation | ErrorKind::RelayIdMismatch | ErrorKind::Internal => {
+            TransportRuntimeError::BootstrapProtocolFailed
+        }
+        ErrorKind::BootstrapRequired | ErrorKind::TransientFailure | ErrorKind::Other => {
+            TransportRuntimeError::BootstrapTransientFailure
+        }
+        _ => TransportRuntimeError::BootstrapTransientFailure,
     }
 }
 
@@ -833,10 +880,9 @@ impl PersistentArtiClientOwner {
                 sink.record(RedactedTransportRuntimeEvent::bootstrap_succeeded());
                 Ok(())
             }
-            Ok(Err(_error)) => {
+            Ok(Err(error)) => {
                 self.state = PersistentArtiClientLifecycleState::Unbootstrapped;
-                let error =
-                    TransportBootstrapOutcome::TransientNetworkFailure.runtime_error(policy);
+                let error = classify_arti_bootstrap_error_kind(error.kind());
                 sink.record(RedactedTransportRuntimeEvent::bootstrap_failed(error));
                 Err(PersistentArtiClientLifecycleError::BootstrapFailed(error))
             }

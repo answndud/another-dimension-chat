@@ -1,3 +1,5 @@
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 #[cfg(target_os = "macos")]
 use std::process::Command;
 use std::{
@@ -111,10 +113,17 @@ pub fn probe_app_private_state_cache_dirs(
         return Err(TransportRuntimeProbeError::SameStateAndCacheDirectory);
     }
 
+    let state_private_dirs = private_runtime_dirs_to_restrict(&state_dir);
+    let cache_private_dirs = private_runtime_dirs_to_restrict(&cache_dir);
+
     fs::create_dir_all(&state_dir)
         .map_err(|_| TransportRuntimeProbeError::DirectoryCreateFailed)?;
     fs::create_dir_all(&cache_dir)
         .map_err(|_| TransportRuntimeProbeError::DirectoryCreateFailed)?;
+    restrict_private_runtime_dirs(&state_private_dirs)?;
+    restrict_private_runtime_dirs(&cache_private_dirs)?;
+    restrict_private_runtime_dir(&state_dir)?;
+    restrict_private_runtime_dir(&cache_dir)?;
 
     probe_writable_dir(&state_dir)?;
     probe_writable_dir(&cache_dir)?;
@@ -123,6 +132,38 @@ pub fn probe_app_private_state_cache_dirs(
         state_dir,
         cache_dir,
     })
+}
+
+fn private_runtime_dirs_to_restrict(path: &Path) -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    let mut cursor = Some(path);
+    while let Some(dir) = cursor {
+        if dir.exists() {
+            break;
+        }
+        dirs.push(dir.to_path_buf());
+        cursor = dir.parent();
+    }
+    dirs.reverse();
+    dirs
+}
+
+fn restrict_private_runtime_dirs(dirs: &[PathBuf]) -> Result<(), TransportRuntimeProbeError> {
+    for dir in dirs {
+        restrict_private_runtime_dir(dir)?;
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn restrict_private_runtime_dir(path: &Path) -> Result<(), TransportRuntimeProbeError> {
+    fs::set_permissions(path, fs::Permissions::from_mode(0o700))
+        .map_err(|_| TransportRuntimeProbeError::DirectoryProbeFailed)
+}
+
+#[cfg(not(unix))]
+fn restrict_private_runtime_dir(_path: &Path) -> Result<(), TransportRuntimeProbeError> {
+    Ok(())
 }
 
 fn validate_transport_runtime_dir(path: &Path) -> Result<(), TransportRuntimeProbeError> {
