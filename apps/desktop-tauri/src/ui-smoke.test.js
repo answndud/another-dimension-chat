@@ -437,7 +437,15 @@ test("busy actions only clear the action they started", () => {
     assert.match(mainJs, new RegExp(`clearProductionBusyAction\\("${action}"\\)`), `missing scoped busy clear for ${action}`);
   }
 
-  assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /clearProductionBusyAction\("invite-room-open"\)/);
+  assert.match(mainJs, /let activeInviteRoomOpenFingerprint = ""/);
+  assert.match(functionBody(mainJs, "setInviteRoomOpenBusy"), /productionBusyAction = "invite-room-open"/);
+  assert.match(functionBody(mainJs, "setInviteRoomOpenBusy"), /activeInviteRoomOpenFingerprint = twoProfileSessionStatusFingerprint\(input\)/);
+  assert.match(functionBody(mainJs, "inviteRoomOpenBusyMatches"), /productionBusyAction === "invite-room-open"/);
+  assert.match(functionBody(mainJs, "inviteRoomOpenBusyMatches"), /activeInviteRoomOpenFingerprint === twoProfileSessionStatusFingerprint\(input\)/);
+  assert.match(functionBody(mainJs, "clearInviteRoomOpenBusy"), /inviteRoomOpenBusyMatches\(input\)/);
+  assert.match(functionBody(mainJs, "clearInviteRoomOpenBusy"), /clearProductionBusyAction\("invite-room-open"\)/);
+  assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /setInviteRoomOpenBusy\(openInput\)/);
+  assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /clearInviteRoomOpenBusy\(openInput\)/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /clearProductionBusyAction\("two-profile-transcript-load"\)/);
   assert.match(
     functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"),

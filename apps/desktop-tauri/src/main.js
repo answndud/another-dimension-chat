@@ -470,6 +470,7 @@ let productionTwoProfileOnionReceiveMode = {
 let latestProductionMessageImport = null;
 let latestProductionPairingSafety = null;
 let productionBusyAction = null;
+let activeInviteRoomOpenFingerprint = "";
 let latestProductionManualFocusTarget = null;
 let latestChatDeliveryNoticeKey = "";
 let latestChatDeliveryNoticeTone = "neutral";
@@ -491,6 +492,25 @@ const productionPayloadSlots = {
 function clearProductionBusyAction(action) {
   if (productionBusyAction === action) {
     productionBusyAction = null;
+  }
+}
+
+function setInviteRoomOpenBusy(input) {
+  productionBusyAction = "invite-room-open";
+  activeInviteRoomOpenFingerprint = twoProfileSessionStatusFingerprint(input);
+}
+
+function inviteRoomOpenBusyMatches(input) {
+  return (
+    productionBusyAction === "invite-room-open" &&
+    activeInviteRoomOpenFingerprint === twoProfileSessionStatusFingerprint(input)
+  );
+}
+
+function clearInviteRoomOpenBusy(input) {
+  if (inviteRoomOpenBusyMatches(input)) {
+    activeInviteRoomOpenFingerprint = "";
+    clearProductionBusyAction("invite-room-open");
   }
 }
 
@@ -3467,7 +3487,7 @@ async function openInviteRoomFromToken(input = productionTwoProfileInput()) {
     return false;
   }
 
-  productionBusyAction = "invite-room-open";
+  setInviteRoomOpenBusy(openInput);
   setProductionTwoProfileState(currentInviteCodeRole() === "inviter" ? "Opening room" : "Joining room");
   setText(fields.productionTwoProfileWarning, currentInviteCodeRole() === "inviter" ? t("inviteCodeCreatedHint") : t("receivedCodeReadyHint"));
   setText(fields.productionTwoProfileSession, t("setupSessionWaiting"));
@@ -3530,7 +3550,7 @@ async function openInviteRoomFromToken(input = productionTwoProfileInput()) {
     setText(fields.productionTwoProfileBoundary, t("statusFailed"));
     return false;
   } finally {
-    clearProductionBusyAction("invite-room-open");
+    clearInviteRoomOpenBusy(openInput);
     applyProductionActionState();
   }
 }
