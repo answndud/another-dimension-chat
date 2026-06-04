@@ -421,6 +421,40 @@ test("invite-code send path does not bypass private delivery gates", () => {
   assert.doesNotMatch(functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip"), /invokeInviteRoomMessageSend/);
 });
 
+test("message send retry and cancel results stay scoped to the current room", () => {
+  const saveBody = functionBody(mainJs, "saveInviteRoomOutboundMessage");
+  assert.match(saveBody, /twoProfileTranscriptInputStillCurrent\(input\)/);
+  assert.match(saveBody, /stillCurrent: false/);
+
+  const completeBody = functionBody(mainJs, "completeInviteRoomOutboundDelivery");
+  assert.match(completeBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(completeBody, /sendProductionTwoProfileLatestOnionEnvelope\(onionInput\)/);
+
+  const sendBody = functionBody(mainJs, "sendProductionTwoProfileLatestOnionEnvelope");
+  assert.match(mainJs, /async function sendProductionTwoProfileLatestOnionEnvelope\(input = productionTwoProfileInput\(\)\)/);
+  assert.match(sendBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(sendBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: false \}\)/);
+
+  const retryBody = functionBody(mainJs, "retryTwoProfileOutboundEntry");
+  assert.match(retryBody, /await sendProductionTwoProfileLatestOnionEnvelope\(\)/);
+  assert.match(retryBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+
+  const refreshRetryBody = functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry");
+  assert.match(refreshRetryBody, /await prepareInviteRoomPrivateRouteExchange\(input\)/);
+  assert.match(refreshRetryBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(refreshRetryBody, /twoProfilePeerEndpointState\(input\)\.ready/);
+
+  const cancelBody = functionBody(mainJs, "cancelTwoProfileOutboundEntry");
+  assert.match(cancelBody, /production_message_outbound_cancel_pending/);
+  assert.match(cancelBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+
+  const composerBody = functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip");
+  assert.match(composerBody, /const input = productionTwoProfileInput\(\)/);
+  assert.match(composerBody, /stillCurrent/);
+  assert.match(composerBody, /if \(!stillCurrent \|\| !twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(composerBody, /completeInviteRoomOutboundDelivery\(input, messageNumber\)/);
+});
+
 test("join failure explains when the invite room is not open", () => {
   assert.match(mainJs, /function isInviteRoomNotOpenError/);
   assert.match(mainJs, /recoveryInviteRoomNotOpen/);
