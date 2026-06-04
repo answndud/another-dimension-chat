@@ -3243,6 +3243,11 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     : "none";
   const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(realOnionResult);
   const realOnionWaitCancelled = realOnionWaitCanceledForInput(input);
+  const deliveryNoticeCurrentRoom = latestChatDeliveryNoticeKey
+    ? chatDeliveryNoticeMatchesInput(input)
+    : false;
+  const deliveryNoticeKey = deliveryNoticeCurrentRoom ? latestChatDeliveryNoticeKey : "none";
+  const deliveryNoticeTone = deliveryNoticeCurrentRoom ? latestChatDeliveryNoticeTone : "neutral";
 
   return [
     "Another Dimension Chat beta field test report",
@@ -3292,8 +3297,9 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `real_onion_network_io=${realOnionResult?.network_io_attempted === true}`,
     `real_onion_transport_io=${realOnionResult?.transport_io_opened === true}`,
     `real_onion_runtime=${realOnionResult?.runtime_messaging_enabled === true}`,
-    `delivery_notice_key=${fieldTestReportValue(latestChatDeliveryNoticeKey, "none")}`,
-    `delivery_notice_tone=${fieldTestReportValue(latestChatDeliveryNoticeTone, "neutral")}`,
+    `delivery_notice_current_room=${deliveryNoticeCurrentRoom}`,
+    `delivery_notice_key=${fieldTestReportValue(deliveryNoticeKey, "none")}`,
+    `delivery_notice_tone=${fieldTestReportValue(deliveryNoticeTone, "neutral")}`,
     `ui_state=${fieldTestReportValue(fields.productionTwoProfileState?.textContent)}`,
     `redacted_boundary=${fieldTestBoundarySummary(boundaryText)}`,
   ].join("\n");
