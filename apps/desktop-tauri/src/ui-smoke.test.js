@@ -441,6 +441,20 @@ test("profile unlock and transcript load ignore stale profile inputs", () => {
   assert.match(transcriptBody, /if \(!productionProfileInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
 });
 
+test("manual session readiness is scoped to the active profile passphrase", () => {
+  assert.match(mainJs, /let latestProductionSessionStateFingerprint = ""/);
+  assert.match(functionBody(mainJs, "productionSessionStateFingerprint"), /input\.passphrase/);
+  assert.match(functionBody(mainJs, "rememberProductionSessionState"), /latestProductionSessionStateFingerprint = session \? productionSessionStateFingerprint\(input\) : ""/);
+  assert.match(functionBody(mainJs, "latestProductionSessionStateForInput"), /latestProductionSessionStateFingerprint === productionSessionStateFingerprint\(input\)/);
+  assert.match(functionBody(mainJs, "productionSessionReadyForMessages"), /latestProductionSessionStateForInput\(\)/);
+  assert.doesNotMatch(functionBody(mainJs, "productionSessionReadyForMessages"), /latestProductionSessionState,/);
+  assert.match(functionBody(mainJs, "renderProductionPairingFlow"), /latestProductionSessionStateForInput\(input\)\?\.session_draft_present/);
+  assert.match(functionBody(mainJs, "applyProductionActionState"), /latestProductionSessionStateForInput\(pairing\)\?\.session_draft_present/);
+  assert.match(functionBody(mainJs, "restoreProductionSessionAfterUnlock"), /rememberProductionSessionState\(input, session\)/);
+  assert.match(functionBody(mainJs, "checkProductionSessionState"), /rememberProductionSessionState\(input, result\)/);
+  assert.match(functionBody(mainJs, "refreshInviteLocalSessionReady"), /rememberProductionSessionState\(\{ profile: input\.profileA, passphrase: input\.passphrase \}, session\)/);
+});
+
 test("two-profile onion setup actions ignore stale room results", () => {
   const keyBody = functionBody(mainJs, "prepareProductionTwoProfileOnionKey");
   assert.match(keyBody, /const input = productionTwoProfileInput\(\)/);
