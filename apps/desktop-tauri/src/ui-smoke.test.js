@@ -671,13 +671,18 @@ test("receive imports refresh room list metadata immediately", () => {
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /renderSavedInviteRooms\(\)/);
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /renderRoomStatusSummary\(input, sessionsReady\)/);
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /renderProductionTwoProfileMemory\(input\)/);
-  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus"), /refreshCurrentRoomAfterReceiveImport\(refreshPlan\)/);
-  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus"), /const receivingCurrentRoom = productionTwoProfileReceiveMatchesInput\(currentInput\)/);
-  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus"), /rememberProductionTwoProfileOnionReceiveRuntimeState\(runtimeState, runtimeResult\)/);
+  const pollBody = functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus");
+  assert.match(pollBody, /const receivingCurrentRoom = productionTwoProfileReceiveMatchesInput\(currentInput\)/);
+  assert.match(pollBody, /rememberProductionTwoProfileOnionReceiveRuntimeState\(runtimeState, runtimeResult\)/);
   assert.match(
-    functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus"),
+    pollBody,
     /if \(!receivingCurrentRoom\) \{[\s\S]*renderSavedInviteRooms\(\);[\s\S]*\} else \{[\s\S]*await loadProductionTwoProfileTranscript/,
   );
+  assert.match(pollBody, /if \(!twoProfileTranscriptInputStillCurrent\(currentInput\)\) \{[\s\S]*renderSavedInviteRooms\(\);[\s\S]*return;/);
+  assert.match(pollBody, /profileA: currentInput\.profileA/);
+  assert.match(pollBody, /rememberTwoProfileSessionStatus\(currentInput, status\)/);
+  assert.match(pollBody, /showLatestRetryableOutboundNotice\(currentInput\)/);
+  assert.match(pollBody, /refreshCurrentRoomAfterReceiveImport\(refreshPlan, currentInput\)/);
 });
 
 test("private delivery receive controls require a real route", () => {

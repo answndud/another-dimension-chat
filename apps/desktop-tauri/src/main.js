@@ -2575,8 +2575,7 @@ function rememberCurrentInviteRoomMetadata() {
   rememberInviteRoom(code, role, currentRoomConversationMetadata());
 }
 
-function refreshCurrentRoomAfterReceiveImport(refreshPlan = {}) {
-  const input = productionTwoProfileInput();
+function refreshCurrentRoomAfterReceiveImport(refreshPlan = {}, input = productionTwoProfileInput()) {
   const sessionsReady = twoProfileSessionsReadyForInput(input);
   rememberCurrentInviteRoomMetadata();
   renderSavedInviteRooms();
@@ -11464,6 +11463,10 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
           refreshSessionStatus: refreshPlan.endpointUpdated === true,
           input: currentInput,
         });
+        if (!twoProfileTranscriptInputStillCurrent(currentInput)) {
+          renderSavedInviteRooms();
+          return;
+        }
         if (refreshPlan.messageImported) {
           const replySelected = selectLatestReceivedReplyForProfile(productionTwoProfileOnionReceiveMode.profile, {
             focusReply: "none",
@@ -11474,22 +11477,25 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
           }
         }
         if (refreshPlan.endpointUpdated) {
-          const input = productionTwoProfileInput();
-          if (input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase) {
+          if (currentInput.profileA && currentInput.profileB && currentInput.profileA !== currentInput.profileB && currentInput.passphrase) {
             const status = await invoke("production_two_profile_session_status", {
-              profileA: input.profileA,
-              profileB: input.profileB,
-              passphrase: input.passphrase,
+              profileA: currentInput.profileA,
+              profileB: currentInput.profileB,
+              passphrase: currentInput.passphrase,
             });
-            rememberTwoProfileSessionStatus(input, status);
+            if (!twoProfileTranscriptInputStillCurrent(currentInput)) {
+              renderSavedInviteRooms();
+              return;
+            }
+            rememberTwoProfileSessionStatus(currentInput, status);
             renderProductionTwoProfileSessionStatusResult(status);
-            renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
+            renderRoomIdentityBar(currentInput, twoProfileSessionsReadyForInput(currentInput));
             if (!refreshPlan.messageImported) {
-              showLatestRetryableOutboundNotice(input);
+              showLatestRetryableOutboundNotice(currentInput);
             }
           }
         }
-        refreshCurrentRoomAfterReceiveImport(refreshPlan);
+        refreshCurrentRoomAfterReceiveImport(refreshPlan, currentInput);
       }
     }
     if (!backendLoop.enabled && !backendLoop.worker_running) {
