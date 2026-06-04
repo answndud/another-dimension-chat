@@ -312,6 +312,30 @@ test("profile unlock and manual import refresh the room captured at action start
   assert.match(importRefreshBody, /renderProductionTwoProfileMemory\(input\)/);
 });
 
+test("manual message actions ignore stale inputs before updating current UI", () => {
+  assert.match(mainJs, /function productionMessageInputStillCurrent/);
+  assert.match(functionBody(mainJs, "productionMessageInputStillCurrent"), /current\.envelopePayload === input\.envelopePayload/);
+
+  const exportBody = functionBody(mainJs, "exportProductionMessageEnvelope");
+  assert.match(exportBody, /const twoProfileRefreshInput = productionTwoProfileInput\(\)/);
+  assert.match(exportBody, /if \(!productionMessageInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(exportBody, /syncTwoProfileConversationAfterManualExport\([\s\S]*twoProfileRefreshInput/);
+  assert.match(exportBody, /twoProfileTranscriptInputStillCurrent\(twoProfileRefreshInput\)/);
+
+  const importBody = functionBody(mainJs, "importProductionMessageEnvelope");
+  assert.match(importBody, /const twoProfileRefreshInput = productionTwoProfileInput\(\)/);
+  assert.match(importBody, /if \(!productionMessageInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(importBody, /refreshTwoProfileConversationAfterManualImport\([\s\S]*twoProfileRefreshInput/);
+
+  const receivedBody = functionBody(mainJs, "exportProductionReceivedMessage");
+  assert.match(receivedBody, /const twoProfileRefreshInput = productionTwoProfileInput\(\)/);
+  assert.match(receivedBody, /if \(!productionMessageInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(receivedBody, /syncTwoProfileConversationAfterReceivedExport\([\s\S]*twoProfileRefreshInput/);
+
+  assert.match(functionBody(mainJs, "syncTwoProfileConversationAfterManualExport"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
+  assert.match(functionBody(mainJs, "syncTwoProfileConversationAfterReceivedExport"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
+});
+
 test("receive imports refresh room list metadata immediately", () => {
   assert.match(mainJs, /function refreshCurrentRoomAfterReceiveImport/);
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /rememberCurrentInviteRoomMetadata\(\)/);

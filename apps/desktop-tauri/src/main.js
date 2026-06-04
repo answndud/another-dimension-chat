@@ -8368,6 +8368,19 @@ function productionMessageInput() {
   };
 }
 
+function productionMessageInputStillCurrent(input) {
+  const current = productionMessageInput();
+  return (
+    current.profile === input.profile &&
+    current.passphrase === input.passphrase &&
+    current.autoMessageNumber === input.autoMessageNumber &&
+    current.messageNumber === input.messageNumber &&
+    current.messageTtlSeconds === input.messageTtlSeconds &&
+    current.message === input.message &&
+    current.envelopePayload === input.envelopePayload
+  );
+}
+
 function renderLoopResults(messages) {
   if (!fields.loopResults) {
     return;
@@ -12305,7 +12318,11 @@ function syncTwoProfileConversationAfterManualExport(
   message,
   messageTtlSeconds,
   envelopePayload,
+  input = productionTwoProfileInput(),
 ) {
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return false;
+  }
   const exportedProfile = String(profile ?? "").trim().toLowerCase();
   const selectedEntry = selectedTwoProfileConversationEntry();
   const selectedNumber = Number.parseInt(selectedEntry?.messageNumber, 10);
@@ -12377,7 +12394,15 @@ function syncTwoProfileConversationAfterManualExport(
   return { conversationUpdated: true, peerImportReady: false };
 }
 
-function syncTwoProfileConversationAfterReceivedExport(profile, messageNumber, message) {
+function syncTwoProfileConversationAfterReceivedExport(
+  profile,
+  messageNumber,
+  message,
+  input = productionTwoProfileInput(),
+) {
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return false;
+  }
   const receivedProfile = String(profile ?? "").trim().toLowerCase();
   const counterpart = productionCounterpartProfile(receivedProfile);
   const normalizedNumber = Number.parseInt(messageNumber, 10);
@@ -12641,6 +12666,7 @@ async function importProductionHandshakeFinish() {
 async function exportProductionMessageEnvelope() {
   const input = productionMessageInput();
   const { profile, passphrase, autoMessageNumber, messageNumber, message, messageTtlSeconds } = input;
+  const twoProfileRefreshInput = productionTwoProfileInput();
   let postBusyFocus = null;
   const selectedBlocker = selectedManualMessageActionBlocker("export", input);
   if (selectedBlocker) {
@@ -12693,6 +12719,9 @@ async function exportProductionMessageEnvelope() {
       message,
       messageTtlSeconds,
     });
+    if (!productionMessageInputStillCurrent(input)) {
+      return;
+    }
     const view = productionMessageEnvelopeExportView(result);
     setProductionMessageState("Message envelope exported");
     setText(fields.productionMessageWarning, result.warning);
@@ -12711,10 +12740,13 @@ async function exportProductionMessageEnvelope() {
       message,
       result.message_ttl_seconds,
       result.envelope_payload,
+      twoProfileRefreshInput,
     );
     if (expiredOutboundMessagesPurged(result) > 0) {
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
-      if (conversationSync?.conversationUpdated) {
+      if (twoProfileTranscriptInputStillCurrent(twoProfileRefreshInput)) {
+        await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+      }
+      if (conversationSync?.conversationUpdated && twoProfileTranscriptInputStillCurrent(twoProfileRefreshInput)) {
         appendMessageLifecyclePurgeWarningToField(fields.productionTwoProfileWarning, result);
       }
     }
@@ -12725,6 +12757,9 @@ async function exportProductionMessageEnvelope() {
     setText(fields.productionMessageInbound, "Not imported yet");
     setText(fields.productionMessageBoundary, view.boundary);
   } catch (error) {
+    if (!productionMessageInputStillCurrent(input)) {
+      return;
+    }
     setProductionMessageState("Message envelope export failed");
     setText(fields.productionMessageWarning, String(error));
     setText(fields.productionMessageOutbound, "Failed");
@@ -12791,6 +12826,9 @@ async function importProductionMessageEnvelope() {
       envelopePayload,
       messageTtlSeconds,
     });
+    if (!productionMessageInputStillCurrent(input)) {
+      return;
+    }
     const view = productionMessageEnvelopeImportView(result);
     latestProductionMessageImport = productionMessageImportFingerprint({ profile, messageNumber });
     const clearedEnvelopeSlot = clearImportedMessageEnvelopeSlot(profile, envelopePayload);
@@ -12826,6 +12864,9 @@ async function importProductionMessageEnvelope() {
       );
     }
   } catch (error) {
+    if (!productionMessageInputStillCurrent(input)) {
+      return;
+    }
     setProductionMessageState("Message envelope import failed");
     setText(fields.productionMessageWarning, String(error));
     setText(fields.productionMessageInbound, "Failed");
@@ -12840,7 +12881,9 @@ async function importProductionMessageEnvelope() {
 }
 
 async function exportProductionReceivedMessage() {
-  const { profile, passphrase, messageNumber } = productionMessageInput();
+  const input = productionMessageInput();
+  const { profile, passphrase, messageNumber } = input;
+  const twoProfileRefreshInput = productionTwoProfileInput();
   let postBusyFocus = null;
   if (!profile || !passphrase || !Number.isInteger(messageNumber) || messageNumber < 1) {
     setProductionMessageState("Received export needs input");
@@ -12861,6 +12904,9 @@ async function exportProductionReceivedMessage() {
       passphrase,
       messageNumber,
     });
+    if (!productionMessageInputStillCurrent(input)) {
+      return;
+    }
     const view = productionReceivedMessageExportView(result);
     const expiredReceivedPurged = result.expired_received_message_purged === true;
     setProductionMessageState(expiredReceivedPurged ? "Received message expired" : "Received message exported");
@@ -12870,8 +12916,10 @@ async function exportProductionReceivedMessage() {
         fields.productionReceivedMessage.value = "";
       }
       completeProductionMessageImportReview();
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
-      appendMessageLifecyclePurgeWarningToField(fields.productionTwoProfileWarning, result);
+      if (twoProfileTranscriptInputStillCurrent(twoProfileRefreshInput)) {
+        await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+        appendMessageLifecyclePurgeWarningToField(fields.productionTwoProfileWarning, result);
+      }
       setText(fields.productionMessageInbound, view.inbound);
       setText(fields.productionMessageBoundary, view.boundary);
       return;
@@ -12889,6 +12937,7 @@ async function exportProductionReceivedMessage() {
       profile,
       messageNumber,
       result.received_message,
+      twoProfileRefreshInput,
     );
     setText(fields.productionMessageInbound, view.inbound);
     setText(fields.productionMessageBoundary, view.boundary);
@@ -12900,6 +12949,9 @@ async function exportProductionReceivedMessage() {
       );
     }
   } catch (error) {
+    if (!productionMessageInputStillCurrent(input)) {
+      return;
+    }
     setProductionMessageState("Received message export failed");
     setText(fields.productionMessageWarning, String(error));
     setText(fields.productionMessageInbound, "Failed");
