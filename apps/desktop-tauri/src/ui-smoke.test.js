@@ -289,6 +289,32 @@ test("room transcript refresh is scoped to the current room", () => {
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /rememberTwoProfileSessionStatus\(sessionCheckInput, result\)/);
 });
 
+test("busy actions only clear the action they started", () => {
+  assert.match(mainJs, /function clearProductionBusyAction\(action\)/);
+  assert.match(functionBody(mainJs, "clearProductionBusyAction"), /productionBusyAction === action/);
+
+  const directNullClearedMain = mainJs
+    .replace("let productionBusyAction = null;", "")
+    .replace(
+      /function clearProductionBusyAction\(action\) \{\s*if \(productionBusyAction === action\) \{\s*productionBusyAction = null;\s*\}\s*\}/,
+      "",
+    );
+  assert.doesNotMatch(directNullClearedMain, /productionBusyAction = null;/);
+
+  const busyActions = [...mainJs.matchAll(/productionBusyAction = "([^"]+)";/g)].map((match) => match[1]);
+  assert.notEqual(busyActions.length, 0, "expected production busy actions");
+  for (const action of busyActions) {
+    assert.match(mainJs, new RegExp(`clearProductionBusyAction\\("${action}"\\)`), `missing scoped busy clear for ${action}`);
+  }
+
+  assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /clearProductionBusyAction\("invite-room-open"\)/);
+  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /clearProductionBusyAction\("two-profile-transcript-load"\)/);
+  assert.match(
+    functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"),
+    /clearProductionBusyAction\("two-profile-real-onion-roundtrip"\)/,
+  );
+});
+
 test("profile unlock and manual import refresh the room captured at action start", () => {
   const unlockBody = functionBody(mainJs, "unlockProductionProfile");
   assert.match(unlockBody, /const twoProfileRefreshInput = productionTwoProfileInput\(\)/);

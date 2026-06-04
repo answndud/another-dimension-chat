@@ -485,6 +485,12 @@ const productionPayloadSlots = {
   messageEnvelope: new Map(),
 };
 
+function clearProductionBusyAction(action) {
+  if (productionBusyAction === action) {
+    productionBusyAction = null;
+  }
+}
+
 function manualNetworkPermissionEnabled() {
   return fields.roomNetworkPermission?.checked === true || fields.manualOnionNetworkPermission?.checked === true;
 }
@@ -3412,7 +3418,7 @@ async function openInviteRoomFromToken(input = productionTwoProfileInput()) {
     setText(fields.productionTwoProfileBoundary, t("statusFailed"));
     return false;
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("invite-room-open");
     applyProductionActionState();
   }
 }
@@ -8916,7 +8922,7 @@ async function startProductionTwoProfileOnionBootstrap() {
     setText(fields.productionTwoProfileWarning, `Tor bootstrap failed without returning secrets. ${error}`);
     setText(fields.productionTwoProfileBoundary, "Failed before endpoint launch or message transport.");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-onion-bootstrap");
     if (fields.startProductionTwoProfileOnionBootstrap) {
       fields.startProductionTwoProfileOnionBootstrap.disabled = false;
     }
@@ -8986,7 +8992,7 @@ async function prepareProductionTwoProfileOnionKey() {
     setText(fields.productionTwoProfileWarning, `Onion key prepare failed without returning secrets. ${error}`);
     setText(fields.productionTwoProfileBoundary, "Failed before network, endpoint launch, or message transport.");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-onion-key-prepare");
     if (fields.prepareProductionTwoProfileOnionKey) {
       fields.prepareProductionTwoProfileOnionKey.disabled = false;
     }
@@ -9093,7 +9099,7 @@ async function launchProductionTwoProfileOnionEndpoint() {
     setText(fields.productionTwoProfileWarning, `Endpoint launch failed without returning secrets. ${error}`);
     setText(fields.productionTwoProfileBoundary, "Failed before descriptor publication or message transport.");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-onion-endpoint-launch");
     if (fields.launchProductionTwoProfileOnionEndpoint) {
       fields.launchProductionTwoProfileOnionEndpoint.disabled = false;
     }
@@ -9211,7 +9217,7 @@ async function prepareProductionTwoProfileOnionPairing() {
     setText(fields.productionTwoProfileWarning, `Onion pairing failed without returning secrets. ${error}`);
     setText(fields.productionTwoProfileBoundary, "Failed before session save or message transport.");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-onion-pairing");
     if (fields.prepareProductionTwoProfileOnionPairing) {
       fields.prepareProductionTwoProfileOnionPairing.disabled = false;
     }
@@ -9324,7 +9330,7 @@ async function saveProductionTwoProfileOnionSessions() {
     setText(fields.productionTwoProfileWarning, `Onion session save failed without returning secrets. ${error}`);
     setText(fields.productionTwoProfileBoundary, "Failed before message transport.");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-onion-session-save");
     if (fields.saveProductionTwoProfileOnionSessions) {
       fields.saveProductionTwoProfileOnionSessions.disabled = false;
     }
@@ -9433,7 +9439,7 @@ async function refreshProductionTwoProfilePeerEndpoints() {
     setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Existing room state was kept."));
     return false;
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-peer-endpoint-refresh");
     if (fields.refreshProductionTwoProfilePeerEndpoints) {
       fields.refreshProductionTwoProfilePeerEndpoints.disabled = false;
     }
@@ -9498,7 +9504,7 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
     setChatDeliveryNoticeByKey("privateRouteCodeFailed", "warning");
     return false;
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("invite-room-private-route-code");
     applyProductionActionState();
   }
 }
@@ -9572,7 +9578,7 @@ async function applyPeerPrivateRouteCode() {
     fields.peerPrivateRouteCode?.focus();
     return false;
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("invite-room-peer-route-code");
     applyProductionActionState();
   }
 }
@@ -9773,7 +9779,7 @@ async function sendProductionTwoProfileEndpointUpdate() {
     setText(fields.productionTwoProfileWarning, localizedSendFailureMessage(error));
     setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Existing room state was kept."));
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-endpoint-update-control");
     if (fields.sendProductionTwoProfileEndpointUpdate) {
       fields.sendProductionTwoProfileEndpointUpdate.disabled = false;
     }
@@ -9909,7 +9915,7 @@ async function completeProductionTwoProfileOnionHandshake() {
     setText(fields.productionTwoProfileWarning, `Onion handshake failed without returning secrets. ${error}`);
     setText(fields.productionTwoProfileBoundary, "Failed before message transport.");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-onion-handshake");
     if (fields.completeProductionTwoProfileOnionHandshake) {
       fields.completeProductionTwoProfileOnionHandshake.disabled = false;
     }
@@ -10643,7 +10649,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       applyProductionActionState();
     }
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-onion-envelope-send");
     if (fields.sendProductionTwoProfileLatestOnionEnvelope) {
       fields.sendProductionTwoProfileLatestOnionEnvelope.disabled = false;
     }
@@ -10841,7 +10847,7 @@ async function cancelTwoProfileOutboundEntry(entry) {
     setText(fields.productionTwoProfileWarning, `${t("sendCancelFailed")} ${String(error)}`);
     setChatDeliveryNoticeByKey("sendCancelFailed", "warning");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-outbound-cancel");
     applyProductionActionState();
   }
 }
@@ -11386,7 +11392,7 @@ async function runProductionTwoProfileRoundtrip() {
     setText(fields.productionTwoProfileBoundary, t("statusFailed"));
     setProductionFollowupActions(false, t("setupRetryHint"));
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-roundtrip");
     if (fields.runProductionTwoProfileRoundtrip) {
       fields.runProductionTwoProfileRoundtrip.disabled = false;
     }
@@ -11464,7 +11470,7 @@ async function runProductionTwoProfileMessageRoundtrip() {
     setText(fields.productionTwoProfileBoundary, t("boundaryFailedNoPath"));
     setProductionFollowupActions(false, t("messageRetryHint"));
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-message-roundtrip");
     applyProductionActionState();
   }
 }
@@ -11633,7 +11639,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       "Failed without showing private details in the chat view.",
     );
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-real-onion-roundtrip");
     activeProductionTwoProfileRealOnionInput = null;
     if (fields.runProductionTwoProfileRealOnionRoundtrip) {
       fields.runProductionTwoProfileRealOnionRoundtrip.disabled = false;
@@ -11850,7 +11856,7 @@ async function unlockProductionProfile() {
     setText(fields.productionProfileIdentity, "Failed");
     setText(fields.productionProfileBoundary, "Failed");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("profile-unlock");
     if (fields.unlockProductionProfile) {
       fields.unlockProductionProfile.disabled = false;
     }
@@ -12035,7 +12041,7 @@ async function exportProductionPairingPayload() {
     setText(fields.productionPairingStorage, "Failed");
     setText(fields.productionPairingBoundary, "Failed");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("pairing-payload");
     if (fields.exportProductionPairing) {
       fields.exportProductionPairing.disabled = false;
     }
@@ -12095,7 +12101,7 @@ async function saveProductionSessionDraft() {
     setText(fields.productionPairingSession, "Failed");
     setText(fields.productionPairingBoundary, "Failed");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("session-draft");
     if (fields.saveProductionSessionDraft) {
       fields.saveProductionSessionDraft.disabled = false;
     }
@@ -12193,7 +12199,7 @@ async function checkProductionSessionState(input = productionPairingInput()) {
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionPairingSession, "Failed");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("session-state");
     if (fields.checkProductionSessionState) {
       fields.checkProductionSessionState.disabled = false;
     }
@@ -12289,7 +12295,7 @@ async function checkProductionTwoProfileSessionStatus() {
     setText(fields.productionPairingWarning, String(error));
     postCheckFocus = fields.checkProductionTwoProfileSessionStatusInline;
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("two-profile-session-status");
     if (fields.checkProductionTwoProfileSessionStatus) {
       fields.checkProductionTwoProfileSessionStatus.disabled = false;
     }
@@ -12460,7 +12466,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
     }
   } finally {
     if (!quiet) {
-      productionBusyAction = null;
+      clearProductionBusyAction("two-profile-transcript-load");
       applyProductionActionState();
     }
   }
@@ -12756,7 +12762,7 @@ async function exportProductionHandshakeInit() {
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionHandshakeState, "Failed");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("handshake-init");
     if (fields.exportProductionHandshakeInit) {
       fields.exportProductionHandshakeInit.disabled = false;
     }
@@ -12797,7 +12803,7 @@ async function exportProductionHandshakeReply() {
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionHandshakeState, "Failed");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("handshake-reply");
     if (fields.exportProductionHandshakeReply) {
       fields.exportProductionHandshakeReply.disabled = false;
     }
@@ -12838,7 +12844,7 @@ async function exportProductionHandshakeFinish() {
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionHandshakeState, "Failed");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("handshake-finish");
     if (fields.exportProductionHandshakeFinish) {
       fields.exportProductionHandshakeFinish.disabled = false;
     }
@@ -12893,7 +12899,7 @@ async function importProductionHandshakeFinish() {
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionHandshakeState, "Failed");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("handshake-finish-import");
     if (fields.importProductionHandshakeFinish) {
       fields.importProductionHandshakeFinish.disabled = false;
     }
@@ -13002,7 +13008,7 @@ async function exportProductionMessageEnvelope() {
     setText(fields.productionMessageWarning, String(error));
     setText(fields.productionMessageOutbound, "Failed");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("message-export");
     if (fields.exportProductionMessageEnvelope) {
       fields.exportProductionMessageEnvelope.disabled = false;
     }
@@ -13109,7 +13115,7 @@ async function importProductionMessageEnvelope() {
     setText(fields.productionMessageWarning, String(error));
     setText(fields.productionMessageInbound, "Failed");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("message-import");
     if (fields.importProductionMessageEnvelope) {
       fields.importProductionMessageEnvelope.disabled = false;
     }
@@ -13194,7 +13200,7 @@ async function exportProductionReceivedMessage() {
     setText(fields.productionMessageWarning, String(error));
     setText(fields.productionMessageInbound, "Failed");
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("received-export");
     if (fields.exportProductionReceivedMessage) {
       fields.exportProductionReceivedMessage.disabled = false;
     }
@@ -13241,7 +13247,7 @@ async function loadProductionMessageTranscript() {
     setProductionMessageState("Transcript load failed");
     setText(fields.productionMessageWarning, String(error));
   } finally {
-    productionBusyAction = null;
+    clearProductionBusyAction("transcript-load");
     if (fields.loadProductionMessageTranscript) {
       fields.loadProductionMessageTranscript.disabled = false;
     }
