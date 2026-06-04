@@ -1606,6 +1606,18 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
   line-height: 1.45;
 }
 
+.field-test-report-summary {
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 28%, var(--panel-border));
+  border-radius: 4px;
+  padding: 7px 9px;
+  background: color-mix(in srgb, var(--panel-strong) 66%, transparent);
+  color: var(--text-secondary);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .chat-transcript-toolbar {
   display: none;
   flex-wrap: wrap;

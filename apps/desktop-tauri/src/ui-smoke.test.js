@@ -791,6 +791,7 @@ test("private delivery receive controls require a real route", () => {
 test("field test report is redacted and copyable from room diagnostics", () => {
   for (const id of [
     "field-test-report",
+    "field-test-report-summary",
     "refresh-field-test-report",
     "copy-field-test-report",
     "cancel-production-two-profile-real-onion-wait",
@@ -798,13 +799,25 @@ test("field test report is redacted and copyable from room diagnostics", () => {
     assert.match(indexHtml, new RegExp(`id="${id}"`));
   }
   assert.match(mainJs, /function buildFieldTestReport/);
+  assert.match(mainJs, /function parseFieldTestReport/);
+  assert.match(mainJs, /function fieldTestReportSummary/);
+  assert.match(mainJs, /function renderFieldTestReportSummary/);
   assert.match(mainJs, /function copyFieldTestReport/);
   assert.match(mainJs, /function productionTwoProfileRealOnionSyntheticFailureResult/);
   assert.match(stylesCss, /\.field-test-report-panel/);
+  assert.match(stylesCss, /\.field-test-report-summary/);
   assert.match(i18nJs, /fieldTestReport/);
   assert.match(i18nJs, /현장 테스트 리포트/);
 
   const reportBody = functionBody(mainJs, "buildFieldTestReport");
+  const summaryBody = functionBody(mainJs, "fieldTestReportSummary");
+  assert.match(summaryBody, /parseFieldTestReport\(report\)/);
+  assert.match(summaryBody, /room_list_next_action/);
+  assert.match(summaryBody, /outbound_recovery_action/);
+  assert.match(summaryBody, /real_onion_recovery_action/);
+  assert.match(summaryBody, /real_onion_next_blocker/);
+  assert.match(summaryBody, /receive_failure_kind/);
+  assert.match(functionBody(mainJs, "refreshFieldTestReport"), /renderFieldTestReportSummary\(report\)/);
   assert.match(reportBody, /route_ready=/);
   assert.match(reportBody, /receive_state=/);
   assert.match(reportBody, /retryable_outbound_present=/);
@@ -842,6 +855,8 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(functionBody(mainJs, "cancelProductionTwoProfileRealOnionWait"), /production_two_profile_real_onion_wait_cancel/);
   assert.doesNotMatch(reportBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
   assert.doesNotMatch(reportBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
+  assert.doesNotMatch(summaryBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
+  assert.doesNotMatch(summaryBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
   assert.doesNotMatch(reportBody, /room_list_code|currentRoomCode=/);
 });
 
