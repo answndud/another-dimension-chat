@@ -13,6 +13,7 @@ export function messageEnvelopeSlotMatchesEntry(slot, entry) {
     Number.parseInt(slot.messageNumber, 10) === Number.parseInt(entry.messageNumber, 10) &&
     String(slot.sender ?? "").trim().toLowerCase() === String(entry.sender ?? "").trim().toLowerCase() &&
     String(slot.receiver ?? "").trim().toLowerCase() === String(entry.receiver ?? "").trim().toLowerCase() &&
+    String(slot.roomFingerprint ?? "").trim() === String(entry.roomFingerprint ?? "").trim() &&
     String(slot.message ?? "").trim() === String(entry.message ?? "").trim()
   );
 }
@@ -31,6 +32,7 @@ export function createMessageEnvelopeSlot(profile, payload, metadata = {}) {
     payload: envelope,
     sender: normalizedProfile,
     receiver: String(metadata.receiver ?? "").trim().toLowerCase(),
+    roomFingerprint: String(metadata.roomFingerprint ?? "").trim(),
     messageNumber: Number.parseInt(metadata.messageNumber, 10),
     message: String(metadata.message ?? "").trim(),
   };

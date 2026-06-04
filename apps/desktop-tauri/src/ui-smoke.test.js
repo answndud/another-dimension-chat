@@ -3,6 +3,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import {
+  createMessageEnvelopeSlot,
+  messageEnvelopeSlotMatchesEntry,
+} from "./message-envelope-slots.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = join(here, "..");
@@ -425,13 +429,48 @@ test("manual message envelope slots require the active pending message", () => {
   assert.match(mainJs, /function pendingMessageEnvelopeSlotForActiveProfile/);
   assert.match(functionBody(mainJs, "pendingMessageEnvelopeSlotForActiveProfile"), /selectedTwoProfilePendingConversationEntry\(\)/);
   assert.match(functionBody(mainJs, "pendingMessageEnvelopeSlotForActiveProfile"), /latestTwoProfilePendingConversationEntry\(\)/);
+  assert.match(functionBody(mainJs, "pendingMessageEnvelopeSlotForActiveProfile"), /messageEnvelopeSlotRecord\(counterpart, entry\.roomFingerprint\)/);
   assert.match(functionBody(mainJs, "activeMessageEnvelopeSlotReady"), /messageEnvelopeSlotMatchesEntry\(slot, entry\)/);
+  assert.match(functionBody(mainJs, "messageEnvelopeSlotKey"), /productionPayloadSlotKey\(profile, roomFingerprint\)/);
+  assert.match(functionBody(mainJs, "messageEnvelopeSlotRecord"), /messageEnvelopeSlotKey\(profile, roomFingerprint\)/);
+  assert.match(functionBody(mainJs, "storeMessageEnvelopeSlot"), /roomFingerprint/);
+  assert.match(functionBody(mainJs, "storeMessageEnvelopeSlot"), /messageEnvelopeSlotKey\(slot\.sender, slot\.roomFingerprint\)/);
 
   const loadBody = functionBody(mainJs, "loadProductionMessageEnvelope");
   assert.match(loadBody, /pendingMessageEnvelopeSlotForActiveProfile\(profile\)/);
   assert.match(loadBody, /if \(!entry\)/);
   assert.match(loadBody, /value && !messageEnvelopeSlotMatchesEntry\(slot, entry\)/);
   assert.match(functionBody(mainJs, "applyProductionActionState"), /activeMessageEnvelopeSlotReady\(activeProductionProfileName\(\)\)/);
+});
+
+test("manual message envelope slots are scoped to the room fingerprint", () => {
+  const slot = createMessageEnvelopeSlot("Alice", "payload", {
+    receiver: "Bob",
+    roomFingerprint: "room-a",
+    messageNumber: 7,
+    message: "secret",
+  });
+  assert.equal(slot.roomFingerprint, "room-a");
+  assert.equal(
+    messageEnvelopeSlotMatchesEntry(slot, {
+      sender: "alice",
+      receiver: "bob",
+      roomFingerprint: "room-a",
+      messageNumber: 7,
+      message: "secret",
+    }),
+    true,
+  );
+  assert.equal(
+    messageEnvelopeSlotMatchesEntry(slot, {
+      sender: "alice",
+      receiver: "bob",
+      roomFingerprint: "room-b",
+      messageNumber: 7,
+      message: "secret",
+    }),
+    false,
+  );
 });
 
 test("manual setup payload slots are scoped to the active room", () => {
