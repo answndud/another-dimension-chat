@@ -4449,7 +4449,8 @@ function latestTwoProfileOutboundDeliveryCandidate(input = productionTwoProfileI
         (entry) =>
           entry.sender === input.profileA &&
           entry.receiver === input.profileB &&
-          Number.parseInt(entry.messageNumber, 10) === targetMessageNumber,
+          Number.parseInt(entry.messageNumber, 10) === targetMessageNumber &&
+          twoProfileConversationOutboundRetryable(entry),
       ) ?? null
     : null;
   const retryableEntry = targetEntry ?? (targetRequested ? null : latestTwoProfileRetryableOutboundEntry(input));

@@ -875,6 +875,7 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(mainJs, /async function sendProductionTwoProfileLatestOnionEnvelope\(input = productionTwoProfileInput\(\), options = \{\}\)/);
   assert.match(sendBody, /latestTwoProfileOutboundOnionMessage\(input, options\)/);
   assert.match(sendBody, /latestTwoProfileOutboundDeliveryCandidate\(input, options\)/);
+  assert.match(functionBody(mainJs, "latestTwoProfileOutboundDeliveryCandidate"), /twoProfileConversationOutboundRetryable\(entry\)/);
   assert.match(functionBody(mainJs, "latestTwoProfileOutboundDeliveryCandidate"), /targetRequested \? null : latestTwoProfileRetryableOutboundEntry\(input\)/);
   assert.match(functionBody(mainJs, "latestTwoProfileOutboundDeliveryCandidate"), /targetRequested && Number\.parseInt\(latest\.messageNumber, 10\) !== targetMessageNumber/);
   assert.match(sendBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
