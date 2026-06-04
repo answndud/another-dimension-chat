@@ -363,6 +363,25 @@ test("pairing and handshake actions ignore stale setup inputs", () => {
   assert.match(functionBody(mainJs, "importProductionHandshakeFinish"), /await checkProductionSessionState\(input\)/);
 });
 
+test("profile unlock and transcript load ignore stale profile inputs", () => {
+  assert.match(mainJs, /function productionProfileInputStillCurrent/);
+  assert.match(functionBody(mainJs, "productionProfileInputStillCurrent"), /current\.profile === input\.profile/);
+
+  const unlockBody = functionBody(mainJs, "unlockProductionProfile");
+  assert.match(unlockBody, /const input = productionProfileInput\(\)/);
+  assert.match(unlockBody, /if \(!productionProfileInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(unlockBody, /restoreProductionSessionAfterUnlock\(input\)/);
+
+  const restoreBody = functionBody(mainJs, "restoreProductionSessionAfterUnlock");
+  assert.match(restoreBody, /const \{ profile, passphrase \} = input/);
+  assert.match(restoreBody, /if \(!productionProfileInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(restoreBody, /production_message_transcript_export/);
+
+  const transcriptBody = functionBody(mainJs, "loadProductionMessageTranscript");
+  assert.match(transcriptBody, /const input = productionProfileInput\(\)/);
+  assert.match(transcriptBody, /if \(!productionProfileInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+});
+
 test("receive imports refresh room list metadata immediately", () => {
   assert.match(mainJs, /function refreshCurrentRoomAfterReceiveImport/);
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /rememberCurrentInviteRoomMetadata\(\)/);
