@@ -614,10 +614,16 @@ test("saved local delivery codes must be refreshed before sharing", () => {
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /twoProfileTranscriptInputStillCurrent\(input\)/);
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /rememberLocalPrivateRouteCode\(result\.local_onion_endpoint, input, \{ updateUi: false \}\)/);
   assert.match(functionBody(mainJs, "preparePrivateDeliveryRoute"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
-  assert.match(functionBody(mainJs, "routeExchangePrimaryActionNode"), /!localPrivateRouteCodeIsActive\(input\)/);
-  assert.match(mainJs, /function focusPrivateRouteNextAction\([\s\S]*!localPrivateRouteCodeIsActive\(input\)/);
+  assert.match(functionBody(mainJs, "routeExchangePrimaryActionNode"), /!currentActiveLocalPrivateRouteCode\(input\)/);
+  assert.match(mainJs, /function focusPrivateRouteNextAction\([\s\S]*!currentActiveLocalPrivateRouteCode\(input\)/);
   assert.match(functionBody(mainJs, "localPrivateRouteCodeStatusKey"), /privateRouteLocalStatusSaved/);
+  assert.match(functionBody(mainJs, "currentActiveLocalPrivateRouteCode"), /localPrivateRouteCodeIsActive\(input\)/);
   assert.match(functionBody(mainJs, "updateLocalPrivateRouteCodeUi"), /has-saved-local-private-route-code/);
+  assert.match(functionBody(mainJs, "updateLocalPrivateRouteCodeUi"), /has-local-private-route-code", hasLocal && active/);
+  assert.match(functionBody(mainJs, "copyLocalPrivateRouteCode"), /const code = currentActiveLocalPrivateRouteCode\(input\)/);
+  assert.doesNotMatch(functionBody(mainJs, "copyLocalPrivateRouteCode"), /fields\.localPrivateRouteCode\?\.value \|\| latestLocalPrivateRouteCode/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /currentActiveLocalPrivateRouteCode\(\)/);
+  assert.match(functionBody(mainJs, "updateChatPrimaryActionMode"), /currentActiveLocalPrivateRouteCode\(input\)/);
   assert.match(stylesCss, /:not\(\.exchange-instruction\):not\(\.route-code-status\)/);
   assert.match(indexHtml, /id="private-route-local-status"/);
 });

@@ -1241,7 +1241,7 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
   } else if (
     (latestChatDeliveryNoticeKey === "peerPrivateRouteCodeMissing" ||
       latestChatDeliveryNoticeKey === "privateRouteWaitingPeerCode") &&
-    latestLocalPrivateRouteCode
+    currentActiveLocalPrivateRouteCode()
   ) {
     const action = document.createElement("button");
     action.type = "button";
@@ -1287,7 +1287,7 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     action.textContent = t("stopReceiving");
     action.addEventListener("click", stopProductionTwoProfileOnionReceive);
     fields.chatDeliveryNotice.append(action);
-  } else if (isLocalPrivateRouteCodeNoticeKey() && latestLocalPrivateRouteCode) {
+  } else if (isLocalPrivateRouteCodeNoticeKey() && currentActiveLocalPrivateRouteCode()) {
     const action = document.createElement("button");
     action.type = "button";
     action.className = "chat-delivery-notice-action";
@@ -1567,7 +1567,7 @@ function routeExchangePrimaryActionNode(input = productionTwoProfileInput()) {
   if (twoProfilePeerEndpointState(input).ready) {
     return null;
   }
-  if (!latestLocalPrivateRouteCode || !localPrivateRouteCodeIsActive(input)) {
+  if (!currentActiveLocalPrivateRouteCode(input)) {
     return fields.preparePrivateRoute;
   }
   return (fields.peerPrivateRouteCode?.value ?? "").trim()
@@ -3988,6 +3988,10 @@ function localPrivateRouteCodeIsActive(input = productionTwoProfileInput()) {
   );
 }
 
+function currentActiveLocalPrivateRouteCode(input = productionTwoProfileInput()) {
+  return localPrivateRouteCodeIsActive(input) ? latestLocalPrivateRouteCode : "";
+}
+
 function localPrivateRouteCodeStatusKey(input = productionTwoProfileInput()) {
   if (!latestLocalPrivateRouteCode) {
     return "privateRouteLocalStatusEmpty";
@@ -4010,7 +4014,7 @@ function updateLocalPrivateRouteCodeUi(input = productionTwoProfileInput()) {
   const active = localPrivateRouteCodeIsActive(input);
   const statusKey = localPrivateRouteCodeStatusKey(input);
   fields.copyPrivateRouteCode?.toggleAttribute("disabled", !hasLocal || !active);
-  document.body.classList.toggle("has-local-private-route-code", hasLocal);
+  document.body.classList.toggle("has-local-private-route-code", hasLocal && active);
   document.body.classList.toggle("has-active-local-private-route-code", hasLocal && active);
   document.body.classList.toggle("has-saved-local-private-route-code", hasLocal && !active);
   fields.localPrivateRouteCode?.classList.toggle("is-saved-route-code", hasLocal && !active);
@@ -4080,7 +4084,7 @@ function focusPrivateRouteNextAction(input = productionTwoProfileInput(), option
     fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
     return "ready";
   }
-  if (!latestLocalPrivateRouteCode || !localPrivateRouteCodeIsActive(input)) {
+  if (!currentActiveLocalPrivateRouteCode(input)) {
     fields.preparePrivateRoute?.focus?.({ preventScroll: true });
     return "create-local";
   }
@@ -4095,7 +4099,7 @@ function focusPrivateRouteNextAction(input = productionTwoProfileInput(), option
 function renderPrivateRouteExchangeState(input = productionTwoProfileInput(), options = {}) {
   const routeReady = twoProfilePeerEndpointState(input).ready && options.forceRefresh !== true;
   const hasLocal = Boolean(latestLocalPrivateRouteCode);
-  const hasActiveLocal = localPrivateRouteCodeIsActive(input);
+  const hasActiveLocal = Boolean(currentActiveLocalPrivateRouteCode(input));
   const hasPeerDraft = Boolean((fields.peerPrivateRouteCode?.value ?? "").trim());
   const titleKey = routeReady
     ? "routeTitleReady"
@@ -4972,7 +4976,10 @@ function updateChatPrimaryActionMode(input = productionTwoProfileInput(), sessio
     "has-private-route",
     twoProfilePeerEndpointState(input).ready,
   );
-  document.body.classList.toggle("has-local-private-route-code", Boolean(latestLocalPrivateRouteCode));
+  document.body.classList.toggle(
+    "has-local-private-route-code",
+    Boolean(currentActiveLocalPrivateRouteCode(input)),
+  );
   document.body.classList.toggle("is-receiving-messages", receivingCurrentRoom);
   document.body.classList.toggle("is-receiving-other-room", receivingOtherRoom);
   document.body.classList.toggle("is-receiving-runtime-mismatch", productionTwoProfileReceiveRuntimeMismatched(input));
@@ -7681,12 +7688,12 @@ function applyProductionActionState() {
   renderPrivateRouteExchangeState(twoProfile, { forceRefresh: routeRecoveryReady });
   setActionButtonState(
     fields.copyPrivateRouteCode,
-    busy || !latestLocalPrivateRouteCode || !localPrivateRouteCodeIsActive(twoProfile),
+    busy || !currentActiveLocalPrivateRouteCode(twoProfile),
     busy
       ? "Wait for the active production action."
       : !latestLocalPrivateRouteCode
         ? t("privateRouteCodeNotReady")
-      : localPrivateRouteCodeIsActive(twoProfile)
+      : currentActiveLocalPrivateRouteCode(twoProfile)
         ? t("copyPrivateRouteCode")
         : t("privateRouteLocalStatusSaved"),
   );
@@ -9605,11 +9612,16 @@ async function applyPeerPrivateRouteCode() {
 }
 
 async function copyLocalPrivateRouteCode() {
-  const code = (fields.localPrivateRouteCode?.value || latestLocalPrivateRouteCode || "").trim();
+  const input = productionTwoProfileInput();
+  const code = currentActiveLocalPrivateRouteCode(input);
   if (!code) {
     showPrivateRouteExchange();
     setProductionTwoProfileState("Delivery code missing");
-    setText(fields.productionTwoProfileWarning, t("privateRouteCodeNotReady"));
+    setText(
+      fields.productionTwoProfileWarning,
+      latestLocalPrivateRouteCode ? t("privateRouteLocalStatusSaved") : t("privateRouteCodeNotReady"),
+    );
+    renderPrivateRouteExchangeState(input, { forceRefresh: true });
     return false;
   }
   try {
