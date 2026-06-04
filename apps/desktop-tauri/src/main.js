@@ -4632,6 +4632,7 @@ function selectedMessageEnvelopeMetadata(profile, messageNumber, message) {
 
 function twoProfileConversationKey(entry) {
   return [
+    String(entry.roomFingerprint ?? twoProfileSessionStatusFingerprint(productionTwoProfileInput())),
     String(entry.sender ?? "").trim().toLowerCase(),
     String(entry.receiver ?? "").trim().toLowerCase(),
     entry.messageNumber,
@@ -4657,6 +4658,7 @@ function appendProductionTwoProfileConversationStatus(
   }
 
   const entry = {
+    roomFingerprint: twoProfileSessionStatusFingerprint(productionTwoProfileInput()),
     sender: normalizedKind === "sent" ? owner : counterpart,
     receiver: normalizedKind === "sent" ? counterpart : owner,
     messageNumber: normalizedNumber,
@@ -5101,6 +5103,7 @@ function selectTwoProfileConversationMessage(sender, receiver, messageNumber, me
     return null;
   }
   const entry = {
+    roomFingerprint: twoProfileSessionStatusFingerprint(productionTwoProfileInput()),
     sender,
     receiver,
     messageNumber: normalizedNumber,
