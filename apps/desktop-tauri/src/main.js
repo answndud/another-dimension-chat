@@ -6360,7 +6360,8 @@ function twoProfileComposerPrimaryIntent({
     receiveIntentForRoom(input) &&
       !input.message &&
       !productionTwoProfileOnionReceiveMode.enabled &&
-      !productionTwoProfileOnionReceiveMode.stopRequested,
+      !productionTwoProfileOnionReceiveMode.stopRequested &&
+      !productionTwoProfileReceiveActiveInOtherRoom(input),
   );
   if (busy || !sessionsReady || (!input.message && !restartReceive)) {
     return {
