@@ -145,7 +145,7 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /has-retryable-send/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /is-resume-recommended/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
-  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
+  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /renderSavedInviteRooms\(\)/);
   assert.match(stylesCss, /\.saved-room-state\.is-listening/);
   assert.match(stylesCss, /\.saved-room-state\.is-receive-paused/);
   assert.match(stylesCss, /\.saved-room-state\.is-waiting-peer-code/);
@@ -167,8 +167,8 @@ test("receive controls are scoped to the active room", () => {
   assert.match(functionBody(mainJs, "renderRoomIdentityBar"), /roomReceivingMismatch/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /productionTwoProfileReceiveActiveInOtherRoom\(input\)/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /receiveOtherRoomActive/);
-  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /!productionTwoProfileReceiveMatchesInput\(input\)/);
-  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /receiveOtherRoomActive/);
+  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /!productionTwoProfileReceiveMatchesInput\(targetInput\)/);
+  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /receiveOtherRoomActive/);
   assert.match(i18nJs, /roomReceivingOther/);
   assert.match(i18nJs, /roomReceivingMismatch/);
   assert.match(i18nJs, /receiveRuntimeMismatch/);
@@ -253,9 +253,16 @@ test("reopened inviter rooms do not show the invite code share panel", () => {
 
 test("saved room removal is list-only and transcript switching rebuilds entries", () => {
   assert.match(functionBody(mainJs, "removeSavedInviteRoom"), /forgetInviteRoom\(code\)/);
+  assert.match(functionBody(mainJs, "removeSavedInviteRoom"), /stopProductionTwoProfileOnionReceiveForInput\(savedInviteRoomInput\(room\), \{ silent: true \}\)/);
   assert.match(functionBody(mainJs, "removeSavedInviteRoom"), /removeRoomConfirm/);
   assert.match(mainJs, /removeRoomNotice/);
   assert.doesNotMatch(functionBody(mainJs, "removeSavedInviteRoom"), /invoke\(/);
+  assert.match(functionBody(mainJs, "forgetInviteRoom"), /rememberReceiveIntentForRoom\(roomInput, false\)/);
+  assert.match(functionBody(mainJs, "forgetInviteRoom"), /clearPrivateRouteFollowupForRoom\(roomInput\)/);
+  assert.match(mainJs, /function clearPrivateRouteFollowupForRoom/);
+  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /silentStop: silent/);
+  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveStopConfirmation"), /silentStop === true/);
+  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /stopProductionTwoProfileOnionReceiveForInput\(productionTwoProfileInput\(\)\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileTranscriptEntries"), /resetProductionTwoProfileTranscript/);
   assert.match(functionBody(mainJs, "resetProductionTwoProfileTranscript"), /productionTwoProfileConversationEntries\.clear\(\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /rememberCurrentInviteRoomMetadata\(\)/);
