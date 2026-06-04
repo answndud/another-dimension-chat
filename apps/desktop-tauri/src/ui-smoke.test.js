@@ -455,6 +455,28 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(composerBody, /completeInviteRoomOutboundDelivery\(input, messageNumber\)/);
 });
 
+test("real onion roundtrip and wait cancel stay scoped to the current room", () => {
+  assert.match(mainJs, /let activeProductionTwoProfileRealOnionInput = null/);
+  assert.match(functionBody(mainJs, "realOnionActiveInputMatches"), /activeProductionTwoProfileRealOnionInput\.passphrase === input\.passphrase/);
+  assert.match(functionBody(mainJs, "realOnionRoundtripActiveForInput"), /productionBusyAction === "two-profile-real-onion-roundtrip"/);
+
+  const actionStateBody = functionBody(mainJs, "applyProductionActionState");
+  assert.match(actionStateBody, /realOnionRoundtripActiveForInput\(twoProfile\)/);
+
+  const runBody = functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip");
+  assert.match(runBody, /const input = productionTwoProfileInput\(\)/);
+  assert.match(runBody, /activeProductionTwoProfileRealOnionInput = \{ profileA, profileB, passphrase \}/);
+  assert.match(runBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(runBody, /fingerprint: twoProfileInputFingerprint\(input\)/);
+  assert.match(runBody, /activeProductionTwoProfileRealOnionInput = null/);
+
+  const cancelBody = functionBody(mainJs, "cancelProductionTwoProfileRealOnionWait");
+  assert.match(cancelBody, /const activeInput = activeProductionTwoProfileRealOnionInput/);
+  assert.match(cancelBody, /twoProfileSessionStatusFingerprint\(activeInput\)/);
+  assert.match(cancelBody, /if \(!twoProfileTranscriptInputStillCurrent\(activeInput\)\) \{\s*return true;\s*\}/);
+  assert.match(cancelBody, /if \(!twoProfileTranscriptInputStillCurrent\(activeInput\)\) \{\s*return false;\s*\}/);
+});
+
 test("join failure explains when the invite room is not open", () => {
   assert.match(mainJs, /function isInviteRoomNotOpenError/);
   assert.match(mainJs, /recoveryInviteRoomNotOpen/);

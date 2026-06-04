@@ -441,6 +441,7 @@ let latestProductionTwoProfileSuccess = null;
 let latestProductionTwoProfileOnionEndpoints = null;
 let latestProductionTwoProfileRealOnionResult = null;
 let latestProductionTwoProfileRealOnionWaitCanceledFingerprint = "";
+let activeProductionTwoProfileRealOnionInput = null;
 let latestLocalPrivateRouteCode = "";
 const localPrivateRouteCodesByRoom = new Map();
 const activeLocalPrivateRouteCodesByRoom = new Map();
@@ -2926,6 +2927,19 @@ function latestRealOnionFieldTestResult(input = productionTwoProfileInput()) {
 function realOnionWaitCanceledForInput(input = productionTwoProfileInput()) {
   const fingerprint = twoProfileSessionStatusFingerprint(input);
   return Boolean(fingerprint && latestProductionTwoProfileRealOnionWaitCanceledFingerprint === fingerprint);
+}
+
+function realOnionActiveInputMatches(input = productionTwoProfileInput()) {
+  return Boolean(
+    activeProductionTwoProfileRealOnionInput &&
+      activeProductionTwoProfileRealOnionInput.profileA === input.profileA &&
+      activeProductionTwoProfileRealOnionInput.profileB === input.profileB &&
+      activeProductionTwoProfileRealOnionInput.passphrase === input.passphrase,
+  );
+}
+
+function realOnionRoundtripActiveForInput(input = productionTwoProfileInput()) {
+  return productionBusyAction === "two-profile-real-onion-roundtrip" && realOnionActiveInputMatches(input);
 }
 
 function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manualNetworkPermission) {
@@ -7749,7 +7763,7 @@ function applyProductionActionState() {
   const realOnionResult = latestRealOnionFieldTestResult(twoProfile);
   const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(realOnionResult);
   const realOnionWaitCanceled = realOnionWaitCanceledForInput(twoProfile);
-  const realOnionRoundtripActive = productionBusyAction === "two-profile-real-onion-roundtrip";
+  const realOnionRoundtripActive = realOnionRoundtripActiveForInput(twoProfile);
   const realOnionRetryReady =
     realOnionRecovery.action === "retry-bootstrap" || realOnionRecovery.action === "bootstrap-cancelled";
   const realOnionCancelWaitReady =
@@ -11321,7 +11335,8 @@ async function runProductionTwoProfileComposerPrimaryAction() {
 }
 
 async function runProductionTwoProfileRealOnionRoundtrip() {
-  const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
+  const input = productionTwoProfileInput();
+  const { profileA, profileB, passphrase, message, messageTtlSeconds } = input;
   const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!profileA || !profileB || profileA === profileB || !passphrase || !message || !messageTtlSeconds) {
     setProductionTwoProfileState("Real onion roundtrip needs input");
@@ -11349,6 +11364,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
   setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Private delivery is running after your explicit action."));
   setProductionFollowupActions(false, t("privateDeliveryFollowupLocked"));
   productionBusyAction = "two-profile-real-onion-roundtrip";
+  activeProductionTwoProfileRealOnionInput = { profileA, profileB, passphrase };
   applyProductionActionState();
   if (fields.runProductionTwoProfileRealOnionRoundtrip) {
     fields.runProductionTwoProfileRealOnionRoundtrip.disabled = true;
@@ -11367,6 +11383,9 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       roomFingerprint: twoProfileSessionStatusFingerprint({ profileA, profileB }),
       result,
     };
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
     const view = productionTwoProfileRealOnionResultView(result);
     const userView = localizedTwoProfileUserView(productionTwoProfileRealOnionUserView(result));
     const realOnionNotice = view.complete
@@ -11393,16 +11412,19 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
         profileB: result.receiver_profile || profileB,
         messageLength: message.length,
         messageNumber: latestRoundtripMessageNumber,
-        fingerprint: twoProfileInputFingerprint(productionTwoProfileInput()),
+        fingerprint: twoProfileInputFingerprint(input),
       };
     }
     if (view.touchedTranscript) {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+      if (!twoProfileTranscriptInputStillCurrent(input)) {
+        return;
+      }
     }
     if (view.complete) {
       if (fields.productionTwoProfileMessage) {
         fields.productionTwoProfileMessage.value = "";
-        renderProductionTwoProfileDirection(productionTwoProfileInput());
+        renderProductionTwoProfileDirection(input);
       }
       const resumeProfile = productionTwoProfileRealOnionResumeProfile(result, { profileB });
       selectLatestReceivedReplyForProfile(resumeProfile, { focusReply: "none" });
@@ -11416,6 +11438,9 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
         manualNetworkPermission,
       ),
     };
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
     setProductionTwoProfileState("Private delivery failed");
     const detail = String(error ?? "");
     const redactedStage = detail.includes("redacted stage:")
@@ -11441,6 +11466,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     );
   } finally {
     productionBusyAction = null;
+    activeProductionTwoProfileRealOnionInput = null;
     if (fields.runProductionTwoProfileRealOnionRoundtrip) {
       fields.runProductionTwoProfileRealOnionRoundtrip.disabled = false;
     }
@@ -11451,10 +11477,17 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
 async function cancelProductionTwoProfileRealOnionWait() {
   const input = productionTwoProfileInput();
   if (productionBusyAction === "two-profile-real-onion-roundtrip") {
+    const activeInput = activeProductionTwoProfileRealOnionInput;
+    if (!activeInput) {
+      return false;
+    }
     try {
       const result = await invoke("production_two_profile_real_onion_wait_cancel");
       if (result?.cancel_requested) {
-        latestProductionTwoProfileRealOnionWaitCanceledFingerprint = twoProfileSessionStatusFingerprint(input);
+        latestProductionTwoProfileRealOnionWaitCanceledFingerprint = twoProfileSessionStatusFingerprint(activeInput);
+        if (!twoProfileTranscriptInputStillCurrent(activeInput)) {
+          return true;
+        }
         setProductionTwoProfileState("Private delivery wait cancel requested");
         setText(fields.productionTwoProfileWarning, t("networkWaitCancelRequested"));
         setText(fields.productionTwoProfileProfiles, localizedTwoProfileUserViewText("Room is saved."));
@@ -11467,6 +11500,9 @@ async function cancelProductionTwoProfileRealOnionWait() {
         return true;
       }
     } catch {
+      if (!twoProfileTranscriptInputStillCurrent(activeInput)) {
+        return false;
+      }
       setProductionTwoProfileState("Private delivery wait cancel failed");
       setText(fields.productionTwoProfileWarning, t("networkWaitCancelFailed"));
       applyProductionActionState();
