@@ -374,6 +374,8 @@ test("profile unlock and manual import refresh the room captured at action start
 test("manual message actions ignore stale inputs before updating current UI", () => {
   assert.match(mainJs, /function productionMessageInputStillCurrent/);
   assert.match(functionBody(mainJs, "productionMessageInputStillCurrent"), /current\.envelopePayload === input\.envelopePayload/);
+  assert.match(functionBody(mainJs, "productionMessageImportFingerprint"), /input\.passphrase/);
+  assert.match(functionBody(mainJs, "productionMessageImportFingerprint"), /input\.envelopePayload/);
 
   const exportBody = functionBody(mainJs, "exportProductionMessageEnvelope");
   assert.match(exportBody, /const twoProfileRefreshInput = productionTwoProfileInput\(\)/);
@@ -384,6 +386,7 @@ test("manual message actions ignore stale inputs before updating current UI", ()
   const importBody = functionBody(mainJs, "importProductionMessageEnvelope");
   assert.match(importBody, /const twoProfileRefreshInput = productionTwoProfileInput\(\)/);
   assert.match(importBody, /if \(!productionMessageInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(importBody, /latestProductionMessageImport = productionMessageImportFingerprint\(input\)/);
   assert.match(importBody, /refreshTwoProfileConversationAfterManualImport\([\s\S]*twoProfileRefreshInput/);
 
   const receivedBody = functionBody(mainJs, "exportProductionReceivedMessage");
@@ -420,6 +423,7 @@ test("pairing and handshake actions ignore stale setup inputs", () => {
   assert.match(functionBody(mainJs, "exportProductionHandshakeFinish"), /productionPairingInputStillCurrent\(input, \["profile", "passphrase", "replyPayload"\]\)/);
   assert.match(functionBody(mainJs, "importProductionHandshakeFinish"), /productionPairingInputStillCurrent\(input, \["profile", "passphrase", "finishPayload"\]\)/);
   assert.match(functionBody(mainJs, "importProductionHandshakeFinish"), /await checkProductionSessionState\(input\)/);
+  assert.match(mainJs, /fields\.productionPairingSafetyVerified\.checked && !currentPairingSafetyVerified\(\)/);
 });
 
 test("profile unlock and transcript load ignore stale profile inputs", () => {
