@@ -298,6 +298,8 @@ test("saved room removal is list-only and transcript switching rebuilds entries"
   assert.match(mainJs, /function clearPrivateRouteFollowupForRoom/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /silentStop: silent/);
   assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveStopConfirmation"), /silentStop === true/);
+  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveStopConfirmation"), /markProductionTwoProfileOnionReceiveStopped\(backendLoop, \{ silent \}\)/);
+  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /markProductionTwoProfileOnionReceiveStopped\(backendLoop, \{ silent \}\)/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /stopProductionTwoProfileOnionReceiveForInput\(productionTwoProfileInput\(\)\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileTranscriptEntries"), /resetProductionTwoProfileTranscript/);
   assert.match(functionBody(mainJs, "resetProductionTwoProfileTranscript"), /productionTwoProfileConversationEntries\.clear\(\)/);
