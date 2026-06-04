@@ -336,6 +336,33 @@ test("manual message actions ignore stale inputs before updating current UI", ()
   assert.match(functionBody(mainJs, "syncTwoProfileConversationAfterReceivedExport"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
 });
 
+test("pairing and handshake actions ignore stale setup inputs", () => {
+  assert.match(mainJs, /function productionPairingInputStillCurrent/);
+  assert.match(functionBody(mainJs, "productionPairingInputStillCurrent"), /fieldsToCompare\.every/);
+
+  const pairingBody = functionBody(mainJs, "exportProductionPairingPayload");
+  assert.match(pairingBody, /const input = productionPairingInput\(\)/);
+  assert.match(pairingBody, /productionPairingInputStillCurrent\(input, \["profile", "passphrase", "rendezvousEndpoint"\]\)/);
+
+  const draftBody = functionBody(mainJs, "saveProductionSessionDraft");
+  assert.match(draftBody, /const input = productionPairingInput\(\)/);
+  assert.match(draftBody, /productionPairingInputStillCurrent\(input, \["profile", "passphrase", "localPayload", "remotePayload", "safetyConfirmed"\]\)/);
+  assert.match(draftBody, /await checkProductionSessionState\(input\)/);
+
+  const safetyBody = functionBody(mainJs, "checkProductionPairingSafety");
+  assert.match(safetyBody, /productionPairingInputStillCurrent\(input, \["localPayload", "remotePayload"\]\)/);
+
+  const sessionBody = functionBody(mainJs, "checkProductionSessionState");
+  assert.match(mainJs, /async function checkProductionSessionState\(input = productionPairingInput\(\)\)/);
+  assert.match(sessionBody, /productionPairingInputStillCurrent\(input, \["profile", "passphrase"\]\)/);
+
+  assert.match(functionBody(mainJs, "exportProductionHandshakeInit"), /productionPairingInputStillCurrent\(input, \["profile", "passphrase"\]\)/);
+  assert.match(functionBody(mainJs, "exportProductionHandshakeReply"), /productionPairingInputStillCurrent\(input, \["profile", "passphrase", "initPayload"\]\)/);
+  assert.match(functionBody(mainJs, "exportProductionHandshakeFinish"), /productionPairingInputStillCurrent\(input, \["profile", "passphrase", "replyPayload"\]\)/);
+  assert.match(functionBody(mainJs, "importProductionHandshakeFinish"), /productionPairingInputStillCurrent\(input, \["profile", "passphrase", "finishPayload"\]\)/);
+  assert.match(functionBody(mainJs, "importProductionHandshakeFinish"), /await checkProductionSessionState\(input\)/);
+});
+
 test("receive imports refresh room list metadata immediately", () => {
   assert.match(mainJs, /function refreshCurrentRoomAfterReceiveImport/);
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /rememberCurrentInviteRoomMetadata\(\)/);
