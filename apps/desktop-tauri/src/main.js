@@ -1979,7 +1979,8 @@ function productionMessageUsesAutoNumber() {
 function productionMessageImportFingerprint(input = productionMessageInput()) {
   const profile = String(input.profile ?? "").trim().toLowerCase();
   const messageNumber = Number.isInteger(input.messageNumber) ? input.messageNumber : "invalid";
-  return `${profile}\n${messageNumber}`;
+  const envelopePayload = String(input.envelopePayload ?? "").trim();
+  return `${profile}\n${input.passphrase || ""}\n${messageNumber}\n${envelopePayload}`;
 }
 
 function latestProductionMessageImportMatches(input = productionMessageInput()) {
@@ -13156,7 +13157,7 @@ async function importProductionMessageEnvelope() {
       return;
     }
     const view = productionMessageEnvelopeImportView(result);
-    latestProductionMessageImport = productionMessageImportFingerprint({ profile, messageNumber });
+    latestProductionMessageImport = productionMessageImportFingerprint(input);
     const clearedEnvelopeSlot = clearImportedMessageEnvelopeSlot(profile, envelopePayload);
     const clearedEnvelopeInput = clearImportedRemoteMessageEnvelopeInput(envelopePayload);
     const clearedEnvelopeOutput = clearImportedLocalMessageEnvelopeOutput(envelopePayload);
@@ -13792,7 +13793,7 @@ if (fields.checkProductionPairingSafety) {
 
 if (fields.productionPairingSafetyVerified) {
   fields.productionPairingSafetyVerified.addEventListener("change", () => {
-    if (fields.productionPairingSafetyVerified.checked && !latestProductionPairingSafety) {
+    if (fields.productionPairingSafetyVerified.checked && !currentPairingSafetyVerified()) {
       fields.productionPairingSafetyVerified.checked = false;
       setProductionPairingState("Safety check required");
       setText(fields.productionPairingWarning, "Check the safety number before marking it verified.");
