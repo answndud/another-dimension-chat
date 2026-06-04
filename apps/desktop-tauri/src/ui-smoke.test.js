@@ -451,7 +451,10 @@ test("pairing and handshake actions ignore stale setup inputs", () => {
   assert.match(draftBody, /await checkProductionSessionState\(input\)/);
 
   const safetyBody = functionBody(mainJs, "checkProductionPairingSafety");
-  assert.match(safetyBody, /productionPairingInputStillCurrent\(input, \["localPayload", "remotePayload"\]\)/);
+  assert.match(safetyBody, /productionPairingInputStillCurrent\(input, \["profile", "passphrase", "localPayload", "remotePayload"\]\)/);
+  assert.match(functionBody(mainJs, "pairingSafetyFingerprint"), /input\.profile/);
+  assert.match(functionBody(mainJs, "pairingSafetyFingerprint"), /input\.passphrase/);
+  assert.match(functionBody(mainJs, "applyProductionPairingSafetyPreviewResult"), /fingerprint: pairingSafetyFingerprint\(input\)/);
 
   const sessionBody = functionBody(mainJs, "checkProductionSessionState");
   assert.match(mainJs, /async function checkProductionSessionState\(input = productionPairingInput\(\)\)/);
