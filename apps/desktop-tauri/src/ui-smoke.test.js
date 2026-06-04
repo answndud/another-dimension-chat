@@ -123,7 +123,11 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateListening/);
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateReceivePaused/);
   assert.match(mainJs, /function savedInviteRoomWaitingForPeerCode/);
-  assert.match(functionBody(mainJs, "savedInviteRoomWaitingForPeerCode"), /activeLocalPrivateRouteCodesByRoom\.get\(roomKey\)/);
+  assert.match(functionBody(mainJs, "savedInviteRoomInput"), /connectionCode: code/);
+  assert.match(functionBody(mainJs, "savedInviteRoomInput"), /inviteRole: role/);
+  assert.match(functionBody(mainJs, "savedInviteRoomWaitingForPeerCode"), /routeMapValueForRoom\(localPrivateRouteCodesByRoom, input/);
+  assert.match(functionBody(mainJs, "savedInviteRoomWaitingForPeerCode"), /routeMapValueForRoom\(activeLocalPrivateRouteCodesByRoom, input\)/);
+  assert.match(functionBody(mainJs, "savedInviteRoomWaitingForPeerCode"), /routeMapValueForRoom\(peerPrivateRouteDraftsByRoom, input/);
   assert.match(mainJs, /function savedInviteRoomHasRetryableOutbound/);
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 30/);
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 20/);
@@ -264,6 +268,8 @@ test("saved room removal is list-only and transcript switching rebuilds entries"
   assert.doesNotMatch(functionBody(mainJs, "removeSavedInviteRoom"), /invoke\(/);
   assert.match(functionBody(mainJs, "forgetInviteRoom"), /rememberReceiveIntentForRoom\(roomInput, false\)/);
   assert.match(functionBody(mainJs, "forgetInviteRoom"), /clearPrivateRouteFollowupForRoom\(roomInput\)/);
+  assert.match(functionBody(mainJs, "forgetInviteRoom"), /connectionCode: trimmedCode/);
+  assert.match(functionBody(mainJs, "forgetInviteRoom"), /for \(const roomKey of privateRouteRoomKeys\(roomInput\)\)/);
   assert.match(mainJs, /function clearPrivateRouteFollowupForRoom/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /silentStop: silent/);
   assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveStopConfirmation"), /silentStop === true/);
@@ -683,7 +689,11 @@ test("delivery code save continues the original send or receive action", () => {
 test("saved local delivery codes must be refreshed before sharing", () => {
   assert.match(mainJs, /const activeLocalPrivateRouteCodesByRoom = new Map\(\)/);
   assert.match(functionBody(mainJs, "restorePrivateRouteExchangeForRoom"), /updateLocalPrivateRouteCodeUi\(input\)/);
-  assert.match(functionBody(mainJs, "localPrivateRouteCodeIsActive"), /activeLocalPrivateRouteCodesByRoom\.get\(roomKey\)/);
+  assert.match(functionBody(mainJs, "localPrivateRouteCodeIsActive"), /routeMapValueForRoom\(activeLocalPrivateRouteCodesByRoom, input\)/);
+  assert.match(functionBody(mainJs, "routeMapValueForRoom"), /legacyPrivateRouteRoomKey\(input\)/);
+  assert.match(functionBody(mainJs, "routeMapValueForRoom"), /persistPrivateRouteMap\(storageKey, source\)/);
+  assert.match(functionBody(mainJs, "receiveIntentForRoom"), /legacyPrivateRouteRoomKey\(input\)/);
+  assert.match(functionBody(mainJs, "rememberReceiveIntentForRoom"), /privateRouteRoomKeys\(input\)/);
   assert.match(functionBody(mainJs, "rememberLocalPrivateRouteCode"), /const updateUi = routeOptions\.updateUi !== false/);
   assert.match(functionBody(mainJs, "rememberLocalPrivateRouteCode"), /if \(!updateUi\) \{[\s\S]*return;[\s\S]*\}/);
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /twoProfileTranscriptInputStillCurrent\(input\)/);

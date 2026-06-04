@@ -2274,13 +2274,20 @@ function forgetInviteRoom(code) {
   }
   for (const role of ["inviter", "joiner"]) {
     const { localProfile, peerProfile } = productionInviteCodeProfiles(trimmedCode, role);
-    const roomInput = { profileA: localProfile, profileB: peerProfile, passphrase: trimmedCode };
-    const roomKey = privateRouteRoomKey(roomInput);
+    const roomInput = {
+      profileA: localProfile,
+      profileB: peerProfile,
+      passphrase: trimmedCode,
+      connectionCode: trimmedCode,
+      inviteRole: role,
+    };
     rememberReceiveIntentForRoom(roomInput, false);
     clearPrivateRouteFollowupForRoom(roomInput);
-    localPrivateRouteCodesByRoom.delete(roomKey);
-    activeLocalPrivateRouteCodesByRoom.delete(roomKey);
-    peerPrivateRouteDraftsByRoom.delete(roomKey);
+    for (const roomKey of privateRouteRoomKeys(roomInput)) {
+      localPrivateRouteCodesByRoom.delete(roomKey);
+      activeLocalPrivateRouteCodesByRoom.delete(roomKey);
+      peerPrivateRouteDraftsByRoom.delete(roomKey);
+    }
   }
   persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
   persistPrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
@@ -2329,7 +2336,7 @@ function savedInviteRoomInput(room) {
     return { profileA: "", profileB: "", passphrase: "" };
   }
   const { localProfile, peerProfile } = productionInviteCodeProfiles(code, role);
-  return { profileA: localProfile, profileB: peerProfile, passphrase: code };
+  return { profileA: localProfile, profileB: peerProfile, passphrase: code, connectionCode: code, inviteRole: role };
 }
 
 function savedInviteRoomReceiveState(room) {
@@ -2347,9 +2354,9 @@ function savedInviteRoomReceiveState(room) {
 function savedInviteRoomWaitingForPeerCode(room) {
   const input = savedInviteRoomInput(room);
   const roomKey = privateRouteRoomKey(input);
-  const localCode = roomKey ? localPrivateRouteCodesByRoom.get(roomKey) || "" : "";
-  const activeCode = roomKey ? activeLocalPrivateRouteCodesByRoom.get(roomKey) || "" : "";
-  const peerDraft = roomKey ? peerPrivateRouteDraftsByRoom.get(roomKey) || "" : "";
+  const localCode = routeMapValueForRoom(localPrivateRouteCodesByRoom, input, localPrivateRouteCodesStorageKey);
+  const activeCode = routeMapValueForRoom(activeLocalPrivateRouteCodesByRoom, input);
+  const peerDraft = routeMapValueForRoom(peerPrivateRouteDraftsByRoom, input, peerPrivateRouteDraftsStorageKey);
   return Boolean(
     roomKey &&
       localCode &&
@@ -3633,11 +3640,28 @@ function twoProfileSessionStatusFingerprint(input = productionTwoProfileInput())
   return `${input.profileA.toLowerCase()}\n${input.profileB.toLowerCase()}\n${input.passphrase || ""}\n${connectionCode}\n${inviteRole}`;
 }
 
+function legacyTwoProfileSessionStatusFingerprint(input = productionTwoProfileInput()) {
+  return `${input.profileA.toLowerCase()}\n${input.profileB.toLowerCase()}\n${input.passphrase || ""}`;
+}
+
 function privateRouteRoomKey(input = productionTwoProfileInput()) {
   if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
     return "";
   }
   return twoProfileSessionStatusFingerprint(input);
+}
+
+function legacyPrivateRouteRoomKey(input = productionTwoProfileInput()) {
+  if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
+    return "";
+  }
+  return legacyTwoProfileSessionStatusFingerprint(input);
+}
+
+function privateRouteRoomKeys(input = productionTwoProfileInput()) {
+  const current = privateRouteRoomKey(input);
+  const legacy = legacyPrivateRouteRoomKey(input);
+  return [...new Set([current, legacy].filter(Boolean))];
 }
 
 function savedReceiveIntentRooms() {
@@ -3662,7 +3686,9 @@ function rememberReceiveIntentForRoom(input = productionTwoProfileInput(), enabl
   if (enabled) {
     rooms.add(roomKey);
   } else {
-    rooms.delete(roomKey);
+    for (const key of privateRouteRoomKeys(input)) {
+      rooms.delete(key);
+    }
   }
   localStoreSet(receiveIntentRoomsStorageKey, JSON.stringify([...rooms].slice(-48)));
   return true;
@@ -3670,7 +3696,20 @@ function rememberReceiveIntentForRoom(input = productionTwoProfileInput(), enabl
 
 function receiveIntentForRoom(input = productionTwoProfileInput()) {
   const roomKey = privateRouteRoomKey(input);
-  return Boolean(roomKey && savedReceiveIntentRooms().has(roomKey));
+  if (!roomKey) {
+    return false;
+  }
+  const rooms = savedReceiveIntentRooms();
+  if (rooms.has(roomKey)) {
+    return true;
+  }
+  const legacyKey = legacyPrivateRouteRoomKey(input);
+  if (legacyKey && legacyKey !== roomKey && rooms.has(legacyKey)) {
+    rooms.add(roomKey);
+    localStoreSet(receiveIntentRoomsStorageKey, JSON.stringify([...rooms].slice(-48)));
+    return true;
+  }
+  return false;
 }
 
 function receiveModeRoomFingerprint(input = productionTwoProfileInput()) {
@@ -3704,12 +3743,12 @@ function productionTwoProfileReceiveRuntimeMismatched(input = productionTwoProfi
 
 function restorePrivateRouteExchangeForRoom(input = productionTwoProfileInput()) {
   const roomKey = privateRouteRoomKey(input);
-  latestLocalPrivateRouteCode = roomKey ? localPrivateRouteCodesByRoom.get(roomKey) || "" : "";
+  latestLocalPrivateRouteCode = routeMapValueForRoom(localPrivateRouteCodesByRoom, input, localPrivateRouteCodesStorageKey);
   if (fields.localPrivateRouteCode) {
     fields.localPrivateRouteCode.value = latestLocalPrivateRouteCode;
   }
   if (fields.peerPrivateRouteCode) {
-    fields.peerPrivateRouteCode.value = roomKey ? peerPrivateRouteDraftsByRoom.get(roomKey) || "" : "";
+    fields.peerPrivateRouteCode.value = routeMapValueForRoom(peerPrivateRouteDraftsByRoom, input, peerPrivateRouteDraftsStorageKey);
   }
   updateLocalPrivateRouteCodeUi(input);
   renderPrivateRouteExchangeState(input);
@@ -3728,6 +3767,26 @@ function rememberPeerPrivateRouteDraft(input = productionTwoProfileInput()) {
   }
   persistPrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
   renderSavedInviteRooms();
+}
+
+function routeMapValueForRoom(source, input = productionTwoProfileInput(), storageKey = "") {
+  const roomKey = privateRouteRoomKey(input);
+  if (!roomKey) {
+    return "";
+  }
+  const currentValue = source.get(roomKey) || "";
+  if (currentValue) {
+    return currentValue;
+  }
+  const legacyKey = legacyPrivateRouteRoomKey(input);
+  const legacyValue = legacyKey && legacyKey !== roomKey ? source.get(legacyKey) || "" : "";
+  if (legacyValue) {
+    source.set(roomKey, legacyValue);
+    if (storageKey) {
+      persistPrivateRouteMap(storageKey, source);
+    }
+  }
+  return legacyValue;
 }
 
 function twoProfileAutoResumeFingerprint(input = productionTwoProfileInput()) {
@@ -4041,7 +4100,7 @@ function localPrivateRouteCodeIsActive(input = productionTwoProfileInput()) {
   return Boolean(
     roomKey &&
       latestLocalPrivateRouteCode &&
-      activeLocalPrivateRouteCodesByRoom.get(roomKey) === latestLocalPrivateRouteCode,
+      routeMapValueForRoom(activeLocalPrivateRouteCodesByRoom, input) === latestLocalPrivateRouteCode,
   );
 }
 
