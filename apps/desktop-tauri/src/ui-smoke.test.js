@@ -98,6 +98,10 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /savedInviteRoomMetadataSyncCandidates\(\)/);
   assert.match(mainJs, /function inviteRoomMetadataValue/);
   assert.match(functionBody(mainJs, "inviteRoomMetadataValue"), /hasOwnProperty\.call\(metadata \?\? \{\}, key\)/);
+  assert.match(mainJs, /function inviteRoomUpdatedAtValue/);
+  assert.match(functionBody(mainJs, "inviteRoomUpdatedAtValue"), /hasOwnProperty\.call\(metadata \?\? \{\}, "updatedAt"\)/);
+  assert.match(functionBody(mainJs, "inviteRoomUpdatedAtValue"), /Object\.keys\(metadata \?\? \{\}\)\.length > 0[\s\S]*Date\.now\(\)/);
+  assert.match(functionBody(mainJs, "rememberInviteRoom"), /updatedAt: inviteRoomUpdatedAtValue\(metadata, existing\)/);
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundCount"\)/);
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundMessageNumber"\)/);
   assert.match(indexHtml, /id="back-to-room-list"/);
@@ -124,6 +128,14 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 30/);
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 20/);
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 10/);
+  assert.match(
+    functionBody(mainJs, "savedInviteRoomState"),
+    /savedInviteRoomHasRetryableOutbound\(room\)[\s\S]*receiveState === "listening"[\s\S]*receiveState === "paused"[\s\S]*savedInviteRoomWaitingForPeerCode\(room\)/,
+  );
+  assert.match(
+    functionBody(mainJs, "savedInviteRoomListAction"),
+    /savedInviteRoomHasRetryableOutbound\(room\)[\s\S]*savedInviteRoomReceiveState\(room\) === "paused"[\s\S]*savedInviteRoomWaitingForPeerCode\(room\)/,
+  );
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateResumeNext/);
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateRetrySend/);
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateWaitingPeerCode/);

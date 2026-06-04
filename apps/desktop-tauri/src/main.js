@@ -2185,6 +2185,16 @@ function inviteRoomMetadataValue(metadata, existing, key) {
   return Object.prototype.hasOwnProperty.call(metadata ?? {}, key) ? metadata[key] : existing?.[key];
 }
 
+function inviteRoomUpdatedAtValue(metadata, existing) {
+  if (Object.prototype.hasOwnProperty.call(metadata ?? {}, "updatedAt")) {
+    return Number(metadata.updatedAt ?? 0);
+  }
+  if (Object.keys(metadata ?? {}).length > 0) {
+    return Date.now();
+  }
+  return Number(existing?.updatedAt ?? Date.now());
+}
+
 function rememberInviteRoom(code, role, metadata = {}, options = {}) {
   const trimmedCode = String(code ?? "").trim();
   const normalizedRole = role === "inviter" ? "inviter" : "joiner";
@@ -2197,7 +2207,7 @@ function rememberInviteRoom(code, role, metadata = {}, options = {}) {
     ...existing,
     code: trimmedCode,
     role: normalizedRole,
-    updatedAt: Number(metadata.updatedAt ?? existing.updatedAt ?? Date.now()),
+    updatedAt: inviteRoomUpdatedAtValue(metadata, existing),
     lastMessagePreview: String(metadata.lastMessagePreview ?? existing.lastMessagePreview ?? "").trim(),
     lastMessageAt: Number(metadata.lastMessageAt ?? existing.lastMessageAt ?? 0),
     messageCount: Math.max(
@@ -2336,14 +2346,14 @@ function savedInviteRoomState(room, options = {}) {
   const currentCode = currentInviteRoomCode();
   const receiveState = savedInviteRoomReceiveState(room);
   const view = (() => {
+    if (savedInviteRoomHasRetryableOutbound(room)) {
+      return { key: "retry-send", label: t("roomStateRetrySend") };
+    }
     if (receiveState === "listening") {
       return { key: "listening", label: t("roomStateListening") };
     }
     if (receiveState === "paused") {
       return { key: "receive-paused", label: t("roomStateReceivePaused") };
-    }
-    if (savedInviteRoomHasRetryableOutbound(room)) {
-      return { key: "retry-send", label: t("roomStateRetrySend") };
     }
     if (savedInviteRoomWaitingForPeerCode(room)) {
       return { key: "waiting-peer-code", label: t("roomStateWaitingPeerCode") };
@@ -2368,11 +2378,11 @@ function savedInviteRoomListAction(room) {
   if (savedInviteRoomHasRetryableOutbound(room)) {
     return { action: "review-send", labelKey: "roomActionReviewSend" };
   }
-  if (savedInviteRoomWaitingForPeerCode(room)) {
-    return { action: "paste-peer-code", labelKey: "roomActionPastePeerCode" };
-  }
   if (savedInviteRoomReceiveState(room) === "paused") {
     return { action: "start-receiving", labelKey: "startReceiving" };
+  }
+  if (savedInviteRoomWaitingForPeerCode(room)) {
+    return { action: "paste-peer-code", labelKey: "roomActionPastePeerCode" };
   }
   return null;
 }
