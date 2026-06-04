@@ -1599,7 +1599,8 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
   line-height: 1.45;
 }
 
-.field-test-report-panel textarea {
+.field-test-report-panel textarea,
+.peer-field-test-report {
   min-height: 150px;
   resize: vertical;
   font-size: 11px;
