@@ -190,6 +190,7 @@ test("receive restart intent owns the room primary action", () => {
   assert.match(mainJs, /function savedInviteRoomListAction/);
   assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /savedInviteRoomReceiveState\(room\) === "paused"/);
   assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /labelKey: "startReceiving"/);
+  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /rememberReceiveIntentForRoom\(input, true\)/);
   const actionBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
   assert.match(actionBody, /intent\.action === "start-receiving"/);
   assert.match(actionBody, /await startProductionTwoProfileOnionReceive\(\)/);
@@ -205,7 +206,7 @@ test("room list controls are wired to room flow instead of settings", () => {
   assert.match(mainJs, /fields\.backToRoomList\.addEventListener\("click", showRoomList\)/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /runSavedInviteRoomListAction\(room, view\.nextAction\.action\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /await openSavedInviteRoom\(room\)/);
-  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /focusPrivateRouteNextAction\(productionTwoProfileInput\(\)\)/);
+  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /focusPrivateRouteNextAction\(input\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /showRetryableTwoProfileOutboundNotice\(pending\)/);
   assert.match(mainJs, /fields\.roomListInviteCode\.addEventListener\("input", renderReceivedInviteCodeActionState\)/);
   assert.match(

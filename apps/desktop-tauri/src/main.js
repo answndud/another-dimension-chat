@@ -2447,8 +2447,10 @@ async function runSavedInviteRoomListAction(room, action) {
     return false;
   }
   if (action === "paste-peer-code") {
-    rememberPrivateRouteFollowup("receive", productionTwoProfileInput());
-    focusPrivateRouteNextAction(productionTwoProfileInput());
+    const input = productionTwoProfileInput();
+    rememberReceiveIntentForRoom(input, true);
+    rememberPrivateRouteFollowup("receive", input);
+    focusPrivateRouteNextAction(input);
     return true;
   }
   if (action === "review-send") {
