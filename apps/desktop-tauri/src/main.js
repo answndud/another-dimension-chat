@@ -2691,7 +2691,6 @@ function removeSavedInviteRoom(room) {
   forgetInviteRoom(code);
   if (code === currentInviteRoomCode()) {
     clearCurrentInviteRoomInput();
-    resetProductionTwoProfileTranscript();
     showRoomList();
   }
   setProductionTwoProfileState("Room removed from list");
@@ -3215,6 +3214,7 @@ function clearCurrentInviteRoomInput() {
   stopInviteRoomPresenceRefresh();
   stopInviteRoomTranscriptRefresh();
   clearManualMessagePayloadsForRoomContextChange();
+  resetProductionTwoProfileTranscript();
   latestDerivedConnectionCode = "";
   latestCreatedInviteCode = "";
   copiedInviteCode = "";
