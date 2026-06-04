@@ -472,6 +472,7 @@ let productionBusyAction = null;
 let latestProductionManualFocusTarget = null;
 let latestChatDeliveryNoticeKey = "";
 let latestChatDeliveryNoticeTone = "neutral";
+let latestChatDeliveryNoticeRoomFingerprint = "";
 let twoProfileAutoResumeTimer = null;
 let latestTwoProfileAutoResumeFingerprint = null;
 let selectedTwoProfileConversationKey = null;
@@ -1104,8 +1105,10 @@ function applyLanguage(language) {
   renderMessageTtlControlOptions();
   renderProductionTwoProfileFlow(productionTwoProfileInput());
   renderProductionTwoProfileDirection(productionTwoProfileInput());
-  if (latestChatDeliveryNoticeKey) {
+  if (latestChatDeliveryNoticeKey && chatDeliveryNoticeMatchesInput(productionTwoProfileInput())) {
     setChatDeliveryNoticeByKey(latestChatDeliveryNoticeKey, latestChatDeliveryNoticeTone);
+  } else if (latestChatDeliveryNoticeKey) {
+    setChatDeliveryNoticeByKey("", "neutral");
   }
   applyProductionActionState();
 }
@@ -1154,6 +1157,16 @@ function privateRouteRecoveryNoticeActive(key = latestChatDeliveryNoticeKey) {
     key === "privateRouteCodeReadyForReceive" ||
     key === "peerPrivateRouteCodeMissing"
   );
+}
+
+function chatDeliveryNoticeRoomFingerprint(input = productionTwoProfileInput()) {
+  return input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase
+    ? twoProfileSessionStatusFingerprint(input)
+    : "";
+}
+
+function chatDeliveryNoticeMatchesInput(input = productionTwoProfileInput()) {
+  return latestChatDeliveryNoticeRoomFingerprint === chatDeliveryNoticeRoomFingerprint(input);
 }
 
 function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
@@ -1300,13 +1313,15 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
 function setChatDeliveryNoticeByKey(key, tone = "neutral") {
   latestChatDeliveryNoticeKey = key || "";
   latestChatDeliveryNoticeTone = tone || "neutral";
+  latestChatDeliveryNoticeRoomFingerprint = key ? chatDeliveryNoticeRoomFingerprint() : "";
   setChatDeliveryNotice(key ? t(key) : "", tone);
 }
 
-function setChatDeliveryNoticeForPendingOutbound(entry) {
-  const primaryAction = currentTwoProfileOutboundPrimaryAction(entry);
+function setChatDeliveryNoticeForPendingOutbound(entry, input = productionTwoProfileInput()) {
+  const primaryAction = currentTwoProfileOutboundPrimaryAction(entry, input);
   latestChatDeliveryNoticeKey = primaryAction.noticeKey || "sendFailedGeneric";
   latestChatDeliveryNoticeTone = primaryAction.action === "enable-private-delivery" ? "muted" : "warning";
+  latestChatDeliveryNoticeRoomFingerprint = chatDeliveryNoticeRoomFingerprint(input);
   setChatDeliveryNotice(t(primaryAction.recoveryKey || "sendRecoveryGeneric"), latestChatDeliveryNoticeTone, {
     pendingEntry: entry,
   });
@@ -5247,6 +5262,9 @@ function clearStaleSendRecoveryNotice(input = productionTwoProfileInput()) {
   if (latestTwoProfileRetryableOutboundEntry(input)) {
     return false;
   }
+  if (!chatDeliveryNoticeMatchesInput(input)) {
+    return false;
+  }
   const staleRecoveryNotice = new Set([
     "sendFailedGeneric",
     "messageSavedPrivateDeliveryOff",
@@ -7368,6 +7386,7 @@ function applyProductionActionState() {
   const receivingOtherRoom = productionTwoProfileReceiveActiveInOtherRoom(twoProfile);
   const receivingRuntimeMismatch = productionTwoProfileReceiveRuntimeMismatched(twoProfile);
   const retryableOutboundConversation = latestTwoProfileRetryableOutboundEntry(twoProfile);
+  const currentRoomDeliveryNotice = chatDeliveryNoticeMatchesInput(twoProfile);
   if (
     productionTwoProfileShouldShowOutboundRecovery({
       busy,
@@ -7406,11 +7425,17 @@ function applyProductionActionState() {
     (receiveIntent || !twoProfile.message)
   ) {
     setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted");
-  } else if (!busy && twoProfileSafetyConfirmed && latestChatDeliveryNoticeKey === "sendLockedUntilVerified") {
+  } else if (
+    !busy &&
+    twoProfileSafetyConfirmed &&
+    currentRoomDeliveryNotice &&
+    latestChatDeliveryNoticeKey === "sendLockedUntilVerified"
+  ) {
     setChatDeliveryNoticeByKey("", "neutral");
   } else if (
     !busy &&
     !pendingConversation &&
+    currentRoomDeliveryNotice &&
     (latestChatDeliveryNoticeKey === "messageSavedPrivateDeliveryOff" ||
       latestChatDeliveryNoticeKey === "privateDeliveryRouteNeeded" ||
       latestChatDeliveryNoticeKey === "chatNoticeNetworkPermission" ||
