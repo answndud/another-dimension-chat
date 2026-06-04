@@ -611,7 +611,7 @@ test("private delivery receive controls require a real route", () => {
   assert.doesNotMatch(functionBody(mainJs, "updateChatPrimaryActionMode"), /twoProfileInviteCodeModeActive\(\) && sessionsReady/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /!twoProfilePeerEndpointState\(input\)\.ready/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /rememberPrivateRouteFollowup\("receive", input\)/);
-  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /await preparePrivateDeliveryRoute\(\)/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /await preparePrivateDeliveryRoute\(\{ input \}\)/);
   assert.doesNotMatch(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /!latestLocalPrivateRouteCode/);
   assert.match(stylesCss, /body\.is-chat-active\.has-confirmed-safety:not\(\.has-message-draft\) \.room-receive-controls/);
   assert.match(stylesCss, /body\.is-chat-active:not\(\.has-private-route\)[\s\S]*#start-production-two-profile-onion-receive/);
@@ -725,8 +725,10 @@ test("chat delivery notices stay scoped to the active invite room", () => {
   assert.match(mainJs, /let latestChatDeliveryNoticeRoomFingerprint = ""/);
   assert.match(functionBody(mainJs, "chatDeliveryNoticeRoomFingerprint"), /twoProfileSessionStatusFingerprint\(input\)/);
   assert.match(functionBody(mainJs, "chatDeliveryNoticeMatchesInput"), /latestChatDeliveryNoticeRoomFingerprint === chatDeliveryNoticeRoomFingerprint\(input\)/);
-  assert.match(functionBody(mainJs, "setChatDeliveryNoticeByKey"), /latestChatDeliveryNoticeRoomFingerprint = key \? chatDeliveryNoticeRoomFingerprint\(\) : ""/);
+  assert.match(mainJs, /function setChatDeliveryNoticeByKey\(key, tone = "neutral", input = productionTwoProfileInput\(\)\)/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNoticeByKey"), /latestChatDeliveryNoticeRoomFingerprint = key \? chatDeliveryNoticeRoomFingerprint\(input\) : ""/);
   assert.match(functionBody(mainJs, "setChatDeliveryNoticeForPendingOutbound"), /latestChatDeliveryNoticeRoomFingerprint = chatDeliveryNoticeRoomFingerprint\(input\)/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNoticeForSendAttempt"), /setChatDeliveryNoticeByKey\("chatNoticeSent", "success", input\)/);
 
   const languageBody = functionBody(mainJs, "applyLanguage");
   assert.match(languageBody, /latestChatDeliveryNoticeKey && chatDeliveryNoticeMatchesInput\(productionTwoProfileInput\(\)\)/);
@@ -765,10 +767,12 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(mainJs, /async function sendProductionTwoProfileLatestOnionEnvelope\(input = productionTwoProfileInput\(\)\)/);
   assert.match(sendBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(sendBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: false \}\)/);
+  assert.match(sendBody, /setChatDeliveryNoticeForSendAttempt\(result, input\)/);
 
   const retryBody = functionBody(mainJs, "retryTwoProfileOutboundEntry");
   assert.match(retryBody, /await sendProductionTwoProfileLatestOnionEnvelope\(\)/);
   assert.match(retryBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(retryBody, /setChatDeliveryNoticeByKey\("sendRetrying", "progress", input\)/);
 
   const refreshRetryBody = functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry");
   assert.match(refreshRetryBody, /await prepareInviteRoomPrivateRouteExchange\(input\)/);
@@ -778,6 +782,7 @@ test("message send retry and cancel results stay scoped to the current room", ()
   const cancelBody = functionBody(mainJs, "cancelTwoProfileOutboundEntry");
   assert.match(cancelBody, /production_message_outbound_cancel_pending/);
   assert.match(cancelBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(cancelBody, /setChatDeliveryNoticeByKey\("sendCanceling", "progress", input\)/);
 
   const composerBody = functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip");
   assert.match(composerBody, /const input = productionTwoProfileInput\(\)/);
@@ -860,7 +865,7 @@ test("composer and delivery-route controls stay on the chat delivery path", () =
   const composerBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
   assert.match(composerBody, /enablePrivateDeliveryPermission\(\)/);
   assert.match(composerBody, /rememberPrivateRouteFollowup\(input\.message \? "send-draft" : "receive", input\)/);
-  assert.match(composerBody, /await preparePrivateDeliveryRoute\(\)/);
+  assert.match(composerBody, /await preparePrivateDeliveryRoute\(\{ input \}\)/);
   assert.match(composerBody, /focusSafetyConfirmation\(\)/);
   assert.match(composerBody, /await runProductionTwoProfileMessageRoundtrip\(\)/);
   assert.doesNotMatch(composerBody, /openChatSettingsPanel|openPrivateDeliverySettings/);

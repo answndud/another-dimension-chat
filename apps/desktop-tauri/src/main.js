@@ -695,21 +695,21 @@ function sendRuntimeOwnerMismatch(result) {
   return Boolean(result?.owner_profile_bound === true && result?.owner_matches_send_profile === false);
 }
 
-function setChatDeliveryNoticeForSendAttempt(result) {
+function setChatDeliveryNoticeForSendAttempt(result, input = productionTwoProfileInput()) {
   if (result?.send_attempt_succeeded) {
-    setChatDeliveryNoticeByKey("chatNoticeSent", "success");
+    setChatDeliveryNoticeByKey("chatNoticeSent", "success", input);
     return;
   }
   if (sendRuntimeOwnerMismatch(result)) {
-    setChatDeliveryNoticeByKey("sendRuntimeMismatch", "warning");
+    setChatDeliveryNoticeByKey("sendRuntimeMismatch", "warning", input);
     return;
   }
   if (result?.peer_endpoint_refresh_recommended || result?.retry_recommended_after_endpoint_refresh) {
-    setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning");
+    setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
     return;
   }
   const key = chatNoticeForSendReceiveText(result?.next_blocker || result?.warning || "")?.key ?? "sendFailedGeneric";
-  setChatDeliveryNoticeByKey(key, "warning");
+  setChatDeliveryNoticeByKey(key, "warning", input);
 }
 
 function localizedRetentionLabel(entry) {
@@ -1311,10 +1311,10 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
   }
 }
 
-function setChatDeliveryNoticeByKey(key, tone = "neutral") {
+function setChatDeliveryNoticeByKey(key, tone = "neutral", input = productionTwoProfileInput()) {
   latestChatDeliveryNoticeKey = key || "";
   latestChatDeliveryNoticeTone = tone || "neutral";
-  latestChatDeliveryNoticeRoomFingerprint = key ? chatDeliveryNoticeRoomFingerprint() : "";
+  latestChatDeliveryNoticeRoomFingerprint = key ? chatDeliveryNoticeRoomFingerprint(input) : "";
   setChatDeliveryNotice(key ? t(key) : "", tone);
 }
 
@@ -1610,13 +1610,13 @@ function openChatSettingsPanel(focusTarget = fields.productionTwoProfileB) {
   visibleFocusTarget?.focus();
 }
 
-function openPrivateDeliverySettings() {
+function openPrivateDeliverySettings(input = productionTwoProfileInput()) {
   openChatSettingsPanel(fields.roomNetworkPermission);
   document.querySelector(".network-permission-toggle")?.classList.add("is-attention");
   fields.roomNetworkPermission?.scrollIntoView?.({ block: "center", behavior: "smooth" });
   setProductionTwoProfileState("Private delivery permission needed");
   setText(fields.productionTwoProfileWarning, t("privateDeliveryPermissionRequired"));
-  setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning");
+  setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning", input);
 }
 
 function enablePrivateDeliveryPermission() {
@@ -1629,15 +1629,15 @@ function enablePrivateDeliveryPermission() {
   setProductionTwoProfileState("Private delivery permission enabled");
   if (sessionsReady && twoProfileSafetyConfirmedForInput(input) && !twoProfilePeerEndpointState(input).ready) {
     setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteNeeded"));
-    setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted");
+    setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted", input);
     fields.preparePrivateRoute?.focus?.({ preventScroll: true });
   } else if (sessionsReady && twoProfileSafetyConfirmedForInput(input) && receiveIntentForRoom(input)) {
     setText(fields.productionTwoProfileWarning, t("chatNoticeReceiveStopped"));
-    setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted");
+    setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted", input);
     fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
   } else {
     setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteReady"));
-    setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success");
+    setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
   }
   applyProductionActionState();
 }
@@ -3907,6 +3907,7 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
     setChatDeliveryNoticeByKey(
       peerEndpointState.stale ? "chatNoticeRefreshAddress" : "privateDeliveryRouteNeeded",
       "warning",
+      input,
     );
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
     showLatestRetryableOutboundNotice(input);
@@ -3922,7 +3923,7 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
     return;
   }
   setText(fields.productionTwoProfileWarning, t("messageSavedPrivateDeliveryOff"));
-  setChatDeliveryNoticeByKey("messageSavedPrivateDeliveryOff", "muted");
+  setChatDeliveryNoticeByKey("messageSavedPrivateDeliveryOff", "muted", input);
   await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
   showLatestRetryableOutboundNotice(input);
 }
@@ -4226,7 +4227,7 @@ function focusPrivateRouteNextAction(input = productionTwoProfileInput(), option
   showPrivateRouteExchange();
   renderPrivateRouteExchangeState(input, { forceRefresh });
   if (!manualNetworkPermissionEnabled()) {
-    openPrivateDeliverySettings();
+    openPrivateDeliverySettings(input);
     return "permission";
   }
   if (twoProfilePeerEndpointState(input).ready && !forceRefresh) {
@@ -5404,7 +5405,7 @@ function showRetryableTwoProfileOutboundNotice(entry) {
   if (!entry) {
     return;
   }
-  setChatDeliveryNoticeForPendingOutbound(entry);
+  setChatDeliveryNoticeForPendingOutbound(entry, productionTwoProfileInput());
 }
 
 function showLatestRetryableOutboundNotice(input = productionTwoProfileInput()) {
@@ -5415,7 +5416,7 @@ function showLatestRetryableOutboundNotice(input = productionTwoProfileInput()) 
   if (!entry) {
     return false;
   }
-  setChatDeliveryNoticeForPendingOutbound(entry);
+  setChatDeliveryNoticeForPendingOutbound(entry, input);
   return true;
 }
 
@@ -7616,16 +7617,16 @@ function applyProductionActionState() {
       hasRetryableOutbound: Boolean(retryableOutboundConversation),
     })
   ) {
-    setChatDeliveryNoticeForPendingOutbound(retryableOutboundConversation);
+    setChatDeliveryNoticeForPendingOutbound(retryableOutboundConversation, twoProfile);
   } else if (!busy && twoProfileSessionsReady && !twoProfileSafetyConfirmed) {
-    setChatDeliveryNoticeByKey("sendLockedUntilVerified", "warning");
+    setChatDeliveryNoticeByKey("sendLockedUntilVerified", "warning", twoProfile);
   } else if (
     !busy &&
     twoProfileSessionsReady &&
     twoProfileSafetyConfirmed &&
     !manualNetworkPermission
   ) {
-    setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning");
+    setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning", twoProfile);
   } else if (
     !busy &&
     twoProfileSessionsReady &&
@@ -7635,6 +7636,7 @@ function applyProductionActionState() {
     setChatDeliveryNoticeByKey(
       manualNetworkPermission ? "privateDeliveryRouteNeeded" : "chatNoticeNetworkPermission",
       manualNetworkPermission ? "muted" : "warning",
+      twoProfile,
     );
   } else if (
     !busy &&
@@ -7646,14 +7648,14 @@ function applyProductionActionState() {
     !productionTwoProfileOnionReceiveMode.stopRequested &&
     (receiveIntent || !twoProfile.message)
   ) {
-    setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted");
+    setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted", twoProfile);
   } else if (
     !busy &&
     twoProfileSafetyConfirmed &&
     currentRoomDeliveryNotice &&
     latestChatDeliveryNoticeKey === "sendLockedUntilVerified"
   ) {
-    setChatDeliveryNoticeByKey("", "neutral");
+    setChatDeliveryNoticeByKey("", "neutral", twoProfile);
   } else if (
     !busy &&
     !pendingConversation &&
@@ -7663,7 +7665,7 @@ function applyProductionActionState() {
       latestChatDeliveryNoticeKey === "chatNoticeNetworkPermission" ||
       latestChatDeliveryNoticeKey === "chatNoticeReceiveStopped")
   ) {
-    setChatDeliveryNoticeByKey("", "neutral");
+    setChatDeliveryNoticeByKey("", "neutral", twoProfile);
   }
   setReplyLatestTwoProfileLabel(replySelection.label);
   setReviewPendingTwoProfileLabel(
@@ -9743,13 +9745,13 @@ async function refreshProductionTwoProfilePeerEndpoints() {
 async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfileInput()) {
   showPrivateRouteExchange();
   if (!manualNetworkPermissionEnabled()) {
-    openPrivateDeliverySettings();
+    openPrivateDeliverySettings(input);
     return false;
   }
   productionBusyAction = "invite-room-private-route-code";
   setProductionTwoProfileState("Delivery code creating");
   setText(fields.productionTwoProfileWarning, t("privateRouteCodeCreating"));
-  setChatDeliveryNoticeByKey("privateRouteCodeCreating", "progress");
+  setChatDeliveryNoticeByKey("privateRouteCodeCreating", "progress", input);
   setText(fields.productionTwoProfileProfiles, localizedTwoProfileUserViewText("Room is ready."));
   setText(fields.productionTwoProfileSession, localizedTwoProfileUserViewText("Preparing private delivery, then creating this device delivery code."));
   setText(fields.productionTwoProfileMessageState, localizedTwoProfileUserViewText("No message transport attempted."));
@@ -9781,7 +9783,7 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
       : "privateRouteWaitingPeerCode";
     setProductionTwoProfileState("Delivery code ready");
     setText(fields.productionTwoProfileWarning, t(noticeKey));
-    setChatDeliveryNoticeByKey(noticeKey, "muted");
+    setChatDeliveryNoticeByKey(noticeKey, "muted", input);
     setText(
       fields.productionTwoProfileBoundary,
       `backup=${runtime.backup.backup_exclusion_verified} key=${runtime.key.key_material_ready} persistent_client=${runtime.client.persistent_client_ready} endpoint=${result.onion_endpoint_returned} next=${result.next_blocker}`,
@@ -9794,7 +9796,7 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
     }
     setProductionTwoProfileState("Delivery code failed");
     setText(fields.productionTwoProfileWarning, `${t("privateRouteCodeFailed")} ${String(error)}`);
-    setChatDeliveryNoticeByKey("privateRouteCodeFailed", "warning");
+    setChatDeliveryNoticeByKey("privateRouteCodeFailed", "warning", input);
     return false;
   } finally {
     clearProductionBusyAction("invite-room-private-route-code");
@@ -9834,7 +9836,7 @@ async function applyPeerPrivateRouteCode() {
   productionBusyAction = "invite-room-peer-route-code";
   setProductionTwoProfileState("Peer delivery saving");
   setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeSaving"));
-  setChatDeliveryNoticeByKey("peerPrivateRouteCodeSaving", "progress");
+  setChatDeliveryNoticeByKey("peerPrivateRouteCodeSaving", "progress", input);
   applyProductionActionState();
   try {
     const update = await invoke("production_pairing_session_remote_endpoint_update", {
@@ -9850,7 +9852,7 @@ async function applyPeerPrivateRouteCode() {
     renderProductionTwoProfileSessionStatusResult(status);
     setProductionTwoProfileState(update.remote_endpoint_state_written ? "Peer delivery saved" : "Peer delivery unchanged");
     setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeSaved"));
-    setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success");
+    setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
     hidePrivateRouteExchangeIfReady(input);
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
     if (await continueAfterPeerPrivateRouteSaved(input)) {
@@ -9858,7 +9860,7 @@ async function applyPeerPrivateRouteCode() {
     }
     const pending = latestTwoProfileRetryableOutboundEntry(input);
     if (pending) {
-      setChatDeliveryNoticeForPendingOutbound(pending);
+      setChatDeliveryNoticeForPendingOutbound(pending, input);
     }
     return true;
   } catch (error) {
@@ -9867,7 +9869,7 @@ async function applyPeerPrivateRouteCode() {
     }
     setProductionTwoProfileState("Peer delivery failed");
     setText(fields.productionTwoProfileWarning, `${t("peerPrivateRouteCodeFailed")} ${String(error)}`);
-    setChatDeliveryNoticeByKey("peerPrivateRouteCodeFailed", "warning");
+    setChatDeliveryNoticeByKey("peerPrivateRouteCodeFailed", "warning", input);
     fields.peerPrivateRouteCode?.focus();
     return false;
   } finally {
@@ -9893,7 +9895,7 @@ async function copyLocalPrivateRouteCode() {
     await navigator.clipboard.writeText(code);
     setProductionTwoProfileState("Delivery code copied");
     setText(fields.productionTwoProfileWarning, t("privateRouteCodeCopied"));
-    setChatDeliveryNoticeByKey("privateRouteCodeCopied", "success");
+    setChatDeliveryNoticeByKey("privateRouteCodeCopied", "success", input);
     fields.peerPrivateRouteCode?.focus();
     return true;
   } catch {
@@ -9907,7 +9909,7 @@ async function copyLocalPrivateRouteCode() {
 
 async function preparePrivateDeliveryRoute(options = {}) {
   const forceRefresh = options.forceRefresh === true;
-  const input = productionTwoProfileInput();
+  const input = options.input ?? productionTwoProfileInput();
   if (!input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
     openChatSettingsPanel(fields.productionTwoProfileB);
     setProductionTwoProfileState("Private route needs room");
@@ -9926,13 +9928,13 @@ async function preparePrivateDeliveryRoute(options = {}) {
     return;
   }
   if (!manualNetworkPermissionEnabled()) {
-    openPrivateDeliverySettings();
+    openPrivateDeliverySettings(input);
     return;
   }
   if (twoProfilePeerEndpointState(input).ready && !forceRefresh) {
     setProductionTwoProfileState("Private route ready");
     setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteReady"));
-    setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success");
+    setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
     return;
   }
 
@@ -9941,7 +9943,7 @@ async function preparePrivateDeliveryRoute(options = {}) {
     if (nextRouteAction === "paste-peer") {
       setProductionTwoProfileState("Peer delivery code needed");
       setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
-      setChatDeliveryNoticeByKey("peerPrivateRouteCodeMissing", "muted");
+      setChatDeliveryNoticeByKey("peerPrivateRouteCodeMissing", "muted", input);
       return;
     }
     if (nextRouteAction === "apply-peer") {
@@ -9958,7 +9960,7 @@ async function preparePrivateDeliveryRoute(options = {}) {
     return;
   }
 
-  setChatDeliveryNoticeByKey("privateDeliveryRoutePreparing", "progress");
+  setChatDeliveryNoticeByKey("privateDeliveryRoutePreparing", "progress", input);
   const refreshed = await refreshProductionTwoProfilePeerEndpoints();
   if (refreshed && showLatestRetryableOutboundNotice(input)) {
     return;
@@ -9966,6 +9968,7 @@ async function preparePrivateDeliveryRoute(options = {}) {
   setChatDeliveryNoticeByKey(
     refreshed ? "privateDeliveryRouteReady" : "chatNoticeRefreshAddress",
     refreshed ? "success" : "warning",
+    input,
   );
 }
 
@@ -10818,11 +10821,11 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
   if (!manualNetworkPermission) {
     const pending = latestVisibleTwoProfileRetryableOutboundEntry(input);
     if (pending) {
-      setChatDeliveryNoticeForPendingOutbound(pending);
+      setChatDeliveryNoticeForPendingOutbound(pending, input);
     } else {
-      setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning");
+      setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning", input);
     }
-    openPrivateDeliverySettings();
+    openPrivateDeliverySettings(input);
     return;
   }
   if (!latestOnionOutbound) {
@@ -10849,14 +10852,14 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
         ? t("inputRequiredMessage")
         : t("chatNoticeRefreshAddress"),
     );
-    setChatDeliveryNoticeByKey(peerEndpointState.ready ? "sendFailedGeneric" : "chatNoticeRefreshAddress", "warning");
+    setChatDeliveryNoticeByKey(peerEndpointState.ready ? "sendFailedGeneric" : "chatNoticeRefreshAddress", "warning", input);
     return;
   }
 
   productionBusyAction = "two-profile-onion-envelope-send";
   setProductionTwoProfileState("Private delivery running");
   setText(fields.productionTwoProfileWarning, t("chatNoticeSending"));
-  setChatDeliveryNoticeByKey("chatNoticeSending", "progress");
+  setChatDeliveryNoticeByKey("chatNoticeSending", "progress", input);
   setText(fields.productionTwoProfileProfiles, localizedTwoProfileUserViewText("Room is ready."));
   setText(fields.productionTwoProfileSession, localizedTwoProfileUserViewText("Sending saved message."));
   setText(fields.productionTwoProfileMessageState, localizedTwoProfileUserViewText("Trying private delivery."));
@@ -10902,7 +10905,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       `feature=${result.manual_client_attempt_feature_compiled} permission=${result.manual_network_permission_enabled} persistent_client=${result.persistent_client_ready} promoted_cache=${result.persistent_client_promoted_from_real_onion_cache === true} owner_profile_bound=${result.owner_profile_bound === true} owner_matches_send=${result.owner_matches_send_profile === true} send_intent=${result.send_intent_prepared} started=${result.send_attempt_started} succeeded=${result.send_attempt_succeeded} ack_wait=${result.ack_wait_registered} event_recorded=${result.redacted_send_result_event_recorded} events=${result.event_summary.join("; ") || "none"} next=${result.next_blocker} blockers=${result.blockers.join("; ") || "none"} raw_endpoint=${result.raw_endpoint_returned} raw_path=${result.raw_path_returned} onion_secret=${result.onion_secret_returned} peer_proof=${result.peer_proof_returned} transcript=${result.session_transcript_returned} envelope_payload=${result.envelope_payload_returned} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} accept=${result.stream_accept_attempted} dial=${result.stream_dial_attempted} read_write=${result.stream_read_write_attempted} send=${result.stream_send_attempted} envelope_io=${result.envelope_io_opened} runtime=${result.runtime_messaging_enabled}`,
     );
     setText(fields.productionTwoProfileWarning, localizedSendAttemptMessage(result));
-    setChatDeliveryNoticeForSendAttempt(result);
+    setChatDeliveryNoticeForSendAttempt(result, input);
     setText(fields.productionTwoProfileProfiles, userView.profiles);
     setText(fields.productionTwoProfileSession, userView.session);
     setText(fields.productionTwoProfileMessageState, userView.message);
@@ -11034,12 +11037,12 @@ async function retryTwoProfileOutboundEntry(entry) {
   if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
     setProductionTwoProfileState("Retry send needs direction");
     setText(fields.productionTwoProfileWarning, t("sendRetryWrongDirection"));
-    setChatDeliveryNoticeByKey("sendRetryWrongDirection", "warning");
+    setChatDeliveryNoticeByKey("sendRetryWrongDirection", "warning", input);
     return;
   }
   setProductionTwoProfileState("Retry send running");
   setText(fields.productionTwoProfileWarning, t("sendRetrying"));
-  setChatDeliveryNoticeByKey("sendRetrying", "progress");
+  setChatDeliveryNoticeByKey("sendRetrying", "progress", input);
   latestProductionTwoProfileSuccess = {
     profileA: entry.sender,
     profileB: entry.receiver,
@@ -11088,11 +11091,11 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
       if (peerEndpointState.stale) {
         setProductionTwoProfileState("Peer address refresh needed");
         setText(fields.productionTwoProfileWarning, t("chatNoticeRefreshAddress"));
-        setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning");
+        setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
       } else {
         setProductionTwoProfileState("Peer delivery code needed");
         setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
-        setChatDeliveryNoticeByKey("peerPrivateRouteCodeMissing", "muted");
+        setChatDeliveryNoticeByKey("peerPrivateRouteCodeMissing", "muted", input);
       }
       return;
     }
@@ -11118,13 +11121,13 @@ async function cancelTwoProfileOutboundEntry(entry) {
   if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
     setProductionTwoProfileState("Cancel send needs direction");
     setText(fields.productionTwoProfileWarning, t("sendCancelWrongDirection"));
-    setChatDeliveryNoticeByKey("sendCancelWrongDirection", "warning");
+    setChatDeliveryNoticeByKey("sendCancelWrongDirection", "warning", input);
     return;
   }
   productionBusyAction = "two-profile-outbound-cancel";
   setProductionTwoProfileState("Cancel send running");
   setText(fields.productionTwoProfileWarning, t("sendCanceling"));
-  setChatDeliveryNoticeByKey("sendCanceling", "progress");
+  setChatDeliveryNoticeByKey("sendCanceling", "progress", input);
   applyProductionActionState();
   try {
     await invoke("production_message_outbound_cancel_pending", {
@@ -11137,7 +11140,7 @@ async function cancelTwoProfileOutboundEntry(entry) {
     }
     setProductionTwoProfileState("Pending send canceled");
     setText(fields.productionTwoProfileWarning, t("sendCanceledNotice"));
-    setChatDeliveryNoticeByKey("sendCanceledNotice", "success");
+    setChatDeliveryNoticeByKey("sendCanceledNotice", "success", input);
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
   } catch (error) {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
@@ -11145,7 +11148,7 @@ async function cancelTwoProfileOutboundEntry(entry) {
     }
     setProductionTwoProfileState("Cancel send failed");
     setText(fields.productionTwoProfileWarning, `${t("sendCancelFailed")} ${String(error)}`);
-    setChatDeliveryNoticeByKey("sendCancelFailed", "warning");
+    setChatDeliveryNoticeByKey("sendCancelFailed", "warning", input);
   } finally {
     clearProductionBusyAction("two-profile-outbound-cancel");
     applyProductionActionState();
@@ -11174,13 +11177,13 @@ async function startProductionTwoProfileOnionReceive() {
   if (productionTwoProfileReceiveActiveInOtherRoom(input)) {
     setProductionTwoProfileState("Message listening active in another room");
     setText(fields.productionTwoProfileWarning, t("receiveOtherRoomActive"));
-    setChatDeliveryNoticeByKey("receiveOtherRoomActive", "warning");
+    setChatDeliveryNoticeByKey("receiveOtherRoomActive", "warning", input);
     return;
   }
   rememberReceiveIntentForRoom(input, true);
   if (!manualNetworkPermission) {
-    setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning");
-    openPrivateDeliverySettings();
+    setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning", input);
+    openPrivateDeliverySettings(input);
     return;
   }
   if (!twoProfilePeerEndpointState(input).ready) {
@@ -11196,8 +11199,9 @@ async function startProductionTwoProfileOnionReceive() {
     setChatDeliveryNoticeByKey(
       nextRouteAction === "create-local" ? "privateDeliveryRouteNeeded" : "peerPrivateRouteCodeMissing",
       "muted",
+      input,
     );
-    await preparePrivateDeliveryRoute();
+    await preparePrivateDeliveryRoute({ input });
     return;
   }
   if (productionTwoProfileOnionReceiveMode.enabled) {
@@ -11251,7 +11255,7 @@ async function startProductionTwoProfileOnionReceive() {
   setProductionTwoProfileOnionReceiveRuntimeState("receiving");
   updateLocalPrivateRouteCodeUi(input);
   setText(fields.productionTwoProfileWarning, t("receiveStarted"));
-  setChatDeliveryNoticeByKey("chatNoticeReceiving", "success");
+  setChatDeliveryNoticeByKey("chatNoticeReceiving", "success", input);
   setText(fields.productionTwoProfileProfiles, currentLanguage === "ko" ? `내 ID=${profileA}` : `local=${profileA}`);
   setText(fields.productionTwoProfileSession, t("receiveUsingLocalRoom"));
   setText(fields.productionTwoProfileMessageState, t("receiveWaiting"));
@@ -11392,16 +11396,17 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
             key: "receiveRetrying",
             tone: "warning",
           };
-        setChatDeliveryNoticeByKey(receiveNotice.key, receiveNotice.tone);
+        setChatDeliveryNoticeByKey(receiveNotice.key, receiveNotice.tone, currentInput);
       } else if (refreshPlan.transcriptChanged) {
         setText(fields.productionTwoProfileWarning, productionTwoProfileOnionReceiveUserNotice(refreshPlan));
         setChatDeliveryNoticeByKey(
           refreshPlan.messageImported ? "chatNoticeReceived" : "chatNoticeEndpointUpdated",
           "success",
+          currentInput,
         );
       } else if (productionTwoProfileReceiveRuntimeMismatched(currentInput)) {
         setText(fields.productionTwoProfileWarning, t("receiveRuntimeMismatch"));
-        setChatDeliveryNoticeByKey("receiveRuntimeMismatch", "warning");
+        setChatDeliveryNoticeByKey("receiveRuntimeMismatch", "warning", currentInput);
       } else if (runtimeState === "receiving") {
         setText(fields.productionTwoProfileWarning, t("receiveStarted"));
       }
@@ -11426,7 +11431,7 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
           });
           if (replySelected) {
             setText(fields.productionTwoProfileWarning, t("replyReadyAfterReceive"));
-            setChatDeliveryNoticeByKey("replyReadyAfterReceive", "success");
+            setChatDeliveryNoticeByKey("replyReadyAfterReceive", "success", currentInput);
           }
         }
         if (refreshPlan.endpointUpdated) {
@@ -11451,7 +11456,7 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
     if (!backendLoop.enabled && !backendLoop.worker_running) {
       markProductionTwoProfileOnionReceiveStopped(backendLoop, { silent: !receivingCurrentRoom });
       if (receivingCurrentRoom) {
-        setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted");
+        setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted", currentInput);
       }
       return;
     }
@@ -11550,7 +11555,7 @@ function stopProductionTwoProfileOnionReceiveForInput(input, options) {
     if (!silent) {
       setProductionTwoProfileState("Message listening active in another room");
       setText(fields.productionTwoProfileWarning, t("receiveOtherRoomActive"));
-      setChatDeliveryNoticeByKey("receiveOtherRoomActive", "warning");
+      setChatDeliveryNoticeByKey("receiveOtherRoomActive", "warning", targetInput);
       applyProductionActionState();
     }
     return;
@@ -11793,17 +11798,17 @@ async function runProductionTwoProfileComposerPrimaryAction() {
   }
   if (intent.action === "prepare-private-route") {
     rememberPrivateRouteFollowup(input.message ? "send-draft" : "receive", input);
-    setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted");
-    await preparePrivateDeliveryRoute();
+    setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted", input);
+    await preparePrivateDeliveryRoute({ input });
     return;
   }
   if (intent.action === "start-receiving") {
-    setChatDeliveryNoticeByKey("chatNoticeReceiveRestart", "success");
+    setChatDeliveryNoticeByKey("chatNoticeReceiveRestart", "success", input);
     await startProductionTwoProfileOnionReceive();
     return;
   }
   if (intent.action === "verify") {
-    setChatDeliveryNoticeByKey("sendLockedUntilVerified", "warning");
+    setChatDeliveryNoticeByKey("sendLockedUntilVerified", "warning", input);
     focusSafetyConfirmation();
     return;
   }
@@ -11821,7 +11826,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     return;
   }
   if (!manualNetworkPermission) {
-    openPrivateDeliverySettings();
+    openPrivateDeliverySettings(input);
     return;
   }
 
@@ -11874,7 +11879,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
         };
     setProductionTwoProfileState(userView.state);
     setText(fields.productionTwoProfileWarning, t(realOnionNotice.key));
-    setChatDeliveryNoticeByKey(realOnionNotice.key, realOnionNotice.tone);
+    setChatDeliveryNoticeByKey(realOnionNotice.key, realOnionNotice.tone, input);
     setText(fields.productionTwoProfileProfiles, userView.profiles);
     setText(fields.productionTwoProfileSession, userView.session);
     setText(fields.productionTwoProfileMessageState, userView.message);
@@ -11975,7 +11980,7 @@ async function cancelProductionTwoProfileRealOnionWait() {
         setText(fields.productionTwoProfileSession, t("networkWaitCancelRequested"));
         setText(fields.productionTwoProfileMessageState, t("retryPrivateDeliveryHint"));
         setText(fields.productionTwoProfileBoundary, t("networkWaitCanceledBoundary"));
-        setChatDeliveryNoticeByKey("networkWaitCancelRequested", "muted");
+        setChatDeliveryNoticeByKey("networkWaitCancelRequested", "muted", activeInput);
         applyProductionActionState();
         refreshFieldTestReport();
         return true;
@@ -12006,7 +12011,7 @@ async function cancelProductionTwoProfileRealOnionWait() {
   setText(fields.productionTwoProfileSession, t("networkWaitCanceled"));
   setText(fields.productionTwoProfileMessageState, t("retryPrivateDeliveryHint"));
   setText(fields.productionTwoProfileBoundary, t("networkWaitCanceledBoundary"));
-  setChatDeliveryNoticeByKey("networkWaitCanceledNotice", "muted");
+  setChatDeliveryNoticeByKey("networkWaitCanceledNotice", "muted", input);
   applyProductionActionState();
   refreshFieldTestReport();
   return true;
