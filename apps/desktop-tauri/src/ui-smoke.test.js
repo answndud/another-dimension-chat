@@ -300,8 +300,11 @@ test("room transcript refresh is scoped to the current room", () => {
 
 test("conversation selection keys are scoped to the active invite room", () => {
   assert.match(functionBody(mainJs, "twoProfileConversationKey"), /entry\.roomFingerprint \?\? twoProfileSessionStatusFingerprint\(productionTwoProfileInput\(\)\)/);
-  assert.match(functionBody(mainJs, "appendProductionTwoProfileConversationStatus"), /roomFingerprint: twoProfileSessionStatusFingerprint\(productionTwoProfileInput\(\)\)/);
-  assert.match(functionBody(mainJs, "selectTwoProfileConversationMessage"), /roomFingerprint: twoProfileSessionStatusFingerprint\(productionTwoProfileInput\(\)\)/);
+  assert.match(mainJs, /function appendProductionTwoProfileConversationStatus\([\s\S]*input = productionTwoProfileInput\(\),[\s\S]*\)/);
+  assert.match(functionBody(mainJs, "appendProductionTwoProfileConversationStatus"), /roomFingerprint: twoProfileSessionStatusFingerprint\(input\)/);
+  assert.match(functionBody(mainJs, "selectTwoProfileConversationMessage"), /roomFingerprint: twoProfileSessionStatusFingerprint\(options\.input \?\? productionTwoProfileInput\(\)\)/);
+  assert.match(mainJs, /function renderProductionTwoProfileTranscriptEntries\(entries, input = productionTwoProfileInput\(\)\)/);
+  assert.match(functionBody(mainJs, "renderProductionTwoProfileTranscriptEntries"), /,\s*input,\s*\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileTranscriptEntries"), /resetProductionTwoProfileTranscript\(\{ preserveSelection: true \}\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileTranscriptEntries"), /clearStaleTwoProfileConversationSelection\(\)/);
   assert.match(functionBody(mainJs, "clearStaleTwoProfileConversationSelection"), /productionTwoProfileConversationEntries\.has\(selectedTwoProfileConversationKey\)/);
