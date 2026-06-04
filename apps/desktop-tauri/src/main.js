@@ -3341,10 +3341,10 @@ async function finishInviteRoomReadyFromStatus(input, status, warningText) {
   renderRoomIdentityBar(roomInput, status.both_ready_for_message_envelope);
   renderRoomStatusSummary(roomInput, status.both_ready_for_message_envelope);
   updateMinimalChatMode(input, status.both_ready_for_message_envelope);
-  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
   setProductionTwoProfileState("Room ready");
   setText(fields.productionTwoProfileWarning, warningText);
-  setChatDeliveryNoticeByKey("inviteRoomReadyAfterSessionCode", "success");
+  setChatDeliveryNoticeByKey("inviteRoomReadyAfterSessionCode", "success", input);
   startInviteRoomPresenceRefresh(roomInput);
   startInviteRoomTranscriptRefresh(roomInput);
   if (inviteRole === "inviter") {
@@ -3540,7 +3540,7 @@ function startInviteRoomTranscriptRefresh(input = productionTwoProfileInput()) {
     }
     inviteRoomTranscriptRefreshInFlight = true;
     try {
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
     } finally {
       inviteRoomTranscriptRefreshInFlight = false;
     }
@@ -3873,7 +3873,7 @@ async function saveInviteRoomOutboundMessage(input = productionTwoProfileInput()
   setText(fields.productionTwoProfileSession, t("messageSavedForDelivery"));
   setText(fields.productionTwoProfileMessageState, t("messageWaitingForDelivery"));
   setText(fields.productionTwoProfileBoundary, productionMessageEnvelopeExportView(result).boundary);
-  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
   return { result, messageNumber, messageText, stillCurrent: true };
 }
 
@@ -3909,7 +3909,7 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
       "warning",
       input,
     );
-    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
     showLatestRetryableOutboundNotice(input);
     return;
   }
@@ -3924,7 +3924,7 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
   }
   setText(fields.productionTwoProfileWarning, t("messageSavedPrivateDeliveryOff"));
   setChatDeliveryNoticeByKey("messageSavedPrivateDeliveryOff", "muted", input);
-  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
   showLatestRetryableOutboundNotice(input);
 }
 
@@ -9853,7 +9853,7 @@ async function applyPeerPrivateRouteCode() {
     setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeSaved"));
     setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
     hidePrivateRouteExchangeIfReady(input);
-    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
     if (await continueAfterPeerPrivateRouteSaved(input)) {
       return true;
     }
@@ -10840,7 +10840,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       if (!twoProfileTranscriptInputStillCurrent(input)) {
         return;
       }
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
       showLatestRetryableOutboundNotice(input);
       return;
     }
@@ -10921,7 +10921,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       rememberTwoProfileSessionStatus(input, status);
       renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
     }
-    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
     if (!result.send_attempt_succeeded) {
       showLatestRetryableOutboundNotice(input);
     }
@@ -10944,7 +10944,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
     updateChatDeliveryNoticeFromText(error);
     setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Failed before or during bounded onion send attempt."));
     try {
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
       showLatestRetryableOutboundNotice(input);
     } catch {
       applyProductionActionState();
@@ -11050,11 +11050,11 @@ async function retryTwoProfileOutboundEntry(entry) {
     roomFingerprint: twoProfileSessionStatusFingerprint(input),
     fingerprint: twoProfileInputFingerprint(input),
   };
-  await sendProductionTwoProfileLatestOnionEnvelope();
+  await sendProductionTwoProfileLatestOnionEnvelope(input);
   if (!twoProfileTranscriptInputStillCurrent(input)) {
     return;
   }
-  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
 }
 
 async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
@@ -11074,7 +11074,7 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
         if (!twoProfileTranscriptInputStillCurrent(input)) {
           return;
         }
-        await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+        await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
         return;
       }
       if (nextRouteAction === "apply-peer") {
@@ -11108,7 +11108,7 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
   if (refreshed) {
     await retryTwoProfileOutboundEntry(entry);
   } else {
-    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
   }
 }
 
@@ -11140,7 +11140,7 @@ async function cancelTwoProfileOutboundEntry(entry) {
     setProductionTwoProfileState("Pending send canceled");
     setText(fields.productionTwoProfileWarning, t("sendCanceledNotice"));
     setChatDeliveryNoticeByKey("sendCanceledNotice", "success", input);
-    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
   } catch (error) {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
@@ -11423,6 +11423,7 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
         await loadProductionTwoProfileTranscript({
           quiet: true,
           refreshSessionStatus: refreshPlan.endpointUpdated === true,
+          input: currentInput,
         });
         if (refreshPlan.messageImported) {
           const replySelected = selectLatestReceivedReplyForProfile(productionTwoProfileOnionReceiveMode.profile, {
@@ -11672,7 +11673,7 @@ async function runProductionTwoProfileRoundtrip() {
     setProductionTwoProfileState("Connection setup completed");
     const view = renderProductionTwoProfileRoomSetupResult(result);
     if (view.canContinue) {
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
       setText(
         fields.productionTwoProfileWarning,
         currentLanguage === "ko"
@@ -11899,7 +11900,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       };
     }
     if (view.touchedTranscript) {
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
       if (!twoProfileTranscriptInputStillCurrent(input)) {
         return;
       }
@@ -12208,6 +12209,7 @@ async function refreshTwoProfileSessionAfterProfileUnlock(
         quiet: true,
         refreshSessionStatus: false,
         autoResume: true,
+        input,
       });
       if (!twoProfileTranscriptInputStillCurrent(input)) {
         return false;
@@ -12560,7 +12562,7 @@ async function checkProductionTwoProfileSessionStatus() {
     renderProductionTwoProfileSessionStatusResult(result);
     setText(fields.productionPairingWarning, result.warning);
     if (result.both_ready_for_message_envelope) {
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input: sessionCheckInput });
       startInviteRoomTranscriptRefresh(sessionCheckInput);
       const currentInput = productionTwoProfileInput();
       const hasDraft = Boolean(currentInput.message);
@@ -12632,7 +12634,7 @@ function twoProfileTranscriptInputStillCurrent(input) {
 }
 
 async function loadProductionTwoProfileTranscript(options = {}) {
-  const input = productionTwoProfileInput();
+  const input = options.input ?? productionTwoProfileInput();
   const { profileA, profileB, passphrase } = input;
   const transcriptInput = twoProfileRoomIdentityInput(input);
   const quiet = options.quiet === true;
@@ -12808,7 +12810,7 @@ async function refreshTwoProfileConversationAfterManualImport(
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return false;
     }
-    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return false;
     }
@@ -13009,7 +13011,7 @@ function scheduleTwoProfileAutoResume() {
     ) {
       return;
     }
-    await loadProductionTwoProfileTranscript({ quiet: true, autoResume: true });
+    await loadProductionTwoProfileTranscript({ quiet: true, autoResume: true, input: currentInput });
     applyProductionActionState();
   }, 450);
 }
@@ -13302,7 +13304,7 @@ async function exportProductionMessageEnvelope() {
     );
     if (expiredOutboundMessagesPurged(result) > 0) {
       if (twoProfileTranscriptInputStillCurrent(twoProfileRefreshInput)) {
-        await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+        await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input: twoProfileRefreshInput });
       }
       if (conversationSync?.conversationUpdated && twoProfileTranscriptInputStillCurrent(twoProfileRefreshInput)) {
         appendMessageLifecyclePurgeWarningToField(fields.productionTwoProfileWarning, result);
@@ -13475,7 +13477,7 @@ async function exportProductionReceivedMessage() {
       }
       completeProductionMessageImportReview();
       if (twoProfileTranscriptInputStillCurrent(twoProfileRefreshInput)) {
-        await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+        await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input: twoProfileRefreshInput });
         appendMessageLifecyclePurgeWarningToField(fields.productionTwoProfileWarning, result);
       }
       setText(fields.productionMessageInbound, view.inbound);
