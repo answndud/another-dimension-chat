@@ -836,6 +836,11 @@ test("chat delivery notices stay scoped to the active invite room", () => {
   assert.match(functionBody(mainJs, "setChatDeliveryNoticeByKey"), /latestChatDeliveryNoticeRoomFingerprint = key \? chatDeliveryNoticeRoomFingerprint\(input\) : ""/);
   assert.match(functionBody(mainJs, "setChatDeliveryNoticeForPendingOutbound"), /latestChatDeliveryNoticeRoomFingerprint = chatDeliveryNoticeRoomFingerprint\(input\)/);
   assert.match(functionBody(mainJs, "setChatDeliveryNoticeForSendAttempt"), /setChatDeliveryNoticeByKey\("chatNoticeSent", "success", input\)/);
+  assert.match(mainJs, /function currentChatDeliveryNoticeOutboundAction/);
+  assert.match(functionBody(mainJs, "currentChatDeliveryNoticeOutboundAction"), /chatDeliveryNoticeMatchesInput\(input\)/);
+  assert.match(functionBody(mainJs, "currentChatDeliveryNoticeOutboundAction"), /productionTwoProfileConversationEntries\.get\(twoProfileConversationKey\(entry\)\)/);
+  assert.match(functionBody(mainJs, "currentChatDeliveryNoticeOutboundAction"), /currentTwoProfileOutboundPrimaryAction\(currentEntry, input\)/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /currentChatDeliveryNoticeOutboundAction\(pendingEntry\)/);
 
   const languageBody = functionBody(mainJs, "applyLanguage");
   assert.match(languageBody, /latestChatDeliveryNoticeKey && chatDeliveryNoticeMatchesInput\(productionTwoProfileInput\(\)\)/);
