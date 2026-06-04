@@ -1177,12 +1177,22 @@ body.is-room-list-mode .room-list-panel {
 }
 
 .saved-room-state.is-retry-send,
+.saved-room-state.is-enable-delivery,
+.saved-room-state.is-setup-delivery,
+.saved-room-state.is-refresh-address,
 .saved-room-list-item.has-retryable-send {
   border-color: color-mix(in srgb, var(--warning) 58%, var(--panel-border));
 }
 
-.saved-room-state.is-retry-send {
+.saved-room-state.is-retry-send,
+.saved-room-state.is-enable-delivery,
+.saved-room-state.is-setup-delivery {
   color: var(--warning);
+}
+
+.saved-room-state.is-refresh-address {
+  border-color: color-mix(in srgb, var(--accent-cyan) 58%, var(--panel-border));
+  color: var(--accent-cyan);
 }
 
 .saved-room-state.is-receive-paused,

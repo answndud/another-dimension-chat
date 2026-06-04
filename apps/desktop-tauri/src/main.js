@@ -2521,6 +2521,20 @@ function savedInviteRoomRetryableAction(action) {
     : "";
 }
 
+function savedInviteRoomRetryableState(room) {
+  const action = savedInviteRoomRetryableAction(room?.retryableOutboundAction);
+  if (action === "enable-private-delivery") {
+    return { key: "enable-delivery", label: t("roomStateEnableDelivery") };
+  }
+  if (action === "prepare-private-route") {
+    return { key: "setup-delivery", label: t("roomStateSetupDelivery") };
+  }
+  if (action === "refresh-and-retry") {
+    return { key: "refresh-address", label: t("roomStateRefreshAddress") };
+  }
+  return { key: "retry-send", label: t("roomStateRetrySend") };
+}
+
 function savedInviteRoomResumePriority(room) {
   if (savedInviteRoomHasRetryableOutbound(room)) {
     return 30;
@@ -2548,7 +2562,7 @@ function savedInviteRoomState(room, options = {}) {
   const receiveState = savedInviteRoomReceiveState(room);
   const view = (() => {
     if (savedInviteRoomHasRetryableOutbound(room)) {
-      return { key: "retry-send", label: t("roomStateRetrySend") };
+      return savedInviteRoomRetryableState(room);
     }
     if (receiveState === "listening") {
       return { key: "listening", label: t("roomStateListening") };
