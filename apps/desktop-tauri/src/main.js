@@ -9632,8 +9632,7 @@ async function saveProductionTwoProfileOnionSessions() {
   }
 }
 
-async function refreshProductionTwoProfilePeerEndpoints() {
-  const input = productionTwoProfileInput();
+async function refreshProductionTwoProfilePeerEndpoints(input = productionTwoProfileInput()) {
   const { profileA, profileB, passphrase } = input;
   const roomInput = twoProfileRoomIdentityInput(input);
   const manualNetworkPermission = manualNetworkPermissionEnabled();
@@ -9961,7 +9960,7 @@ async function preparePrivateDeliveryRoute(options = {}) {
   }
 
   setChatDeliveryNoticeByKey("privateDeliveryRoutePreparing", "progress", input);
-  const refreshed = await refreshProductionTwoProfilePeerEndpoints();
+  const refreshed = await refreshProductionTwoProfilePeerEndpoints(input);
   if (refreshed && showLatestRetryableOutboundNotice(input)) {
     return;
   }
@@ -11102,7 +11101,7 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
     await retryTwoProfileOutboundEntry(entry);
     return;
   }
-  const refreshed = await refreshProductionTwoProfilePeerEndpoints();
+  const refreshed = await refreshProductionTwoProfilePeerEndpoints(input);
   if (!twoProfileTranscriptInputStillCurrent(input)) {
     return;
   }

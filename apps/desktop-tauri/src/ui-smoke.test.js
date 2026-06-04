@@ -543,7 +543,7 @@ test("two-profile onion setup actions ignore stale room results", () => {
   assert.match(saveBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
 
   const refreshBody = functionBody(mainJs, "refreshProductionTwoProfilePeerEndpoints");
-  assert.match(refreshBody, /const input = productionTwoProfileInput\(\)/);
+  assert.match(mainJs, /async function refreshProductionTwoProfilePeerEndpoints\(input = productionTwoProfileInput\(\)\)/);
   assert.match(refreshBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
 
   const updateBody = functionBody(mainJs, "sendProductionTwoProfileEndpointUpdate");
@@ -776,6 +776,7 @@ test("message send retry and cancel results stay scoped to the current room", ()
 
   const refreshRetryBody = functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry");
   assert.match(refreshRetryBody, /await prepareInviteRoomPrivateRouteExchange\(input\)/);
+  assert.match(refreshRetryBody, /await refreshProductionTwoProfilePeerEndpoints\(input\)/);
   assert.match(refreshRetryBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(refreshRetryBody, /twoProfilePeerEndpointState\(input\)\.ready/);
 
@@ -869,6 +870,10 @@ test("composer and delivery-route controls stay on the chat delivery path", () =
   assert.match(composerBody, /focusSafetyConfirmation\(\)/);
   assert.match(composerBody, /await runProductionTwoProfileMessageRoundtrip\(\)/);
   assert.doesNotMatch(composerBody, /openChatSettingsPanel|openPrivateDeliverySettings/);
+
+  const prepareRouteBody = functionBody(mainJs, "preparePrivateDeliveryRoute");
+  assert.match(prepareRouteBody, /const input = options\.input \?\? productionTwoProfileInput\(\)/);
+  assert.match(prepareRouteBody, /await refreshProductionTwoProfilePeerEndpoints\(input\)/);
 
   const permissionBody = functionBody(mainJs, "enablePrivateDeliveryPermission");
   assert.match(permissionBody, /setManualNetworkPermission\(true\)/);
