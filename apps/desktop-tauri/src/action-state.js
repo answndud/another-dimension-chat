@@ -586,12 +586,83 @@ export function productionTwoProfileConversationCompare(left, right, direction =
   return order * leftKey.route.localeCompare(rightKey.route);
 }
 
+function inviteRoomConversationMetadataKey(entry, fallbackIndex) {
+  const sender = String(entry?.sender ?? "").trim();
+  const receiver = String(entry?.receiver ?? "").trim();
+  const messageNumber = Number.parseInt(entry?.messageNumber ?? "", 10);
+  if (sender && receiver && Number.isFinite(messageNumber)) {
+    return `${sender}\u0000${receiver}\u0000${messageNumber}`;
+  }
+  return `fallback\u0000${fallbackIndex}`;
+}
+
+function inviteRoomOutboundDeliveryStateRank(state) {
+  switch (state) {
+    case "sent":
+      return 4;
+    case "canceled":
+      return 3;
+    case "failed":
+      return 2;
+    case "pending":
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+function mergedInviteRoomConversationMetadataEntries(entries) {
+  const merged = new Map();
+  (Array.isArray(entries) ? entries : []).forEach((entry, index) => {
+    const key = inviteRoomConversationMetadataKey(entry, index);
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, {
+        ...entry,
+        statuses: entry?.statuses instanceof Set ? new Set(entry.statuses) : entry?.statuses,
+      });
+      return;
+    }
+    const existingStateRank = inviteRoomOutboundDeliveryStateRank(existing.outboundDeliveryState);
+    const nextStateRank = inviteRoomOutboundDeliveryStateRank(entry?.outboundDeliveryState);
+    const chosenState = nextStateRank > existingStateRank ? entry : existing;
+    const existingStatuses = existing.statuses?.has ? existing.statuses : null;
+    const nextStatuses = entry?.statuses?.has ? entry.statuses : null;
+    const statuses = existingStatuses || nextStatuses ? new Set() : existing.statuses;
+    if (existingStatuses) {
+      for (const status of existingStatuses) {
+        statuses.add(status);
+      }
+    }
+    if (nextStatuses) {
+      for (const status of nextStatuses) {
+        statuses.add(status);
+      }
+    }
+    merged.set(key, {
+      ...existing,
+      message: String(existing?.message ?? "").trim() ? existing.message : entry?.message,
+      createdAtMs: Math.max(
+        Number.parseInt(existing?.createdAtMs ?? 0, 10) || 0,
+        Number.parseInt(entry?.createdAtMs ?? 0, 10) || 0,
+      ),
+      outboundDeliveryState: chosenState?.outboundDeliveryState,
+      outboundFailureKind: chosenState?.outboundFailureKind ?? null,
+      outboundRetryable: existing?.outboundRetryable === true || entry?.outboundRetryable === true,
+      statuses,
+    });
+  });
+  return [...merged.values()];
+}
+
 export function productionInviteRoomConversationMetadata(entries) {
-  const sortedEntries = (Array.isArray(entries) ? entries : []).slice().sort((left, right) =>
+  const sortedEntries = mergedInviteRoomConversationMetadataEntries(entries).sort((left, right) =>
     productionTwoProfileConversationCompare(left, right, "desc"),
   );
   const retryableOutboundEntries = sortedEntries.filter(
     (entry) =>
+      entry?.kind !== "received" &&
+      !(entry?.statuses?.has?.("received") && !entry?.statuses?.has?.("sent")) &&
       entry?.outboundRetryable === true &&
       entry?.outboundDeliveryState !== "canceled" &&
       entry?.outboundDeliveryState !== "sent",
