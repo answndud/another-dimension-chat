@@ -2025,7 +2025,15 @@ function setRoomScreen(screen) {
   updateMinimalChatMode();
 }
 
+function prepareRoomListReturnState() {
+  reconcileCurrentInviteRoomMetadataFromTranscriptEntries([...productionTwoProfileConversationEntries.values()]);
+  if (!savedRoomMetadataSyncInFlight) {
+    setSavedRoomMetadataSyncStatus("");
+  }
+}
+
 function showRoomList() {
+  prepareRoomListReturnState();
   setRoomScreen("list");
 }
 

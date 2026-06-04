@@ -61,6 +61,7 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(mainJs, /ad\.localPeer\.\$\{localDevPeer\}\.\$\{key\}/);
   assert.match(mainJs, /function showRoomList/);
   assert.match(mainJs, /function showRoomDetail/);
+  assert.match(mainJs, /function prepareRoomListReturnState/);
   assert.match(mainJs, /function renderSavedInviteRooms/);
   assert.match(mainJs, /function openSavedInviteRoom/);
   assert.match(mainJs, /function removeSavedInviteRoom/);
@@ -82,6 +83,10 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(stylesCss, /\.room-list-sync-status/);
   assert.match(stylesCss, /\.saved-room-list-item\.is-resume-recommended/);
   assert.doesNotMatch(mainJs, /restoreLastInviteRoom\(\);/);
+  assert.match(functionBody(mainJs, "showRoomList"), /prepareRoomListReturnState\(\)/);
+  assert.match(functionBody(mainJs, "prepareRoomListReturnState"), /reconcileCurrentInviteRoomMetadataFromTranscriptEntries/);
+  assert.match(functionBody(mainJs, "prepareRoomListReturnState"), /!savedRoomMetadataSyncInFlight/);
+  assert.match(functionBody(mainJs, "prepareRoomListReturnState"), /setSavedRoomMetadataSyncStatus\(""\)/);
   assert.match(mainJs, /showRoomList\(\);\s*syncSavedInviteRoomMetadataFromLocalStores\(\);/);
   assert.match(functionBody(mainJs, "savedInviteRoomMetadataFromLocalStores"), /production_message_transcript_export/);
   assert.match(functionBody(mainJs, "savedInviteRoomMetadataSyncCandidates"), /savedInviteRoomResumePriority\(right\) - savedInviteRoomResumePriority\(left\)/);
