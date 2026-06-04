@@ -935,6 +935,16 @@ test("private delivery stays explicit before network work starts", () => {
   assert.match(functionBody(mainJs, "ensurePrivateDeliveryRuntimeReady"), /production_onion_persistent_client_start/);
 });
 
+test("safety mismatch revokes the saved room verification", () => {
+  assert.match(mainJs, /function clearTwoProfileSafetyConfirmationForInput/);
+  assert.match(functionBody(mainJs, "clearTwoProfileSafetyConfirmationForInput"), /twoProfileSafetyStorageKeys\(input\)/);
+  assert.match(functionBody(mainJs, "clearTwoProfileSafetyConfirmationForInput"), /localStoreRemove\(key\)/);
+  assert.match(functionBody(mainJs, "rejectCurrentTwoProfileSafety"), /clearTwoProfileSafetyConfirmationForInput\(productionTwoProfileInput\(\)\)/);
+  assert.match(functionBody(mainJs, "rejectCurrentTwoProfileSafety"), /applyProductionActionState\(\)/);
+  assert.match(functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip"), /!twoProfileSafetyConfirmedForInput\(roomInput\)/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /!twoProfileSafetyConfirmedForInput\(input\)/);
+});
+
 test("composer and delivery-route controls stay on the chat delivery path", () => {
   assert.match(
     mainJs,

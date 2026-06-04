@@ -4005,6 +4005,17 @@ function confirmTwoProfileSafetyForInput(input = productionTwoProfileInput()) {
   return localStoreSet(key, "confirmed");
 }
 
+function clearTwoProfileSafetyConfirmationForInput(input = productionTwoProfileInput()) {
+  const keys = twoProfileSafetyStorageKeys(input);
+  if (keys.length === 0) {
+    return false;
+  }
+  for (const key of keys) {
+    localStoreRemove(key);
+  }
+  return true;
+}
+
 function confirmCurrentTwoProfileSafety() {
   const input = productionTwoProfileInput();
   if (!twoProfileSessionsReadyForInput(input)) {
@@ -4024,8 +4035,10 @@ function confirmCurrentTwoProfileSafety() {
 }
 
 function rejectCurrentTwoProfileSafety() {
+  clearTwoProfileSafetyConfirmationForInput(productionTwoProfileInput());
   setProductionTwoProfileState("Verification mismatch");
   setText(fields.productionTwoProfileWarning, t("phraseMismatchWarning"));
+  applyProductionActionState();
   openChatSettingsPanel(fields.productionTwoProfileB);
 }
 
