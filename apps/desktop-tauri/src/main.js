@@ -8515,7 +8515,8 @@ function productionPairingEndpointStillCurrent(rendezvousEndpoint) {
 }
 
 function pairingSafetyFingerprint(input = productionPairingInput()) {
-  return `${input.localPayload}\n${input.remotePayload}`;
+  const profile = String(input.profile ?? "").trim().toLowerCase();
+  return `${profile}\n${input.passphrase || ""}\n${input.localPayload}\n${input.remotePayload}`;
 }
 
 function currentPairingSafetyVerified(input = productionPairingInput()) {
@@ -9341,7 +9342,12 @@ async function prepareProductionTwoProfileOnionPairing() {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
-    applyProductionPairingSafetyPreviewResult(safety, profileAResult.pairing.pairing_payload, profileBResult.pairing.pairing_payload);
+    applyProductionPairingSafetyPreviewResult(safety, {
+      profile: profileA,
+      passphrase,
+      localPayload: profileAResult.pairing.pairing_payload,
+      remotePayload: profileBResult.pairing.pairing_payload,
+    });
     setProductionTwoProfileState("Onion pairing safety ready");
     setText(
       fields.productionTwoProfileWarning,
@@ -9398,7 +9404,15 @@ async function saveProductionTwoProfileOnionSessions() {
     setText(fields.productionTwoProfileWarning, "Prepare onion pairing payloads before saving sessions.");
     return;
   }
-  if (!currentPairingSafetyVerified({ localPayload, remotePayload, safetyConfirmed: true })) {
+  if (
+    !currentPairingSafetyVerified({
+      profile: profileA,
+      passphrase,
+      localPayload,
+      remotePayload,
+      safetyConfirmed: true,
+    })
+  ) {
     setProductionTwoProfileState("Onion session save needs safety");
     setText(fields.productionTwoProfileWarning, "Verify the safety number before saving Alice/Bob onion sessions.");
     return;
@@ -12277,9 +12291,9 @@ async function saveProductionSessionDraft() {
   }
 }
 
-function applyProductionPairingSafetyPreviewResult(result, localPayload, remotePayload) {
+function applyProductionPairingSafetyPreviewResult(result, input) {
   latestProductionPairingSafety = {
-    fingerprint: pairingSafetyFingerprint({ localPayload, remotePayload }),
+    fingerprint: pairingSafetyFingerprint(input),
     safetyNumber: result.safety_number,
     safetyPhrase: result.safety_phrase,
   };
@@ -12313,12 +12327,12 @@ async function checkProductionPairingSafety() {
       localPayload: input.localPayload,
       remotePayload: input.remotePayload,
     });
-    if (!productionPairingInputStillCurrent(input, ["localPayload", "remotePayload"])) {
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "localPayload", "remotePayload"])) {
       return;
     }
-    applyProductionPairingSafetyPreviewResult(result, input.localPayload, input.remotePayload);
+    applyProductionPairingSafetyPreviewResult(result, input);
   } catch (error) {
-    if (!productionPairingInputStillCurrent(input, ["localPayload", "remotePayload"])) {
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "localPayload", "remotePayload"])) {
       return;
     }
     setProductionPairingState("Safety check failed");
