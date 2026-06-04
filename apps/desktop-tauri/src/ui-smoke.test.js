@@ -225,6 +225,9 @@ test("receive restart intent owns the room primary action", () => {
   assert.match(actionBody, /intent\.action === "start-receiving"/);
   assert.match(actionBody, /await startProductionTwoProfileOnionReceive\(\)/);
   assert.match(actionBody, /input\.message \? "send-draft" : "receive"/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /latestChatDeliveryNoticeKey === "receiveStartFailed"/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /action\.textContent = t\("startReceiving"\)/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /action\.addEventListener\("click", startProductionTwoProfileOnionReceive\)/);
   assert.match(functionBody(mainJs, "applyProductionActionState"), /composerPrimaryAvailableWithoutDraft/);
   assert.match(i18nJs, /receiveIntentRestartReady/);
   assert.match(i18nJs, /chatNoticeReceiveRestart/);
