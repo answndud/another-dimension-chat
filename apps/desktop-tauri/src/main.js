@@ -403,6 +403,8 @@ const fields = {
   chatDeliveryNotice: document.querySelector("#chat-delivery-notice"),
   fieldTestReport: document.querySelector("#field-test-report"),
   fieldTestReportSummary: document.querySelector("#field-test-report-summary"),
+  peerFieldTestReport: document.querySelector("#peer-field-test-report"),
+  fieldTestReportCompare: document.querySelector("#field-test-report-compare"),
   refreshFieldTestReport: document.querySelector("#refresh-field-test-report"),
   copyFieldTestReport: document.querySelector("#copy-field-test-report"),
   productionTwoProfileTranscriptExport: document.querySelector("#production-two-profile-transcript-export"),
@@ -3247,6 +3249,53 @@ function fieldTestReportSummary(report) {
   return `summary ${room} ${safety} ${route} ${receive} next=${fieldTestReportValue(nextAction, "none")} blocker=${fieldTestReportValue(blocker, "none")}`;
 }
 
+function fieldTestReportTriageState(report) {
+  const parsed = parseFieldTestReport(report);
+  return {
+    room: parsed.room_present === "true" ? "room" : "no-room",
+    safety: parsed.safety_confirmed === "true" ? "verified" : "unverified",
+    route: parsed.route_stale === "true"
+      ? "route-stale"
+      : parsed.route_ready === "true"
+        ? "route-ready"
+        : "route-missing",
+    receive: parsed.receive_enabled === "true"
+      ? `receive-${fieldTestReportValue(parsed.receive_state, "unknown")}`
+      : "receive-off",
+    next:
+      parsed.room_list_next_action && parsed.room_list_next_action !== "none"
+        ? parsed.room_list_next_action
+        : parsed.outbound_recovery_action && parsed.outbound_recovery_action !== "none"
+          ? parsed.outbound_recovery_action
+          : parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none"
+            ? parsed.real_onion_recovery_action
+            : "none",
+    blocker:
+      parsed.real_onion_next_blocker && parsed.real_onion_next_blocker !== "none"
+        ? parsed.real_onion_next_blocker
+        : parsed.receive_failure_kind && parsed.receive_failure_kind !== "none"
+          ? parsed.receive_failure_kind
+          : parsed.outbound_failure_class && parsed.outbound_failure_class !== "none"
+            ? parsed.outbound_failure_class
+            : "none",
+  };
+}
+
+function fieldTestReportComparison(localReport, peerReport) {
+  if (!String(peerReport ?? "").trim()) {
+    return "";
+  }
+  const local = fieldTestReportTriageState(localReport);
+  const peer = fieldTestReportTriageState(peerReport);
+  const mismatches = [];
+  for (const key of ["room", "safety", "route", "receive", "next", "blocker"]) {
+    if (local[key] !== peer[key]) {
+      mismatches.push(`${key}:${fieldTestReportValue(local[key], "none")}!=${fieldTestReportValue(peer[key], "none")}`);
+    }
+  }
+  return mismatches.length > 0 ? `compare ${mismatches.join(" ")}` : "compare reports-aligned";
+}
+
 function renderFieldTestReportSummary(report) {
   if (!fields.fieldTestReportSummary) {
     return "";
@@ -3254,6 +3303,16 @@ function renderFieldTestReportSummary(report) {
   const summary = fieldTestReportSummary(report);
   fields.fieldTestReportSummary.textContent = summary;
   return summary;
+}
+
+function renderFieldTestReportComparison() {
+  if (!fields.fieldTestReportCompare) {
+    return "";
+  }
+  const comparison = fieldTestReportComparison(fields.fieldTestReport?.value ?? "", fields.peerFieldTestReport?.value ?? "");
+  fields.fieldTestReportCompare.textContent = comparison;
+  fields.fieldTestReportCompare.hidden = !comparison;
+  return comparison;
 }
 
 function latestRealOnionFieldTestResult(input = productionTwoProfileInput()) {
@@ -3444,6 +3503,7 @@ function refreshFieldTestReport() {
   const report = buildFieldTestReport();
   fields.fieldTestReport.value = report;
   renderFieldTestReportSummary(report);
+  renderFieldTestReportComparison();
   return report;
 }
 
@@ -14790,6 +14850,10 @@ if (fields.refreshFieldTestReport) {
 
 if (fields.copyFieldTestReport) {
   fields.copyFieldTestReport.addEventListener("click", copyFieldTestReport);
+}
+
+if (fields.peerFieldTestReport) {
+  fields.peerFieldTestReport.addEventListener("input", renderFieldTestReportComparison);
 }
 
 if (fields.replyLatestTwoProfileMessage) {

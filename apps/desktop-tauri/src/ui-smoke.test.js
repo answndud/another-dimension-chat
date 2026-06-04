@@ -792,6 +792,8 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   for (const id of [
     "field-test-report",
     "field-test-report-summary",
+    "peer-field-test-report",
+    "field-test-report-compare",
     "refresh-field-test-report",
     "copy-field-test-report",
     "cancel-production-two-profile-real-onion-wait",
@@ -801,23 +803,34 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(mainJs, /function buildFieldTestReport/);
   assert.match(mainJs, /function parseFieldTestReport/);
   assert.match(mainJs, /function fieldTestReportSummary/);
+  assert.match(mainJs, /function fieldTestReportTriageState/);
+  assert.match(mainJs, /function fieldTestReportComparison/);
   assert.match(mainJs, /function renderFieldTestReportSummary/);
+  assert.match(mainJs, /function renderFieldTestReportComparison/);
   assert.match(mainJs, /function copyFieldTestReport/);
   assert.match(mainJs, /function productionTwoProfileRealOnionSyntheticFailureResult/);
   assert.match(stylesCss, /\.field-test-report-panel/);
   assert.match(stylesCss, /\.field-test-report-summary/);
+  assert.match(stylesCss, /\.peer-field-test-report/);
   assert.match(i18nJs, /fieldTestReport/);
   assert.match(i18nJs, /현장 테스트 리포트/);
 
   const reportBody = functionBody(mainJs, "buildFieldTestReport");
   const summaryBody = functionBody(mainJs, "fieldTestReportSummary");
+  const compareBody = functionBody(mainJs, "fieldTestReportComparison");
   assert.match(summaryBody, /parseFieldTestReport\(report\)/);
+  assert.match(compareBody, /fieldTestReportTriageState\(localReport\)/);
+  assert.match(compareBody, /fieldTestReportTriageState\(peerReport\)/);
+  assert.match(compareBody, /mismatches\.push/);
+  assert.match(compareBody, /reports-aligned/);
   assert.match(summaryBody, /room_list_next_action/);
   assert.match(summaryBody, /outbound_recovery_action/);
   assert.match(summaryBody, /real_onion_recovery_action/);
   assert.match(summaryBody, /real_onion_next_blocker/);
   assert.match(summaryBody, /receive_failure_kind/);
   assert.match(functionBody(mainJs, "refreshFieldTestReport"), /renderFieldTestReportSummary\(report\)/);
+  assert.match(functionBody(mainJs, "refreshFieldTestReport"), /renderFieldTestReportComparison\(\)/);
+  assert.match(mainJs, /fields\.peerFieldTestReport\.addEventListener\("input", renderFieldTestReportComparison\)/);
   assert.match(reportBody, /route_ready=/);
   assert.match(reportBody, /receive_state=/);
   assert.match(reportBody, /retryable_outbound_present=/);
@@ -857,6 +870,8 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.doesNotMatch(reportBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
   assert.doesNotMatch(summaryBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
   assert.doesNotMatch(summaryBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
+  assert.doesNotMatch(compareBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
+  assert.doesNotMatch(compareBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
   assert.doesNotMatch(reportBody, /room_list_code|currentRoomCode=/);
 });
 
