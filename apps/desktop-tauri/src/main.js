@@ -3864,8 +3864,8 @@ async function saveInviteRoomOutboundMessage(input = productionTwoProfileInput()
     ttlSeconds: result.message_ttl_seconds,
     outboundDeliveryState: "pending",
     outboundRetryable: true,
-  });
-  selectTwoProfileConversationMessage(profileA, profileB, messageNumber, messageText);
+  }, input);
+  selectTwoProfileConversationMessage(profileA, profileB, messageNumber, messageText, { input });
   if (fields.productionTwoProfileMessage) {
     fields.productionTwoProfileMessage.value = "";
     renderProductionTwoProfileDirection(productionTwoProfileInput());
@@ -4806,6 +4806,7 @@ function appendProductionTwoProfileConversationStatus(
   messageNumber,
   message,
   retention = {},
+  input = productionTwoProfileInput(),
 ) {
   const normalizedKind = kind === "received" ? "received" : "sent";
   const owner = String(ownerProfile ?? "").trim().toLowerCase() || "unknown";
@@ -4817,7 +4818,7 @@ function appendProductionTwoProfileConversationStatus(
   }
 
   const entry = {
-    roomFingerprint: twoProfileSessionStatusFingerprint(productionTwoProfileInput()),
+    roomFingerprint: twoProfileSessionStatusFingerprint(input),
     sender: normalizedKind === "sent" ? owner : counterpart,
     receiver: normalizedKind === "sent" ? counterpart : owner,
     messageNumber: normalizedNumber,
@@ -5262,7 +5263,7 @@ function selectTwoProfileConversationMessage(sender, receiver, messageNumber, me
     return null;
   }
   const entry = {
-    roomFingerprint: twoProfileSessionStatusFingerprint(productionTwoProfileInput()),
+    roomFingerprint: twoProfileSessionStatusFingerprint(options.input ?? productionTwoProfileInput()),
     sender,
     receiver,
     messageNumber: normalizedNumber,
@@ -5453,7 +5454,7 @@ function clearStaleTwoProfileConversationSelection() {
   return true;
 }
 
-function renderProductionTwoProfileTranscriptEntries(entries) {
+function renderProductionTwoProfileTranscriptEntries(entries, input = productionTwoProfileInput()) {
   resetProductionTwoProfileTranscript({ preserveSelection: true });
   const orderedEntries = [...(entries ?? [])].sort((left, right) =>
     productionTwoProfileConversationCompare(
@@ -5487,6 +5488,7 @@ function renderProductionTwoProfileTranscriptEntries(entries) {
         outboundFailureKind: entry.outboundFailureKind,
         outboundRetryable: entry.outboundRetryable,
       },
+      input,
     );
   }
   clearStaleTwoProfileConversationSelection();
@@ -7208,7 +7210,7 @@ function selectReplyAfterSentMessageResult(result, fallbackInput, message, label
   const sender = String(result?.sender_profile ?? fallbackInput?.profileA ?? "").trim().toLowerCase();
   const receiver = String(result?.receiver_profile ?? fallbackInput?.profileB ?? "").trim().toLowerCase();
   const messageNumber = Number.parseInt(result?.message_number, 10);
-  const sentMessage = selectTwoProfileConversationMessage(sender, receiver, messageNumber, message);
+  const sentMessage = selectTwoProfileConversationMessage(sender, receiver, messageNumber, message, { input: fallbackInput });
   if (!selectReplyAfterDeliveredReview(sentMessage)) {
     selectTwoProfileReplyDirection(fallbackInput);
   }
@@ -8552,7 +8554,7 @@ function renderProductionTwoProfileMessageResult(result) {
       fingerprint: twoProfileInputFingerprint(input),
     };
     renderProductionTwoProfileMemory(input);
-    applyStoredSessionMessageResultToManualFlow(result, input.message);
+    applyStoredSessionMessageResultToManualFlow(result, input.message, input);
     if (fields.productionTwoProfileMessage) {
       fields.productionTwoProfileMessage.value = "";
       renderProductionTwoProfileDirection(productionTwoProfileInput());
@@ -8562,7 +8564,7 @@ function renderProductionTwoProfileMessageResult(result) {
   return view;
 }
 
-function applyStoredSessionMessageResultToManualFlow(result, message) {
+function applyStoredSessionMessageResultToManualFlow(result, message, input = productionTwoProfileInput()) {
   const sender = String(result.sender_profile ?? "").trim().toLowerCase();
   const receiver = String(result.receiver_profile ?? "").trim().toLowerCase();
   const messageNumber = Number.parseInt(result.message_number, 10);
@@ -8584,9 +8586,9 @@ function applyStoredSessionMessageResultToManualFlow(result, message) {
     const retentionMetadata = { ttlSeconds: result.message_ttl_seconds };
     appendProductionTranscriptEntry("sent", sender, messageNumber, text, retentionMetadata);
     appendProductionTranscriptEntry("received", receiver, messageNumber, text, retentionMetadata);
-    appendProductionTwoProfileConversationStatus("sent", sender, receiver, messageNumber, text);
-    appendProductionTwoProfileConversationStatus("received", receiver, sender, messageNumber, text);
-    selectTwoProfileConversationMessage(sender, receiver, messageNumber, text);
+    appendProductionTwoProfileConversationStatus("sent", sender, receiver, messageNumber, text, {}, input);
+    appendProductionTwoProfileConversationStatus("received", receiver, sender, messageNumber, text, {}, input);
+    selectTwoProfileConversationMessage(sender, receiver, messageNumber, text, { input });
   }
   latestProductionMessageImport = null;
   if (fields.productionReceivedMessage) {
@@ -12705,7 +12707,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
         profileBResult,
       );
     }
-    const staleMessageEnvelopeSlotsPruned = renderProductionTwoProfileTranscriptEntries(entries);
+    const staleMessageEnvelopeSlotsPruned = renderProductionTwoProfileTranscriptEntries(entries, transcriptInput);
     reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries);
     clearStaleSendRecoveryNotice(transcriptInput);
     const resumeWarning = appendStaleMessageEnvelopeSlotsPruned(
@@ -12895,6 +12897,7 @@ function syncTwoProfileConversationAfterManualExport(
     exportedNumber,
     text,
     { ttlSeconds: messageTtlSeconds },
+    input,
   );
   setProductionTwoProfileState("Conversation updated after export");
   const refreshedEntry = selectedTwoProfileConversationEntry();
@@ -12957,6 +12960,8 @@ function syncTwoProfileConversationAfterReceivedExport(
     counterpart,
     normalizedNumber,
     text,
+    {},
+    input,
   );
   const refreshedEntry = selectedTwoProfileConversationEntry();
   if (twoProfileConversationReplyable(refreshedEntry)) {
