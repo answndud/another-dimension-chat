@@ -2283,6 +2283,9 @@ function forgetInviteRoom(code) {
     };
     rememberReceiveIntentForRoom(roomInput, false);
     clearPrivateRouteFollowupForRoom(roomInput);
+    for (const key of twoProfileSafetyStorageKeys(roomInput)) {
+      localStoreRemove(key);
+    }
     for (const roomKey of privateRouteRoomKeys(roomInput)) {
       localPrivateRouteCodesByRoom.delete(roomKey);
       activeLocalPrivateRouteCodesByRoom.delete(roomKey);
@@ -3932,6 +3935,18 @@ function twoProfileSafetyStorageKey(input = productionTwoProfileInput()) {
   return `ad.chatSafetyConfirmed.v1.${encodeURIComponent(fingerprint)}`;
 }
 
+function legacyTwoProfileSafetyStorageKey(input = productionTwoProfileInput()) {
+  const fingerprint = legacyTwoProfileSessionStatusFingerprint(input);
+  if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
+    return null;
+  }
+  return `ad.chatSafetyConfirmed.v1.${encodeURIComponent(fingerprint)}`;
+}
+
+function twoProfileSafetyStorageKeys(input = productionTwoProfileInput()) {
+  return [...new Set([twoProfileSafetyStorageKey(input), legacyTwoProfileSafetyStorageKey(input)].filter(Boolean))];
+}
+
 function rememberTwoProfileSafety(input, result) {
   if (!result?.safety_phrase && !result?.safety_number) {
     return;
@@ -3958,7 +3973,15 @@ function twoProfileSafetyConfirmedForInput(input = productionTwoProfileInput()) 
   if (!key) {
     return false;
   }
-  return localStoreGet(key) === "confirmed";
+  if (localStoreGet(key) === "confirmed") {
+    return true;
+  }
+  const legacyKey = legacyTwoProfileSafetyStorageKey(input);
+  if (legacyKey && legacyKey !== key && localStoreGet(legacyKey) === "confirmed") {
+    localStoreSet(key, "confirmed");
+    return true;
+  }
+  return false;
 }
 
 function confirmTwoProfileSafetyForInput(input = productionTwoProfileInput()) {
