@@ -2234,7 +2234,10 @@ function forgetInviteRoom(code) {
   }
   for (const role of ["inviter", "joiner"]) {
     const { localProfile, peerProfile } = productionInviteCodeProfiles(trimmedCode, role);
-    const roomKey = privateRouteRoomKey({ profileA: localProfile, profileB: peerProfile });
+    const roomInput = { profileA: localProfile, profileB: peerProfile, passphrase: trimmedCode };
+    const roomKey = privateRouteRoomKey(roomInput);
+    rememberReceiveIntentForRoom(roomInput, false);
+    clearPrivateRouteFollowupForRoom(roomInput);
     localPrivateRouteCodesByRoom.delete(roomKey);
     activeLocalPrivateRouteCodesByRoom.delete(roomKey);
     peerPrivateRouteDraftsByRoom.delete(roomKey);
@@ -2633,6 +2636,7 @@ function removeSavedInviteRoom(room) {
   if (!window.confirm(t("removeRoomConfirm"))) {
     return false;
   }
+  stopProductionTwoProfileOnionReceiveForInput(savedInviteRoomInput(room), { silent: true });
   forgetInviteRoom(code);
   if (code === currentInviteRoomCode()) {
     clearCurrentInviteRoomInput();
@@ -5349,6 +5353,14 @@ function privateRouteFollowupMatchesRoom(input = productionTwoProfileInput()) {
     pendingPrivateRouteFollowup &&
       pendingPrivateRouteFollowup.roomFingerprint === twoProfileAutoResumeFingerprint(input),
   );
+}
+
+function clearPrivateRouteFollowupForRoom(input = productionTwoProfileInput()) {
+  if (privateRouteFollowupMatchesRoom(input)) {
+    clearPrivateRouteFollowup();
+    return true;
+  }
+  return false;
 }
 
 async function continueAfterPeerPrivateRouteSaved(input = productionTwoProfileInput()) {
@@ -10650,6 +10662,7 @@ async function startProductionTwoProfileOnionReceive() {
     stopRequested: false,
     runtimeState: "receiving",
     runtimeLabel: "Listening for new messages",
+    silentStop: false,
     lastProcessedImportSequence: 0,
     lastProcessedMessageImportCount: 0,
     lastProcessedEndpointUpdateCount: 0,
@@ -10886,6 +10899,7 @@ function markProductionTwoProfileOnionReceiveStopped(backendLoop = null) {
     stopRequested: false,
     runtimeState: "stopped",
     runtimeLabel: "Message listening stopped",
+    silentStop: false,
     lastProcessedImportSequence: productionTwoProfileOnionReceiveMode.lastProcessedImportSequence,
     lastProcessedMessageImportCount: productionTwoProfileOnionReceiveMode.lastProcessedMessageImportCount,
     lastProcessedEndpointUpdateCount: productionTwoProfileOnionReceiveMode.lastProcessedEndpointUpdateCount,
@@ -10897,18 +10911,23 @@ function markProductionTwoProfileOnionReceiveStopped(backendLoop = null) {
 }
 
 async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
+  const silent = productionTwoProfileOnionReceiveMode.silentStop === true;
   try {
     const backendLoop = await invoke("production_onion_receive_loop_status");
-    setText(fields.productionTwoProfileBoundary, productionTwoProfileOnionReceiveBackendBoundary(backendLoop));
-    setText(
-      fields.productionTwoProfileMessageState,
-      backendLoop.stop_confirmed ? t("receiveStopped") : t("receiveStopping"),
-    );
+    if (!silent) {
+      setText(fields.productionTwoProfileBoundary, productionTwoProfileOnionReceiveBackendBoundary(backendLoop));
+      setText(
+        fields.productionTwoProfileMessageState,
+        backendLoop.stop_confirmed ? t("receiveStopped") : t("receiveStopping"),
+      );
+    }
     if (!backendLoop.stop_confirmed) {
       scheduleProductionTwoProfileOnionReceiveStopConfirmation();
     } else {
       markProductionTwoProfileOnionReceiveStopped(backendLoop);
-      setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
+      if (!silent) {
+        setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
+      }
     }
   } catch (error) {
     productionTwoProfileOnionReceiveMode = {
@@ -10917,23 +10936,29 @@ async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
       runtimeState: "failed-retryable",
       runtimeLabel: "Message listening stop failed",
     };
-    setText(fields.productionTwoProfileBoundary, `Backend receive loop stop confirmation failed without returning secrets. ${error}`);
+    if (!silent) {
+      setText(fields.productionTwoProfileBoundary, `Backend receive loop stop confirmation failed without returning secrets. ${error}`);
+    }
   } finally {
     applyProductionActionState();
   }
 }
 
-function stopProductionTwoProfileOnionReceive() {
-  const input = productionTwoProfileInput();
-  if (!productionTwoProfileReceiveMatchesInput(input)) {
-    setProductionTwoProfileState("Message listening active in another room");
-    setText(fields.productionTwoProfileWarning, t("receiveOtherRoomActive"));
-    setChatDeliveryNoticeByKey("receiveOtherRoomActive", "warning");
-    applyProductionActionState();
+function stopProductionTwoProfileOnionReceiveForInput(input, options) {
+  const targetInput = input ?? productionTwoProfileInput();
+  const stopOptions = options ?? {};
+  const silent = stopOptions.silent === true;
+  if (!productionTwoProfileReceiveMatchesInput(targetInput)) {
+    if (!silent) {
+      setProductionTwoProfileState("Message listening active in another room");
+      setText(fields.productionTwoProfileWarning, t("receiveOtherRoomActive"));
+      setChatDeliveryNoticeByKey("receiveOtherRoomActive", "warning");
+      applyProductionActionState();
+    }
     return;
   }
   const profile = productionTwoProfileOnionReceiveMode.profile;
-  rememberReceiveIntentForRoom(input, false);
+  rememberReceiveIntentForRoom(targetInput, false);
   clearProductionTwoProfileOnionReceiveTimer();
   productionTwoProfileOnionReceiveMode = {
     ...productionTwoProfileOnionReceiveMode,
@@ -10944,25 +10969,32 @@ function stopProductionTwoProfileOnionReceive() {
     stopRequested: true,
     runtimeState: "stopped",
     runtimeLabel: "Message listening stopping",
+    silentStop: silent,
   };
   setProductionTwoProfileOnionReceiveRuntimeState("stopped");
   updateLocalPrivateRouteCodeUi(productionTwoProfileInput());
-  setText(fields.productionTwoProfileWarning, profile ? t("receiveStopPending") : t("receiveStopped"));
-  setText(fields.productionTwoProfileMessageState, t("receiveStopping"));
+  if (!silent) {
+    setText(fields.productionTwoProfileWarning, profile ? t("receiveStopPending") : t("receiveStopped"));
+    setText(fields.productionTwoProfileMessageState, t("receiveStopping"));
+  }
   applyProductionActionState();
   renderSavedInviteRooms();
   invoke("production_onion_receive_loop_stop")
     .then((backendLoop) => {
-      setText(
-        fields.productionTwoProfileBoundary,
-        productionTwoProfileOnionReceiveBackendBoundary(backendLoop),
-      );
+      if (!silent) {
+        setText(
+          fields.productionTwoProfileBoundary,
+          productionTwoProfileOnionReceiveBackendBoundary(backendLoop),
+        );
+      }
       if (!backendLoop.stop_confirmed) {
         scheduleProductionTwoProfileOnionReceiveStopConfirmation();
       } else {
         markProductionTwoProfileOnionReceiveStopped(backendLoop);
-        setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
-        setText(fields.productionTwoProfileWarning, t("receiveStopped"));
+        if (!silent) {
+          setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
+          setText(fields.productionTwoProfileWarning, t("receiveStopped"));
+        }
         renderSavedInviteRooms();
       }
     })
@@ -10973,11 +11005,18 @@ function stopProductionTwoProfileOnionReceive() {
         runtimeState: "failed-retryable",
         runtimeLabel: "Message listening stop failed",
       };
-      setText(fields.productionTwoProfileWarning, t("receiveStopFailed"));
-      setText(fields.productionTwoProfileBoundary, `Backend receive loop stop failed without returning secrets. ${error}`);
+      if (!silent) {
+        setText(fields.productionTwoProfileWarning, t("receiveStopFailed"));
+        setText(fields.productionTwoProfileBoundary, `Backend receive loop stop failed without returning secrets. ${error}`);
+      }
       applyProductionActionState();
       renderSavedInviteRooms();
     });
+  return true;
+}
+
+function stopProductionTwoProfileOnionReceive() {
+  stopProductionTwoProfileOnionReceiveForInput(productionTwoProfileInput());
 }
 
 async function runProductionTwoProfileRoundtrip() {
