@@ -411,6 +411,32 @@ test("manual message envelope slots require the active pending message", () => {
   assert.match(functionBody(mainJs, "applyProductionActionState"), /activeMessageEnvelopeSlotReady\(activeProductionProfileName\(\)\)/);
 });
 
+test("manual setup payload slots are scoped to the active room", () => {
+  assert.match(mainJs, /function currentManualPayloadSlotRoomFingerprint/);
+  assert.match(functionBody(mainJs, "currentManualPayloadSlotRoomFingerprint"), /twoProfileSessionStatusFingerprint\(input\)/);
+  assert.match(functionBody(mainJs, "productionPayloadSlotKey"), /normalizedProfile && normalizedRoom/);
+  assert.match(functionBody(mainJs, "productionPayloadSlotMatchesRoom"), /slot\.roomFingerprint/);
+  assert.match(functionBody(mainJs, "storeProductionPayloadSlotRecord"), /productionPayloadSlotKey\(slot\.profile, slot\.roomFingerprint\)/);
+
+  const storeBody = functionBody(mainJs, "storeProductionPayloadSlot");
+  assert.match(storeBody, /storeProductionPayloadSlotRecord\(kind, profile, value\)/);
+  assert.doesNotMatch(storeBody, /productionPayloadSlots\[kind\]\.set\(profile, value\)/);
+
+  const loadBody = functionBody(mainJs, "loadProductionPayloadSlot");
+  assert.match(loadBody, /productionPayloadSlotValue\(kind, counterpart\)/);
+  assert.doesNotMatch(loadBody, /productionPayloadSlots\[kind\]\.get\(counterpart\)/);
+
+  const relayBody = functionBody(mainJs, "relayProductionPayloadSlotToPeer");
+  assert.match(relayBody, /storeProductionPayloadSlotRecord\(kind, profile, value\)/);
+  assert.doesNotMatch(relayBody, /productionPayloadSlots\[kind\]\.set\(profile, value\)/);
+
+  const actionStateBody = functionBody(mainJs, "applyProductionActionState");
+  assert.match(actionStateBody, /productionPayloadSlotReady\("pairing", counterpartProfile\)/);
+  assert.match(actionStateBody, /productionPayloadSlotReady\("handshakeInit", counterpartProfile\)/);
+  assert.match(actionStateBody, /productionPayloadSlotReady\("handshakeReply", counterpartProfile\)/);
+  assert.match(actionStateBody, /productionPayloadSlotReady\("handshakeFinish", counterpartProfile\)/);
+});
+
 test("pairing and handshake actions ignore stale setup inputs", () => {
   assert.match(mainJs, /function productionPairingInputStillCurrent/);
   assert.match(functionBody(mainJs, "productionPairingInputStillCurrent"), /fieldsToCompare\.every/);

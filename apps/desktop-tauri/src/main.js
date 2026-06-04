@@ -5454,24 +5454,24 @@ function renderManualStatus() {
   const counterpart = productionCounterpartProfile(profile);
   const slotState = {
     pairing: {
-      local: productionPayloadSlots.pairing.has(profile),
-      remote: Boolean(counterpart && productionPayloadSlots.pairing.has(counterpart)),
+      local: productionPayloadSlotReady("pairing", profile),
+      remote: productionPayloadSlotReady("pairing", counterpart),
     },
     handshakeInit: {
-      local: productionPayloadSlots.handshakeInit.has(profile),
-      remote: Boolean(counterpart && productionPayloadSlots.handshakeInit.has(counterpart)),
+      local: productionPayloadSlotReady("handshakeInit", profile),
+      remote: productionPayloadSlotReady("handshakeInit", counterpart),
     },
     handshakeReply: {
-      local: productionPayloadSlots.handshakeReply.has(profile),
-      remote: Boolean(counterpart && productionPayloadSlots.handshakeReply.has(counterpart)),
+      local: productionPayloadSlotReady("handshakeReply", profile),
+      remote: productionPayloadSlotReady("handshakeReply", counterpart),
     },
     handshakeFinish: {
-      local: productionPayloadSlots.handshakeFinish.has(profile),
-      remote: Boolean(counterpart && productionPayloadSlots.handshakeFinish.has(counterpart)),
+      local: productionPayloadSlotReady("handshakeFinish", profile),
+      remote: productionPayloadSlotReady("handshakeFinish", counterpart),
     },
     messageEnvelope: {
       local: productionPayloadSlots.messageEnvelope.has(profile),
-      remote: Boolean(counterpart && productionPayloadSlots.messageEnvelope.has(counterpart)),
+      remote: activeMessageEnvelopeSlotReady(profile),
     },
   };
   const view = productionManualStatusView({ profile }, slotState);
@@ -5484,6 +5484,67 @@ function renderManualStatus() {
 
 function twoProfileInputFingerprint(input) {
   return `${input.profileA}\n${input.profileB}\n${input.messageTtlSeconds}\n${input.message}`;
+}
+
+function currentManualPayloadSlotRoomFingerprint() {
+  const input = productionTwoProfileInput();
+  if (!input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
+    return "";
+  }
+  return twoProfileSessionStatusFingerprint(input);
+}
+
+function productionPayloadSlotKey(profile, roomFingerprint = currentManualPayloadSlotRoomFingerprint()) {
+  const normalizedProfile = String(profile ?? "").trim().toLowerCase();
+  const normalizedRoom = String(roomFingerprint ?? "").trim();
+  return normalizedProfile && normalizedRoom ? `${normalizedProfile}\n${normalizedRoom}` : "";
+}
+
+function productionPayloadSlotPayload(slot) {
+  return typeof slot === "string" ? slot : String(slot?.payload ?? "").trim();
+}
+
+function productionPayloadSlotMatchesRoom(slot, profile, roomFingerprint = currentManualPayloadSlotRoomFingerprint()) {
+  if (!slot || typeof slot === "string") {
+    return false;
+  }
+  return (
+    String(slot.profile ?? "").trim().toLowerCase() === String(profile ?? "").trim().toLowerCase() &&
+    String(slot.roomFingerprint ?? "").trim() === String(roomFingerprint ?? "").trim()
+  );
+}
+
+function createProductionPayloadSlot(profile, payload) {
+  const normalizedProfile = String(profile ?? "").trim().toLowerCase();
+  const value = String(payload ?? "").trim();
+  const roomFingerprint = currentManualPayloadSlotRoomFingerprint();
+  if (!normalizedProfile || !value || !roomFingerprint) {
+    return null;
+  }
+  return { profile: normalizedProfile, roomFingerprint, payload: value };
+}
+
+function storeProductionPayloadSlotRecord(kind, profile, payload) {
+  const slot = createProductionPayloadSlot(profile, payload);
+  if (!slot) {
+    return false;
+  }
+  productionPayloadSlots[kind].set(productionPayloadSlotKey(slot.profile, slot.roomFingerprint), slot);
+  return true;
+}
+
+function productionPayloadSlotRecord(kind, profile) {
+  const key = productionPayloadSlotKey(profile);
+  const slot = key ? productionPayloadSlots[kind]?.get(key) : null;
+  return productionPayloadSlotMatchesRoom(slot, profile) ? slot : null;
+}
+
+function productionPayloadSlotValue(kind, profile) {
+  return productionPayloadSlotPayload(productionPayloadSlotRecord(kind, profile));
+}
+
+function productionPayloadSlotReady(kind, profile) {
+  return Boolean(productionPayloadSlotValue(kind, profile));
 }
 
 function rememberPrivateRouteFollowup(action, input = productionTwoProfileInput()) {
@@ -6305,7 +6366,11 @@ function storeProductionPayloadSlot(kind, sourceField, label) {
     setText(fields.productionPairingWarning, `Export ${payloadLabel(label)} before storing a local payload slot.`);
     return;
   }
-  productionPayloadSlots[kind].set(profile, value);
+  if (!storeProductionPayloadSlotRecord(kind, profile, value)) {
+    setProductionPairingState(`${label} store needs active room`);
+    setText(fields.productionPairingWarning, `Open the active room before storing a local ${payloadLabel(label)} slot.`);
+    return;
+  }
   setProductionPairingState(`${label} stored`);
   setText(fields.productionPairingWarning, `Stored local ${payloadLabel(label)} slot for ${profile}.`);
   applyProductionActionState();
@@ -6314,7 +6379,7 @@ function storeProductionPayloadSlot(kind, sourceField, label) {
 function loadProductionPayloadSlot(kind, targetField, label) {
   const profile = activeProductionProfileName();
   const counterpart = productionCounterpartProfile(profile);
-  const value = counterpart ? productionPayloadSlots[kind].get(counterpart) : null;
+  const value = productionPayloadSlotValue(kind, counterpart);
   if (!value || !targetField) {
     setProductionPairingState(`Remote ${payloadLabel(label)} slot empty`);
     setText(fields.productionPairingWarning, manualMissingCounterpartWarning(profile, counterpart, label));
@@ -6338,7 +6403,11 @@ function relayProductionPayloadSlotToPeer(kind, sourceField, targetField, label)
     );
     return;
   }
-  productionPayloadSlots[kind].set(profile, value);
+  if (!storeProductionPayloadSlotRecord(kind, profile, value)) {
+    setProductionPairingState(`${label} relay needs active room`);
+    setText(fields.productionPairingWarning, `Open the active room before relaying a local ${payloadLabel(label)}.`);
+    return;
+  }
   if (!selectProductionProfileForManualRelay(counterpart)) {
     setProductionPairingState(`${label} relay needs supported peer`);
     setText(fields.productionPairingWarning, "Relay supports the local Alice/Bob manual pair only.");
@@ -7057,21 +7126,13 @@ function applyProductionActionState() {
   const hasLocalPairingPayload = Boolean(fields.productionPairingPayload?.value.trim());
   const hasRemotePairingInput = Boolean(pairing.remotePayload);
   const counterpartProfile = productionCounterpartProfile(activeProductionProfileName());
-  const hasRemotePairingSlot = Boolean(
-    counterpartProfile && productionPayloadSlots.pairing.has(counterpartProfile),
-  );
+  const hasRemotePairingSlot = productionPayloadSlotReady("pairing", counterpartProfile);
   const hasHandshakeInitPayload = Boolean(fields.productionHandshakeInitPayload?.value.trim());
   const hasHandshakeReplyPayload = Boolean(fields.productionHandshakeReplyPayload?.value.trim());
   const hasHandshakeFinishPayload = Boolean(fields.productionHandshakeFinishPayload?.value.trim());
-  const hasRemoteHandshakeInitSlot = Boolean(
-    counterpartProfile && productionPayloadSlots.handshakeInit.has(counterpartProfile),
-  );
-  const hasRemoteHandshakeReplySlot = Boolean(
-    counterpartProfile && productionPayloadSlots.handshakeReply.has(counterpartProfile),
-  );
-  const hasRemoteHandshakeFinishSlot = Boolean(
-    counterpartProfile && productionPayloadSlots.handshakeFinish.has(counterpartProfile),
-  );
+  const hasRemoteHandshakeInitSlot = productionPayloadSlotReady("handshakeInit", counterpartProfile);
+  const hasRemoteHandshakeReplySlot = productionPayloadSlotReady("handshakeReply", counterpartProfile);
+  const hasRemoteHandshakeFinishSlot = productionPayloadSlotReady("handshakeFinish", counterpartProfile);
   const hasLocalMessageEnvelope = Boolean(fields.productionMessageEnvelope?.value.trim());
   const hasRemoteMessageEnvelopeSlot = activeMessageEnvelopeSlotReady(activeProductionProfileName());
   const selectedConversation = selectedTwoProfileConversationEntry();
