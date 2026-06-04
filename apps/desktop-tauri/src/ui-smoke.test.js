@@ -836,11 +836,11 @@ test("chat delivery notices stay scoped to the active invite room", () => {
   assert.match(functionBody(mainJs, "setChatDeliveryNoticeByKey"), /latestChatDeliveryNoticeRoomFingerprint = key \? chatDeliveryNoticeRoomFingerprint\(input\) : ""/);
   assert.match(functionBody(mainJs, "setChatDeliveryNoticeForPendingOutbound"), /latestChatDeliveryNoticeRoomFingerprint = chatDeliveryNoticeRoomFingerprint\(input\)/);
   assert.match(functionBody(mainJs, "setChatDeliveryNoticeForSendAttempt"), /setChatDeliveryNoticeByKey\("chatNoticeSent", "success", input\)/);
-  assert.match(mainJs, /function currentChatDeliveryNoticeOutboundAction/);
-  assert.match(functionBody(mainJs, "currentChatDeliveryNoticeOutboundAction"), /chatDeliveryNoticeMatchesInput\(input\)/);
-  assert.match(functionBody(mainJs, "currentChatDeliveryNoticeOutboundAction"), /productionTwoProfileConversationEntries\.get\(twoProfileConversationKey\(entry\)\)/);
-  assert.match(functionBody(mainJs, "currentChatDeliveryNoticeOutboundAction"), /currentTwoProfileOutboundPrimaryAction\(currentEntry, input\)/);
-  assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /currentChatDeliveryNoticeOutboundAction\(pendingEntry\)/);
+  assert.match(mainJs, /function currentTwoProfileOutboundAction/);
+  assert.match(functionBody(mainJs, "currentTwoProfileOutboundAction"), /options\.requireNoticeMatch === true && !chatDeliveryNoticeMatchesInput\(input\)/);
+  assert.match(functionBody(mainJs, "currentTwoProfileOutboundAction"), /productionTwoProfileConversationEntries\.get\(twoProfileConversationKey\(entry\)\)/);
+  assert.match(functionBody(mainJs, "currentTwoProfileOutboundAction"), /currentTwoProfileOutboundPrimaryAction\(currentEntry, input\)/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /currentTwoProfileOutboundAction\(pendingEntry, \{ requireNoticeMatch: true \}\)/);
 
   const languageBody = functionBody(mainJs, "applyLanguage");
   assert.match(languageBody, /latestChatDeliveryNoticeKey && chatDeliveryNoticeMatchesInput\(productionTwoProfileInput\(\)\)/);
@@ -892,6 +892,9 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(retryBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: true, input \}\)/);
   assert.match(retryBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(retryBody, /setChatDeliveryNoticeByKey\("sendRetrying", "progress", input\)/);
+  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /currentTwoProfileOutboundAction\(entry\)/);
+  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /runTwoProfileOutboundPrimaryAction\(current\.entry, current\.primaryAction\)/);
+  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /cancelTwoProfileOutboundEntry\(current\.entry\)/);
 
   const refreshRetryBody = functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry");
   assert.match(refreshRetryBody, /await prepareInviteRoomPrivateRouteExchange\(input\)/);
