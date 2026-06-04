@@ -288,6 +288,12 @@ test("receive imports refresh room list metadata immediately", () => {
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /renderRoomStatusSummary\(input, sessionsReady\)/);
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /renderProductionTwoProfileMemory\(input\)/);
   assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus"), /refreshCurrentRoomAfterReceiveImport\(refreshPlan\)/);
+  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus"), /const receivingCurrentRoom = productionTwoProfileReceiveMatchesInput\(currentInput\)/);
+  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus"), /rememberProductionTwoProfileOnionReceiveRuntimeState\(runtimeState, runtimeResult\)/);
+  assert.match(
+    functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus"),
+    /if \(!receivingCurrentRoom\) \{[\s\S]*renderSavedInviteRooms\(\);[\s\S]*\} else \{[\s\S]*await loadProductionTwoProfileTranscript/,
+  );
 });
 
 test("private delivery receive controls require a real route", () => {

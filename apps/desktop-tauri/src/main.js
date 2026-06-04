@@ -10727,6 +10727,12 @@ function setProductionTwoProfileOnionReceiveRuntimeState(runtimeState, result = 
   return view;
 }
 
+function rememberProductionTwoProfileOnionReceiveRuntimeState(runtimeState, result = null) {
+  productionTwoProfileOnionReceiveMode.runtimeState = runtimeState;
+  productionTwoProfileOnionReceiveMode.runtimeLabel = result?.runtime_label || "";
+  return productionOnionReceiveRuntimeView(productionTwoProfileOnionReceiveMode, result);
+}
+
 function productionTwoProfileOnionReceiveBackendBoundary(backendLoop) {
   return `backend_enabled=${backendLoop.enabled} worker=${backendLoop.worker_running} stop_requested=${backendLoop.stop_requested} stop_confirmed=${backendLoop.stop_confirmed} profile_selected=${backendLoop.profile_selected} in_flight=${backendLoop.receive_attempt_in_flight} attempts=${backendLoop.attempt_count} generation=${backendLoop.generation} worker_starts=${backendLoop.worker_start_count ?? 0} duplicate_blocks=${backendLoop.duplicate_start_block_count ?? 0} import_seq=${backendLoop.import_sequence} message_imports=${backendLoop.message_import_count ?? 0} endpoint_updates=${backendLoop.endpoint_update_count ?? 0} active_after_import=${backendLoop.active_after_import} continues_after_import=${backendLoop.continues_after_import} multi_message_ready=${backendLoop.multi_message_receive_ready} restart_isolated=${backendLoop.restart_generation_isolated} wait_cancellable=${backendLoop.retry_wait_cancellable} runtime_state=${backendLoop.runtime_state || "unknown"} last_started=${backendLoop.last_attempt_started} last_succeeded=${backendLoop.last_attempt_succeeded} endpoint_update=${backendLoop.last_endpoint_update_applied} last_network=${backendLoop.last_network_io_attempted} last_accept=${backendLoop.last_stream_accept_attempted} last_stream=${backendLoop.last_stream_read_write_attempted} last_envelope=${backendLoop.last_envelope_io_opened} last_runtime=${backendLoop.last_runtime_messaging_enabled} failure=${backendLoop.last_failure_kind} retryable=${backendLoop.last_failure_retryable} next=${backendLoop.last_next_blocker || "none"} explicit_start=${backendLoop.explicit_user_start_required} duplicate=${backendLoop.duplicate_loop_blocked} app_launch_network=${backendLoop.starts_network_on_app_launch} owner_profile_bound=${backendLoop.owner_profile_bound === true} owner_matches_receive=${backendLoop.owner_matches_receive_profile === true} raw_profile=${backendLoop.raw_profile_returned} passphrase=${backendLoop.passphrase_retained} key_material=${backendLoop.key_material_exposed} network=${backendLoop.network_io_attempted} transport=${backendLoop.transport_io_opened} runtime=${backendLoop.runtime_messaging_enabled}`;
 }
@@ -10812,78 +10818,88 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
     const runtimeState = refreshPlan.transcriptChanged
       ? "message-imported"
       : backendLoop.runtime_state || inferredRuntimeState;
-    const runtimeView = setProductionTwoProfileOnionReceiveRuntimeState(
-      runtimeState,
-      refreshPlan.transcriptChanged
-        ? { runtime_label: refreshPlan.messageImported ? "New message received" : "Peer address updated" }
-        : backendLoop,
-    );
-    setText(
-      fields.productionTwoProfileMessageState,
-      localizedChatStatus(runtimeView.label),
-    );
-    if (runtimeState === "failed-retryable") {
-      const receiveFailureMessage = productionOnionReceiveFailureMessage(backendLoop);
-      setText(fields.productionTwoProfileWarning, localizedReceiveFailureMessage(receiveFailureMessage));
-      const receiveNotice = chatNoticeForSendReceiveText(receiveFailureMessage) ??
-        chatNoticeForProductionState("Message listening will retry") ?? {
-          key: "receiveRetrying",
-          tone: "warning",
-        };
-      setChatDeliveryNoticeByKey(receiveNotice.key, receiveNotice.tone);
-    } else if (refreshPlan.transcriptChanged) {
-      setText(fields.productionTwoProfileWarning, productionTwoProfileOnionReceiveUserNotice(refreshPlan));
-      setChatDeliveryNoticeByKey(
-        refreshPlan.messageImported ? "chatNoticeReceived" : "chatNoticeEndpointUpdated",
-        "success",
+    const runtimeResult = refreshPlan.transcriptChanged
+      ? { runtime_label: refreshPlan.messageImported ? "New message received" : "Peer address updated" }
+      : backendLoop;
+    const currentInput = productionTwoProfileInput();
+    const receivingCurrentRoom = productionTwoProfileReceiveMatchesInput(currentInput);
+    const runtimeView = receivingCurrentRoom
+      ? setProductionTwoProfileOnionReceiveRuntimeState(runtimeState, runtimeResult)
+      : rememberProductionTwoProfileOnionReceiveRuntimeState(runtimeState, runtimeResult);
+    if (receivingCurrentRoom) {
+      setText(
+        fields.productionTwoProfileMessageState,
+        localizedChatStatus(runtimeView.label),
       );
-    } else if (productionTwoProfileReceiveRuntimeMismatched()) {
-      setText(fields.productionTwoProfileWarning, t("receiveRuntimeMismatch"));
-      setChatDeliveryNoticeByKey("receiveRuntimeMismatch", "warning");
-    } else if (runtimeState === "receiving") {
-      setText(fields.productionTwoProfileWarning, t("receiveStarted"));
+      if (runtimeState === "failed-retryable") {
+        const receiveFailureMessage = productionOnionReceiveFailureMessage(backendLoop);
+        setText(fields.productionTwoProfileWarning, localizedReceiveFailureMessage(receiveFailureMessage));
+        const receiveNotice = chatNoticeForSendReceiveText(receiveFailureMessage) ??
+          chatNoticeForProductionState("Message listening will retry") ?? {
+            key: "receiveRetrying",
+            tone: "warning",
+          };
+        setChatDeliveryNoticeByKey(receiveNotice.key, receiveNotice.tone);
+      } else if (refreshPlan.transcriptChanged) {
+        setText(fields.productionTwoProfileWarning, productionTwoProfileOnionReceiveUserNotice(refreshPlan));
+        setChatDeliveryNoticeByKey(
+          refreshPlan.messageImported ? "chatNoticeReceived" : "chatNoticeEndpointUpdated",
+          "success",
+        );
+      } else if (productionTwoProfileReceiveRuntimeMismatched(currentInput)) {
+        setText(fields.productionTwoProfileWarning, t("receiveRuntimeMismatch"));
+        setChatDeliveryNoticeByKey("receiveRuntimeMismatch", "warning");
+      } else if (runtimeState === "receiving") {
+        setText(fields.productionTwoProfileWarning, t("receiveStarted"));
+      }
+      setText(fields.productionTwoProfileBoundary, productionTwoProfileOnionReceiveBackendBoundary(backendLoop));
+      renderRoomIdentityBar(currentInput, twoProfileSessionsReadyForInput(currentInput));
+      renderRoomStatusSummary(currentInput);
     }
-    setText(fields.productionTwoProfileBoundary, productionTwoProfileOnionReceiveBackendBoundary(backendLoop));
-    renderRoomIdentityBar(productionTwoProfileInput(), twoProfileSessionsReadyForInput(productionTwoProfileInput()));
-    renderRoomStatusSummary(productionTwoProfileInput());
     if (refreshPlan.transcriptChanged) {
       productionTwoProfileOnionReceiveMode.lastProcessedImportSequence = refreshPlan.importSequence;
       productionTwoProfileOnionReceiveMode.lastProcessedMessageImportCount = refreshPlan.messageImportCount;
       productionTwoProfileOnionReceiveMode.lastProcessedEndpointUpdateCount = refreshPlan.endpointUpdateCount;
-      await loadProductionTwoProfileTranscript({
-        quiet: true,
-        refreshSessionStatus: refreshPlan.endpointUpdated === true,
-      });
-      if (refreshPlan.messageImported) {
-        const replySelected = selectLatestReceivedReplyForProfile(productionTwoProfileOnionReceiveMode.profile, {
-          focusReply: "none",
+      if (!receivingCurrentRoom) {
+        renderSavedInviteRooms();
+      } else {
+        await loadProductionTwoProfileTranscript({
+          quiet: true,
+          refreshSessionStatus: refreshPlan.endpointUpdated === true,
         });
-        if (replySelected) {
-          setText(fields.productionTwoProfileWarning, t("replyReadyAfterReceive"));
-          setChatDeliveryNoticeByKey("replyReadyAfterReceive", "success");
-        }
-      }
-      if (refreshPlan.endpointUpdated) {
-        const input = productionTwoProfileInput();
-        if (input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase) {
-          const status = await invoke("production_two_profile_session_status", {
-            profileA: input.profileA,
-            profileB: input.profileB,
-            passphrase: input.passphrase,
+        if (refreshPlan.messageImported) {
+          const replySelected = selectLatestReceivedReplyForProfile(productionTwoProfileOnionReceiveMode.profile, {
+            focusReply: "none",
           });
-          rememberTwoProfileSessionStatus(input, status);
-          renderProductionTwoProfileSessionStatusResult(status);
-          renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
-          if (!refreshPlan.messageImported) {
-            showLatestRetryableOutboundNotice(input);
+          if (replySelected) {
+            setText(fields.productionTwoProfileWarning, t("replyReadyAfterReceive"));
+            setChatDeliveryNoticeByKey("replyReadyAfterReceive", "success");
           }
         }
+        if (refreshPlan.endpointUpdated) {
+          const input = productionTwoProfileInput();
+          if (input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase) {
+            const status = await invoke("production_two_profile_session_status", {
+              profileA: input.profileA,
+              profileB: input.profileB,
+              passphrase: input.passphrase,
+            });
+            rememberTwoProfileSessionStatus(input, status);
+            renderProductionTwoProfileSessionStatusResult(status);
+            renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
+            if (!refreshPlan.messageImported) {
+              showLatestRetryableOutboundNotice(input);
+            }
+          }
+        }
+        refreshCurrentRoomAfterReceiveImport(refreshPlan);
       }
-      refreshCurrentRoomAfterReceiveImport(refreshPlan);
     }
     if (!backendLoop.enabled && !backendLoop.worker_running) {
-      markProductionTwoProfileOnionReceiveStopped(backendLoop);
-      setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted");
+      markProductionTwoProfileOnionReceiveStopped(backendLoop, { silent: !receivingCurrentRoom });
+      if (receivingCurrentRoom) {
+        setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted");
+      }
       return;
     }
     if (backendLoop.enabled && !productionTwoProfileOnionReceiveMode.stopRequested) {
@@ -10908,7 +10924,7 @@ function scheduleProductionTwoProfileOnionReceiveStopConfirmation(delayMs = 500)
   }, delayMs);
 }
 
-function markProductionTwoProfileOnionReceiveStopped(backendLoop = null) {
+function markProductionTwoProfileOnionReceiveStopped(backendLoop = null, options = {}) {
   const nextGeneration = Math.max(
     productionTwoProfileOnionReceiveMode.generation,
     Number.parseInt(backendLoop?.generation ?? 0, 10) || 0,
@@ -10932,7 +10948,11 @@ function markProductionTwoProfileOnionReceiveStopped(backendLoop = null) {
     ownerProfileBound: false,
     ownerMatchesReceiveProfile: true,
   };
-  setProductionTwoProfileOnionReceiveRuntimeState("stopped");
+  if (options.silent === true) {
+    rememberProductionTwoProfileOnionReceiveRuntimeState("stopped");
+  } else {
+    setProductionTwoProfileOnionReceiveRuntimeState("stopped");
+  }
 }
 
 async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
