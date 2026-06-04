@@ -4580,6 +4580,30 @@ function messageEnvelopeSlotReadyForEntry(profile, entry) {
   return envelopeSlotReadyForEntry(slot, entry);
 }
 
+function pendingMessageEnvelopeSlotForActiveProfile(profile = activeProductionProfileName()) {
+  const normalizedProfile = String(profile ?? "").trim().toLowerCase();
+  const counterpart = productionCounterpartProfile(normalizedProfile);
+  if (!normalizedProfile || !counterpart) {
+    return { counterpart, entry: null, slot: null, value: "" };
+  }
+  const selectedEntry = selectedTwoProfilePendingConversationEntry();
+  const latestEntry = latestTwoProfilePendingConversationEntry();
+  const entry =
+    selectedEntry && selectedEntry.sender === counterpart && selectedEntry.receiver === normalizedProfile
+      ? selectedEntry
+      : latestEntry && latestEntry.sender === counterpart && latestEntry.receiver === normalizedProfile
+        ? latestEntry
+        : null;
+  const slot = productionPayloadSlots.messageEnvelope.get(counterpart) ?? null;
+  const value = messageEnvelopeSlotPayload(slot);
+  return { counterpart, entry, slot, value };
+}
+
+function activeMessageEnvelopeSlotReady(profile = activeProductionProfileName()) {
+  const { entry, slot, value } = pendingMessageEnvelopeSlotForActiveProfile(profile);
+  return Boolean(entry && value && messageEnvelopeSlotMatchesEntry(slot, entry));
+}
+
 function storeMessageEnvelopeSlot(profile, payload, metadata = {}) {
   const slot = createMessageEnvelopeSlot(profile, payload, metadata);
   if (!slot) {
@@ -6367,20 +6391,22 @@ function storeProductionMessageEnvelope() {
 
 function loadProductionMessageEnvelope() {
   const profile = activeProductionProfileName();
-  const counterpart = productionCounterpartProfile(profile);
-  const slot = counterpart ? productionPayloadSlots.messageEnvelope.get(counterpart) : null;
-  const value = messageEnvelopeSlotPayload(slot);
-  const selectedEntry = selectedTwoProfilePendingConversationEntry();
-  if (
-    selectedEntry &&
-    selectedEntry.sender === counterpart &&
-    selectedEntry.receiver === profile &&
-    !messageEnvelopeSlotMatchesEntry(slot, selectedEntry)
-  ) {
+  const { counterpart, entry, slot, value } = pendingMessageEnvelopeSlotForActiveProfile(profile);
+  if (!entry) {
+    setProductionMessageState("Remote envelope needs pending message");
+    setText(
+      fields.productionMessageWarning,
+      counterpart
+        ? `Select a pending ${counterpart} -> ${profile} message before loading an envelope slot.`
+        : manualMissingCounterpartWarning(profile, counterpart, "envelope"),
+    );
+    return;
+  }
+  if (value && !messageEnvelopeSlotMatchesEntry(slot, entry)) {
     setProductionMessageState("Remote envelope slot stale");
     setText(
       fields.productionMessageWarning,
-      `Stored ${counterpart} envelope does not match selected message #${selectedEntry.messageNumber}. Export that message again before importing.`,
+      `Stored ${counterpart} envelope does not match selected message #${entry.messageNumber}. Export that message again before importing.`,
     );
     return;
   }
@@ -7047,9 +7073,7 @@ function applyProductionActionState() {
     counterpartProfile && productionPayloadSlots.handshakeFinish.has(counterpartProfile),
   );
   const hasLocalMessageEnvelope = Boolean(fields.productionMessageEnvelope?.value.trim());
-  const hasRemoteMessageEnvelopeSlot = Boolean(
-    counterpartProfile && productionPayloadSlots.messageEnvelope.has(counterpartProfile),
-  );
+  const hasRemoteMessageEnvelopeSlot = activeMessageEnvelopeSlotReady(activeProductionProfileName());
   const selectedConversation = selectedTwoProfileConversationEntry();
   const selectedMessageLabel = selectedConversation
     ? `${selectedConversation.sender}->${selectedConversation.receiver}#${selectedConversation.messageNumber}`

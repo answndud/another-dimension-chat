@@ -398,6 +398,19 @@ test("manual message actions ignore stale inputs before updating current UI", ()
   assert.match(functionBody(mainJs, "syncTwoProfileConversationAfterReceivedExport"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
 });
 
+test("manual message envelope slots require the active pending message", () => {
+  assert.match(mainJs, /function pendingMessageEnvelopeSlotForActiveProfile/);
+  assert.match(functionBody(mainJs, "pendingMessageEnvelopeSlotForActiveProfile"), /selectedTwoProfilePendingConversationEntry\(\)/);
+  assert.match(functionBody(mainJs, "pendingMessageEnvelopeSlotForActiveProfile"), /latestTwoProfilePendingConversationEntry\(\)/);
+  assert.match(functionBody(mainJs, "activeMessageEnvelopeSlotReady"), /messageEnvelopeSlotMatchesEntry\(slot, entry\)/);
+
+  const loadBody = functionBody(mainJs, "loadProductionMessageEnvelope");
+  assert.match(loadBody, /pendingMessageEnvelopeSlotForActiveProfile\(profile\)/);
+  assert.match(loadBody, /if \(!entry\)/);
+  assert.match(loadBody, /value && !messageEnvelopeSlotMatchesEntry\(slot, entry\)/);
+  assert.match(functionBody(mainJs, "applyProductionActionState"), /activeMessageEnvelopeSlotReady\(activeProductionProfileName\(\)\)/);
+});
+
 test("pairing and handshake actions ignore stale setup inputs", () => {
   assert.match(mainJs, /function productionPairingInputStillCurrent/);
   assert.match(functionBody(mainJs, "productionPairingInputStillCurrent"), /fieldsToCompare\.every/);
