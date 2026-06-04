@@ -11853,6 +11853,7 @@ async function checkProductionSessionState() {
 
 async function checkProductionTwoProfileSessionStatus() {
   const { profileA, profileB, passphrase } = productionTwoProfileInput();
+  const sessionCheckInput = { profileA, profileB, passphrase };
   if (!profileA || !profileB || profileA === profileB || !passphrase) {
     setText(
       fields.productionTwoProfileSessionStatus,
@@ -11883,8 +11884,11 @@ async function checkProductionTwoProfileSessionStatus() {
     fields.checkProductionTwoProfileSessionStatusInline.disabled = true;
   }
   try {
-    const result = await invokeInviteRoomSessionStatus({ profileA, profileB, passphrase });
-    rememberTwoProfileSessionStatus({ profileA, profileB }, result);
+    const result = await invokeInviteRoomSessionStatus(sessionCheckInput);
+    rememberTwoProfileSessionStatus(sessionCheckInput, result);
+    if (!twoProfileTranscriptInputStillCurrent(sessionCheckInput)) {
+      return;
+    }
     renderProductionTwoProfileSessionStatusResult(result);
     setText(fields.productionPairingWarning, result.warning);
     if (result.both_ready_for_message_envelope) {
@@ -11925,6 +11929,9 @@ async function checkProductionTwoProfileSessionStatus() {
         : fields.productionTwoProfileMessage;
     }
   } catch (error) {
+    if (!twoProfileTranscriptInputStillCurrent(sessionCheckInput)) {
+      return;
+    }
     latestProductionTwoProfileSessionStatus = null;
     setProductionTwoProfileState("Session check failed");
     setText(fields.productionTwoProfileSessionStatus, "Saved connection check failed");
@@ -11940,7 +11947,9 @@ async function checkProductionTwoProfileSessionStatus() {
       fields.checkProductionTwoProfileSessionStatusInline.disabled = false;
     }
     applyProductionActionState();
-    postCheckFocus?.focus();
+    if (twoProfileTranscriptInputStillCurrent(sessionCheckInput)) {
+      postCheckFocus?.focus();
+    }
   }
 }
 
