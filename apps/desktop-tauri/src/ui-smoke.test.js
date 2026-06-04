@@ -247,6 +247,16 @@ test("room list create action does not overlap the app settings action", () => {
   );
 });
 
+test("room context switches clear stale manual message payloads", () => {
+  assert.match(mainJs, /function clearManualMessagePayloadsForRoomContextChange/);
+  assert.match(functionBody(mainJs, "clearManualMessagePayloadsForRoomContextChange"), /resetProductionMessageImportState\(\)/);
+  assert.match(functionBody(mainJs, "clearManualMessagePayloadsForRoomContextChange"), /clearManualMessageDraftForReplySelection\(\)/);
+  assert.match(functionBody(mainJs, "clearManualMessageDraftForReplySelection"), /productionMessageEnvelope\.value = ""/);
+  assert.match(functionBody(mainJs, "clearManualMessageDraftForReplySelection"), /productionRemoteMessageEnvelope\.value = ""/);
+  assert.match(functionBody(mainJs, "clearCurrentInviteRoomInput"), /clearManualMessagePayloadsForRoomContextChange\(\)/);
+  assert.match(functionBody(mainJs, "prepareRoomListReturnState"), /clearManualMessagePayloadsForRoomContextChange\(\)/);
+});
+
 test("created invite code stays visible after the room becomes ready", () => {
   assert.match(mainJs, /has-inviter-invite-code/);
   assert.match(mainJs, /focusCurrentInviteCodeDisplay\(\)/);
