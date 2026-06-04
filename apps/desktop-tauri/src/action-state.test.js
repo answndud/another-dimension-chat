@@ -390,6 +390,7 @@ test("room list metadata follows latest imported conversation entry", () => {
     messageCount: 2,
     retryableOutboundCount: 0,
     retryableOutboundMessageNumber: null,
+    retryableOutboundAction: "",
   });
   assert.equal(entries[0].messageNumber, 1);
 });
@@ -413,6 +414,7 @@ test("room list metadata truncates long previews without losing message count", 
       messageCount: 1,
       retryableOutboundCount: 0,
       retryableOutboundMessageNumber: null,
+      retryableOutboundAction: "",
     },
   );
 });
@@ -427,6 +429,7 @@ test("room list metadata carries retryable outbound state", () => {
         message: "still saved",
         createdAtMs: 400,
         outboundDeliveryState: "failed",
+        outboundFailureKind: "stored remote endpoint refresh required",
         outboundRetryable: true,
       },
       {
@@ -455,6 +458,7 @@ test("room list metadata carries retryable outbound state", () => {
       messageCount: 3,
       retryableOutboundCount: 1,
       retryableOutboundMessageNumber: 3,
+      retryableOutboundAction: "refresh-and-retry",
     },
   );
 });
@@ -499,6 +503,7 @@ test("room list metadata collapses retried copies before counting retryable send
       messageCount: 1,
       retryableOutboundCount: 0,
       retryableOutboundMessageNumber: null,
+      retryableOutboundAction: "",
     },
   );
 });

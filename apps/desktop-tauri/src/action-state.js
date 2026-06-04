@@ -683,6 +683,9 @@ export function productionInviteRoomConversationMetadata(entries) {
     messageCount: sortedEntries.length,
     retryableOutboundCount: retryableOutboundEntries.length,
     retryableOutboundMessageNumber: latestRetryableOutbound?.messageNumber ?? null,
+    retryableOutboundAction: latestRetryableOutbound
+      ? productionTwoProfileOutboundPrimaryAction(latestRetryableOutbound).action
+      : "",
   };
 }
 
