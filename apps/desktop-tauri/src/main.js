@@ -2181,6 +2181,10 @@ function roomListStoragePayload(rooms) {
   }));
 }
 
+function inviteRoomMetadataValue(metadata, existing, key) {
+  return Object.prototype.hasOwnProperty.call(metadata ?? {}, key) ? metadata[key] : existing?.[key];
+}
+
 function rememberInviteRoom(code, role, metadata = {}, options = {}) {
   const trimmedCode = String(code ?? "").trim();
   const normalizedRole = role === "inviter" ? "inviter" : "joiner";
@@ -2198,14 +2202,14 @@ function rememberInviteRoom(code, role, metadata = {}, options = {}) {
     lastMessageAt: Number(metadata.lastMessageAt ?? existing.lastMessageAt ?? 0),
     messageCount: Math.max(
       0,
-      Number.parseInt(metadata.messageCount ?? existing.messageCount ?? 0, 10) || 0,
+      Number.parseInt(inviteRoomMetadataValue(metadata, existing, "messageCount") ?? 0, 10) || 0,
     ),
     retryableOutboundCount: Math.max(
       0,
-      Number.parseInt(metadata.retryableOutboundCount ?? existing.retryableOutboundCount ?? 0, 10) || 0,
+      Number.parseInt(inviteRoomMetadataValue(metadata, existing, "retryableOutboundCount") ?? 0, 10) || 0,
     ),
     retryableOutboundMessageNumber:
-      Number.parseInt(metadata.retryableOutboundMessageNumber ?? existing.retryableOutboundMessageNumber ?? 0, 10) || 0,
+      Number.parseInt(inviteRoomMetadataValue(metadata, existing, "retryableOutboundMessageNumber") ?? 0, 10) || 0,
   });
   localStoreSet(inviteRoomsStorageKey, JSON.stringify(roomListStoragePayload(rooms)));
   if (options.render !== false) {
