@@ -269,6 +269,8 @@ test("saved room removal is list-only and transcript switching rebuilds entries"
   assert.match(functionBody(mainJs, "forgetInviteRoom"), /rememberReceiveIntentForRoom\(roomInput, false\)/);
   assert.match(functionBody(mainJs, "forgetInviteRoom"), /clearPrivateRouteFollowupForRoom\(roomInput\)/);
   assert.match(functionBody(mainJs, "forgetInviteRoom"), /connectionCode: trimmedCode/);
+  assert.match(functionBody(mainJs, "forgetInviteRoom"), /twoProfileSafetyStorageKeys\(roomInput\)/);
+  assert.match(functionBody(mainJs, "forgetInviteRoom"), /localStoreRemove\(key\)/);
   assert.match(functionBody(mainJs, "forgetInviteRoom"), /for \(const roomKey of privateRouteRoomKeys\(roomInput\)\)/);
   assert.match(mainJs, /function clearPrivateRouteFollowupForRoom/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /silentStop: silent/);
@@ -312,6 +314,9 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(functionBody(mainJs, "twoProfileSessionStatusFingerprint"), /input\.inviteRole/);
   assert.match(functionBody(mainJs, "currentInviteRoomIdentityForInput"), /input\?\.profileA/);
   assert.match(functionBody(mainJs, "currentInviteRoomIdentityForInput"), /return \{ connectionCode: "", inviteRole: "" \}/);
+  assert.match(functionBody(mainJs, "twoProfileSafetyConfirmedForInput"), /legacyTwoProfileSafetyStorageKey\(input\)/);
+  assert.match(functionBody(mainJs, "twoProfileSafetyConfirmedForInput"), /localStoreSet\(key, "confirmed"\)/);
+  assert.match(functionBody(mainJs, "twoProfileSafetyStorageKeys"), /legacyTwoProfileSafetyStorageKey\(input\)/);
   assert.match(functionBody(mainJs, "latestTwoProfileSuccessForInput"), /roomFingerprint === twoProfileSessionStatusFingerprint\(input\)/);
   assert.match(functionBody(mainJs, "latestTwoProfileSuccessMatchesDirection"), /latestTwoProfileSuccessForInput\(input\)/);
   assert.match(functionBody(mainJs, "latestTwoProfileSuccessMatchesOppositeDirection"), /latestTwoProfileSuccessForInput\(\{/);
