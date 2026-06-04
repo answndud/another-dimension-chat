@@ -11566,7 +11566,7 @@ async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
     if (!backendLoop.stop_confirmed) {
       scheduleProductionTwoProfileOnionReceiveStopConfirmation();
     } else {
-      markProductionTwoProfileOnionReceiveStopped(backendLoop);
+      markProductionTwoProfileOnionReceiveStopped(backendLoop, { silent });
       if (!silent) {
         setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
       }
@@ -11632,7 +11632,7 @@ function stopProductionTwoProfileOnionReceiveForInput(input, options) {
       if (!backendLoop.stop_confirmed) {
         scheduleProductionTwoProfileOnionReceiveStopConfirmation();
       } else {
-        markProductionTwoProfileOnionReceiveStopped(backendLoop);
+        markProductionTwoProfileOnionReceiveStopped(backendLoop, { silent });
         if (!silent) {
           setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
           setText(fields.productionTwoProfileWarning, t("receiveStopped"));
