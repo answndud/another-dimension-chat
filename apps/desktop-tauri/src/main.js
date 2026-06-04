@@ -1219,7 +1219,7 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     retry.disabled = !outboundActionState.canRunNow;
     retry.title = outboundActionState.disabledReason || "";
     retry.addEventListener("click", () => {
-      const current = currentChatDeliveryNoticeOutboundAction(pendingEntry);
+      const current = currentTwoProfileOutboundAction(pendingEntry, { requireNoticeMatch: true });
       if (current) {
         runTwoProfileOutboundPrimaryAction(current.entry, current.primaryAction);
       }
@@ -1231,7 +1231,7 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     cancel.disabled = !outboundActionState.canRunNow;
     cancel.title = outboundActionState.disabledReason || "";
     cancel.addEventListener("click", () => {
-      const current = currentChatDeliveryNoticeOutboundAction(pendingEntry);
+      const current = currentTwoProfileOutboundAction(pendingEntry, { requireNoticeMatch: true });
       if (current) {
         cancelTwoProfileOutboundEntry(current.entry);
       }
@@ -1313,9 +1313,9 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
   }
 }
 
-function currentChatDeliveryNoticeOutboundAction(entry) {
+function currentTwoProfileOutboundAction(entry, options = {}) {
   const input = productionTwoProfileInput();
-  if (!chatDeliveryNoticeMatchesInput(input)) {
+  if (options.requireNoticeMatch === true && !chatDeliveryNoticeMatchesInput(input)) {
     return null;
   }
   const currentEntry = productionTwoProfileConversationEntries.get(twoProfileConversationKey(entry));
@@ -5142,8 +5142,9 @@ function renderProductionTwoProfileConversationList() {
       retry.textContent = outboundPrimaryActionLabel(primaryAction);
       retry.addEventListener("click", (event) => {
         event.stopPropagation();
-        if (outboundActionState.canRunNow) {
-          runTwoProfileOutboundPrimaryAction(entry, primaryAction);
+        const current = currentTwoProfileOutboundAction(entry);
+        if (current) {
+          runTwoProfileOutboundPrimaryAction(current.entry, current.primaryAction);
         }
       });
       const cancel = document.createElement("button");
@@ -5154,8 +5155,9 @@ function renderProductionTwoProfileConversationList() {
       cancel.textContent = t("cancelSend");
       cancel.addEventListener("click", (event) => {
         event.stopPropagation();
-        if (outboundActionState.canRunNow) {
-          cancelTwoProfileOutboundEntry(entry);
+        const current = currentTwoProfileOutboundAction(entry);
+        if (current) {
+          cancelTwoProfileOutboundEntry(current.entry);
         }
       });
       actions.append(retry, cancel);
