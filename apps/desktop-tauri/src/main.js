@@ -471,6 +471,8 @@ let latestProductionMessageImport = null;
 let latestProductionPairingSafety = null;
 let productionBusyAction = null;
 let activeInviteRoomOpenFingerprint = "";
+let activeInviteRoomPrivateRouteCodeFingerprint = "";
+let activeInviteRoomPeerRouteCodeFingerprint = "";
 let latestProductionManualFocusTarget = null;
 let latestChatDeliveryNoticeKey = "";
 let latestChatDeliveryNoticeTone = "neutral";
@@ -511,6 +513,36 @@ function clearInviteRoomOpenBusy(input) {
   if (inviteRoomOpenBusyMatches(input)) {
     activeInviteRoomOpenFingerprint = "";
     clearProductionBusyAction("invite-room-open");
+  }
+}
+
+function setInviteRoomPrivateRouteCodeBusy(input) {
+  productionBusyAction = "invite-room-private-route-code";
+  activeInviteRoomPrivateRouteCodeFingerprint = twoProfileSessionStatusFingerprint(input);
+}
+
+function clearInviteRoomPrivateRouteCodeBusy(input) {
+  if (
+    productionBusyAction === "invite-room-private-route-code" &&
+    activeInviteRoomPrivateRouteCodeFingerprint === twoProfileSessionStatusFingerprint(input)
+  ) {
+    activeInviteRoomPrivateRouteCodeFingerprint = "";
+    clearProductionBusyAction("invite-room-private-route-code");
+  }
+}
+
+function setInviteRoomPeerRouteCodeBusy(input) {
+  productionBusyAction = "invite-room-peer-route-code";
+  activeInviteRoomPeerRouteCodeFingerprint = twoProfileSessionStatusFingerprint(input);
+}
+
+function clearInviteRoomPeerRouteCodeBusy(input) {
+  if (
+    productionBusyAction === "invite-room-peer-route-code" &&
+    activeInviteRoomPeerRouteCodeFingerprint === twoProfileSessionStatusFingerprint(input)
+  ) {
+    activeInviteRoomPeerRouteCodeFingerprint = "";
+    clearProductionBusyAction("invite-room-peer-route-code");
   }
 }
 
@@ -9906,7 +9938,7 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
     openPrivateDeliverySettings(input);
     return false;
   }
-  productionBusyAction = "invite-room-private-route-code";
+  setInviteRoomPrivateRouteCodeBusy(input);
   setProductionTwoProfileState("Delivery code creating");
   setText(fields.productionTwoProfileWarning, t("privateRouteCodeCreating"));
   setChatDeliveryNoticeByKey("privateRouteCodeCreating", "progress", input);
@@ -9960,7 +9992,7 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
     setChatDeliveryNoticeByKey("privateRouteCodeFailed", "warning", input);
     return false;
   } finally {
-    clearProductionBusyAction("invite-room-private-route-code");
+    clearInviteRoomPrivateRouteCodeBusy(input);
     applyProductionActionState();
   }
 }
@@ -9994,7 +10026,7 @@ async function applyPeerPrivateRouteCode() {
   }
   rememberPeerPrivateRouteDraft(input);
 
-  productionBusyAction = "invite-room-peer-route-code";
+  setInviteRoomPeerRouteCodeBusy(input);
   setProductionTwoProfileState("Peer delivery saving");
   setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeSaving"));
   setChatDeliveryNoticeByKey("peerPrivateRouteCodeSaving", "progress", input);
@@ -10037,7 +10069,7 @@ async function applyPeerPrivateRouteCode() {
     fields.peerPrivateRouteCode?.focus();
     return false;
   } finally {
-    clearProductionBusyAction("invite-room-peer-route-code");
+    clearInviteRoomPeerRouteCodeBusy(input);
     applyProductionActionState();
   }
 }
