@@ -672,6 +672,12 @@ test("two-profile onion setup actions ignore stale room results", () => {
   const refreshBody = functionBody(mainJs, "refreshProductionTwoProfilePeerEndpoints");
   assert.match(mainJs, /async function refreshProductionTwoProfilePeerEndpoints\(input = productionTwoProfileInput\(\)\)/);
   assert.match(refreshBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
+  assert.match(mainJs, /let activeTwoProfilePeerEndpointRefreshFingerprint = ""/);
+  assert.match(functionBody(mainJs, "setTwoProfilePeerEndpointRefreshBusy"), /productionBusyAction = "two-profile-peer-endpoint-refresh"/);
+  assert.match(functionBody(mainJs, "setTwoProfilePeerEndpointRefreshBusy"), /activeTwoProfilePeerEndpointRefreshFingerprint = twoProfileSessionStatusFingerprint\(input\)/);
+  assert.match(functionBody(mainJs, "clearTwoProfilePeerEndpointRefreshBusy"), /activeTwoProfilePeerEndpointRefreshFingerprint === twoProfileSessionStatusFingerprint\(input\)/);
+  assert.match(refreshBody, /setTwoProfilePeerEndpointRefreshBusy\(input\)/);
+  assert.match(refreshBody, /clearTwoProfilePeerEndpointRefreshBusy\(input\)/);
 
   const loadTranscriptBody = functionBody(mainJs, "loadProductionTwoProfileTranscript");
   assert.match(loadTranscriptBody, /const input = options\.input \?\? productionTwoProfileInput\(\)/);
