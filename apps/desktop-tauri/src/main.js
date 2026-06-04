@@ -2071,6 +2071,7 @@ let latestCreatedInviteCode = "";
 let copiedInviteCode = "";
 let latestConnectionCodeRole = "";
 let inviteRoomPresenceRefreshTimer = null;
+let inviteRoomPresenceRefreshFingerprint = "";
 let inviteRoomTranscriptRefreshTimer = null;
 let inviteRoomTranscriptRefreshFingerprint = "";
 let inviteRoomTranscriptRefreshInFlight = false;
@@ -3539,6 +3540,7 @@ function stopInviteRoomPresenceRefresh() {
     window.clearInterval(inviteRoomPresenceRefreshTimer);
     inviteRoomPresenceRefreshTimer = null;
   }
+  inviteRoomPresenceRefreshFingerprint = "";
 }
 
 function stopInviteRoomTranscriptRefresh() {
@@ -3554,6 +3556,8 @@ function startInviteRoomPresenceRefresh(input = productionTwoProfileInput()) {
   if (currentInviteCodeRole() !== "inviter" || !input.profileA || !input.profileB || !input.passphrase) {
     return;
   }
+  const fingerprint = twoProfileSessionStatusFingerprint(input);
+  inviteRoomPresenceRefreshFingerprint = fingerprint;
   const refresh = () => {
     invoke("production_invite_room_presence_refresh", {
       localProfile: input.profileA,
@@ -3561,12 +3565,14 @@ function startInviteRoomPresenceRefresh(input = productionTwoProfileInput()) {
       passphrase: input.passphrase,
     })
       .then((result) => {
-        if (result?.open === false) {
+        if (inviteRoomPresenceRefreshFingerprint === fingerprint && result?.open === false) {
           stopInviteRoomPresenceRefresh();
         }
       })
       .catch(() => {
-        stopInviteRoomPresenceRefresh();
+        if (inviteRoomPresenceRefreshFingerprint === fingerprint) {
+          stopInviteRoomPresenceRefresh();
+        }
       });
   };
   refresh();
@@ -3610,7 +3616,9 @@ function startInviteRoomTranscriptRefresh(input = productionTwoProfileInput()) {
   };
   inviteRoomTranscriptRefreshTimer = window.setInterval(() => {
     refresh().catch(() => {
-      stopInviteRoomTranscriptRefresh();
+      if (inviteRoomTranscriptRefreshFingerprint === fingerprint) {
+        stopInviteRoomTranscriptRefresh();
+      }
     });
   }, 1500);
 }

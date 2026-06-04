@@ -342,9 +342,25 @@ test("saved room removal is list-only and transcript switching rebuilds entries"
 });
 
 test("room transcript refresh is scoped to the current room", () => {
+  assert.match(mainJs, /let inviteRoomPresenceRefreshFingerprint = ""/);
+  assert.match(functionBody(mainJs, "stopInviteRoomPresenceRefresh"), /inviteRoomPresenceRefreshFingerprint = ""/);
+  assert.match(functionBody(mainJs, "startInviteRoomPresenceRefresh"), /const fingerprint = twoProfileSessionStatusFingerprint\(input\)/);
+  assert.match(functionBody(mainJs, "startInviteRoomPresenceRefresh"), /inviteRoomPresenceRefreshFingerprint = fingerprint/);
+  assert.match(
+    functionBody(mainJs, "startInviteRoomPresenceRefresh"),
+    /inviteRoomPresenceRefreshFingerprint === fingerprint && result\?\.open === false/,
+  );
+  assert.match(
+    functionBody(mainJs, "startInviteRoomPresenceRefresh"),
+    /catch\(\(\) => \{[\s\S]*inviteRoomPresenceRefreshFingerprint === fingerprint[\s\S]*stopInviteRoomPresenceRefresh\(\)/,
+  );
   assert.match(mainJs, /let inviteRoomTranscriptRefreshInFlight = false/);
   assert.match(functionBody(mainJs, "startInviteRoomTranscriptRefresh"), /inviteRoomTranscriptRefreshInFlight/);
   assert.match(functionBody(mainJs, "startInviteRoomTranscriptRefresh"), /finally/);
+  assert.match(
+    functionBody(mainJs, "startInviteRoomTranscriptRefresh"),
+    /catch\(\(\) => \{[\s\S]*inviteRoomTranscriptRefreshFingerprint === fingerprint[\s\S]*stopInviteRoomTranscriptRefresh\(\)/,
+  );
   assert.match(mainJs, /function twoProfileTranscriptInputStillCurrent/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /transcriptInput/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /twoProfileTranscriptInputStillCurrent\(transcriptInput\)/);
