@@ -3315,6 +3315,11 @@ function renderFieldTestReportComparison() {
   return comparison;
 }
 
+function fieldTestReportCopyPayload(report) {
+  const comparison = fieldTestReportComparison(report, fields.peerFieldTestReport?.value ?? "");
+  return comparison ? `${report}\n${comparison}` : report;
+}
+
 function latestRealOnionFieldTestResult(input = productionTwoProfileInput()) {
   if (!latestProductionTwoProfileRealOnionResult) {
     return null;
@@ -3512,8 +3517,9 @@ async function copyFieldTestReport() {
   if (!report) {
     return false;
   }
+  const payload = fieldTestReportCopyPayload(report);
   try {
-    await navigator.clipboard.writeText(report);
+    await navigator.clipboard.writeText(payload);
     setProductionTwoProfileState("Field test report copied");
     setText(fields.productionTwoProfileWarning, t("fieldTestReportCopied"));
     return true;

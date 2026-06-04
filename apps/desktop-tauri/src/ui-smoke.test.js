@@ -807,6 +807,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(mainJs, /function fieldTestReportComparison/);
   assert.match(mainJs, /function renderFieldTestReportSummary/);
   assert.match(mainJs, /function renderFieldTestReportComparison/);
+  assert.match(mainJs, /function fieldTestReportCopyPayload/);
   assert.match(mainJs, /function copyFieldTestReport/);
   assert.match(mainJs, /function productionTwoProfileRealOnionSyntheticFailureResult/);
   assert.match(stylesCss, /\.field-test-report-panel/);
@@ -830,6 +831,9 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(summaryBody, /receive_failure_kind/);
   assert.match(functionBody(mainJs, "refreshFieldTestReport"), /renderFieldTestReportSummary\(report\)/);
   assert.match(functionBody(mainJs, "refreshFieldTestReport"), /renderFieldTestReportComparison\(\)/);
+  assert.match(functionBody(mainJs, "fieldTestReportCopyPayload"), /fieldTestReportComparison\(report, fields\.peerFieldTestReport\?\.value \?\? ""\)/);
+  assert.match(functionBody(mainJs, "copyFieldTestReport"), /const payload = fieldTestReportCopyPayload\(report\)/);
+  assert.match(functionBody(mainJs, "copyFieldTestReport"), /navigator\.clipboard\.writeText\(payload\)/);
   assert.match(mainJs, /fields\.peerFieldTestReport\.addEventListener\("input", renderFieldTestReportComparison\)/);
   assert.match(reportBody, /route_ready=/);
   assert.match(reportBody, /receive_state=/);
