@@ -5722,6 +5722,9 @@ function clearPrivateRouteFollowupForRoom(input = productionTwoProfileInput()) {
 }
 
 async function continueAfterPeerPrivateRouteSaved(input = productionTwoProfileInput()) {
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return false;
+  }
   if (!twoProfilePeerEndpointState(input).ready) {
     return false;
   }
@@ -9797,6 +9800,9 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
 
   try {
     const runtime = await ensurePrivateDeliveryRuntimeReady(input);
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return false;
+    }
     const result = await invoke("production_onion_service_launch_attempt", {
       profile: input.profileA,
       passphrase: input.passphrase,
@@ -9892,6 +9898,9 @@ async function applyPeerPrivateRouteCode() {
     setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
     hidePrivateRouteExchangeIfReady(input);
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return true;
+    }
     if (await continueAfterPeerPrivateRouteSaved(input)) {
       return true;
     }
@@ -9999,6 +10008,9 @@ async function preparePrivateDeliveryRoute(options = {}) {
 
   setChatDeliveryNoticeByKey("privateDeliveryRoutePreparing", "progress", input);
   const refreshed = await refreshProductionTwoProfilePeerEndpoints(input);
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return;
+  }
   if (refreshed && showLatestRetryableOutboundNotice(input)) {
     return;
   }
