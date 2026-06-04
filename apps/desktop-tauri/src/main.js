@@ -8322,6 +8322,11 @@ function productionProfileInput() {
   };
 }
 
+function productionProfileInputStillCurrent(input) {
+  const current = productionProfileInput();
+  return current.profile === input.profile && current.passphrase === input.passphrase;
+}
+
 function productionPairingInput() {
   return {
     ...productionProfileInput(),
@@ -11648,7 +11653,8 @@ async function runProductionRoundtrip() {
 }
 
 async function unlockProductionProfile() {
-  const { profile, passphrase } = productionProfileInput();
+  const input = productionProfileInput();
+  const { profile, passphrase } = input;
   const twoProfileRefreshInput = productionTwoProfileInput();
   if (!profile || !passphrase) {
     setProductionProfileState("Profile unlock needs input");
@@ -11668,6 +11674,9 @@ async function unlockProductionProfile() {
   }
   try {
     const result = await invoke("production_profile_unlock", { profile, passphrase });
+    if (!productionProfileInputStillCurrent(input)) {
+      return;
+    }
     const view = productionProfileUnlockView(result);
     setProductionProfileState("Profile unlocked");
     setText(fields.productionProfileWarning, result.warning);
@@ -11675,10 +11684,22 @@ async function unlockProductionProfile() {
     setText(fields.productionProfileIdentity, view.identity);
     setText(fields.productionProfileBoundary, view.boundary);
     await loadProductionMessageRetentionPreference(profile, passphrase, { quiet: true });
+    if (!productionProfileInputStillCurrent(input)) {
+      return;
+    }
     await loadProductionProfileList();
-    await restoreProductionSessionAfterUnlock(profile, passphrase);
+    if (!productionProfileInputStillCurrent(input)) {
+      return;
+    }
+    await restoreProductionSessionAfterUnlock(input);
+    if (!productionProfileInputStillCurrent(input)) {
+      return;
+    }
     await refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase, twoProfileRefreshInput);
   } catch (error) {
+    if (!productionProfileInputStillCurrent(input)) {
+      return;
+    }
     setProductionProfileState("Profile unlock failed");
     setText(fields.productionProfileWarning, String(error));
     setText(fields.productionProfileStorage, "Failed");
@@ -11750,11 +11771,15 @@ async function refreshTwoProfileSessionAfterProfileUnlock(
   }
 }
 
-async function restoreProductionSessionAfterUnlock(profile, passphrase) {
+async function restoreProductionSessionAfterUnlock(input) {
+  const { profile, passphrase } = input;
   let session;
   try {
     session = await invoke("production_session_state_check", { profile, passphrase });
   } catch {
+    if (!productionProfileInputStillCurrent(input)) {
+      return;
+    }
     latestProductionSessionState = null;
     setProductionPairingState("No stored session");
     setText(fields.productionPairingSession, "No message-ready stored session for this profile yet");
@@ -11768,6 +11793,9 @@ async function restoreProductionSessionAfterUnlock(profile, passphrase) {
     return;
   }
 
+  if (!productionProfileInputStillCurrent(input)) {
+    return;
+  }
   const view = productionSessionStateView(session);
   latestProductionSessionState = session;
   setProductionPairingState(
@@ -11788,11 +11816,17 @@ async function restoreProductionSessionAfterUnlock(profile, passphrase) {
 
   try {
     const transcript = await invoke("production_message_transcript_export", { profile, passphrase });
+    if (!productionProfileInputStillCurrent(input)) {
+      return;
+    }
     renderProductionTranscriptEntries(profile, transcript.entries);
     setProductionMessageState("Stored transcript recovered");
     setText(fields.productionMessageWarning, transcriptRetentionWarning(transcript));
     setText(fields.productionMessageBoundary, transcriptBoundarySummary(transcript));
   } catch {
+    if (!productionProfileInputStillCurrent(input)) {
+      return;
+    }
     setProductionMessageState("Transcript recovery unavailable");
     setText(
       fields.productionMessageWarning,
@@ -13026,7 +13060,8 @@ async function exportProductionReceivedMessage() {
 }
 
 async function loadProductionMessageTranscript() {
-  const { profile, passphrase } = productionProfileInput();
+  const input = productionProfileInput();
+  const { profile, passphrase } = input;
   if (!profile || !passphrase) {
     setProductionMessageState("Transcript load needs profile");
     setText(fields.productionMessageWarning, "Enter profile and passphrase before loading transcript.");
@@ -13045,6 +13080,9 @@ async function loadProductionMessageTranscript() {
       profile,
       passphrase,
     });
+    if (!productionProfileInputStillCurrent(input)) {
+      return;
+    }
     renderProductionTranscriptEntries(profile, result.entries);
     if (fields.productionMessageTranscriptExport) {
       fields.productionMessageTranscriptExport.value = result.transcript_tsv ?? "";
@@ -13053,6 +13091,9 @@ async function loadProductionMessageTranscript() {
     setText(fields.productionMessageWarning, transcriptRetentionWarning(result));
     setText(fields.productionMessageBoundary, transcriptBoundarySummary(result));
   } catch (error) {
+    if (!productionProfileInputStillCurrent(input)) {
+      return;
+    }
     setProductionMessageState("Transcript load failed");
     setText(fields.productionMessageWarning, String(error));
   } finally {
