@@ -8335,6 +8335,12 @@ function productionPairingInput() {
   };
 }
 
+function productionPairingInputStillCurrent(input, keys = []) {
+  const current = productionPairingInput();
+  const fieldsToCompare = keys.length > 0 ? keys : Object.keys(input ?? {});
+  return fieldsToCompare.every((key) => current[key] === input[key]);
+}
+
 function pairingSafetyFingerprint(input = productionPairingInput()) {
   return `${input.localPayload}\n${input.remotePayload}`;
 }
@@ -11809,7 +11815,8 @@ async function applyProductionPairingPayloadExportResult(result, stateLabel = "P
 }
 
 async function exportProductionPairingPayload() {
-  const { profile, passphrase, rendezvousEndpoint } = productionPairingInput();
+  const input = productionPairingInput();
+  const { profile, passphrase, rendezvousEndpoint } = input;
   if (!profile || !passphrase || !rendezvousEndpoint) {
     setProductionPairingState("Pairing payload needs input");
     setText(fields.productionPairingWarning, "Enter profile, passphrase, and onion endpoint.");
@@ -11834,8 +11841,14 @@ async function exportProductionPairingPayload() {
       passphrase,
       rendezvousEndpoint,
     });
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "rendezvousEndpoint"])) {
+      return;
+    }
     await applyProductionPairingPayloadExportResult(result);
   } catch (error) {
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "rendezvousEndpoint"])) {
+      return;
+    }
     setProductionPairingState("Pairing payload export failed");
     setText(fields.productionPairingWarning, String(error));
     if (fields.productionPairingPayload) {
@@ -11853,7 +11866,8 @@ async function exportProductionPairingPayload() {
 }
 
 async function saveProductionSessionDraft() {
-  const { profile, passphrase, localPayload, remotePayload, safetyConfirmed } = productionPairingInput();
+  const input = productionPairingInput();
+  const { profile, passphrase, localPayload, remotePayload, safetyConfirmed } = input;
   if (!profile || !passphrase || !localPayload || !remotePayload) {
     setProductionPairingState("Session draft needs payloads");
     setText(fields.productionPairingWarning, "Export local payload and paste a remote payload.");
@@ -11882,6 +11896,9 @@ async function saveProductionSessionDraft() {
       remotePayload,
       safetyConfirmed,
     });
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "localPayload", "remotePayload", "safetyConfirmed"])) {
+      return;
+    }
     const view = productionSessionDraftView(result);
     setProductionPairingState("Session draft saved");
     setText(fields.productionPairingWarning, result.warning);
@@ -11889,9 +11906,12 @@ async function saveProductionSessionDraft() {
     setText(fields.productionPairingStorage, view.storage);
     setText(fields.productionPairingBoundary, view.boundary);
     if (result.session_draft_present) {
-      await checkProductionSessionState();
+      await checkProductionSessionState(input);
     }
   } catch (error) {
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "localPayload", "remotePayload", "safetyConfirmed"])) {
+      return;
+    }
     setProductionPairingState("Session draft save failed");
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionPairingSession, "Failed");
@@ -11941,8 +11961,14 @@ async function checkProductionPairingSafety() {
       localPayload: input.localPayload,
       remotePayload: input.remotePayload,
     });
+    if (!productionPairingInputStillCurrent(input, ["localPayload", "remotePayload"])) {
+      return;
+    }
     applyProductionPairingSafetyPreviewResult(result, input.localPayload, input.remotePayload);
   } catch (error) {
+    if (!productionPairingInputStillCurrent(input, ["localPayload", "remotePayload"])) {
+      return;
+    }
     setProductionPairingState("Safety check failed");
     setText(fields.productionPairingWarning, String(error));
     resetProductionPairingSafety("Failed");
@@ -11954,8 +11980,8 @@ async function checkProductionPairingSafety() {
   }
 }
 
-async function checkProductionSessionState() {
-  const { profile, passphrase } = productionPairingInput();
+async function checkProductionSessionState(input = productionPairingInput()) {
+  const { profile, passphrase } = input;
   if (!profile || !passphrase) {
     setProductionPairingState("Session state needs profile");
     setText(fields.productionPairingWarning, "Enter profile and passphrase.");
@@ -11970,6 +11996,9 @@ async function checkProductionSessionState() {
   }
   try {
     const result = await invoke("production_session_state_check", { profile, passphrase });
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
+      return;
+    }
     const view = productionSessionStateView(result);
     latestProductionSessionState = result;
     setProductionPairingState("Session state checked");
@@ -11978,6 +12007,9 @@ async function checkProductionSessionState() {
     setText(fields.productionPairingBoundary, view.pairingBoundary);
     setText(fields.productionMessageBoundary, view.messageBoundary);
   } catch (error) {
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
+      return;
+    }
     latestProductionSessionState = null;
     setProductionPairingState("Session state check failed");
     setText(fields.productionPairingWarning, String(error));
@@ -12518,7 +12550,8 @@ function renderHandshakePayloadResult(result, outputField) {
 }
 
 async function exportProductionHandshakeInit() {
-  const { profile, passphrase } = productionPairingInput();
+  const input = productionPairingInput();
+  const { profile, passphrase } = input;
   if (!profile || !passphrase) {
     setProductionPairingState("Handshake init needs profile");
     setText(fields.productionPairingWarning, "Enter profile and passphrase.");
@@ -12533,8 +12566,14 @@ async function exportProductionHandshakeInit() {
   }
   try {
     const result = await invoke("production_handshake_init_export", { profile, passphrase });
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
+      return;
+    }
     renderHandshakePayloadResult(result, fields.productionHandshakeInitPayload);
   } catch (error) {
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
+      return;
+    }
     setProductionPairingState("Handshake init failed");
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionHandshakeState, "Failed");
@@ -12548,7 +12587,8 @@ async function exportProductionHandshakeInit() {
 }
 
 async function exportProductionHandshakeReply() {
-  const { profile, passphrase, initPayload } = productionPairingInput();
+  const input = productionPairingInput();
+  const { profile, passphrase, initPayload } = input;
   if (!profile || !passphrase || !initPayload) {
     setProductionPairingState("Handshake reply needs init");
     setText(fields.productionPairingWarning, "Paste a remote handshake init payload.");
@@ -12567,8 +12607,14 @@ async function exportProductionHandshakeReply() {
       passphrase,
       initPayload,
     });
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "initPayload"])) {
+      return;
+    }
     renderHandshakePayloadResult(result, fields.productionHandshakeReplyPayload);
   } catch (error) {
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "initPayload"])) {
+      return;
+    }
     setProductionPairingState("Handshake reply failed");
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionHandshakeState, "Failed");
@@ -12582,7 +12628,8 @@ async function exportProductionHandshakeReply() {
 }
 
 async function exportProductionHandshakeFinish() {
-  const { profile, passphrase, replyPayload } = productionPairingInput();
+  const input = productionPairingInput();
+  const { profile, passphrase, replyPayload } = input;
   if (!profile || !passphrase || !replyPayload) {
     setProductionPairingState("Handshake finish needs reply");
     setText(fields.productionPairingWarning, "Paste a remote handshake reply payload.");
@@ -12601,8 +12648,14 @@ async function exportProductionHandshakeFinish() {
       passphrase,
       replyPayload,
     });
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "replyPayload"])) {
+      return;
+    }
     renderHandshakePayloadResult(result, fields.productionHandshakeFinishPayload);
   } catch (error) {
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "replyPayload"])) {
+      return;
+    }
     setProductionPairingState("Handshake finish failed");
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionHandshakeState, "Failed");
@@ -12616,7 +12669,8 @@ async function exportProductionHandshakeFinish() {
 }
 
 async function importProductionHandshakeFinish() {
-  const { profile, passphrase, finishPayload } = productionPairingInput();
+  const input = productionPairingInput();
+  const { profile, passphrase, finishPayload } = input;
   if (!profile || !passphrase || !finishPayload) {
     setProductionPairingState("Handshake import needs finish");
     setText(fields.productionPairingWarning, "Paste a remote handshake finish payload.");
@@ -12635,6 +12689,9 @@ async function importProductionHandshakeFinish() {
       passphrase,
       finishPayload,
     });
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "finishPayload"])) {
+      return;
+    }
     const view = productionHandshakeFinishImportView(result);
     const clearedFinishInput =
       Boolean(finishPayload) &&
@@ -12649,8 +12706,11 @@ async function importProductionHandshakeFinish() {
     );
     setText(fields.productionHandshakeState, view.state);
     setText(fields.productionPairingBoundary, view.boundary);
-    await checkProductionSessionState();
+    await checkProductionSessionState(input);
   } catch (error) {
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "finishPayload"])) {
+      return;
+    }
     setProductionPairingState("Handshake finish import failed");
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionHandshakeState, "Failed");
