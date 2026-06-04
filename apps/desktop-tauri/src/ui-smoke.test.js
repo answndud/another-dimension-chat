@@ -810,6 +810,10 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /retryable_outbound_present=/);
   assert.match(reportBody, /outbound_failure_class=/);
   assert.match(reportBody, /outbound_recovery_action=/);
+  assert.match(reportBody, /savedInviteRoomListItemView\(currentSavedRoom/);
+  assert.match(reportBody, /room_list_state_key=/);
+  assert.match(reportBody, /room_list_state_label=/);
+  assert.match(reportBody, /room_list_next_action=/);
   assert.match(reportBody, /receive_failure_kind=/);
   assert.match(reportBody, /real_onion_next_blocker=/);
   assert.match(reportBody, /real_onion_blockers=/);
@@ -838,6 +842,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(functionBody(mainJs, "cancelProductionTwoProfileRealOnionWait"), /production_two_profile_real_onion_wait_cancel/);
   assert.doesNotMatch(reportBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
   assert.doesNotMatch(reportBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
+  assert.doesNotMatch(reportBody, /room_list_code|currentRoomCode=/);
 });
 
 test("send diagnostics expose runtime owner match without raw profile names", () => {

@@ -3321,6 +3321,9 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     : false;
   const deliveryNoticeKey = deliveryNoticeCurrentRoom ? latestChatDeliveryNoticeKey : "none";
   const deliveryNoticeTone = deliveryNoticeCurrentRoom ? latestChatDeliveryNoticeTone : "neutral";
+  const currentRoomCode = currentInviteRoomCode();
+  const currentSavedRoom = savedInviteRooms().find((room) => room.code === currentRoomCode) ?? null;
+  const currentSavedRoomView = currentSavedRoom ? savedInviteRoomListItemView(currentSavedRoom, { currentCode: currentRoomCode }) : null;
 
   return [
     "Another Dimension Chat beta field test report",
@@ -3348,6 +3351,9 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `retryable_outbound_present=${Boolean(retryableOutbound)}`,
     `outbound_failure_class=${fieldTestReportValue(outboundFailureClass, "none")}`,
     `outbound_recovery_action=${fieldTestReportValue(outboundRecoveryAction, "none")}`,
+    `room_list_state_key=${fieldTestReportValue(currentSavedRoomView?.state?.key, "none")}`,
+    `room_list_state_label=${fieldTestReportValue(currentSavedRoomView?.state?.label, "none")}`,
+    `room_list_next_action=${fieldTestReportValue(currentSavedRoomView?.nextAction?.action, "none")}`,
     `receive_failure_kind=${fieldTestReportValue(receiveFailureKind, "none")}`,
     `real_onion_attempted=${Boolean(realOnionResult)}`,
     `real_onion_next_blocker=${fieldTestReportValue(realOnionResult?.next_blocker, "none")}`,
