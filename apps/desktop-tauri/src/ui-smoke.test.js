@@ -700,6 +700,11 @@ test("standalone onion diagnostics ignore stale profile and endpoint inputs", ()
 
 test("receive imports refresh room list metadata immediately", () => {
   assert.match(mainJs, /function refreshCurrentRoomAfterReceiveImport/);
+  assert.match(mainJs, /function savedInviteRoomForRoomFingerprint/);
+  assert.match(mainJs, /function refreshSavedInviteRoomMetadataForFingerprint/);
+  assert.match(functionBody(mainJs, "savedInviteRoomForRoomFingerprint"), /privateRouteRoomKey\(savedInviteRoomInput\(room\)\) === fingerprint/);
+  assert.match(functionBody(mainJs, "refreshSavedInviteRoomMetadataForFingerprint"), /savedInviteRoomMetadataFromLocalStores\(room\)/);
+  assert.match(functionBody(mainJs, "refreshSavedInviteRoomMetadataForFingerprint"), /rememberInviteRoom\(/);
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /rememberCurrentInviteRoomMetadata\(\)/);
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /renderSavedInviteRooms\(\)/);
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /renderRoomStatusSummary\(input, sessionsReady\)/);
@@ -709,7 +714,7 @@ test("receive imports refresh room list metadata immediately", () => {
   assert.match(pollBody, /rememberProductionTwoProfileOnionReceiveRuntimeState\(runtimeState, runtimeResult\)/);
   assert.match(
     pollBody,
-    /if \(!receivingCurrentRoom\) \{[\s\S]*renderSavedInviteRooms\(\);[\s\S]*\} else \{[\s\S]*await loadProductionTwoProfileTranscript/,
+    /if \(!receivingCurrentRoom\) \{[\s\S]*await refreshSavedInviteRoomMetadataForFingerprint\([\s\S]*productionTwoProfileOnionReceiveMode\.roomFingerprint,[\s\S]*preserveUpdatedAt: refreshPlan\.messageImported !== true[\s\S]*\);[\s\S]*\} else \{[\s\S]*await loadProductionTwoProfileTranscript/,
   );
   assert.match(pollBody, /if \(!twoProfileTranscriptInputStillCurrent\(currentInput\)\) \{[\s\S]*renderSavedInviteRooms\(\);[\s\S]*return;/);
   assert.match(pollBody, /profileA: currentInput\.profileA/);

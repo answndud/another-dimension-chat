@@ -2522,6 +2522,44 @@ async function savedInviteRoomMetadataFromLocalStores(room) {
   ]);
 }
 
+function savedInviteRoomForRoomFingerprint(roomFingerprint, rooms = savedInviteRooms()) {
+  const fingerprint = String(roomFingerprint ?? "").trim();
+  if (!fingerprint) {
+    return null;
+  }
+  return (
+    (Array.isArray(rooms) ? rooms : []).find(
+      (room) => privateRouteRoomKey(savedInviteRoomInput(room)) === fingerprint,
+    ) ?? null
+  );
+}
+
+async function refreshSavedInviteRoomMetadataForFingerprint(roomFingerprint, options = {}) {
+  const room = savedInviteRoomForRoomFingerprint(roomFingerprint);
+  if (!room) {
+    renderSavedInviteRooms();
+    return false;
+  }
+  try {
+    const metadata = await savedInviteRoomMetadataFromLocalStores(room);
+    if (!metadata) {
+      renderSavedInviteRooms();
+      return false;
+    }
+    rememberInviteRoom(
+      room.code,
+      room.role,
+      options.preserveUpdatedAt ? { ...metadata, updatedAt: room.updatedAt } : metadata,
+      { render: false },
+    );
+    renderSavedInviteRooms();
+    return true;
+  } catch {
+    renderSavedInviteRooms();
+    return false;
+  }
+}
+
 function savedInviteRoomMetadataSyncCandidates(rooms = savedInviteRooms()) {
   return (Array.isArray(rooms) ? rooms : [])
     .slice()
@@ -11527,7 +11565,10 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
       productionTwoProfileOnionReceiveMode.lastProcessedMessageImportCount = refreshPlan.messageImportCount;
       productionTwoProfileOnionReceiveMode.lastProcessedEndpointUpdateCount = refreshPlan.endpointUpdateCount;
       if (!receivingCurrentRoom) {
-        renderSavedInviteRooms();
+        await refreshSavedInviteRoomMetadataForFingerprint(
+          productionTwoProfileOnionReceiveMode.roomFingerprint,
+          { preserveUpdatedAt: refreshPlan.messageImported !== true },
+        );
       } else {
         await loadProductionTwoProfileTranscript({
           quiet: true,
