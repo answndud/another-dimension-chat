@@ -402,6 +402,7 @@ const fields = {
   productionTwoProfileTranscript: document.querySelector("#production-two-profile-transcript"),
   chatDeliveryNotice: document.querySelector("#chat-delivery-notice"),
   fieldTestReport: document.querySelector("#field-test-report"),
+  fieldTestReportSummary: document.querySelector("#field-test-report-summary"),
   refreshFieldTestReport: document.querySelector("#refresh-field-test-report"),
   copyFieldTestReport: document.querySelector("#copy-field-test-report"),
   productionTwoProfileTranscriptExport: document.querySelector("#production-two-profile-transcript-export"),
@@ -3204,6 +3205,57 @@ function fieldTestBoundaryValue(text, key, fallback = "none") {
   return match ? fieldTestReportValue(match[1], fallback) : fallback;
 }
 
+function parseFieldTestReport(report) {
+  const fields = {};
+  for (const line of String(report ?? "").split(/\r?\n/)) {
+    const match = line.match(/^([a-z0-9_]+)=(.*)$/i);
+    if (match) {
+      fields[match[1]] = match[2];
+    }
+  }
+  return fields;
+}
+
+function fieldTestReportSummary(report) {
+  const parsed = parseFieldTestReport(report);
+  const room = parsed.room_present === "true" ? "room" : "no-room";
+  const safety = parsed.safety_confirmed === "true" ? "verified" : "unverified";
+  const route = parsed.route_stale === "true"
+    ? "route-stale"
+    : parsed.route_ready === "true"
+      ? "route-ready"
+      : "route-missing";
+  const receive = parsed.receive_enabled === "true"
+    ? `receive-${fieldTestReportValue(parsed.receive_state, "unknown")}`
+    : "receive-off";
+  const nextAction =
+    parsed.room_list_next_action && parsed.room_list_next_action !== "none"
+      ? parsed.room_list_next_action
+      : parsed.outbound_recovery_action && parsed.outbound_recovery_action !== "none"
+        ? parsed.outbound_recovery_action
+        : parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none"
+          ? parsed.real_onion_recovery_action
+          : "none";
+  const blocker =
+    parsed.real_onion_next_blocker && parsed.real_onion_next_blocker !== "none"
+      ? parsed.real_onion_next_blocker
+      : parsed.receive_failure_kind && parsed.receive_failure_kind !== "none"
+        ? parsed.receive_failure_kind
+        : parsed.outbound_failure_class && parsed.outbound_failure_class !== "none"
+          ? parsed.outbound_failure_class
+          : "none";
+  return `summary ${room} ${safety} ${route} ${receive} next=${fieldTestReportValue(nextAction, "none")} blocker=${fieldTestReportValue(blocker, "none")}`;
+}
+
+function renderFieldTestReportSummary(report) {
+  if (!fields.fieldTestReportSummary) {
+    return "";
+  }
+  const summary = fieldTestReportSummary(report);
+  fields.fieldTestReportSummary.textContent = summary;
+  return summary;
+}
+
 function latestRealOnionFieldTestResult(input = productionTwoProfileInput()) {
   if (!latestProductionTwoProfileRealOnionResult) {
     return null;
@@ -3386,10 +3438,12 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
 
 function refreshFieldTestReport() {
   if (!fields.fieldTestReport) {
+    renderFieldTestReportSummary("");
     return "";
   }
   const report = buildFieldTestReport();
   fields.fieldTestReport.value = report;
+  renderFieldTestReportSummary(report);
   return report;
 }
 
