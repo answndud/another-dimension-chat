@@ -289,6 +289,30 @@ test("room transcript refresh is scoped to the current room", () => {
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /rememberTwoProfileSessionStatus\(sessionCheckInput, result\)/);
 });
 
+test("same-profile invite rooms are scoped by invite code", () => {
+  assert.match(functionBody(mainJs, "twoProfileSessionStatusFingerprint"), /input\.passphrase/);
+  assert.match(functionBody(mainJs, "latestTwoProfileSuccessForInput"), /roomFingerprint === twoProfileSessionStatusFingerprint\(input\)/);
+  assert.match(functionBody(mainJs, "latestTwoProfileSuccessMatchesDirection"), /latestTwoProfileSuccessForInput\(input\)/);
+  assert.match(functionBody(mainJs, "latestTwoProfileSuccessMatchesOppositeDirection"), /latestTwoProfileSuccessForInput\(\{/);
+  assert.match(functionBody(mainJs, "latestTwoProfileOutboundDeliveryCandidate"), /latest\.roomFingerprint !== twoProfileSessionStatusFingerprint\(input\)/);
+
+  for (const name of [
+    "saveInviteRoomOutboundMessage",
+    "renderProductionTwoProfileResult",
+    "renderProductionTwoProfileMessageResult",
+    "retryTwoProfileOutboundEntry",
+    "runProductionTwoProfileRealOnionRoundtrip",
+  ]) {
+    assert.match(functionBody(mainJs, name), /roomFingerprint: twoProfileSessionStatusFingerprint/);
+  }
+
+  assert.match(functionBody(mainJs, "updateMinimalChatMode"), /latestTwoProfileSuccessForInput\(input\)/);
+  assert.match(functionBody(mainJs, "renderProductionTwoProfileMemory"), /latestTwoProfileSuccessForInput\(input\)/);
+  assert.match(functionBody(mainJs, "sendProductionTwoProfileEndpointUpdate"), /latestTwoProfileSuccessForInput\(input\)/);
+  assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /latestRealOnionFieldTestResult\(\{ profileA, profileB, passphrase \}\)/);
+  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /latestTwoProfileSessionStatusForCurrentInput\(\{ profileA, profileB, passphrase \}\)/);
+});
+
 test("busy actions only clear the action they started", () => {
   assert.match(mainJs, /function clearProductionBusyAction\(action\)/);
   assert.match(functionBody(mainJs, "clearProductionBusyAction"), /productionBusyAction === action/);
