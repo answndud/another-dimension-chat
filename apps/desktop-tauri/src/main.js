@@ -2305,11 +2305,12 @@ function savedInviteRooms() {
           lastMessagePreview: String(room?.lastMessagePreview ?? "").trim(),
           lastMessageAt: Number(room?.lastMessageAt ?? 0),
           messageCount: Math.max(0, Number.parseInt(room?.messageCount ?? 0, 10) || 0),
-          retryableOutboundCount: Math.max(
-            0,
-            Number.parseInt(room?.retryableOutboundCount ?? 0, 10) || 0,
-          ),
+          retryableOutboundCount: Math.max(0, Number.parseInt(room?.retryableOutboundCount ?? 0, 10) || 0),
           retryableOutboundMessageNumber: Number.parseInt(room?.retryableOutboundMessageNumber ?? 0, 10) || 0,
+          retryableOutboundAction:
+            Math.max(0, Number.parseInt(room?.retryableOutboundCount ?? 0, 10) || 0) > 0
+              ? savedInviteRoomRetryableAction(room?.retryableOutboundAction)
+              : "",
         }))
         .filter((room) => room.code && room.role);
     }
@@ -2330,6 +2331,7 @@ function savedInviteRooms() {
         messageCount: 0,
         retryableOutboundCount: 0,
         retryableOutboundMessageNumber: 0,
+        retryableOutboundAction: "",
       });
     }
   } catch {
@@ -2348,6 +2350,10 @@ function roomListStoragePayload(rooms) {
     messageCount: Math.max(0, Number.parseInt(room.messageCount ?? 0, 10) || 0),
     retryableOutboundCount: Math.max(0, Number.parseInt(room.retryableOutboundCount ?? 0, 10) || 0),
     retryableOutboundMessageNumber: Number.parseInt(room.retryableOutboundMessageNumber ?? 0, 10) || 0,
+    retryableOutboundAction:
+      Math.max(0, Number.parseInt(room.retryableOutboundCount ?? 0, 10) || 0) > 0
+        ? savedInviteRoomRetryableAction(room.retryableOutboundAction)
+        : "",
   }));
 }
 
@@ -2373,6 +2379,10 @@ function rememberInviteRoom(code, role, metadata = {}, options = {}) {
   }
   const existing = savedInviteRooms().find((room) => room.code === trimmedCode) ?? {};
   const rooms = savedInviteRooms().filter((room) => room.code !== trimmedCode);
+  const retryableOutboundCount = Math.max(
+    0,
+    Number.parseInt(inviteRoomMetadataValue(metadata, existing, "retryableOutboundCount") ?? 0, 10) || 0,
+  );
   rooms.unshift({
     ...existing,
     code: trimmedCode,
@@ -2384,12 +2394,13 @@ function rememberInviteRoom(code, role, metadata = {}, options = {}) {
       0,
       Number.parseInt(inviteRoomMetadataValue(metadata, existing, "messageCount") ?? 0, 10) || 0,
     ),
-    retryableOutboundCount: Math.max(
-      0,
-      Number.parseInt(inviteRoomMetadataValue(metadata, existing, "retryableOutboundCount") ?? 0, 10) || 0,
-    ),
+    retryableOutboundCount,
     retryableOutboundMessageNumber:
       Number.parseInt(inviteRoomMetadataValue(metadata, existing, "retryableOutboundMessageNumber") ?? 0, 10) || 0,
+    retryableOutboundAction:
+      retryableOutboundCount > 0
+        ? savedInviteRoomRetryableAction(inviteRoomMetadataValue(metadata, existing, "retryableOutboundAction"))
+        : "",
   });
   localStoreSet(inviteRoomsStorageKey, JSON.stringify(roomListStoragePayload(rooms)));
   if (options.render !== false) {
@@ -2503,6 +2514,13 @@ function savedInviteRoomHasRetryableOutbound(room) {
   return Number.parseInt(room?.retryableOutboundCount ?? 0, 10) > 0;
 }
 
+function savedInviteRoomRetryableAction(action) {
+  const normalized = String(action ?? "").trim();
+  return new Set(["enable-private-delivery", "prepare-private-route", "refresh-and-retry", "retry"]).has(normalized)
+    ? normalized
+    : "";
+}
+
 function savedInviteRoomResumePriority(room) {
   if (savedInviteRoomHasRetryableOutbound(room)) {
     return 30;
@@ -2559,6 +2577,16 @@ function savedInviteRoomState(room, options = {}) {
 
 function savedInviteRoomListAction(room) {
   if (savedInviteRoomHasRetryableOutbound(room)) {
+    const action = savedInviteRoomRetryableAction(room.retryableOutboundAction);
+    if (action === "enable-private-delivery") {
+      return { action, labelKey: "enablePrivateDelivery" };
+    }
+    if (action === "prepare-private-route") {
+      return { action, labelKey: "preparePrivateRoute" };
+    }
+    if (action === "refresh-and-retry") {
+      return { action, labelKey: "refreshAndRetry" };
+    }
     return { action: "review-send", labelKey: "roomActionReviewSend" };
   }
   if (savedInviteRoomReceiveState(room) === "paused") {
@@ -2587,6 +2615,37 @@ async function runSavedInviteRoomListAction(room, action) {
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
+    } else {
+      showLatestRetryableOutboundNotice(productionTwoProfileInput());
+    }
+    return true;
+  }
+  if (action === "enable-private-delivery") {
+    const input = productionTwoProfileInput();
+    const pending = latestVisibleTwoProfileRetryableOutboundEntry(input);
+    if (pending) {
+      selectTwoProfileConversationEntry(pending);
+      showRetryableTwoProfileOutboundNotice(pending);
+    }
+    openPrivateDeliverySettings(input);
+    return true;
+  }
+  if (action === "prepare-private-route") {
+    const input = productionTwoProfileInput();
+    const pending = latestVisibleTwoProfileRetryableOutboundEntry(input);
+    if (pending) {
+      selectTwoProfileConversationEntry(pending);
+      showRetryableTwoProfileOutboundNotice(pending);
+    }
+    focusPrivateRouteNextAction(input);
+    return true;
+  }
+  if (action === "refresh-and-retry") {
+    const pending = latestVisibleTwoProfileRetryableOutboundEntry(productionTwoProfileInput());
+    if (pending) {
+      selectTwoProfileConversationEntry(pending);
+      showRetryableTwoProfileOutboundNotice(pending);
+      await refreshTwoProfileOutboundEndpointThenRetry(pending);
     } else {
       showLatestRetryableOutboundNotice(productionTwoProfileInput());
     }
