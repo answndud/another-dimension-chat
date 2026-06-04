@@ -474,6 +474,7 @@ let activeInviteRoomOpenFingerprint = "";
 let activeInviteRoomPrivateRouteCodeFingerprint = "";
 let activeInviteRoomPeerRouteCodeFingerprint = "";
 let activeTwoProfileOnionEnvelopeSendKey = "";
+let activeTwoProfilePeerEndpointRefreshFingerprint = "";
 let latestProductionManualFocusTarget = null;
 let latestChatDeliveryNoticeKey = "";
 let latestChatDeliveryNoticeTone = "neutral";
@@ -564,6 +565,21 @@ function clearTwoProfileOnionEnvelopeSendBusy(input, messageNumber) {
   ) {
     activeTwoProfileOnionEnvelopeSendKey = "";
     clearProductionBusyAction("two-profile-onion-envelope-send");
+  }
+}
+
+function setTwoProfilePeerEndpointRefreshBusy(input) {
+  productionBusyAction = "two-profile-peer-endpoint-refresh";
+  activeTwoProfilePeerEndpointRefreshFingerprint = twoProfileSessionStatusFingerprint(input);
+}
+
+function clearTwoProfilePeerEndpointRefreshBusy(input) {
+  if (
+    productionBusyAction === "two-profile-peer-endpoint-refresh" &&
+    activeTwoProfilePeerEndpointRefreshFingerprint === twoProfileSessionStatusFingerprint(input)
+  ) {
+    activeTwoProfilePeerEndpointRefreshFingerprint = "";
+    clearProductionBusyAction("two-profile-peer-endpoint-refresh");
   }
 }
 
@@ -9876,7 +9892,7 @@ async function refreshProductionTwoProfilePeerEndpoints(input = productionTwoPro
     return launch;
   };
 
-  productionBusyAction = "two-profile-peer-endpoint-refresh";
+  setTwoProfilePeerEndpointRefreshBusy(input);
   setProductionTwoProfileState("Endpoint refresh running");
   setText(fields.productionTwoProfileWarning, t("refreshAddressRunning"));
   setText(fields.productionTwoProfileProfiles, `a=${profileA} b=${profileB}`);
@@ -9945,7 +9961,7 @@ async function refreshProductionTwoProfilePeerEndpoints(input = productionTwoPro
     setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Existing room state was kept."));
     return false;
   } finally {
-    clearProductionBusyAction("two-profile-peer-endpoint-refresh");
+    clearTwoProfilePeerEndpointRefreshBusy(input);
     if (fields.refreshProductionTwoProfilePeerEndpoints) {
       fields.refreshProductionTwoProfilePeerEndpoints.disabled = false;
     }
