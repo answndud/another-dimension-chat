@@ -9407,6 +9407,9 @@ async function applyPeerPrivateRouteCode() {
     });
     const status = await invokeInviteRoomSessionStatus(input);
     rememberTwoProfileSessionStatus(input, status);
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return true;
+    }
     renderProductionTwoProfileSessionStatusResult(status);
     setProductionTwoProfileState(update.remote_endpoint_state_written ? "Peer delivery saved" : "Peer delivery unchanged");
     setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeSaved"));
@@ -9422,6 +9425,9 @@ async function applyPeerPrivateRouteCode() {
     }
     return true;
   } catch (error) {
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return false;
+    }
     setProductionTwoProfileState("Peer delivery failed");
     setText(fields.productionTwoProfileWarning, `${t("peerPrivateRouteCodeFailed")} ${String(error)}`);
     setChatDeliveryNoticeByKey("peerPrivateRouteCodeFailed", "warning");
