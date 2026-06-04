@@ -492,7 +492,12 @@ export function productionTwoProfileOutboundActionState(entry, input = {}, invit
     sameDirection,
     canApplyDirection: Boolean(showActions),
     canRunNow: Boolean(showActions && (!inviteCodeMode || sameDirection)),
+    canCancelNow: Boolean(showActions && (!inviteCodeMode || sameDirection)),
     disabledReason:
+      showActions && inviteCodeMode && !sameDirection
+        ? "Only pending messages sent from this device can be retried or canceled here."
+        : "",
+    cancelDisabledReason:
       showActions && inviteCodeMode && !sameDirection
         ? "Only pending messages sent from this device can be retried or canceled here."
         : "",

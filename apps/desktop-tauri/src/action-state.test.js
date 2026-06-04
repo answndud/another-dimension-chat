@@ -112,7 +112,9 @@ test("failed outbound messages stay retryable or cancelable from the active devi
     sameDirection: true,
     canApplyDirection: true,
     canRunNow: true,
+    canCancelNow: true,
     disabledReason: "",
+    cancelDisabledReason: "",
   });
   assert.deepEqual(productionTwoProfileOutboundPrimaryAction(entry), {
     action: "enable-private-delivery",

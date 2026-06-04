@@ -898,7 +898,11 @@ test("chat delivery notices stay scoped to the active invite room", () => {
   assert.match(functionBody(mainJs, "currentTwoProfileOutboundAction"), /options\.requireNoticeMatch === true && !chatDeliveryNoticeMatchesInput\(input\)/);
   assert.match(functionBody(mainJs, "currentTwoProfileOutboundAction"), /productionTwoProfileConversationEntries\.get\(twoProfileConversationKey\(entry\)\)/);
   assert.match(functionBody(mainJs, "currentTwoProfileOutboundAction"), /currentTwoProfileOutboundPrimaryAction\(currentEntry, input\)/);
+  assert.match(mainJs, /function currentTwoProfileOutboundCancelableEntry/);
+  assert.match(functionBody(mainJs, "currentTwoProfileOutboundCancelableEntry"), /outboundActionState\.canCancelNow \? currentEntry : null/);
   assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /currentTwoProfileOutboundAction\(pendingEntry, \{ requireNoticeMatch: true \}\)/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /cancel\.disabled = !outboundActionState\.canCancelNow/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /currentTwoProfileOutboundCancelableEntry\(pendingEntry, \{ requireNoticeMatch: true \}\)/);
 
   const languageBody = functionBody(mainJs, "applyLanguage");
   assert.match(languageBody, /latestChatDeliveryNoticeKey && chatDeliveryNoticeMatchesInput\(productionTwoProfileInput\(\)\)/);
@@ -960,7 +964,9 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(retryBody, /setChatDeliveryNoticeByKey\("sendRetrying", "progress", input\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /currentTwoProfileOutboundAction\(entry\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /runTwoProfileOutboundPrimaryAction\(current\.entry, current\.primaryAction\)/);
-  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /cancelTwoProfileOutboundEntry\(current\.entry\)/);
+  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /cancel\.disabled = !outboundActionState\.canCancelNow/);
+  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /currentTwoProfileOutboundCancelableEntry\(entry\)/);
+  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /cancelTwoProfileOutboundEntry\(currentEntry\)/);
 
   const refreshRetryBody = functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry");
   assert.match(refreshRetryBody, /await prepareInviteRoomPrivateRouteExchange\(input\)/);
