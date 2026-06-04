@@ -3889,9 +3889,9 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
   }
   if (manualNetworkPermissionEnabled()) {
     const onionInput = roomInput;
-    if (latestTwoProfileOutboundOnionMessage(onionInput)) {
+    if (latestTwoProfileOutboundOnionMessage(onionInput, { messageNumber })) {
       setText(fields.productionTwoProfileWarning, t("onionDeliveryStarting"));
-      await sendProductionTwoProfileLatestOnionEnvelope(onionInput);
+      await sendProductionTwoProfileLatestOnionEnvelope(onionInput, { messageNumber });
       return;
     }
     const peerEndpointState = twoProfilePeerEndpointState(onionInput);
@@ -4441,8 +4441,18 @@ function storedPeerEndpointTransportState(input = productionTwoProfileInput()) {
   return { ready: false, reason: "endpoint not checked" };
 }
 
-function latestTwoProfileOutboundDeliveryCandidate(input = productionTwoProfileInput()) {
-  const retryableEntry = latestTwoProfileRetryableOutboundEntry(input);
+function latestTwoProfileOutboundDeliveryCandidate(input = productionTwoProfileInput(), options = {}) {
+  const targetMessageNumber = Number.parseInt(options.messageNumber, 10);
+  const targetRequested = Number.isInteger(targetMessageNumber) && targetMessageNumber > 0;
+  const targetEntry = targetRequested
+    ? [...productionTwoProfileConversationEntries.values()].find(
+        (entry) =>
+          entry.sender === input.profileA &&
+          entry.receiver === input.profileB &&
+          Number.parseInt(entry.messageNumber, 10) === targetMessageNumber,
+      ) ?? null
+    : null;
+  const retryableEntry = targetEntry ?? (targetRequested ? null : latestTwoProfileRetryableOutboundEntry(input));
   const latest = retryableEntry
     ? {
         profileA: retryableEntry.sender,
@@ -4453,6 +4463,7 @@ function latestTwoProfileOutboundDeliveryCandidate(input = productionTwoProfileI
   if (
     !latest ||
     (!retryableEntry && latest.roomFingerprint !== twoProfileSessionStatusFingerprint(input)) ||
+    (targetRequested && Number.parseInt(latest.messageNumber, 10) !== targetMessageNumber) ||
     latest.profileA !== input.profileA ||
     latest.profileB !== input.profileB ||
     !Number.isInteger(latest.messageNumber) ||
@@ -4497,8 +4508,8 @@ function twoProfileConversationEntryForOutboundCandidate(candidate) {
   );
 }
 
-function latestTwoProfileOutboundOnionMessage(input = productionTwoProfileInput()) {
-  const latest = latestTwoProfileOutboundDeliveryCandidate(input);
+function latestTwoProfileOutboundOnionMessage(input = productionTwoProfileInput(), options = {}) {
+  const latest = latestTwoProfileOutboundDeliveryCandidate(input, options);
   if (!latest) {
     return null;
   }
@@ -10880,8 +10891,8 @@ async function attemptOnionOutboundEnvelopeSend() {
   }
 }
 
-async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwoProfileInput()) {
-  const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(input);
+async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwoProfileInput(), options = {}) {
+  const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(input, options);
   const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!manualNetworkPermission) {
     const pending = latestVisibleTwoProfileRetryableOutboundEntry(input);
@@ -10894,7 +10905,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
     return;
   }
   if (!latestOnionOutbound) {
-    const latestCandidate = latestTwoProfileOutboundDeliveryCandidate(input);
+    const latestCandidate = latestTwoProfileOutboundDeliveryCandidate(input, options);
     const peerEndpointState = twoProfilePeerEndpointState(input);
     if (latestCandidate) {
       await markTwoProfileOutboundSendFailed(
@@ -11116,7 +11127,7 @@ async function retryTwoProfileOutboundEntry(entry) {
     roomFingerprint: twoProfileSessionStatusFingerprint(input),
     fingerprint: twoProfileInputFingerprint(input),
   };
-  await sendProductionTwoProfileLatestOnionEnvelope(input);
+  await sendProductionTwoProfileLatestOnionEnvelope(input, { messageNumber: entry.messageNumber });
   if (!twoProfileTranscriptInputStillCurrent(input)) {
     return;
   }
