@@ -11630,6 +11630,7 @@ async function runProductionRoundtrip() {
 
 async function unlockProductionProfile() {
   const { profile, passphrase } = productionProfileInput();
+  const twoProfileRefreshInput = productionTwoProfileInput();
   if (!profile || !passphrase) {
     setProductionProfileState("Profile unlock needs input");
     setText(fields.productionProfileWarning, "Enter a profile name and passphrase.");
@@ -11657,7 +11658,7 @@ async function unlockProductionProfile() {
     await loadProductionMessageRetentionPreference(profile, passphrase, { quiet: true });
     await loadProductionProfileList();
     await restoreProductionSessionAfterUnlock(profile, passphrase);
-    await refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase);
+    await refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase, twoProfileRefreshInput);
   } catch (error) {
     setProductionProfileState("Profile unlock failed");
     setText(fields.productionProfileWarning, String(error));
@@ -11673,9 +11674,12 @@ async function unlockProductionProfile() {
   }
 }
 
-async function refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase) {
+async function refreshTwoProfileSessionAfterProfileUnlock(
+  profile,
+  passphrase,
+  input = productionTwoProfileInput(),
+) {
   const unlockedProfile = String(profile ?? "").trim().toLowerCase();
-  const input = productionTwoProfileInput();
   if (
     !unlockedProfile ||
     !passphrase ||
@@ -11689,7 +11693,13 @@ async function refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase) {
   }
 
   try {
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return false;
+    }
     const result = await invokeInviteRoomSessionStatus(input);
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return false;
+    }
     rememberTwoProfileSessionStatus(input, result);
     renderProductionTwoProfileSessionStatusResult(result);
     if (result.both_ready_for_message_envelope) {
@@ -11698,6 +11708,9 @@ async function refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase) {
         refreshSessionStatus: false,
         autoResume: true,
       });
+      if (!twoProfileTranscriptInputStillCurrent(input)) {
+        return false;
+      }
       const resumeTarget = autoSelectTwoProfileResumeTarget(result);
       setProductionTwoProfileState(
         resumeTarget === "retry-send" || resumeTarget === "pending-review"
@@ -11705,6 +11718,9 @@ async function refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase) {
           : "Conversation resumed after profile unlock",
       );
       return true;
+    }
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return false;
     }
     setProductionTwoProfileState("Sessions incomplete after profile unlock");
     setText(fields.productionTwoProfileWarning, twoProfileSessionRebuildMessage(input));
@@ -12227,9 +12243,12 @@ async function loadProductionTwoProfileTranscript(options = {}) {
   }
 }
 
-async function refreshTwoProfileConversationAfterManualImport(profile, passphrase) {
+async function refreshTwoProfileConversationAfterManualImport(
+  profile,
+  passphrase,
+  input = productionTwoProfileInput(),
+) {
   const importedProfile = String(profile ?? "").trim().toLowerCase();
-  const input = productionTwoProfileInput();
   if (
     !importedProfile ||
     !passphrase ||
@@ -12243,8 +12262,17 @@ async function refreshTwoProfileConversationAfterManualImport(profile, passphras
   }
 
   try {
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return false;
+    }
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return false;
+    }
   } catch (error) {
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return false;
+    }
     setProductionTwoProfileState("Conversation reload skipped");
     setText(
       fields.productionTwoProfileWarning,
@@ -12713,6 +12741,7 @@ async function exportProductionMessageEnvelope() {
 async function importProductionMessageEnvelope() {
   const input = productionMessageInput();
   const { profile, passphrase, messageNumber, envelopePayload, messageTtlSeconds } = input;
+  const twoProfileRefreshInput = productionTwoProfileInput();
   let postBusyFocus = null;
   const selectedBlocker = selectedManualMessageActionBlocker("import", input);
   if (selectedBlocker) {
@@ -12780,7 +12809,11 @@ async function importProductionMessageEnvelope() {
     setText(fields.productionMessageOutbound, "Not exported in this profile");
     setText(fields.productionMessageInbound, view.inbound);
     setText(fields.productionMessageBoundary, view.boundary);
-    const conversationRefresh = await refreshTwoProfileConversationAfterManualImport(profile, passphrase);
+    const conversationRefresh = await refreshTwoProfileConversationAfterManualImport(
+      profile,
+      passphrase,
+      twoProfileRefreshInput,
+    );
     if (conversationRefresh?.replySelected) {
       postBusyFocus = "current-action";
       setText(

@@ -289,6 +289,29 @@ test("room transcript refresh is scoped to the current room", () => {
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /rememberTwoProfileSessionStatus\(sessionCheckInput, result\)/);
 });
 
+test("profile unlock and manual import refresh the room captured at action start", () => {
+  const unlockBody = functionBody(mainJs, "unlockProductionProfile");
+  assert.match(unlockBody, /const twoProfileRefreshInput = productionTwoProfileInput\(\)/);
+  assert.match(unlockBody, /refreshTwoProfileSessionAfterProfileUnlock\(profile, passphrase, twoProfileRefreshInput\)/);
+
+  const unlockRefreshBody = functionBody(mainJs, "refreshTwoProfileSessionAfterProfileUnlock");
+  assert.match(mainJs, /async function refreshTwoProfileSessionAfterProfileUnlock\([\s\S]*input = productionTwoProfileInput\(\),[\s\S]*\)/);
+  assert.match(unlockRefreshBody, /invokeInviteRoomSessionStatus\(input\)/);
+  assert.match(unlockRefreshBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
+  assert.match(unlockRefreshBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*autoResume: true/);
+  assert.match(unlockRefreshBody, /rememberTwoProfileSessionStatus\(input, result\)/);
+
+  const importBody = functionBody(mainJs, "importProductionMessageEnvelope");
+  assert.match(importBody, /const twoProfileRefreshInput = productionTwoProfileInput\(\)/);
+  assert.match(importBody, /refreshTwoProfileConversationAfterManualImport\([\s\S]*twoProfileRefreshInput/);
+
+  const importRefreshBody = functionBody(mainJs, "refreshTwoProfileConversationAfterManualImport");
+  assert.match(mainJs, /async function refreshTwoProfileConversationAfterManualImport\([\s\S]*input = productionTwoProfileInput\(\),[\s\S]*\)/);
+  assert.match(importRefreshBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
+  assert.match(importRefreshBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: false \}\)/);
+  assert.match(importRefreshBody, /renderProductionTwoProfileMemory\(input\)/);
+});
+
 test("receive imports refresh room list metadata immediately", () => {
   assert.match(mainJs, /function refreshCurrentRoomAfterReceiveImport/);
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /rememberCurrentInviteRoomMetadata\(\)/);
