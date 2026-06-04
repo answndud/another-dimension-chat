@@ -3202,10 +3202,14 @@ async function openSavedInviteRoom(room) {
   syncTwoProfileDerivedConnectionFields();
   renderCurrentInviteCodeDisplay();
   applyProductionActionState();
+  const openInput = productionTwoProfileInput();
   if (!(await waitForMessageRetentionPolicyReady())) {
     return false;
   }
-  return openInviteRoomFromToken();
+  if (!twoProfileTranscriptInputStillCurrent(openInput)) {
+    return false;
+  }
+  return openInviteRoomFromToken(openInput);
 }
 
 async function startInviteRoomFromCode({ code, role, copyBeforePrepare = false }) {
@@ -3240,17 +3244,27 @@ async function startInviteRoomFromCode({ code, role, copyBeforePrepare = false }
   if (copyBeforePrepare) {
     await copyCurrentInviteCode({ quiet: true });
   }
+  const openInput = productionTwoProfileInput();
   if (!(await waitForMessageRetentionPolicyReady())) {
+    if (!twoProfileTranscriptInputStillCurrent(openInput)) {
+      return false;
+    }
     setProductionTwoProfileState("Invite setup blocked");
     setText(fields.productionTwoProfileWarning, messageRetentionPolicyBlocker());
     applyProductionActionState();
     return false;
   }
-  return openInviteRoomFromToken();
+  if (!twoProfileTranscriptInputStillCurrent(openInput)) {
+    return false;
+  }
+  return openInviteRoomFromToken(openInput);
 }
 
 async function finishInviteRoomReadyFromStatus(input, status, warningText) {
   const { profileA, profileB, passphrase } = input;
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return false;
+  }
   const inviteRole = currentInviteCodeRole();
   rememberLastInviteRoom(passphrase, currentInviteCodeRole());
   confirmTwoProfileSafetyForInput({ profileA, profileB, passphrase });
@@ -3270,6 +3284,7 @@ async function finishInviteRoomReadyFromStatus(input, status, warningText) {
   } else {
     fields.productionTwoProfileMessage?.focus?.();
   }
+  return true;
 }
 
 async function restoreLastInviteRoom() {
@@ -3288,14 +3303,19 @@ async function restoreLastInviteRoom() {
   syncTwoProfileDerivedConnectionFields();
   renderCurrentInviteCodeDisplay();
   applyProductionActionState();
+  const openInput = productionTwoProfileInput();
   if (!(await waitForMessageRetentionPolicyReady())) {
     return false;
   }
-  return openInviteRoomFromToken();
+  if (!twoProfileTranscriptInputStillCurrent(openInput)) {
+    return false;
+  }
+  return openInviteRoomFromToken(openInput);
 }
 
 async function openInviteRoomFromToken(input = productionTwoProfileInput()) {
   const { profileA, profileB, passphrase, messageTtlSeconds } = input;
+  const openInput = { ...input, profileA, profileB, passphrase, messageTtlSeconds };
   if (!messageRetentionPolicyReady()) {
     setProductionTwoProfileState("Room setup blocked");
     setText(fields.productionTwoProfileWarning, messageRetentionPolicyBlocker());
@@ -3331,19 +3351,21 @@ async function openInviteRoomFromToken(input = productionTwoProfileInput()) {
       const savedStatus = await invokeInviteRoomSessionStatus({ profileA, profileB, passphrase });
       if (savedStatus.both_ready_for_message_envelope) {
         await saveProductionMessageRetentionPreference(profileA, passphrase, messageTtlSeconds);
-        await finishInviteRoomReadyFromStatus(
-          { ...input, profileA, profileB, passphrase },
+        return await finishInviteRoomReadyFromStatus(
+          openInput,
           savedStatus,
           currentLanguage === "ko"
             ? "저장된 채팅방을 열었습니다. 바로 메시지를 보낼 수 있습니다."
             : "Saved room opened. You can send a message now.",
         );
-        return true;
       }
     } catch {
       // No saved room yet; continue with first-time invite setup.
     }
     const result = await invokeInviteRoomSetup({ profileA, profileB, passphrase });
+    if (!twoProfileTranscriptInputStillCurrent(openInput)) {
+      return false;
+    }
     const view = renderProductionTwoProfileRoomSetupResult(result);
     if (!view.canContinue) {
       setProductionTwoProfileState("Room setup failed");
@@ -3352,8 +3374,8 @@ async function openInviteRoomFromToken(input = productionTwoProfileInput()) {
     }
     await saveProductionMessageRetentionPreference(profileA, passphrase, messageTtlSeconds);
     const status = await invokeInviteRoomSessionStatus({ profileA, profileB, passphrase });
-    await finishInviteRoomReadyFromStatus(
-      { ...input, profileA, profileB, passphrase },
+    return await finishInviteRoomReadyFromStatus(
+      openInput,
       status,
       currentInviteCodeRole() === "inviter"
         ? currentLanguage === "ko"
@@ -3363,8 +3385,10 @@ async function openInviteRoomFromToken(input = productionTwoProfileInput()) {
           ? "초대 코드로 방에 들어왔습니다. 바로 메시지를 보낼 수 있습니다."
           : "Joined with the invite code. You can send a message now.",
     );
-    return true;
   } catch (error) {
+    if (!twoProfileTranscriptInputStillCurrent(openInput)) {
+      return false;
+    }
     resetFailedJoinInviteRoomState(passphrase);
     setProductionTwoProfileState("Room setup failed");
     setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("roundtrip", error, productionTwoProfileInput(), { includeDetail: true }));

@@ -220,7 +220,9 @@ test("room list controls are wired to room flow instead of settings", () => {
   const startBody = functionBody(mainJs, "startInviteRoomFromCode");
   assert.match(startBody, /showRoomDetail\(\)/);
   assert.match(startBody, /closeChatSettingsPanel\(\)/);
-  assert.match(startBody, /return openInviteRoomFromToken\(\)/);
+  assert.match(startBody, /const openInput = productionTwoProfileInput\(\)/);
+  assert.match(startBody, /twoProfileTranscriptInputStillCurrent\(openInput\)/);
+  assert.match(startBody, /return openInviteRoomFromToken\(openInput\)/);
   assert.doesNotMatch(startBody, /openChatSettingsPanel|openPrivateDeliverySettings/);
 });
 
@@ -249,6 +251,9 @@ test("reopened inviter rooms do not show the invite code share panel", () => {
   assert.match(functionBody(mainJs, "renderCurrentInviteCodeDisplay"), /role === "inviter" && currentInviteCodeShareVisible/);
   assert.match(functionBody(mainJs, "createInviteCode"), /currentInviteCodeShareVisible = true/);
   assert.match(functionBody(mainJs, "openSavedInviteRoom"), /currentInviteCodeShareVisible = false/);
+  assert.match(functionBody(mainJs, "openSavedInviteRoom"), /const openInput = productionTwoProfileInput\(\)/);
+  assert.match(functionBody(mainJs, "openSavedInviteRoom"), /twoProfileTranscriptInputStillCurrent\(openInput\)/);
+  assert.match(functionBody(mainJs, "openSavedInviteRoom"), /return openInviteRoomFromToken\(openInput\)/);
 });
 
 test("saved room removal is list-only and transcript switching rebuilds entries", () => {
@@ -435,6 +440,9 @@ test("new invite room setup creates profiles before saving retention preference"
   assert.notEqual(setupIndex, -1, "missing invite room setup call");
   assert.notEqual(retentionIndex, -1, "missing post-setup retention save");
   assert.ok(retentionIndex > setupIndex, "retention preference must save after new room setup");
+  assert.match(body, /const openInput = \{ \.\.\.input, profileA, profileB, passphrase, messageTtlSeconds \}/);
+  assert.match(body, /twoProfileTranscriptInputStillCurrent\(openInput\)/);
+  assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /twoProfileTranscriptInputStillCurrent\(input\)/);
 });
 
 test("private delivery stays explicit before network work starts", () => {
