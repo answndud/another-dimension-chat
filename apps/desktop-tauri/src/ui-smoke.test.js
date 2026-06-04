@@ -292,9 +292,10 @@ test("room transcript refresh is scoped to the current room", () => {
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /twoProfileTranscriptInputStillCurrent\(transcriptInput\)/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /invokeInviteRoomSessionStatus/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /reconcileCurrentInviteRoomMetadataFromTranscriptEntries\(entries\)/);
-  assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /const sessionCheckInput = \{ profileA, profileB, passphrase \}/);
+  assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /const sessionCheckInput = twoProfileRoomIdentityInput\(input\)/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /twoProfileTranscriptInputStillCurrent\(sessionCheckInput\)/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /rememberTwoProfileSessionStatus\(sessionCheckInput, result\)/);
+  assert.match(functionBody(mainJs, "twoProfileTranscriptInputStillCurrent"), /twoProfileSessionStatusFingerprint\(current\) === twoProfileSessionStatusFingerprint\(input\)/);
 });
 
 test("conversation selection keys are scoped to the active invite room", () => {
@@ -317,6 +318,8 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(functionBody(mainJs, "twoProfileSafetyConfirmedForInput"), /legacyTwoProfileSafetyStorageKey\(input\)/);
   assert.match(functionBody(mainJs, "twoProfileSafetyConfirmedForInput"), /localStoreSet\(key, "confirmed"\)/);
   assert.match(functionBody(mainJs, "twoProfileSafetyStorageKeys"), /legacyTwoProfileSafetyStorageKey\(input\)/);
+  assert.match(functionBody(mainJs, "twoProfileRoomIdentityInput"), /connectionCode/);
+  assert.match(functionBody(mainJs, "twoProfileRoomIdentityInput"), /inviteRole/);
   assert.match(functionBody(mainJs, "latestTwoProfileSuccessForInput"), /roomFingerprint === twoProfileSessionStatusFingerprint\(input\)/);
   assert.match(functionBody(mainJs, "latestTwoProfileSuccessMatchesDirection"), /latestTwoProfileSuccessForInput\(input\)/);
   assert.match(functionBody(mainJs, "latestTwoProfileSuccessMatchesOppositeDirection"), /latestTwoProfileSuccessForInput\(\{/);
@@ -335,8 +338,8 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(functionBody(mainJs, "updateMinimalChatMode"), /latestTwoProfileSuccessForInput\(input\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileMemory"), /latestTwoProfileSuccessForInput\(input\)/);
   assert.match(functionBody(mainJs, "sendProductionTwoProfileEndpointUpdate"), /latestTwoProfileSuccessForInput\(input\)/);
-  assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /latestRealOnionFieldTestResult\(\{ profileA, profileB, passphrase \}\)/);
-  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /latestTwoProfileSessionStatusForCurrentInput\(\{ profileA, profileB, passphrase \}\)/);
+  assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /latestRealOnionFieldTestResult\(roomInput\)/);
+  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /latestTwoProfileSessionStatusForCurrentInput\(transcriptInput\)/);
 });
 
 test("busy actions only clear the action they started", () => {
@@ -796,7 +799,7 @@ test("real onion roundtrip and wait cancel stay scoped to the current room", () 
   const runBody = functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip");
   assert.match(runBody, /const input = productionTwoProfileInput\(\)/);
   assert.match(runBody, /const realOnionRunId = \(productionTwoProfileRealOnionRunSequence \+= 1\)/);
-  assert.match(runBody, /activeProductionTwoProfileRealOnionInput = \{ profileA, profileB, passphrase, runId: realOnionRunId \}/);
+  assert.match(runBody, /activeProductionTwoProfileRealOnionInput = \{ \.\.\.roomInput, runId: realOnionRunId \}/);
   assert.match(runBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(runBody, /fingerprint: twoProfileInputFingerprint\(input\)/);
   assert.match(runBody, /if \(realOnionActiveRunMatches\(realOnionRunId\)\) \{/);
