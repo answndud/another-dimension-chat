@@ -9,7 +9,7 @@
     "dev:ui:peer-a": "VITE_AD_PREVIEW_PEER=peer-a vite --host 127.0.0.1 --port 1420 --strictPort",
     "dev:ui:peer-b": "VITE_AD_PREVIEW_PEER=peer-b vite --host 127.0.0.1 --port 1421 --strictPort",
     "build": "vite build",
-    "test:state": "node --test src/action-state.test.js src/browser-preview-tauri.test.js src/i18n.test.js src/ui-smoke.test.js",
+    "test:state": "node --test src/action-state.test.js src/i18n.test.js src/ui-smoke.test.js",
     "test:browser-preview-peers": "node --test src/browser-preview-tauri.test.js",
     "test:local-peers": "node scripts/verify-local-peer-flow.mjs",
     "preview": "vite preview --host 127.0.0.1 --port 1420 --strictPort",
