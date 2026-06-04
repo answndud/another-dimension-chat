@@ -1317,12 +1317,12 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     cancel.type = "button";
     cancel.className = "chat-delivery-notice-action is-cancel";
     cancel.textContent = t("cancelSend");
-    cancel.disabled = !outboundActionState.canRunNow;
-    cancel.title = outboundActionState.disabledReason || "";
+    cancel.disabled = !outboundActionState.canCancelNow;
+    cancel.title = outboundActionState.cancelDisabledReason || "";
     cancel.addEventListener("click", () => {
-      const current = currentTwoProfileOutboundAction(pendingEntry, { requireNoticeMatch: true });
-      if (current) {
-        cancelTwoProfileOutboundEntry(current.entry);
+      const currentEntry = currentTwoProfileOutboundCancelableEntry(pendingEntry, { requireNoticeMatch: true });
+      if (currentEntry) {
+        cancelTwoProfileOutboundEntry(currentEntry);
       }
     });
     actions.append(retry, cancel);
@@ -1423,6 +1423,20 @@ function currentTwoProfileOutboundAction(entry, options = {}) {
     entry: currentEntry,
     primaryAction: currentTwoProfileOutboundPrimaryAction(currentEntry, input),
   };
+}
+
+function currentTwoProfileOutboundCancelableEntry(entry, options = {}) {
+  const input = productionTwoProfileInput();
+  if (options.requireNoticeMatch === true && !chatDeliveryNoticeMatchesInput(input)) {
+    return null;
+  }
+  const currentEntry = productionTwoProfileConversationEntries.get(twoProfileConversationKey(entry));
+  const outboundActionState = productionTwoProfileOutboundActionState(
+    currentEntry,
+    input,
+    twoProfileInviteCodeModeActive(),
+  );
+  return outboundActionState.canCancelNow ? currentEntry : null;
 }
 
 function setChatDeliveryNoticeByKey(key, tone = "neutral", input = productionTwoProfileInput()) {
@@ -5288,14 +5302,14 @@ function renderProductionTwoProfileConversationList() {
       const cancel = document.createElement("button");
       cancel.type = "button";
       cancel.className = "transcript-cancel";
-      cancel.disabled = !outboundActionState.canRunNow;
-      cancel.title = outboundActionState.disabledReason || "";
+      cancel.disabled = !outboundActionState.canCancelNow;
+      cancel.title = outboundActionState.cancelDisabledReason || "";
       cancel.textContent = t("cancelSend");
       cancel.addEventListener("click", (event) => {
         event.stopPropagation();
-        const current = currentTwoProfileOutboundAction(entry);
-        if (current) {
-          cancelTwoProfileOutboundEntry(current.entry);
+        const currentEntry = currentTwoProfileOutboundCancelableEntry(entry);
+        if (currentEntry) {
+          cancelTwoProfileOutboundEntry(currentEntry);
         }
       });
       actions.append(retry, cancel);
