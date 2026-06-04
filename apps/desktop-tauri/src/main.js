@@ -2067,6 +2067,7 @@ function setRoomScreen(screen) {
 
 function prepareRoomListReturnState() {
   reconcileCurrentInviteRoomMetadataFromTranscriptEntries([...productionTwoProfileConversationEntries.values()]);
+  clearManualMessagePayloadsForRoomContextChange();
   if (!savedRoomMetadataSyncInFlight) {
     setSavedRoomMetadataSyncStatus("");
   }
@@ -3213,6 +3214,7 @@ async function createRoomFromRoomListInviteCode() {
 function clearCurrentInviteRoomInput() {
   stopInviteRoomPresenceRefresh();
   stopInviteRoomTranscriptRefresh();
+  clearManualMessagePayloadsForRoomContextChange();
   latestDerivedConnectionCode = "";
   latestCreatedInviteCode = "";
   copiedInviteCode = "";
@@ -4621,6 +4623,11 @@ function clearManualMessageDraftForReplySelection() {
   if (fields.productionRemoteMessageEnvelope) {
     fields.productionRemoteMessageEnvelope.value = "";
   }
+}
+
+function clearManualMessagePayloadsForRoomContextChange() {
+  resetProductionMessageImportState();
+  clearManualMessageDraftForReplySelection();
 }
 
 function resetProductionMessageTranscript() {
