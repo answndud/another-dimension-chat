@@ -23,7 +23,19 @@ function functionBody(source, name) {
   }
   const index = source.indexOf(`function ${name}(`);
   assert.notEqual(index, -1, `missing function ${name}`);
-  const brace = source.indexOf("{", source.indexOf(")", index));
+  const paramsStart = source.indexOf("(", index);
+  let paramsDepth = 0;
+  let paramsEnd = -1;
+  for (let cursor = paramsStart; cursor < source.length; cursor += 1) {
+    if (source[cursor] === "(") paramsDepth += 1;
+    if (source[cursor] === ")") paramsDepth -= 1;
+    if (paramsDepth === 0) {
+      paramsEnd = cursor;
+      break;
+    }
+  }
+  assert.notEqual(paramsEnd, -1, `unterminated params for function ${name}`);
+  const brace = source.indexOf("{", paramsEnd);
   let depth = 0;
   for (let cursor = brace; cursor < source.length; cursor += 1) {
     if (source[cursor] === "{") depth += 1;
@@ -856,16 +868,21 @@ test("message send retry and cancel results stay scoped to the current room", ()
 
   const completeBody = functionBody(mainJs, "completeInviteRoomOutboundDelivery");
   assert.match(completeBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
-  assert.match(completeBody, /sendProductionTwoProfileLatestOnionEnvelope\(onionInput\)/);
+  assert.match(completeBody, /latestTwoProfileOutboundOnionMessage\(onionInput, \{ messageNumber \}\)/);
+  assert.match(completeBody, /sendProductionTwoProfileLatestOnionEnvelope\(onionInput, \{ messageNumber \}\)/);
 
   const sendBody = functionBody(mainJs, "sendProductionTwoProfileLatestOnionEnvelope");
-  assert.match(mainJs, /async function sendProductionTwoProfileLatestOnionEnvelope\(input = productionTwoProfileInput\(\)\)/);
+  assert.match(mainJs, /async function sendProductionTwoProfileLatestOnionEnvelope\(input = productionTwoProfileInput\(\), options = \{\}\)/);
+  assert.match(sendBody, /latestTwoProfileOutboundOnionMessage\(input, options\)/);
+  assert.match(sendBody, /latestTwoProfileOutboundDeliveryCandidate\(input, options\)/);
+  assert.match(functionBody(mainJs, "latestTwoProfileOutboundDeliveryCandidate"), /targetRequested \? null : latestTwoProfileRetryableOutboundEntry\(input\)/);
+  assert.match(functionBody(mainJs, "latestTwoProfileOutboundDeliveryCandidate"), /targetRequested && Number\.parseInt\(latest\.messageNumber, 10\) !== targetMessageNumber/);
   assert.match(sendBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(sendBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: false, input \}\)/);
   assert.match(sendBody, /setChatDeliveryNoticeForSendAttempt\(result, input\)/);
 
   const retryBody = functionBody(mainJs, "retryTwoProfileOutboundEntry");
-  assert.match(retryBody, /await sendProductionTwoProfileLatestOnionEnvelope\(input\)/);
+  assert.match(retryBody, /await sendProductionTwoProfileLatestOnionEnvelope\(input, \{ messageNumber: entry\.messageNumber \}\)/);
   assert.match(retryBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: true, input \}\)/);
   assert.match(retryBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(retryBody, /setChatDeliveryNoticeByKey\("sendRetrying", "progress", input\)/);
