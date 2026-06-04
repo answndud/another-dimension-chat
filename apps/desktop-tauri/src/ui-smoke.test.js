@@ -377,7 +377,7 @@ test("profile unlock and manual import refresh the room captured at action start
   assert.match(mainJs, /async function refreshTwoProfileSessionAfterProfileUnlock\([\s\S]*input = productionTwoProfileInput\(\),[\s\S]*\)/);
   assert.match(unlockRefreshBody, /invokeInviteRoomSessionStatus\(input\)/);
   assert.match(unlockRefreshBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
-  assert.match(unlockRefreshBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*autoResume: true/);
+  assert.match(unlockRefreshBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*autoResume: true,[\s\S]*input/);
   assert.match(unlockRefreshBody, /rememberTwoProfileSessionStatus\(input, result\)/);
 
   const importBody = functionBody(mainJs, "importProductionMessageEnvelope");
@@ -387,7 +387,7 @@ test("profile unlock and manual import refresh the room captured at action start
   const importRefreshBody = functionBody(mainJs, "refreshTwoProfileConversationAfterManualImport");
   assert.match(mainJs, /async function refreshTwoProfileConversationAfterManualImport\([\s\S]*input = productionTwoProfileInput\(\),[\s\S]*\)/);
   assert.match(importRefreshBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
-  assert.match(importRefreshBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: false \}\)/);
+  assert.match(importRefreshBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: false, input \}\)/);
   assert.match(importRefreshBody, /renderProductionTwoProfileMemory\(input\)/);
 });
 
@@ -545,6 +545,10 @@ test("two-profile onion setup actions ignore stale room results", () => {
   const refreshBody = functionBody(mainJs, "refreshProductionTwoProfilePeerEndpoints");
   assert.match(mainJs, /async function refreshProductionTwoProfilePeerEndpoints\(input = productionTwoProfileInput\(\)\)/);
   assert.match(refreshBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
+
+  const loadTranscriptBody = functionBody(mainJs, "loadProductionTwoProfileTranscript");
+  assert.match(loadTranscriptBody, /const input = options\.input \?\? productionTwoProfileInput\(\)/);
+  assert.match(loadTranscriptBody, /if \(!twoProfileTranscriptInputStillCurrent\(transcriptInput\)\) \{\s*return false;\s*\}/);
 
   const updateBody = functionBody(mainJs, "sendProductionTwoProfileEndpointUpdate");
   assert.match(updateBody, /const input = productionTwoProfileInput\(\)/);
@@ -766,23 +770,26 @@ test("message send retry and cancel results stay scoped to the current room", ()
   const sendBody = functionBody(mainJs, "sendProductionTwoProfileLatestOnionEnvelope");
   assert.match(mainJs, /async function sendProductionTwoProfileLatestOnionEnvelope\(input = productionTwoProfileInput\(\)\)/);
   assert.match(sendBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
-  assert.match(sendBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: false \}\)/);
+  assert.match(sendBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: false, input \}\)/);
   assert.match(sendBody, /setChatDeliveryNoticeForSendAttempt\(result, input\)/);
 
   const retryBody = functionBody(mainJs, "retryTwoProfileOutboundEntry");
-  assert.match(retryBody, /await sendProductionTwoProfileLatestOnionEnvelope\(\)/);
+  assert.match(retryBody, /await sendProductionTwoProfileLatestOnionEnvelope\(input\)/);
+  assert.match(retryBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: true, input \}\)/);
   assert.match(retryBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(retryBody, /setChatDeliveryNoticeByKey\("sendRetrying", "progress", input\)/);
 
   const refreshRetryBody = functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry");
   assert.match(refreshRetryBody, /await prepareInviteRoomPrivateRouteExchange\(input\)/);
   assert.match(refreshRetryBody, /await refreshProductionTwoProfilePeerEndpoints\(input\)/);
+  assert.match(refreshRetryBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: true, input \}\)/);
   assert.match(refreshRetryBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(refreshRetryBody, /twoProfilePeerEndpointState\(input\)\.ready/);
 
   const cancelBody = functionBody(mainJs, "cancelTwoProfileOutboundEntry");
   assert.match(cancelBody, /production_message_outbound_cancel_pending/);
   assert.match(cancelBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(cancelBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: false, input \}\)/);
   assert.match(cancelBody, /setChatDeliveryNoticeByKey\("sendCanceling", "progress", input\)/);
 
   const composerBody = functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip");
