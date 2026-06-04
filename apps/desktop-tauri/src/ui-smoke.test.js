@@ -803,6 +803,10 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /room_runtime_promoted_from_real_onion_cache=/);
   assert.match(reportBody, /room_runtime_owner_profile_bound=/);
   assert.match(reportBody, /room_runtime_owner_matches_receive_profile=/);
+  assert.match(reportBody, /deliveryNoticeCurrentRoom/);
+  assert.match(reportBody, /delivery_notice_current_room=/);
+  assert.match(reportBody, /deliveryNoticeCurrentRoom \? latestChatDeliveryNoticeKey : "none"/);
+  assert.match(reportBody, /deliveryNoticeCurrentRoom \? latestChatDeliveryNoticeTone : "neutral"/);
   assert.match(reportBody, /send_runtime_owner_profile_bound=/);
   assert.match(reportBody, /send_runtime_owner_matches_send_profile=/);
   assert.match(reportBody, /real_onion_network_io=/);
