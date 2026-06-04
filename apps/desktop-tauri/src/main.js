@@ -442,6 +442,7 @@ let latestProductionTwoProfileOnionEndpoints = null;
 let latestProductionTwoProfileRealOnionResult = null;
 let latestProductionTwoProfileRealOnionWaitCanceledFingerprint = "";
 let activeProductionTwoProfileRealOnionInput = null;
+let productionTwoProfileRealOnionRunSequence = 0;
 let latestLocalPrivateRouteCode = "";
 const localPrivateRouteCodesByRoom = new Map();
 const activeLocalPrivateRouteCodesByRoom = new Map();
@@ -2946,6 +2947,10 @@ function realOnionActiveInputMatches(input = productionTwoProfileInput()) {
 
 function realOnionRoundtripActiveForInput(input = productionTwoProfileInput()) {
   return productionBusyAction === "two-profile-real-onion-roundtrip" && realOnionActiveInputMatches(input);
+}
+
+function realOnionActiveRunMatches(runId) {
+  return Boolean(activeProductionTwoProfileRealOnionInput?.runId === runId);
 }
 
 function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manualNetworkPermission) {
@@ -11537,8 +11542,9 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
   setText(fields.productionTwoProfileMessageState, localizedTwoProfileUserViewText("Trying private delivery."));
   setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Private delivery is running after your explicit action."));
   setProductionFollowupActions(false, t("privateDeliveryFollowupLocked"));
+  const realOnionRunId = (productionTwoProfileRealOnionRunSequence += 1);
   productionBusyAction = "two-profile-real-onion-roundtrip";
-  activeProductionTwoProfileRealOnionInput = { profileA, profileB, passphrase };
+  activeProductionTwoProfileRealOnionInput = { profileA, profileB, passphrase, runId: realOnionRunId };
   applyProductionActionState();
   if (fields.runProductionTwoProfileRealOnionRoundtrip) {
     fields.runProductionTwoProfileRealOnionRoundtrip.disabled = true;
@@ -11639,12 +11645,14 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       "Failed without showing private details in the chat view.",
     );
   } finally {
-    clearProductionBusyAction("two-profile-real-onion-roundtrip");
-    activeProductionTwoProfileRealOnionInput = null;
-    if (fields.runProductionTwoProfileRealOnionRoundtrip) {
-      fields.runProductionTwoProfileRealOnionRoundtrip.disabled = false;
+    if (realOnionActiveRunMatches(realOnionRunId)) {
+      clearProductionBusyAction("two-profile-real-onion-roundtrip");
+      activeProductionTwoProfileRealOnionInput = null;
+      if (fields.runProductionTwoProfileRealOnionRoundtrip) {
+        fields.runProductionTwoProfileRealOnionRoundtrip.disabled = false;
+      }
+      applyProductionActionState();
     }
-    applyProductionActionState();
   }
 }
 
