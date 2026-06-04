@@ -435,6 +435,7 @@ const fields = {
 
 let latestSimulation = null;
 let latestProductionSessionState = null;
+let latestProductionSessionStateFingerprint = "";
 let latestProductionTwoProfileSessionStatus = null;
 let latestProductionTwoProfileSafety = null;
 let latestProductionTwoProfileSuccess = null;
@@ -1985,12 +1986,27 @@ function latestProductionMessageImportMatches(input = productionMessageInput()) 
   return latestProductionMessageImport === productionMessageImportFingerprint(input);
 }
 
+function productionSessionStateFingerprint(input = productionProfileInput()) {
+  return `${String(input.profile ?? "").trim().toLowerCase()}\n${input.passphrase || ""}`;
+}
+
+function rememberProductionSessionState(input, session) {
+  latestProductionSessionState = session;
+  latestProductionSessionStateFingerprint = session ? productionSessionStateFingerprint(input) : "";
+}
+
+function latestProductionSessionStateForInput(input = productionProfileInput()) {
+  return latestProductionSessionStateFingerprint === productionSessionStateFingerprint(input)
+    ? latestProductionSessionState
+    : null;
+}
+
 function productionSessionReadyForMessages() {
   const activeProfile = activeProductionProfileName();
   const scopedTwoProfileStatus = latestTwoProfileSessionStatusForCurrentInput();
   return productionProfileMessageReadiness(
     activeProfile,
-    latestProductionSessionState,
+    latestProductionSessionStateForInput(),
     scopedTwoProfileStatus,
   );
 }
@@ -3529,7 +3545,7 @@ async function refreshInviteLocalSessionReady(input = productionTwoProfileInput(
     profile: input.profileA,
     passphrase: input.passphrase,
   });
-  latestProductionSessionState = session;
+  rememberProductionSessionState({ profile: input.profileA, passphrase: input.passphrase }, session);
   const status = inviteLocalReadyStatusResult(input, session);
   rememberTwoProfileSessionStatus(input, status);
   renderProductionTwoProfileSessionStatusResult(status);
@@ -5826,7 +5842,7 @@ function renderProductionPairingFlow(input = productionPairingInput()) {
     latestProductionPairingSafety?.fingerprint === pairingSafetyFingerprint(input),
   );
   const safetyVerified = currentPairingSafetyVerified(input);
-  const draftSaved = Boolean(latestProductionSessionState?.session_draft_present);
+  const draftSaved = Boolean(latestProductionSessionStateForInput(input)?.session_draft_present);
 
   setProductionPairingFlowStep(
     fields.productionPairingStepExport,
@@ -7007,7 +7023,7 @@ function applyProductionActionState() {
   const hasSessionDraftInput = Boolean(
     hasProfileUnlockInput && pairing.localPayload && pairing.remotePayload && pairingSafetyVerified,
   );
-  const hasSessionDraftSaved = Boolean(latestProductionSessionState?.session_draft_present);
+  const hasSessionDraftSaved = Boolean(latestProductionSessionStateForInput(pairing)?.session_draft_present);
   const hasHandshakeReplyInput = Boolean(hasProfileUnlockInput && pairing.initPayload);
   const hasHandshakeFinishInput = Boolean(hasProfileUnlockInput && pairing.replyPayload);
   const hasFinishImportInput = Boolean(hasProfileUnlockInput && pairing.finishPayload);
@@ -8159,7 +8175,7 @@ async function loadProductionProfileList() {
 }
 
 function resetProductionPairingView(options = {}) {
-  latestProductionSessionState = null;
+  rememberProductionSessionState(productionProfileInput(), null);
   if (!options.preserveTwoProfileStatus) {
     latestProductionTwoProfileSessionStatus = null;
   }
@@ -11996,7 +12012,7 @@ async function restoreProductionSessionAfterUnlock(input) {
     if (!productionProfileInputStillCurrent(input)) {
       return;
     }
-    latestProductionSessionState = null;
+    rememberProductionSessionState(input, null);
     setProductionPairingState("No stored session");
     setText(fields.productionPairingSession, "No message-ready stored session for this profile yet");
     setText(fields.productionPairingBoundary, "Not checked yet");
@@ -12013,7 +12029,7 @@ async function restoreProductionSessionAfterUnlock(input) {
     return;
   }
   const view = productionSessionStateView(session);
-  latestProductionSessionState = session;
+  rememberProductionSessionState(input, session);
   setProductionPairingState(
     session.ready_for_message_envelope ? "Stored session recovered" : "Stored session incomplete",
   );
@@ -12250,7 +12266,7 @@ async function checkProductionSessionState(input = productionPairingInput()) {
       return;
     }
     const view = productionSessionStateView(result);
-    latestProductionSessionState = result;
+    rememberProductionSessionState(input, result);
     setProductionPairingState("Session state checked");
     setText(fields.productionPairingWarning, result.warning);
     setText(fields.productionPairingSession, view.session);
@@ -12260,7 +12276,7 @@ async function checkProductionSessionState(input = productionPairingInput()) {
     if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
       return;
     }
-    latestProductionSessionState = null;
+    rememberProductionSessionState(input, null);
     setProductionPairingState("Session state check failed");
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionPairingSession, "Failed");
