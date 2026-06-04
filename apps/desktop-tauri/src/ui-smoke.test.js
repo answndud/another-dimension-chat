@@ -257,6 +257,15 @@ test("room context switches clear stale manual message payloads", () => {
   assert.match(functionBody(mainJs, "prepareRoomListReturnState"), /clearManualMessagePayloadsForRoomContextChange\(\)/);
 });
 
+test("room context switches clear stale conversation selection", () => {
+  assert.match(functionBody(mainJs, "clearCurrentInviteRoomInput"), /resetProductionTwoProfileTranscript\(\)/);
+  assert.match(functionBody(mainJs, "resetProductionTwoProfileTranscript"), /selectedTwoProfileConversationKey = null/);
+  assert.match(functionBody(mainJs, "resetProductionTwoProfileTranscript"), /productionTwoProfileConversationEntries\.clear\(\)/);
+  assert.match(functionBody(mainJs, "createNewInviteRoomFromList"), /clearCurrentInviteRoomInput\(\)/);
+  assert.match(functionBody(mainJs, "openSavedInviteRoom"), /clearCurrentInviteRoomInput\(\)/);
+  assert.doesNotMatch(functionBody(mainJs, "removeSavedInviteRoom"), /clearCurrentInviteRoomInput\(\);\s*resetProductionTwoProfileTranscript\(\)/);
+});
+
 test("created invite code stays visible after the room becomes ready", () => {
   assert.match(mainJs, /has-inviter-invite-code/);
   assert.match(mainJs, /focusCurrentInviteCodeDisplay\(\)/);
