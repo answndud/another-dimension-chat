@@ -3946,15 +3946,18 @@ function updateLocalPrivateRouteCodeUi(input = productionTwoProfileInput()) {
   setText(fields.privateRouteLocalStatus, t(statusKey));
 }
 
-function rememberLocalPrivateRouteCode(code, input = productionTwoProfileInput(), options = {}) {
-  const roomKey = privateRouteRoomKey(input);
-  const markActive = options.active !== false;
-  latestLocalPrivateRouteCode = String(code ?? "").trim();
+function rememberLocalPrivateRouteCode(code, input, options) {
+  const targetInput = input ?? productionTwoProfileInput();
+  const routeOptions = options ?? {};
+  const roomKey = privateRouteRoomKey(targetInput);
+  const markActive = routeOptions.active !== false;
+  const updateUi = routeOptions.updateUi !== false;
+  const routeCode = String(code ?? "").trim();
   if (roomKey) {
-    if (latestLocalPrivateRouteCode) {
-      localPrivateRouteCodesByRoom.set(roomKey, latestLocalPrivateRouteCode);
+    if (routeCode) {
+      localPrivateRouteCodesByRoom.set(roomKey, routeCode);
       if (markActive) {
-        activeLocalPrivateRouteCodesByRoom.set(roomKey, latestLocalPrivateRouteCode);
+        activeLocalPrivateRouteCodesByRoom.set(roomKey, routeCode);
       }
     } else {
       localPrivateRouteCodesByRoom.delete(roomKey);
@@ -3962,10 +3965,15 @@ function rememberLocalPrivateRouteCode(code, input = productionTwoProfileInput()
     }
     persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
   }
+  if (!updateUi) {
+    renderSavedInviteRooms();
+    return;
+  }
+  latestLocalPrivateRouteCode = routeCode;
   if (fields.localPrivateRouteCode) {
     fields.localPrivateRouteCode.value = latestLocalPrivateRouteCode;
   }
-  updateLocalPrivateRouteCodeUi(input);
+  updateLocalPrivateRouteCodeUi(targetInput);
   renderSavedInviteRooms();
 }
 
@@ -9337,6 +9345,11 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
     if (!result.local_onion_endpoint) {
       throw new Error(result.next_blocker || "delivery code unavailable");
     }
+    const stillCurrentRoom = twoProfileTranscriptInputStillCurrent(input);
+    if (!stillCurrentRoom) {
+      rememberLocalPrivateRouteCode(result.local_onion_endpoint, input, { updateUi: false });
+      return true;
+    }
     rememberLocalPrivateRouteCode(result.local_onion_endpoint);
     if (fields.productionPairingEndpoint) {
       fields.productionPairingEndpoint.value = result.local_onion_endpoint;
@@ -9355,6 +9368,9 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
     focusLocalPrivateRouteCodeDisplay();
     return true;
   } catch (error) {
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return false;
+    }
     setProductionTwoProfileState("Delivery code failed");
     setText(fields.productionTwoProfileWarning, `${t("privateRouteCodeFailed")} ${String(error)}`);
     setChatDeliveryNoticeByKey("privateRouteCodeFailed", "warning");
@@ -9507,6 +9523,9 @@ async function preparePrivateDeliveryRoute(options = {}) {
       return;
     }
     const localRouteCreated = await prepareInviteRoomPrivateRouteExchange(input);
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
     if (localRouteCreated && (fields.peerPrivateRouteCode?.value ?? "").trim()) {
       await applyPeerPrivateRouteCode();
     }

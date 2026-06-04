@@ -382,6 +382,11 @@ test("saved local delivery codes must be refreshed before sharing", () => {
   assert.match(mainJs, /const activeLocalPrivateRouteCodesByRoom = new Map\(\)/);
   assert.match(functionBody(mainJs, "restorePrivateRouteExchangeForRoom"), /updateLocalPrivateRouteCodeUi\(input\)/);
   assert.match(functionBody(mainJs, "localPrivateRouteCodeIsActive"), /activeLocalPrivateRouteCodesByRoom\.get\(roomKey\)/);
+  assert.match(functionBody(mainJs, "rememberLocalPrivateRouteCode"), /const updateUi = routeOptions\.updateUi !== false/);
+  assert.match(functionBody(mainJs, "rememberLocalPrivateRouteCode"), /if \(!updateUi\) \{[\s\S]*return;[\s\S]*\}/);
+  assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /twoProfileTranscriptInputStillCurrent\(input\)/);
+  assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /rememberLocalPrivateRouteCode\(result\.local_onion_endpoint, input, \{ updateUi: false \}\)/);
+  assert.match(functionBody(mainJs, "preparePrivateDeliveryRoute"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(functionBody(mainJs, "routeExchangePrimaryActionNode"), /!localPrivateRouteCodeIsActive\(input\)/);
   assert.match(mainJs, /function focusPrivateRouteNextAction\([\s\S]*!localPrivateRouteCodeIsActive\(input\)/);
   assert.match(functionBody(mainJs, "localPrivateRouteCodeStatusKey"), /privateRouteLocalStatusSaved/);
