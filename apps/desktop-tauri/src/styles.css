@@ -1619,6 +1619,33 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.field-test-checklist {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.field-test-checklist-item {
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--panel-strong) 70%, transparent);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.field-test-checklist-item.is-done {
+  border-color: color-mix(in srgb, var(--accent-green) 40%, var(--panel-border));
+  color: var(--text-primary);
+}
+
+.field-test-checklist-item.is-check {
+  border-color: color-mix(in srgb, var(--accent-amber) 42%, var(--panel-border));
+}
+
 .chat-transcript-toolbar {
   display: none;
   flex-wrap: wrap;
