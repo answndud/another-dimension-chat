@@ -369,6 +369,7 @@ test("delivery code save continues the original send or receive action", () => {
   assert.match(mainJs, /let pendingPrivateRouteFollowup = null/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"), /rememberPrivateRouteFollowup\(input\.message \? "send-draft" : "receive", input\)/);
   assert.match(functionBody(mainJs, "applyPeerPrivateRouteCode"), /continueAfterPeerPrivateRouteSaved\(input\)/);
+  assert.match(functionBody(mainJs, "applyPeerPrivateRouteCode"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return true;\s*\}/);
   const followupBody = functionBody(mainJs, "continueAfterPeerPrivateRouteSaved");
   assert.match(followupBody, /latestTwoProfileRetryableOutboundEntry\(input\)/);
   assert.match(followupBody, /await retryTwoProfileOutboundEntry\(pending\)/);
