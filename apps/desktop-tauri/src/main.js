@@ -11323,6 +11323,9 @@ async function startProductionTwoProfileOnionReceive() {
   } catch (error) {
     setProductionTwoProfileState("Message listening failed");
     setText(fields.productionTwoProfileWarning, t("receiveStartFailed"));
+    setChatDeliveryNoticeByKey("receiveStartFailed", "warning", input);
+    renderSavedInviteRooms();
+    applyProductionActionState();
     return;
   }
   if (backendLoop.duplicate_loop_blocked || !backendLoop.enabled) {
@@ -11332,6 +11335,8 @@ async function startProductionTwoProfileOnionReceive() {
       fields.productionTwoProfileBoundary,
       productionTwoProfileOnionReceiveBackendBoundary(backendLoop),
     );
+    renderSavedInviteRooms();
+    applyProductionActionState();
     return;
   }
 

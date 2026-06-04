@@ -174,6 +174,14 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /has-retryable-send/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /is-resume-recommended/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
+  assert.match(
+    functionBody(mainJs, "startProductionTwoProfileOnionReceive"),
+    /catch \(error\) \{[\s\S]*setChatDeliveryNoticeByKey\("receiveStartFailed", "warning", input\);[\s\S]*renderSavedInviteRooms\(\);[\s\S]*applyProductionActionState\(\);/,
+  );
+  assert.match(
+    functionBody(mainJs, "startProductionTwoProfileOnionReceive"),
+    /backendLoop\.duplicate_loop_blocked \|\| !backendLoop\.enabled[\s\S]*renderSavedInviteRooms\(\);[\s\S]*applyProductionActionState\(\);/,
+  );
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /renderSavedInviteRooms\(\)/);
   assert.match(stylesCss, /\.saved-room-state\.is-listening/);
   assert.match(stylesCss, /\.saved-room-state\.is-receive-paused/);
