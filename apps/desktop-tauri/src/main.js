@@ -3857,6 +3857,7 @@ async function saveInviteRoomOutboundMessage(input = productionTwoProfileInput()
   }
   storeMessageEnvelopeSlot(profileA, result.envelope_payload, {
     receiver: profileB,
+    roomFingerprint: twoProfileSessionStatusFingerprint(input),
     messageNumber,
     message: messageText,
   });
@@ -4693,8 +4694,7 @@ function appendProductionTranscriptEntry(kind, profile, messageNumber, message, 
 }
 
 function messageEnvelopeSlotReadyForEntry(profile, entry) {
-  const normalizedProfile = String(profile ?? "").trim().toLowerCase();
-  const slot = normalizedProfile ? productionPayloadSlots.messageEnvelope.get(normalizedProfile) : null;
+  const slot = messageEnvelopeSlotRecord(profile, messageEnvelopeSlotRoomFingerprintForEntry(entry));
   return envelopeSlotReadyForEntry(slot, entry);
 }
 
@@ -4712,7 +4712,7 @@ function pendingMessageEnvelopeSlotForActiveProfile(profile = activeProductionPr
       : latestEntry && latestEntry.sender === counterpart && latestEntry.receiver === normalizedProfile
         ? latestEntry
         : null;
-  const slot = productionPayloadSlots.messageEnvelope.get(counterpart) ?? null;
+  const slot = entry ? messageEnvelopeSlotRecord(counterpart, entry.roomFingerprint) : messageEnvelopeSlotRecord(counterpart);
   const value = messageEnvelopeSlotPayload(slot);
   return { counterpart, entry, slot, value };
 }
@@ -4722,12 +4722,30 @@ function activeMessageEnvelopeSlotReady(profile = activeProductionProfileName())
   return Boolean(entry && value && messageEnvelopeSlotMatchesEntry(slot, entry));
 }
 
+function messageEnvelopeSlotRoomFingerprintForEntry(entry) {
+  return String(entry?.roomFingerprint ?? currentManualPayloadSlotRoomFingerprint()).trim();
+}
+
+function messageEnvelopeSlotKey(profile, roomFingerprint = currentManualPayloadSlotRoomFingerprint()) {
+  return productionPayloadSlotKey(profile, roomFingerprint);
+}
+
+function messageEnvelopeSlotRecord(profile, roomFingerprint = currentManualPayloadSlotRoomFingerprint()) {
+  const key = messageEnvelopeSlotKey(profile, roomFingerprint);
+  return key ? productionPayloadSlots.messageEnvelope.get(key) ?? null : null;
+}
+
 function storeMessageEnvelopeSlot(profile, payload, metadata = {}) {
-  const slot = createMessageEnvelopeSlot(profile, payload, metadata);
+  const roomFingerprint = String(metadata.roomFingerprint ?? currentManualPayloadSlotRoomFingerprint()).trim();
+  const slot = createMessageEnvelopeSlot(profile, payload, { ...metadata, roomFingerprint });
   if (!slot) {
     return false;
   }
-  productionPayloadSlots.messageEnvelope.set(slot.sender, slot);
+  const key = messageEnvelopeSlotKey(slot.sender, slot.roomFingerprint);
+  if (!key) {
+    return false;
+  }
+  productionPayloadSlots.messageEnvelope.set(key, slot);
   return true;
 }
 
@@ -4748,7 +4766,7 @@ function clearMessageEnvelopeFieldsForPayload(payload) {
 
 function pruneStaleMessageEnvelopeSlots() {
   let pruned = 0;
-  for (const [sender, slot] of productionPayloadSlots.messageEnvelope.entries()) {
+  for (const [key, slot] of productionPayloadSlots.messageEnvelope.entries()) {
     if (typeof slot === "string") {
       continue;
     }
@@ -4757,7 +4775,7 @@ function pruneStaleMessageEnvelopeSlots() {
       messageEnvelopeSlotMatchesEntry(slot, entry),
     );
     if (!payload || !stillMatchesConversation) {
-      productionPayloadSlots.messageEnvelope.delete(sender);
+      productionPayloadSlots.messageEnvelope.delete(key);
       clearMessageEnvelopeFieldsForPayload(payload);
       pruned += 1;
     }
@@ -4771,12 +4789,14 @@ function selectedMessageEnvelopeMetadata(profile, messageNumber, message) {
   const parsedNumber = Number.parseInt(messageNumber, 10);
   const selectedNumber = Number.parseInt(selectedEntry?.messageNumber, 10);
   const text = String(message ?? "").trim();
+  const roomFingerprint = currentManualPayloadSlotRoomFingerprint();
   if (
     !selectedEntry ||
     !normalizedProfile ||
     !Number.isInteger(parsedNumber) ||
     !Number.isInteger(selectedNumber) ||
     selectedEntry.sender !== normalizedProfile ||
+    selectedEntry.roomFingerprint !== roomFingerprint ||
     selectedNumber !== parsedNumber ||
     selectedEntry.message !== text
   ) {
@@ -4784,6 +4804,7 @@ function selectedMessageEnvelopeMetadata(profile, messageNumber, message) {
   }
   return {
     receiver: selectedEntry.receiver,
+    roomFingerprint,
     messageNumber: parsedNumber,
     message: text,
   };
@@ -5590,7 +5611,7 @@ function renderManualStatus() {
       remote: productionPayloadSlotReady("handshakeFinish", counterpart),
     },
     messageEnvelope: {
-      local: productionPayloadSlots.messageEnvelope.has(profile),
+      local: Boolean(messageEnvelopeSlotRecord(profile)),
       remote: activeMessageEnvelopeSlotReady(profile),
     },
   };
@@ -6615,11 +6636,12 @@ function clearImportedMessageEnvelopeSlot(profile, envelopePayload) {
   const importedProfile = String(profile ?? "").trim().toLowerCase();
   const counterpart = productionCounterpartProfile(importedProfile);
   const importedEnvelope = String(envelopePayload ?? "").trim();
-  const storedEnvelope = counterpart ? messageEnvelopeSlotPayload(productionPayloadSlots.messageEnvelope.get(counterpart)) : "";
+  const key = counterpart ? messageEnvelopeSlotKey(counterpart) : "";
+  const storedEnvelope = key ? messageEnvelopeSlotPayload(productionPayloadSlots.messageEnvelope.get(key)) : "";
   if (!counterpart || !importedEnvelope || storedEnvelope !== importedEnvelope) {
     return false;
   }
-  productionPayloadSlots.messageEnvelope.delete(counterpart);
+  productionPayloadSlots.messageEnvelope.delete(key);
   renderProductionTwoProfileConversationList();
   return true;
 }
@@ -6969,7 +6991,7 @@ function applyPendingConversationToManualMessageReview(entry, options = {}) {
   const sentCopyPresent = entry.statuses.has("sent");
   const receivedCopyPresent = entry.statuses.has("received");
   const reviewProfile = sentCopyPresent && !receivedCopyPresent ? entry.receiver : entry.sender;
-  const senderEnvelopeSlotRecord = productionPayloadSlots.messageEnvelope.get(entry.sender);
+  const senderEnvelopeSlotRecord = messageEnvelopeSlotRecord(entry.sender, entry.roomFingerprint);
   const senderEnvelopeSlot = messageEnvelopeSlotMatchesEntry(senderEnvelopeSlotRecord, entry)
     ? messageEnvelopeSlotPayload(senderEnvelopeSlotRecord)
     : "";
@@ -12874,6 +12896,7 @@ function syncTwoProfileConversationAfterManualExport(
   if (exportedProfile && envelope) {
     storeMessageEnvelopeSlot(exportedProfile, envelope, {
       receiver: selectedEntry?.receiver,
+      roomFingerprint: twoProfileSessionStatusFingerprint(input),
       messageNumber: exportedNumber,
       message: text,
     });
