@@ -436,13 +436,67 @@ test("room list metadata carries retryable outbound state", () => {
         outboundDeliveryState: "sent",
         outboundRetryable: true,
       },
+      {
+        sender: "alice",
+        receiver: "bob",
+        kind: "received",
+        messageNumber: 1,
+        message: "received copy",
+        createdAtMs: 200,
+        outboundDeliveryState: "failed",
+        outboundRetryable: true,
+      },
     ]),
     {
       lastMessagePreview: "still saved",
       lastMessageAt: 400,
-      messageCount: 2,
+      messageCount: 3,
       retryableOutboundCount: 1,
       retryableOutboundMessageNumber: 3,
+    },
+  );
+});
+
+test("room list metadata collapses retried copies before counting retryable sends", () => {
+  assert.deepEqual(
+    productionInviteRoomConversationMetadata([
+      {
+        sender: "alice",
+        receiver: "bob",
+        kind: "sent",
+        messageNumber: 1,
+        message: "retried",
+        createdAtMs: 400,
+        outboundDeliveryState: "pending",
+        outboundRetryable: true,
+      },
+      {
+        sender: "alice",
+        receiver: "bob",
+        kind: "sent",
+        messageNumber: 1,
+        message: "retried",
+        createdAtMs: 400,
+        outboundDeliveryState: "failed",
+        outboundRetryable: true,
+      },
+      {
+        sender: "alice",
+        receiver: "bob",
+        kind: "sent",
+        messageNumber: 1,
+        message: "retried",
+        createdAtMs: 400,
+        outboundDeliveryState: "sent",
+        outboundRetryable: false,
+      },
+    ]),
+    {
+      lastMessagePreview: "retried",
+      lastMessageAt: 400,
+      messageCount: 1,
+      retryableOutboundCount: 0,
+      retryableOutboundMessageNumber: null,
     },
   );
 });

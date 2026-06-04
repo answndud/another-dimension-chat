@@ -4,7 +4,10 @@ import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
-import { productionTwoProfileLatestRetryableOutbound } from "./action-state.js";
+import {
+  productionInviteRoomConversationMetadata,
+  productionTwoProfileLatestRetryableOutbound,
+} from "./action-state.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const previewSource = readFileSync(join(here, "browser-preview-tauri.js"), "utf8");
@@ -109,6 +112,7 @@ function previewConversationEntriesFromTranscript(profile, counterpartProfile, e
     return {
       sender: sent ? profile : counterpartProfile,
       receiver: sent ? counterpartProfile : profile,
+      kind: sent ? "sent" : "received",
       messageNumber: entry.message_number,
       message: entry.message,
       createdAtMs: entry.created_at_ms,
@@ -121,6 +125,13 @@ function previewConversationEntriesFromTranscript(profile, counterpartProfile, e
       statuses: new Set([sent ? "sent" : "received"]),
     };
   });
+}
+
+function previewRoomMetadataFromTranscripts(localProfile, peerProfile, localEntries = [], peerEntries = []) {
+  return productionInviteRoomConversationMetadata([
+    ...previewConversationEntriesFromTranscript(localProfile, peerProfile, localEntries),
+    ...previewConversationEntriesFromTranscript(peerProfile, localProfile, peerEntries),
+  ]);
 }
 
 test("browser preview keeps invite codes open long enough for manual join", () => {
@@ -605,6 +616,10 @@ test("browser preview keeps room transcript, retryable send, and receive state a
     profile: sender,
     passphrase,
   });
+  const reloadedReceiverTranscript = await afterReload("production_message_transcript_export", {
+    profile: receiver,
+    passphrase,
+  });
   assert.equal(
     reloadedSenderTranscript.entries.some(
       (entry) =>
@@ -616,6 +631,14 @@ test("browser preview keeps room transcript, retryable send, and receive state a
     ),
     true,
   );
+  const reloadedRoomMetadata = previewRoomMetadataFromTranscripts(
+    sender,
+    receiver,
+    reloadedSenderTranscript.entries,
+    reloadedReceiverTranscript.entries,
+  );
+  assert.equal(reloadedRoomMetadata.retryableOutboundCount > 0, true);
+  assert.equal(reloadedRoomMetadata.retryableOutboundMessageNumber, 1);
 
   const reloadedReceiveStatus = await afterReload("production_onion_receive_loop_status");
   assert.equal(reloadedReceiveStatus.enabled, true);
@@ -647,6 +670,14 @@ test("browser preview keeps room transcript, retryable send, and receive state a
     profile: receiver,
     passphrase,
   });
+  const finalRoomMetadata = previewRoomMetadataFromTranscripts(
+    sender,
+    receiver,
+    finalSenderTranscript.entries,
+    finalReceiverTranscript.entries,
+  );
+  assert.equal(finalRoomMetadata.retryableOutboundCount, 0);
+  assert.equal(finalRoomMetadata.retryableOutboundMessageNumber, null);
   assert.equal(
     finalSenderTranscript.entries.some(
       (entry) =>
