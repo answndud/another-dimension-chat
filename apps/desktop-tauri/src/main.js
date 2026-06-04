@@ -11647,7 +11647,11 @@ function stopProductionTwoProfileOnionReceiveForInput(input, options) {
     runtimeLabel: "Message listening stopping",
     silentStop: silent,
   };
-  setProductionTwoProfileOnionReceiveRuntimeState("stopped");
+  if (silent) {
+    rememberProductionTwoProfileOnionReceiveRuntimeState("stopped");
+  } else {
+    setProductionTwoProfileOnionReceiveRuntimeState("stopped");
+  }
   updateLocalPrivateRouteCodeUi(productionTwoProfileInput());
   if (!silent) {
     setText(fields.productionTwoProfileWarning, profile ? t("receiveStopPending") : t("receiveStopped"));
