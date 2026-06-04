@@ -403,6 +403,7 @@ const fields = {
   chatDeliveryNotice: document.querySelector("#chat-delivery-notice"),
   fieldTestReport: document.querySelector("#field-test-report"),
   fieldTestReportSummary: document.querySelector("#field-test-report-summary"),
+  fieldTestChecklist: document.querySelector("#field-test-checklist"),
   peerFieldTestReport: document.querySelector("#peer-field-test-report"),
   fieldTestReportCompare: document.querySelector("#field-test-report-compare"),
   refreshFieldTestReport: document.querySelector("#refresh-field-test-report"),
@@ -3296,12 +3297,84 @@ function fieldTestReportComparison(localReport, peerReport) {
   return mismatches.length > 0 ? `compare ${mismatches.join(" ")}` : "compare reports-aligned";
 }
 
+function fieldTestChecklistItems(report) {
+  const parsed = parseFieldTestReport(report);
+  const sentRows = Number.parseInt(parsed.sent_rows ?? "0", 10) || 0;
+  const receivedRows = Number.parseInt(parsed.received_rows ?? "0", 10) || 0;
+  const routeReady = parsed.route_ready === "true";
+  const routeStale = parsed.route_stale === "true";
+  const receiveEnabled = parsed.receive_enabled === "true";
+  const receiveState = fieldTestReportValue(parsed.receive_state, "stopped");
+  const realOnionAttempted = parsed.real_onion_attempted === "true";
+  const realOnionRetryable = parsed.real_onion_retryable === "true";
+  const roomListState = fieldTestReportValue(parsed.room_list_state_key, "none");
+  return [
+    {
+      key: "room",
+      status: parsed.room_present === "true" && parsed.session_ready === "true" ? "done" : "pending",
+      label: t("fieldTestChecklistRoom"),
+    },
+    {
+      key: "safety",
+      status: parsed.safety_confirmed === "true" ? "done" : "pending",
+      label: t("fieldTestChecklistSafety"),
+    },
+    {
+      key: "route",
+      status: routeReady && !routeStale ? "done" : routeStale ? "check" : "pending",
+      label: t("fieldTestChecklistRoute"),
+    },
+    {
+      key: "receive",
+      status: receiveEnabled && receiveState !== "stopped" ? "done" : "pending",
+      label: t("fieldTestChecklistReceive"),
+    },
+    {
+      key: "messages",
+      status: sentRows > 0 && receivedRows > 0 ? "done" : sentRows > 0 ? "check" : "pending",
+      label: t("fieldTestChecklistMessages"),
+    },
+    {
+      key: "resume",
+      status: roomListState !== "none" ? "done" : "pending",
+      label: t("fieldTestChecklistResume"),
+    },
+    {
+      key: "report",
+      status: realOnionAttempted ? (realOnionRetryable ? "check" : "done") : "pending",
+      label: t("fieldTestChecklistReport"),
+    },
+  ];
+}
+
+function renderFieldTestChecklist(report) {
+  if (!fields.fieldTestChecklist) {
+    return [];
+  }
+  const items = fieldTestChecklistItems(report);
+  const statusLabels = {
+    done: t("fieldTestStatusDone"),
+    pending: t("fieldTestStatusPending"),
+    check: t("fieldTestStatusCheck"),
+  };
+  fields.fieldTestChecklist.innerHTML = "";
+  for (const item of items) {
+    const node = document.createElement("li");
+    node.className = `field-test-checklist-item is-${item.status}`;
+    node.dataset.fieldTestStep = item.key;
+    node.textContent = `${statusLabels[item.status] ?? item.status} ${item.label}`;
+    fields.fieldTestChecklist.append(node);
+  }
+  return items;
+}
+
 function renderFieldTestReportSummary(report) {
   if (!fields.fieldTestReportSummary) {
     return "";
   }
   const summary = fieldTestReportSummary(report);
   fields.fieldTestReportSummary.textContent = summary;
+  renderFieldTestChecklist(report);
   return summary;
 }
 
