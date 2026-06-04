@@ -382,6 +382,40 @@ test("profile unlock and transcript load ignore stale profile inputs", () => {
   assert.match(transcriptBody, /if \(!productionProfileInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
 });
 
+test("two-profile onion setup actions ignore stale room results", () => {
+  const keyBody = functionBody(mainJs, "prepareProductionTwoProfileOnionKey");
+  assert.match(keyBody, /const input = productionTwoProfileInput\(\)/);
+  assert.match(keyBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+
+  const endpointBody = functionBody(mainJs, "launchProductionTwoProfileOnionEndpoint");
+  assert.match(endpointBody, /const input = productionTwoProfileInput\(\)/);
+  assert.match(endpointBody, /production_onion_service_launch_attempt/);
+  assert.match(endpointBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(endpointBody, /applyProductionPairingPayloadExportResult/);
+
+  const pairingBody = functionBody(mainJs, "prepareProductionTwoProfileOnionPairing");
+  assert.match(pairingBody, /const input = productionTwoProfileInput\(\)/);
+  assert.match(pairingBody, /launchAndExport\(profileA\)/);
+  assert.match(pairingBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+
+  const saveBody = functionBody(mainJs, "saveProductionTwoProfileOnionSessions");
+  assert.match(saveBody, /const input = productionTwoProfileInput\(\)/);
+  assert.match(saveBody, /production_two_profile_session_status/);
+  assert.match(saveBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+
+  const refreshBody = functionBody(mainJs, "refreshProductionTwoProfilePeerEndpoints");
+  assert.match(refreshBody, /const input = productionTwoProfileInput\(\)/);
+  assert.match(refreshBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
+
+  const updateBody = functionBody(mainJs, "sendProductionTwoProfileEndpointUpdate");
+  assert.match(updateBody, /const input = productionTwoProfileInput\(\)/);
+  assert.match(updateBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+
+  const handshakeBody = functionBody(mainJs, "completeProductionTwoProfileOnionHandshake");
+  assert.match(handshakeBody, /const input = productionTwoProfileInput\(\)/);
+  assert.match(handshakeBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+});
+
 test("receive imports refresh room list metadata immediately", () => {
   assert.match(mainJs, /function refreshCurrentRoomAfterReceiveImport/);
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /rememberCurrentInviteRoomMetadata\(\)/);
