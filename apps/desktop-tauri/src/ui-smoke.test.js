@@ -931,7 +931,10 @@ test("private delivery stays explicit before network work starts", () => {
   assert.match(functionBody(mainJs, "enablePrivateDeliveryPermission"), /setManualNetworkPermission\(true\)/);
   assert.doesNotMatch(functionBody(mainJs, "enablePrivateDeliveryPermission"), /production_onion_persistent_client_start/);
   assert.doesNotMatch(functionBody(mainJs, "enablePrivateDeliveryPermission"), /production_onion_service_launch_attempt/);
-  assert.match(functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"), /enablePrivateDeliveryPermission\(\)/);
+  assert.match(
+    functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"),
+    /rememberPrivateRouteFollowup\(input\.message \? "send-draft" : "receive", input\);[\s\S]*enablePrivateDeliveryPermission\(\)/,
+  );
   assert.match(functionBody(mainJs, "ensurePrivateDeliveryRuntimeReady"), /production_onion_persistent_client_start/);
 });
 

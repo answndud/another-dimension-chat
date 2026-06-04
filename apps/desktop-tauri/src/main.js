@@ -11863,6 +11863,7 @@ async function runProductionTwoProfileComposerPrimaryAction() {
     peerEndpointState: twoProfilePeerEndpointState(input),
   });
   if (intent.action === "enable-private-delivery") {
+    rememberPrivateRouteFollowup(input.message ? "send-draft" : "receive", input);
     enablePrivateDeliveryPermission();
     return;
   }
