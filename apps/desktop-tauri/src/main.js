@@ -3604,8 +3604,33 @@ function syncTwoProfileDerivedConnectionFields() {
   restorePrivateRouteExchangeForRoom(productionTwoProfileInput());
 }
 
+function currentInviteRoomIdentityForInput(input) {
+  const code = String(fields.productionTwoProfileB?.dataset.connectionCode ?? fields.productionTwoProfileB?.value ?? "").trim();
+  if (!code) {
+    return { connectionCode: "", inviteRole: "" };
+  }
+  const currentProfileA = String(fields.productionTwoProfileA?.value ?? "").trim();
+  const currentProfileB = String(fields.productionTwoProfileB?.dataset.peerProfile || code).trim();
+  const currentPassphrase =
+    fields.productionTwoProfilePassphrase?.value || fields.productionProfilePassphrase?.value || "";
+  if (
+    String(input?.profileA ?? "").trim() !== currentProfileA ||
+    String(input?.profileB ?? "").trim() !== currentProfileB ||
+    String(input?.passphrase ?? "") !== currentPassphrase
+  ) {
+    return { connectionCode: "", inviteRole: "" };
+  }
+  return {
+    connectionCode: code,
+    inviteRole: fields.productionTwoProfileB?.dataset.inviteCodeRole ?? connectionCodeRoleFor(code),
+  };
+}
+
 function twoProfileSessionStatusFingerprint(input = productionTwoProfileInput()) {
-  return `${input.profileA.toLowerCase()}\n${input.profileB.toLowerCase()}\n${input.passphrase || ""}`;
+  const currentIdentity = currentInviteRoomIdentityForInput(input);
+  const connectionCode = String(input.connectionCode ?? currentIdentity.connectionCode).trim();
+  const inviteRole = String(input.inviteRole ?? currentIdentity.inviteRole).trim();
+  return `${input.profileA.toLowerCase()}\n${input.profileB.toLowerCase()}\n${input.passphrase || ""}\n${connectionCode}\n${inviteRole}`;
 }
 
 function privateRouteRoomKey(input = productionTwoProfileInput()) {
@@ -8325,6 +8350,8 @@ function productionTwoProfileInput() {
     profileB: (derivedPeerProfile || connectionCode).trim(),
     passphrase:
       fields.productionTwoProfilePassphrase?.value || fields.productionProfilePassphrase?.value || "",
+    connectionCode: fields.productionTwoProfileB?.dataset.connectionCode ?? connectionCode,
+    inviteRole: fields.productionTwoProfileB?.dataset.inviteCodeRole ?? connectionCodeRoleFor(connectionCode),
     messageTtlSeconds: messageTtlInputValue(fields.productionTwoProfileMessageTtl),
     message: (fields.productionTwoProfileMessage?.value ?? "").trim(),
   };
