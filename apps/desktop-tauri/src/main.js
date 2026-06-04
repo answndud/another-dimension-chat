@@ -11216,9 +11216,11 @@ async function cancelTwoProfileOutboundEntry(entry) {
       return;
     }
     setProductionTwoProfileState("Pending send canceled");
+    setSelectedTwoProfileConversationEntry(null);
     setText(fields.productionTwoProfileWarning, t("sendCanceledNotice"));
     setChatDeliveryNoticeByKey("sendCanceledNotice", "success", input);
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
+    showLatestRetryableOutboundNotice(input);
   } catch (error) {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;

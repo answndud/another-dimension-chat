@@ -898,7 +898,9 @@ test("message send retry and cancel results stay scoped to the current room", ()
   const cancelBody = functionBody(mainJs, "cancelTwoProfileOutboundEntry");
   assert.match(cancelBody, /production_message_outbound_cancel_pending/);
   assert.match(cancelBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(cancelBody, /setSelectedTwoProfileConversationEntry\(null\)/);
   assert.match(cancelBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: false, input \}\)/);
+  assert.match(cancelBody, /showLatestRetryableOutboundNotice\(input\)/);
   assert.match(cancelBody, /setChatDeliveryNoticeByKey\("sendCanceling", "progress", input\)/);
 
   const composerBody = functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip");
