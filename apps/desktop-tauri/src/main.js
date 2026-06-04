@@ -9282,6 +9282,7 @@ async function prepareProductionTwoProfileOnionKey() {
 
 async function launchProductionTwoProfileOnionEndpoint() {
   const input = productionTwoProfileInput();
+  const manualPairingInput = productionPairingInput();
   const { profileA, passphrase } = input;
   const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!profileA || !passphrase) {
@@ -9317,7 +9318,8 @@ async function launchProductionTwoProfileOnionEndpoint() {
       return;
     }
     let pairingPayloadExported = false;
-    if (result.local_onion_endpoint && fields.productionPairingEndpoint) {
+    const manualPairingStillCurrent = productionPairingInputStillCurrent(manualPairingInput);
+    if (result.local_onion_endpoint && fields.productionPairingEndpoint && manualPairingStillCurrent) {
       fields.productionPairingEndpoint.value = result.local_onion_endpoint;
       fields.productionPairingEndpoint.dispatchEvent(new Event("input", { bubbles: true }));
       if (fields.productionProfileName) {
@@ -9389,6 +9391,7 @@ async function launchProductionTwoProfileOnionEndpoint() {
 
 async function prepareProductionTwoProfileOnionPairing() {
   const input = productionTwoProfileInput();
+  const manualPairingInput = productionPairingInput();
   const { profileA, profileB, passphrase } = input;
   const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!profileA || !profileB || profileA === profileB || !passphrase) {
@@ -9437,22 +9440,25 @@ async function prepareProductionTwoProfileOnionPairing() {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
-    if (fields.productionProfileName) {
+    const manualPairingStillCurrent = productionPairingInputStillCurrent(manualPairingInput);
+    if (manualPairingStillCurrent && fields.productionProfileName) {
       fields.productionProfileName.value = profileA;
       fields.productionProfileName.dispatchEvent(new Event("input", { bubbles: true }));
     }
-    if (fields.productionProfileSelector) {
+    if (manualPairingStillCurrent && fields.productionProfileSelector) {
       fields.productionProfileSelector.value = profileA;
     }
-    if (fields.productionPairingEndpoint) {
+    if (manualPairingStillCurrent && fields.productionPairingEndpoint) {
       fields.productionPairingEndpoint.value = profileAResult.launch.local_onion_endpoint;
       fields.productionPairingEndpoint.dispatchEvent(new Event("input", { bubbles: true }));
     }
-    await applyProductionPairingPayloadExportResult(
-      profileAResult.pairing,
-      "Onion pairing payloads ready",
-    );
-    if (fields.productionRemotePairingPayload) {
+    if (manualPairingStillCurrent) {
+      await applyProductionPairingPayloadExportResult(
+        profileAResult.pairing,
+        "Onion pairing payloads ready",
+      );
+    }
+    if (manualPairingStillCurrent && fields.productionRemotePairingPayload) {
       fields.productionRemotePairingPayload.value = profileBResult.pairing.pairing_payload;
       fields.productionRemotePairingPayload.dispatchEvent(new Event("input", { bubbles: true }));
     }
@@ -9463,12 +9469,14 @@ async function prepareProductionTwoProfileOnionPairing() {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
-    applyProductionPairingSafetyPreviewResult(safety, {
-      profile: profileA,
-      passphrase,
-      localPayload: profileAResult.pairing.pairing_payload,
-      remotePayload: profileBResult.pairing.pairing_payload,
-    });
+    if (manualPairingStillCurrent) {
+      applyProductionPairingSafetyPreviewResult(safety, {
+        profile: profileA,
+        passphrase,
+        localPayload: profileAResult.pairing.pairing_payload,
+        remotePayload: profileBResult.pairing.pairing_payload,
+      });
+    }
     setProductionTwoProfileState("Onion pairing safety ready");
     setText(
       fields.productionTwoProfileWarning,
