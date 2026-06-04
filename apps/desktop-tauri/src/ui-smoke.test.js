@@ -416,6 +416,42 @@ test("two-profile onion setup actions ignore stale room results", () => {
   assert.match(handshakeBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
 });
 
+test("standalone onion diagnostics ignore stale profile and endpoint inputs", () => {
+  assert.match(mainJs, /function productionPairingEndpointStillCurrent/);
+  assert.match(functionBody(mainJs, "productionPairingEndpointStillCurrent"), /productionPairingEndpoint/);
+
+  for (const name of [
+    "prepareOnionKeyRecord",
+    "checkOnionLaunchPreflight",
+    "attemptOnionServiceLaunch",
+    "prepareOnionDescriptorPublication",
+    "attemptOnionDescriptorPublication",
+    "prepareOnionInboundStream",
+    "attemptOnionInboundEnvelopeReceive",
+  ]) {
+    const body = functionBody(mainJs, name);
+    assert.match(body, /const input = productionProfileInput\(\)/);
+    assert.match(body, /if \(!productionProfileInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  }
+
+  const outboundBody = functionBody(mainJs, "prepareOnionOutboundStream");
+  assert.match(outboundBody, /productionPairingEndpointStillCurrent\(rendezvousEndpoint\)/);
+
+  for (const name of ["prepareOnionStreamCloseout", "prepareOnionRemoteAuth"]) {
+    const body = functionBody(mainJs, name);
+    assert.match(body, /const input = productionProfileInput\(\)/);
+    assert.match(body, /productionProfileInputStillCurrent\(input\)/);
+    assert.match(body, /productionPairingEndpointStillCurrent\(rendezvousEndpoint\)/);
+  }
+
+  for (const name of ["prepareOnionOutboundEnvelopeSend", "attemptOnionOutboundEnvelopeSend"]) {
+    const body = functionBody(mainJs, name);
+    assert.match(body, /const input = productionMessageInput\(\)/);
+    assert.match(body, /productionMessageInputStillCurrent\(input\)/);
+    assert.match(body, /productionPairingEndpointStillCurrent\(rendezvousEndpoint\)/);
+  }
+});
+
 test("receive imports refresh room list metadata immediately", () => {
   assert.match(mainJs, /function refreshCurrentRoomAfterReceiveImport/);
   assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /rememberCurrentInviteRoomMetadata\(\)/);
