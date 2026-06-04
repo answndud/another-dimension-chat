@@ -628,6 +628,25 @@ test("saved local delivery codes must be refreshed before sharing", () => {
   assert.match(indexHtml, /id="private-route-local-status"/);
 });
 
+test("chat delivery notices stay scoped to the active invite room", () => {
+  assert.match(mainJs, /let latestChatDeliveryNoticeRoomFingerprint = ""/);
+  assert.match(functionBody(mainJs, "chatDeliveryNoticeRoomFingerprint"), /twoProfileSessionStatusFingerprint\(input\)/);
+  assert.match(functionBody(mainJs, "chatDeliveryNoticeMatchesInput"), /latestChatDeliveryNoticeRoomFingerprint === chatDeliveryNoticeRoomFingerprint\(input\)/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNoticeByKey"), /latestChatDeliveryNoticeRoomFingerprint = key \? chatDeliveryNoticeRoomFingerprint\(\) : ""/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNoticeForPendingOutbound"), /latestChatDeliveryNoticeRoomFingerprint = chatDeliveryNoticeRoomFingerprint\(input\)/);
+
+  const languageBody = functionBody(mainJs, "applyLanguage");
+  assert.match(languageBody, /latestChatDeliveryNoticeKey && chatDeliveryNoticeMatchesInput\(productionTwoProfileInput\(\)\)/);
+  assert.match(languageBody, /setChatDeliveryNoticeByKey\("", "neutral"\)/);
+
+  const actionStateBody = functionBody(mainJs, "applyProductionActionState");
+  assert.match(actionStateBody, /const currentRoomDeliveryNotice = chatDeliveryNoticeMatchesInput\(twoProfile\)/);
+  assert.match(actionStateBody, /currentRoomDeliveryNotice[\s\S]*latestChatDeliveryNoticeKey === "sendLockedUntilVerified"/);
+  assert.match(actionStateBody, /currentRoomDeliveryNotice[\s\S]*latestChatDeliveryNoticeKey === "messageSavedPrivateDeliveryOff"/);
+
+  assert.match(functionBody(mainJs, "clearStaleSendRecoveryNotice"), /!chatDeliveryNoticeMatchesInput\(input\)/);
+});
+
 test("invite-code send path does not bypass private delivery gates", () => {
   const intentStart = mainJs.indexOf("function twoProfileComposerPrimaryIntent");
   const intentEnd = mainJs.indexOf("function renderProductionTwoProfileMemory", intentStart);
