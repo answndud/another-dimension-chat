@@ -14,8 +14,13 @@ const indexHtml = readFileSync(join(appRoot, "index.html"), "utf8");
 const mainJs = readFileSync(join(here, "main.js"), "utf8");
 const i18nJs = readFileSync(join(here, "i18n.js"), "utf8");
 const stylesCss = readFileSync(join(here, "styles.css"), "utf8");
+const functionBodyCache = new Map();
 
 function functionBody(source, name) {
+  const cacheKey = `${name}:${source.length}`;
+  if (functionBodyCache.has(cacheKey)) {
+    return functionBodyCache.get(cacheKey);
+  }
   const index = source.indexOf(`function ${name}(`);
   assert.notEqual(index, -1, `missing function ${name}`);
   const brace = source.indexOf("{", source.indexOf(")", index));
@@ -23,7 +28,11 @@ function functionBody(source, name) {
   for (let cursor = brace; cursor < source.length; cursor += 1) {
     if (source[cursor] === "{") depth += 1;
     if (source[cursor] === "}") depth -= 1;
-    if (depth === 0) return source.slice(brace + 1, cursor);
+    if (depth === 0) {
+      const body = source.slice(brace + 1, cursor);
+      functionBodyCache.set(cacheKey, body);
+      return body;
+    }
   }
   assert.fail(`unterminated function ${name}`);
 }

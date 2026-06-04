@@ -113,7 +113,9 @@ scripts/verify_all.sh
 This runs:
 
 - `cargo fmt --all -- --check`
-- `cargo test --workspace --lib`
+- Selected core and Tauri library tests for the current production room, storage, and resume slices.
+- Fast Tauri action/i18n/UI state tests.
+- Tauri frontend build.
 - Default build boundary checks that keep `dev-insecure` out of default feature sets and verify the default CLI exposes only boundary commands.
 - Default CLI hardening rejects production skeleton commands for profile, pairing, messaging, storage unlock, transport bootstrap, and transport send/receive unless a later phase explicitly opens them.
 - Production skeleton preflight summary aggregates current crypto/session, transport, storage, and command-surface blockers without exposing production messaging.
@@ -144,6 +146,7 @@ scripts/verify_full.sh
 
 This additionally runs:
 
+- Tauri browser preview peer tests.
 - Tauri GUI-less local peer flow preflight.
 - CLI smoke flow.
 - `cargo test --workspace`
