@@ -935,6 +935,14 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(sendBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(sendBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: false, input \}\)/);
   assert.match(sendBody, /setChatDeliveryNoticeForSendAttempt\(result, input\)/);
+  assert.match(mainJs, /let activeTwoProfileOnionEnvelopeSendKey = ""/);
+  assert.match(functionBody(mainJs, "twoProfileOnionEnvelopeSendKey"), /twoProfileSessionStatusFingerprint\(input\)/);
+  assert.match(functionBody(mainJs, "twoProfileOnionEnvelopeSendKey"), /normalizedNumber/);
+  assert.match(functionBody(mainJs, "setTwoProfileOnionEnvelopeSendBusy"), /productionBusyAction = "two-profile-onion-envelope-send"/);
+  assert.match(functionBody(mainJs, "setTwoProfileOnionEnvelopeSendBusy"), /activeTwoProfileOnionEnvelopeSendKey = twoProfileOnionEnvelopeSendKey\(input, messageNumber\)/);
+  assert.match(functionBody(mainJs, "clearTwoProfileOnionEnvelopeSendBusy"), /activeTwoProfileOnionEnvelopeSendKey === twoProfileOnionEnvelopeSendKey\(input, messageNumber\)/);
+  assert.match(sendBody, /setTwoProfileOnionEnvelopeSendBusy\(input, latestOnionOutbound\.messageNumber\)/);
+  assert.match(sendBody, /clearTwoProfileOnionEnvelopeSendBusy\(input, latestOnionOutbound\.messageNumber\)/);
 
   const retryBody = functionBody(mainJs, "retryTwoProfileOutboundEntry");
   assert.match(retryBody, /await sendProductionTwoProfileLatestOnionEnvelope\(input, \{ messageNumber: entry\.messageNumber \}\)/);

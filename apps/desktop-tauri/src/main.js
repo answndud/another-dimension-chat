@@ -473,6 +473,7 @@ let productionBusyAction = null;
 let activeInviteRoomOpenFingerprint = "";
 let activeInviteRoomPrivateRouteCodeFingerprint = "";
 let activeInviteRoomPeerRouteCodeFingerprint = "";
+let activeTwoProfileOnionEnvelopeSendKey = "";
 let latestProductionManualFocusTarget = null;
 let latestChatDeliveryNoticeKey = "";
 let latestChatDeliveryNoticeTone = "neutral";
@@ -543,6 +544,26 @@ function clearInviteRoomPeerRouteCodeBusy(input) {
   ) {
     activeInviteRoomPeerRouteCodeFingerprint = "";
     clearProductionBusyAction("invite-room-peer-route-code");
+  }
+}
+
+function twoProfileOnionEnvelopeSendKey(input, messageNumber) {
+  const normalizedNumber = Number.parseInt(messageNumber, 10) || 0;
+  return `${twoProfileSessionStatusFingerprint(input)}\n${normalizedNumber}`;
+}
+
+function setTwoProfileOnionEnvelopeSendBusy(input, messageNumber) {
+  productionBusyAction = "two-profile-onion-envelope-send";
+  activeTwoProfileOnionEnvelopeSendKey = twoProfileOnionEnvelopeSendKey(input, messageNumber);
+}
+
+function clearTwoProfileOnionEnvelopeSendBusy(input, messageNumber) {
+  if (
+    productionBusyAction === "two-profile-onion-envelope-send" &&
+    activeTwoProfileOnionEnvelopeSendKey === twoProfileOnionEnvelopeSendKey(input, messageNumber)
+  ) {
+    activeTwoProfileOnionEnvelopeSendKey = "";
+    clearProductionBusyAction("two-profile-onion-envelope-send");
   }
 }
 
@@ -11055,7 +11076,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
     return;
   }
 
-  productionBusyAction = "two-profile-onion-envelope-send";
+  setTwoProfileOnionEnvelopeSendBusy(input, latestOnionOutbound.messageNumber);
   setProductionTwoProfileState("Private delivery running");
   setText(fields.productionTwoProfileWarning, t("chatNoticeSending"));
   setChatDeliveryNoticeByKey("chatNoticeSending", "progress", input);
@@ -11150,7 +11171,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       applyProductionActionState();
     }
   } finally {
-    clearProductionBusyAction("two-profile-onion-envelope-send");
+    clearTwoProfileOnionEnvelopeSendBusy(input, latestOnionOutbound.messageNumber);
     if (fields.sendProductionTwoProfileLatestOnionEnvelope) {
       fields.sendProductionTwoProfileLatestOnionEnvelope.disabled = false;
     }
