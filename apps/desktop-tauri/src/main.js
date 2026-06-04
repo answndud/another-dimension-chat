@@ -3685,6 +3685,9 @@ async function saveInviteRoomOutboundMessage(input = productionTwoProfileInput()
   });
   const messageNumber = Number.parseInt(result.selected_message_number, 10);
   const messageText = message;
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return { result, messageNumber, messageText, stillCurrent: false };
+  }
   latestProductionTwoProfileSuccess = {
     profileA,
     profileB,
@@ -3717,16 +3720,19 @@ async function saveInviteRoomOutboundMessage(input = productionTwoProfileInput()
   setText(fields.productionTwoProfileMessageState, t("messageWaitingForDelivery"));
   setText(fields.productionTwoProfileBoundary, productionMessageEnvelopeExportView(result).boundary);
   await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
-  return { result, messageNumber, messageText };
+  return { result, messageNumber, messageText, stillCurrent: true };
 }
 
 async function completeInviteRoomOutboundDelivery(input, messageNumber) {
   const { profileA, profileB, passphrase } = input;
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return;
+  }
   if (manualNetworkPermissionEnabled()) {
     const onionInput = { profileA, profileB, passphrase };
     if (latestTwoProfileOutboundOnionMessage(onionInput)) {
       setText(fields.productionTwoProfileWarning, t("onionDeliveryStarting"));
-      await sendProductionTwoProfileLatestOnionEnvelope();
+      await sendProductionTwoProfileLatestOnionEnvelope(onionInput);
       return;
     }
     const peerEndpointState = twoProfilePeerEndpointState(onionInput);
@@ -3739,6 +3745,9 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
       messageNumber,
       failureKind,
     );
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
     setText(fields.productionTwoProfileWarning, t("onionDeliveryNeedsPeerAddress"));
     setChatDeliveryNoticeByKey(
       peerEndpointState.stale ? "chatNoticeRefreshAddress" : "privateDeliveryRouteNeeded",
@@ -3754,6 +3763,9 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
     messageNumber,
     "ManualNetworkPermissionMissing",
   );
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return;
+  }
   setText(fields.productionTwoProfileWarning, t("messageSavedPrivateDeliveryOff"));
   setChatDeliveryNoticeByKey("messageSavedPrivateDeliveryOff", "muted");
   await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
@@ -10313,8 +10325,7 @@ async function attemptOnionOutboundEnvelopeSend() {
   }
 }
 
-async function sendProductionTwoProfileLatestOnionEnvelope() {
-  const input = productionTwoProfileInput();
+async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwoProfileInput()) {
   const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(input);
   const manualNetworkPermission = manualNetworkPermissionEnabled();
   if (!manualNetworkPermission) {
@@ -10337,6 +10348,9 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
         latestCandidate.messageNumber,
         peerEndpointState.stale ? "stored remote endpoint refresh required" : "peer-endpoint-missing",
       );
+      if (!twoProfileTranscriptInputStillCurrent(input)) {
+        return;
+      }
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
       showLatestRetryableOutboundNotice(input);
       return;
@@ -10380,6 +10394,9 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
           messageNumber: latestOnionOutbound.messageNumber,
           manualNetworkPermission,
         });
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
     setOnionOutboundEnvelopeSendState(
       result.send_attempt_succeeded
         ? "Envelope send attempt wrote"
@@ -10409,6 +10426,9 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
         profileB: input.profileB,
         passphrase: input.passphrase,
       });
+      if (!twoProfileTranscriptInputStillCurrent(input)) {
+        return;
+      }
       rememberTwoProfileSessionStatus(input, status);
       renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
     }
@@ -10426,6 +10446,9 @@ async function sendProductionTwoProfileLatestOnionEnvelope() {
       );
     } catch {
       // Keep the user-facing failure path available even if state refresh fails.
+    }
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
     }
     setProductionTwoProfileState("Private delivery failed");
     setText(fields.productionTwoProfileWarning, localizedSendFailureMessage(error));
@@ -10538,6 +10561,9 @@ async function retryTwoProfileOutboundEntry(entry) {
     fingerprint: twoProfileInputFingerprint(input),
   };
   await sendProductionTwoProfileLatestOnionEnvelope();
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return;
+  }
   await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
 }
 
@@ -10555,12 +10581,18 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
       if (nextRouteAction === "create-local") {
         rememberPrivateRouteFollowup("retry-outbound", input);
         await prepareInviteRoomPrivateRouteExchange(input);
+        if (!twoProfileTranscriptInputStillCurrent(input)) {
+          return;
+        }
         await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true });
         return;
       }
       if (nextRouteAction === "apply-peer") {
         const applied = await applyPeerPrivateRouteCode();
-        if (applied && twoProfilePeerEndpointState(productionTwoProfileInput()).ready) {
+        if (!twoProfileTranscriptInputStillCurrent(input)) {
+          return;
+        }
+        if (applied && twoProfilePeerEndpointState(input).ready) {
           await retryTwoProfileOutboundEntry(entry);
         }
         return;
@@ -10580,6 +10612,9 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
     return;
   }
   const refreshed = await refreshProductionTwoProfilePeerEndpoints();
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return;
+  }
   if (refreshed) {
     await retryTwoProfileOutboundEntry(entry);
   } else {
@@ -10609,11 +10644,17 @@ async function cancelTwoProfileOutboundEntry(entry) {
       passphrase: input.passphrase,
       messageNumber: Number.parseInt(entry.messageNumber, 10),
     });
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
     setProductionTwoProfileState("Pending send canceled");
     setText(fields.productionTwoProfileWarning, t("sendCanceledNotice"));
     setChatDeliveryNoticeByKey("sendCanceledNotice", "success");
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false });
   } catch (error) {
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
     setProductionTwoProfileState("Cancel send failed");
     setText(fields.productionTwoProfileWarning, `${t("sendCancelFailed")} ${String(error)}`);
     setChatDeliveryNoticeByKey("sendCancelFailed", "warning");
@@ -11173,7 +11214,8 @@ async function runProductionTwoProfileRoundtrip() {
 }
 
 async function runProductionTwoProfileMessageRoundtrip() {
-  const { profileA, profileB, passphrase, message, messageTtlSeconds } = productionTwoProfileInput();
+  const input = productionTwoProfileInput();
+  const { profileA, profileB, passphrase, message, messageTtlSeconds } = input;
   if (!messageRetentionPolicyReady()) {
     setProductionTwoProfileState("Stored-session message blocked");
     setText(fields.productionTwoProfileWarning, messageRetentionPolicyBlocker());
@@ -11211,18 +11253,27 @@ async function runProductionTwoProfileMessageRoundtrip() {
   productionBusyAction = "two-profile-message-roundtrip";
   applyProductionActionState();
   try {
-    const { result, messageNumber } = await saveInviteRoomOutboundMessage({
+    const { result, messageNumber, stillCurrent } = await saveInviteRoomOutboundMessage({
       profileA,
       profileB,
       passphrase,
       message,
       messageTtlSeconds,
     });
+    if (!stillCurrent || !twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
     setProductionTwoProfileState("Message saved");
     setText(fields.productionTwoProfileWarning, result.warning);
-    await completeInviteRoomOutboundDelivery({ profileA, profileB, passphrase }, messageNumber);
+    await completeInviteRoomOutboundDelivery(input, messageNumber);
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
     await loadProductionProfileList();
   } catch (error) {
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
     setProductionTwoProfileState("Message send failed");
     setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("stored-message", error));
     setText(fields.productionTwoProfileProfiles, t("messageProfilesFailed"));
