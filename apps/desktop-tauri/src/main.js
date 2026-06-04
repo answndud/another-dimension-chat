@@ -1378,7 +1378,10 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     action.textContent = t("comparePhraseAction");
     action.addEventListener("click", focusSafetyConfirmation);
     fields.chatDeliveryNotice.append(action);
-  } else if (latestChatDeliveryNoticeKey === "chatNoticeReceiveStopped") {
+  } else if (
+    latestChatDeliveryNoticeKey === "chatNoticeReceiveStopped" ||
+    latestChatDeliveryNoticeKey === "receiveStartFailed"
+  ) {
     const action = document.createElement("button");
     action.type = "button";
     action.className = "chat-delivery-notice-action";
