@@ -1219,8 +1219,9 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     retry.disabled = !outboundActionState.canRunNow;
     retry.title = outboundActionState.disabledReason || "";
     retry.addEventListener("click", () => {
-      if (outboundActionState.canRunNow) {
-        runTwoProfileOutboundPrimaryAction(pendingEntry, primaryAction);
+      const current = currentChatDeliveryNoticeOutboundAction(pendingEntry);
+      if (current) {
+        runTwoProfileOutboundPrimaryAction(current.entry, current.primaryAction);
       }
     });
     const cancel = document.createElement("button");
@@ -1230,8 +1231,9 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     cancel.disabled = !outboundActionState.canRunNow;
     cancel.title = outboundActionState.disabledReason || "";
     cancel.addEventListener("click", () => {
-      if (outboundActionState.canRunNow) {
-        cancelTwoProfileOutboundEntry(pendingEntry);
+      const current = currentChatDeliveryNoticeOutboundAction(pendingEntry);
+      if (current) {
+        cancelTwoProfileOutboundEntry(current.entry);
       }
     });
     actions.append(retry, cancel);
@@ -1309,6 +1311,26 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     action.addEventListener("click", copyLocalPrivateRouteCode);
     fields.chatDeliveryNotice.append(action);
   }
+}
+
+function currentChatDeliveryNoticeOutboundAction(entry) {
+  const input = productionTwoProfileInput();
+  if (!chatDeliveryNoticeMatchesInput(input)) {
+    return null;
+  }
+  const currentEntry = productionTwoProfileConversationEntries.get(twoProfileConversationKey(entry));
+  const outboundActionState = productionTwoProfileOutboundActionState(
+    currentEntry,
+    input,
+    twoProfileInviteCodeModeActive(),
+  );
+  if (!outboundActionState.canRunNow) {
+    return null;
+  }
+  return {
+    entry: currentEntry,
+    primaryAction: currentTwoProfileOutboundPrimaryAction(currentEntry, input),
+  };
 }
 
 function setChatDeliveryNoticeByKey(key, tone = "neutral", input = productionTwoProfileInput()) {
