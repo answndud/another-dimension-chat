@@ -66,6 +66,9 @@ import { transcriptRetentionView } from "./transcript-retention.js";
 import { applyStaticTranslations, normalizeLanguage, translate } from "./i18n.js";
 import "./styles.css";
 
+const FIELD_TEST_APP_VERSION = "0.1.0";
+const FIELD_TEST_BUILD_CHANNEL = "beta-onion";
+
 const fields = {
   themeToggle: document.querySelector("#theme-toggle"),
   languageSelector: document.querySelector("#language-selector"),
@@ -3253,6 +3256,8 @@ function fieldTestReportSummary(report) {
 function fieldTestReportTriageState(report) {
   const parsed = parseFieldTestReport(report);
   return {
+    appVersion: fieldTestReportValue(parsed.app_version, "unknown"),
+    buildChannel: fieldTestReportValue(parsed.build_channel, "unknown"),
     room: parsed.room_present === "true" ? "room" : "no-room",
     safety: parsed.safety_confirmed === "true" ? "verified" : "unverified",
     route: parsed.route_stale === "true"
@@ -3289,7 +3294,7 @@ function fieldTestReportComparison(localReport, peerReport) {
   const local = fieldTestReportTriageState(localReport);
   const peer = fieldTestReportTriageState(peerReport);
   const mismatches = [];
-  for (const key of ["room", "safety", "route", "receive", "next", "blocker"]) {
+  for (const key of ["appVersion", "buildChannel", "room", "safety", "route", "receive", "next", "blocker"]) {
     if (local[key] !== peer[key]) {
       mismatches.push(`${key}:${fieldTestReportValue(local[key], "none")}!=${fieldTestReportValue(peer[key], "none")}`);
     }
@@ -3517,6 +3522,8 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   return [
     "Another Dimension Chat beta field test report",
     "report_version=1",
+    `app_version=${FIELD_TEST_APP_VERSION}`,
+    `build_channel=${FIELD_TEST_BUILD_CHANNEL}`,
     `language=${fieldTestReportValue(currentLanguage)}`,
     `room_present=${hasRoom}`,
     `session_ready=${twoProfileSessionsReadyForInput(input)}`,

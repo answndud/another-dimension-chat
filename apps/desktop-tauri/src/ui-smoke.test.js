@@ -827,6 +827,8 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   const checklistBody = functionBody(mainJs, "fieldTestChecklistItems");
   assert.match(summaryBody, /parseFieldTestReport\(report\)/);
   assert.match(compareBody, /fieldTestReportTriageState\(localReport\)/);
+  assert.match(compareBody, /appVersion/);
+  assert.match(compareBody, /buildChannel/);
   assert.match(checklistBody, /parseFieldTestReport\(report\)/);
   assert.match(checklistBody, /fieldTestChecklistRoom/);
   assert.match(checklistBody, /fieldTestChecklistReport/);
@@ -849,6 +851,8 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(functionBody(mainJs, "copyFieldTestReport"), /navigator\.clipboard\.writeText\(payload\)/);
   assert.match(mainJs, /fields\.peerFieldTestReport\.addEventListener\("input", renderFieldTestReportComparison\)/);
   assert.match(reportBody, /route_ready=/);
+  assert.match(reportBody, /app_version=/);
+  assert.match(reportBody, /build_channel=/);
   assert.match(reportBody, /receive_state=/);
   assert.match(reportBody, /retryable_outbound_present=/);
   assert.match(reportBody, /outbound_failure_class=/);
