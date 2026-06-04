@@ -3573,7 +3573,7 @@ function syncTwoProfileDerivedConnectionFields() {
 }
 
 function twoProfileSessionStatusFingerprint(input = productionTwoProfileInput()) {
-  return `${input.profileA.toLowerCase()}\n${input.profileB.toLowerCase()}`;
+  return `${input.profileA.toLowerCase()}\n${input.profileB.toLowerCase()}\n${input.passphrase || ""}`;
 }
 
 function privateRouteRoomKey(input = productionTwoProfileInput()) {
@@ -3718,6 +3718,7 @@ async function saveInviteRoomOutboundMessage(input = productionTwoProfileInput()
     profileB,
     messageLength: messageText.length,
     messageNumber,
+    roomFingerprint: twoProfileSessionStatusFingerprint({ profileA, profileB, passphrase }),
     fingerprint: twoProfileInputFingerprint({ profileA, profileB, passphrase, message: messageText }),
   };
   if (fields.productionMessageEnvelope) {
@@ -3895,7 +3896,7 @@ function renderProductionTwoProfileSessionStatusResult(result) {
 
 function latestTwoProfileSuccessMatchesDirection(input = productionTwoProfileInput()) {
   return Boolean(
-    latestProductionTwoProfileSuccess &&
+    latestTwoProfileSuccessForInput(input) &&
       latestProductionTwoProfileSuccess.profileA === input.profileA &&
       latestProductionTwoProfileSuccess.profileB === input.profileB,
   );
@@ -3903,10 +3904,20 @@ function latestTwoProfileSuccessMatchesDirection(input = productionTwoProfileInp
 
 function latestTwoProfileSuccessMatchesOppositeDirection(input = productionTwoProfileInput()) {
   return Boolean(
-    latestProductionTwoProfileSuccess &&
+    latestTwoProfileSuccessForInput({
+      ...input,
+      profileA: input.profileB,
+      profileB: input.profileA,
+    }) &&
       latestProductionTwoProfileSuccess.profileA === input.profileB &&
       latestProductionTwoProfileSuccess.profileB === input.profileA,
   );
+}
+
+function latestTwoProfileSuccessForInput(input = productionTwoProfileInput()) {
+  return latestProductionTwoProfileSuccess?.roomFingerprint === twoProfileSessionStatusFingerprint(input)
+    ? latestProductionTwoProfileSuccess
+    : null;
 }
 
 function pendingLocalFinishCodeNeedsSharing() {
@@ -4270,6 +4281,7 @@ function latestTwoProfileOutboundDeliveryCandidate(input = productionTwoProfileI
     : latestProductionTwoProfileSuccess;
   if (
     !latest ||
+    (!retryableEntry && latest.roomFingerprint !== twoProfileSessionStatusFingerprint(input)) ||
     latest.profileA !== input.profileA ||
     latest.profileB !== input.profileB ||
     !Number.isInteger(latest.messageNumber) ||
@@ -4919,7 +4931,7 @@ function latestTwoProfileConversationEntry() {
 
 function updateMinimalChatMode(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
   const hasConversation = productionTwoProfileConversationEntries.size > 0;
-  const hasRoomActivity = Boolean(hasConversation || latestProductionTwoProfileSuccess || sessionsReady);
+  const hasRoomActivity = Boolean(hasConversation || latestTwoProfileSuccessForInput(input) || sessionsReady);
   const chatStarted = Boolean(roomDetailOpen && hasRoomActivity);
   const setupEmpty = !chatStarted;
   const hasConnectionCode = Boolean(input.profileB);
@@ -5837,7 +5849,7 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
   const authReady = Boolean(profilesReady && input.passphrase);
   const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
   const hasMessage = Boolean(input.message);
-  const lastSuccess = latestProductionTwoProfileSuccess;
+  const lastSuccess = latestTwoProfileSuccessForInput(input);
   const lastSuccessDirection = latestTwoProfileSuccessMatchesDirection(input);
   const lastSuccessOppositeDirection = latestTwoProfileSuccessMatchesOppositeDirection(input);
   const selectedReplyTarget = selectedTwoProfileDeliveredReplyTarget(input);
@@ -6107,8 +6119,9 @@ function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
     : `${currentDirection} | no draft`;
   const latestConversation = latestTwoProfileConversationEntry();
   const selectedReplyTarget = selectedTwoProfileDeliveredReplyTarget(input);
+  const latestSuccess = latestTwoProfileSuccessForInput(input);
 
-  if (!latestProductionTwoProfileSuccess) {
+  if (!latestSuccess) {
     setText(
       fields.productionTwoProfileCurrentInput,
       selectedReplyTarget
@@ -6122,7 +6135,7 @@ function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
   }
 
   const matchesLastSuccess =
-    twoProfileInputFingerprint(input) === latestProductionTwoProfileSuccess.fingerprint;
+    twoProfileInputFingerprint(input) === latestSuccess.fingerprint;
   const repliesToTail = Boolean(
     latestConversation &&
       input.profileA === latestConversation.receiver &&
@@ -6138,7 +6151,7 @@ function renderProductionTwoProfileMemory(input = productionTwoProfileInput()) {
   );
   setText(
     fields.productionTwoProfileLastSuccess,
-    `${latestProductionTwoProfileSuccess.profileA} -> ${latestProductionTwoProfileSuccess.profileB} | message_chars=${latestProductionTwoProfileSuccess.messageLength}`,
+    `${latestSuccess.profileA} -> ${latestSuccess.profileB} | message_chars=${latestSuccess.messageLength}`,
   );
 }
 
@@ -7129,7 +7142,7 @@ function applyProductionActionState() {
     hasMessageRetentionPolicy,
   });
   const twoProfileCanReply = Boolean(
-    !busy && latestProductionTwoProfileSuccess && hasTwoProfileSessionStatusInput && !twoProfile.message,
+    !busy && latestTwoProfileSuccessForInput(twoProfile) && hasTwoProfileSessionStatusInput && !twoProfile.message,
   );
   const selectedConversationDelivered = twoProfileConversationReplyable(selectedConversation);
   const inviteCodeReplyMode = twoProfileInviteCodeModeActive();
@@ -7584,6 +7597,7 @@ function applyProductionActionState() {
     false,
   );
   const storedEndpointTransportState = storedPeerEndpointTransportState(twoProfile);
+  const latestTwoProfileSuccess = latestTwoProfileSuccessForInput(twoProfile);
   setActionButtonState(
     fields.sendProductionTwoProfileEndpointUpdate,
     busy ||
@@ -7592,9 +7606,9 @@ function applyProductionActionState() {
       !twoProfileSessionsReady ||
       !storedEndpointTransportState.ready ||
       !latestTwoProfileLocalOnionEndpoint(twoProfile) ||
-      !latestProductionTwoProfileSuccess ||
-      latestProductionTwoProfileSuccess.profileA !== twoProfile.profileA ||
-      latestProductionTwoProfileSuccess.profileB !== twoProfile.profileB,
+      !latestTwoProfileSuccess ||
+      latestTwoProfileSuccess.profileA !== twoProfile.profileA ||
+      latestTwoProfileSuccess.profileB !== twoProfile.profileB,
     busy
       ? "Wait for the active production action."
       : !manualNetworkPermission
@@ -7607,9 +7621,9 @@ function applyProductionActionState() {
         ? `Stored peer endpoint blocked: ${storedEndpointTransportState.reason}.`
       : !latestTwoProfileLocalOnionEndpoint(twoProfile)
         ? "Refresh or prepare onion endpoints first."
-      : !latestProductionTwoProfileSuccess ||
-          latestProductionTwoProfileSuccess.profileA !== twoProfile.profileA ||
-          latestProductionTwoProfileSuccess.profileB !== twoProfile.profileB
+      : !latestTwoProfileSuccess ||
+          latestTwoProfileSuccess.profileA !== twoProfile.profileA ||
+          latestTwoProfileSuccess.profileB !== twoProfile.profileB
         ? "Send a stored-session message first."
         : "Send an encrypted endpoint update control envelope over the stored peer onion endpoint.",
     false,
@@ -8194,6 +8208,7 @@ function renderProductionTwoProfileResult(result) {
       profileB: input.profileB,
       messageLength: input.message.length,
       messageNumber: Number.parseInt(result.message_number, 10),
+      roomFingerprint: twoProfileSessionStatusFingerprint(input),
       fingerprint: twoProfileInputFingerprint(input),
     };
     rememberTwoProfileReadySessionFromRoundtrip(input, result);
@@ -8275,6 +8290,7 @@ function renderProductionTwoProfileMessageResult(result) {
       profileB: input.profileB,
       messageLength: input.message.length,
       messageNumber: Number.parseInt(result.message_number, 10),
+      roomFingerprint: twoProfileSessionStatusFingerprint(input),
       fingerprint: twoProfileInputFingerprint(input),
     };
     renderProductionTwoProfileMemory(input);
@@ -9679,7 +9695,7 @@ async function preparePrivateDeliveryRoute(options = {}) {
 async function sendProductionTwoProfileEndpointUpdate() {
   const input = productionTwoProfileInput();
   const localEndpoint = latestTwoProfileLocalOnionEndpoint(input);
-  const latestMessage = latestProductionTwoProfileSuccess;
+  const latestMessage = latestTwoProfileSuccessForInput(input);
   const storedEndpointTransportState = storedPeerEndpointTransportState(input);
   if (!input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
     setProductionTwoProfileState("Endpoint update needs profiles");
@@ -10751,6 +10767,7 @@ async function retryTwoProfileOutboundEntry(entry) {
     profileB: entry.receiver,
     messageNumber: Number.parseInt(entry.messageNumber, 10),
     messageLength: String(entry.message ?? "").length,
+    roomFingerprint: twoProfileSessionStatusFingerprint(input),
     fingerprint: twoProfileInputFingerprint(input),
   };
   await sendProductionTwoProfileLatestOnionEnvelope();
@@ -11527,7 +11544,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     return;
   }
 
-  const previousRealOnionResult = latestRealOnionFieldTestResult({ profileA, profileB });
+  const previousRealOnionResult = latestRealOnionFieldTestResult({ profileA, profileB, passphrase });
   const previousRealOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(previousRealOnionResult);
   const bootstrapRetryLimit =
     previousRealOnionRecovery.action === "retry-bootstrap" ||
@@ -11560,7 +11577,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       bootstrapRetryLimit,
     });
     latestProductionTwoProfileRealOnionResult = {
-      roomFingerprint: twoProfileSessionStatusFingerprint({ profileA, profileB }),
+      roomFingerprint: twoProfileSessionStatusFingerprint({ profileA, profileB, passphrase }),
       result,
     };
     if (!twoProfileTranscriptInputStillCurrent(input)) {
@@ -11592,6 +11609,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
         profileB: result.receiver_profile || profileB,
         messageLength: message.length,
         messageNumber: latestRoundtripMessageNumber,
+        roomFingerprint: twoProfileSessionStatusFingerprint(input),
         fingerprint: twoProfileInputFingerprint(input),
       };
     }
@@ -11611,7 +11629,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     }
   } catch (error) {
     latestProductionTwoProfileRealOnionResult = {
-      roomFingerprint: twoProfileSessionStatusFingerprint({ profileA, profileB }),
+      roomFingerprint: twoProfileSessionStatusFingerprint({ profileA, profileB, passphrase }),
       result: productionTwoProfileRealOnionSyntheticFailureResult(
         error,
         { profileA, profileB },
@@ -12367,7 +12385,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
     const expiredMessagesPurged =
       Number.parseInt(profileAResult.expired_messages_purged ?? 0, 10) +
       Number.parseInt(profileBResult.expired_messages_purged ?? 0, 10);
-    let sessionStatus = latestTwoProfileSessionStatusForCurrentInput({ profileA, profileB });
+    let sessionStatus = latestTwoProfileSessionStatusForCurrentInput({ profileA, profileB, passphrase });
     if (refreshSessionStatus) {
       sessionStatus = await invokeInviteRoomSessionStatus({
         profileA,
