@@ -9,10 +9,24 @@ use crate::{
     TransportRuntimeEventSink,
 };
 use another_dimension_identity::ProfileName;
-use arti_client::{config::TorClientConfigBuilder, ErrorKind, HasKind, TorClientConfig};
+#[cfg(feature = "arti-bridge-client")]
+use arti_client::config::{pt::TransportConfigBuilder, CfgPath};
+use arti_client::{config::TorClientConfigBuilder, TorClientConfig};
+#[cfg(feature = "arti-manual-bootstrap")]
+use arti_client::{ErrorKind, HasKind};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+const MANAGED_BRIDGE_TRANSPORT_PROTOCOLS: &[&str] = &[
+    "obfs4",
+    "webtunnel",
+    "meek_lite",
+    "snowflake",
+    "obfs2",
+    "obfs3",
+    "scramblesuit",
+];
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ArtiConfigError {
@@ -20,6 +34,15 @@ pub enum ArtiConfigError {
     RelativeDirectory,
     SharedDefaultDirectory,
     SameStateAndCacheDirectory,
+    EmptyBridgeConfig,
+    TooManyBridgeLines,
+    BridgeLineTooLong,
+    BridgeLineParseFailed,
+    EmptyObfs4TransportBinaryPath,
+    RelativeObfs4TransportBinaryPath,
+    Obfs4TransportProtocolParseFailed,
+    Obfs4TransportConfigBuildFailed,
+    BridgeConfigUnsupportedInBuild,
     BuildFailed,
 }
 
@@ -55,7 +78,11 @@ pub fn bootstrap_preflight_boundary() -> ArtiBootstrapPreflight {
     ArtiBootstrapPreflight {
         bootstrap_policy: ArtiBootstrapPolicy::DisabledUntilPreflightIsImplemented,
         onion_service_policy: ArtiOnionServicePolicy::DisabledUntilKeyLifecycleDecision,
-        bridge_policy: ArtiBridgePolicy::UnsupportedInCurrentSpike,
+        bridge_policy: if cfg!(feature = "arti-bridge-client") {
+            ArtiBridgePolicy::ConfigureBeforeBootstrap
+        } else {
+            ArtiBridgePolicy::UnsupportedInCurrentSpike
+        },
         require_log_redaction: true,
         allow_runtime_network: false,
         allow_onion_key_generation: false,
@@ -141,7 +168,132 @@ impl fmt::Debug for ProfileScopedTransportDirs {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Eq, PartialEq)]
+pub struct AppPrivateBridgeConfig {
+    bridge_lines: Vec<String>,
+    bridge_transport_protocols: Vec<String>,
+    obfs4_transport_binary_path: Option<PathBuf>,
+}
+
+impl AppPrivateBridgeConfig {
+    const MAX_BRIDGE_LINES: usize = 8;
+    const MAX_BRIDGE_LINE_BYTES: usize = 2048;
+
+    pub fn from_app_private_lines<'a>(
+        lines: impl IntoIterator<Item = &'a str>,
+    ) -> Result<Self, ArtiConfigError> {
+        let bridge_lines = lines
+            .into_iter()
+            .map(str::trim)
+            .filter(|line| !line.is_empty() && !line.starts_with('#'))
+            .map(|line| {
+                if line.len() > Self::MAX_BRIDGE_LINE_BYTES {
+                    return Err(ArtiConfigError::BridgeLineTooLong);
+                }
+                Ok(line.to_string())
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        if bridge_lines.is_empty() {
+            return Err(ArtiConfigError::EmptyBridgeConfig);
+        }
+        if bridge_lines.len() > Self::MAX_BRIDGE_LINES {
+            return Err(ArtiConfigError::TooManyBridgeLines);
+        }
+        let bridge_transport_protocols = managed_bridge_transport_protocols(&bridge_lines);
+
+        Ok(Self {
+            bridge_lines,
+            bridge_transport_protocols,
+            obfs4_transport_binary_path: None,
+        })
+    }
+
+    pub fn bridge_line_count(&self) -> usize {
+        self.bridge_lines.len()
+    }
+
+    pub fn managed_transport_protocol_count(&self) -> usize {
+        self.bridge_transport_protocols.len()
+    }
+
+    pub fn requires_pluggable_transport_binary(&self) -> bool {
+        !self.bridge_transport_protocols.is_empty()
+    }
+
+    pub fn with_obfs4_transport_binary_path(
+        mut self,
+        path: impl Into<PathBuf>,
+    ) -> Result<Self, ArtiConfigError> {
+        let path = path.into();
+        if path.as_os_str().is_empty() {
+            return Err(ArtiConfigError::EmptyObfs4TransportBinaryPath);
+        }
+        if !path.is_absolute() {
+            return Err(ArtiConfigError::RelativeObfs4TransportBinaryPath);
+        }
+        self.obfs4_transport_binary_path = Some(path);
+        Ok(self)
+    }
+
+    pub fn obfs4_transport_binary_configured(&self) -> bool {
+        self.obfs4_transport_binary_path.is_some()
+    }
+}
+
+fn managed_bridge_transport_protocols(bridge_lines: &[String]) -> Vec<String> {
+    let mut protocols = Vec::new();
+    for line in bridge_lines {
+        if let Some(protocol) = managed_bridge_transport_protocol(line) {
+            if !protocols.iter().any(|existing| existing == protocol) {
+                protocols.push(protocol.to_string());
+            }
+        }
+    }
+    protocols
+}
+
+fn managed_bridge_transport_protocol(line: &str) -> Option<&'static str> {
+    let mut parts = line.split_whitespace();
+    let first = parts.next()?;
+    let second = parts.next();
+    let candidates = if first.eq_ignore_ascii_case("Bridge") {
+        [second, None]
+    } else {
+        [Some(first), second]
+    };
+
+    candidates.into_iter().flatten().find_map(|candidate| {
+        MANAGED_BRIDGE_TRANSPORT_PROTOCOLS
+            .iter()
+            .copied()
+            .find(|protocol| candidate.eq_ignore_ascii_case(protocol))
+    })
+}
+
+impl fmt::Debug for AppPrivateBridgeConfig {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("AppPrivateBridgeConfig")
+            .field("bridge_line_count", &self.bridge_line_count())
+            .field(
+                "managed_transport_protocol_count",
+                &self.managed_transport_protocol_count(),
+            )
+            .field("bridge_lines", &"<redacted>")
+            .field("bridge_transport_protocols", &"<redacted>")
+            .field(
+                "obfs4_transport_binary_path",
+                &self
+                    .obfs4_transport_binary_path
+                    .as_ref()
+                    .map(|_| "<redacted>"),
+            )
+            .finish()
+    }
+}
+
+#[derive(Clone)]
 pub struct ArtiAdapterSpike {
     config: TorClientConfig,
     transport: OnionEnvelopeTransport,
@@ -160,9 +312,7 @@ impl ArtiAdapterSpike {
     pub fn fail_closed_app_private_config(
         dirs: ArtiAppPrivateDirs,
     ) -> Result<Self, ArtiConfigError> {
-        let config = TorClientConfigBuilder::from_directories(dirs.state_dir(), dirs.cache_dir())
-            .build()
-            .map_err(|_| ArtiConfigError::BuildFailed)?;
+        let config = build_app_private_tor_client_config(&dirs, None)?;
 
         Ok(Self {
             config,
@@ -184,7 +334,19 @@ impl ArtiAdapterSpike {
     }
 }
 
-#[derive(Clone, Debug)]
+impl fmt::Debug for ArtiAdapterSpike {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("ArtiAdapterSpike")
+            .field("config", &"<redacted>")
+            .field("transport_policy", &self.transport.policy())
+            .field("state_dir", &"<redacted>")
+            .field("cache_dir", &"<redacted>")
+            .finish()
+    }
+}
+
+#[derive(Clone)]
 pub struct BoundedArtiBootstrapAdapterSpike {
     config: TorClientConfig,
     dirs: Arc<ArtiAppPrivateDirs>,
@@ -192,14 +354,36 @@ pub struct BoundedArtiBootstrapAdapterSpike {
     transport: OnionEnvelopeTransport,
 }
 
+impl fmt::Debug for BoundedArtiBootstrapAdapterSpike {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("BoundedArtiBootstrapAdapterSpike")
+            .field("config", &"<redacted>")
+            .field(
+                "timeout_seconds",
+                &self.skeleton.policy().timeout().seconds(),
+            )
+            .field("transport_policy", &self.transport.policy())
+            .field("state_dir", &"<redacted>")
+            .field("cache_dir", &"<redacted>")
+            .finish()
+    }
+}
+
 impl BoundedArtiBootstrapAdapterSpike {
     pub fn fail_closed_app_private_config(
         dirs: ArtiAppPrivateDirs,
         skeleton: TransportBootstrapExecutionSkeleton,
     ) -> Result<Self, ArtiConfigError> {
-        let config = TorClientConfigBuilder::from_directories(dirs.state_dir(), dirs.cache_dir())
-            .build()
-            .map_err(|_| ArtiConfigError::BuildFailed)?;
+        Self::fail_closed_app_private_config_with_bridge_config(dirs, skeleton, None)
+    }
+
+    pub fn fail_closed_app_private_config_with_bridge_config(
+        dirs: ArtiAppPrivateDirs,
+        skeleton: TransportBootstrapExecutionSkeleton,
+        bridge_config: Option<&AppPrivateBridgeConfig>,
+    ) -> Result<Self, ArtiConfigError> {
+        let config = build_app_private_tor_client_config(&dirs, bridge_config)?;
 
         Ok(Self {
             config,
@@ -232,6 +416,54 @@ impl BoundedArtiBootstrapAdapterSpike {
     ) -> Result<(), TransportRuntimeError> {
         self.skeleton.execute_fail_closed(outcome, sink)
     }
+}
+
+fn build_app_private_tor_client_config(
+    dirs: &ArtiAppPrivateDirs,
+    bridge_config: Option<&AppPrivateBridgeConfig>,
+) -> Result<TorClientConfig, ArtiConfigError> {
+    #[cfg(feature = "arti-bridge-client")]
+    let mut builder = TorClientConfigBuilder::from_directories(dirs.state_dir(), dirs.cache_dir());
+    #[cfg(not(feature = "arti-bridge-client"))]
+    let builder = TorClientConfigBuilder::from_directories(dirs.state_dir(), dirs.cache_dir());
+
+    if let Some(bridge_config) = bridge_config {
+        #[cfg(feature = "arti-bridge-client")]
+        {
+            for line in &bridge_config.bridge_lines {
+                let bridge = line
+                    .parse()
+                    .map_err(|_| ArtiConfigError::BridgeLineParseFailed)?;
+                builder.bridges().bridges().push(bridge);
+            }
+            if let Some(path) = &bridge_config.obfs4_transport_binary_path {
+                let mut transport = TransportConfigBuilder::default();
+                let protocols = bridge_config
+                    .bridge_transport_protocols
+                    .iter()
+                    .map(|protocol| {
+                        protocol
+                            .parse()
+                            .map_err(|_| ArtiConfigError::Obfs4TransportProtocolParseFailed)
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                if !protocols.is_empty() {
+                    transport
+                        .protocols(protocols)
+                        .path(CfgPath::new(path.to_string_lossy().into_owned()))
+                        .run_on_startup(true);
+                    builder.bridges().transports().push(transport);
+                }
+            }
+        }
+        #[cfg(not(feature = "arti-bridge-client"))]
+        {
+            let _ = bridge_config;
+            return Err(ArtiConfigError::BridgeConfigUnsupportedInBuild);
+        }
+    }
+
+    builder.build().map_err(|_| ArtiConfigError::BuildFailed)
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -313,8 +545,8 @@ pub struct PersistentArtiClientOwner {
     onion_service: Option<PersistentOnionServiceHandle>,
 }
 
-#[cfg(feature = "arti-manual-bootstrap")]
 enum PersistentArtiClientHandle {
+    #[cfg(feature = "arti-manual-bootstrap")]
     Real(Arc<arti_client::TorClient<tor_rtcompat::PreferredRuntime>>),
     #[cfg(test)]
     Test,
@@ -338,10 +570,10 @@ enum PersistentOnionServiceHandle {
     Test,
 }
 
-#[cfg(feature = "arti-manual-bootstrap")]
 impl fmt::Debug for PersistentArtiClientHandle {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            #[cfg(feature = "arti-manual-bootstrap")]
             Self::Real(_) => formatter.write_str("<bootstrapped-client>"),
             #[cfg(test)]
             Self::Test => formatter.write_str("<test-client>"),

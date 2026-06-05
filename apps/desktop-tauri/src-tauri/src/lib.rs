@@ -475,6 +475,9 @@ pub struct ProductionTwoProfileRoomSetupResult {
 #[derive(serde::Serialize)]
 pub struct ProductionTwoProfileMessageRoundtripResult {
     warning: &'static str,
+    result_scope: &'static str,
+    external_peer_delivery_confirmed: bool,
+    local_dev_roundtrip_result: bool,
     sender_profile: String,
     receiver_profile: String,
     message_number: u64,
@@ -505,6 +508,8 @@ pub struct ProductionTwoProfileRealOnionRoundtripResult {
     message_number: u64,
     second_message_number: u64,
     message_ttl_seconds: u64,
+    bridge_capable_build: bool,
+    bridge_configured_for_bootstrap: bool,
     profile_a_unlocked: bool,
     profile_b_unlocked: bool,
     bootstrap_retry_limit: u8,
@@ -939,6 +944,20 @@ pub struct ProductionMessageRetentionPreferenceResult {
     message_ttl_seconds: u64,
     preference_written: bool,
     key_material_exposed: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionOnionBridgeConfigResult {
+    warning: &'static str,
+    bridge_config_state: &'static str,
+    bridge_config_next_action: &'static str,
+    bridge_capable_build: bool,
+    bridge_configured_for_bootstrap: bool,
+    config_path_returned: bool,
+    raw_bridge_lines_returned: bool,
+    network_io_attempted: bool,
     transport_io_opened: bool,
     runtime_messaging_enabled: bool,
 }
@@ -1494,6 +1513,9 @@ pub struct ProductionOnionEndpointUpdateControlSendAttemptResult {
 #[derive(serde::Serialize)]
 pub struct ProductionOnionOutboundEnvelopeSendAttemptResult {
     warning: &'static str,
+    result_scope: &'static str,
+    external_peer_delivery_confirmed: bool,
+    local_dev_roundtrip_result: bool,
     preparation_only: bool,
     manual_client_attempt_feature_compiled: bool,
     manual_network_permission_enabled: bool,
@@ -1540,6 +1562,65 @@ fn production_message_retention_policy() -> ProductionMessageRetentionPolicyResu
         allowed_ttl_seconds: another_dimension_core::production::PRODUCTION_ALLOWED_MESSAGE_TTL_SECONDS
             .to_vec(),
     }
+}
+
+#[tauri::command]
+fn production_onion_bridge_config_status(
+    app: tauri::AppHandle,
+) -> Result<ProductionOnionBridgeConfigResult, String> {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production onion bridge config status failed without exposing local path details"
+    })?;
+    run_production_onion_bridge_config_status(app_data_root)
+}
+
+#[tauri::command]
+fn production_onion_bridge_config_save(
+    app: tauri::AppHandle,
+    bridge_lines: String,
+) -> Result<ProductionOnionBridgeConfigResult, String> {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production onion bridge config save failed without exposing local path details"
+    })?;
+    run_production_onion_bridge_config_save(app_data_root, bridge_lines).map_err(|_| {
+        "production onion bridge config save failed without exposing local path or bridge details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_onion_pt_binary_save(
+    app: tauri::AppHandle,
+    binary_path: String,
+) -> Result<ProductionOnionBridgeConfigResult, String> {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production onion pluggable transport save failed without exposing local path details"
+    })?;
+    run_production_onion_pt_binary_save(app_data_root, binary_path).map_err(|_| {
+        "production onion pluggable transport save failed without exposing local path or bridge details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_onion_obfs4_transport_binary_save(
+    app: tauri::AppHandle,
+    binary_path: String,
+) -> Result<ProductionOnionBridgeConfigResult, String> {
+    production_onion_pt_binary_save(app, binary_path)
+}
+
+#[tauri::command]
+fn production_onion_bridge_config_clear(
+    app: tauri::AppHandle,
+) -> Result<ProductionOnionBridgeConfigResult, String> {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production onion bridge config clear failed without exposing local path details"
+    })?;
+    run_production_onion_bridge_config_clear(app_data_root).map_err(|_| {
+        "production onion bridge config clear failed without exposing local path or bridge details"
+            .to_string()
+    })
 }
 
 #[tauri::command]
@@ -2098,6 +2179,9 @@ fn stored_endpoint_unavailable_outbound_send_result(
         || next_blocker.to_ascii_lowercase().contains("stale");
     ProductionOnionOutboundEnvelopeSendAttemptResult {
         warning: "Stored peer onion endpoint is not ready. The message remains saved and can be retried after the endpoint is refreshed.",
+        result_scope: "external-peer-send-attempt",
+        external_peer_delivery_confirmed: false,
+        local_dev_roundtrip_result: false,
         preparation_only: false,
         manual_client_attempt_feature_compiled: cfg!(feature = "manual-onion-client-attempt"),
         manual_network_permission_enabled: manual_network_permission,
@@ -3000,7 +3084,7 @@ fn production_two_profile_real_onion_wait_cancel(
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, not(feature = "manual-onion-client-attempt")))]
 #[allow(clippy::too_many_arguments)]
 async fn run_production_two_profile_real_onion_roundtrip(
     app_data_root: impl AsRef<std::path::Path>,
@@ -6946,6 +7030,9 @@ async fn run_production_onion_outbound_envelope_send_attempt(
         }
         return Ok(ProductionOnionOutboundEnvelopeSendAttemptResult {
             warning: "Outbound envelope send attempt is feature-disabled in this build. No stream dial, stream send, envelope I/O, or message transport was attempted.",
+            result_scope: "external-peer-send-attempt",
+            external_peer_delivery_confirmed: false,
+            local_dev_roundtrip_result: false,
             preparation_only: false,
             manual_client_attempt_feature_compiled: false,
             manual_network_permission_enabled: manual_network_permission,
@@ -7064,6 +7151,9 @@ async fn run_production_onion_outbound_envelope_send_attempt(
         }
         Ok(ProductionOnionOutboundEnvelopeSendAttemptResult {
             warning: "Outbound envelope send attempt boundary. It may attempt one bounded onion stream dial and encrypted envelope write only when manual network permission, a retained Tor client, verified pairwise session, and stored outbound envelope are all ready. It returns only redacted status.",
+            result_scope: "external-peer-send-attempt",
+            external_peer_delivery_confirmed: false,
+            local_dev_roundtrip_result: false,
             preparation_only: false,
             manual_client_attempt_feature_compiled: true,
             manual_network_permission_enabled: manual_network_permission,
@@ -8594,6 +8684,297 @@ fn sanitize_envelope_payload(payload: String) -> Result<String, String> {
     Ok(payload.to_string())
 }
 
+fn real_onion_bridge_capable_build() -> bool {
+    cfg!(feature = "manual-onion-bridge-client")
+}
+
+#[cfg(feature = "manual-onion-bridge-client")]
+fn app_private_real_onion_bridge_config_path(app_data_root: &std::path::Path) -> std::path::PathBuf {
+    app_data_root.join("transport").join("bridge-lines.txt")
+}
+
+#[cfg(feature = "manual-onion-bridge-client")]
+fn app_private_real_onion_pt_binary_path(
+    app_data_root: &std::path::Path,
+) -> std::path::PathBuf {
+    app_data_root.join("transport").join("pt-binary-path.txt")
+}
+
+#[cfg(feature = "manual-onion-bridge-client")]
+fn app_private_real_onion_legacy_obfs4_transport_binary_path(
+    app_data_root: &std::path::Path,
+) -> std::path::PathBuf {
+    app_data_root
+        .join("transport")
+        .join("obfs4-pt-binary-path.txt")
+}
+
+#[cfg(all(feature = "manual-onion-bridge-client", unix))]
+fn set_app_private_bridge_config_permissions(
+    bridge_path: &std::path::Path,
+) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let parent = bridge_path
+        .parent()
+        .ok_or_else(|| "production onion bridge config save failed".to_string())?;
+    std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700))
+        .map_err(|_| "production onion bridge config save failed".to_string())?;
+    std::fs::set_permissions(bridge_path, std::fs::Permissions::from_mode(0o600))
+        .map_err(|_| "production onion bridge config save failed".to_string())
+}
+
+#[cfg(all(feature = "manual-onion-bridge-client", not(unix)))]
+fn set_app_private_bridge_config_permissions(
+    bridge_path: &std::path::Path,
+) -> Result<(), String> {
+    let _ = bridge_path;
+    Ok(())
+}
+
+#[cfg(feature = "manual-onion-bridge-client")]
+fn write_app_private_bridge_config_file(
+    bridge_path: &std::path::Path,
+    bridge_lines: String,
+) -> Result<(), String> {
+    let parent = bridge_path
+        .parent()
+        .ok_or_else(|| "production onion bridge config save failed".to_string())?;
+    std::fs::create_dir_all(parent)
+        .map_err(|_| "production onion bridge config save failed".to_string())?;
+    std::fs::write(bridge_path, bridge_lines)
+        .map_err(|_| "production onion bridge config save failed".to_string())?;
+    set_app_private_bridge_config_permissions(bridge_path)
+}
+
+#[cfg(feature = "manual-onion-bridge-client")]
+fn load_app_private_pt_binary_path(
+    pt_path: &std::path::Path,
+) -> Result<Option<std::path::PathBuf>, String> {
+    if !pt_path.exists() {
+        return Ok(None);
+    }
+    let contents = std::fs::read_to_string(pt_path)
+        .map_err(|_| "production onion obfs4 transport status failed".to_string())?;
+    let binary_path = std::path::PathBuf::from(contents.trim());
+    if binary_path.as_os_str().is_empty()
+        || !binary_path.is_absolute()
+        || !binary_path.is_file()
+    {
+        return Err("production onion obfs4 transport invalid".to_string());
+    }
+    Ok(Some(binary_path))
+}
+
+#[cfg(feature = "manual-onion-bridge-client")]
+fn load_app_private_real_onion_pt_binary_path(
+    app_data_root: &std::path::Path,
+) -> Result<Option<std::path::PathBuf>, String> {
+    let primary = app_private_real_onion_pt_binary_path(app_data_root);
+    match load_app_private_pt_binary_path(&primary)? {
+        Some(path) => Ok(Some(path)),
+        None => {
+            let legacy =
+                app_private_real_onion_legacy_obfs4_transport_binary_path(app_data_root);
+            load_app_private_pt_binary_path(&legacy)
+        }
+    }
+}
+
+fn run_production_onion_bridge_config_status(
+    app_data_root: impl AsRef<std::path::Path>,
+) -> Result<ProductionOnionBridgeConfigResult, String> {
+    #[cfg(feature = "manual-onion-bridge-client")]
+    let (bridge_config_state, bridge_config_next_action, bridge_configured_for_bootstrap) = {
+        let bridge_path = app_private_real_onion_bridge_config_path(app_data_root.as_ref());
+        if bridge_path.exists() {
+            let contents = std::fs::read_to_string(&bridge_path)
+                .map_err(|_| "production onion bridge config status failed")?;
+            if let Ok(config) = another_dimension_transport::arti_adapter_spike::AppPrivateBridgeConfig::from_app_private_lines(
+                contents.lines(),
+            )
+            {
+                if config.requires_pluggable_transport_binary() {
+                    match load_app_private_real_onion_pt_binary_path(app_data_root.as_ref()) {
+                        Ok(Some(_)) => ("configured", "retry-network", true),
+                        Ok(None) => ("transport-missing", "configure-obfs4-transport", false),
+                        Err(_) => ("transport-invalid", "replace-obfs4-transport", false),
+                    }
+                } else {
+                    ("configured", "retry-network", true)
+                }
+            } else {
+                ("invalid", "replace-bridge-config", false)
+            }
+        } else {
+            ("missing", "save-bridge-config", false)
+        }
+    };
+    #[cfg(not(feature = "manual-onion-bridge-client"))]
+    let (bridge_config_state, bridge_config_next_action, bridge_configured_for_bootstrap) = {
+        let _ = app_data_root;
+        ("unsupported", "use-bridge-capable-build", false)
+    };
+
+    Ok(ProductionOnionBridgeConfigResult {
+        warning: "production onion bridge config status is redacted; raw bridge lines and local paths are not returned",
+        bridge_config_state,
+        bridge_config_next_action,
+        bridge_capable_build: real_onion_bridge_capable_build(),
+        bridge_configured_for_bootstrap,
+        config_path_returned: false,
+        raw_bridge_lines_returned: false,
+        network_io_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
+    })
+}
+
+fn run_production_onion_bridge_config_save(
+    app_data_root: impl AsRef<std::path::Path>,
+    bridge_lines: String,
+) -> Result<ProductionOnionBridgeConfigResult, String> {
+    if !real_onion_bridge_capable_build() {
+        return Err("production onion bridge config requires a bridge-capable build".to_string());
+    }
+    #[cfg(feature = "manual-onion-bridge-client")]
+    {
+    let bridge_path = app_private_real_onion_bridge_config_path(app_data_root.as_ref());
+    let bridge_config =
+        another_dimension_transport::arti_adapter_spike::AppPrivateBridgeConfig::from_app_private_lines(
+            bridge_lines.lines(),
+        )
+        .map_err(|_| "production onion bridge config invalid")?;
+    write_app_private_bridge_config_file(&bridge_path, bridge_lines)?;
+    let _ = bridge_config;
+
+    run_production_onion_bridge_config_status(app_data_root)
+    }
+    #[cfg(not(feature = "manual-onion-bridge-client"))]
+    {
+        let _ = (app_data_root, bridge_lines);
+        Err("production onion bridge config requires a bridge-capable build".to_string())
+    }
+}
+
+fn run_production_onion_pt_binary_save(
+    app_data_root: impl AsRef<std::path::Path>,
+    binary_path: String,
+) -> Result<ProductionOnionBridgeConfigResult, String> {
+    if !real_onion_bridge_capable_build() {
+        return Err(
+            "production onion pluggable transport requires a bridge-capable build".to_string(),
+        );
+    }
+    #[cfg(feature = "manual-onion-bridge-client")]
+    {
+        let binary_path = std::path::PathBuf::from(binary_path.trim());
+        if binary_path.as_os_str().is_empty()
+            || !binary_path.is_absolute()
+            || !binary_path.is_file()
+        {
+            return Err("production onion pluggable transport invalid".to_string());
+        }
+        let pt_path = app_private_real_onion_pt_binary_path(app_data_root.as_ref());
+        write_app_private_bridge_config_file(
+            &pt_path,
+            binary_path.to_string_lossy().into_owned(),
+        )?;
+        run_production_onion_bridge_config_status(app_data_root)
+    }
+    #[cfg(not(feature = "manual-onion-bridge-client"))]
+    {
+        let _ = (app_data_root, binary_path);
+        Err("production onion pluggable transport requires a bridge-capable build".to_string())
+    }
+}
+
+fn run_production_onion_bridge_config_clear(
+    app_data_root: impl AsRef<std::path::Path>,
+) -> Result<ProductionOnionBridgeConfigResult, String> {
+    if !real_onion_bridge_capable_build() {
+        return Err("production onion bridge config requires a bridge-capable build".to_string());
+    }
+    #[cfg(feature = "manual-onion-bridge-client")]
+    {
+        let bridge_path = app_private_real_onion_bridge_config_path(app_data_root.as_ref());
+        let pt_path = app_private_real_onion_pt_binary_path(app_data_root.as_ref());
+        let legacy_pt_path =
+            app_private_real_onion_legacy_obfs4_transport_binary_path(app_data_root.as_ref());
+        match std::fs::remove_file(&bridge_path) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(_) => return Err("production onion bridge config clear failed".to_string()),
+        }
+        match std::fs::remove_file(&pt_path) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(_) => return Err("production onion bridge config clear failed".to_string()),
+        }
+        match std::fs::remove_file(&legacy_pt_path) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(_) => return Err("production onion bridge config clear failed".to_string()),
+        }
+        Ok(ProductionOnionBridgeConfigResult {
+            warning: "production onion bridge config cleared from app-private storage; raw bridge lines and local paths are not returned",
+            bridge_config_state: "missing",
+            bridge_config_next_action: "save-bridge-config",
+            bridge_capable_build: true,
+            bridge_configured_for_bootstrap: false,
+            config_path_returned: false,
+            raw_bridge_lines_returned: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+    #[cfg(not(feature = "manual-onion-bridge-client"))]
+    {
+        let _ = app_data_root;
+        Err("production onion bridge config requires a bridge-capable build".to_string())
+    }
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+fn load_app_private_real_onion_bridge_config(
+    app_data_root: &std::path::Path,
+) -> Result<Option<another_dimension_transport::arti_adapter_spike::AppPrivateBridgeConfig>, String>
+{
+    #[cfg(feature = "manual-onion-bridge-client")]
+    {
+        let bridge_path = app_private_real_onion_bridge_config_path(app_data_root);
+        if !bridge_path.exists() {
+            return Ok(None);
+        }
+        let contents = std::fs::read_to_string(&bridge_path)
+            .map_err(|_| "real onion bridge config unavailable")?;
+        let config =
+            another_dimension_transport::arti_adapter_spike::AppPrivateBridgeConfig::from_app_private_lines(
+                contents.lines(),
+            )
+            .map_err(|_| "real onion bridge config invalid")?;
+        let config = if config.requires_pluggable_transport_binary() {
+            let Some(pt_binary_path) = load_app_private_real_onion_pt_binary_path(app_data_root)
+                .map_err(|_| "real onion obfs4 transport binary invalid")?
+            else {
+                return Err("real onion obfs4 transport binary missing".to_string());
+            };
+            config
+                .with_obfs4_transport_binary_path(pt_binary_path)
+                .map_err(|_| "real onion obfs4 transport binary invalid")?
+        } else {
+            config
+        };
+        Ok(Some(config))
+    }
+    #[cfg(not(feature = "manual-onion-bridge-client"))]
+    {
+        let _ = app_data_root;
+        Ok(None)
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
     _app_data_root: impl AsRef<std::path::Path>,
@@ -8645,6 +9026,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             message_number: 0,
             second_message_number: 0,
             message_ttl_seconds,
+            bridge_capable_build: real_onion_bridge_capable_build(),
+            bridge_configured_for_bootstrap: false,
             bootstrap_retry_limit,
             profile_a_bootstrap_attempts: 0,
             profile_b_bootstrap_attempts: 0,
@@ -8725,6 +9108,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
                 message_number: 0,
                 second_message_number: 0,
                 message_ttl_seconds,
+                bridge_capable_build: real_onion_bridge_capable_build(),
+                bridge_configured_for_bootstrap: false,
                 bootstrap_retry_limit,
                 profile_a_bootstrap_attempts: 0,
                 profile_b_bootstrap_attempts: 0,
@@ -8789,6 +9174,107 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             });
         }
 
+        let bridge_config = match load_app_private_real_onion_bridge_config(_app_data_root.as_ref())
+        {
+            Ok(config) => config,
+            Err(error) => {
+                let (warning, event_summary, next_blocker) =
+                    if error.contains("obfs4 transport binary missing") {
+                        (
+                            "Real onion roundtrip stopped because the app-private obfs4 transport binary is missing. Configure the transport binary before retrying network; result is redacted and no network work was attempted.",
+                            vec!["obfs4-transport-missing".to_string()],
+                            "Obfs4TransportMissing",
+                        )
+                    } else if error.contains("obfs4 transport binary invalid") {
+                        (
+                            "Real onion roundtrip stopped because the app-private obfs4 transport binary is invalid. Replace the transport binary path before retrying network; result is redacted and no network work was attempted.",
+                            vec!["obfs4-transport-invalid".to_string()],
+                            "Obfs4TransportInvalid",
+                        )
+                    } else {
+                        (
+                            "Real onion roundtrip stopped because the app-private bridge config is invalid. Replace the bridge config before retrying network; result is redacted and no network work was attempted.",
+                            vec!["bridge-config-invalid".to_string()],
+                            "BridgeConfigInvalid",
+                        )
+                    };
+                return Ok(ProductionTwoProfileRealOnionRoundtripResult {
+                    warning,
+                    manual_client_attempt_feature_compiled: true,
+                    manual_network_permission_enabled: true,
+                    sender_profile: profile_a_name,
+                    receiver_profile: profile_b_name,
+                    message_number: 0,
+                    second_message_number: 0,
+                    message_ttl_seconds,
+                    bridge_capable_build: real_onion_bridge_capable_build(),
+                    bridge_configured_for_bootstrap: false,
+                    bootstrap_retry_limit,
+                    profile_a_bootstrap_attempts: 0,
+                    profile_b_bootstrap_attempts: 0,
+                    profile_a_bootstrap_reused: false,
+                    profile_b_bootstrap_reused: false,
+                    profile_a_unlocked: false,
+                    profile_b_unlocked: false,
+                    profile_a_client_bootstrapped: false,
+                    profile_b_client_bootstrapped: false,
+                    profile_a_onion_service_launched: false,
+                    profile_b_onion_service_launched: false,
+                    profile_a_endpoint_ready: false,
+                    profile_b_endpoint_ready: false,
+                    pairing_payloads_exported: false,
+                    session_drafts_saved: false,
+                    handshake_completed: false,
+                    sender_session_ready: false,
+                    receiver_session_ready: false,
+                    message_number_reserved: false,
+                    second_message_number_reserved: false,
+                    encrypted_envelope_exported: false,
+                    second_encrypted_envelope_exported: false,
+                    send_attempt_started: false,
+                    send_attempt_succeeded: false,
+                    second_send_attempt_succeeded: false,
+                    receive_attempt_started: false,
+                    receive_attempt_succeeded: false,
+                    second_receive_attempt_succeeded: false,
+                    inbound_message_stored: false,
+                    second_inbound_message_stored: false,
+                    consecutive_receive_attempts: 0,
+                    consecutive_messages_imported: 0,
+                    receive_mode_runtime_state: "stopped",
+                    receive_mode_runtime_label: "Receive mode stopped",
+                    receive_mode_attempt_count: 0,
+                    receive_mode_import_sequence: 0,
+                    receive_mode_message_import_count: 0,
+                    receive_mode_endpoint_update_count: 0,
+                    receive_mode_last_network_io_attempted: false,
+                    receive_mode_last_stream_accept_attempted: false,
+                    receive_mode_last_stream_read_write_attempted: false,
+                    receive_mode_last_envelope_io_opened: false,
+                    receive_mode_last_runtime_messaging_enabled: false,
+                    receive_mode_recorder_verified: false,
+                    received_status_verified: false,
+                    received_export_matches_input: false,
+                    second_received_status_verified: false,
+                    second_received_export_matches_input: false,
+                    event_summary,
+                    next_blocker: next_blocker.to_string(),
+                    blockers: vec![next_blocker.to_string()],
+                    local_endpoint_returned: false,
+                    peer_endpoint_returned: false,
+                    envelope_payload_returned: false,
+                    plaintext_returned_to_frontend: false,
+                    store_path_returned: false,
+                    passphrase_retained: false,
+                    key_material_exposed: false,
+                    network_io_attempted: false,
+                    transport_io_opened: false,
+                    runtime_messaging_enabled: false,
+                });
+            }
+        };
+        let bridge_configured_for_bootstrap = bridge_config.is_some();
+
         let profile_a_unlock = run_production_profile_unlock(
             &_app_data_root,
             profile_a_name.clone(),
@@ -8834,6 +9320,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
                 message_number: 0,
                 second_message_number: 0,
                 message_ttl_seconds,
+                bridge_capable_build: real_onion_bridge_capable_build(),
+                bridge_configured_for_bootstrap,
                 bootstrap_retry_limit,
                 profile_a_bootstrap_attempts,
                 profile_b_bootstrap_attempts,
@@ -8913,6 +9401,7 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             &profile_a_name,
             &mut event_summary,
             bootstrap_retry_limit,
+            bridge_config.as_ref(),
             cancel_scope,
         )
         .await
@@ -8951,6 +9440,7 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             &profile_b_name,
             &mut event_summary,
             bootstrap_retry_limit,
+            bridge_config.as_ref(),
             cancel_scope,
         )
         .await
@@ -9347,6 +9837,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
                     message_number,
                     second_message_number,
                     message_ttl_seconds,
+                    bridge_capable_build: real_onion_bridge_capable_build(),
+                    bridge_configured_for_bootstrap,
                     bootstrap_retry_limit,
                     profile_a_bootstrap_attempts,
                     profile_b_bootstrap_attempts,
@@ -9713,6 +10205,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             message_number,
             second_message_number,
             message_ttl_seconds,
+            bridge_capable_build: real_onion_bridge_capable_build(),
+            bridge_configured_for_bootstrap,
             bootstrap_retry_limit,
             profile_a_bootstrap_attempts,
             profile_b_bootstrap_attempts,
@@ -9847,6 +10341,36 @@ fn real_onion_bootstrap_error_retryable(redacted_bootstrap_error: &str) -> bool 
         || redacted_bootstrap_error.contains("BootstrapNetworkAccessFailed")
         || redacted_bootstrap_error.contains("BootstrapTransientFailure")
         || redacted_bootstrap_error.contains("CensorshipOrBridgeRequired")
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+fn push_real_onion_bootstrap_diagnostic(
+    event_summary: &mut Vec<String>,
+    phase: &str,
+    bridge_config: Option<&another_dimension_transport::arti_adapter_spike::AppPrivateBridgeConfig>,
+    timeout_seconds: u16,
+) {
+    let bridge_mode = match bridge_config {
+        Some(config) if config.requires_pluggable_transport_binary() => "managed_transport_bridge",
+        Some(_) => "direct_bridge",
+        None => "no_bridge",
+    };
+    let bridge_line_count = bridge_config.map_or(0, |config| config.bridge_line_count());
+    let managed_transport_count =
+        bridge_config.map_or(0, |config| config.managed_transport_protocol_count());
+    let pt_binary_configured =
+        bridge_config.is_some_and(|config| config.obfs4_transport_binary_configured());
+    let next_action = match (phase, bridge_mode) {
+        ("timeout", "managed_transport_bridge") => "retry-different-network-or-refresh-bridge-pt",
+        ("timeout", "direct_bridge") => "retry-different-network-or-refresh-bridge",
+        ("timeout", _) => "retry-different-network-or-add-bridge",
+        ("error", "managed_transport_bridge") => "inspect-pt-or-bridge-diagnostics",
+        ("error", _) => "inspect-bootstrap-diagnostics",
+        _ => "observe-bootstrap",
+    };
+    event_summary.push(format!(
+        "bootstrap_diagnostic phase={phase} profile=redacted bridge_mode={bridge_mode} bridge_lines={bridge_line_count} managed_transport_count={managed_transport_count} pt_binary_configured={pt_binary_configured} timeout_seconds={timeout_seconds} next_action={next_action}",
+    ));
 }
 
 #[cfg(feature = "manual-onion-client-attempt")]
@@ -10020,6 +10544,7 @@ async fn build_real_onion_roundtrip_owner_with_retries(
     profile: &str,
     event_summary: &mut Vec<String>,
     bootstrap_retry_limit: u8,
+    bridge_config: Option<&another_dimension_transport::arti_adapter_spike::AppPrivateBridgeConfig>,
     cancel_scope: Option<&RealOnionRoundtripCancelScope<'_>>,
 ) -> Result<
     (
@@ -10044,6 +10569,7 @@ async fn build_real_onion_roundtrip_owner_with_retries(
             app_cache_root,
             profile,
             event_summary,
+            bridge_config,
             cancel_scope,
         )
         .await
@@ -10073,6 +10599,7 @@ async fn build_real_onion_roundtrip_owner(
     app_cache_root: &std::path::Path,
     profile: &str,
     event_summary: &mut Vec<String>,
+    bridge_config: Option<&another_dimension_transport::arti_adapter_spike::AppPrivateBridgeConfig>,
     cancel_scope: Option<&RealOnionRoundtripCancelScope<'_>>,
 ) -> Result<another_dimension_transport::arti_adapter_spike::PersistentArtiClientOwner, String> {
     use another_dimension_transport::{
@@ -10097,9 +10624,16 @@ async fn build_real_onion_roundtrip_owner(
     let _ = mark_transport_backup_exclusion(&dirs);
     let backup_exclusion =
         verify_transport_backup_exclusion(&dirs).map_err(|_| "real onion backup exclusion not verified")?;
-    let bridge_ready = BridgeCensorshipConfiguration::NoBridgeRequired
-        .check(BridgeRequirement::ExplicitlyNotRequiredForThisBuild)
-        .map_err(|_| "real onion bridge readiness failed")?;
+    let bridge_ready = if bridge_config.is_some() {
+        BridgeCensorshipConfiguration::BridgeConfigured {
+            redacted_bridge_config_id: "app-private-bridge-config".to_string(),
+        }
+        .check(BridgeRequirement::RequiredBeforeBootstrap)
+    } else {
+        BridgeCensorshipConfiguration::NoBridgeRequired
+            .check(BridgeRequirement::ExplicitlyNotRequiredForThisBuild)
+    }
+    .map_err(|_| "real onion bridge readiness failed")?;
     let runtime_ready = TransportRuntimePermissionPreflight::from_fully_verified_preflight(
         &dirs,
         true,
@@ -10110,8 +10644,16 @@ async fn build_real_onion_roundtrip_owner(
     )
     .check()
     .map_err(|_| "real onion runtime preflight failed")?;
+    let bootstrap_timeout_seconds = if bridge_config.is_some_and(|config| {
+        config.requires_pluggable_transport_binary() && config.obfs4_transport_binary_configured()
+    })
+    {
+        120
+    } else {
+        12
+    };
     let policy = TransportBootstrapPolicy::new(
-        TransportBootstrapTimeoutPolicy::new(12)
+        TransportBootstrapTimeoutPolicy::new(bootstrap_timeout_seconds)
             .map_err(|_| "real onion bootstrap timeout policy rejected")?,
         TransportBootstrapRetryPolicy::high_risk_default(),
         false,
@@ -10119,20 +10661,34 @@ async fn build_real_onion_roundtrip_owner(
     )
     .map_err(|_| "real onion bootstrap policy rejected")?;
     let skeleton = TransportBootstrapExecutionSkeleton::new(runtime_ready, policy);
+    push_real_onion_bootstrap_diagnostic(
+        event_summary,
+        "config",
+        bridge_config,
+        bootstrap_timeout_seconds,
+    );
     let arti_dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
         dirs.state_dir().to_path_buf(),
         dirs.cache_dir().to_path_buf(),
     )
     .map_err(|_| "real onion Arti dirs rejected")?;
     let adapter =
-        arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config(
-            arti_dirs, skeleton,
+        arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config_with_bridge_config(
+            arti_dirs,
+            skeleton,
+            bridge_config,
         )
         .map_err(|_| "real onion Arti adapter unavailable")?;
     let mut owner = arti_adapter_spike::PersistentArtiClientOwner::new_unbootstrapped(adapter);
     let mut sink = InMemoryTransportRuntimeEventSink::default();
     let bootstrap_timeout =
         std::time::Duration::from_secs(u64::from(policy.timeout().seconds() + 2));
+    push_real_onion_bootstrap_diagnostic(
+        event_summary,
+        "start",
+        bridge_config,
+        policy.timeout().seconds(),
+    );
     let bootstrap_result = {
         let bootstrap_future = owner.bootstrap_and_keep_client(
             arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
@@ -10159,6 +10715,12 @@ async fn build_real_onion_roundtrip_owner(
                     "transport_event kind=BootstrapFailed runtime_error=Some(BootstrapTimeout) probe_error=None route_kind=None direction=None"
                         .to_string(),
                 );
+                push_real_onion_bootstrap_diagnostic(
+                    event_summary,
+                    "timeout",
+                    bridge_config,
+                    policy.timeout().seconds(),
+                );
                 Err(arti_adapter_spike::PersistentArtiClientLifecycleError::BootstrapFailed(
                     another_dimension_transport::TransportRuntimeError::BootstrapTimeout,
                 ))
@@ -10175,6 +10737,14 @@ async fn build_real_onion_roundtrip_owner(
         }
     };
     event_summary.extend(sink.events().iter().map(ToString::to_string));
+    if bootstrap_result.is_err() {
+        push_real_onion_bootstrap_diagnostic(
+            event_summary,
+            "error",
+            bridge_config,
+            policy.timeout().seconds(),
+        );
+    }
     bootstrap_result.map_err(|_| {
         format!(
             "real onion bootstrap failed after redacted events: {}",
@@ -10703,6 +11273,9 @@ fn run_production_two_profile_message_roundtrip(
     Ok(ProductionTwoProfileMessageRoundtripResult {
         warning:
             "stored-session directed message roundtrip only; Profile A sends to Profile B without network, Tor, or secure-release claim",
+        result_scope: "local-dev-roundtrip",
+        external_peer_delivery_confirmed: false,
+        local_dev_roundtrip_result: true,
         sender_profile: sender_profile_result,
         receiver_profile: receiver_profile_result,
         message_number,
@@ -10974,6 +11547,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             prototype_status,
             production_message_retention_policy,
+            production_onion_bridge_config_status,
+            production_onion_bridge_config_save,
+            production_onion_pt_binary_save,
+            production_onion_obfs4_transport_binary_save,
+            production_onion_bridge_config_clear,
             production_onion_backup_exclusion_prepare,
             production_onion_bootstrap_preflight_check,
             production_onion_client_bootstrap_once,
@@ -11206,6 +11784,273 @@ replay check: no replayed messages after message 2
         );
     }
 
+    #[cfg(feature = "manual-onion-bridge-client")]
+    #[test]
+    fn production_onion_bridge_config_save_is_redacted_and_private() {
+        let root = unique_production_roundtrip_dir().expect("root");
+        let bridge_line = "obfs4 37.218.245.14:38224 D9A82D2F9C2F65A18407B1D2B764F130847F8B5D cert=bjRaMrr1BRiAW8IE9U5z27fQaYgOhX1UCmOpg2pFpoMvo6ZgQMzLsaTzzQNTlm7hNcb+Sg iat-mode=0";
+
+        let saved = super::run_production_onion_bridge_config_save(&root, bridge_line.to_string())
+            .expect("bridge config saved");
+        let status =
+            super::run_production_onion_bridge_config_status(&root).expect("bridge config status");
+        let serialized = serde_json::to_string(&saved).expect("serialized");
+
+        assert!(saved.bridge_capable_build);
+        assert!(!saved.bridge_configured_for_bootstrap);
+        assert!(!status.bridge_configured_for_bootstrap);
+        assert_eq!(saved.bridge_config_state, "transport-missing");
+        assert_eq!(
+            saved.bridge_config_next_action,
+            "configure-obfs4-transport"
+        );
+        assert_eq!(status.bridge_config_state, "transport-missing");
+
+        let pt_binary = root.join("test-lyrebird");
+        std::fs::write(&pt_binary, "test binary placeholder").expect("pt binary placeholder");
+        let transport_saved = super::run_production_onion_pt_binary_save(
+            &root,
+            pt_binary.to_string_lossy().into_owned(),
+        )
+        .expect("pt binary path saved");
+        let ready_status =
+            super::run_production_onion_bridge_config_status(&root).expect("ready bridge status");
+        assert!(transport_saved.bridge_configured_for_bootstrap);
+        assert_eq!(transport_saved.bridge_config_state, "configured");
+        assert!(root.join("transport").join("pt-binary-path.txt").exists());
+        assert!(!root
+            .join("transport")
+            .join("obfs4-pt-binary-path.txt")
+            .exists());
+        assert!(ready_status.bridge_configured_for_bootstrap);
+        assert_eq!(ready_status.bridge_config_state, "configured");
+        assert_eq!(ready_status.bridge_config_next_action, "retry-network");
+        assert!(!saved.config_path_returned);
+        assert!(!saved.raw_bridge_lines_returned);
+        assert!(!saved.network_io_attempted);
+        assert!(!saved.transport_io_opened);
+        assert!(!saved.runtime_messaging_enabled);
+        assert!(!serialized.contains("38.229.33.83"));
+        assert!(!serialized.contains("0BAC39417268B96B9F514E7F63FA6FBA1A788955"));
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+
+            let bridge_path = root.join("transport").join("bridge-lines.txt");
+            let bridge_mode = std::fs::metadata(&bridge_path)
+                .expect("bridge metadata")
+                .permissions()
+                .mode()
+                & 0o777;
+            let parent_mode = std::fs::metadata(bridge_path.parent().expect("bridge parent"))
+                .expect("bridge parent metadata")
+                .permissions()
+                .mode()
+                & 0o777;
+            assert_eq!(bridge_mode, 0o600);
+            assert_eq!(parent_mode, 0o700);
+        }
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(feature = "manual-onion-bridge-client")]
+    #[test]
+    fn production_onion_direct_bridge_config_does_not_require_transport_binary() {
+        let root = unique_production_roundtrip_dir().expect("root");
+        let bridge_line = "Bridge 38.229.33.83:80 0BAC39417268B96B9F514E7F63FA6FBA1A788955";
+
+        let status =
+            super::run_production_onion_bridge_config_save(&root, bridge_line.to_string())
+                .expect("direct bridge config saved");
+
+        assert!(status.bridge_capable_build);
+        assert!(status.bridge_configured_for_bootstrap);
+        assert_eq!(status.bridge_config_state, "configured");
+        assert_eq!(status.bridge_config_next_action, "retry-network");
+        assert!(!status.config_path_returned);
+        assert!(!status.raw_bridge_lines_returned);
+        assert!(!status.network_io_attempted);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(feature = "manual-onion-bridge-client")]
+    #[test]
+    fn production_onion_bridge_config_clear_returns_missing_redacted_status() {
+        let root = unique_production_roundtrip_dir().expect("root");
+        let bridge_line = "Bridge 38.229.33.83:80 0BAC39417268B96B9F514E7F63FA6FBA1A788955";
+
+        let saved = super::run_production_onion_bridge_config_save(&root, bridge_line.to_string())
+            .expect("bridge config saved");
+        assert!(saved.bridge_configured_for_bootstrap);
+        let legacy_pt_path = root.join("transport").join("obfs4-pt-binary-path.txt");
+        std::fs::write(&legacy_pt_path, root.join("legacy-pt").to_string_lossy().as_bytes())
+            .expect("legacy pt path written");
+
+        let cleared =
+            super::run_production_onion_bridge_config_clear(&root).expect("bridge config cleared");
+        let status =
+            super::run_production_onion_bridge_config_status(&root).expect("bridge config status");
+        let serialized = serde_json::to_string(&cleared).expect("serialized");
+
+        assert_eq!(cleared.bridge_config_state, "missing");
+        assert_eq!(cleared.bridge_config_next_action, "save-bridge-config");
+        assert!(!cleared.bridge_configured_for_bootstrap);
+        assert_eq!(status.bridge_config_state, "missing");
+        assert!(!status.bridge_configured_for_bootstrap);
+        assert!(!cleared.config_path_returned);
+        assert!(!cleared.raw_bridge_lines_returned);
+        assert!(!cleared.network_io_attempted);
+        assert!(!cleared.transport_io_opened);
+        assert!(!cleared.runtime_messaging_enabled);
+        assert!(!legacy_pt_path.exists());
+        assert!(!serialized.contains("38.229.33.83"));
+        assert!(!serialized.contains("0BAC39417268B96B9F514E7F63FA6FBA1A788955"));
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(feature = "manual-onion-bridge-client")]
+    #[test]
+    fn production_onion_bridge_config_status_distinguishes_invalid_file() {
+        let root = unique_production_roundtrip_dir().expect("root");
+        let bridge_path = root.join("transport").join("bridge-lines.txt");
+        std::fs::create_dir_all(bridge_path.parent().expect("bridge parent"))
+            .expect("bridge parent created");
+        std::fs::write(&bridge_path, "# no bridge lines\n").expect("invalid bridge config written");
+
+        let status =
+            super::run_production_onion_bridge_config_status(&root).expect("bridge config status");
+        let serialized = serde_json::to_string(&status).expect("serialized");
+
+        assert!(status.bridge_capable_build);
+        assert!(!status.bridge_configured_for_bootstrap);
+        assert_eq!(status.bridge_config_state, "invalid");
+        assert_eq!(status.bridge_config_next_action, "replace-bridge-config");
+        assert!(!status.config_path_returned);
+        assert!(!status.raw_bridge_lines_returned);
+        assert!(!serialized.contains("bridge-lines"));
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(feature = "manual-onion-bridge-client")]
+    #[test]
+    fn production_real_onion_roundtrip_blocks_invalid_bridge_config_without_network() {
+        let root = unique_production_roundtrip_dir().expect("root");
+        let data_root = root.join("data");
+        let cache_root = root.join("cache");
+        let bridge_path = data_root.join("transport").join("bridge-lines.txt");
+        std::fs::create_dir_all(bridge_path.parent().expect("bridge parent"))
+            .expect("bridge parent created");
+        std::fs::write(&bridge_path, "# no bridge lines\n").expect("invalid bridge config written");
+
+        let result = tauri::async_runtime::block_on(
+            super::run_production_two_profile_real_onion_roundtrip(
+                &data_root,
+                &cache_root,
+                "alice".to_string(),
+                "bob".to_string(),
+                "shared passphrase".to_string(),
+                "hello".to_string(),
+                3600,
+                true,
+                Some(1),
+            ),
+        )
+        .expect("real onion result");
+
+        assert_eq!(result.next_blocker, "BridgeConfigInvalid");
+        assert!(!result.bridge_configured_for_bootstrap);
+        assert_eq!(result.profile_a_bootstrap_attempts, 0);
+        assert_eq!(result.profile_b_bootstrap_attempts, 0);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(not(feature = "manual-onion-bridge-client"))]
+    #[test]
+    fn production_onion_bridge_config_save_requires_bridge_capable_build() {
+        let root = unique_production_roundtrip_dir().expect("root");
+
+        assert!(super::run_production_onion_bridge_config_save(
+            &root,
+            "Bridge 38.229.33.83:80 0BAC39417268B96B9F514E7F63FA6FBA1A788955".to_string(),
+        )
+        .is_err());
+        let status =
+            super::run_production_onion_bridge_config_status(&root).expect("bridge config status");
+        assert!(!status.bridge_capable_build);
+        assert!(!status.bridge_configured_for_bootstrap);
+        assert_eq!(status.bridge_config_state, "unsupported");
+        assert_eq!(status.bridge_config_next_action, "use-bridge-capable-build");
+        assert!(super::run_production_onion_bridge_config_clear(&root).is_err());
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(feature = "manual-onion-bridge-client")]
+    fn prepare_real_onion_smoke_bridge_config_from_env(
+        data_root: &std::path::Path,
+    ) -> Result<bool, String> {
+        let require_bridge_config = matches!(
+            std::env::var("ANOTHER_DIMENSION_REAL_ONION_SMOKE_REQUIRE_BRIDGE_CONFIG")
+                .unwrap_or_default()
+                .as_str(),
+            "1" | "true" | "TRUE" | "yes" | "YES"
+        );
+        let Some(bridge_config_file) =
+            std::env::var_os("ANOTHER_DIMENSION_REAL_ONION_SMOKE_BRIDGE_CONFIG_FILE")
+        else {
+            if require_bridge_config {
+                return Err("real onion smoke bridge config required but unavailable".to_string());
+            }
+            return Ok(false);
+        };
+        let contents = std::fs::read_to_string(std::path::PathBuf::from(bridge_config_file))
+            .map_err(|_| "real onion smoke bridge config file unavailable".to_string())?;
+        let bridge_config = another_dimension_transport::arti_adapter_spike::AppPrivateBridgeConfig::from_app_private_lines(
+            contents.lines(),
+        )
+        .map_err(|_| "real onion smoke bridge config invalid".to_string())?;
+        let bridge_path = data_root.join("transport").join("bridge-lines.txt");
+        super::write_app_private_bridge_config_file(&bridge_path, contents)
+            .map_err(|_| "real onion smoke bridge config write failed".to_string())?;
+        if bridge_config.requires_pluggable_transport_binary() {
+            let Some(pt_binary_path) = std::env::var_os("ANOTHER_DIMENSION_REAL_ONION_SMOKE_PT_BINARY")
+                .or_else(|| std::env::var_os("ANOTHER_DIMENSION_REAL_ONION_SMOKE_OBFS4_PT_BINARY"))
+            else {
+                return Err(
+                    "real onion smoke pluggable transport binary required but unavailable"
+                        .to_string(),
+                );
+            };
+            let pt_binary_path = std::path::PathBuf::from(pt_binary_path);
+            if !pt_binary_path.is_absolute() || !pt_binary_path.is_file() {
+                return Err("real onion smoke pluggable transport binary invalid".to_string());
+            }
+            let pt_path = data_root.join("transport").join("pt-binary-path.txt");
+            super::write_app_private_bridge_config_file(
+                &pt_path,
+                pt_binary_path.to_string_lossy().into_owned(),
+            )
+            .map_err(|_| "real onion smoke pluggable transport binary write failed".to_string())?;
+        }
+        Ok(true)
+    }
+
+    #[cfg(not(feature = "manual-onion-bridge-client"))]
+    fn prepare_real_onion_smoke_bridge_config_from_env(
+        data_root: &std::path::Path,
+    ) -> Result<bool, String> {
+        let _ = data_root;
+        Ok(false)
+    }
+
     #[test]
     fn production_two_profile_real_onion_roundtrip_requires_manual_permission_without_network() {
         let root = unique_production_roundtrip_dir().expect("temp root");
@@ -11307,6 +12152,9 @@ replay check: no replayed messages after message 2
         let root = unique_production_roundtrip_dir().expect("temp root");
         let data_root = root.join("data");
         let cache_root = root.join("cache");
+        let bridge_config_prepared =
+            prepare_real_onion_smoke_bridge_config_from_env(&data_root)
+                .expect("real onion smoke bridge config prepared");
 
         let result = tauri::async_runtime::block_on(run_production_two_profile_real_onion_roundtrip(
             &data_root,
@@ -11317,14 +12165,20 @@ replay check: no replayed messages after message 2
             "real onion smoke".to_string(),
             3600,
             true,
-            None,
+            Some(3),
         ))
         .expect("real onion roundtrip smoke");
 
         eprintln!(
-            "real_onion_field_smoke next={} blockers={} bootstrap_a={} bootstrap_b={} launch_a={} launch_b={} endpoint_a={} endpoint_b={} handshake={} first_send_started={} first_send_ok={} first_receive_started={} first_receive_ok={} second_send_ok={} second_receive_ok={} imports={} network={} transport={} runtime={}",
+            "real_onion_field_smoke next={} blockers={} retry_limit={} attempts_a={} attempts_b={} bridge_capable={} bridge_config_prepared={} bridge_config_used={} bootstrap_a={} bootstrap_b={} launch_a={} launch_b={} endpoint_a={} endpoint_b={} handshake={} first_send_started={} first_send_ok={} first_receive_started={} first_receive_ok={} second_send_ok={} second_receive_ok={} imports={} network={} transport={} runtime={} events={}",
             result.next_blocker,
             result.blockers.join("#"),
+            result.bootstrap_retry_limit,
+            result.profile_a_bootstrap_attempts,
+            result.profile_b_bootstrap_attempts,
+            result.bridge_capable_build,
+            bridge_config_prepared,
+            result.bridge_configured_for_bootstrap,
             result.profile_a_client_bootstrapped,
             result.profile_b_client_bootstrapped,
             result.profile_a_onion_service_launched,
@@ -11342,10 +12196,12 @@ replay check: no replayed messages after message 2
             result.network_io_attempted,
             result.transport_io_opened,
             result.runtime_messaging_enabled,
+            result.event_summary.join("|"),
         );
 
         assert!(result.manual_client_attempt_feature_compiled);
         assert!(result.manual_network_permission_enabled);
+        assert_eq!(result.bootstrap_retry_limit, 3);
         if result.next_blocker != "none" {
             assert!(
                 result.next_blocker == "ProfileABootstrapTimeout"
@@ -14497,6 +15353,9 @@ replay check: no replayed messages after message 2
         .expect("outbound message");
         let failed_attempt = super::ProductionOnionOutboundEnvelopeSendAttemptResult {
             warning: "test send attempt",
+            result_scope: "external-peer-send-attempt",
+            external_peer_delivery_confirmed: false,
+            local_dev_roundtrip_result: false,
             preparation_only: false,
             manual_client_attempt_feature_compiled: true,
             manual_network_permission_enabled: true,
@@ -14633,6 +15492,9 @@ replay check: no replayed messages after message 2
         .expect("blocked outbound message");
         let blocked_attempt = super::ProductionOnionOutboundEnvelopeSendAttemptResult {
             warning: "test blocked send attempt",
+            result_scope: "external-peer-send-attempt",
+            external_peer_delivery_confirmed: false,
+            local_dev_roundtrip_result: false,
             preparation_only: false,
             manual_client_attempt_feature_compiled: true,
             manual_network_permission_enabled: true,
@@ -14706,6 +15568,9 @@ replay check: no replayed messages after message 2
         .expect("runtime mismatch outbound message");
         let mismatch_attempt = super::ProductionOnionOutboundEnvelopeSendAttemptResult {
             warning: "test runtime mismatch send attempt",
+            result_scope: "external-peer-send-attempt",
+            external_peer_delivery_confirmed: false,
+            local_dev_roundtrip_result: false,
             preparation_only: false,
             manual_client_attempt_feature_compiled: true,
             manual_network_permission_enabled: true,

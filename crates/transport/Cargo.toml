@@ -34,6 +34,11 @@ arti-manual-bootstrap = [
     "dep:tor-hsservice",
     "dep:tor-rtcompat",
 ]
+arti-bridge-client = [
+    "arti-manual-bootstrap",
+    "arti-client/bridge-client",
+    "arti-client/pt-client",
+]
 dev-insecure = [
     "another-dimension-identity/dev-insecure",
     "another-dimension-protocol/dev-insecure",

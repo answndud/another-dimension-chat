@@ -52,6 +52,13 @@ cd apps/desktop-tauri
 npm run tauri:build:beta-onion
 ```
 
+Build the beta with the manual onion networking attempt and bridge-client feature compiled in:
+
+```bash
+cd apps/desktop-tauri
+npm run tauri:build:beta-onion-bridge
+```
+
 Run the local development shell with the manual onion networking attempt feature compiled in:
 
 ```bash
@@ -59,7 +66,14 @@ cd apps/desktop-tauri
 npm run tauri:dev:beta-onion
 ```
 
-The `manual-onion-client-attempt` feature only compiles the explicit onion attempt path. It does not start Tor, launch an onion service, publish descriptors, receive, or send on app startup. Network work still requires the in-app manual network permission and an explicit user action.
+Run the local development shell with the manual onion networking attempt and bridge-client feature compiled in:
+
+```bash
+cd apps/desktop-tauri
+npm run tauri:dev:beta-onion-bridge
+```
+
+The `manual-onion-client-attempt` and `manual-onion-bridge-client` features only compile explicit onion attempt paths. They do not start Tor, launch an onion service, publish descriptors, receive, or send on app startup. Network work still requires the in-app manual network permission and an explicit user action.
 
 Run two isolated local peer shells from separate terminals when testing one computer as two devices:
 
@@ -67,6 +81,33 @@ Run two isolated local peer shells from separate terminals when testing one comp
 cd apps/desktop-tauri
 npm run tauri:dev:peer-a
 npm run tauri:dev:peer-b
+```
+
+Use the bridge-capable peer shells when the field run needs app-private bridge config:
+
+```bash
+cd apps/desktop-tauri
+npm run tauri:dev:peer-a:bridge
+npm run tauri:dev:peer-b:bridge
+```
+
+Inject the same local bridge config file into each bridge-capable peer shell without printing bridge lines. Managed-transport bridges such as obfs4 or webtunnel also require an explicit pluggable transport binary; direct bridge lines do not.
+
+```bash
+cd apps/desktop-tauri
+npm run tauri:dev:peer-a:bridge -- --bridge-config-file /path/to/local/bridge-lines.txt --pt-binary /path/to/lyrebird
+npm run tauri:dev:peer-b:bridge -- --bridge-config-file /path/to/local/bridge-lines.txt --pt-binary /path/to/lyrebird
+```
+
+Run the ignored real onion smoke with a local bridge config file and pluggable transport binary only when you are ready for one explicit network attempt:
+
+```bash
+ANOTHER_DIMENSION_REAL_ONION_SMOKE_BRIDGE_CONFIG_FILE=/path/to/local/bridge-lines.txt \
+ANOTHER_DIMENSION_REAL_ONION_SMOKE_PT_BINARY=/path/to/lyrebird \
+ANOTHER_DIMENSION_REAL_ONION_SMOKE_REQUIRE_BRIDGE_CONFIG=1 \
+CARGO_BUILD_JOBS=1 cargo test --manifest-path apps/desktop-tauri/src-tauri/Cargo.toml --lib \
+  --features manual-onion-bridge-client \
+  production_two_profile_real_onion_roundtrip_smoke_delivers_or_fails_closed -- --ignored --nocapture
 ```
 
 Run the GUI-less preflight before opening those shells:

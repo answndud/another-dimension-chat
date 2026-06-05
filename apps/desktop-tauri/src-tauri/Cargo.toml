@@ -13,6 +13,10 @@ tauri-build = { version = "2", features = [] }
 
 [features]
 manual-onion-client-attempt = ["another-dimension-transport/arti-manual-bootstrap"]
+manual-onion-bridge-client = [
+    "manual-onion-client-attempt",
+    "another-dimension-transport/arti-bridge-client",
+]
 
 [dependencies]
 another-dimension-core = { path = "../../../crates/core" }
