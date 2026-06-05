@@ -3466,8 +3466,11 @@ function renderFieldTestReportComparison() {
 }
 
 function fieldTestReportCopyPayload(report) {
-  const comparison = fieldTestReportComparison(report, fields.peerFieldTestReport?.value ?? "");
-  return comparison ? `${report}\n${comparison}` : report;
+  const peerReport = fields.peerFieldTestReport?.value ?? "";
+  const comparison = fieldTestReportComparison(report, peerReport);
+  const nextActionKey = fieldTestNextActionKey(report, peerReport);
+  const nextAction = `next_action=${fieldTestReportValue(nextActionKey, "none")}`;
+  return comparison ? `${report}\n${comparison}\n${nextAction}` : `${report}\n${nextAction}`;
 }
 
 function latestRealOnionFieldTestResult(input = productionTwoProfileInput()) {

@@ -863,7 +863,10 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(functionBody(mainJs, "refreshFieldTestReport"), /renderFieldTestReportComparison\(\)/);
   assert.match(functionBody(mainJs, "renderFieldTestReportComparison"), /renderFieldTestChecklist\(fields\.fieldTestReport\?\.value \?\? "", fields\.peerFieldTestReport\?\.value \?\? ""\)/);
   assert.match(functionBody(mainJs, "renderFieldTestReportComparison"), /renderFieldTestNextAction\(fields\.fieldTestReport\?\.value \?\? "", fields\.peerFieldTestReport\?\.value \?\? ""\)/);
-  assert.match(functionBody(mainJs, "fieldTestReportCopyPayload"), /fieldTestReportComparison\(report, fields\.peerFieldTestReport\?\.value \?\? ""\)/);
+  assert.match(functionBody(mainJs, "fieldTestReportCopyPayload"), /const peerReport = fields\.peerFieldTestReport\?\.value \?\? ""/);
+  assert.match(functionBody(mainJs, "fieldTestReportCopyPayload"), /fieldTestReportComparison\(report, peerReport\)/);
+  assert.match(functionBody(mainJs, "fieldTestReportCopyPayload"), /fieldTestNextActionKey\(report, peerReport\)/);
+  assert.match(functionBody(mainJs, "fieldTestReportCopyPayload"), /next_action=/);
   assert.match(functionBody(mainJs, "copyFieldTestReport"), /const payload = fieldTestReportCopyPayload\(report\)/);
   assert.match(functionBody(mainJs, "copyFieldTestReport"), /navigator\.clipboard\.writeText\(payload\)/);
   assert.match(mainJs, /fields\.peerFieldTestReport\.addEventListener\("input", renderFieldTestReportComparison\)/);
