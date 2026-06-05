@@ -806,6 +806,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(mainJs, /function fieldTestReportSummary/);
   assert.match(mainJs, /function fieldTestReportTriageState/);
   assert.match(mainJs, /function fieldTestReportComparison/);
+  assert.match(mainJs, /function fieldTestBuildIdentityMatches/);
   assert.match(mainJs, /function fieldTestChecklistItems/);
   assert.match(mainJs, /function renderFieldTestChecklist/);
   assert.match(mainJs, /function renderFieldTestReportSummary/);
@@ -830,7 +831,12 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(compareBody, /appVersion/);
   assert.match(compareBody, /buildChannel/);
   assert.match(compareBody, /buildCommit/);
+  assert.match(functionBody(mainJs, "fieldTestBuildIdentityMatches"), /local\.appVersion === peer\.appVersion/);
+  assert.match(functionBody(mainJs, "fieldTestBuildIdentityMatches"), /local\.buildChannel === peer\.buildChannel/);
+  assert.match(functionBody(mainJs, "fieldTestBuildIdentityMatches"), /local\.buildCommit === peer\.buildCommit/);
   assert.match(checklistBody, /parseFieldTestReport\(report\)/);
+  assert.match(checklistBody, /fieldTestChecklistBuild/);
+  assert.match(checklistBody, /fieldTestBuildIdentityMatches\(report, peerReport\)/);
   assert.match(checklistBody, /fieldTestChecklistRoom/);
   assert.match(checklistBody, /fieldTestChecklistReport/);
   assert.match(functionBody(mainJs, "renderFieldTestChecklist"), /fieldTestStatusDone/);
@@ -847,6 +853,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(functionBody(mainJs, "refreshFieldTestReport"), /renderFieldTestReportSummary\(report\)/);
   assert.match(functionBody(mainJs, "renderFieldTestReportSummary"), /renderFieldTestChecklist\(report\)/);
   assert.match(functionBody(mainJs, "refreshFieldTestReport"), /renderFieldTestReportComparison\(\)/);
+  assert.match(functionBody(mainJs, "renderFieldTestReportComparison"), /renderFieldTestChecklist\(fields\.fieldTestReport\?\.value \?\? "", fields\.peerFieldTestReport\?\.value \?\? ""\)/);
   assert.match(functionBody(mainJs, "fieldTestReportCopyPayload"), /fieldTestReportComparison\(report, fields\.peerFieldTestReport\?\.value \?\? ""\)/);
   assert.match(functionBody(mainJs, "copyFieldTestReport"), /const payload = fieldTestReportCopyPayload\(report\)/);
   assert.match(functionBody(mainJs, "copyFieldTestReport"), /navigator\.clipboard\.writeText\(payload\)/);

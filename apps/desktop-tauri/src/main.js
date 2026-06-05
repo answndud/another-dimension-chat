@@ -3304,7 +3304,20 @@ function fieldTestReportComparison(localReport, peerReport) {
   return mismatches.length > 0 ? `compare ${mismatches.join(" ")}` : "compare reports-aligned";
 }
 
-function fieldTestChecklistItems(report) {
+function fieldTestBuildIdentityMatches(localReport, peerReport) {
+  if (!String(peerReport ?? "").trim()) {
+    return null;
+  }
+  const local = fieldTestReportTriageState(localReport);
+  const peer = fieldTestReportTriageState(peerReport);
+  return (
+    local.appVersion === peer.appVersion &&
+    local.buildChannel === peer.buildChannel &&
+    local.buildCommit === peer.buildCommit
+  );
+}
+
+function fieldTestChecklistItems(report, peerReport = "") {
   const parsed = parseFieldTestReport(report);
   const sentRows = Number.parseInt(parsed.sent_rows ?? "0", 10) || 0;
   const receivedRows = Number.parseInt(parsed.received_rows ?? "0", 10) || 0;
@@ -3315,7 +3328,13 @@ function fieldTestChecklistItems(report) {
   const realOnionAttempted = parsed.real_onion_attempted === "true";
   const realOnionRetryable = parsed.real_onion_retryable === "true";
   const roomListState = fieldTestReportValue(parsed.room_list_state_key, "none");
+  const buildMatch = fieldTestBuildIdentityMatches(report, peerReport);
   return [
+    {
+      key: "build",
+      status: buildMatch === null ? "pending" : buildMatch ? "done" : "check",
+      label: t("fieldTestChecklistBuild"),
+    },
     {
       key: "room",
       status: parsed.room_present === "true" && parsed.session_ready === "true" ? "done" : "pending",
@@ -3354,11 +3373,11 @@ function fieldTestChecklistItems(report) {
   ];
 }
 
-function renderFieldTestChecklist(report) {
+function renderFieldTestChecklist(report, peerReport = fields.peerFieldTestReport?.value ?? "") {
   if (!fields.fieldTestChecklist) {
     return [];
   }
-  const items = fieldTestChecklistItems(report);
+  const items = fieldTestChecklistItems(report, peerReport);
   const statusLabels = {
     done: t("fieldTestStatusDone"),
     pending: t("fieldTestStatusPending"),
@@ -3392,6 +3411,7 @@ function renderFieldTestReportComparison() {
   const comparison = fieldTestReportComparison(fields.fieldTestReport?.value ?? "", fields.peerFieldTestReport?.value ?? "");
   fields.fieldTestReportCompare.textContent = comparison;
   fields.fieldTestReportCompare.hidden = !comparison;
+  renderFieldTestChecklist(fields.fieldTestReport?.value ?? "", fields.peerFieldTestReport?.value ?? "");
   return comparison;
 }
 
