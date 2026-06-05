@@ -410,6 +410,7 @@ const fields = {
   fieldTestChecklist: document.querySelector("#field-test-checklist"),
   peerFieldTestReport: document.querySelector("#peer-field-test-report"),
   fieldTestReportCompare: document.querySelector("#field-test-report-compare"),
+  fieldTestNextAction: document.querySelector("#field-test-next-action"),
   refreshFieldTestReport: document.querySelector("#refresh-field-test-report"),
   copyFieldTestReport: document.querySelector("#copy-field-test-report"),
   productionTwoProfileTranscriptExport: document.querySelector("#production-two-profile-transcript-export"),
@@ -3373,6 +3374,53 @@ function fieldTestChecklistItems(report, peerReport = "") {
   ];
 }
 
+function fieldTestNextActionKey(report, peerReport = "") {
+  const parsed = parseFieldTestReport(report);
+  const sentRows = Number.parseInt(parsed.sent_rows ?? "0", 10) || 0;
+  const receivedRows = Number.parseInt(parsed.received_rows ?? "0", 10) || 0;
+  const peerReportReady = Boolean(String(peerReport ?? "").trim());
+  const buildMatch = fieldTestBuildIdentityMatches(report, peerReport);
+  if (peerReportReady && buildMatch === false) {
+    return "fieldTestNextBuildMismatch";
+  }
+  if (parsed.room_present !== "true" || parsed.session_ready !== "true") {
+    return "fieldTestNextOpenRoom";
+  }
+  if (parsed.safety_confirmed !== "true") {
+    return "fieldTestNextVerifySafety";
+  }
+  if (parsed.route_ready !== "true" || parsed.route_stale === "true") {
+    return "fieldTestNextSetupRoute";
+  }
+  if (parsed.receive_enabled !== "true" || fieldTestReportValue(parsed.receive_state, "stopped") === "stopped") {
+    return "fieldTestNextStartReceive";
+  }
+  if (sentRows === 0 || receivedRows === 0) {
+    return "fieldTestNextExchangeMessages";
+  }
+  if (fieldTestReportValue(parsed.room_list_state_key, "none") === "none") {
+    return "fieldTestNextRestartResume";
+  }
+  if (!peerReportReady) {
+    return "fieldTestNextPastePeerReport";
+  }
+  if (fieldTestReportComparison(report, peerReport) !== "compare reports-aligned") {
+    return "fieldTestNextCompareMismatch";
+  }
+  return "fieldTestNextComplete";
+}
+
+function renderFieldTestNextAction(report, peerReport = fields.peerFieldTestReport?.value ?? "") {
+  if (!fields.fieldTestNextAction) {
+    return "";
+  }
+  const key = fieldTestNextActionKey(report, peerReport);
+  const text = t(key);
+  fields.fieldTestNextAction.textContent = text;
+  fields.fieldTestNextAction.hidden = !text;
+  return text;
+}
+
 function renderFieldTestChecklist(report, peerReport = fields.peerFieldTestReport?.value ?? "") {
   if (!fields.fieldTestChecklist) {
     return [];
@@ -3401,6 +3449,7 @@ function renderFieldTestReportSummary(report) {
   const summary = fieldTestReportSummary(report);
   fields.fieldTestReportSummary.textContent = summary;
   renderFieldTestChecklist(report);
+  renderFieldTestNextAction(report);
   return summary;
 }
 
@@ -3412,6 +3461,7 @@ function renderFieldTestReportComparison() {
   fields.fieldTestReportCompare.textContent = comparison;
   fields.fieldTestReportCompare.hidden = !comparison;
   renderFieldTestChecklist(fields.fieldTestReport?.value ?? "", fields.peerFieldTestReport?.value ?? "");
+  renderFieldTestNextAction(fields.fieldTestReport?.value ?? "", fields.peerFieldTestReport?.value ?? "");
   return comparison;
 }
 
