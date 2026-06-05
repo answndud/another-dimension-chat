@@ -295,6 +295,36 @@ test("real onion bootstrap timeout remains retryable and cancellable", () => {
   });
 });
 
+test("real onion exhausted bootstrap with bridge-capable build but no config points to bridge config", () => {
+  const result = {
+    manual_network_permission_enabled: true,
+    next_blocker: "ProfileABootstrapTimeout",
+    blockers: ["BootstrapTimeout"],
+    bootstrap_retry_limit: 3,
+    profile_a_bootstrap_attempts: 3,
+    profile_b_bootstrap_attempts: 0,
+    bridge_capable_build: true,
+    bridge_configured_for_bootstrap: false,
+    network_io_attempted: true,
+    transport_io_opened: false,
+    runtime_messaging_enabled: false,
+  };
+
+  assert.deepEqual(productionTwoProfileRealOnionRecoveryPlan(result), {
+    action: "prepare-network-or-bridge",
+    retryable: true,
+    waitCancellable: false,
+    reason: "network-or-bridge-config",
+  });
+  assert.deepEqual(productionTwoProfileRealOnionUserView(result), {
+    state: "Private delivery needs network change",
+    profiles: "Room is saved.",
+    session: "Delivery network did not finish starting.",
+    message: "Change network or add private bridge config, then retry private delivery.",
+    boundary: "No message was sent and no bridge config was used.",
+  });
+});
+
 test("real onion bootstrap cancel remains retryable without an active wait", () => {
   const result = {
     manual_network_permission_enabled: true,

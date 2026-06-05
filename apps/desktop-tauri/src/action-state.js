@@ -425,6 +425,9 @@ export function productionTwoProfileOutboundStatusLabel(entry) {
   }
   if (entry?.outboundDeliveryState === "failed") {
     const failure = String(entry.outboundFailureKind ?? "").toLowerCase();
+    if (failure.includes("localonionendpointnotready")) {
+      return "receive stopped";
+    }
     if (failure.includes("timeout")) {
       return "send timeout";
     }
@@ -1327,7 +1330,7 @@ export function productionTwoProfileMessageResultView(result) {
       `${boundaryContained ? "Contained" : "Review"}: no plaintext, key material, store path, network I/O, transport I/O, or runtime messaging exposure | ` +
       `plaintext_returned=${result.plaintext_returned_to_frontend} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
     nextStep: canContinue
-      ? "Next: continue from the delivered message and write a stored-session reply."
+      ? "Next: continue from the local roundtrip message and write a stored-session reply."
       : "Review stored-session result rows before continuing.",
   };
 }
@@ -1400,6 +1403,8 @@ export function productionTwoProfileRealOnionResultView(result) {
     boundary:
       `feature=${result?.manual_client_attempt_feature_compiled === true} ` +
       `permission=${result?.manual_network_permission_enabled === true} ` +
+      `bridge_capable=${result?.bridge_capable_build === true} ` +
+      `bridge_configured=${result?.bridge_configured_for_bootstrap === true} ` +
       `next=${result?.next_blocker ?? "unknown"} ` +
       `endpoint_returned=${Boolean(result?.local_endpoint_returned || result?.peer_endpoint_returned)} ` +
       `envelope_payload=${result?.envelope_payload_returned === true} ` +
@@ -1450,11 +1455,59 @@ export function productionTwoProfileRealOnionRecoveryPlan(result) {
       reason: "network-bootstrap-cancelled",
     };
   }
+  if (text.includes("bridgeconfiginvalid")) {
+    return {
+      action: "prepare-network-or-bridge",
+      retryable: true,
+      waitCancellable: false,
+      reason: "network-or-bridge-invalid-config",
+    };
+  }
+  if (text.includes("obfs4transportmissing")) {
+    return {
+      action: "prepare-network-or-bridge",
+      retryable: true,
+      waitCancellable: false,
+      reason: "network-or-bridge-transport",
+    };
+  }
+  if (text.includes("obfs4transportinvalid")) {
+    return {
+      action: "prepare-network-or-bridge",
+      retryable: true,
+      waitCancellable: false,
+      reason: "network-or-bridge-invalid-transport",
+    };
+  }
   if (
     text.includes("bootstraptimeout") ||
     text.includes("bootstrapnetworkaccessfailed") ||
     text.includes("censorshiporbridgerequired")
   ) {
+    const retryLimit = Number.parseInt(result?.bootstrap_retry_limit ?? 0, 10) || 0;
+    const profileAAttempts = Number.parseInt(result?.profile_a_bootstrap_attempts ?? 0, 10) || 0;
+    const profileBAttempts = Number.parseInt(result?.profile_b_bootstrap_attempts ?? 0, 10) || 0;
+    const attemptsExhausted = retryLimit > 0 && Math.max(profileAAttempts, profileBAttempts) >= retryLimit;
+    if (result?.bridge_capable_build === false && attemptsExhausted) {
+      return {
+        action: "prepare-network-or-bridge",
+        retryable: true,
+        waitCancellable: false,
+        reason: "network-or-bridge-capable-build",
+      };
+    }
+    if (
+      result?.bridge_capable_build === true &&
+      result?.bridge_configured_for_bootstrap === false &&
+      attemptsExhausted
+    ) {
+      return {
+        action: "prepare-network-or-bridge",
+        retryable: true,
+        waitCancellable: false,
+        reason: "network-or-bridge-config",
+      };
+    }
     return {
       action: "retry-bootstrap",
       retryable: true,
@@ -1488,11 +1541,11 @@ export function productionTwoProfileSendAttemptUserView(result, messageNumber = 
   const label = Number.isInteger(number) && number > 0 ? `#${number}` : "";
   if (result?.send_attempt_succeeded) {
     return {
-      state: "Private delivery sent",
+      state: "Private send written",
       profiles: "Room is ready.",
-      session: label ? `Message ${label} was sent.` : "Message was sent.",
+      session: label ? `Message ${label} was written to the peer route.` : "Message was written to the peer route.",
       message: "Waiting for the other device to receive it.",
-      boundary: "Private delivery finished. Technical details are available in diagnostics.",
+      boundary: "External peer delivery is not confirmed until the other device receives it.",
     };
   }
   if (result?.peer_endpoint_refresh_recommended || result?.retry_recommended_after_endpoint_refresh) {
@@ -1565,6 +1618,35 @@ export function productionTwoProfileRealOnionUserView(result) {
       session: "Delivery network did not finish starting.",
       message: "Wait a moment, then retry private delivery or turn it off.",
       boundary: "No message was sent and the wait can be cancelled.",
+    };
+  }
+  if (recovery.action === "prepare-network-or-bridge") {
+    const bridgeConfigMissing = recovery.reason === "network-or-bridge-config";
+    const bridgeConfigInvalid = recovery.reason === "network-or-bridge-invalid-config";
+    const bridgeTransportMissing = recovery.reason === "network-or-bridge-transport";
+    const bridgeTransportInvalid = recovery.reason === "network-or-bridge-invalid-transport";
+    return {
+      state: "Private delivery needs network change",
+      profiles: "Room is saved.",
+      session: "Delivery network did not finish starting.",
+      message: bridgeConfigInvalid
+        ? "Replace the private bridge config, then retry private delivery."
+        : bridgeTransportInvalid
+        ? "Replace the pluggable transport binary path, then retry private delivery."
+        : bridgeTransportMissing
+        ? "Configure the pluggable transport binary, then retry private delivery."
+        : bridgeConfigMissing
+        ? "Change network or add private bridge config, then retry private delivery."
+        : "Change network or use a bridge-capable build, then retry private delivery.",
+      boundary: bridgeConfigInvalid
+        ? "No message was sent because the saved bridge config is invalid."
+        : bridgeTransportInvalid
+        ? "No message was sent because the saved pluggable transport binary path is invalid."
+        : bridgeTransportMissing
+        ? "No message was sent because pluggable transport is not configured."
+        : bridgeConfigMissing
+        ? "No message was sent and no bridge config was used."
+        : "No message was sent and this build did not report bridge support.",
     };
   }
   if (recovery.action === "bootstrap-cancelled") {

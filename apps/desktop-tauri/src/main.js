@@ -117,6 +117,12 @@ const fields = {
   onionClientAttemptGateState: document.querySelector("#onion-client-attempt-gate-state"),
   onionClientAttemptGateBoundary: document.querySelector("#onion-client-attempt-gate-boundary"),
   manualOnionNetworkPermission: document.querySelector("#manual-onion-network-permission"),
+  onionBridgeConfigLines: document.querySelector("#onion-bridge-config-lines"),
+  saveOnionBridgeConfig: document.querySelector("#save-onion-bridge-config"),
+  onionObfs4TransportBinaryPath: document.querySelector("#onion-obfs4-transport-binary-path"),
+  saveOnionObfs4TransportBinary: document.querySelector("#save-onion-obfs4-transport-binary"),
+  checkOnionBridgeConfig: document.querySelector("#check-onion-bridge-config"),
+  clearOnionBridgeConfig: document.querySelector("#clear-onion-bridge-config"),
   roomNetworkPermission: document.querySelector("#room-network-permission"),
   runOnionClientOnce: document.querySelector("#run-onion-client-once"),
   onionClientOnceState: document.querySelector("#onion-client-once-state"),
@@ -450,12 +456,14 @@ let latestProductionTwoProfileSafety = null;
 let latestProductionTwoProfileSuccess = null;
 let latestProductionTwoProfileOnionEndpoints = null;
 let latestProductionTwoProfileRealOnionResult = null;
+let latestProductionOnionBridgeConfigStatus = null;
 let latestProductionTwoProfileRealOnionWaitCanceledFingerprint = "";
 let activeProductionTwoProfileRealOnionInput = null;
 let productionTwoProfileRealOnionRunSequence = 0;
 let latestLocalPrivateRouteCode = "";
 const localPrivateRouteCodesByRoom = new Map();
 const activeLocalPrivateRouteCodesByRoom = new Map();
+const localPrivateRouteLifecycleByRoom = new Map();
 const peerPrivateRouteDraftsByRoom = new Map();
 let pendingPrivateRouteFollowup = null;
 let productionTwoProfileOnionReceiveMode = {
@@ -778,7 +786,7 @@ function localizedSendFailureMessage(error) {
 
 function localizedSendAttemptMessage(result) {
   if (result?.send_attempt_succeeded) {
-    return t("chatNoticeSent");
+    return t("chatNoticeExternalSendWritten");
   }
   if (sendRuntimeOwnerMismatch(result)) {
     return t("sendRuntimeMismatch");
@@ -795,7 +803,7 @@ function sendRuntimeOwnerMismatch(result) {
 
 function setChatDeliveryNoticeForSendAttempt(result, input = productionTwoProfileInput()) {
   if (result?.send_attempt_succeeded) {
-    setChatDeliveryNoticeByKey("chatNoticeSent", "success", input);
+    setChatDeliveryNoticeByKey("chatNoticeExternalSendWritten", "success", input);
     return;
   }
   if (sendRuntimeOwnerMismatch(result)) {
@@ -977,8 +985,10 @@ function localizedTwoProfileUserViewText(value) {
     "Room is ready.": "userRoomReady",
     "Room is saved.": "userRoomSaved",
     "Message was sent.": "userMessageSent",
+    "Message was written to the peer route.": "userMessageWrittenToPeerRoute",
     "Waiting for the other device to receive it.": "userWaitingPeerReceive",
     "Private delivery finished. Technical details are available in diagnostics.": "userDeliveryFinished",
+    "External peer delivery is not confirmed until the other device receives it.": "userExternalDeliveryUnconfirmed",
     "Peer address needs to be refreshed.": "userPeerAddressRefreshSession",
     "Message is still saved. Refresh the address, then retry or cancel.": "userMessageSavedRefresh",
     "No message was deleted.": "userNoMessageDeleted",
@@ -1000,9 +1010,16 @@ function localizedTwoProfileUserViewText(value) {
     "Private delivery setup did not finish.": "userDeliverySetupDidNotFinish",
     "Try again after the private route is ready.": "userTryAgainRouteReady",
     "Private delivery waiting for network": "userDeliveryWaitingNetwork",
+    "Private delivery needs network change": "userDeliveryNeedsNetworkChange",
     "Delivery network did not finish starting.": "userDeliveryNetworkStartIncomplete",
     "Wait a moment, then retry private delivery or turn it off.": "userWaitRetryOrDisableDelivery",
     "No message was sent and the wait can be cancelled.": "userNoMessageSentWaitCancellable",
+    "Change network or use a bridge-capable build, then retry private delivery.": "userChangeNetworkOrBridgeBuild",
+    "No message was sent and this build did not report bridge support.": "userNoMessageSentNoBridgeSupport",
+    "Change network or add private bridge config, then retry private delivery.": "userChangeNetworkOrAddBridgeConfig",
+    "No message was sent and no bridge config was used.": "userNoMessageSentNoBridgeConfig",
+    "Replace the private bridge config, then retry private delivery.": "userReplaceBridgeConfig",
+    "No message was sent because the saved bridge config is invalid.": "userNoMessageSentInvalidBridgeConfig",
     "Network wait canceled": "networkWaitCanceled",
     "Retry private delivery when you are ready.": "retryPrivateDeliveryHint",
     "No message was sent and the network wait was closed.": "networkWaitCanceledBoundary",
@@ -1028,6 +1045,7 @@ function localizedTwoProfileUserViewText(value) {
   }
   const messageNumberPatterns = [
     [/^Message (#\d+) was sent\.$/, "userMessageNumberSent"],
+    [/^Message (#\d+) was written to the peer route\.$/, "userMessageNumberWrittenToPeerRoute"],
     [/^Message (#\d+) is still saved\. Refresh the address, then retry or cancel\.$/, "userMessageNumberSavedRefresh"],
     [/^Message (#\d+) is still saved\.$/, "userMessageNumberSaved"],
     [/^Message (#\d+) is still saved\. Retry or cancel it from the conversation\.$/, "userMessageNumberSavedRetryCancel"],
@@ -1467,6 +1485,41 @@ function setChatDeliveryNoticeForPendingOutbound(entry, input = productionTwoPro
 
 function currentTwoProfileOutboundPrimaryAction(entry, input = productionTwoProfileInput()) {
   const primaryAction = productionTwoProfileOutboundPrimaryAction(entry);
+  const routeReadiness = externalPeerSendReadiness(input, { allowMissingMessage: true });
+  if (!routeReadiness.ready) {
+    if (routeReadiness.nextAction === "enable-private-delivery") {
+      return {
+        action: "enable-private-delivery",
+        labelKey: "enablePrivateDelivery",
+        noticeKey: "chatNoticeNetworkPermission",
+        recoveryKey: "sendRecoveryPermissionOff",
+      };
+    }
+    if (routeReadiness.nextAction === "start-receiving") {
+      return {
+        action: "start-receiving",
+        labelKey: "startReceiving",
+        noticeKey: "chatNoticeReceiveStopped",
+        recoveryKey: "sendRecoveryStartReceiving",
+      };
+    }
+    if (routeReadiness.nextAction === "verify") {
+      return {
+        action: "verify",
+        labelKey: "comparePhraseAction",
+        noticeKey: "sendLockedUntilVerified",
+        recoveryKey: "sendLockedUntilVerified",
+      };
+    }
+    if (routeReadiness.nextAction === "refresh-endpoint") {
+      return {
+        action: "prepare-private-route",
+        labelKey: "preparePrivateRoute",
+        noticeKey: routeReadiness.peerEndpointState?.stale ? "chatNoticeRefreshAddress" : "privateDeliveryRouteNeeded",
+        recoveryKey: routeReadiness.peerEndpointState?.stale ? "sendRecoveryStaleEndpoint" : "sendRecoveryRouteMissing",
+      };
+    }
+  }
   const peerEndpointState = twoProfilePeerEndpointState(input);
   if (primaryAction.action === "enable-private-delivery" && manualNetworkPermissionEnabled()) {
     if (!peerEndpointState.ready) {
@@ -1505,6 +1558,16 @@ function runTwoProfileOutboundPrimaryAction(entry, primaryAction = currentTwoPro
     enablePrivateDeliveryPermission();
     return;
   }
+  if (primaryAction.action === "start-receiving") {
+    selectTwoProfileOutboundActionDirection(entry, "retry");
+    startProductionTwoProfileOnionReceive();
+    return;
+  }
+  if (primaryAction.action === "verify") {
+    selectTwoProfileOutboundActionDirection(entry, "retry");
+    focusSafetyConfirmation();
+    return;
+  }
   if (primaryAction.action === "prepare-private-route") {
     selectTwoProfileOutboundActionDirection(entry, "retry");
     preparePrivateDeliveryRoute();
@@ -1521,6 +1584,9 @@ function outboundRecoveryClass(primaryAction, statusLabel = "") {
   const status = String(statusLabel ?? "").trim().toLowerCase();
   if (primaryAction?.action === "enable-private-delivery") {
     return "is-permission-needed";
+  }
+  if (primaryAction?.action === "start-receiving" || status === "receive stopped") {
+    return "is-route-needed";
   }
   if (status === "route missing") {
     return "is-route-needed";
@@ -1547,6 +1613,9 @@ function outboundRecoveryReasonKey(primaryAction, statusLabel = "") {
   }
   if (primaryAction?.action === "enable-private-delivery") {
     return "sendReasonPermissionOff";
+  }
+  if (primaryAction?.action === "start-receiving" || status === "receive stopped") {
+    return "sendReasonStartReceiving";
   }
   if (status === "route missing") {
     return "sendReasonRouteMissing";
@@ -2237,6 +2306,7 @@ const lastInviteRoomStorageKey = "ad.lastInviteRoom.v1";
 const inviteRoomsStorageKey = "ad.inviteRooms.v1";
 const receiveIntentRoomsStorageKey = "ad.receiveIntentRooms.v1";
 const localPrivateRouteCodesStorageKey = "ad.localPrivateRouteCodes.v1";
+const localPrivateRouteLifecycleStorageKey = "ad.localPrivateRouteLifecycle.v1";
 const peerPrivateRouteDraftsStorageKey = "ad.peerPrivateRouteDrafts.v1";
 const savedInviteRoomStorageLimit = 24;
 const savedRoomMetadataStartupSyncLimit = 8;
@@ -2266,7 +2336,49 @@ function persistPrivateRouteMap(storageKey, source) {
   localStoreSet(storageKey, JSON.stringify(Object.fromEntries(entries)));
 }
 
+function hydratePrivateRouteLifecycleMap(storageKey, target) {
+  target.clear();
+  try {
+    const parsed = JSON.parse(localStoreGet(storageKey) ?? "{}");
+    const entries = Object.entries(parsed && typeof parsed === "object" ? parsed : {});
+    for (const [roomKey, record] of entries.slice(-48)) {
+      const key = String(roomKey ?? "").trim();
+      const endpoint = String(record?.endpoint ?? "").trim();
+      const state = String(record?.state ?? "").trim() === "listening"
+        ? "stopped"
+        : String(record?.state ?? "").trim();
+      if (key && endpoint && state) {
+        target.set(key, {
+          endpoint,
+          state,
+          updatedAt: Number.parseInt(record?.updatedAt ?? 0, 10) || 0,
+          generation: Number.parseInt(record?.generation ?? 0, 10) || 0,
+        });
+      }
+    }
+  } catch {
+    target.clear();
+  }
+}
+
+function persistPrivateRouteLifecycleMap(storageKey, source) {
+  const entries = [...source.entries()]
+    .map(([roomKey, record]) => [
+      String(roomKey ?? "").trim(),
+      {
+        endpoint: String(record?.endpoint ?? "").trim(),
+        state: String(record?.state ?? "").trim(),
+        updatedAt: Number.parseInt(record?.updatedAt ?? 0, 10) || 0,
+        generation: Number.parseInt(record?.generation ?? 0, 10) || 0,
+      },
+    ])
+    .filter(([roomKey, record]) => roomKey && record.endpoint && record.state)
+    .slice(-48);
+  localStoreSet(storageKey, JSON.stringify(Object.fromEntries(entries)));
+}
+
 hydratePrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
+hydratePrivateRouteLifecycleMap(localPrivateRouteLifecycleStorageKey, localPrivateRouteLifecycleByRoom);
 hydratePrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
 
 function rememberConnectionCodeRole(code, role) {
@@ -2439,10 +2551,12 @@ function forgetInviteRoom(code) {
     for (const roomKey of privateRouteRoomKeys(roomInput)) {
       localPrivateRouteCodesByRoom.delete(roomKey);
       activeLocalPrivateRouteCodesByRoom.delete(roomKey);
+      localPrivateRouteLifecycleByRoom.delete(roomKey);
       peerPrivateRouteDraftsByRoom.delete(roomKey);
     }
   }
   persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
+  persistPrivateRouteLifecycleMap(localPrivateRouteLifecycleStorageKey, localPrivateRouteLifecycleByRoom);
   persistPrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
   const rooms = savedInviteRooms().filter((room) => room.code !== trimmedCode);
   localStoreSet(inviteRoomsStorageKey, JSON.stringify(roomListStoragePayload(rooms)));
@@ -3162,6 +3276,12 @@ function fieldTestReportValue(value, fallback = "unknown") {
     .slice(0, 96);
 }
 
+function latestRealOnionBootstrapDiagnostic(result) {
+  const events = Array.isArray(result?.event_summary) ? result.event_summary : [];
+  const diagnostics = events.filter((event) => String(event).includes("bootstrap_diagnostic"));
+  return diagnostics.at(-1) ?? "none";
+}
+
 function fieldTestBoundarySummary(text) {
   const source = String(text ?? "");
   const allowedKeys = [
@@ -3374,14 +3494,39 @@ function fieldTestChecklistItems(report, peerReport = "") {
   ];
 }
 
+function fieldTestRealOnionNextActionKey(parsed) {
+  if (parsed.real_onion_attempted !== "true") {
+    return "";
+  }
+  switch (parsed.real_onion_recovery_action) {
+    case "enable-private-delivery":
+      return "fieldTestNextEnablePrivateDelivery";
+    case "retry-bootstrap":
+    case "bootstrap-cancelled":
+      return "fieldTestNextRetryNetwork";
+    case "prepare-network-or-bridge":
+      return "fieldTestNextPrepareNetworkOrBridge";
+    case "inspect-diagnostics":
+      return "fieldTestNextInspectDiagnostics";
+    case "retry-private-delivery":
+      return "fieldTestNextRetryDelivery";
+    default:
+      return "";
+  }
+}
+
 function fieldTestNextActionKey(report, peerReport = "") {
   const parsed = parseFieldTestReport(report);
   const sentRows = Number.parseInt(parsed.sent_rows ?? "0", 10) || 0;
   const receivedRows = Number.parseInt(parsed.received_rows ?? "0", 10) || 0;
   const peerReportReady = Boolean(String(peerReport ?? "").trim());
   const buildMatch = fieldTestBuildIdentityMatches(report, peerReport);
+  const realOnionNextActionKey = fieldTestRealOnionNextActionKey(parsed);
   if (peerReportReady && buildMatch === false) {
     return "fieldTestNextBuildMismatch";
+  }
+  if (realOnionNextActionKey) {
+    return realOnionNextActionKey;
   }
   if (parsed.room_present !== "true" || parsed.session_ready !== "true") {
     return "fieldTestNextOpenRoom";
@@ -3394,6 +3539,13 @@ function fieldTestNextActionKey(report, peerReport = "") {
   }
   if (parsed.receive_enabled !== "true" || fieldTestReportValue(parsed.receive_state, "stopped") === "stopped") {
     return "fieldTestNextStartReceive";
+  }
+  if (
+    parsed.manual_network_permission === "true" &&
+    parsed.real_onion_bridge_capable_build === "true" &&
+    parsed.real_onion_bridge_configured_for_bootstrap !== "true"
+  ) {
+    return "fieldTestNextPrepareNetworkOrBridge";
   }
   if (sentRows === 0 || receivedRows === 0) {
     return "fieldTestNextExchangeMessages";
@@ -3535,6 +3687,8 @@ function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manua
     receiver_profile: String(input?.profileB ?? ""),
     next_blocker: nextBlocker,
     blockers: [blocker],
+    bridge_capable_build: false,
+    bridge_configured_for_bootstrap: false,
     local_endpoint_returned: false,
     peer_endpoint_returned: false,
     envelope_payload_returned: false,
@@ -3546,6 +3700,181 @@ function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manua
     transport_io_opened: false,
     runtime_messaging_enabled: false,
   };
+}
+
+function renderProductionOnionBridgeConfigStatus(result) {
+  latestProductionOnionBridgeConfigStatus = result ?? null;
+  const stateKey =
+    result?.bridge_capable_build !== true
+      ? "bridgeConfigUnsupported"
+      : result?.bridge_config_state === "invalid"
+        ? "bridgeConfigInvalidStatus"
+        : result?.bridge_config_state === "transport-invalid"
+        ? "bridgeTransportInvalidStatus"
+        : result?.bridge_config_state === "transport-missing"
+        ? "bridgeTransportMissing"
+        : result?.bridge_configured_for_bootstrap === true
+        ? "bridgeConfigReady"
+        : "bridgeConfigMissing";
+  setText(fields.onionPreflightState, t(stateKey));
+  setText(fields.onionPreflightWarning, result?.warning ?? t(stateKey));
+  setText(
+    fields.onionPreflightBoundary,
+    `bridge_capable=${result?.bridge_capable_build === true} ` +
+      `bridge_state=${fieldTestReportValue(result?.bridge_config_state, "unknown")} ` +
+      `bridge_next=${fieldTestReportValue(result?.bridge_config_next_action, "unknown")} ` +
+      `bridge_configured=${result?.bridge_configured_for_bootstrap === true} ` +
+      `raw_path=${result?.config_path_returned === true} ` +
+      `raw_bridge_lines=${result?.raw_bridge_lines_returned === true} ` +
+      `network_io=${result?.network_io_attempted === true} ` +
+      `transport_io=${result?.transport_io_opened === true} ` +
+      `runtime=${result?.runtime_messaging_enabled === true}`,
+  );
+  refreshFieldTestReport();
+}
+
+function updateProductionOnionBridgeConfigControls() {
+  const busy = productionBusyAction !== null;
+  const bridgeConfigInputPresent = Boolean((fields.onionBridgeConfigLines?.value ?? "").trim());
+  const obfs4TransportInputPresent = Boolean((fields.onionObfs4TransportBinaryPath?.value ?? "").trim());
+  if (fields.saveOnionBridgeConfig) {
+    fields.saveOnionBridgeConfig.disabled = busy || !bridgeConfigInputPresent;
+    fields.saveOnionBridgeConfig.title = busy
+      ? "Wait for the active production action."
+      : bridgeConfigInputPresent
+        ? t("saveBridgeConfig")
+        : t("bridgeConfigPlaceholder");
+  }
+  if (fields.saveOnionObfs4TransportBinary) {
+    fields.saveOnionObfs4TransportBinary.disabled = busy || !obfs4TransportInputPresent;
+    fields.saveOnionObfs4TransportBinary.title = busy
+      ? "Wait for the active production action."
+      : obfs4TransportInputPresent
+        ? t("saveBridgeTransport")
+        : t("bridgeTransportBinaryPlaceholder");
+  }
+  if (fields.checkOnionBridgeConfig) {
+    fields.checkOnionBridgeConfig.disabled = busy;
+    fields.checkOnionBridgeConfig.title = busy
+      ? "Wait for the active production action."
+      : t("checkBridgeConfig");
+  }
+  if (fields.clearOnionBridgeConfig) {
+    fields.clearOnionBridgeConfig.disabled = busy;
+    fields.clearOnionBridgeConfig.title = busy
+      ? "Wait for the active production action."
+      : t("clearBridgeConfig");
+  }
+}
+
+async function checkProductionOnionBridgeConfigStatus() {
+  if (!hasTauriRuntimeBridge()) {
+    setText(fields.onionPreflightWarning, t("tauriUnavailable"));
+    return;
+  }
+  try {
+    const result = await invoke("production_onion_bridge_config_status");
+    renderProductionOnionBridgeConfigStatus(result);
+  } catch (error) {
+    setText(fields.onionPreflightWarning, t("bridgeConfigInvalid"));
+    setText(fields.onionPreflightBoundary, `bridge_config_status_failed=${String(error ?? "unknown")}`);
+  }
+}
+
+async function loadProductionOnionBridgeConfigStatus() {
+  if (!hasTauriRuntimeBridge() || !fields.checkOnionBridgeConfig) {
+    return;
+  }
+  try {
+    const result = await invoke("production_onion_bridge_config_status");
+    renderProductionOnionBridgeConfigStatus(result);
+  } catch {
+    latestProductionOnionBridgeConfigStatus = null;
+    setText(
+      fields.onionPreflightBoundary,
+      "bridge_config_status_unavailable=true raw_path=false raw_bridge_lines=false network_io=false transport_io=false runtime=false",
+    );
+    refreshFieldTestReport();
+  }
+}
+
+async function saveProductionOnionBridgeConfig() {
+  const bridgeLines = (fields.onionBridgeConfigLines?.value ?? "").trim();
+  if (!bridgeLines) {
+    setText(fields.onionPreflightWarning, t("bridgeConfigInvalid"));
+    return;
+  }
+  productionBusyAction = "onion-bridge-config";
+  updateProductionOnionBridgeConfigControls();
+  applyProductionActionState();
+  try {
+    const result = await invoke("production_onion_bridge_config_save", { bridgeLines });
+    renderProductionOnionBridgeConfigStatus(result);
+    setText(fields.onionPreflightWarning, t("bridgeConfigSaved"));
+    if (fields.onionBridgeConfigLines) {
+      fields.onionBridgeConfigLines.value = "";
+    }
+    updateProductionOnionBridgeConfigControls();
+  } catch (error) {
+    setText(fields.onionPreflightWarning, t("bridgeConfigInvalid"));
+    setText(fields.onionPreflightBoundary, `bridge_config_save_failed=${String(error ?? "unknown")}`);
+  } finally {
+    clearProductionBusyAction("onion-bridge-config");
+    updateProductionOnionBridgeConfigControls();
+    applyProductionActionState();
+  }
+}
+
+async function saveProductionOnionObfs4TransportBinary() {
+  const binaryPath = (fields.onionObfs4TransportBinaryPath?.value ?? "").trim();
+  if (!binaryPath) {
+    setText(fields.onionPreflightWarning, t("bridgeTransportInvalidStatus"));
+    return;
+  }
+  productionBusyAction = "onion-bridge-config";
+  updateProductionOnionBridgeConfigControls();
+  applyProductionActionState();
+  try {
+    const result = await invoke("production_onion_pt_binary_save", { binaryPath });
+    renderProductionOnionBridgeConfigStatus(result);
+    setText(fields.onionPreflightWarning, t("bridgeTransportSaved"));
+    if (fields.onionObfs4TransportBinaryPath) {
+      fields.onionObfs4TransportBinaryPath.value = "";
+    }
+    updateProductionOnionBridgeConfigControls();
+  } catch {
+    setText(fields.onionPreflightWarning, t("bridgeTransportInvalidStatus"));
+    setText(
+      fields.onionPreflightBoundary,
+      "pt_binary_save_failed=true raw_path=false raw_bridge_lines=false network_io=false transport_io=false runtime=false",
+    );
+  } finally {
+    clearProductionBusyAction("onion-bridge-config");
+    updateProductionOnionBridgeConfigControls();
+    applyProductionActionState();
+  }
+}
+
+async function clearProductionOnionBridgeConfig() {
+  if (!hasTauriRuntimeBridge()) {
+    setText(fields.onionPreflightWarning, t("tauriUnavailable"));
+    return;
+  }
+  productionBusyAction = "onion-bridge-config";
+  updateProductionOnionBridgeConfigControls();
+  applyProductionActionState();
+  try {
+    const result = await invoke("production_onion_bridge_config_clear");
+    renderProductionOnionBridgeConfigStatus(result);
+    setText(fields.onionPreflightWarning, t("bridgeConfigCleared"));
+  } catch (error) {
+    setText(fields.onionPreflightWarning, t("bridgeConfigClearFailed"));
+    setText(fields.onionPreflightBoundary, `bridge_config_clear_failed=${String(error ?? "unknown")}`);
+  } finally {
+    clearProductionBusyAction("onion-bridge-config");
+    updateProductionOnionBridgeConfigControls();
+    applyProductionActionState();
+  }
 }
 
 function buildFieldTestReport(input = productionTwoProfileInput()) {
@@ -3580,6 +3909,22 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     ? fieldTestBoundaryValue(boundaryText, "failure")
     : "none";
   const realOnionResult = latestRealOnionFieldTestResult(input);
+  const bridgeStatus = latestProductionOnionBridgeConfigStatus;
+  const bridgeCapableBuild =
+    realOnionResult?.bridge_capable_build === true || bridgeStatus?.bridge_capable_build === true;
+  const bridgeConfiguredForBootstrap =
+    realOnionResult?.bridge_configured_for_bootstrap === true ||
+    bridgeStatus?.bridge_configured_for_bootstrap === true;
+  const bridgeConfigState = realOnionResult
+    ? realOnionResult.bridge_configured_for_bootstrap === true
+      ? "configured"
+      : bridgeStatus?.bridge_config_state
+    : bridgeStatus?.bridge_config_state;
+  const bridgeConfigNextAction = realOnionResult
+    ? realOnionResult.bridge_configured_for_bootstrap === true
+      ? "retry-network"
+      : bridgeStatus?.bridge_config_next_action
+    : bridgeStatus?.bridge_config_next_action;
   const realOnionBlockers = Array.isArray(realOnionResult?.blockers)
     ? realOnionResult.blockers.join("#")
     : "none";
@@ -3635,9 +3980,14 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `real_onion_retryable=${realOnionRecovery.retryable === true}`,
     `real_onion_wait_cancellable=${realOnionRecovery.waitCancellable === true}`,
     `real_onion_wait_cancelled=${realOnionWaitCancelled === true}`,
+    `real_onion_bridge_capable_build=${bridgeCapableBuild}`,
+    `real_onion_bridge_configured_for_bootstrap=${bridgeConfiguredForBootstrap}`,
+    `real_onion_bridge_config_state=${fieldTestReportValue(bridgeConfigState, "unknown")}`,
+    `real_onion_bridge_config_next_action=${fieldTestReportValue(bridgeConfigNextAction, "unknown")}`,
     `real_onion_bootstrap_retry_limit=${Number.parseInt(realOnionResult?.bootstrap_retry_limit ?? 0, 10) || 0}`,
     `real_onion_profile_a_bootstrap_attempts=${Number.parseInt(realOnionResult?.profile_a_bootstrap_attempts ?? 0, 10) || 0}`,
     `real_onion_profile_b_bootstrap_attempts=${Number.parseInt(realOnionResult?.profile_b_bootstrap_attempts ?? 0, 10) || 0}`,
+    `real_onion_bootstrap_diagnostic=${fieldTestReportValue(latestRealOnionBootstrapDiagnostic(realOnionResult), "none")}`,
     `real_onion_profile_a_bootstrap_reused=${realOnionResult?.profile_a_bootstrap_reused === true}`,
     `real_onion_profile_b_bootstrap_reused=${realOnionResult?.profile_b_bootstrap_reused === true}`,
     `room_runtime_promoted_from_real_onion_cache=${fieldTestBoundaryValue(boundaryText, "promoted_cache") === "true"}`,
@@ -4422,49 +4772,33 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
   if (!twoProfileTranscriptInputStillCurrent(input)) {
     return;
   }
-  if (manualNetworkPermissionEnabled()) {
-    const onionInput = roomInput;
-    if (latestTwoProfileOutboundOnionMessage(onionInput, { messageNumber })) {
-      setText(fields.productionTwoProfileWarning, t("onionDeliveryStarting"));
-      await sendProductionTwoProfileLatestOnionEnvelope(onionInput, { messageNumber });
-      return;
-    }
-    const peerEndpointState = twoProfilePeerEndpointState(onionInput);
-    const failureKind = peerEndpointState.stale
-      ? "stored remote endpoint refresh required"
-      : "peer-endpoint-missing";
+  const onionInput = roomInput;
+  const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(onionInput, { messageNumber });
+  const routeReadiness = externalPeerSendReadiness(onionInput, {
+    latestOnionOutbound,
+    messageNumber,
+  });
+  if (!routeReadiness.ready) {
     await markTwoProfileOutboundSendFailed(
       profileA,
       passphrase,
       messageNumber,
-      failureKind,
+      routeReadiness.failureKind,
     );
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
-    setText(fields.productionTwoProfileWarning, t("onionDeliveryNeedsPeerAddress"));
-    setChatDeliveryNoticeByKey(
-      peerEndpointState.stale ? "chatNoticeRefreshAddress" : "privateDeliveryRouteNeeded",
-      "warning",
-      input,
-    );
+    setProductionTwoProfileState("Private delivery not ready");
+    setText(fields.productionTwoProfileWarning, routeReadiness.disabledReason);
+    setChatDeliveryNoticeByKey(routeReadiness.noticeKey, "warning", input);
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
     showLatestRetryableOutboundNotice(input);
     return;
   }
-  await markTwoProfileOutboundSendFailed(
-    profileA,
-    passphrase,
-    messageNumber,
-    "ManualNetworkPermissionMissing",
-  );
-  if (!twoProfileTranscriptInputStillCurrent(input)) {
-    return;
+  if (latestOnionOutbound) {
+    setText(fields.productionTwoProfileWarning, t("onionDeliveryStarting"));
+    await sendProductionTwoProfileLatestOnionEnvelope(onionInput, { messageNumber });
   }
-  setText(fields.productionTwoProfileWarning, t("messageSavedPrivateDeliveryOff"));
-  setChatDeliveryNoticeByKey("messageSavedPrivateDeliveryOff", "muted", input);
-  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
-  showLatestRetryableOutboundNotice(input);
 }
 
 function latestTwoProfileSessionStatusForCurrentInput(input = productionTwoProfileInput()) {
@@ -4666,6 +5000,10 @@ function latestTwoProfilePeerOnionEndpoint(input = productionTwoProfileInput()) 
 }
 
 function latestTwoProfileLocalOnionEndpoint(input = productionTwoProfileInput()) {
+  const activeLocalRoute = routeMapValueForRoom(activeLocalPrivateRouteCodesByRoom, input);
+  if (activeLocalRoute) {
+    return activeLocalRoute;
+  }
   if (
     !latestProductionTwoProfileOnionEndpoints ||
     latestProductionTwoProfileOnionEndpoints.fingerprint !== twoProfileSessionStatusFingerprint(input)
@@ -4694,9 +5032,47 @@ function currentActiveLocalPrivateRouteCode(input = productionTwoProfileInput())
   return localPrivateRouteCodeIsActive(input) ? latestLocalPrivateRouteCode : "";
 }
 
+function localPrivateRouteLifecycle(input = productionTwoProfileInput()) {
+  const roomKey = privateRouteRoomKey(input);
+  return roomKey ? localPrivateRouteLifecycleByRoom.get(roomKey) ?? null : null;
+}
+
+function rememberLocalPrivateRouteLifecycle(input = productionTwoProfileInput(), options = {}) {
+  const roomKey = privateRouteRoomKey(input);
+  if (!roomKey) {
+    return false;
+  }
+  const endpoint = String(
+    options.endpoint ??
+      routeMapValueForRoom(activeLocalPrivateRouteCodesByRoom, input) ??
+      routeMapValueForRoom(localPrivateRouteCodesByRoom, input, localPrivateRouteCodesStorageKey) ??
+      "",
+  ).trim();
+  if (!endpoint) {
+    localPrivateRouteLifecycleByRoom.delete(roomKey);
+  } else {
+    localPrivateRouteLifecycleByRoom.set(roomKey, {
+      endpoint,
+      state: String(options.state ?? "saved").trim() || "saved",
+      updatedAt: Date.now(),
+      generation: Number.parseInt(options.generation ?? productionTwoProfileOnionReceiveMode.generation ?? 0, 10) || 0,
+    });
+  }
+  persistPrivateRouteLifecycleMap(localPrivateRouteLifecycleStorageKey, localPrivateRouteLifecycleByRoom);
+  return true;
+}
+
 function localPrivateRouteCodeStatusKey(input = productionTwoProfileInput()) {
   if (!latestLocalPrivateRouteCode) {
     return "privateRouteLocalStatusEmpty";
+  }
+  const lifecycle = localPrivateRouteLifecycle(input);
+  if (
+    lifecycle?.state === "listening" &&
+    lifecycle.endpoint === latestLocalPrivateRouteCode &&
+    localPrivateRouteCodeIsActive(input)
+  ) {
+    return "privateRouteLocalStatusListening";
   }
   if (!localPrivateRouteCodeIsActive(input)) {
     return "privateRouteLocalStatusSaved";
@@ -4737,9 +5113,14 @@ function rememberLocalPrivateRouteCode(code, input, options) {
       if (markActive) {
         activeLocalPrivateRouteCodesByRoom.set(roomKey, routeCode);
       }
+      rememberLocalPrivateRouteLifecycle(targetInput, {
+        endpoint: routeCode,
+        state: markActive ? "ready" : "saved",
+      });
     } else {
       localPrivateRouteCodesByRoom.delete(roomKey);
       activeLocalPrivateRouteCodesByRoom.delete(roomKey);
+      rememberLocalPrivateRouteLifecycle(targetInput, { endpoint: "", state: "empty" });
     }
     persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
   }
@@ -4947,6 +5328,116 @@ function twoProfilePeerEndpointState(input = productionTwoProfileInput()) {
     return { ready: false, reason: "peer endpoint missing", source: "stored session" };
   }
   return { ready: false, reason: "endpoint not checked" };
+}
+
+function externalPeerSendReadiness(input = productionTwoProfileInput(), options = {}) {
+  const sessionsReady = twoProfileSessionsReadyForInput(input);
+  const safetyVerified = sessionsReady && twoProfileSafetyConfirmedForInput(input);
+  const networkPermission = manualNetworkPermissionEnabled();
+  const receiveActive = productionTwoProfileReceiveMatchesInput(input);
+  const receiveRuntimeMismatch = productionTwoProfileReceiveRuntimeMismatched(input);
+  const localEndpointReady = Boolean(
+    receiveActive &&
+      !receiveRuntimeMismatch &&
+      !productionTwoProfileOnionReceiveMode.stopRequested,
+  );
+  const peerEndpointState = twoProfilePeerEndpointState(input);
+  const latestOnionOutbound =
+    options.latestOnionOutbound === undefined
+      ? latestTwoProfileOutboundOnionMessage(input, options)
+      : options.latestOnionOutbound;
+  const allowMissingMessage = options.allowMissingMessage === true;
+
+  const base = {
+    sessionsReady,
+    safetyVerified,
+    networkPermission,
+    localEndpointReady,
+    peerEndpointState,
+    latestOnionOutbound,
+  };
+  if (!input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
+    return {
+      ...base,
+      ready: false,
+      nextAction: "check-session",
+      noticeKey: "receiveNeedsRoom",
+      failureKind: "MessageSessionNotReady",
+      disabledReason: t("receiveNeedsRoom"),
+    };
+  }
+  if (!sessionsReady) {
+    return {
+      ...base,
+      ready: false,
+      nextAction: "check-session",
+      noticeKey: "receiveNeedsReadyRoom",
+      failureKind: "MessageSessionNotReady",
+      disabledReason: t("receiveNeedsReadyRoom"),
+    };
+  }
+  if (!safetyVerified) {
+    return {
+      ...base,
+      ready: false,
+      nextAction: "verify",
+      noticeKey: "sendLockedUntilVerified",
+      failureKind: "SafetyVerificationRequired",
+      disabledReason: t("sendLockedUntilVerified"),
+    };
+  }
+  if (!networkPermission) {
+    return {
+      ...base,
+      ready: false,
+      nextAction: "enable-private-delivery",
+      noticeKey: "chatNoticeNetworkPermission",
+      failureKind: "ManualNetworkPermissionMissing",
+      disabledReason: t("deliveryNeedsNetworkPermission"),
+    };
+  }
+  if (!localEndpointReady) {
+    return {
+      ...base,
+      ready: false,
+      nextAction: "start-receiving",
+      noticeKey: receiveRuntimeMismatch ? "receiveRuntimeMismatch" : "chatNoticeReceiveStopped",
+      failureKind: receiveRuntimeMismatch ? "RuntimeOwnerProfileMismatch" : "LocalOnionEndpointNotReady",
+      disabledReason: receiveRuntimeMismatch ? t("receiveRuntimeMismatch") : t("externalSendNeedsReceive"),
+    };
+  }
+  if (!peerEndpointState.ready) {
+    return {
+      ...base,
+      ready: false,
+      nextAction: "refresh-endpoint",
+      noticeKey: peerEndpointState.stale ? "chatNoticeRefreshAddress" : "privateDeliveryRouteNeeded",
+      failureKind: peerEndpointState.stale
+        ? "stored remote endpoint refresh required"
+        : "peer-endpoint-missing",
+      disabledReason: peerEndpointState.stale
+        ? t("chatNoticeRefreshAddress")
+        : t("peerPrivateRouteCodeMissing"),
+    };
+  }
+  if (!allowMissingMessage && !latestOnionOutbound) {
+    return {
+      ...base,
+      ready: false,
+      nextAction: "retry-send",
+      noticeKey: "sendFailedGeneric",
+      failureKind: "StoredOutboundEnvelopeRequired",
+      disabledReason: t("inputRequiredMessage"),
+    };
+  }
+  return {
+    ...base,
+    ready: true,
+    nextAction: "retry-send",
+    noticeKey: "chatNoticeSending",
+    failureKind: "",
+    disabledReason: "",
+  };
 }
 
 function storedPeerEndpointTransportState(input = productionTwoProfileInput()) {
@@ -6905,14 +7396,20 @@ function twoProfileComposerPrimaryIntent({
   manualNetworkPermission = manualNetworkPermissionEnabled(),
   peerEndpointState = twoProfilePeerEndpointState(input),
 } = {}) {
-  const restartReceive = Boolean(
+  const needsReceiveStart = Boolean(
     receiveIntentForRoom(input) &&
       !input.message &&
       !productionTwoProfileOnionReceiveMode.enabled &&
       !productionTwoProfileOnionReceiveMode.stopRequested &&
       !productionTwoProfileReceiveActiveInOtherRoom(input),
   );
-  if (busy || !sessionsReady || (!input.message && !restartReceive)) {
+  const needsReceiveBeforeSend = Boolean(
+    input.message &&
+      !productionTwoProfileReceiveMatchesInput(input) &&
+      !productionTwoProfileOnionReceiveMode.stopRequested &&
+      !productionTwoProfileReceiveActiveInOtherRoom(input),
+  );
+  if (busy || !sessionsReady || (!input.message && !needsReceiveStart)) {
     return {
       action: "send",
       labelKey: "roomActionSend",
@@ -6931,6 +7428,13 @@ function twoProfileComposerPrimaryIntent({
       action: "enable-private-delivery",
       labelKey: "enablePrivateDelivery",
       disabledReason: t("deliveryNeedsNetworkPermission"),
+    };
+  }
+  if (needsReceiveStart || needsReceiveBeforeSend) {
+    return {
+      action: "start-receiving",
+      labelKey: "startReceiving",
+      disabledReason: t("externalSendNeedsReceive"),
     };
   }
   if (!peerEndpointState.ready) {
@@ -8243,8 +8747,7 @@ function applyProductionActionState() {
     manualNetworkPermission &&
     twoProfilePeerEndpointState(twoProfile).ready &&
     !productionTwoProfileOnionReceiveMode.enabled &&
-    !productionTwoProfileOnionReceiveMode.stopRequested &&
-    (receiveIntent || !twoProfile.message)
+    !productionTwoProfileOnionReceiveMode.stopRequested
   ) {
     setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted", twoProfile);
   } else if (
@@ -8495,6 +8998,9 @@ function applyProductionActionState() {
     false,
   );
   const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(twoProfile);
+  const externalSendReadiness = externalPeerSendReadiness(twoProfile, {
+    latestOnionOutbound,
+  });
   const routePreparationReady = Boolean(
     hasTwoProfileSessionStatusInput &&
       twoProfileSessionsReady &&
@@ -8564,16 +9070,14 @@ function applyProductionActionState() {
   ]);
   setActionButtonState(
     fields.sendProductionTwoProfileLatestOnionEnvelope,
-    busy || !manualNetworkPermission || !latestOnionOutbound,
+    busy || !latestOnionOutbound || !externalSendReadiness.ready,
     busy
       ? "Wait for the active production action."
-      : !manualNetworkPermission
-        ? "Enable manual onion network permission before sending over onion."
-      : !peerEndpointState.ready
-        ? `Peer endpoint blocked: ${peerEndpointState.reason}.`
       : !latestOnionOutbound
         ? "Send a stored-session message after preparing onion pairing endpoints first."
-        : `Attempt onion send for message #${latestOnionOutbound.messageNumber}.`,
+      : !externalSendReadiness.ready
+        ? externalSendReadiness.disabledReason
+        : `Attempt external onion send for message #${latestOnionOutbound.messageNumber}.`,
     false,
   );
   setActionButtonState(
@@ -8584,8 +9088,7 @@ function applyProductionActionState() {
       !manualNetworkPermission ||
       !hasTwoProfileSessionStatusInput ||
       !twoProfileSessionsReady ||
-      !twoProfileSafetyConfirmed ||
-      !peerEndpointState.ready,
+      !twoProfileSafetyConfirmed,
     busy
       ? "Wait for the active production action."
       : receivingCurrentRoom && productionTwoProfileOnionReceiveMode.stopRequested
@@ -8604,10 +9107,8 @@ function applyProductionActionState() {
         ? t("receiveNeedsReadyRoom")
       : !twoProfileSafetyConfirmed
         ? t("receiveNeedsVerification")
-      : !peerEndpointState.ready
-        ? t("privateDeliveryRouteNeeded")
         : t("startReceiving"),
-    receiveIntent && !receivingCurrentRoom && !receivingOtherRoom,
+    (receiveIntent || Boolean(twoProfile.message)) && !receivingCurrentRoom && !receivingOtherRoom,
   );
   setActionButtonState(
     fields.stopProductionTwoProfileOnionReceive,
@@ -8644,7 +9145,13 @@ function applyProductionActionState() {
   const realOnionWaitCanceled = realOnionWaitCanceledForInput(twoProfile);
   const realOnionRoundtripActive = realOnionRoundtripActiveForInput(twoProfile);
   const realOnionRetryReady =
-    realOnionRecovery.action === "retry-bootstrap" || realOnionRecovery.action === "bootstrap-cancelled";
+    realOnionRecovery.action === "retry-bootstrap" ||
+    realOnionRecovery.action === "bootstrap-cancelled" ||
+    realOnionRecovery.action === "prepare-network-or-bridge";
+  const realOnionRetryLabelKey =
+    realOnionRecovery.action === "retry-bootstrap" || realOnionRecovery.action === "prepare-network-or-bridge"
+      ? "retryNetwork"
+      : "retryPrivateDelivery";
   const realOnionCancelWaitReady =
     realOnionRoundtripActive ||
     (realOnionRecovery.action === "retry-bootstrap" &&
@@ -8652,7 +9159,7 @@ function applyProductionActionState() {
       !realOnionWaitCanceled);
   const realOnionRunLabel = fields.runProductionTwoProfileRealOnionRoundtrip?.querySelector("[data-i18n]");
   if (realOnionRunLabel) {
-    setText(realOnionRunLabel, t(realOnionRetryReady ? "retryPrivateDelivery" : "runRealOnionRoundtrip"));
+    setText(realOnionRunLabel, t(realOnionRetryReady ? realOnionRetryLabelKey : "runRealOnionRoundtrip"));
   }
   setActionButtonState(
     fields.runProductionTwoProfileRealOnionRoundtrip,
@@ -8664,7 +9171,7 @@ function applyProductionActionState() {
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
       : realOnionRetryReady
-        ? t("retryPrivateDelivery")
+        ? t(realOnionRetryLabelKey)
       : "Enter two profiles, passphrase, and message first.",
     twoProfileCurrentAction === "real-onion-roundtrip",
   );
@@ -8808,6 +9315,7 @@ function applyProductionActionState() {
     "Complete a local roundtrip before editing the next message.",
     twoProfileCanReply && latestTwoProfileSuccessMatchesOppositeDirection(twoProfile),
   );
+  updateProductionOnionBridgeConfigControls();
 }
 
 function renderDemoSteps(steps) {
@@ -11431,26 +11939,18 @@ async function attemptOnionOutboundEnvelopeSend() {
 
 async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwoProfileInput(), options = {}) {
   const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(input, options);
-  const manualNetworkPermission = manualNetworkPermissionEnabled();
-  if (!manualNetworkPermission) {
-    const pending = latestVisibleTwoProfileRetryableOutboundEntry(input);
-    if (pending) {
-      setChatDeliveryNoticeForPendingOutbound(pending, input);
-    } else {
-      setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning", input);
-    }
-    openPrivateDeliverySettings(input);
-    return;
-  }
+  const routeReadiness = externalPeerSendReadiness(input, {
+    ...options,
+    latestOnionOutbound,
+  });
   if (!latestOnionOutbound) {
     const latestCandidate = latestTwoProfileOutboundDeliveryCandidate(input, options);
-    const peerEndpointState = twoProfilePeerEndpointState(input);
     if (latestCandidate) {
       await markTwoProfileOutboundSendFailed(
         input.profileA,
         input.passphrase,
         latestCandidate.messageNumber,
-        peerEndpointState.stale ? "stored remote endpoint refresh required" : "peer-endpoint-missing",
+        routeReadiness.failureKind,
       );
       if (!twoProfileTranscriptInputStillCurrent(input)) {
         return;
@@ -11462,11 +11962,31 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
     setProductionTwoProfileState("Private delivery needs message");
     setText(
       fields.productionTwoProfileWarning,
-      peerEndpointState.ready
+      routeReadiness.peerEndpointState.ready
         ? t("inputRequiredMessage")
-        : t("chatNoticeRefreshAddress"),
+        : routeReadiness.disabledReason,
     );
-    setChatDeliveryNoticeByKey(peerEndpointState.ready ? "sendFailedGeneric" : "chatNoticeRefreshAddress", "warning", input);
+    setChatDeliveryNoticeByKey(routeReadiness.peerEndpointState.ready ? "sendFailedGeneric" : routeReadiness.noticeKey, "warning", input);
+    return;
+  }
+  if (!routeReadiness.ready) {
+    await markTwoProfileOutboundSendFailed(
+      latestOnionOutbound.profile,
+      latestOnionOutbound.passphrase,
+      latestOnionOutbound.messageNumber,
+      routeReadiness.failureKind,
+    );
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
+    setProductionTwoProfileState("Private delivery not ready");
+    setText(fields.productionTwoProfileWarning, routeReadiness.disabledReason);
+    setChatDeliveryNoticeByKey(routeReadiness.noticeKey, "warning", input);
+    if (routeReadiness.nextAction === "enable-private-delivery") {
+      openPrivateDeliverySettings(input);
+    }
+    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
+    showLatestRetryableOutboundNotice(input);
     return;
   }
 
@@ -11489,14 +12009,14 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
           profile: latestOnionOutbound.profile,
           passphrase: latestOnionOutbound.passphrase,
           messageNumber: latestOnionOutbound.messageNumber,
-          manualNetworkPermission,
+          manualNetworkPermission: routeReadiness.networkPermission,
         })
       : await invoke("production_onion_outbound_envelope_send_attempt", {
           profile: latestOnionOutbound.profile,
           passphrase: latestOnionOutbound.passphrase,
           rendezvousEndpoint: latestOnionOutbound.peerEndpoint,
           messageNumber: latestOnionOutbound.messageNumber,
-          manualNetworkPermission,
+          manualNetworkPermission: routeReadiness.networkPermission,
         });
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
@@ -11802,28 +12322,24 @@ async function startProductionTwoProfileOnionReceive() {
     openPrivateDeliverySettings(input);
     return;
   }
-  if (!twoProfilePeerEndpointState(input).ready) {
-    const nextRouteAction = focusPrivateRouteNextAction(input);
-    rememberPrivateRouteFollowup("receive", input);
-    setProductionTwoProfileState("Delivery setup needed");
-    setText(
-      fields.productionTwoProfileWarning,
-      nextRouteAction === "create-local"
-        ? t("privateDeliveryRouteNeeded")
-        : t("peerPrivateRouteCodeMissing"),
-    );
-    setChatDeliveryNoticeByKey(
-      nextRouteAction === "create-local" ? "privateDeliveryRouteNeeded" : "peerPrivateRouteCodeMissing",
-      "muted",
-      input,
-    );
-    await preparePrivateDeliveryRoute({ input });
-    return;
-  }
   if (productionTwoProfileOnionReceiveMode.enabled) {
     setProductionTwoProfileState("Message listening already running");
     setText(fields.productionTwoProfileWarning, t("receiveAlreadyListening"));
     return;
+  }
+  if (!currentActiveLocalPrivateRouteCode(input)) {
+    setProductionTwoProfileState("Local endpoint preparing");
+    setText(fields.productionTwoProfileWarning, t("privateRouteCodeCreating"));
+    const localEndpointReady = await prepareInviteRoomPrivateRouteExchange(input);
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
+    if (!localEndpointReady || !currentActiveLocalPrivateRouteCode(input)) {
+      setProductionTwoProfileState("Local endpoint needed");
+      setText(fields.productionTwoProfileWarning, t("privateRouteCodeNotReady"));
+      setChatDeliveryNoticeByKey("privateRouteCodeFailed", "warning", input);
+      return;
+    }
   }
 
   let backendLoop = null;
@@ -11873,6 +12389,11 @@ async function startProductionTwoProfileOnionReceive() {
     ownerProfileBound: backendLoop.owner_profile_bound === true,
     ownerMatchesReceiveProfile: backendLoop.owner_matches_receive_profile !== false,
   };
+  rememberLocalPrivateRouteLifecycle(input, {
+    state: "listening",
+    endpoint: currentActiveLocalPrivateRouteCode(input),
+    generation,
+  });
   setProductionTwoProfileOnionReceiveRuntimeState("receiving");
   updateLocalPrivateRouteCodeUi(input);
   setText(fields.productionTwoProfileWarning, t("receiveStarted"));
@@ -12086,7 +12607,10 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
       }
     }
     if (!backendLoop.enabled && !backendLoop.worker_running) {
-      markProductionTwoProfileOnionReceiveStopped(backendLoop, { silent: !receivingCurrentRoom });
+      markProductionTwoProfileOnionReceiveStopped(backendLoop, {
+        silent: !receivingCurrentRoom,
+        input: currentInput,
+      });
       if (receivingCurrentRoom) {
         setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted", currentInput);
       }
@@ -12115,10 +12639,17 @@ function scheduleProductionTwoProfileOnionReceiveStopConfirmation(delayMs = 500)
 }
 
 function markProductionTwoProfileOnionReceiveStopped(backendLoop = null, options = {}) {
+  const stoppedInput = options.input ?? productionTwoProfileInput();
   const nextGeneration = Math.max(
     productionTwoProfileOnionReceiveMode.generation,
     Number.parseInt(backendLoop?.generation ?? 0, 10) || 0,
   );
+  rememberLocalPrivateRouteLifecycle(stoppedInput, {
+    state: "stopped",
+    endpoint: routeMapValueForRoom(activeLocalPrivateRouteCodesByRoom, stoppedInput) ||
+      routeMapValueForRoom(localPrivateRouteCodesByRoom, stoppedInput, localPrivateRouteCodesStorageKey),
+    generation: nextGeneration,
+  });
   productionTwoProfileOnionReceiveMode = {
     enabled: false,
     roomFingerprint: "",
@@ -12159,7 +12690,10 @@ async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
     if (!backendLoop.stop_confirmed) {
       scheduleProductionTwoProfileOnionReceiveStopConfirmation();
     } else {
-      markProductionTwoProfileOnionReceiveStopped(backendLoop, { silent });
+      markProductionTwoProfileOnionReceiveStopped(backendLoop, {
+        silent,
+        input: productionTwoProfileInput(),
+      });
       if (!silent) {
         setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
       }
@@ -12194,6 +12728,12 @@ function stopProductionTwoProfileOnionReceiveForInput(input, options) {
   }
   const profile = productionTwoProfileOnionReceiveMode.profile;
   rememberReceiveIntentForRoom(targetInput, false);
+  rememberLocalPrivateRouteLifecycle(targetInput, {
+    state: "stopped",
+    endpoint: currentActiveLocalPrivateRouteCode(targetInput) ||
+      routeMapValueForRoom(localPrivateRouteCodesByRoom, targetInput, localPrivateRouteCodesStorageKey),
+    generation: productionTwoProfileOnionReceiveMode.generation,
+  });
   clearProductionTwoProfileOnionReceiveTimer();
   productionTwoProfileOnionReceiveMode = {
     ...productionTwoProfileOnionReceiveMode,
@@ -12229,7 +12769,10 @@ function stopProductionTwoProfileOnionReceiveForInput(input, options) {
       if (!backendLoop.stop_confirmed) {
         scheduleProductionTwoProfileOnionReceiveStopConfirmation();
       } else {
-        markProductionTwoProfileOnionReceiveStopped(backendLoop, { silent });
+        markProductionTwoProfileOnionReceiveStopped(backendLoop, {
+          silent,
+          input: productionTwoProfileInput(),
+        });
         if (!silent) {
           setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
           setText(fields.productionTwoProfileWarning, t("receiveStopped"));
@@ -12470,8 +13013,9 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
   const previousRealOnionResult = latestRealOnionFieldTestResult(roomInput);
   const previousRealOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(previousRealOnionResult);
   const bootstrapRetryLimit =
-    previousRealOnionRecovery.action === "retry-bootstrap" ||
-    previousRealOnionRecovery.action === "bootstrap-cancelled"
+    previousRealOnionRecovery.action === "retry-bootstrap"
+      ? 3
+      : previousRealOnionRecovery.action === "bootstrap-cancelled"
       ? 2
       : 1;
   latestProductionTwoProfileRealOnionWaitCanceledFingerprint = "";
@@ -12509,7 +13053,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     const view = productionTwoProfileRealOnionResultView(result);
     const userView = localizedTwoProfileUserView(productionTwoProfileRealOnionUserView(result));
     const realOnionNotice = view.complete
-      ? { key: "chatNoticeSent", tone: "success" }
+      ? { key: "localRoundtripComplete", tone: "success" }
       : chatNoticeForSendReceiveText(result.next_blocker || result.warning || userView.message) ?? {
           key: "sendFailedGeneric",
           tone: "warning",
@@ -15000,6 +15544,30 @@ if (fields.cancelProductionTwoProfileRealOnionWait) {
   );
 }
 
+if (fields.onionBridgeConfigLines) {
+  fields.onionBridgeConfigLines.addEventListener("input", updateProductionOnionBridgeConfigControls);
+}
+
+if (fields.onionObfs4TransportBinaryPath) {
+  fields.onionObfs4TransportBinaryPath.addEventListener("input", updateProductionOnionBridgeConfigControls);
+}
+
+if (fields.saveOnionBridgeConfig) {
+  fields.saveOnionBridgeConfig.addEventListener("click", saveProductionOnionBridgeConfig);
+}
+
+if (fields.saveOnionObfs4TransportBinary) {
+  fields.saveOnionObfs4TransportBinary.addEventListener("click", saveProductionOnionObfs4TransportBinary);
+}
+
+if (fields.checkOnionBridgeConfig) {
+  fields.checkOnionBridgeConfig.addEventListener("click", checkProductionOnionBridgeConfigStatus);
+}
+
+if (fields.clearOnionBridgeConfig) {
+  fields.clearOnionBridgeConfig.addEventListener("click", clearProductionOnionBridgeConfig);
+}
+
 if (fields.loadProductionTwoProfileTranscript) {
   fields.loadProductionTwoProfileTranscript.addEventListener("click", () =>
     loadProductionTwoProfileTranscript(),
@@ -15071,3 +15639,4 @@ loadProductionProfileList();
 renderSavedInviteRooms();
 showRoomList();
 syncSavedInviteRoomMetadataFromLocalStores();
+loadProductionOnionBridgeConfigStatus();

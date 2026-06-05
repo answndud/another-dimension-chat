@@ -3885,6 +3885,105 @@ fn arti_adapter_spike_builds_app_private_config_without_opening_network() {
 
 #[cfg(feature = "arti-adapter-spike")]
 #[test]
+fn app_private_bridge_config_redacts_raw_lines() {
+    let line = "obfs4 37.218.245.14:38224 D9A82D2F9C2F65A18407B1D2B764F130847F8B5D cert=bjRaMrr1BRiAW8IE9U5z27fQaYgOhX1UCmOpg2pFpoMvo6ZgQMzLsaTzzQNTlm7hNcb+Sg iat-mode=0";
+    let config = arti_adapter_spike::AppPrivateBridgeConfig::from_app_private_lines([
+        "# local operator note",
+        line,
+        "",
+    ])
+    .expect("bridge config")
+    .with_obfs4_transport_binary_path("/usr/bin/obfs4proxy")
+    .expect("bridge transport path");
+
+    let rendered = format!("{config:?}");
+    assert_eq!(config.bridge_line_count(), 1);
+    assert_eq!(config.managed_transport_protocol_count(), 1);
+    assert!(config.requires_pluggable_transport_binary());
+    assert!(config.obfs4_transport_binary_configured());
+    assert!(rendered.contains("bridge_line_count"));
+    assert!(rendered.contains("managed_transport_protocol_count"));
+    assert!(!rendered.contains("38.229.33.83"));
+    assert!(!rendered.contains("0BAC39417268B96B9F514E7F63FA6FBA1A788955"));
+    assert!(!rendered.contains("/usr/bin/obfs4proxy"));
+}
+
+#[cfg(feature = "arti-adapter-spike")]
+#[test]
+fn app_private_direct_bridge_config_does_not_require_transport_binary() {
+    let config = arti_adapter_spike::AppPrivateBridgeConfig::from_app_private_lines([
+        "Bridge 38.229.33.83:80 0BAC39417268B96B9F514E7F63FA6FBA1A788955",
+    ])
+    .expect("direct bridge config");
+
+    assert_eq!(config.bridge_line_count(), 1);
+    assert_eq!(config.managed_transport_protocol_count(), 0);
+    assert!(!config.requires_pluggable_transport_binary());
+    assert!(!config.obfs4_transport_binary_configured());
+}
+
+#[cfg(all(feature = "arti-adapter-spike", not(feature = "arti-bridge-client")))]
+#[test]
+fn app_private_bridge_config_is_rejected_without_bridge_feature() {
+    let root = std::env::temp_dir().join("another-dimension-test-bridge-unsupported");
+    let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+        root.join("arti-state"),
+        root.join("arti-cache"),
+    )
+    .expect("app private dirs");
+    let config = arti_adapter_spike::AppPrivateBridgeConfig::from_app_private_lines([
+        "obfs4 37.218.245.14:38224 D9A82D2F9C2F65A18407B1D2B764F130847F8B5D cert=bjRaMrr1BRiAW8IE9U5z27fQaYgOhX1UCmOpg2pFpoMvo6ZgQMzLsaTzzQNTlm7hNcb+Sg iat-mode=0",
+    ])
+    .expect("bridge config")
+    .with_obfs4_transport_binary_path("/usr/bin/obfs4proxy")
+    .expect("bridge transport path");
+
+    assert!(matches!(
+        arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config_with_bridge_config(
+            dirs,
+            TransportBootstrapExecutionSkeleton::new(
+                TransportRuntimeReady,
+                TransportBootstrapPolicy::high_risk_default(),
+            ),
+            Some(&config),
+        ),
+        Err(arti_adapter_spike::ArtiConfigError::BridgeConfigUnsupportedInBuild)
+    ));
+}
+
+#[cfg(feature = "arti-bridge-client")]
+#[test]
+fn app_private_bridge_config_builds_arti_config_without_opening_network() {
+    let root = std::env::temp_dir().join("another-dimension-test-bridge-config");
+    let dirs = arti_adapter_spike::ArtiAppPrivateDirs::new(
+        root.join("arti-state"),
+        root.join("arti-cache"),
+    )
+    .expect("app private dirs");
+    let config = arti_adapter_spike::AppPrivateBridgeConfig::from_app_private_lines([
+        "Bridge 38.229.33.83:80 0BAC39417268B96B9F514E7F63FA6FBA1A788955",
+    ])
+    .expect("bridge config");
+    let adapter =
+        arti_adapter_spike::BoundedArtiBootstrapAdapterSpike::fail_closed_app_private_config_with_bridge_config(
+            dirs,
+            TransportBootstrapExecutionSkeleton::new(
+                TransportRuntimeReady,
+                TransportBootstrapPolicy::high_risk_default(),
+            ),
+            Some(&config),
+        )
+        .expect("bridge-capable Arti config");
+    let rendered = format!("{adapter:?}");
+
+    assert!(rendered.contains("BoundedArtiBootstrapAdapterSpike"));
+    assert!(rendered.contains("<redacted>"));
+    assert!(!rendered.contains("38.229.33.83"));
+    assert!(!rendered.contains("0BAC39417268B96B9F514E7F63FA6FBA1A788955"));
+}
+
+#[cfg(feature = "arti-adapter-spike")]
+#[test]
 fn arti_app_private_dirs_reject_shared_defaults_and_relative_paths() {
     let root = std::env::temp_dir().join("another-dimension-test-profile");
     let shared_state = if cfg!(windows) {
@@ -3967,6 +4066,11 @@ fn profile_scoped_transport_dirs_reject_unsafe_root_and_redact_debug() {
 #[cfg(feature = "arti-adapter-spike")]
 #[test]
 fn arti_bootstrap_preflight_boundary_disables_runtime_network_by_default() {
+    let bridge_policy = if cfg!(feature = "arti-bridge-client") {
+        arti_adapter_spike::ArtiBridgePolicy::ConfigureBeforeBootstrap
+    } else {
+        arti_adapter_spike::ArtiBridgePolicy::UnsupportedInCurrentSpike
+    };
     assert_eq!(
         arti_adapter_spike::bootstrap_preflight_boundary(),
         arti_adapter_spike::ArtiBootstrapPreflight {
@@ -3974,7 +4078,7 @@ fn arti_bootstrap_preflight_boundary_disables_runtime_network_by_default() {
                 arti_adapter_spike::ArtiBootstrapPolicy::DisabledUntilPreflightIsImplemented,
             onion_service_policy:
                 arti_adapter_spike::ArtiOnionServicePolicy::DisabledUntilKeyLifecycleDecision,
-            bridge_policy: arti_adapter_spike::ArtiBridgePolicy::UnsupportedInCurrentSpike,
+            bridge_policy,
             require_log_redaction: true,
             allow_runtime_network: false,
             allow_onion_key_generation: false,

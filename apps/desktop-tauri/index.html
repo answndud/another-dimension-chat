@@ -275,6 +275,27 @@
               <input id="manual-onion-network-permission" type="checkbox" />
               <span data-i18n="manualNetworkPermission">Manual network permission</span>
             </label>
+            <label class="loop-label" for="onion-bridge-config-lines" data-i18n="bridgeConfig">Bridge config</label>
+            <textarea
+              id="onion-bridge-config-lines"
+              rows="3"
+              spellcheck="false"
+              data-i18n-placeholder="bridgeConfigPlaceholder"
+              placeholder="Paste bridge lines"
+            ></textarea>
+            <button id="save-onion-bridge-config" type="button" data-i18n="saveBridgeConfig">Save bridge config</button>
+            <label class="loop-label" for="onion-obfs4-transport-binary-path" data-i18n="bridgeTransportBinary">Pluggable transport binary</label>
+            <input
+              id="onion-obfs4-transport-binary-path"
+              type="text"
+              spellcheck="false"
+              autocomplete="off"
+              data-i18n-placeholder="bridgeTransportBinaryPlaceholder"
+              placeholder="/path/to/lyrebird"
+            />
+            <button id="save-onion-obfs4-transport-binary" type="button" data-i18n="saveBridgeTransport">Save transport binary</button>
+            <button id="check-onion-bridge-config" type="button" data-i18n="checkBridgeConfig">Check bridge config</button>
+            <button id="clear-onion-bridge-config" type="button" data-i18n="clearBridgeConfig">Clear bridge config</button>
             <button id="run-onion-client-once" type="button" data-i18n="runClientOnce">Run client once</button>
             <button id="check-onion-persistent-client" type="button" data-i18n="checkClientState">Check client state</button>
             <button id="start-onion-persistent-client" type="button" data-i18n="startPersistentClient">Start persistent client</button>
