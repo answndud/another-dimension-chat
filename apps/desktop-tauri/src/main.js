@@ -12313,6 +12313,9 @@ function outboundSendFailureKindFromError(error) {
   if (text.includes("timeout")) {
     return "receive-timeout";
   }
+  if (text.includes("persistentclientnotready") || text.includes("bootstrap")) {
+    return "PersistentClientNotReady";
+  }
   if (sendFailureNeedsRouteSetup(text)) {
     return "peer-endpoint-missing";
   }
