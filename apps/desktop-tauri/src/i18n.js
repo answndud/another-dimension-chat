@@ -125,6 +125,20 @@ const dictionaries = {
     bridgeTransportMissing: "Pluggable transport binary is not configured.",
     bridgeTransportInvalidStatus: "Saved pluggable transport binary path is invalid. Replace it before retrying network.",
     bridgeTransportSaved: "Pluggable transport binary saved.",
+    userRefreshBridgeTransport:
+      "Refresh the private bridge config or replace the pluggable transport binary, then retry private delivery.",
+    userNoMessageSentBridgeTransportRetries:
+      "No message was sent after bridge bootstrap exhausted retries with pluggable transport configured.",
+    userReplaceBridgeTransport: "Replace the pluggable transport binary path, then retry private delivery.",
+    userNoMessageSentInvalidBridgeTransport:
+      "No message was sent because the saved pluggable transport binary path is invalid.",
+    userConfigureBridgeTransport: "Configure the pluggable transport binary, then retry private delivery.",
+    userNoMessageSentMissingBridgeTransport:
+      "No message was sent because pluggable transport is not configured.",
+    userRefreshBridgeOrNetwork: "Refresh the private bridge config or change network, then retry private delivery.",
+    userNoMessageSentBridgeRetries: "No message was sent after bridge bootstrap exhausted retries.",
+    userChangeNetworkRetryDelivery: "Change network, then retry private delivery.",
+    userNoMessageSentNetworkRetries: "No message was sent after network bootstrap exhausted retries.",
     tauriUnavailable: "Tauri runtime is not available in this preview.",
     cancelNetworkWait: "Cancel wait",
     networkWaitCanceled: "Network wait canceled",
@@ -966,6 +980,20 @@ const dictionaries = {
     bridgeTransportMissing: "Pluggable transport binary가 설정되지 않았습니다.",
     bridgeTransportInvalidStatus: "저장된 pluggable transport binary 경로가 올바르지 않습니다. 네트워크 재시도 전에 교체하세요.",
     bridgeTransportSaved: "Pluggable transport binary를 저장했습니다.",
+    userRefreshBridgeTransport:
+      "Bridge 설정을 새로 받거나 pluggable transport binary를 교체한 뒤 비공개 전송을 다시 시도하세요.",
+    userNoMessageSentBridgeTransportRetries:
+      "Pluggable transport가 설정된 bridge bootstrap이 재시도를 모두 소진해 메시지를 보내지 않았습니다.",
+    userReplaceBridgeTransport: "Pluggable transport binary 경로를 교체한 뒤 비공개 전송을 다시 시도하세요.",
+    userNoMessageSentInvalidBridgeTransport:
+      "저장된 pluggable transport binary 경로가 올바르지 않아 메시지를 보내지 않았습니다.",
+    userConfigureBridgeTransport: "Pluggable transport binary를 설정한 뒤 비공개 전송을 다시 시도하세요.",
+    userNoMessageSentMissingBridgeTransport:
+      "Pluggable transport가 설정되지 않아 메시지를 보내지 않았습니다.",
+    userRefreshBridgeOrNetwork: "Bridge 설정을 새로 받거나 네트워크를 바꾼 뒤 비공개 전송을 다시 시도하세요.",
+    userNoMessageSentBridgeRetries: "Bridge bootstrap이 재시도를 모두 소진해 메시지를 보내지 않았습니다.",
+    userChangeNetworkRetryDelivery: "네트워크를 바꾼 뒤 비공개 전송을 다시 시도하세요.",
+    userNoMessageSentNetworkRetries: "네트워크 bootstrap이 재시도를 모두 소진해 메시지를 보내지 않았습니다.",
     tauriUnavailable: "이 미리보기에서는 Tauri 런타임을 사용할 수 없습니다.",
     cancelNetworkWait: "대기 취소",
     networkWaitCanceled: "네트워크 대기를 취소했습니다.",
