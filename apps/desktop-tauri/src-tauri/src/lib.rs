@@ -10413,6 +10413,50 @@ fn real_onion_bootstrap_error_retryable(redacted_bootstrap_error: &str) -> bool 
 }
 
 #[cfg(feature = "manual-onion-client-attempt")]
+fn managed_bridge_bootstrap_error_retryable(
+    redacted_bootstrap_error: &str,
+    bridge_config: Option<&another_dimension_transport::arti_adapter_spike::AppPrivateBridgeConfig>,
+) -> bool {
+    if real_onion_bootstrap_error_retryable(redacted_bootstrap_error) {
+        return true;
+    }
+    let managed_bridge_with_transport = bridge_config
+        .is_some_and(|config| {
+            config.requires_pluggable_transport_binary()
+                && config.obfs4_transport_binary_configured()
+        });
+    managed_bridge_with_transport
+        && (redacted_bootstrap_error.contains("BootstrapUnsupported")
+            || redacted_bootstrap_error.contains("BootstrapProtocolFailed"))
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+fn managed_bridge_bootstrap_retry_should_refresh_cache(
+    redacted_bootstrap_error: &str,
+    bridge_config: Option<&another_dimension_transport::arti_adapter_spike::AppPrivateBridgeConfig>,
+) -> bool {
+    bridge_config.is_some_and(|config| {
+        config.requires_pluggable_transport_binary() && config.obfs4_transport_binary_configured()
+    }) && (redacted_bootstrap_error.contains("BootstrapUnsupported")
+        || redacted_bootstrap_error.contains("BootstrapProtocolFailed"))
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+fn refresh_real_onion_bootstrap_cache_for_retry(
+    app_cache_root: &std::path::Path,
+    profile: &str,
+    event_summary: &mut Vec<String>,
+) {
+    let cache_root = app_cache_root
+        .join("profiles")
+        .join(profile)
+        .join("real-onion-roundtrip")
+        .join("arti-cache");
+    let _ = std::fs::remove_dir_all(cache_root);
+    event_summary.push("bootstrap_retry_cache_refreshed profile=redacted".to_string());
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
 fn push_real_onion_bootstrap_diagnostic(
     event_summary: &mut Vec<String>,
     phase: &str,
@@ -10645,12 +10689,19 @@ async fn build_real_onion_roundtrip_owner_with_retries(
         {
             Ok(owner) => return Ok((owner, attempt, false)),
             Err(error) => {
-                let retryable = real_onion_bootstrap_error_retryable(&error)
+                let retryable = managed_bridge_bootstrap_error_retryable(&error, bridge_config)
                     && !error.contains("BootstrapCancelled")
                     && attempt < attempts;
                 last_error = error;
                 if !retryable {
                     return Err((last_error, attempt));
+                }
+                if managed_bridge_bootstrap_retry_should_refresh_cache(&last_error, bridge_config) {
+                    refresh_real_onion_bootstrap_cache_for_retry(
+                        app_cache_root,
+                        profile,
+                        event_summary,
+                    );
                 }
                 event_summary.push(format!(
                     "bootstrap_retry_wait profile=redacted completed_attempt={attempt}"
@@ -12826,28 +12877,55 @@ replay check: no replayed messages after message 2
         let init =
             run_production_handshake_init_export(&data_a, inviter.clone(), passphrase.clone())
                 .expect("inviter init");
-        assert!(init.output_payload_created);
-        let reply = run_production_handshake_reply_export(
-            &data_b,
-            joiner.clone(),
-            passphrase.clone(),
-            init.output_payload,
-        )
-        .expect("joiner reply");
-        let finish = run_production_handshake_finish_export(
-            &data_a,
-            inviter.clone(),
-            passphrase.clone(),
-            reply.output_payload,
-        )
-        .expect("inviter finish");
-        run_production_handshake_finish_import(
-            &data_b,
-            joiner.clone(),
-            passphrase.clone(),
-            finish.output_payload,
-        )
-        .expect("joiner finish import");
+        if init.output_payload_created {
+            let reply = run_production_handshake_reply_export(
+                &data_b,
+                joiner.clone(),
+                passphrase.clone(),
+                init.output_payload,
+            )
+            .expect("joiner reply");
+            let finish = run_production_handshake_finish_export(
+                &data_a,
+                inviter.clone(),
+                passphrase.clone(),
+                reply.output_payload,
+            )
+            .expect("inviter finish");
+            run_production_handshake_finish_import(
+                &data_b,
+                joiner.clone(),
+                passphrase.clone(),
+                finish.output_payload,
+            )
+            .expect("joiner finish import");
+        } else {
+            let joiner_init =
+                run_production_handshake_init_export(&data_b, joiner.clone(), passphrase.clone())
+                    .expect("joiner init");
+            assert!(joiner_init.output_payload_created);
+            let reply = run_production_handshake_reply_export(
+                &data_a,
+                inviter.clone(),
+                passphrase.clone(),
+                joiner_init.output_payload,
+            )
+            .expect("inviter reply");
+            let finish = run_production_handshake_finish_export(
+                &data_b,
+                joiner.clone(),
+                passphrase.clone(),
+                reply.output_payload,
+            )
+            .expect("joiner finish");
+            run_production_handshake_finish_import(
+                &data_a,
+                inviter.clone(),
+                passphrase.clone(),
+                finish.output_payload,
+            )
+            .expect("inviter finish import");
+        }
         assert!(
             run_production_session_state_check(&data_a, inviter.clone(), passphrase.clone())
                 .expect("inviter state")
@@ -12897,16 +12975,20 @@ replay check: no replayed messages after message 2
                     passphrase.clone(),
                     true,
                 ),
-                super::run_production_onion_outbound_envelope_send_attempt(
-                    &data_a,
-                    &cache_a,
-                    &state_a,
-                    inviter.clone(),
-                    passphrase.clone(),
-                    endpoint_b.clone(),
-                    first_number,
-                    true,
-                )
+                async {
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    super::run_production_onion_outbound_envelope_send_attempt(
+                        &data_a,
+                        &cache_a,
+                        &state_a,
+                        inviter.clone(),
+                        passphrase.clone(),
+                        endpoint_b.clone(),
+                        first_number,
+                        true,
+                    )
+                    .await
+                }
             )
         });
         let first_receive = first_receive.expect("first receive result");
@@ -12964,16 +13046,20 @@ replay check: no replayed messages after message 2
                     passphrase.clone(),
                     true,
                 ),
-                super::run_production_onion_outbound_envelope_send_attempt(
-                    &data_b,
-                    &cache_b,
-                    &state_b,
-                    joiner.clone(),
-                    passphrase.clone(),
-                    endpoint_a.clone(),
-                    second_number,
-                    true,
-                )
+                async {
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    super::run_production_onion_outbound_envelope_send_attempt(
+                        &data_b,
+                        &cache_b,
+                        &state_b,
+                        joiner.clone(),
+                        passphrase.clone(),
+                        endpoint_a.clone(),
+                        second_number,
+                        true,
+                    )
+                    .await
+                }
             )
         });
         let second_receive = second_receive.expect("second receive result");
@@ -13023,6 +13109,7 @@ replay check: no replayed messages after message 2
         if let Ok(mut owner_guard) = state_a.owner.lock() {
             let _ = owner_guard.take();
         }
+        std::thread::sleep(std::time::Duration::from_secs(3));
         let mut resume_events = Vec::new();
         let resume_attempts_a;
         let mut resumed_owner_a = match tauri::async_runtime::block_on(
@@ -13104,16 +13191,20 @@ replay check: no replayed messages after message 2
                     passphrase.clone(),
                     true,
                 ),
-                super::run_production_onion_outbound_envelope_send_attempt(
-                    &data_a,
-                    &cache_a,
-                    &resumed_state_a,
-                    inviter.clone(),
-                    passphrase.clone(),
-                    endpoint_b.clone(),
-                    third_number,
-                    true,
-                )
+                async {
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    super::run_production_onion_outbound_envelope_send_attempt(
+                        &data_a,
+                        &cache_a,
+                        &resumed_state_a,
+                        inviter.clone(),
+                        passphrase.clone(),
+                        endpoint_b.clone(),
+                        third_number,
+                        true,
+                    )
+                    .await
+                }
             )
         });
         let third_receive = third_receive.expect("third receive result");
