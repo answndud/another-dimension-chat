@@ -993,7 +993,11 @@ function setChatDeliveryNoticeForOutboundFailureKind(failureKind, input = produc
     setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning", input);
     return;
   }
-  if (normalized.includes("localonionendpointnotready") || normalized.includes("persistentclientnotready")) {
+  if (normalized.includes("persistentclientnotready")) {
+    setChatDeliveryNoticeByKey("sendFailedGeneric", "warning", input);
+    return;
+  }
+  if (normalized.includes("localonionendpointnotready")) {
     setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "warning", input);
     return;
   }
@@ -2961,6 +2965,7 @@ function savedInviteRoomRetryableAction(action) {
     "prepare-private-route",
     "refresh-and-retry",
     "start-receiving",
+    "retry-network",
     "retry",
   ]).has(normalized)
     ? normalized
@@ -2980,6 +2985,9 @@ function savedInviteRoomRetryableState(room) {
   }
   if (action === "start-receiving") {
     return { key: "receive-paused", label: t("roomStateReceivePaused") };
+  }
+  if (action === "retry-network") {
+    return { key: "retry-network", label: t("retryNetwork") };
   }
   return { key: "retry-send", label: t("roomStateRetrySend") };
 }
@@ -3052,6 +3060,9 @@ function savedInviteRoomListAction(room) {
     }
     if (action === "start-receiving") {
       return { action, labelKey: "startReceiving" };
+    }
+    if (action === "retry-network") {
+      return { action, labelKey: "retryNetwork" };
     }
     return { action: "retry", labelKey: "retrySend" };
   }
@@ -3182,6 +3193,17 @@ async function runSavedInviteRoomListAction(room, action) {
     return true;
   }
   if (action === "retry") {
+    const pending = latestVisibleTwoProfileRetryableOutboundEntry(productionTwoProfileInput());
+    if (pending) {
+      selectTwoProfileConversationEntry(pending);
+      showRetryableTwoProfileOutboundNotice(pending);
+      await runTwoProfileOutboundPrimaryAction(pending);
+    } else {
+      await handleSavedInviteRoomMissingPendingAction(action);
+    }
+    return true;
+  }
+  if (action === "retry-network") {
     const pending = latestVisibleTwoProfileRetryableOutboundEntry(productionTwoProfileInput());
     if (pending) {
       selectTwoProfileConversationEntry(pending);
@@ -4017,6 +4039,8 @@ function fieldTestRecoveryActionNextKey(action) {
       return "fieldTestNextEnablePrivateDelivery";
     case "start-receiving":
       return "fieldTestNextStartReceive";
+    case "retry-network":
+      return "fieldTestNextRetryNetwork";
     case "prepare-private-route":
     case "refresh-and-retry":
     case "paste-peer-code":
@@ -7001,6 +7025,14 @@ function twoProfileRetryableOutboundActionView(entry, fallback) {
       focusTarget: "start-receiving",
     };
   }
+  if (primaryAction.action === "retry-network") {
+    return {
+      ...common,
+      nextAction: `Network retry needed: retry private delivery for message ${label}.`,
+      rowLabel: "action: retry network",
+      focusTarget: "retry-send",
+    };
+  }
   if (primaryAction.action === "prepare-private-route") {
     return {
       ...common,
@@ -7073,6 +7105,11 @@ function retryableTwoProfileOutboundWarning(entry) {
     return currentLanguage === "ko"
       ? `메시지 ${label} 전송이 멈췄습니다. 메시지 받기를 시작한 뒤 다시 보내거나 취소할 수 있습니다.`
       : `Message ${label} is waiting. Start receiving, then retry or cancel this send.`;
+  }
+  if (primaryAction.action === "retry-network") {
+    return currentLanguage === "ko"
+      ? `메시지 ${label} 전송 네트워크를 다시 시도해야 합니다. 다시 보내거나 취소할 수 있습니다.`
+      : `Message ${label} needs a network retry. Retry private delivery or cancel this send.`;
   }
   if (primaryAction.action === "prepare-private-route") {
     return currentLanguage === "ko"
