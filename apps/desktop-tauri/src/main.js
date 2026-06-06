@@ -3050,6 +3050,13 @@ async function handleSavedInviteRoomMissingPendingAction(action) {
     return true;
   }
   if (action === "start-receiving") {
+    const pending = latestVisibleTwoProfileRetryableOutboundEntry(productionTwoProfileInput());
+    if (pending) {
+      selectTwoProfileConversationEntry(pending);
+      showRetryableTwoProfileOutboundNotice(pending);
+      await runTwoProfileOutboundPrimaryAction(pending);
+      return true;
+    }
     await startProductionTwoProfileOnionReceive();
     return true;
   }
@@ -3129,7 +3136,7 @@ async function runSavedInviteRoomListAction(room, action) {
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
-      await retryTwoProfileOutboundEntry(pending);
+      await runTwoProfileOutboundPrimaryAction(pending);
     } else {
       await handleSavedInviteRoomMissingPendingAction(action);
     }
@@ -3141,6 +3148,8 @@ async function runSavedInviteRoomListAction(room, action) {
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
+      await runTwoProfileOutboundPrimaryAction(pending);
+      return true;
     }
     openPrivateDeliverySettings(input);
     return true;
@@ -3151,6 +3160,8 @@ async function runSavedInviteRoomListAction(room, action) {
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
+      await runTwoProfileOutboundPrimaryAction(pending);
+      return true;
     }
     focusPrivateRouteNextAction(input);
     return true;
@@ -3160,7 +3171,7 @@ async function runSavedInviteRoomListAction(room, action) {
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
-      await refreshTwoProfileOutboundEndpointThenRetry(pending);
+      await runTwoProfileOutboundPrimaryAction(pending);
     } else {
       await handleSavedInviteRoomMissingPendingAction(action);
     }
