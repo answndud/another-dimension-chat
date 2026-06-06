@@ -3226,25 +3226,41 @@ function savedInviteRoomResumePriority(room) {
   return 0;
 }
 
+function savedInviteRoomPriorityEntries(rooms = savedInviteRooms()) {
+  pruneExpiredRealOnionRecoveries();
+  return (Array.isArray(rooms) ? rooms : []).map((room, index) => ({
+    index,
+    priority: savedInviteRoomResumePriority(room),
+    room,
+    updatedAt: Number(room?.updatedAt ?? 0) || 0,
+  }));
+}
+
 function savedInviteRoomResumeRoom(rooms = savedInviteRooms()) {
-  return (Array.isArray(rooms) ? rooms : [])
-    .filter((room) => savedInviteRoomResumePriority(room) > 0)
-    .sort((left, right) => {
-      const priority = savedInviteRoomResumePriority(right) - savedInviteRoomResumePriority(left);
-      return priority || Number(right.updatedAt ?? 0) - Number(left.updatedAt ?? 0);
-    })[0] ?? null;
+  return (
+    savedInviteRoomPriorityEntries(rooms)
+      .filter(({ priority }) => priority > 0)
+      .sort((left, right) => {
+        const priority = right.priority - left.priority;
+        return priority || right.updatedAt - left.updatedAt || left.index - right.index;
+      })[0]?.room ?? null
+  );
 }
 
 function savedInviteRoomState(room, options = {}) {
   const currentCode = currentInviteRoomCode();
-  const receiveState = savedInviteRoomReceiveState(room);
+  const receiveState = options.receiveState ?? savedInviteRoomReceiveState(room);
+  const waitingPeerCode = options.waitingPeerCode ?? savedInviteRoomWaitingForPeerCode(room);
+  const hasRealOnionRecoveryView = Object.prototype.hasOwnProperty.call(options, "realOnionRecoveryView");
+  const realOnionRecoveryView = hasRealOnionRecoveryView
+    ? options.realOnionRecoveryView
+    : savedInviteRoomRealOnionRecoveryView(room);
   const view = (() => {
     if (savedInviteRoomHasRetryableOutbound(room)) {
       return savedInviteRoomRetryableState(room);
     }
-    const realOnionRecovery = savedInviteRoomRealOnionRecoveryView(room);
-    if (realOnionRecovery) {
-      return realOnionRecovery.state;
+    if (realOnionRecoveryView) {
+      return realOnionRecoveryView.state;
     }
     if (receiveState === "listening") {
       return { key: "listening", label: t("roomStateListening") };
@@ -3252,7 +3268,7 @@ function savedInviteRoomState(room, options = {}) {
     if (receiveState === "paused") {
       return { key: "receive-paused", label: t("roomStateReceivePaused") };
     }
-    if (savedInviteRoomWaitingForPeerCode(room)) {
+    if (waitingPeerCode) {
       return { key: "waiting-peer-code", label: t("roomStateWaitingPeerCode") };
     }
     if (room.code === currentCode && roomDetailOpen) {
@@ -3271,7 +3287,7 @@ function savedInviteRoomState(room, options = {}) {
     : view;
 }
 
-function savedInviteRoomListAction(room) {
+function savedInviteRoomListAction(room, options = {}) {
   if (savedInviteRoomHasRetryableOutbound(room)) {
     const action = savedInviteRoomRetryableAction(room.retryableOutboundAction);
     if (action === "enable-private-delivery") {
@@ -3291,14 +3307,19 @@ function savedInviteRoomListAction(room) {
     }
     return { action: "retry", labelKey: "retrySend" };
   }
-  const realOnionRecovery = savedInviteRoomRealOnionRecoveryView(room);
+  const hasRealOnionRecoveryView = Object.prototype.hasOwnProperty.call(options, "realOnionRecoveryView");
+  const realOnionRecovery = hasRealOnionRecoveryView
+    ? options.realOnionRecoveryView
+    : savedInviteRoomRealOnionRecoveryView(room);
   if (realOnionRecovery) {
     return { action: realOnionRecovery.action, labelKey: realOnionRecovery.labelKey };
   }
-  if (savedInviteRoomReceiveState(room) === "paused") {
+  const receiveState = options.receiveState ?? savedInviteRoomReceiveState(room);
+  if (receiveState === "paused") {
     return { action: "start-receiving", labelKey: "startReceiving" };
   }
-  if (savedInviteRoomWaitingForPeerCode(room)) {
+  const waitingPeerCode = options.waitingPeerCode ?? savedInviteRoomWaitingForPeerCode(room);
+  if (waitingPeerCode) {
     return { action: "paste-peer-code", labelKey: "roomActionPastePeerCode" };
   }
   return null;
@@ -3685,13 +3706,12 @@ async function refreshSavedInviteRoomMetadataForFingerprint(roomFingerprint, opt
 }
 
 function savedInviteRoomMetadataSyncCandidates(rooms = savedInviteRooms()) {
-  pruneExpiredRealOnionRecoveries();
-  return (Array.isArray(rooms) ? rooms : [])
-    .slice()
+  return savedInviteRoomPriorityEntries(rooms)
     .sort((left, right) => {
-      const priority = savedInviteRoomResumePriority(right) - savedInviteRoomResumePriority(left);
-      return priority || Number(right.updatedAt ?? 0) - Number(left.updatedAt ?? 0);
+      const priority = right.priority - left.priority;
+      return priority || right.updatedAt - left.updatedAt || left.index - right.index;
     })
+    .map(({ room }) => room)
     .slice(0, savedRoomMetadataStartupSyncLimit);
 }
 
@@ -3788,16 +3808,29 @@ function savedInviteRoomListItemView(room, context = {}) {
   const currentCode = context.currentCode ?? currentInviteRoomCode();
   const resumeRoom = context.resumeRoom ?? null;
   const receiveState = savedInviteRoomReceiveState(room);
+  const waitingPeerCode = savedInviteRoomWaitingForPeerCode(room);
+  const realOnionRecoveryView = savedInviteRoomHasRetryableOutbound(room)
+    ? null
+    : savedInviteRoomRealOnionRecoveryView(room);
   const resumeRecommended = Boolean(resumeRoom && room.code === resumeRoom.code && room.role === resumeRoom.role);
   return {
     current: room.code === currentCode,
     hasRetryableSend: savedInviteRoomHasRetryableOutbound(room),
-    nextAction: savedInviteRoomListAction(room),
+    nextAction: savedInviteRoomListAction(room, {
+      realOnionRecoveryView,
+      receiveState,
+      waitingPeerCode,
+    }),
     preview: savedInviteRoomPreview(room),
     receiveState,
     resumeRecommended,
-    state: savedInviteRoomState(room, { resumeRecommended }),
-    waitingPeerCode: savedInviteRoomWaitingForPeerCode(room),
+    state: savedInviteRoomState(room, {
+      realOnionRecoveryView,
+      receiveState,
+      resumeRecommended,
+      waitingPeerCode,
+    }),
+    waitingPeerCode,
   };
 }
 
