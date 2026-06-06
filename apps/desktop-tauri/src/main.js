@@ -4170,9 +4170,11 @@ function fieldTestReportSummary(report) {
       ? parsed.room_list_next_action
       : parsed.outbound_recovery_action && parsed.outbound_recovery_action !== "none"
         ? parsed.outbound_recovery_action
-        : parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none"
-          ? parsed.real_onion_recovery_action
-          : "none";
+        : parsed.route_readiness_next_action && parsed.route_readiness_next_action !== "none"
+          ? parsed.route_readiness_next_action
+          : parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none"
+            ? parsed.real_onion_recovery_action
+            : "none";
   const blocker =
     parsed.real_onion_next_blocker && parsed.real_onion_next_blocker !== "none"
       ? parsed.real_onion_next_blocker
@@ -4180,7 +4182,9 @@ function fieldTestReportSummary(report) {
         ? parsed.receive_failure_kind
         : parsed.outbound_failure_class && parsed.outbound_failure_class !== "none"
           ? parsed.outbound_failure_class
-          : "none";
+          : parsed.route_readiness_failure_kind && parsed.route_readiness_failure_kind !== "none"
+            ? parsed.route_readiness_failure_kind
+            : "none";
   return `summary ${room} ${safety} ${delivery} ${route} ${receive} next=${fieldTestReportValue(nextAction, "none")} blocker=${fieldTestReportValue(blocker, "none")}`;
 }
 
@@ -4212,16 +4216,20 @@ function fieldTestReportTriageState(report) {
         ? parsed.room_list_next_action
         : parsed.outbound_recovery_action && parsed.outbound_recovery_action !== "none"
           ? parsed.outbound_recovery_action
-          : parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none"
-            ? parsed.real_onion_recovery_action
-            : "none",
+          : parsed.route_readiness_next_action && parsed.route_readiness_next_action !== "none"
+            ? parsed.route_readiness_next_action
+            : parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none"
+              ? parsed.real_onion_recovery_action
+              : "none",
     blocker:
       parsed.real_onion_next_blocker && parsed.real_onion_next_blocker !== "none"
         ? parsed.real_onion_next_blocker
-        : parsed.receive_failure_kind && parsed.receive_failure_kind !== "none"
-          ? parsed.receive_failure_kind
-          : parsed.outbound_failure_class && parsed.outbound_failure_class !== "none"
-            ? parsed.outbound_failure_class
+      : parsed.receive_failure_kind && parsed.receive_failure_kind !== "none"
+        ? parsed.receive_failure_kind
+        : parsed.outbound_failure_class && parsed.outbound_failure_class !== "none"
+          ? parsed.outbound_failure_class
+          : parsed.route_readiness_failure_kind && parsed.route_readiness_failure_kind !== "none"
+            ? parsed.route_readiness_failure_kind
             : "none",
   };
 }
@@ -4347,12 +4355,17 @@ function fieldTestRecoveryActionNextKey(action) {
   switch (action) {
     case "enable-private-delivery":
       return "fieldTestNextEnablePrivateDelivery";
+    case "check-session":
+      return "fieldTestNextOpenRoom";
+    case "verify":
+      return "fieldTestNextVerifySafety";
     case "start-receiving":
       return "fieldTestNextStartReceive";
     case "retry-network":
       return "fieldTestNextRetryNetwork";
     case "prepare-private-route":
     case "refresh-and-retry":
+    case "refresh-endpoint":
     case "paste-peer-code":
       return "fieldTestNextSetupRoute";
     case "retry":
@@ -4383,7 +4396,12 @@ function fieldTestNextActionKey(report, peerReport = "") {
   }
   const roomListAction = fieldTestReportValue(parsed.room_list_next_action, "none");
   const outboundAction = fieldTestReportValue(parsed.outbound_recovery_action, "none");
-  const currentRecoveryAction = roomListAction !== "none" ? roomListAction : outboundAction;
+  const routeReadinessAction = fieldTestReportValue(parsed.route_readiness_next_action, "none");
+  const currentRecoveryAction = roomListAction !== "none"
+    ? roomListAction
+    : outboundAction !== "none"
+      ? outboundAction
+      : routeReadinessAction;
   const recoveryActionNextKey = fieldTestRecoveryActionNextKey(currentRecoveryAction);
   if (recoveryActionNextKey) {
     return recoveryActionNextKey;
@@ -4875,6 +4893,10 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const currentRoomCode = currentInviteRoomCode();
   const currentSavedRoom = savedInviteRooms().find((room) => room.code === currentRoomCode) ?? null;
   const currentSavedRoomView = currentSavedRoom ? savedInviteRoomListItemView(currentSavedRoom, { currentCode: currentRoomCode }) : null;
+  const routeReadiness = externalPeerSendReadiness(input, {
+    allowMissingMessage: true,
+    latestOnionOutbound: null,
+  });
   const roomListNextAction = outboundRecoveryAction !== "none"
     ? outboundRecoveryAction
     : currentSavedRoomView?.nextAction?.action;
@@ -4894,6 +4916,10 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `route_stale=${route.stale === true}`,
     `route_source=${fieldTestReportValue(route.source)}`,
     `route_reason=${fieldTestReportValue(route.reason)}`,
+    `route_readiness_ready=${routeReadiness.ready === true}`,
+    `route_readiness_next_action=${fieldTestReportValue(routeReadiness.nextAction, "none")}`,
+    `route_readiness_failure_kind=${fieldTestReportValue(routeReadiness.failureKind, "none")}`,
+    `route_readiness_notice_key=${fieldTestReportValue(routeReadiness.noticeKey, "none")}`,
     `receive_enabled=${receiveMode.enabled === true}`,
     `receive_state=${fieldTestReportValue(receiveMode.runtimeState, "stopped")}`,
     `receive_in_flight=${receiveMode.inFlight === true}`,
