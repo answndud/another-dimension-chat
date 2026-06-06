@@ -1566,32 +1566,56 @@ function outboundPrimaryActionLabel(primaryAction) {
   return t(primaryAction?.labelKey || "retrySend");
 }
 
-function runTwoProfileOutboundPrimaryAction(entry, primaryAction = currentTwoProfileOutboundPrimaryAction(entry)) {
-  if (primaryAction.action === "enable-private-delivery") {
+async function restoreInviteRoomForConversationEntry(entry) {
+  const expectedFingerprint = String(entry?.roomFingerprint ?? "").trim();
+  if (!expectedFingerprint || twoProfileSessionStatusFingerprint(productionTwoProfileInput()) === expectedFingerprint) {
+    return true;
+  }
+  const room = savedInviteRoomForRoomFingerprint(expectedFingerprint);
+  if (!room) {
+    setSelectedTwoProfileConversationEntry(entry);
+    setProductionTwoProfileState("Retry send needs saved room");
+    setText(
+      fields.productionTwoProfileWarning,
+      currentLanguage === "ko"
+        ? "이 메시지가 속한 저장된 방을 먼저 다시 여세요."
+        : "Reopen the saved room for this message before retrying.",
+    );
+    return false;
+  }
+  return openSavedInviteRoom(room);
+}
+
+async function runTwoProfileOutboundPrimaryAction(entry) {
+  if (!(await restoreInviteRoomForConversationEntry(entry))) {
+    return;
+  }
+  const resolvedPrimaryAction = currentTwoProfileOutboundPrimaryAction(entry);
+  if (resolvedPrimaryAction.action === "enable-private-delivery") {
     selectTwoProfileOutboundActionDirection(entry, "retry");
     enablePrivateDeliveryPermission();
     return;
   }
-  if (primaryAction.action === "start-receiving") {
+  if (resolvedPrimaryAction.action === "start-receiving") {
     selectTwoProfileOutboundActionDirection(entry, "retry");
-    startProductionTwoProfileOnionReceive();
+    await startProductionTwoProfileOnionReceive();
     return;
   }
-  if (primaryAction.action === "verify") {
+  if (resolvedPrimaryAction.action === "verify") {
     selectTwoProfileOutboundActionDirection(entry, "retry");
     focusSafetyConfirmation();
     return;
   }
-  if (primaryAction.action === "prepare-private-route") {
+  if (resolvedPrimaryAction.action === "prepare-private-route") {
     selectTwoProfileOutboundActionDirection(entry, "retry");
-    preparePrivateDeliveryRoute();
+    await preparePrivateDeliveryRoute();
     return;
   }
-  if (primaryAction.action === "refresh-and-retry") {
-    refreshTwoProfileOutboundEndpointThenRetry(entry);
+  if (resolvedPrimaryAction.action === "refresh-and-retry") {
+    await refreshTwoProfileOutboundEndpointThenRetry(entry);
     return;
   }
-  retryTwoProfileOutboundEntry(entry);
+  await retryTwoProfileOutboundEntry(entry);
 }
 
 function outboundRecoveryClass(primaryAction, statusLabel = "") {
@@ -12249,6 +12273,9 @@ function selectTwoProfileOutboundActionDirection(entry, action) {
 }
 
 async function retryTwoProfileOutboundEntry(entry) {
+  if (!(await restoreInviteRoomForConversationEntry(entry))) {
+    return;
+  }
   if (!selectTwoProfileOutboundActionDirection(entry, "retry")) {
     return;
   }
@@ -12278,6 +12305,9 @@ async function retryTwoProfileOutboundEntry(entry) {
 }
 
 async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
+  if (!(await restoreInviteRoomForConversationEntry(entry))) {
+    return;
+  }
   const input = productionTwoProfileInput();
   if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
     setProductionTwoProfileState("Endpoint refresh needs direction");
@@ -12333,6 +12363,9 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
 }
 
 async function cancelTwoProfileOutboundEntry(entry) {
+  if (!(await restoreInviteRoomForConversationEntry(entry))) {
+    return;
+  }
   if (!selectTwoProfileOutboundActionDirection(entry, "cancel")) {
     return;
   }
