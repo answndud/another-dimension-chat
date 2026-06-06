@@ -2719,10 +2719,13 @@ const peerPrivateRouteDraftsStorageKey = "ad.peerPrivateRouteDrafts.v1";
 const realOnionRecoveriesStorageKey = "ad.realOnionRecoveries.v1";
 const savedInviteRoomStorageLimit = 24;
 const savedRoomMetadataStartupSyncLimit = 8;
+const realOnionRecoveryPersistenceTtlMs = 24 * 60 * 60 * 1000;
 
-function normalizeStoredRealOnionRecovery(record) {
+function normalizeStoredRealOnionRecovery(record, options = {}) {
   const action = String(record?.action ?? "").trim();
   const reason = String(record?.reason ?? "").trim();
+  const now = Number.parseInt(options.now ?? Date.now(), 10) || Date.now();
+  const updatedAt = Number.parseInt(record?.updatedAt ?? 0, 10) || now;
   if (
     !new Set([
       "bootstrap-cancelled",
@@ -2735,11 +2738,15 @@ function normalizeStoredRealOnionRecovery(record) {
   ) {
     return null;
   }
+  if (updatedAt + realOnionRecoveryPersistenceTtlMs < now) {
+    return null;
+  }
   return {
     action,
     retryable: record?.retryable === true,
     waitCancellable: false,
     reason: /^[a-z0-9-]{1,96}$/.test(reason) ? reason : "persisted-recovery",
+    updatedAt,
   };
 }
 
@@ -2748,12 +2755,19 @@ function hydrateRealOnionRecoveries() {
   try {
     const parsed = JSON.parse(localStoreGet(realOnionRecoveriesStorageKey) ?? "{}");
     const entries = Object.entries(parsed && typeof parsed === "object" ? parsed : {});
+    const now = Date.now();
+    let dropped = false;
     for (const [roomKey, recovery] of entries.slice(-savedInviteRoomStorageLimit)) {
       const key = String(roomKey ?? "").trim();
-      const normalized = normalizeStoredRealOnionRecovery(recovery);
+      const normalized = normalizeStoredRealOnionRecovery(recovery, { now });
       if (key && normalized) {
         latestProductionTwoProfileRealOnionRecoveriesByRoom.set(key, normalized);
+      } else {
+        dropped = true;
       }
+    }
+    if (dropped || entries.length > savedInviteRoomStorageLimit) {
+      persistRealOnionRecoveries();
     }
   } catch {
     latestProductionTwoProfileRealOnionRecoveriesByRoom.clear();
@@ -2761,8 +2775,9 @@ function hydrateRealOnionRecoveries() {
 }
 
 function persistRealOnionRecoveries() {
+  const now = Date.now();
   const entries = [...latestProductionTwoProfileRealOnionRecoveriesByRoom.entries()]
-    .map(([roomKey, recovery]) => [String(roomKey ?? "").trim(), normalizeStoredRealOnionRecovery(recovery)])
+    .map(([roomKey, recovery]) => [String(roomKey ?? "").trim(), normalizeStoredRealOnionRecovery(recovery, { now })])
     .filter(([roomKey, recovery]) => roomKey && recovery)
     .slice(-savedInviteRoomStorageLimit);
   localStoreSet(realOnionRecoveriesStorageKey, JSON.stringify(Object.fromEntries(entries)));
@@ -4415,7 +4430,10 @@ function rememberRealOnionFieldTestResult(roomInput, result) {
       refreshSessionStatus: true,
     });
   } else if (recovery?.action && recovery.action !== "none") {
-    latestProductionTwoProfileRealOnionRecoveriesByRoom.set(fingerprint, recovery);
+    latestProductionTwoProfileRealOnionRecoveriesByRoom.set(fingerprint, {
+      ...recovery,
+      updatedAt: Date.now(),
+    });
     persistRealOnionRecoveries();
   } else {
     latestProductionTwoProfileRealOnionRecoveriesByRoom.delete(fingerprint);
@@ -4437,10 +4455,20 @@ function latestRealOnionRecoveryForInput(input = productionTwoProfileInput()) {
     return productionTwoProfileRealOnionRecoveryPlan(result);
   }
   const fingerprint = twoProfileSessionStatusFingerprint(input);
-  return fingerprint
-    ? latestProductionTwoProfileRealOnionRecoveriesByRoom.get(fingerprint) ??
-        productionTwoProfileRealOnionRecoveryPlan(null)
-    : productionTwoProfileRealOnionRecoveryPlan(null);
+  if (!fingerprint) {
+    return productionTwoProfileRealOnionRecoveryPlan(null);
+  }
+  const recovery = latestProductionTwoProfileRealOnionRecoveriesByRoom.get(fingerprint) ?? null;
+  if (!recovery) {
+    return productionTwoProfileRealOnionRecoveryPlan(null);
+  }
+  const normalized = normalizeStoredRealOnionRecovery(recovery);
+  if (!normalized) {
+    latestProductionTwoProfileRealOnionRecoveriesByRoom.delete(fingerprint);
+    persistRealOnionRecoveries();
+    return productionTwoProfileRealOnionRecoveryPlan(null);
+  }
+  return normalized;
 }
 
 function realOnionWaitCanceledForInput(input = productionTwoProfileInput()) {
