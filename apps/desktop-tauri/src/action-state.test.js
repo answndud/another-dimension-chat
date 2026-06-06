@@ -325,6 +325,67 @@ test("real onion exhausted bootstrap with bridge-capable build but no config poi
   });
 });
 
+test("real onion exhausted managed bridge bootstrap points to bridge or transport refresh", () => {
+  const result = {
+    manual_network_permission_enabled: true,
+    next_blocker: "ProfileABootstrapTimeout",
+    blockers: ["BootstrapTimeout"],
+    bootstrap_retry_limit: 3,
+    profile_a_bootstrap_attempts: 3,
+    profile_b_bootstrap_attempts: 0,
+    bridge_capable_build: true,
+    bridge_configured_for_bootstrap: true,
+    event_summary: [
+      "bootstrap_diagnostic phase=timeout profile=redacted bridge_mode=managed_transport_bridge bridge_lines=2 managed_transport_count=1 pt_binary_configured=true timeout_seconds=120 next_action=retry-different-network-or-refresh-bridge-pt",
+    ],
+    network_io_attempted: true,
+    transport_io_opened: false,
+    runtime_messaging_enabled: false,
+  };
+
+  assert.deepEqual(productionTwoProfileRealOnionRecoveryPlan(result), {
+    action: "prepare-network-or-bridge",
+    retryable: true,
+    waitCancellable: false,
+    reason: "network-or-bridge-refresh-transport",
+  });
+  assert.deepEqual(productionTwoProfileRealOnionUserView(result), {
+    state: "Private delivery needs network change",
+    profiles: "Room is saved.",
+    session: "Delivery network did not finish starting.",
+    message:
+      "Refresh the private bridge config or replace the pluggable transport binary, then retry private delivery.",
+    boundary:
+      "No message was sent after bridge bootstrap exhausted retries with pluggable transport configured.",
+  });
+});
+
+test("real onion exhausted direct bridge bootstrap points to bridge refresh", () => {
+  const result = {
+    manual_network_permission_enabled: true,
+    next_blocker: "ProfileABootstrapTimeout",
+    blockers: ["BootstrapTimeout"],
+    bootstrap_retry_limit: 3,
+    profile_a_bootstrap_attempts: 3,
+    profile_b_bootstrap_attempts: 0,
+    bridge_capable_build: true,
+    bridge_configured_for_bootstrap: true,
+    event_summary: [
+      "bootstrap_diagnostic phase=timeout profile=redacted bridge_mode=direct_bridge bridge_lines=1 managed_transport_count=0 pt_binary_configured=false timeout_seconds=12 next_action=retry-different-network-or-refresh-bridge",
+    ],
+    network_io_attempted: true,
+    transport_io_opened: false,
+    runtime_messaging_enabled: false,
+  };
+
+  assert.deepEqual(productionTwoProfileRealOnionRecoveryPlan(result), {
+    action: "prepare-network-or-bridge",
+    retryable: true,
+    waitCancellable: false,
+    reason: "network-or-bridge-refresh-config",
+  });
+});
+
 test("real onion bootstrap cancel remains retryable without an active wait", () => {
   const result = {
     manual_network_permission_enabled: true,

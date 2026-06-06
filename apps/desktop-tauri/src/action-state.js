@@ -1479,6 +1479,14 @@ export function productionTwoProfileRealOnionRecoveryPlan(result) {
       reason: "network-or-bridge-invalid-transport",
     };
   }
+  const diagnosticText = (Array.isArray(result?.event_summary) ? result.event_summary : [])
+    .filter((event) => String(event).includes("bootstrap_diagnostic"))
+    .at(-1) ?? "";
+  const diagnosticNextAction =
+    String(diagnosticText)
+      .split(/\s+/)
+      .find((part) => part.startsWith("next_action="))
+      ?.slice("next_action=".length) ?? "";
   if (
     text.includes("bootstraptimeout") ||
     text.includes("bootstrapnetworkaccessfailed") ||
@@ -1506,6 +1514,20 @@ export function productionTwoProfileRealOnionRecoveryPlan(result) {
         retryable: true,
         waitCancellable: false,
         reason: "network-or-bridge-config",
+      };
+    }
+    if (attemptsExhausted && result?.bridge_configured_for_bootstrap === true) {
+      const reason =
+        diagnosticNextAction === "retry-different-network-or-refresh-bridge-pt"
+          ? "network-or-bridge-refresh-transport"
+          : diagnosticNextAction === "retry-different-network-or-refresh-bridge"
+            ? "network-or-bridge-refresh-config"
+            : "network-or-bridge-different-network";
+      return {
+        action: "prepare-network-or-bridge",
+        retryable: true,
+        waitCancellable: false,
+        reason,
       };
     }
     return {
@@ -1625,25 +1647,40 @@ export function productionTwoProfileRealOnionUserView(result) {
     const bridgeConfigInvalid = recovery.reason === "network-or-bridge-invalid-config";
     const bridgeTransportMissing = recovery.reason === "network-or-bridge-transport";
     const bridgeTransportInvalid = recovery.reason === "network-or-bridge-invalid-transport";
+    const bridgeTransportRefresh = recovery.reason === "network-or-bridge-refresh-transport";
+    const bridgeConfigRefresh = recovery.reason === "network-or-bridge-refresh-config";
+    const differentNetwork = recovery.reason === "network-or-bridge-different-network";
     return {
       state: "Private delivery needs network change",
       profiles: "Room is saved.",
       session: "Delivery network did not finish starting.",
       message: bridgeConfigInvalid
         ? "Replace the private bridge config, then retry private delivery."
+        : bridgeTransportRefresh
+        ? "Refresh the private bridge config or replace the pluggable transport binary, then retry private delivery."
         : bridgeTransportInvalid
         ? "Replace the pluggable transport binary path, then retry private delivery."
         : bridgeTransportMissing
         ? "Configure the pluggable transport binary, then retry private delivery."
+        : bridgeConfigRefresh
+        ? "Refresh the private bridge config or change network, then retry private delivery."
+        : differentNetwork
+        ? "Change network, then retry private delivery."
         : bridgeConfigMissing
         ? "Change network or add private bridge config, then retry private delivery."
         : "Change network or use a bridge-capable build, then retry private delivery.",
       boundary: bridgeConfigInvalid
         ? "No message was sent because the saved bridge config is invalid."
+        : bridgeTransportRefresh
+        ? "No message was sent after bridge bootstrap exhausted retries with pluggable transport configured."
         : bridgeTransportInvalid
         ? "No message was sent because the saved pluggable transport binary path is invalid."
         : bridgeTransportMissing
         ? "No message was sent because pluggable transport is not configured."
+        : bridgeConfigRefresh
+        ? "No message was sent after bridge bootstrap exhausted retries."
+        : differentNetwork
+        ? "No message was sent after network bootstrap exhausted retries."
         : bridgeConfigMissing
         ? "No message was sent and no bridge config was used."
         : "No message was sent and this build did not report bridge support.",
