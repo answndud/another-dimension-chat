@@ -10456,7 +10456,7 @@ fn managed_bridge_bootstrap_error_retryable(
 }
 
 #[cfg(feature = "manual-onion-client-attempt")]
-fn managed_bridge_bootstrap_retry_should_refresh_cache(
+fn managed_bridge_bootstrap_retry_should_refresh_state_cache(
     redacted_bootstrap_error: &str,
     bridge_config: Option<&another_dimension_transport::arti_adapter_spike::AppPrivateBridgeConfig>,
 ) -> bool {
@@ -10467,18 +10467,25 @@ fn managed_bridge_bootstrap_retry_should_refresh_cache(
 }
 
 #[cfg(feature = "manual-onion-client-attempt")]
-fn refresh_real_onion_bootstrap_cache_for_retry(
+fn refresh_real_onion_bootstrap_state_cache_for_retry(
+    app_data_root: &std::path::Path,
     app_cache_root: &std::path::Path,
     profile: &str,
     event_summary: &mut Vec<String>,
 ) {
+    let state_root = app_data_root
+        .join("profiles")
+        .join(profile)
+        .join("real-onion-roundtrip")
+        .join("arti-state");
     let cache_root = app_cache_root
         .join("profiles")
         .join(profile)
         .join("real-onion-roundtrip")
         .join("arti-cache");
+    let _ = std::fs::remove_dir_all(state_root);
     let _ = std::fs::remove_dir_all(cache_root);
-    event_summary.push("bootstrap_retry_cache_refreshed profile=redacted".to_string());
+    event_summary.push("bootstrap_retry_state_cache_refreshed profile=redacted".to_string());
 }
 
 #[cfg(feature = "manual-onion-client-attempt")]
@@ -10721,8 +10728,12 @@ async fn build_real_onion_roundtrip_owner_with_retries(
                 if !retryable {
                     return Err((last_error, attempt));
                 }
-                if managed_bridge_bootstrap_retry_should_refresh_cache(&last_error, bridge_config) {
-                    refresh_real_onion_bootstrap_cache_for_retry(
+                if managed_bridge_bootstrap_retry_should_refresh_state_cache(
+                    &last_error,
+                    bridge_config,
+                ) {
+                    refresh_real_onion_bootstrap_state_cache_for_retry(
+                        app_data_root,
                         app_cache_root,
                         profile,
                         event_summary,
