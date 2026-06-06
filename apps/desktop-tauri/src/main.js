@@ -6943,17 +6943,19 @@ async function continueAfterPeerPrivateRouteSaved(input = productionTwoProfileIn
   if (!twoProfilePeerEndpointState(input).ready) {
     return false;
   }
-  const pending = latestTwoProfileRetryableOutboundEntry(input);
-  if (pending) {
-    clearPrivateRouteFollowup();
-    await retryTwoProfileOutboundEntry(pending);
-    return true;
-  }
   if (!privateRouteFollowupMatchesRoom(input)) {
     return false;
   }
   const followup = pendingPrivateRouteFollowup;
   clearPrivateRouteFollowup();
+  if (followup.action === "retry-outbound") {
+    const pending = latestTwoProfileRetryableOutboundEntry(input);
+    if (pending) {
+      await retryTwoProfileOutboundEntry(pending);
+      return true;
+    }
+    return false;
+  }
   if (followup.action === "receive") {
     await startProductionTwoProfileOnionReceive();
     return true;
