@@ -7171,7 +7171,8 @@ async fn run_production_onion_outbound_envelope_send_attempt(
                                     next_blocker = "AwaitingRemoteAck".to_string();
                                 }
                                 Err(error) => {
-                                    next_blocker = format!("{error:?}");
+                                    next_blocker =
+                                        outbound_transport_error_next_blocker(error).to_string();
                                 }
                             }
                         }
@@ -7404,7 +7405,9 @@ async fn run_production_onion_endpoint_update_control_send_stored_endpoint_attem
                                             next_blocker = "AwaitingRemoteControlImport".to_string();
                                         }
                                         Err(error) => {
-                                            next_blocker = format!("{error:?}");
+                                            next_blocker =
+                                                outbound_transport_error_next_blocker(error)
+                                                    .to_string();
                                         }
                                     }
                                 }
@@ -7877,6 +7880,31 @@ fn send_result_recommends_peer_endpoint_refresh(
 ) -> bool {
     let blocker = result.next_blocker.to_ascii_lowercase();
     blocker.contains("endpoint") || blocker.contains("stale") || blocker.contains("refresh")
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+fn outbound_transport_error_next_blocker(
+    error: another_dimension_transport::TransportRuntimeError,
+) -> &'static str {
+    use another_dimension_transport::TransportRuntimeError;
+
+    match error {
+        TransportRuntimeError::RuntimeNetworkDisabled
+        | TransportRuntimeError::BootstrapCancelled
+        | TransportRuntimeError::BootstrapTimeout
+        | TransportRuntimeError::BootstrapNetworkAccessFailed
+        | TransportRuntimeError::BootstrapLocalStateFailed
+        | TransportRuntimeError::BootstrapConfigurationFailed
+        | TransportRuntimeError::BootstrapUnsupported
+        | TransportRuntimeError::BootstrapProtocolFailed
+        | TransportRuntimeError::BootstrapTransientFailure
+        | TransportRuntimeError::CensorshipOrBridgeRequired
+        | TransportRuntimeError::StateDirectoryPermissionDenied
+        | TransportRuntimeError::LogRedactionPreflightFailed => "PersistentClientNotReady",
+        TransportRuntimeError::OnionServiceKeyUnavailable
+        | TransportRuntimeError::OnionServiceLaunchFailed => "LocalOnionEndpointNotReady",
+        TransportRuntimeError::SendFailed | TransportRuntimeError::ReceiveFailed => "peer-offline",
+    }
 }
 
 fn apply_outbound_message_send_attempt_result(
