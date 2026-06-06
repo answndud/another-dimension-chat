@@ -455,6 +455,7 @@ let latestProductionTwoProfileSafety = null;
 let latestProductionTwoProfileSuccess = null;
 let latestProductionTwoProfileOnionEndpoints = null;
 const latestProductionTwoProfileRealOnionResultsByRoom = new Map();
+const latestProductionTwoProfileRealOnionRecoveriesByRoom = new Map();
 let latestProductionOnionBridgeConfigStatus = null;
 const latestProductionTwoProfileRealOnionWaitCanceledFingerprints = new Set();
 let activeProductionTwoProfileRealOnionInput = null;
@@ -782,6 +783,7 @@ function localStoreKey(key) {
       key === "ad.inviteRooms.v1" ||
       key === "ad.receiveIntentRooms.v1" ||
       key === "ad.localPrivateRouteCodes.v1" ||
+      key === "ad.realOnionRecoveries.v1" ||
       key === "ad.peerPrivateRouteDrafts.v1" ||
       key === themeStorageKey ||
       key === languageStorageKey)
@@ -2714,8 +2716,57 @@ const receiveIntentRoomsStorageKey = "ad.receiveIntentRooms.v1";
 const localPrivateRouteCodesStorageKey = "ad.localPrivateRouteCodes.v1";
 const localPrivateRouteLifecycleStorageKey = "ad.localPrivateRouteLifecycle.v1";
 const peerPrivateRouteDraftsStorageKey = "ad.peerPrivateRouteDrafts.v1";
+const realOnionRecoveriesStorageKey = "ad.realOnionRecoveries.v1";
 const savedInviteRoomStorageLimit = 24;
 const savedRoomMetadataStartupSyncLimit = 8;
+
+function normalizeStoredRealOnionRecovery(record) {
+  const action = String(record?.action ?? "").trim();
+  const reason = String(record?.reason ?? "").trim();
+  if (
+    !new Set([
+      "bootstrap-cancelled",
+      "enable-private-delivery",
+      "inspect-diagnostics",
+      "prepare-network-or-bridge",
+      "retry-bootstrap",
+      "retry-private-delivery",
+    ]).has(action)
+  ) {
+    return null;
+  }
+  return {
+    action,
+    retryable: record?.retryable === true,
+    waitCancellable: false,
+    reason: /^[a-z0-9-]{1,96}$/.test(reason) ? reason : "persisted-recovery",
+  };
+}
+
+function hydrateRealOnionRecoveries() {
+  latestProductionTwoProfileRealOnionRecoveriesByRoom.clear();
+  try {
+    const parsed = JSON.parse(localStoreGet(realOnionRecoveriesStorageKey) ?? "{}");
+    const entries = Object.entries(parsed && typeof parsed === "object" ? parsed : {});
+    for (const [roomKey, recovery] of entries.slice(-savedInviteRoomStorageLimit)) {
+      const key = String(roomKey ?? "").trim();
+      const normalized = normalizeStoredRealOnionRecovery(recovery);
+      if (key && normalized) {
+        latestProductionTwoProfileRealOnionRecoveriesByRoom.set(key, normalized);
+      }
+    }
+  } catch {
+    latestProductionTwoProfileRealOnionRecoveriesByRoom.clear();
+  }
+}
+
+function persistRealOnionRecoveries() {
+  const entries = [...latestProductionTwoProfileRealOnionRecoveriesByRoom.entries()]
+    .map(([roomKey, recovery]) => [String(roomKey ?? "").trim(), normalizeStoredRealOnionRecovery(recovery)])
+    .filter(([roomKey, recovery]) => roomKey && recovery)
+    .slice(-savedInviteRoomStorageLimit);
+  localStoreSet(realOnionRecoveriesStorageKey, JSON.stringify(Object.fromEntries(entries)));
+}
 
 function hydratePrivateRouteMap(storageKey, target) {
   target.clear();
@@ -2786,6 +2837,7 @@ function persistPrivateRouteLifecycleMap(storageKey, source) {
 hydratePrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
 hydratePrivateRouteLifecycleMap(localPrivateRouteLifecycleStorageKey, localPrivateRouteLifecycleByRoom);
 hydratePrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
+hydrateRealOnionRecoveries();
 
 function rememberConnectionCodeRole(code, role) {
   const normalizedRole = role === "inviter" ? "inviter" : "joiner";
@@ -2959,11 +3011,15 @@ function forgetInviteRoom(code) {
       activeLocalPrivateRouteCodesByRoom.delete(roomKey);
       localPrivateRouteLifecycleByRoom.delete(roomKey);
       peerPrivateRouteDraftsByRoom.delete(roomKey);
+      latestProductionTwoProfileRealOnionResultsByRoom.delete(roomKey);
+      latestProductionTwoProfileRealOnionRecoveriesByRoom.delete(roomKey);
+      latestProductionTwoProfileRealOnionWaitCanceledFingerprints.delete(roomKey);
     }
   }
   persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
   persistPrivateRouteLifecycleMap(localPrivateRouteLifecycleStorageKey, localPrivateRouteLifecycleByRoom);
   persistPrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
+  persistRealOnionRecoveries();
   const rooms = savedInviteRooms().filter((room) => room.code !== trimmedCode);
   localStoreSet(inviteRoomsStorageKey, JSON.stringify(roomListStoragePayload(rooms)));
   renderSavedInviteRooms();
@@ -3079,8 +3135,7 @@ function savedInviteRoomRetryableState(room) {
 
 function savedInviteRoomRealOnionRecoveryView(room) {
   const input = savedInviteRoomInput(room);
-  const result = latestRealOnionFieldTestResult(input);
-  const recovery = productionTwoProfileRealOnionRecoveryPlan(result);
+  const recovery = latestRealOnionRecoveryForInput(input);
   if (!recovery?.action || recovery.action === "none") {
     return null;
   }
@@ -4345,6 +4400,7 @@ function rememberRealOnionFieldTestResult(roomInput, result) {
     roomFingerprint: fingerprint,
     result,
   });
+  const recovery = productionTwoProfileRealOnionRecoveryPlan(result);
   for (const key of latestProductionTwoProfileRealOnionResultsByRoom.keys()) {
     if (latestProductionTwoProfileRealOnionResultsByRoom.size <= savedInviteRoomStorageLimit) {
       break;
@@ -4353,9 +4409,17 @@ function rememberRealOnionFieldTestResult(roomInput, result) {
     latestProductionTwoProfileRealOnionWaitCanceledFingerprints.delete(key);
   }
   if (realOnionResultConfirmsExternalPeerDelivery(result)) {
+    latestProductionTwoProfileRealOnionRecoveriesByRoom.delete(fingerprint);
+    persistRealOnionRecoveries();
     void refreshSavedInviteRoomMetadataForFingerprint(fingerprint, {
       refreshSessionStatus: true,
     });
+  } else if (recovery?.action && recovery.action !== "none") {
+    latestProductionTwoProfileRealOnionRecoveriesByRoom.set(fingerprint, recovery);
+    persistRealOnionRecoveries();
+  } else {
+    latestProductionTwoProfileRealOnionRecoveriesByRoom.delete(fingerprint);
+    persistRealOnionRecoveries();
   }
   return true;
 }
@@ -4365,6 +4429,18 @@ function latestRealOnionFieldTestResult(input = productionTwoProfileInput()) {
   return fingerprint
     ? latestProductionTwoProfileRealOnionResultsByRoom.get(fingerprint)?.result ?? null
     : null;
+}
+
+function latestRealOnionRecoveryForInput(input = productionTwoProfileInput()) {
+  const result = latestRealOnionFieldTestResult(input);
+  if (result) {
+    return productionTwoProfileRealOnionRecoveryPlan(result);
+  }
+  const fingerprint = twoProfileSessionStatusFingerprint(input);
+  return fingerprint
+    ? latestProductionTwoProfileRealOnionRecoveriesByRoom.get(fingerprint) ??
+        productionTwoProfileRealOnionRecoveryPlan(null)
+    : productionTwoProfileRealOnionRecoveryPlan(null);
 }
 
 function realOnionWaitCanceledForInput(input = productionTwoProfileInput()) {
@@ -4469,12 +4545,15 @@ function clearRealOnionRecoveryAfterExplicitBridgeChange(input = productionTwoPr
   const fingerprint = twoProfileSessionStatusFingerprint(twoProfileRoomIdentityInput(input));
   if (
     !fingerprint ||
-    !latestProductionTwoProfileRealOnionResultsByRoom.has(fingerprint)
+    (!latestProductionTwoProfileRealOnionResultsByRoom.has(fingerprint) &&
+      !latestProductionTwoProfileRealOnionRecoveriesByRoom.has(fingerprint))
   ) {
     return false;
   }
   latestProductionTwoProfileRealOnionResultsByRoom.delete(fingerprint);
+  latestProductionTwoProfileRealOnionRecoveriesByRoom.delete(fingerprint);
   latestProductionTwoProfileRealOnionWaitCanceledFingerprints.delete(fingerprint);
+  persistRealOnionRecoveries();
   refreshFieldTestReport();
   return true;
 }
@@ -10066,8 +10145,7 @@ function applyProductionActionState() {
         : t("privateDeliveryPermissionRequired"),
     false,
   );
-  const realOnionResult = latestRealOnionFieldTestResult(twoProfile);
-  const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(realOnionResult);
+  const realOnionRecovery = latestRealOnionRecoveryForInput(twoProfile);
   const realOnionWaitCanceled = realOnionWaitCanceledForInput(twoProfile);
   const realOnionRoundtripActive = realOnionRoundtripActiveForInput(twoProfile);
   const realOnionRunAction = realOnionRecoveryRunAction(realOnionRecovery);
