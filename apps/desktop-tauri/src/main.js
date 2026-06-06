@@ -2864,7 +2864,7 @@ function savedInviteRoomListAction(room) {
     if (action === "refresh-and-retry") {
       return { action, labelKey: "refreshAndRetry" };
     }
-    return { action: "review-send", labelKey: "roomActionReviewSend" };
+    return { action: "retry", labelKey: "retrySend" };
   }
   if (savedInviteRoomReceiveState(room) === "paused") {
     return { action: "start-receiving", labelKey: "startReceiving" };
@@ -2892,6 +2892,17 @@ async function runSavedInviteRoomListAction(room, action) {
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
+    } else {
+      showLatestRetryableOutboundNotice(productionTwoProfileInput());
+    }
+    return true;
+  }
+  if (action === "retry") {
+    const pending = latestVisibleTwoProfileRetryableOutboundEntry(productionTwoProfileInput());
+    if (pending) {
+      selectTwoProfileConversationEntry(pending);
+      showRetryableTwoProfileOutboundNotice(pending);
+      await retryTwoProfileOutboundEntry(pending);
     } else {
       showLatestRetryableOutboundNotice(productionTwoProfileInput());
     }
