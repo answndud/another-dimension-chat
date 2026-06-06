@@ -143,6 +143,18 @@ test("outbound failure classes keep missing route separate from stale endpoint",
     outboundFailureKind: "receive-timeout",
     outboundRetryable: true,
   };
+  const bootstrap = {
+    statuses: new Set(["sent"]),
+    outboundDeliveryState: "failed",
+    outboundFailureKind: "PersistentClientNotReady",
+    outboundRetryable: true,
+  };
+  const missingMessage = {
+    statuses: new Set(["sent"]),
+    outboundDeliveryState: "failed",
+    outboundFailureKind: "StoredOutboundEnvelopeRequired",
+    outboundRetryable: true,
+  };
 
   assert.equal(productionTwoProfileOutboundStatusLabel(missingRoute), "route missing");
   assert.equal(productionTwoProfileOutboundNeedsEndpointRefresh(missingRoute), false);
@@ -184,6 +196,22 @@ test("outbound failure classes keep missing route separate from stale endpoint",
     labelKey: "retrySend",
     noticeKey: "sendFailedGeneric",
     recoveryKey: "sendRecoveryTimeout",
+  });
+
+  assert.equal(productionTwoProfileOutboundStatusLabel(bootstrap), "Tor bootstrap");
+  assert.deepEqual(productionTwoProfileOutboundPrimaryAction(bootstrap), {
+    action: "start-receiving",
+    labelKey: "retryNetwork",
+    noticeKey: "chatNoticeReceiveStopped",
+    recoveryKey: "sendRecoveryTorBootstrap",
+  });
+
+  assert.equal(productionTwoProfileOutboundStatusLabel(missingMessage), "message missing");
+  assert.deepEqual(productionTwoProfileOutboundPrimaryAction(missingMessage), {
+    action: "retry",
+    labelKey: "retrySend",
+    noticeKey: "sendFailedGeneric",
+    recoveryKey: "sendRecoveryGeneric",
   });
 });
 

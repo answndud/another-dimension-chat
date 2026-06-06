@@ -431,6 +431,9 @@ export function productionTwoProfileOutboundStatusLabel(entry) {
     if (failure.includes("timeout")) {
       return "send timeout";
     }
+    if (failure.includes("storedoutboundenveloperequired")) {
+      return "message missing";
+    }
     if (
       failure.includes("peer-endpoint-missing") ||
       failure.includes("endpoint-missing") ||
@@ -538,10 +541,18 @@ export function productionTwoProfileOutboundPrimaryAction(entry) {
   }
   if (status === "Tor bootstrap") {
     return {
-      action: "prepare-private-route",
-      labelKey: "preparePrivateRoute",
-      noticeKey: "privateDeliveryRouteNeeded",
+      action: "start-receiving",
+      labelKey: "retryNetwork",
+      noticeKey: "chatNoticeReceiveStopped",
       recoveryKey: "sendRecoveryTorBootstrap",
+    };
+  }
+  if (status === "message missing") {
+    return {
+      action: "retry",
+      labelKey: "retrySend",
+      noticeKey: "sendFailedGeneric",
+      recoveryKey: "sendRecoveryGeneric",
     };
   }
   if (status === "peer offline") {
