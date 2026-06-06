@@ -895,8 +895,8 @@ function localizedSendFailureMessage(error) {
   if (sendFailureNeedsEndpointRefresh(text)) {
     return t("staleEndpoint");
   }
-  if (text.includes("persistentclientnotready") || text.includes("bootstrap")) {
-    return t("torBootstrap");
+  if (sendFailureNeedsNetworkRetry(text)) {
+    return t("retryNetwork");
   }
   if (text.includes("manualnetworkpermission") || text.includes("permission")) {
     return t("permissionOff");
@@ -923,6 +923,9 @@ function localizedSendAttemptMessage(result) {
   }
   if (result?.peer_endpoint_refresh_recommended || result?.retry_recommended_after_endpoint_refresh) {
     return t("chatNoticeRefreshAddress");
+  }
+  if (sendFailureNeedsNetworkRetry(failureText)) {
+    return t("retryNetwork");
   }
   return localizedSendFailureMessage(failureText);
 }
@@ -951,6 +954,10 @@ function setChatDeliveryNoticeForSendAttempt(result, input = productionTwoProfil
   }
   if (result?.peer_endpoint_refresh_recommended || result?.retry_recommended_after_endpoint_refresh) {
     setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
+    return;
+  }
+  if (sendFailureNeedsNetworkRetry(failureText)) {
+    setChatDeliveryNoticeByKey("retryNetwork", "warning", input);
     return;
   }
   const key = chatNoticeForSendReceiveText(failureText)?.key ?? "sendFailedGeneric";
@@ -987,6 +994,11 @@ function sendFailureNeedsEndpointRefresh(text) {
   return !sendFailureNeedsRouteSetup(text) && (text.includes("stale") || text.includes("refresh"));
 }
 
+function sendFailureNeedsNetworkRetry(text) {
+  const normalized = String(text ?? "").toLowerCase();
+  return normalized.includes("persistentclientnotready") || normalized.includes("bootstrap");
+}
+
 function setChatDeliveryNoticeForOutboundFailureKind(failureKind, input = productionTwoProfileInput()) {
   const normalized = String(failureKind ?? "").toLowerCase();
   if (normalized.includes("manualnetworkpermission")) {
@@ -994,7 +1006,7 @@ function setChatDeliveryNoticeForOutboundFailureKind(failureKind, input = produc
     return;
   }
   if (normalized.includes("persistentclientnotready")) {
-    setChatDeliveryNoticeByKey("sendFailedGeneric", "warning", input);
+    setChatDeliveryNoticeByKey("retryNetwork", "warning", input);
     return;
   }
   if (normalized.includes("localonionendpointnotready")) {

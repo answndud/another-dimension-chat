@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  chatNoticeForSendReceiveText,
   productionInviteCodeProfiles,
   productionInviteRoomConversationMetadata,
   productionOnionReceiveLoopRefreshPlan,
@@ -228,6 +229,21 @@ test("outbound failure classes keep missing route separate from stale endpoint",
     labelKey: "retrySend",
     noticeKey: "sendFailedGeneric",
     recoveryKey: "sendRecoveryGeneric",
+  });
+});
+
+test("send receive notices separate bootstrap retry from route setup", () => {
+  assert.deepEqual(chatNoticeForSendReceiveText("PersistentClientNotReady"), {
+    key: "retryNetwork",
+    tone: "warning",
+  });
+  assert.deepEqual(chatNoticeForSendReceiveText("bootstrap timeout"), {
+    key: "retryNetwork",
+    tone: "warning",
+  });
+  assert.deepEqual(chatNoticeForSendReceiveText("private route is not ready"), {
+    key: "torBootstrap",
+    tone: "warning",
   });
 });
 
