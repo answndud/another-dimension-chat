@@ -3077,9 +3077,56 @@ function savedInviteRoomRetryableState(room) {
   return { key: "retry-send", label: t("roomStateRetrySend") };
 }
 
+function savedInviteRoomRealOnionRecoveryView(room) {
+  const input = savedInviteRoomInput(room);
+  const result = latestRealOnionFieldTestResult(input);
+  const recovery = productionTwoProfileRealOnionRecoveryPlan(result);
+  if (!recovery?.action || recovery.action === "none") {
+    return null;
+  }
+  if (recovery.action === "enable-private-delivery") {
+    return manualNetworkPermission
+      ? null
+      : {
+          action: "real-onion-enable-private-delivery",
+          labelKey: "enablePrivateDelivery",
+          state: { key: "enable-delivery", label: t("roomStateEnableDelivery") },
+        };
+  }
+  const runAction = realOnionRecoveryRunAction(recovery);
+  if (!runAction.ready) {
+    return null;
+  }
+  if (runAction.opensNetworkSettings) {
+    return {
+      action: "real-onion-network-settings",
+      labelKey: runAction.labelKey,
+      recovery,
+      state: { key: "setup-delivery", label: t(runAction.labelKey) },
+    };
+  }
+  if (runAction.labelKey === "retryNetwork") {
+    return {
+      action: "real-onion-retry",
+      labelKey: runAction.labelKey,
+      recovery,
+      state: { key: "retry-network", label: t(runAction.labelKey) },
+    };
+  }
+  return {
+    action: "real-onion-retry",
+    labelKey: runAction.labelKey,
+    recovery,
+    state: { key: "retry-send", label: t(runAction.labelKey) },
+  };
+}
+
 function savedInviteRoomResumePriority(room) {
   if (savedInviteRoomHasRetryableOutbound(room)) {
     return 30;
+  }
+  if (savedInviteRoomRealOnionRecoveryView(room)) {
+    return 25;
   }
   if (savedInviteRoomReceiveState(room) === "paused") {
     return 20;
@@ -3105,6 +3152,10 @@ function savedInviteRoomState(room, options = {}) {
   const view = (() => {
     if (savedInviteRoomHasRetryableOutbound(room)) {
       return savedInviteRoomRetryableState(room);
+    }
+    const realOnionRecovery = savedInviteRoomRealOnionRecoveryView(room);
+    if (realOnionRecovery) {
+      return realOnionRecovery.state;
     }
     if (receiveState === "listening") {
       return { key: "listening", label: t("roomStateListening") };
@@ -3150,6 +3201,10 @@ function savedInviteRoomListAction(room) {
       return { action, labelKey: "retryNetwork" };
     }
     return { action: "retry", labelKey: "retrySend" };
+  }
+  const realOnionRecovery = savedInviteRoomRealOnionRecoveryView(room);
+  if (realOnionRecovery) {
+    return { action: realOnionRecovery.action, labelKey: realOnionRecovery.labelKey };
   }
   if (savedInviteRoomReceiveState(room) === "paused") {
     return { action: "start-receiving", labelKey: "startReceiving" };
@@ -3336,6 +3391,29 @@ async function runSavedInviteRoomListAction(room, action) {
   }
   if (action === "start-receiving") {
     await startProductionTwoProfileOnionReceive();
+    return true;
+  }
+  if (action === "real-onion-enable-private-delivery") {
+    enablePrivateDeliveryPermission();
+    renderSavedInviteRooms();
+    return true;
+  }
+  if (action === "real-onion-network-settings") {
+    const input = productionTwoProfileInput();
+    const recovery = savedInviteRoomRealOnionRecoveryView(room)?.recovery;
+    const runAction = realOnionRecoveryRunAction(recovery);
+    if (runAction.opensNetworkSettings) {
+      openPrivateDeliveryBridgeSettings(recovery, input);
+      return true;
+    }
+    if (runAction.ready) {
+      await runProductionTwoProfileRealOnionRoundtrip();
+      return true;
+    }
+    return true;
+  }
+  if (action === "real-onion-retry") {
+    await runProductionTwoProfileRealOnionRoundtrip();
     return true;
   }
   return false;
