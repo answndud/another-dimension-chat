@@ -3505,6 +3505,15 @@ function fieldTestRealOnionNextActionKey(parsed) {
     case "bootstrap-cancelled":
       return "fieldTestNextRetryNetwork";
     case "prepare-network-or-bridge":
+      if (parsed.real_onion_recovery_reason === "network-or-bridge-refresh-transport") {
+        return "fieldTestNextRefreshBridgeTransport";
+      }
+      if (parsed.real_onion_recovery_reason === "network-or-bridge-refresh-config") {
+        return "fieldTestNextRefreshBridge";
+      }
+      if (parsed.real_onion_recovery_reason === "network-or-bridge-different-network") {
+        return "fieldTestNextDifferentNetwork";
+      }
       return "fieldTestNextPrepareNetworkOrBridge";
     case "inspect-diagnostics":
       return "fieldTestNextInspectDiagnostics";
