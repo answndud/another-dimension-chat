@@ -207,9 +207,9 @@ test("outbound failure classes keep missing route separate from stale endpoint",
 
   assert.equal(productionTwoProfileOutboundStatusLabel(bootstrap), "Tor bootstrap");
   assert.deepEqual(productionTwoProfileOutboundPrimaryAction(bootstrap), {
-    action: "start-receiving",
+    action: "retry-network",
     labelKey: "retryNetwork",
-    noticeKey: "chatNoticeReceiveStopped",
+    noticeKey: "sendFailedGeneric",
     recoveryKey: "sendRecoveryTorBootstrap",
   });
 

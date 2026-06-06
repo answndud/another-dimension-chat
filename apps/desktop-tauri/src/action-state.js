@@ -552,9 +552,9 @@ export function productionTwoProfileOutboundPrimaryAction(entry) {
   }
   if (status === "Tor bootstrap") {
     return {
-      action: "start-receiving",
+      action: "retry-network",
       labelKey: "retryNetwork",
-      noticeKey: "chatNoticeReceiveStopped",
+      noticeKey: "sendFailedGeneric",
       recoveryKey: "sendRecoveryTorBootstrap",
     };
   }
