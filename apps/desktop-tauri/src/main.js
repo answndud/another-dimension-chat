@@ -1020,6 +1020,20 @@ function localizedTwoProfileUserViewText(value) {
     "No message was sent and no bridge config was used.": "userNoMessageSentNoBridgeConfig",
     "Replace the private bridge config, then retry private delivery.": "userReplaceBridgeConfig",
     "No message was sent because the saved bridge config is invalid.": "userNoMessageSentInvalidBridgeConfig",
+    "Refresh the private bridge config or replace the pluggable transport binary, then retry private delivery.":
+      "userRefreshBridgeTransport",
+    "No message was sent after bridge bootstrap exhausted retries with pluggable transport configured.":
+      "userNoMessageSentBridgeTransportRetries",
+    "Replace the pluggable transport binary path, then retry private delivery.": "userReplaceBridgeTransport",
+    "No message was sent because the saved pluggable transport binary path is invalid.":
+      "userNoMessageSentInvalidBridgeTransport",
+    "Configure the pluggable transport binary, then retry private delivery.": "userConfigureBridgeTransport",
+    "No message was sent because pluggable transport is not configured.": "userNoMessageSentMissingBridgeTransport",
+    "Refresh the private bridge config or change network, then retry private delivery.":
+      "userRefreshBridgeOrNetwork",
+    "No message was sent after bridge bootstrap exhausted retries.": "userNoMessageSentBridgeRetries",
+    "Change network, then retry private delivery.": "userChangeNetworkRetryDelivery",
+    "No message was sent after network bootstrap exhausted retries.": "userNoMessageSentNetworkRetries",
     "Network wait canceled": "networkWaitCanceled",
     "Retry private delivery when you are ready.": "retryPrivateDeliveryHint",
     "No message was sent and the network wait was closed.": "networkWaitCanceledBoundary",
@@ -1823,6 +1837,52 @@ function openPrivateDeliverySettings(input = productionTwoProfileInput()) {
   setProductionTwoProfileState("Private delivery permission needed");
   setText(fields.productionTwoProfileWarning, t("privateDeliveryPermissionRequired"));
   setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning", input);
+}
+
+function realOnionRecoveryNeedsExplicitNetworkPreparation(recovery) {
+  return (
+    recovery?.action === "prepare-network-or-bridge" &&
+    recovery?.reason !== "network-or-bridge-different-network"
+  );
+}
+
+function realOnionRecoveryBridgeSettingsTarget(recovery) {
+  if (
+    recovery?.reason === "network-or-bridge-transport" ||
+    recovery?.reason === "network-or-bridge-invalid-transport"
+  ) {
+    return fields.onionObfs4TransportBinaryPath ?? fields.onionBridgeConfigLines;
+  }
+  return fields.onionBridgeConfigLines ?? fields.onionObfs4TransportBinaryPath;
+}
+
+function realOnionRecoveryBridgeSettingsNoticeKey(recovery) {
+  if (recovery?.reason === "network-or-bridge-refresh-transport") {
+    return "fieldTestNextRefreshBridgeTransport";
+  }
+  if (recovery?.reason === "network-or-bridge-refresh-config") {
+    return "fieldTestNextRefreshBridge";
+  }
+  if (
+    recovery?.reason === "network-or-bridge-transport" ||
+    recovery?.reason === "network-or-bridge-invalid-transport"
+  ) {
+    return "bridgeTransportInvalidStatus";
+  }
+  if (recovery?.reason === "network-or-bridge-invalid-config") {
+    return "bridgeConfigInvalidStatus";
+  }
+  return "fieldTestNextPrepareNetworkOrBridge";
+}
+
+function openPrivateDeliveryBridgeSettings(recovery, input = productionTwoProfileInput()) {
+  const target = realOnionRecoveryBridgeSettingsTarget(recovery);
+  openChatSettingsPanel(target);
+  target?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  target?.focus?.({ preventScroll: true });
+  setProductionTwoProfileState("Private delivery needs network change");
+  setText(fields.productionTwoProfileWarning, t(realOnionRecoveryBridgeSettingsNoticeKey(recovery)));
+  setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "warning", input);
 }
 
 function enablePrivateDeliveryPermission() {
@@ -3742,6 +3802,15 @@ function renderProductionOnionBridgeConfigStatus(result) {
   refreshFieldTestReport();
 }
 
+function clearRealOnionRecoveryAfterExplicitBridgeChange() {
+  if (!latestProductionTwoProfileRealOnionResult) {
+    return;
+  }
+  latestProductionTwoProfileRealOnionResult = null;
+  latestProductionTwoProfileRealOnionWaitCanceledFingerprint = "";
+  refreshFieldTestReport();
+}
+
 function updateProductionOnionBridgeConfigControls() {
   const busy = productionBusyAction !== null;
   const bridgeConfigInputPresent = Boolean((fields.onionBridgeConfigLines?.value ?? "").trim());
@@ -3819,6 +3888,7 @@ async function saveProductionOnionBridgeConfig() {
   try {
     const result = await invoke("production_onion_bridge_config_save", { bridgeLines });
     renderProductionOnionBridgeConfigStatus(result);
+    clearRealOnionRecoveryAfterExplicitBridgeChange();
     setText(fields.onionPreflightWarning, t("bridgeConfigSaved"));
     if (fields.onionBridgeConfigLines) {
       fields.onionBridgeConfigLines.value = "";
@@ -3846,6 +3916,7 @@ async function saveProductionOnionObfs4TransportBinary() {
   try {
     const result = await invoke("production_onion_pt_binary_save", { binaryPath });
     renderProductionOnionBridgeConfigStatus(result);
+    clearRealOnionRecoveryAfterExplicitBridgeChange();
     setText(fields.onionPreflightWarning, t("bridgeTransportSaved"));
     if (fields.onionObfs4TransportBinaryPath) {
       fields.onionObfs4TransportBinaryPath.value = "";
@@ -3875,6 +3946,7 @@ async function clearProductionOnionBridgeConfig() {
   try {
     const result = await invoke("production_onion_bridge_config_clear");
     renderProductionOnionBridgeConfigStatus(result);
+    clearRealOnionRecoveryAfterExplicitBridgeChange();
     setText(fields.onionPreflightWarning, t("bridgeConfigCleared"));
   } catch (error) {
     setText(fields.onionPreflightWarning, t("bridgeConfigClearFailed"));
@@ -9153,12 +9225,16 @@ function applyProductionActionState() {
   const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(realOnionResult);
   const realOnionWaitCanceled = realOnionWaitCanceledForInput(twoProfile);
   const realOnionRoundtripActive = realOnionRoundtripActiveForInput(twoProfile);
+  const realOnionNeedsNetworkPreparation =
+    realOnionRecoveryNeedsExplicitNetworkPreparation(realOnionRecovery);
   const realOnionRetryReady =
     realOnionRecovery.action === "retry-bootstrap" ||
     realOnionRecovery.action === "bootstrap-cancelled" ||
     realOnionRecovery.action === "prepare-network-or-bridge";
   const realOnionRetryLabelKey =
-    realOnionRecovery.action === "retry-bootstrap" || realOnionRecovery.action === "prepare-network-or-bridge"
+    realOnionNeedsNetworkPreparation
+      ? "bridgeConfig"
+      : realOnionRecovery.action === "retry-bootstrap" || realOnionRecovery.action === "prepare-network-or-bridge"
       ? "retryNetwork"
       : "retryPrivateDelivery";
   const realOnionCancelWaitReady =
@@ -13021,6 +13097,16 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
 
   const previousRealOnionResult = latestRealOnionFieldTestResult(roomInput);
   const previousRealOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(previousRealOnionResult);
+  if (realOnionRecoveryNeedsExplicitNetworkPreparation(previousRealOnionRecovery)) {
+    const userView = localizedTwoProfileUserView(productionTwoProfileRealOnionUserView(previousRealOnionResult));
+    openPrivateDeliveryBridgeSettings(previousRealOnionRecovery, input);
+    setText(fields.productionTwoProfileProfiles, userView.profiles);
+    setText(fields.productionTwoProfileSession, userView.session);
+    setText(fields.productionTwoProfileMessageState, userView.message);
+    setText(fields.productionTwoProfileBoundary, userView.boundary);
+    refreshFieldTestReport();
+    return;
+  }
   const bootstrapRetryLimit =
     previousRealOnionRecovery.action === "retry-bootstrap"
       ? 3
