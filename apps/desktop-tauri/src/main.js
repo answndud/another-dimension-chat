@@ -4362,13 +4362,21 @@ function renderProductionOnionBridgeConfigStatus(result) {
   refreshFieldTestReport();
 }
 
-function clearRealOnionRecoveryAfterExplicitBridgeChange() {
-  if (!latestProductionTwoProfileRealOnionResult) {
-    return;
+function clearRealOnionRecoveryAfterExplicitBridgeChange(input = productionTwoProfileInput()) {
+  const fingerprint = twoProfileSessionStatusFingerprint(twoProfileRoomIdentityInput(input));
+  if (
+    !latestProductionTwoProfileRealOnionResult ||
+    !fingerprint ||
+    latestProductionTwoProfileRealOnionResult.roomFingerprint !== fingerprint
+  ) {
+    return false;
   }
   latestProductionTwoProfileRealOnionResult = null;
-  latestProductionTwoProfileRealOnionWaitCanceledFingerprint = "";
+  if (latestProductionTwoProfileRealOnionWaitCanceledFingerprint === fingerprint) {
+    latestProductionTwoProfileRealOnionWaitCanceledFingerprint = "";
+  }
   refreshFieldTestReport();
+  return true;
 }
 
 function updateProductionOnionBridgeConfigControls() {
@@ -4438,6 +4446,7 @@ async function loadProductionOnionBridgeConfigStatus() {
 
 async function saveProductionOnionBridgeConfig() {
   const bridgeLines = (fields.onionBridgeConfigLines?.value ?? "").trim();
+  const input = productionTwoProfileInput();
   if (!bridgeLines) {
     setText(fields.onionPreflightWarning, t("bridgeConfigInvalid"));
     return;
@@ -4448,7 +4457,7 @@ async function saveProductionOnionBridgeConfig() {
   try {
     const result = await invoke("production_onion_bridge_config_save", { bridgeLines });
     renderProductionOnionBridgeConfigStatus(result);
-    clearRealOnionRecoveryAfterExplicitBridgeChange();
+    clearRealOnionRecoveryAfterExplicitBridgeChange(input);
     setText(fields.onionPreflightWarning, t("bridgeConfigSaved"));
     if (fields.onionBridgeConfigLines) {
       fields.onionBridgeConfigLines.value = "";
@@ -4466,6 +4475,7 @@ async function saveProductionOnionBridgeConfig() {
 
 async function saveProductionOnionObfs4TransportBinary() {
   const binaryPath = (fields.onionObfs4TransportBinaryPath?.value ?? "").trim();
+  const input = productionTwoProfileInput();
   if (!binaryPath) {
     setText(fields.onionPreflightWarning, t("bridgeTransportInvalidStatus"));
     return;
@@ -4476,7 +4486,7 @@ async function saveProductionOnionObfs4TransportBinary() {
   try {
     const result = await invoke("production_onion_pt_binary_save", { binaryPath });
     renderProductionOnionBridgeConfigStatus(result);
-    clearRealOnionRecoveryAfterExplicitBridgeChange();
+    clearRealOnionRecoveryAfterExplicitBridgeChange(input);
     setText(fields.onionPreflightWarning, t("bridgeTransportSaved"));
     if (fields.onionObfs4TransportBinaryPath) {
       fields.onionObfs4TransportBinaryPath.value = "";
@@ -4500,13 +4510,14 @@ async function clearProductionOnionBridgeConfig() {
     setText(fields.onionPreflightWarning, t("tauriUnavailable"));
     return;
   }
+  const input = productionTwoProfileInput();
   productionBusyAction = "onion-bridge-config";
   updateProductionOnionBridgeConfigControls();
   applyProductionActionState();
   try {
     const result = await invoke("production_onion_bridge_config_clear");
     renderProductionOnionBridgeConfigStatus(result);
-    clearRealOnionRecoveryAfterExplicitBridgeChange();
+    clearRealOnionRecoveryAfterExplicitBridgeChange(input);
     setText(fields.onionPreflightWarning, t("bridgeConfigCleared"));
   } catch (error) {
     setText(fields.onionPreflightWarning, t("bridgeConfigClearFailed"));
