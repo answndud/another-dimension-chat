@@ -5050,6 +5050,18 @@ function productionTwoProfileReceiveActiveInOtherRoom(input = productionTwoProfi
   );
 }
 
+function productionTwoProfileOnionReceiveOwnerInput(fallbackInput = productionTwoProfileInput()) {
+  const ownerFingerprint = String(productionTwoProfileOnionReceiveMode.roomFingerprint ?? "").trim();
+  if (!ownerFingerprint) {
+    return fallbackInput;
+  }
+  if (privateRouteRoomKey(fallbackInput) === ownerFingerprint) {
+    return fallbackInput;
+  }
+  const ownerRoom = savedInviteRoomForRoomFingerprint(ownerFingerprint);
+  return ownerRoom ? savedInviteRoomInput(ownerRoom) : null;
+}
+
 function productionTwoProfileReceiveRuntimeMismatched(input = productionTwoProfileInput()) {
   return Boolean(
     productionTwoProfileReceiveMatchesInput(input) &&
@@ -13167,9 +13179,10 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
       }
     }
     if (!backendLoop.enabled && !backendLoop.worker_running) {
+      const receiveOwnerInput = productionTwoProfileOnionReceiveOwnerInput(currentInput);
       markProductionTwoProfileOnionReceiveStopped(backendLoop, {
         silent: !receivingCurrentRoom,
-        input: currentInput,
+        input: receiveOwnerInput,
       });
       if (receivingCurrentRoom) {
         setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted", currentInput);
@@ -13199,17 +13212,21 @@ function scheduleProductionTwoProfileOnionReceiveStopConfirmation(delayMs = 500)
 }
 
 function markProductionTwoProfileOnionReceiveStopped(backendLoop = null, options = {}) {
-  const stoppedInput = options.input ?? productionTwoProfileInput();
+  const stoppedInput = Object.prototype.hasOwnProperty.call(options, "input")
+    ? options.input
+    : productionTwoProfileOnionReceiveOwnerInput();
   const nextGeneration = Math.max(
     productionTwoProfileOnionReceiveMode.generation,
     Number.parseInt(backendLoop?.generation ?? 0, 10) || 0,
   );
-  rememberLocalPrivateRouteLifecycle(stoppedInput, {
-    state: "stopped",
-    endpoint: routeMapValueForRoom(activeLocalPrivateRouteCodesByRoom, stoppedInput) ||
-      routeMapValueForRoom(localPrivateRouteCodesByRoom, stoppedInput, localPrivateRouteCodesStorageKey),
-    generation: nextGeneration,
-  });
+  if (stoppedInput && privateRouteRoomKey(stoppedInput)) {
+    rememberLocalPrivateRouteLifecycle(stoppedInput, {
+      state: "stopped",
+      endpoint: routeMapValueForRoom(activeLocalPrivateRouteCodesByRoom, stoppedInput) ||
+        routeMapValueForRoom(localPrivateRouteCodesByRoom, stoppedInput, localPrivateRouteCodesStorageKey),
+      generation: nextGeneration,
+    });
+  }
   productionTwoProfileOnionReceiveMode = {
     enabled: false,
     roomFingerprint: "",
@@ -13250,9 +13267,10 @@ async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
     if (!backendLoop.stop_confirmed) {
       scheduleProductionTwoProfileOnionReceiveStopConfirmation();
     } else {
+      const receiveOwnerInput = productionTwoProfileOnionReceiveOwnerInput();
       markProductionTwoProfileOnionReceiveStopped(backendLoop, {
         silent,
-        input: productionTwoProfileInput(),
+        input: receiveOwnerInput,
       });
       if (!silent) {
         setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
@@ -13331,7 +13349,7 @@ function stopProductionTwoProfileOnionReceiveForInput(input, options) {
       } else {
         markProductionTwoProfileOnionReceiveStopped(backendLoop, {
           silent,
-          input: productionTwoProfileInput(),
+          input: targetInput,
         });
         if (!silent) {
           setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
