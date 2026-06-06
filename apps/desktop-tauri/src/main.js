@@ -454,9 +454,9 @@ let latestProductionTwoProfileSessionStatus = null;
 let latestProductionTwoProfileSafety = null;
 let latestProductionTwoProfileSuccess = null;
 let latestProductionTwoProfileOnionEndpoints = null;
-let latestProductionTwoProfileRealOnionResult = null;
+const latestProductionTwoProfileRealOnionResultsByRoom = new Map();
 let latestProductionOnionBridgeConfigStatus = null;
-let latestProductionTwoProfileRealOnionWaitCanceledFingerprint = "";
+const latestProductionTwoProfileRealOnionWaitCanceledFingerprints = new Set();
 let activeProductionTwoProfileRealOnionInput = null;
 let productionTwoProfileRealOnionRunSequence = 0;
 let latestLocalPrivateRouteCode = "";
@@ -4254,19 +4254,35 @@ function fieldTestReportCopyPayload(report) {
   return comparison ? `${report}\n${comparison}\n${nextAction}` : `${report}\n${nextAction}`;
 }
 
-function latestRealOnionFieldTestResult(input = productionTwoProfileInput()) {
-  if (!latestProductionTwoProfileRealOnionResult) {
-    return null;
+function rememberRealOnionFieldTestResult(roomInput, result) {
+  const fingerprint = twoProfileSessionStatusFingerprint(twoProfileRoomIdentityInput(roomInput));
+  if (!fingerprint) {
+    return false;
   }
+  latestProductionTwoProfileRealOnionResultsByRoom.set(fingerprint, {
+    roomFingerprint: fingerprint,
+    result,
+  });
+  for (const key of latestProductionTwoProfileRealOnionResultsByRoom.keys()) {
+    if (latestProductionTwoProfileRealOnionResultsByRoom.size <= savedInviteRoomStorageLimit) {
+      break;
+    }
+    latestProductionTwoProfileRealOnionResultsByRoom.delete(key);
+    latestProductionTwoProfileRealOnionWaitCanceledFingerprints.delete(key);
+  }
+  return true;
+}
+
+function latestRealOnionFieldTestResult(input = productionTwoProfileInput()) {
   const fingerprint = twoProfileSessionStatusFingerprint(input);
-  return latestProductionTwoProfileRealOnionResult.roomFingerprint === fingerprint
-    ? latestProductionTwoProfileRealOnionResult.result
+  return fingerprint
+    ? latestProductionTwoProfileRealOnionResultsByRoom.get(fingerprint)?.result ?? null
     : null;
 }
 
 function realOnionWaitCanceledForInput(input = productionTwoProfileInput()) {
   const fingerprint = twoProfileSessionStatusFingerprint(input);
-  return Boolean(fingerprint && latestProductionTwoProfileRealOnionWaitCanceledFingerprint === fingerprint);
+  return Boolean(fingerprint && latestProductionTwoProfileRealOnionWaitCanceledFingerprints.has(fingerprint));
 }
 
 function realOnionActiveInputMatches(input = productionTwoProfileInput()) {
@@ -4365,16 +4381,13 @@ function renderProductionOnionBridgeConfigStatus(result) {
 function clearRealOnionRecoveryAfterExplicitBridgeChange(input = productionTwoProfileInput()) {
   const fingerprint = twoProfileSessionStatusFingerprint(twoProfileRoomIdentityInput(input));
   if (
-    !latestProductionTwoProfileRealOnionResult ||
     !fingerprint ||
-    latestProductionTwoProfileRealOnionResult.roomFingerprint !== fingerprint
+    !latestProductionTwoProfileRealOnionResultsByRoom.has(fingerprint)
   ) {
     return false;
   }
-  latestProductionTwoProfileRealOnionResult = null;
-  if (latestProductionTwoProfileRealOnionWaitCanceledFingerprint === fingerprint) {
-    latestProductionTwoProfileRealOnionWaitCanceledFingerprint = "";
-  }
+  latestProductionTwoProfileRealOnionResultsByRoom.delete(fingerprint);
+  latestProductionTwoProfileRealOnionWaitCanceledFingerprints.delete(fingerprint);
   refreshFieldTestReport();
   return true;
 }
@@ -13882,7 +13895,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       : previousRealOnionRecovery.action === "bootstrap-cancelled"
       ? 2
       : 1;
-  latestProductionTwoProfileRealOnionWaitCanceledFingerprint = "";
+  latestProductionTwoProfileRealOnionWaitCanceledFingerprints.delete(twoProfileSessionStatusFingerprint(roomInput));
   setProductionTwoProfileState("Private delivery running");
   setText(fields.productionTwoProfileWarning, t("chatNoticeSending"));
   setText(fields.productionTwoProfileProfiles, localizedTwoProfileUserViewText("Room is being prepared."));
@@ -13907,10 +13920,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       manualNetworkPermission,
       bootstrapRetryLimit,
     });
-    latestProductionTwoProfileRealOnionResult = {
-      roomFingerprint: twoProfileSessionStatusFingerprint(roomInput),
-      result,
-    };
+    rememberRealOnionFieldTestResult(roomInput, result);
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
@@ -13963,14 +13973,14 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       selectLatestReceivedReplyForProfile(resumeProfile, { focusReply: "none" });
     }
   } catch (error) {
-    latestProductionTwoProfileRealOnionResult = {
-      roomFingerprint: twoProfileSessionStatusFingerprint(roomInput),
-      result: productionTwoProfileRealOnionSyntheticFailureResult(
+    rememberRealOnionFieldTestResult(
+      roomInput,
+      productionTwoProfileRealOnionSyntheticFailureResult(
         error,
         { profileA, profileB },
         manualNetworkPermission,
       ),
-    };
+    );
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
@@ -14024,7 +14034,7 @@ async function cancelProductionTwoProfileRealOnionWait() {
     try {
       const result = await invoke("production_two_profile_real_onion_wait_cancel");
       if (result?.cancel_requested) {
-        latestProductionTwoProfileRealOnionWaitCanceledFingerprint = twoProfileSessionStatusFingerprint(activeInput);
+        latestProductionTwoProfileRealOnionWaitCanceledFingerprints.add(twoProfileSessionStatusFingerprint(activeInput));
         if (!twoProfileTranscriptInputStillCurrent(activeInput)) {
           return true;
         }
@@ -14058,7 +14068,7 @@ async function cancelProductionTwoProfileRealOnionWait() {
     refreshFieldTestReport();
     return false;
   }
-  latestProductionTwoProfileRealOnionWaitCanceledFingerprint = twoProfileSessionStatusFingerprint(input);
+  latestProductionTwoProfileRealOnionWaitCanceledFingerprints.add(twoProfileSessionStatusFingerprint(input));
   setProductionTwoProfileState("Private delivery wait canceled");
   setText(fields.productionTwoProfileWarning, t("networkWaitCanceledNotice"));
   setText(fields.productionTwoProfileProfiles, localizedTwoProfileUserViewText("Room is saved."));
