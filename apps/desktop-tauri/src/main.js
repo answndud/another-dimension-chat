@@ -883,6 +883,9 @@ function localizedReceiveFailureMessage(message) {
 
 function localizedSendFailureMessage(error) {
   const text = String(error ?? "").toLowerCase();
+  if (sendFailureNeedsStartReceiving(text)) {
+    return t("externalSendNeedsReceive");
+  }
   if (text.includes("timeout")) {
     return t("sendTimeout");
   }
@@ -912,6 +915,9 @@ function localizedSendAttemptMessage(result) {
   if (sendRuntimeOwnerMismatch(result)) {
     return t("sendRuntimeMismatch");
   }
+  if (sendFailureNeedsStartReceiving(failureText)) {
+    return t("externalSendNeedsReceive");
+  }
   if (sendFailureNeedsRouteSetup(failureText)) {
     return t("privateDeliveryRouteNeeded");
   }
@@ -933,6 +939,10 @@ function setChatDeliveryNoticeForSendAttempt(result, input = productionTwoProfil
   }
   if (sendRuntimeOwnerMismatch(result)) {
     setChatDeliveryNoticeByKey("sendRuntimeMismatch", "warning", input);
+    return;
+  }
+  if (sendFailureNeedsStartReceiving(failureText)) {
+    setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "warning", input);
     return;
   }
   if (sendFailureNeedsRouteSetup(failureText)) {
@@ -962,8 +972,48 @@ function sendFailureNeedsRouteSetup(text) {
   );
 }
 
+function sendFailureNeedsStartReceiving(text) {
+  return (
+    text.includes("localonionendpointnotready") ||
+    text.includes("local onion endpoint not ready") ||
+    text.includes("receive stopped") ||
+    text.includes("receive mode stopped") ||
+    text.includes("message listening stopped") ||
+    text.includes("message listening is off")
+  );
+}
+
 function sendFailureNeedsEndpointRefresh(text) {
   return !sendFailureNeedsRouteSetup(text) && (text.includes("stale") || text.includes("refresh"));
+}
+
+function setChatDeliveryNoticeForOutboundFailureKind(failureKind, input = productionTwoProfileInput()) {
+  const normalized = String(failureKind ?? "").toLowerCase();
+  if (normalized.includes("manualnetworkpermission")) {
+    setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning", input);
+    return;
+  }
+  if (normalized.includes("localonionendpointnotready") || normalized.includes("persistentclientnotready")) {
+    setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "warning", input);
+    return;
+  }
+  if (normalized.includes("runtimeownerprofilemismatch")) {
+    setChatDeliveryNoticeByKey("sendRuntimeMismatch", "warning", input);
+    return;
+  }
+  if (sendFailureNeedsRouteSetup(normalized)) {
+    setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "warning", input);
+    return;
+  }
+  if (sendFailureNeedsEndpointRefresh(normalized)) {
+    setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
+    return;
+  }
+  if (normalized.includes("timeout")) {
+    setChatDeliveryNoticeByKey("sendTimeout", "warning", input);
+    return;
+  }
+  setChatDeliveryNoticeByKey("sendFailedGeneric", "warning", input);
 }
 
 function localizedRetentionLabel(entry) {
@@ -12680,12 +12730,13 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       showLatestRetryableOutboundNotice(input);
     }
   } catch (error) {
+    const failureKind = outboundSendFailureKindFromError(error);
     try {
       await markTwoProfileOutboundSendFailed(
         latestOnionOutbound.profile,
         latestOnionOutbound.passphrase,
         latestOnionOutbound.messageNumber,
-        outboundSendFailureKindFromError(error),
+        failureKind,
       );
     } catch {
       // Keep the user-facing failure path available even if state refresh fails.
@@ -12695,7 +12746,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
     }
     setProductionTwoProfileState("Private delivery failed");
     setText(fields.productionTwoProfileWarning, localizedSendFailureMessage(error));
-    updateChatDeliveryNoticeFromText(error);
+    setChatDeliveryNoticeForOutboundFailureKind(failureKind, input);
     setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Failed before or during bounded onion send attempt."));
     try {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
@@ -12728,6 +12779,9 @@ async function markTwoProfileOutboundSendFailed(profile, passphrase, messageNumb
 
 function outboundSendFailureKindFromError(error) {
   const text = String(error ?? "").toLowerCase();
+  if (sendFailureNeedsStartReceiving(text)) {
+    return "LocalOnionEndpointNotReady";
+  }
   if (text.includes("manualnetworkpermission") || text.includes("network permission")) {
     return "ManualNetworkPermissionMissing";
   }
