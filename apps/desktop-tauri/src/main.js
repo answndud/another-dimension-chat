@@ -7154,6 +7154,14 @@ function clearPrivateRouteFollowupForRoom(input = productionTwoProfileInput()) {
   return false;
 }
 
+function clearMismatchedPrivateRouteFollowup(input = productionTwoProfileInput()) {
+  if (!pendingPrivateRouteFollowup || privateRouteFollowupMatchesRoom(input)) {
+    return false;
+  }
+  clearPrivateRouteFollowup();
+  return true;
+}
+
 async function continueAfterPeerPrivateRouteSaved(input = productionTwoProfileInput()) {
   if (!twoProfileTranscriptInputStillCurrent(input)) {
     return false;
@@ -9120,6 +9128,7 @@ function applyProductionActionState() {
   const receivingRuntimeMismatch = productionTwoProfileReceiveRuntimeMismatched(twoProfile);
   const retryableOutboundConversation = latestTwoProfileRetryableOutboundEntry(twoProfile);
   clearMismatchedChatDeliveryNotice(twoProfile);
+  clearMismatchedPrivateRouteFollowup(twoProfile);
   const currentRoomDeliveryNotice = chatDeliveryNoticeMatchesInput(twoProfile);
   if (
     productionTwoProfileShouldShowOutboundRecovery({
@@ -15936,7 +15945,7 @@ if (fields.sendProductionTwoProfileLatestOnionEnvelope) {
 
 if (fields.preparePrivateRoute) {
   fields.preparePrivateRoute.addEventListener("click", () =>
-    preparePrivateDeliveryRoute({ forceRefresh: latestChatDeliveryNoticeKey === "sendRuntimeMismatch" }),
+    preparePrivateDeliveryRoute({ forceRefresh: privateRouteRecoveryNoticeActive("sendRuntimeMismatch") }),
   );
 }
 if (fields.copyPrivateRouteCode) {
