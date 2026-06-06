@@ -2148,6 +2148,27 @@ function realOnionRecoveryBridgeSettingsNoticeKey(recovery) {
   return "fieldTestNextPrepareNetworkOrBridge";
 }
 
+function realOnionRecoveryNoticeKey(recovery) {
+  switch (recovery?.action) {
+    case "enable-private-delivery":
+      return "fieldTestNextEnablePrivateDelivery";
+    case "retry-bootstrap":
+    case "bootstrap-cancelled":
+      return "fieldTestNextRetryNetwork";
+    case "prepare-network-or-bridge":
+      if (recovery?.reason === "network-or-bridge-different-network") {
+        return "fieldTestNextDifferentNetwork";
+      }
+      return realOnionRecoveryBridgeSettingsNoticeKey(recovery);
+    case "inspect-diagnostics":
+      return "fieldTestNextInspectDiagnostics";
+    case "retry-private-delivery":
+      return "fieldTestNextRetryDelivery";
+    default:
+      return "";
+  }
+}
+
 function openPrivateDeliveryBridgeSettings(recovery, input = productionTwoProfileInput()) {
   const target = realOnionRecoveryBridgeSettingsTarget(recovery);
   openChatSettingsPanel(target);
@@ -2155,7 +2176,7 @@ function openPrivateDeliveryBridgeSettings(recovery, input = productionTwoProfil
   target?.focus?.({ preventScroll: true });
   setProductionTwoProfileState("Private delivery needs network change");
   setText(fields.productionTwoProfileWarning, t(realOnionRecoveryBridgeSettingsNoticeKey(recovery)));
-  setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "warning", input);
+  setChatDeliveryNoticeByKey(realOnionRecoveryBridgeSettingsNoticeKey(recovery), "warning", input);
 }
 
 function enablePrivateDeliveryPermission() {
@@ -13842,9 +13863,13 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     }
     const view = productionTwoProfileRealOnionResultView(result);
     const userView = localizedTwoProfileUserView(productionTwoProfileRealOnionUserView(result));
+    const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(result);
+    const realOnionNoticeKey = realOnionRecoveryNoticeKey(realOnionRecovery);
     const realOnionNotice = view.complete
       ? { key: "localRoundtripComplete", tone: "success" }
-      : chatNoticeForSendReceiveText(result.next_blocker || result.warning || userView.message) ?? {
+      : realOnionNoticeKey
+        ? { key: realOnionNoticeKey, tone: "warning" }
+        : chatNoticeForSendReceiveText(result.next_blocker || result.warning || userView.message) ?? {
           key: "sendFailedGeneric",
           tone: "warning",
         };
@@ -13911,13 +13936,18 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     setText(
       fields.productionTwoProfileSession,
       redactedStage.includes("bootstrap")
-        ? t("torBootstrap")
+        ? t("retryNetwork")
         : "Private delivery setup did not finish.",
     );
     setText(fields.productionTwoProfileMessageState, "Message was not delivered. Retry when private delivery is ready.");
     setText(
       fields.productionTwoProfileBoundary,
       "Failed without showing private details in the chat view.",
+    );
+    setChatDeliveryNoticeByKey(
+      redactedStage.includes("bootstrap") ? "fieldTestNextRetryNetwork" : "sendFailedGeneric",
+      "warning",
+      input,
     );
   } finally {
     if (realOnionActiveRunMatches(realOnionRunId)) {
