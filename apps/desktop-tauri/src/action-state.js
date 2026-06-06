@@ -1487,6 +1487,27 @@ export function productionTwoProfileRealOnionRecoveryPlan(result) {
       .split(/\s+/)
       .find((part) => part.startsWith("next_action="))
       ?.slice("next_action=".length) ?? "";
+  const bridgeBootstrapRecoveryReason = () => {
+    if (result?.bridge_capable_build === false) {
+      return "network-or-bridge-capable-build";
+    }
+    if (
+      result?.bridge_capable_build === true &&
+      result?.bridge_configured_for_bootstrap === false
+    ) {
+      return "network-or-bridge-config";
+    }
+    if (
+      diagnosticNextAction === "retry-different-network-or-refresh-bridge-pt" ||
+      diagnosticNextAction === "inspect-pt-or-bridge-diagnostics"
+    ) {
+      return "network-or-bridge-refresh-transport";
+    }
+    if (diagnosticNextAction === "retry-different-network-or-refresh-bridge") {
+      return "network-or-bridge-refresh-config";
+    }
+    return "network-or-bridge-different-network";
+  };
   if (
     text.includes("bootstraptimeout") ||
     text.includes("bootstrapnetworkaccessfailed") ||
@@ -1517,17 +1538,11 @@ export function productionTwoProfileRealOnionRecoveryPlan(result) {
       };
     }
     if (attemptsExhausted && result?.bridge_configured_for_bootstrap === true) {
-      const reason =
-        diagnosticNextAction === "retry-different-network-or-refresh-bridge-pt"
-          ? "network-or-bridge-refresh-transport"
-          : diagnosticNextAction === "retry-different-network-or-refresh-bridge"
-            ? "network-or-bridge-refresh-config"
-            : "network-or-bridge-different-network";
       return {
         action: "prepare-network-or-bridge",
         retryable: true,
         waitCancellable: false,
-        reason,
+        reason: bridgeBootstrapRecoveryReason(),
       };
     }
     return {
@@ -1543,6 +1558,18 @@ export function productionTwoProfileRealOnionRecoveryPlan(result) {
     text.includes("bootstrapunsupported") ||
     text.includes("bootstrapprotocolfailed")
   ) {
+    if (
+      result?.bridge_capable_build === false ||
+      result?.bridge_configured_for_bootstrap === false ||
+      diagnosticNextAction
+    ) {
+      return {
+        action: "prepare-network-or-bridge",
+        retryable: true,
+        waitCancellable: false,
+        reason: bridgeBootstrapRecoveryReason(),
+      };
+    }
     return {
       action: "inspect-diagnostics",
       retryable: false,

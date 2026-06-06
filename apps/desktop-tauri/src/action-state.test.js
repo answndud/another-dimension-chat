@@ -386,6 +386,32 @@ test("real onion exhausted direct bridge bootstrap points to bridge refresh", ()
   });
 });
 
+test("real onion managed bridge bootstrap error points to bridge or transport refresh", () => {
+  const result = {
+    manual_network_permission_enabled: true,
+    next_blocker: "ProfileAResumeBootstrapUnsupported",
+    blockers: ["BootstrapUnsupported"],
+    bootstrap_retry_limit: 3,
+    profile_a_bootstrap_attempts: 1,
+    profile_b_bootstrap_attempts: 1,
+    bridge_capable_build: true,
+    bridge_configured_for_bootstrap: true,
+    event_summary: [
+      "bootstrap_diagnostic phase=error profile=redacted bridge_mode=managed_transport_bridge bridge_lines=2 managed_transport_count=1 pt_binary_configured=true timeout_seconds=120 next_action=inspect-pt-or-bridge-diagnostics",
+    ],
+    network_io_attempted: true,
+    transport_io_opened: false,
+    runtime_messaging_enabled: false,
+  };
+
+  assert.deepEqual(productionTwoProfileRealOnionRecoveryPlan(result), {
+    action: "prepare-network-or-bridge",
+    retryable: true,
+    waitCancellable: false,
+    reason: "network-or-bridge-refresh-transport",
+  });
+});
+
 test("real onion bootstrap cancel remains retryable without an active wait", () => {
   const result = {
     manual_network_permission_enabled: true,

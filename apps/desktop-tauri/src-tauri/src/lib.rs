@@ -12601,6 +12601,618 @@ replay check: no replayed messages after message 2
         let _ = std::fs::remove_dir_all(root);
     }
 
+    #[cfg(all(target_os = "macos", feature = "manual-onion-client-attempt"))]
+    #[test]
+    #[ignore = "requires explicit Tor bootstrap, local onion stream I/O, and two isolated app roots"]
+    fn production_isolated_invite_roots_real_onion_field_driver_delivers_or_fails_closed() {
+        use another_dimension_transport::{
+            arti_adapter_spike, InMemoryTransportRuntimeEventSink,
+        };
+
+        fn print_field_driver_blocker(
+            next: &str,
+            blockers: &[String],
+            events: &[String],
+            bridge_a: bool,
+            bridge_b: bool,
+            attempts_a: u8,
+            attempts_b: u8,
+        ) {
+            eprintln!(
+                "isolated_real_onion_field_driver next={} blockers={} bridge_a={} bridge_b={} attempts_a={} attempts_b={} events={}",
+                next,
+                blockers.join("#"),
+                bridge_a,
+                bridge_b,
+                attempts_a,
+                attempts_b,
+                events.join("|"),
+            );
+        }
+
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let data_a = root.join("peer-a-data");
+        let cache_a = root.join("peer-a-cache");
+        let data_b = root.join("peer-b-data");
+        let cache_b = root.join("peer-b-cache");
+        let bridge_a =
+            prepare_real_onion_smoke_bridge_config_from_env(&data_a).expect("bridge config a");
+        let bridge_b =
+            prepare_real_onion_smoke_bridge_config_from_env(&data_b).expect("bridge config b");
+        let bridge_config_a =
+            super::load_app_private_real_onion_bridge_config(&data_a).expect("load bridge a");
+        let bridge_config_b =
+            super::load_app_private_real_onion_bridge_config(&data_b).expect("load bridge b");
+        let passphrase = "isolated-field-driver-passphrase".to_string();
+        let inviter = "inviter-field-driver".to_string();
+        let joiner = "joiner-field-driver".to_string();
+        let first_message = "isolated field driver hello".to_string();
+        let second_message = "isolated field driver reply".to_string();
+        let third_message = "isolated field driver resume hello".to_string();
+        let ttl = 3600;
+        let retry_limit = 3;
+        let mut events = Vec::new();
+        let attempts_a;
+        let mut attempts_b = 0;
+
+        run_production_profile_unlock(&data_a, inviter.clone(), passphrase.clone())
+            .expect("unlock inviter");
+        run_production_profile_unlock(&data_b, joiner.clone(), passphrase.clone())
+            .expect("unlock joiner");
+        let _ = run_production_onion_backup_exclusion_prepare(&data_a, &cache_a);
+        let _ = run_production_onion_backup_exclusion_prepare(&data_b, &cache_b);
+        run_production_onion_key_record_prepare(
+            &data_a,
+            &cache_a,
+            inviter.clone(),
+            passphrase.clone(),
+        )
+        .expect("prepare inviter key record");
+        run_production_onion_key_record_prepare(
+            &data_b,
+            &cache_b,
+            joiner.clone(),
+            passphrase.clone(),
+        )
+        .expect("prepare joiner key record");
+
+        let mut owner_a = match tauri::async_runtime::block_on(
+            super::build_real_onion_roundtrip_owner_with_retries(
+                &data_a,
+                &cache_a,
+                None,
+                &inviter,
+                &mut events,
+                retry_limit,
+                bridge_config_a.as_ref(),
+                None,
+            ),
+        ) {
+            Ok((owner, attempts, _reused)) => {
+                attempts_a = attempts;
+                owner
+            }
+            Err((error, attempts)) => {
+                attempts_a = attempts;
+                let (next, blockers) = super::classify_real_onion_bootstrap_blocker("ProfileA", &error);
+                events.push(format!("redacted_stage={error}"));
+                print_field_driver_blocker(
+                    &next, &blockers, &events, bridge_a, bridge_b, attempts_a, attempts_b,
+                );
+                let serialized = serde_json::to_string(&events).expect("serialize events");
+                assert!(!serialized.contains(root.to_string_lossy().as_ref()));
+                assert!(!serialized.contains(&passphrase));
+                assert!(!serialized.contains(".onion"));
+                let _ = std::fs::remove_dir_all(root);
+                return;
+            }
+        };
+        let mut owner_b = match tauri::async_runtime::block_on(
+            super::build_real_onion_roundtrip_owner_with_retries(
+                &data_b,
+                &cache_b,
+                None,
+                &joiner,
+                &mut events,
+                retry_limit,
+                bridge_config_b.as_ref(),
+                None,
+            ),
+        ) {
+            Ok((owner, attempts, _reused)) => {
+                attempts_b = attempts;
+                owner
+            }
+            Err((error, attempts)) => {
+                attempts_b = attempts;
+                let (next, blockers) = super::classify_real_onion_bootstrap_blocker("ProfileB", &error);
+                events.push(format!("redacted_stage={error}"));
+                print_field_driver_blocker(
+                    &next, &blockers, &events, bridge_a, bridge_b, attempts_a, attempts_b,
+                );
+                let serialized = serde_json::to_string(&events).expect("serialize events");
+                assert!(!serialized.contains(root.to_string_lossy().as_ref()));
+                assert!(!serialized.contains(&passphrase));
+                assert!(!serialized.contains(".onion"));
+                let _ = std::fs::remove_dir_all(root);
+                return;
+            }
+        };
+
+        let inviter_profile = sanitize_production_profile(inviter.clone()).expect("inviter profile");
+        let joiner_profile = sanitize_production_profile(joiner.clone()).expect("joiner profile");
+        let mut launch_sink = InMemoryTransportRuntimeEventSink::default();
+        if owner_a
+            .launch_onion_service_once(
+                arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                &super::production_onion_service_nickname(&inviter_profile),
+                &mut launch_sink,
+            )
+            .is_err()
+        {
+            events.extend(launch_sink.events().iter().map(ToString::to_string));
+            print_field_driver_blocker(
+                "ProfileAOnionServiceLaunchFailed",
+                &["OnionServiceLaunchFailed".to_string()],
+                &events,
+                bridge_a,
+                bridge_b,
+                attempts_a,
+                attempts_b,
+            );
+            let _ = std::fs::remove_dir_all(root);
+            return;
+        }
+        if owner_b
+            .launch_onion_service_once(
+                arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                &super::production_onion_service_nickname(&joiner_profile),
+                &mut launch_sink,
+            )
+            .is_err()
+        {
+            events.extend(launch_sink.events().iter().map(ToString::to_string));
+            print_field_driver_blocker(
+                "ProfileBOnionServiceLaunchFailed",
+                &["OnionServiceLaunchFailed".to_string()],
+                &events,
+                bridge_a,
+                bridge_b,
+                attempts_a,
+                attempts_b,
+            );
+            let _ = std::fs::remove_dir_all(root);
+            return;
+        }
+        events.extend(launch_sink.events().iter().map(ToString::to_string));
+        let endpoint_a = owner_a.retained_onion_endpoint().expect("inviter endpoint");
+        let endpoint_b = owner_b.retained_onion_endpoint().expect("joiner endpoint");
+
+        let payload_a = run_production_pairing_payload_export(
+            &data_a,
+            inviter.clone(),
+            passphrase.clone(),
+            endpoint_a.clone(),
+        )
+        .expect("inviter payload")
+        .pairing_payload;
+        let payload_b = run_production_pairing_payload_export(
+            &data_b,
+            joiner.clone(),
+            passphrase.clone(),
+            endpoint_b.clone(),
+        )
+        .expect("joiner payload")
+        .pairing_payload;
+        run_production_pairing_session_draft_save(
+            &data_a,
+            inviter.clone(),
+            passphrase.clone(),
+            payload_a.clone(),
+            payload_b.clone(),
+            true,
+        )
+        .expect("save inviter draft");
+        run_production_pairing_session_draft_save(
+            &data_b,
+            joiner.clone(),
+            passphrase.clone(),
+            payload_b,
+            payload_a,
+            true,
+        )
+        .expect("save joiner draft");
+
+        let init =
+            run_production_handshake_init_export(&data_a, inviter.clone(), passphrase.clone())
+                .expect("inviter init");
+        assert!(init.output_payload_created);
+        let reply = run_production_handshake_reply_export(
+            &data_b,
+            joiner.clone(),
+            passphrase.clone(),
+            init.output_payload,
+        )
+        .expect("joiner reply");
+        let finish = run_production_handshake_finish_export(
+            &data_a,
+            inviter.clone(),
+            passphrase.clone(),
+            reply.output_payload,
+        )
+        .expect("inviter finish");
+        run_production_handshake_finish_import(
+            &data_b,
+            joiner.clone(),
+            passphrase.clone(),
+            finish.output_payload,
+        )
+        .expect("joiner finish import");
+        assert!(
+            run_production_session_state_check(&data_a, inviter.clone(), passphrase.clone())
+                .expect("inviter state")
+                .ready_for_message_envelope
+        );
+        assert!(
+            run_production_session_state_check(&data_b, joiner.clone(), passphrase.clone())
+                .expect("joiner state")
+                .ready_for_message_envelope
+        );
+
+        let state_a = ProductionOnionClientRuntimeState::default();
+        let state_b = ProductionOnionClientRuntimeState::default();
+        *state_a.owner.lock().expect("owner a lock") = Some(owner_a);
+        *state_b.owner.lock().expect("owner b lock") = Some(owner_b);
+        *state_a.owner_profile.lock().expect("owner profile a lock") = Some(inviter.clone());
+        *state_b.owner_profile.lock().expect("owner profile b lock") = Some(joiner.clone());
+        run_production_onion_receive_loop_start(&state_a, inviter.clone(), true);
+        run_production_onion_receive_loop_worker_started(&state_a);
+        run_production_onion_receive_loop_start(&state_b, joiner.clone(), true);
+        run_production_onion_receive_loop_worker_started(&state_b);
+
+        let first_number = super::run_production_message_number_reserve(
+            &data_a,
+            inviter.clone(),
+            passphrase.clone(),
+        )
+        .expect("first message number");
+        let first_outbound = run_production_message_envelope_export(
+            &data_a,
+            inviter.clone(),
+            passphrase.clone(),
+            first_number,
+            false,
+            first_message.clone(),
+            ttl,
+        )
+        .expect("first outbound");
+        assert!(first_outbound.encrypted_envelope_present);
+        let (first_receive, first_send) = tauri::async_runtime::block_on(async {
+            tokio::join!(
+                super::run_production_onion_inbound_envelope_receive_attempt(
+                    &data_b,
+                    &cache_b,
+                    &state_b,
+                    joiner.clone(),
+                    passphrase.clone(),
+                    true,
+                ),
+                super::run_production_onion_outbound_envelope_send_attempt(
+                    &data_a,
+                    &cache_a,
+                    &state_a,
+                    inviter.clone(),
+                    passphrase.clone(),
+                    endpoint_b.clone(),
+                    first_number,
+                    true,
+                )
+            )
+        });
+        let first_receive = first_receive.expect("first receive result");
+        let first_send = first_send.expect("first send result");
+        run_production_onion_receive_loop_record_attempt_result(&state_b, &first_receive);
+        events.extend(first_send.event_summary.iter().cloned());
+        events.extend(first_receive.event_summary.iter().cloned());
+        if !first_send.send_attempt_succeeded || !first_receive.receive_attempt_succeeded {
+            let next = if !first_send.send_attempt_succeeded {
+                "SendAttemptFailed"
+            } else {
+                "ReceiveAttemptFailed"
+            };
+            let blockers = vec![next.to_string()];
+            print_field_driver_blocker(
+                next, &blockers, &events, bridge_a, bridge_b, attempts_a, attempts_b,
+            );
+            let _ = std::fs::remove_dir_all(root);
+            return;
+        }
+        let first_received = run_production_message_received_export(
+            &data_b,
+            joiner.clone(),
+            passphrase.clone(),
+            first_number,
+        )
+        .expect("first received export");
+        assert_eq!(first_received.received_message, first_message);
+        std::thread::sleep(std::time::Duration::from_secs(2));
+
+        let second_number = super::run_production_message_number_reserve(
+            &data_b,
+            joiner.clone(),
+            passphrase.clone(),
+        )
+        .expect("second message number");
+        let second_outbound = run_production_message_envelope_export(
+            &data_b,
+            joiner.clone(),
+            passphrase.clone(),
+            second_number,
+            false,
+            second_message.clone(),
+            ttl,
+        )
+        .expect("second outbound");
+        assert!(second_outbound.encrypted_envelope_present);
+        let (second_receive, second_send) = tauri::async_runtime::block_on(async {
+            tokio::join!(
+                super::run_production_onion_inbound_envelope_receive_attempt(
+                    &data_a,
+                    &cache_a,
+                    &state_a,
+                    inviter.clone(),
+                    passphrase.clone(),
+                    true,
+                ),
+                super::run_production_onion_outbound_envelope_send_attempt(
+                    &data_b,
+                    &cache_b,
+                    &state_b,
+                    joiner.clone(),
+                    passphrase.clone(),
+                    endpoint_a.clone(),
+                    second_number,
+                    true,
+                )
+            )
+        });
+        let second_receive = second_receive.expect("second receive result");
+        let second_send = second_send.expect("second send result");
+        run_production_onion_receive_loop_record_attempt_result(&state_a, &second_receive);
+        events.extend(second_send.event_summary.iter().cloned());
+        events.extend(second_receive.event_summary.iter().cloned());
+        if !second_send.send_attempt_succeeded || !second_receive.receive_attempt_succeeded {
+            let next = if !second_send.send_attempt_succeeded {
+                "SecondSendAttemptFailed"
+            } else {
+                "SecondReceiveAttemptFailed"
+            };
+            let blockers = vec![next.to_string()];
+            print_field_driver_blocker(
+                next, &blockers, &events, bridge_a, bridge_b, attempts_a, attempts_b,
+            );
+            let _ = std::fs::remove_dir_all(root);
+            return;
+        }
+        let second_received = run_production_message_received_export(
+            &data_a,
+            inviter.clone(),
+            passphrase.clone(),
+            second_number,
+        )
+        .expect("second received export");
+        assert_eq!(second_received.received_message, second_message);
+
+        let third_number = super::run_production_message_number_reserve(
+            &data_a,
+            inviter.clone(),
+            passphrase.clone(),
+        )
+        .expect("third message number");
+        let third_outbound = run_production_message_envelope_export(
+            &data_a,
+            inviter.clone(),
+            passphrase.clone(),
+            third_number,
+            false,
+            third_message.clone(),
+            ttl,
+        )
+        .expect("third outbound after resume");
+        assert!(third_outbound.encrypted_envelope_present);
+        if let Ok(mut owner_guard) = state_a.owner.lock() {
+            let _ = owner_guard.take();
+        }
+        let mut resume_events = Vec::new();
+        let resume_attempts_a;
+        let mut resumed_owner_a = match tauri::async_runtime::block_on(
+            super::build_real_onion_roundtrip_owner_with_retries(
+                &data_a,
+                &cache_a,
+                None,
+                &inviter,
+                &mut resume_events,
+                retry_limit,
+                bridge_config_a.as_ref(),
+                None,
+            ),
+        ) {
+            Ok((owner, attempts, _reused)) => {
+                resume_attempts_a = attempts;
+                owner
+            }
+            Err((error, attempts)) => {
+                resume_attempts_a = attempts;
+                let (next, blockers) =
+                    super::classify_real_onion_bootstrap_blocker("ProfileAResume", &error);
+                resume_events.push(format!("redacted_stage={error}"));
+                events.extend(resume_events);
+                print_field_driver_blocker(
+                    &next,
+                    &blockers,
+                    &events,
+                    bridge_a,
+                    bridge_b,
+                    attempts_a + resume_attempts_a,
+                    attempts_b,
+                );
+                let _ = std::fs::remove_dir_all(root);
+                return;
+            }
+        };
+        let mut resume_launch_sink = InMemoryTransportRuntimeEventSink::default();
+        if resumed_owner_a
+            .launch_onion_service_once(
+                arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
+                &super::production_onion_service_nickname(&inviter_profile),
+                &mut resume_launch_sink,
+            )
+            .is_err()
+        {
+            events.extend(resume_events);
+            events.extend(resume_launch_sink.events().iter().map(ToString::to_string));
+            print_field_driver_blocker(
+                "ProfileAResumeOnionServiceLaunchFailed",
+                &["OnionServiceLaunchFailed".to_string()],
+                &events,
+                bridge_a,
+                bridge_b,
+                attempts_a + resume_attempts_a,
+                attempts_b,
+            );
+            let _ = std::fs::remove_dir_all(root);
+            return;
+        }
+        events.extend(resume_events);
+        events.extend(resume_launch_sink.events().iter().map(ToString::to_string));
+        assert!(resumed_owner_a.retained_onion_endpoint().is_some());
+        let resumed_state_a = ProductionOnionClientRuntimeState::default();
+        *resumed_state_a.owner.lock().expect("resume owner a lock") = Some(resumed_owner_a);
+        *resumed_state_a
+            .owner_profile
+            .lock()
+            .expect("resume owner profile a lock") = Some(inviter.clone());
+        run_production_onion_receive_loop_start(&resumed_state_a, inviter.clone(), true);
+        run_production_onion_receive_loop_worker_started(&resumed_state_a);
+        let (third_receive, third_send) = tauri::async_runtime::block_on(async {
+            tokio::join!(
+                super::run_production_onion_inbound_envelope_receive_attempt(
+                    &data_b,
+                    &cache_b,
+                    &state_b,
+                    joiner.clone(),
+                    passphrase.clone(),
+                    true,
+                ),
+                super::run_production_onion_outbound_envelope_send_attempt(
+                    &data_a,
+                    &cache_a,
+                    &resumed_state_a,
+                    inviter.clone(),
+                    passphrase.clone(),
+                    endpoint_b.clone(),
+                    third_number,
+                    true,
+                )
+            )
+        });
+        let third_receive = third_receive.expect("third receive result");
+        let third_send = third_send.expect("third send result");
+        run_production_onion_receive_loop_record_attempt_result(&state_b, &third_receive);
+        events.extend(third_send.event_summary.iter().cloned());
+        events.extend(third_receive.event_summary.iter().cloned());
+        if !third_send.send_attempt_succeeded || !third_receive.receive_attempt_succeeded {
+            let next = if !third_send.send_attempt_succeeded {
+                "ResumeSendAttemptFailed"
+            } else {
+                "ResumeReceiveAttemptFailed"
+            };
+            let blockers = vec![next.to_string()];
+            print_field_driver_blocker(
+                next,
+                &blockers,
+                &events,
+                bridge_a,
+                bridge_b,
+                attempts_a + resume_attempts_a,
+                attempts_b,
+            );
+            let _ = std::fs::remove_dir_all(root);
+            return;
+        }
+        let third_received = run_production_message_received_export(
+            &data_b,
+            joiner.clone(),
+            passphrase.clone(),
+            third_number,
+        )
+        .expect("third received export");
+        assert_eq!(third_received.received_message, third_message);
+        assert!(
+            run_production_session_state_check(&data_a, inviter.clone(), passphrase.clone())
+                .expect("inviter resume state")
+                .ready_for_message_envelope
+        );
+        assert!(
+            run_production_session_state_check(&data_b, joiner.clone(), passphrase.clone())
+                .expect("joiner resume state")
+                .ready_for_message_envelope
+        );
+
+        let transcript_a =
+            run_production_message_transcript_export(&data_a, inviter.clone(), passphrase.clone())
+                .expect("inviter transcript");
+        let transcript_b =
+            run_production_message_transcript_export(&data_b, joiner.clone(), passphrase.clone())
+                .expect("joiner transcript");
+        assert!(transcript_a.entries.iter().any(|entry| {
+            entry.direction == "sent" && entry.message_number == first_number
+        }));
+        assert!(transcript_a.entries.iter().any(|entry| {
+            entry.direction == "received" && entry.message_number == second_number
+        }));
+        assert!(transcript_a.entries.iter().any(|entry| {
+            entry.direction == "sent" && entry.message_number == third_number
+        }));
+        assert!(transcript_b.entries.iter().any(|entry| {
+            entry.direction == "received" && entry.message_number == first_number
+        }));
+        assert!(transcript_b.entries.iter().any(|entry| {
+            entry.direction == "sent" && entry.message_number == second_number
+        }));
+        assert!(transcript_b.entries.iter().any(|entry| {
+            entry.direction == "received" && entry.message_number == third_number
+        }));
+
+        let status_a = run_production_onion_receive_loop_status(&state_a, false);
+        let status_b = run_production_onion_receive_loop_status(&state_b, false);
+        let resumed_status_a = run_production_onion_receive_loop_status(&resumed_state_a, false);
+        eprintln!(
+            "isolated_real_onion_field_driver next=none blockers= bridge_a={} bridge_b={} attempts_a={} attempts_b={} resume_attempts_a={} bootstrap_a=true bootstrap_b=true launch_a=true launch_b=true endpoint_a=true endpoint_b=true handshake=true first_send_ok=true first_receive_ok=true second_send_ok=true second_receive_ok=true resume_state=true third_send_ok=true third_receive_ok=true imports_a={} imports_b={} resume_imports_a={} network=true transport=true runtime=true events={}",
+            bridge_a,
+            bridge_b,
+            attempts_a,
+            attempts_b,
+            resume_attempts_a,
+            status_a.message_import_count,
+            status_b.message_import_count,
+            resumed_status_a.message_import_count,
+            events.join("|"),
+        );
+
+        let serialized = serde_json::to_string(&events).expect("serialize field driver events");
+        assert!(!serialized.contains(root.to_string_lossy().as_ref()));
+        assert!(!serialized.contains(&passphrase));
+        assert!(!serialized.contains("ADENV1"));
+        assert!(!serialized.contains("ADPAIR2"));
+        assert!(!serialized.contains(".onion"));
+        assert!(!serialized.contains(&first_message));
+        assert!(!serialized.contains(&second_message));
+        assert!(!serialized.contains(&third_message));
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
     #[test]
     fn production_profile_sanitizer_rejects_path_like_input() {
         assert!(sanitize_production_profile("../alice".to_string()).is_err());
