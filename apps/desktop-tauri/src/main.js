@@ -6909,11 +6909,15 @@ function productionPayloadSlotReady(kind, profile) {
   return Boolean(productionPayloadSlotValue(kind, profile));
 }
 
-function rememberPrivateRouteFollowup(action, input = productionTwoProfileInput()) {
+function rememberPrivateRouteFollowup(action, input = productionTwoProfileInput(), options = {}) {
+  const retryMessageNumber = Number.parseInt(options.messageNumber, 10);
   pendingPrivateRouteFollowup = {
     action,
     roomFingerprint: twoProfileAutoResumeFingerprint(input),
     messageFingerprint: twoProfileInputFingerprint(input),
+    retrySender: String(options.sender ?? input.profileA ?? "").trim(),
+    retryReceiver: String(options.receiver ?? input.profileB ?? "").trim(),
+    retryMessageNumber: Number.isInteger(retryMessageNumber) && retryMessageNumber > 0 ? retryMessageNumber : null,
   };
 }
 
@@ -6949,12 +6953,20 @@ async function continueAfterPeerPrivateRouteSaved(input = productionTwoProfileIn
   const followup = pendingPrivateRouteFollowup;
   clearPrivateRouteFollowup();
   if (followup.action === "retry-outbound") {
-    const pending = latestTwoProfileRetryableOutboundEntry(input);
+    const pending = retryableOutboundEntryForPrivateRouteFollowup(followup, input);
     if (pending) {
       await retryTwoProfileOutboundEntry(pending);
       return true;
     }
-    return false;
+    setProductionTwoProfileState("Retry send needs saved message");
+    setText(
+      fields.productionTwoProfileWarning,
+      currentLanguage === "ko"
+        ? "주소는 저장됐지만 선택했던 전송 대기 메시지를 찾을 수 없습니다. 대화에서 다시 보낼 메시지를 선택하세요."
+        : "The address was saved, but the selected pending send is no longer available. Choose the message to retry from the conversation.",
+    );
+    setChatDeliveryNoticeByKey("sendFailedGeneric", "warning", input);
+    return true;
   }
   if (followup.action === "receive") {
     await startProductionTwoProfileOnionReceive();
@@ -6973,6 +6985,26 @@ async function continueAfterPeerPrivateRouteSaved(input = productionTwoProfileIn
     return true;
   }
   return false;
+}
+
+function retryableOutboundEntryForPrivateRouteFollowup(followup, input = productionTwoProfileInput()) {
+  const messageNumber = Number.parseInt(followup?.retryMessageNumber, 10);
+  if (!Number.isInteger(messageNumber) || messageNumber < 1) {
+    return null;
+  }
+  const roomFingerprint = twoProfileSessionStatusFingerprint(input);
+  const sender = String(followup?.retrySender ?? input.profileA ?? "").trim();
+  const receiver = String(followup?.retryReceiver ?? input.profileB ?? "").trim();
+  return (
+    [...productionTwoProfileConversationEntries.values()].find(
+      (entry) =>
+        String(entry?.roomFingerprint ?? "").trim() === roomFingerprint &&
+        String(entry?.sender ?? "").trim() === sender &&
+        String(entry?.receiver ?? "").trim() === receiver &&
+        Number.parseInt(entry?.messageNumber, 10) === messageNumber &&
+        productionTwoProfileOutboundActionState(entry, input, twoProfileInviteCodeModeActive()).canRunNow,
+    ) ?? null
+  );
 }
 
 function messageTtlOptionsFromControls() {
@@ -12377,7 +12409,11 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
   if (twoProfileInviteCodeModeActive()) {
     const peerEndpointState = twoProfilePeerEndpointState(input);
     if (!peerEndpointState.ready) {
-      rememberPrivateRouteFollowup("retry-outbound", input);
+      rememberPrivateRouteFollowup("retry-outbound", input, {
+        sender: entry.sender,
+        receiver: entry.receiver,
+        messageNumber: entry.messageNumber,
+      });
       const nextRouteAction = focusPrivateRouteNextAction(input);
       if (nextRouteAction === "create-local") {
         await prepareInviteRoomPrivateRouteExchange(input);
