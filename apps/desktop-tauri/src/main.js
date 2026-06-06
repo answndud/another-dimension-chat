@@ -12375,9 +12375,9 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
   if (twoProfileInviteCodeModeActive()) {
     const peerEndpointState = twoProfilePeerEndpointState(input);
     if (!peerEndpointState.ready) {
+      rememberPrivateRouteFollowup("retry-outbound", input);
       const nextRouteAction = focusPrivateRouteNextAction(input);
       if (nextRouteAction === "create-local") {
-        rememberPrivateRouteFollowup("retry-outbound", input);
         await prepareInviteRoomPrivateRouteExchange(input);
         if (!twoProfileTranscriptInputStillCurrent(input)) {
           return;
@@ -12399,6 +12399,7 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
         setProductionTwoProfileState("Peer address refresh needed");
         setText(fields.productionTwoProfileWarning, t("chatNoticeRefreshAddress"));
         setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
+        focusPeerPrivateRouteCodeInput();
       } else {
         setProductionTwoProfileState("Peer delivery code needed");
         setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
