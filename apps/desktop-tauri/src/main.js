@@ -8564,25 +8564,30 @@ function twoProfileComposerPrimaryIntent({
       disabledReason: t("deliveryNeedsNetworkPermission"),
     };
   }
-  if (needsReceiveStart || needsReceiveBeforeSend) {
+  const routeReadiness = externalPeerSendReadiness(input, {
+    allowMissingMessage: true,
+    latestOnionOutbound: null,
+  });
+  if ((needsReceiveStart || needsReceiveBeforeSend) || routeReadiness.nextAction === "start-receiving") {
     return {
       action: "start-receiving",
       labelKey: "startReceiving",
-      disabledReason: t("externalSendNeedsReceive"),
+      disabledReason: routeReadiness.disabledReason || t("externalSendNeedsReceive"),
     };
   }
-  if (!peerEndpointState.ready) {
+  if (routeReadiness.nextAction === "refresh-endpoint") {
+    const stale = routeReadiness.peerEndpointState?.stale === true || peerEndpointState.stale === true;
+    return {
+      action: stale ? "refresh-endpoint" : "prepare-private-route",
+      labelKey: stale ? "refreshAndRetry" : "preparePrivateRoute",
+      disabledReason: routeReadiness.disabledReason || t("deliveryNeedsRoute"),
+    };
+  }
+  if (!routeReadiness.ready) {
     return {
       action: "prepare-private-route",
       labelKey: "preparePrivateRoute",
-      disabledReason: t("deliveryNeedsRoute"),
-    };
-  }
-  if (restartReceive) {
-    return {
-      action: "start-receiving",
-      labelKey: "startReceiving",
-      disabledReason: t("receiveIntentRestartReady"),
+      disabledReason: routeReadiness.disabledReason || t("deliveryNeedsRoute"),
     };
   }
   return {
@@ -14153,6 +14158,12 @@ async function runProductionTwoProfileComposerPrimaryAction() {
     rememberPrivateRouteFollowup(input.message ? "send-draft" : "receive", input);
     setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted", input);
     await preparePrivateDeliveryRoute({ input });
+    return;
+  }
+  if (intent.action === "refresh-endpoint") {
+    rememberPrivateRouteFollowup(input.message ? "send-draft" : "receive", input);
+    setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
+    await preparePrivateDeliveryRoute({ input, forceRefresh: true });
     return;
   }
   if (intent.action === "start-receiving") {
