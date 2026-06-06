@@ -4151,6 +4151,8 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `real_onion_bootstrap_diagnostic=${fieldTestReportValue(latestRealOnionBootstrapDiagnostic(realOnionResult), "none")}`,
     `real_onion_profile_a_bootstrap_reused=${realOnionResult?.profile_a_bootstrap_reused === true}`,
     `real_onion_profile_b_bootstrap_reused=${realOnionResult?.profile_b_bootstrap_reused === true}`,
+    `real_onion_external_peer_delivery_confirmed=${realOnionResult?.external_peer_delivery_confirmed === true}`,
+    `real_onion_local_dev_roundtrip_result=${realOnionResult?.local_dev_roundtrip_result === true}`,
     `room_runtime_promoted_from_real_onion_cache=${fieldTestBoundaryValue(boundaryText, "promoted_cache") === "true"}`,
     `room_runtime_owner_profile_bound=${fieldTestBoundaryValue(boundaryText, "owner_profile_bound") === "true"}`,
     `room_runtime_owner_matches_receive_profile=${fieldTestBoundaryValue(boundaryText, "owner_matches_receive") === "true"}`,
