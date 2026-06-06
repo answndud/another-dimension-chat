@@ -429,6 +429,8 @@ const dictionaries = {
     receivePermissionRequired: "Turn on network permission before listening for messages.",
     receiveAlreadyListening: "Already listening for new messages.",
     receiveOtherRoomActive: "Another room is already listening. Open that room to stop it.",
+    receiveOtherRoomMissing:
+      "Another room is already listening, but it is not in the saved room list. Stop receiving from the original room or restart the app before starting this room.",
     receiveRuntimeMismatch: "Receiving is using a different room identity. Stop it, then start receiving again.",
     receiveRuntimeMismatchStop: "Stop the mismatched receive runtime before starting this room again.",
     receiveStarted: "Listening for new messages. Keep this window open.",
@@ -1283,6 +1285,8 @@ const dictionaries = {
     receivePermissionRequired: "메시지를 받으려면 네트워크 권한을 켜세요.",
     receiveAlreadyListening: "이미 새 메시지를 기다리는 중입니다.",
     receiveOtherRoomActive: "다른 채팅방에서 이미 메시지를 기다리는 중입니다. 중지하려면 그 채팅방을 여세요.",
+    receiveOtherRoomMissing:
+      "다른 채팅방에서 이미 메시지를 기다리는 중이지만 저장된 방 목록에서 그 방을 찾을 수 없습니다. 원래 채팅방에서 받기를 중지하거나 앱을 다시 시작한 뒤 이 채팅방에서 시작하세요.",
     receiveRuntimeMismatch: "다른 채팅방 ID로 메시지를 기다리는 중입니다. 먼저 중지한 뒤 이 채팅방에서 다시 시작하세요.",
     receiveRuntimeMismatchStop: "이 채팅방에서 다시 시작하려면 맞지 않는 수신 런타임을 먼저 중지하세요.",
     receiveStarted: "새 메시지를 기다리는 중입니다. 이 창을 열어 두세요.",

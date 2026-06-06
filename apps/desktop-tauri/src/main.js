@@ -2929,6 +2929,21 @@ async function handleSavedInviteRoomMissingPendingAction(action) {
   return true;
 }
 
+async function showSavedInviteRoomReceiveOwnerMissing(targetRoom, stateLabel) {
+  await openSavedInviteRoom(targetRoom);
+  setProductionTwoProfileState(stateLabel);
+  setText(fields.productionTwoProfileWarning, t("receiveOtherRoomMissing"));
+  setChatDeliveryNoticeByKey("receiveOtherRoomMissing", "warning", productionTwoProfileInput());
+  setProductionFollowupActions(
+    true,
+    currentLanguage === "ko"
+      ? "다음: 원래 채팅방에서 받기를 중지하거나 앱을 다시 시작한 뒤 이 채팅방에서 메시지 받기를 다시 시작하세요."
+      : "Next: stop receiving from the original room or restart the app, then start receiving in this room again.",
+  );
+  fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
+  return true;
+}
+
 async function openSavedInviteRoomReceiveOwnerBeforeSwitch(targetRoom) {
   const targetInput = savedInviteRoomInput(targetRoom);
   if (!productionTwoProfileReceiveActiveInOtherRoom(targetInput)) {
@@ -2937,11 +2952,11 @@ async function openSavedInviteRoomReceiveOwnerBeforeSwitch(targetRoom) {
   rememberReceiveIntentForRoom(targetInput, true);
   const ownerRoom = savedInviteRoomForRoomFingerprint(productionTwoProfileOnionReceiveMode.roomFingerprint);
   if (!ownerRoom) {
-    return false;
+    return showSavedInviteRoomReceiveOwnerMissing(targetRoom, "Message listening owner room missing");
   }
   const openedOwner = await openSavedInviteRoom(ownerRoom);
   if (!openedOwner) {
-    return false;
+    return showSavedInviteRoomReceiveOwnerMissing(targetRoom, "Message listening owner room unavailable");
   }
   setProductionTwoProfileState("Message listening active in another room");
   setText(fields.productionTwoProfileWarning, t("receiveOtherRoomActive"));
