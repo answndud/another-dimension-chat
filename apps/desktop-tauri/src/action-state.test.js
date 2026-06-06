@@ -156,6 +156,12 @@ test("outbound failure classes keep missing route separate from stale endpoint",
     outboundFailureKind: "StoredOutboundEnvelopeRequired",
     outboundRetryable: true,
   };
+  const localEndpointNotReady = {
+    statuses: new Set(["sent"]),
+    outboundDeliveryState: "failed",
+    outboundFailureKind: "LocalOnionEndpointNotReady",
+    outboundRetryable: true,
+  };
 
   assert.equal(productionTwoProfileOutboundStatusLabel(missingRoute), "route missing");
   assert.equal(productionTwoProfileOutboundNeedsEndpointRefresh(missingRoute), false);
@@ -205,6 +211,15 @@ test("outbound failure classes keep missing route separate from stale endpoint",
     labelKey: "retryNetwork",
     noticeKey: "chatNoticeReceiveStopped",
     recoveryKey: "sendRecoveryTorBootstrap",
+  });
+
+  assert.equal(productionTwoProfileOutboundStatusLabel(localEndpointNotReady), "receive stopped");
+  assert.equal(productionTwoProfileOutboundNeedsEndpointRefresh(localEndpointNotReady), false);
+  assert.deepEqual(productionTwoProfileOutboundPrimaryAction(localEndpointNotReady), {
+    action: "start-receiving",
+    labelKey: "startReceiving",
+    noticeKey: "chatNoticeReceiveStopped",
+    recoveryKey: "sendRecoveryStartReceiving",
   });
 
   assert.equal(productionTwoProfileOutboundStatusLabel(missingMessage), "message missing");
