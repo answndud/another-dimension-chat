@@ -3488,6 +3488,13 @@ function fieldTestReportSummary(report) {
   const parsed = parseFieldTestReport(report);
   const room = parsed.room_present === "true" ? "room" : "no-room";
   const safety = parsed.safety_confirmed === "true" ? "verified" : "unverified";
+  const delivery =
+    parsed.real_onion_external_peer_delivery_confirmed === "true" &&
+    parsed.real_onion_local_dev_roundtrip_result !== "true"
+      ? "external-onion-delivered"
+      : parsed.real_onion_local_dev_roundtrip_result === "true"
+        ? "local-dev-roundtrip"
+        : "external-delivery-unconfirmed";
   const route = parsed.route_stale === "true"
     ? "route-stale"
     : parsed.route_ready === "true"
@@ -3512,7 +3519,7 @@ function fieldTestReportSummary(report) {
         : parsed.outbound_failure_class && parsed.outbound_failure_class !== "none"
           ? parsed.outbound_failure_class
           : "none";
-  return `summary ${room} ${safety} ${route} ${receive} next=${fieldTestReportValue(nextAction, "none")} blocker=${fieldTestReportValue(blocker, "none")}`;
+  return `summary ${room} ${safety} ${delivery} ${route} ${receive} next=${fieldTestReportValue(nextAction, "none")} blocker=${fieldTestReportValue(blocker, "none")}`;
 }
 
 function fieldTestReportTriageState(report) {
@@ -3523,6 +3530,13 @@ function fieldTestReportTriageState(report) {
     buildCommit: fieldTestReportValue(parsed.build_commit, "unknown"),
     room: parsed.room_present === "true" ? "room" : "no-room",
     safety: parsed.safety_confirmed === "true" ? "verified" : "unverified",
+    delivery:
+      parsed.real_onion_external_peer_delivery_confirmed === "true" &&
+      parsed.real_onion_local_dev_roundtrip_result !== "true"
+        ? "external-onion-delivered"
+        : parsed.real_onion_local_dev_roundtrip_result === "true"
+          ? "local-dev-roundtrip"
+          : "external-delivery-unconfirmed",
     route: parsed.route_stale === "true"
       ? "route-stale"
       : parsed.route_ready === "true"
@@ -3557,7 +3571,7 @@ function fieldTestReportComparison(localReport, peerReport) {
   const local = fieldTestReportTriageState(localReport);
   const peer = fieldTestReportTriageState(peerReport);
   const mismatches = [];
-  for (const key of ["appVersion", "buildChannel", "buildCommit", "room", "safety", "route", "receive", "next", "blocker"]) {
+  for (const key of ["appVersion", "buildChannel", "buildCommit", "room", "safety", "delivery", "route", "receive", "next", "blocker"]) {
     if (local[key] !== peer[key]) {
       mismatches.push(`${key}:${fieldTestReportValue(local[key], "none")}!=${fieldTestReportValue(peer[key], "none")}`);
     }
@@ -3588,6 +3602,9 @@ function fieldTestChecklistItems(report, peerReport = "") {
   const receiveState = fieldTestReportValue(parsed.receive_state, "stopped");
   const realOnionAttempted = parsed.real_onion_attempted === "true";
   const realOnionRetryable = parsed.real_onion_retryable === "true";
+  const externalOnionDelivered =
+    parsed.real_onion_external_peer_delivery_confirmed === "true" &&
+    parsed.real_onion_local_dev_roundtrip_result !== "true";
   const roomListState = fieldTestReportValue(parsed.room_list_state_key, "none");
   const buildMatch = fieldTestBuildIdentityMatches(report, peerReport);
   return [
@@ -3618,7 +3635,7 @@ function fieldTestChecklistItems(report, peerReport = "") {
     },
     {
       key: "messages",
-      status: sentRows > 0 && receivedRows > 0 ? "done" : sentRows > 0 ? "check" : "pending",
+      status: externalOnionDelivered || (sentRows > 0 && receivedRows > 0) ? "done" : sentRows > 0 ? "check" : "pending",
       label: t("fieldTestChecklistMessages"),
     },
     {
