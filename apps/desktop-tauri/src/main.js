@@ -4011,6 +4011,23 @@ function fieldTestRealOnionNextActionKey(parsed) {
   }
 }
 
+function fieldTestRecoveryActionNextKey(action) {
+  switch (action) {
+    case "enable-private-delivery":
+      return "fieldTestNextEnablePrivateDelivery";
+    case "start-receiving":
+      return "fieldTestNextStartReceive";
+    case "prepare-private-route":
+    case "refresh-and-retry":
+    case "paste-peer-code":
+      return "fieldTestNextSetupRoute";
+    case "retry":
+      return "fieldTestNextRetryDelivery";
+    default:
+      return "";
+  }
+}
+
 function fieldTestNextActionKey(report, peerReport = "") {
   const parsed = parseFieldTestReport(report);
   const sentRows = Number.parseInt(parsed.sent_rows ?? "0", 10) || 0;
@@ -4029,6 +4046,13 @@ function fieldTestNextActionKey(report, peerReport = "") {
   }
   if (parsed.safety_confirmed !== "true") {
     return "fieldTestNextVerifySafety";
+  }
+  const roomListAction = fieldTestReportValue(parsed.room_list_next_action, "none");
+  const outboundAction = fieldTestReportValue(parsed.outbound_recovery_action, "none");
+  const currentRecoveryAction = roomListAction !== "none" ? roomListAction : outboundAction;
+  const recoveryActionNextKey = fieldTestRecoveryActionNextKey(currentRecoveryAction);
+  if (recoveryActionNextKey) {
+    return recoveryActionNextKey;
   }
   if (parsed.route_ready !== "true" || parsed.route_stale === "true") {
     return "fieldTestNextSetupRoute";
@@ -4397,9 +4421,10 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const outboundFailureClass = retryableOutbound
     ? productionTwoProfileOutboundStatusLabel(retryableOutbound)
     : "none";
-  const outboundRecoveryAction = retryableOutbound
-    ? productionTwoProfileOutboundPrimaryAction(retryableOutbound).action
-    : "none";
+  const currentOutboundRecovery = retryableOutbound
+    ? currentTwoProfileOutboundPrimaryAction(retryableOutbound, input)
+    : null;
+  const outboundRecoveryAction = currentOutboundRecovery?.action ?? "none";
   const receiveActiveInRoom = productionTwoProfileReceiveMatchesInput(input);
   const receiveMode = receiveActiveInRoom
     ? productionTwoProfileOnionReceiveMode
@@ -4446,6 +4471,9 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const currentRoomCode = currentInviteRoomCode();
   const currentSavedRoom = savedInviteRooms().find((room) => room.code === currentRoomCode) ?? null;
   const currentSavedRoomView = currentSavedRoom ? savedInviteRoomListItemView(currentSavedRoom, { currentCode: currentRoomCode }) : null;
+  const roomListNextAction = outboundRecoveryAction !== "none"
+    ? outboundRecoveryAction
+    : currentSavedRoomView?.nextAction?.action;
 
   return [
     "Another Dimension Chat beta field test report",
@@ -4478,7 +4506,7 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `outbound_recovery_action=${fieldTestReportValue(outboundRecoveryAction, "none")}`,
     `room_list_state_key=${fieldTestReportValue(currentSavedRoomView?.state?.key, "none")}`,
     `room_list_state_label=${fieldTestReportValue(currentSavedRoomView?.state?.label, "none")}`,
-    `room_list_next_action=${fieldTestReportValue(currentSavedRoomView?.nextAction?.action, "none")}`,
+    `room_list_next_action=${fieldTestReportValue(roomListNextAction, "none")}`,
     `receive_failure_kind=${fieldTestReportValue(receiveFailureKind, "none")}`,
     `real_onion_attempted=${Boolean(realOnionResult)}`,
     `real_onion_next_blocker=${fieldTestReportValue(realOnionResult?.next_blocker, "none")}`,
