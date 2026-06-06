@@ -4332,6 +4332,10 @@ function fieldTestReportCopyPayload(report) {
   return comparison ? `${report}\n${comparison}\n${nextAction}` : `${report}\n${nextAction}`;
 }
 
+function realOnionResultConfirmsExternalPeerDelivery(result) {
+  return result?.external_peer_delivery_confirmed === true && result?.local_dev_roundtrip_result !== true;
+}
+
 function rememberRealOnionFieldTestResult(roomInput, result) {
   const fingerprint = twoProfileSessionStatusFingerprint(twoProfileRoomIdentityInput(roomInput));
   if (!fingerprint) {
@@ -4347,6 +4351,11 @@ function rememberRealOnionFieldTestResult(roomInput, result) {
     }
     latestProductionTwoProfileRealOnionResultsByRoom.delete(key);
     latestProductionTwoProfileRealOnionWaitCanceledFingerprints.delete(key);
+  }
+  if (realOnionResultConfirmsExternalPeerDelivery(result)) {
+    void refreshSavedInviteRoomMetadataForFingerprint(fingerprint, {
+      refreshSessionStatus: true,
+    });
   }
   return true;
 }
