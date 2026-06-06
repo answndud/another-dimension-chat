@@ -599,6 +599,44 @@ function clearTwoProfilePeerEndpointRefreshBusy(input) {
   }
 }
 
+function twoProfileOnionEnvelopeSendBusyMatches(input) {
+  const fingerprint = twoProfileSessionStatusFingerprint(input);
+  return Boolean(
+    productionBusyAction === "two-profile-onion-envelope-send" &&
+      fingerprint &&
+      activeTwoProfileOnionEnvelopeSendKey.startsWith(`${fingerprint}\n`),
+  );
+}
+
+function productionBusyActionMatchesInput(input = productionTwoProfileInput()) {
+  if (productionBusyAction === null) {
+    return false;
+  }
+  if (productionBusyAction === "invite-room-open") {
+    return inviteRoomOpenBusyMatches(input);
+  }
+  if (productionBusyAction === "invite-room-private-route-code") {
+    return activeInviteRoomPrivateRouteCodeFingerprint === twoProfileSessionStatusFingerprint(input);
+  }
+  if (productionBusyAction === "invite-room-peer-route-code") {
+    return activeInviteRoomPeerRouteCodeFingerprint === twoProfileSessionStatusFingerprint(input);
+  }
+  if (productionBusyAction === "two-profile-onion-envelope-send") {
+    return twoProfileOnionEnvelopeSendBusyMatches(input);
+  }
+  if (productionBusyAction === "two-profile-peer-endpoint-refresh") {
+    return activeTwoProfilePeerEndpointRefreshFingerprint === twoProfileSessionStatusFingerprint(input);
+  }
+  if (productionBusyAction === "two-profile-real-onion-roundtrip") {
+    return realOnionRoundtripActiveForInput(input);
+  }
+  return true;
+}
+
+function productionBusyActionBlocksInput(input = productionTwoProfileInput()) {
+  return Boolean(productionBusyAction && productionBusyActionMatchesInput(input));
+}
+
 function manualNetworkPermissionEnabled() {
   return fields.roomNetworkPermission?.checked === true || fields.manualOnionNetworkPermission?.checked === true;
 }
@@ -7806,7 +7844,7 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
 
 function twoProfileComposerPrimaryIntent({
   input = productionTwoProfileInput(),
-  busy = productionBusyAction !== null,
+  busy = productionBusyActionBlocksInput(input),
   sessionsReady = twoProfileSessionsReadyForInput(input),
   safetyConfirmed = twoProfileSafetyConfirmedForInput(input),
   manualNetworkPermission = manualNetworkPermissionEnabled(),
@@ -8747,7 +8785,7 @@ function applyProductionActionState() {
   const pairing = productionPairingInput();
   const message = productionMessageInput();
   const twoProfile = productionTwoProfileInput();
-  const busy = productionBusyAction !== null;
+  const busy = productionBusyActionBlocksInput(twoProfile);
   const sessionReadyForMessages = productionSessionReadyForMessages();
   const hasProfileUnlockInput = Boolean(profile && passphrase);
   const hasPairingInput = Boolean(hasProfileUnlockInput && pairing.rendezvousEndpoint);
@@ -13407,7 +13445,7 @@ async function runProductionTwoProfileComposerPrimaryAction() {
   const input = productionTwoProfileInput();
   const intent = twoProfileComposerPrimaryIntent({
     input,
-    busy: productionBusyAction !== null,
+    busy: productionBusyActionBlocksInput(input),
     sessionsReady: twoProfileSessionsReadyForInput(input),
     safetyConfirmed: twoProfileSafetyConfirmedForInput(input),
     manualNetworkPermission: manualNetworkPermissionEnabled(),
@@ -13651,7 +13689,8 @@ async function cancelProductionTwoProfileRealOnionWait() {
 }
 
 async function runTwoProfilePrimaryActionFromCompose() {
-  if (productionBusyAction !== null) {
+  const input = productionTwoProfileInput();
+  if (productionBusyActionBlocksInput(input)) {
     setProductionTwoProfileState("Connection action already running");
     setText(fields.productionTwoProfileWarning, "Wait for the active production action before sending again.");
     return;
@@ -13668,10 +13707,9 @@ async function runTwoProfilePrimaryActionFromCompose() {
   }
 
   setProductionTwoProfileState("Send needs input");
-  const input = productionTwoProfileInput();
   const readiness = twoProfilePrimaryReadiness(
     input,
-    productionBusyAction !== null,
+    productionBusyActionBlocksInput(input),
     twoProfileSessionsReadyForInput(input),
     messageRetentionPolicyReady(),
   );
