@@ -10280,6 +10280,11 @@ function applyProductionActionState() {
   const realOnionWaitCanceled = realOnionWaitCanceledForInput(twoProfile);
   const realOnionRoundtripActive = realOnionRoundtripActiveForInput(twoProfile);
   const realOnionRunAction = realOnionRecoveryRunAction(realOnionRecovery);
+  const realOnionRouteReadiness = externalPeerSendReadiness(twoProfile, {
+    allowMissingMessage: true,
+    latestOnionOutbound: null,
+  });
+  const realOnionRouteBlocked = !realOnionRunAction.ready && !realOnionRouteReadiness.ready;
   const realOnionCancelWaitReady =
     realOnionRoundtripActive ||
     (realOnionRecovery.action === "retry-bootstrap" &&
@@ -10291,13 +10296,19 @@ function applyProductionActionState() {
   }
   setActionButtonState(
     fields.runProductionTwoProfileRealOnionRoundtrip,
-    busy || !hasTwoProfileInput || !hasMessageRetentionPolicy || !manualNetworkPermission,
+    busy ||
+      !hasTwoProfileInput ||
+      !hasMessageRetentionPolicy ||
+      !manualNetworkPermission ||
+      realOnionRouteBlocked,
     busy
       ? "Wait for the active production action."
       : !manualNetworkPermission
         ? "Enable manual onion network permission before running real onion roundtrip."
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
+      : realOnionRouteBlocked
+        ? realOnionRouteReadiness.disabledReason
       : realOnionRunAction.ready
         ? t(realOnionRunAction.noticeKey || realOnionRunAction.labelKey)
       : "Enter two profiles, passphrase, and message first.",
