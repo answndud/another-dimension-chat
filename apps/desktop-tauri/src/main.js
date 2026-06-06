@@ -2779,7 +2779,13 @@ function savedInviteRoomHasRetryableOutbound(room) {
 
 function savedInviteRoomRetryableAction(action) {
   const normalized = String(action ?? "").trim();
-  return new Set(["enable-private-delivery", "prepare-private-route", "refresh-and-retry", "retry"]).has(normalized)
+  return new Set([
+    "enable-private-delivery",
+    "prepare-private-route",
+    "refresh-and-retry",
+    "start-receiving",
+    "retry",
+  ]).has(normalized)
     ? normalized
     : "";
 }
@@ -2794,6 +2800,9 @@ function savedInviteRoomRetryableState(room) {
   }
   if (action === "refresh-and-retry") {
     return { key: "refresh-address", label: t("roomStateRefreshAddress") };
+  }
+  if (action === "start-receiving") {
+    return { key: "receive-paused", label: t("roomStateReceivePaused") };
   }
   return { key: "retry-send", label: t("roomStateRetrySend") };
 }
@@ -2863,6 +2872,9 @@ function savedInviteRoomListAction(room) {
     }
     if (action === "refresh-and-retry") {
       return { action, labelKey: "refreshAndRetry" };
+    }
+    if (action === "start-receiving") {
+      return { action, labelKey: "startReceiving" };
     }
     return { action: "retry", labelKey: "retrySend" };
   }

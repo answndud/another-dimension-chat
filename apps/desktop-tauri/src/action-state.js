@@ -458,6 +458,9 @@ export function productionTwoProfileOutboundStatusLabel(entry) {
 
 export function productionTwoProfileOutboundNeedsEndpointRefresh(entry) {
   const failure = String(entry?.outboundFailureKind ?? "").toLowerCase();
+  if (failure.includes("localonionendpointnotready")) {
+    return false;
+  }
   const endpointMissing =
     failure.includes("peer-endpoint-missing") ||
     failure.includes("endpoint-missing") ||
@@ -537,6 +540,14 @@ export function productionTwoProfileOutboundPrimaryAction(entry) {
       labelKey: "refreshAndRetry",
       noticeKey: "chatNoticeRefreshAddress",
       recoveryKey: "sendRecoveryStaleEndpoint",
+    };
+  }
+  if (status === "receive stopped") {
+    return {
+      action: "start-receiving",
+      labelKey: "startReceiving",
+      noticeKey: "chatNoticeReceiveStopped",
+      recoveryKey: "sendRecoveryStartReceiving",
     };
   }
   if (status === "Tor bootstrap") {
