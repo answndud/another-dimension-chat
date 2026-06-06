@@ -1928,7 +1928,8 @@ function realOnionRecoveryNeedsExplicitNetworkPreparation(recovery) {
 function realOnionRecoveryBridgeSettingsTarget(recovery) {
   if (
     recovery?.reason === "network-or-bridge-transport" ||
-    recovery?.reason === "network-or-bridge-invalid-transport"
+    recovery?.reason === "network-or-bridge-invalid-transport" ||
+    recovery?.reason === "network-or-bridge-refresh-transport"
   ) {
     return fields.onionObfs4TransportBinaryPath ?? fields.onionBridgeConfigLines;
   }
