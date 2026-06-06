@@ -5931,7 +5931,32 @@ fn run_production_onion_receive_loop_stop(
     if let Ok(mut guard) = state.receive_loop_profile.lock() {
         *guard = None;
     }
+    shutdown_persistent_onion_runtime_owner(state);
     run_production_onion_receive_loop_status(state, false)
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+fn shutdown_persistent_onion_runtime_owner(state: &ProductionOnionClientRuntimeState) -> bool {
+    let mut owner = match state.owner.lock() {
+        Ok(mut guard) => guard.take(),
+        Err(_) => None,
+    };
+    let owner_was_present = owner.is_some();
+    if let Some(owner) = owner.as_mut() {
+        let mut sink = another_dimension_transport::InMemoryTransportRuntimeEventSink::default();
+        owner.shutdown(&mut sink);
+    }
+    if owner_was_present {
+        if let Ok(mut guard) = state.owner_profile.lock() {
+            *guard = None;
+        }
+    }
+    owner_was_present
+}
+
+#[cfg(not(feature = "manual-onion-client-attempt"))]
+fn shutdown_persistent_onion_runtime_owner(_state: &ProductionOnionClientRuntimeState) -> bool {
+    false
 }
 
 fn run_production_onion_receive_loop_worker_finished(state: &ProductionOnionClientRuntimeState) {
@@ -13106,9 +13131,7 @@ replay check: no replayed messages after message 2
         )
         .expect("third outbound after resume");
         assert!(third_outbound.encrypted_envelope_present);
-        if let Ok(mut owner_guard) = state_a.owner.lock() {
-            let _ = owner_guard.take();
-        }
+        super::shutdown_persistent_onion_runtime_owner(&state_a);
         std::thread::sleep(std::time::Duration::from_secs(3));
         let mut resume_events = Vec::new();
         let resume_attempts_a;
