@@ -1177,6 +1177,7 @@ body.is-room-list-mode .room-list-panel {
 }
 
 .saved-room-state.is-retry-send,
+.saved-room-state.is-retry-network,
 .saved-room-state.is-enable-delivery,
 .saved-room-state.is-setup-delivery,
 .saved-room-state.is-refresh-address,
@@ -1185,6 +1186,7 @@ body.is-room-list-mode .room-list-panel {
 }
 
 .saved-room-state.is-retry-send,
+.saved-room-state.is-retry-network,
 .saved-room-state.is-enable-delivery,
 .saved-room-state.is-setup-delivery {
   color: var(--warning);
