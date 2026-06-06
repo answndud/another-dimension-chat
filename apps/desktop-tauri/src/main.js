@@ -1557,24 +1557,48 @@ function currentTwoProfileOutboundPrimaryAction(entry, input = productionTwoProf
       };
     }
     if (routeReadiness.nextAction === "refresh-endpoint") {
+      if (routeReadiness.peerEndpointState?.stale) {
+        return {
+          action: "refresh-and-retry",
+          labelKey: "refreshAndRetry",
+          noticeKey: "chatNoticeRefreshAddress",
+          recoveryKey: "sendRecoveryStaleEndpoint",
+        };
+      }
       return {
         action: "prepare-private-route",
         labelKey: "preparePrivateRoute",
-        noticeKey: routeReadiness.peerEndpointState?.stale ? "chatNoticeRefreshAddress" : "privateDeliveryRouteNeeded",
-        recoveryKey: routeReadiness.peerEndpointState?.stale ? "sendRecoveryStaleEndpoint" : "sendRecoveryRouteMissing",
+        noticeKey: "privateDeliveryRouteNeeded",
+        recoveryKey: "sendRecoveryRouteMissing",
       };
     }
   }
   const peerEndpointState = twoProfilePeerEndpointState(input);
   if (primaryAction.action === "enable-private-delivery" && manualNetworkPermissionEnabled()) {
     if (!peerEndpointState.ready) {
+      if (peerEndpointState.stale) {
+        return {
+          action: "refresh-and-retry",
+          labelKey: "refreshAndRetry",
+          noticeKey: "chatNoticeRefreshAddress",
+          recoveryKey: "sendRecoveryStaleEndpoint",
+        };
+      }
       return {
         action: "prepare-private-route",
         labelKey: "preparePrivateRoute",
-        noticeKey: peerEndpointState.stale ? "chatNoticeRefreshAddress" : "privateDeliveryRouteNeeded",
-        recoveryKey: peerEndpointState.stale ? "sendRecoveryStaleEndpoint" : "sendRecoveryRouteMissing",
+        noticeKey: "privateDeliveryRouteNeeded",
+        recoveryKey: "sendRecoveryRouteMissing",
       };
     }
+    return {
+      action: "retry",
+      labelKey: "retrySend",
+      noticeKey: "sendFailedGeneric",
+      recoveryKey: "sendRecoveryGeneric",
+    };
+  }
+  if (primaryAction.action === "refresh-and-retry" && peerEndpointState.ready) {
     return {
       action: "retry",
       labelKey: "retrySend",
