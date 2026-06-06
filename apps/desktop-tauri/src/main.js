@@ -41,7 +41,6 @@ import {
   productionTwoProfileConversationCompare,
   productionTwoProfileCurrentAction,
   productionTwoProfileMessageResultView,
-  productionTwoProfileOutboundNeedsEndpointRefresh,
   productionTwoProfileOutboundStatusLabel,
   productionTwoProfileRealOnionRecoveryPlan,
   productionTwoProfileRealOnionResultView,
@@ -6600,11 +6599,73 @@ function selectedManualMessageActionBlocker(action, input = productionMessageInp
   return "";
 }
 
+function twoProfileRetryableOutboundActionView(entry, fallback) {
+  if (!twoProfileConversationOutboundRetryable(entry)) {
+    return fallback;
+  }
+  const current = currentTwoProfileOutboundAction(entry);
+  const primaryAction = current?.primaryAction ?? currentTwoProfileOutboundPrimaryAction(entry);
+  const number = Number.parseInt(entry?.messageNumber, 10);
+  const label = Number.isInteger(number) ? `#${number}` : "";
+  const common = {
+    state: "is-ready",
+    manualTarget: null,
+    manualButtonLabel: "Open manual tools",
+  };
+  if (primaryAction.action === "refresh-and-retry") {
+    return {
+      ...common,
+      nextAction: `Stale address: refresh the peer address, then retry message ${label}.`,
+      rowLabel: "action: refresh address and retry",
+      focusTarget: "refresh-endpoint",
+    };
+  }
+  if (primaryAction.action === "start-receiving") {
+    return {
+      ...common,
+      nextAction: `Receive stopped: start receiving, then retry message ${label}.`,
+      rowLabel: "action: start receiving",
+      focusTarget: "start-receiving",
+    };
+  }
+  if (primaryAction.action === "prepare-private-route") {
+    return {
+      ...common,
+      nextAction: `Delivery code needed: set up delivery, then retry message ${label}.`,
+      rowLabel: "action: set up delivery",
+      focusTarget: "private-route",
+    };
+  }
+  if (primaryAction.action === "enable-private-delivery") {
+    return {
+      ...common,
+      nextAction: `Private delivery is off: turn it on, then retry message ${label}.`,
+      rowLabel: "action: turn on private delivery",
+      focusTarget: "private-delivery",
+    };
+  }
+  if (primaryAction.action === "verify") {
+    return {
+      ...common,
+      nextAction: `Verify peer identity, then retry message ${label}.`,
+      rowLabel: "action: verify peer",
+      focusTarget: "verify",
+    };
+  }
+  return {
+    ...common,
+    nextAction: `Retry send: message ${label} can be sent again or canceled.`,
+    rowLabel: "action: retry send",
+    focusTarget: "retry-send",
+  };
+}
+
 function twoProfileConversationActionView(entry) {
   const senderEnvelopeSlotPresent = entry
     ? messageEnvelopeSlotReadyForEntry(entry.sender, entry)
     : false;
   const actionView = productionTwoProfileConversationActionView(entry, senderEnvelopeSlotPresent);
+  const resolvedActionView = twoProfileRetryableOutboundActionView(entry, actionView);
   const focusTargets = {
     "reply-message": fields.productionTwoProfileMessage,
     "import-envelope": fields.importProductionMessageEnvelope,
@@ -6612,9 +6673,9 @@ function twoProfileConversationActionView(entry) {
     "export-envelope": fields.exportProductionMessageEnvelope,
   };
   return {
-    ...actionView,
-    focusTargetKey: actionView.focusTarget,
-    focusTarget: focusTargets[actionView.focusTarget] ?? null,
+    ...resolvedActionView,
+    focusTargetKey: resolvedActionView.focusTarget,
+    focusTarget: focusTargets[resolvedActionView.focusTarget] ?? null,
   };
 }
 
@@ -6628,10 +6689,22 @@ function retryableTwoProfileOutboundWarning(entry) {
   }
   const number = Number.parseInt(entry.messageNumber, 10);
   const label = Number.isInteger(number) ? `#${number}` : "";
-  if (productionTwoProfileOutboundNeedsEndpointRefresh(entry)) {
+  const current = currentTwoProfileOutboundAction(entry);
+  const primaryAction = current?.primaryAction ?? currentTwoProfileOutboundPrimaryAction(entry);
+  if (primaryAction.action === "refresh-and-retry") {
     return currentLanguage === "ko"
       ? `메시지 ${label} 전송이 멈췄습니다. 상대 주소를 갱신한 뒤 다시 보내거나 취소할 수 있습니다.`
       : `Message ${label} is waiting. Refresh the peer address, then retry or cancel this send.`;
+  }
+  if (primaryAction.action === "start-receiving") {
+    return currentLanguage === "ko"
+      ? `메시지 ${label} 전송이 멈췄습니다. 메시지 받기를 시작한 뒤 다시 보내거나 취소할 수 있습니다.`
+      : `Message ${label} is waiting. Start receiving, then retry or cancel this send.`;
+  }
+  if (primaryAction.action === "prepare-private-route") {
+    return currentLanguage === "ko"
+      ? `메시지 ${label} 전송 경로가 준비되지 않았습니다. 전송을 준비한 뒤 다시 보내거나 취소할 수 있습니다.`
+      : `Message ${label} needs a delivery route. Set up delivery, then retry or cancel this send.`;
   }
   return currentLanguage === "ko"
     ? `메시지 ${label} 전송이 실패했습니다. 다시 보내거나 취소할 수 있습니다.`
