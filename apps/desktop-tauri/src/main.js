@@ -2929,7 +2929,37 @@ async function handleSavedInviteRoomMissingPendingAction(action) {
   return true;
 }
 
+async function openSavedInviteRoomReceiveOwnerBeforeSwitch(targetRoom) {
+  const targetInput = savedInviteRoomInput(targetRoom);
+  if (!productionTwoProfileReceiveActiveInOtherRoom(targetInput)) {
+    return false;
+  }
+  rememberReceiveIntentForRoom(targetInput, true);
+  const ownerRoom = savedInviteRoomForRoomFingerprint(productionTwoProfileOnionReceiveMode.roomFingerprint);
+  if (!ownerRoom) {
+    return false;
+  }
+  const openedOwner = await openSavedInviteRoom(ownerRoom);
+  if (!openedOwner) {
+    return false;
+  }
+  setProductionTwoProfileState("Message listening active in another room");
+  setText(fields.productionTwoProfileWarning, t("receiveOtherRoomActive"));
+  setChatDeliveryNoticeByKey("receiveOtherRoomActive", "warning", productionTwoProfileInput());
+  setProductionFollowupActions(
+    true,
+    currentLanguage === "ko"
+      ? "다음: 이 채팅방에서 메시지 받기를 중지한 뒤, 다시 시작하려던 채팅방을 여세요."
+      : "Next: stop receiving in this room, then reopen the room you wanted to start.",
+  );
+  fields.stopProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
+  return true;
+}
+
 async function runSavedInviteRoomListAction(room, action) {
+  if (action === "start-receiving" && await openSavedInviteRoomReceiveOwnerBeforeSwitch(room)) {
+    return true;
+  }
   const opened = await openSavedInviteRoom(room);
   if (!opened) {
     return false;
