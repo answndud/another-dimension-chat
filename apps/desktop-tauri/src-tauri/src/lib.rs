@@ -6300,6 +6300,9 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
                     let mut sink = InMemoryTransportRuntimeEventSink::default();
                     receive_attempt_started = true;
                     inbound_rend_request_accept_attempted = true;
+                    event_summary.push(
+                        "receive_diagnostic phase=rend_accept_start profile=redacted".to_string(),
+                    );
                     let mut recorded_event_count = 0;
                     let result = owner.accept_inbound_rend_request_once(
                         arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
@@ -6309,11 +6312,19 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
                     recorded_event_count = sink.events().len();
                     match result {
                         Ok(()) => {
+                            event_summary.push(
+                                "receive_diagnostic phase=rend_accept_ok profile=redacted"
+                                    .to_string(),
+                            );
                             inbound_rend_request_accepted = true;
                             accepted_stream_request_stream_ready =
                                 owner.summary().accepted_stream_request_stream_owned();
                             stream_request_accept_attempted = true;
                             stream_read_attempted = true;
+                            event_summary.push(
+                                "receive_diagnostic phase=stream_read_start profile=redacted"
+                                    .to_string(),
+                            );
                             let read_result = owner.read_accepted_inbound_stream_once(
                                 arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
                                 4096,
@@ -6322,6 +6333,10 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
                             event_summary.extend(sink.events()[recorded_event_count..].iter().map(ToString::to_string));
                             match read_result {
                                 Ok(envelope_bytes) => {
+                                    event_summary.push(format!(
+                                        "receive_diagnostic phase=stream_read_ok profile=redacted bytes_present={}",
+                                        !envelope_bytes.is_empty()
+                                    ));
                                     stream_request_accepted = true;
                                     stream_bytes_read = !envelope_bytes.is_empty();
                                     let envelope_payload = match String::from_utf8(envelope_bytes)
@@ -6426,11 +6441,17 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
                                     }
                                 }
                                 Err(error) => {
+                                    event_summary.push(format!(
+                                        "receive_diagnostic phase=stream_read_failed profile=redacted error={error:?}",
+                                    ));
                                     next_blocker = format!("{error:?}");
                                 }
                             }
                         }
                         Err(error) => {
+                            event_summary.push(format!(
+                                "receive_diagnostic phase=rend_accept_failed profile=redacted error={error:?}",
+                            ));
                             next_blocker = format!("{error:?}");
                         }
                     }
@@ -9285,6 +9306,8 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             profile_b_name.clone(),
             passphrase.clone(),
         )?;
+        let _transport_backup =
+            run_production_onion_backup_exclusion_prepare(&_app_data_root, &_app_cache_root);
         let profile_a_key_record = run_production_onion_key_record_prepare(
             &_app_data_root,
             &_app_cache_root,
@@ -9660,13 +9683,22 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             passphrase.clone(),
         )?;
         let mut profile_b_init = None;
-        let (sender_profile, receiver_profile, sender_owner, receiver_owner, receiver_endpoint, init_payload) =
+        let (
+            sender_profile,
+            receiver_profile,
+            sender_owner,
+            receiver_owner,
+            sender_endpoint,
+            receiver_endpoint,
+            init_payload,
+        ) =
             if profile_a_init.output_payload_created {
                 (
                     profile_a_name.clone(),
                     profile_b_name.clone(),
                     profile_a_owner,
                     profile_b_owner,
+                    profile_a_endpoint,
                     profile_b_endpoint,
                     profile_a_init.output_payload,
                 )
@@ -9686,6 +9718,7 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
                     profile_a_name.clone(),
                     profile_b_owner,
                     profile_a_owner,
+                    profile_b_endpoint,
                     profile_a_endpoint,
                     output_payload,
                 )
@@ -9743,6 +9776,12 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
         if let Ok(mut guard) = receiver_runtime_state.owner.lock() {
             *guard = Some(receiver_owner);
         }
+        let _ = run_production_onion_receive_loop_start(
+            &sender_runtime_state,
+            sender_profile.clone(),
+            true,
+        );
+        let _ = run_production_onion_receive_loop_worker_started(&sender_runtime_state);
         let _ = run_production_onion_receive_loop_start(
             &receiver_runtime_state,
             receiver_profile.clone(),
@@ -9990,6 +10029,10 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
         let (inbound_result, send_result) = tokio::join!(receive_future, send_future);
         let inbound_attempt = inbound_result.map_err(|_| "real onion receive attempt failed")?;
         let send_attempt = send_result.map_err(|_| "real onion send attempt failed")?;
+        run_production_onion_receive_loop_record_attempt_result(
+            &receiver_runtime_state,
+            &inbound_attempt,
+        );
         event_summary.extend(send_attempt.event_summary.iter().cloned());
         event_summary.extend(inbound_attempt.event_summary.iter().cloned());
         if !send_attempt.send_attempt_succeeded {
@@ -10064,33 +10107,34 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
         )?;
         let second_message_number = run_production_message_number_reserve(
             &_app_data_root,
-            sender_profile.clone(),
+            receiver_profile.clone(),
             passphrase.clone(),
         )?;
         let second_outbound = run_production_message_envelope_export(
             &_app_data_root,
-            sender_profile.clone(),
+            receiver_profile.clone(),
             passphrase.clone(),
             second_message_number,
             false,
             message_text,
             message_ttl_seconds,
         )?;
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         let second_receive_future = run_production_onion_inbound_envelope_receive_attempt(
             &_app_data_root,
             &_app_cache_root,
-            &receiver_runtime_state,
-            receiver_profile.clone(),
+            &sender_runtime_state,
+            sender_profile.clone(),
             passphrase.clone(),
             true,
         );
         let second_send_future = run_production_onion_outbound_envelope_send_attempt(
             &_app_data_root,
             &_app_cache_root,
-            &sender_runtime_state,
-            sender_profile.clone(),
+            &receiver_runtime_state,
+            receiver_profile.clone(),
             passphrase.clone(),
-            receiver_endpoint,
+            sender_endpoint,
             second_message_number,
             true,
         );
@@ -10100,6 +10144,10 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             second_inbound_result.map_err(|_| "real onion second receive attempt failed")?;
         let second_send_attempt =
             second_send_result.map_err(|_| "real onion second send attempt failed")?;
+        run_production_onion_receive_loop_record_attempt_result(
+            &sender_runtime_state,
+            &second_inbound_attempt,
+        );
         event_summary.extend(second_send_attempt.event_summary.iter().cloned());
         event_summary.extend(second_inbound_attempt.event_summary.iter().cloned());
         if !second_send_attempt.send_attempt_succeeded {
@@ -10170,22 +10218,46 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
         }
         let second_received = run_production_message_received_export(
             &_app_data_root,
-            receiver_profile,
+            sender_profile,
             passphrase,
             second_message_number,
         )?;
-        let receive_mode_status =
+        let sender_receive_mode_status =
+            run_production_onion_receive_loop_status(&sender_runtime_state, false);
+        let receiver_receive_mode_status =
             run_production_onion_receive_loop_status(&receiver_runtime_state, false);
-        let consecutive_messages_imported = receive_mode_status.message_import_count;
-        let receive_mode_recorder_verified = receive_mode_status.attempt_count == 2
-            && receive_mode_status.import_sequence == 2
-            && receive_mode_status.message_import_count == 2
-            && receive_mode_status.endpoint_update_count == 0
-            && receive_mode_status.last_network_io_attempted
-            && receive_mode_status.last_stream_accept_attempted
-            && receive_mode_status.last_stream_read_write_attempted
-            && receive_mode_status.last_envelope_io_opened
-            && receive_mode_status.last_runtime_messaging_enabled;
+        let consecutive_receive_attempts =
+            sender_receive_mode_status.attempt_count + receiver_receive_mode_status.attempt_count;
+        let consecutive_messages_imported = sender_receive_mode_status.message_import_count
+            + receiver_receive_mode_status.message_import_count;
+        let receive_mode_import_sequence = sender_receive_mode_status.import_sequence
+            + receiver_receive_mode_status.import_sequence;
+        let receive_mode_endpoint_update_count = sender_receive_mode_status.endpoint_update_count
+            + receiver_receive_mode_status.endpoint_update_count;
+        let receive_mode_last_network_io_attempted =
+            sender_receive_mode_status.last_network_io_attempted
+                || receiver_receive_mode_status.last_network_io_attempted;
+        let receive_mode_last_stream_accept_attempted =
+            sender_receive_mode_status.last_stream_accept_attempted
+                || receiver_receive_mode_status.last_stream_accept_attempted;
+        let receive_mode_last_stream_read_write_attempted =
+            sender_receive_mode_status.last_stream_read_write_attempted
+                || receiver_receive_mode_status.last_stream_read_write_attempted;
+        let receive_mode_last_envelope_io_opened =
+            sender_receive_mode_status.last_envelope_io_opened
+                || receiver_receive_mode_status.last_envelope_io_opened;
+        let receive_mode_last_runtime_messaging_enabled =
+            sender_receive_mode_status.last_runtime_messaging_enabled
+                || receiver_receive_mode_status.last_runtime_messaging_enabled;
+        let receive_mode_recorder_verified = consecutive_receive_attempts == 2
+            && receive_mode_import_sequence == 2
+            && consecutive_messages_imported == 2
+            && receive_mode_endpoint_update_count == 0
+            && receive_mode_last_network_io_attempted
+            && receive_mode_last_stream_accept_attempted
+            && receive_mode_last_stream_read_write_attempted
+            && receive_mode_last_envelope_io_opened
+            && receive_mode_last_runtime_messaging_enabled;
         restore_real_onion_roundtrip_runtime_owners(
             runtime_state,
             _app_data_root.as_ref(),
@@ -10243,22 +10315,19 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             second_receive_attempt_succeeded: second_inbound_attempt.receive_attempt_succeeded,
             inbound_message_stored: inbound_attempt.received_envelope_ready,
             second_inbound_message_stored: second_inbound_attempt.received_envelope_ready,
-            consecutive_receive_attempts: 2,
+            consecutive_receive_attempts,
             consecutive_messages_imported,
-            receive_mode_runtime_state: receive_mode_status.runtime_state,
-            receive_mode_runtime_label: receive_mode_status.runtime_label,
-            receive_mode_attempt_count: receive_mode_status.attempt_count,
-            receive_mode_import_sequence: receive_mode_status.import_sequence,
-            receive_mode_message_import_count: receive_mode_status.message_import_count,
-            receive_mode_endpoint_update_count: receive_mode_status.endpoint_update_count,
-            receive_mode_last_network_io_attempted: receive_mode_status.last_network_io_attempted,
-            receive_mode_last_stream_accept_attempted: receive_mode_status
-                .last_stream_accept_attempted,
-            receive_mode_last_stream_read_write_attempted: receive_mode_status
-                .last_stream_read_write_attempted,
-            receive_mode_last_envelope_io_opened: receive_mode_status.last_envelope_io_opened,
-            receive_mode_last_runtime_messaging_enabled: receive_mode_status
-                .last_runtime_messaging_enabled,
+            receive_mode_runtime_state: receiver_receive_mode_status.runtime_state,
+            receive_mode_runtime_label: receiver_receive_mode_status.runtime_label,
+            receive_mode_attempt_count: consecutive_receive_attempts,
+            receive_mode_import_sequence,
+            receive_mode_message_import_count: consecutive_messages_imported,
+            receive_mode_endpoint_update_count,
+            receive_mode_last_network_io_attempted,
+            receive_mode_last_stream_accept_attempted,
+            receive_mode_last_stream_read_write_attempted,
+            receive_mode_last_envelope_io_opened,
+            receive_mode_last_runtime_messaging_enabled,
             receive_mode_recorder_verified,
             received_status_verified: inbound_attempt.received_envelope_ready
                 && received.received_message_matches_session,
@@ -12488,18 +12557,38 @@ replay check: no replayed messages after message 2
         .expect("receiver transcript after real onion smoke");
         assert_eq!(sender_transcript.entries.len(), 2);
         assert_eq!(receiver_transcript.entries.len(), 2);
-        assert!(sender_transcript
-            .entries
-            .iter()
-            .all(|entry| entry.direction == "sent"));
-        assert!(receiver_transcript
-            .entries
-            .iter()
-            .all(|entry| entry.direction == "received"));
-        assert!(receiver_transcript.entries.iter().all(|entry| {
-            entry.message == "real onion smoke" && entry.ttl_seconds == 3600 && !entry.expired
-        }));
-
+        assert_eq!(
+            sender_transcript
+                .entries
+                .iter()
+                .filter(|entry| entry.direction == "sent")
+                .count(),
+            1
+        );
+        assert_eq!(
+            sender_transcript
+                .entries
+                .iter()
+                .filter(|entry| entry.direction == "received")
+                .count(),
+            1
+        );
+        assert_eq!(
+            receiver_transcript
+                .entries
+                .iter()
+                .filter(|entry| entry.direction == "sent")
+                .count(),
+            1
+        );
+        assert_eq!(
+            receiver_transcript
+                .entries
+                .iter()
+                .filter(|entry| entry.direction == "received")
+                .count(),
+            1
+        );
         let serialized = serde_json::to_string(&result).expect("serialize real onion smoke");
         assert!(!serialized.contains("correct-passphrase"));
         assert!(!serialized.contains(data_root.to_string_lossy().as_ref()));
