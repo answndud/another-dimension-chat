@@ -2118,6 +2118,17 @@ function realOnionRecoveryNeedsExplicitNetworkPreparation(recovery) {
   );
 }
 
+function realOnionRecoverySettingsLabelKey(recovery) {
+  if (
+    recovery?.reason === "network-or-bridge-transport" ||
+    recovery?.reason === "network-or-bridge-invalid-transport" ||
+    recovery?.reason === "network-or-bridge-refresh-transport"
+  ) {
+    return "bridgeTransportBinary";
+  }
+  return "bridgeConfig";
+}
+
 function realOnionRecoveryBridgeSettingsTarget(recovery) {
   if (
     recovery?.reason === "network-or-bridge-transport" ||
@@ -2167,6 +2178,47 @@ function realOnionRecoveryNoticeKey(recovery) {
     default:
       return "";
   }
+}
+
+function realOnionRecoveryRunAction(recovery) {
+  if (realOnionRecoveryNeedsExplicitNetworkPreparation(recovery)) {
+    return {
+      ready: true,
+      labelKey: realOnionRecoverySettingsLabelKey(recovery),
+      noticeKey: realOnionRecoveryBridgeSettingsNoticeKey(recovery),
+      opensNetworkSettings: true,
+    };
+  }
+  if (recovery?.action === "retry-bootstrap" || recovery?.action === "bootstrap-cancelled") {
+    return {
+      ready: true,
+      labelKey: "retryNetwork",
+      noticeKey: "fieldTestNextRetryNetwork",
+      opensNetworkSettings: false,
+    };
+  }
+  if (recovery?.action === "prepare-network-or-bridge") {
+    return {
+      ready: true,
+      labelKey: "retryNetwork",
+      noticeKey: realOnionRecoveryNoticeKey(recovery) || "fieldTestNextRetryNetwork",
+      opensNetworkSettings: false,
+    };
+  }
+  if (recovery?.action === "retry-private-delivery") {
+    return {
+      ready: true,
+      labelKey: "retryPrivateDelivery",
+      noticeKey: "fieldTestNextRetryDelivery",
+      opensNetworkSettings: false,
+    };
+  }
+  return {
+    ready: false,
+    labelKey: "runRealOnionRoundtrip",
+    noticeKey: "",
+    opensNetworkSettings: false,
+  };
 }
 
 function openPrivateDeliveryBridgeSettings(recovery, input = productionTwoProfileInput()) {
@@ -9907,18 +9959,7 @@ function applyProductionActionState() {
   const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(realOnionResult);
   const realOnionWaitCanceled = realOnionWaitCanceledForInput(twoProfile);
   const realOnionRoundtripActive = realOnionRoundtripActiveForInput(twoProfile);
-  const realOnionNeedsNetworkPreparation =
-    realOnionRecoveryNeedsExplicitNetworkPreparation(realOnionRecovery);
-  const realOnionRetryReady =
-    realOnionRecovery.action === "retry-bootstrap" ||
-    realOnionRecovery.action === "bootstrap-cancelled" ||
-    realOnionRecovery.action === "prepare-network-or-bridge";
-  const realOnionRetryLabelKey =
-    realOnionNeedsNetworkPreparation
-      ? "bridgeConfig"
-      : realOnionRecovery.action === "retry-bootstrap" || realOnionRecovery.action === "prepare-network-or-bridge"
-      ? "retryNetwork"
-      : "retryPrivateDelivery";
+  const realOnionRunAction = realOnionRecoveryRunAction(realOnionRecovery);
   const realOnionCancelWaitReady =
     realOnionRoundtripActive ||
     (realOnionRecovery.action === "retry-bootstrap" &&
@@ -9926,7 +9967,7 @@ function applyProductionActionState() {
       !realOnionWaitCanceled);
   const realOnionRunLabel = fields.runProductionTwoProfileRealOnionRoundtrip?.querySelector("[data-i18n]");
   if (realOnionRunLabel) {
-    setText(realOnionRunLabel, t(realOnionRetryReady ? realOnionRetryLabelKey : "runRealOnionRoundtrip"));
+    setText(realOnionRunLabel, t(realOnionRunAction.ready ? realOnionRunAction.labelKey : "runRealOnionRoundtrip"));
   }
   setActionButtonState(
     fields.runProductionTwoProfileRealOnionRoundtrip,
@@ -9937,8 +9978,8 @@ function applyProductionActionState() {
         ? "Enable manual onion network permission before running real onion roundtrip."
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
-      : realOnionRetryReady
-        ? t(realOnionRetryLabelKey)
+      : realOnionRunAction.ready
+        ? t(realOnionRunAction.noticeKey || realOnionRunAction.labelKey)
       : "Enter two profiles, passphrase, and message first.",
     twoProfileCurrentAction === "real-onion-roundtrip",
   );
@@ -13813,7 +13854,8 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
 
   const previousRealOnionResult = latestRealOnionFieldTestResult(roomInput);
   const previousRealOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(previousRealOnionResult);
-  if (realOnionRecoveryNeedsExplicitNetworkPreparation(previousRealOnionRecovery)) {
+  const previousRealOnionRunAction = realOnionRecoveryRunAction(previousRealOnionRecovery);
+  if (previousRealOnionRunAction.opensNetworkSettings) {
     const userView = localizedTwoProfileUserView(productionTwoProfileRealOnionUserView(previousRealOnionResult));
     openPrivateDeliveryBridgeSettings(previousRealOnionRecovery, input);
     setText(fields.productionTwoProfileProfiles, userView.profiles);
