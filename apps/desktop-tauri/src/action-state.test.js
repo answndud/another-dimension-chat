@@ -14,6 +14,7 @@ import {
   productionTwoProfileRealOnionRecoveryPlan,
   productionTwoProfileRealOnionUserView,
   productionTwoProfileResumeTarget,
+  productionTwoProfileSendAttemptUserView,
   productionTwoProfileShouldShowOutboundRecovery,
 } from "./action-state.js";
 
@@ -213,6 +214,68 @@ test("outbound failure classes keep missing route separate from stale endpoint",
     noticeKey: "sendFailedGeneric",
     recoveryKey: "sendRecoveryGeneric",
   });
+});
+
+test("send attempt view separates route setup from endpoint refresh", () => {
+  assert.deepEqual(
+    productionTwoProfileSendAttemptUserView(
+      {
+        send_attempt_started: false,
+        send_attempt_succeeded: false,
+        peer_endpoint_refresh_recommended: false,
+        next_blocker: "stored remote endpoint unavailable",
+        blockers: ["stored remote endpoint unavailable"],
+      },
+      7,
+    ),
+    {
+      state: "Private route needed",
+      profiles: "Room is saved.",
+      session: "Peer delivery route is not ready.",
+      message: "Message #7 is still saved. Set up the delivery route, then retry or cancel.",
+      boundary: "No private delivery was attempted.",
+    },
+  );
+
+  assert.deepEqual(
+    productionTwoProfileSendAttemptUserView(
+      {
+        send_attempt_started: false,
+        send_attempt_succeeded: false,
+        peer_endpoint_refresh_recommended: true,
+        next_blocker: "stored remote endpoint refresh required",
+        blockers: ["stored remote endpoint refresh required"],
+      },
+      7,
+    ),
+    {
+      state: "Peer address refresh needed",
+      profiles: "Room is saved.",
+      session: "Peer address needs to be refreshed.",
+      message: "Message #7 is still saved. Refresh the address, then retry or cancel.",
+      boundary: "No message was deleted.",
+    },
+  );
+
+  assert.deepEqual(
+    productionTwoProfileSendAttemptUserView(
+      {
+        send_attempt_started: true,
+        send_attempt_succeeded: false,
+        peer_endpoint_refresh_recommended: false,
+        next_blocker: "SendFailed",
+        blockers: ["SendFailed"],
+      },
+      7,
+    ),
+    {
+      state: "Private delivery failed",
+      profiles: "Room is saved.",
+      session: "The other device may be offline.",
+      message: "Message #7 is still saved. Retry or cancel it from the conversation.",
+      boundary: "The failed send stayed retryable.",
+    },
+  );
 });
 
 test("latest retryable outbound only selects active-device failed sends", () => {

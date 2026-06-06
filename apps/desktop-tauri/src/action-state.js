@@ -1599,6 +1599,9 @@ export function productionTwoProfileRealOnionRecoveryPlan(result) {
 export function productionTwoProfileSendAttemptUserView(result, messageNumber = 0) {
   const number = Number.parseInt(messageNumber, 10);
   const label = Number.isInteger(number) && number > 0 ? `#${number}` : "";
+  const blockerText = sendAttemptBlockerText(result);
+  const routeMissing = sendAttemptNeedsRouteSetup(blockerText);
+  const endpointRefreshNeeded = sendAttemptNeedsEndpointRefresh(result, blockerText, routeMissing);
   if (result?.send_attempt_succeeded) {
     return {
       state: "Private send written",
@@ -1608,7 +1611,7 @@ export function productionTwoProfileSendAttemptUserView(result, messageNumber = 
       boundary: "External peer delivery is not confirmed until the other device receives it.",
     };
   }
-  if (result?.peer_endpoint_refresh_recommended || result?.retry_recommended_after_endpoint_refresh) {
+  if (endpointRefreshNeeded) {
     return {
       state: "Peer address refresh needed",
       profiles: "Room is saved.",
@@ -1617,6 +1620,17 @@ export function productionTwoProfileSendAttemptUserView(result, messageNumber = 
         ? `Message ${label} is still saved. Refresh the address, then retry or cancel.`
         : "Message is still saved. Refresh the address, then retry or cancel.",
       boundary: "No message was deleted.",
+    };
+  }
+  if (routeMissing) {
+    return {
+      state: "Private route needed",
+      profiles: "Room is saved.",
+      session: "Peer delivery route is not ready.",
+      message: label
+        ? `Message ${label} is still saved. Set up the delivery route, then retry or cancel.`
+        : "Message is still saved. Set up the delivery route, then retry or cancel.",
+      boundary: "No private delivery was attempted.",
     };
   }
   if (result?.manual_network_permission_enabled === false) {
@@ -1648,6 +1662,33 @@ export function productionTwoProfileSendAttemptUserView(result, messageNumber = 
       : "Message is still saved. Retry when the room is ready.",
     boundary: "No message was deleted.",
   };
+}
+
+function sendAttemptBlockerText(result) {
+  const blockers = Array.isArray(result?.blockers) ? result.blockers : [];
+  return [result?.next_blocker, result?.warning, ...blockers].join(" ").toLowerCase();
+}
+
+function sendAttemptNeedsRouteSetup(blockerText) {
+  return (
+    blockerText.includes("peer-endpoint-missing") ||
+    blockerText.includes("endpoint-missing") ||
+    blockerText.includes("endpointunavailable") ||
+    blockerText.includes("stored remote endpoint unavailable") ||
+    blockerText.includes("runtimeownerprofilemismatch")
+  );
+}
+
+function sendAttemptNeedsEndpointRefresh(result, blockerText, routeMissing) {
+  if (routeMissing) {
+    return false;
+  }
+  return Boolean(
+    result?.peer_endpoint_refresh_recommended ||
+      result?.retry_recommended_after_endpoint_refresh ||
+      blockerText.includes("stale") ||
+      blockerText.includes("refresh"),
+  );
 }
 
 export function productionTwoProfileRealOnionUserView(result) {

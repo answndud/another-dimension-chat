@@ -769,7 +769,10 @@ function localizedSendFailureMessage(error) {
   if (text.includes("timeout")) {
     return t("sendTimeout");
   }
-  if (text.includes("stale") || text.includes("refresh") || text.includes("endpoint")) {
+  if (sendFailureNeedsRouteSetup(text)) {
+    return t("privateDeliveryRouteNeeded");
+  }
+  if (sendFailureNeedsEndpointRefresh(text)) {
     return t("staleEndpoint");
   }
   if (text.includes("persistentclientnotready") || text.includes("bootstrap")) {
@@ -785,16 +788,20 @@ function localizedSendFailureMessage(error) {
 }
 
 function localizedSendAttemptMessage(result) {
+  const failureText = sendAttemptFailureText(result);
   if (result?.send_attempt_succeeded) {
     return t("chatNoticeExternalSendWritten");
   }
   if (sendRuntimeOwnerMismatch(result)) {
     return t("sendRuntimeMismatch");
   }
+  if (sendFailureNeedsRouteSetup(failureText)) {
+    return t("privateDeliveryRouteNeeded");
+  }
   if (result?.peer_endpoint_refresh_recommended || result?.retry_recommended_after_endpoint_refresh) {
     return t("chatNoticeRefreshAddress");
   }
-  return localizedSendFailureMessage(result?.next_blocker || result?.warning || "");
+  return localizedSendFailureMessage(failureText);
 }
 
 function sendRuntimeOwnerMismatch(result) {
@@ -802,6 +809,7 @@ function sendRuntimeOwnerMismatch(result) {
 }
 
 function setChatDeliveryNoticeForSendAttempt(result, input = productionTwoProfileInput()) {
+  const failureText = sendAttemptFailureText(result);
   if (result?.send_attempt_succeeded) {
     setChatDeliveryNoticeByKey("chatNoticeExternalSendWritten", "success", input);
     return;
@@ -810,12 +818,35 @@ function setChatDeliveryNoticeForSendAttempt(result, input = productionTwoProfil
     setChatDeliveryNoticeByKey("sendRuntimeMismatch", "warning", input);
     return;
   }
+  if (sendFailureNeedsRouteSetup(failureText)) {
+    setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "warning", input);
+    return;
+  }
   if (result?.peer_endpoint_refresh_recommended || result?.retry_recommended_after_endpoint_refresh) {
     setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
     return;
   }
-  const key = chatNoticeForSendReceiveText(result?.next_blocker || result?.warning || "")?.key ?? "sendFailedGeneric";
+  const key = chatNoticeForSendReceiveText(failureText)?.key ?? "sendFailedGeneric";
   setChatDeliveryNoticeByKey(key, "warning", input);
+}
+
+function sendAttemptFailureText(result) {
+  const blockers = Array.isArray(result?.blockers) ? result.blockers : [];
+  return [result?.next_blocker, result?.warning, ...blockers].join(" ").toLowerCase();
+}
+
+function sendFailureNeedsRouteSetup(text) {
+  return (
+    text.includes("peer-endpoint-missing") ||
+    text.includes("endpoint-missing") ||
+    text.includes("endpointunavailable") ||
+    text.includes("stored remote endpoint unavailable") ||
+    text.includes("runtimeownerprofilemismatch")
+  );
+}
+
+function sendFailureNeedsEndpointRefresh(text) {
+  return !sendFailureNeedsRouteSetup(text) && (text.includes("stale") || text.includes("refresh"));
 }
 
 function localizedRetentionLabel(entry) {
@@ -12224,7 +12255,10 @@ function outboundSendFailureKindFromError(error) {
   if (text.includes("timeout")) {
     return "receive-timeout";
   }
-  if (text.includes("stale") || text.includes("refresh") || text.includes("endpoint")) {
+  if (sendFailureNeedsRouteSetup(text)) {
+    return "peer-endpoint-missing";
+  }
+  if (sendFailureNeedsEndpointRefresh(text)) {
     return "stored remote endpoint refresh required";
   }
   return "peer offline";
