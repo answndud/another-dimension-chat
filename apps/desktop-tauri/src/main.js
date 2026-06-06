@@ -489,8 +489,12 @@ let productionBusyAction = null;
 let activeInviteRoomOpenFingerprint = "";
 let activeInviteRoomPrivateRouteCodeFingerprint = "";
 let activeInviteRoomPeerRouteCodeFingerprint = "";
+let activeTwoProfileRoundtripFingerprint = "";
+let activeTwoProfileMessageRoundtripFingerprint = "";
 let activeTwoProfileOnionEnvelopeSendKey = "";
 let activeTwoProfilePeerEndpointRefreshFingerprint = "";
+let activeTwoProfileOutboundCancelFingerprint = "";
+let activeTwoProfileSessionStatusFingerprint = "";
 let latestProductionManualFocusTarget = null;
 let latestChatDeliveryNoticeKey = "";
 let latestChatDeliveryNoticeTone = "neutral";
@@ -564,6 +568,36 @@ function clearInviteRoomPeerRouteCodeBusy(input) {
   }
 }
 
+function setTwoProfileRoundtripBusy(input) {
+  productionBusyAction = "two-profile-roundtrip";
+  activeTwoProfileRoundtripFingerprint = twoProfileSessionStatusFingerprint(input);
+}
+
+function clearTwoProfileRoundtripBusy(input) {
+  if (
+    productionBusyAction === "two-profile-roundtrip" &&
+    activeTwoProfileRoundtripFingerprint === twoProfileSessionStatusFingerprint(input)
+  ) {
+    activeTwoProfileRoundtripFingerprint = "";
+    clearProductionBusyAction("two-profile-roundtrip");
+  }
+}
+
+function setTwoProfileMessageRoundtripBusy(input) {
+  productionBusyAction = "two-profile-message-roundtrip";
+  activeTwoProfileMessageRoundtripFingerprint = twoProfileSessionStatusFingerprint(input);
+}
+
+function clearTwoProfileMessageRoundtripBusy(input) {
+  if (
+    productionBusyAction === "two-profile-message-roundtrip" &&
+    activeTwoProfileMessageRoundtripFingerprint === twoProfileSessionStatusFingerprint(input)
+  ) {
+    activeTwoProfileMessageRoundtripFingerprint = "";
+    clearProductionBusyAction("two-profile-message-roundtrip");
+  }
+}
+
 function twoProfileOnionEnvelopeSendKey(input, messageNumber) {
   const normalizedNumber = Number.parseInt(messageNumber, 10) || 0;
   return `${twoProfileSessionStatusFingerprint(input)}\n${normalizedNumber}`;
@@ -599,6 +633,36 @@ function clearTwoProfilePeerEndpointRefreshBusy(input) {
   }
 }
 
+function setTwoProfileOutboundCancelBusy(input) {
+  productionBusyAction = "two-profile-outbound-cancel";
+  activeTwoProfileOutboundCancelFingerprint = twoProfileSessionStatusFingerprint(input);
+}
+
+function clearTwoProfileOutboundCancelBusy(input) {
+  if (
+    productionBusyAction === "two-profile-outbound-cancel" &&
+    activeTwoProfileOutboundCancelFingerprint === twoProfileSessionStatusFingerprint(input)
+  ) {
+    activeTwoProfileOutboundCancelFingerprint = "";
+    clearProductionBusyAction("two-profile-outbound-cancel");
+  }
+}
+
+function setTwoProfileSessionStatusBusy(input) {
+  productionBusyAction = "two-profile-session-status";
+  activeTwoProfileSessionStatusFingerprint = twoProfileSessionStatusFingerprint(input);
+}
+
+function clearTwoProfileSessionStatusBusy(input) {
+  if (
+    productionBusyAction === "two-profile-session-status" &&
+    activeTwoProfileSessionStatusFingerprint === twoProfileSessionStatusFingerprint(input)
+  ) {
+    activeTwoProfileSessionStatusFingerprint = "";
+    clearProductionBusyAction("two-profile-session-status");
+  }
+}
+
 function twoProfileOnionEnvelopeSendBusyMatches(input) {
   const fingerprint = twoProfileSessionStatusFingerprint(input);
   return Boolean(
@@ -621,20 +685,36 @@ function productionBusyActionMatchesInput(input = productionTwoProfileInput()) {
   if (productionBusyAction === "invite-room-peer-route-code") {
     return activeInviteRoomPeerRouteCodeFingerprint === twoProfileSessionStatusFingerprint(input);
   }
+  if (productionBusyAction === "two-profile-roundtrip") {
+    return activeTwoProfileRoundtripFingerprint === twoProfileSessionStatusFingerprint(input);
+  }
+  if (productionBusyAction === "two-profile-message-roundtrip") {
+    return activeTwoProfileMessageRoundtripFingerprint === twoProfileSessionStatusFingerprint(input);
+  }
   if (productionBusyAction === "two-profile-onion-envelope-send") {
     return twoProfileOnionEnvelopeSendBusyMatches(input);
   }
   if (productionBusyAction === "two-profile-peer-endpoint-refresh") {
     return activeTwoProfilePeerEndpointRefreshFingerprint === twoProfileSessionStatusFingerprint(input);
   }
+  if (productionBusyAction === "two-profile-outbound-cancel") {
+    return activeTwoProfileOutboundCancelFingerprint === twoProfileSessionStatusFingerprint(input);
+  }
   if (productionBusyAction === "two-profile-real-onion-roundtrip") {
     return realOnionRoundtripActiveForInput(input);
+  }
+  if (productionBusyAction === "two-profile-session-status") {
+    return activeTwoProfileSessionStatusFingerprint === twoProfileSessionStatusFingerprint(input);
   }
   return true;
 }
 
 function productionBusyActionBlocksInput(input = productionTwoProfileInput()) {
   return Boolean(productionBusyAction && productionBusyActionMatchesInput(input));
+}
+
+function productionBusyActionIsForInput(action, input = productionTwoProfileInput()) {
+  return productionBusyAction === action && productionBusyActionMatchesInput(input);
 }
 
 function manualNetworkPermissionEnabled() {
@@ -7708,7 +7788,7 @@ function renderProductionTwoProfileFlow(input = productionTwoProfileInput()) {
         : `${twoProfileComposePrompt(input)}.`,
   );
 
-  const sendRunning = productionBusyAction === "two-profile-message-roundtrip";
+  const sendRunning = productionBusyActionIsForInput("two-profile-message-roundtrip", input);
   const sendReady = hasMessage && sessionsReady;
   const sendComplete = Boolean(lastSuccessDirection && !hasMessage);
   setTwoProfileFlowStep(
@@ -8981,8 +9061,8 @@ function applyProductionActionState() {
     selectedNeedsPeerImport,
   });
   const twoProfileComposeLocked =
-    productionBusyAction === "two-profile-roundtrip" ||
-    productionBusyAction === "two-profile-message-roundtrip" ||
+    productionBusyActionIsForInput("two-profile-roundtrip", twoProfile) ||
+    productionBusyActionIsForInput("two-profile-message-roundtrip", twoProfile) ||
     (twoProfileSessionsReady && !twoProfileSafetyConfirmed);
 
   if (fields.productionMessageNumber) {
@@ -12738,7 +12818,7 @@ async function cancelTwoProfileOutboundEntry(entry) {
     setChatDeliveryNoticeByKey("sendCancelWrongDirection", "warning", input);
     return;
   }
-  productionBusyAction = "two-profile-outbound-cancel";
+  setTwoProfileOutboundCancelBusy(input);
   setProductionTwoProfileState("Cancel send running");
   setText(fields.productionTwoProfileWarning, t("sendCanceling"));
   setChatDeliveryNoticeByKey("sendCanceling", "progress", input);
@@ -12766,7 +12846,7 @@ async function cancelTwoProfileOutboundEntry(entry) {
     setText(fields.productionTwoProfileWarning, `${t("sendCancelFailed")} ${String(error)}`);
     setChatDeliveryNoticeByKey("sendCancelFailed", "warning", input);
   } finally {
-    clearProductionBusyAction("two-profile-outbound-cancel");
+    clearTwoProfileOutboundCancelBusy(input);
     applyProductionActionState();
   }
 }
@@ -13282,7 +13362,8 @@ function stopProductionTwoProfileOnionReceive() {
 }
 
 async function runProductionTwoProfileRoundtrip() {
-  const { profileA, profileB, passphrase, messageTtlSeconds } = productionTwoProfileInput();
+  const input = productionTwoProfileInput();
+  const { profileA, profileB, passphrase, messageTtlSeconds } = input;
   let postBusyFocus = null;
   if (twoProfileInviteCodeModeActive()) {
     await openInviteRoomFromToken();
@@ -13316,7 +13397,7 @@ async function runProductionTwoProfileRoundtrip() {
   );
   setText(fields.productionTwoProfileBoundary, t("setupBoundaryWaiting"));
   setProductionFollowupActions(false, t("setupFollowupLocked"));
-  productionBusyAction = "two-profile-roundtrip";
+  setTwoProfileRoundtripBusy(input);
   applyProductionActionState();
   if (fields.runProductionTwoProfileRoundtrip) {
     fields.runProductionTwoProfileRoundtrip.disabled = true;
@@ -13356,7 +13437,7 @@ async function runProductionTwoProfileRoundtrip() {
     setText(fields.productionTwoProfileBoundary, t("statusFailed"));
     setProductionFollowupActions(false, t("setupRetryHint"));
   } finally {
-    clearProductionBusyAction("two-profile-roundtrip");
+    clearTwoProfileRoundtripBusy(input);
     if (fields.runProductionTwoProfileRoundtrip) {
       fields.runProductionTwoProfileRoundtrip.disabled = false;
     }
@@ -13403,7 +13484,7 @@ async function runProductionTwoProfileMessageRoundtrip() {
   setText(fields.productionTwoProfileMessageState, t("setupMessageWaiting"));
   setText(fields.productionTwoProfileBoundary, t("setupBoundaryWaiting"));
   setProductionFollowupActions(false, t("messageFollowupLocked"));
-  productionBusyAction = "two-profile-message-roundtrip";
+  setTwoProfileMessageRoundtripBusy(input);
   applyProductionActionState();
   try {
     const { result, messageNumber, stillCurrent } = await saveInviteRoomOutboundMessage({
@@ -13436,7 +13517,7 @@ async function runProductionTwoProfileMessageRoundtrip() {
     setText(fields.productionTwoProfileBoundary, t("boundaryFailedNoPath"));
     setProductionFollowupActions(false, t("messageRetryHint"));
   } finally {
-    clearProductionBusyAction("two-profile-message-roundtrip");
+    clearTwoProfileMessageRoundtripBusy(input);
     applyProductionActionState();
   }
 }
@@ -14215,7 +14296,7 @@ async function checkProductionTwoProfileSessionStatus() {
   setText(fields.productionTwoProfileSessionStatus, "Checking encrypted local stores");
   setProductionTwoProfileState("Sessions checking");
   setText(fields.productionTwoProfileWarning, "Checking the saved room on this device.");
-  productionBusyAction = "two-profile-session-status";
+  setTwoProfileSessionStatusBusy(sessionCheckInput);
   let postCheckFocus = null;
   applyProductionActionState();
   if (fields.checkProductionTwoProfileSessionStatus) {
@@ -14280,7 +14361,7 @@ async function checkProductionTwoProfileSessionStatus() {
     setText(fields.productionPairingWarning, String(error));
     postCheckFocus = fields.checkProductionTwoProfileSessionStatusInline;
   } finally {
-    clearProductionBusyAction("two-profile-session-status");
+    clearTwoProfileSessionStatusBusy(sessionCheckInput);
     if (fields.checkProductionTwoProfileSessionStatus) {
       fields.checkProductionTwoProfileSessionStatus.disabled = false;
     }
