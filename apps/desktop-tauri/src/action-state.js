@@ -1387,7 +1387,15 @@ export function productionTwoProfileRealOnionResultView(result) {
       !result?.passphrase_retained &&
       !result?.key_material_exposed,
   );
-  const complete = firstDelivered && secondDelivered && receiveRecorderReady && redactedBoundaryContained;
+  const externalDeliveryConfirmed = result?.external_peer_delivery_confirmed === true;
+  const localDevRoundtripResult = result?.local_dev_roundtrip_result === true;
+  const complete =
+    externalDeliveryConfirmed &&
+    !localDevRoundtripResult &&
+    firstDelivered &&
+    secondDelivered &&
+    receiveRecorderReady &&
+    redactedBoundaryContained;
   const touchedTranscript = Boolean(
     result?.message_number_reserved ||
       result?.second_message_number_reserved ||
@@ -1409,6 +1417,8 @@ export function productionTwoProfileRealOnionResultView(result) {
       `second=#${result?.second_message_number ?? 0} delivered=${secondDelivered} ` +
       `receive_attempts=${result?.consecutive_receive_attempts ?? 0} ` +
       `imported=${result?.consecutive_messages_imported ?? 0} ` +
+      `external_delivery=${externalDeliveryConfirmed} ` +
+      `local_dev_roundtrip=${localDevRoundtripResult} ` +
       `recorder=${receiveRecorderReady} ` +
       `redacted=${redactedBoundaryContained}`,
     boundary:
@@ -1417,6 +1427,8 @@ export function productionTwoProfileRealOnionResultView(result) {
       `bridge_capable=${result?.bridge_capable_build === true} ` +
       `bridge_configured=${result?.bridge_configured_for_bootstrap === true} ` +
       `next=${result?.next_blocker ?? "unknown"} ` +
+      `external_delivery=${externalDeliveryConfirmed} ` +
+      `local_dev_roundtrip=${localDevRoundtripResult} ` +
       `endpoint_returned=${Boolean(result?.local_endpoint_returned || result?.peer_endpoint_returned)} ` +
       `envelope_payload=${result?.envelope_payload_returned === true} ` +
       `plaintext=${result?.plaintext_returned_to_frontend === true} ` +
