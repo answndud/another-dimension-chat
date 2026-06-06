@@ -3406,6 +3406,42 @@ function showSavedInviteRoomExpiredRealOnionAction() {
   return true;
 }
 
+function showRealOnionRouteReadinessBlock(readiness, input = productionTwoProfileInput()) {
+  const noticeKey = readiness?.noticeKey || "privateDeliveryRouteNeeded";
+  const message = readiness?.disabledReason || t(noticeKey);
+  setProductionTwoProfileState("Private delivery not ready");
+  setText(fields.productionTwoProfileWarning, message);
+  setText(fields.productionTwoProfileProfiles, t("roomStateSaved"));
+  setText(fields.productionTwoProfileSession, message);
+  setText(fields.productionTwoProfileMessageState, t("messageNotSent"));
+  setText(fields.productionTwoProfileBoundary, "Private delivery was not started because the route is not ready.");
+  setChatDeliveryNoticeByKey(noticeKey, "warning", input);
+  setProductionFollowupActions(
+    true,
+    currentLanguage === "ko"
+      ? "다음: 현재 안내된 작업을 먼저 완료한 뒤 전송 테스트를 다시 실행하세요."
+      : "Next: complete the current route-readiness action, then run the delivery test again.",
+  );
+  if (readiness?.nextAction === "enable-private-delivery") {
+    fields.openPrivateDeliverySettings?.focus?.({ preventScroll: true });
+    return true;
+  }
+  if (readiness?.nextAction === "verify") {
+    focusSafetyConfirmation();
+    return true;
+  }
+  if (readiness?.nextAction === "start-receiving") {
+    fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
+    return true;
+  }
+  if (readiness?.nextAction === "refresh-endpoint") {
+    focusPrivateRouteNextAction(input);
+    return true;
+  }
+  fields.runProductionTwoProfileMessageRoundtrip?.focus?.({ preventScroll: true });
+  return true;
+}
+
 async function runSavedInviteRoomListAction(room, action) {
   if (action === "start-receiving" && await openSavedInviteRoomReceiveOwnerBeforeSwitch(room)) {
     return true;
@@ -14111,16 +14147,27 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
   }
 
   const previousRealOnionResult = latestRealOnionFieldTestResult(roomInput);
-  const previousRealOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(previousRealOnionResult);
+  const previousRealOnionRecovery = latestRealOnionRecoveryForInput(roomInput);
   const previousRealOnionRunAction = realOnionRecoveryRunAction(previousRealOnionRecovery);
   if (previousRealOnionRunAction.opensNetworkSettings) {
-    const userView = localizedTwoProfileUserView(productionTwoProfileRealOnionUserView(previousRealOnionResult));
     openPrivateDeliveryBridgeSettings(previousRealOnionRecovery, input);
-    setText(fields.productionTwoProfileProfiles, userView.profiles);
-    setText(fields.productionTwoProfileSession, userView.session);
-    setText(fields.productionTwoProfileMessageState, userView.message);
-    setText(fields.productionTwoProfileBoundary, userView.boundary);
+    if (previousRealOnionResult) {
+      const userView = localizedTwoProfileUserView(productionTwoProfileRealOnionUserView(previousRealOnionResult));
+      setText(fields.productionTwoProfileProfiles, userView.profiles);
+      setText(fields.productionTwoProfileSession, userView.session);
+      setText(fields.productionTwoProfileMessageState, userView.message);
+      setText(fields.productionTwoProfileBoundary, userView.boundary);
+    }
     refreshFieldTestReport();
+    return;
+  }
+  const routeReadiness = externalPeerSendReadiness(roomInput, {
+    allowMissingMessage: true,
+    latestOnionOutbound: null,
+  });
+  if (!routeReadiness.ready) {
+    showRealOnionRouteReadinessBlock(routeReadiness, roomInput);
+    applyProductionActionState();
     return;
   }
   const bootstrapRetryLimit =
