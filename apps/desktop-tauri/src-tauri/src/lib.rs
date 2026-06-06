@@ -5829,6 +5829,7 @@ fn production_onion_receive_loop_failure_view(
         "PersistentClientNotReady" | "PersistentClientOwnerUnavailable" => {
             ("persistent-client", true)
         }
+        "LocalOnionEndpointNotReady" => ("persistent-client", true),
         "InboundEnvelopeReceiveAlreadyInProgress" => ("busy", true),
         "InboundEnvelopeImportIncomplete"
         | "InboundEnvelopeImportFailed"
@@ -5841,6 +5842,7 @@ fn production_onion_receive_loop_failure_view(
         blocker if blocker.contains("Timeout") || blocker.contains("timeout") => {
             ("receive-timeout", true)
         }
+        "peer-offline" => ("peer-offline", true),
         blocker
             if blocker.contains("Accept")
                 || blocker.contains("Rend")
@@ -6466,18 +6468,20 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
                                     }
                                 }
                                 Err(error) => {
+                                    let blocker = inbound_transport_error_next_blocker(error);
                                     event_summary.push(format!(
-                                        "receive_diagnostic phase=stream_read_failed profile=redacted error={error:?}",
+                                        "receive_diagnostic phase=stream_read_failed profile=redacted blocker={blocker}",
                                     ));
-                                    next_blocker = format!("{error:?}");
+                                    next_blocker = blocker.to_string();
                                 }
                             }
                         }
                         Err(error) => {
+                            let blocker = inbound_transport_error_next_blocker(error);
                             event_summary.push(format!(
-                                "receive_diagnostic phase=rend_accept_failed profile=redacted error={error:?}",
+                                "receive_diagnostic phase=rend_accept_failed profile=redacted blocker={blocker}",
                             ));
-                            next_blocker = format!("{error:?}");
+                            next_blocker = blocker.to_string();
                         }
                     }
                 }
@@ -7156,8 +7160,12 @@ async fn run_production_onion_outbound_envelope_send_attempt(
                         Some(owner) => {
                             let mut sink = InMemoryTransportRuntimeEventSink::default();
                             send_attempt_started = true;
+                            event_summary.push(
+                                "send_diagnostic phase=stream_write_start profile=redacted"
+                                    .to_string(),
+                            );
                             let result = owner
-                        .write_outbound_envelope_once(
+                                .write_outbound_envelope_once(
                                     arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
                                     &rendezvous_endpoint,
                                     envelope.export_payload().as_bytes(),
@@ -7168,11 +7176,18 @@ async fn run_production_onion_outbound_envelope_send_attempt(
                             match result {
                                 Ok(()) => {
                                     send_attempt_succeeded = true;
+                                    event_summary.push(
+                                        "send_diagnostic phase=stream_write_ok profile=redacted"
+                                            .to_string(),
+                                    );
                                     next_blocker = "AwaitingRemoteAck".to_string();
                                 }
                                 Err(error) => {
                                     next_blocker =
                                         outbound_transport_error_next_blocker(error).to_string();
+                                    event_summary.push(format!(
+                                        "send_diagnostic phase=stream_write_failed profile=redacted blocker={next_blocker}",
+                                    ));
                                 }
                             }
                         }
@@ -7389,6 +7404,10 @@ async fn run_production_onion_endpoint_update_control_send_stored_endpoint_attem
                                 Some(owner) => {
                                     let mut sink = InMemoryTransportRuntimeEventSink::default();
                                     send_attempt_started = true;
+                                    event_summary.push(
+                                        "send_diagnostic phase=control_stream_write_start profile=redacted"
+                                            .to_string(),
+                                    );
                                     let result = owner
                                         .write_outbound_envelope_once(
                                             arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
@@ -7402,12 +7421,19 @@ async fn run_production_onion_endpoint_update_control_send_stored_endpoint_attem
                                     match result {
                                         Ok(()) => {
                                             send_attempt_succeeded = true;
+                                            event_summary.push(
+                                                "send_diagnostic phase=control_stream_write_ok profile=redacted"
+                                                    .to_string(),
+                                            );
                                             next_blocker = "AwaitingRemoteControlImport".to_string();
                                         }
                                         Err(error) => {
                                             next_blocker =
                                                 outbound_transport_error_next_blocker(error)
                                                     .to_string();
+                                            event_summary.push(format!(
+                                                "send_diagnostic phase=control_stream_write_failed profile=redacted blocker={next_blocker}",
+                                            ));
                                         }
                                     }
                                 }
@@ -7884,6 +7910,31 @@ fn send_result_recommends_peer_endpoint_refresh(
 
 #[cfg(feature = "manual-onion-client-attempt")]
 fn outbound_transport_error_next_blocker(
+    error: another_dimension_transport::TransportRuntimeError,
+) -> &'static str {
+    use another_dimension_transport::TransportRuntimeError;
+
+    match error {
+        TransportRuntimeError::RuntimeNetworkDisabled
+        | TransportRuntimeError::BootstrapCancelled
+        | TransportRuntimeError::BootstrapTimeout
+        | TransportRuntimeError::BootstrapNetworkAccessFailed
+        | TransportRuntimeError::BootstrapLocalStateFailed
+        | TransportRuntimeError::BootstrapConfigurationFailed
+        | TransportRuntimeError::BootstrapUnsupported
+        | TransportRuntimeError::BootstrapProtocolFailed
+        | TransportRuntimeError::BootstrapTransientFailure
+        | TransportRuntimeError::CensorshipOrBridgeRequired
+        | TransportRuntimeError::StateDirectoryPermissionDenied
+        | TransportRuntimeError::LogRedactionPreflightFailed => "PersistentClientNotReady",
+        TransportRuntimeError::OnionServiceKeyUnavailable
+        | TransportRuntimeError::OnionServiceLaunchFailed => "LocalOnionEndpointNotReady",
+        TransportRuntimeError::SendFailed | TransportRuntimeError::ReceiveFailed => "peer-offline",
+    }
+}
+
+#[cfg(feature = "manual-onion-client-attempt")]
+fn inbound_transport_error_next_blocker(
     error: another_dimension_transport::TransportRuntimeError,
 ) -> &'static str {
     use another_dimension_transport::TransportRuntimeError;
@@ -12745,6 +12796,12 @@ replay check: no replayed messages after message 2
             );
         }
 
+        fn push_field_driver_result_blocker(blockers: &mut Vec<String>, blocker: &str) {
+            if blocker != "none" && !blockers.iter().any(|item| item == blocker) {
+                blockers.push(blocker.to_string());
+            }
+        }
+
         let root = unique_production_roundtrip_dir().expect("temp root");
         let data_a = root.join("peer-a-data");
         let cache_a = root.join("peer-a-cache");
@@ -13066,7 +13123,9 @@ replay check: no replayed messages after message 2
             } else {
                 "ReceiveAttemptFailed"
             };
-            let blockers = vec![next.to_string()];
+            let mut blockers = vec![next.to_string()];
+            push_field_driver_result_blocker(&mut blockers, &first_send.next_blocker);
+            push_field_driver_result_blocker(&mut blockers, &first_receive.next_blocker);
             print_field_driver_blocker(
                 next, &blockers, &events, bridge_a, bridge_b, attempts_a, attempts_b,
             );
@@ -13137,7 +13196,9 @@ replay check: no replayed messages after message 2
             } else {
                 "SecondReceiveAttemptFailed"
             };
-            let blockers = vec![next.to_string()];
+            let mut blockers = vec![next.to_string()];
+            push_field_driver_result_blocker(&mut blockers, &second_send.next_blocker);
+            push_field_driver_result_blocker(&mut blockers, &second_receive.next_blocker);
             print_field_driver_blocker(
                 next, &blockers, &events, bridge_a, bridge_b, attempts_a, attempts_b,
             );
@@ -13280,7 +13341,9 @@ replay check: no replayed messages after message 2
             } else {
                 "ResumeReceiveAttemptFailed"
             };
-            let blockers = vec![next.to_string()];
+            let mut blockers = vec![next.to_string()];
+            push_field_driver_result_blocker(&mut blockers, &third_send.next_blocker);
+            push_field_driver_result_blocker(&mut blockers, &third_receive.next_blocker);
             print_field_driver_blocker(
                 next,
                 &blockers,
