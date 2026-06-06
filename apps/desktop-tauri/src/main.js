@@ -2783,6 +2783,25 @@ function persistRealOnionRecoveries() {
   localStoreSet(realOnionRecoveriesStorageKey, JSON.stringify(Object.fromEntries(entries)));
 }
 
+function pruneExpiredRealOnionRecoveries() {
+  const now = Date.now();
+  let changed = false;
+  for (const [roomKey, recovery] of latestProductionTwoProfileRealOnionRecoveriesByRoom.entries()) {
+    const key = String(roomKey ?? "").trim();
+    const normalized = normalizeStoredRealOnionRecovery(recovery, { now });
+    if (key && normalized) {
+      latestProductionTwoProfileRealOnionRecoveriesByRoom.set(key, normalized);
+    } else {
+      latestProductionTwoProfileRealOnionRecoveriesByRoom.delete(roomKey);
+      changed = true;
+    }
+  }
+  if (changed) {
+    persistRealOnionRecoveries();
+  }
+  return changed;
+}
+
 function hydratePrivateRouteMap(storageKey, target) {
   target.clear();
   try {
@@ -3666,6 +3685,7 @@ async function refreshSavedInviteRoomMetadataForFingerprint(roomFingerprint, opt
 }
 
 function savedInviteRoomMetadataSyncCandidates(rooms = savedInviteRooms()) {
+  pruneExpiredRealOnionRecoveries();
   return (Array.isArray(rooms) ? rooms : [])
     .slice()
     .sort((left, right) => {
@@ -3711,8 +3731,15 @@ async function syncSavedInviteRoomMetadataFromLocalStores() {
   try {
     for (const room of candidates) {
       try {
-        const metadata = await savedInviteRoomMetadataFromLocalStores(room);
+        let metadata = await savedInviteRoomMetadataFromLocalStores(room);
         if (metadata) {
+          try {
+            const input = savedInviteRoomInput(room);
+            const sessionStatus = await invokeInviteRoomSessionStatus(input);
+            metadata = savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus);
+          } catch {
+            // Keep transcript refresh useful even if session status cannot be read yet.
+          }
           rememberInviteRoom(room.code, room.role, { ...metadata, updatedAt: room.updatedAt }, { render: false });
           refreshed += 1;
         }
