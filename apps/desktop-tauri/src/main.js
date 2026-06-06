@@ -3377,6 +3377,35 @@ async function openSavedInviteRoomReceiveOwnerBeforeSwitch(targetRoom) {
   return true;
 }
 
+function showSavedInviteRoomExpiredRealOnionAction() {
+  const input = productionTwoProfileInput();
+  const message = currentLanguage === "ko"
+    ? "저장된 비공개 전송 복구 안내가 만료되었습니다. 현재 방 상태를 다시 확인한 뒤 필요한 작업을 진행하세요."
+    : "The saved private delivery recovery hint expired. Review the current room state before choosing the next action.";
+  rememberCurrentInviteRoomMetadata();
+  renderSavedInviteRooms();
+  applyProductionActionState();
+  setProductionTwoProfileState("Private delivery recovery expired");
+  setText(fields.productionTwoProfileWarning, message);
+  setChatDeliveryNotice(message, "muted");
+  setProductionFollowupActions(
+    true,
+    currentLanguage === "ko"
+      ? "다음: 현재 방 기준으로 비공개 전송 허용, 주소 준비, 전송 테스트 중 필요한 작업을 진행하세요."
+      : "Next: use the current room state to enable private delivery, set up the route, or test delivery.",
+  );
+  if (!manualNetworkPermissionEnabled()) {
+    fields.openPrivateDeliverySettings?.focus?.({ preventScroll: true });
+    return true;
+  }
+  if (!twoProfilePeerEndpointState(input).ready) {
+    focusPrivateRouteNextAction(input);
+    return true;
+  }
+  fields.runProductionTwoProfileRealOnionRoundtrip?.focus?.({ preventScroll: true });
+  return true;
+}
+
 async function runSavedInviteRoomListAction(room, action) {
   if (action === "start-receiving" && await openSavedInviteRoomReceiveOwnerBeforeSwitch(room)) {
     return true;
@@ -3464,13 +3493,21 @@ async function runSavedInviteRoomListAction(room, action) {
     return true;
   }
   if (action === "real-onion-enable-private-delivery") {
+    const recoveryView = savedInviteRoomRealOnionRecoveryView(room);
+    if (recoveryView?.action !== action) {
+      return showSavedInviteRoomExpiredRealOnionAction();
+    }
     enablePrivateDeliveryPermission();
     renderSavedInviteRooms();
     return true;
   }
   if (action === "real-onion-network-settings") {
     const input = productionTwoProfileInput();
-    const recovery = savedInviteRoomRealOnionRecoveryView(room)?.recovery;
+    const recoveryView = savedInviteRoomRealOnionRecoveryView(room);
+    if (recoveryView?.action !== action) {
+      return showSavedInviteRoomExpiredRealOnionAction();
+    }
+    const recovery = recoveryView.recovery;
     const runAction = realOnionRecoveryRunAction(recovery);
     if (runAction.opensNetworkSettings) {
       openPrivateDeliveryBridgeSettings(recovery, input);
@@ -3483,6 +3520,10 @@ async function runSavedInviteRoomListAction(room, action) {
     return true;
   }
   if (action === "real-onion-retry") {
+    const recoveryView = savedInviteRoomRealOnionRecoveryView(room);
+    if (recoveryView?.action !== action) {
+      return showSavedInviteRoomExpiredRealOnionAction();
+    }
     await runProductionTwoProfileRealOnionRoundtrip();
     return true;
   }
