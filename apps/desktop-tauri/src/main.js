@@ -3203,6 +3203,32 @@ async function savedInviteRoomMetadataFromLocalStores(room) {
   ]);
 }
 
+function savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus) {
+  if (!metadata || !sessionStatus || Number.parseInt(metadata.retryableOutboundCount ?? 0, 10) <= 0) {
+    return metadata;
+  }
+  const currentAction = savedInviteRoomRetryableAction(metadata.retryableOutboundAction);
+  const peerEndpointState = peerEndpointStateFromSessionStatus(input, sessionStatus);
+  if (peerEndpointState.ready && (currentAction === "refresh-and-retry" || currentAction === "prepare-private-route")) {
+    return { ...metadata, retryableOutboundAction: "retry" };
+  }
+  if (
+    !peerEndpointState.ready &&
+    peerEndpointState.stale &&
+    (currentAction === "retry" || currentAction === "prepare-private-route")
+  ) {
+    return { ...metadata, retryableOutboundAction: "refresh-and-retry" };
+  }
+  if (
+    !peerEndpointState.ready &&
+    !peerEndpointState.stale &&
+    (currentAction === "retry" || currentAction === "refresh-and-retry")
+  ) {
+    return { ...metadata, retryableOutboundAction: "prepare-private-route" };
+  }
+  return metadata;
+}
+
 function savedInviteRoomForRoomFingerprint(roomFingerprint, rooms = savedInviteRooms()) {
   const fingerprint = String(roomFingerprint ?? "").trim();
   if (!fingerprint) {
@@ -3222,10 +3248,15 @@ async function refreshSavedInviteRoomMetadataForFingerprint(roomFingerprint, opt
     return false;
   }
   try {
-    const metadata = await savedInviteRoomMetadataFromLocalStores(room);
+    const input = savedInviteRoomInput(room);
+    let metadata = await savedInviteRoomMetadataFromLocalStores(room);
     if (!metadata) {
       renderSavedInviteRooms();
       return false;
+    }
+    if (options.refreshSessionStatus === true) {
+      const sessionStatus = await invokeInviteRoomSessionStatus(input);
+      metadata = savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus);
     }
     rememberInviteRoom(
       room.code,
@@ -5724,6 +5755,50 @@ function storedPeerEndpointInvitePlaceholderForInput(input = productionTwoProfil
   return false;
 }
 
+function peerEndpointStateFromSessionStatus(input, sessionStatus, options = {}) {
+  if (!sessionStatus || !input?.profileA) {
+    return { ready: false, reason: "endpoint not checked" };
+  }
+  const localProfile = input.profileA;
+  const side =
+    localProfile === sessionStatus.profile_a
+      ? "profile_a"
+      : localProfile === sessionStatus.profile_b
+        ? "profile_b"
+        : "";
+  if (!side) {
+    return { ready: false, reason: "profiles missing" };
+  }
+  const present = sessionStatus[`${side}_remote_endpoint_state_present`] === true;
+  const stale = sessionStatus[`${side}_remote_endpoint_marked_stale`] === true;
+  const refreshRecommended = sessionStatus[`${side}_remote_endpoint_refresh_recommended`] === true;
+  const lastFailedMessageNumber = sessionStatus[`${side}_remote_endpoint_last_failed_message_number`] ?? null;
+  const invitePlaceholder = sessionStatus[`${side}_remote_endpoint_invite_placeholder`] === true;
+  const treatInvitePlaceholderAsMissing = options.treatInvitePlaceholderAsMissing !== false;
+  if (stale) {
+    return {
+      ready: false,
+      reason: lastFailedMessageNumber
+        ? `stored endpoint stale after message #${lastFailedMessageNumber}`
+        : "stored endpoint stale",
+      source: "stored session",
+      stale: true,
+      refreshRecommended,
+    };
+  }
+  if (present && invitePlaceholder && treatInvitePlaceholderAsMissing) {
+    return {
+      ready: false,
+      reason: "peer delivery code missing",
+      source: "stored invite placeholder",
+    };
+  }
+  if (present) {
+    return { ready: true, reason: "stored endpoint ready", source: "stored session" };
+  }
+  return { ready: false, reason: "peer endpoint missing", source: "stored session" };
+}
+
 function twoProfilePeerEndpointState(input = productionTwoProfileInput()) {
   if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
     return { ready: false, reason: "profiles missing" };
@@ -5732,30 +5807,11 @@ function twoProfilePeerEndpointState(input = productionTwoProfileInput()) {
   if (transientEndpoint) {
     return { ready: true, reason: "ready", source: "current runtime" };
   }
-  const storedStatus = storedPeerEndpointStatusForInput(input);
-  if (storedStatus?.stale) {
-    return {
-      ready: false,
-      reason: storedStatus.lastFailedMessageNumber
-        ? `stored endpoint stale after message #${storedStatus.lastFailedMessageNumber}`
-        : "stored endpoint stale",
-      source: "stored session",
-      stale: true,
-      refreshRecommended: storedStatus.refreshRecommended,
-    };
-  }
-  if (storedPeerEndpointPresentForInput(input)) {
-    if (twoProfileInviteCodeModeActive() && storedPeerEndpointInvitePlaceholderForInput(input)) {
-      return {
-        ready: false,
-        reason: "peer delivery code missing",
-        source: "stored invite placeholder",
-      };
-    }
-    return { ready: true, reason: "stored endpoint ready", source: "stored session" };
-  }
-  if (latestTwoProfileSessionStatusForCurrentInput(input)) {
-    return { ready: false, reason: "peer endpoint missing", source: "stored session" };
+  const sessionStatus = latestTwoProfileSessionStatusForCurrentInput(input);
+  if (sessionStatus) {
+    return peerEndpointStateFromSessionStatus(input, sessionStatus, {
+      treatInvitePlaceholderAsMissing: twoProfileInviteCodeModeActive(),
+    });
   }
   return { ready: false, reason: "endpoint not checked" };
 }
@@ -13135,7 +13191,10 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
       if (!receivingCurrentRoom) {
         await refreshSavedInviteRoomMetadataForFingerprint(
           productionTwoProfileOnionReceiveMode.roomFingerprint,
-          { preserveUpdatedAt: refreshPlan.messageImported !== true },
+          {
+            preserveUpdatedAt: refreshPlan.messageImported !== true,
+            refreshSessionStatus: refreshPlan.endpointUpdated === true,
+          },
         );
       } else {
         await loadProductionTwoProfileTranscript({
