@@ -1180,6 +1180,11 @@ impl PersistentArtiClientOwner {
                 .flush()
                 .await
                 .map_err(|_| TransportRuntimeError::SendFailed)?;
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            stream
+                .close()
+                .await
+                .map_err(|_| TransportRuntimeError::SendFailed)?;
             Ok(())
         };
 
@@ -1411,24 +1416,54 @@ impl PersistentArtiClientOwner {
             self.adapter.skeleton().policy().timeout().seconds(),
         ));
         let read_result = async {
-            let stream_request = stream_requests
-                .next()
+            let first_byte_timeout = timeout.min(std::time::Duration::from_secs(10));
+            let next_stream_timeout = timeout.min(std::time::Duration::from_secs(3));
+            for attempt in 0..3 {
+                let stream_request_timeout = if attempt == 0 {
+                    timeout
+                } else {
+                    next_stream_timeout
+                };
+                let stream_request = match tokio::time::timeout(
+                    stream_request_timeout,
+                    stream_requests.next(),
+                )
                 .await
-                .ok_or(TransportRuntimeError::ReceiveFailed)?;
-            let mut data_stream = stream_request
-                .accept(tor_cell::relaycell::msg::Connected::new_empty())
-                .await
-                .map_err(|_| TransportRuntimeError::ReceiveFailed)?;
-            let mut envelope = Vec::new();
-            (&mut data_stream)
-                .take((max_bytes.saturating_add(1)) as u64)
-                .read_to_end(&mut envelope)
-                .await
-                .map_err(|_| TransportRuntimeError::ReceiveFailed)?;
-            if envelope.len() > max_bytes {
-                return Err(TransportRuntimeError::ReceiveFailed);
+                {
+                    Ok(Some(stream_request)) => stream_request,
+                    Ok(None) | Err(_) => return Err(TransportRuntimeError::ReceiveFailed),
+                };
+                let mut data_stream = stream_request
+                    .accept(tor_cell::relaycell::msg::Connected::new_empty())
+                    .await
+                    .map_err(|_| TransportRuntimeError::ReceiveFailed)?;
+                let mut envelope = Vec::new();
+                let mut buffer = vec![0; max_bytes.min(1024).max(1)];
+                let idle_timeout = std::time::Duration::from_millis(750);
+                loop {
+                    let read_timeout = if envelope.is_empty() {
+                        first_byte_timeout
+                    } else {
+                        idle_timeout
+                    };
+                    match tokio::time::timeout(read_timeout, data_stream.read(&mut buffer)).await {
+                        Ok(Ok(0)) => break,
+                        Ok(Ok(read)) => {
+                            envelope.extend_from_slice(&buffer[..read]);
+                            if envelope.len() > max_bytes {
+                                return Err(TransportRuntimeError::ReceiveFailed);
+                            }
+                        }
+                        Ok(Err(_)) => return Err(TransportRuntimeError::ReceiveFailed),
+                        Err(_) if !envelope.is_empty() => break,
+                        Err(_) => break,
+                    }
+                }
+                if !envelope.is_empty() {
+                    return Ok(envelope);
+                }
             }
-            Ok(envelope)
+            Err(TransportRuntimeError::ReceiveFailed)
         };
 
         let result = match tokio::time::timeout(timeout, read_result).await {
