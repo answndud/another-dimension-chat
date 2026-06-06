@@ -1312,11 +1312,13 @@ function isLocalPrivateRouteCodeNoticeKey(key = latestChatDeliveryNoticeKey) {
 
 function privateRouteRecoveryNoticeActive(key = latestChatDeliveryNoticeKey) {
   return (
-    key === "sendRuntimeMismatch" ||
-    key === "privateRouteCodeReady" ||
-    key === "privateRouteWaitingPeerCode" ||
-    key === "privateRouteCodeReadyForReceive" ||
-    key === "peerPrivateRouteCodeMissing"
+    key === latestChatDeliveryNoticeKey &&
+    chatDeliveryNoticeMatchesInput(productionTwoProfileInput()) &&
+    (key === "sendRuntimeMismatch" ||
+      key === "privateRouteCodeReady" ||
+      key === "privateRouteWaitingPeerCode" ||
+      key === "privateRouteCodeReadyForReceive" ||
+      key === "peerPrivateRouteCodeMissing")
   );
 }
 
@@ -1328,6 +1330,14 @@ function chatDeliveryNoticeRoomFingerprint(input = productionTwoProfileInput()) 
 
 function chatDeliveryNoticeMatchesInput(input = productionTwoProfileInput()) {
   return latestChatDeliveryNoticeRoomFingerprint === chatDeliveryNoticeRoomFingerprint(input);
+}
+
+function clearMismatchedChatDeliveryNotice(input = productionTwoProfileInput()) {
+  if (!latestChatDeliveryNoticeKey || chatDeliveryNoticeMatchesInput(input)) {
+    return false;
+  }
+  setChatDeliveryNoticeByKey("", "neutral", input);
+  return true;
 }
 
 function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
@@ -9109,6 +9119,7 @@ function applyProductionActionState() {
   const receivingOtherRoom = productionTwoProfileReceiveActiveInOtherRoom(twoProfile);
   const receivingRuntimeMismatch = productionTwoProfileReceiveRuntimeMismatched(twoProfile);
   const retryableOutboundConversation = latestTwoProfileRetryableOutboundEntry(twoProfile);
+  clearMismatchedChatDeliveryNotice(twoProfile);
   const currentRoomDeliveryNotice = chatDeliveryNoticeMatchesInput(twoProfile);
   if (
     productionTwoProfileShouldShowOutboundRecovery({
