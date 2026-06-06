@@ -2886,6 +2886,49 @@ function savedInviteRoomListAction(room) {
   return null;
 }
 
+function savedInviteRoomMissingPendingMessage(action) {
+  const normalized = savedInviteRoomRetryableAction(action);
+  if (normalized === "refresh-and-retry") {
+    return currentLanguage === "ko"
+      ? "저장된 전송 대기 메시지는 더 이상 없습니다. 주소 갱신이 필요하면 전송 코드를 다시 준비하세요."
+      : "No pending send remains in this saved room. If the address still needs refresh, set up the delivery code again.";
+  }
+  if (normalized === "start-receiving") {
+    return currentLanguage === "ko"
+      ? "저장된 전송 대기 메시지는 더 이상 없습니다. 메시지 받기는 이 방에서 계속 시작할 수 있습니다."
+      : "No pending send remains in this saved room. You can still start receiving for this room.";
+  }
+  return currentLanguage === "ko"
+    ? "저장된 전송 대기 메시지는 더 이상 없습니다. 대화를 확인하거나 새 메시지를 작성하세요."
+    : "No pending send remains in this saved room. Review the conversation or write a new message.";
+}
+
+async function handleSavedInviteRoomMissingPendingAction(action) {
+  const input = productionTwoProfileInput();
+  rememberCurrentInviteRoomMetadata();
+  renderSavedInviteRooms();
+  setProductionTwoProfileState("No pending send");
+  setText(fields.productionTwoProfileWarning, savedInviteRoomMissingPendingMessage(action));
+  setChatDeliveryNotice(savedInviteRoomMissingPendingMessage(action), "muted");
+  setProductionFollowupActions(
+    true,
+    currentLanguage === "ko"
+      ? "다음: 대화를 확인하거나 새 메시지를 작성하세요."
+      : "Next: review the conversation or write a new message.",
+  );
+  if (action === "refresh-and-retry") {
+    setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
+    await preparePrivateDeliveryRoute({ input, forceRefresh: true });
+    return true;
+  }
+  if (action === "start-receiving") {
+    await startProductionTwoProfileOnionReceive();
+    return true;
+  }
+  fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
+  return true;
+}
+
 async function runSavedInviteRoomListAction(room, action) {
   const opened = await openSavedInviteRoom(room);
   if (!opened) {
@@ -2904,7 +2947,7 @@ async function runSavedInviteRoomListAction(room, action) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
     } else {
-      showLatestRetryableOutboundNotice(productionTwoProfileInput());
+      await handleSavedInviteRoomMissingPendingAction(action);
     }
     return true;
   }
@@ -2915,7 +2958,7 @@ async function runSavedInviteRoomListAction(room, action) {
       showRetryableTwoProfileOutboundNotice(pending);
       await retryTwoProfileOutboundEntry(pending);
     } else {
-      showLatestRetryableOutboundNotice(productionTwoProfileInput());
+      await handleSavedInviteRoomMissingPendingAction(action);
     }
     return true;
   }
@@ -2946,7 +2989,7 @@ async function runSavedInviteRoomListAction(room, action) {
       showRetryableTwoProfileOutboundNotice(pending);
       await refreshTwoProfileOutboundEndpointThenRetry(pending);
     } else {
-      showLatestRetryableOutboundNotice(productionTwoProfileInput());
+      await handleSavedInviteRoomMissingPendingAction(action);
     }
     return true;
   }
