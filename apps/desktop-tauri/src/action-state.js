@@ -1889,8 +1889,13 @@ export function chatNoticeForSendReceiveText(value) {
   }
   if (
     lower.includes("bootstrap") ||
-    lower.includes("private route") ||
     lower.includes("tor restart") ||
+    lower.includes("persistentclientnotready")
+  ) {
+    return { key: "retryNetwork", tone: "warning" };
+  }
+  if (
+    lower.includes("private route") ||
     text.includes("비공개 경로")
   ) {
     return { key: "torBootstrap", tone: "warning" };
