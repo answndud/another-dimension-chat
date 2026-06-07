@@ -4231,6 +4231,25 @@ async function savedInviteRoomMetadataFromLocalStores(room) {
   return metadata;
 }
 
+function savedInviteRoomRetryableActionPriority(action) {
+  switch (savedInviteRoomRetryableAction(action)) {
+    case "retry":
+      return 6;
+    case "retry-network":
+      return 5;
+    case "refresh-and-retry":
+      return 4;
+    case "start-receiving":
+      return 3;
+    case "prepare-private-route":
+      return 2;
+    case "enable-private-delivery":
+      return 1;
+    default:
+      return 0;
+  }
+}
+
 function savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries, preferredMessageNumber) {
   if (!metadata || Number.parseInt(metadata.retryableOutboundCount ?? 0, 10) <= 0) {
     return metadata;
@@ -4256,10 +4275,17 @@ function savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries,
   if (!preferred) {
     return metadata;
   }
+  const preferredAction = productionTwoProfileOutboundPrimaryAction(preferred).action;
+  if (
+    savedInviteRoomRetryableActionPriority(metadata.retryableOutboundAction) >
+      savedInviteRoomRetryableActionPriority(preferredAction)
+  ) {
+    return metadata;
+  }
   return {
     ...metadata,
     retryableOutboundMessageNumber: preferredMessageNumber,
-    retryableOutboundAction: productionTwoProfileOutboundPrimaryAction(preferred).action,
+    retryableOutboundAction: preferredAction,
   };
 }
 
