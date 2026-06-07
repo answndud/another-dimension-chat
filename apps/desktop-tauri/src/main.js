@@ -2678,7 +2678,7 @@ function renderRoomIdentityBar(input, sessionsReady) {
 function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
   const hasConnectionCode = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB);
   const safetyConfirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
-  const retryableOutbound = latestTwoProfileRetryableOutboundEntry(input);
+  const retryableOutbound = automaticVisibleTwoProfileRetryableOutboundEntry(input);
   const pendingConversation = latestTwoProfilePendingConversationEntry();
   const endpointState = twoProfilePeerEndpointState(input);
   const inviteTokenRoomReady = twoProfileInviteCodeModeActive() && sessionsReady && safetyConfirmed;
@@ -3335,6 +3335,27 @@ function savedInviteRoomHasRetryableOutbound(room) {
   return Number.parseInt(room?.retryableOutboundCount ?? 0, 10) > 0;
 }
 
+function retryableOutboundEntryForSavedRoomAction(room, input = productionTwoProfileInput(), options = {}) {
+  const actionOrigin = String(options.actionOrigin ?? "").trim();
+  if (actionOrigin !== "retryable-outbound") {
+    return latestVisibleTwoProfileRetryableOutboundEntry(input);
+  }
+  const messageNumber = Number.parseInt(room?.retryableOutboundMessageNumber ?? 0, 10) || 0;
+  if (messageNumber <= 0) {
+    return null;
+  }
+  return (
+    [...productionTwoProfileConversationEntries.values()].find(
+      (entry) =>
+        String(entry.roomFingerprint ?? "").trim() === twoProfileSessionStatusFingerprint(input) &&
+        String(entry.sender ?? "").trim().toLowerCase() === String(input.profileA ?? "").trim().toLowerCase() &&
+        String(entry.receiver ?? "").trim().toLowerCase() === String(input.profileB ?? "").trim().toLowerCase() &&
+        Number.parseInt(entry.messageNumber, 10) === messageNumber &&
+        twoProfileConversationOutboundRetryable(entry),
+    ) ?? null
+  );
+}
+
 function savedInviteRoomRetryableAction(action) {
   const normalized = String(action ?? "").trim();
   return new Set([
@@ -3646,13 +3667,6 @@ async function handleSavedInviteRoomMissingPendingAction(action) {
     return true;
   }
   if (action === "start-receiving") {
-    const pending = latestVisibleTwoProfileRetryableOutboundEntry(productionTwoProfileInput());
-    if (pending) {
-      selectTwoProfileConversationEntry(pending);
-      showRetryableTwoProfileOutboundNotice(pending);
-      await runTwoProfileOutboundPrimaryAction(pending);
-      return true;
-    }
     fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
     return true;
   }
@@ -3909,7 +3923,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
   if (
     actionOrigin === "retryable-outbound" &&
     savedInviteRoomRetryableAction(action) &&
-    !latestVisibleTwoProfileRetryableOutboundEntry(productionTwoProfileInput())
+    !retryableOutboundEntryForSavedRoomAction(room, productionTwoProfileInput(), { actionOrigin })
   ) {
     await handleSavedInviteRoomMissingPendingAction(action);
     return true;
@@ -3935,7 +3949,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return true;
   }
   if (action === "review-send") {
-    const pending = latestVisibleTwoProfileRetryableOutboundEntry(productionTwoProfileInput());
+    const pending = retryableOutboundEntryForSavedRoomAction(room, productionTwoProfileInput(), { actionOrigin });
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
@@ -3945,7 +3959,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return true;
   }
   if (action === "retry") {
-    const pending = latestVisibleTwoProfileRetryableOutboundEntry(productionTwoProfileInput());
+    const pending = retryableOutboundEntryForSavedRoomAction(room, productionTwoProfileInput(), { actionOrigin });
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
@@ -3956,7 +3970,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return true;
   }
   if (action === "retry-network") {
-    const pending = latestVisibleTwoProfileRetryableOutboundEntry(productionTwoProfileInput());
+    const pending = retryableOutboundEntryForSavedRoomAction(room, productionTwoProfileInput(), { actionOrigin });
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
@@ -3968,7 +3982,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
   }
   if (action === "enable-private-delivery") {
     const input = productionTwoProfileInput();
-    const pending = latestVisibleTwoProfileRetryableOutboundEntry(input);
+    const pending = retryableOutboundEntryForSavedRoomAction(room, input, { actionOrigin });
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
@@ -3980,7 +3994,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
   }
   if (action === "prepare-private-route") {
     const input = productionTwoProfileInput();
-    const pending = latestVisibleTwoProfileRetryableOutboundEntry(input);
+    const pending = retryableOutboundEntryForSavedRoomAction(room, input, { actionOrigin });
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
@@ -3992,7 +4006,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
   }
   if (action === "refresh-endpoint") {
     const input = productionTwoProfileInput();
-    const pending = latestVisibleTwoProfileRetryableOutboundEntry(input);
+    const pending = retryableOutboundEntryForSavedRoomAction(room, input, { actionOrigin });
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
@@ -4008,7 +4022,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return true;
   }
   if (action === "refresh-and-retry") {
-    const pending = latestVisibleTwoProfileRetryableOutboundEntry(productionTwoProfileInput());
+    const pending = retryableOutboundEntryForSavedRoomAction(room, productionTwoProfileInput(), { actionOrigin });
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
@@ -7335,7 +7349,7 @@ function latestTwoProfileOutboundDeliveryCandidate(input = productionTwoProfileI
           twoProfileConversationOutboundRetryable(entry),
       ) ?? null
     : null;
-  const retryableEntry = targetEntry ?? (targetRequested ? null : latestTwoProfileRetryableOutboundEntry(input));
+  const retryableEntry = targetEntry ?? (targetRequested ? null : automaticVisibleTwoProfileRetryableOutboundEntry(input));
   const latest = retryableEntry
     ? {
         profileA: retryableEntry.sender,
@@ -8562,7 +8576,7 @@ function refreshRouteReadinessNoticeAfterSessionRefresh(input = productionTwoPro
 }
 
 function clearStaleSendRecoveryNotice(input = productionTwoProfileInput()) {
-  if (latestTwoProfileRetryableOutboundEntry(input)) {
+  if (automaticVisibleTwoProfileRetryableOutboundEntry(input)) {
     return false;
   }
   if (!chatDeliveryNoticeMatchesInput(input)) {
@@ -13191,10 +13205,7 @@ async function applyPeerPrivateRouteCode() {
     if (await continueAfterPeerPrivateRouteSaved(input)) {
       return true;
     }
-    const pending = latestTwoProfileRetryableOutboundEntry(input);
-    if (pending) {
-      setChatDeliveryNoticeForPendingOutbound(pending, input);
-    }
+    showLatestRetryableOutboundNotice(input);
     return true;
   } catch (error) {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
