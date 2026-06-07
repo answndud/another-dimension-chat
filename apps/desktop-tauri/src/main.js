@@ -4341,9 +4341,19 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return true;
   }
   if (action === "real-onion-retry") {
+    const input = productionTwoProfileInput();
     const recoveryView = savedInviteRoomRealOnionRecoveryView(room);
     if (recoveryView?.action !== action) {
       return showSavedInviteRoomExpiredRealOnionAction();
+    }
+    const routeReadiness = externalPeerSendReadiness(input, {
+      allowMissingMessage: true,
+      latestOnionOutbound: null,
+    });
+    if (!routeReadiness.ready) {
+      showRealOnionRouteReadinessBlock(routeReadiness, input);
+      applyProductionActionState();
+      return true;
     }
     await runProductionTwoProfileRealOnionRoundtrip();
     return true;
