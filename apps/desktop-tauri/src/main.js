@@ -5625,6 +5625,27 @@ function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manua
   } else if (detail.includes("cancel")) {
     nextBlocker = "BootstrapCancelled";
     blocker = "BootstrapCancelled";
+  } else if (detail.includes("networkaccessfailed")) {
+    nextBlocker = "BootstrapNetworkAccessFailed";
+    blocker = "BootstrapNetworkAccessFailed";
+  } else if (detail.includes("localstatefailed")) {
+    nextBlocker = "BootstrapLocalStateFailed";
+    blocker = "BootstrapLocalStateFailed";
+  } else if (detail.includes("configurationfailed")) {
+    nextBlocker = "BootstrapConfigurationFailed";
+    blocker = "BootstrapConfigurationFailed";
+  } else if (detail.includes("unsupported")) {
+    nextBlocker = "BootstrapUnsupported";
+    blocker = "BootstrapUnsupported";
+  } else if (detail.includes("protocolfailed")) {
+    nextBlocker = "BootstrapProtocolFailed";
+    blocker = "BootstrapProtocolFailed";
+  } else if (detail.includes("transientfailure")) {
+    nextBlocker = "BootstrapTransientFailure";
+    blocker = "BootstrapTransientFailure";
+  } else if (detail.includes("censorshiporbridgerequired")) {
+    nextBlocker = "CensorshipOrBridgeRequired";
+    blocker = "CensorshipOrBridgeRequired";
   } else if (detail.includes("bootstrap")) {
     nextBlocker = "BootstrapTimeout";
     blocker = "BootstrapTimeout";
