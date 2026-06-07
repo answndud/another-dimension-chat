@@ -4617,6 +4617,32 @@ function fieldTestReportChecklistStatus({
   return realOnionRetryable ? "check" : "done";
 }
 
+function fieldTestRouteChecklistStatus({
+  routeReady,
+  routeStale,
+  routeReadinessAction,
+}) {
+  if (routeReadinessAction === "refresh-endpoint") {
+    return routeStale ? "check" : "pending";
+  }
+  if (routeReady && !routeStale) {
+    return "done";
+  }
+  return routeStale ? "check" : "pending";
+}
+
+function fieldTestReceiveChecklistStatus({
+  receiveEnabled,
+  receiveState,
+  routeReadinessAction,
+  routeReadinessFailureKind,
+}) {
+  if (routeReadinessAction === "start-receiving") {
+    return routeReadinessFailureKind === "RuntimeOwnerProfileMismatch" ? "check" : "pending";
+  }
+  return receiveEnabled && receiveState !== "stopped" ? "done" : "pending";
+}
+
 function fieldTestChecklistItems(report, peerReport = "") {
   const parsed = parseFieldTestReport(report);
   const sentRows = Number.parseInt(parsed.sent_rows ?? "0", 10) || 0;
@@ -4630,6 +4656,8 @@ function fieldTestChecklistItems(report, peerReport = "") {
   const externalOnionDelivered = fieldTestExternalOnionDelivered(parsed);
   const roomListState = fieldTestReportValue(parsed.room_list_state_key, "none");
   const routeReadinessBlocked = fieldTestRouteReadinessBlocked(parsed);
+  const routeReadinessAction = fieldTestReportValue(fieldTestBlockedRouteReadinessAction(parsed), "none");
+  const routeReadinessFailureKind = fieldTestReportValue(parsed.route_readiness_failure_kind, "none");
   const buildMatch = fieldTestBuildIdentityMatches(report, peerReport);
   return [
     {
@@ -4649,12 +4677,21 @@ function fieldTestChecklistItems(report, peerReport = "") {
     },
     {
       key: "route",
-      status: routeReady && !routeStale ? "done" : routeStale ? "check" : "pending",
+      status: fieldTestRouteChecklistStatus({
+        routeReady,
+        routeStale,
+        routeReadinessAction,
+      }),
       label: t("fieldTestChecklistRoute"),
     },
     {
       key: "receive",
-      status: receiveEnabled && receiveState !== "stopped" ? "done" : "pending",
+      status: fieldTestReceiveChecklistStatus({
+        receiveEnabled,
+        receiveState,
+        routeReadinessAction,
+        routeReadinessFailureKind,
+      }),
       label: t("fieldTestChecklistReceive"),
     },
     {
