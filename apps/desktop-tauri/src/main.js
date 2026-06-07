@@ -1607,14 +1607,14 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     action.type = "button";
     action.className = "chat-delivery-notice-action";
     action.textContent = t("preparePrivateRoute");
-    action.addEventListener("click", preparePrivateDeliveryRoute);
+    action.addEventListener("click", () => preparePrivateDeliveryRoute({ allowRetryRecovery: false }));
     fields.chatDeliveryNotice.append(action);
   } else if (latestChatDeliveryNoticeKey === "sendRuntimeMismatch") {
     const action = document.createElement("button");
     action.type = "button";
     action.className = "chat-delivery-notice-action";
     action.textContent = t("preparePrivateRoute");
-    action.addEventListener("click", () => preparePrivateDeliveryRoute({ forceRefresh: true }));
+    action.addEventListener("click", () => preparePrivateDeliveryRoute({ forceRefresh: true, allowRetryRecovery: false }));
     fields.chatDeliveryNotice.append(action);
   } else if (
     (latestChatDeliveryNoticeKey === "peerPrivateRouteCodeMissing" ||
@@ -4217,7 +4217,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
       return true;
     }
     setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
-    await preparePrivateDeliveryRoute({ input, forceRefresh: true });
+    await preparePrivateDeliveryRoute({ input, forceRefresh: true, allowRetryRecovery: false });
     return true;
   }
   if (action === "verify-safety") {
@@ -13572,7 +13572,9 @@ async function refreshProductionTwoProfilePeerEndpoints(input = productionTwoPro
       options.suppressRecoveryNoticeRefresh !== true &&
       twoProfileTranscriptInputStillCurrent(input)
     ) {
-      refreshRouteReadinessNoticeAfterSessionRefresh(input);
+      refreshRouteReadinessNoticeAfterSessionRefresh(input, {
+        allowRetryRecovery: options.allowRetryRecovery === true,
+      });
     }
     applyProductionActionState();
   }
@@ -13756,6 +13758,7 @@ async function copyLocalPrivateRouteCode() {
 async function preparePrivateDeliveryRoute(options = {}) {
   const forceRefresh = options.forceRefresh === true;
   const input = options.input ?? productionTwoProfileInput();
+  const allowRetryRecovery = options.allowRetryRecovery !== false;
   if (!input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
     openChatSettingsPanel(fields.productionTwoProfileB);
     setProductionTwoProfileState("Private route needs room");
@@ -13778,7 +13781,7 @@ async function preparePrivateDeliveryRoute(options = {}) {
     return;
   }
   if (twoProfilePeerEndpointState(input).ready && !forceRefresh) {
-    if (showPrivateRouteRetryFollowupPrompt(input)) {
+    if (allowRetryRecovery && showPrivateRouteRetryFollowupPrompt(input)) {
       return;
     }
     setProductionTwoProfileState("Private route ready");
@@ -13793,7 +13796,9 @@ async function preparePrivateDeliveryRoute(options = {}) {
       setProductionTwoProfileState("Peer delivery code needed");
       setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
       setChatDeliveryNoticeByKey("peerPrivateRouteCodeMissing", "muted", input);
-      showPrivateRouteRetryFollowupPrompt(input);
+      if (allowRetryRecovery) {
+        showPrivateRouteRetryFollowupPrompt(input);
+      }
       return;
     }
     if (nextRouteAction === "apply-peer") {
@@ -13811,14 +13816,14 @@ async function preparePrivateDeliveryRoute(options = {}) {
   }
 
   setChatDeliveryNoticeByKey("privateDeliveryRoutePreparing", "progress", input);
-  const refreshed = await refreshProductionTwoProfilePeerEndpoints(input);
+  const refreshed = await refreshProductionTwoProfilePeerEndpoints(input, { allowRetryRecovery });
   if (!twoProfileTranscriptInputStillCurrent(input)) {
     return;
   }
-  if (refreshed && showPrivateRouteRetryFollowupPrompt(input, { clear: true })) {
+  if (allowRetryRecovery && refreshed && showPrivateRouteRetryFollowupPrompt(input, { clear: true })) {
     return;
   }
-  if (refreshed && showLatestRetryableOutboundNotice(input, { allowAutomatic: false })) {
+  if (allowRetryRecovery && refreshed && showLatestRetryableOutboundNotice(input, { allowAutomatic: false })) {
     return;
   }
   setChatDeliveryNoticeByKey(
@@ -15837,13 +15842,13 @@ async function runProductionTwoProfileComposerPrimaryAction() {
   if (intent.action === "prepare-private-route") {
     rememberPrivateRouteFollowup(input.message ? "send-draft" : "receive", input);
     setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted", input);
-    await preparePrivateDeliveryRoute({ input });
+    await preparePrivateDeliveryRoute({ input, allowRetryRecovery: false });
     return;
   }
   if (intent.action === "refresh-endpoint") {
     rememberPrivateRouteFollowup(input.message ? "send-draft" : "receive", input);
     setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
-    await preparePrivateDeliveryRoute({ input, forceRefresh: true });
+    await preparePrivateDeliveryRoute({ input, forceRefresh: true, allowRetryRecovery: false });
     return;
   }
   if (intent.action === "start-receiving") {
@@ -18377,7 +18382,7 @@ if (fields.saveProductionTwoProfileOnionSessions) {
 if (fields.refreshProductionTwoProfilePeerEndpoints) {
   fields.refreshProductionTwoProfilePeerEndpoints.addEventListener(
     "click",
-    refreshProductionTwoProfilePeerEndpoints,
+    () => refreshProductionTwoProfilePeerEndpoints(productionTwoProfileInput(), { allowRetryRecovery: false }),
   );
 }
 
@@ -18404,7 +18409,10 @@ if (fields.sendProductionTwoProfileLatestOnionEnvelope) {
 
 if (fields.preparePrivateRoute) {
   fields.preparePrivateRoute.addEventListener("click", () =>
-    preparePrivateDeliveryRoute({ forceRefresh: privateRouteRecoveryNoticeActive("sendRuntimeMismatch") }),
+    preparePrivateDeliveryRoute({
+      forceRefresh: privateRouteRecoveryNoticeActive("sendRuntimeMismatch"),
+      allowRetryRecovery: false,
+    }),
   );
 }
 if (fields.copyPrivateRouteCode) {
