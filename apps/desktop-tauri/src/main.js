@@ -4397,7 +4397,12 @@ async function refreshSavedInviteRoomMetadataForFingerprint(roomFingerprint, opt
       renderSavedInviteRooms();
       return false;
     }
-    if (options.refreshSessionStatus === true) {
+    const retryableMetadataCleared =
+      savedInviteRoomHasRetryableOutbound(room) && !savedInviteRoomHasRetryableOutbound(metadata);
+    const refreshSessionStatus =
+      options.refreshSessionStatus === true ||
+      (retryableMetadataCleared && !latestTwoProfileSessionStatusForCurrentInput(input));
+    if (refreshSessionStatus) {
       try {
         const sessionStatus = await invokeInviteRoomSessionStatus(input);
         rememberTwoProfileSessionStatus(input, sessionStatus);
