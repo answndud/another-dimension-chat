@@ -8317,6 +8317,60 @@ function showLatestRetryableOutboundNotice(input = productionTwoProfileInput()) 
   return true;
 }
 
+function isRouteReadinessNoticeKey(key = latestChatDeliveryNoticeKey) {
+  return new Set([
+    "chatNoticeRefreshAddress",
+    "peerPrivateRouteCodeMissing",
+    "privateDeliveryRouteNeeded",
+    "privateRouteWaitingPeerCode",
+  ]).has(key);
+}
+
+function refreshRouteReadinessNoticeAfterSessionRefresh(input = productionTwoProfileInput()) {
+  if (!isRouteReadinessNoticeKey() || !chatDeliveryNoticeMatchesInput(input)) {
+    return false;
+  }
+  if (showLatestRetryableOutboundNotice(input)) {
+    return true;
+  }
+  const routeReadiness = externalPeerSendReadiness(input, {
+    allowMissingMessage: true,
+    latestOnionOutbound: null,
+  });
+  if (routeReadiness.ready === true) {
+    setProductionTwoProfileState("Private route ready");
+    setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteReady"));
+    setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
+    setProductionFollowupActions(
+      true,
+      currentLanguage === "ko"
+        ? "다음: 새 메시지를 작성하거나 저장된 전송을 다시 시도하세요."
+        : "Next: write a new message or retry the saved send.",
+    );
+    fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
+    return true;
+  }
+  if (routeReadiness.nextAction === "start-receiving" && !routeReadinessReceiveStopPending(routeReadiness)) {
+    setProductionTwoProfileState("Message listening needed");
+    setText(fields.productionTwoProfileWarning, t("chatNoticeReceiveStopped"));
+    setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted", input);
+    setProductionFollowupActions(
+      true,
+      currentLanguage === "ko"
+        ? "다음: 이 채팅방에서 메시지 받기를 시작하세요."
+        : "Next: start receiving in this room.",
+    );
+    fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
+    return true;
+  }
+  if (routeReadiness.noticeKey && routeReadiness.noticeKey !== latestChatDeliveryNoticeKey) {
+    setText(fields.productionTwoProfileWarning, routeReadiness.disabledReason || t(routeReadiness.noticeKey));
+    setChatDeliveryNoticeByKey(routeReadiness.noticeKey, "warning", input);
+    return true;
+  }
+  return false;
+}
+
 function clearStaleSendRecoveryNotice(input = productionTwoProfileInput()) {
   if (latestTwoProfileRetryableOutboundEntry(input)) {
     return false;
@@ -12676,6 +12730,7 @@ async function refreshProductionTwoProfilePeerEndpoints(input = productionTwoPro
     fields.refreshProductionTwoProfilePeerEndpoints.disabled = true;
   }
 
+  let refreshSucceeded = false;
   try {
     const profileALaunch = await launchEndpoint(profileA);
     const profileBLaunch = await launchEndpoint(profileB);
@@ -12723,6 +12778,7 @@ async function refreshProductionTwoProfilePeerEndpoints(input = productionTwoPro
       fields.productionTwoProfileBoundary,
       `a_changed=${profileAUpdate.remote_endpoint_changed} b_changed=${profileBUpdate.remote_endpoint_changed} existing_session=${profileAUpdate.update_channel_existing_encrypted_session && profileBUpdate.update_channel_existing_encrypted_session} a_retained=${profileALaunch.onion_service_retained} b_retained=${profileBLaunch.onion_service_retained} raw_endpoint=${profileAUpdate.remote_endpoint_returned || profileBUpdate.remote_endpoint_returned} raw_path=${profileAUpdate.store_path_returned || profileBUpdate.store_path_returned || profileALaunch.raw_path_returned || profileBLaunch.raw_path_returned} onion_secret=${profileALaunch.onion_secret_returned || profileBLaunch.onion_secret_returned} key_material=${profileAUpdate.key_material_exposed || profileBUpdate.key_material_exposed || profileALaunch.key_material_exposed || profileBLaunch.key_material_exposed} network=${profileALaunch.network_io_attempted || profileBLaunch.network_io_attempted} transport=${profileAUpdate.transport_io_opened || profileBUpdate.transport_io_opened || profileALaunch.transport_io_opened || profileBLaunch.transport_io_opened} runtime=${profileAUpdate.runtime_messaging_enabled || profileBUpdate.runtime_messaging_enabled || profileALaunch.runtime_messaging_enabled || profileBLaunch.runtime_messaging_enabled}`,
     );
+    refreshSucceeded = true;
     return true;
   } catch (error) {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
@@ -12736,6 +12792,9 @@ async function refreshProductionTwoProfilePeerEndpoints(input = productionTwoPro
     clearTwoProfilePeerEndpointRefreshBusy(input);
     if (fields.refreshProductionTwoProfilePeerEndpoints) {
       fields.refreshProductionTwoProfilePeerEndpoints.disabled = false;
+    }
+    if (refreshSucceeded && twoProfileTranscriptInputStillCurrent(input)) {
+      refreshRouteReadinessNoticeAfterSessionRefresh(input);
     }
     applyProductionActionState();
   }
@@ -15880,7 +15939,9 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       input: transcriptInput,
       sessionStatus,
     });
-    clearStaleSendRecoveryNotice(transcriptInput);
+    if (!refreshRouteReadinessNoticeAfterSessionRefresh(transcriptInput)) {
+      clearStaleSendRecoveryNotice(transcriptInput);
+    }
     const resumeWarning = appendStaleMessageEnvelopeSlotsPruned(
       appendExpiredMessagesPurged(
         "Stored conversation and message-ready sessions recovered after local unlock.",
