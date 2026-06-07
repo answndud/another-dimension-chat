@@ -12103,6 +12103,10 @@ function applyProductionActionState() {
     realOnionRunAction.opensNetworkSettings === true ||
     realOnionRunAction.inspectDiagnostics === true;
   const realOnionRouteBlocked = !realOnionRunBypassesRouteReadiness && !realOnionRouteReadiness.ready;
+  const realOnionMissingMessage =
+    !realOnionRunBypassesRouteReadiness &&
+    Boolean(twoProfile.profileA && twoProfile.profileB && twoProfile.profileA !== twoProfile.profileB && twoProfile.passphrase) &&
+    (!twoProfile.message || !twoProfile.messageTtlSeconds);
   const realOnionCancelWaitReady =
     realOnionRoundtripActive ||
     (realOnionRecovery.action === "retry-bootstrap" &&
@@ -12110,7 +12114,12 @@ function applyProductionActionState() {
       !realOnionWaitCanceled);
   const realOnionRunLabel = fields.runProductionTwoProfileRealOnionRoundtrip?.querySelector("[data-i18n]");
   if (realOnionRunLabel) {
-    setText(realOnionRunLabel, t(realOnionRunAction.ready ? realOnionRunAction.labelKey : "runRealOnionRoundtrip"));
+    setText(
+      realOnionRunLabel,
+      realOnionMissingMessage && !twoProfile.message
+        ? t("writeMessageBeforeSending")
+        : t(realOnionRunAction.ready ? realOnionRunAction.labelKey : "runRealOnionRoundtrip"),
+    );
   }
   setActionButtonState(
     fields.runProductionTwoProfileRealOnionRoundtrip,
@@ -12118,6 +12127,7 @@ function applyProductionActionState() {
       !hasTwoProfileInput ||
       !hasMessageRetentionPolicy ||
       !manualNetworkPermission ||
+      realOnionMissingMessage ||
       realOnionRouteBlocked,
     busy
       ? "Wait for the active production action."
@@ -12125,6 +12135,10 @@ function applyProductionActionState() {
         ? "Enable manual onion network permission before running real onion roundtrip."
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
+      : realOnionMissingMessage
+        ? !twoProfile.message
+          ? t("writeMessageBeforeSending")
+          : messageTtlInputBlocker()
       : realOnionRouteBlocked
         ? realOnionRouteReadiness.disabledReason
       : realOnionRunAction.ready
