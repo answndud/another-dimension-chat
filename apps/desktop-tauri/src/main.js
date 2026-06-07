@@ -8014,7 +8014,9 @@ async function continueAfterPeerPrivateRouteSaved(input = productionTwoProfileIn
   if (followup.action === "retry-outbound") {
     const pending = retryableOutboundEntryForPrivateRouteFollowup(followup, input);
     if (pending) {
-      await retryTwoProfileOutboundEntry(pending);
+      selectTwoProfileConversationEntry(pending);
+      showRetryableTwoProfileOutboundNotice(pending);
+      await runTwoProfileOutboundPrimaryAction(pending);
       return true;
     }
     setProductionTwoProfileState("Retry send needs saved message");
@@ -8061,7 +8063,7 @@ function retryableOutboundEntryForPrivateRouteFollowup(followup, input = product
         String(entry?.sender ?? "").trim() === sender &&
         String(entry?.receiver ?? "").trim() === receiver &&
         Number.parseInt(entry?.messageNumber, 10) === messageNumber &&
-        productionTwoProfileOutboundActionState(entry, input, twoProfileInviteCodeModeActive()).canRunNow,
+        twoProfileConversationOutboundRetryable(entry),
     ) ?? null
   );
 }
