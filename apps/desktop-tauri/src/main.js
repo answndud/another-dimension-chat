@@ -4039,9 +4039,9 @@ function savedInviteRoomPreservesOpenActionOrigin(actionOrigin) {
   return new Set(["receive-state", "peer-code", "real-onion-recovery"]).has(String(actionOrigin ?? "").trim());
 }
 
-function clearRouteReadinessOnlyRetryContext(input = productionTwoProfileInput()) {
+function clearRouteReadinessOnlyFollowupContext(input = productionTwoProfileInput()) {
   let changed = false;
-  if (pendingPrivateRouteFollowup?.action === "retry-outbound" && privateRouteFollowupMatchesRoom(input)) {
+  if (privateRouteFollowupMatchesRoom(input)) {
     clearPrivateRouteFollowup();
     changed = true;
   }
@@ -4085,7 +4085,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return false;
   }
   if (actionOrigin === "route-readiness") {
-    clearRouteReadinessOnlyRetryContext(productionTwoProfileInput());
+    clearRouteReadinessOnlyFollowupContext(productionTwoProfileInput());
   }
   if (
     actionOrigin === "retryable-outbound" &&
@@ -9456,10 +9456,6 @@ async function continueAfterPeerPrivateRouteSaved(input = productionTwoProfileIn
     );
     setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
     fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
-    return true;
-  }
-  if (receiveIntentForRoom(input)) {
-    await startProductionTwoProfileOnionReceive();
     return true;
   }
   return false;
