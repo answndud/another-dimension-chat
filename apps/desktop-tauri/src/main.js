@@ -4052,6 +4052,10 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
       await runTwoProfileOutboundPrimaryAction(pending);
       return true;
     }
+    if (actionOrigin === "retryable-outbound") {
+      await handleSavedInviteRoomMissingPendingAction(action);
+      return true;
+    }
     openPrivateDeliverySettings(input);
     return true;
   }
@@ -4064,6 +4068,10 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
       await runTwoProfileOutboundPrimaryAction(pending);
       return true;
     }
+    if (actionOrigin === "retryable-outbound") {
+      await handleSavedInviteRoomMissingPendingAction(action);
+      return true;
+    }
     focusPrivateRouteNextAction(input);
     return true;
   }
@@ -4074,6 +4082,10 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
       await runTwoProfileOutboundPrimaryAction(pending);
+      return true;
+    }
+    if (actionOrigin === "retryable-outbound") {
+      await handleSavedInviteRoomMissingPendingAction(action);
       return true;
     }
     setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
