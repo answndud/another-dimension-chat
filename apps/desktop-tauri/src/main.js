@@ -5244,6 +5244,10 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     allowMissingMessage: true,
     latestOnionOutbound: null,
   });
+  const routeReadinessBlocked = routeReadiness.ready !== true;
+  const routeReadinessNextAction = routeReadinessBlocked ? routeReadiness.nextAction : "none";
+  const routeReadinessFailureKind = routeReadinessBlocked ? routeReadiness.failureKind : "none";
+  const routeReadinessNoticeKey = routeReadinessBlocked ? routeReadiness.noticeKey : "none";
   const roomListNextAction = outboundRecoveryAction !== "none"
     ? outboundRecoveryAction
     : currentSavedRoom.action;
@@ -5264,9 +5268,9 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `route_source=${fieldTestReportValue(route.source)}`,
     `route_reason=${fieldTestReportValue(route.reason)}`,
     `route_readiness_ready=${routeReadiness.ready === true}`,
-    `route_readiness_next_action=${fieldTestReportValue(routeReadiness.nextAction, "none")}`,
-    `route_readiness_failure_kind=${fieldTestReportValue(routeReadiness.failureKind, "none")}`,
-    `route_readiness_notice_key=${fieldTestReportValue(routeReadiness.noticeKey, "none")}`,
+    `route_readiness_next_action=${fieldTestReportValue(routeReadinessNextAction, "none")}`,
+    `route_readiness_failure_kind=${fieldTestReportValue(routeReadinessFailureKind, "none")}`,
+    `route_readiness_notice_key=${fieldTestReportValue(routeReadinessNoticeKey, "none")}`,
     `receive_enabled=${receiveMode.enabled === true}`,
     `receive_state=${fieldTestReportValue(receiveMode.runtimeState, "stopped")}`,
     `receive_in_flight=${receiveMode.inFlight === true}`,
