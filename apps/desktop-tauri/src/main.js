@@ -14565,6 +14565,7 @@ function markProductionTwoProfileOnionReceiveStopped(backendLoop = null, options
 
 async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
   const silent = productionTwoProfileOnionReceiveMode.silentStop === true;
+  let receiveStopStateChanged = false;
   try {
     const backendLoop = await invoke("production_onion_receive_loop_status");
     if (!silent) {
@@ -14582,6 +14583,7 @@ async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
         silent,
         input: receiveOwnerInput,
       });
+      receiveStopStateChanged = true;
       if (!silent) {
         setText(fields.productionTwoProfileMessageState, t("receiveStopped"));
       }
@@ -14593,10 +14595,14 @@ async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
       runtimeState: "failed-retryable",
       runtimeLabel: "Message listening stop failed",
     };
+    receiveStopStateChanged = true;
     if (!silent) {
       setText(fields.productionTwoProfileBoundary, `Backend receive loop stop confirmation failed without returning secrets. ${error}`);
     }
   } finally {
+    if (receiveStopStateChanged) {
+      renderSavedInviteRooms();
+    }
     applyProductionActionState();
   }
 }
