@@ -8919,8 +8919,34 @@ function isRouteReadinessNoticeKey(key = latestChatDeliveryNoticeKey) {
   ]).has(key);
 }
 
+function isRealOnionRecoveryNoticeKey(key = latestChatDeliveryNoticeKey) {
+  return new Set([
+    "bridgeConfigInvalidStatus",
+    "bridgeTransportInvalidStatus",
+    "fieldTestNextDifferentNetwork",
+    "fieldTestNextEnablePrivateDelivery",
+    "fieldTestNextInspectDiagnostics",
+    "fieldTestNextPrepareNetworkOrBridge",
+    "fieldTestNextRefreshBridge",
+    "fieldTestNextRefreshBridgeTransport",
+    "fieldTestNextRetryDelivery",
+    "fieldTestNextRetryNetwork",
+  ]).has(key);
+}
+
 function refreshRouteReadinessNoticeAfterSessionRefresh(input = productionTwoProfileInput()) {
-  if (!isRouteReadinessNoticeKey() || !chatDeliveryNoticeMatchesInput(input)) {
+  if (!chatDeliveryNoticeMatchesInput(input)) {
+    return false;
+  }
+  const routeReadiness = externalPeerSendReadiness(input, {
+    allowMissingMessage: true,
+    latestOnionOutbound: null,
+  });
+  const routeReadinessBlocked = routeReadiness.ready !== true;
+  if (
+    !isRouteReadinessNoticeKey() &&
+    !(routeReadinessBlocked && isRealOnionRecoveryNoticeKey())
+  ) {
     return false;
   }
   if (showPrivateRouteRetryFollowupPrompt(input)) {
@@ -8929,10 +8955,6 @@ function refreshRouteReadinessNoticeAfterSessionRefresh(input = productionTwoPro
   if (showLatestRetryableOutboundNotice(input, { allowAutomatic: false })) {
     return true;
   }
-  const routeReadiness = externalPeerSendReadiness(input, {
-    allowMissingMessage: true,
-    latestOnionOutbound: null,
-  });
   if (routeReadiness.ready === true) {
     setProductionTwoProfileState("Private route ready");
     setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteReady"));
