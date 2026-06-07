@@ -1626,8 +1626,20 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     const action = document.createElement("button");
     action.type = "button";
     action.className = "chat-delivery-notice-action";
-    action.textContent = t("startReceiving");
-    action.addEventListener("click", startProductionTwoProfileOnionReceive);
+    action.textContent = productionTwoProfileReceiveMatchesInput(productionTwoProfileInput())
+      ? t("roomActionSend")
+      : t("startReceiving");
+    action.addEventListener("click", () => {
+      const input = productionTwoProfileInput();
+      if (!chatDeliveryNoticeMatchesInput(input)) {
+        return;
+      }
+      if (productionTwoProfileReceiveMatchesInput(input)) {
+        fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
+        return;
+      }
+      startProductionTwoProfileOnionReceive();
+    });
     fields.chatDeliveryNotice.append(action);
   } else if (
     latestChatDeliveryNoticeKey === "messageSavedPrivateDeliveryOff" ||
