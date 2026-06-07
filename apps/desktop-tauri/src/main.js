@@ -4255,16 +4255,22 @@ function savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries,
     return metadata;
   }
   const delivered = (entries ?? []).some((entry) =>
-    entry?.kind === "received" &&
-      String(entry?.profile ?? "").trim().toLowerCase() === String(input.profileB ?? "").trim().toLowerCase() &&
-      String(entry?.counterpartProfile ?? "").trim().toLowerCase() === String(input.profileA ?? "").trim().toLowerCase() &&
-      Number.parseInt(entry?.messageNumber, 10) === preferredMessageNumber
+    Number.parseInt(entry?.messageNumber, 10) === preferredMessageNumber &&
+      (
+        entry?.statuses?.has?.("received") ||
+        (
+          entry?.kind === "received" &&
+          String(entry?.profile ?? "").trim().toLowerCase() === String(input.profileB ?? "").trim().toLowerCase() &&
+          String(entry?.counterpartProfile ?? "").trim().toLowerCase() === String(input.profileA ?? "").trim().toLowerCase()
+        )
+      )
   );
   if (delivered) {
     return metadata;
   }
   const preferred = (entries ?? []).find((entry) =>
     entry?.kind !== "received" &&
+      !entry?.statuses?.has?.("received") &&
       String(entry?.profile ?? "").trim().toLowerCase() === String(input.profileA ?? "").trim().toLowerCase() &&
       String(entry?.counterpartProfile ?? "").trim().toLowerCase() === String(input.profileB ?? "").trim().toLowerCase() &&
       Number.parseInt(entry?.messageNumber, 10) === preferredMessageNumber &&
