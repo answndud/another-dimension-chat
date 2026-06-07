@@ -1743,7 +1743,7 @@ function currentTwoProfileOutboundPrimaryAction(entry, input = productionTwoProf
       };
     }
     if (routeReadiness.nextAction === "start-receiving") {
-      if (productionTwoProfileReceiveStoppingInOtherRoom(input)) {
+      if (routeReadinessReceiveStopPending(routeReadiness)) {
         return {
           action: "wait-receive-stop",
           labelKey: "receiveStopPending",
@@ -3636,8 +3636,13 @@ function showSavedInviteRoomExpiredRealOnionAction() {
 }
 
 function showRealOnionRouteReadinessBlock(readiness, input = productionTwoProfileInput()) {
-  const noticeKey = readiness?.noticeKey || "privateDeliveryRouteNeeded";
-  const message = readiness?.disabledReason || t(noticeKey);
+  const receiveStopPending = routeReadinessReceiveStopPending(readiness);
+  const noticeKey = receiveStopPending
+    ? "receiveStopPending"
+    : readiness?.noticeKey || "privateDeliveryRouteNeeded";
+  const message = receiveStopPending
+    ? t("receiveStopPending")
+    : readiness?.disabledReason || t(noticeKey);
   setProductionTwoProfileState("Private delivery not ready");
   setText(fields.productionTwoProfileWarning, message);
   setText(fields.productionTwoProfileProfiles, t("roomStateSaved"));
@@ -3660,6 +3665,15 @@ function showRealOnionRouteReadinessBlock(readiness, input = productionTwoProfil
     return true;
   }
   if (readiness?.nextAction === "start-receiving") {
+    if (receiveStopPending) {
+      setProductionFollowupActions(
+        true,
+        currentLanguage === "ko"
+          ? "다음: 받기 중지가 완료될 때까지 기다린 뒤 대상 방을 다시 여세요."
+          : "Next: wait until receiving has fully stopped, then reopen the target room.",
+      );
+      return true;
+    }
     fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
     return true;
   }
@@ -6169,6 +6183,13 @@ function productionTwoProfileReceiveStoppingInOtherRoom(input = productionTwoPro
   );
 }
 
+function routeReadinessReceiveStopPending(readiness) {
+  return Boolean(
+    readiness?.failureKind === "LocalOnionEndpointStopping" ||
+      readiness?.receiveStopRequested === true,
+  );
+}
+
 function productionTwoProfileOnionReceiveOwnerInput(fallbackInput = productionTwoProfileInput()) {
   const ownerFingerprint = String(productionTwoProfileOnionReceiveMode.roomFingerprint ?? "").trim();
   if (!ownerFingerprint) {
@@ -6937,7 +6958,9 @@ function externalPeerSendReadiness(input = productionTwoProfileInput(), options 
   const receiveActive = productionTwoProfileReceiveMatchesInput(input);
   const receiveRuntimeMismatch = productionTwoProfileReceiveRuntimeMismatched(input);
   const receiveStopRequested = Boolean(
-    receiveActive && productionTwoProfileOnionReceiveMode.stopRequested,
+    productionTwoProfileOnionReceiveMode.enabled &&
+      productionTwoProfileOnionReceiveMode.stopRequested &&
+      (receiveActive || productionTwoProfileReceiveActiveInOtherRoom(input)),
   );
   const localEndpointReady = Boolean(
     receiveActive &&
@@ -7010,12 +7033,16 @@ function externalPeerSendReadiness(input = productionTwoProfileInput(), options 
       ...base,
       ready: false,
       nextAction: "start-receiving",
-      noticeKey: receiveRuntimeMismatch ? "receiveRuntimeMismatch" : "chatNoticeReceiveStopped",
+      noticeKey: receiveRuntimeMismatch
+        ? "receiveRuntimeMismatch"
+        : receiveStopRequested
+          ? "receiveStopPending"
+          : "chatNoticeReceiveStopped",
       failureKind,
       disabledReason: receiveRuntimeMismatch
         ? t("receiveRuntimeMismatch")
         : receiveStopRequested
-          ? t("receiveStopping")
+          ? t("receiveStopPending")
           : t("externalSendNeedsReceive"),
     };
   }
@@ -9199,7 +9226,7 @@ function twoProfileComposerPrimaryIntent({
     allowMissingMessage: true,
     latestOnionOutbound: null,
   });
-  if (productionTwoProfileReceiveStoppingInOtherRoom(input)) {
+  if (routeReadinessReceiveStopPending(routeReadiness)) {
     return {
       action: "wait-receive-stop",
       labelKey: "receiveStopPending",
