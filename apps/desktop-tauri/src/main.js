@@ -4107,10 +4107,48 @@ async function savedInviteRoomMetadataFromLocalStores(room) {
     invoke("production_message_transcript_export", { profile: profileA, passphrase }),
     invoke("production_message_transcript_export", { profile: profileB, passphrase }),
   ]);
-  return productionInviteRoomConversationMetadata([
+  const entries = [
     ...twoProfileTranscriptEntriesFromProfile(profileA, profileB, profileAResult.entries),
     ...twoProfileTranscriptEntriesFromProfile(profileB, profileA, profileBResult.entries),
-  ]);
+  ];
+  let metadata = productionInviteRoomConversationMetadata(entries);
+  const preferredMessageNumber = Number.parseInt(room?.retryableOutboundMessageNumber ?? 0, 10) || 0;
+  if (preferredMessageNumber > 0) {
+    metadata = savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries, preferredMessageNumber);
+  }
+  return metadata;
+}
+
+function savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries, preferredMessageNumber) {
+  if (!metadata || Number.parseInt(metadata.retryableOutboundCount ?? 0, 10) <= 0) {
+    return metadata;
+  }
+  const delivered = (entries ?? []).some((entry) =>
+    entry?.kind === "received" &&
+      String(entry?.profile ?? "").trim().toLowerCase() === String(input.profileB ?? "").trim().toLowerCase() &&
+      String(entry?.counterpartProfile ?? "").trim().toLowerCase() === String(input.profileA ?? "").trim().toLowerCase() &&
+      Number.parseInt(entry?.messageNumber, 10) === preferredMessageNumber
+  );
+  if (delivered) {
+    return metadata;
+  }
+  const preferred = (entries ?? []).find((entry) =>
+    entry?.kind !== "received" &&
+      String(entry?.profile ?? "").trim().toLowerCase() === String(input.profileA ?? "").trim().toLowerCase() &&
+      String(entry?.counterpartProfile ?? "").trim().toLowerCase() === String(input.profileB ?? "").trim().toLowerCase() &&
+      Number.parseInt(entry?.messageNumber, 10) === preferredMessageNumber &&
+      entry?.outboundRetryable === true &&
+      entry?.outboundDeliveryState !== "canceled" &&
+      entry?.outboundDeliveryState !== "sent"
+  );
+  if (!preferred) {
+    return metadata;
+  }
+  return {
+    ...metadata,
+    retryableOutboundMessageNumber: preferredMessageNumber,
+    retryableOutboundAction: productionTwoProfileOutboundPrimaryAction(preferred).action,
+  };
 }
 
 function savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus) {
