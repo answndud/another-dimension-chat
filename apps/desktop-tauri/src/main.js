@@ -3449,6 +3449,7 @@ function savedInviteRoomRetryableAction(action) {
     "refresh-and-retry",
     "start-receiving",
     "retry-network",
+    "verify-safety",
     "retry",
   ]).has(normalized)
     ? normalized
@@ -3471,6 +3472,9 @@ function savedInviteRoomRetryableState(room) {
   }
   if (action === "retry-network") {
     return { key: "retry-network", label: t("retryNetwork") };
+  }
+  if (action === "verify-safety") {
+    return { key: "verify-safety", label: t("roomVerifyNeeded") };
   }
   return { key: "retry-send", label: t("roomStateRetrySend") };
 }
@@ -3686,6 +3690,9 @@ function savedInviteRoomListAction(room, options = {}) {
     }
     if (action === "retry-network") {
       return { action, labelKey: "retryNetwork", origin: "retryable-outbound" };
+    }
+    if (action === "verify-safety") {
+      return { action, labelKey: "comparePhraseAction", origin: "retryable-outbound" };
     }
     return { action: "retry", labelKey: "retrySend", origin: "retryable-outbound" };
   }
@@ -4243,6 +4250,8 @@ function savedInviteRoomRetryableActionPriority(action) {
       return 3;
     case "prepare-private-route":
       return 2;
+    case "verify-safety":
+      return 2;
     case "enable-private-delivery":
       return 1;
     default:
@@ -4300,34 +4309,39 @@ function savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus
     return metadata;
   }
   const currentAction = savedInviteRoomRetryableAction(metadata.retryableOutboundAction);
-  const peerEndpointState = peerEndpointStateFromSessionStatus(input, sessionStatus);
-  const receiveActive = productionTwoProfileReceiveMatchesInput(input) &&
-    productionTwoProfileOnionReceiveMode.stopRequested !== true;
-  if (receiveActive && currentAction === "start-receiving") {
-    if (peerEndpointState.ready) {
-      return { ...metadata, retryableOutboundAction: "retry" };
+  const readiness = externalPeerSendReadiness(input, {
+    allowMissingMessage: true,
+    latestOnionOutbound: null,
+  });
+  if (!readiness.ready) {
+    if (readiness.nextAction === "enable-private-delivery") {
+      return { ...metadata, retryableOutboundAction: "enable-private-delivery" };
     }
-    return {
-      ...metadata,
-      retryableOutboundAction: peerEndpointState.stale ? "refresh-and-retry" : "prepare-private-route",
-    };
+    if (readiness.nextAction === "verify") {
+      return { ...metadata, retryableOutboundAction: "verify-safety" };
+    }
+    if (readiness.nextAction === "start-receiving") {
+      return { ...metadata, retryableOutboundAction: "start-receiving" };
+    }
+    if (readiness.nextAction === "refresh-endpoint") {
+      return {
+        ...metadata,
+        retryableOutboundAction: readiness.peerEndpointState?.stale
+          ? "refresh-and-retry"
+          : "prepare-private-route",
+      };
+    }
   }
-  if (peerEndpointState.ready && (currentAction === "refresh-and-retry" || currentAction === "prepare-private-route")) {
+  if (
+    [
+      "enable-private-delivery",
+      "verify-safety",
+      "start-receiving",
+      "refresh-and-retry",
+      "prepare-private-route",
+    ].includes(currentAction)
+  ) {
     return { ...metadata, retryableOutboundAction: "retry" };
-  }
-  if (
-    !peerEndpointState.ready &&
-    peerEndpointState.stale &&
-    (currentAction === "retry" || currentAction === "prepare-private-route")
-  ) {
-    return { ...metadata, retryableOutboundAction: "refresh-and-retry" };
-  }
-  if (
-    !peerEndpointState.ready &&
-    !peerEndpointState.stale &&
-    (currentAction === "retry" || currentAction === "refresh-and-retry")
-  ) {
-    return { ...metadata, retryableOutboundAction: "prepare-private-route" };
   }
   return metadata;
 }
