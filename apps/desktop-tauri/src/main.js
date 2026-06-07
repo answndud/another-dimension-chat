@@ -5295,6 +5295,7 @@ function fieldTestRecoveryActionNextKey(action) {
     case "check-session":
       return "fieldTestNextOpenRoom";
     case "verify":
+    case "verify-safety":
       return "fieldTestNextVerifySafety";
     case "start-receiving":
       return "fieldTestNextStartReceive";
