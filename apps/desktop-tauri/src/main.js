@@ -13638,6 +13638,7 @@ async function startProductionTwoProfileOnionReceive() {
     setChatDeliveryNoticeByKey("receiveOtherRoomActive", "warning", input);
     return;
   }
+  clearPrivateRouteFollowupForRoom(input);
   rememberReceiveIntentForRoom(input, true);
   if (!manualNetworkPermission) {
     setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning", input);
@@ -14058,6 +14059,7 @@ function stopProductionTwoProfileOnionReceiveForInput(input, options) {
     return;
   }
   const profile = productionTwoProfileOnionReceiveMode.profile;
+  clearPrivateRouteFollowupForRoom(targetInput);
   rememberReceiveIntentForRoom(targetInput, false);
   rememberLocalPrivateRouteLifecycle(targetInput, {
     state: "stopped",
