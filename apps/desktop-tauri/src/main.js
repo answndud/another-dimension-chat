@@ -4013,6 +4013,10 @@ function savedInviteRoomRecheckedRouteReadinessAction(action, actionOrigin, curr
   return { ready: false, action: routeReadinessView.action };
 }
 
+function savedInviteRoomPreservesOpenActionOrigin(actionOrigin) {
+  return new Set(["receive-state", "peer-code"]).has(String(actionOrigin ?? "").trim());
+}
+
 async function runSavedInviteRoomListAction(room, action, options = {}) {
   const actionOrigin = String(options.actionOrigin ?? "").trim();
   if (
@@ -4047,6 +4051,8 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
         if (routeRecheck?.action && routeRecheck.action !== action) {
           return runSavedInviteRoomListAction(currentRoom, routeRecheck.action, { actionOrigin: "route-readiness" });
         }
+      } else if (savedInviteRoomPreservesOpenActionOrigin(actionOrigin)) {
+        // Preserve explicit receive/peer-code intent after transcript metadata refresh.
       } else {
         return runSavedInviteRoomListAction(currentRoom, currentAction, { actionOrigin: current.actionOrigin });
       }
