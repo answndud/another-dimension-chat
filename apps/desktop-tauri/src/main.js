@@ -4499,6 +4499,21 @@ function fieldTestBlockedRouteReadinessAction(parsed) {
     : "";
 }
 
+function fieldTestReceiveAwareRecoveryAction(action, parsed) {
+  if (
+    action === "start-receiving" &&
+    (parsed.route_readiness_failure_kind === "LocalOnionEndpointStopping" ||
+      parsed.receive_stop_requested === "true")
+  ) {
+    return "wait-receive-stop";
+  }
+  return action;
+}
+
+function fieldTestRouteReadinessRecoveryAction(parsed) {
+  return fieldTestReceiveAwareRecoveryAction(fieldTestBlockedRouteReadinessAction(parsed), parsed);
+}
+
 function fieldTestReportBlocker(parsed) {
   if (fieldTestRouteReadinessBlocked(parsed)) {
     return parsed.route_readiness_failure_kind;
@@ -4539,12 +4554,12 @@ function fieldTestReportReceiveValue(parsed) {
 
 function fieldTestReportNextActionValue(parsed) {
   if (parsed.room_list_next_action && parsed.room_list_next_action !== "none") {
-    return parsed.room_list_next_action;
+    return fieldTestReceiveAwareRecoveryAction(parsed.room_list_next_action, parsed);
   }
   if (parsed.outbound_recovery_action && parsed.outbound_recovery_action !== "none") {
-    return parsed.outbound_recovery_action;
+    return fieldTestReceiveAwareRecoveryAction(parsed.outbound_recovery_action, parsed);
   }
-  const routeReadinessAction = fieldTestBlockedRouteReadinessAction(parsed);
+  const routeReadinessAction = fieldTestRouteReadinessRecoveryAction(parsed);
   if (routeReadinessAction) {
     return routeReadinessAction;
   }
@@ -4850,6 +4865,8 @@ function fieldTestRecoveryActionNextKey(action) {
       return "fieldTestNextVerifySafety";
     case "start-receiving":
       return "fieldTestNextStartReceive";
+    case "wait-receive-stop":
+      return "fieldTestNextWaitReceiveStop";
     case "retry-network":
       return "fieldTestNextRetryNetwork";
     case "prepare-private-route":
@@ -4882,7 +4899,7 @@ function fieldTestNextActionKey(report, peerReport = "") {
   }
   const roomListAction = fieldTestReportValue(parsed.room_list_next_action, "none");
   const outboundAction = fieldTestReportValue(parsed.outbound_recovery_action, "none");
-  const routeReadinessAction = fieldTestReportValue(fieldTestBlockedRouteReadinessAction(parsed), "none");
+  const routeReadinessAction = fieldTestReportValue(fieldTestRouteReadinessRecoveryAction(parsed), "none");
   const currentRecoveryAction = roomListAction !== "none"
     ? roomListAction
     : outboundAction !== "none"
@@ -4894,6 +4911,9 @@ function fieldTestNextActionKey(report, peerReport = "") {
   }
   if (parsed.route_ready !== "true" || parsed.route_stale === "true") {
     return "fieldTestNextSetupRoute";
+  }
+  if (parsed.receive_stop_requested === "true") {
+    return "fieldTestNextWaitReceiveStop";
   }
   if (parsed.receive_enabled !== "true" || fieldTestReportValue(parsed.receive_state, "stopped") === "stopped") {
     return "fieldTestNextStartReceive";
