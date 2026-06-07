@@ -1636,7 +1636,7 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     action.type = "button";
     action.className = "chat-delivery-notice-action";
     action.textContent = t("enablePrivateDelivery");
-    action.addEventListener("click", enablePrivateDeliveryPermission);
+    action.addEventListener("click", () => enablePrivateDeliveryPermission());
     fields.chatDeliveryNotice.append(action);
   } else if (latestChatDeliveryNoticeKey === "sendLockedUntilVerified") {
     const action = document.createElement("button");
@@ -2287,8 +2287,11 @@ function openPrivateDeliveryBridgeSettings(recovery, input = productionTwoProfil
   setChatDeliveryNoticeByKey(realOnionRecoveryBridgeSettingsNoticeKey(recovery), "warning", input);
 }
 
-function enablePrivateDeliveryPermission() {
+function enablePrivateDeliveryPermission(options = {}) {
   setManualNetworkPermission(true);
+  if (options.preserveFollowup !== true) {
+    clearPrivateRouteFollowupForRoom(productionTwoProfileInput());
+  }
   document.querySelector(".network-permission-toggle")?.classList.remove("is-attention");
   const input = productionTwoProfileInput();
   const sessionsReady = twoProfileSessionsReadyForInput(input);
@@ -14302,7 +14305,7 @@ async function runProductionTwoProfileComposerPrimaryAction() {
   });
   if (intent.action === "enable-private-delivery") {
     rememberPrivateRouteFollowup(input.message ? "send-draft" : "receive", input);
-    enablePrivateDeliveryPermission();
+    enablePrivateDeliveryPermission({ preserveFollowup: true });
     return;
   }
   if (intent.action === "prepare-private-route") {
@@ -16162,7 +16165,7 @@ if (fields.closeChatSettings) {
 }
 
 if (fields.openPrivateDeliverySettings) {
-  fields.openPrivateDeliverySettings.addEventListener("click", enablePrivateDeliveryPermission);
+  fields.openPrivateDeliverySettings.addEventListener("click", () => enablePrivateDeliveryPermission());
 }
 
 document.querySelector(".chat-settings-panel")?.addEventListener("toggle", (event) => {
@@ -16432,6 +16435,9 @@ for (const input of [fields.manualOnionNetworkPermission, fields.roomNetworkPerm
   if (input) {
     input.addEventListener("change", () => {
       setManualNetworkPermission(input.checked);
+      if (input.checked) {
+        clearPrivateRouteFollowupForRoom(productionTwoProfileInput());
+      }
       if (input === fields.roomNetworkPermission && input.checked) {
         document.querySelector(".network-permission-toggle")?.classList.remove("is-attention");
       }
