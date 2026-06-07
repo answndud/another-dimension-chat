@@ -4986,13 +4986,22 @@ function fieldTestReportReceiveValue(parsed) {
 }
 
 function fieldTestReportNextActionValue(parsed) {
+  if (parsed.room_present !== "true" || parsed.session_ready !== "true") {
+    return "check-session";
+  }
+  if (parsed.safety_confirmed !== "true") {
+    return "verify";
+  }
+  const routeReadinessAction = fieldTestRouteReadinessRecoveryAction(parsed);
   if (parsed.room_list_next_action && parsed.room_list_next_action !== "none") {
+    if (parsed.room_list_next_origin !== "retryable-outbound" && routeReadinessAction) {
+      return routeReadinessAction;
+    }
     return fieldTestReceiveAwareRecoveryAction(parsed.room_list_next_action, parsed);
   }
   if (parsed.outbound_recovery_action && parsed.outbound_recovery_action !== "none") {
     return fieldTestReceiveAwareRecoveryAction(parsed.outbound_recovery_action, parsed);
   }
-  const routeReadinessAction = fieldTestRouteReadinessRecoveryAction(parsed);
   if (routeReadinessAction) {
     return routeReadinessAction;
   }
@@ -5332,9 +5341,12 @@ function fieldTestNextActionKey(report, peerReport = "") {
     return "fieldTestNextVerifySafety";
   }
   const roomListAction = fieldTestReportValue(parsed.room_list_next_action, "none");
+  const roomListOrigin = fieldTestReportValue(parsed.room_list_next_origin, "none");
   const outboundAction = fieldTestReportValue(parsed.outbound_recovery_action, "none");
   const routeReadinessAction = fieldTestReportValue(fieldTestRouteReadinessRecoveryAction(parsed), "none");
-  const currentRecoveryAction = roomListAction !== "none"
+  const roomListBlockedByRouteReadiness =
+    roomListOrigin !== "retryable-outbound" && routeReadinessAction !== "none";
+  const currentRecoveryAction = roomListAction !== "none" && !roomListBlockedByRouteReadiness
     ? roomListAction
     : outboundAction !== "none"
       ? outboundAction
@@ -5964,6 +5976,7 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `room_list_state_key=${fieldTestReportValue(currentSavedRoomView?.state?.key, "none")}`,
     `room_list_state_label=${fieldTestReportValue(currentSavedRoomView?.state?.label, "none")}`,
     `room_list_next_action=${fieldTestReportValue(roomListNextAction, "none")}`,
+    `room_list_next_origin=${fieldTestReportValue(currentSavedRoom.actionOrigin, "none")}`,
     `receive_failure_kind=${fieldTestReportValue(receiveFailureKind, "none")}`,
     `real_onion_attempted=${Boolean(realOnionResult)}`,
     `real_onion_next_blocker=${fieldTestReportValue(realOnionResult?.next_blocker, "none")}`,
