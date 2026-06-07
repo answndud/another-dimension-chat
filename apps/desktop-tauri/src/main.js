@@ -4563,6 +4563,10 @@ function fieldTestPeerLocalStateNextActionKey(localReport, peerReport) {
   if (!String(peerReport ?? "").trim() || !fieldTestReportsAligned(localReport, peerReport)) {
     return "";
   }
+  const localNextActionKey = fieldTestNextActionKey(localReport, "");
+  if (fieldTestActionRequiresLocalRecovery(localNextActionKey)) {
+    return "";
+  }
   const peerNextActionKey = fieldTestNextActionKey(peerReport, "");
   return fieldTestActionRequiresLocalRecovery(peerNextActionKey) ? peerNextActionKey : "";
 }
