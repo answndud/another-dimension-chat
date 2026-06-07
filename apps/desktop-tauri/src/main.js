@@ -3999,6 +3999,20 @@ function showSavedInviteRoomActionNowReady() {
   return true;
 }
 
+function savedInviteRoomRecheckedRouteReadinessAction(action, actionOrigin, currentRoom) {
+  if (actionOrigin !== "route-readiness") {
+    return null;
+  }
+  const routeReadinessView = savedInviteRoomRouteReadinessView(currentRoom);
+  if (!routeReadinessView) {
+    return { ready: true };
+  }
+  if (routeReadinessView.action === action) {
+    return { ready: false, action };
+  }
+  return { ready: false, action: routeReadinessView.action };
+}
+
 async function runSavedInviteRoomListAction(room, action, options = {}) {
   const actionOrigin = String(options.actionOrigin ?? "").trim();
   if (
@@ -4025,7 +4039,17 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     const currentRoom = current.room;
     const currentAction = current.action;
     if (currentAction && (currentAction !== action || current.actionOrigin !== actionOrigin)) {
-      return runSavedInviteRoomListAction(currentRoom, currentAction, { actionOrigin: current.actionOrigin });
+      if (current.actionOrigin === "retryable-outbound" && actionOrigin !== "retryable-outbound") {
+        const routeRecheck = savedInviteRoomRecheckedRouteReadinessAction(action, actionOrigin, currentRoom);
+        if (routeRecheck?.ready) {
+          return showSavedInviteRoomActionNowReady();
+        }
+        if (routeRecheck?.action && routeRecheck.action !== action) {
+          return runSavedInviteRoomListAction(currentRoom, routeRecheck.action, { actionOrigin: "route-readiness" });
+        }
+      } else {
+        return runSavedInviteRoomListAction(currentRoom, currentAction, { actionOrigin: current.actionOrigin });
+      }
     }
     if (!currentAction) {
       return String(action ?? "").startsWith("real-onion-")
