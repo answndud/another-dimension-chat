@@ -4584,6 +4584,39 @@ function fieldTestBuildIdentityMatches(localReport, peerReport) {
   );
 }
 
+function fieldTestMessagesChecklistStatus({
+  externalOnionDelivered,
+  routeReadinessBlocked,
+  sentRows,
+  receivedRows,
+}) {
+  if (externalOnionDelivered) {
+    return routeReadinessBlocked ? "check" : "done";
+  }
+  if (sentRows > 0 && receivedRows > 0) {
+    return "done";
+  }
+  return sentRows > 0 ? "check" : "pending";
+}
+
+function fieldTestReportChecklistStatus({
+  externalOnionDelivered,
+  routeReadinessBlocked,
+  realOnionAttempted,
+  realOnionRetryable,
+}) {
+  if (externalOnionDelivered) {
+    return "done";
+  }
+  if (routeReadinessBlocked) {
+    return "pending";
+  }
+  if (!realOnionAttempted) {
+    return "pending";
+  }
+  return realOnionRetryable ? "check" : "done";
+}
+
 function fieldTestChecklistItems(report, peerReport = "") {
   const parsed = parseFieldTestReport(report);
   const sentRows = Number.parseInt(parsed.sent_rows ?? "0", 10) || 0;
@@ -4626,15 +4659,12 @@ function fieldTestChecklistItems(report, peerReport = "") {
     },
     {
       key: "messages",
-      status: externalOnionDelivered
-        ? routeReadinessBlocked
-          ? "check"
-          : "done"
-        : sentRows > 0 && receivedRows > 0
-          ? "done"
-          : sentRows > 0
-            ? "check"
-            : "pending",
+      status: fieldTestMessagesChecklistStatus({
+        externalOnionDelivered,
+        routeReadinessBlocked,
+        sentRows,
+        receivedRows,
+      }),
       label: t("fieldTestChecklistMessages"),
     },
     {
@@ -4644,13 +4674,12 @@ function fieldTestChecklistItems(report, peerReport = "") {
     },
     {
       key: "report",
-      status: externalOnionDelivered
-        ? "done"
-        : routeReadinessBlocked
-          ? "pending"
-          : realOnionAttempted
-            ? (realOnionRetryable ? "check" : "done")
-            : "pending",
+      status: fieldTestReportChecklistStatus({
+        externalOnionDelivered,
+        routeReadinessBlocked,
+        realOnionAttempted,
+        realOnionRetryable,
+      }),
       label: t("fieldTestChecklistReport"),
     },
   ];
