@@ -8033,12 +8033,20 @@ async function continueAfterPeerPrivateRouteSaved(input = productionTwoProfileIn
     await startProductionTwoProfileOnionReceive();
     return true;
   }
-  if (
-    followup.action === "send-draft" &&
-    followup.messageFingerprint === twoProfileInputFingerprint(input) &&
-    String(input.message ?? "").trim()
-  ) {
-    await runProductionTwoProfileMessageRoundtrip();
+  if (followup.action === "send-draft") {
+    if (followup.messageFingerprint === twoProfileInputFingerprint(input) && String(input.message ?? "").trim()) {
+      await runProductionTwoProfileMessageRoundtrip();
+      return true;
+    }
+    setProductionTwoProfileState("Draft send needs review");
+    setText(
+      fields.productionTwoProfileWarning,
+      currentLanguage === "ko"
+        ? "전송 경로는 준비됐지만 메시지 초안이 바뀌었습니다. 현재 메시지를 확인한 뒤 다시 보내세요."
+        : "The delivery route is ready, but the message draft changed. Review the current message before sending.",
+    );
+    setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
+    fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
     return true;
   }
   if (receiveIntentForRoom(input)) {
