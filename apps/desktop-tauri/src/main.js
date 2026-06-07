@@ -8802,6 +8802,9 @@ function refreshRouteReadinessNoticeAfterSessionRefresh(input = productionTwoPro
   if (!isRouteReadinessNoticeKey() || !chatDeliveryNoticeMatchesInput(input)) {
     return false;
   }
+  if (showPrivateRouteRetryFollowupPrompt(input)) {
+    return true;
+  }
   if (showLatestRetryableOutboundNotice(input, { allowAutomatic: false })) {
     return true;
   }
@@ -13420,6 +13423,7 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
       fields.productionTwoProfileBoundary,
       `backup=${runtime.backup.backup_exclusion_verified} key=${runtime.key.key_material_ready} persistent_client=${runtime.client.persistent_client_ready} endpoint=${result.onion_endpoint_returned} next=${result.next_blocker}`,
     );
+    showPrivateRouteRetryFollowupPrompt(input);
     focusLocalPrivateRouteCodeDisplay();
     return true;
   } catch (error) {
@@ -13461,6 +13465,7 @@ async function applyPeerPrivateRouteCode() {
     setProductionTwoProfileState("Peer delivery code needed");
     setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
     fields.peerPrivateRouteCode?.focus();
+    showPrivateRouteRetryFollowupPrompt(input);
     return false;
   }
   rememberPeerPrivateRouteDraft(input);
@@ -13569,6 +13574,9 @@ async function preparePrivateDeliveryRoute(options = {}) {
     return;
   }
   if (twoProfilePeerEndpointState(input).ready && !forceRefresh) {
+    if (showPrivateRouteRetryFollowupPrompt(input)) {
+      return;
+    }
     setProductionTwoProfileState("Private route ready");
     setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteReady"));
     setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
@@ -13581,6 +13589,7 @@ async function preparePrivateDeliveryRoute(options = {}) {
       setProductionTwoProfileState("Peer delivery code needed");
       setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
       setChatDeliveryNoticeByKey("peerPrivateRouteCodeMissing", "muted", input);
+      showPrivateRouteRetryFollowupPrompt(input);
       return;
     }
     if (nextRouteAction === "apply-peer") {
