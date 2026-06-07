@@ -3333,6 +3333,13 @@ function savedInviteRoomRouteReadinessView(room) {
     };
   }
   if (readiness.nextAction === "start-receiving") {
+    if (routeReadinessReceiveStopPending(readiness)) {
+      return {
+        action: "wait-receive-stop",
+        labelKey: "receiveStopPending",
+        state: { key: "receive-stopping", label: t("roomReceivingStopping") },
+      };
+    }
     return {
       action: "start-receiving",
       labelKey: "startReceiving",
