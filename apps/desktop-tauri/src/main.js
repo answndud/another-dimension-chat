@@ -8664,7 +8664,7 @@ function showRetryableTwoProfileOutboundNotice(entry) {
   setChatDeliveryNoticeForPendingOutbound(entry, productionTwoProfileInput());
 }
 
-function showLatestRetryableOutboundNotice(input = productionTwoProfileInput()) {
+function showLatestRetryableOutboundNotice(input = productionTwoProfileInput(), options = {}) {
   if (!twoProfileSessionsReadyForInput(input)) {
     return false;
   }
@@ -8676,6 +8676,9 @@ function showLatestRetryableOutboundNotice(input = productionTwoProfileInput()) 
     }
     showCurrentRetryableOutboundMissing(latestChatDeliveryNoticePendingOutbound);
     return true;
+  }
+  if (options.allowAutomatic === false) {
+    return false;
   }
   const entry = automaticVisibleTwoProfileRetryableOutboundEntry(input);
   if (!entry) {
@@ -8703,7 +8706,7 @@ function refreshRouteReadinessNoticeAfterSessionRefresh(input = productionTwoPro
   if (!isRouteReadinessNoticeKey() || !chatDeliveryNoticeMatchesInput(input)) {
     return false;
   }
-  if (showLatestRetryableOutboundNotice(input)) {
+  if (showLatestRetryableOutboundNotice(input, { allowAutomatic: false })) {
     return true;
   }
   const routeReadiness = externalPeerSendReadiness(input, {
