@@ -5987,6 +5987,29 @@ function renderProductionOnionBridgeConfigStatus(result) {
   refreshFieldTestReport();
 }
 
+function rememberProductionOnionBridgeConfigStatusFallback(status = {}) {
+  latestProductionOnionBridgeConfigStatus = {
+    bridge_capable_build: status.bridgeCapableBuild === true,
+    bridge_configured_for_bootstrap: false,
+    bridge_config_state: String(status.state ?? "unknown"),
+    bridge_config_next_action: String(status.nextAction ?? "unknown"),
+    config_path_returned: false,
+    raw_bridge_lines_returned: false,
+    network_io_attempted: false,
+    transport_io_opened: false,
+    runtime_messaging_enabled: false,
+  };
+  setText(
+    fields.onionPreflightBoundary,
+    `${status.boundaryPrefix ?? "bridge_config_status_unavailable"}=true ` +
+      `bridge_capable=${latestProductionOnionBridgeConfigStatus.bridge_capable_build === true} ` +
+      `bridge_state=${fieldTestReportValue(latestProductionOnionBridgeConfigStatus.bridge_config_state, "unknown")} ` +
+      `bridge_next=${fieldTestReportValue(latestProductionOnionBridgeConfigStatus.bridge_config_next_action, "unknown")} ` +
+      "bridge_configured=false raw_path=false raw_bridge_lines=false network_io=false transport_io=false runtime=false",
+  );
+  refreshFieldTestReport();
+}
+
 function clearRealOnionRecoveryAfterExplicitBridgeChange() {
   let changed = false;
   for (const [roomKey, record] of latestProductionTwoProfileRealOnionResultsByRoom.entries()) {
@@ -6061,8 +6084,10 @@ async function checkProductionOnionBridgeConfigStatus() {
     const result = await invoke("production_onion_bridge_config_status");
     renderProductionOnionBridgeConfigStatus(result);
   } catch (error) {
+    rememberProductionOnionBridgeConfigStatusFallback({
+      boundaryPrefix: "bridge_config_status_failed",
+    });
     setText(fields.onionPreflightWarning, t("bridgeConfigInvalid"));
-    setText(fields.onionPreflightBoundary, `bridge_config_status_failed=${String(error ?? "unknown")}`);
   }
 }
 
@@ -6074,12 +6099,7 @@ async function loadProductionOnionBridgeConfigStatus() {
     const result = await invoke("production_onion_bridge_config_status");
     renderProductionOnionBridgeConfigStatus(result);
   } catch {
-    latestProductionOnionBridgeConfigStatus = null;
-    setText(
-      fields.onionPreflightBoundary,
-      "bridge_config_status_unavailable=true raw_path=false raw_bridge_lines=false network_io=false transport_io=false runtime=false",
-    );
-    refreshFieldTestReport();
+    rememberProductionOnionBridgeConfigStatusFallback();
   }
 }
 
@@ -6104,8 +6124,13 @@ async function saveProductionOnionBridgeConfig() {
     }
     updateProductionOnionBridgeConfigControls();
   } catch (error) {
+    rememberProductionOnionBridgeConfigStatusFallback({
+      boundaryPrefix: "bridge_config_save_failed",
+      bridgeCapableBuild: true,
+      state: "invalid",
+      nextAction: "replace-bridge-config",
+    });
     setText(fields.onionPreflightWarning, t("bridgeConfigInvalid"));
-    setText(fields.onionPreflightBoundary, `bridge_config_save_failed=${String(error ?? "unknown")}`);
   } finally {
     clearProductionBusyAction("onion-bridge-config");
     updateProductionOnionBridgeConfigControls();
@@ -6134,11 +6159,13 @@ async function saveProductionOnionObfs4TransportBinary() {
     }
     updateProductionOnionBridgeConfigControls();
   } catch {
+    rememberProductionOnionBridgeConfigStatusFallback({
+      boundaryPrefix: "pt_binary_save_failed",
+      bridgeCapableBuild: true,
+      state: "transport-invalid",
+      nextAction: "replace-obfs4-transport",
+    });
     setText(fields.onionPreflightWarning, t("bridgeTransportInvalidStatus"));
-    setText(
-      fields.onionPreflightBoundary,
-      "pt_binary_save_failed=true raw_path=false raw_bridge_lines=false network_io=false transport_io=false runtime=false",
-    );
   } finally {
     clearProductionBusyAction("onion-bridge-config");
     updateProductionOnionBridgeConfigControls();
@@ -6162,8 +6189,10 @@ async function clearProductionOnionBridgeConfig() {
     clearPrivateRouteFollowupAfterExplicitBridgeChange(input);
     setText(fields.onionPreflightWarning, t("bridgeConfigCleared"));
   } catch (error) {
+    rememberProductionOnionBridgeConfigStatusFallback({
+      boundaryPrefix: "bridge_config_clear_failed",
+    });
     setText(fields.onionPreflightWarning, t("bridgeConfigClearFailed"));
-    setText(fields.onionPreflightBoundary, `bridge_config_clear_failed=${String(error ?? "unknown")}`);
   } finally {
     clearProductionBusyAction("onion-bridge-config");
     updateProductionOnionBridgeConfigControls();
