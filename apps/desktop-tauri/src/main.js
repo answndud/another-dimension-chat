@@ -5557,6 +5557,11 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const routeReadinessNextAction = routeReadinessBlocked ? routeReadiness.nextAction : "none";
   const routeReadinessFailureKind = routeReadinessBlocked ? routeReadiness.failureKind : "none";
   const routeReadinessNoticeKey = routeReadinessBlocked ? routeReadiness.noticeKey : "none";
+  const composerNextAction = !retryableOutbound && routeReadiness.ready === true
+    ? input.message
+      ? "send-message"
+      : "write-message"
+    : "none";
   const roomListNextAction = outboundRecoveryAction !== "none"
     ? outboundRecoveryAction
     : currentSavedRoom.action;
@@ -5580,6 +5585,7 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `route_readiness_next_action=${fieldTestReportValue(routeReadinessNextAction, "none")}`,
     `route_readiness_failure_kind=${fieldTestReportValue(routeReadinessFailureKind, "none")}`,
     `route_readiness_notice_key=${fieldTestReportValue(routeReadinessNoticeKey, "none")}`,
+    `composer_next_action=${fieldTestReportValue(composerNextAction, "none")}`,
     `receive_owner_current_room=${receiveMode.ownerCurrentRoom === true}`,
     `receive_enabled=${receiveMode.enabled === true}`,
     `receive_stop_requested=${receiveMode.stopRequested === true}`,
