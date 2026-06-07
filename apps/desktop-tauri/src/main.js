@@ -3556,13 +3556,13 @@ function savedInviteRoomMissingPendingMessage(action) {
   const normalized = savedInviteRoomRetryableAction(action);
   if (normalized === "refresh-and-retry") {
     return currentLanguage === "ko"
-      ? "저장된 전송 대기 메시지는 더 이상 없습니다. 주소 갱신이 필요하면 전송 코드를 다시 준비하세요."
-      : "No pending send remains in this saved room. If the address still needs refresh, set up the delivery code again.";
+      ? "저장된 전송 대기 메시지는 더 이상 없습니다. 대화를 확인하거나 새 메시지를 작성하세요."
+      : "No pending send remains in this saved room. Review the conversation or write a new message.";
   }
   if (normalized === "start-receiving") {
     return currentLanguage === "ko"
-      ? "저장된 전송 대기 메시지는 더 이상 없습니다. 메시지 받기는 이 방에서 계속 시작할 수 있습니다."
-      : "No pending send remains in this saved room. You can still start receiving for this room.";
+      ? "저장된 전송 대기 메시지는 더 이상 없습니다. 메시지 받기를 시작하기 전에 대화를 확인하거나 새 메시지를 작성하세요."
+      : "No pending send remains in this saved room. Review the conversation or write a new message before starting receive.";
   }
   return currentLanguage === "ko"
     ? "저장된 전송 대기 메시지는 더 이상 없습니다. 대화를 확인하거나 새 메시지를 작성하세요."
@@ -3570,7 +3570,6 @@ function savedInviteRoomMissingPendingMessage(action) {
 }
 
 async function handleSavedInviteRoomMissingPendingAction(action) {
-  const input = productionTwoProfileInput();
   rememberCurrentInviteRoomMetadata();
   renderSavedInviteRooms();
   setProductionTwoProfileState("No pending send");
@@ -3583,8 +3582,7 @@ async function handleSavedInviteRoomMissingPendingAction(action) {
       : "Next: review the conversation or write a new message.",
   );
   if (action === "refresh-and-retry") {
-    setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
-    await preparePrivateDeliveryRoute({ input, forceRefresh: true });
+    fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
     return true;
   }
   if (action === "start-receiving") {
@@ -3595,7 +3593,7 @@ async function handleSavedInviteRoomMissingPendingAction(action) {
       await runTwoProfileOutboundPrimaryAction(pending);
       return true;
     }
-    await startProductionTwoProfileOnionReceive();
+    fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
     return true;
   }
   fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
