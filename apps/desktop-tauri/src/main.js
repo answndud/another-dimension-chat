@@ -5677,6 +5677,24 @@ function fieldTestReceiveModeSnapshot(input = productionTwoProfileInput()) {
   };
 }
 
+function fieldTestRetryableOutboundEntry(input, currentSavedRoom) {
+  if (currentSavedRoom?.actionOrigin === "retryable-outbound") {
+    return retryableOutboundEntryForSavedRoomAction(currentSavedRoom.room, input, {
+      actionOrigin: currentSavedRoom.actionOrigin,
+    });
+  }
+  return automaticVisibleTwoProfileRetryableOutboundEntry(input);
+}
+
+function fieldTestRoomListNextAction(currentSavedRoom, outboundRecoveryAction, retryableOutbound) {
+  if (currentSavedRoom?.actionOrigin === "retryable-outbound") {
+    return retryableOutbound ? outboundRecoveryAction : "none";
+  }
+  return outboundRecoveryAction !== "none"
+    ? outboundRecoveryAction
+    : currentSavedRoom?.action;
+}
+
 function buildFieldTestReport(input = productionTwoProfileInput()) {
   const hasRoom = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase);
   const route = twoProfilePeerEndpointState(input);
@@ -5685,7 +5703,9 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const receivedRows = entries.filter((entry) => entry.statuses?.has("received")).length;
   const failedRows = entries.filter((entry) => entry.outboundDeliveryState === "failed").length;
   const canceledRows = entries.filter((entry) => entry.outboundDeliveryState === "canceled").length;
-  const retryableOutbound = automaticVisibleTwoProfileRetryableOutboundEntry(input);
+  const currentSavedRoom = currentSavedInviteRoomView(input);
+  const currentSavedRoomView = currentSavedRoom.view;
+  const retryableOutbound = fieldTestRetryableOutboundEntry(input, currentSavedRoom);
   const outboundFailureClass = retryableOutbound
     ? productionTwoProfileOutboundStatusLabel(retryableOutbound)
     : "none";
@@ -5726,8 +5746,6 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     : false;
   const deliveryNoticeKey = deliveryNoticeCurrentRoom ? latestChatDeliveryNoticeKey : "none";
   const deliveryNoticeTone = deliveryNoticeCurrentRoom ? latestChatDeliveryNoticeTone : "neutral";
-  const currentSavedRoom = currentSavedInviteRoomView(input);
-  const currentSavedRoomView = currentSavedRoom.view;
   const routeReadiness = externalPeerSendReadiness(input, {
     allowMissingMessage: true,
     latestOnionOutbound: null,
@@ -5741,9 +5759,11 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
       ? "send-message"
       : "write-message"
     : "none";
-  const roomListNextAction = outboundRecoveryAction !== "none"
-    ? outboundRecoveryAction
-    : currentSavedRoom.action;
+  const roomListNextAction = fieldTestRoomListNextAction(
+    currentSavedRoom,
+    outboundRecoveryAction,
+    retryableOutbound,
+  );
 
   return [
     "Another Dimension Chat beta field test report",
