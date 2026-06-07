@@ -15768,7 +15768,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(result);
     const realOnionNoticeKey = realOnionRecoveryNoticeKey(realOnionRecovery);
     const realOnionNotice = view.complete
-      ? { key: "localRoundtripComplete", tone: "success" }
+      ? { key: "userDeliveryCompletedNoDetails", tone: "success" }
       : realOnionNoticeKey
         ? { key: realOnionNoticeKey, tone: "warning" }
         : chatNoticeForSendReceiveText(result.next_blocker || result.warning || userView.message) ?? {
