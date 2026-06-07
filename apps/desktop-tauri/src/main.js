@@ -5389,6 +5389,7 @@ function fieldTestReportChecklistStatus({
   externalOnionDelivered,
   routeReadinessBlocked,
   realOnionAttempted,
+  realOnionRecoveryAction,
   realOnionRetryable,
 }) {
   if (externalOnionDelivered) {
@@ -5399,6 +5400,9 @@ function fieldTestReportChecklistStatus({
   }
   if (!realOnionAttempted) {
     return "pending";
+  }
+  if (realOnionRecoveryAction && realOnionRecoveryAction !== "none") {
+    return "check";
   }
   return realOnionRetryable ? "check" : "done";
 }
@@ -5443,6 +5447,7 @@ function fieldTestChecklistItems(report, peerReport = "") {
   const receiveState = fieldTestReportValue(parsed.receive_state, "stopped");
   const receiveStopRequested = parsed.receive_stop_requested === "true";
   const realOnionAttempted = parsed.real_onion_attempted === "true";
+  const realOnionRecoveryAction = fieldTestReportValue(parsed.real_onion_recovery_action, "none");
   const realOnionRetryable = parsed.real_onion_retryable === "true";
   const externalOnionDelivered = fieldTestExternalOnionDelivered(parsed);
   const roomListState = fieldTestReportValue(parsed.room_list_state_key, "none");
@@ -5507,6 +5512,7 @@ function fieldTestChecklistItems(report, peerReport = "") {
         externalOnionDelivered,
         routeReadinessBlocked,
         realOnionAttempted,
+        realOnionRecoveryAction,
         realOnionRetryable,
       }),
       label: t("fieldTestChecklistReport"),
