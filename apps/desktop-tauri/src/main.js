@@ -7409,15 +7409,22 @@ function storedPeerEndpointTransportState(input = productionTwoProfileInput()) {
 function latestTwoProfileOutboundDeliveryCandidate(input = productionTwoProfileInput(), options = {}) {
   const targetMessageNumber = Number.parseInt(options.messageNumber, 10);
   const targetRequested = Number.isInteger(targetMessageNumber) && targetMessageNumber > 0;
+  const targetRoomFingerprint = String(options.roomFingerprint ?? twoProfileSessionStatusFingerprint(input)).trim();
+  const targetMessage = String(options.message ?? "").trim();
   const targetEntry = targetRequested
     ? [...productionTwoProfileConversationEntries.values()].find(
         (entry) =>
-          entry.sender === input.profileA &&
-          entry.receiver === input.profileB &&
+          String(entry.roomFingerprint ?? "").trim() === targetRoomFingerprint &&
+          String(entry.sender ?? "").trim().toLowerCase() === String(input.profileA ?? "").trim().toLowerCase() &&
+          String(entry.receiver ?? "").trim().toLowerCase() === String(input.profileB ?? "").trim().toLowerCase() &&
           Number.parseInt(entry.messageNumber, 10) === targetMessageNumber &&
+          (!targetMessage || String(entry.message ?? "").trim() === targetMessage) &&
           twoProfileConversationOutboundRetryable(entry),
       ) ?? null
     : null;
+  if (targetRequested && options.exactRetryOnly === true && !targetEntry) {
+    return null;
+  }
   const retryableEntry = targetEntry ?? (targetRequested ? null : automaticVisibleTwoProfileRetryableOutboundEntry(input));
   const latest = retryableEntry
     ? {
@@ -14536,7 +14543,12 @@ async function retryTwoProfileOutboundEntry(entry) {
     roomFingerprint: twoProfileSessionStatusFingerprint(input),
     fingerprint: twoProfileInputFingerprint(input),
   };
-  await sendProductionTwoProfileLatestOnionEnvelope(input, { messageNumber: currentEntry.messageNumber });
+  await sendProductionTwoProfileLatestOnionEnvelope(input, {
+    exactRetryOnly: true,
+    message: currentEntry.message,
+    messageNumber: currentEntry.messageNumber,
+    roomFingerprint: currentEntry.roomFingerprint,
+  });
   if (!twoProfileTranscriptInputStillCurrent(input)) {
     return;
   }
