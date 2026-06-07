@@ -5405,15 +5405,15 @@ function fieldTestNextActionKey(report, peerReport = "") {
   if (parsed.receive_enabled !== "true" || fieldTestReportValue(parsed.receive_state, "stopped") === "stopped") {
     return "fieldTestNextStartReceive";
   }
+  if (realOnionNextActionKey) {
+    return realOnionNextActionKey;
+  }
   if (
     parsed.manual_network_permission === "true" &&
     parsed.real_onion_bridge_capable_build === "true" &&
     parsed.real_onion_bridge_configured_for_bootstrap !== "true"
   ) {
     return "fieldTestNextPrepareNetworkOrBridge";
-  }
-  if (realOnionNextActionKey) {
-    return realOnionNextActionKey;
   }
   if (sentRows === 0 || receivedRows === 0) {
     return "fieldTestNextExchangeMessages";
