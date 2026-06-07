@@ -5987,21 +5987,31 @@ function renderProductionOnionBridgeConfigStatus(result) {
   refreshFieldTestReport();
 }
 
-function clearRealOnionRecoveryAfterExplicitBridgeChange(input = productionTwoProfileInput()) {
-  const fingerprint = twoProfileSessionStatusFingerprint(twoProfileRoomIdentityInput(input));
-  if (
-    !fingerprint ||
-    (!latestProductionTwoProfileRealOnionResultsByRoom.has(fingerprint) &&
-      !latestProductionTwoProfileRealOnionRecoveriesByRoom.has(fingerprint))
-  ) {
+function clearRealOnionRecoveryAfterExplicitBridgeChange() {
+  let changed = false;
+  for (const [roomKey, record] of latestProductionTwoProfileRealOnionResultsByRoom.entries()) {
+    const recovery = productionTwoProfileRealOnionRecoveryPlan(record?.result);
+    if (recovery?.action && recovery.action !== "none") {
+      latestProductionTwoProfileRealOnionResultsByRoom.delete(roomKey);
+      latestProductionTwoProfileRealOnionWaitCanceledFingerprints.delete(roomKey);
+      changed = true;
+    }
+  }
+  if (latestProductionTwoProfileRealOnionRecoveriesByRoom.size > 0) {
+    latestProductionTwoProfileRealOnionRecoveriesByRoom.clear();
+    changed = true;
+  }
+  if (latestProductionTwoProfileRealOnionWaitCanceledFingerprints.size > 0) {
+    latestProductionTwoProfileRealOnionWaitCanceledFingerprints.clear();
+    changed = true;
+  }
+  if (!changed) {
     return false;
   }
-  latestProductionTwoProfileRealOnionResultsByRoom.delete(fingerprint);
-  latestProductionTwoProfileRealOnionRecoveriesByRoom.delete(fingerprint);
-  latestProductionTwoProfileRealOnionWaitCanceledFingerprints.delete(fingerprint);
   persistRealOnionRecoveries();
+  renderSavedInviteRooms();
   refreshFieldTestReport();
-  return true;
+  return changed;
 }
 
 function clearPrivateRouteFollowupAfterExplicitBridgeChange(input = productionTwoProfileInput()) {
