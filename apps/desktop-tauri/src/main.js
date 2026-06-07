@@ -4046,13 +4046,18 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     const currentRoom = current.room;
     const currentAction = current.action;
     if (currentAction && (currentAction !== action || current.actionOrigin !== actionOrigin)) {
-      if (current.actionOrigin === "retryable-outbound" && actionOrigin !== "retryable-outbound") {
+      if (actionOrigin === "route-readiness") {
         const routeRecheck = savedInviteRoomRecheckedRouteReadinessAction(action, actionOrigin, currentRoom);
         if (routeRecheck?.ready) {
           return showSavedInviteRoomActionNowReady();
         }
         if (routeRecheck?.action && routeRecheck.action !== action) {
           return runSavedInviteRoomListAction(currentRoom, routeRecheck.action, { actionOrigin: "route-readiness" });
+        }
+        if (routeRecheck?.action === action) {
+          // Keep the original route-only action even if transcript refresh exposed another origin.
+        } else {
+          return showSavedInviteRoomActionNowReady();
         }
       } else if (savedInviteRoomPreservesOpenActionOrigin(actionOrigin)) {
         // Preserve explicit non-send intent after transcript metadata refresh.
