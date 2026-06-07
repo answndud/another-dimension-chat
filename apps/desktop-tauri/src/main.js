@@ -4420,6 +4420,14 @@ function fieldTestRouteReadinessBlocked(parsed) {
   );
 }
 
+function fieldTestBlockedRouteReadinessAction(parsed) {
+  return parsed.route_readiness_ready !== "true" &&
+    parsed.route_readiness_next_action &&
+    parsed.route_readiness_next_action !== "none"
+    ? parsed.route_readiness_next_action
+    : "";
+}
+
 function fieldTestReportBlocker(parsed) {
   if (fieldTestRouteReadinessBlocked(parsed)) {
     return parsed.route_readiness_failure_kind;
@@ -4470,8 +4478,8 @@ function fieldTestReportSummary(report) {
       ? parsed.room_list_next_action
       : parsed.outbound_recovery_action && parsed.outbound_recovery_action !== "none"
         ? parsed.outbound_recovery_action
-        : parsed.route_readiness_next_action && parsed.route_readiness_next_action !== "none"
-          ? parsed.route_readiness_next_action
+        : fieldTestBlockedRouteReadinessAction(parsed)
+          ? fieldTestBlockedRouteReadinessAction(parsed)
           : parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none"
             ? parsed.real_onion_recovery_action
             : "none";
@@ -4506,8 +4514,8 @@ function fieldTestReportTriageState(report) {
         ? parsed.room_list_next_action
         : parsed.outbound_recovery_action && parsed.outbound_recovery_action !== "none"
           ? parsed.outbound_recovery_action
-          : parsed.route_readiness_next_action && parsed.route_readiness_next_action !== "none"
-            ? parsed.route_readiness_next_action
+          : fieldTestBlockedRouteReadinessAction(parsed)
+            ? fieldTestBlockedRouteReadinessAction(parsed)
             : parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none"
               ? parsed.real_onion_recovery_action
               : "none",
@@ -4717,7 +4725,7 @@ function fieldTestNextActionKey(report, peerReport = "") {
   }
   const roomListAction = fieldTestReportValue(parsed.room_list_next_action, "none");
   const outboundAction = fieldTestReportValue(parsed.outbound_recovery_action, "none");
-  const routeReadinessAction = fieldTestReportValue(parsed.route_readiness_next_action, "none");
+  const routeReadinessAction = fieldTestReportValue(fieldTestBlockedRouteReadinessAction(parsed), "none");
   const currentRecoveryAction = roomListAction !== "none"
     ? roomListAction
     : outboundAction !== "none"
