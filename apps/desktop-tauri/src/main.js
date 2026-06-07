@@ -1995,6 +1995,7 @@ function showCurrentRetryableOutboundMissing(entry) {
       ? "다음: 대화를 확인하거나 새 메시지를 작성하세요."
       : "Next: review the conversation or write a new message.",
   );
+  refreshFieldTestReport();
   return false;
 }
 
@@ -14276,6 +14277,10 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       });
       showLatestRetryableOutboundNotice(input);
       refreshFieldTestReport();
+      return;
+    }
+    if (options.exactRetryOnly === true) {
+      showCurrentRetryableOutboundMissing(null);
       return;
     }
     setProductionTwoProfileState("Private delivery needs message");
