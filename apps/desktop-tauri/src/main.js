@@ -1882,6 +1882,18 @@ function currentTwoProfileRetryableOutboundEntry(entry) {
   return currentEntry && twoProfileConversationOutboundRetryable(currentEntry) ? currentEntry : null;
 }
 
+function rememberPrivateRouteFollowupForOutboundRetry(entry, input = productionTwoProfileInput()) {
+  if (!entry) {
+    return false;
+  }
+  rememberPrivateRouteFollowup("retry-outbound", input, {
+    sender: entry.sender,
+    receiver: entry.receiver,
+    messageNumber: entry.messageNumber,
+  });
+  return true;
+}
+
 function showCurrentRetryableOutboundMissing(entry) {
   setSelectedTwoProfileConversationEntry(null, { render: false });
   rememberCurrentInviteRoomMetadata();
@@ -1930,7 +1942,8 @@ async function runTwoProfileOutboundPrimaryAction(entry) {
   const resolvedPrimaryAction = currentTwoProfileOutboundPrimaryAction(resolvedEntry);
   if (resolvedPrimaryAction.action === "enable-private-delivery") {
     selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
-    enablePrivateDeliveryPermission();
+    rememberPrivateRouteFollowupForOutboundRetry(resolvedEntry);
+    enablePrivateDeliveryPermission({ preserveFollowup: true });
     return;
   }
   if (resolvedPrimaryAction.action === "start-receiving") {
@@ -1950,6 +1963,7 @@ async function runTwoProfileOutboundPrimaryAction(entry) {
   }
   if (resolvedPrimaryAction.action === "prepare-private-route") {
     selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
+    rememberPrivateRouteFollowupForOutboundRetry(resolvedEntry);
     await preparePrivateDeliveryRoute();
     return;
   }
@@ -14266,11 +14280,7 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
   if (twoProfileInviteCodeModeActive()) {
     const peerEndpointState = twoProfilePeerEndpointState(input);
     if (!peerEndpointState.ready) {
-      rememberPrivateRouteFollowup("retry-outbound", input, {
-        sender: currentEntry.sender,
-        receiver: currentEntry.receiver,
-        messageNumber: currentEntry.messageNumber,
-      });
+      rememberPrivateRouteFollowupForOutboundRetry(currentEntry, input);
       const nextRouteAction = focusPrivateRouteNextAction(input);
       if (nextRouteAction === "create-local") {
         await prepareInviteRoomPrivateRouteExchange(input);
