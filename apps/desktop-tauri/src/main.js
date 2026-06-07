@@ -3267,6 +3267,49 @@ function savedInviteRoomRealOnionRecoveryView(room) {
   };
 }
 
+function savedInviteRoomRouteReadinessView(room) {
+  const input = savedInviteRoomInput(room);
+  const readiness = externalPeerSendReadiness(input, {
+    allowMissingMessage: true,
+    latestOnionOutbound: null,
+  });
+  if (readiness.ready === true) {
+    return null;
+  }
+  if (readiness.nextAction === "enable-private-delivery") {
+    return {
+      action: "enable-private-delivery",
+      labelKey: "enablePrivateDelivery",
+      state: { key: "enable-delivery", label: t("roomStateEnableDelivery") },
+    };
+  }
+  if (readiness.nextAction === "verify") {
+    return {
+      action: "verify-safety",
+      labelKey: "comparePhraseAction",
+      state: { key: "verify-safety", label: t("roomVerifyNeeded") },
+    };
+  }
+  if (readiness.nextAction === "start-receiving") {
+    return {
+      action: "start-receiving",
+      labelKey: "startReceiving",
+      state: { key: "receive-paused", label: t("roomStateReceivePaused") },
+    };
+  }
+  if (readiness.nextAction === "refresh-endpoint") {
+    const stale = readiness.peerEndpointState?.stale === true;
+    return {
+      action: stale ? "refresh-endpoint" : "prepare-private-route",
+      labelKey: stale ? "refreshEndpoint" : "preparePrivateRoute",
+      state: stale
+        ? { key: "refresh-address", label: t("roomStateRefreshAddress") }
+        : { key: "setup-delivery", label: t("roomStateSetupDelivery") },
+    };
+  }
+  return null;
+}
+
 function savedInviteRoomResumePriority(room) {
   if (savedInviteRoomHasRetryableOutbound(room)) {
     return 30;
@@ -3276,6 +3319,9 @@ function savedInviteRoomResumePriority(room) {
   }
   if (savedInviteRoomReceiveState(room) === "paused") {
     return 20;
+  }
+  if (savedInviteRoomRouteReadinessView(room)) {
+    return 15;
   }
   if (savedInviteRoomWaitingForPeerCode(room)) {
     return 10;
@@ -3312,12 +3358,19 @@ function savedInviteRoomState(room, options = {}) {
   const realOnionRecoveryView = hasRealOnionRecoveryView
     ? options.realOnionRecoveryView
     : savedInviteRoomRealOnionRecoveryView(room);
+  const hasRouteReadinessView = Object.prototype.hasOwnProperty.call(options, "routeReadinessView");
+  const routeReadinessView = hasRouteReadinessView
+    ? options.routeReadinessView
+    : savedInviteRoomRouteReadinessView(room);
   const view = (() => {
     if (savedInviteRoomHasRetryableOutbound(room)) {
       return savedInviteRoomRetryableState(room);
     }
     if (realOnionRecoveryView) {
       return realOnionRecoveryView.state;
+    }
+    if (routeReadinessView) {
+      return routeReadinessView.state;
     }
     if (receiveState === "listening") {
       return { key: "listening", label: t("roomStateListening") };
@@ -3370,6 +3423,13 @@ function savedInviteRoomListAction(room, options = {}) {
     : savedInviteRoomRealOnionRecoveryView(room);
   if (realOnionRecovery) {
     return { action: realOnionRecovery.action, labelKey: realOnionRecovery.labelKey };
+  }
+  const hasRouteReadinessView = Object.prototype.hasOwnProperty.call(options, "routeReadinessView");
+  const routeReadinessView = hasRouteReadinessView
+    ? options.routeReadinessView
+    : savedInviteRoomRouteReadinessView(room);
+  if (routeReadinessView) {
+    return { action: routeReadinessView.action, labelKey: routeReadinessView.labelKey };
   }
   const receiveState = options.receiveState ?? savedInviteRoomReceiveState(room);
   if (receiveState === "paused") {
@@ -3608,6 +3668,23 @@ async function runSavedInviteRoomListAction(room, action) {
       return true;
     }
     focusPrivateRouteNextAction(input);
+    return true;
+  }
+  if (action === "refresh-endpoint") {
+    const input = productionTwoProfileInput();
+    const pending = latestVisibleTwoProfileRetryableOutboundEntry(input);
+    if (pending) {
+      selectTwoProfileConversationEntry(pending);
+      showRetryableTwoProfileOutboundNotice(pending);
+      await runTwoProfileOutboundPrimaryAction(pending);
+      return true;
+    }
+    setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
+    await preparePrivateDeliveryRoute({ input, forceRefresh: true });
+    return true;
+  }
+  if (action === "verify-safety") {
+    focusSafetyConfirmation();
     return true;
   }
   if (action === "refresh-and-retry") {
@@ -3885,6 +3962,9 @@ function savedInviteRoomListItemView(room, context = {}) {
   const realOnionRecoveryView = savedInviteRoomHasRetryableOutbound(room)
     ? null
     : savedInviteRoomRealOnionRecoveryView(room);
+  const routeReadinessView = savedInviteRoomHasRetryableOutbound(room) || realOnionRecoveryView
+    ? null
+    : savedInviteRoomRouteReadinessView(room);
   const resumeRecommended = Boolean(resumeRoom && room.code === resumeRoom.code && room.role === resumeRoom.role);
   return {
     current: room.code === currentCode,
@@ -3892,6 +3972,7 @@ function savedInviteRoomListItemView(room, context = {}) {
     nextAction: savedInviteRoomListAction(room, {
       realOnionRecoveryView,
       receiveState,
+      routeReadinessView,
       waitingPeerCode,
     }),
     preview: savedInviteRoomPreview(room),
@@ -3901,6 +3982,7 @@ function savedInviteRoomListItemView(room, context = {}) {
       realOnionRecoveryView,
       receiveState,
       resumeRecommended,
+      routeReadinessView,
       waitingPeerCode,
     }),
     waitingPeerCode,
