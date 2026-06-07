@@ -4393,12 +4393,26 @@ function fieldTestReportComparison(localReport, peerReport) {
   const local = fieldTestReportTriageState(localReport);
   const peer = fieldTestReportTriageState(peerReport);
   const mismatches = [];
-  for (const key of ["appVersion", "buildChannel", "buildCommit", "room", "safety", "delivery", "route", "receive", "next", "blocker"]) {
+  for (const key of ["appVersion", "buildChannel", "buildCommit", "room", "safety", "delivery"]) {
     if (local[key] !== peer[key]) {
       mismatches.push(`${key}:${fieldTestReportValue(local[key], "none")}!=${fieldTestReportValue(peer[key], "none")}`);
     }
   }
-  return mismatches.length > 0 ? `compare ${mismatches.join(" ")}` : "compare reports-aligned";
+  const localStateDiffs = [];
+  for (const key of ["route", "receive", "next", "blocker"]) {
+    if (local[key] !== peer[key]) {
+      localStateDiffs.push(`${key}:${fieldTestReportValue(local[key], "none")}!=${fieldTestReportValue(peer[key], "none")}`);
+    }
+  }
+  const localStateSummary = localStateDiffs.length > 0 ? ` local_state ${localStateDiffs.join(" ")}` : "";
+  return mismatches.length > 0
+    ? `compare ${mismatches.join(" ")}${localStateSummary}`
+    : `compare reports-aligned${localStateSummary}`;
+}
+
+function fieldTestReportsAligned(localReport, peerReport) {
+  const comparison = fieldTestReportComparison(localReport, peerReport);
+  return !comparison || comparison.startsWith("compare reports-aligned");
 }
 
 function fieldTestBuildIdentityMatches(localReport, peerReport) {
@@ -4587,7 +4601,7 @@ function fieldTestNextActionKey(report, peerReport = "") {
   if (!peerReportReady) {
     return "fieldTestNextPastePeerReport";
   }
-  if (fieldTestReportComparison(report, peerReport) !== "compare reports-aligned") {
+  if (!fieldTestReportsAligned(report, peerReport)) {
     return "fieldTestNextCompareMismatch";
   }
   return "fieldTestNextComplete";
