@@ -3508,7 +3508,7 @@ function savedInviteRoomRetryableState(room) {
   return { key: "retry-send", label: t("roomStateRetrySend") };
 }
 
-function savedInviteRoomWithoutLoadedStaleRetryable(room) {
+function savedInviteRoomWithoutLoadedStaleRetryable(room, options = {}) {
   if (!savedInviteRoomHasRetryableOutbound(room) || productionTwoProfileConversationEntries.size === 0) {
     return room;
   }
@@ -3516,9 +3516,13 @@ function savedInviteRoomWithoutLoadedStaleRetryable(room) {
   if (!twoProfileTranscriptInputStillCurrent(input)) {
     return room;
   }
-  return retryableOutboundEntryForSavedRoomAction(room, input, { actionOrigin: "retryable-outbound" })
-    ? room
-    : savedInviteRoomWithoutRetryableOutbound(room);
+  if (retryableOutboundEntryForSavedRoomAction(room, input, { actionOrigin: "retryable-outbound" })) {
+    return room;
+  }
+  if (options.persist === true) {
+    clearSavedInviteRoomRetryableOutbound(room);
+  }
+  return savedInviteRoomWithoutRetryableOutbound(room);
 }
 
 function savedInviteRoomRealOnionRecoveryView(room) {
@@ -4611,7 +4615,9 @@ function currentInviteRoomCode() {
 }
 
 function savedInviteRoomListItemView(room, context = {}) {
-  const viewRoom = savedInviteRoomWithoutLoadedStaleRetryable(room);
+  const viewRoom = savedInviteRoomWithoutLoadedStaleRetryable(room, {
+    persist: context.persistStaleRetryableClear === true,
+  });
   const currentCode = context.currentCode ?? currentInviteRoomCode();
   const resumeRoom = context.resumeRoom ?? null;
   const receiveState = savedInviteRoomReceiveState(viewRoom);
@@ -4675,7 +4681,10 @@ function currentSavedInviteRoomView(input = productionTwoProfileInput()) {
     return { room: null, view: null, action: "" };
   }
   let viewRoom = currentRoom;
-  let view = savedInviteRoomListItemView(viewRoom, { currentCode: currentInviteRoomCode() });
+  let view = savedInviteRoomListItemView(viewRoom, {
+    currentCode: currentInviteRoomCode(),
+    persistStaleRetryableClear: true,
+  });
   if (
     view?.nextAction?.origin === "retryable-outbound" &&
     productionTwoProfileConversationEntries.size > 0 &&
@@ -4685,6 +4694,7 @@ function currentSavedInviteRoomView(input = productionTwoProfileInput()) {
     viewRoom = savedInviteRoomWithoutRetryableOutbound(currentRoom);
     view = savedInviteRoomListItemView(viewRoom, {
       currentCode: currentInviteRoomCode(),
+      persistStaleRetryableClear: true,
     });
   }
   return {
@@ -4711,7 +4721,11 @@ function renderSavedInviteRooms() {
   const currentCode = currentInviteRoomCode();
   const resumeRoom = savedInviteRoomResumeRoom(rooms);
   for (const room of rooms) {
-    const view = savedInviteRoomListItemView(room, { currentCode, resumeRoom });
+    const view = savedInviteRoomListItemView(room, {
+      currentCode,
+      resumeRoom,
+      persistStaleRetryableClear: true,
+    });
     const item = document.createElement("li");
     item.className = "saved-room-list-item";
     item.classList.toggle("is-current", view.current);
