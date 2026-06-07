@@ -3840,9 +3840,13 @@ async function refreshSavedInviteRoomMetadataForFingerprint(roomFingerprint, opt
       return false;
     }
     if (options.refreshSessionStatus === true) {
-      const sessionStatus = await invokeInviteRoomSessionStatus(input);
-      rememberTwoProfileSessionStatus(input, sessionStatus);
-      metadata = savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus);
+      try {
+        const sessionStatus = await invokeInviteRoomSessionStatus(input);
+        rememberTwoProfileSessionStatus(input, sessionStatus);
+        metadata = savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus);
+      } catch {
+        forgetTwoProfileSessionStatusForInput(input);
+      }
     }
     rememberInviteRoom(
       room.code,
@@ -3912,6 +3916,7 @@ async function syncSavedInviteRoomMetadataFromLocalStores() {
             rememberTwoProfileSessionStatus(input, sessionStatus);
             metadata = savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus);
           } catch {
+            forgetTwoProfileSessionStatusForInput(savedInviteRoomInput(room));
             // Keep transcript refresh useful even if session status cannot be read yet.
           }
           rememberInviteRoom(room.code, room.role, { ...metadata, updatedAt: room.updatedAt }, { render: false });
