@@ -15812,17 +15812,17 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       selectLatestReceivedReplyForProfile(resumeProfile, { focusReply: "none" });
     }
   } catch (error) {
-    rememberRealOnionFieldTestResult(
-      roomInput,
-      productionTwoProfileRealOnionSyntheticFailureResult(
-        error,
-        { profileA, profileB },
-        manualNetworkPermission,
-      ),
+    const syntheticFailure = productionTwoProfileRealOnionSyntheticFailureResult(
+      error,
+      { profileA, profileB },
+      manualNetworkPermission,
     );
+    rememberRealOnionFieldTestResult(roomInput, syntheticFailure);
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
+    const syntheticRecovery = productionTwoProfileRealOnionRecoveryPlan(syntheticFailure);
+    const syntheticNoticeKey = realOnionRecoveryNoticeKey(syntheticRecovery);
     setProductionTwoProfileState("Private delivery failed");
     const detail = String(error ?? "");
     const redactedStage = detail.includes("redacted stage:")
@@ -15847,7 +15847,8 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       "Failed without showing private details in the chat view.",
     );
     setChatDeliveryNoticeByKey(
-      redactedStage.includes("bootstrap") ? "fieldTestNextRetryNetwork" : "sendFailedGeneric",
+      syntheticNoticeKey ||
+        (redactedStage.includes("bootstrap") ? "fieldTestNextRetryNetwork" : "sendFailedGeneric"),
       "warning",
       input,
     );
