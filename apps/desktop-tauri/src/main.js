@@ -3163,6 +3163,12 @@ function savedInviteRoomInput(room) {
 
 function savedInviteRoomReceiveState(room) {
   const input = savedInviteRoomInput(room);
+  if (
+    productionTwoProfileReceiveMatchesInput(input) &&
+    productionTwoProfileOnionReceiveMode.stopRequested
+  ) {
+    return "stopping";
+  }
   const listening = Boolean(
     productionTwoProfileReceiveMatchesInput(input) &&
       !productionTwoProfileOnionReceiveMode.stopRequested,
@@ -3377,6 +3383,9 @@ function savedInviteRoomState(room, options = {}) {
     if (receiveState === "listening") {
       return { key: "listening", label: t("roomStateListening") };
     }
+    if (receiveState === "stopping") {
+      return { key: "receive-stopping", label: t("roomReceivingStopping") };
+    }
     if (receiveState === "paused") {
       return { key: "receive-paused", label: t("roomStateReceivePaused") };
     }
@@ -3430,6 +3439,9 @@ function savedInviteRoomListAction(room, options = {}) {
     return { action: realOnionRecovery.action, labelKey: realOnionRecovery.labelKey };
   }
   const receiveState = options.receiveState ?? savedInviteRoomReceiveState(room);
+  if (receiveState === "stopping") {
+    return { action: "wait-receive-stop", labelKey: "receiveStopPending" };
+  }
   if (receiveState === "paused") {
     return { action: "start-receiving", labelKey: "startReceiving" };
   }
@@ -3497,18 +3509,38 @@ async function handleSavedInviteRoomMissingPendingAction(action) {
   return true;
 }
 
-async function showSavedInviteRoomReceiveOwnerMissing(targetRoom, stateLabel) {
+async function showSavedInviteRoomReceiveOwnerMissing(targetRoom, stateLabel, options = {}) {
+  const stopPending = options.stopPending === true;
   await openSavedInviteRoom(targetRoom);
   setProductionTwoProfileState(stateLabel);
-  setText(fields.productionTwoProfileWarning, t("receiveOtherRoomMissing"));
-  setChatDeliveryNoticeByKey("receiveOtherRoomMissing", "warning", productionTwoProfileInput());
+  setText(fields.productionTwoProfileWarning, stopPending ? t("receiveStopPending") : t("receiveOtherRoomMissing"));
+  setChatDeliveryNoticeByKey(stopPending ? "receiveStopPending" : "receiveOtherRoomMissing", "warning", productionTwoProfileInput());
+  setProductionFollowupActions(
+    true,
+    stopPending
+      ? currentLanguage === "ko"
+        ? "다음: 받기 중지가 완료될 때까지 기다리거나 앱을 다시 시작한 뒤, 이 채팅방에서 메시지 받기를 다시 시작하세요."
+        : "Next: wait for receiving to stop, or restart the app, then start receiving in this room again."
+      : currentLanguage === "ko"
+        ? "다음: 원래 채팅방에서 받기를 중지하거나 앱을 다시 시작한 뒤 이 채팅방에서 메시지 받기를 다시 시작하세요."
+        : "Next: stop receiving from the original room or restart the app, then start receiving in this room again.",
+  );
+  if (!stopPending) {
+    fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
+  }
+  return true;
+}
+
+function showSavedInviteRoomReceiveStopPending() {
+  setProductionTwoProfileState("Message listening stopping");
+  setText(fields.productionTwoProfileWarning, t("receiveStopPending"));
+  setChatDeliveryNoticeByKey("receiveStopPending", "warning", productionTwoProfileInput());
   setProductionFollowupActions(
     true,
     currentLanguage === "ko"
-      ? "다음: 원래 채팅방에서 받기를 중지하거나 앱을 다시 시작한 뒤 이 채팅방에서 메시지 받기를 다시 시작하세요."
-      : "Next: stop receiving from the original room or restart the app, then start receiving in this room again.",
+      ? "다음: 받기 중지가 완료될 때까지 기다린 뒤, 다시 시작하려던 채팅방을 여세요."
+      : "Next: wait until receiving has fully stopped, then reopen the room you wanted to start.",
   );
-  fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
   return true;
 }
 
@@ -3518,13 +3550,17 @@ async function openSavedInviteRoomReceiveOwnerBeforeSwitch(targetRoom) {
     return false;
   }
   rememberReceiveIntentForRoom(targetInput, true);
+  const stopPending = productionTwoProfileOnionReceiveMode.stopRequested === true;
   const ownerRoom = savedInviteRoomForRoomFingerprint(productionTwoProfileOnionReceiveMode.roomFingerprint);
   if (!ownerRoom) {
-    return showSavedInviteRoomReceiveOwnerMissing(targetRoom, "Message listening owner room missing");
+    return showSavedInviteRoomReceiveOwnerMissing(targetRoom, "Message listening owner room missing", { stopPending });
   }
   const openedOwner = await openSavedInviteRoom(ownerRoom);
   if (!openedOwner) {
-    return showSavedInviteRoomReceiveOwnerMissing(targetRoom, "Message listening owner room unavailable");
+    return showSavedInviteRoomReceiveOwnerMissing(targetRoom, "Message listening owner room unavailable", { stopPending });
+  }
+  if (stopPending) {
+    return showSavedInviteRoomReceiveStopPending();
   }
   setProductionTwoProfileState("Message listening active in another room");
   setText(fields.productionTwoProfileWarning, t("receiveOtherRoomActive"));
@@ -3613,6 +3649,7 @@ function savedInviteRoomActionRechecksAfterOpen(action) {
       "prepare-private-route",
       "refresh-endpoint",
       "start-receiving",
+      "wait-receive-stop",
       "verify-safety",
     ]).has(normalized)
   );
@@ -3743,6 +3780,9 @@ async function runSavedInviteRoomListAction(room, action) {
   if (action === "start-receiving") {
     await startProductionTwoProfileOnionReceive();
     return true;
+  }
+  if (action === "wait-receive-stop") {
+    return showSavedInviteRoomReceiveStopPending();
   }
   if (action === "real-onion-enable-private-delivery") {
     const recoveryView = savedInviteRoomRealOnionRecoveryView(room);
@@ -6068,6 +6108,13 @@ function productionTwoProfileReceiveActiveInOtherRoom(input = productionTwoProfi
   return Boolean(
     productionTwoProfileOnionReceiveMode.enabled &&
       !productionTwoProfileReceiveMatchesInput(input),
+  );
+}
+
+function productionTwoProfileReceiveStoppingInOtherRoom(input = productionTwoProfileInput()) {
+  return Boolean(
+    productionTwoProfileReceiveActiveInOtherRoom(input) &&
+      productionTwoProfileOnionReceiveMode.stopRequested,
   );
 }
 
@@ -14011,6 +14058,18 @@ async function startProductionTwoProfileOnionReceive() {
   if (!twoProfileSafetyConfirmedForInput(input)) {
     setProductionTwoProfileState("Verification required");
     setText(fields.productionTwoProfileWarning, t("receiveNeedsVerification"));
+    return;
+  }
+  if (productionTwoProfileReceiveStoppingInOtherRoom(input)) {
+    setProductionTwoProfileState("Message listening stopping in another room");
+    setText(fields.productionTwoProfileWarning, t("receiveStopPending"));
+    setChatDeliveryNoticeByKey("receiveStopPending", "warning", input);
+    setProductionFollowupActions(
+      true,
+      currentLanguage === "ko"
+        ? "다음: 기존 받기 중지가 완료된 뒤 이 채팅방에서 메시지 받기를 다시 시작하세요."
+        : "Next: wait for the existing receive stop to finish, then start receiving in this room again.",
+    );
     return;
   }
   if (productionTwoProfileReceiveActiveInOtherRoom(input)) {
