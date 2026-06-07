@@ -5351,6 +5351,12 @@ function fieldTestPeerLocalStateNextActionKey(localReport, peerReport) {
   return fieldTestActionRequiresLocalRecovery(peerNextActionKey) ? peerNextActionKey : "";
 }
 
+function fieldTestReportRecoveryActionForNextKey(report, nextActionKey) {
+  return fieldTestActionRequiresLocalRecovery(nextActionKey)
+    ? fieldTestReportNextActionValue(parseFieldTestReport(report))
+    : "";
+}
+
 function fieldTestBuildIdentityMatches(localReport, peerReport) {
   if (!String(peerReport ?? "").trim()) {
     return null;
@@ -5691,8 +5697,8 @@ function renderFieldTestReportComparison() {
 function fieldTestReportCopyPayload(report) {
   const peerReport = fields.peerFieldTestReport?.value ?? "";
   const comparison = fieldTestReportComparison(report, peerReport);
-  const localRecoveryAction = fieldTestReportNextActionValue(parseFieldTestReport(report));
   const nextActionKey = fieldTestNextActionKey(report, peerReport);
+  const localRecoveryAction = fieldTestReportRecoveryActionForNextKey(report, nextActionKey);
   const nextAction = [
     `next_action=${fieldTestReportValue(nextActionKey, "none")}`,
     localRecoveryAction && localRecoveryAction !== "none"
@@ -5701,7 +5707,7 @@ function fieldTestReportCopyPayload(report) {
   ].filter(Boolean).join("\n");
   const peerNextActionKey = fieldTestPeerLocalStateNextActionKey(report, peerReport);
   const peerRecoveryAction = peerNextActionKey
-    ? fieldTestReportNextActionValue(parseFieldTestReport(peerReport))
+    ? fieldTestReportRecoveryActionForNextKey(peerReport, peerNextActionKey)
     : "";
   const peerNextAction = peerNextActionKey
     ? [
