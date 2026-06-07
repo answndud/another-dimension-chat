@@ -4451,6 +4451,21 @@ function fieldTestExternalOnionDelivered(parsed) {
   );
 }
 
+function fieldTestReportReceiveValue(parsed) {
+  if (parsed.receive_stop_requested === "true") {
+    return "receive-stopping";
+  }
+  if (
+    Object.prototype.hasOwnProperty.call(parsed, "receive_owner_current_room") &&
+    parsed.receive_owner_current_room !== "true"
+  ) {
+    return "receive-off";
+  }
+  return parsed.receive_enabled === "true"
+    ? `receive-${fieldTestReportValue(parsed.receive_state, "unknown")}`
+    : "receive-off";
+}
+
 function fieldTestReportNextActionValue(parsed) {
   if (parsed.room_list_next_action && parsed.room_list_next_action !== "none") {
     return parsed.room_list_next_action;
@@ -4487,9 +4502,7 @@ function fieldTestReportSummary(report) {
     : parsed.route_ready === "true"
       ? "route-ready"
       : "route-missing";
-  const receive = parsed.receive_enabled === "true"
-    ? `receive-${fieldTestReportValue(parsed.receive_state, "unknown")}`
-    : "receive-off";
+  const receive = fieldTestReportReceiveValue(parsed);
   const nextAction = fieldTestReportNextActionValue(parsed);
   const blocker = fieldTestReportBlocker(parsed);
   return `summary ${room} ${safety} ${delivery} ${route} ${receive} next=${fieldTestReportValue(nextAction, "none")} blocker=${fieldTestReportValue(blocker, "none")}`;
@@ -4514,9 +4527,7 @@ function fieldTestReportTriageState(report) {
       : parsed.route_ready === "true"
         ? "route-ready"
         : "route-missing",
-    receive: parsed.receive_enabled === "true"
-      ? `receive-${fieldTestReportValue(parsed.receive_state, "unknown")}`
-      : "receive-off",
+    receive: fieldTestReportReceiveValue(parsed),
     next: fieldTestReportNextActionValue(parsed),
     blocker: fieldTestReportBlocker(parsed),
   };
@@ -4634,9 +4645,13 @@ function fieldTestRouteChecklistStatus({
 function fieldTestReceiveChecklistStatus({
   receiveEnabled,
   receiveState,
+  receiveStopRequested,
   routeReadinessAction,
   routeReadinessFailureKind,
 }) {
+  if (receiveStopRequested) {
+    return "check";
+  }
   if (routeReadinessAction === "start-receiving") {
     return routeReadinessFailureKind === "RuntimeOwnerProfileMismatch" ? "check" : "pending";
   }
@@ -4651,6 +4666,7 @@ function fieldTestChecklistItems(report, peerReport = "") {
   const routeStale = parsed.route_stale === "true";
   const receiveEnabled = parsed.receive_enabled === "true";
   const receiveState = fieldTestReportValue(parsed.receive_state, "stopped");
+  const receiveStopRequested = parsed.receive_stop_requested === "true";
   const realOnionAttempted = parsed.real_onion_attempted === "true";
   const realOnionRetryable = parsed.real_onion_retryable === "true";
   const externalOnionDelivered = fieldTestExternalOnionDelivered(parsed);
@@ -4689,6 +4705,7 @@ function fieldTestChecklistItems(report, peerReport = "") {
       status: fieldTestReceiveChecklistStatus({
         receiveEnabled,
         receiveState,
+        receiveStopRequested,
         routeReadinessAction,
         routeReadinessFailureKind,
       }),
@@ -5260,6 +5277,35 @@ async function clearProductionOnionBridgeConfig() {
   }
 }
 
+function fieldTestReceiveModeSnapshot(input = productionTwoProfileInput()) {
+  const ownerCurrentRoom = productionTwoProfileReceiveMatchesInput(input);
+  if (!ownerCurrentRoom) {
+    return {
+      ownerCurrentRoom: false,
+      enabled: false,
+      stopRequested: false,
+      runtimeState: "stopped",
+      attempt: 0,
+      inFlight: false,
+      lastProcessedMessageImportCount: 0,
+      lastProcessedEndpointUpdateCount: 0,
+    };
+  }
+  const stopRequested = productionTwoProfileOnionReceiveMode.stopRequested === true;
+  return {
+    ownerCurrentRoom: true,
+    enabled: productionTwoProfileOnionReceiveMode.enabled === true && !stopRequested,
+    stopRequested,
+    runtimeState: stopRequested
+      ? "stopping"
+      : fieldTestReportValue(productionTwoProfileOnionReceiveMode.runtimeState, "stopped"),
+    attempt: productionTwoProfileOnionReceiveMode.attempt,
+    inFlight: productionTwoProfileOnionReceiveMode.inFlight,
+    lastProcessedMessageImportCount: productionTwoProfileOnionReceiveMode.lastProcessedMessageImportCount,
+    lastProcessedEndpointUpdateCount: productionTwoProfileOnionReceiveMode.lastProcessedEndpointUpdateCount,
+  };
+}
+
 function buildFieldTestReport(input = productionTwoProfileInput()) {
   const hasRoom = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase);
   const route = twoProfilePeerEndpointState(input);
@@ -5276,20 +5322,10 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     ? currentTwoProfileOutboundPrimaryAction(retryableOutbound, input)
     : null;
   const outboundRecoveryAction = currentOutboundRecovery?.action ?? "none";
-  const receiveActiveInRoom = productionTwoProfileReceiveMatchesInput(input);
-  const receiveMode = receiveActiveInRoom
-    ? productionTwoProfileOnionReceiveMode
-    : {
-        enabled: false,
-        runtimeState: "stopped",
-        attempt: 0,
-        inFlight: false,
-        lastProcessedMessageImportCount: 0,
-        lastProcessedEndpointUpdateCount: 0,
-      };
+  const receiveMode = fieldTestReceiveModeSnapshot(input);
   const boundaryText = fields.productionTwoProfileBoundary?.textContent ?? "";
   const sendAttemptBoundaryText = fields.onionOutboundEnvelopeSendAttempt?.textContent ?? "";
-  const receiveFailureKind = receiveActiveInRoom
+  const receiveFailureKind = receiveMode.ownerCurrentRoom
     ? fieldTestBoundaryValue(boundaryText, "failure")
     : "none";
   const realOnionResult = latestRealOnionFieldTestResult(input);
@@ -5352,7 +5388,9 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `route_readiness_next_action=${fieldTestReportValue(routeReadinessNextAction, "none")}`,
     `route_readiness_failure_kind=${fieldTestReportValue(routeReadinessFailureKind, "none")}`,
     `route_readiness_notice_key=${fieldTestReportValue(routeReadinessNoticeKey, "none")}`,
+    `receive_owner_current_room=${receiveMode.ownerCurrentRoom === true}`,
     `receive_enabled=${receiveMode.enabled === true}`,
+    `receive_stop_requested=${receiveMode.stopRequested === true}`,
     `receive_state=${fieldTestReportValue(receiveMode.runtimeState, "stopped")}`,
     `receive_in_flight=${receiveMode.inFlight === true}`,
     `receive_attempts=${Number.parseInt(receiveMode.attempt ?? 0, 10) || 0}`,
@@ -6800,10 +6838,13 @@ function externalPeerSendReadiness(input = productionTwoProfileInput(), options 
   const networkPermission = manualNetworkPermissionEnabled();
   const receiveActive = productionTwoProfileReceiveMatchesInput(input);
   const receiveRuntimeMismatch = productionTwoProfileReceiveRuntimeMismatched(input);
+  const receiveStopRequested = Boolean(
+    receiveActive && productionTwoProfileOnionReceiveMode.stopRequested,
+  );
   const localEndpointReady = Boolean(
     receiveActive &&
       !receiveRuntimeMismatch &&
-      !productionTwoProfileOnionReceiveMode.stopRequested,
+      !receiveStopRequested,
   );
   const peerEndpointState = twoProfilePeerEndpointState(input);
   const latestOnionOutbound =
@@ -6816,6 +6857,7 @@ function externalPeerSendReadiness(input = productionTwoProfileInput(), options 
     sessionsReady,
     safetyVerified,
     networkPermission,
+    receiveStopRequested,
     localEndpointReady,
     peerEndpointState,
     latestOnionOutbound,
@@ -6861,13 +6903,22 @@ function externalPeerSendReadiness(input = productionTwoProfileInput(), options 
     };
   }
   if (!localEndpointReady) {
+    const failureKind = receiveRuntimeMismatch
+      ? "RuntimeOwnerProfileMismatch"
+      : receiveStopRequested
+        ? "LocalOnionEndpointStopping"
+        : "LocalOnionEndpointNotReady";
     return {
       ...base,
       ready: false,
       nextAction: "start-receiving",
       noticeKey: receiveRuntimeMismatch ? "receiveRuntimeMismatch" : "chatNoticeReceiveStopped",
-      failureKind: receiveRuntimeMismatch ? "RuntimeOwnerProfileMismatch" : "LocalOnionEndpointNotReady",
-      disabledReason: receiveRuntimeMismatch ? t("receiveRuntimeMismatch") : t("externalSendNeedsReceive"),
+      failureKind,
+      disabledReason: receiveRuntimeMismatch
+        ? t("receiveRuntimeMismatch")
+        : receiveStopRequested
+          ? t("receiveStopping")
+          : t("externalSendNeedsReceive"),
     };
   }
   if (!peerEndpointState.ready) {
