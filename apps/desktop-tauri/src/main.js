@@ -4039,6 +4039,38 @@ function savedInviteRoomPreservesOpenActionOrigin(actionOrigin) {
   return new Set(["receive-state", "peer-code", "real-onion-recovery"]).has(String(actionOrigin ?? "").trim());
 }
 
+function clearRouteReadinessOnlyRetryContext(input = productionTwoProfileInput()) {
+  let changed = false;
+  if (pendingPrivateRouteFollowup?.action === "retry-outbound" && privateRouteFollowupMatchesRoom(input)) {
+    clearPrivateRouteFollowup();
+    changed = true;
+  }
+  if (latestChatDeliveryNoticePendingOutbound && chatDeliveryNoticeMatchesInput(input)) {
+    latestChatDeliveryNoticePendingOutbound = null;
+    if (!isRouteReadinessNoticeKey(latestChatDeliveryNoticeKey)) {
+      setChatDeliveryNoticeByKey("", "neutral", input);
+    }
+    changed = true;
+  }
+  const selected = selectedTwoProfileRetryableOutboundEntry(input);
+  if (selected) {
+    latestClearedRetryableSelection = {
+      roomFingerprint: String(selected.roomFingerprint ?? twoProfileSessionStatusFingerprint(input)).trim(),
+      sender: String(selected.sender ?? "").trim(),
+      receiver: String(selected.receiver ?? "").trim(),
+      messageNumber: Number.parseInt(selected.messageNumber, 10) || 0,
+      message: String(selected.message ?? "").trim(),
+    };
+    selectedTwoProfileConversationKey = null;
+    renderProductionTwoProfileConversationList();
+    changed = true;
+  }
+  if (changed) {
+    applyProductionActionState();
+  }
+  return changed;
+}
+
 async function runSavedInviteRoomListAction(room, action, options = {}) {
   const actionOrigin = String(options.actionOrigin ?? "").trim();
   if (
@@ -4051,6 +4083,9 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
   const opened = await openSavedInviteRoom(room);
   if (!opened) {
     return false;
+  }
+  if (actionOrigin === "route-readiness") {
+    clearRouteReadinessOnlyRetryContext(productionTwoProfileInput());
   }
   if (
     actionOrigin === "retryable-outbound" &&
@@ -4612,19 +4647,21 @@ function currentSavedInviteRoomView(input = productionTwoProfileInput()) {
   if (!currentRoom) {
     return { room: null, view: null, action: "" };
   }
-  let view = savedInviteRoomListItemView(currentRoom, { currentCode: currentInviteRoomCode() });
+  let viewRoom = currentRoom;
+  let view = savedInviteRoomListItemView(viewRoom, { currentCode: currentInviteRoomCode() });
   if (
     view?.nextAction?.origin === "retryable-outbound" &&
     productionTwoProfileConversationEntries.size > 0 &&
     !retryableOutboundEntryForSavedRoomAction(currentRoom, input, { actionOrigin: "retryable-outbound" })
   ) {
     clearSavedInviteRoomRetryableOutbound(currentRoom);
-    view = savedInviteRoomListItemView(savedInviteRoomWithoutRetryableOutbound(currentRoom), {
+    viewRoom = savedInviteRoomWithoutRetryableOutbound(currentRoom);
+    view = savedInviteRoomListItemView(viewRoom, {
       currentCode: currentInviteRoomCode(),
     });
   }
   return {
-    room: currentRoom,
+    room: viewRoom,
     view,
     action: view?.nextAction?.action ?? "",
     actionOrigin: view?.nextAction?.origin ?? "",
