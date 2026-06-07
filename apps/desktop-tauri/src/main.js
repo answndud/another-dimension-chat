@@ -3497,6 +3497,15 @@ function savedInviteRoomRetryableAction(action) {
     : "";
 }
 
+function savedInviteRoomRetryOnlyAction(action) {
+  return new Set([
+    "refresh-and-retry",
+    "retry",
+    "retry-network",
+    "review-send",
+  ]).has(String(action ?? "").trim());
+}
+
 function savedInviteRoomRetryableState(room) {
   const action = savedInviteRoomRetryableAction(room?.retryableOutboundAction);
   if (action === "enable-private-delivery") {
@@ -4198,6 +4207,10 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
         ? showSavedInviteRoomExpiredRealOnionAction()
         : showSavedInviteRoomActionNowReady();
     }
+  }
+  if (savedInviteRoomRetryOnlyAction(action) && actionOrigin !== "retryable-outbound") {
+    clearRouteReadinessOnlyFollowupContext(productionTwoProfileInput());
+    return showSavedInviteRoomActionNowReady();
   }
   if (action === "paste-peer-code") {
     const input = productionTwoProfileInput();
