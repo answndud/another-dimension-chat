@@ -503,6 +503,7 @@ let latestChatDeliveryNoticeTone = "neutral";
 let latestChatDeliveryNoticeRoomFingerprint = "";
 let latestChatDeliveryNoticePendingOutbound = null;
 let latestClearedRetryableSelection = null;
+let allowCurrentRoomRetryableMetadataFallbackOnce = false;
 let twoProfileAutoResumeTimer = null;
 let latestTwoProfileAutoResumeFingerprint = null;
 let selectedTwoProfileConversationKey = null;
@@ -4320,8 +4321,22 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
   return false;
 }
 
-function currentRoomConversationMetadata() {
-  return productionInviteRoomConversationMetadata([...productionTwoProfileConversationEntries.values()]);
+function currentRoomConversationMetadata(options = {}) {
+  let metadata = productionInviteRoomConversationMetadata([...productionTwoProfileConversationEntries.values()]);
+  const input = options.input ?? productionTwoProfileInput();
+  const existingRoom = savedInviteRoomForRoomFingerprint(privateRouteRoomKey(input));
+  const preferredMessageNumber = Number.parseInt(existingRoom?.retryableOutboundMessageNumber ?? 0, 10) || 0;
+  if (preferredMessageNumber > 0) {
+    metadata = savedInviteRoomMetadataWithPreferredRetryable(
+      metadata,
+      input,
+      [...productionTwoProfileConversationEntries.values()],
+      preferredMessageNumber,
+    );
+  } else if (options.allowRetryableFallback !== true) {
+    metadata = inviteRoomMetadataWithoutRetryableOutbound(metadata);
+  }
+  return metadata;
 }
 
 function reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries, options = {}) {
@@ -4596,7 +4611,9 @@ function rememberCurrentInviteRoomMetadata() {
   if (!code || !role) {
     return;
   }
-  rememberInviteRoom(code, role, currentRoomConversationMetadata());
+  const allowRetryableFallback = allowCurrentRoomRetryableMetadataFallbackOnce === true;
+  allowCurrentRoomRetryableMetadataFallbackOnce = false;
+  rememberInviteRoom(code, role, currentRoomConversationMetadata({ allowRetryableFallback }));
 }
 
 function refreshCurrentRoomAfterReceiveImport(refreshPlan = {}, input = productionTwoProfileInput()) {
@@ -7017,6 +7034,7 @@ async function saveInviteRoomOutboundMessage(input = productionTwoProfileInput()
     ttlSeconds: result.message_ttl_seconds,
     outboundDeliveryState: "pending",
     outboundRetryable: true,
+    allowRetryableMetadataFallback: true,
   }, input);
   selectTwoProfileConversationMessage(profileA, profileB, messageNumber, messageText, { input });
   if (fields.productionTwoProfileMessage) {
@@ -8281,6 +8299,9 @@ function appendProductionTwoProfileConversationStatus(
     existing.outboundDeliveryState = entry.outboundDeliveryState || existing.outboundDeliveryState || "pending";
     existing.outboundFailureKind = entry.outboundFailureKind || "";
     existing.outboundRetryable = entry.outboundRetryable === true;
+    if (existing.outboundRetryable && retention.allowRetryableMetadataFallback === true) {
+      allowCurrentRoomRetryableMetadataFallbackOnce = true;
+    }
   }
   productionTwoProfileConversationEntries.set(key, existing);
   renderProductionTwoProfileConversationList();
