@@ -5430,6 +5430,11 @@ function fieldTestReportRecoveryActionForNextKey(report, nextActionKey) {
     : "";
 }
 
+function fieldTestReportComposerAction(report) {
+  const action = fieldTestReportValue(parseFieldTestReport(report).composer_next_action, "none");
+  return action === "write-message" || action === "send-message" ? action : "";
+}
+
 function fieldTestBuildIdentityMatches(localReport, peerReport) {
   if (!String(peerReport ?? "").trim()) {
     return null;
@@ -5778,8 +5783,10 @@ function fieldTestReportCopyPayload(report) {
   const comparison = fieldTestReportComparison(report, peerReport);
   const nextActionKey = fieldTestNextActionKey(report, peerReport);
   const localRecoveryAction = fieldTestReportRecoveryActionForNextKey(report, nextActionKey);
+  const composerAction = fieldTestReportComposerAction(report);
   const nextAction = [
     `next_action=${fieldTestReportValue(nextActionKey, "none")}`,
+    composerAction ? `composer_action=${fieldTestReportValue(composerAction, "none")}` : "",
     localRecoveryAction && localRecoveryAction !== "none"
       ? `local_recovery_action=${fieldTestReportValue(localRecoveryAction, "none")}`
       : "",
