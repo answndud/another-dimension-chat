@@ -3912,12 +3912,12 @@ function showSavedInviteRoomExpiredRealOnionAction() {
       ? "다음: 현재 방 기준으로 비공개 전송 허용, 주소 준비, 전송 테스트 중 필요한 작업을 진행하세요."
       : "Next: use the current room state to enable private delivery, set up the route, or test delivery.",
   );
-  if (!manualNetworkPermissionEnabled()) {
-    fields.openPrivateDeliverySettings?.focus?.({ preventScroll: true });
-    return true;
-  }
-  if (!twoProfilePeerEndpointState(input).ready) {
-    focusPrivateRouteNextAction(input);
+  const routeReadiness = externalPeerSendReadiness(input, {
+    allowMissingMessage: true,
+    latestOnionOutbound: null,
+  });
+  if (!routeReadiness.ready) {
+    showRealOnionRouteReadinessBlock(routeReadiness, input);
     return true;
   }
   fields.runProductionTwoProfileRealOnionRoundtrip?.focus?.({ preventScroll: true });
