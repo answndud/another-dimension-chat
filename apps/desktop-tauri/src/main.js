@@ -2460,6 +2460,9 @@ function enablePrivateDeliveryPermission(options = {}) {
   renderRoomIdentityBar(input, sessionsReady);
   renderRoomStatusSummary(input, sessionsReady);
   setProductionTwoProfileState("Private delivery permission enabled");
+  if (options.preserveFollowup === true && showPrivateRouteRetryFollowupPrompt(input)) {
+    return;
+  }
   if (sessionsReady && twoProfileSafetyConfirmedForInput(input) && !twoProfilePeerEndpointState(input).ready) {
     setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteNeeded"));
     setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted", input);
