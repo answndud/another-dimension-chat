@@ -4029,6 +4029,17 @@ function savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus
   }
   const currentAction = savedInviteRoomRetryableAction(metadata.retryableOutboundAction);
   const peerEndpointState = peerEndpointStateFromSessionStatus(input, sessionStatus);
+  const receiveActive = productionTwoProfileReceiveMatchesInput(input) &&
+    productionTwoProfileOnionReceiveMode.stopRequested !== true;
+  if (receiveActive && currentAction === "start-receiving") {
+    if (peerEndpointState.ready) {
+      return { ...metadata, retryableOutboundAction: "retry" };
+    }
+    return {
+      ...metadata,
+      retryableOutboundAction: peerEndpointState.stale ? "refresh-and-retry" : "prepare-private-route",
+    };
+  }
   if (peerEndpointState.ready && (currentAction === "refresh-and-retry" || currentAction === "prepare-private-route")) {
     return { ...metadata, retryableOutboundAction: "retry" };
   }
