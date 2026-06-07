@@ -2342,6 +2342,7 @@ function enablePrivateDeliveryPermission(options = {}) {
     setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteReady"));
     setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
   }
+  refreshRouteReadinessNoticeAfterSessionRefresh(input);
   applyProductionActionState();
 }
 
@@ -6547,6 +6548,7 @@ function confirmCurrentTwoProfileSafety() {
   setProductionTwoProfileState("Verification confirmed");
   applyProductionActionState();
   setText(fields.productionTwoProfileWarning, t("messageInputUnlocked"));
+  refreshRouteReadinessNoticeAfterSessionRefresh(input);
   fields.productionTwoProfileMessage?.focus();
 }
 
@@ -8320,9 +8322,14 @@ function showLatestRetryableOutboundNotice(input = productionTwoProfileInput()) 
 function isRouteReadinessNoticeKey(key = latestChatDeliveryNoticeKey) {
   return new Set([
     "chatNoticeRefreshAddress",
+    "chatNoticeNetworkPermission",
+    "chatNoticeReceiveStopped",
+    "messageSavedPrivateDeliveryOff",
     "peerPrivateRouteCodeMissing",
+    "privateDeliveryRouteReady",
     "privateDeliveryRouteNeeded",
     "privateRouteWaitingPeerCode",
+    "sendLockedUntilVerified",
   ]).has(key);
 }
 
