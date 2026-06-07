@@ -13860,7 +13860,8 @@ async function refreshProductionTwoProfilePeerEndpoints(input = productionTwoPro
   }
 }
 
-async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfileInput()) {
+async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfileInput(), options = {}) {
+  const allowRetryRecovery = options.allowRetryRecovery !== false;
   showPrivateRouteExchange();
   if (!manualNetworkPermissionEnabled()) {
     openPrivateDeliverySettings(input);
@@ -13909,7 +13910,9 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
       fields.productionTwoProfileBoundary,
       `backup=${runtime.backup.backup_exclusion_verified} key=${runtime.key.key_material_ready} persistent_client=${runtime.client.persistent_client_ready} endpoint=${result.onion_endpoint_returned} next=${result.next_blocker}`,
     );
-    showPrivateRouteRetryFollowupPrompt(input);
+    if (allowRetryRecovery) {
+      showPrivateRouteRetryFollowupPrompt(input);
+    }
     focusLocalPrivateRouteCodeDisplay();
     return true;
   } catch (error) {
@@ -13926,7 +13929,8 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
   }
 }
 
-async function applyPeerPrivateRouteCode() {
+async function applyPeerPrivateRouteCode(options = {}) {
+  const allowRetryRecovery = options.allowRetryRecovery !== false;
   const input = productionTwoProfileInput();
   const peerRouteCode = (fields.peerPrivateRouteCode?.value ?? "").trim();
   if (!input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
@@ -13986,10 +13990,12 @@ async function applyPeerPrivateRouteCode() {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return true;
     }
-    if (await continueAfterPeerPrivateRouteSaved(input)) {
+    if (allowRetryRecovery && await continueAfterPeerPrivateRouteSaved(input)) {
       return true;
     }
-    showLatestRetryableOutboundNotice(input, { allowAutomatic: false });
+    if (allowRetryRecovery) {
+      showLatestRetryableOutboundNotice(input, { allowAutomatic: false });
+    }
     return true;
   } catch (error) {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
@@ -14082,15 +14088,15 @@ async function preparePrivateDeliveryRoute(options = {}) {
       return;
     }
     if (nextRouteAction === "apply-peer") {
-      await applyPeerPrivateRouteCode();
+      await applyPeerPrivateRouteCode({ allowRetryRecovery });
       return;
     }
-    const localRouteCreated = await prepareInviteRoomPrivateRouteExchange(input);
+    const localRouteCreated = await prepareInviteRoomPrivateRouteExchange(input, { allowRetryRecovery });
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
     if (localRouteCreated && (fields.peerPrivateRouteCode?.value ?? "").trim()) {
-      await applyPeerPrivateRouteCode();
+      await applyPeerPrivateRouteCode({ allowRetryRecovery });
     }
     return;
   }
@@ -15472,7 +15478,9 @@ async function startProductionTwoProfileOnionReceive(options = {}) {
   if (!currentActiveLocalPrivateRouteCode(input)) {
     setProductionTwoProfileState("Local endpoint preparing");
     setText(fields.productionTwoProfileWarning, t("privateRouteCodeCreating"));
-    const localEndpointReady = await prepareInviteRoomPrivateRouteExchange(input);
+    const localEndpointReady = await prepareInviteRoomPrivateRouteExchange(input, {
+      allowRetryRecovery: options.preserveFollowup === true,
+    });
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
