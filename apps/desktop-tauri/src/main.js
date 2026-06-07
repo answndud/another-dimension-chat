@@ -4734,6 +4734,7 @@ function rememberRealOnionFieldTestResult(roomInput, result) {
     latestProductionTwoProfileRealOnionRecoveriesByRoom.delete(fingerprint);
     persistRealOnionRecoveries();
     void refreshSavedInviteRoomMetadataForFingerprint(fingerprint, {
+      preserveUpdatedAt: true,
       refreshSessionStatus: true,
     });
   } else if (recovery?.action && recovery.action !== "none") {
