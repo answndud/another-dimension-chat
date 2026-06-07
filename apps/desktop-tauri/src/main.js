@@ -1894,6 +1894,23 @@ function rememberPrivateRouteFollowupForOutboundRetry(entry, input = productionT
   return true;
 }
 
+function showExactRetryableOutboundPrompt(entry, input = productionTwoProfileInput()) {
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return false;
+  }
+  const currentEntry = currentTwoProfileRetryableOutboundEntry(entry);
+  if (!currentEntry) {
+    return false;
+  }
+  setSelectedTwoProfileConversationEntry(currentEntry);
+  setText(fields.productionTwoProfileWarning, retryableTwoProfileOutboundWarning(currentEntry));
+  showRetryableTwoProfileOutboundNotice(currentEntry);
+  setProductionFollowupActions(true, selectedTwoProfileNextActionMessage(currentEntry));
+  applyProductionActionState();
+  refreshFieldTestReport();
+  return true;
+}
+
 function showCurrentRetryableOutboundMissing(entry) {
   setSelectedTwoProfileConversationEntry(null, { render: false });
   rememberCurrentInviteRoomMetadata();
@@ -1949,6 +1966,9 @@ async function runTwoProfileOutboundPrimaryAction(entry) {
   if (resolvedPrimaryAction.action === "start-receiving") {
     selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
     await startProductionTwoProfileOnionReceive();
+    if (productionTwoProfileReceiveMatchesInput(productionTwoProfileInput())) {
+      showExactRetryableOutboundPrompt(resolvedEntry, productionTwoProfileInput());
+    }
     return;
   }
   if (resolvedPrimaryAction.action === "wait-receive-stop") {
