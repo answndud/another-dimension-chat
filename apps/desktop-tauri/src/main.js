@@ -5144,6 +5144,22 @@ function fieldTestReportStandaloneOutboundRecoveryAction(parsed) {
     : "";
 }
 
+function fieldTestReportOutboundFailureClass(parsed) {
+  const failureClass = fieldTestReportValue(parsed.outbound_failure_class, "none");
+  if (failureClass === "none") {
+    return "";
+  }
+  if (!fieldTestReportHasSavedRoomContext(parsed)) {
+    return failureClass;
+  }
+  return (
+    fieldTestReportValue(parsed.room_list_next_origin, "none") === "retryable-outbound" &&
+    parsed.retryable_outbound_present === "true"
+  )
+    ? failureClass
+    : "";
+}
+
 function fieldTestReportBlocker(parsed) {
   if (fieldTestRouteReadinessBlocked(parsed)) {
     return parsed.route_readiness_failure_kind;
@@ -5154,8 +5170,9 @@ function fieldTestReportBlocker(parsed) {
   if (parsed.receive_failure_kind && parsed.receive_failure_kind !== "none") {
     return parsed.receive_failure_kind;
   }
-  if (parsed.outbound_failure_class && parsed.outbound_failure_class !== "none") {
-    return parsed.outbound_failure_class;
+  const outboundFailureClass = fieldTestReportOutboundFailureClass(parsed);
+  if (outboundFailureClass) {
+    return outboundFailureClass;
   }
   return "none";
 }
