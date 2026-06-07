@@ -2514,8 +2514,15 @@ function enablePrivateDeliveryPermission(options = {}) {
   renderRoomIdentityBar(input, sessionsReady);
   renderRoomStatusSummary(input, sessionsReady);
   setProductionTwoProfileState("Private delivery permission enabled");
-  if (options.preserveFollowup === true && showPrivateRouteRetryFollowupPrompt(input)) {
-    return;
+  const preservedRetryFollowup =
+    options.preserveFollowup === true &&
+    pendingPrivateRouteFollowup?.action === "retry-outbound" &&
+    privateRouteFollowupMatchesRoom(input);
+  if (preservedRetryFollowup) {
+    if (showPrivateRouteRetryFollowupPrompt(input)) {
+      return;
+    }
+    clearPrivateRouteFollowupForRoom(input);
   }
   if (sessionsReady && twoProfileSafetyConfirmedForInput(input) && !twoProfilePeerEndpointState(input).ready) {
     setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteNeeded"));
@@ -2529,7 +2536,7 @@ function enablePrivateDeliveryPermission(options = {}) {
     setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteReady"));
     setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
   }
-  refreshRouteReadinessNoticeAfterSessionRefresh(input);
+  refreshRouteReadinessNoticeAfterSessionRefresh(input, { allowRetryRecovery: false });
   applyProductionActionState();
 }
 
@@ -8990,7 +8997,7 @@ function isRealOnionRecoveryNoticeKey(key = latestChatDeliveryNoticeKey) {
   ]).has(key);
 }
 
-function refreshRouteReadinessNoticeAfterSessionRefresh(input = productionTwoProfileInput()) {
+function refreshRouteReadinessNoticeAfterSessionRefresh(input = productionTwoProfileInput(), options = {}) {
   if (!chatDeliveryNoticeMatchesInput(input)) {
     return false;
   }
@@ -9005,11 +9012,13 @@ function refreshRouteReadinessNoticeAfterSessionRefresh(input = productionTwoPro
   ) {
     return false;
   }
-  if (showPrivateRouteRetryFollowupPrompt(input)) {
-    return true;
-  }
-  if (showLatestRetryableOutboundNotice(input, { allowAutomatic: false })) {
-    return true;
+  if (options.allowRetryRecovery !== false) {
+    if (showPrivateRouteRetryFollowupPrompt(input)) {
+      return true;
+    }
+    if (showLatestRetryableOutboundNotice(input, { allowAutomatic: false })) {
+      return true;
+    }
   }
   if (routeReadiness.ready === true) {
     setProductionTwoProfileState("Private route ready");
