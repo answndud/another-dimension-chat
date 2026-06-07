@@ -1677,7 +1677,10 @@ function currentTwoProfileOutboundAction(entry, options = {}) {
   if (options.requireNoticeMatch === true && !chatDeliveryNoticeMatchesInput(input)) {
     return null;
   }
-  const currentEntry = productionTwoProfileConversationEntries.get(twoProfileConversationKey(entry));
+  const currentEntry = currentTwoProfileRetryableOutboundEntry(entry);
+  if (!currentEntry) {
+    return null;
+  }
   const outboundActionState = productionTwoProfileOutboundActionState(
     currentEntry,
     input,
@@ -1697,7 +1700,10 @@ function currentTwoProfileOutboundCancelableEntry(entry, options = {}) {
   if (options.requireNoticeMatch === true && !chatDeliveryNoticeMatchesInput(input)) {
     return null;
   }
-  const currentEntry = productionTwoProfileConversationEntries.get(twoProfileConversationKey(entry));
+  const currentEntry = currentTwoProfileRetryableOutboundEntry(entry);
+  if (!currentEntry) {
+    return null;
+  }
   const outboundActionState = productionTwoProfileOutboundActionState(
     currentEntry,
     input,
@@ -1836,36 +1842,84 @@ async function restoreInviteRoomForConversationEntry(entry) {
   return openSavedInviteRoom(room);
 }
 
+function currentTwoProfileRetryableOutboundEntry(entry) {
+  const currentEntry = entry
+    ? productionTwoProfileConversationEntries.get(twoProfileConversationKey(entry)) ?? null
+    : null;
+  return currentEntry && twoProfileConversationOutboundRetryable(currentEntry) ? currentEntry : null;
+}
+
+function showCurrentRetryableOutboundMissing(entry) {
+  setSelectedTwoProfileConversationEntry(null, { render: false });
+  rememberCurrentInviteRoomMetadata();
+  renderProductionTwoProfileConversationList();
+  renderSavedInviteRooms();
+  setProductionTwoProfileState("No pending send");
+  setText(
+    fields.productionTwoProfileWarning,
+    currentLanguage === "ko"
+      ? "선택한 전송 대기 메시지는 더 이상 없습니다. 대화를 확인하거나 새 메시지를 작성하세요."
+      : "The selected pending send is no longer available. Review the conversation or write a new message.",
+  );
+  setChatDeliveryNotice(
+    currentLanguage === "ko"
+      ? "선택한 전송 대기 메시지는 더 이상 없습니다."
+      : "The selected pending send is no longer available.",
+    "muted",
+  );
+  setProductionFollowupActions(
+    true,
+    currentLanguage === "ko"
+      ? "다음: 대화를 확인하거나 새 메시지를 작성하세요."
+      : "Next: review the conversation or write a new message.",
+  );
+  return false;
+}
+
 async function runTwoProfileOutboundPrimaryAction(entry) {
   if (!(await restoreInviteRoomForConversationEntry(entry))) {
     return;
   }
-  const resolvedPrimaryAction = currentTwoProfileOutboundPrimaryAction(entry);
+  const resolvedEntry = currentTwoProfileRetryableOutboundEntry(entry);
+  if (!resolvedEntry) {
+    showCurrentRetryableOutboundMissing(entry);
+    return;
+  }
+  const outboundActionState = productionTwoProfileOutboundActionState(
+    resolvedEntry,
+    productionTwoProfileInput(),
+    twoProfileInviteCodeModeActive(),
+  );
+  if (!outboundActionState.canRunNow) {
+    selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
+    return;
+  }
+  const resolvedPrimaryAction = currentTwoProfileOutboundPrimaryAction(resolvedEntry);
   if (resolvedPrimaryAction.action === "enable-private-delivery") {
-    selectTwoProfileOutboundActionDirection(entry, "retry");
+    selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
     enablePrivateDeliveryPermission();
     return;
   }
   if (resolvedPrimaryAction.action === "start-receiving") {
-    selectTwoProfileOutboundActionDirection(entry, "retry");
+    selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
     await startProductionTwoProfileOnionReceive();
     return;
   }
   if (resolvedPrimaryAction.action === "verify") {
-    selectTwoProfileOutboundActionDirection(entry, "retry");
+    selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
     focusSafetyConfirmation();
     return;
   }
   if (resolvedPrimaryAction.action === "prepare-private-route") {
-    selectTwoProfileOutboundActionDirection(entry, "retry");
+    selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
     await preparePrivateDeliveryRoute();
     return;
   }
   if (resolvedPrimaryAction.action === "refresh-and-retry") {
-    await refreshTwoProfileOutboundEndpointThenRetry(entry);
+    await refreshTwoProfileOutboundEndpointThenRetry(resolvedEntry);
     return;
   }
-  await retryTwoProfileOutboundEntry(entry);
+  await retryTwoProfileOutboundEntry(resolvedEntry);
 }
 
 function outboundRecoveryClass(primaryAction, statusLabel = "") {
@@ -13386,11 +13440,16 @@ async function retryTwoProfileOutboundEntry(entry) {
   if (!(await restoreInviteRoomForConversationEntry(entry))) {
     return;
   }
-  if (!selectTwoProfileOutboundActionDirection(entry, "retry")) {
+  const currentEntry = currentTwoProfileRetryableOutboundEntry(entry);
+  if (!currentEntry) {
+    showCurrentRetryableOutboundMissing(entry);
+    return;
+  }
+  if (!selectTwoProfileOutboundActionDirection(currentEntry, "retry")) {
     return;
   }
   const input = productionTwoProfileInput();
-  if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
+  if (currentEntry.sender !== input.profileA || currentEntry.receiver !== input.profileB) {
     setProductionTwoProfileState("Retry send needs direction");
     setText(fields.productionTwoProfileWarning, t("sendRetryWrongDirection"));
     setChatDeliveryNoticeByKey("sendRetryWrongDirection", "warning", input);
@@ -13400,14 +13459,14 @@ async function retryTwoProfileOutboundEntry(entry) {
   setText(fields.productionTwoProfileWarning, t("sendRetrying"));
   setChatDeliveryNoticeByKey("sendRetrying", "progress", input);
   latestProductionTwoProfileSuccess = {
-    profileA: entry.sender,
-    profileB: entry.receiver,
-    messageNumber: Number.parseInt(entry.messageNumber, 10),
-    messageLength: String(entry.message ?? "").length,
+    profileA: currentEntry.sender,
+    profileB: currentEntry.receiver,
+    messageNumber: Number.parseInt(currentEntry.messageNumber, 10),
+    messageLength: String(currentEntry.message ?? "").length,
     roomFingerprint: twoProfileSessionStatusFingerprint(input),
     fingerprint: twoProfileInputFingerprint(input),
   };
-  await sendProductionTwoProfileLatestOnionEnvelope(input, { messageNumber: entry.messageNumber });
+  await sendProductionTwoProfileLatestOnionEnvelope(input, { messageNumber: currentEntry.messageNumber });
   if (!twoProfileTranscriptInputStillCurrent(input)) {
     return;
   }
@@ -13418,8 +13477,13 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
   if (!(await restoreInviteRoomForConversationEntry(entry))) {
     return;
   }
+  const currentEntry = currentTwoProfileRetryableOutboundEntry(entry);
+  if (!currentEntry) {
+    showCurrentRetryableOutboundMissing(entry);
+    return;
+  }
   const input = productionTwoProfileInput();
-  if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
+  if (currentEntry.sender !== input.profileA || currentEntry.receiver !== input.profileB) {
     setProductionTwoProfileState("Endpoint refresh needs direction");
     setText(fields.productionTwoProfileWarning, t("sendRefreshWrongDirection"));
     return;
@@ -13428,9 +13492,9 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
     const peerEndpointState = twoProfilePeerEndpointState(input);
     if (!peerEndpointState.ready) {
       rememberPrivateRouteFollowup("retry-outbound", input, {
-        sender: entry.sender,
-        receiver: entry.receiver,
-        messageNumber: entry.messageNumber,
+        sender: currentEntry.sender,
+        receiver: currentEntry.receiver,
+        messageNumber: currentEntry.messageNumber,
       });
       const nextRouteAction = focusPrivateRouteNextAction(input);
       if (nextRouteAction === "create-local") {
@@ -13447,7 +13511,7 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
           return;
         }
         if (applied && twoProfilePeerEndpointState(input).ready) {
-          await retryTwoProfileOutboundEntry(entry);
+          await retryTwoProfileOutboundEntry(currentEntry);
         }
         return;
       }
@@ -13463,7 +13527,7 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
       }
       return;
     }
-    await retryTwoProfileOutboundEntry(entry);
+    await retryTwoProfileOutboundEntry(currentEntry);
     return;
   }
   const refreshed = await refreshProductionTwoProfilePeerEndpoints(input);
@@ -13471,7 +13535,7 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
     return;
   }
   if (refreshed) {
-    await retryTwoProfileOutboundEntry(entry);
+    await retryTwoProfileOutboundEntry(currentEntry);
   } else {
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
   }
@@ -13481,11 +13545,16 @@ async function cancelTwoProfileOutboundEntry(entry) {
   if (!(await restoreInviteRoomForConversationEntry(entry))) {
     return;
   }
-  if (!selectTwoProfileOutboundActionDirection(entry, "cancel")) {
+  const currentEntry = currentTwoProfileRetryableOutboundEntry(entry);
+  if (!currentEntry) {
+    showCurrentRetryableOutboundMissing(entry);
+    return;
+  }
+  if (!selectTwoProfileOutboundActionDirection(currentEntry, "cancel")) {
     return;
   }
   const input = productionTwoProfileInput();
-  if (!entry || entry.sender !== input.profileA || entry.receiver !== input.profileB) {
+  if (currentEntry.sender !== input.profileA || currentEntry.receiver !== input.profileB) {
     setProductionTwoProfileState("Cancel send needs direction");
     setText(fields.productionTwoProfileWarning, t("sendCancelWrongDirection"));
     setChatDeliveryNoticeByKey("sendCancelWrongDirection", "warning", input);
@@ -13498,9 +13567,9 @@ async function cancelTwoProfileOutboundEntry(entry) {
   applyProductionActionState();
   try {
     await invoke("production_message_outbound_cancel_pending", {
-      profile: entry.sender,
+      profile: currentEntry.sender,
       passphrase: input.passphrase,
-      messageNumber: Number.parseInt(entry.messageNumber, 10),
+      messageNumber: Number.parseInt(currentEntry.messageNumber, 10),
     });
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
