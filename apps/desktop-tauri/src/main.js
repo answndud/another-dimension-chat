@@ -4533,9 +4533,6 @@ function fieldTestNextActionKey(report, peerReport = "") {
   if (peerReportReady && buildMatch === false) {
     return "fieldTestNextBuildMismatch";
   }
-  if (realOnionNextActionKey) {
-    return realOnionNextActionKey;
-  }
   if (parsed.room_present !== "true" || parsed.session_ready !== "true") {
     return "fieldTestNextOpenRoom";
   }
@@ -4566,6 +4563,9 @@ function fieldTestNextActionKey(report, peerReport = "") {
     parsed.real_onion_bridge_configured_for_bootstrap !== "true"
   ) {
     return "fieldTestNextPrepareNetworkOrBridge";
+  }
+  if (realOnionNextActionKey) {
+    return realOnionNextActionKey;
   }
   if (sentRows === 0 || receivedRows === 0) {
     return "fieldTestNextExchangeMessages";
