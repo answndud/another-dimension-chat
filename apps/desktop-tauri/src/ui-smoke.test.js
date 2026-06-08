@@ -13,6 +13,7 @@ const appRoot = join(here, "..");
 const indexHtml = readFileSync(join(appRoot, "index.html"), "utf8");
 const mainJs = readFileSync(join(here, "main.js"), "utf8");
 const i18nJs = readFileSync(join(here, "i18n.js"), "utf8");
+const privateDeliveryStateJs = readFileSync(join(here, "private-delivery-state.js"), "utf8");
 const stylesCss = readFileSync(join(here, "styles.css"), "utf8");
 const functionBodyCache = new Map();
 
@@ -114,7 +115,7 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(functionBody(mainJs, "prepareRoomListReturnState"), /setSavedRoomMetadataSyncStatus\(""\)/);
   assert.match(mainJs, /showRoomList\(\);\s*syncSavedInviteRoomMetadataFromLocalStores\(\);/);
   assert.match(functionBody(mainJs, "savedInviteRoomMetadataFromLocalStores"), /production_message_transcript_export/);
-  assert.match(functionBody(mainJs, "savedInviteRoomMetadataSyncCandidates"), /savedInviteRoomResumePriority\(right\) - savedInviteRoomResumePriority\(left\)/);
+  assert.match(functionBody(mainJs, "savedInviteRoomMetadataSyncCandidates"), /right\.priority - left\.priority/);
   assert.match(functionBody(mainJs, "savedInviteRoomMetadataSyncCandidates"), /slice\(0, savedRoomMetadataStartupSyncLimit\)/);
   assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncRunning/);
   assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncComplete/);
@@ -180,17 +181,17 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "enable-private-delivery"/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "prepare-private-route"/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "refresh-and-retry"/);
-  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /refreshTwoProfileOutboundEndpointThenRetry\(pending\)/);
+  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /runSavedInviteRoomRetryableOutboundAction\(room, input, action, actionOrigin\)/);
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 30/);
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 20/);
-  assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 10/);
+  assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 18/);
   assert.match(
     functionBody(mainJs, "savedInviteRoomState"),
-    /savedInviteRoomHasRetryableOutbound\(room\)[\s\S]*receiveState === "listening"[\s\S]*receiveState === "paused"[\s\S]*savedInviteRoomWaitingForPeerCode\(room\)/,
+    /savedInviteRoomHasRetryableOutbound\(room\)[\s\S]*receiveState === "listening"[\s\S]*receiveState === "paused"[\s\S]*waitingPeerCode/,
   );
   assert.match(
     functionBody(mainJs, "savedInviteRoomListAction"),
-    /savedInviteRoomHasRetryableOutbound\(room\)[\s\S]*savedInviteRoomReceiveState\(room\) === "paused"[\s\S]*savedInviteRoomWaitingForPeerCode\(room\)/,
+    /savedInviteRoomHasRetryableOutbound\(room\)[\s\S]*receiveState === "paused"[\s\S]*waitingPeerCode/,
   );
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateResumeNext/);
   assert.match(functionBody(mainJs, "savedInviteRoomRetryableState"), /roomStateRetrySend/);
@@ -199,7 +200,7 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(i18nJs, /roomStateSetupDelivery/);
   assert.match(i18nJs, /roomStateRefreshAddress/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /needs-receive-restart/);
-  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /savedInviteRoomListItemView\(room, \{ currentCode, resumeRoom \}\)/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /savedInviteRoomListItemView\(room,[\s\S]*currentCode,[\s\S]*resumeRoom,[\s\S]*persistStaleRetryableClear: true/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /is-waiting-peer-code/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /has-retryable-send/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /is-resume-recommended/);
@@ -251,7 +252,7 @@ test("receive restart intent owns the room primary action", () => {
   assert.match(mainJs, /receiveIntentForRoom\(input\)[\s\S]*action: "start-receiving"/);
   assert.match(mainJs, /action: "start-receiving"[\s\S]*labelKey: "startReceiving"/);
   assert.match(mainJs, /function savedInviteRoomListAction/);
-  assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /savedInviteRoomReceiveState\(room\) === "paused"/);
+  assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /receiveState === "paused"/);
   assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /labelKey: "startReceiving"/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /rememberReceiveIntentForRoom\(input, true\)/);
   const actionBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
@@ -270,10 +271,10 @@ test("room list controls are wired to room flow instead of settings", () => {
   assert.match(mainJs, /fields\.roomListCreateRoom\.addEventListener\("click", createNewInviteRoomFromList\)/);
   assert.match(mainJs, /fields\.roomListJoinRoom\.addEventListener\("click", createRoomFromRoomListInviteCode\)/);
   assert.match(mainJs, /fields\.backToRoomList\.addEventListener\("click", showRoomList\)/);
-  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /runSavedInviteRoomListAction\(room, view\.nextAction\.action\)/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /runSavedInviteRoomListAction\(view\.room \?\? room, view\.nextAction\.action, \{ actionOrigin: view\.nextAction\.origin \}\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /await openSavedInviteRoom\(room\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /focusPrivateRouteNextAction\(input\)/);
-  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /showRetryableTwoProfileOutboundNotice\(pending\)/);
+  assert.match(functionBody(mainJs, "runSavedInviteRoomRetryableOutboundAction"), /showRetryableTwoProfileOutboundNotice\(pending\)/);
   assert.match(mainJs, /fields\.roomListInviteCode\.addEventListener\("input", renderReceivedInviteCodeActionState\)/);
   assert.match(
     mainJs,
@@ -367,8 +368,8 @@ test("saved room removal is list-only and transcript switching rebuilds entries"
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /if \(silent\) \{[\s\S]*rememberProductionTwoProfileOnionReceiveRuntimeState\("stopped"\)/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /else \{[\s\S]*setProductionTwoProfileOnionReceiveRuntimeState\("stopped"\)/);
   assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveStopConfirmation"), /silentStop === true/);
-  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveStopConfirmation"), /markProductionTwoProfileOnionReceiveStopped\(backendLoop, \{ silent \}\)/);
-  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /markProductionTwoProfileOnionReceiveStopped\(backendLoop, \{ silent \}\)/);
+  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveStopConfirmation"), /markProductionTwoProfileOnionReceiveStopped\(backendLoop,[\s\S]*silent,[\s\S]*input: receiveOwnerInput/);
+  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /markProductionTwoProfileOnionReceiveStopped\(backendLoop,[\s\S]*silent,[\s\S]*input: targetInput/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /stopProductionTwoProfileOnionReceiveForInput\(productionTwoProfileInput\(\)\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileTranscriptEntries"), /resetProductionTwoProfileTranscript/);
   assert.match(functionBody(mainJs, "resetProductionTwoProfileTranscript"), /productionTwoProfileConversationEntries\.clear\(\)/);
@@ -401,7 +402,7 @@ test("room transcript refresh is scoped to the current room", () => {
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /transcriptInput/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /twoProfileTranscriptInputStillCurrent\(transcriptInput\)/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /invokeInviteRoomSessionStatus/);
-  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /reconcileCurrentInviteRoomMetadataFromTranscriptEntries\(entries\)/);
+  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /reconcileCurrentInviteRoomMetadataFromTranscriptEntries\(entries,[\s\S]*sessionStatus/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /const sessionCheckInput = twoProfileRoomIdentityInput\(input\)/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /twoProfileTranscriptInputStillCurrent\(sessionCheckInput\)/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /rememberTwoProfileSessionStatus\(sessionCheckInput, result\)/);
@@ -436,17 +437,17 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(functionBody(mainJs, "latestTwoProfileSuccessForInput"), /roomFingerprint === twoProfileSessionStatusFingerprint\(input\)/);
   assert.match(functionBody(mainJs, "latestTwoProfileSuccessMatchesDirection"), /latestTwoProfileSuccessForInput\(input\)/);
   assert.match(functionBody(mainJs, "latestTwoProfileSuccessMatchesOppositeDirection"), /latestTwoProfileSuccessForInput\(\{/);
-  assert.match(functionBody(mainJs, "latestTwoProfileOutboundDeliveryCandidate"), /latest\.roomFingerprint !== twoProfileSessionStatusFingerprint\(input\)/);
+  assert.match(functionBody(mainJs, "latestTwoProfileOutboundDeliveryCandidate"), /String\(entry\.roomFingerprint \?\? ""\)\.trim\(\) === targetRoomFingerprint/);
 
   for (const name of [
     "saveInviteRoomOutboundMessage",
     "renderProductionTwoProfileResult",
     "renderProductionTwoProfileMessageResult",
-    "retryTwoProfileOutboundEntry",
     "runProductionTwoProfileRealOnionRoundtrip",
   ]) {
     assert.match(functionBody(mainJs, name), /roomFingerprint: twoProfileSessionStatusFingerprint/);
   }
+  assert.match(functionBody(mainJs, "retryTwoProfileOutboundEntry"), /roomFingerprint: currentEntry\.roomFingerprint/);
 
   assert.match(functionBody(mainJs, "updateMinimalChatMode"), /latestTwoProfileSuccessForInput\(input\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileMemory"), /latestTwoProfileSuccessForInput\(input\)/);
@@ -706,7 +707,7 @@ test("two-profile onion setup actions ignore stale room results", () => {
   assert.match(saveBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
 
   const refreshBody = functionBody(mainJs, "refreshProductionTwoProfilePeerEndpoints");
-  assert.match(mainJs, /async function refreshProductionTwoProfilePeerEndpoints\(input = productionTwoProfileInput\(\)\)/);
+  assert.match(mainJs, /async function refreshProductionTwoProfilePeerEndpoints\(input = productionTwoProfileInput\(\), options = \{\}\)/);
   assert.match(refreshBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
   assert.match(mainJs, /let activeTwoProfilePeerEndpointRefreshFingerprint = ""/);
   assert.match(functionBody(mainJs, "setTwoProfilePeerEndpointRefreshBusy"), /productionBusyAction = "two-profile-peer-endpoint-refresh"/);
@@ -785,16 +786,16 @@ test("receive imports refresh room list metadata immediately", () => {
   assert.match(pollBody, /if \(!twoProfileTranscriptInputStillCurrent\(currentInput\)\) \{[\s\S]*renderSavedInviteRooms\(\);[\s\S]*return;/);
   assert.match(pollBody, /profileA: currentInput\.profileA/);
   assert.match(pollBody, /rememberTwoProfileSessionStatus\(currentInput, status\)/);
-  assert.match(pollBody, /showLatestRetryableOutboundNotice\(currentInput\)/);
+  assert.match(pollBody, /showReceiveEndpointUpdateRecoveryNotice\(currentInput, pendingNoticeBeforeReceiveRefresh/);
   assert.match(pollBody, /refreshCurrentRoomAfterReceiveImport\(refreshPlan, currentInput\)/);
 });
 
 test("private delivery receive controls require a real route", () => {
   assert.match(functionBody(mainJs, "updateChatPrimaryActionMode"), /"has-private-route",\s*twoProfilePeerEndpointState\(input\)\.ready/);
   assert.doesNotMatch(functionBody(mainJs, "updateChatPrimaryActionMode"), /twoProfileInviteCodeModeActive\(\) && sessionsReady/);
-  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /!twoProfilePeerEndpointState\(input\)\.ready/);
-  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /rememberPrivateRouteFollowup\("receive", input\)/);
-  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /await preparePrivateDeliveryRoute\(\{ input \}\)/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /!currentActiveLocalPrivateRouteCode\(input\)/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /rememberReceiveIntentForRoom\(input, true\)/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /await prepareInviteRoomPrivateRouteExchange\(input,/);
   assert.doesNotMatch(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /!latestLocalPrivateRouteCode/);
   assert.match(stylesCss, /body\.is-chat-active\.has-confirmed-safety:not\(\.has-message-draft\) \.room-receive-controls/);
   assert.match(stylesCss, /body\.is-chat-active:not\(\.has-private-route\)[\s\S]*#start-production-two-profile-onion-receive/);
@@ -838,37 +839,40 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(i18nJs, /현장 테스트 리포트/);
 
   const reportBody = functionBody(mainJs, "buildFieldTestReport");
-  const summaryBody = functionBody(mainJs, "fieldTestReportSummary");
-  const compareBody = functionBody(mainJs, "fieldTestReportComparison");
+  const summaryBody = functionBody(privateDeliveryStateJs, "fieldTestReportSummary");
+  const compareBody = functionBody(privateDeliveryStateJs, "fieldTestReportComparison");
   const checklistBody = functionBody(mainJs, "fieldTestChecklistItems");
+  assert.match(functionBody(mainJs, "fieldTestReportSummary"), /privateDeliveryState\.fieldTestReportSummary\(report\)/);
+  assert.match(functionBody(mainJs, "fieldTestReportComparison"), /privateDeliveryState\.fieldTestReportComparison\(localReport, peerReport\)/);
   assert.match(summaryBody, /parseFieldTestReport\(report\)/);
   assert.match(compareBody, /fieldTestReportTriageState\(localReport\)/);
-  assert.match(compareBody, /appVersion/);
-  assert.match(compareBody, /buildChannel/);
-  assert.match(compareBody, /buildCommit/);
-  assert.match(functionBody(mainJs, "fieldTestBuildIdentityMatches"), /local\.appVersion === peer\.appVersion/);
-  assert.match(functionBody(mainJs, "fieldTestBuildIdentityMatches"), /local\.buildChannel === peer\.buildChannel/);
-  assert.match(functionBody(mainJs, "fieldTestBuildIdentityMatches"), /local\.buildCommit === peer\.buildCommit/);
+  assert.match(privateDeliveryStateJs, /FIELD_TEST_REPORT_HARD_COMPARE_KEYS[\s\S]*"appVersion"/);
+  assert.match(privateDeliveryStateJs, /FIELD_TEST_REPORT_HARD_COMPARE_KEYS[\s\S]*"buildChannel"/);
+  assert.match(privateDeliveryStateJs, /FIELD_TEST_REPORT_HARD_COMPARE_KEYS[\s\S]*"buildCommit"/);
+  assert.match(functionBody(mainJs, "fieldTestBuildIdentityMatches"), /privateDeliveryState\.fieldTestBuildIdentityMatches\(localReport, peerReport\)/);
+  assert.match(functionBody(privateDeliveryStateJs, "fieldTestBuildIdentityMatches"), /local\.appVersion === peer\.appVersion/);
+  assert.match(functionBody(privateDeliveryStateJs, "fieldTestBuildIdentityMatches"), /local\.buildChannel === peer\.buildChannel/);
+  assert.match(functionBody(privateDeliveryStateJs, "fieldTestBuildIdentityMatches"), /local\.buildCommit === peer\.buildCommit/);
   assert.match(checklistBody, /parseFieldTestReport\(report\)/);
   assert.match(checklistBody, /fieldTestChecklistBuild/);
   assert.match(checklistBody, /fieldTestBuildIdentityMatches\(report, peerReport\)/);
   assert.match(checklistBody, /fieldTestChecklistRoom/);
   assert.match(checklistBody, /fieldTestChecklistReport/);
   const nextActionBody = functionBody(mainJs, "fieldTestNextActionKey");
+  assert.match(nextActionBody, /fieldTestReportResolvedRoomListAction\(parsed\)/);
   assert.match(nextActionBody, /fieldTestNextBuildMismatch/);
   assert.match(nextActionBody, /fieldTestNextOpenRoom/);
   assert.match(nextActionBody, /fieldTestNextComplete/);
+  assert.match(functionBody(mainJs, "fieldTestRecoveryActionNextKey"), /fieldTestNextStopReceive/);
   assert.match(functionBody(mainJs, "renderFieldTestChecklist"), /fieldTestStatusDone/);
   assert.match(functionBody(mainJs, "renderFieldTestChecklist"), /fieldTestStatusPending/);
   assert.match(functionBody(mainJs, "renderFieldTestChecklist"), /fieldTestStatusCheck/);
   assert.match(compareBody, /fieldTestReportTriageState\(peerReport\)/);
   assert.match(compareBody, /mismatches\.push/);
   assert.match(compareBody, /reports-aligned/);
-  assert.match(summaryBody, /room_list_next_action/);
-  assert.match(summaryBody, /outbound_recovery_action/);
-  assert.match(summaryBody, /real_onion_recovery_action/);
-  assert.match(summaryBody, /real_onion_next_blocker/);
-  assert.match(summaryBody, /receive_failure_kind/);
+  assert.match(summaryBody, /fieldTestReportNextActionValue\(parsed\)/);
+  assert.match(summaryBody, /fieldTestReportBlocker\(parsed\)/);
+  assert.match(summaryBody, /fieldTestReportReceiveValue\(parsed\)/);
   assert.match(functionBody(mainJs, "refreshFieldTestReport"), /renderFieldTestReportSummary\(report\)/);
   assert.match(functionBody(mainJs, "renderFieldTestReportSummary"), /renderFieldTestChecklist\(report\)/);
   assert.match(functionBody(mainJs, "renderFieldTestReportSummary"), /renderFieldTestNextAction\(report\)/);
@@ -890,7 +894,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /retryable_outbound_present=/);
   assert.match(reportBody, /outbound_failure_class=/);
   assert.match(reportBody, /outbound_recovery_action=/);
-  assert.match(reportBody, /savedInviteRoomListItemView\(currentSavedRoom/);
+  assert.match(reportBody, /currentSavedInviteRoomView\(input\)/);
   assert.match(reportBody, /room_list_state_key=/);
   assert.match(reportBody, /room_list_state_label=/);
   assert.match(reportBody, /room_list_next_action=/);
@@ -935,7 +939,7 @@ test("send diagnostics expose runtime owner match without raw profile names", ()
   assert.match(mainJs, /function sendRuntimeOwnerMismatch/);
   assert.match(functionBody(mainJs, "setChatDeliveryNoticeForSendAttempt"), /sendRuntimeMismatch/);
   assert.match(mainJs, /latestChatDeliveryNoticeKey === "sendRuntimeMismatch"/);
-  assert.match(mainJs, /preparePrivateDeliveryRoute\(\{ forceRefresh: true \}\)/);
+  assert.match(mainJs, /preparePrivateDeliveryRoute\(\{ forceRefresh: true, allowRetryRecovery: false \}\)/);
   assert.match(mainJs, /function privateRouteRecoveryNoticeActive/);
   assert.match(functionBody(mainJs, "privateRouteRecoveryNoticeActive"), /privateRouteWaitingPeerCode/);
   assert.match(functionBody(mainJs, "applyProductionActionState"), /routeRecoveryReady/);
@@ -952,8 +956,8 @@ test("delivery code save continues the original send or receive action", () => {
   assert.match(functionBody(mainJs, "applyPeerPrivateRouteCode"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return true;\s*\}/);
   const followupBody = functionBody(mainJs, "continueAfterPeerPrivateRouteSaved");
   assert.match(followupBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
-  assert.match(followupBody, /latestTwoProfileRetryableOutboundEntry\(input\)/);
-  assert.match(followupBody, /await retryTwoProfileOutboundEntry\(pending\)/);
+  assert.match(followupBody, /retryableOutboundEntryForPrivateRouteFollowup\(followup, input\)/);
+  assert.match(followupBody, /await runTwoProfileOutboundPrimaryAction\(pending\)/);
   assert.match(followupBody, /await startProductionTwoProfileOnionReceive\(\)/);
   assert.match(followupBody, /await runProductionTwoProfileMessageRoundtrip\(\)/);
   assert.match(followupBody, /clearPrivateRouteFollowup\(\)/);
@@ -985,7 +989,7 @@ test("saved local delivery codes must be refreshed before sharing", () => {
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /const runtime = await ensurePrivateDeliveryRuntimeReady\(input\);[\s\S]*if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{[\s\S]*return false;/);
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /rememberLocalPrivateRouteCode\(result\.local_onion_endpoint, input, \{ updateUi: false \}\)/);
   assert.match(functionBody(mainJs, "preparePrivateDeliveryRoute"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
-  assert.match(functionBody(mainJs, "preparePrivateDeliveryRoute"), /const refreshed = await refreshProductionTwoProfilePeerEndpoints\(input\);[\s\S]*if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{[\s\S]*return;/);
+  assert.match(functionBody(mainJs, "preparePrivateDeliveryRoute"), /const refreshed = await refreshProductionTwoProfilePeerEndpoints\(input, \{ allowRetryRecovery \}\);[\s\S]*if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{[\s\S]*return;/);
   assert.match(functionBody(mainJs, "routeExchangePrimaryActionNode"), /!currentActiveLocalPrivateRouteCode\(input\)/);
   assert.match(mainJs, /function focusPrivateRouteNextAction\([\s\S]*!currentActiveLocalPrivateRouteCode\(input\)/);
   assert.match(functionBody(mainJs, "localPrivateRouteCodeStatusKey"), /privateRouteLocalStatusSaved/);
@@ -1007,10 +1011,10 @@ test("chat delivery notices stay scoped to the active invite room", () => {
   assert.match(mainJs, /function setChatDeliveryNoticeByKey\(key, tone = "neutral", input = productionTwoProfileInput\(\)\)/);
   assert.match(functionBody(mainJs, "setChatDeliveryNoticeByKey"), /latestChatDeliveryNoticeRoomFingerprint = key \? chatDeliveryNoticeRoomFingerprint\(input\) : ""/);
   assert.match(functionBody(mainJs, "setChatDeliveryNoticeForPendingOutbound"), /latestChatDeliveryNoticeRoomFingerprint = chatDeliveryNoticeRoomFingerprint\(input\)/);
-  assert.match(functionBody(mainJs, "setChatDeliveryNoticeForSendAttempt"), /setChatDeliveryNoticeByKey\("chatNoticeSent", "success", input\)/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNoticeForSendAttempt"), /setChatDeliveryNoticeByKey\("chatNoticeExternalSendWritten", "success", input\)/);
   assert.match(mainJs, /function currentTwoProfileOutboundAction/);
   assert.match(functionBody(mainJs, "currentTwoProfileOutboundAction"), /options\.requireNoticeMatch === true && !chatDeliveryNoticeMatchesInput\(input\)/);
-  assert.match(functionBody(mainJs, "currentTwoProfileOutboundAction"), /productionTwoProfileConversationEntries\.get\(twoProfileConversationKey\(entry\)\)/);
+  assert.match(functionBody(mainJs, "currentTwoProfileOutboundAction"), /currentTwoProfileRetryableOutboundEntry\(entry\)/);
   assert.match(functionBody(mainJs, "currentTwoProfileOutboundAction"), /currentTwoProfileOutboundPrimaryAction\(currentEntry, input\)/);
   assert.match(mainJs, /function currentTwoProfileOutboundCancelableEntry/);
   assert.match(functionBody(mainJs, "currentTwoProfileOutboundCancelableEntry"), /outboundActionState\.canCancelNow \? currentEntry : null/);
@@ -1019,8 +1023,7 @@ test("chat delivery notices stay scoped to the active invite room", () => {
   assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /currentTwoProfileOutboundCancelableEntry\(pendingEntry, \{ requireNoticeMatch: true \}\)/);
 
   const languageBody = functionBody(mainJs, "applyLanguage");
-  assert.match(languageBody, /latestChatDeliveryNoticeKey && chatDeliveryNoticeMatchesInput\(productionTwoProfileInput\(\)\)/);
-  assert.match(languageBody, /setChatDeliveryNoticeByKey\("", "neutral"\)/);
+  assert.match(languageBody, /rerenderLatestChatDeliveryNotice\(productionTwoProfileInput\(\)\)/);
 
   const actionStateBody = functionBody(mainJs, "applyProductionActionState");
   assert.match(actionStateBody, /const currentRoomDeliveryNotice = chatDeliveryNoticeMatchesInput\(twoProfile\)/);
@@ -1057,10 +1060,10 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(sendBody, /latestTwoProfileOutboundOnionMessage\(input, options\)/);
   assert.match(sendBody, /latestTwoProfileOutboundDeliveryCandidate\(input, options\)/);
   assert.match(functionBody(mainJs, "latestTwoProfileOutboundDeliveryCandidate"), /twoProfileConversationOutboundRetryable\(entry\)/);
-  assert.match(functionBody(mainJs, "latestTwoProfileOutboundDeliveryCandidate"), /targetRequested \? null : latestTwoProfileRetryableOutboundEntry\(input\)/);
-  assert.match(functionBody(mainJs, "latestTwoProfileOutboundDeliveryCandidate"), /targetRequested && Number\.parseInt\(latest\.messageNumber, 10\) !== targetMessageNumber/);
+  assert.match(functionBody(mainJs, "latestTwoProfileOutboundDeliveryCandidate"), /targetRequested \? null : automaticVisibleTwoProfileRetryableOutboundEntry\(input\)/);
+  assert.match(functionBody(mainJs, "latestTwoProfileOutboundDeliveryCandidate"), /\(targetRequested && Number\.parseInt\(latest\.messageNumber, 10\) !== targetMessageNumber\)/);
   assert.match(sendBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
-  assert.match(sendBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: false, input \}\)/);
+  assert.match(sendBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*quiet: true,[\s\S]*refreshSessionStatus: true,[\s\S]*input/);
   assert.match(sendBody, /setChatDeliveryNoticeForSendAttempt\(result, input\)/);
   assert.match(mainJs, /let activeTwoProfileOnionEnvelopeSendKey = ""/);
   assert.match(functionBody(mainJs, "twoProfileOnionEnvelopeSendKey"), /twoProfileSessionStatusFingerprint\(input\)/);
@@ -1072,20 +1075,20 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(sendBody, /clearTwoProfileOnionEnvelopeSendBusy\(input, latestOnionOutbound\.messageNumber\)/);
 
   const retryBody = functionBody(mainJs, "retryTwoProfileOutboundEntry");
-  assert.match(retryBody, /await sendProductionTwoProfileLatestOnionEnvelope\(input, \{ messageNumber: entry\.messageNumber \}\)/);
-  assert.match(retryBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: true, input \}\)/);
+  assert.match(retryBody, /await sendProductionTwoProfileLatestOnionEnvelope\(input,[\s\S]*exactRetryOnly: true,[\s\S]*message: currentEntry\.message,[\s\S]*messageNumber: currentEntry\.messageNumber,[\s\S]*roomFingerprint: currentEntry\.roomFingerprint/);
+  assert.match(retryBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*quiet: true,[\s\S]*refreshSessionStatus: true,[\s\S]*allowRetryableMetadataFallback: false,[\s\S]*input/);
   assert.match(retryBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(retryBody, /setChatDeliveryNoticeByKey\("sendRetrying", "progress", input\)/);
-  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /currentTwoProfileOutboundAction\(entry\)/);
+  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /currentTwoProfileOutboundAction\(entry, \{ requireCurrentInput: true \}\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /runTwoProfileOutboundPrimaryAction\(current\.entry, current\.primaryAction\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /cancel\.disabled = !outboundActionState\.canCancelNow/);
-  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /currentTwoProfileOutboundCancelableEntry\(entry\)/);
+  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /currentTwoProfileOutboundCancelableEntry\(entry, \{ requireCurrentInput: true \}\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /cancelTwoProfileOutboundEntry\(currentEntry\)/);
 
   const refreshRetryBody = functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry");
   assert.match(refreshRetryBody, /await prepareInviteRoomPrivateRouteExchange\(input\)/);
-  assert.match(refreshRetryBody, /await refreshProductionTwoProfilePeerEndpoints\(input\)/);
-  assert.match(refreshRetryBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: true, input \}\)/);
+  assert.match(refreshRetryBody, /await refreshProductionTwoProfilePeerEndpoints\(input, \{ suppressRecoveryNoticeRefresh: true \}\)/);
+  assert.match(refreshRetryBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*quiet: true,[\s\S]*refreshSessionStatus: true,[\s\S]*allowRetryableMetadataFallback: false,[\s\S]*input/);
   assert.match(refreshRetryBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(refreshRetryBody, /twoProfilePeerEndpointState\(input\)\.ready/);
 
@@ -1093,8 +1096,8 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(cancelBody, /production_message_outbound_cancel_pending/);
   assert.match(cancelBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(cancelBody, /setSelectedTwoProfileConversationEntry\(null\)/);
-  assert.match(cancelBody, /await loadProductionTwoProfileTranscript\(\{ quiet: true, refreshSessionStatus: false, input \}\)/);
-  assert.match(cancelBody, /showLatestRetryableOutboundNotice\(input\)/);
+  assert.match(cancelBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*quiet: true,[\s\S]*refreshSessionStatus: false,[\s\S]*allowRetryableMetadataFallback: false,[\s\S]*input/);
+  assert.match(cancelBody, /showLatestRetryableOutboundNotice\(input, \{ allowAutomatic: false \}\)/);
   assert.match(cancelBody, /setChatDeliveryNoticeByKey\("sendCanceling", "progress", input\)/);
 
   const composerBody = functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip");
@@ -1160,7 +1163,7 @@ test("private delivery stays explicit before network work starts", () => {
   assert.doesNotMatch(functionBody(mainJs, "enablePrivateDeliveryPermission"), /production_onion_service_launch_attempt/);
   assert.match(
     functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"),
-    /rememberPrivateRouteFollowup\(input\.message \? "send-draft" : "receive", input\);[\s\S]*enablePrivateDeliveryPermission\(\)/,
+    /rememberPrivateRouteFollowup\(input\.message \? "send-draft" : "receive", input\);[\s\S]*enablePrivateDeliveryPermission\(\{ preserveFollowup: true \}\)/,
   );
   assert.match(functionBody(mainJs, "ensurePrivateDeliveryRuntimeReady"), /production_onion_persistent_client_start/);
 });
@@ -1189,16 +1192,16 @@ test("composer and delivery-route controls stay on the chat delivery path", () =
   );
 
   const composerBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
-  assert.match(composerBody, /enablePrivateDeliveryPermission\(\)/);
+  assert.match(composerBody, /enablePrivateDeliveryPermission\(\{ preserveFollowup: true \}\)/);
   assert.match(composerBody, /rememberPrivateRouteFollowup\(input\.message \? "send-draft" : "receive", input\)/);
-  assert.match(composerBody, /await preparePrivateDeliveryRoute\(\{ input \}\)/);
+  assert.match(composerBody, /await preparePrivateDeliveryRoute\(\{ input, allowRetryRecovery: false \}\)/);
   assert.match(composerBody, /focusSafetyConfirmation\(\)/);
   assert.match(composerBody, /await runProductionTwoProfileMessageRoundtrip\(\)/);
   assert.doesNotMatch(composerBody, /openChatSettingsPanel|openPrivateDeliverySettings/);
 
   const prepareRouteBody = functionBody(mainJs, "preparePrivateDeliveryRoute");
   assert.match(prepareRouteBody, /const input = options\.input \?\? productionTwoProfileInput\(\)/);
-  assert.match(prepareRouteBody, /await refreshProductionTwoProfilePeerEndpoints\(input\)/);
+  assert.match(prepareRouteBody, /await refreshProductionTwoProfilePeerEndpoints\(input, \{ allowRetryRecovery \}\)/);
 
   const permissionBody = functionBody(mainJs, "enablePrivateDeliveryPermission");
   assert.match(permissionBody, /setManualNetworkPermission\(true\)/);
