@@ -136,6 +136,18 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(stylesCss, /body\.is-room-detail-mode\.is-chat-active \.room-list-back/);
 });
 
+test("saved room open carries current session status into metadata reconciliation", () => {
+  assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /sessionStatus: status/);
+  assert.match(
+    functionBody(mainJs, "loadProductionTwoProfileTranscript"),
+    /options\.sessionStatus \?\? latestTwoProfileSessionStatusForCurrentInput\(transcriptInput\)/,
+  );
+  assert.match(
+    functionBody(mainJs, "loadProductionTwoProfileTranscript"),
+    /reconcileCurrentInviteRoomMetadataFromTranscriptEntries\(entries,[\s\S]*sessionStatus/,
+  );
+});
+
 test("saved room list shows receive runtime and restart intent", () => {
   assert.match(mainJs, /function savedInviteRoomInput/);
   assert.match(mainJs, /function savedInviteRoomReceiveState/);
