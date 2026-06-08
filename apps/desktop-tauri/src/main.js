@@ -63,6 +63,7 @@ import {
 import { combinedTwoProfileTranscriptTsv } from "./transcript-export.js";
 import { transcriptRetentionView } from "./transcript-retention.js";
 import { applyStaticTranslations, normalizeLanguage, translate } from "./i18n.js";
+import * as privateDeliveryState from "./private-delivery-state.js";
 import "./styles.css";
 
 const FIELD_TEST_APP_VERSION = __AD_FIELD_TEST_APP_VERSION__;
@@ -3483,27 +3484,29 @@ function retryableOutboundEntryForSavedRoomAction(room, input = productionTwoPro
 }
 
 function savedInviteRoomRetryableAction(action) {
-  const normalized = String(action ?? "").trim();
-  return new Set([
-    "enable-private-delivery",
-    "prepare-private-route",
-    "refresh-and-retry",
-    "start-receiving",
-    "retry-network",
-    "verify-safety",
-    "retry",
-  ]).has(normalized)
-    ? normalized
-    : "";
+  return privateDeliveryState.normalizeSavedInviteRoomRetryableAction(action);
 }
 
-function savedInviteRoomRetryOnlyAction(action) {
-  return new Set([
-    "refresh-and-retry",
-    "retry",
-    "retry-network",
-    "review-send",
-  ]).has(String(action ?? "").trim());
+function savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin) {
+  return privateDeliveryState.savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin);
+}
+
+function savedInviteRoomRetryOnlyWithoutRetryableOrigin(action, actionOrigin) {
+  return privateDeliveryState.savedInviteRoomRetryOnlyWithoutRetryableOrigin(action, actionOrigin);
+}
+
+function savedInviteRoomActionIsRouteReadinessOnly(actionOrigin) {
+  return privateDeliveryState.savedInviteRoomActionIsRouteReadinessOnly(actionOrigin);
+}
+
+function savedInviteRoomReceiveOwnershipBlocksRecovery(options) {
+  return privateDeliveryState.savedInviteRoomReceiveOwnershipBlocksRecovery(options);
+}
+
+function savedInviteRoomResolvedRetryableOutbound(room, input, action, actionOrigin) {
+  return savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin)
+    ? retryableOutboundEntryForSavedRoomAction(room, input, { actionOrigin })
+    : null;
 }
 
 function savedInviteRoomRetryableState(room) {
@@ -3655,9 +3658,6 @@ function savedInviteRoomResumePriority(room) {
   if (savedInviteRoomHasRetryableOutbound(viewRoom)) {
     return 30;
   }
-  if (savedInviteRoomRealOnionRecoveryView(viewRoom)) {
-    return 25;
-  }
   const receiveState = savedInviteRoomReceiveState(viewRoom);
   if (receiveState === "stopping") {
     return 22;
@@ -3668,6 +3668,15 @@ function savedInviteRoomResumePriority(room) {
   const routeReadinessView = savedInviteRoomRouteReadinessView(viewRoom);
   if (routeReadinessView?.action === "wait-receive-stop") {
     return 19;
+  }
+  if (
+    !savedInviteRoomReceiveOwnershipBlocksRecovery({
+      receiveState,
+      routeReadinessAction: routeReadinessView?.action ?? "",
+    }) &&
+    savedInviteRoomRealOnionRecoveryView(viewRoom)
+  ) {
+    return 25;
   }
   if (savedInviteRoomWaitingForPeerCode(viewRoom)) {
     return 18;
@@ -3704,13 +3713,22 @@ function savedInviteRoomState(room, options = {}) {
   const receiveState = options.receiveState ?? savedInviteRoomReceiveState(room);
   const waitingPeerCode = options.waitingPeerCode ?? savedInviteRoomWaitingForPeerCode(room);
   const hasRealOnionRecoveryView = Object.prototype.hasOwnProperty.call(options, "realOnionRecoveryView");
-  const realOnionRecoveryView = hasRealOnionRecoveryView
+  let realOnionRecoveryView = hasRealOnionRecoveryView
     ? options.realOnionRecoveryView
     : savedInviteRoomRealOnionRecoveryView(room);
   const hasRouteReadinessView = Object.prototype.hasOwnProperty.call(options, "routeReadinessView");
   const routeReadinessView = hasRouteReadinessView
     ? options.routeReadinessView
     : savedInviteRoomRouteReadinessView(room);
+  if (
+    realOnionRecoveryView &&
+    savedInviteRoomReceiveOwnershipBlocksRecovery({
+      receiveState,
+      routeReadinessAction: routeReadinessView?.action ?? "",
+    })
+  ) {
+    realOnionRecoveryView = null;
+  }
   const view = (() => {
     if (savedInviteRoomHasRetryableOutbound(room)) {
       return savedInviteRoomRetryableState(room);
@@ -3773,13 +3791,26 @@ function savedInviteRoomListAction(room, options = {}) {
     return { action: "retry", labelKey: "retrySend", origin: "retryable-outbound" };
   }
   const hasRealOnionRecoveryView = Object.prototype.hasOwnProperty.call(options, "realOnionRecoveryView");
-  const realOnionRecovery = hasRealOnionRecoveryView
+  let realOnionRecovery = hasRealOnionRecoveryView
     ? options.realOnionRecoveryView
     : savedInviteRoomRealOnionRecoveryView(room);
+  const receiveState = options.receiveState ?? savedInviteRoomReceiveState(room);
+  const hasRouteReadinessView = Object.prototype.hasOwnProperty.call(options, "routeReadinessView");
+  const routeReadinessView = hasRouteReadinessView
+    ? options.routeReadinessView
+    : savedInviteRoomRouteReadinessView(room);
+  if (
+    realOnionRecovery &&
+    savedInviteRoomReceiveOwnershipBlocksRecovery({
+      receiveState,
+      routeReadinessAction: routeReadinessView?.action ?? "",
+    })
+  ) {
+    realOnionRecovery = null;
+  }
   if (realOnionRecovery) {
     return { action: realOnionRecovery.action, labelKey: realOnionRecovery.labelKey, origin: "real-onion-recovery" };
   }
-  const receiveState = options.receiveState ?? savedInviteRoomReceiveState(room);
   if (receiveState === "stopping") {
     return { action: "wait-receive-stop", labelKey: "receiveStopPending", origin: "receive-state" };
   }
@@ -3790,10 +3821,6 @@ function savedInviteRoomListAction(room, options = {}) {
   if (waitingPeerCode) {
     return { action: "paste-peer-code", labelKey: "roomActionPastePeerCode", origin: "peer-code" };
   }
-  const hasRouteReadinessView = Object.prototype.hasOwnProperty.call(options, "routeReadinessView");
-  const routeReadinessView = hasRouteReadinessView
-    ? options.routeReadinessView
-    : savedInviteRoomRouteReadinessView(room);
   if (routeReadinessView) {
     return { action: routeReadinessView.action, labelKey: routeReadinessView.labelKey, origin: "route-readiness" };
   }
@@ -4119,7 +4146,7 @@ function savedInviteRoomRecheckedRouteReadinessAction(action, actionOrigin, curr
 }
 
 function savedInviteRoomPreservesOpenActionOrigin(actionOrigin) {
-  return new Set(["receive-state", "peer-code", "real-onion-recovery"]).has(String(actionOrigin ?? "").trim());
+  return privateDeliveryState.savedInviteRoomPreservesOpenActionOrigin(actionOrigin);
 }
 
 function clearRouteReadinessOnlyFollowupContext(input = productionTwoProfileInput()) {
@@ -4158,7 +4185,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
   const actionOrigin = String(options.actionOrigin ?? "").trim();
   if (
     action === "start-receiving" &&
-    actionOrigin !== "retryable-outbound" &&
+    !savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin) &&
     await openSavedInviteRoomReceiveOwnerBeforeSwitch(room)
   ) {
     return true;
@@ -4167,13 +4194,12 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
   if (!opened) {
     return false;
   }
-  if (actionOrigin === "route-readiness") {
+  if (savedInviteRoomActionIsRouteReadinessOnly(actionOrigin)) {
     clearRouteReadinessOnlyFollowupContext(productionTwoProfileInput());
   }
   if (
-    actionOrigin === "retryable-outbound" &&
-    savedInviteRoomRetryableAction(action) &&
-    !retryableOutboundEntryForSavedRoomAction(room, productionTwoProfileInput(), { actionOrigin })
+    savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin) &&
+    !savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin)
   ) {
     await handleSavedInviteRoomMissingPendingAction(action);
     return true;
@@ -4183,7 +4209,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     const currentRoom = current.room;
     const currentAction = current.action;
     if (currentAction && (currentAction !== action || current.actionOrigin !== actionOrigin)) {
-      if (actionOrigin === "route-readiness") {
+      if (savedInviteRoomActionIsRouteReadinessOnly(actionOrigin)) {
         const routeRecheck = savedInviteRoomRecheckedRouteReadinessAction(action, actionOrigin, currentRoom);
         if (routeRecheck?.ready) {
           return showSavedInviteRoomActionNowReady();
@@ -4208,7 +4234,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
         : showSavedInviteRoomActionNowReady();
     }
   }
-  if (savedInviteRoomRetryOnlyAction(action) && actionOrigin !== "retryable-outbound") {
+  if (savedInviteRoomRetryOnlyWithoutRetryableOrigin(action, actionOrigin)) {
     clearRouteReadinessOnlyFollowupContext(productionTwoProfileInput());
     return showSavedInviteRoomActionNowReady();
   }
@@ -4220,7 +4246,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return true;
   }
   if (action === "review-send") {
-    const pending = retryableOutboundEntryForSavedRoomAction(room, productionTwoProfileInput(), { actionOrigin });
+    const pending = savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin);
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
@@ -4230,7 +4256,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return true;
   }
   if (action === "retry") {
-    const pending = retryableOutboundEntryForSavedRoomAction(room, productionTwoProfileInput(), { actionOrigin });
+    const pending = savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin);
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
@@ -4241,7 +4267,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return true;
   }
   if (action === "retry-network") {
-    const pending = retryableOutboundEntryForSavedRoomAction(room, productionTwoProfileInput(), { actionOrigin });
+    const pending = savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin);
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
@@ -4253,14 +4279,14 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
   }
   if (action === "enable-private-delivery") {
     const input = productionTwoProfileInput();
-    const pending = retryableOutboundEntryForSavedRoomAction(room, input, { actionOrigin });
+    const pending = savedInviteRoomResolvedRetryableOutbound(room, input, action, actionOrigin);
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
       await runTwoProfileOutboundPrimaryAction(pending);
       return true;
     }
-    if (actionOrigin === "retryable-outbound") {
+    if (savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin)) {
       await handleSavedInviteRoomMissingPendingAction(action);
       return true;
     }
@@ -4269,14 +4295,14 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
   }
   if (action === "prepare-private-route") {
     const input = productionTwoProfileInput();
-    const pending = retryableOutboundEntryForSavedRoomAction(room, input, { actionOrigin });
+    const pending = savedInviteRoomResolvedRetryableOutbound(room, input, action, actionOrigin);
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
       await runTwoProfileOutboundPrimaryAction(pending);
       return true;
     }
-    if (actionOrigin === "retryable-outbound") {
+    if (savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin)) {
       await handleSavedInviteRoomMissingPendingAction(action);
       return true;
     }
@@ -4285,14 +4311,14 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
   }
   if (action === "refresh-endpoint") {
     const input = productionTwoProfileInput();
-    const pending = retryableOutboundEntryForSavedRoomAction(room, input, { actionOrigin });
+    const pending = savedInviteRoomResolvedRetryableOutbound(room, input, action, actionOrigin);
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
       await runTwoProfileOutboundPrimaryAction(pending);
       return true;
     }
-    if (actionOrigin === "retryable-outbound") {
+    if (savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin)) {
       await handleSavedInviteRoomMissingPendingAction(action);
       return true;
     }
@@ -4301,8 +4327,8 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return true;
   }
   if (action === "verify-safety") {
-    if (actionOrigin === "retryable-outbound") {
-      const pending = retryableOutboundEntryForSavedRoomAction(room, productionTwoProfileInput(), { actionOrigin });
+    if (savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin)) {
+      const pending = savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin);
       if (pending) {
         selectTwoProfileConversationEntry(pending);
         showRetryableTwoProfileOutboundNotice(pending);
@@ -4316,7 +4342,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return true;
   }
   if (action === "refresh-and-retry") {
-    const pending = retryableOutboundEntryForSavedRoomAction(room, productionTwoProfileInput(), { actionOrigin });
+    const pending = savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin);
     if (pending) {
       selectTwoProfileConversationEntry(pending);
       showRetryableTwoProfileOutboundNotice(pending);
@@ -4327,8 +4353,8 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return true;
   }
   if (action === "start-receiving") {
-    if (actionOrigin === "retryable-outbound") {
-      const pending = retryableOutboundEntryForSavedRoomAction(room, productionTwoProfileInput(), { actionOrigin });
+    if (savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin)) {
+      const pending = savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin);
       if (pending) {
         selectTwoProfileConversationEntry(pending);
         showRetryableTwoProfileOutboundNotice(pending);
@@ -4725,12 +4751,19 @@ function savedInviteRoomListItemView(room, context = {}) {
   const resumeRoom = context.resumeRoom ?? null;
   const receiveState = savedInviteRoomReceiveState(viewRoom);
   const waitingPeerCode = savedInviteRoomWaitingForPeerCode(viewRoom);
-  const realOnionRecoveryView = savedInviteRoomHasRetryableOutbound(viewRoom)
+  const routeReadinessViewCandidate = savedInviteRoomHasRetryableOutbound(viewRoom)
+    ? null
+    : savedInviteRoomRouteReadinessView(viewRoom);
+  const receiveOwnershipBlocksRecovery = savedInviteRoomReceiveOwnershipBlocksRecovery({
+    receiveState,
+    routeReadinessAction: routeReadinessViewCandidate?.action ?? "",
+  });
+  const realOnionRecoveryView = savedInviteRoomHasRetryableOutbound(viewRoom) || receiveOwnershipBlocksRecovery
     ? null
     : savedInviteRoomRealOnionRecoveryView(viewRoom);
   const routeReadinessView = savedInviteRoomHasRetryableOutbound(viewRoom) || realOnionRecoveryView
     ? null
-    : savedInviteRoomRouteReadinessView(viewRoom);
+    : routeReadinessViewCandidate;
   const resumeRecommended = Boolean(resumeRoom && viewRoom.code === resumeRoom.code && viewRoom.role === resumeRoom.role);
   return {
     current: viewRoom.code === currentCode,
@@ -5106,14 +5139,7 @@ async function copyCurrentInviteCode(options = {}) {
 }
 
 function fieldTestReportValue(value, fallback = "unknown") {
-  const text = String(value ?? "").trim();
-  if (!text) {
-    return fallback;
-  }
-  return text
-    .replace(/[^\w .:/#=-]+/g, "-")
-    .replace(/\s+/g, " ")
-    .slice(0, 96);
+  return privateDeliveryState.fieldTestReportValue(value, fallback);
 }
 
 function latestRealOnionBootstrapDiagnostic(result) {
@@ -5123,354 +5149,103 @@ function latestRealOnionBootstrapDiagnostic(result) {
 }
 
 function fieldTestBoundarySummary(text) {
-  const source = String(text ?? "");
-  const allowedKeys = [
-    "permission",
-    "persistent_client",
-    "send_intent",
-    "started",
-    "succeeded",
-    "ack_wait",
-    "event_recorded",
-    "network_io",
-    "accept",
-    "dial",
-    "read_write",
-    "send",
-    "envelope_io",
-    "runtime",
-    "backend_enabled",
-    "worker",
-    "in_flight",
-    "attempts",
-    "message_imports",
-    "endpoint_updates",
-    "last_started",
-    "last_succeeded",
-    "last_network",
-    "failure",
-    "retryable",
-    "next",
-    "app_launch_network",
-    "raw_profile",
-    "passphrase",
-    "key_material",
-    "network",
-    "transport",
-  ];
-  const parts = [];
-  for (const key of allowedKeys) {
-    const match = source.match(new RegExp(`(?:^|\\s)${key}=([^\\s;]+)`));
-    if (match) {
-      parts.push(`${key}=${fieldTestReportValue(match[1])}`);
-    }
-  }
-  return parts.length > 0 ? parts.join(" ") : "none";
+  return privateDeliveryState.fieldTestBoundarySummary(text);
 }
 
 function fieldTestBoundaryValue(text, key, fallback = "none") {
-  const match = String(text ?? "").match(new RegExp(`(?:^|\\s)${key}=([^\\s;]+)`));
-  return match ? fieldTestReportValue(match[1], fallback) : fallback;
+  return privateDeliveryState.fieldTestBoundaryValue(text, key, fallback);
 }
 
 function parseFieldTestReport(report) {
-  const fields = {};
-  for (const line of String(report ?? "").split(/\r?\n/)) {
-    const match = line.match(/^([a-z0-9_]+)=(.*)$/i);
-    if (match) {
-      fields[match[1]] = match[2];
-    }
-  }
-  return fields;
+  return privateDeliveryState.parseFieldTestReport(report);
 }
 
 function fieldTestRouteReadinessBlocked(parsed) {
-  return (
-    parsed.route_readiness_ready !== "true" &&
-    parsed.route_readiness_failure_kind &&
-    parsed.route_readiness_failure_kind !== "none"
-  );
+  return privateDeliveryState.fieldTestRouteReadinessBlocked(parsed);
 }
 
 function fieldTestBlockedRouteReadinessAction(parsed) {
-  return parsed.route_readiness_ready !== "true" &&
-    parsed.route_readiness_next_action &&
-    parsed.route_readiness_next_action !== "none"
-    ? parsed.route_readiness_next_action
-    : "";
+  return privateDeliveryState.fieldTestBlockedRouteReadinessAction(parsed);
 }
 
 function fieldTestReceiveAwareRecoveryAction(action, parsed) {
-  if (
-    action === "start-receiving" &&
-    (parsed.route_readiness_failure_kind === "LocalOnionEndpointStopping" ||
-      parsed.receive_stop_requested === "true")
-  ) {
-    return "wait-receive-stop";
-  }
-  return action;
+  return privateDeliveryState.fieldTestReceiveAwareRecoveryAction(action, parsed);
 }
 
 function fieldTestRouteReadinessRecoveryAction(parsed) {
-  return fieldTestReceiveAwareRecoveryAction(fieldTestBlockedRouteReadinessAction(parsed), parsed);
+  return privateDeliveryState.fieldTestRouteReadinessRecoveryAction(parsed);
 }
 
 function fieldTestReportHasSavedRoomContext(parsed) {
-  return (
-    fieldTestReportValue(parsed.room_list_state_key, "none") !== "none" ||
-    fieldTestReportValue(parsed.room_list_next_action, "none") !== "none" ||
-    fieldTestReportValue(parsed.room_list_next_origin, "none") !== "none"
-  );
+  return privateDeliveryState.fieldTestReportHasSavedRoomContext(parsed);
 }
 
 function fieldTestReportStandaloneOutboundRecoveryAction(parsed) {
-  const action = fieldTestReportValue(parsed.outbound_recovery_action, "none");
-  return action !== "none" && !fieldTestReportHasSavedRoomContext(parsed)
-    ? fieldTestReceiveAwareRecoveryAction(action, parsed)
-    : "";
+  return privateDeliveryState.fieldTestReportStandaloneOutboundRecoveryAction(parsed);
 }
 
 function fieldTestReportRoomListAction(parsed) {
-  const action = fieldTestReportValue(parsed.room_list_next_action, "none");
-  if (action === "none") {
-    return "";
-  }
-  const origin = fieldTestReportValue(parsed.room_list_next_origin, "none");
-  return savedInviteRoomRetryOnlyAction(action) && origin !== "retryable-outbound"
-    ? ""
-    : action;
+  return privateDeliveryState.fieldTestReportRoomListAction(parsed);
 }
 
 function fieldTestReportOutboundFailureClass(parsed) {
-  const failureClass = fieldTestReportValue(parsed.outbound_failure_class, "none");
-  if (failureClass === "none") {
-    return "";
-  }
-  if (!fieldTestReportHasSavedRoomContext(parsed)) {
-    return failureClass;
-  }
-  return (
-    fieldTestReportValue(parsed.room_list_next_origin, "none") === "retryable-outbound" &&
-    parsed.retryable_outbound_present === "true"
-  )
-    ? failureClass
-    : "";
+  return privateDeliveryState.fieldTestReportOutboundFailureClass(parsed);
 }
 
 function fieldTestReportBlocker(parsed) {
-  if (fieldTestRouteReadinessBlocked(parsed)) {
-    return parsed.route_readiness_failure_kind;
-  }
-  if (parsed.real_onion_next_blocker && parsed.real_onion_next_blocker !== "none") {
-    return parsed.real_onion_next_blocker;
-  }
-  if (parsed.receive_failure_kind && parsed.receive_failure_kind !== "none") {
-    return parsed.receive_failure_kind;
-  }
-  const outboundFailureClass = fieldTestReportOutboundFailureClass(parsed);
-  if (outboundFailureClass) {
-    return outboundFailureClass;
-  }
-  return "none";
+  return privateDeliveryState.fieldTestReportBlocker(parsed);
 }
 
 function fieldTestExternalOnionDelivered(parsed) {
-  return (
-    parsed.real_onion_external_peer_delivery_confirmed === "true" &&
-    parsed.real_onion_local_dev_roundtrip_result !== "true"
-  );
+  return privateDeliveryState.fieldTestExternalOnionDelivered(parsed);
 }
 
 function fieldTestReportReceiveValue(parsed) {
-  if (parsed.receive_stop_requested === "true") {
-    return "receive-stopping";
-  }
-  if (
-    Object.prototype.hasOwnProperty.call(parsed, "receive_owner_current_room") &&
-    parsed.receive_owner_current_room !== "true"
-  ) {
-    return "receive-off";
-  }
-  return parsed.receive_enabled === "true"
-    ? `receive-${fieldTestReportValue(parsed.receive_state, "unknown")}`
-    : "receive-off";
+  return privateDeliveryState.fieldTestReportReceiveValue(parsed);
 }
 
 function fieldTestReportNextActionValue(parsed) {
-  if (parsed.room_present !== "true" || parsed.session_ready !== "true") {
-    return "check-session";
-  }
-  if (parsed.safety_confirmed !== "true") {
-    return "verify";
-  }
-  const routeReadinessAction = fieldTestRouteReadinessRecoveryAction(parsed);
-  const roomListAction = fieldTestReportRoomListAction(parsed);
-  if (roomListAction) {
-    if (parsed.room_list_next_origin !== "retryable-outbound" && routeReadinessAction) {
-      return routeReadinessAction;
-    }
-    return fieldTestReceiveAwareRecoveryAction(roomListAction, parsed);
-  }
-  if (routeReadinessAction) {
-    return routeReadinessAction;
-  }
-  const outboundRecoveryAction = fieldTestReportStandaloneOutboundRecoveryAction(parsed);
-  if (outboundRecoveryAction) {
-    return outboundRecoveryAction;
-  }
-  if (parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none") {
-    return parsed.real_onion_recovery_action;
-  }
-  return "none";
+  return privateDeliveryState.fieldTestReportNextActionValue(parsed);
 }
 
 function fieldTestReportSummary(report) {
-  const parsed = parseFieldTestReport(report);
-  const room = parsed.room_present === "true" ? "room" : "no-room";
-  const safety = parsed.safety_confirmed === "true" ? "verified" : "unverified";
-  const externalOnionDelivered = fieldTestExternalOnionDelivered(parsed);
-  const routeReadinessBlocked = fieldTestRouteReadinessBlocked(parsed);
-  const delivery =
-    externalOnionDelivered
-      ? routeReadinessBlocked
-        ? "external-onion-delivered-current-route-blocked"
-        : "external-onion-delivered"
-      : parsed.real_onion_local_dev_roundtrip_result === "true"
-        ? "local-dev-roundtrip"
-        : "external-delivery-unconfirmed";
-  const route = parsed.route_stale === "true"
-    ? "route-stale"
-    : parsed.route_ready === "true"
-      ? "route-ready"
-      : "route-missing";
-  const receive = fieldTestReportReceiveValue(parsed);
-  const nextAction = fieldTestReportNextActionValue(parsed);
-  const blocker = fieldTestReportBlocker(parsed);
-  return `summary ${room} ${safety} ${delivery} ${route} ${receive} next=${fieldTestReportValue(nextAction, "none")} blocker=${fieldTestReportValue(blocker, "none")}`;
+  return privateDeliveryState.fieldTestReportSummary(report);
 }
 
 function fieldTestReportTriageState(report) {
-  const parsed = parseFieldTestReport(report);
-  return {
-    appVersion: fieldTestReportValue(parsed.app_version, "unknown"),
-    buildChannel: fieldTestReportValue(parsed.build_channel, "unknown"),
-    buildCommit: fieldTestReportValue(parsed.build_commit, "unknown"),
-    room: parsed.room_present === "true" ? "room" : "no-room",
-    safety: parsed.safety_confirmed === "true" ? "verified" : "unverified",
-    delivery:
-      fieldTestExternalOnionDelivered(parsed)
-        ? "external-onion-delivered"
-        : parsed.real_onion_local_dev_roundtrip_result === "true"
-          ? "local-dev-roundtrip"
-          : "external-delivery-unconfirmed",
-    route: parsed.route_stale === "true"
-      ? "route-stale"
-      : parsed.route_ready === "true"
-        ? "route-ready"
-        : "route-missing",
-    receive: fieldTestReportReceiveValue(parsed),
-    next: fieldTestReportNextActionValue(parsed),
-    blocker: fieldTestReportBlocker(parsed),
-  };
+  return privateDeliveryState.fieldTestReportTriageState(report);
 }
 
-const FIELD_TEST_REPORT_HARD_COMPARE_KEYS = Object.freeze([
-  "appVersion",
-  "buildChannel",
-  "buildCommit",
-  "room",
-  "safety",
-  "delivery",
-]);
-
-const FIELD_TEST_REPORT_LOCAL_STATE_COMPARE_KEYS = Object.freeze([
-  "route",
-  "receive",
-  "next",
-  "blocker",
-]);
-
 function fieldTestReportComparison(localReport, peerReport) {
-  if (!String(peerReport ?? "").trim()) {
-    return "";
-  }
-  const local = fieldTestReportTriageState(localReport);
-  const peer = fieldTestReportTriageState(peerReport);
-  const mismatches = [];
-  for (const key of FIELD_TEST_REPORT_HARD_COMPARE_KEYS) {
-    if (local[key] !== peer[key]) {
-      mismatches.push(`${key}:${fieldTestReportValue(local[key], "none")}!=${fieldTestReportValue(peer[key], "none")}`);
-    }
-  }
-  const localStateDiffs = [];
-  for (const key of FIELD_TEST_REPORT_LOCAL_STATE_COMPARE_KEYS) {
-    if (local[key] !== peer[key]) {
-      localStateDiffs.push(`${key}:${fieldTestReportValue(local[key], "none")}!=${fieldTestReportValue(peer[key], "none")}`);
-    }
-  }
-  const localStateSummary = localStateDiffs.length > 0 ? ` local_state ${localStateDiffs.join(" ")}` : "";
-  return mismatches.length > 0
-    ? `compare ${mismatches.join(" ")}${localStateSummary}`
-    : `compare reports-aligned${localStateSummary}`;
+  return privateDeliveryState.fieldTestReportComparison(localReport, peerReport);
 }
 
 function fieldTestReportsAligned(localReport, peerReport) {
-  const comparison = fieldTestReportComparison(localReport, peerReport);
-  return !comparison || comparison.startsWith("compare reports-aligned");
+  return privateDeliveryState.fieldTestReportsAligned(localReport, peerReport);
 }
 
 function fieldTestActionRequiresLocalRecovery(key) {
-  return new Set([
-    "fieldTestNextDifferentNetwork",
-    "fieldTestNextEnablePrivateDelivery",
-    "fieldTestNextInspectDiagnostics",
-    "fieldTestNextOpenRoom",
-    "fieldTestNextPrepareNetworkOrBridge",
-    "fieldTestNextRefreshBridge",
-    "fieldTestNextRefreshBridgeTransport",
-    "fieldTestNextRetryDelivery",
-    "fieldTestNextRetryNetwork",
-    "fieldTestNextSetupRoute",
-    "fieldTestNextStartReceive",
-    "fieldTestNextVerifySafety",
-    "fieldTestNextWaitReceiveStop",
-  ]).has(key);
+  return privateDeliveryState.fieldTestActionRequiresLocalRecovery(key);
 }
 
 function fieldTestPeerLocalStateNextActionKey(localReport, peerReport) {
-  if (!String(peerReport ?? "").trim() || !fieldTestReportsAligned(localReport, peerReport)) {
-    return "";
-  }
-  const localNextActionKey = fieldTestNextActionKey(localReport, "");
-  if (fieldTestActionRequiresLocalRecovery(localNextActionKey)) {
-    return "";
-  }
-  const peerNextActionKey = fieldTestNextActionKey(peerReport, "");
-  return fieldTestActionRequiresLocalRecovery(peerNextActionKey) ? peerNextActionKey : "";
+  return privateDeliveryState.fieldTestPeerLocalStateNextActionKey(
+    localReport,
+    peerReport,
+    fieldTestNextActionKey,
+  );
 }
 
 function fieldTestReportRecoveryActionForNextKey(report, nextActionKey) {
-  return fieldTestActionRequiresLocalRecovery(nextActionKey)
-    ? fieldTestReportNextActionValue(parseFieldTestReport(report))
-    : "";
+  return privateDeliveryState.fieldTestReportRecoveryActionForNextKey(report, nextActionKey);
 }
 
 function fieldTestReportComposerAction(report) {
-  const action = fieldTestReportValue(parseFieldTestReport(report).composer_next_action, "none");
-  return action === "write-message" || action === "send-message" ? action : "";
+  return privateDeliveryState.fieldTestReportComposerAction(report);
 }
 
 function fieldTestBuildIdentityMatches(localReport, peerReport) {
-  if (!String(peerReport ?? "").trim()) {
-    return null;
-  }
-  const local = fieldTestReportTriageState(localReport);
-  const peer = fieldTestReportTriageState(peerReport);
-  return (
-    local.appVersion === peer.appVersion &&
-    local.buildChannel === peer.buildChannel &&
-    local.buildCommit === peer.buildCommit
-  );
+  return privateDeliveryState.fieldTestBuildIdentityMatches(localReport, peerReport);
 }
 
 function fieldTestMessagesChecklistStatus({
@@ -5479,13 +5254,12 @@ function fieldTestMessagesChecklistStatus({
   sentRows,
   receivedRows,
 }) {
-  if (externalOnionDelivered) {
-    return routeReadinessBlocked ? "check" : "done";
-  }
-  if (sentRows > 0 && receivedRows > 0) {
-    return "done";
-  }
-  return sentRows > 0 ? "check" : "pending";
+  return privateDeliveryState.fieldTestMessagesChecklistStatus({
+    externalOnionDelivered,
+    routeReadinessBlocked,
+    sentRows,
+    receivedRows,
+  });
 }
 
 function fieldTestReportChecklistStatus({
@@ -5495,19 +5269,13 @@ function fieldTestReportChecklistStatus({
   realOnionRecoveryAction,
   realOnionRetryable,
 }) {
-  if (externalOnionDelivered) {
-    return "done";
-  }
-  if (routeReadinessBlocked) {
-    return "pending";
-  }
-  if (!realOnionAttempted) {
-    return "pending";
-  }
-  if (realOnionRecoveryAction && realOnionRecoveryAction !== "none") {
-    return "check";
-  }
-  return realOnionRetryable ? "check" : "done";
+  return privateDeliveryState.fieldTestReportChecklistStatus({
+    externalOnionDelivered,
+    routeReadinessBlocked,
+    realOnionAttempted,
+    realOnionRecoveryAction,
+    realOnionRetryable,
+  });
 }
 
 function fieldTestRouteChecklistStatus({
@@ -5515,13 +5283,11 @@ function fieldTestRouteChecklistStatus({
   routeStale,
   routeReadinessAction,
 }) {
-  if (routeReadinessAction === "refresh-endpoint") {
-    return routeStale ? "check" : "pending";
-  }
-  if (routeReady && !routeStale) {
-    return "done";
-  }
-  return routeStale ? "check" : "pending";
+  return privateDeliveryState.fieldTestRouteChecklistStatus({
+    routeReady,
+    routeStale,
+    routeReadinessAction,
+  });
 }
 
 function fieldTestReceiveChecklistStatus({
@@ -5531,13 +5297,13 @@ function fieldTestReceiveChecklistStatus({
   routeReadinessAction,
   routeReadinessFailureKind,
 }) {
-  if (receiveStopRequested) {
-    return "check";
-  }
-  if (routeReadinessAction === "start-receiving") {
-    return routeReadinessFailureKind === "RuntimeOwnerProfileMismatch" ? "check" : "pending";
-  }
-  return receiveEnabled && receiveState !== "stopped" ? "done" : "pending";
+  return privateDeliveryState.fieldTestReceiveChecklistStatus({
+    receiveEnabled,
+    receiveState,
+    receiveStopRequested,
+    routeReadinessAction,
+    routeReadinessFailureKind,
+  });
 }
 
 function fieldTestChecklistItems(report, peerReport = "") {
@@ -5831,7 +5597,7 @@ function fieldTestReportCopyPayload(report) {
 }
 
 function realOnionResultConfirmsExternalPeerDelivery(result) {
-  return result?.external_peer_delivery_confirmed === true && result?.local_dev_roundtrip_result !== true;
+  return privateDeliveryState.realOnionResultConfirmsExternalPeerDelivery(result);
 }
 
 function rememberRealOnionFieldTestResult(roomInput, result) {
@@ -6305,10 +6071,13 @@ function fieldTestReceiveModeSnapshot(input = productionTwoProfileInput()) {
 }
 
 function fieldTestRetryableOutboundEntry(input, currentSavedRoom) {
-  if (currentSavedRoom?.actionOrigin === "retryable-outbound") {
-    return retryableOutboundEntryForSavedRoomAction(currentSavedRoom.room, input, {
-      actionOrigin: currentSavedRoom.actionOrigin,
-    });
+  if (savedInviteRoomActionCanUseRetryableOutbound(currentSavedRoom?.action, currentSavedRoom?.actionOrigin)) {
+    return savedInviteRoomResolvedRetryableOutbound(
+      currentSavedRoom.room,
+      input,
+      currentSavedRoom.action,
+      currentSavedRoom.actionOrigin,
+    );
   }
   if (currentSavedRoom?.room) {
     return null;
@@ -6317,7 +6086,7 @@ function fieldTestRetryableOutboundEntry(input, currentSavedRoom) {
 }
 
 function fieldTestRoomListNextAction(currentSavedRoom, outboundRecoveryAction, retryableOutbound) {
-  if (currentSavedRoom?.actionOrigin === "retryable-outbound") {
+  if (savedInviteRoomActionCanUseRetryableOutbound(currentSavedRoom?.action, currentSavedRoom?.actionOrigin)) {
     return retryableOutbound ? outboundRecoveryAction : "none";
   }
   if (currentSavedRoom?.action) {
@@ -6374,6 +6143,8 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     ? realOnionResult.blockers.join("#")
     : "none";
   const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(realOnionResult);
+  const realOnionExternalPeerDeliveryConfirmed =
+    realOnionResultConfirmsExternalPeerDelivery(realOnionResult);
   const realOnionWaitCancelled = realOnionWaitCanceledForInput(input);
   const deliveryNoticeCurrentRoom = latestChatDeliveryNoticeKey
     ? chatDeliveryNoticeMatchesInput(input)
@@ -6458,7 +6229,7 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `real_onion_bootstrap_diagnostic=${fieldTestReportValue(latestRealOnionBootstrapDiagnostic(realOnionResult), "none")}`,
     `real_onion_profile_a_bootstrap_reused=${realOnionResult?.profile_a_bootstrap_reused === true}`,
     `real_onion_profile_b_bootstrap_reused=${realOnionResult?.profile_b_bootstrap_reused === true}`,
-    `real_onion_external_peer_delivery_confirmed=${realOnionResult?.external_peer_delivery_confirmed === true}`,
+    `real_onion_external_peer_delivery_confirmed=${realOnionExternalPeerDeliveryConfirmed}`,
     `real_onion_local_dev_roundtrip_result=${realOnionResult?.local_dev_roundtrip_result === true}`,
     `room_runtime_promoted_from_real_onion_cache=${fieldTestBoundaryValue(boundaryText, "promoted_cache") === "true"}`,
     `room_runtime_owner_profile_bound=${fieldTestBoundaryValue(boundaryText, "owner_profile_bound") === "true"}`,
@@ -8075,10 +7846,9 @@ function latestTwoProfileOutboundDeliveryCandidate(input = productionTwoProfileI
         messageNumber: retryableEntry.messageNumber,
         roomFingerprint: retryableEntry.roomFingerprint,
       }
-    : latestProductionTwoProfileSuccess;
+    : null;
   if (
     !latest ||
-    (!retryableEntry && latest.roomFingerprint !== twoProfileSessionStatusFingerprint(input)) ||
     (targetRequested && Number.parseInt(latest.messageNumber, 10) !== targetMessageNumber) ||
     latest.profileA !== input.profileA ||
     latest.profileB !== input.profileB ||
@@ -8087,43 +7857,7 @@ function latestTwoProfileOutboundDeliveryCandidate(input = productionTwoProfileI
   ) {
     return null;
   }
-  if (!retryableEntry && twoProfileOutboundDeliveryCandidateSettled(latest)) {
-    return null;
-  }
   return latest;
-}
-
-function twoProfileOutboundDeliveryCandidateSettled(candidate) {
-  const entry = twoProfileConversationEntryForOutboundCandidate(candidate);
-  return Boolean(
-    entry &&
-      !twoProfileConversationOutboundRetryable(entry) &&
-      (entry.statuses?.has("received") ||
-        entry.outboundDeliveryState === "sent" ||
-        entry.outboundDeliveryState === "canceled"),
-  );
-}
-
-function twoProfileConversationEntryForOutboundCandidate(candidate) {
-  if (!candidate) {
-    return null;
-  }
-  const messageNumber = Number.parseInt(candidate.messageNumber, 10);
-  if (!Number.isInteger(messageNumber) || messageNumber < 1) {
-    return null;
-  }
-  const sender = String(candidate.profileA ?? "").trim().toLowerCase();
-  const receiver = String(candidate.profileB ?? "").trim().toLowerCase();
-  const roomFingerprint = String(candidate.roomFingerprint ?? "").trim();
-  return (
-    [...productionTwoProfileConversationEntries.values()].find(
-      (entry) =>
-        (!roomFingerprint || String(entry.roomFingerprint ?? "").trim() === roomFingerprint) &&
-        entry.sender === sender &&
-        entry.receiver === receiver &&
-        Number.parseInt(entry.messageNumber, 10) === messageNumber,
-    ) ?? null
-  );
 }
 
 function latestTwoProfileOutboundOnionMessage(input = productionTwoProfileInput(), options = {}) {
@@ -15274,14 +15008,6 @@ async function retryTwoProfileOutboundEntry(entry) {
   setProductionTwoProfileState("Retry send running");
   setText(fields.productionTwoProfileWarning, t("sendRetrying"));
   setChatDeliveryNoticeByKey("sendRetrying", "progress", input);
-  latestProductionTwoProfileSuccess = {
-    profileA: currentEntry.sender,
-    profileB: currentEntry.receiver,
-    messageNumber: Number.parseInt(currentEntry.messageNumber, 10),
-    messageLength: String(currentEntry.message ?? "").length,
-    roomFingerprint: twoProfileSessionStatusFingerprint(input),
-    fingerprint: twoProfileInputFingerprint(input),
-  };
   await sendProductionTwoProfileLatestOnionEnvelope(input, {
     exactRetryOnly: true,
     message: currentEntry.message,
@@ -16298,7 +16024,11 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       result.second_message_number || result.message_number,
       10,
     );
-    if (Number.isInteger(latestRoundtripMessageNumber) && latestRoundtripMessageNumber > 0) {
+    if (
+      realOnionResultConfirmsExternalPeerDelivery(result) &&
+      Number.isInteger(latestRoundtripMessageNumber) &&
+      latestRoundtripMessageNumber > 0
+    ) {
       latestProductionTwoProfileSuccess = {
         profileA: result.sender_profile || profileA,
         profileB: result.receiver_profile || profileB,
