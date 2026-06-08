@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   fieldTestReportComposerAction,
   fieldTestReportNextActionValue,
+  fieldTestReportResolvedRoomListAction,
   fieldTestReportRoomListAction,
   fieldTestReportSummary,
   fieldTestReportTriageState,
@@ -16,8 +17,10 @@ import {
 test("saved room retryable actions require retryable outbound origin", () => {
   assert.equal(savedInviteRoomActionCanUseRetryableOutbound("retry", "retryable-outbound"), true);
   assert.equal(savedInviteRoomActionCanUseRetryableOutbound("start-receiving", "retryable-outbound"), true);
+  assert.equal(savedInviteRoomActionCanUseRetryableOutbound("wait-receive-stop", "retryable-outbound"), true);
   assert.equal(savedInviteRoomActionCanUseRetryableOutbound("retry", "route-readiness"), false);
   assert.equal(savedInviteRoomActionCanUseRetryableOutbound("start-receiving", "receive-state"), false);
+  assert.equal(savedInviteRoomActionCanUseRetryableOutbound("wait-receive-stop", "receive-state"), false);
   assert.equal(savedInviteRoomRetryOnlyWithoutRetryableOrigin("retry-network", "route-readiness"), true);
 });
 
@@ -54,6 +57,45 @@ test("field test summary reports receive recovery before stale real onion room a
   assert.equal(fieldTestReportRoomListAction(parsed), "real-onion-retry");
   assert.equal(fieldTestReportNextActionValue(parsed), "start-receiving");
   assert.match(fieldTestReportSummary(report), /next=start-receiving/);
+});
+
+test("field test summary maps receive owner mismatch to stop receiving", () => {
+  const report = [
+    "room_present=true",
+    "session_ready=true",
+    "safety_confirmed=true",
+    "room_list_next_action=start-receiving",
+    "room_list_next_origin=route-readiness",
+    "route_readiness_ready=false",
+    "route_readiness_next_action=start-receiving",
+    "route_readiness_failure_kind=RuntimeOwnerProfileMismatch",
+    "receive_enabled=true",
+    "receive_stop_requested=false",
+    "real_onion_recovery_action=retry-bootstrap",
+  ].join("\n");
+  const parsed = parseFieldTestReport(report);
+
+  assert.equal(fieldTestReportNextActionValue(parsed), "stop-receiving");
+  assert.match(fieldTestReportSummary(report), /next=stop-receiving/);
+});
+
+test("field test summary resolves real onion saved room action to recovery action", () => {
+  const report = [
+    "room_present=true",
+    "session_ready=true",
+    "safety_confirmed=true",
+    "room_list_next_action=real-onion-retry",
+    "room_list_next_origin=real-onion-recovery",
+    "route_readiness_ready=true",
+    "route_readiness_next_action=none",
+    "real_onion_recovery_action=retry-bootstrap",
+  ].join("\n");
+  const parsed = parseFieldTestReport(report);
+
+  assert.equal(fieldTestReportRoomListAction(parsed), "real-onion-retry");
+  assert.equal(fieldTestReportResolvedRoomListAction(parsed), "retry-bootstrap");
+  assert.equal(fieldTestReportNextActionValue(parsed), "retry-bootstrap");
+  assert.match(fieldTestReportSummary(report), /next=retry-bootstrap/);
 });
 
 test("local dev roundtrip never counts as external onion delivery", () => {

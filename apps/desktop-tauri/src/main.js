@@ -1860,6 +1860,14 @@ function currentTwoProfileOutboundPrimaryAction(entry, input = productionTwoProf
       };
     }
     if (routeReadiness.nextAction === "start-receiving") {
+      if (routeReadinessReceiveRuntimeMismatch(routeReadiness)) {
+        return {
+          action: "stop-receiving",
+          labelKey: "stopReceiving",
+          noticeKey: "receiveRuntimeMismatch",
+          recoveryKey: "sendRecoveryRuntimeMismatch",
+        };
+      }
       if (routeReadinessReceiveStopPending(routeReadiness)) {
         return {
           action: "wait-receive-stop",
@@ -2116,6 +2124,12 @@ async function runTwoProfileOutboundPrimaryAction(entry) {
     showSavedInviteRoomReceiveStopPending();
     return;
   }
+  if (resolvedPrimaryAction.action === "stop-receiving") {
+    selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
+    rememberPrivateRouteFollowupForOutboundRetry(resolvedEntry);
+    stopProductionTwoProfileOnionReceive();
+    return;
+  }
   if (resolvedPrimaryAction.action === "verify") {
     selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
     focusSafetyConfirmation();
@@ -2139,7 +2153,11 @@ function outboundRecoveryClass(primaryAction, statusLabel = "") {
   if (primaryAction?.action === "enable-private-delivery") {
     return "is-permission-needed";
   }
-  if (primaryAction?.action === "start-receiving" || status === "receive stopped") {
+  if (
+    primaryAction?.action === "start-receiving" ||
+    primaryAction?.action === "stop-receiving" ||
+    status === "receive stopped"
+  ) {
     return "is-route-needed";
   }
   if (primaryAction?.action === "wait-receive-stop") {
@@ -2170,6 +2188,9 @@ function outboundRecoveryReasonKey(primaryAction, statusLabel = "") {
   }
   if (primaryAction?.action === "enable-private-delivery") {
     return "sendReasonPermissionOff";
+  }
+  if (primaryAction?.action === "stop-receiving") {
+    return "sendReasonRuntimeMismatch";
   }
   if (primaryAction?.action === "start-receiving" || status === "receive stopped") {
     return "sendReasonStartReceiving";
@@ -3210,6 +3231,10 @@ function normalizedSavedRoomRetryableAction(count, value) {
   return count > 0 ? savedInviteRoomRetryableAction(value) : "";
 }
 
+function normalizedSavedRoomRetryableMessage(count, value) {
+  return count > 0 ? String(value ?? "").trim() : "";
+}
+
 function savedInviteRooms() {
   let rooms = [];
   try {
@@ -3229,6 +3254,10 @@ function savedInviteRooms() {
             retryableOutboundMessageNumber: normalizedSavedRoomRetryableMessageNumber(
               retryableOutboundCount,
               room?.retryableOutboundMessageNumber,
+            ),
+            retryableOutboundMessage: normalizedSavedRoomRetryableMessage(
+              retryableOutboundCount,
+              room?.retryableOutboundMessage,
             ),
             retryableOutboundAction: normalizedSavedRoomRetryableAction(
               retryableOutboundCount,
@@ -3255,6 +3284,7 @@ function savedInviteRooms() {
         messageCount: 0,
         retryableOutboundCount: 0,
         retryableOutboundMessageNumber: 0,
+        retryableOutboundMessage: "",
         retryableOutboundAction: "",
       });
     }
@@ -3278,6 +3308,10 @@ function roomListStoragePayload(rooms) {
       retryableOutboundMessageNumber: normalizedSavedRoomRetryableMessageNumber(
         retryableOutboundCount,
         room.retryableOutboundMessageNumber,
+      ),
+      retryableOutboundMessage: normalizedSavedRoomRetryableMessage(
+        retryableOutboundCount,
+        room.retryableOutboundMessage,
       ),
       retryableOutboundAction: normalizedSavedRoomRetryableAction(
         retryableOutboundCount,
@@ -3328,6 +3362,10 @@ function rememberInviteRoom(code, role, metadata = {}, options = {}) {
     retryableOutboundMessageNumber: normalizedSavedRoomRetryableMessageNumber(
       retryableOutboundCount,
       inviteRoomMetadataValue(metadata, existing, "retryableOutboundMessageNumber"),
+    ),
+    retryableOutboundMessage: normalizedSavedRoomRetryableMessage(
+      retryableOutboundCount,
+      inviteRoomMetadataValue(metadata, existing, "retryableOutboundMessage"),
     ),
     retryableOutboundAction: normalizedSavedRoomRetryableAction(
       retryableOutboundCount,
@@ -3471,16 +3509,20 @@ function retryableOutboundEntryForSavedRoomAction(room, input = productionTwoPro
   if (messageNumber <= 0) {
     return null;
   }
-  return (
-    [...productionTwoProfileConversationEntries.values()].find(
-      (entry) =>
-        String(entry.roomFingerprint ?? "").trim() === twoProfileSessionStatusFingerprint(input) &&
-        String(entry.sender ?? "").trim().toLowerCase() === String(input.profileA ?? "").trim().toLowerCase() &&
-        String(entry.receiver ?? "").trim().toLowerCase() === String(input.profileB ?? "").trim().toLowerCase() &&
-        Number.parseInt(entry.messageNumber, 10) === messageNumber &&
-        twoProfileConversationOutboundRetryable(entry),
-    ) ?? null
+  const retryableMatches = [...productionTwoProfileConversationEntries.values()].filter(
+    (entry) =>
+      String(entry.roomFingerprint ?? "").trim() === twoProfileSessionStatusFingerprint(input) &&
+      String(entry.sender ?? "").trim().toLowerCase() === String(input.profileA ?? "").trim().toLowerCase() &&
+      String(entry.receiver ?? "").trim().toLowerCase() === String(input.profileB ?? "").trim().toLowerCase() &&
+      Number.parseInt(entry.messageNumber, 10) === messageNumber &&
+      entry.outboundDeliveryState === "failed" &&
+      twoProfileConversationOutboundRetryable(entry),
   );
+  const savedMessage = String(room?.retryableOutboundMessage ?? "").trim();
+  if (savedMessage) {
+    return retryableMatches.find((entry) => String(entry.message ?? "").trim() === savedMessage) ?? null;
+  }
+  return retryableMatches[0] ?? null;
 }
 
 function savedInviteRoomRetryableAction(action) {
@@ -3522,6 +3564,9 @@ function savedInviteRoomRetryableState(room) {
   }
   if (action === "start-receiving") {
     return { key: "receive-paused", label: t("roomStateReceivePaused") };
+  }
+  if (action === "wait-receive-stop") {
+    return { key: "receive-stopping", label: t("roomReceivingStopping") };
   }
   if (action === "retry-network") {
     return { key: "retry-network", label: t("retryNetwork") };
@@ -3627,6 +3672,13 @@ function savedInviteRoomRouteReadinessView(room) {
     };
   }
   if (readiness.nextAction === "start-receiving") {
+    if (routeReadinessReceiveRuntimeMismatch(readiness)) {
+      return {
+        action: "stop-receiving",
+        labelKey: "stopReceiving",
+        state: { key: "receive-mismatch", label: t("roomReceivingMismatch") },
+      };
+    }
     if (routeReadinessReceiveStopPending(readiness)) {
       return {
         action: "wait-receive-stop",
@@ -3669,6 +3721,9 @@ function savedInviteRoomResumePriority(room) {
   if (routeReadinessView?.action === "wait-receive-stop") {
     return 19;
   }
+  if (routeReadinessView) {
+    return 24;
+  }
   if (
     !savedInviteRoomReceiveOwnershipBlocksRecovery({
       receiveState,
@@ -3680,9 +3735,6 @@ function savedInviteRoomResumePriority(room) {
   }
   if (savedInviteRoomWaitingForPeerCode(viewRoom)) {
     return 18;
-  }
-  if (routeReadinessView) {
-    return 15;
   }
   return 0;
 }
@@ -3782,6 +3834,9 @@ function savedInviteRoomListAction(room, options = {}) {
     if (action === "start-receiving") {
       return { action, labelKey: "startReceiving", origin: "retryable-outbound" };
     }
+    if (action === "wait-receive-stop") {
+      return { action, labelKey: "receiveStopPending", origin: "retryable-outbound" };
+    }
     if (action === "retry-network") {
       return { action, labelKey: "retryNetwork", origin: "retryable-outbound" };
     }
@@ -3866,6 +3921,24 @@ async function handleSavedInviteRoomMissingPendingAction(action) {
     return true;
   }
   fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
+  return true;
+}
+
+async function runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin, options = {}) {
+  if (!savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin)) {
+    return false;
+  }
+  const pending = savedInviteRoomResolvedRetryableOutbound(room, input, action, actionOrigin);
+  if (!pending) {
+    await handleSavedInviteRoomMissingPendingAction(action);
+    return true;
+  }
+  selectTwoProfileConversationEntry(pending);
+  showRetryableTwoProfileOutboundNotice(pending);
+  if (options.reviewOnly === true) {
+    return true;
+  }
+  await runTwoProfileOutboundPrimaryAction(pending);
   return true;
 }
 
@@ -4054,6 +4127,16 @@ function showRealOnionRouteReadinessBlock(readiness, input = productionTwoProfil
     return true;
   }
   if (readiness?.nextAction === "start-receiving") {
+    if (routeReadinessReceiveRuntimeMismatch(readiness)) {
+      setProductionFollowupActions(
+        true,
+        currentLanguage === "ko"
+          ? "다음: 현재 받기를 중지한 뒤 이 채팅방에서 메시지 받기를 다시 시작하세요."
+          : "Next: stop the current receiver, then start receiving again in this room.",
+      );
+      fields.stopProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
+      return true;
+    }
     if (receiveStopPending) {
       setProductionFollowupActions(
         true,
@@ -4086,6 +4169,7 @@ function savedInviteRoomActionRechecksAfterOpen(action) {
       "retry",
       "retry-network",
       "start-receiving",
+      "stop-receiving",
       "wait-receive-stop",
       "verify-safety",
     ]).has(normalized)
@@ -4100,6 +4184,50 @@ function showSavedInviteRoomActionNowReady() {
   setChatDeliveryNoticeByKey("inviteRoomReadyAfterSessionCode", "success", productionTwoProfileInput());
   fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
   return true;
+}
+
+function showSavedInviteRoomRecoveryAfterOpen(input = productionTwoProfileInput()) {
+  const current = currentSavedInviteRoomView(input);
+  if (!current.action) {
+    return false;
+  }
+  if (savedInviteRoomActionCanUseRetryableOutbound(current.action, current.actionOrigin)) {
+    const pending = savedInviteRoomResolvedRetryableOutbound(
+      current.room,
+      input,
+      current.action,
+      current.actionOrigin,
+    );
+    return pending ? showExactRetryableOutboundPrompt(pending, input) : false;
+  }
+  if (current.action === "wait-receive-stop") {
+    return showSavedInviteRoomReceiveStopPending();
+  }
+  const routeReadiness = externalPeerSendReadiness(input, {
+    allowMissingMessage: true,
+    latestOnionOutbound: null,
+  });
+  if (!routeReadiness.ready) {
+    return showRealOnionRouteReadinessBlock(routeReadiness, input);
+  }
+  if (String(current.action ?? "").startsWith("real-onion-")) {
+    const recoveryView = savedInviteRoomRealOnionRecoveryView(current.room);
+    if (recoveryView?.action !== current.action) {
+      return false;
+    }
+    const recovery = recoveryView.recovery;
+    const runAction = realOnionRecoveryRunAction(recovery);
+    const noticeKey = runAction.noticeKey || realOnionRecoveryNoticeKey(recovery);
+    if (!noticeKey) {
+      return false;
+    }
+    setProductionTwoProfileState("Private delivery needs review");
+    setText(fields.productionTwoProfileWarning, t(noticeKey));
+    setChatDeliveryNoticeByKey(noticeKey, "warning", input);
+    setProductionFollowupActions(true, t(noticeKey));
+    return true;
+  }
+  return false;
 }
 
 function showSavedInviteRoomRealOnionNeedsMessage(input = productionTwoProfileInput()) {
@@ -4194,21 +4322,25 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
   if (!opened) {
     return false;
   }
+  const input = productionTwoProfileInput();
   if (savedInviteRoomActionIsRouteReadinessOnly(actionOrigin)) {
-    clearRouteReadinessOnlyFollowupContext(productionTwoProfileInput());
+    clearRouteReadinessOnlyFollowupContext(input);
   }
   if (
     savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin) &&
-    !savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin)
+    !savedInviteRoomResolvedRetryableOutbound(room, input, action, actionOrigin)
   ) {
     await handleSavedInviteRoomMissingPendingAction(action);
     return true;
   }
   if (savedInviteRoomActionRechecksAfterOpen(action)) {
-    const current = currentSavedInviteRoomView(productionTwoProfileInput());
+    const current = currentSavedInviteRoomView(input);
     const currentRoom = current.room;
     const currentAction = current.action;
     if (currentAction && (currentAction !== action || current.actionOrigin !== actionOrigin)) {
+      if (currentAction === "wait-receive-stop") {
+        return showSavedInviteRoomReceiveStopPending();
+      }
       if (savedInviteRoomActionIsRouteReadinessOnly(actionOrigin)) {
         const routeRecheck = savedInviteRoomRecheckedRouteReadinessAction(action, actionOrigin, currentRoom);
         if (routeRecheck?.ready) {
@@ -4235,91 +4367,40 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     }
   }
   if (savedInviteRoomRetryOnlyWithoutRetryableOrigin(action, actionOrigin)) {
-    clearRouteReadinessOnlyFollowupContext(productionTwoProfileInput());
+    clearRouteReadinessOnlyFollowupContext(input);
     return showSavedInviteRoomActionNowReady();
   }
   if (action === "paste-peer-code") {
-    const input = productionTwoProfileInput();
     rememberReceiveIntentForRoom(input, true);
     rememberPrivateRouteFollowup("receive", input);
     focusPrivateRouteNextAction(input);
     return true;
   }
   if (action === "review-send") {
-    const pending = savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin);
-    if (pending) {
-      selectTwoProfileConversationEntry(pending);
-      showRetryableTwoProfileOutboundNotice(pending);
-    } else {
-      await handleSavedInviteRoomMissingPendingAction(action);
-    }
-    return true;
+    return runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin, { reviewOnly: true });
   }
   if (action === "retry") {
-    const pending = savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin);
-    if (pending) {
-      selectTwoProfileConversationEntry(pending);
-      showRetryableTwoProfileOutboundNotice(pending);
-      await runTwoProfileOutboundPrimaryAction(pending);
-    } else {
-      await handleSavedInviteRoomMissingPendingAction(action);
-    }
-    return true;
+    return runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin);
   }
   if (action === "retry-network") {
-    const pending = savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin);
-    if (pending) {
-      selectTwoProfileConversationEntry(pending);
-      showRetryableTwoProfileOutboundNotice(pending);
-      await runTwoProfileOutboundPrimaryAction(pending);
-    } else {
-      await handleSavedInviteRoomMissingPendingAction(action);
-    }
-    return true;
+    return runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin);
   }
   if (action === "enable-private-delivery") {
-    const input = productionTwoProfileInput();
-    const pending = savedInviteRoomResolvedRetryableOutbound(room, input, action, actionOrigin);
-    if (pending) {
-      selectTwoProfileConversationEntry(pending);
-      showRetryableTwoProfileOutboundNotice(pending);
-      await runTwoProfileOutboundPrimaryAction(pending);
-      return true;
-    }
-    if (savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin)) {
-      await handleSavedInviteRoomMissingPendingAction(action);
+    if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
       return true;
     }
     openPrivateDeliverySettings(input);
     return true;
   }
   if (action === "prepare-private-route") {
-    const input = productionTwoProfileInput();
-    const pending = savedInviteRoomResolvedRetryableOutbound(room, input, action, actionOrigin);
-    if (pending) {
-      selectTwoProfileConversationEntry(pending);
-      showRetryableTwoProfileOutboundNotice(pending);
-      await runTwoProfileOutboundPrimaryAction(pending);
-      return true;
-    }
-    if (savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin)) {
-      await handleSavedInviteRoomMissingPendingAction(action);
+    if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
       return true;
     }
     focusPrivateRouteNextAction(input);
     return true;
   }
   if (action === "refresh-endpoint") {
-    const input = productionTwoProfileInput();
-    const pending = savedInviteRoomResolvedRetryableOutbound(room, input, action, actionOrigin);
-    if (pending) {
-      selectTwoProfileConversationEntry(pending);
-      showRetryableTwoProfileOutboundNotice(pending);
-      await runTwoProfileOutboundPrimaryAction(pending);
-      return true;
-    }
-    if (savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin)) {
-      await handleSavedInviteRoomMissingPendingAction(action);
+    if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
       return true;
     }
     setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
@@ -4327,44 +4408,24 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return true;
   }
   if (action === "verify-safety") {
-    if (savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin)) {
-      const pending = savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin);
-      if (pending) {
-        selectTwoProfileConversationEntry(pending);
-        showRetryableTwoProfileOutboundNotice(pending);
-        await runTwoProfileOutboundPrimaryAction(pending);
-      } else {
-        await handleSavedInviteRoomMissingPendingAction(action);
-      }
+    if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
       return true;
     }
     focusSafetyConfirmation();
     return true;
   }
   if (action === "refresh-and-retry") {
-    const pending = savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin);
-    if (pending) {
-      selectTwoProfileConversationEntry(pending);
-      showRetryableTwoProfileOutboundNotice(pending);
-      await runTwoProfileOutboundPrimaryAction(pending);
-    } else {
-      await handleSavedInviteRoomMissingPendingAction(action);
-    }
-    return true;
+    return runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin);
   }
   if (action === "start-receiving") {
-    if (savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin)) {
-      const pending = savedInviteRoomResolvedRetryableOutbound(room, productionTwoProfileInput(), action, actionOrigin);
-      if (pending) {
-        selectTwoProfileConversationEntry(pending);
-        showRetryableTwoProfileOutboundNotice(pending);
-        await runTwoProfileOutboundPrimaryAction(pending);
-      } else {
-        await handleSavedInviteRoomMissingPendingAction(action);
-      }
+    if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
       return true;
     }
     await startProductionTwoProfileOnionReceive();
+    return true;
+  }
+  if (action === "stop-receiving") {
+    stopProductionTwoProfileOnionReceive();
     return true;
   }
   if (action === "wait-receive-stop") {
@@ -4502,6 +4563,7 @@ function inviteRoomMetadataWithoutRetryableOutbound(metadata) {
     ...metadata,
     retryableOutboundCount: 0,
     retryableOutboundMessageNumber: 0,
+    retryableOutboundMessage: "",
     retryableOutboundAction: "",
   };
 }
@@ -4510,8 +4572,22 @@ function savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries,
   if (!metadata || Number.parseInt(metadata.retryableOutboundCount ?? 0, 10) <= 0) {
     return metadata;
   }
+  const preferred = (entries ?? []).find((entry) =>
+    entry?.kind !== "received" &&
+      !entry?.statuses?.has?.("received") &&
+      String(entry?.profile ?? "").trim().toLowerCase() === String(input.profileA ?? "").trim().toLowerCase() &&
+      String(entry?.counterpartProfile ?? "").trim().toLowerCase() === String(input.profileB ?? "").trim().toLowerCase() &&
+      Number.parseInt(entry?.messageNumber, 10) === preferredMessageNumber &&
+      entry?.outboundRetryable === true &&
+      entry?.outboundDeliveryState === "failed"
+  );
+  if (!preferred) {
+    return inviteRoomMetadataWithoutRetryableOutbound(metadata);
+  }
+  const preferredMessage = String(preferred.message ?? "").trim();
   const delivered = (entries ?? []).some((entry) =>
     Number.parseInt(entry?.messageNumber, 10) === preferredMessageNumber &&
+      String(entry?.message ?? "").trim() === preferredMessage &&
       (
         entry?.statuses?.has?.("received") ||
         (
@@ -4524,23 +4600,11 @@ function savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries,
   if (delivered) {
     return inviteRoomMetadataWithoutRetryableOutbound(metadata);
   }
-  const preferred = (entries ?? []).find((entry) =>
-    entry?.kind !== "received" &&
-      !entry?.statuses?.has?.("received") &&
-      String(entry?.profile ?? "").trim().toLowerCase() === String(input.profileA ?? "").trim().toLowerCase() &&
-      String(entry?.counterpartProfile ?? "").trim().toLowerCase() === String(input.profileB ?? "").trim().toLowerCase() &&
-      Number.parseInt(entry?.messageNumber, 10) === preferredMessageNumber &&
-      entry?.outboundRetryable === true &&
-      entry?.outboundDeliveryState !== "canceled" &&
-      entry?.outboundDeliveryState !== "sent"
-  );
-  if (!preferred) {
-    return inviteRoomMetadataWithoutRetryableOutbound(metadata);
-  }
   const preferredAction = productionTwoProfileOutboundPrimaryAction(preferred).action;
   return {
     ...metadata,
     retryableOutboundMessageNumber: preferredMessageNumber,
+    retryableOutboundMessage: preferredMessage,
     retryableOutboundAction: preferredAction,
   };
 }
@@ -4562,7 +4626,12 @@ function savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus
       return { ...metadata, retryableOutboundAction: "verify-safety" };
     }
     if (readiness.nextAction === "start-receiving") {
-      return { ...metadata, retryableOutboundAction: "start-receiving" };
+      return {
+        ...metadata,
+        retryableOutboundAction: routeReadinessReceiveStopPending(readiness)
+          ? "wait-receive-stop"
+          : "start-receiving",
+      };
     }
     if (readiness.nextAction === "refresh-endpoint") {
       return {
@@ -4758,7 +4827,12 @@ function savedInviteRoomListItemView(room, context = {}) {
     receiveState,
     routeReadinessAction: routeReadinessViewCandidate?.action ?? "",
   });
-  const realOnionRecoveryView = savedInviteRoomHasRetryableOutbound(viewRoom) || receiveOwnershipBlocksRecovery
+  const routeReadinessBlocksRecovery = Boolean(routeReadinessViewCandidate);
+  const realOnionRecoveryView = (
+    savedInviteRoomHasRetryableOutbound(viewRoom) ||
+    receiveOwnershipBlocksRecovery ||
+    routeReadinessBlocksRecovery
+  )
     ? null
     : savedInviteRoomRealOnionRecoveryView(viewRoom);
   const routeReadinessView = savedInviteRoomHasRetryableOutbound(viewRoom) || realOnionRecoveryView
@@ -4803,6 +4877,7 @@ function clearSavedInviteRoomRetryableOutbound(room) {
     {
       retryableOutboundCount: 0,
       retryableOutboundMessageNumber: 0,
+      retryableOutboundMessage: "",
       retryableOutboundAction: "",
       updatedAt: Number(room.updatedAt ?? 0),
     },
@@ -5188,6 +5263,10 @@ function fieldTestReportRoomListAction(parsed) {
   return privateDeliveryState.fieldTestReportRoomListAction(parsed);
 }
 
+function fieldTestReportResolvedRoomListAction(parsed) {
+  return privateDeliveryState.fieldTestReportResolvedRoomListAction(parsed);
+}
+
 function fieldTestReportOutboundFailureClass(parsed) {
   return privateDeliveryState.fieldTestReportOutboundFailureClass(parsed);
 }
@@ -5430,6 +5509,8 @@ function fieldTestRecoveryActionNextKey(action) {
       return "fieldTestNextVerifySafety";
     case "start-receiving":
       return "fieldTestNextStartReceive";
+    case "stop-receiving":
+      return "fieldTestNextStopReceive";
     case "wait-receive-stop":
       return "fieldTestNextWaitReceiveStop";
     case "retry-network":
@@ -5462,7 +5543,7 @@ function fieldTestNextActionKey(report, peerReport = "") {
   if (parsed.safety_confirmed !== "true") {
     return "fieldTestNextVerifySafety";
   }
-  const roomListAction = fieldTestReportValue(fieldTestReportRoomListAction(parsed), "none");
+  const roomListAction = fieldTestReportValue(fieldTestReportResolvedRoomListAction(parsed), "none");
   const outboundAction = fieldTestReportValue(fieldTestReportStandaloneOutboundRecoveryAction(parsed), "none");
   const routeReadinessAction = fieldTestReportValue(fieldTestRouteReadinessRecoveryAction(parsed), "none");
   let currentRecoveryAction = "none";
@@ -6470,12 +6551,17 @@ async function finishInviteRoomReadyFromStatus(input, status, warningText) {
     sessionStatus: status,
     input,
   });
-  setProductionTwoProfileState("Room ready");
-  setText(fields.productionTwoProfileWarning, warningText);
-  setChatDeliveryNoticeByKey("inviteRoomReadyAfterSessionCode", "success", input);
+  const recoveryNoticeShown = showSavedInviteRoomRecoveryAfterOpen(roomInput);
+  if (!recoveryNoticeShown) {
+    setProductionTwoProfileState("Room ready");
+    setText(fields.productionTwoProfileWarning, warningText);
+    setChatDeliveryNoticeByKey("inviteRoomReadyAfterSessionCode", "success", input);
+  }
   startInviteRoomPresenceRefresh(roomInput);
   startInviteRoomTranscriptRefresh(roomInput);
-  if (inviteRole === "inviter") {
+  if (recoveryNoticeShown) {
+    refreshFieldTestReport();
+  } else if (inviteRole === "inviter") {
     focusCurrentInviteCodeDisplay();
   } else {
     fields.productionTwoProfileMessage?.focus?.();
@@ -6891,6 +6977,10 @@ function routeReadinessReceiveStopPending(readiness) {
     readiness?.failureKind === "LocalOnionEndpointStopping" ||
       readiness?.receiveStopRequested === true,
   );
+}
+
+function routeReadinessReceiveRuntimeMismatch(readiness) {
+  return readiness?.failureKind === "RuntimeOwnerProfileMismatch";
 }
 
 function productionTwoProfileOnionReceiveOwnerInput(fallbackInput = productionTwoProfileInput()) {
@@ -8793,6 +8883,14 @@ function twoProfileRetryableOutboundActionView(entry, fallback) {
       focusTarget: "start-receiving",
     };
   }
+  if (primaryAction.action === "stop-receiving") {
+    return {
+      ...common,
+      nextAction: `Receiver owner mismatch: stop receiving, then restart it before retrying message ${label}.`,
+      rowLabel: "action: stop mismatched receive",
+      focusTarget: "stop-receiving",
+    };
+  }
   if (primaryAction.action === "wait-receive-stop") {
     return {
       ...common,
@@ -8852,6 +8950,7 @@ function twoProfileConversationActionView(entry) {
     "import-envelope": fields.importProductionMessageEnvelope,
     "remote-envelope": fields.productionRemoteMessageEnvelope,
     "export-envelope": fields.exportProductionMessageEnvelope,
+    "stop-receiving": fields.stopProductionTwoProfileOnionReceive,
   };
   return {
     ...resolvedActionView,
@@ -8881,6 +8980,11 @@ function retryableTwoProfileOutboundWarning(entry) {
     return currentLanguage === "ko"
       ? `메시지 ${label} 전송이 멈췄습니다. 메시지 받기를 시작한 뒤 다시 보내거나 취소할 수 있습니다.`
       : `Message ${label} is waiting. Start receiving, then retry or cancel this send.`;
+  }
+  if (primaryAction.action === "stop-receiving") {
+    return currentLanguage === "ko"
+      ? `메시지 ${label} 전송이 멈췄습니다. 현재 받기를 중지한 뒤 다시 시작하고 전송을 재시도하세요.`
+      : `Message ${label} is waiting. Stop the current receiver, restart receiving, then retry this send.`;
   }
   if (primaryAction.action === "wait-receive-stop") {
     return currentLanguage === "ko"
@@ -9066,6 +9170,24 @@ function refreshRouteReadinessNoticeAfterSessionRefresh(input = productionTwoPro
     return true;
   }
   return false;
+}
+
+function showReceiveEndpointUpdateRecoveryNotice(input, previousPendingNotice = null, options = {}) {
+  if (restoreChatDeliveryPendingOutboundSnapshot(previousPendingNotice, input)) {
+    return true;
+  }
+  if (showPrivateRouteRetryFollowupPrompt(input, { clear: true })) {
+    return true;
+  }
+  if (showLatestRetryableOutboundNotice(input, { allowAutomatic: false })) {
+    return true;
+  }
+  if (options.allowRouteReadiness === false) {
+    return false;
+  }
+  return refreshRouteReadinessNoticeAfterSessionRefresh(input, {
+    allowRetryRecovery: false,
+  });
 }
 
 function clearStaleSendRecoveryNotice(input = productionTwoProfileInput()) {
@@ -10142,6 +10264,13 @@ function twoProfileComposerPrimaryIntent({
     allowMissingMessage: true,
     latestOnionOutbound: null,
   });
+  if (routeReadinessReceiveRuntimeMismatch(routeReadiness)) {
+    return {
+      action: "stop-receiving",
+      labelKey: "stopReceiving",
+      disabledReason: routeReadiness.disabledReason || t("receiveRuntimeMismatch"),
+    };
+  }
   if (routeReadinessReceiveStopPending(routeReadiness)) {
     return {
       action: "wait-receive-stop",
@@ -14863,6 +14992,8 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
     });
     if (result.send_attempt_succeeded) {
       clearCompletedExternalSendUiState(input, latestOnionOutbound.messageNumber);
+      rememberCurrentInviteRoomMetadata();
+      renderSavedInviteRooms();
     } else {
       if (!showRetryableOutboundPromptForMessage(input, latestOnionOutbound.messageNumber)) {
         showCurrentRetryableOutboundMissing(null);
@@ -15414,6 +15545,7 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
       ? { runtime_label: refreshPlan.messageImported ? "New message received" : "Peer address updated" }
       : backendLoop;
     const currentInput = productionTwoProfileInput();
+    const pendingNoticeBeforeReceiveRefresh = chatDeliveryPendingOutboundSnapshot(currentInput);
     const receivingCurrentRoom = productionTwoProfileReceiveMatchesInput(currentInput);
     const runtimeView = receivingCurrentRoom
       ? setProductionTwoProfileOnionReceiveRuntimeState(runtimeState, runtimeResult)
@@ -15495,11 +15627,9 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
             rememberTwoProfileSessionStatus(currentInput, status);
             renderProductionTwoProfileSessionStatusResult(status);
             renderRoomIdentityBar(currentInput, twoProfileSessionsReadyForInput(currentInput));
-            if (!refreshPlan.messageImported) {
-              if (!showPrivateRouteRetryFollowupPrompt(currentInput, { clear: true })) {
-                showLatestRetryableOutboundNotice(currentInput, { allowAutomatic: false });
-              }
-            }
+            showReceiveEndpointUpdateRecoveryNotice(currentInput, pendingNoticeBeforeReceiveRefresh, {
+              allowRouteReadiness: !refreshPlan.messageImported,
+            });
           }
         }
         refreshCurrentRoomAfterReceiveImport(refreshPlan, currentInput);
@@ -15908,6 +16038,11 @@ async function runProductionTwoProfileComposerPrimaryAction() {
   if (intent.action === "start-receiving") {
     setChatDeliveryNoticeByKey("chatNoticeReceiveRestart", "success", input);
     await startProductionTwoProfileOnionReceive();
+    return;
+  }
+  if (intent.action === "stop-receiving") {
+    setChatDeliveryNoticeByKey("receiveRuntimeMismatch", "warning", input);
+    stopProductionTwoProfileOnionReceive();
     return;
   }
   if (intent.action === "wait-receive-stop") {
