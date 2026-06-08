@@ -694,8 +694,7 @@ export function productionInviteRoomConversationMetadata(entries) {
       entry?.kind !== "received" &&
       !entry?.statuses?.has?.("received") &&
       entry?.outboundRetryable === true &&
-      entry?.outboundDeliveryState !== "canceled" &&
-      entry?.outboundDeliveryState !== "sent",
+      entry?.outboundDeliveryState === "failed",
   );
   const latestRetryableOutbound = retryableOutboundEntries[0] ?? null;
   const latest = sortedEntries.find((entry) => String(entry?.message ?? "").trim());
@@ -708,6 +707,7 @@ export function productionInviteRoomConversationMetadata(entries) {
     messageCount: sortedEntries.length,
     retryableOutboundCount: retryableOutboundEntries.length,
     retryableOutboundMessageNumber: latestRetryableOutbound?.messageNumber ?? null,
+    retryableOutboundMessage: latestRetryableOutbound?.message ?? "",
     retryableOutboundAction: latestRetryableOutbound
       ? productionTwoProfileOutboundPrimaryAction(latestRetryableOutbound).action
       : "",
