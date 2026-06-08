@@ -78,6 +78,7 @@ export function normalizeSavedInviteRoomRetryableAction(action) {
     "prepare-private-route",
     "refresh-and-retry",
     "start-receiving",
+    "wait-receive-stop",
     "retry-network",
     "verify-safety",
     "retry",
@@ -170,6 +171,9 @@ export function fieldTestBlockedRouteReadinessAction(parsed) {
 }
 
 export function fieldTestReceiveAwareRecoveryAction(action, parsed) {
+  if (action === "start-receiving" && parsed.route_readiness_failure_kind === "RuntimeOwnerProfileMismatch") {
+    return "stop-receiving";
+  }
   if (
     action === "start-receiving" &&
     (parsed.route_readiness_failure_kind === "LocalOnionEndpointStopping" ||
@@ -208,6 +212,18 @@ export function fieldTestReportRoomListAction(parsed) {
   return isSavedInviteRoomRetryOnlyAction(action) && origin !== "retryable-outbound"
     ? ""
     : action;
+}
+
+export function fieldTestReportResolvedRoomListAction(parsed) {
+  const action = fieldTestReportRoomListAction(parsed);
+  if (!action) {
+    return "";
+  }
+  if (!action.startsWith("real-onion-")) {
+    return action;
+  }
+  const realOnionRecovery = fieldTestReportValue(parsed.real_onion_recovery_action, "none");
+  return realOnionRecovery === "none" ? action : realOnionRecovery;
 }
 
 export function fieldTestReportOutboundFailureClass(parsed) {
@@ -273,7 +289,7 @@ export function fieldTestReportNextActionValue(parsed) {
     return "verify";
   }
   const routeReadinessAction = fieldTestRouteReadinessRecoveryAction(parsed);
-  const roomListAction = fieldTestReportRoomListAction(parsed);
+  const roomListAction = fieldTestReportResolvedRoomListAction(parsed);
   if (roomListAction) {
     if (parsed.room_list_next_origin !== "retryable-outbound" && routeReadinessAction) {
       return routeReadinessAction;
@@ -501,6 +517,9 @@ export function fieldTestReceiveChecklistStatus({
   routeReadinessFailureKind,
 }) {
   if (receiveStopRequested) {
+    return "check";
+  }
+  if (routeReadinessAction === "stop-receiving") {
     return "check";
   }
   if (routeReadinessAction === "start-receiving") {
