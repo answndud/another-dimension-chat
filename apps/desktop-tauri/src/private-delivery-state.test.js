@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  fieldTestReportComposerAction,
   fieldTestReportNextActionValue,
   fieldTestReportRoomListAction,
   fieldTestReportSummary,
+  fieldTestReportTriageState,
   parseFieldTestReport,
+  realOnionResultConfirmsExternalPeerDelivery,
   savedInviteRoomActionCanUseRetryableOutbound,
   savedInviteRoomReceiveOwnershipBlocksRecovery,
   savedInviteRoomRetryOnlyWithoutRetryableOrigin,
@@ -53,3 +56,52 @@ test("field test summary reports receive recovery before stale real onion room a
   assert.match(fieldTestReportSummary(report), /next=start-receiving/);
 });
 
+test("local dev roundtrip never counts as external onion delivery", () => {
+  assert.equal(
+    realOnionResultConfirmsExternalPeerDelivery({
+      external_peer_delivery_confirmed: true,
+      local_dev_roundtrip_result: true,
+    }),
+    false,
+  );
+  assert.equal(
+    realOnionResultConfirmsExternalPeerDelivery({
+      external_peer_delivery_confirmed: true,
+      local_dev_roundtrip_result: false,
+    }),
+    true,
+  );
+
+  const report = [
+    "room_present=true",
+    "session_ready=true",
+    "safety_confirmed=true",
+    "route_ready=true",
+    "route_readiness_ready=true",
+    "route_readiness_next_action=none",
+    "real_onion_external_peer_delivery_confirmed=true",
+    "real_onion_local_dev_roundtrip_result=true",
+  ].join("\n");
+
+  assert.match(fieldTestReportSummary(report), /local-dev-roundtrip/);
+  assert.equal(fieldTestReportTriageState(report).delivery, "local-dev-roundtrip");
+});
+
+test("route-ready compose state stays separate from recovery next action", () => {
+  const report = [
+    "room_present=true",
+    "session_ready=true",
+    "safety_confirmed=true",
+    "route_ready=true",
+    "route_readiness_ready=true",
+    "route_readiness_next_action=none",
+    "room_list_next_action=none",
+    "outbound_recovery_action=none",
+    "real_onion_recovery_action=none",
+    "composer_next_action=send-message",
+  ].join("\n");
+
+  assert.equal(fieldTestReportNextActionValue(parseFieldTestReport(report)), "none");
+  assert.equal(fieldTestReportComposerAction(report), "send-message");
+  assert.match(fieldTestReportSummary(report), /next=none/);
+});
