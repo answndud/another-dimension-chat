@@ -108,16 +108,16 @@ console.log(`App cache: ${appCacheRoot}`);
 console.log(`Dev rendezvous: ${rendezvousRoot}`);
 console.log(`Bridge-capable build: ${bridgeCapable ? "yes" : "no"}`);
 
+mkdirSync(appDataRoot, { recursive: true });
+mkdirSync(appCacheRoot, { recursive: true });
+mkdirSync(rendezvousRoot, { recursive: true });
+
 if (printPathsOnly) {
   console.log("Bridge config installed: no");
   console.log("Pluggable transport required: unknown");
   console.log("Pluggable transport configured: no");
   process.exit(0);
 }
-
-mkdirSync(appDataRoot, { recursive: true });
-mkdirSync(appCacheRoot, { recursive: true });
-mkdirSync(rendezvousRoot, { recursive: true });
 
 if (bridgeConfigFile) {
   const contents = readFileSync(resolve(bridgeConfigFile), "utf8");

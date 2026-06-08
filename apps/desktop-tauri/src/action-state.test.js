@@ -629,6 +629,7 @@ test("room list metadata follows latest imported conversation entry", () => {
     messageCount: 2,
     retryableOutboundCount: 0,
     retryableOutboundMessageNumber: null,
+    retryableOutboundMessage: "",
     retryableOutboundAction: "",
   });
   assert.equal(entries[0].messageNumber, 1);
@@ -653,6 +654,7 @@ test("room list metadata truncates long previews without losing message count", 
       messageCount: 1,
       retryableOutboundCount: 0,
       retryableOutboundMessageNumber: null,
+      retryableOutboundMessage: "",
       retryableOutboundAction: "",
     },
   );
@@ -697,7 +699,33 @@ test("room list metadata carries retryable outbound state", () => {
       messageCount: 3,
       retryableOutboundCount: 1,
       retryableOutboundMessageNumber: 3,
+      retryableOutboundMessage: "still saved",
       retryableOutboundAction: "refresh-and-retry",
+    },
+  );
+});
+
+test("room list metadata waits for failed state before saved retry", () => {
+  assert.deepEqual(
+    productionInviteRoomConversationMetadata([
+      {
+        sender: "alice",
+        receiver: "bob",
+        messageNumber: 3,
+        message: "still pending",
+        createdAtMs: 400,
+        outboundDeliveryState: "pending",
+        outboundRetryable: true,
+      },
+    ]),
+    {
+      lastMessagePreview: "still pending",
+      lastMessageAt: 400,
+      messageCount: 1,
+      retryableOutboundCount: 0,
+      retryableOutboundMessageNumber: null,
+      retryableOutboundMessage: "",
+      retryableOutboundAction: "",
     },
   );
 });
@@ -742,6 +770,7 @@ test("room list metadata collapses retried copies before counting retryable send
       messageCount: 1,
       retryableOutboundCount: 0,
       retryableOutboundMessageNumber: null,
+      retryableOutboundMessage: "",
       retryableOutboundAction: "",
     },
   );

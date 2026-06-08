@@ -6,46 +6,47 @@ The project goal is not "a serverless chat app" in the loose sense. The long-ter
 
 ## Current Status
 
-This repository is a prototype scaffold.
+This repository is a prototype moving toward a local desktop beta.
 
 Do not use it for real communication.
 
-The current implementation is intentionally limited to a `dev-insecure` CLI flow that helps test protocol boundaries, pairing lifecycle, message envelope handling, replay behavior, and local storage invariants before any production security claim.
+The current implementation has a local Tauri desktop beta candidate for two-profile invite rooms, local encrypted profile/session/message stores, explicit private-delivery setup, restart/resume recovery, and fail-closed onion/Tor attempt paths. It still exists to test protocol, storage, transport, and UI recovery boundaries before any production security claim.
 
 What exists today:
 
-- Rust workspace split into `identity`, `pairing`, `crypto`, `protocol`, `transport`, `storage`, and `core` crates, plus CLI and Tauri prototype shells.
+- Rust workspace split into `identity`, `pairing`, `crypto`, `protocol`, `transport`, `storage`, and `core` crates, plus CLI and Tauri desktop prototype shells.
 - A `dev-insecure` CLI flow for local pairing and message-flow experimentation only.
 - Pairwise profile/contact, pairing payload, safety number, pairing lifecycle, padded envelope, replay-window, endpoint update, and deterministic duplicate-connection prototypes.
 - Production-facing guardrails for Ed25519 pairwise identity material, signed pairing drafts, Noise-based session setup smoke tests, envelope encryption/decryption, replay rejection, and local storage policy checks.
 - High-risk transport policy and fail-closed Tor/onion scaffolding, including direct-route rejection, app-private directory checks, runtime preflight, redacted runtime events, bridge/censorship configuration boundaries, onion key lifecycle policy, and descriptor/stream/envelope-I/O gates.
 - SQLCipher-backed storage spikes for `ADREC1` record containers, passphrase unlock, high-risk unlock policy, replay-window persistence, pairwise endpoint state, local message indexes, opaque record-id derivation, and internal raw database-key opening only.
-- A read-only Tauri prototype status shell exposing redacted boundary state through `prototype_status`.
+- A local Tauri desktop beta shell for invite-code rooms, safety phrase confirmation, encrypted local profile/session/message records, saved-room resume, manual private-route exchange, explicit receive start/stop, retry/cancel recovery, and redacted field-test reports.
+- Explicit user-triggered onion/Tor attempt paths for beta field testing. The app must not bootstrap Tor, host onion services, publish descriptors, open streams, send envelopes, or receive envelopes on app launch.
 - Lightweight verification scripts, CLI hardening tests, Tauri scaffold static checks, and GitHub Actions verification.
-- Release signing, reproducible/equivalent builds, dependency review, external review, signoff, and update integrity are not implemented. Template-only release scaffold files are intentionally not part of the active development loop.
+- Local beta DMG handoff is possible from the Tauri app directory, but signing, notarization, reproducible/equivalent builds, dependency review, external review, signoff, and update integrity are not implemented.
 
 What does not exist yet:
 
 - Real end-to-end encryption.
-- Usable production messaging.
-- Real Tor/onion transport.
-- Production transport adapter implementation.
-- Bridge or censorship-circumvention implementation.
+- Secure production messaging.
+- Reliable Tor/onion transport across real networks.
+- Audited production transport adapter implementation.
+- Audited bridge or censorship-circumvention support.
 - Actual onion service private key material.
 - Production unlock/key management.
 - OS keychain/DPAPI/Keystore wrapping.
 - Complete production encrypted local storage lifecycle.
 - Replay rollback protection against encrypted database snapshot restore.
-- Production Tauri desktop app. The current Tauri scaffold is a read-only prototype status shell, not a production messaging UI.
+- Production Tauri desktop app. The current Tauri shell is a local beta candidate, not a secure release.
 - Android or iOS app.
 - Offline mailbox.
 - Group chat.
 - File transfer.
 - Voice or video calls.
 - Multi-device support.
-- Release signing or reproducible builds.
+- Release signing, notarization, auto-update integrity, or reproducible builds.
 - Dependency/supply-chain review evidence.
-- External security review or independent review readiness.
+- External security review, independent review readiness, or user safety signoff.
 
 ## Security Boundary
 
@@ -66,7 +67,7 @@ The project also does not claim to be generally more secure than Signal. The int
 ```text
 apps/
   cli/              development CLI shell
-  desktop-tauri/    minimal Tauri prototype shell scaffold
+  desktop-tauri/    local desktop beta shell and field-test UI
 
 crates/
   core/             profile, pairing, and message orchestration
@@ -152,6 +153,27 @@ This additionally runs:
 - `cargo test --workspace`
 - `cargo test --workspace --features dev-insecure`
 - `cargo clippy --workspace --all-targets --all-features`
+
+## Local Beta Release Prep
+
+The current beta release target is an internal field-test build, not a public secure messenger release.
+
+Before handing a beta artifact to a tester:
+
+1. Run `scripts/verify_all.sh`.
+2. From `apps/desktop-tauri`, run `npm run test:state`.
+3. From `apps/desktop-tauri`, run `npm run test:local-peers`.
+4. Build the desired local artifact:
+   - `npm run tauri:build`
+   - `npm run tauri:build:beta-onion`
+   - `npm run tauri:build:beta-onion-bridge`
+5. Copy local handoff artifacts into `apps/desktop-tauri/beta-artifacts/`.
+6. Record the artifact name, SHA-256, build channel, commit, date, and field-test scope in the handoff notes.
+
+Do not publish `docs/`, app data, bridge lines, onion endpoints, plaintext messages, passphrases, private keys, raw logs, `target/`, `dist/`, `node_modules/`, or `beta-artifacts/`.
+
+For desktop-specific commands and beta notes, see [apps/desktop-tauri/README.md](apps/desktop-tauri/README.md).
+For the public-safe beta handoff checklist, see [reference/BETA_RELEASE_CHECKLIST.md](reference/BETA_RELEASE_CHECKLIST.md).
 
 ## CLI Prototype
 
