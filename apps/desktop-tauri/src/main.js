@@ -6464,7 +6464,12 @@ async function finishInviteRoomReadyFromStatus(input, status, warningText) {
   renderRoomStatusSummary(roomInput, status.both_ready_for_message_envelope);
   updateMinimalChatMode(input, status.both_ready_for_message_envelope);
   renderSavedInviteRooms();
-  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
+  await loadProductionTwoProfileTranscript({
+    quiet: true,
+    refreshSessionStatus: false,
+    sessionStatus: status,
+    input,
+  });
   setProductionTwoProfileState("Room ready");
   setText(fields.productionTwoProfileWarning, warningText);
   setChatDeliveryNoticeByKey("inviteRoomReadyAfterSessionCode", "success", input);
@@ -16822,7 +16827,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
     const expiredMessagesPurged =
       Number.parseInt(profileAResult.expired_messages_purged ?? 0, 10) +
       Number.parseInt(profileBResult.expired_messages_purged ?? 0, 10);
-    let sessionStatus = latestTwoProfileSessionStatusForCurrentInput(transcriptInput);
+    let sessionStatus = options.sessionStatus ?? latestTwoProfileSessionStatusForCurrentInput(transcriptInput);
     if (refreshSessionStatus) {
       sessionStatus = await invokeInviteRoomSessionStatus({
         profileA,
