@@ -21,6 +21,11 @@ Download all files from this same GitHub Release:
 - `DEPENDENCY_LOCKFILES.sha256`
 - `MANIFEST.md`
 
+Use the files attached to this GitHub Release as the release authority. The
+`main` branch may contain later documentation or source updates, so do not
+verify the downloaded DMG against branch files copied from GitHub's source
+browser.
+
 ## Verify Before Opening
 
 Run:
