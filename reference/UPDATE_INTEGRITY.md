@@ -38,6 +38,27 @@ The release publisher must not replace a DMG without replacing the matching
 `.sha256`, provenance JSON, manifest, release notes, and dependency lockfile
 hash evidence in the same release.
 
+The generated public provenance JSON must describe the public upload artifact,
+not only the local source artifact. It must include:
+
+- public DMG file name
+- public DMG SHA-256
+- public DMG size in bytes
+- app version
+- build channel
+- build commit
+- platform
+- unsigned GitHub public beta distribution marker
+- `signed=false`
+- `notarized=false`
+- `auto_update=false`
+- `startup_network_sockets=none`
+- source provenance SHA-256
+- dependency lockfile hash file name
+- manual update integrity file name
+- supply-chain baseline file name
+- public non-claims
+
 The public release body must repeat:
 
 - unsigned experimental public beta
