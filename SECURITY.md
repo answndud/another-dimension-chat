@@ -6,9 +6,13 @@ Another Dimension Chat is not ready for real communication.
 
 The current public repository contains a Rust/Tauri prototype and a local desktop beta candidate. It is useful for testing development flow, local encrypted-store boundaries, invite-room recovery, explicit private-delivery actions, and fail-closed onion/Tor attempt behavior, but it does not provide production-grade confidentiality, anonymity, metadata resistance, endpoint protection, or user safety.
 
-Default-build production code now includes narrow decision boundaries for pairing, session setup, envelope handling, replay rejection, transport policy, fail-closed onion transport behavior, pre-network transport blockers, backup-exclusion verification boundaries, onion service key lifecycle policy boundaries, onion service launch preflight boundaries, bridge/censorship readiness policy boundaries, bootstrap execution boundaries, bounded Arti adapter spikes, local-only manual bootstrap gates, profile-scoped transport directory resolution, persistent Arti client lifecycle ownership, storage policy tests, SQLCipher-backed storage work, passphrase unlock tests, high-risk unlock policy tests, replay-window persistence tests, receive-flow replay commit-order tests, session-scoped opaque replay record-id derivation, and desktop beta recovery UI checks. These are implementation guardrails, not a secure messenger release.
+Default-build production code now includes narrow decision boundaries for pairing, session setup, durable local session lifecycle records, local data lifecycle controls, forward-only schema versioning, marker-only rollback detection, envelope handling, replay rejection, transport policy, fail-closed onion transport behavior, pre-network transport blockers, backup-exclusion verification boundaries, onion service key lifecycle policy boundaries, onion service launch preflight boundaries, bridge/censorship readiness policy boundaries, bootstrap execution boundaries, bounded Arti adapter spikes, local-only manual bootstrap gates, profile-scoped transport directory resolution, persistent Arti client lifecycle ownership, storage policy tests, SQLCipher-backed storage work, passphrase unlock tests, high-risk unlock policy tests, replay-window persistence tests, receive-flow replay commit-order tests, session-scoped opaque replay record-id derivation, and desktop beta recovery UI checks. These are implementation guardrails, not a secure messenger release.
 
 The public cross-component replacement inventory is tracked in `reference/COMPONENT_BOUNDARIES.md`. It is a boundary map for future work, not a production-readiness statement.
+
+The public privacy-model comparison is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`. It maps the intended Korean Briar/Cwtch-style direction to current public beta gaps and LINDDUN categories; it is not a claim that the current beta has reached that level.
+
+The public threat model is tracked in `reference/PUBLIC_THREAT_MODEL.md`, and the independent review packet is tracked in `reference/INDEPENDENT_REVIEW_PACKET.md`. These are review inputs, not evidence that a review has been completed.
 
 Do not use this project to communicate sensitive information.
 
@@ -22,19 +26,23 @@ If private vulnerability reporting is not enabled, open a minimal public issue t
 
 This project does not currently claim:
 
+- A serverless product in the broad sense, a public relay-free availability guarantee, or a no-infrastructure availability guarantee.
+- Phone-number, email, global-account, searchable-username, centralized contact-discovery, centralized message-server, push-notification, or cloud-backup support.
 - Secure production end-to-end encryption.
 - Reliable real-network Tor/onion delivery.
+- Completed independent external two-machine onion delivery evidence. Current
+  single-machine local rehearsal is not external peer evidence.
 - Audited production transport adapter implementation.
 - Audited bridge or censorship-circumvention support.
 - Production-ready Arti transport bootstrap, onion service launch, system Tor discovery, runtime Tor connectivity, or bridge/censorship behavior.
 - Onion service key generation, rotation, persistence, backup, or migration.
 - Actual onion service private key material.
-- Production unlock/key management.
+- Complete production key management. The desktop shell has a passphrase-first local product unlock/lock path, local durable session lifecycle records, and local data lifecycle controls, but key wrapping, secure deletion from media, rollback prevention, audited E2EE readiness, and runtime messaging readiness are still not claimed.
 - OS keychain/DPAPI/Keystore wrapping.
-- Complete production encrypted local storage lifecycle.
+- Complete production encrypted local storage lifecycle with secure deletion guarantees.
 - Durable production key storage.
-- Durable production session persistence.
-- Replay rollback protection against encrypted database snapshot restore.
+- Audited or security-ready durable production session lifecycle.
+- Replay rollback prevention against encrypted database snapshot restore.
 - Signed, notarized, reproducible, auto-updating, or supply-chain-reviewed releases.
 - External audit, independent review, or public user safety signoff.
 - Protection against device compromise.
@@ -47,7 +55,40 @@ This project does not currently claim:
 
 Internal beta artifacts are for field testing only. A beta handoff may exercise local encrypted stores, invite-room recovery, explicit receive start/stop, retry/cancel recovery, and explicit onion/Tor attempts, but it must not be described as secure, anonymous, audited, hardened, or suitable for sensitive communication.
 
-Beta artifacts must not include local app data, private planning notes, bridge lines, onion endpoints, plaintext messages, passphrases, private keys, raw diagnostic logs, build caches, or ignored `beta-artifacts/` contents in the public repository.
+The current internal field-test handoff record, when present in ignored local artifacts, uses transfer bundle SHA-256 `f231dcc3a95b63d5d32b6b36cb503443a46547fa1dcbb44d58f772be831d0907` and app DMG SHA-256 `625ee389d930330b0f2e369a53c4f582df076dd612920f6cf0366aab4a3edb95`. A different transfer bundle hash is a different handoff and must update the peer message, checksum file, and intake expectation before testers use it.
+
+Beta peers must verify the transfer zip with its `.sha256` file before opening it, then run the extracted `./VERIFY_FIELD_TEST_BUNDLE.sh` preflight. That verifier checks the DMG/provenance/plist/signing boundary without launching the app or starting network/onion work.
+
+Beta artifacts must not include local app data, private planning notes, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, raw diagnostic logs, build caches, or ignored `beta-artifacts/` contents in the public repository.
+
+Completed field-test reports must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, passphrases, profile names, message text, local app data paths, raw logs, or key material.
+
+## Unsigned Public Beta Boundary
+
+The public GitHub DMG path is an unsigned experimental public beta distribution path only. It is not signed, not notarized, not audited, not production-ready, and sensitive communication prohibited.
+
+External two-machine onion delivery has not yet been independently verified for
+this public beta. Do not treat same-machine dual-profile rehearsal, local smoke
+tests, or operator-prepared peer packets as proof of real external onion
+delivery.
+
+The current public upload set is prepared from the ignored local beta DMG with:
+
+```bash
+scripts/prepare_unsigned_public_beta_release.sh
+```
+
+The generated public release folder is `apps/desktop-tauri/public-release/unsigned-public-beta/`. It is ignored and should contain only the DMG, matching `.sha256`, provenance JSON, `INSTALL_UNSIGNED_MACOS.md`, `RELEASE_NOTES.md`, and `MANIFEST.md`.
+
+Public users must verify the DMG checksum before using the normal macOS Privacy & Security manual allow path. This project does not ask users to bypass macOS protections with terminal quarantine removal commands. There is no auto-update channel; every update is a manual GitHub Release download with a matching `.sha256` file.
+
+The unsigned release upload set includes `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, and `DEPENDENCY_LOCKFILES.sha256` as review evidence. These files are not an audit, SBOM, reproducible-build proof, malware review, signing substitute, notarization substitute, or secure messenger claim.
+
+The upload set also includes `PUBLIC_THREAT_MODEL.md` and `INDEPENDENT_REVIEW_PACKET.md` so reviewers can inspect allowed claims, non-claims, known gaps, and public-safe review commands without private planning notes.
+
+The app's public diagnostics export is limited to status, build, failure class, manual network permission state, and app-launch network boundary. It must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, profile names, message text, local paths, raw logs, passphrases, or key material.
+
+Public unsigned beta artifacts must not include local app data, private planning notes, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, raw diagnostic logs, build caches, `docs/`, `target/`, `dist/`, `node_modules/`, `beta-artifacts/`, or generated public release folders committed into the repository.
 
 ## Development Expectations
 

@@ -12,6 +12,39 @@ Do not use it for real communication.
 
 The current implementation has a local Tauri desktop beta candidate for two-profile invite rooms, local encrypted profile/session/message stores, explicit private-delivery setup, restart/resume recovery, and fail-closed onion/Tor attempt paths. It still exists to test protocol, storage, transport, and UI recovery boundaries before any production security claim.
 
+The current internal field-test handoff record, if the ignored local artifact directory is present, is:
+
+- Transfer bundle: `apps/desktop-tauri/beta-artifacts/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-field-test-handoff.zip`
+- Transfer bundle SHA-256: `f231dcc3a95b63d5d32b6b36cb503443a46547fa1dcbb44d58f772be831d0907`
+- App DMG SHA-256 inside the bundle: `625ee389d930330b0f2e369a53c4f582df076dd612920f6cf0366aab4a3edb95`
+- Build channel and commit reported by field-test UI: `beta-onion`, `806ecad1`
+
+This handoff is not a public release, not signed or notarized, not audited, and not suitable for sensitive communication. The ignored `beta-artifacts/` directory is local-only and must not be committed.
+
+The current unsigned public beta release path repackages the local DMG into a GitHub Release upload set. It is still an unsigned experimental public beta, not notarized, not audited, not production-ready, and sensitive communication prohibited. External two-machine onion delivery has not been independently verified; same-machine dual-profile rehearsal is development evidence only.
+
+Expected public GitHub Release files:
+
+- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
+- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
+- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
+- `INSTALL_UNSIGNED_MACOS.md`
+- `RELEASE_NOTES.md`
+- `UPDATE_INTEGRITY.md`
+- `SUPPLY_CHAIN_BASELINE.md`
+- `PUBLIC_THREAT_MODEL.md`
+- `INDEPENDENT_REVIEW_PACKET.md`
+- `DEPENDENCY_LOCKFILES.sha256`
+- `MANIFEST.md`
+
+Prepare the ignored local upload folder from the frozen local DMG:
+
+```bash
+scripts/prepare_unsigned_public_beta_release.sh
+```
+
+The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
+
 What exists today:
 
 - Rust workspace split into `identity`, `pairing`, `crypto`, `protocol`, `transport`, `storage`, and `core` crates, plus CLI and Tauri desktop prototype shells.
@@ -20,23 +53,28 @@ What exists today:
 - Production-facing guardrails for Ed25519 pairwise identity material, signed pairing drafts, Noise-based session setup smoke tests, envelope encryption/decryption, replay rejection, and local storage policy checks.
 - High-risk transport policy and fail-closed Tor/onion scaffolding, including direct-route rejection, app-private directory checks, runtime preflight, redacted runtime events, bridge/censorship configuration boundaries, onion key lifecycle policy, and descriptor/stream/envelope-I/O gates.
 - SQLCipher-backed storage spikes for `ADREC1` record containers, passphrase unlock, high-risk unlock policy, replay-window persistence, pairwise endpoint state, local message indexes, opaque record-id derivation, and internal raw database-key opening only.
+- A local SQLCipher-backed production session lifecycle path for pairing draft, remote endpoint state, replay window, Noise transport state, restart/resume readiness checks, and explicit session lifecycle deletion without wiping message records.
+- Local data lifecycle controls for conversation message-record deletion, profile-store deletion, owned local app-data wipe, backup-exclusion preparation, forward-only schema versioning, and marker-only rollback detection. These controls do not claim secure deletion from media or rollback prevention.
+- Manual update integrity evidence for the unsigned public beta release path: DMG `.sha256`, provenance JSON, release manifest, update-integrity policy, supply-chain baseline note, and dependency lockfile SHA-256 list.
+- Public threat model and independent review packet that state allowed claims, non-claims, known gaps, and public-safe review commands.
 - A local Tauri desktop beta shell for invite-code rooms, safety phrase confirmation, encrypted local profile/session/message records, saved-room resume, manual private-route exchange, explicit receive start/stop, retry/cancel recovery, and redacted field-test reports.
+- In-app unsigned public beta warnings and public diagnostics export limited to status, build, and failure class.
 - Explicit user-triggered onion/Tor attempt paths for beta field testing. The app must not bootstrap Tor, host onion services, publish descriptors, open streams, send envelopes, or receive envelopes on app launch.
 - Lightweight verification scripts, CLI hardening tests, Tauri scaffold static checks, and GitHub Actions verification.
-- Local beta DMG handoff is possible from the Tauri app directory, but signing, notarization, reproducible/equivalent builds, dependency review, external review, signoff, and update integrity are not implemented.
+- Local beta DMG handoff is possible from the Tauri app directory, but signing, notarization, reproducible/equivalent builds, dependency review, external review, signoff, and auto-update integrity are not implemented.
 
 What does not exist yet:
 
-- Real end-to-end encryption.
-- Secure production messaging.
+- Audited or security-ready production end-to-end encryption.
+- Secure production messaging suitable for sensitive communication.
 - Reliable Tor/onion transport across real networks.
 - Audited production transport adapter implementation.
 - Audited bridge or censorship-circumvention support.
 - Actual onion service private key material.
-- Production unlock/key management.
+- Complete production key management. The desktop shell now has a passphrase-first product unlock/lock state, local durable session lifecycle records, and local data lifecycle controls, but it does not claim key wrapping, secure deletion from media, rollback prevention, audited E2EE readiness, or runtime messaging readiness.
 - OS keychain/DPAPI/Keystore wrapping.
-- Complete production encrypted local storage lifecycle.
-- Replay rollback protection against encrypted database snapshot restore.
+- Complete production encrypted local storage lifecycle with secure deletion guarantees.
+- Replay rollback prevention against encrypted database snapshot restore.
 - Production Tauri desktop app. The current Tauri shell is a local beta candidate, not a secure release.
 - Android or iOS app.
 - Offline mailbox.
@@ -45,8 +83,8 @@ What does not exist yet:
 - Voice or video calls.
 - Multi-device support.
 - Release signing, notarization, auto-update integrity, or reproducible builds.
-- Dependency/supply-chain review evidence.
-- External security review, independent review readiness, or user safety signoff.
+- Dependency/supply-chain audit or SBOM evidence.
+- Completed external security review, independent review result, or user safety signoff.
 
 ## Security Boundary
 
@@ -120,23 +158,17 @@ This runs:
 - Default build boundary checks that keep `dev-insecure` out of default feature sets and verify the default CLI exposes only boundary commands.
 - Default CLI hardening rejects production skeleton commands for profile, pairing, messaging, storage unlock, transport bootstrap, and transport send/receive unless a later phase explicitly opens them.
 - Production skeleton preflight summary aggregates current crypto/session, transport, storage, and command-surface blockers without exposing production messaging.
-- Production skeleton next connector selection keeps the next slice on session protocol and durable-state gates without opening runtime execution.
-- Session durable-state connector gate draft records private-key and replay storage requirements while keeping Noise transport state in memory and runtime execution closed.
-- Session durable-state connector harness applies the storage policy to those records and rejects session transport persistence before any connector implementation.
-- Session durable-state persistence adapter skeleton maps the allowed record policies without implementing storage unlock, transport I/O, or runtime messaging.
-- Session durable-state encrypted-record adapter spike prepares allowed sealed records without enabling durable Noise transport state.
-- Session durable-state adapter non-readiness guard keeps rollback protection, durable session persistence, production E2EE readiness, product store writes, and runtime messaging false.
-- Session durable-state store-write adapter writes caller-supplied prepared sealed records through an already-unlocked SQLCipher store only after kind, scope, and record-id prefix binding checks, without adding a production unlock, transport I/O, or messaging path.
-- Session durable-state store-write status mirror marks the adapter boundary available while keeping production store write, unlock, durable persistence, rollback protection, and runtime messaging disabled.
-- Session durable-state product unlock blocker summary keeps product unlock closed until key wrapping, backup exclusion, rollback, and durable session lifecycle decisions are complete.
-- Session durable-state unlock policy handoff confirms high-risk passphrase-first unlock policy and OS-keystore-only rejection while keeping product unlock and runtime messaging disabled.
-- Session unlock/lock command design gate requires explicit lock, idle auto-lock, redacted unlock errors, and passphrase-first high-risk policy while keeping product unlock and lock commands disabled.
-- Session unlock command fail-closed skeleton accepts request shape coverage but always returns a redacted disabled result without opening storage, writing session records, exposing key material, or enabling runtime messaging.
-- Session lock lifecycle status mirror records default/high-risk idle auto-lock requirements while keeping storage unlocked state, product lock command, key erasure claim, and runtime messaging disabled.
+- Session lifecycle records now persist pairing draft, endpoint state, replay window, and Noise transport state in the local encrypted profile store, with status/delete commands that do not return channel ids, paths, passphrases, endpoints, payloads, or key material.
+- Session lifecycle delete closes restart/resume and message-envelope readiness for the active session while preserving message records for the later data-lifecycle phase.
+- Data lifecycle commands delete conversation records, profile store files, and owned local app data without returning paths, passphrases, plaintext, or key material; secure deletion from media remains false.
+- SQLCipher stores now apply a forward-only `user_version` migration boundary and reject future schema versions instead of silently downgrading or destructively rewriting data.
+- Rollback detection is marker-only and still requires external monotonic state before any rollback-prevention claim.
+- Desktop product unlock opens the local encrypted profile store through a passphrase-first command, then records only redacted unlocked/locked metadata with explicit lock and 60-second idle auto-lock.
+- Session unlock policy keeps OS-keystore-only unlock rejected for high-risk mode and does not use Apple keychain, Secure Enclave, DPAPI, Keystore, or cloud key wrapping in v0.1.
+- Session unlock/lock UX exposes redacted wrong-passphrase/locked states without returning raw storage errors, local paths, identifiers, passphrase detail, or key material.
 - Session unlock redacted error taxonomy classifies disabled, passphrase-required, and OS-keystore-only rejected states without exposing raw storage errors, OS keychain errors, paths, identifiers, key material, or passphrase detail.
 - Default CLI `production unlock` is a fail-closed boundary command that returns the redacted disabled taxonomy without opening storage, writing session records, exposing key material, or enabling runtime messaging.
-- Tauri prototype status mirrors the CLI production unlock redacted disabled taxonomy as static read-only copy without adding an unlock command or executing the CLI.
-- Tauri prototype status mirrors session durable-state and unlock-policy blockers as static read-only copy without adding unlock, store-write, or runtime messaging commands.
+- Tauri prototype status separates the still-disabled CLI production unlock from the desktop product unlock command, which opens storage only after explicit user passphrase input and still does not enable runtime messaging.
 - Tauri scaffold static checks.
 
 For a heavier pre-release, audit, or risky cross-cutting change pass, run:
@@ -156,7 +188,12 @@ This additionally runs:
 
 ## Local Beta Release Prep
 
-The current beta release target is an internal field-test build, not a public secure messenger release.
+The current beta release target has two separate paths:
+
+- Internal field-test handoff under ignored `apps/desktop-tauri/beta-artifacts/`.
+- Unsigned public experimental GitHub Release staging under ignored `apps/desktop-tauri/public-release/`.
+
+Neither path is a public secure messenger release.
 
 Before handing a beta artifact to a tester:
 
@@ -170,10 +207,26 @@ Before handing a beta artifact to a tester:
 5. Copy local handoff artifacts into `apps/desktop-tauri/beta-artifacts/`.
 6. Record the artifact name, SHA-256, build channel, commit, date, and field-test scope in the handoff notes.
 
-Do not publish `docs/`, app data, bridge lines, onion endpoints, plaintext messages, passphrases, private keys, raw logs, `target/`, `dist/`, `node_modules/`, or `beta-artifacts/`.
+To stage the current unsigned public GitHub Release upload set from the local ignored DMG, run:
+
+```bash
+scripts/prepare_unsigned_public_beta_release.sh
+```
+
+Upload only the generated public release files from `apps/desktop-tauri/public-release/unsigned-public-beta/`. The public release notes and install guide must keep the unsigned experimental beta warning, sensitive communication prohibition, not audited status, not production-ready status, and external two-machine onion delivery non-claim. Users must treat every update as a fresh manual download and verify the matching `.sha256` file.
+
+For the current local field-test handoff, send only the per-peer delivery folder contents from:
+
+- `apps/desktop-tauri/beta-artifacts/peer-delivery-a/`
+- `apps/desktop-tauri/beta-artifacts/peer-delivery-b/`
+
+Each folder should contain the transfer zip, matching `.sha256`, `PEER_HANDOFF_MESSAGE.md`, and `MANIFEST.md`. The peer-side preflight verifier must be run from the extracted `another-dimension-beta-handoff` folder. It checks bundle contents without launching the app or starting network/onion work.
+
+Do not publish `docs/`, app data, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, raw logs, `target/`, `dist/`, `node_modules/`, or `beta-artifacts/`.
 
 For desktop-specific commands and beta notes, see [apps/desktop-tauri/README.md](apps/desktop-tauri/README.md).
 For the public-safe beta handoff checklist, see [reference/BETA_RELEASE_CHECKLIST.md](reference/BETA_RELEASE_CHECKLIST.md).
+For public review scope, see [reference/PUBLIC_THREAT_MODEL.md](reference/PUBLIC_THREAT_MODEL.md) and [reference/INDEPENDENT_REVIEW_PACKET.md](reference/INDEPENDENT_REVIEW_PACKET.md).
 
 ## CLI Prototype
 
@@ -185,7 +238,7 @@ The default build exposes only a local production-boundary self-test. Here, "pro
 cargo run -q -- production self-test
 ```
 
-The self-test prints a redacted production-session summary for the current `snow` Noise XX synchronous evaluation boundary. The summary keeps production E2EE, durable session persistence, Tauri production messaging commands, and usable async messaging false.
+The self-test prints a redacted production-session summary for the current `snow` Noise XX synchronous evaluation boundary. It is a CLI boundary check and does not claim audited E2EE readiness, automatic transport, or usable async messaging.
 
 The default build also exposes a read-only production skeleton preflight. It prints the current session, transport, storage, and command-surface blockers without creating profiles, unlocking storage, bootstrapping transport, sending envelopes, receiving envelopes, or marking messaging ready:
 
