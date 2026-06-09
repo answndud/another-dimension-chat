@@ -1,0 +1,72 @@
+# Install Unsigned macOS Public Beta
+
+This build is an unsigned experimental public beta of Another Dimension Chat.
+
+It is not notarized, not audited, not production-ready, and sensitive communication prohibited.
+
+## Files
+
+Download these files from the GitHub Release:
+
+- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
+- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
+- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
+- `INSTALL_UNSIGNED_MACOS.md`
+- `RELEASE_NOTES.md`
+- `UPDATE_INTEGRITY.md`
+- `SUPPLY_CHAIN_BASELINE.md`
+- `PUBLIC_THREAT_MODEL.md`
+- `INDEPENDENT_REVIEW_PACKET.md`
+- `DEPENDENCY_LOCKFILES.sha256`
+- `MANIFEST.md`
+
+## Verify The Download
+
+Put the `.dmg` and `.sha256` in the same folder, then run:
+
+```bash
+shasum -a 256 -c another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256
+```
+
+Expected output:
+
+```text
+another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg: OK
+```
+
+Expected DMG SHA-256:
+
+```text
+625ee389d930330b0f2e369a53c4f582df076dd612920f6cf0366aab4a3edb95
+```
+
+## Open On macOS
+
+Because this build is unsigned and not notarized, macOS may block it.
+
+Use only the normal macOS manual allow path:
+
+1. Open the DMG.
+2. Try to open Another Dimension Chat.
+3. If macOS blocks it, open System Settings.
+4. Go to Privacy & Security.
+5. Allow the blocked app only if the checksum matched the expected SHA-256.
+
+Do not use this app for sensitive communication.
+
+## Manual Updates Only
+
+This beta has no auto-update channel.
+
+For every update, download the new DMG and matching `.sha256` from the same
+GitHub Release and verify the checksum again before opening the app.
+
+`DEPENDENCY_LOCKFILES.sha256` records the lockfile hashes used for the release
+baseline. It is reviewer evidence, not a dependency audit or security guarantee.
+
+## Safety Boundary
+
+- No phone number, email, global account, searchable username, centralized contact discovery, central message server, push notification, or cloud backup is part of this beta.
+- The app must not start Tor/onion/network work on launch.
+- Network/onion work must require explicit user action.
+- This beta does not claim secure messenger readiness.
