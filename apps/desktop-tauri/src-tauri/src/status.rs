@@ -10,6 +10,7 @@ pub struct PrototypeStatus {
     production_session_non_readiness: &'static str,
     production_session_readiness_blockers: String,
     production_async_delivery_semantics: String,
+    production_manual_runtime_messaging: String,
     production_protocol_decision: String,
     production_runtime_command_surface: String,
     production_preflight_status: String,
@@ -36,6 +37,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
     let session_gate = another_dimension_core::production::production_session_readiness_gate();
     let async_delivery =
         another_dimension_core::production::production_async_delivery_semantics_summary();
+    let manual_runtime =
+        another_dimension_core::production::production_manual_runtime_messaging_gate_summary();
     let protocol_decision =
         another_dimension_core::production::production_protocol_decision_summary();
     let command_surface =
@@ -70,6 +73,22 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             async_delivery.runtime_messaging_enabled(),
             async_delivery.semantic_states().join(","),
             async_delivery.required_followups().join(","),
+        ),
+        production_manual_runtime_messaging: format!(
+            "gate_reviewed={} manual_runtime_messaging={} explicit_user_action_required={} passphrase_first_storage_required={} session_runtime_material_required={} envelope_export_import_ready={} local_transcript_ready={} automatic_network_on_launch={} network_io_attempted={} external_onion_delivery_verified={} production_messaging_ready={} security_ready_claimed={} operations={}",
+            manual_runtime.gate_reviewed(),
+            manual_runtime.manual_runtime_messaging_enabled(),
+            manual_runtime.explicit_user_action_required(),
+            manual_runtime.passphrase_first_storage_required(),
+            manual_runtime.session_runtime_material_required(),
+            manual_runtime.encrypted_envelope_export_import_ready(),
+            manual_runtime.local_transcript_ready(),
+            manual_runtime.automatic_network_on_launch_allowed(),
+            manual_runtime.network_io_attempted(),
+            manual_runtime.external_onion_delivery_verified(),
+            manual_runtime.production_messaging_ready(),
+            manual_runtime.security_ready_claimed(),
+            manual_runtime.operations().join(","),
         ),
         production_protocol_decision: format!(
             "reviewed={} selected={} custom_protocol_allowed={} offline_mailbox_selected={} group_or_multidevice_selected={} production_e2ee_ready={} rejected_directions={} required_followups={}",
@@ -204,6 +223,15 @@ mod tests {
         assert!(status
             .production_async_delivery_semantics
             .contains("external_onion_delivery_verified=false"));
+        assert!(status
+            .production_manual_runtime_messaging
+            .contains("manual_runtime_messaging=true"));
+        assert!(status
+            .production_manual_runtime_messaging
+            .contains("network_io_attempted=false"));
+        assert!(status
+            .production_manual_runtime_messaging
+            .contains("production_messaging_ready=false"));
         assert!(status
             .local_data_lifecycle_policy
             .contains("passphrase_first_required=true"));
