@@ -85,6 +85,10 @@ What exists today:
   after decrypt, and tamper failure must not advance receive state. This is still
   not an audited or production-ready E2EE claim.
 - Local data lifecycle controls for conversation message-record deletion, profile-store deletion, owned local app-data wipe, backup-exclusion preparation, forward-only schema versioning, and marker-only rollback detection. These controls do not claim secure deletion from media or rollback prevention.
+- A v0.1 key and rollback boundary decision: passphrase-first remains required,
+  OS keystore or Secure Enclave style wrapping is optional and not required,
+  OS-keystore-only unlock is rejected, app key wrapping is not claimed, and
+  rollback prevention is not claimed without an external monotonic-state design.
 - Manual update integrity evidence for the unsigned public beta release path: DMG `.sha256`, public provenance JSON, release manifest, update-integrity policy, supply-chain baseline note, and dependency lockfile SHA-256 list.
 - Public threat model and independent review packet that state allowed claims, non-claims, known gaps, and public-safe review commands.
 - A local Tauri desktop beta shell for invite-code rooms, safety phrase confirmation, encrypted local profile/session/message records, saved-room resume, manual private-route exchange, explicit receive start/stop, retry/cancel recovery, and redacted field-test reports.
@@ -104,7 +108,7 @@ What does not exist yet:
 - Audited production transport adapter implementation.
 - Audited bridge or censorship-circumvention support.
 - Actual onion service private key material.
-- Complete production key management. The desktop shell now has a passphrase-first product unlock/lock state, local durable session lifecycle records, and local data lifecycle controls, but it does not claim key wrapping, secure deletion from media, rollback prevention, audited E2EE readiness, or runtime messaging readiness.
+- Complete production key management. The desktop shell now has a passphrase-first product unlock/lock state, local durable session lifecycle records, local data lifecycle controls, and a v0.1 key/rollback boundary decision, but it does not claim app key wrapping, secure deletion from media, rollback prevention, audited E2EE readiness, or automatic/network runtime messaging readiness.
 - OS keychain/DPAPI/Keystore wrapping.
 - Complete production encrypted local storage lifecycle with secure deletion guarantees.
 - Replay rollback prevention against encrypted database snapshot restore.
@@ -198,6 +202,7 @@ This runs:
 - Rollback detection is marker-only and still requires external monotonic state before any rollback-prevention claim.
 - Desktop product unlock opens the local encrypted profile store through a passphrase-first command, then records only redacted unlocked/locked metadata with explicit lock and 60-second idle auto-lock.
 - Session unlock policy keeps OS-keystore-only unlock rejected for high-risk mode and does not use Apple keychain, Secure Enclave, DPAPI, Keystore, or cloud key wrapping in v0.1.
+- Key/rollback policy is closed for v0.1 as a non-claim boundary: passphrase-first is required, OS wrapping is optional/non-required, app key wrapping is not ready, rollback prevention is not claimed, and external monotonic state is required before any future rollback-prevention claim.
 - Session unlock/lock UX exposes redacted wrong-passphrase/locked states without returning raw storage errors, local paths, identifiers, passphrase detail, or key material.
 - Session unlock redacted error taxonomy classifies disabled, passphrase-required, and OS-keystore-only rejected states without exposing raw storage errors, OS keychain errors, paths, identifiers, key material, or passphrase detail.
 - Default CLI `production unlock` is a fail-closed boundary command that returns the redacted disabled taxonomy without opening storage, writing session records, exposing key material, or enabling automatic runtime messaging.
