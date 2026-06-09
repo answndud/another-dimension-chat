@@ -468,6 +468,18 @@ pub mod production {
         "secure_media_deletion_non_claim",
     ];
 
+    const PRODUCTION_TRANSPORT_ENVELOPE_IO_POLICIES: &[&str] = &[
+        "explicit_user_action_required",
+        "no_network_on_launch",
+        "onion_only_high_risk_route",
+        "direct_fallback_rejected",
+        "fail_closed_send_receive_adapters",
+        "redacted_envelope_io_context",
+        "remote_peer_authentication_before_session_binding",
+        "verified_pairwise_session_before_envelope_io",
+        "external_two_machine_evidence_required",
+    ];
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionRuntimeCommandSurfaceSummary {
         reviewed_categories: &'static [&'static str],
@@ -538,6 +550,27 @@ pub mod production {
         secure_media_deletion_claimed: bool,
         boundary_closed: bool,
         production_key_management_ready: bool,
+        security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionTransportEnvelopeIoBoundarySummary {
+        policies: &'static [&'static str],
+        explicit_user_action_required: bool,
+        automatic_network_on_launch_allowed: bool,
+        high_risk_onion_only_policy: bool,
+        direct_fallback_allowed: bool,
+        route_allowed_by_policy: bool,
+        outbound_fail_closed_adapter_ready: bool,
+        inbound_fail_closed_adapter_ready: bool,
+        redacted_envelope_io_context_required: bool,
+        remote_peer_authentication_required: bool,
+        verified_pairwise_session_required: bool,
+        send_receive_available: bool,
+        external_two_machine_onion_delivery_verified: bool,
+        reliable_real_network_onion_delivery_claimed: bool,
+        boundary_closed: bool,
+        production_messaging_ready: bool,
         security_ready_claimed: bool,
     }
 
@@ -777,6 +810,76 @@ pub mod production {
         }
     }
 
+    impl ProductionTransportEnvelopeIoBoundarySummary {
+        pub fn policies(self) -> &'static [&'static str] {
+            self.policies
+        }
+
+        pub fn explicit_user_action_required(self) -> bool {
+            self.explicit_user_action_required
+        }
+
+        pub fn automatic_network_on_launch_allowed(self) -> bool {
+            self.automatic_network_on_launch_allowed
+        }
+
+        pub fn high_risk_onion_only_policy(self) -> bool {
+            self.high_risk_onion_only_policy
+        }
+
+        pub fn direct_fallback_allowed(self) -> bool {
+            self.direct_fallback_allowed
+        }
+
+        pub fn route_allowed_by_policy(self) -> bool {
+            self.route_allowed_by_policy
+        }
+
+        pub fn outbound_fail_closed_adapter_ready(self) -> bool {
+            self.outbound_fail_closed_adapter_ready
+        }
+
+        pub fn inbound_fail_closed_adapter_ready(self) -> bool {
+            self.inbound_fail_closed_adapter_ready
+        }
+
+        pub fn redacted_envelope_io_context_required(self) -> bool {
+            self.redacted_envelope_io_context_required
+        }
+
+        pub fn remote_peer_authentication_required(self) -> bool {
+            self.remote_peer_authentication_required
+        }
+
+        pub fn verified_pairwise_session_required(self) -> bool {
+            self.verified_pairwise_session_required
+        }
+
+        pub fn send_receive_available(self) -> bool {
+            self.send_receive_available
+        }
+
+        pub fn external_two_machine_onion_delivery_verified(self) -> bool {
+            self.external_two_machine_onion_delivery_verified
+        }
+
+        pub fn reliable_real_network_onion_delivery_claimed(self) -> bool {
+            self.reliable_real_network_onion_delivery_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+
+        pub fn production_messaging_ready(self) -> bool {
+            self.production_messaging_ready
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+    }
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionSessionReadinessGate {
         production_e2ee_ready: bool,
@@ -910,6 +1013,7 @@ pub mod production {
         session_e2ee_ready: bool,
         local_manual_e2ee_runtime_ready: bool,
         key_rollback_boundary_closed: bool,
+        transport_envelope_io_boundary_closed: bool,
         transport_route_kind: TransportKind,
         transport_route_allowed_by_policy: bool,
         transport_send_receive_available: bool,
@@ -3167,6 +3271,10 @@ pub mod production {
             self.key_rollback_boundary_closed
         }
 
+        pub fn transport_envelope_io_boundary_closed(self) -> bool {
+            self.transport_envelope_io_boundary_closed
+        }
+
         pub fn transport_route_kind(self) -> TransportKind {
             self.transport_route_kind
         }
@@ -3209,6 +3317,7 @@ pub mod production {
         SessionProtocolAndStatePersistence,
         StorageKeyManagementAndRollback,
         TransportEnvelopeIo,
+        ExternalOnionEvidence,
         RuntimeCommandSurface,
     }
 
@@ -8158,6 +8267,67 @@ pub mod production {
         }
     }
 
+    pub fn production_transport_envelope_io_boundary_summary(
+    ) -> ProductionTransportEnvelopeIoBoundarySummary {
+        let command_surface = production_runtime_command_surface_summary();
+        let transport = OnionEnvelopeTransport::fail_closed_high_risk();
+        let route = TransportRoute::onion("preflight.onion")
+            .expect("static onion preflight route is valid");
+        let path = transport.message_path_boundary_summary(&route);
+        let explicit_user_action_required = command_surface.explicit_user_network_attempts_only();
+        let automatic_network_on_launch_allowed =
+            command_surface.implicit_network_on_launch_allowed();
+        let high_risk_onion_only_policy = transport.policy().mode()
+            == another_dimension_transport::TransportMode::HighRiskOnionOnly;
+        let direct_fallback_allowed = TransportPolicy::high_risk_default()
+            .require_allowed(
+                &TransportRoute::direct_peer("direct-peer")
+                    .expect("static direct peer endpoint is valid"),
+            )
+            .is_ok();
+        let outbound_fail_closed_adapter_ready = true;
+        let inbound_fail_closed_adapter_ready = true;
+        let redacted_envelope_io_context_required = true;
+        let remote_peer_authentication_required = true;
+        let verified_pairwise_session_required = true;
+        let send_receive_available = path.send_receive_available();
+        let external_two_machine_onion_delivery_verified = false;
+        let reliable_real_network_onion_delivery_claimed = false;
+        let boundary_closed = explicit_user_action_required
+            && !automatic_network_on_launch_allowed
+            && high_risk_onion_only_policy
+            && !direct_fallback_allowed
+            && path.route_allowed_by_policy()
+            && outbound_fail_closed_adapter_ready
+            && inbound_fail_closed_adapter_ready
+            && redacted_envelope_io_context_required
+            && remote_peer_authentication_required
+            && verified_pairwise_session_required
+            && !send_receive_available
+            && !external_two_machine_onion_delivery_verified
+            && !reliable_real_network_onion_delivery_claimed;
+
+        ProductionTransportEnvelopeIoBoundarySummary {
+            policies: PRODUCTION_TRANSPORT_ENVELOPE_IO_POLICIES,
+            explicit_user_action_required,
+            automatic_network_on_launch_allowed,
+            high_risk_onion_only_policy,
+            direct_fallback_allowed,
+            route_allowed_by_policy: path.route_allowed_by_policy(),
+            outbound_fail_closed_adapter_ready,
+            inbound_fail_closed_adapter_ready,
+            redacted_envelope_io_context_required,
+            remote_peer_authentication_required,
+            verified_pairwise_session_required,
+            send_receive_available,
+            external_two_machine_onion_delivery_verified,
+            reliable_real_network_onion_delivery_claimed,
+            boundary_closed,
+            production_messaging_ready: false,
+            security_ready_claimed: false,
+        }
+    }
+
     pub fn production_session_readiness_gate() -> ProductionSessionReadinessGate {
         let summary = production_session_evaluation_summary();
 
@@ -8173,6 +8343,7 @@ pub mod production {
         let session = production_session_evaluation_summary();
         let local_manual_e2ee = production_local_manual_e2ee_runtime_summary();
         let key_rollback = production_key_rollback_boundary_summary();
+        let transport_boundary = production_transport_envelope_io_boundary_summary();
         let command_surface = production_runtime_command_surface_summary();
         let transport = OnionEnvelopeTransport::fail_closed_high_risk();
         let route = TransportRoute::onion("preflight.onion")
@@ -8186,6 +8357,7 @@ pub mod production {
             session_e2ee_ready: session.production_e2ee_ready(),
             local_manual_e2ee_runtime_ready: local_manual_e2ee.local_manual_e2ee_runtime_ready(),
             key_rollback_boundary_closed: key_rollback.boundary_closed(),
+            transport_envelope_io_boundary_closed: transport_boundary.boundary_closed(),
             transport_route_kind: transport.route_kind(),
             transport_route_allowed_by_policy: transport.route_allowed_by_policy(),
             transport_send_receive_available: transport.send_receive_available(),
@@ -8228,6 +8400,16 @@ pub mod production {
         }
 
         if !preflight.transport_send_receive_available() {
+            let transport_boundary = production_transport_envelope_io_boundary_summary();
+            if transport_boundary.boundary_closed() {
+                return ProductionSkeletonNextConnectorSelection {
+                    connector: ProductionSkeletonConnector::ExternalOnionEvidence,
+                    blocker: "external two-machine onion delivery evidence is not complete",
+                    required_gate: "real external peer reports without fabricated local evidence",
+                    opens_runtime_execution: false,
+                    production_messaging_ready: false,
+                };
+            }
             return ProductionSkeletonNextConnectorSelection {
                 connector: ProductionSkeletonConnector::TransportEnvelopeIo,
                 blocker: "transport send receive envelope I/O is disabled",
@@ -9816,7 +9998,7 @@ pub mod production {
             assert!(preflight.local_manual_e2ee_runtime_ready());
             assert_eq!(
                 selection.connector(),
-                ProductionSkeletonConnector::TransportEnvelopeIo
+                ProductionSkeletonConnector::ExternalOnionEvidence
             );
             assert!(!selection.production_messaging_ready());
         }
@@ -9852,9 +10034,47 @@ pub mod production {
             assert!(preflight.key_rollback_boundary_closed());
             assert_eq!(
                 selection.connector(),
-                ProductionSkeletonConnector::TransportEnvelopeIo
+                ProductionSkeletonConnector::ExternalOnionEvidence
             );
             assert!(!selection.production_messaging_ready());
+        }
+
+        #[test]
+        fn production_transport_envelope_io_boundary_closes_without_external_evidence_claim() {
+            let boundary = production_transport_envelope_io_boundary_summary();
+            let preflight = production_skeleton_preflight_summary();
+            let selection = production_skeleton_next_connector_selection();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.explicit_user_action_required());
+            assert!(!boundary.automatic_network_on_launch_allowed());
+            assert!(boundary.high_risk_onion_only_policy());
+            assert!(!boundary.direct_fallback_allowed());
+            assert!(boundary.route_allowed_by_policy());
+            assert!(boundary.outbound_fail_closed_adapter_ready());
+            assert!(boundary.inbound_fail_closed_adapter_ready());
+            assert!(boundary.redacted_envelope_io_context_required());
+            assert!(boundary.remote_peer_authentication_required());
+            assert!(boundary.verified_pairwise_session_required());
+            assert!(!boundary.send_receive_available());
+            assert!(!boundary.external_two_machine_onion_delivery_verified());
+            assert!(!boundary.reliable_real_network_onion_delivery_claimed());
+            assert!(!boundary.production_messaging_ready());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary.policies().contains(&"direct_fallback_rejected"));
+            assert!(boundary
+                .policies()
+                .contains(&"external_two_machine_evidence_required"));
+            assert!(preflight.transport_envelope_io_boundary_closed());
+            assert!(!preflight.transport_send_receive_available());
+            assert_eq!(
+                selection.connector(),
+                ProductionSkeletonConnector::ExternalOnionEvidence
+            );
+            assert_eq!(
+                selection.required_gate(),
+                "real external peer reports without fabricated local evidence"
+            );
         }
 
         #[test]
