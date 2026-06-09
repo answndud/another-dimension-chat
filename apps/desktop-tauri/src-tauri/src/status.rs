@@ -11,6 +11,7 @@ pub struct PrototypeStatus {
     production_session_readiness_blockers: String,
     production_async_delivery_semantics: String,
     production_manual_runtime_messaging: String,
+    production_local_manual_e2ee_runtime: String,
     production_protocol_decision: String,
     production_runtime_command_surface: String,
     production_preflight_status: String,
@@ -39,6 +40,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         another_dimension_core::production::production_async_delivery_semantics_summary();
     let manual_runtime =
         another_dimension_core::production::production_manual_runtime_messaging_gate_summary();
+    let local_manual_e2ee =
+        another_dimension_core::production::production_local_manual_e2ee_runtime_summary();
     let protocol_decision =
         another_dimension_core::production::production_protocol_decision_summary();
     let command_surface =
@@ -89,6 +92,27 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             manual_runtime.production_messaging_ready(),
             manual_runtime.security_ready_claimed(),
             manual_runtime.operations().join(","),
+        ),
+        production_local_manual_e2ee_runtime: format!(
+            "gate_reviewed={} local_manual_e2ee_runtime_ready={} selected_protocol={} noise_xx_transport_state_required={} remote_static_verification_required={} safety_transcript_bound={} channel_binding_required={} message_number_nonce_binding_required={} replay_commit_after_decrypt={} tamper_failure_non_advance={} passphrase_first_storage_required={} envelope_export_import_ready={} automatic_network_on_launch={} network_io_attempted={} external_onion_delivery_verified={} production_e2ee_ready={} security_ready_claimed={} failure_model={}",
+            local_manual_e2ee.gate_reviewed(),
+            local_manual_e2ee.local_manual_e2ee_runtime_ready(),
+            local_manual_e2ee.selected_protocol(),
+            local_manual_e2ee.noise_xx_transport_state_required(),
+            local_manual_e2ee.remote_static_verification_required(),
+            local_manual_e2ee.safety_transcript_bound(),
+            local_manual_e2ee.channel_binding_required(),
+            local_manual_e2ee.message_number_nonce_binding_required(),
+            local_manual_e2ee.replay_commit_after_decrypt(),
+            local_manual_e2ee.tamper_failure_non_advance(),
+            local_manual_e2ee.passphrase_first_storage_required(),
+            local_manual_e2ee.explicit_envelope_export_import_ready(),
+            local_manual_e2ee.automatic_network_on_launch_allowed(),
+            local_manual_e2ee.network_io_attempted(),
+            local_manual_e2ee.external_onion_delivery_verified(),
+            local_manual_e2ee.production_e2ee_ready(),
+            local_manual_e2ee.security_ready_claimed(),
+            local_manual_e2ee.failure_model().join(","),
         ),
         production_protocol_decision: format!(
             "reviewed={} selected={} custom_protocol_allowed={} offline_mailbox_selected={} group_or_multidevice_selected={} production_e2ee_ready={} rejected_directions={} required_followups={}",
@@ -233,6 +257,15 @@ mod tests {
             .production_manual_runtime_messaging
             .contains("production_messaging_ready=false"));
         assert!(status
+            .production_local_manual_e2ee_runtime
+            .contains("local_manual_e2ee_runtime_ready=true"));
+        assert!(status
+            .production_local_manual_e2ee_runtime
+            .contains("production_e2ee_ready=false"));
+        assert!(status
+            .production_local_manual_e2ee_runtime
+            .contains("external_onion_delivery_verified=false"));
+        assert!(status
             .local_data_lifecycle_policy
             .contains("passphrase_first_required=true"));
         assert!(status
@@ -256,13 +289,13 @@ mod tests {
         assert!(status.transport_status.contains("route=OnionService"));
         assert!(status
             .network_execution_status
-            .contains("next_connector=SessionProtocolAndStatePersistence"));
+            .contains("next_connector=StorageKeyManagementAndRollback"));
         assert!(status
             .transport_io_status
             .contains("transport_send_receive=false"));
         assert!(status
             .transport_io_status
-            .contains("reviewed session protocol decision plus durable state persistence plan"));
+            .contains("key management rollback backup exclusion and migration decision"));
         assert!(status
             .release_integrity_status
             .contains("manual SHA-256 verification"));
