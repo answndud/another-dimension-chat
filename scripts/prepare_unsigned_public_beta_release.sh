@@ -22,6 +22,7 @@ REQUIRED_RELEASE_FILES=(
   "$RELEASE_PROVENANCE"
   "INSTALL_UNSIGNED_MACOS.md"
   "RELEASE_NOTES.md"
+  "GITHUB_RELEASE_BODY.md"
   "UPDATE_INTEGRITY.md"
   "SUPPLY_CHAIN_BASELINE.md"
   "PUBLIC_THREAT_MODEL.md"
@@ -57,6 +58,7 @@ require_file "$SOURCE_DMG"
 require_file "$SOURCE_PROVENANCE"
 require_file "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md"
 require_file "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md"
+require_file "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md"
 require_file "$ROOT_DIR/reference/UPDATE_INTEGRITY.md"
 require_file "$ROOT_DIR/reference/SUPPLY_CHAIN_BASELINE.md"
 require_file "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md"
@@ -89,6 +91,7 @@ mkdir -p "$RELEASE_DIR"
 cp "$SOURCE_DMG" "$RELEASE_DIR/$RELEASE_DMG"
 cp "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md"
 cp "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "$RELEASE_DIR/RELEASE_NOTES.md"
+cp "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "$RELEASE_DIR/GITHUB_RELEASE_BODY.md"
 cp "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "$RELEASE_DIR/UPDATE_INTEGRITY.md"
 cp "$ROOT_DIR/reference/SUPPLY_CHAIN_BASELINE.md" "$RELEASE_DIR/SUPPLY_CHAIN_BASELINE.md"
 cp "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md"
@@ -150,6 +153,7 @@ This folder is for a GitHub Release upload.
 - \`$RELEASE_PROVENANCE\`
 - \`INSTALL_UNSIGNED_MACOS.md\`
 - \`RELEASE_NOTES.md\`
+- \`GITHUB_RELEASE_BODY.md\`
 - \`UPDATE_INTEGRITY.md\`
 - \`SUPPLY_CHAIN_BASELINE.md\`
 - \`PUBLIC_THREAT_MODEL.md\`
@@ -194,6 +198,12 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"signed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"notarized\": false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Auto-update: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Signing/notarization: disabled"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "unsigned experimental public beta"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not audited"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not production-ready"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "sensitive communication prohibited"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GITHUB_RELEASE_BODY.md"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "External two-machine onion delivery has not yet been independently verified"
 require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "does not provide auto-update"
 require_text "$RELEASE_DIR/SUPPLY_CHAIN_BASELINE.md" "not a supply-chain audit"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "Cargo.lock"
