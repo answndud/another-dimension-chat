@@ -12,6 +12,16 @@
         <p class="eyebrow" data-i18n="appTagline">Private 1:1 chat</p>
         <h1 id="app-title">Another Dimension Chat</h1>
         <p id="local-dev-peer-label" class="local-dev-peer-label" hidden></p>
+        <section class="public-beta-warning" aria-labelledby="public-beta-warning-title">
+          <p class="eyebrow" data-i18n="publicBetaEyebrow">Unsigned public beta</p>
+          <h2 id="public-beta-warning-title" data-i18n="publicBetaWarningTitle">Experimental beta only</h2>
+          <p data-i18n="publicBetaWarningBody">
+            This build is unsigned, not notarized, not audited, not production-ready, and must not be used for sensitive communication.
+          </p>
+          <p data-i18n="publicBetaNetworkBody">
+            Network and onion delivery stay off on launch. They require manual permission and an explicit delivery action.
+          </p>
+        </section>
         <details class="system-settings-panel" role="dialog" aria-modal="true" aria-labelledby="app-settings-title">
           <summary id="app-settings-title" data-i18n="systemPanel" data-i18n-title="systemPanel" title="Settings">Settings</summary>
           <button
@@ -146,11 +156,15 @@
             </div>
             <div>
               <dt data-i18n="sessionDurableState">Session durable state</dt>
-              <dd id="session-durable-state" data-i18n="sessionDurableStateValue">Store-write adapter boundary; product unlock disabled</dd>
+              <dd id="session-durable-state" data-i18n="sessionDurableStateValue">
+                Store-write adapter boundary; product unlock available durable persistence pending
+              </dd>
             </div>
             <div>
               <dt data-i18n="sessionUnlockPolicy">Session unlock policy</dt>
-              <dd id="session-unlock-policy" data-i18n="sessionUnlockPolicyValue">High-risk passphrase required OS-keystore-only rejected</dd>
+              <dd id="session-unlock-policy" data-i18n="sessionUnlockPolicyValue">
+                Passphrase-first high-risk policy OS-keystore-only rejected
+              </dd>
             </div>
             <div>
               <dt data-i18n="sessionUnlockLimits">Session unlock limits</dt>
@@ -160,13 +174,15 @@
             </div>
             <div>
               <dt data-i18n="sessionUnlockRejection">Session unlock rejection</dt>
-              <dd id="session-unlock-cli-rejection" data-i18n="sessionUnlockRejectionValue">Redacted product-unlock-disabled boundary copy</dd>
+              <dd id="session-unlock-cli-rejection" data-i18n="sessionUnlockRejectionValue">
+                CLI production unlock disabled; desktop product unlock available
+              </dd>
             </div>
             <div>
               <dt data-i18n="unlockRejectionFlags">Unlock rejection flags</dt>
               <dd id="session-unlock-cli-rejection-flags" data-i18n="unlockRejectionFlagsValue">
-                Storage_opened=false session_records_written=false key_material_exposed=false
-                runtime_messaging=false
+                Desktop_product_unlock=true storage_opened_on_user_action=true
+                session_records_written=false key_material_exposed=false runtime_messaging=false
               </dd>
             </div>
             <div>
@@ -572,17 +588,18 @@
                 <div>
                   <h4 id="field-test-report-title" data-i18n="fieldTestReport">Field test report</h4>
                   <p data-i18n="fieldTestReportHint">
-                    Redacted delivery status for beta testing. It does not include codes, messages, profiles, or local paths.
+                    Redacted delivery status for beta testing. It does not include codes, endpoints, messages, profiles, local paths, logs, passphrases, or key material.
                   </p>
                 </div>
                 <textarea id="field-test-report" rows="8" readonly></textarea>
                 <p id="field-test-report-summary" class="field-test-report-summary" aria-live="polite"></p>
                 <ol id="field-test-checklist" class="field-test-checklist" aria-live="polite"></ol>
-                <label class="loop-label" for="peer-field-test-report">Peer report</label>
+                <label class="loop-label" for="peer-field-test-report" data-i18n="peerFieldTestReport">Peer report</label>
                 <textarea
                   id="peer-field-test-report"
                   class="peer-field-test-report"
                   rows="5"
+                  data-i18n-placeholder="peerFieldTestReportPlaceholder"
                   placeholder="Paste peer field test report"
                 ></textarea>
                 <p id="field-test-report-compare" class="field-test-report-summary" aria-live="polite"></p>
@@ -595,6 +612,22 @@
                     Copy report
                   </button>
                 </div>
+                <section class="public-diagnostics-panel" aria-labelledby="public-beta-diagnostics-title">
+                  <h5 id="public-beta-diagnostics-title" data-i18n="publicBetaDiagnostics">Public diagnostics</h5>
+                  <p data-i18n="publicBetaDiagnosticsHint">
+                    Status, build, and failure class only. It excludes codes, endpoints, messages, profiles, paths, logs, passphrases, and key material.
+                  </p>
+                  <textarea id="public-beta-diagnostics" rows="6" readonly></textarea>
+                  <p id="public-beta-diagnostics-summary" class="field-test-report-summary" aria-live="polite"></p>
+                  <div class="loop-actions">
+                    <button id="refresh-public-beta-diagnostics" type="button" class="flow-control is-secondary" data-i18n="refreshPublicBetaDiagnostics">
+                      Refresh diagnostics
+                    </button>
+                    <button id="copy-public-beta-diagnostics" type="button" data-i18n="copyPublicBetaDiagnostics">
+                      Copy diagnostics
+                    </button>
+                  </div>
+                </section>
               </section>
             </details>
             <section class="room-list-panel" aria-labelledby="room-list-title">
@@ -987,6 +1020,12 @@
                 />
                 <div class="loop-actions">
                   <button id="unlock-production-profile" type="button" data-i18n="unlockProfile">Unlock profile</button>
+                  <button id="lock-production-profile" type="button" class="flow-control is-secondary" data-i18n="lockProfile">
+                    Lock profile
+                  </button>
+                  <button id="check-production-product-unlock" type="button" class="flow-control is-secondary" data-i18n="checkUnlock">
+                    Check unlock
+                  </button>
                 </div>
                 <p id="production-profile-state" class="demo-state" aria-live="polite" data-i18n="profileLocked">
                   Profile locked
@@ -999,6 +1038,10 @@
                 </p>
                 <dl class="flow-summary">
                   <div>
+                    <dt data-i18n="unlockState">Unlock</dt>
+                    <dd id="production-product-unlock-state" data-i18n="notCheckedYet">Not checked yet</dd>
+                  </div>
+                  <div>
                     <dt data-i18n="storage">Storage</dt>
                     <dd id="production-profile-storage" data-i18n="notCheckedYet">Not checked yet</dd>
                   </div>
@@ -1010,7 +1053,39 @@
                     <dt data-i18n="boundary">Boundary</dt>
                     <dd id="production-profile-boundary" data-i18n="notCheckedYet">Not checked yet</dd>
                   </div>
+                  <div>
+                    <dt data-i18n="dataLifecycle">Data lifecycle</dt>
+                    <dd id="production-data-lifecycle" data-i18n="notCheckedYet">Not checked yet</dd>
+                  </div>
                 </dl>
+                <div class="tool-step">
+                  <div class="loop-actions">
+                    <button id="check-production-data-lifecycle" type="button" class="flow-control is-secondary" data-i18n="checkDataLifecycle">
+                      Check data lifecycle
+                    </button>
+                    <button id="prepare-production-data-lifecycle" type="button" class="flow-control is-secondary" data-i18n="prepareDataLifecycle">
+                      Prepare lifecycle
+                    </button>
+                  </div>
+                  <label class="loop-label" for="production-profile-delete-confirmation" data-i18n="profileDeleteConfirm">
+                    Type profile name to delete profile
+                  </label>
+                  <input id="production-profile-delete-confirmation" type="text" autocomplete="off" />
+                  <div class="loop-actions">
+                    <button id="delete-production-profile" type="button" class="flow-control is-secondary" data-i18n="deleteProfile">
+                      Delete profile
+                    </button>
+                  </div>
+                  <label class="loop-label" for="production-full-wipe-confirmation" data-i18n="fullWipeConfirm">
+                    Type WIPE LOCAL DATA to wipe local app data
+                  </label>
+                  <input id="production-full-wipe-confirmation" type="text" autocomplete="off" />
+                  <div class="loop-actions">
+                    <button id="wipe-production-local-data" type="button" class="flow-control is-secondary" data-i18n="wipeLocalData">
+                      Wipe local data
+                    </button>
+                  </div>
+                </div>
               </section>
               <section class="loop-panel" aria-labelledby="production-pairing-title">
                 <div>
@@ -1130,6 +1205,8 @@
                     <button id="export-production-handshake-finish" type="button" data-i18n="exportFinish">Export finish</button>
                     <button id="import-production-handshake-finish" type="button" data-i18n="importFinish">Import finish</button>
                     <button id="check-production-session-state" type="button" data-i18n="checkSession">Check session</button>
+                    <button id="check-production-session-lifecycle" type="button" class="flow-control is-secondary" data-i18n="checkLifecycle">Check lifecycle</button>
+                    <button id="delete-production-session-lifecycle" type="button" class="flow-control is-secondary" data-i18n="deleteSession">Delete session</button>
                   </div>
                 </div>
                 <dl class="flow-summary">
@@ -1144,6 +1221,10 @@
                   <div>
                     <dt data-i18n="handshake">Handshake</dt>
                     <dd id="production-handshake-state" data-i18n="notCheckedYet">Not checked yet</dd>
+                  </div>
+                  <div>
+                    <dt data-i18n="lifecycle">Lifecycle</dt>
+                    <dd id="production-session-lifecycle" data-i18n="notCheckedYet">Not checked yet</dd>
                   </div>
                   <div>
                     <dt data-i18n="boundary">Boundary</dt>
@@ -1171,6 +1252,7 @@
                   <textarea id="production-message-body" rows="3">hello over stored transport</textarea>
                   <div class="loop-actions">
                     <button id="export-production-message-envelope" type="button" data-i18n="exportEnvelope">Export envelope</button>
+                    <button id="delete-production-conversation" type="button" class="flow-control is-secondary" data-i18n="deleteConversation">Delete conversation</button>
                   </div>
                   <p id="production-message-state" class="demo-state" aria-live="polite" data-i18n="messageFlowIdle">
                     Message flow idle

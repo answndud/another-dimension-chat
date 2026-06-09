@@ -2018,6 +2018,22 @@ export function productionSessionStateView(result) {
   };
 }
 
+export function productionSessionLifecycleView(result) {
+  return {
+    lifecycle:
+      `draft=${result.session_draft_present} endpoint=${result.remote_endpoint_state_present} ` +
+      `endpoint_status=${result.remote_endpoint_status_present} replay=${result.replay_window_present} ` +
+      `pending_handshake=${result.pending_handshake_state_present} ` +
+      `transport=${result.session_transport_state_present} resume=${result.session_resume_ready} ` +
+      `deleted=${result.session_deleted} closed=${result.session_resume_closed}`,
+    boundary:
+      `message_records_preserved=${result.message_records_preserved} ` +
+      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} ` +
+      `key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} ` +
+      `transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+  };
+}
+
 export function productionTwoProfileSessionStatusView(result) {
   const bothReady = result.both_ready_for_message_envelope;
   return {

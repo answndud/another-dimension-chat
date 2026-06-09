@@ -8,22 +8,24 @@ Current boundary:
 
 - Rust owns security-sensitive state and future protocol/storage/transport behavior.
 - Frontend may request redacted status, run local `dev-insecure` diagnostics, and call explicit local encrypted-store production commands.
+- The main view shows an unsigned public beta warning. Public diagnostics export only status, build, failure class, manual network permission state, and app-launch network boundary.
 - Redacted status separates release-claim, messaging-surface, core, profile, pairing, production-session, production-self-test, production-session limits, production-preflight, preflight-blockers, session durable-state, session unlock-policy, session unlock-limits, session unlock-rejection, transport, network-execution, experimental-transport, bootstrap-status classification, transport-I/O, storage, and verification boundaries without exposing profile/contact/endpoint data.
 - The core status is static boundary copy; security-sensitive protocol, storage, and transport work stays in Rust commands rather than frontend logic.
 - The production-session status is static evaluation copy for the `snow` Noise XX synchronous boundary. Message commands use local encrypted stores, and onion transport commands are separate explicit user-triggered actions.
 - The production-self-test status points to the CLI `production self-test` boundary only; it does not execute from the Tauri shell or mark messaging usable.
-- The production-session limits copy keeps production E2EE claim, durable session persistence, Tauri production messaging command, and async messaging out of scope.
+- The production-session limits copy keeps audited production E2EE readiness, automatic transport, and async messaging out of scope.
 - The production-preflight status mirrors the CLI `production preflight` blockers as static read-only copy; it does not execute the CLI command, bootstrap transport, or mark messaging usable.
-- The session durable-state status mirrors the store-write adapter boundary as static copy; it does not execute unlock, expose a shell write command, persist Noise transport state, or mark durable session persistence ready.
-- The session unlock-policy status mirrors the high-risk passphrase-required and OS-keystore-only-rejected policy as static copy; it does not expose a product unlock command.
-- The session unlock-limits copy keeps product unlock, durable session persistence, rollback protection, and runtime messaging disabled.
-- The session unlock-rejection status mirrors the CLI `production unlock` redacted disabled taxonomy as static copy; it does not execute the CLI command, expose profile/passphrase input, open storage, write session records, expose key material, or enable runtime messaging.
+- The session lifecycle controls can check and delete local encrypted session draft, endpoint, replay, and Noise transport records without returning paths, passphrases, channel ids, endpoints, payloads, or key material. Deleting the session closes resume/message readiness but does not wipe message records.
+- The data lifecycle controls can delete current conversation records, delete an encrypted profile store, wipe owned local app data, prepare backup-exclusion/migration/rollback markers, and report the boundary without returning local paths, plaintext, passphrases, or key material.
+- The session unlock-policy status uses passphrase-first high-risk unlock and rejects OS-keystore-only unlock. Apple keychain, Secure Enclave, DPAPI, Keystore, and cloud key wrapping are not v0.1 requirements.
+- Product unlock/lock commands open the local encrypted profile store only after explicit user passphrase input, record only redacted unlocked/locked metadata, provide explicit lock, and apply a 60-second idle auto-lock.
+- The CLI `production unlock` command remains fail-closed. The desktop product unlock command does not expose profile paths, passphrases, raw storage errors, key material, write session records, or enable runtime messaging.
 - The transport status is conservative pre-network copy; it does not by itself bootstrap Tor, host onion services, publish descriptors, open streams, or transfer envelopes.
 - The network-execution status is disabled-by-default copy; socket, Tor bootstrap, onion hosting, stream, and envelope transfer attempts require in-app manual network permission and an explicit user action.
 - The experimental-transport status is a manual-gate summary; it does not mark transport broadly usable.
 - The bootstrap-status classification mirrors CLI status classes such as `network-disabled`, `censorship-or-bridge-required`, and `timeout-or-transient-network-failure`; it does not expose raw Arti errors, paths, endpoints, bridge lines, descriptors, profile names, contact ids, or key material.
 - The transport-I/O status stays conservative until explicit onion commands report redacted attempt results for onion hosting, stream I/O, envelope I/O, and messaging.
-- The storage status is static `ADREC1` spike copy; it does not claim complete production key management, rollback protection, secure deletion, backup, recovery, or durable session persistence.
+- The storage status is static `ADREC1` spike copy; it does not claim complete production key management, rollback prevention, secure deletion from media, backup recovery, or audited session lifecycle readiness.
 - Status copy must describe boundary-only or disabled prototype states, not readiness, availability, or secure-release claims.
 - The allowed Tauri commands are the explicit local demo, status, encrypted profile/pairing/session/message commands, and explicit user-triggered onion transport commands.
 - `dev_local_demo` runs `cargo run -q --features dev-insecure -- demo local` from a temporary local workspace and returns its warning/transcript; it is not production messaging.
@@ -125,10 +127,36 @@ Current local beta handoff:
 
 - Artifact: `apps/desktop-tauri/beta-artifacts/Another Dimension Chat_0.1.0_aarch64.dmg`
 - SHA-256: `625ee389d930330b0f2e369a53c4f582df076dd612920f6cf0366aab4a3edb95`
+- Transfer bundle: `apps/desktop-tauri/beta-artifacts/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-field-test-handoff.zip`
+- Transfer bundle SHA-256: `f231dcc3a95b63d5d32b6b36cb503443a46547fa1dcbb44d58f772be831d0907`
+- Peer delivery folders: `apps/desktop-tauri/beta-artifacts/peer-delivery-a/` and `apps/desktop-tauri/beta-artifacts/peer-delivery-b/`
 - Build: `beta-onion` from commit `806ecad1`
 - Installed-app smoke covered fresh smoke profiles, local encrypted pair/verify/send/reply, quit/reopen/unlock transcript resume, and explicit receive start/stop after manual network permission.
 - This remains a local beta candidate. External Tor/onion success is environment-dependent and must be tested with explicit user action; no secure-release claim is made.
 - External Tor/onion field testing should record whether bootstrap, onion endpoint launch, endpoint exchange, send, receive, retry, and cancel complete or fail closed. Do not treat Tor blocking, timeout, or peer offline results as release-blocking security failures unless they expose secrets, silently start network work, or corrupt transcript/session state.
+- Peer reports must use the listed leading status tokens and must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, passphrases, profile names, message text, local paths, raw logs, or key material.
+
+Public unsigned GitHub Release staging:
+
+```bash
+scripts/prepare_unsigned_public_beta_release.sh
+```
+
+Run that command from the repository root after the frozen local DMG and provenance JSON exist in `apps/desktop-tauri/beta-artifacts/`. It writes the ignored upload set to `apps/desktop-tauri/public-release/unsigned-public-beta/`:
+
+- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
+- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
+- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
+- `INSTALL_UNSIGNED_MACOS.md`
+- `RELEASE_NOTES.md`
+- `UPDATE_INTEGRITY.md`
+- `SUPPLY_CHAIN_BASELINE.md`
+- `PUBLIC_THREAT_MODEL.md`
+- `INDEPENDENT_REVIEW_PACKET.md`
+- `DEPENDENCY_LOCKFILES.sha256`
+- `MANIFEST.md`
+
+This public path is still an unsigned experimental public beta. It is not notarized, not audited, not production-ready, and sensitive communication prohibited. External two-machine onion delivery has not been independently verified; same-machine dual-profile rehearsal is development evidence only. Users must verify the checksum before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
 Run the local desktop shell during development:
 
@@ -164,8 +192,10 @@ App data and migration expectations:
 - Tauri resolves the profile store root from `app.path().app_data_dir()` for identifier `chat.anotherdimension.prototype`.
 - Encrypted profile stores live under `<app-data>/profiles/<profile>/`.
 - Transport state/cache preparation uses `<app-data>/transport/arti-state` and `<app-cache>/transport/arti-cache`.
-- v0.1 beta has no destructive migration step. Existing profile/session/message records are read in place; incompatible future schema changes must add explicit migration logic before deleting or rewriting user data.
-- Build artifacts must not include local app data, local dev stores, `docs/`, `target/`, `dist/`, `node_modules/`, or `beta-artifacts/`.
+- v0.1 beta has no destructive migration step. SQLCipher profile stores use a forward-only schema version boundary and reject future schema versions instead of silently downgrading or rewriting user data.
+- The data lifecycle marker records that rollback detection is marker-only. It is not rollback prevention and still requires external monotonic state before any stronger claim.
+- Deleting a conversation removes local message records for the current encrypted session while preserving session records. Deleting a profile removes that profile store file. Full local wipe removes owned `profiles/`, `transport/`, lifecycle markers, and transport cache; it does not claim secure deletion from media.
+- Build artifacts must not include local app data, local dev stores, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, raw logs, `docs/`, `target/`, `dist/`, `node_modules/`, or `beta-artifacts/`.
 
 From the repository root:
 
