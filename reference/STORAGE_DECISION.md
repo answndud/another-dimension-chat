@@ -43,6 +43,7 @@ The repository currently has:
 - A session lock lifecycle status mirror that records default 5 minute and high-risk 1 minute idle auto-lock requirements while keeping storage locked and avoiding key erasure claims.
 - A session unlock redacted error taxonomy that classifies disabled, passphrase-required, and OS-keystore-only rejected states without exposing raw storage errors, OS keychain errors, paths, identifiers, key material, or passphrase detail.
 - A default CLI `production unlock` boundary rejection that returns `product-unlock-disabled` without opening storage, writing session records, exposing key material, or enabling runtime messaging.
+- A local data lifecycle policy summary that fixes the v0.1 policy boundary: passphrase-first unlock is required, OS-keystore wrapping is optional and non-required, OS-keystore-only unlock remains rejected, key wrapping is not ready, rollback protection is a non-claim, backup exclusion is a required best-effort policy but not verified here, deletion is logical only, secure media deletion is not claimed, schema migration is forward-only, and prototype data migration is not ready.
 
 The repository does not currently have:
 
@@ -52,7 +53,7 @@ The repository does not currently have:
 - Durable production private key storage.
 - Replay rollback protection.
 - Durable Noise transport or ratchet state storage.
-- Backup, export, import, or migration behavior.
+- Verified backup exclusion, export/import recovery, or prototype data migration behavior.
 - Production account recovery or key rotation.
 - Record-level encryption implementation. `ADREC1` is a container format, not an encryption algorithm.
 - Full production message persistence and rich local message index schema.
@@ -75,13 +76,14 @@ Satisfied or partially satisfied:
 Deferred:
 
 - Full production message persistence and rich local message index schema.
-- Durable production private key storage.
-- Production key wrapping, KDF parameters, and OS keychain/DPAPI/Keystore integration.
+- Durable production private key storage beyond the encrypted-record boundary.
+- Production key wrapping and KDF parameters.
+- Optional OS keychain/DPAPI/Keystore wrapping integration.
 - Migration from `dev-insecure` prototype data.
 - Replay rollback protection.
 - Secure deletion from physical media.
 
-Current storage direction: keep the SQLCipher spike narrow and explicit while the onion transport prototype work continues. Do not add durable private key storage, production key wrapping, backup/recovery, or replay rollback-protection claims without a separate phase decision.
+Current v0.1 storage direction: keep the SQLCipher spike narrow and explicit, require passphrase-first unlock, treat OS keystore/Secure Enclave style wrapping as optional future support, and keep rollback prevention and secure media deletion as explicit non-claims. Do not add durable private key storage, production key wrapping, backup/recovery, or replay rollback-protection claims without a separate phase decision.
 
 ## Production Storage Classes
 
@@ -111,13 +113,13 @@ Current storage direction: keep the SQLCipher spike narrow and explicit while th
 Before implementing durable production storage, decide and document:
 
 - Storage backend: SQLCipher, encrypted embedded database, or a smaller record store.
-- Unlock model: passphrase, OS keystore wrapping, or hybrid.
+- Unlock model: passphrase-first by default; OS keystore wrapping may be added only as optional support and must not become the only unlock factor for high-risk mode.
 - KDF and parameter policy if passphrases are used.
 - Per-profile and per-contact scoping.
-- Backup exclusion behavior on macOS, Windows, Linux, and Android.
-- Secure deletion expectations and non-claims.
+- Backup exclusion behavior on macOS, Windows, Linux, and Android. Until verified per platform, describe it as required best-effort policy rather than a completed guarantee.
+- Secure deletion expectations and non-claims. Current deletion is logical record deletion and does not claim physical media erasure.
 - Crash dump, log, and temporary file handling.
-- Migration strategy from prototype data, if any.
+- Migration strategy from prototype data, if any. Current public beta policy does not claim prototype data migration readiness.
 
 ## Backend Selection Decision
 
