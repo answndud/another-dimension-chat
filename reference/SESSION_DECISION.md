@@ -105,27 +105,29 @@ This alignment does not claim production E2EE readiness. It only narrows the nex
 
 Replay-aware decrypt now uses the existing `ReplayWindow` boundary. Duplicate and old message numbers are rejected before decrypt, while tampered ciphertext does not commit replay state. Replay state is still caller-owned and not persisted by the production boundary.
 
-`production_session_evaluation_summary()` is the current public-safe harness for this evaluation path. It records that the existing `snow` Noise XX synchronous boundary is covered for production pairing, safety transcript binding, deterministic canonical dialer selection, ciphertext tamper rejection, replay-before-decrypt behavior, and in-memory-only state. It also keeps production E2EE readiness, durable session persistence, Tauri production messaging commands, and usable async messaging explicitly false.
+`production_session_evaluation_summary()` is the current public-safe harness for this evaluation path. It records that the existing `snow` Noise XX synchronous boundary is covered for production pairing, safety transcript binding, deterministic canonical dialer selection, ciphertext tamper rejection, replay-before-decrypt behavior, encrypted-at-rest durable session state, and message-type-separated transport nonce scheduling. It keeps production E2EE readiness, Tauri production messaging commands, and usable async messaging explicitly false, with named blockers for reviewed protocol decision, runtime command surface, and async delivery semantics.
 
-`session_durable_state_connector_gate()` is the first read-only connector-gate draft for durable session state. It records that pairwise identity private keys, Noise static private keys, and replay window state require encrypted-at-rest records; Noise transport state remains in-memory only; replay commits remain after successful decrypt; rollback protection is not provided; and storage unlock commands, transport I/O, runtime messaging, and connector readiness remain false.
+`production_session_readiness_gate()` mirrors those readiness blockers as a compact gate for CLI/Tauri status surfaces. It does not open runtime messaging, storage unlock commands, transport I/O, or a secure messenger claim.
 
-`session_durable_state_connector_test_harness()` applies that gate to the storage policy without implementing the connector. It verifies that pairwise identity private keys, Noise static private keys, and replay windows may enter only the encrypted-record path, rejects session transport persistence, and keeps storage unlock commands, transport I/O, and runtime messaging closed.
+`session_durable_state_connector_gate()` is the first read-only connector-gate draft for durable session state. It records that pairwise identity private keys, Noise static private keys, replay window state, and Noise transport state require encrypted-at-rest records; replay commits remain after successful decrypt; rollback protection is not provided; and storage unlock commands, transport I/O, runtime messaging, and connector readiness remain false.
+
+`session_durable_state_connector_test_harness()` applies that gate to the storage policy without opening runtime execution. It verifies that pairwise identity private keys, Noise static private keys, replay windows, and session transport state may enter only the encrypted-record path, and keeps storage unlock commands, transport I/O, and runtime messaging closed.
 
 `session_durable_state_persistence_adapter_skeleton()` is the current adapter boundary before implementation. It maps pairwise identity private keys, Noise static private keys, replay windows, and session transport state to storage policy decisions, while keeping adapter implementation readiness, storage unlock commands, transport I/O, and runtime messaging false.
 
-`session_durable_state_encrypted_record_adapter_spike()` is the first narrow adapter spike. It can prepare sealed `EncryptedRecord` containers for allowed session durable-state kinds and does not mark durable session persistence ready.
+`session_durable_state_encrypted_record_adapter_spike()` is the first narrow adapter spike. It can prepare sealed `EncryptedRecord` containers for allowed session durable-state kinds while keeping runtime execution closed.
 
-`session_durable_state_adapter_non_readiness_guard()` keeps the adapter spike from being interpreted as readiness. It records that rollback protection is not provided and that product store writes, durable session persistence, production E2EE readiness, durable Noise transport persistence, and runtime messaging remain false.
+`session_durable_state_adapter_non_readiness_guard()` keeps the adapter spike from being interpreted as production E2EE readiness. It records that durable session persistence and durable Noise transport persistence are available as encrypted-at-rest local state, while rollback protection, production E2EE readiness, product store writes, and runtime messaging remain false.
 
-`session_durable_state_store_write_adapter()` is the first narrow store-write boundary. It writes caller-supplied prepared sealed records through an already-unlocked `SqlCipherRecordStore` only after the expected durable-state kind, encrypted-record scope, and record-id prefix match. It does not open an unlock command, transport I/O, runtime messaging, rollback protection, or durable session readiness.
+`session_durable_state_store_write_adapter()` is the first narrow store-write boundary. It writes caller-supplied prepared sealed records through an already-unlocked `SqlCipherRecordStore` only after the expected durable-state kind, encrypted-record scope, and record-id prefix match. It does not open an unlock command, transport I/O, runtime messaging, rollback protection, or production E2EE readiness.
 
-`session_durable_state_store_write_status_mirror()` reports that the store-write adapter boundary exists and requires a caller-supplied unlocked store. It keeps production store write, production unlock command, durable session persistence, rollback protection, and runtime messaging unavailable.
+`session_durable_state_store_write_status_mirror()` reports that the store-write adapter boundary exists and requires a caller-supplied unlocked store. It keeps production store write, production unlock command, rollback protection, and runtime messaging unavailable.
 
-`session_durable_state_product_unlock_blocker_summary()` records the current product unlock blockers. The passphrase-first storage boundary exists, but product unlock remains closed because app key wrapping, backup exclusion, rollback protection, durable session persistence, and runtime messaging are not ready.
+`session_durable_state_product_unlock_blocker_summary()` records the current product unlock blockers. The passphrase-first storage boundary exists, but product unlock remains closed because app key wrapping, backup exclusion, rollback protection, and runtime messaging are not ready.
 
-`session_durable_state_unlock_policy_handoff_summary()` links the session durable-state blocker summary to the storage unlock policy. It confirms that high-risk mode accepts passphrase-based unlock policy, rejects OS-keystore-only unlock, and still keeps product unlock, durable session persistence, and runtime messaging unavailable.
+`session_durable_state_unlock_policy_handoff_summary()` links the session durable-state blocker summary to the storage unlock policy. It confirms that high-risk mode accepts passphrase-based unlock policy, rejects OS-keystore-only unlock, and still keeps product unlock and runtime messaging unavailable.
 
-`session_unlock_lock_command_design_gate()` records the minimum command semantics before any product unlock/lock implementation. A future command must preserve passphrase-first high-risk unlock, OS-keystore-only rejection, explicit lock, idle auto-lock, and redacted unlock errors. The gate keeps production unlock command, production lock command, durable session persistence, and runtime messaging unavailable.
+`session_unlock_lock_command_design_gate()` records the minimum command semantics before any product unlock/lock implementation. A future command must preserve passphrase-first high-risk unlock, OS-keystore-only rejection, explicit lock, idle auto-lock, and redacted unlock errors. The gate keeps production unlock command, production lock command, and runtime messaging unavailable.
 
 `session_unlock_command_fail_closed()` is the first command-shape skeleton for future product unlock. It accepts passphrase-only, OS-keystore-only, and combined request shapes, but every request returns a redacted disabled result. The skeleton does not open storage, write session records, expose key material, or enable runtime messaging.
 
@@ -137,9 +139,9 @@ Default CLI `production unlock` currently uses that taxonomy only as a fail-clos
 
 ## Session Persistence Decision
 
-For the current v0.1 production message boundary, production session state is in-memory only.
+For the current v0.1 production message boundary, production session state is persisted only as encrypted-at-rest local records through the session lifecycle path.
 
-Do not persist Noise transport state, Noise static private keys, replay state, or derived channel/session state in plaintext local files. Durable production session persistence is blocked until the encrypted local storage phase defines storage keys, unlock behavior, key derivation, backup exclusion, and local compromise limits.
+Do not persist Noise transport state, Noise static private keys, replay state, or derived channel/session state in plaintext local files. Production E2EE readiness remains blocked until the reviewed protocol decision, runtime command surface, and async delivery semantics are complete.
 
 The current implementation may recreate setup drafts and sessions for local self-tests. That is acceptable for boundary verification, but it is not a usable asynchronous messaging model and should not be presented as production-ready communication.
 

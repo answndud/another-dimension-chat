@@ -3431,6 +3431,10 @@ fn print_production_self_test_summary() {
         summary.tauri_production_messaging_command_ready(),
         summary.usable_async_messaging_ready()
     );
+    println!(
+        "production session readiness blockers: {}",
+        summary.readiness_blocker_tags().join(",")
+    );
 }
 
 #[cfg(not(feature = "dev-insecure"))]
