@@ -111,6 +111,7 @@ Upload exactly these generated files to the GitHub Release:
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
 - `INSTALL_UNSIGNED_MACOS.md`
 - `RELEASE_NOTES.md`
+- `GITHUB_RELEASE_BODY.md`
 - `UPDATE_INTEGRITY.md`
 - `SUPPLY_CHAIN_BASELINE.md`
 - `PUBLIC_THREAT_MODEL.md`
@@ -118,7 +119,8 @@ Upload exactly these generated files to the GitHub Release:
 - `DEPENDENCY_LOCKFILES.sha256`
 - `MANIFEST.md`
 
-Public release notes and the GitHub Release body must say:
+Use `GITHUB_RELEASE_BODY.md` as the GitHub Release body. Public release notes
+and the GitHub Release body must say:
 
 - This is an unsigned experimental public beta.
 - It is not notarized.

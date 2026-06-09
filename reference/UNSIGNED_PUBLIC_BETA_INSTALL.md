@@ -13,6 +13,7 @@ Download these files from the GitHub Release:
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
 - `INSTALL_UNSIGNED_MACOS.md`
 - `RELEASE_NOTES.md`
+- `GITHUB_RELEASE_BODY.md`
 - `UPDATE_INTEGRITY.md`
 - `SUPPLY_CHAIN_BASELINE.md`
 - `PUBLIC_THREAT_MODEL.md`
