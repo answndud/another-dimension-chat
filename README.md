@@ -89,6 +89,10 @@ What exists today:
   OS keystore or Secure Enclave style wrapping is optional and not required,
   OS-keystore-only unlock is rejected, app key wrapping is not claimed, and
   rollback prevention is not claimed without an external monotonic-state design.
+- An explicit transport envelope I/O boundary for high-risk onion-only routing:
+  network work still requires user action, direct fallback is rejected, send and
+  receive adapters remain fail-closed, envelope I/O context is redacted, and
+  external two-machine onion delivery is still not claimed.
 - Manual update integrity evidence for the unsigned public beta release path: DMG `.sha256`, public provenance JSON, release manifest, update-integrity policy, supply-chain baseline note, and dependency lockfile SHA-256 list.
 - Public threat model and independent review packet that state allowed claims, non-claims, known gaps, and public-safe review commands.
 - A local Tauri desktop beta shell for invite-code rooms, safety phrase confirmation, encrypted local profile/session/message records, saved-room resume, manual private-route exchange, explicit receive start/stop, retry/cancel recovery, and redacted field-test reports.
@@ -105,6 +109,7 @@ What does not exist yet:
   guarantee.
 - Secure production messaging suitable for sensitive communication.
 - Reliable Tor/onion transport across real networks.
+- Completed external two-machine onion delivery evidence.
 - Audited production transport adapter implementation.
 - Audited bridge or censorship-circumvention support.
 - Actual onion service private key material.
@@ -203,6 +208,10 @@ This runs:
 - Desktop product unlock opens the local encrypted profile store through a passphrase-first command, then records only redacted unlocked/locked metadata with explicit lock and 60-second idle auto-lock.
 - Session unlock policy keeps OS-keystore-only unlock rejected for high-risk mode and does not use Apple keychain, Secure Enclave, DPAPI, Keystore, or cloud key wrapping in v0.1.
 - Key/rollback policy is closed for v0.1 as a non-claim boundary: passphrase-first is required, OS wrapping is optional/non-required, app key wrapping is not ready, rollback prevention is not claimed, and external monotonic state is required before any future rollback-prevention claim.
+- Transport envelope I/O policy is closed for v0.1 as a non-claim boundary:
+  high-risk routing is onion-only, direct fallback is rejected, network work is
+  never automatic on launch, and send/receive remains fail-closed until real
+  external evidence exists.
 - Session unlock/lock UX exposes redacted wrong-passphrase/locked states without returning raw storage errors, local paths, identifiers, passphrase detail, or key material.
 - Session unlock redacted error taxonomy classifies disabled, passphrase-required, and OS-keystore-only rejected states without exposing raw storage errors, OS keychain errors, paths, identifiers, key material, or passphrase detail.
 - Default CLI `production unlock` is a fail-closed boundary command that returns the redacted disabled taxonomy without opening storage, writing session records, exposing key material, or enabling automatic runtime messaging.
