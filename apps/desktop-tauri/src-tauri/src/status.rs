@@ -8,6 +8,7 @@ pub struct PrototypeStatus {
     production_session_status: &'static str,
     production_self_test_status: &'static str,
     production_session_non_readiness: &'static str,
+    production_session_readiness_blockers: String,
     production_preflight_status: String,
     production_preflight_blockers: String,
     session_durable_state_status: &'static str,
@@ -27,6 +28,7 @@ pub struct PrototypeStatus {
 
 pub fn redacted_prototype_status() -> PrototypeStatus {
     let preflight = another_dimension_core::production::production_skeleton_preflight_summary();
+    let session_gate = another_dimension_core::production::production_session_readiness_gate();
     let next_connector =
         another_dimension_core::production::production_skeleton_next_connector_selection();
 
@@ -39,7 +41,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         production_session_status: "snow Noise XX synchronous evaluation boundary only",
         production_self_test_status: "CLI production boundary self-test only",
         production_session_non_readiness:
-            "no production E2EE claim network transport durable persistence or async messaging",
+            "no audited production E2EE claim network transport automatic messaging or secure release",
+        production_session_readiness_blockers: session_gate.blocker_tags().join(","),
         production_preflight_status: format!(
             "read-only production skeleton: session_e2ee={} transport_send_receive={} messaging={}",
             preflight.session_e2ee_ready(),
@@ -59,12 +62,15 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             preflight.default_runtime_command_surface_closed(),
             preflight.production_messaging_ready(),
         ),
-        session_durable_state_status: "store-write adapter boundary; product unlock disabled",
-        session_unlock_policy_status: "high-risk passphrase required OS-keystore-only rejected",
-        session_unlock_non_readiness: "product unlock durable persistence rollback runtime messaging disabled",
-        session_unlock_cli_rejection_status: "redacted product-unlock-disabled boundary copy",
+        session_durable_state_status:
+            "local encrypted session lifecycle controls available; no audited readiness claim",
+        session_unlock_policy_status: "passphrase-first high-risk policy OS-keystore-only rejected",
+        session_unlock_non_readiness:
+            "rollback prevention secure deletion from media runtime messaging disabled",
+        session_unlock_cli_rejection_status:
+            "CLI production unlock disabled; desktop product unlock available",
         session_unlock_cli_rejection_flags:
-            "storage_opened=false session_records_written=false key_material_exposed=false runtime_messaging=false",
+            "desktop_product_unlock=true storage_opened_on_user_action=true session_lifecycle_controls=true key_material_exposed=false runtime_messaging=false",
         transport_status: format!(
             "route={:?} allowed_by_policy={} send_receive={}",
             preflight.transport_route_kind(),
@@ -85,7 +91,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             preflight.production_messaging_ready(),
             next_connector.required_gate(),
         ),
-        storage_status: "ADREC1 storage spike only",
+        storage_status:
+            "ADREC1 storage spike plus forward-only schema and local data lifecycle boundary",
         verification_status: "lightweight checks only",
         local_dev_peer_label: local_dev_peer_label(),
     }
