@@ -8,6 +8,8 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 
 Download these files from the GitHub Release:
 
+<https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned>
+
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
