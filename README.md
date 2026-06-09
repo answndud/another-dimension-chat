@@ -79,6 +79,11 @@ What exists today:
   import, transcript, retry, and cancel semantics only after user action; it
   does not enable automatic messaging, network send/receive, or a security-ready
   messenger claim.
+- A local manual E2EE runtime failure-model gate for the explicit envelope path:
+  Noise XX transport state is required, remote static verification is required,
+  channel/message-number/nonce binding is fixed, replay state is committed only
+  after decrypt, and tamper failure must not advance receive state. This is still
+  not an audited or production-ready E2EE claim.
 - Local data lifecycle controls for conversation message-record deletion, profile-store deletion, owned local app-data wipe, backup-exclusion preparation, forward-only schema versioning, and marker-only rollback detection. These controls do not claim secure deletion from media or rollback prevention.
 - Manual update integrity evidence for the unsigned public beta release path: DMG `.sha256`, public provenance JSON, release manifest, update-integrity policy, supply-chain baseline note, and dependency lockfile SHA-256 list.
 - Public threat model and independent review packet that state allowed claims, non-claims, known gaps, and public-safe review commands.
@@ -90,7 +95,10 @@ What exists today:
 
 What does not exist yet:
 
-- Audited or security-ready production end-to-end encryption.
+- Audited or security-ready production end-to-end encryption. The local manual
+  envelope runtime has a reviewed session/key/replay failure-model gate, but it
+  is not an external audit, production security claim, or sensitive-communication
+  guarantee.
 - Secure production messaging suitable for sensitive communication.
 - Reliable Tor/onion transport across real networks.
 - Audited production transport adapter implementation.
