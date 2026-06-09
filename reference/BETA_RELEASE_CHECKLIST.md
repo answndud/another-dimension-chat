@@ -1,6 +1,6 @@
 # Beta Release Checklist
 
-This checklist is for internal field-test beta handoff only. It is not a secure-release checklist and does not create a security claim.
+This checklist covers the internal field-test beta handoff and the unsigned public experimental GitHub DMG beta staging path. It is not a secure-release checklist and does not create a security claim.
 
 ## Scope
 
@@ -72,7 +72,60 @@ shasum -a 256 /path/to/artifact
 
 - Store local handoff artifacts under `apps/desktop-tauri/beta-artifacts/`.
 - Do not commit `beta-artifacts/`.
-- Do not include `docs/`, local app data, build caches, bridge lines, onion endpoints, plaintext messages, passphrases, private keys, raw logs, `target/`, `dist/`, or `node_modules/`.
+- Do not include `docs/`, local app data, build caches, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, raw logs, `target/`, `dist/`, or `node_modules/`.
 - Tester notes must say the beta is not secure and must not be used for sensitive communication.
 - Field-test notes should record whether bootstrap, onion endpoint launch, route exchange, send, receive, retry, and cancel complete or fail closed.
 
+Current local handoff record:
+
+- Transfer bundle SHA-256: `f231dcc3a95b63d5d32b6b36cb503443a46547fa1dcbb44d58f772be831d0907`
+- App DMG SHA-256: `625ee389d930330b0f2e369a53c4f582df076dd612920f6cf0366aab4a3edb95`
+- Build channel and commit: `beta-onion`, `806ecad1`
+- Per-peer delivery folders: `apps/desktop-tauri/beta-artifacts/peer-delivery-a/` and `apps/desktop-tauri/beta-artifacts/peer-delivery-b/`
+
+Peer handoff rules:
+
+- Send the transfer zip, matching `.sha256`, `PEER_HANDOFF_MESSAGE.md`, and `MANIFEST.md`.
+- Peers must verify the zip with `shasum -a 256 -c ...zip.sha256` before opening it.
+- Peers must run `./VERIFY_FIELD_TEST_BUNDLE.sh` from the extracted `another-dimension-beta-handoff` folder.
+- Completed peer reports must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, passphrases, profile names, message text, local app data paths, raw logs, or key material.
+
+## Unsigned Public GitHub Release
+
+The public beta path starts from the ignored local DMG and creates a separate ignored upload set:
+
+```bash
+scripts/prepare_unsigned_public_beta_release.sh
+```
+
+Default output:
+
+```text
+apps/desktop-tauri/public-release/unsigned-public-beta/
+```
+
+Upload exactly these generated files to the GitHub Release:
+
+- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
+- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
+- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
+- `INSTALL_UNSIGNED_MACOS.md`
+- `RELEASE_NOTES.md`
+- `UPDATE_INTEGRITY.md`
+- `SUPPLY_CHAIN_BASELINE.md`
+- `PUBLIC_THREAT_MODEL.md`
+- `INDEPENDENT_REVIEW_PACKET.md`
+- `DEPENDENCY_LOCKFILES.sha256`
+- `MANIFEST.md`
+
+Public release notes and the GitHub Release body must say:
+
+- This is an unsigned experimental public beta.
+- It is not notarized.
+- It is not audited.
+- It is not production-ready.
+- Sensitive communication prohibited.
+- Users must verify the checksum before using the normal macOS Privacy & Security manual allow path.
+- Auto-update is not supported; every update is a manual GitHub Release download plus SHA-256 verification.
+
+Do not upload or commit `docs/`, local app data, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, raw logs, build caches, `target/`, `dist/`, `node_modules/`, `beta-artifacts/`, or the ignored `public-release/` folder itself.
