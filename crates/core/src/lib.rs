@@ -164,10 +164,76 @@ pub mod production {
         }
     }
 
-    const PRODUCTION_SESSION_READINESS_BLOCKERS: &[ProductionSessionReadinessBlocker] = &[
-        ProductionSessionReadinessBlocker::ReviewedProtocolDecision,
-        ProductionSessionReadinessBlocker::AsyncDeliverySemantics,
+    const PRODUCTION_SESSION_READINESS_BLOCKERS: &[ProductionSessionReadinessBlocker] =
+        &[ProductionSessionReadinessBlocker::AsyncDeliverySemantics];
+
+    const PRODUCTION_PROTOCOL_DECISION_REJECTED_DIRECTIONS: &[&str] = &[
+        "custom_x25519_protocol",
+        "standalone_double_ratchet_crate",
+        "signal_style_wrapper_without_storage_prekey_review",
+        "offline_mailbox_prekey_publication",
+        "group_sender_keys",
+        "multi_device_sync",
     ];
+
+    const PRODUCTION_PROTOCOL_DECISION_REQUIRED_FOLLOWUPS: &[&str] = &[
+        "async_delivery_semantics",
+        "rollback_boundary",
+        "key_management_policy",
+        "external_onion_delivery_evidence",
+        "independent_security_review",
+    ];
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionProtocolDecisionSummary {
+        selected_session_protocol: &'static str,
+        selected_scope: &'static str,
+        decision_reviewed: bool,
+        custom_protocol_allowed: bool,
+        offline_mailbox_selected: bool,
+        group_or_multidevice_selected: bool,
+        rejected_directions: &'static [&'static str],
+        required_followups: &'static [&'static str],
+        production_e2ee_ready: bool,
+    }
+
+    impl ProductionProtocolDecisionSummary {
+        pub fn selected_session_protocol(self) -> &'static str {
+            self.selected_session_protocol
+        }
+
+        pub fn selected_scope(self) -> &'static str {
+            self.selected_scope
+        }
+
+        pub fn decision_reviewed(self) -> bool {
+            self.decision_reviewed
+        }
+
+        pub fn custom_protocol_allowed(self) -> bool {
+            self.custom_protocol_allowed
+        }
+
+        pub fn offline_mailbox_selected(self) -> bool {
+            self.offline_mailbox_selected
+        }
+
+        pub fn group_or_multidevice_selected(self) -> bool {
+            self.group_or_multidevice_selected
+        }
+
+        pub fn rejected_directions(self) -> &'static [&'static str] {
+            self.rejected_directions
+        }
+
+        pub fn required_followups(self) -> &'static [&'static str] {
+            self.required_followups
+        }
+
+        pub fn production_e2ee_ready(self) -> bool {
+            self.production_e2ee_ready
+        }
+    }
 
     const PRODUCTION_RUNTIME_COMMAND_SURFACE_REVIEWED_CATEGORIES: &[&str] = &[
         "status_preflight",
@@ -285,6 +351,7 @@ pub mod production {
         production_e2ee_ready: bool,
         durable_session_persistence_ready: bool,
         readiness_blockers: &'static [ProductionSessionReadinessBlocker],
+        protocol_decision_reviewed: bool,
         runtime_command_surface_reviewed: bool,
         tauri_production_messaging_command_ready: bool,
         usable_async_messaging_ready: bool,
@@ -336,6 +403,10 @@ pub mod production {
                 .iter()
                 .map(|blocker| blocker.as_str())
                 .collect()
+        }
+
+        pub fn protocol_decision_reviewed(self) -> bool {
+            self.protocol_decision_reviewed
         }
 
         pub fn runtime_command_surface_reviewed(self) -> bool {
@@ -7352,10 +7423,11 @@ pub mod production {
     }
 
     pub fn production_session_evaluation_summary() -> ProductionSessionEvaluationSummary {
+        let protocol_decision = production_protocol_decision_summary();
         let command_surface = production_runtime_command_surface_summary();
 
         ProductionSessionEvaluationSummary {
-            protocol_candidate: "snow Noise XX synchronous boundary",
+            protocol_candidate: protocol_decision.selected_session_protocol(),
             production_pairing_required: true,
             safety_transcript_bound: true,
             canonical_dialer_stable: true,
@@ -7365,9 +7437,25 @@ pub mod production {
             production_e2ee_ready: false,
             durable_session_persistence_ready: true,
             readiness_blockers: PRODUCTION_SESSION_READINESS_BLOCKERS,
+            protocol_decision_reviewed: protocol_decision.decision_reviewed(),
             runtime_command_surface_reviewed: command_surface.command_surface_ready(),
             tauri_production_messaging_command_ready: false,
             usable_async_messaging_ready: false,
+        }
+    }
+
+    pub fn production_protocol_decision_summary() -> ProductionProtocolDecisionSummary {
+        ProductionProtocolDecisionSummary {
+            selected_session_protocol: "snow Noise XX synchronous 1:1 invite-code boundary",
+            selected_scope:
+                "pairwise identity, signed pairing payload, transcript-bound Noise XX, deterministic canonical dialer, encrypted-at-rest durable local session state",
+            decision_reviewed: true,
+            custom_protocol_allowed: false,
+            offline_mailbox_selected: false,
+            group_or_multidevice_selected: false,
+            rejected_directions: PRODUCTION_PROTOCOL_DECISION_REJECTED_DIRECTIONS,
+            required_followups: PRODUCTION_PROTOCOL_DECISION_REQUIRED_FOLLOWUPS,
+            production_e2ee_ready: false,
         }
     }
 
@@ -8864,17 +8952,46 @@ pub mod production {
             assert!(!summary.production_e2ee_ready());
             assert!(summary.durable_session_persistence_ready());
             assert!(!summary.session_state_in_memory_only());
+            assert!(summary.protocol_decision_reviewed());
             assert!(summary.runtime_command_surface_reviewed());
             assert!(!summary.tauri_production_messaging_command_ready());
             assert!(!summary.usable_async_messaging_ready());
             assert_eq!(
                 summary.readiness_blocker_tags(),
-                vec!["reviewed_protocol_decision", "async_delivery_semantics",]
+                vec!["async_delivery_semantics",]
             );
             assert!(!gate.production_e2ee_ready());
             assert!(gate.durable_session_persistence_ready());
             assert!(!gate.runtime_messaging_enabled());
             assert_eq!(gate.blockers(), summary.readiness_blockers());
+        }
+
+        #[test]
+        fn production_protocol_decision_selects_noise_without_custom_crypto_claim() {
+            let decision = production_protocol_decision_summary();
+            let summary = production_session_evaluation_summary();
+
+            assert!(decision.decision_reviewed());
+            assert_eq!(
+                decision.selected_session_protocol(),
+                "snow Noise XX synchronous 1:1 invite-code boundary"
+            );
+            assert!(decision.selected_scope().contains("signed pairing payload"));
+            assert!(!decision.custom_protocol_allowed());
+            assert!(!decision.offline_mailbox_selected());
+            assert!(!decision.group_or_multidevice_selected());
+            assert!(!decision.production_e2ee_ready());
+            assert!(decision
+                .rejected_directions()
+                .contains(&"custom_x25519_protocol"));
+            assert!(decision
+                .required_followups()
+                .contains(&"async_delivery_semantics"));
+            assert!(summary.protocol_decision_reviewed());
+            assert_eq!(
+                summary.protocol_candidate(),
+                "snow Noise XX synchronous 1:1 invite-code boundary"
+            );
         }
 
         #[test]

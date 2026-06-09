@@ -3410,6 +3410,8 @@ fn run_production_self_test() -> Result<(), String> {
 #[cfg(not(feature = "dev-insecure"))]
 fn print_production_self_test_summary() {
     let summary = another_dimension_core::production::production_session_evaluation_summary();
+    let protocol_decision =
+        another_dimension_core::production::production_protocol_decision_summary();
     let command_surface =
         another_dimension_core::production::production_runtime_command_surface_summary();
 
@@ -3427,12 +3429,24 @@ fn print_production_self_test_summary() {
         summary.session_state_in_memory_only()
     );
     println!(
-        "production session non-readiness: production_e2ee={} durable_session_persistence={} command_surface_reviewed={} tauri_production_messaging_command={} usable_async_messaging={}",
+        "production session non-readiness: production_e2ee={} durable_session_persistence={} protocol_decision_reviewed={} command_surface_reviewed={} tauri_production_messaging_command={} usable_async_messaging={}",
         summary.production_e2ee_ready(),
         summary.durable_session_persistence_ready(),
+        summary.protocol_decision_reviewed(),
         summary.runtime_command_surface_reviewed(),
         summary.tauri_production_messaging_command_ready(),
         summary.usable_async_messaging_ready()
+    );
+    println!(
+        "production protocol decision: reviewed={} selected={} custom_protocol_allowed={} offline_mailbox_selected={} group_or_multidevice_selected={} production_e2ee_ready={} rejected_directions={} required_followups={}",
+        protocol_decision.decision_reviewed(),
+        protocol_decision.selected_session_protocol(),
+        protocol_decision.custom_protocol_allowed(),
+        protocol_decision.offline_mailbox_selected(),
+        protocol_decision.group_or_multidevice_selected(),
+        protocol_decision.production_e2ee_ready(),
+        protocol_decision.rejected_directions().join(","),
+        protocol_decision.required_followups().join(",")
     );
     println!(
         "production runtime command surface: inventory_reviewed={} default_dev_insecure={} implicit_network_on_launch={} explicit_user_network_only={} plaintext_stdout_secret_export={} runtime_messaging={} reviewed_categories={} rejected_categories={}",
