@@ -74,6 +74,11 @@ What exists today:
 - High-risk transport policy and fail-closed Tor/onion scaffolding, including direct-route rejection, app-private directory checks, runtime preflight, redacted runtime events, bridge/censorship configuration boundaries, onion key lifecycle policy, and descriptor/stream/envelope-I/O gates.
 - SQLCipher-backed storage spikes for `ADREC1` record containers, passphrase unlock, high-risk unlock policy, replay-window persistence, pairwise endpoint state, local message indexes, opaque record-id derivation, and internal raw database-key opening only.
 - A local SQLCipher-backed production session lifecycle path for pairing draft, remote endpoint state, replay window, Noise transport state, restart/resume readiness checks, and explicit session lifecycle deletion without wiping message records.
+- A manual local runtime messaging gate for explicit passphrase-first envelope
+  export/import flows. This enables local encrypted envelope preparation,
+  import, transcript, retry, and cancel semantics only after user action; it
+  does not enable automatic messaging, network send/receive, or a security-ready
+  messenger claim.
 - Local data lifecycle controls for conversation message-record deletion, profile-store deletion, owned local app-data wipe, backup-exclusion preparation, forward-only schema versioning, and marker-only rollback detection. These controls do not claim secure deletion from media or rollback prevention.
 - Manual update integrity evidence for the unsigned public beta release path: DMG `.sha256`, public provenance JSON, release manifest, update-integrity policy, supply-chain baseline note, and dependency lockfile SHA-256 list.
 - Public threat model and independent review packet that state allowed claims, non-claims, known gaps, and public-safe review commands.
@@ -187,8 +192,8 @@ This runs:
 - Session unlock policy keeps OS-keystore-only unlock rejected for high-risk mode and does not use Apple keychain, Secure Enclave, DPAPI, Keystore, or cloud key wrapping in v0.1.
 - Session unlock/lock UX exposes redacted wrong-passphrase/locked states without returning raw storage errors, local paths, identifiers, passphrase detail, or key material.
 - Session unlock redacted error taxonomy classifies disabled, passphrase-required, and OS-keystore-only rejected states without exposing raw storage errors, OS keychain errors, paths, identifiers, key material, or passphrase detail.
-- Default CLI `production unlock` is a fail-closed boundary command that returns the redacted disabled taxonomy without opening storage, writing session records, exposing key material, or enabling runtime messaging.
-- Tauri prototype status separates the still-disabled CLI production unlock from the desktop product unlock command, which opens storage only after explicit user passphrase input and still does not enable runtime messaging.
+- Default CLI `production unlock` is a fail-closed boundary command that returns the redacted disabled taxonomy without opening storage, writing session records, exposing key material, or enabling automatic runtime messaging.
+- Tauri prototype status separates the still-disabled CLI production unlock from the desktop product unlock command, which opens storage only after explicit user passphrase input. Manual local runtime messaging is limited to explicit envelope export/import flows and still does not claim network send/receive, external onion delivery, audited E2EE readiness, or secure production messaging.
 - Tauri scaffold static checks.
 
 For a heavier pre-release, audit, or risky cross-cutting change pass, run:

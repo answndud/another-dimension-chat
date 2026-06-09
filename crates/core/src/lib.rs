@@ -434,6 +434,18 @@ pub mod production {
         "plaintext_stdout_secret_export",
     ];
 
+    const PRODUCTION_MANUAL_RUNTIME_MESSAGING_OPERATIONS: &[&str] = &[
+        "passphrase_unlock",
+        "load_session_runtime_material",
+        "reserve_message_number",
+        "write_local_pending_message",
+        "encrypt_envelope",
+        "explicit_envelope_export",
+        "explicit_envelope_import",
+        "write_received_transcript",
+        "retry_cancel_delivery_state",
+    ];
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionRuntimeCommandSurfaceSummary {
         reviewed_categories: &'static [&'static str],
@@ -445,6 +457,23 @@ pub mod production {
         plaintext_stdout_secret_export_allowed: bool,
         runtime_messaging_enabled: bool,
         command_surface_ready: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionManualRuntimeMessagingGateSummary {
+        operations: &'static [&'static str],
+        gate_reviewed: bool,
+        explicit_user_action_required: bool,
+        passphrase_first_storage_required: bool,
+        session_runtime_material_required: bool,
+        encrypted_envelope_export_import_ready: bool,
+        local_transcript_ready: bool,
+        automatic_network_on_launch_allowed: bool,
+        network_io_attempted: bool,
+        external_onion_delivery_verified: bool,
+        production_messaging_ready: bool,
+        manual_runtime_messaging_enabled: bool,
+        security_ready_claimed: bool,
     }
 
     impl ProductionRuntimeCommandSurfaceSummary {
@@ -482,6 +511,60 @@ pub mod production {
 
         pub fn command_surface_ready(self) -> bool {
             self.command_surface_ready
+        }
+    }
+
+    impl ProductionManualRuntimeMessagingGateSummary {
+        pub fn operations(self) -> &'static [&'static str] {
+            self.operations
+        }
+
+        pub fn gate_reviewed(self) -> bool {
+            self.gate_reviewed
+        }
+
+        pub fn explicit_user_action_required(self) -> bool {
+            self.explicit_user_action_required
+        }
+
+        pub fn passphrase_first_storage_required(self) -> bool {
+            self.passphrase_first_storage_required
+        }
+
+        pub fn session_runtime_material_required(self) -> bool {
+            self.session_runtime_material_required
+        }
+
+        pub fn encrypted_envelope_export_import_ready(self) -> bool {
+            self.encrypted_envelope_export_import_ready
+        }
+
+        pub fn local_transcript_ready(self) -> bool {
+            self.local_transcript_ready
+        }
+
+        pub fn automatic_network_on_launch_allowed(self) -> bool {
+            self.automatic_network_on_launch_allowed
+        }
+
+        pub fn network_io_attempted(self) -> bool {
+            self.network_io_attempted
+        }
+
+        pub fn external_onion_delivery_verified(self) -> bool {
+            self.external_onion_delivery_verified
+        }
+
+        pub fn production_messaging_ready(self) -> bool {
+            self.production_messaging_ready
+        }
+
+        pub fn manual_runtime_messaging_enabled(self) -> bool {
+            self.manual_runtime_messaging_enabled
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
         }
     }
 
@@ -7705,6 +7788,40 @@ pub mod production {
         }
     }
 
+    pub fn production_manual_runtime_messaging_gate_summary(
+    ) -> ProductionManualRuntimeMessagingGateSummary {
+        let async_delivery = production_async_delivery_semantics_summary();
+        let command_surface = production_runtime_command_surface_summary();
+        let local_data_policy = production_local_data_lifecycle_policy_summary();
+
+        let manual_runtime_messaging_enabled = async_delivery.local_encrypted_outbound_ready()
+            && async_delivery.explicit_envelope_export_ready()
+            && async_delivery.explicit_inbound_import_ready()
+            && async_delivery.received_transcript_ready()
+            && command_surface.command_surface_ready()
+            && command_surface.explicit_user_network_attempts_only()
+            && !command_surface.implicit_network_on_launch_allowed()
+            && !command_surface.default_build_has_dev_insecure_commands()
+            && local_data_policy.passphrase_first_required();
+
+        ProductionManualRuntimeMessagingGateSummary {
+            operations: PRODUCTION_MANUAL_RUNTIME_MESSAGING_OPERATIONS,
+            gate_reviewed: true,
+            explicit_user_action_required: true,
+            passphrase_first_storage_required: local_data_policy.passphrase_first_required(),
+            session_runtime_material_required: true,
+            encrypted_envelope_export_import_ready: async_delivery.explicit_envelope_export_ready()
+                && async_delivery.explicit_inbound_import_ready(),
+            local_transcript_ready: async_delivery.received_transcript_ready(),
+            automatic_network_on_launch_allowed: false,
+            network_io_attempted: false,
+            external_onion_delivery_verified: async_delivery.external_onion_delivery_verified(),
+            production_messaging_ready: false,
+            manual_runtime_messaging_enabled,
+            security_ready_claimed: false,
+        }
+    }
+
     pub fn production_session_readiness_gate() -> ProductionSessionReadinessGate {
         let summary = production_session_evaluation_summary();
 
@@ -9301,6 +9418,29 @@ pub mod production {
                 .contains(&"default_automatic_messaging"));
             assert!(preflight.default_runtime_command_surface_closed());
             assert!(!preflight.production_messaging_ready());
+        }
+
+        #[test]
+        fn production_manual_runtime_messaging_gate_opens_only_explicit_local_envelope_flow() {
+            let gate = production_manual_runtime_messaging_gate_summary();
+            let preflight = production_skeleton_preflight_summary();
+
+            assert!(gate.gate_reviewed());
+            assert!(gate.manual_runtime_messaging_enabled());
+            assert!(gate.explicit_user_action_required());
+            assert!(gate.passphrase_first_storage_required());
+            assert!(gate.session_runtime_material_required());
+            assert!(gate.encrypted_envelope_export_import_ready());
+            assert!(gate.local_transcript_ready());
+            assert!(!gate.automatic_network_on_launch_allowed());
+            assert!(!gate.network_io_attempted());
+            assert!(!gate.external_onion_delivery_verified());
+            assert!(!gate.production_messaging_ready());
+            assert!(!gate.security_ready_claimed());
+            assert!(gate.operations().contains(&"encrypt_envelope"));
+            assert!(gate.operations().contains(&"explicit_envelope_import"));
+            assert!(!preflight.production_messaging_ready());
+            assert!(!preflight.transport_send_receive_available());
         }
 
         #[test]
