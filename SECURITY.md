@@ -6,7 +6,7 @@ Another Dimension Chat is not ready for real communication.
 
 The current public repository contains a Rust/Tauri prototype and a local desktop beta candidate. It is useful for testing development flow, local encrypted-store boundaries, invite-room recovery, explicit private-delivery actions, and fail-closed onion/Tor attempt behavior, but it does not provide production-grade confidentiality, anonymity, metadata resistance, endpoint protection, or user safety.
 
-Default-build production code now includes narrow decision boundaries for pairing, session setup, durable local session lifecycle records, local data lifecycle controls, forward-only schema versioning, marker-only rollback detection, envelope handling, explicit manual envelope export/import runtime gating, replay rejection, transport policy, fail-closed onion transport behavior, pre-network transport blockers, backup-exclusion verification boundaries, onion service key lifecycle policy boundaries, onion service launch preflight boundaries, bridge/censorship readiness policy boundaries, bootstrap execution boundaries, bounded Arti adapter spikes, local-only manual bootstrap gates, profile-scoped transport directory resolution, persistent Arti client lifecycle ownership, storage policy tests, SQLCipher-backed storage work, passphrase unlock tests, high-risk unlock policy tests, replay-window persistence tests, receive-flow replay commit-order tests, session-scoped opaque replay record-id derivation, and desktop beta recovery UI checks. These are implementation guardrails, not a secure messenger release.
+Default-build production code now includes narrow decision boundaries for pairing, session setup, durable local session lifecycle records, local data lifecycle controls, forward-only schema versioning, marker-only rollback detection, envelope handling, explicit manual envelope export/import runtime gating, local manual E2EE runtime failure-model gating, replay rejection, transport policy, fail-closed onion transport behavior, pre-network transport blockers, backup-exclusion verification boundaries, onion service key lifecycle policy boundaries, onion service launch preflight boundaries, bridge/censorship readiness policy boundaries, bootstrap execution boundaries, bounded Arti adapter spikes, local-only manual bootstrap gates, profile-scoped transport directory resolution, persistent Arti client lifecycle ownership, storage policy tests, SQLCipher-backed storage work, passphrase unlock tests, high-risk unlock policy tests, replay-window persistence tests, receive-flow replay commit-order tests, session-scoped opaque replay record-id derivation, and desktop beta recovery UI checks. These are implementation guardrails, not a secure messenger release.
 
 The public cross-component replacement inventory is tracked in `reference/COMPONENT_BOUNDARIES.md`. It is a boundary map for future work, not a production-readiness statement.
 
@@ -29,6 +29,9 @@ This project does not currently claim:
 - A serverless product in the broad sense, a public relay-free availability guarantee, or a no-infrastructure availability guarantee.
 - Phone-number, email, global-account, searchable-username, centralized contact-discovery, centralized message-server, push-notification, or cloud-backup support.
 - Secure production end-to-end encryption.
+- The local manual envelope runtime has a reviewed Noise XX/session/key/replay
+  failure-model gate, but this is not an audit, production-ready E2EE claim, or
+  sensitive-communication guarantee.
 - Reliable real-network Tor/onion delivery.
 - Completed independent external two-machine onion delivery evidence. Current
   single-machine local rehearsal is not external peer evidence.
@@ -37,7 +40,7 @@ This project does not currently claim:
 - Production-ready Arti transport bootstrap, onion service launch, system Tor discovery, runtime Tor connectivity, or bridge/censorship behavior.
 - Onion service key generation, rotation, persistence, backup, or migration.
 - Actual onion service private key material.
-- Complete production key management. The desktop shell has a passphrase-first local product unlock/lock path, local durable session lifecycle records, local data lifecycle controls, and an explicit manual envelope export/import runtime gate, but key wrapping, secure deletion from media, rollback prevention, audited E2EE readiness, automatic messaging readiness, and network send/receive readiness are still not claimed.
+- Complete production key management. The desktop shell has a passphrase-first local product unlock/lock path, local durable session lifecycle records, local data lifecycle controls, an explicit manual envelope export/import runtime gate, and a local manual E2EE runtime failure-model gate, but key wrapping, secure deletion from media, rollback prevention, audited E2EE readiness, automatic messaging readiness, and network send/receive readiness are still not claimed.
 - OS keychain/DPAPI/Keystore wrapping.
 - Complete production encrypted local storage lifecycle with secure deletion guarantees.
 - Durable production key storage.

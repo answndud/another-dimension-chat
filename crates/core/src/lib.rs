@@ -446,6 +446,18 @@ pub mod production {
         "retry_cancel_delivery_state",
     ];
 
+    const PRODUCTION_LOCAL_MANUAL_E2EE_RUNTIME_FAILURE_MODEL: &[&str] = &[
+        "noise_xx_transport_state_required",
+        "remote_static_verification_required",
+        "safety_transcript_bound",
+        "channel_id_bound",
+        "message_number_nonce_bound",
+        "replay_commit_after_decrypt",
+        "tamper_failure_non_advance",
+        "passphrase_first_storage_required",
+        "explicit_envelope_export_import_only",
+    ];
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionRuntimeCommandSurfaceSummary {
         reviewed_categories: &'static [&'static str],
@@ -473,6 +485,28 @@ pub mod production {
         external_onion_delivery_verified: bool,
         production_messaging_ready: bool,
         manual_runtime_messaging_enabled: bool,
+        security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionLocalManualE2eeRuntimeSummary {
+        failure_model: &'static [&'static str],
+        selected_protocol: &'static str,
+        gate_reviewed: bool,
+        noise_xx_transport_state_required: bool,
+        remote_static_verification_required: bool,
+        safety_transcript_bound: bool,
+        channel_binding_required: bool,
+        message_number_nonce_binding_required: bool,
+        replay_commit_after_decrypt: bool,
+        tamper_failure_non_advance: bool,
+        passphrase_first_storage_required: bool,
+        explicit_envelope_export_import_ready: bool,
+        automatic_network_on_launch_allowed: bool,
+        network_io_attempted: bool,
+        external_onion_delivery_verified: bool,
+        local_manual_e2ee_runtime_ready: bool,
+        production_e2ee_ready: bool,
         security_ready_claimed: bool,
     }
 
@@ -568,6 +602,80 @@ pub mod production {
         }
     }
 
+    impl ProductionLocalManualE2eeRuntimeSummary {
+        pub fn failure_model(self) -> &'static [&'static str] {
+            self.failure_model
+        }
+
+        pub fn selected_protocol(self) -> &'static str {
+            self.selected_protocol
+        }
+
+        pub fn gate_reviewed(self) -> bool {
+            self.gate_reviewed
+        }
+
+        pub fn noise_xx_transport_state_required(self) -> bool {
+            self.noise_xx_transport_state_required
+        }
+
+        pub fn remote_static_verification_required(self) -> bool {
+            self.remote_static_verification_required
+        }
+
+        pub fn safety_transcript_bound(self) -> bool {
+            self.safety_transcript_bound
+        }
+
+        pub fn channel_binding_required(self) -> bool {
+            self.channel_binding_required
+        }
+
+        pub fn message_number_nonce_binding_required(self) -> bool {
+            self.message_number_nonce_binding_required
+        }
+
+        pub fn replay_commit_after_decrypt(self) -> bool {
+            self.replay_commit_after_decrypt
+        }
+
+        pub fn tamper_failure_non_advance(self) -> bool {
+            self.tamper_failure_non_advance
+        }
+
+        pub fn passphrase_first_storage_required(self) -> bool {
+            self.passphrase_first_storage_required
+        }
+
+        pub fn explicit_envelope_export_import_ready(self) -> bool {
+            self.explicit_envelope_export_import_ready
+        }
+
+        pub fn automatic_network_on_launch_allowed(self) -> bool {
+            self.automatic_network_on_launch_allowed
+        }
+
+        pub fn network_io_attempted(self) -> bool {
+            self.network_io_attempted
+        }
+
+        pub fn external_onion_delivery_verified(self) -> bool {
+            self.external_onion_delivery_verified
+        }
+
+        pub fn local_manual_e2ee_runtime_ready(self) -> bool {
+            self.local_manual_e2ee_runtime_ready
+        }
+
+        pub fn production_e2ee_ready(self) -> bool {
+            self.production_e2ee_ready
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+    }
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionSessionReadinessGate {
         production_e2ee_ready: bool,
@@ -610,6 +718,7 @@ pub mod production {
         ciphertext_tamper_rejected: bool,
         replay_guard_before_decrypt: bool,
         session_state_in_memory_only: bool,
+        local_manual_e2ee_runtime_ready: bool,
         production_e2ee_ready: bool,
         durable_session_persistence_ready: bool,
         readiness_blockers: &'static [ProductionSessionReadinessBlocker],
@@ -647,6 +756,10 @@ pub mod production {
 
         pub fn session_state_in_memory_only(self) -> bool {
             self.session_state_in_memory_only
+        }
+
+        pub fn local_manual_e2ee_runtime_ready(self) -> bool {
+            self.local_manual_e2ee_runtime_ready
         }
 
         pub fn production_e2ee_ready(self) -> bool {
@@ -694,6 +807,7 @@ pub mod production {
         session_pairing_required: bool,
         session_safety_transcript_bound: bool,
         session_e2ee_ready: bool,
+        local_manual_e2ee_runtime_ready: bool,
         transport_route_kind: TransportKind,
         transport_route_allowed_by_policy: bool,
         transport_send_receive_available: bool,
@@ -2941,6 +3055,10 @@ pub mod production {
 
         pub fn session_e2ee_ready(self) -> bool {
             self.session_e2ee_ready
+        }
+
+        pub fn local_manual_e2ee_runtime_ready(self) -> bool {
+            self.local_manual_e2ee_runtime_ready
         }
 
         pub fn transport_route_kind(self) -> TransportKind {
@@ -7693,6 +7811,7 @@ pub mod production {
         let protocol_decision = production_protocol_decision_summary();
         let command_surface = production_runtime_command_surface_summary();
         let async_delivery = production_async_delivery_semantics_summary();
+        let local_manual_e2ee = production_local_manual_e2ee_runtime_summary();
 
         ProductionSessionEvaluationSummary {
             protocol_candidate: protocol_decision.selected_session_protocol(),
@@ -7702,6 +7821,7 @@ pub mod production {
             ciphertext_tamper_rejected: true,
             replay_guard_before_decrypt: true,
             session_state_in_memory_only: false,
+            local_manual_e2ee_runtime_ready: local_manual_e2ee.local_manual_e2ee_runtime_ready(),
             production_e2ee_ready: false,
             durable_session_persistence_ready: true,
             readiness_blockers: PRODUCTION_SESSION_READINESS_BLOCKERS,
@@ -7822,6 +7942,59 @@ pub mod production {
         }
     }
 
+    pub fn production_local_manual_e2ee_runtime_summary() -> ProductionLocalManualE2eeRuntimeSummary
+    {
+        let protocol_decision = production_protocol_decision_summary();
+        let async_delivery = production_async_delivery_semantics_summary();
+        let command_surface = production_runtime_command_surface_summary();
+        let storage = production_message_storage_boundary_summary();
+        let storage_backend =
+            another_dimension_storage::production::storage_backend_integration_boundary_summary();
+        let high_risk_passphrase_allowed =
+            UnlockRequest::new(UnlockMode::HighRisk, vec![UnlockFactor::Passphrase])
+                .require_allowed()
+                .is_ok();
+        let passphrase_first_storage_required =
+            storage_backend.passphrase_first_unlock() && high_risk_passphrase_allowed;
+
+        let local_manual_e2ee_runtime_ready = protocol_decision.decision_reviewed()
+            && protocol_decision
+                .selected_session_protocol()
+                .contains("Noise XX")
+            && async_delivery.local_encrypted_outbound_ready()
+            && async_delivery.explicit_envelope_export_ready()
+            && async_delivery.explicit_inbound_import_ready()
+            && async_delivery.received_transcript_ready()
+            && command_surface.command_surface_ready()
+            && command_surface.explicit_user_network_attempts_only()
+            && !command_surface.implicit_network_on_launch_allowed()
+            && !command_surface.default_build_has_dev_insecure_commands()
+            && passphrase_first_storage_required
+            && storage.replay_commit_after_decrypt();
+
+        ProductionLocalManualE2eeRuntimeSummary {
+            failure_model: PRODUCTION_LOCAL_MANUAL_E2EE_RUNTIME_FAILURE_MODEL,
+            selected_protocol: protocol_decision.selected_session_protocol(),
+            gate_reviewed: true,
+            noise_xx_transport_state_required: true,
+            remote_static_verification_required: true,
+            safety_transcript_bound: true,
+            channel_binding_required: true,
+            message_number_nonce_binding_required: true,
+            replay_commit_after_decrypt: storage.replay_commit_after_decrypt(),
+            tamper_failure_non_advance: true,
+            passphrase_first_storage_required,
+            explicit_envelope_export_import_ready: async_delivery.explicit_envelope_export_ready()
+                && async_delivery.explicit_inbound_import_ready(),
+            automatic_network_on_launch_allowed: false,
+            network_io_attempted: false,
+            external_onion_delivery_verified: async_delivery.external_onion_delivery_verified(),
+            local_manual_e2ee_runtime_ready,
+            production_e2ee_ready: false,
+            security_ready_claimed: false,
+        }
+    }
+
     pub fn production_session_readiness_gate() -> ProductionSessionReadinessGate {
         let summary = production_session_evaluation_summary();
 
@@ -7835,6 +8008,7 @@ pub mod production {
 
     pub fn production_skeleton_preflight_summary() -> ProductionSkeletonPreflightSummary {
         let session = production_session_evaluation_summary();
+        let local_manual_e2ee = production_local_manual_e2ee_runtime_summary();
         let command_surface = production_runtime_command_surface_summary();
         let transport = OnionEnvelopeTransport::fail_closed_high_risk();
         let route = TransportRoute::onion("preflight.onion")
@@ -7846,6 +8020,7 @@ pub mod production {
             session_pairing_required: session.production_pairing_required(),
             session_safety_transcript_bound: session.safety_transcript_bound(),
             session_e2ee_ready: session.production_e2ee_ready(),
+            local_manual_e2ee_runtime_ready: local_manual_e2ee.local_manual_e2ee_runtime_ready(),
             transport_route_kind: transport.route_kind(),
             transport_route_allowed_by_policy: transport.route_allowed_by_policy(),
             transport_send_receive_available: transport.send_receive_available(),
@@ -7865,12 +8040,12 @@ pub mod production {
     {
         let preflight = production_skeleton_preflight_summary();
 
-        if !preflight.session_e2ee_ready() {
+        if !preflight.local_manual_e2ee_runtime_ready() {
             return ProductionSkeletonNextConnectorSelection {
                 connector: ProductionSkeletonConnector::SessionProtocolAndStatePersistence,
-                blocker: "production session E2EE and durable state are not complete",
+                blocker: "local manual E2EE runtime session gate is not complete",
                 required_gate:
-                    "reviewed session protocol decision plus durable state persistence plan",
+                    "reviewed Noise XX session key replay and explicit envelope failure model",
                 opens_runtime_execution: false,
                 production_messaging_ready: false,
             };
@@ -9304,6 +9479,7 @@ pub mod production {
             assert!(summary.protocol_decision_reviewed());
             assert!(summary.runtime_command_surface_reviewed());
             assert!(summary.async_delivery_semantics_reviewed());
+            assert!(summary.local_manual_e2ee_runtime_ready());
             assert!(!summary.tauri_production_messaging_command_ready());
             assert!(!summary.usable_async_messaging_ready());
             assert!(summary.readiness_blocker_tags().is_empty());
@@ -9441,6 +9617,42 @@ pub mod production {
             assert!(gate.operations().contains(&"explicit_envelope_import"));
             assert!(!preflight.production_messaging_ready());
             assert!(!preflight.transport_send_receive_available());
+        }
+
+        #[test]
+        fn production_local_manual_e2ee_runtime_gate_closes_session_failure_model_without_claims() {
+            let gate = production_local_manual_e2ee_runtime_summary();
+            let preflight = production_skeleton_preflight_summary();
+            let selection = production_skeleton_next_connector_selection();
+
+            assert!(gate.gate_reviewed());
+            assert!(gate.local_manual_e2ee_runtime_ready());
+            assert!(gate.selected_protocol().contains("Noise XX"));
+            assert!(gate.noise_xx_transport_state_required());
+            assert!(gate.remote_static_verification_required());
+            assert!(gate.safety_transcript_bound());
+            assert!(gate.channel_binding_required());
+            assert!(gate.message_number_nonce_binding_required());
+            assert!(gate.replay_commit_after_decrypt());
+            assert!(gate.tamper_failure_non_advance());
+            assert!(gate.passphrase_first_storage_required());
+            assert!(gate.explicit_envelope_export_import_ready());
+            assert!(!gate.automatic_network_on_launch_allowed());
+            assert!(!gate.network_io_attempted());
+            assert!(!gate.external_onion_delivery_verified());
+            assert!(!gate.production_e2ee_ready());
+            assert!(!gate.security_ready_claimed());
+            assert!(gate
+                .failure_model()
+                .contains(&"remote_static_verification_required"));
+            assert!(gate.failure_model().contains(&"tamper_failure_non_advance"));
+            assert!(!preflight.session_e2ee_ready());
+            assert!(preflight.local_manual_e2ee_runtime_ready());
+            assert_eq!(
+                selection.connector(),
+                ProductionSkeletonConnector::StorageKeyManagementAndRollback
+            );
+            assert!(!selection.production_messaging_ready());
         }
 
         #[test]
