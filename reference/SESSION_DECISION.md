@@ -87,7 +87,7 @@ Explicitly not selected for the first implementation slice:
 - A standalone Double Ratchet crate without a reviewed setup, identity, persistence, and transport-binding story.
 - A Signal-style implementation wrapper without deeper dependency, storage, prekey, and release review.
 
-This alignment does not claim production E2EE readiness. It only fixes the first reviewed protocol boundary and leaves asynchronous delivery semantics as the remaining Phase BD blocker.
+This alignment does not claim production E2EE readiness. It fixes the first reviewed protocol boundary and leaves external onion delivery evidence, rollback/key-management policy, and independent review outside Phase BD.
 
 ## Current Code Boundary
 
@@ -107,7 +107,9 @@ Replay-aware decrypt now uses the existing `ReplayWindow` boundary. Duplicate an
 
 `production_protocol_decision_summary()` is the current public-safe protocol decision harness. It records that the first v0.1 boundary selects `snow` Noise XX for a synchronous 1:1 invite-code session, rejects custom X25519 protocols, standalone ratchet crates, unreviewed Signal-style wrappers, offline mailbox prekey publication, group sender keys, and multi-device sync, and keeps production E2EE readiness false.
 
-`production_session_evaluation_summary()` is the current public-safe harness for this evaluation path. It records that the existing `snow` Noise XX synchronous boundary is covered for production pairing, safety transcript binding, deterministic canonical dialer selection, ciphertext tamper rejection, replay-before-decrypt behavior, encrypted-at-rest durable session state, message-type-separated transport nonce scheduling, reviewed protocol decision, and reviewed runtime command surface inventory. It keeps production E2EE readiness and usable async messaging explicitly false, with named blocker for async delivery semantics.
+`production_async_delivery_semantics_summary()` is the current local async delivery semantics harness. It records that outbound pending state, explicit encrypted envelope export, explicit inbound envelope import, retryable send failure, terminal cancel, received-message storage, expiration, transcript export, and conversation delete semantics are reviewed for the local encrypted file-exchange boundary. It keeps remote ack protocol readiness, external onion delivery verification, runtime messaging, and secure messenger readiness false.
+
+`production_session_evaluation_summary()` is the current public-safe harness for this evaluation path. It records that the existing `snow` Noise XX synchronous boundary is covered for production pairing, safety transcript binding, deterministic canonical dialer selection, ciphertext tamper rejection, replay-before-decrypt behavior, encrypted-at-rest durable session state, message-type-separated transport nonce scheduling, reviewed protocol decision, reviewed async delivery semantics, and reviewed runtime command surface inventory. It keeps production E2EE readiness and usable async messaging explicitly false, with no remaining Phase BD session readiness blockers.
 
 `production_session_readiness_gate()` mirrors those readiness blockers as a compact gate for CLI/Tauri status surfaces. It does not open runtime messaging, storage unlock commands, transport I/O, or a secure messenger claim.
 
@@ -143,7 +145,7 @@ Default CLI `production unlock` currently uses that taxonomy only as a fail-clos
 
 For the current v0.1 production message boundary, production session state is persisted only as encrypted-at-rest local records through the session lifecycle path.
 
-Do not persist Noise transport state, Noise static private keys, replay state, or derived channel/session state in plaintext local files. Production E2EE readiness remains blocked until async delivery semantics are complete.
+Do not persist Noise transport state, Noise static private keys, replay state, or derived channel/session state in plaintext local files. Production E2EE readiness remains blocked by post-Phase-BD concerns: rollback/key-management policy, external onion delivery evidence, update/release integrity, and independent review.
 
 The current implementation may recreate setup drafts and sessions for local self-tests. That is acceptable for boundary verification, but it is not a usable asynchronous messaging model and should not be presented as production-ready communication.
 

@@ -3410,6 +3410,8 @@ fn run_production_self_test() -> Result<(), String> {
 #[cfg(not(feature = "dev-insecure"))]
 fn print_production_self_test_summary() {
     let summary = another_dimension_core::production::production_session_evaluation_summary();
+    let async_delivery =
+        another_dimension_core::production::production_async_delivery_semantics_summary();
     let protocol_decision =
         another_dimension_core::production::production_protocol_decision_summary();
     let command_surface =
@@ -3429,13 +3431,29 @@ fn print_production_self_test_summary() {
         summary.session_state_in_memory_only()
     );
     println!(
-        "production session non-readiness: production_e2ee={} durable_session_persistence={} protocol_decision_reviewed={} command_surface_reviewed={} tauri_production_messaging_command={} usable_async_messaging={}",
+        "production session non-readiness: production_e2ee={} durable_session_persistence={} protocol_decision_reviewed={} command_surface_reviewed={} async_delivery_semantics_reviewed={} tauri_production_messaging_command={} usable_async_messaging={}",
         summary.production_e2ee_ready(),
         summary.durable_session_persistence_ready(),
         summary.protocol_decision_reviewed(),
         summary.runtime_command_surface_reviewed(),
+        summary.async_delivery_semantics_reviewed(),
         summary.tauri_production_messaging_command_ready(),
         summary.usable_async_messaging_ready()
+    );
+    println!(
+        "production async delivery semantics: reviewed={} local_outbound={} envelope_export={} inbound_import={} retryable_failure={} cancel_terminal={} received_transcript={} remote_ack_protocol={} external_onion_delivery_verified={} runtime_messaging={} states={} required_followups={}",
+        async_delivery.semantics_reviewed(),
+        async_delivery.local_encrypted_outbound_ready(),
+        async_delivery.explicit_envelope_export_ready(),
+        async_delivery.explicit_inbound_import_ready(),
+        async_delivery.retryable_failure_ready(),
+        async_delivery.cancel_terminal_ready(),
+        async_delivery.received_transcript_ready(),
+        async_delivery.remote_ack_protocol_ready(),
+        async_delivery.external_onion_delivery_verified(),
+        async_delivery.runtime_messaging_enabled(),
+        async_delivery.semantic_states().join(","),
+        async_delivery.required_followups().join(",")
     );
     println!(
         "production protocol decision: reviewed={} selected={} custom_protocol_allowed={} offline_mailbox_selected={} group_or_multidevice_selected={} production_e2ee_ready={} rejected_directions={} required_followups={}",

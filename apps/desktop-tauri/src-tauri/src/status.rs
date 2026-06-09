@@ -9,6 +9,7 @@ pub struct PrototypeStatus {
     production_self_test_status: &'static str,
     production_session_non_readiness: &'static str,
     production_session_readiness_blockers: String,
+    production_async_delivery_semantics: String,
     production_protocol_decision: String,
     production_runtime_command_surface: String,
     production_preflight_status: String,
@@ -31,6 +32,8 @@ pub struct PrototypeStatus {
 pub fn redacted_prototype_status() -> PrototypeStatus {
     let preflight = another_dimension_core::production::production_skeleton_preflight_summary();
     let session_gate = another_dimension_core::production::production_session_readiness_gate();
+    let async_delivery =
+        another_dimension_core::production::production_async_delivery_semantics_summary();
     let protocol_decision =
         another_dimension_core::production::production_protocol_decision_summary();
     let command_surface =
@@ -49,6 +52,21 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         production_session_non_readiness:
             "no audited production E2EE claim network transport automatic messaging or secure release",
         production_session_readiness_blockers: session_gate.blocker_tags().join(","),
+        production_async_delivery_semantics: format!(
+            "reviewed={} local_outbound={} envelope_export={} inbound_import={} retryable_failure={} cancel_terminal={} received_transcript={} remote_ack_protocol={} external_onion_delivery_verified={} runtime_messaging={} states={} required_followups={}",
+            async_delivery.semantics_reviewed(),
+            async_delivery.local_encrypted_outbound_ready(),
+            async_delivery.explicit_envelope_export_ready(),
+            async_delivery.explicit_inbound_import_ready(),
+            async_delivery.retryable_failure_ready(),
+            async_delivery.cancel_terminal_ready(),
+            async_delivery.received_transcript_ready(),
+            async_delivery.remote_ack_protocol_ready(),
+            async_delivery.external_onion_delivery_verified(),
+            async_delivery.runtime_messaging_enabled(),
+            async_delivery.semantic_states().join(","),
+            async_delivery.required_followups().join(","),
+        ),
         production_protocol_decision: format!(
             "reviewed={} selected={} custom_protocol_allowed={} offline_mailbox_selected={} group_or_multidevice_selected={} production_e2ee_ready={} rejected_directions={} required_followups={}",
             protocol_decision.decision_reviewed(),
@@ -155,6 +173,12 @@ mod tests {
         assert!(status
             .production_preflight_blockers
             .contains("rollback_protection=NotProvided"));
+        assert!(status
+            .production_async_delivery_semantics
+            .contains("reviewed=true"));
+        assert!(status
+            .production_async_delivery_semantics
+            .contains("external_onion_delivery_verified=false"));
         assert!(status
             .production_protocol_decision
             .contains("reviewed=true"));

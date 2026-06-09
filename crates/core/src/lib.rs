@@ -164,8 +164,7 @@ pub mod production {
         }
     }
 
-    const PRODUCTION_SESSION_READINESS_BLOCKERS: &[ProductionSessionReadinessBlocker] =
-        &[ProductionSessionReadinessBlocker::AsyncDeliverySemantics];
+    const PRODUCTION_SESSION_READINESS_BLOCKERS: &[ProductionSessionReadinessBlocker] = &[];
 
     const PRODUCTION_PROTOCOL_DECISION_REJECTED_DIRECTIONS: &[&str] = &[
         "custom_x25519_protocol",
@@ -177,12 +176,95 @@ pub mod production {
     ];
 
     const PRODUCTION_PROTOCOL_DECISION_REQUIRED_FOLLOWUPS: &[&str] = &[
-        "async_delivery_semantics",
         "rollback_boundary",
         "key_management_policy",
         "external_onion_delivery_evidence",
         "independent_security_review",
     ];
+
+    const PRODUCTION_ASYNC_DELIVERY_SEMANTIC_STATES: &[&str] = &[
+        "outbound_pending",
+        "encrypted_envelope_exported",
+        "send_failed_retryable",
+        "send_canceled_terminal",
+        "inbound_envelope_imported",
+        "received_message_stored",
+        "received_message_expired",
+        "conversation_deleted",
+    ];
+
+    const PRODUCTION_ASYNC_DELIVERY_REQUIRED_FOLLOWUPS: &[&str] = &[
+        "external_onion_delivery_evidence",
+        "remote_ack_protocol",
+        "bounded_receive_loop_review",
+        "independent_security_review",
+    ];
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionAsyncDeliverySemanticsSummary {
+        semantic_states: &'static [&'static str],
+        required_followups: &'static [&'static str],
+        local_encrypted_outbound_ready: bool,
+        explicit_envelope_export_ready: bool,
+        explicit_inbound_import_ready: bool,
+        retryable_failure_ready: bool,
+        cancel_terminal_ready: bool,
+        received_transcript_ready: bool,
+        remote_ack_protocol_ready: bool,
+        external_onion_delivery_verified: bool,
+        runtime_messaging_enabled: bool,
+        semantics_reviewed: bool,
+    }
+
+    impl ProductionAsyncDeliverySemanticsSummary {
+        pub fn semantic_states(self) -> &'static [&'static str] {
+            self.semantic_states
+        }
+
+        pub fn required_followups(self) -> &'static [&'static str] {
+            self.required_followups
+        }
+
+        pub fn local_encrypted_outbound_ready(self) -> bool {
+            self.local_encrypted_outbound_ready
+        }
+
+        pub fn explicit_envelope_export_ready(self) -> bool {
+            self.explicit_envelope_export_ready
+        }
+
+        pub fn explicit_inbound_import_ready(self) -> bool {
+            self.explicit_inbound_import_ready
+        }
+
+        pub fn retryable_failure_ready(self) -> bool {
+            self.retryable_failure_ready
+        }
+
+        pub fn cancel_terminal_ready(self) -> bool {
+            self.cancel_terminal_ready
+        }
+
+        pub fn received_transcript_ready(self) -> bool {
+            self.received_transcript_ready
+        }
+
+        pub fn remote_ack_protocol_ready(self) -> bool {
+            self.remote_ack_protocol_ready
+        }
+
+        pub fn external_onion_delivery_verified(self) -> bool {
+            self.external_onion_delivery_verified
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+
+        pub fn semantics_reviewed(self) -> bool {
+            self.semantics_reviewed
+        }
+    }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionProtocolDecisionSummary {
@@ -353,6 +435,7 @@ pub mod production {
         readiness_blockers: &'static [ProductionSessionReadinessBlocker],
         protocol_decision_reviewed: bool,
         runtime_command_surface_reviewed: bool,
+        async_delivery_semantics_reviewed: bool,
         tauri_production_messaging_command_ready: bool,
         usable_async_messaging_ready: bool,
     }
@@ -411,6 +494,10 @@ pub mod production {
 
         pub fn runtime_command_surface_reviewed(self) -> bool {
             self.runtime_command_surface_reviewed
+        }
+
+        pub fn async_delivery_semantics_reviewed(self) -> bool {
+            self.async_delivery_semantics_reviewed
         }
 
         pub fn tauri_production_messaging_command_ready(self) -> bool {
@@ -7425,6 +7512,7 @@ pub mod production {
     pub fn production_session_evaluation_summary() -> ProductionSessionEvaluationSummary {
         let protocol_decision = production_protocol_decision_summary();
         let command_surface = production_runtime_command_surface_summary();
+        let async_delivery = production_async_delivery_semantics_summary();
 
         ProductionSessionEvaluationSummary {
             protocol_candidate: protocol_decision.selected_session_protocol(),
@@ -7439,8 +7527,27 @@ pub mod production {
             readiness_blockers: PRODUCTION_SESSION_READINESS_BLOCKERS,
             protocol_decision_reviewed: protocol_decision.decision_reviewed(),
             runtime_command_surface_reviewed: command_surface.command_surface_ready(),
+            async_delivery_semantics_reviewed: async_delivery.semantics_reviewed(),
             tauri_production_messaging_command_ready: false,
             usable_async_messaging_ready: false,
+        }
+    }
+
+    pub fn production_async_delivery_semantics_summary() -> ProductionAsyncDeliverySemanticsSummary
+    {
+        ProductionAsyncDeliverySemanticsSummary {
+            semantic_states: PRODUCTION_ASYNC_DELIVERY_SEMANTIC_STATES,
+            required_followups: PRODUCTION_ASYNC_DELIVERY_REQUIRED_FOLLOWUPS,
+            local_encrypted_outbound_ready: true,
+            explicit_envelope_export_ready: true,
+            explicit_inbound_import_ready: true,
+            retryable_failure_ready: true,
+            cancel_terminal_ready: true,
+            received_transcript_ready: true,
+            remote_ack_protocol_ready: false,
+            external_onion_delivery_verified: false,
+            runtime_messaging_enabled: false,
+            semantics_reviewed: true,
         }
     }
 
@@ -8954,12 +9061,10 @@ pub mod production {
             assert!(!summary.session_state_in_memory_only());
             assert!(summary.protocol_decision_reviewed());
             assert!(summary.runtime_command_surface_reviewed());
+            assert!(summary.async_delivery_semantics_reviewed());
             assert!(!summary.tauri_production_messaging_command_ready());
             assert!(!summary.usable_async_messaging_ready());
-            assert_eq!(
-                summary.readiness_blocker_tags(),
-                vec!["async_delivery_semantics",]
-            );
+            assert!(summary.readiness_blocker_tags().is_empty());
             assert!(!gate.production_e2ee_ready());
             assert!(gate.durable_session_persistence_ready());
             assert!(!gate.runtime_messaging_enabled());
@@ -8986,12 +9091,41 @@ pub mod production {
                 .contains(&"custom_x25519_protocol"));
             assert!(decision
                 .required_followups()
-                .contains(&"async_delivery_semantics"));
+                .contains(&"external_onion_delivery_evidence"));
             assert!(summary.protocol_decision_reviewed());
             assert_eq!(
                 summary.protocol_candidate(),
                 "snow Noise XX synchronous 1:1 invite-code boundary"
             );
+        }
+
+        #[test]
+        fn production_async_delivery_semantics_are_reviewed_without_network_claim() {
+            let async_delivery = production_async_delivery_semantics_summary();
+            let summary = production_session_evaluation_summary();
+
+            assert!(async_delivery.semantics_reviewed());
+            assert!(async_delivery.local_encrypted_outbound_ready());
+            assert!(async_delivery.explicit_envelope_export_ready());
+            assert!(async_delivery.explicit_inbound_import_ready());
+            assert!(async_delivery.retryable_failure_ready());
+            assert!(async_delivery.cancel_terminal_ready());
+            assert!(async_delivery.received_transcript_ready());
+            assert!(!async_delivery.remote_ack_protocol_ready());
+            assert!(!async_delivery.external_onion_delivery_verified());
+            assert!(!async_delivery.runtime_messaging_enabled());
+            assert!(async_delivery
+                .semantic_states()
+                .contains(&"outbound_pending"));
+            assert!(async_delivery
+                .semantic_states()
+                .contains(&"send_canceled_terminal"));
+            assert!(async_delivery
+                .required_followups()
+                .contains(&"remote_ack_protocol"));
+            assert!(summary.async_delivery_semantics_reviewed());
+            assert!(summary.readiness_blocker_tags().is_empty());
+            assert!(!summary.usable_async_messaging_ready());
         }
 
         #[test]
