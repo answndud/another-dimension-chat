@@ -9,6 +9,7 @@ pub struct PrototypeStatus {
     production_self_test_status: &'static str,
     production_session_non_readiness: &'static str,
     production_session_readiness_blockers: String,
+    production_protocol_decision: String,
     production_runtime_command_surface: String,
     production_preflight_status: String,
     production_preflight_blockers: String,
@@ -30,6 +31,8 @@ pub struct PrototypeStatus {
 pub fn redacted_prototype_status() -> PrototypeStatus {
     let preflight = another_dimension_core::production::production_skeleton_preflight_summary();
     let session_gate = another_dimension_core::production::production_session_readiness_gate();
+    let protocol_decision =
+        another_dimension_core::production::production_protocol_decision_summary();
     let command_surface =
         another_dimension_core::production::production_runtime_command_surface_summary();
     let next_connector =
@@ -46,6 +49,17 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         production_session_non_readiness:
             "no audited production E2EE claim network transport automatic messaging or secure release",
         production_session_readiness_blockers: session_gate.blocker_tags().join(","),
+        production_protocol_decision: format!(
+            "reviewed={} selected={} custom_protocol_allowed={} offline_mailbox_selected={} group_or_multidevice_selected={} production_e2ee_ready={} rejected_directions={} required_followups={}",
+            protocol_decision.decision_reviewed(),
+            protocol_decision.selected_session_protocol(),
+            protocol_decision.custom_protocol_allowed(),
+            protocol_decision.offline_mailbox_selected(),
+            protocol_decision.group_or_multidevice_selected(),
+            protocol_decision.production_e2ee_ready(),
+            protocol_decision.rejected_directions().join(","),
+            protocol_decision.required_followups().join(","),
+        ),
         production_runtime_command_surface: format!(
             "inventory_reviewed={} default_dev_insecure={} implicit_network_on_launch={} explicit_user_network_only={} plaintext_stdout_secret_export={} runtime_messaging={} reviewed_categories={} rejected_categories={}",
             command_surface.command_inventory_reviewed(),
@@ -141,6 +155,12 @@ mod tests {
         assert!(status
             .production_preflight_blockers
             .contains("rollback_protection=NotProvided"));
+        assert!(status
+            .production_protocol_decision
+            .contains("reviewed=true"));
+        assert!(status
+            .production_protocol_decision
+            .contains("custom_protocol_allowed=false"));
         assert!(status
             .production_runtime_command_surface
             .contains("inventory_reviewed=true"));

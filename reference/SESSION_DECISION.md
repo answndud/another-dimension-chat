@@ -63,15 +63,15 @@ Not decided here:
 - Storage of production session secrets.
 - Transport authentication over onion services.
 
-## Initial Direction
+## Selected Direction
 
-Evaluate a minimal Noise-based synchronous session boundary first, likely through `snow`, because it can fit the current 1:1 online-only pairing model without inventing a custom key exchange.
+Use a minimal Noise-based synchronous session boundary through `snow` for the first v0.1 production session path, because it fits the current 1:1 online-only invite-code pairing model without inventing a custom key exchange.
 
-This is only a candidate direction.
+This is a reviewed protocol decision for the first implementation boundary. It is not a claim that the messenger has production-ready E2EE.
 
 ## Shortlist Alignment
 
-The first implementation candidate is the existing `snow`-backed Noise XX smoke boundary, limited to the synchronous 1:1 session-establishment path.
+The first selected implementation boundary is the existing `snow`-backed Noise XX path, limited to the synchronous 1:1 session-establishment path.
 
 Selection constraints:
 
@@ -87,7 +87,7 @@ Explicitly not selected for the first implementation slice:
 - A standalone Double Ratchet crate without a reviewed setup, identity, persistence, and transport-binding story.
 - A Signal-style implementation wrapper without deeper dependency, storage, prekey, and release review.
 
-This alignment does not claim production E2EE readiness. It only narrows the next testable boundary.
+This alignment does not claim production E2EE readiness. It only fixes the first reviewed protocol boundary and leaves asynchronous delivery semantics as the remaining Phase BD blocker.
 
 ## Current Code Boundary
 
@@ -105,7 +105,9 @@ This alignment does not claim production E2EE readiness. It only narrows the nex
 
 Replay-aware decrypt now uses the existing `ReplayWindow` boundary. Duplicate and old message numbers are rejected before decrypt, while tampered ciphertext does not commit replay state. Replay state is still caller-owned and not persisted by the production boundary.
 
-`production_session_evaluation_summary()` is the current public-safe harness for this evaluation path. It records that the existing `snow` Noise XX synchronous boundary is covered for production pairing, safety transcript binding, deterministic canonical dialer selection, ciphertext tamper rejection, replay-before-decrypt behavior, encrypted-at-rest durable session state, message-type-separated transport nonce scheduling, and a reviewed runtime command surface inventory. It keeps production E2EE readiness and usable async messaging explicitly false, with named blockers for reviewed protocol decision and async delivery semantics.
+`production_protocol_decision_summary()` is the current public-safe protocol decision harness. It records that the first v0.1 boundary selects `snow` Noise XX for a synchronous 1:1 invite-code session, rejects custom X25519 protocols, standalone ratchet crates, unreviewed Signal-style wrappers, offline mailbox prekey publication, group sender keys, and multi-device sync, and keeps production E2EE readiness false.
+
+`production_session_evaluation_summary()` is the current public-safe harness for this evaluation path. It records that the existing `snow` Noise XX synchronous boundary is covered for production pairing, safety transcript binding, deterministic canonical dialer selection, ciphertext tamper rejection, replay-before-decrypt behavior, encrypted-at-rest durable session state, message-type-separated transport nonce scheduling, reviewed protocol decision, and reviewed runtime command surface inventory. It keeps production E2EE readiness and usable async messaging explicitly false, with named blocker for async delivery semantics.
 
 `production_session_readiness_gate()` mirrors those readiness blockers as a compact gate for CLI/Tauri status surfaces. It does not open runtime messaging, storage unlock commands, transport I/O, or a secure messenger claim.
 
@@ -141,7 +143,7 @@ Default CLI `production unlock` currently uses that taxonomy only as a fail-clos
 
 For the current v0.1 production message boundary, production session state is persisted only as encrypted-at-rest local records through the session lifecycle path.
 
-Do not persist Noise transport state, Noise static private keys, replay state, or derived channel/session state in plaintext local files. Production E2EE readiness remains blocked until the reviewed protocol decision and async delivery semantics are complete.
+Do not persist Noise transport state, Noise static private keys, replay state, or derived channel/session state in plaintext local files. Production E2EE readiness remains blocked until async delivery semantics are complete.
 
 The current implementation may recreate setup drafts and sessions for local self-tests. That is acceptable for boundary verification, but it is not a usable asynchronous messaging model and should not be presented as production-ready communication.
 

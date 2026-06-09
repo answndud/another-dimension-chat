@@ -33,8 +33,9 @@ The repository currently has:
 - `NoiseTransportPair` exposes a narrow one-message encrypt/decrypt boundary after Noise XX transport mode and rejects tampered ciphertext through the underlying `snow` transport state.
 - `ProductionEnvelopeSession` connects the in-memory Noise transport pair to `protocol::Envelope` for a caller-supplied message number and a domain-separated transcript-derived test channel id.
 - Production envelope receive can commit `ReplayWindow` state only after replay acceptance and successful decrypt, so tampered ciphertext does not advance replay state.
-- `production_session_evaluation_summary()` exposes the bounded first evaluation result: the `snow` Noise XX synchronous boundary has production-pairing, safety-transcript, canonical-dialer, tamper-rejection, replay-before-decrypt guard coverage, encrypted-at-rest durable session state coverage, message-type-separated transport nonce scheduling, and a reviewed runtime command surface inventory. Production E2EE readiness and usable async messaging remain false. It exposes named readiness blockers for reviewed protocol decision and async delivery semantics.
-- Production session draft, Noise private key, replay window, session transport persistence, and message-type-separated transport nonce scheduling are implemented as encrypted-at-rest local records and deterministic message crypto boundaries. Reviewed E2EE protocol readiness remains incomplete.
+- `production_protocol_decision_summary()` records the first reviewed v0.1 protocol boundary: `snow` Noise XX for synchronous 1:1 invite-code sessions, with custom X25519 protocols, standalone ratchet crates, unreviewed Signal-style wrappers, offline mailbox prekey publication, group sender keys, and multi-device sync rejected for this boundary.
+- `production_session_evaluation_summary()` exposes the bounded first evaluation result: the `snow` Noise XX synchronous boundary has production-pairing, safety-transcript, canonical-dialer, tamper-rejection, replay-before-decrypt guard coverage, encrypted-at-rest durable session state coverage, message-type-separated transport nonce scheduling, reviewed protocol decision, and a reviewed runtime command surface inventory. Production E2EE readiness and usable async messaging remain false. It exposes the named readiness blocker for async delivery semantics.
+- Production session draft, Noise private key, replay window, session transport persistence, and message-type-separated transport nonce scheduling are implemented as encrypted-at-rest local records and deterministic message crypto boundaries. Production E2EE readiness remains incomplete because async delivery semantics and external review are not complete.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
 
@@ -98,14 +99,14 @@ Current shortlist outcome:
 | Direct `x25519-dalek` plus custom session logic | **Do not select** | Low-level primitives are not a protocol. Building a custom session or ratchet from primitives would violate the no-custom-crypto rule. |
 | Standalone Double Ratchet crates | **Do not select first** | A ratchet crate alone does not solve identity binding, setup authentication, prekey distribution, safety material, persistence, or transport binding. |
 
-First evaluation path:
+Selected first path:
 
 1. Keep the first production message/session work on the existing Noise-based synchronous boundary.
-2. Treat `snow` as the implementation candidate for a bounded prototype only after tests are written against the production pairing/safety/session boundary.
+2. Treat `snow` as the selected implementation boundary for synchronous 1:1 invite-code sessions after the production pairing/safety/session boundary tests.
 3. Keep `dev-insecure` fake crypto available for local prototype ergonomics.
 4. Do not claim production E2EE readiness until persistence, key management, transport binding, release review, and user-facing safety copy are resolved.
 
-This shortlist is intentionally narrow. It does not decide that Noise XX is sufficient for the final v0.1 messenger, and it does not approve a custom ratchet or custom protocol.
+This decision is intentionally narrow. It does not decide that Noise XX is sufficient for every future messenger mode, and it does not approve a custom ratchet or custom protocol.
 
 ## Implementation Gate For The Shortlist
 
@@ -119,7 +120,7 @@ Before a production message/session implementation expands beyond the current sm
 - Replay rejection happens before decrypt and tampered ciphertext does not advance replay state.
 - Session state is persisted only where the encrypted storage and session lifecycle boundary explicitly permits it.
 - No Tauri production messaging command is exposed while the crypto/session boundary is incomplete.
-- `ProductionSessionEvaluationSummary` keeps production E2EE readiness, Tauri production messaging commands, and usable async messaging false while reporting encrypted-at-rest durable session persistence, message-type-separated nonce scheduling, and reviewed runtime command surface inventory as available.
+- `ProductionSessionEvaluationSummary` keeps production E2EE readiness, Tauri production messaging commands, and usable async messaging false while reporting reviewed protocol decision, encrypted-at-rest durable session persistence, message-type-separated nonce scheduling, and reviewed runtime command surface inventory as available.
 
 ## Prekey Question
 
