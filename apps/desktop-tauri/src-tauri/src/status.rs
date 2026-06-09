@@ -19,6 +19,7 @@ pub struct PrototypeStatus {
     session_durable_state_status: &'static str,
     local_data_lifecycle_policy: String,
     key_rollback_boundary: String,
+    transport_envelope_io_boundary: String,
     session_unlock_policy_status: &'static str,
     session_unlock_non_readiness: &'static str,
     session_unlock_cli_rejection_status: &'static str,
@@ -53,6 +54,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         another_dimension_core::production::production_local_data_lifecycle_policy_summary();
     let key_rollback =
         another_dimension_core::production::production_key_rollback_boundary_summary();
+    let transport_boundary =
+        another_dimension_core::production::production_transport_envelope_io_boundary_summary();
 
     PrototypeStatus {
         secure_release: false,
@@ -146,10 +149,11 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             preflight.production_messaging_ready(),
         ),
         production_preflight_blockers: format!(
-            "session_e2ee={} local_manual_e2ee_runtime={} key_rollback_boundary_closed={} route={:?} route_allowed={} transport_send_receive={} message_storage={:?} session_transport_storage={:?} replay_commit_after_decrypt={} rollback_protection={:?} runtime_surface_closed={} messaging={}",
+            "session_e2ee={} local_manual_e2ee_runtime={} key_rollback_boundary_closed={} transport_envelope_io_boundary_closed={} route={:?} route_allowed={} transport_send_receive={} message_storage={:?} session_transport_storage={:?} replay_commit_after_decrypt={} rollback_protection={:?} runtime_surface_closed={} messaging={}",
             preflight.session_e2ee_ready(),
             preflight.local_manual_e2ee_runtime_ready(),
             preflight.key_rollback_boundary_closed(),
+            preflight.transport_envelope_io_boundary_closed(),
             preflight.transport_route_kind(),
             preflight.transport_route_allowed_by_policy(),
             preflight.transport_send_receive_available(),
@@ -200,6 +204,26 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             key_rollback.production_key_management_ready(),
             key_rollback.security_ready_claimed(),
             key_rollback.policies().join(","),
+        ),
+        transport_envelope_io_boundary: format!(
+            "boundary_closed={} explicit_user_action_required={} automatic_network_on_launch={} high_risk_onion_only_policy={} direct_fallback_allowed={} route_allowed_by_policy={} outbound_fail_closed_adapter_ready={} inbound_fail_closed_adapter_ready={} redacted_envelope_io_context_required={} remote_peer_authentication_required={} verified_pairwise_session_required={} send_receive_available={} external_two_machine_onion_delivery_verified={} reliable_real_network_onion_delivery_claimed={} production_messaging_ready={} security_ready_claimed={} policies={}",
+            transport_boundary.boundary_closed(),
+            transport_boundary.explicit_user_action_required(),
+            transport_boundary.automatic_network_on_launch_allowed(),
+            transport_boundary.high_risk_onion_only_policy(),
+            transport_boundary.direct_fallback_allowed(),
+            transport_boundary.route_allowed_by_policy(),
+            transport_boundary.outbound_fail_closed_adapter_ready(),
+            transport_boundary.inbound_fail_closed_adapter_ready(),
+            transport_boundary.redacted_envelope_io_context_required(),
+            transport_boundary.remote_peer_authentication_required(),
+            transport_boundary.verified_pairwise_session_required(),
+            transport_boundary.send_receive_available(),
+            transport_boundary.external_two_machine_onion_delivery_verified(),
+            transport_boundary.reliable_real_network_onion_delivery_claimed(),
+            transport_boundary.production_messaging_ready(),
+            transport_boundary.security_ready_claimed(),
+            transport_boundary.policies().join(","),
         ),
         session_unlock_policy_status: "passphrase-first high-risk policy OS-keystore-only rejected",
         session_unlock_non_readiness:
@@ -310,6 +334,18 @@ mod tests {
             .key_rollback_boundary
             .contains("production_key_management_ready=false"));
         assert!(status
+            .transport_envelope_io_boundary
+            .contains("boundary_closed=true"));
+        assert!(status
+            .transport_envelope_io_boundary
+            .contains("send_receive_available=false"));
+        assert!(status
+            .transport_envelope_io_boundary
+            .contains("external_two_machine_onion_delivery_verified=false"));
+        assert!(status
+            .transport_envelope_io_boundary
+            .contains("direct_fallback_allowed=false"));
+        assert!(status
             .production_protocol_decision
             .contains("reviewed=true"));
         assert!(status
@@ -324,13 +360,13 @@ mod tests {
         assert!(status.transport_status.contains("route=OnionService"));
         assert!(status
             .network_execution_status
-            .contains("next_connector=TransportEnvelopeIo"));
+            .contains("next_connector=ExternalOnionEvidence"));
         assert!(status
             .transport_io_status
             .contains("transport_send_receive=false"));
         assert!(status
             .transport_io_status
-            .contains("bounded Tor onion lifecycle adapter without direct fallback"));
+            .contains("real external peer reports without fabricated local evidence"));
         assert!(status
             .release_integrity_status
             .contains("manual SHA-256 verification"));
