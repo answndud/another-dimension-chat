@@ -458,6 +458,16 @@ pub mod production {
         "explicit_envelope_export_import_only",
     ];
 
+    const PRODUCTION_KEY_ROLLBACK_BOUNDARY_POLICIES: &[&str] = &[
+        "passphrase_first_v0_1_default",
+        "os_keystore_optional_not_required",
+        "os_keystore_only_rejected",
+        "app_key_wrapping_non_claim",
+        "rollback_prevention_non_claim_without_external_monotonic_state",
+        "backup_exclusion_policy_decided_not_verified",
+        "secure_media_deletion_non_claim",
+    ];
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionRuntimeCommandSurfaceSummary {
         reviewed_categories: &'static [&'static str],
@@ -507,6 +517,27 @@ pub mod production {
         external_onion_delivery_verified: bool,
         local_manual_e2ee_runtime_ready: bool,
         production_e2ee_ready: bool,
+        security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionKeyRollbackBoundarySummary {
+        policies: &'static [&'static str],
+        passphrase_first_required: bool,
+        os_keystore_optional: bool,
+        os_keystore_dependency_required: bool,
+        os_keystore_only_rejected: bool,
+        app_key_wrapping_ready: bool,
+        app_key_wrapping_non_claim_decided: bool,
+        rollback_protection: ReplayRollbackProtection,
+        rollback_prevention_claimed: bool,
+        rollback_non_claim_decided: bool,
+        external_monotonic_state_required_before_claim: bool,
+        backup_exclusion_policy_decided: bool,
+        backup_exclusion_verified: bool,
+        secure_media_deletion_claimed: bool,
+        boundary_closed: bool,
+        production_key_management_ready: bool,
         security_ready_claimed: bool,
     }
 
@@ -676,6 +707,76 @@ pub mod production {
         }
     }
 
+    impl ProductionKeyRollbackBoundarySummary {
+        pub fn policies(self) -> &'static [&'static str] {
+            self.policies
+        }
+
+        pub fn passphrase_first_required(self) -> bool {
+            self.passphrase_first_required
+        }
+
+        pub fn os_keystore_optional(self) -> bool {
+            self.os_keystore_optional
+        }
+
+        pub fn os_keystore_dependency_required(self) -> bool {
+            self.os_keystore_dependency_required
+        }
+
+        pub fn os_keystore_only_rejected(self) -> bool {
+            self.os_keystore_only_rejected
+        }
+
+        pub fn app_key_wrapping_ready(self) -> bool {
+            self.app_key_wrapping_ready
+        }
+
+        pub fn app_key_wrapping_non_claim_decided(self) -> bool {
+            self.app_key_wrapping_non_claim_decided
+        }
+
+        pub fn rollback_protection(self) -> ReplayRollbackProtection {
+            self.rollback_protection
+        }
+
+        pub fn rollback_prevention_claimed(self) -> bool {
+            self.rollback_prevention_claimed
+        }
+
+        pub fn rollback_non_claim_decided(self) -> bool {
+            self.rollback_non_claim_decided
+        }
+
+        pub fn external_monotonic_state_required_before_claim(self) -> bool {
+            self.external_monotonic_state_required_before_claim
+        }
+
+        pub fn backup_exclusion_policy_decided(self) -> bool {
+            self.backup_exclusion_policy_decided
+        }
+
+        pub fn backup_exclusion_verified(self) -> bool {
+            self.backup_exclusion_verified
+        }
+
+        pub fn secure_media_deletion_claimed(self) -> bool {
+            self.secure_media_deletion_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+
+        pub fn production_key_management_ready(self) -> bool {
+            self.production_key_management_ready
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+    }
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionSessionReadinessGate {
         production_e2ee_ready: bool,
@@ -808,6 +909,7 @@ pub mod production {
         session_safety_transcript_bound: bool,
         session_e2ee_ready: bool,
         local_manual_e2ee_runtime_ready: bool,
+        key_rollback_boundary_closed: bool,
         transport_route_kind: TransportKind,
         transport_route_allowed_by_policy: bool,
         transport_send_receive_available: bool,
@@ -3059,6 +3161,10 @@ pub mod production {
 
         pub fn local_manual_e2ee_runtime_ready(self) -> bool {
             self.local_manual_e2ee_runtime_ready
+        }
+
+        pub fn key_rollback_boundary_closed(self) -> bool {
+            self.key_rollback_boundary_closed
         }
 
         pub fn transport_route_kind(self) -> TransportKind {
@@ -7995,6 +8101,63 @@ pub mod production {
         }
     }
 
+    pub fn production_key_rollback_boundary_summary() -> ProductionKeyRollbackBoundarySummary {
+        let storage =
+            another_dimension_storage::production::storage_backend_integration_boundary_summary();
+        let high_risk_requires_passphrase =
+            UnlockRequest::new(UnlockMode::HighRisk, vec![UnlockFactor::Passphrase])
+                .require_allowed()
+                .is_ok();
+        let os_keystore_only_rejected = matches!(
+            UnlockRequest::new(
+                UnlockMode::HighRisk,
+                vec![UnlockFactor::OsKeystoreWrappedKey]
+            )
+            .require_allowed(),
+            Err(ProductionStoragePolicyError::UnlockPolicyViolation)
+        );
+        let passphrase_first_required =
+            storage.passphrase_first_unlock() && high_risk_requires_passphrase;
+        let app_key_wrapping_ready = storage.production_key_management_ready();
+        let rollback_protection = storage.rollback_protection();
+        let backup_exclusion_policy_decided = true;
+        let backup_exclusion_verified = false;
+        let secure_media_deletion_claimed = storage.secure_deletion_from_media();
+
+        let app_key_wrapping_non_claim_decided = !app_key_wrapping_ready;
+        let rollback_non_claim_decided =
+            rollback_protection == ReplayRollbackProtection::NotProvided;
+        let external_monotonic_state_required_before_claim =
+            rollback_protection == ReplayRollbackProtection::NotProvided;
+        let boundary_closed = passphrase_first_required
+            && os_keystore_only_rejected
+            && app_key_wrapping_non_claim_decided
+            && rollback_non_claim_decided
+            && external_monotonic_state_required_before_claim
+            && backup_exclusion_policy_decided
+            && !secure_media_deletion_claimed;
+
+        ProductionKeyRollbackBoundarySummary {
+            policies: PRODUCTION_KEY_ROLLBACK_BOUNDARY_POLICIES,
+            passphrase_first_required,
+            os_keystore_optional: true,
+            os_keystore_dependency_required: false,
+            os_keystore_only_rejected,
+            app_key_wrapping_ready,
+            app_key_wrapping_non_claim_decided,
+            rollback_protection,
+            rollback_prevention_claimed: false,
+            rollback_non_claim_decided,
+            external_monotonic_state_required_before_claim,
+            backup_exclusion_policy_decided,
+            backup_exclusion_verified,
+            secure_media_deletion_claimed,
+            boundary_closed,
+            production_key_management_ready: false,
+            security_ready_claimed: false,
+        }
+    }
+
     pub fn production_session_readiness_gate() -> ProductionSessionReadinessGate {
         let summary = production_session_evaluation_summary();
 
@@ -8009,6 +8172,7 @@ pub mod production {
     pub fn production_skeleton_preflight_summary() -> ProductionSkeletonPreflightSummary {
         let session = production_session_evaluation_summary();
         let local_manual_e2ee = production_local_manual_e2ee_runtime_summary();
+        let key_rollback = production_key_rollback_boundary_summary();
         let command_surface = production_runtime_command_surface_summary();
         let transport = OnionEnvelopeTransport::fail_closed_high_risk();
         let route = TransportRoute::onion("preflight.onion")
@@ -8021,6 +8185,7 @@ pub mod production {
             session_safety_transcript_bound: session.safety_transcript_bound(),
             session_e2ee_ready: session.production_e2ee_ready(),
             local_manual_e2ee_runtime_ready: local_manual_e2ee.local_manual_e2ee_runtime_ready(),
+            key_rollback_boundary_closed: key_rollback.boundary_closed(),
             transport_route_kind: transport.route_kind(),
             transport_route_allowed_by_policy: transport.route_allowed_by_policy(),
             transport_send_receive_available: transport.send_receive_available(),
@@ -8051,11 +8216,12 @@ pub mod production {
             };
         }
 
-        if preflight.storage_rollback_protection() == ReplayRollbackProtection::NotProvided {
+        if !preflight.key_rollback_boundary_closed() {
             return ProductionSkeletonNextConnectorSelection {
                 connector: ProductionSkeletonConnector::StorageKeyManagementAndRollback,
-                blocker: "storage rollback protection and key management are not complete",
-                required_gate: "key management rollback backup exclusion and migration decision",
+                blocker: "storage key management and rollback boundary decision is not complete",
+                required_gate:
+                    "passphrase-first key policy rollback non-claim and backup boundary decision",
                 opens_runtime_execution: false,
                 production_messaging_ready: false,
             };
@@ -9650,7 +9816,43 @@ pub mod production {
             assert!(preflight.local_manual_e2ee_runtime_ready());
             assert_eq!(
                 selection.connector(),
-                ProductionSkeletonConnector::StorageKeyManagementAndRollback
+                ProductionSkeletonConnector::TransportEnvelopeIo
+            );
+            assert!(!selection.production_messaging_ready());
+        }
+
+        #[test]
+        fn production_key_rollback_boundary_closes_policy_without_claiming_wrapping_or_rollback() {
+            let boundary = production_key_rollback_boundary_summary();
+            let preflight = production_skeleton_preflight_summary();
+            let selection = production_skeleton_next_connector_selection();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.passphrase_first_required());
+            assert!(boundary.os_keystore_optional());
+            assert!(!boundary.os_keystore_dependency_required());
+            assert!(boundary.os_keystore_only_rejected());
+            assert!(!boundary.app_key_wrapping_ready());
+            assert!(boundary.app_key_wrapping_non_claim_decided());
+            assert_eq!(
+                boundary.rollback_protection(),
+                ReplayRollbackProtection::NotProvided
+            );
+            assert!(!boundary.rollback_prevention_claimed());
+            assert!(boundary.rollback_non_claim_decided());
+            assert!(boundary.external_monotonic_state_required_before_claim());
+            assert!(boundary.backup_exclusion_policy_decided());
+            assert!(!boundary.backup_exclusion_verified());
+            assert!(!boundary.secure_media_deletion_claimed());
+            assert!(!boundary.production_key_management_ready());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .policies()
+                .contains(&"rollback_prevention_non_claim_without_external_monotonic_state"));
+            assert!(preflight.key_rollback_boundary_closed());
+            assert_eq!(
+                selection.connector(),
+                ProductionSkeletonConnector::TransportEnvelopeIo
             );
             assert!(!selection.production_messaging_ready());
         }

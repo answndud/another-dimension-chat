@@ -18,6 +18,7 @@ pub struct PrototypeStatus {
     production_preflight_blockers: String,
     session_durable_state_status: &'static str,
     local_data_lifecycle_policy: String,
+    key_rollback_boundary: String,
     session_unlock_policy_status: &'static str,
     session_unlock_non_readiness: &'static str,
     session_unlock_cli_rejection_status: &'static str,
@@ -50,6 +51,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         another_dimension_core::production::production_skeleton_next_connector_selection();
     let local_data_policy =
         another_dimension_core::production::production_local_data_lifecycle_policy_summary();
+    let key_rollback =
+        another_dimension_core::production::production_key_rollback_boundary_summary();
 
     PrototypeStatus {
         secure_release: false,
@@ -143,8 +146,10 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             preflight.production_messaging_ready(),
         ),
         production_preflight_blockers: format!(
-            "session_e2ee={} route={:?} route_allowed={} transport_send_receive={} message_storage={:?} session_transport_storage={:?} replay_commit_after_decrypt={} rollback_protection={:?} runtime_surface_closed={} messaging={}",
+            "session_e2ee={} local_manual_e2ee_runtime={} key_rollback_boundary_closed={} route={:?} route_allowed={} transport_send_receive={} message_storage={:?} session_transport_storage={:?} replay_commit_after_decrypt={} rollback_protection={:?} runtime_surface_closed={} messaging={}",
             preflight.session_e2ee_ready(),
+            preflight.local_manual_e2ee_runtime_ready(),
+            preflight.key_rollback_boundary_closed(),
             preflight.transport_route_kind(),
             preflight.transport_route_allowed_by_policy(),
             preflight.transport_send_receive_available(),
@@ -175,6 +180,26 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             local_data_policy.prototype_data_migration_ready(),
             local_data_policy.runtime_messaging_enabled(),
             local_data_policy.policy_tags().join(","),
+        ),
+        key_rollback_boundary: format!(
+            "boundary_closed={} passphrase_first_required={} os_keystore_optional={} os_keystore_dependency_required={} os_keystore_only_rejected={} app_key_wrapping_ready={} app_key_wrapping_non_claim={} rollback_protection={:?} rollback_prevention_claimed={} rollback_non_claim={} external_monotonic_state_required_before_claim={} backup_policy_decided={} backup_verified={} secure_media_deletion_claimed={} production_key_management_ready={} security_ready_claimed={} policies={}",
+            key_rollback.boundary_closed(),
+            key_rollback.passphrase_first_required(),
+            key_rollback.os_keystore_optional(),
+            key_rollback.os_keystore_dependency_required(),
+            key_rollback.os_keystore_only_rejected(),
+            key_rollback.app_key_wrapping_ready(),
+            key_rollback.app_key_wrapping_non_claim_decided(),
+            key_rollback.rollback_protection(),
+            key_rollback.rollback_prevention_claimed(),
+            key_rollback.rollback_non_claim_decided(),
+            key_rollback.external_monotonic_state_required_before_claim(),
+            key_rollback.backup_exclusion_policy_decided(),
+            key_rollback.backup_exclusion_verified(),
+            key_rollback.secure_media_deletion_claimed(),
+            key_rollback.production_key_management_ready(),
+            key_rollback.security_ready_claimed(),
+            key_rollback.policies().join(","),
         ),
         session_unlock_policy_status: "passphrase-first high-risk policy OS-keystore-only rejected",
         session_unlock_non_readiness:
@@ -274,6 +299,16 @@ mod tests {
         assert!(status
             .local_data_lifecycle_policy
             .contains("secure_media_deletion_claimed=false"));
+        assert!(status.key_rollback_boundary.contains("boundary_closed=true"));
+        assert!(status
+            .key_rollback_boundary
+            .contains("app_key_wrapping_non_claim=true"));
+        assert!(status
+            .key_rollback_boundary
+            .contains("rollback_non_claim=true"));
+        assert!(status
+            .key_rollback_boundary
+            .contains("production_key_management_ready=false"));
         assert!(status
             .production_protocol_decision
             .contains("reviewed=true"));
@@ -289,13 +324,13 @@ mod tests {
         assert!(status.transport_status.contains("route=OnionService"));
         assert!(status
             .network_execution_status
-            .contains("next_connector=StorageKeyManagementAndRollback"));
+            .contains("next_connector=TransportEnvelopeIo"));
         assert!(status
             .transport_io_status
             .contains("transport_send_receive=false"));
         assert!(status
             .transport_io_status
-            .contains("key management rollback backup exclusion and migration decision"));
+            .contains("bounded Tor onion lifecycle adapter without direct fallback"));
         assert!(status
             .release_integrity_status
             .contains("manual SHA-256 verification"));
