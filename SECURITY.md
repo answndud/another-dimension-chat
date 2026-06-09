@@ -78,11 +78,11 @@ The current public upload set is prepared from the ignored local beta DMG with:
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-The generated public release folder is `apps/desktop-tauri/public-release/unsigned-public-beta/`. It is ignored and should contain only the DMG, matching `.sha256`, provenance JSON, `INSTALL_UNSIGNED_MACOS.md`, `RELEASE_NOTES.md`, and `MANIFEST.md`.
+The generated public release folder is `apps/desktop-tauri/public-release/unsigned-public-beta/`. It is ignored and should contain only the DMG, matching `.sha256`, public provenance JSON, `INSTALL_UNSIGNED_MACOS.md`, `RELEASE_NOTES.md`, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, `PUBLIC_THREAT_MODEL.md`, `INDEPENDENT_REVIEW_PACKET.md`, `DEPENDENCY_LOCKFILES.sha256`, and `MANIFEST.md`.
 
 Public users must verify the DMG checksum before using the normal macOS Privacy & Security manual allow path. This project does not ask users to bypass macOS protections with terminal quarantine removal commands. There is no auto-update channel; every update is a manual GitHub Release download with a matching `.sha256` file.
 
-The unsigned release upload set includes `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, and `DEPENDENCY_LOCKFILES.sha256` as review evidence. These files are not an audit, SBOM, reproducible-build proof, malware review, signing substitute, notarization substitute, or secure messenger claim.
+The unsigned release upload set includes public provenance JSON, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, and `DEPENDENCY_LOCKFILES.sha256` as review evidence. The release script regenerates the public provenance for the public DMG name and records the source provenance SHA-256. These files are not an audit, SBOM, reproducible-build proof, malware review, signing substitute, notarization substitute, or secure messenger claim.
 
 The upload set also includes `PUBLIC_THREAT_MODEL.md` and `INDEPENDENT_REVIEW_PACKET.md` so reviewers can inspect allowed claims, non-claims, known gaps, and public-safe review commands without private planning notes.
 

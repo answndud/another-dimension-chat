@@ -17,6 +17,11 @@ The generated release file is:
 This lets reviewers see which lockfiles were present when the public upload set
 was prepared. It does not prove dependency safety.
 
+The release script also records the SHA-256 of the local source provenance JSON
+inside the public provenance JSON. That links the public upload name to the
+local build provenance without claiming reproducible builds or artifact
+authenticity beyond the GitHub Release that the user chooses to trust.
+
 ## Current Package Managers
 
 - Rust workspace: Cargo lockfile at repository root.
@@ -27,6 +32,12 @@ was prepared. It does not prove dependency safety.
 
 For this public beta, dependency review is limited to lockfile presence, release
 artifact checksum evidence, and public non-claims.
+
+The public release script fails if the upload set does not include the expected
+DMG, `.sha256`, public provenance JSON, manifest, manual update integrity note,
+supply-chain baseline note, threat model, independent review packet, and
+dependency lockfile hashes. This is an upload-set completeness check, not a
+dependency safety review.
 
 Not included:
 

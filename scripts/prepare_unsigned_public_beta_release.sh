@@ -16,6 +16,19 @@ SOURCE_PROVENANCE="$SOURCE_DIR/Another Dimension Chat_0.1.0_aarch64.dmg.provenan
 RELEASE_DIR="${1:-$ROOT_DIR/apps/desktop-tauri/public-release/unsigned-public-beta}"
 RELEASE_DMG="another-dimension-chat-${APP_VERSION}-${BUILD_CHANNEL}-${PLATFORM}-unsigned.dmg"
 RELEASE_PROVENANCE="${RELEASE_DMG}.provenance.json"
+REQUIRED_RELEASE_FILES=(
+  "$RELEASE_DMG"
+  "$RELEASE_DMG.sha256"
+  "$RELEASE_PROVENANCE"
+  "INSTALL_UNSIGNED_MACOS.md"
+  "RELEASE_NOTES.md"
+  "UPDATE_INTEGRITY.md"
+  "SUPPLY_CHAIN_BASELINE.md"
+  "PUBLIC_THREAT_MODEL.md"
+  "INDEPENDENT_REVIEW_PACKET.md"
+  "DEPENDENCY_LOCKFILES.sha256"
+  "MANIFEST.md"
+)
 
 case "$RELEASE_DIR" in
   ""|"/"|"$ROOT_DIR"|"$ROOT_DIR/"|"."|"..")
@@ -27,6 +40,15 @@ esac
 require_file() {
   if [ ! -f "$1" ]; then
     echo "FAIL missing file: $1" >&2
+    exit 1
+  fi
+}
+
+require_text() {
+  local file="$1"
+  local expected="$2"
+  if ! grep -Fq "$expected" "$file"; then
+    echo "FAIL missing expected text in $file: $expected" >&2
     exit 1
   fi
 }
@@ -51,11 +73,20 @@ if [ "$actual_sha" != "$EXPECTED_DMG_SHA" ]; then
   exit 1
 fi
 
+source_provenance_sha="$(shasum -a 256 "$SOURCE_PROVENANCE" | awk '{print $1}')"
+artifact_size_bytes="$(wc -c < "$SOURCE_DMG" | tr -d '[:space:]')"
+
+require_text "$SOURCE_PROVENANCE" "\"artifact_sha256\": \"$EXPECTED_DMG_SHA\""
+require_text "$SOURCE_PROVENANCE" "\"app_version\": \"$APP_VERSION\""
+require_text "$SOURCE_PROVENANCE" "\"build_channel\": \"$BUILD_CHANNEL\""
+require_text "$SOURCE_PROVENANCE" "\"build_commit\": \"$BUILD_COMMIT\""
+require_text "$SOURCE_PROVENANCE" "\"platform\": \"$PLATFORM\""
+require_text "$SOURCE_PROVENANCE" "\"startup_network_sockets\": \"none\""
+
 rm -rf "$RELEASE_DIR"
 mkdir -p "$RELEASE_DIR"
 
 cp "$SOURCE_DMG" "$RELEASE_DIR/$RELEASE_DMG"
-cp "$SOURCE_PROVENANCE" "$RELEASE_DIR/$RELEASE_PROVENANCE"
 cp "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md"
 cp "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "$RELEASE_DIR/RELEASE_NOTES.md"
 cp "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "$RELEASE_DIR/UPDATE_INTEGRITY.md"
@@ -75,6 +106,37 @@ cp "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "$RELEASE_DIR/INDEPENDENT_
     apps/desktop-tauri/src-tauri/Cargo.lock \
     apps/desktop-tauri/package-lock.json > "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256"
 )
+
+cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
+{
+  "artifact": "$RELEASE_DMG",
+  "artifact_sha256": "$EXPECTED_DMG_SHA",
+  "artifact_size_bytes": $artifact_size_bytes,
+  "app_version": "$APP_VERSION",
+  "build_channel": "$BUILD_CHANNEL",
+  "build_commit": "$BUILD_COMMIT",
+  "platform": "$PLATFORM",
+  "distribution": "unsigned-github-public-beta",
+  "notarized": false,
+  "signed": false,
+  "auto_update": false,
+  "startup_network_sockets": "none",
+  "source_provenance_sha256": "$source_provenance_sha",
+  "dependency_lockfiles_sha256_file": "DEPENDENCY_LOCKFILES.sha256",
+  "manual_update_integrity_file": "UPDATE_INTEGRITY.md",
+  "supply_chain_baseline_file": "SUPPLY_CHAIN_BASELINE.md",
+  "public_non_claims": [
+    "unsigned experimental public beta",
+    "not notarized",
+    "not audited",
+    "not production-ready",
+    "sensitive communication prohibited",
+    "no auto-update",
+    "no dependency audit claim",
+    "no reproducible-build claim"
+  ]
+}
+EOF
 
 cat > "$RELEASE_DIR/MANIFEST.md" <<EOF
 # Another Dimension Chat unsigned public beta manifest
@@ -101,6 +163,11 @@ This folder is for a GitHub Release upload.
 - Build commit: \`$BUILD_COMMIT\`
 - Platform: \`$PLATFORM\`
 - DMG SHA-256: \`$EXPECTED_DMG_SHA\`
+- Public provenance: \`$RELEASE_PROVENANCE\`
+- Source provenance SHA-256: \`$source_provenance_sha\`
+- Dependency lockfile hashes: \`DEPENDENCY_LOCKFILES.sha256\`
+- Auto-update: disabled
+- Signing/notarization: disabled
 
 ## Boundary
 
@@ -115,7 +182,26 @@ provenance/lockfile-hash evidence in this upload set. There is no auto-update,
 signing, notarization, reproducible-build, SBOM, or security-audit claim.
 EOF
 
+for release_file in "${REQUIRED_RELEASE_FILES[@]}"; do
+  require_file "$RELEASE_DIR/$release_file"
+done
+
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact\": \"$RELEASE_DMG\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact_sha256\": \"$EXPECTED_DMG_SHA\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"source_provenance_sha256\": \"$source_provenance_sha\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"auto_update\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"signed\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"notarized\": false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Auto-update: disabled"
+require_text "$RELEASE_DIR/MANIFEST.md" "Signing/notarization: disabled"
+require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "does not provide auto-update"
+require_text "$RELEASE_DIR/SUPPLY_CHAIN_BASELINE.md" "not a supply-chain audit"
+require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "Cargo.lock"
+require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/src-tauri/Cargo.lock"
+require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/package-lock.json"
+
 echo "release_dir=$RELEASE_DIR"
 echo "release_dmg=$RELEASE_DMG"
 echo "dmg_sha256=$EXPECTED_DMG_SHA"
+echo "source_provenance_sha256=$source_provenance_sha"
 echo "status=unsigned-public-beta-release-ready"

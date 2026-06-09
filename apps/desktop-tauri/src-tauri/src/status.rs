@@ -26,6 +26,7 @@ pub struct PrototypeStatus {
     bootstrap_status_classification: &'static str,
     transport_io_status: String,
     storage_status: &'static str,
+    release_integrity_status: &'static str,
     verification_status: &'static str,
     local_dev_peer_label: String,
 }
@@ -161,6 +162,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         ),
         storage_status:
             "ADREC1 storage spike plus forward-only schema and local data lifecycle boundary",
+        release_integrity_status:
+            "unsigned GitHub beta uses manual SHA-256 verification, public provenance, dependency lockfile hashes, no auto-update, no signing, no notarization, no supply-chain audit claim",
         verification_status: "lightweight checks only",
         local_dev_peer_label: local_dev_peer_label(),
     }
@@ -232,6 +235,12 @@ mod tests {
         assert!(status
             .transport_io_status
             .contains("reviewed session protocol decision plus durable state persistence plan"));
+        assert!(status
+            .release_integrity_status
+            .contains("manual SHA-256 verification"));
+        assert!(status
+            .release_integrity_status
+            .contains("no auto-update"));
         assert!(status.local_dev_peer_label.is_empty());
     }
 }
