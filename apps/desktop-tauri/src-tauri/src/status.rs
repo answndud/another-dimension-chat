@@ -9,6 +9,7 @@ pub struct PrototypeStatus {
     production_self_test_status: &'static str,
     production_session_non_readiness: &'static str,
     production_session_readiness_blockers: String,
+    production_runtime_command_surface: String,
     production_preflight_status: String,
     production_preflight_blockers: String,
     session_durable_state_status: &'static str,
@@ -29,6 +30,8 @@ pub struct PrototypeStatus {
 pub fn redacted_prototype_status() -> PrototypeStatus {
     let preflight = another_dimension_core::production::production_skeleton_preflight_summary();
     let session_gate = another_dimension_core::production::production_session_readiness_gate();
+    let command_surface =
+        another_dimension_core::production::production_runtime_command_surface_summary();
     let next_connector =
         another_dimension_core::production::production_skeleton_next_connector_selection();
 
@@ -43,6 +46,17 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         production_session_non_readiness:
             "no audited production E2EE claim network transport automatic messaging or secure release",
         production_session_readiness_blockers: session_gate.blocker_tags().join(","),
+        production_runtime_command_surface: format!(
+            "inventory_reviewed={} default_dev_insecure={} implicit_network_on_launch={} explicit_user_network_only={} plaintext_stdout_secret_export={} runtime_messaging={} reviewed_categories={} rejected_categories={}",
+            command_surface.command_inventory_reviewed(),
+            command_surface.default_build_has_dev_insecure_commands(),
+            command_surface.implicit_network_on_launch_allowed(),
+            command_surface.explicit_user_network_attempts_only(),
+            command_surface.plaintext_stdout_secret_export_allowed(),
+            command_surface.runtime_messaging_enabled(),
+            command_surface.reviewed_categories().join(","),
+            command_surface.rejected_categories().join(","),
+        ),
         production_preflight_status: format!(
             "read-only production skeleton: session_e2ee={} transport_send_receive={} messaging={}",
             preflight.session_e2ee_ready(),
@@ -127,6 +141,12 @@ mod tests {
         assert!(status
             .production_preflight_blockers
             .contains("rollback_protection=NotProvided"));
+        assert!(status
+            .production_runtime_command_surface
+            .contains("inventory_reviewed=true"));
+        assert!(status
+            .production_runtime_command_surface
+            .contains("runtime_messaging=false"));
         assert!(status.transport_status.contains("route=OnionService"));
         assert!(status
             .network_execution_status

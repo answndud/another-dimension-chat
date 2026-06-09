@@ -33,7 +33,7 @@ The repository currently has:
 - `NoiseTransportPair` exposes a narrow one-message encrypt/decrypt boundary after Noise XX transport mode and rejects tampered ciphertext through the underlying `snow` transport state.
 - `ProductionEnvelopeSession` connects the in-memory Noise transport pair to `protocol::Envelope` for a caller-supplied message number and a domain-separated transcript-derived test channel id.
 - Production envelope receive can commit `ReplayWindow` state only after replay acceptance and successful decrypt, so tampered ciphertext does not advance replay state.
-- `production_session_evaluation_summary()` exposes the bounded first evaluation result: the `snow` Noise XX synchronous boundary has production-pairing, safety-transcript, canonical-dialer, tamper-rejection, replay-before-decrypt guard coverage, encrypted-at-rest durable session state coverage, and message-type-separated transport nonce scheduling, while production E2EE readiness, Tauri production messaging commands, and usable async messaging remain false. It also exposes named readiness blockers for reviewed protocol decision, runtime command surface, and async delivery semantics.
+- `production_session_evaluation_summary()` exposes the bounded first evaluation result: the `snow` Noise XX synchronous boundary has production-pairing, safety-transcript, canonical-dialer, tamper-rejection, replay-before-decrypt guard coverage, encrypted-at-rest durable session state coverage, message-type-separated transport nonce scheduling, and a reviewed runtime command surface inventory. Production E2EE readiness and usable async messaging remain false. It exposes named readiness blockers for reviewed protocol decision and async delivery semantics.
 - Production session draft, Noise private key, replay window, session transport persistence, and message-type-separated transport nonce scheduling are implemented as encrypted-at-rest local records and deterministic message crypto boundaries. Reviewed E2EE protocol readiness remains incomplete.
 - Integration fixture tests for canonical pairing payloads, dev placeholder signatures, and safety transcript ordering.
 - Padded envelope and replay window prototypes in `crates/protocol`.
@@ -119,7 +119,7 @@ Before a production message/session implementation expands beyond the current sm
 - Replay rejection happens before decrypt and tampered ciphertext does not advance replay state.
 - Session state is persisted only where the encrypted storage and session lifecycle boundary explicitly permits it.
 - No Tauri production messaging command is exposed while the crypto/session boundary is incomplete.
-- `ProductionSessionEvaluationSummary` keeps production E2EE readiness, Tauri production messaging commands, and usable async messaging false while reporting encrypted-at-rest durable session persistence and message-type-separated nonce scheduling as available.
+- `ProductionSessionEvaluationSummary` keeps production E2EE readiness, Tauri production messaging commands, and usable async messaging false while reporting encrypted-at-rest durable session persistence, message-type-separated nonce scheduling, and reviewed runtime command surface inventory as available.
 
 ## Prekey Question
 

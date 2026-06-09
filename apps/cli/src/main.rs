@@ -3410,6 +3410,8 @@ fn run_production_self_test() -> Result<(), String> {
 #[cfg(not(feature = "dev-insecure"))]
 fn print_production_self_test_summary() {
     let summary = another_dimension_core::production::production_session_evaluation_summary();
+    let command_surface =
+        another_dimension_core::production::production_runtime_command_surface_summary();
 
     println!(
         "production session candidate: {}",
@@ -3425,11 +3427,23 @@ fn print_production_self_test_summary() {
         summary.session_state_in_memory_only()
     );
     println!(
-        "production session non-readiness: production_e2ee={} durable_session_persistence={} tauri_production_messaging_command={} usable_async_messaging={}",
+        "production session non-readiness: production_e2ee={} durable_session_persistence={} command_surface_reviewed={} tauri_production_messaging_command={} usable_async_messaging={}",
         summary.production_e2ee_ready(),
         summary.durable_session_persistence_ready(),
+        summary.runtime_command_surface_reviewed(),
         summary.tauri_production_messaging_command_ready(),
         summary.usable_async_messaging_ready()
+    );
+    println!(
+        "production runtime command surface: inventory_reviewed={} default_dev_insecure={} implicit_network_on_launch={} explicit_user_network_only={} plaintext_stdout_secret_export={} runtime_messaging={} reviewed_categories={} rejected_categories={}",
+        command_surface.command_inventory_reviewed(),
+        command_surface.default_build_has_dev_insecure_commands(),
+        command_surface.implicit_network_on_launch_allowed(),
+        command_surface.explicit_user_network_attempts_only(),
+        command_surface.plaintext_stdout_secret_export_allowed(),
+        command_surface.runtime_messaging_enabled(),
+        command_surface.reviewed_categories().join(","),
+        command_surface.rejected_categories().join(",")
     );
     println!(
         "production session readiness blockers: {}",
@@ -3440,6 +3454,8 @@ fn print_production_self_test_summary() {
 #[cfg(not(feature = "dev-insecure"))]
 fn print_production_skeleton_preflight_summary() {
     let summary = another_dimension_core::production::production_skeleton_preflight_summary();
+    let command_surface =
+        another_dimension_core::production::production_runtime_command_surface_summary();
 
     println!("production skeleton preflight summary:");
     println!(
@@ -3462,8 +3478,10 @@ fn print_production_skeleton_preflight_summary() {
         summary.storage_rollback_protection()
     );
     println!(
-        "runtime command surface: default_closed={} production_messaging_ready={}",
+        "runtime command surface: default_closed={} inventory_reviewed={} runtime_messaging={} production_messaging_ready={}",
         summary.default_runtime_command_surface_closed(),
+        command_surface.command_inventory_reviewed(),
+        command_surface.runtime_messaging_enabled(),
         summary.production_messaging_ready()
     );
 }

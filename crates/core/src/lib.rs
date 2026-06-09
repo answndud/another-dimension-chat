@@ -166,9 +166,79 @@ pub mod production {
 
     const PRODUCTION_SESSION_READINESS_BLOCKERS: &[ProductionSessionReadinessBlocker] = &[
         ProductionSessionReadinessBlocker::ReviewedProtocolDecision,
-        ProductionSessionReadinessBlocker::RuntimeCommandSurface,
         ProductionSessionReadinessBlocker::AsyncDeliverySemantics,
     ];
+
+    const PRODUCTION_RUNTIME_COMMAND_SURFACE_REVIEWED_CATEGORIES: &[&str] = &[
+        "status_preflight",
+        "local_encrypted_profile",
+        "pairing_payload_and_safety",
+        "session_draft_lifecycle",
+        "explicit_handshake_file_exchange",
+        "explicit_envelope_file_exchange",
+        "local_data_lifecycle",
+        "manual_onion_preflight_and_attempt",
+        "receive_loop_control",
+    ];
+
+    const PRODUCTION_RUNTIME_COMMAND_SURFACE_REJECTED_CATEGORIES: &[&str] = &[
+        "default_automatic_messaging",
+        "cli_long_lived_unlock",
+        "dev_insecure_commands",
+        "implicit_network_on_launch",
+        "plaintext_stdout_secret_export",
+    ];
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionRuntimeCommandSurfaceSummary {
+        reviewed_categories: &'static [&'static str],
+        rejected_categories: &'static [&'static str],
+        command_inventory_reviewed: bool,
+        default_build_has_dev_insecure_commands: bool,
+        implicit_network_on_launch_allowed: bool,
+        explicit_user_network_attempts_only: bool,
+        plaintext_stdout_secret_export_allowed: bool,
+        runtime_messaging_enabled: bool,
+        command_surface_ready: bool,
+    }
+
+    impl ProductionRuntimeCommandSurfaceSummary {
+        pub fn reviewed_categories(self) -> &'static [&'static str] {
+            self.reviewed_categories
+        }
+
+        pub fn rejected_categories(self) -> &'static [&'static str] {
+            self.rejected_categories
+        }
+
+        pub fn command_inventory_reviewed(self) -> bool {
+            self.command_inventory_reviewed
+        }
+
+        pub fn default_build_has_dev_insecure_commands(self) -> bool {
+            self.default_build_has_dev_insecure_commands
+        }
+
+        pub fn implicit_network_on_launch_allowed(self) -> bool {
+            self.implicit_network_on_launch_allowed
+        }
+
+        pub fn explicit_user_network_attempts_only(self) -> bool {
+            self.explicit_user_network_attempts_only
+        }
+
+        pub fn plaintext_stdout_secret_export_allowed(self) -> bool {
+            self.plaintext_stdout_secret_export_allowed
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+
+        pub fn command_surface_ready(self) -> bool {
+            self.command_surface_ready
+        }
+    }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionSessionReadinessGate {
@@ -215,6 +285,7 @@ pub mod production {
         production_e2ee_ready: bool,
         durable_session_persistence_ready: bool,
         readiness_blockers: &'static [ProductionSessionReadinessBlocker],
+        runtime_command_surface_reviewed: bool,
         tauri_production_messaging_command_ready: bool,
         usable_async_messaging_ready: bool,
     }
@@ -265,6 +336,10 @@ pub mod production {
                 .iter()
                 .map(|blocker| blocker.as_str())
                 .collect()
+        }
+
+        pub fn runtime_command_surface_reviewed(self) -> bool {
+            self.runtime_command_surface_reviewed
         }
 
         pub fn tauri_production_messaging_command_ready(self) -> bool {
@@ -7277,6 +7352,8 @@ pub mod production {
     }
 
     pub fn production_session_evaluation_summary() -> ProductionSessionEvaluationSummary {
+        let command_surface = production_runtime_command_surface_summary();
+
         ProductionSessionEvaluationSummary {
             protocol_candidate: "snow Noise XX synchronous boundary",
             production_pairing_required: true,
@@ -7288,8 +7365,23 @@ pub mod production {
             production_e2ee_ready: false,
             durable_session_persistence_ready: true,
             readiness_blockers: PRODUCTION_SESSION_READINESS_BLOCKERS,
+            runtime_command_surface_reviewed: command_surface.command_surface_ready(),
             tauri_production_messaging_command_ready: false,
             usable_async_messaging_ready: false,
+        }
+    }
+
+    pub fn production_runtime_command_surface_summary() -> ProductionRuntimeCommandSurfaceSummary {
+        ProductionRuntimeCommandSurfaceSummary {
+            reviewed_categories: PRODUCTION_RUNTIME_COMMAND_SURFACE_REVIEWED_CATEGORIES,
+            rejected_categories: PRODUCTION_RUNTIME_COMMAND_SURFACE_REJECTED_CATEGORIES,
+            command_inventory_reviewed: true,
+            default_build_has_dev_insecure_commands: false,
+            implicit_network_on_launch_allowed: false,
+            explicit_user_network_attempts_only: true,
+            plaintext_stdout_secret_export_allowed: false,
+            runtime_messaging_enabled: false,
+            command_surface_ready: true,
         }
     }
 
@@ -7306,6 +7398,7 @@ pub mod production {
 
     pub fn production_skeleton_preflight_summary() -> ProductionSkeletonPreflightSummary {
         let session = production_session_evaluation_summary();
+        let command_surface = production_runtime_command_surface_summary();
         let transport = OnionEnvelopeTransport::fail_closed_high_risk();
         let route = TransportRoute::onion("preflight.onion")
             .expect("static onion preflight route is valid");
@@ -7323,7 +7416,10 @@ pub mod production {
             storage_session_transport_protection: storage.session_transport_storage(),
             storage_replay_commit_after_decrypt: storage.replay_commit_after_decrypt(),
             storage_rollback_protection: storage.rollback_protection(),
-            default_runtime_command_surface_closed: true,
+            default_runtime_command_surface_closed: !command_surface.runtime_messaging_enabled()
+                && !command_surface.implicit_network_on_launch_allowed()
+                && !command_surface.plaintext_stdout_secret_export_allowed()
+                && !command_surface.default_build_has_dev_insecure_commands(),
             production_messaging_ready: false,
         }
     }
@@ -8768,20 +8864,39 @@ pub mod production {
             assert!(!summary.production_e2ee_ready());
             assert!(summary.durable_session_persistence_ready());
             assert!(!summary.session_state_in_memory_only());
+            assert!(summary.runtime_command_surface_reviewed());
             assert!(!summary.tauri_production_messaging_command_ready());
             assert!(!summary.usable_async_messaging_ready());
             assert_eq!(
                 summary.readiness_blocker_tags(),
-                vec![
-                    "reviewed_protocol_decision",
-                    "runtime_command_surface",
-                    "async_delivery_semantics",
-                ]
+                vec!["reviewed_protocol_decision", "async_delivery_semantics",]
             );
             assert!(!gate.production_e2ee_ready());
             assert!(gate.durable_session_persistence_ready());
             assert!(!gate.runtime_messaging_enabled());
             assert_eq!(gate.blockers(), summary.readiness_blockers());
+        }
+
+        #[test]
+        fn production_runtime_command_surface_is_reviewed_but_runtime_closed() {
+            let surface = production_runtime_command_surface_summary();
+            let preflight = production_skeleton_preflight_summary();
+
+            assert!(surface.command_inventory_reviewed());
+            assert!(surface.command_surface_ready());
+            assert!(surface.explicit_user_network_attempts_only());
+            assert!(!surface.default_build_has_dev_insecure_commands());
+            assert!(!surface.implicit_network_on_launch_allowed());
+            assert!(!surface.plaintext_stdout_secret_export_allowed());
+            assert!(!surface.runtime_messaging_enabled());
+            assert!(surface
+                .reviewed_categories()
+                .contains(&"explicit_envelope_file_exchange"));
+            assert!(surface
+                .rejected_categories()
+                .contains(&"default_automatic_messaging"));
+            assert!(preflight.default_runtime_command_surface_closed());
+            assert!(!preflight.production_messaging_ready());
         }
 
         #[test]
