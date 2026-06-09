@@ -54,6 +54,8 @@ Review the unsigned experimental public beta boundary:
 - `reference/BETA_RELEASE_CHECKLIST.md`: release upload checklist.
 - `reference/UNSIGNED_PUBLIC_BETA_INSTALL.md`: user install and checksum steps.
 - `reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md`: release notes template.
+- `reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md`: copy-ready GitHub
+  Release body with required non-claims.
 - `reference/UPDATE_INTEGRITY.md`: manual update integrity boundary.
 - `reference/SUPPLY_CHAIN_BASELINE.md`: dependency lockfile hash baseline.
 - `reference/PRIVACY_MODEL_COMPARISON.md`: LINDDUN/Briar/Cwtch-style target
@@ -94,6 +96,7 @@ shasum -a 256 -c another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.
 The reviewer should report:
 
 - any public wording that overclaims security readiness
+- any GitHub Release body wording that omits required non-claims
 - any release artifact that omits checksum/provenance/update-integrity evidence
 - any diagnostic/reporting path that could expose sensitive material
 - any command path that starts network/onion work without explicit user action

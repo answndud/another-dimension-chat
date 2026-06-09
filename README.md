@@ -30,6 +30,7 @@ Expected public GitHub Release files:
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
 - `INSTALL_UNSIGNED_MACOS.md`
 - `RELEASE_NOTES.md`
+- `GITHUB_RELEASE_BODY.md`
 - `UPDATE_INTEGRITY.md`
 - `SUPPLY_CHAIN_BASELINE.md`
 - `PUBLIC_THREAT_MODEL.md`
@@ -43,7 +44,7 @@ Prepare the ignored local upload folder from the frozen local DMG:
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, update-integrity note, supply-chain baseline, and dependency lockfile hash evidence are missing. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
+The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, and dependency lockfile hash evidence are missing. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
 What exists today:
 
@@ -213,7 +214,7 @@ To stage the current unsigned public GitHub Release upload set from the local ig
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-Upload only the generated public release files from `apps/desktop-tauri/public-release/unsigned-public-beta/`. The public release notes and install guide must keep the unsigned experimental beta warning, sensitive communication prohibition, not audited status, not production-ready status, and external two-machine onion delivery non-claim. Users must treat every update as a fresh manual download and verify the matching `.sha256` file.
+Upload only the generated public release files from `apps/desktop-tauri/public-release/unsigned-public-beta/`. Use `GITHUB_RELEASE_BODY.md` as the GitHub Release body. The public release body, notes, and install guide must keep the unsigned experimental beta warning, sensitive communication prohibition, not audited status, not production-ready status, and external two-machine onion delivery non-claim. Users must treat every update as a fresh manual download and verify the matching `.sha256` file.
 
 For the current local field-test handoff, send only the per-peer delivery folder contents from:
 

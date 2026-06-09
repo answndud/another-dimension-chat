@@ -42,6 +42,7 @@ PUBLIC_CLAIM_FILES=(
   "$ROOT_DIR/apps/desktop-tauri/README.md"
   "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md"
   "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md"
+  "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md"
   "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md"
   "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md"
 )
@@ -50,7 +51,7 @@ for file in "${PUBLIC_CLAIM_FILES[@]}"; do
   require_file "$file"
 done
 
-for file in "$ROOT_DIR/README.md" "$ROOT_DIR/SECURITY.md" "$ROOT_DIR/apps/desktop-tauri/README.md" "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md"; do
+for file in "$ROOT_DIR/README.md" "$ROOT_DIR/SECURITY.md" "$ROOT_DIR/apps/desktop-tauri/README.md" "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md"; do
   require_text "$file" "unsigned experimental public beta"
   require_text "$file" "not audited"
   require_text "$file" "not production-ready"
@@ -61,8 +62,10 @@ require_text "$ROOT_DIR/README.md" "External two-machine onion delivery has not 
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "External two-machine onion delivery has not been independently verified"
 require_text "$ROOT_DIR/SECURITY.md" "External two-machine onion delivery has not yet been independently verified"
 require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "External two-machine onion delivery has not yet been independently verified"
+require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "External two-machine onion delivery has not yet been independently verified"
 require_text "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "External two-machine onion delivery has not yet been independently verified"
 require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "independently verified external two-machine onion delivery"
+require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "Release body"
 
 echo "status=public-beta-gap-acceptance-ready"
 echo "peer_a_report=absent"
