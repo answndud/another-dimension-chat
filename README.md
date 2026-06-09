@@ -30,6 +30,12 @@ Published unsigned public beta:
 - Checksum: <https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-beta-onion-unsigned/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256>
 - Expected SHA-256: `625ee389d930330b0f2e369a53c4f582df076dd612920f6cf0366aab4a3edb95`
 
+Release/source boundary: the published DMG, checksum, provenance, and install
+documents are the assets attached to the GitHub Release above. The `main`
+branch may contain later documentation or source changes, so do not verify a
+download against branch files copied from GitHub's source browser. Always use
+the `.sha256` file attached to the same release as the DMG.
+
 Download the DMG and `.sha256` from the same release, then verify before opening:
 
 ```bash

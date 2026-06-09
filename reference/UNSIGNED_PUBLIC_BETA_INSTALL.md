@@ -23,6 +23,11 @@ Download these files from the GitHub Release:
 - `DEPENDENCY_LOCKFILES.sha256`
 - `MANIFEST.md`
 
+Use the files attached to that GitHub Release as the release authority. The
+`main` branch may contain later documentation or source updates, so do not
+verify the downloaded DMG against branch files copied from GitHub's source
+browser.
+
 ## Verify The Download
 
 Put the `.dmg` and `.sha256` in the same folder, then run:
