@@ -325,6 +325,102 @@ struct ProductionOnionClientRuntimeState {
     real_onion_roundtrip_cancel_requested: std::sync::atomic::AtomicBool,
 }
 
+const PRODUCT_UNLOCK_IDLE_TIMEOUT_MS: u128 = 60_000;
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct ProductUnlockSession {
+    profile: String,
+    unlocked_at_ms: u128,
+    last_activity_ms: u128,
+    expires_at_ms: u128,
+}
+
+#[derive(Default)]
+struct ProductUnlockRuntimeState {
+    session: std::sync::Mutex<Option<ProductUnlockSession>>,
+}
+
+impl ProductUnlockRuntimeState {
+    fn record_unlocked(&self, profile: String, now_ms: u128) -> ProductionProductUnlockStatusResult {
+        let session = ProductUnlockSession {
+            profile,
+            unlocked_at_ms: now_ms,
+            last_activity_ms: now_ms,
+            expires_at_ms: now_ms + PRODUCT_UNLOCK_IDLE_TIMEOUT_MS,
+        };
+        if let Ok(mut guard) = self.session.lock() {
+            *guard = Some(session.clone());
+        }
+        product_unlock_status_from_session(Some(&session), "unlocked", now_ms)
+    }
+
+    fn status(&self, now_ms: u128) -> ProductionProductUnlockStatusResult {
+        let Ok(mut guard) = self.session.lock() else {
+            return product_unlock_locked_status("state-unavailable", now_ms);
+        };
+        if guard
+            .as_ref()
+            .is_some_and(|session| session.expires_at_ms <= now_ms)
+        {
+            *guard = None;
+            return product_unlock_locked_status("idle-auto-lock", now_ms);
+        }
+        product_unlock_status_from_session(guard.as_ref(), "status", now_ms)
+    }
+
+    fn lock(&self, reason: &'static str, now_ms: u128) -> ProductionProductUnlockStatusResult {
+        if let Ok(mut guard) = self.session.lock() {
+            *guard = None;
+        }
+        product_unlock_locked_status(reason, now_ms)
+    }
+}
+
+fn product_unlock_status_from_session(
+    session: Option<&ProductUnlockSession>,
+    redacted_reason: &'static str,
+    now_ms: u128,
+) -> ProductionProductUnlockStatusResult {
+    let unlocked = session.is_some();
+    ProductionProductUnlockStatusResult {
+        warning: if unlocked {
+            "passphrase-first product unlock active; passphrase not retained; no network or secure-release claim"
+        } else {
+            "product store locked; passphrase-first unlock required"
+        },
+        unlocked,
+        profile: session
+            .map(|session| session.profile.clone())
+            .unwrap_or_default(),
+        redacted_reason,
+        unlock_command_enabled: true,
+        lock_command_enabled: unlocked,
+        passphrase_first: true,
+        os_keystore_only_rejected: true,
+        idle_auto_lock_seconds: (PRODUCT_UNLOCK_IDLE_TIMEOUT_MS / 1000) as u16,
+        explicit_lock_available: true,
+        storage_opened: unlocked,
+        session_records_written: false,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: false,
+        raw_storage_error_exposed: false,
+        path_or_identifier_exposed: false,
+        runtime_messaging_enabled: false,
+        unlocked_at_ms: session.map(|session| session.unlocked_at_ms),
+        last_activity_ms: session.map(|session| session.last_activity_ms),
+        expires_at_ms: session.map(|session| session.expires_at_ms),
+        checked_at_ms: now_ms,
+    }
+}
+
+fn product_unlock_locked_status(
+    redacted_reason: &'static str,
+    now_ms: u128,
+) -> ProductionProductUnlockStatusResult {
+    product_unlock_status_from_session(None, redacted_reason, now_ms)
+}
+
 #[cfg(feature = "manual-onion-client-attempt")]
 struct RealOnionRoundtripCancelScope<'a> {
     state: &'a ProductionOnionClientRuntimeState,
@@ -594,6 +690,32 @@ pub struct ProductionProfileUnlockResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionProductUnlockStatusResult {
+    warning: &'static str,
+    unlocked: bool,
+    profile: String,
+    redacted_reason: &'static str,
+    unlock_command_enabled: bool,
+    lock_command_enabled: bool,
+    passphrase_first: bool,
+    os_keystore_only_rejected: bool,
+    idle_auto_lock_seconds: u16,
+    explicit_lock_available: bool,
+    storage_opened: bool,
+    session_records_written: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    raw_storage_error_exposed: bool,
+    path_or_identifier_exposed: bool,
+    runtime_messaging_enabled: bool,
+    unlocked_at_ms: Option<u128>,
+    last_activity_ms: Option<u128>,
+    expires_at_ms: Option<u128>,
+    checked_at_ms: u128,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionProfileListResult {
     warning: &'static str,
     profiles: Vec<String>,
@@ -688,6 +810,101 @@ pub struct ProductionSessionStateCheckResult {
     store_path_returned: bool,
     passphrase_retained: bool,
     key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionSessionLifecycleResult {
+    warning: &'static str,
+    storage_opened: bool,
+    session_draft_present: bool,
+    channel_id_derivable: bool,
+    remote_endpoint_state_present: bool,
+    remote_endpoint_status_present: bool,
+    replay_window_present: bool,
+    pending_handshake_state_present: bool,
+    session_transport_state_present: bool,
+    runtime_material_reconstructable: bool,
+    ready_for_message_envelope: bool,
+    session_resume_ready: bool,
+    session_deleted: bool,
+    session_resume_closed: bool,
+    message_records_preserved: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionConversationDeleteResult {
+    warning: &'static str,
+    storage_opened: bool,
+    runtime_material_reconstructable: bool,
+    sent_messages_deleted: usize,
+    received_messages_deleted: usize,
+    message_envelopes_deleted: usize,
+    local_message_indexes_deleted: usize,
+    message_counter_deleted: bool,
+    conversation_records_deleted: usize,
+    session_records_preserved: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    plaintext_exposed: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionProfileDeleteResult {
+    warning: &'static str,
+    profile_deleted: bool,
+    profile_existed_before_delete: bool,
+    profile_exists_after_delete: bool,
+    product_unlock_locked: bool,
+    store_path_returned: bool,
+    passphrase_required: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    secure_deletion_from_media_claimed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProductionDataLifecycleResult {
+    warning: &'static str,
+    profile_count: usize,
+    profiles_present: bool,
+    transport_data_present: bool,
+    lifecycle_marker_present: bool,
+    lifecycle_marker_written: bool,
+    backup_exclusion_checked: bool,
+    backup_exclusion_verified: bool,
+    migration_current_version: u16,
+    migration_marker_present: bool,
+    migration_marker_written: bool,
+    forward_only_migration: bool,
+    destructive_migration_blocked: bool,
+    rollback_marker_present: bool,
+    rollback_marker_written: bool,
+    rollback_detection_ready: bool,
+    rollback_prevention_claimed: bool,
+    full_local_data_wiped: bool,
+    profiles_deleted: bool,
+    transport_deleted: bool,
+    cache_deleted: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    secure_deletion_from_media_claimed: bool,
     network_io_attempted: bool,
     transport_io_opened: bool,
     runtime_messaging_enabled: bool,
@@ -2292,6 +2509,51 @@ fn production_profile_unlock(
 }
 
 #[tauri::command]
+fn production_product_unlock(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductUnlockRuntimeState>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionProductUnlockStatusResult, String> {
+    let Ok(profile) = sanitize_production_profile(profile) else {
+        return Ok(product_unlock_locked_status("profile-required", now_unix_ms()));
+    };
+    if passphrase.trim().is_empty() {
+        return Ok(product_unlock_locked_status("passphrase-required", now_unix_ms()));
+    }
+    let app_data_root = production_app_data_dir(&app)
+        .map_err(|_| "product unlock failed without exposing local path details")?;
+    let profile = profile.as_str().to_string();
+    match run_production_profile_unlock(app_data_root, profile.clone(), passphrase) {
+        Ok(result) if result.storage_opened && !result.key_material_exposed => {
+            Ok(state.record_unlocked(profile, now_unix_ms()))
+        }
+        Ok(_) => Ok(product_unlock_locked_status(
+            "unlock-boundary-not-ready",
+            now_unix_ms(),
+        )),
+        Err(_) => Ok(product_unlock_locked_status(
+            "wrong-passphrase-or-store-unavailable",
+            now_unix_ms(),
+        )),
+    }
+}
+
+#[tauri::command]
+fn production_product_lock(
+    state: tauri::State<'_, ProductUnlockRuntimeState>,
+) -> Result<ProductionProductUnlockStatusResult, String> {
+    Ok(state.lock("explicit-lock", now_unix_ms()))
+}
+
+#[tauri::command]
+fn production_product_unlock_status(
+    state: tauri::State<'_, ProductUnlockRuntimeState>,
+) -> Result<ProductionProductUnlockStatusResult, String> {
+    Ok(state.status(now_unix_ms()))
+}
+
+#[tauri::command]
 fn production_profile_list(app: tauri::AppHandle) -> Result<ProductionProfileListResult, String> {
     let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production profile list failed without exposing local path details")?;
@@ -2427,6 +2689,118 @@ fn production_session_state_check(
         "production session state check failed without exposing profile, path, or key details"
             .to_string()
     })
+}
+
+#[tauri::command]
+fn production_session_lifecycle_status(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionSessionLifecycleResult, String> {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production session lifecycle status failed without exposing local path details"
+    })?;
+    run_production_session_lifecycle_status(app_data_root, profile, passphrase).map_err(|_| {
+        "production session lifecycle status failed without exposing profile, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_session_lifecycle_delete(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionSessionLifecycleResult, String> {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production session lifecycle delete failed without exposing local path details"
+    })?;
+    run_production_session_lifecycle_delete(app_data_root, profile, passphrase).map_err(|_| {
+        "production session lifecycle delete failed without exposing profile, path, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_conversation_delete(
+    app: tauri::AppHandle,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionConversationDeleteResult, String> {
+    let app_data_root = production_app_data_dir(&app)
+        .map_err(|_| "production conversation delete failed without exposing local path details")?;
+    run_production_conversation_delete(app_data_root, profile, passphrase).map_err(|_| {
+        "production conversation delete failed without exposing profile, path, message, or key details"
+            .to_string()
+    })
+}
+
+#[tauri::command]
+fn production_profile_delete(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductUnlockRuntimeState>,
+    profile: String,
+    confirmation: String,
+) -> Result<ProductionProfileDeleteResult, String> {
+    let app_data_root = production_app_data_dir(&app)
+        .map_err(|_| "production profile delete failed without exposing local path details")?;
+    let result = run_production_profile_delete(app_data_root, profile, confirmation).map_err(|_| {
+        "production profile delete failed without exposing profile store path or key details"
+            .to_string()
+    })?;
+    let _ = state.lock("profile-delete", now_unix_ms());
+    Ok(ProductionProfileDeleteResult {
+        product_unlock_locked: true,
+        ..result
+    })
+}
+
+#[tauri::command]
+fn production_data_lifecycle_status(
+    app: tauri::AppHandle,
+) -> Result<ProductionDataLifecycleResult, String> {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production data lifecycle status failed without exposing local path details"
+    })?;
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
+        "production data lifecycle status failed without exposing local cache path details"
+    })?;
+    run_production_data_lifecycle_status(app_data_root, app_cache_root, false).map_err(|_| {
+        "production data lifecycle status failed without exposing path or key details".to_string()
+    })
+}
+
+#[tauri::command]
+fn production_data_lifecycle_prepare(
+    app: tauri::AppHandle,
+) -> Result<ProductionDataLifecycleResult, String> {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production data lifecycle prepare failed without exposing local path details"
+    })?;
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
+        "production data lifecycle prepare failed without exposing local cache path details"
+    })?;
+    run_production_data_lifecycle_status(app_data_root, app_cache_root, true).map_err(|_| {
+        "production data lifecycle prepare failed without exposing path or key details".to_string()
+    })
+}
+
+#[tauri::command]
+fn production_full_local_data_wipe(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductUnlockRuntimeState>,
+    confirmation: String,
+) -> Result<ProductionDataLifecycleResult, String> {
+    let app_data_root = production_app_data_dir(&app)
+        .map_err(|_| "production full wipe failed without exposing local path details")?;
+    let app_cache_root = production_app_cache_dir(&app)
+        .map_err(|_| "production full wipe failed without exposing local cache path details")?;
+    let result =
+        run_production_full_local_data_wipe(app_data_root, app_cache_root, confirmation).map_err(
+            |_| "production full wipe failed without exposing path or key details".to_string(),
+        )?;
+    let _ = state.lock("full-local-data-wipe", now_unix_ms());
+    Ok(result)
 }
 
 #[tauri::command]
@@ -7847,6 +8221,309 @@ fn run_production_session_state_check(
     })
 }
 
+fn run_production_session_lifecycle_status(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionSessionLifecycleResult, String> {
+    use another_dimension_core::production::production_pairing_session_lifecycle_status;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let status = production_pairing_session_lifecycle_status(&store_path, profile, &passphrase)
+        .map_err(|_| "session lifecycle status failed")?;
+
+    Ok(ProductionSessionLifecycleResult {
+        warning: "session lifecycle read from encrypted local store only; no store path, passphrase, channel id, or key material returned",
+        storage_opened: status.storage_opened(),
+        session_draft_present: status.session_draft_present(),
+        channel_id_derivable: status.channel_id_derivable(),
+        remote_endpoint_state_present: status.remote_endpoint_state_present(),
+        remote_endpoint_status_present: status.remote_endpoint_status_present(),
+        replay_window_present: status.replay_window_present(),
+        pending_handshake_state_present: status.pending_handshake_state_present(),
+        session_transport_state_present: status.session_transport_state_present(),
+        runtime_material_reconstructable: status.runtime_material_reconstructable(),
+        ready_for_message_envelope: status.ready_for_message_envelope(),
+        session_resume_ready: status.session_resume_ready(),
+        session_deleted: false,
+        session_resume_closed: !status.session_resume_ready(),
+        message_records_preserved: true,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: status.key_material_exposed(),
+        network_io_attempted: false,
+        transport_io_opened: status.transport_io_opened(),
+        runtime_messaging_enabled: status.runtime_messaging_enabled(),
+    })
+}
+
+fn run_production_session_lifecycle_delete(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionSessionLifecycleResult, String> {
+    use another_dimension_core::production::production_pairing_session_delete;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let delete = production_pairing_session_delete(&store_path, profile, &passphrase)
+        .map_err(|_| "session lifecycle delete failed")?;
+
+    Ok(ProductionSessionLifecycleResult {
+        warning: "session lifecycle records deleted from encrypted local store; message records are not wiped in this action",
+        storage_opened: delete.storage_opened(),
+        session_draft_present: false,
+        channel_id_derivable: false,
+        remote_endpoint_state_present: false,
+        remote_endpoint_status_present: false,
+        replay_window_present: false,
+        pending_handshake_state_present: false,
+        session_transport_state_present: false,
+        runtime_material_reconstructable: false,
+        ready_for_message_envelope: false,
+        session_resume_ready: false,
+        session_deleted: delete.session_records_deleted(),
+        session_resume_closed: delete.session_resume_closed(),
+        message_records_preserved: delete.message_records_preserved(),
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: delete.key_material_exposed(),
+        network_io_attempted: false,
+        transport_io_opened: delete.transport_io_opened(),
+        runtime_messaging_enabled: delete.runtime_messaging_enabled(),
+    })
+}
+
+fn run_production_conversation_delete(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    passphrase: String,
+) -> Result<ProductionConversationDeleteResult, String> {
+    use another_dimension_core::production::production_conversation_delete;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    let passphrase = ProfilePassphrase::new(passphrase.trim())
+        .map_err(|_| "invalid production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let deleted = production_conversation_delete(&store_path, profile, &passphrase)
+        .map_err(|_| "conversation delete failed")?;
+
+    Ok(ProductionConversationDeleteResult {
+        warning: "conversation message records deleted from the encrypted local store; session records are preserved and no secure deletion from media is claimed",
+        storage_opened: deleted.storage_opened(),
+        runtime_material_reconstructable: deleted.runtime_material_reconstructable(),
+        sent_messages_deleted: deleted.sent_messages_deleted(),
+        received_messages_deleted: deleted.received_messages_deleted(),
+        message_envelopes_deleted: deleted.message_envelopes_deleted(),
+        local_message_indexes_deleted: deleted.local_message_indexes_deleted(),
+        message_counter_deleted: deleted.message_counter_deleted(),
+        conversation_records_deleted: deleted.conversation_records_deleted(),
+        session_records_preserved: deleted.session_records_preserved(),
+        store_path_returned: false,
+        passphrase_retained: false,
+        plaintext_exposed: deleted.plaintext_exposed(),
+        key_material_exposed: deleted.key_material_exposed(),
+        network_io_attempted: false,
+        transport_io_opened: deleted.transport_io_opened(),
+        runtime_messaging_enabled: deleted.runtime_messaging_enabled(),
+    })
+}
+
+fn run_production_profile_delete(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    confirmation: String,
+) -> Result<ProductionProfileDeleteResult, String> {
+    let profile = sanitize_production_profile(profile)?;
+    if confirmation.trim() != profile.as_str() {
+        return Err("profile delete confirmation must match the profile name".to_string());
+    }
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let existed = store_path.exists();
+    if existed {
+        std::fs::remove_file(&store_path)
+            .map_err(|_| "failed to remove production profile store".to_string())?;
+    }
+    let exists_after = store_path.exists();
+
+    Ok(ProductionProfileDeleteResult {
+        warning: "encrypted profile store file deleted; no secure deletion from media is claimed",
+        profile_deleted: existed && !exists_after,
+        profile_existed_before_delete: existed,
+        profile_exists_after_delete: exists_after,
+        product_unlock_locked: false,
+        store_path_returned: false,
+        passphrase_required: false,
+        passphrase_retained: false,
+        key_material_exposed: false,
+        secure_deletion_from_media_claimed: false,
+        network_io_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
+    })
+}
+
+const DATA_LIFECYCLE_SCHEMA_VERSION: u16 = 1;
+const DATA_LIFECYCLE_DIR: &str = "lifecycle";
+const DATA_LIFECYCLE_MARKER: &str = "data-lifecycle-v1.marker";
+const DATA_LIFECYCLE_MIGRATION_MARKER: &str = "schema-migration-v1.marker";
+const DATA_LIFECYCLE_ROLLBACK_MARKER: &str = "rollback-detection-v1.marker";
+
+fn run_production_data_lifecycle_status(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    prepare: bool,
+) -> Result<ProductionDataLifecycleResult, String> {
+    let app_data_root = app_data_root.as_ref();
+    let app_cache_root = app_cache_root.as_ref();
+    let lifecycle_dir = app_data_root.join(DATA_LIFECYCLE_DIR);
+    let lifecycle_marker = lifecycle_dir.join(DATA_LIFECYCLE_MARKER);
+    let migration_marker = lifecycle_dir.join(DATA_LIFECYCLE_MIGRATION_MARKER);
+    let rollback_marker = lifecycle_dir.join(DATA_LIFECYCLE_ROLLBACK_MARKER);
+
+    let mut lifecycle_marker_written = false;
+    let mut migration_marker_written = false;
+    let mut rollback_marker_written = false;
+    let mut backup_exclusion_checked = false;
+    let mut backup_exclusion_verified = false;
+
+    if prepare {
+        std::fs::create_dir_all(&lifecycle_dir)
+            .map_err(|_| "failed to create lifecycle marker directory".to_string())?;
+        std::fs::write(
+            &lifecycle_marker,
+            "AD-DATA-LIFECYCLE-V1\nscope=local-app-data\nsecure_delete=false\n",
+        )
+        .map_err(|_| "failed to write lifecycle marker".to_string())?;
+        lifecycle_marker_written = true;
+        std::fs::write(
+            &migration_marker,
+            format!(
+                "AD-SCHEMA-MIGRATION-V1\nversion={DATA_LIFECYCLE_SCHEMA_VERSION}\nforward_only=true\ndestructive=false\n"
+            ),
+        )
+        .map_err(|_| "failed to write migration marker".to_string())?;
+        migration_marker_written = true;
+        std::fs::write(
+            &rollback_marker,
+            "AD-ROLLBACK-DETECTION-V1\nprevention=false\nrequires_external_monotonic_state=true\n",
+        )
+        .map_err(|_| "failed to write rollback marker".to_string())?;
+        rollback_marker_written = true;
+
+        let backup = run_production_onion_backup_exclusion_prepare(app_data_root, app_cache_root);
+        backup_exclusion_checked = true;
+        backup_exclusion_verified = backup.backup_exclusion_verified;
+    }
+
+    let profile_count = run_production_profile_list(app_data_root)?.profile_count;
+    let transport_data_present = app_data_root.join("transport").exists()
+        || app_cache_root.join("transport").exists();
+
+    Ok(ProductionDataLifecycleResult {
+        warning: "local data lifecycle boundary only; rollback detection is marker-based and secure deletion from media is not claimed",
+        profile_count,
+        profiles_present: profile_count > 0,
+        transport_data_present,
+        lifecycle_marker_present: lifecycle_marker.exists(),
+        lifecycle_marker_written,
+        backup_exclusion_checked,
+        backup_exclusion_verified,
+        migration_current_version: DATA_LIFECYCLE_SCHEMA_VERSION,
+        migration_marker_present: migration_marker.exists(),
+        migration_marker_written,
+        forward_only_migration: true,
+        destructive_migration_blocked: true,
+        rollback_marker_present: rollback_marker.exists(),
+        rollback_marker_written,
+        rollback_detection_ready: rollback_marker.exists(),
+        rollback_prevention_claimed: false,
+        full_local_data_wiped: false,
+        profiles_deleted: false,
+        transport_deleted: false,
+        cache_deleted: false,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: false,
+        secure_deletion_from_media_claimed: false,
+        network_io_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
+    })
+}
+
+fn remove_owned_file_or_dir(path: &std::path::Path) -> Result<bool, String> {
+    if !path.exists() {
+        return Ok(false);
+    }
+    let metadata = std::fs::metadata(path).map_err(|_| "failed to inspect owned path")?;
+    if metadata.is_dir() {
+        std::fs::remove_dir_all(path).map_err(|_| "failed to remove owned directory")?;
+    } else {
+        std::fs::remove_file(path).map_err(|_| "failed to remove owned file")?;
+    }
+    Ok(true)
+}
+
+fn run_production_full_local_data_wipe(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+    confirmation: String,
+) -> Result<ProductionDataLifecycleResult, String> {
+    if confirmation.trim() != "WIPE LOCAL DATA" {
+        return Err("full local data wipe confirmation is required".to_string());
+    }
+    let app_data_root = app_data_root.as_ref();
+    let app_cache_root = app_cache_root.as_ref();
+    let profiles_removed = remove_owned_file_or_dir(&app_data_root.join("profiles"))?;
+    let transport_removed = remove_owned_file_or_dir(&app_data_root.join("transport"))?;
+    let _lifecycle_removed = remove_owned_file_or_dir(&app_data_root.join(DATA_LIFECYCLE_DIR))?;
+    let cache_removed = remove_owned_file_or_dir(&app_cache_root.join("transport"))?;
+
+    Ok(ProductionDataLifecycleResult {
+        warning: "owned local profile, transport, lifecycle, and transport-cache data removed; secure deletion from media is not claimed",
+        profile_count: 0,
+        profiles_present: app_data_root.join("profiles").exists(),
+        transport_data_present: app_data_root.join("transport").exists()
+            || app_cache_root.join("transport").exists(),
+        lifecycle_marker_present: false,
+        lifecycle_marker_written: false,
+        backup_exclusion_checked: false,
+        backup_exclusion_verified: false,
+        migration_current_version: DATA_LIFECYCLE_SCHEMA_VERSION,
+        migration_marker_present: false,
+        migration_marker_written: false,
+        forward_only_migration: true,
+        destructive_migration_blocked: true,
+        rollback_marker_present: false,
+        rollback_marker_written: false,
+        rollback_detection_ready: false,
+        rollback_prevention_claimed: false,
+        full_local_data_wiped: !app_data_root.join("profiles").exists()
+            && !app_data_root.join("transport").exists()
+            && !app_data_root.join(DATA_LIFECYCLE_DIR).exists()
+            && !app_cache_root.join("transport").exists(),
+        profiles_deleted: profiles_removed,
+        transport_deleted: transport_removed,
+        cache_deleted: cache_removed,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: false,
+        secure_deletion_from_media_claimed: false,
+        network_io_attempted: false,
+        transport_io_opened: false,
+        runtime_messaging_enabled: false,
+    })
+}
+
 fn run_production_pairing_session_remote_endpoint_for_transport(
     app_data_root: impl AsRef<std::path::Path>,
     profile: String,
@@ -11793,6 +12470,7 @@ pub fn run() {
     install_manual_onion_tls_provider();
     tauri::Builder::default()
         .manage(ProductionOnionClientRuntimeState::default())
+        .manage(ProductUnlockRuntimeState::default())
         .invoke_handler(tauri::generate_handler![
             prototype_status,
             production_message_retention_policy,
@@ -11825,6 +12503,9 @@ pub fn run() {
             production_onion_remote_peer_authentication_prepare,
             production_onion_stream_adapter_closeout_prepare,
             production_onion_key_record_prepare,
+            production_product_unlock,
+            production_product_lock,
+            production_product_unlock_status,
             production_profile_unlock,
             production_profile_list,
             production_message_retention_preference_get,
@@ -11834,6 +12515,13 @@ pub fn run() {
             production_pairing_session_draft_save,
             production_pairing_session_remote_endpoint_update,
             production_session_state_check,
+            production_session_lifecycle_status,
+            production_session_lifecycle_delete,
+            production_conversation_delete,
+            production_profile_delete,
+            production_data_lifecycle_status,
+            production_data_lifecycle_prepare,
+            production_full_local_data_wipe,
             production_invite_room_session_status,
             production_two_profile_session_status,
             production_handshake_init_export,
@@ -11879,8 +12567,11 @@ mod tests {
     use super::{
         build_demo_simulation, parse_demo_steps, parse_loop_messages,
         production_message_retention_policy,
+        run_production_conversation_delete,
+        run_production_data_lifecycle_status,
         run_production_endpoint_update_control_envelope_export,
         run_production_endpoint_update_control_envelope_import,
+        run_production_full_local_data_wipe,
         production_profile_store_path, run_production_handshake_finish_export,
         run_production_handshake_finish_import, run_production_handshake_init_export,
         run_production_handshake_reply_export, run_production_local_roundtrip,
@@ -11912,7 +12603,9 @@ mod tests {
         run_production_pairing_session_draft_save,
         run_production_pairing_session_remote_endpoint_mark_send_failure,
         run_production_pairing_session_remote_endpoint_update, run_production_profile_list,
-        run_production_profile_unlock,
+        run_production_profile_delete, run_production_profile_unlock, ProductUnlockRuntimeState,
+        PRODUCT_UNLOCK_IDLE_TIMEOUT_MS,
+        run_production_session_lifecycle_delete, run_production_session_lifecycle_status,
         run_production_session_state_check, ProductionOnionClientRuntimeState,
         ProductionOnionInboundEnvelopeReceiveAttemptResult,
         run_production_two_profile_message_roundtrip, run_production_two_profile_real_onion_roundtrip,
@@ -11924,6 +12617,48 @@ mod tests {
         unique_production_roundtrip_dir,
     };
     static DEV_RENDEZVOUS_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    #[test]
+    fn product_unlock_runtime_state_redacts_and_auto_locks() {
+        let state = ProductUnlockRuntimeState::default();
+
+        let locked = state.status(1_000);
+        assert!(!locked.unlocked);
+        assert_eq!(locked.redacted_reason, "status");
+        assert!(!locked.passphrase_retained);
+        assert!(!locked.key_material_exposed);
+        assert!(!locked.raw_storage_error_exposed);
+        assert!(!locked.path_or_identifier_exposed);
+        assert!(!locked.runtime_messaging_enabled);
+
+        let unlocked = state.record_unlocked("alice".to_string(), 2_000);
+        assert!(unlocked.unlocked);
+        assert_eq!(unlocked.profile, "alice");
+        assert_eq!(unlocked.unlocked_at_ms, Some(2_000));
+        assert_eq!(
+            unlocked.expires_at_ms,
+            Some(2_000 + PRODUCT_UNLOCK_IDLE_TIMEOUT_MS)
+        );
+        assert!(unlocked.lock_command_enabled);
+        assert!(!unlocked.passphrase_retained);
+        assert!(!unlocked.key_material_exposed);
+
+        let still_unlocked = state.status(2_000 + PRODUCT_UNLOCK_IDLE_TIMEOUT_MS - 1);
+        assert!(still_unlocked.unlocked);
+        assert_eq!(still_unlocked.profile, "alice");
+
+        let expired = state.status(2_000 + PRODUCT_UNLOCK_IDLE_TIMEOUT_MS);
+        assert!(!expired.unlocked);
+        assert_eq!(expired.redacted_reason, "idle-auto-lock");
+        assert!(!expired.lock_command_enabled);
+
+        let relocked = state.record_unlocked("bob".to_string(), 10_000);
+        assert!(relocked.unlocked);
+        let explicit = state.lock("explicit-lock", 10_100);
+        assert!(!explicit.unlocked);
+        assert_eq!(explicit.redacted_reason, "explicit-lock");
+        assert!(!explicit.storage_opened);
+    }
 
     #[test]
     fn demo_step_parser_extracts_cli_sections() {
@@ -15390,6 +16125,190 @@ replay check: no replayed messages after message 2
         assert!(!serialized.contains("correct-passphrase"));
         assert!(!serialized.contains("/tmp"));
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_session_lifecycle_status_and_delete_are_redacted() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        for (profile, endpoint) in [("alice", "alice.onion"), ("bob", "bob.onion")] {
+            run_production_profile_unlock(
+                &root,
+                profile.to_string(),
+                "correct-passphrase".to_string(),
+            )
+            .expect("profile unlock");
+            run_production_pairing_payload_export(
+                &root,
+                profile.to_string(),
+                "correct-passphrase".to_string(),
+                endpoint.to_string(),
+            )
+            .expect("payload export");
+        }
+        let alice_payload = run_production_pairing_payload_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "alice.onion".to_string(),
+        )
+        .expect("alice payload")
+        .pairing_payload;
+        let bob_payload = run_production_pairing_payload_export(
+            &root,
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "bob.onion".to_string(),
+        )
+        .expect("bob payload")
+        .pairing_payload;
+        run_production_pairing_session_draft_save(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            alice_payload,
+            bob_payload,
+            true,
+        )
+        .expect("session draft save");
+
+        let status = run_production_session_lifecycle_status(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("lifecycle status");
+        assert!(status.storage_opened);
+        assert!(status.session_draft_present);
+        assert!(status.channel_id_derivable);
+        assert!(status.remote_endpoint_state_present);
+        assert!(status.replay_window_present);
+        assert!(status.runtime_material_reconstructable);
+        assert!(!status.session_transport_state_present);
+        assert!(!status.ready_for_message_envelope);
+        assert!(!status.session_resume_ready);
+        assert!(!status.store_path_returned);
+        assert!(!status.passphrase_retained);
+        assert!(!status.key_material_exposed);
+        assert!(!status.network_io_attempted);
+        assert!(!status.transport_io_opened);
+        assert!(!status.runtime_messaging_enabled);
+
+        let deleted = run_production_session_lifecycle_delete(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("lifecycle delete");
+        assert!(deleted.storage_opened);
+        assert!(deleted.session_deleted);
+        assert!(deleted.session_resume_closed);
+        assert!(deleted.message_records_preserved);
+        assert!(!deleted.session_draft_present);
+        assert!(!deleted.runtime_material_reconstructable);
+        assert!(!deleted.ready_for_message_envelope);
+        assert!(!deleted.store_path_returned);
+        assert!(!deleted.passphrase_retained);
+        assert!(!deleted.key_material_exposed);
+        assert!(!deleted.network_io_attempted);
+        assert!(!deleted.transport_io_opened);
+        assert!(!deleted.runtime_messaging_enabled);
+
+        let deleted_json = serde_json::to_string(&deleted).expect("serialize delete");
+        assert!(!deleted_json.contains("correct-passphrase"));
+        assert!(!deleted_json.contains("alice.onion"));
+        assert!(!deleted_json.contains("bob.onion"));
+        assert!(!deleted_json.contains("/tmp"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_data_lifecycle_delete_migration_and_wipe_are_redacted() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let cache = unique_production_roundtrip_dir().expect("temp cache");
+        run_production_two_profile_room_setup(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("room setup");
+        run_production_two_profile_message_roundtrip(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+            "hello lifecycle".to_string(),
+            604_800,
+        )
+        .expect("message roundtrip");
+
+        let conversation_delete = run_production_conversation_delete(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("conversation delete");
+        assert!(conversation_delete.storage_opened);
+        assert!(conversation_delete.runtime_material_reconstructable);
+        assert!(conversation_delete.sent_messages_deleted >= 1);
+        assert!(conversation_delete.conversation_records_deleted >= 1);
+        assert!(conversation_delete.session_records_preserved);
+        assert!(!conversation_delete.plaintext_exposed);
+        assert!(!conversation_delete.key_material_exposed);
+        let empty = run_production_message_transcript_export(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("transcript after delete");
+        assert!(empty.entries.is_empty());
+
+        let prepared = run_production_data_lifecycle_status(&root, &cache, true)
+            .expect("prepare data lifecycle");
+        assert!(prepared.lifecycle_marker_present);
+        assert!(prepared.lifecycle_marker_written);
+        assert!(prepared.backup_exclusion_checked);
+        assert!(prepared.migration_marker_present);
+        assert!(prepared.migration_marker_written);
+        assert!(prepared.forward_only_migration);
+        assert!(prepared.destructive_migration_blocked);
+        assert!(prepared.rollback_marker_present);
+        assert!(prepared.rollback_detection_ready);
+        assert!(!prepared.rollback_prevention_claimed);
+        assert!(!prepared.secure_deletion_from_media_claimed);
+        assert!(!prepared.store_path_returned);
+        assert!(!prepared.key_material_exposed);
+
+        let profile_delete = run_production_profile_delete(
+            &root,
+            "bob".to_string(),
+            "bob".to_string(),
+        )
+        .expect("profile delete");
+        assert!(profile_delete.profile_deleted);
+        assert!(profile_delete.profile_existed_before_delete);
+        assert!(!profile_delete.profile_exists_after_delete);
+        assert!(!profile_delete.secure_deletion_from_media_claimed);
+        assert!(!profile_delete.store_path_returned);
+
+        let wiped = run_production_full_local_data_wipe(
+            &root,
+            &cache,
+            "WIPE LOCAL DATA".to_string(),
+        )
+        .expect("full local data wipe");
+        assert!(wiped.full_local_data_wiped);
+        assert!(!wiped.profiles_present);
+        assert!(!wiped.transport_data_present);
+        assert!(!wiped.lifecycle_marker_present);
+        assert!(!wiped.rollback_prevention_claimed);
+        assert!(!wiped.secure_deletion_from_media_claimed);
+        assert!(!wiped.store_path_returned);
+        assert!(!wiped.key_material_exposed);
+        assert!(run_production_full_local_data_wipe(&root, &cache, "bad".to_string()).is_err());
+
+        let _ = std::fs::remove_dir_all(root);
+        let _ = std::fs::remove_dir_all(cache);
     }
 
     #[test]

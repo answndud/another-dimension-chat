@@ -359,6 +359,37 @@ export function fieldTestReportTriageState(report) {
   };
 }
 
+export function publicBetaDiagnosticsReport(report, options = {}) {
+  const parsed = parseFieldTestReport(report);
+  const triage = fieldTestReportTriageState(report);
+  const manualNetworkPermission = parsed.manual_network_permission === "true";
+  const realOnionAttempted = parsed.real_onion_attempted === "true";
+  const failureClass = fieldTestReportBlocker(parsed);
+  const lines = [
+    "Another Dimension Chat public beta diagnostics",
+    "diagnostic_version=1",
+    "release_channel=unsigned-experimental-public-beta",
+    "security_claim=not-production-ready",
+    "sensitive_communication=sensitive-communication-prohibited",
+    `app_version=${fieldTestReportValue(triage.appVersion, "unknown")}`,
+    `build_channel=${fieldTestReportValue(triage.buildChannel, "unknown")}`,
+    `build_commit=${fieldTestReportValue(triage.buildCommit, "unknown")}`,
+    `room_status=${fieldTestReportValue(triage.room, "unknown")}`,
+    `safety_status=${fieldTestReportValue(triage.safety, "unknown")}`,
+    `delivery_status=${fieldTestReportValue(triage.delivery, "unknown")}`,
+    `route_status=${fieldTestReportValue(triage.route, "unknown")}`,
+    `receive_status=${fieldTestReportValue(triage.receive, "unknown")}`,
+    `failure_class=${fieldTestReportValue(failureClass, "none")}`,
+    `manual_network_permission=${manualNetworkPermission}`,
+    `real_onion_attempted=${realOnionAttempted}`,
+    `app_launch_network=false`,
+  ];
+  if (options.includeCopyBoundary === true) {
+    lines.push("payload_boundary=status-build-failure-class-only");
+  }
+  return lines.join("\n");
+}
+
 export const FIELD_TEST_REPORT_HARD_COMPARE_KEYS = Object.freeze([
   "appVersion",
   "buildChannel",
@@ -397,6 +428,24 @@ export function fieldTestReportComparison(localReport, peerReport) {
   return mismatches.length > 0
     ? `compare ${mismatches.join(" ")}${localStateSummary}`
     : `compare reports-aligned${localStateSummary}`;
+}
+
+export function fieldTestReportComparisonStatus(localReport, peerReport) {
+  if (!String(peerReport ?? "").trim()) {
+    return "peer-report-missing";
+  }
+  const buildMatch = fieldTestBuildIdentityMatches(localReport, peerReport);
+  if (buildMatch === false) {
+    return "build-mismatch";
+  }
+  const comparison = fieldTestReportComparison(localReport, peerReport);
+  if (comparison.startsWith("compare reports-aligned local_state ")) {
+    return "reports-aligned-local-state-diff";
+  }
+  if (comparison === "compare reports-aligned") {
+    return "reports-aligned";
+  }
+  return "report-mismatch";
 }
 
 export function fieldTestReportsAligned(localReport, peerReport) {
@@ -443,6 +492,65 @@ export function fieldTestReportRecoveryActionForNextKey(report, nextActionKey) {
 export function fieldTestReportComposerAction(report) {
   const action = fieldTestReportValue(parseFieldTestReport(report).composer_next_action, "none");
   return action === "write-message" || action === "send-message" ? action : "";
+}
+
+function fieldTestReportActionState(localReport, peerReport, nextActionKeyForReport) {
+  const nextActionKey = nextActionKeyForReport(localReport, peerReport);
+  const localRecoveryAction = fieldTestReportRecoveryActionForNextKey(localReport, nextActionKey);
+  const composerAction = fieldTestReportComposerAction(localReport);
+  const peerNextActionKey = fieldTestPeerLocalStateNextActionKey(
+    localReport,
+    peerReport,
+    nextActionKeyForReport,
+  );
+  const peerRecoveryAction = peerNextActionKey
+    ? fieldTestReportRecoveryActionForNextKey(peerReport, peerNextActionKey)
+    : "";
+  return {
+    nextActionKey,
+    localRecoveryAction,
+    composerAction,
+    peerNextActionKey,
+    peerRecoveryAction,
+  };
+}
+
+function fieldTestReportCopyActionLinesFromState(comparisonStatus, actionState) {
+  return [
+    `peer_report_status=${fieldTestReportValue(comparisonStatus, "unknown")}`,
+    `next_action=${fieldTestReportValue(actionState.nextActionKey, "none")}`,
+    actionState.composerAction ? `composer_action=${fieldTestReportValue(actionState.composerAction, "none")}` : "",
+    actionState.localRecoveryAction && actionState.localRecoveryAction !== "none"
+      ? `local_recovery_action=${fieldTestReportValue(actionState.localRecoveryAction, "none")}`
+      : "",
+    actionState.peerNextActionKey
+      ? `peer_next_action=${fieldTestReportValue(actionState.peerNextActionKey, "none")}`
+      : "",
+    actionState.peerNextActionKey
+      ? `peer_recovery_action=${fieldTestReportValue(actionState.peerRecoveryAction, "none")}`
+      : "",
+  ].filter(Boolean);
+}
+
+export function fieldTestReportCopyActionLines(localReport, peerReport, nextActionKeyForReport) {
+  return fieldTestReportCopyActionLinesFromState(
+    fieldTestReportComparisonStatus(localReport, peerReport),
+    fieldTestReportActionState(localReport, peerReport, nextActionKeyForReport),
+  );
+}
+
+export function fieldTestReportPanelState(localReport, peerReport, nextActionKeyForReport) {
+  const comparison = fieldTestReportComparison(localReport, peerReport);
+  const comparisonStatus = fieldTestReportComparisonStatus(localReport, peerReport);
+  const actionState = fieldTestReportActionState(localReport, peerReport, nextActionKeyForReport);
+  return {
+    hasPeerReport: Boolean(String(peerReport ?? "").trim()),
+    comparison,
+    comparisonStatus,
+    nextActionKey: actionState.nextActionKey,
+    peerNextActionKey: actionState.peerNextActionKey,
+    copyActionLines: fieldTestReportCopyActionLinesFromState(comparisonStatus, actionState),
+  };
 }
 
 export function fieldTestBuildIdentityMatches(localReport, peerReport) {
