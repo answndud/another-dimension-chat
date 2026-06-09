@@ -25,8 +25,8 @@ pub mod production {
         require_encrypted_record_allowed, require_persistence_allowed, EncryptedRecord,
         EncryptedRecordId, EncryptedRecordScope, LockedProfileStore, ProductionRecordKind,
         ProductionStorageError, ProductionStoragePolicyError, ProfilePassphrase,
-        ReplayRollbackProtection, SqlCipherRecordStore, StorageProtection, UnlockFactor,
-        UnlockMode, UnlockRequest,
+        ReplayRollbackProtection, SqlCipherRecordStore, StorageBackendKind, StorageProtection,
+        UnlockFactor, UnlockMode, UnlockRequest,
     };
     use another_dimension_transport::{
         BoundOutboundStreamSession, EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
@@ -199,6 +199,103 @@ pub mod production {
         "bounded_receive_loop_review",
         "independent_security_review",
     ];
+
+    const PRODUCTION_LOCAL_DATA_LIFECYCLE_POLICIES: &[&str] = &[
+        "passphrase_first_required",
+        "os_keystore_optional_not_required",
+        "rollback_protection_non_claim",
+        "logical_delete_only",
+        "secure_media_deletion_non_claim",
+        "backup_exclusion_best_effort_required",
+        "forward_only_schema_migration",
+        "prototype_data_migration_non_claim",
+    ];
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionLocalDataLifecyclePolicySummary {
+        backend: StorageBackendKind,
+        passphrase_first_required: bool,
+        os_keystore_optional: bool,
+        os_keystore_only_rejected: bool,
+        production_key_wrapping_ready: bool,
+        production_key_management_policy_decided: bool,
+        rollback_protection: ReplayRollbackProtection,
+        rollback_non_claim_decided: bool,
+        backup_exclusion_policy_decided: bool,
+        backup_exclusion_verified: bool,
+        logical_delete_available: bool,
+        secure_media_deletion_claimed: bool,
+        forward_only_schema_migration: bool,
+        prototype_data_migration_ready: bool,
+        runtime_messaging_enabled: bool,
+        policy_tags: &'static [&'static str],
+    }
+
+    impl ProductionLocalDataLifecyclePolicySummary {
+        pub fn backend(self) -> StorageBackendKind {
+            self.backend
+        }
+
+        pub fn passphrase_first_required(self) -> bool {
+            self.passphrase_first_required
+        }
+
+        pub fn os_keystore_optional(self) -> bool {
+            self.os_keystore_optional
+        }
+
+        pub fn os_keystore_only_rejected(self) -> bool {
+            self.os_keystore_only_rejected
+        }
+
+        pub fn production_key_wrapping_ready(self) -> bool {
+            self.production_key_wrapping_ready
+        }
+
+        pub fn production_key_management_policy_decided(self) -> bool {
+            self.production_key_management_policy_decided
+        }
+
+        pub fn rollback_protection(self) -> ReplayRollbackProtection {
+            self.rollback_protection
+        }
+
+        pub fn rollback_non_claim_decided(self) -> bool {
+            self.rollback_non_claim_decided
+        }
+
+        pub fn backup_exclusion_policy_decided(self) -> bool {
+            self.backup_exclusion_policy_decided
+        }
+
+        pub fn backup_exclusion_verified(self) -> bool {
+            self.backup_exclusion_verified
+        }
+
+        pub fn logical_delete_available(self) -> bool {
+            self.logical_delete_available
+        }
+
+        pub fn secure_media_deletion_claimed(self) -> bool {
+            self.secure_media_deletion_claimed
+        }
+
+        pub fn forward_only_schema_migration(self) -> bool {
+            self.forward_only_schema_migration
+        }
+
+        pub fn prototype_data_migration_ready(self) -> bool {
+            self.prototype_data_migration_ready
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+
+        pub fn policy_tags(self) -> &'static [&'static str] {
+            self.policy_tags
+        }
+    }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionAsyncDeliverySemanticsSummary {
@@ -7551,6 +7648,34 @@ pub mod production {
         }
     }
 
+    pub fn production_local_data_lifecycle_policy_summary(
+    ) -> ProductionLocalDataLifecyclePolicySummary {
+        let storage =
+            another_dimension_storage::production::storage_backend_integration_boundary_summary();
+        let handoff = session_durable_state_unlock_policy_handoff_summary();
+
+        ProductionLocalDataLifecyclePolicySummary {
+            backend: storage.backend(),
+            passphrase_first_required: storage.passphrase_first_unlock()
+                && handoff.high_risk_requires_passphrase(),
+            os_keystore_optional: true,
+            os_keystore_only_rejected: handoff.os_keystore_only_rejected(),
+            production_key_wrapping_ready: storage.production_key_management_ready(),
+            production_key_management_policy_decided: true,
+            rollback_protection: storage.rollback_protection(),
+            rollback_non_claim_decided: storage.rollback_protection()
+                == ReplayRollbackProtection::NotProvided,
+            backup_exclusion_policy_decided: true,
+            backup_exclusion_verified: false,
+            logical_delete_available: true,
+            secure_media_deletion_claimed: storage.secure_deletion_from_media(),
+            forward_only_schema_migration: true,
+            prototype_data_migration_ready: false,
+            runtime_messaging_enabled: false,
+            policy_tags: PRODUCTION_LOCAL_DATA_LIFECYCLE_POLICIES,
+        }
+    }
+
     pub fn production_protocol_decision_summary() -> ProductionProtocolDecisionSummary {
         ProductionProtocolDecisionSummary {
             selected_session_protocol: "snow Noise XX synchronous 1:1 invite-code boundary",
@@ -9126,6 +9251,34 @@ pub mod production {
             assert!(summary.async_delivery_semantics_reviewed());
             assert!(summary.readiness_blocker_tags().is_empty());
             assert!(!summary.usable_async_messaging_ready());
+        }
+
+        #[test]
+        fn production_local_data_lifecycle_policy_is_passphrase_first_with_non_claims() {
+            let policy = production_local_data_lifecycle_policy_summary();
+
+            assert_eq!(policy.backend(), StorageBackendKind::SqlCipherAdrec1Spike);
+            assert!(policy.passphrase_first_required());
+            assert!(policy.os_keystore_optional());
+            assert!(policy.os_keystore_only_rejected());
+            assert!(!policy.production_key_wrapping_ready());
+            assert!(policy.production_key_management_policy_decided());
+            assert_eq!(
+                policy.rollback_protection(),
+                ReplayRollbackProtection::NotProvided
+            );
+            assert!(policy.rollback_non_claim_decided());
+            assert!(policy.backup_exclusion_policy_decided());
+            assert!(!policy.backup_exclusion_verified());
+            assert!(policy.logical_delete_available());
+            assert!(!policy.secure_media_deletion_claimed());
+            assert!(policy.forward_only_schema_migration());
+            assert!(!policy.prototype_data_migration_ready());
+            assert!(!policy.runtime_messaging_enabled());
+            assert!(policy.policy_tags().contains(&"passphrase_first_required"));
+            assert!(policy
+                .policy_tags()
+                .contains(&"rollback_protection_non_claim"));
         }
 
         #[test]

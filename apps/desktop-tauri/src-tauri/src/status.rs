@@ -15,6 +15,7 @@ pub struct PrototypeStatus {
     production_preflight_status: String,
     production_preflight_blockers: String,
     session_durable_state_status: &'static str,
+    local_data_lifecycle_policy: String,
     session_unlock_policy_status: &'static str,
     session_unlock_non_readiness: &'static str,
     session_unlock_cli_rejection_status: &'static str,
@@ -40,6 +41,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         another_dimension_core::production::production_runtime_command_surface_summary();
     let next_connector =
         another_dimension_core::production::production_skeleton_next_connector_selection();
+    let local_data_policy =
+        another_dimension_core::production::production_local_data_lifecycle_policy_summary();
 
     PrototypeStatus {
         secure_release: false,
@@ -110,6 +113,25 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         ),
         session_durable_state_status:
             "local encrypted session lifecycle controls available; no audited readiness claim",
+        local_data_lifecycle_policy: format!(
+            "backend={:?} passphrase_first_required={} os_keystore_optional={} os_keystore_only_rejected={} key_wrapping_ready={} key_policy_decided={} rollback_protection={:?} rollback_non_claim={} backup_policy_decided={} backup_verified={} logical_delete={} secure_media_deletion_claimed={} forward_only_schema_migration={} prototype_data_migration_ready={} runtime_messaging={} policy_tags={}",
+            local_data_policy.backend(),
+            local_data_policy.passphrase_first_required(),
+            local_data_policy.os_keystore_optional(),
+            local_data_policy.os_keystore_only_rejected(),
+            local_data_policy.production_key_wrapping_ready(),
+            local_data_policy.production_key_management_policy_decided(),
+            local_data_policy.rollback_protection(),
+            local_data_policy.rollback_non_claim_decided(),
+            local_data_policy.backup_exclusion_policy_decided(),
+            local_data_policy.backup_exclusion_verified(),
+            local_data_policy.logical_delete_available(),
+            local_data_policy.secure_media_deletion_claimed(),
+            local_data_policy.forward_only_schema_migration(),
+            local_data_policy.prototype_data_migration_ready(),
+            local_data_policy.runtime_messaging_enabled(),
+            local_data_policy.policy_tags().join(","),
+        ),
         session_unlock_policy_status: "passphrase-first high-risk policy OS-keystore-only rejected",
         session_unlock_non_readiness:
             "rollback prevention secure deletion from media runtime messaging disabled",
@@ -179,6 +201,15 @@ mod tests {
         assert!(status
             .production_async_delivery_semantics
             .contains("external_onion_delivery_verified=false"));
+        assert!(status
+            .local_data_lifecycle_policy
+            .contains("passphrase_first_required=true"));
+        assert!(status
+            .local_data_lifecycle_policy
+            .contains("rollback_non_claim=true"));
+        assert!(status
+            .local_data_lifecycle_policy
+            .contains("secure_media_deletion_claimed=false"));
         assert!(status
             .production_protocol_decision
             .contains("reviewed=true"));

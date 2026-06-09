@@ -3416,6 +3416,8 @@ fn print_production_self_test_summary() {
         another_dimension_core::production::production_protocol_decision_summary();
     let command_surface =
         another_dimension_core::production::production_runtime_command_surface_summary();
+    let local_data_policy =
+        another_dimension_core::production::production_local_data_lifecycle_policy_summary();
 
     println!(
         "production session candidate: {}",
@@ -3476,6 +3478,25 @@ fn print_production_self_test_summary() {
         command_surface.runtime_messaging_enabled(),
         command_surface.reviewed_categories().join(","),
         command_surface.rejected_categories().join(",")
+    );
+    println!(
+        "production local data lifecycle policy: backend={:?} passphrase_first_required={} os_keystore_optional={} os_keystore_only_rejected={} key_wrapping_ready={} key_policy_decided={} rollback_protection={:?} rollback_non_claim={} backup_policy_decided={} backup_verified={} logical_delete={} secure_media_deletion_claimed={} forward_only_schema_migration={} prototype_data_migration_ready={} runtime_messaging={} policy_tags={}",
+        local_data_policy.backend(),
+        local_data_policy.passphrase_first_required(),
+        local_data_policy.os_keystore_optional(),
+        local_data_policy.os_keystore_only_rejected(),
+        local_data_policy.production_key_wrapping_ready(),
+        local_data_policy.production_key_management_policy_decided(),
+        local_data_policy.rollback_protection(),
+        local_data_policy.rollback_non_claim_decided(),
+        local_data_policy.backup_exclusion_policy_decided(),
+        local_data_policy.backup_exclusion_verified(),
+        local_data_policy.logical_delete_available(),
+        local_data_policy.secure_media_deletion_claimed(),
+        local_data_policy.forward_only_schema_migration(),
+        local_data_policy.prototype_data_migration_ready(),
+        local_data_policy.runtime_messaging_enabled(),
+        local_data_policy.policy_tags().join(",")
     );
     println!(
         "production session readiness blockers: {}",
