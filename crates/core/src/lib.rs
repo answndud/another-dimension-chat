@@ -144,6 +144,66 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionSessionReadinessBlocker {
+        ReviewedProtocolDecision,
+        DurableTransportStatePersistence,
+        MessageKeyEvolution,
+        RuntimeCommandSurface,
+        AsyncDeliverySemantics,
+    }
+
+    impl ProductionSessionReadinessBlocker {
+        pub fn as_str(self) -> &'static str {
+            match self {
+                Self::ReviewedProtocolDecision => "reviewed_protocol_decision",
+                Self::DurableTransportStatePersistence => "durable_transport_state_persistence",
+                Self::MessageKeyEvolution => "message_key_evolution",
+                Self::RuntimeCommandSurface => "runtime_command_surface",
+                Self::AsyncDeliverySemantics => "async_delivery_semantics",
+            }
+        }
+    }
+
+    const PRODUCTION_SESSION_READINESS_BLOCKERS: &[ProductionSessionReadinessBlocker] = &[
+        ProductionSessionReadinessBlocker::ReviewedProtocolDecision,
+        ProductionSessionReadinessBlocker::RuntimeCommandSurface,
+        ProductionSessionReadinessBlocker::AsyncDeliverySemantics,
+    ];
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionSessionReadinessGate {
+        production_e2ee_ready: bool,
+        durable_session_persistence_ready: bool,
+        runtime_messaging_enabled: bool,
+        blockers: &'static [ProductionSessionReadinessBlocker],
+    }
+
+    impl ProductionSessionReadinessGate {
+        pub fn production_e2ee_ready(self) -> bool {
+            self.production_e2ee_ready
+        }
+
+        pub fn durable_session_persistence_ready(self) -> bool {
+            self.durable_session_persistence_ready
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+
+        pub fn blockers(self) -> &'static [ProductionSessionReadinessBlocker] {
+            self.blockers
+        }
+
+        pub fn blocker_tags(self) -> Vec<&'static str> {
+            self.blockers
+                .iter()
+                .map(|blocker| blocker.as_str())
+                .collect()
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionSessionEvaluationSummary {
         protocol_candidate: &'static str,
         production_pairing_required: bool,
@@ -154,6 +214,7 @@ pub mod production {
         session_state_in_memory_only: bool,
         production_e2ee_ready: bool,
         durable_session_persistence_ready: bool,
+        readiness_blockers: &'static [ProductionSessionReadinessBlocker],
         tauri_production_messaging_command_ready: bool,
         usable_async_messaging_ready: bool,
     }
@@ -193,6 +254,17 @@ pub mod production {
 
         pub fn durable_session_persistence_ready(self) -> bool {
             self.durable_session_persistence_ready
+        }
+
+        pub fn readiness_blockers(self) -> &'static [ProductionSessionReadinessBlocker] {
+            self.readiness_blockers
+        }
+
+        pub fn readiness_blocker_tags(self) -> Vec<&'static str> {
+            self.readiness_blockers
+                .iter()
+                .map(|blocker| blocker.as_str())
+                .collect()
         }
 
         pub fn tauri_production_messaging_command_ready(self) -> bool {
@@ -347,6 +419,42 @@ pub mod production {
         remote_endpoint_state_present: bool,
         replay_window_present: bool,
         session_transport_state_present: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionLifecycleStatusSummary {
+        storage_opened: bool,
+        session_draft_present: bool,
+        channel_id_derivable: bool,
+        remote_endpoint_state_present: bool,
+        remote_endpoint_status_present: bool,
+        replay_window_present: bool,
+        pending_handshake_state_present: bool,
+        session_transport_state_present: bool,
+        runtime_material_reconstructable: bool,
+        ready_for_message_envelope: bool,
+        session_resume_ready: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairingSessionDeleteSummary {
+        storage_opened: bool,
+        session_draft_loaded: bool,
+        session_draft_deleted: bool,
+        remote_endpoint_state_deleted: bool,
+        remote_endpoint_status_deleted: bool,
+        replay_window_deleted: bool,
+        pending_handshake_state_deleted: bool,
+        session_transport_state_deleted: bool,
+        session_records_deleted: bool,
+        session_resume_closed: bool,
+        message_records_preserved: bool,
         key_material_exposed: bool,
         transport_io_opened: bool,
         runtime_messaging_enabled: bool,
@@ -756,6 +864,23 @@ pub mod production {
         runtime_messaging_enabled: bool,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionConversationDeleteSummary {
+        storage_opened: bool,
+        runtime_material_reconstructable: bool,
+        sent_messages_deleted: usize,
+        received_messages_deleted: usize,
+        message_envelopes_deleted: usize,
+        local_message_indexes_deleted: usize,
+        message_counter_deleted: bool,
+        conversation_records_deleted: usize,
+        session_records_preserved: bool,
+        plaintext_exposed: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
     impl ProductionProfileInitSummary {
         pub fn storage_opened(self) -> bool {
             self.storage_opened
@@ -1115,6 +1240,122 @@ pub mod production {
 
         pub fn session_transport_state_present(self) -> bool {
             self.session_transport_state_present
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionLifecycleStatusSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_draft_present(self) -> bool {
+            self.session_draft_present
+        }
+
+        pub fn channel_id_derivable(self) -> bool {
+            self.channel_id_derivable
+        }
+
+        pub fn remote_endpoint_state_present(self) -> bool {
+            self.remote_endpoint_state_present
+        }
+
+        pub fn remote_endpoint_status_present(self) -> bool {
+            self.remote_endpoint_status_present
+        }
+
+        pub fn replay_window_present(self) -> bool {
+            self.replay_window_present
+        }
+
+        pub fn pending_handshake_state_present(self) -> bool {
+            self.pending_handshake_state_present
+        }
+
+        pub fn session_transport_state_present(self) -> bool {
+            self.session_transport_state_present
+        }
+
+        pub fn runtime_material_reconstructable(self) -> bool {
+            self.runtime_material_reconstructable
+        }
+
+        pub fn ready_for_message_envelope(self) -> bool {
+            self.ready_for_message_envelope
+        }
+
+        pub fn session_resume_ready(self) -> bool {
+            self.session_resume_ready
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionPairingSessionDeleteSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_draft_loaded(self) -> bool {
+            self.session_draft_loaded
+        }
+
+        pub fn session_draft_deleted(self) -> bool {
+            self.session_draft_deleted
+        }
+
+        pub fn remote_endpoint_state_deleted(self) -> bool {
+            self.remote_endpoint_state_deleted
+        }
+
+        pub fn remote_endpoint_status_deleted(self) -> bool {
+            self.remote_endpoint_status_deleted
+        }
+
+        pub fn replay_window_deleted(self) -> bool {
+            self.replay_window_deleted
+        }
+
+        pub fn pending_handshake_state_deleted(self) -> bool {
+            self.pending_handshake_state_deleted
+        }
+
+        pub fn session_transport_state_deleted(self) -> bool {
+            self.session_transport_state_deleted
+        }
+
+        pub fn session_records_deleted(self) -> bool {
+            self.session_records_deleted
+        }
+
+        pub fn session_resume_closed(self) -> bool {
+            self.session_resume_closed
+        }
+
+        pub fn message_records_preserved(self) -> bool {
+            self.message_records_preserved
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -2432,7 +2673,7 @@ pub mod production {
         pairwise_identity_private_key_encrypted_record_allowed: bool,
         noise_static_private_key_encrypted_record_allowed: bool,
         replay_window_encrypted_record_allowed: bool,
-        session_transport_persistence_rejected: bool,
+        session_transport_persistence_allowed: bool,
         rollback_protection_required_before_readiness: bool,
         opens_storage_unlock_command: bool,
         opens_transport_io: bool,
@@ -2457,8 +2698,8 @@ pub mod production {
             self.replay_window_encrypted_record_allowed
         }
 
-        pub fn session_transport_persistence_rejected(self) -> bool {
-            self.session_transport_persistence_rejected
+        pub fn session_transport_persistence_allowed(self) -> bool {
+            self.session_transport_persistence_allowed
         }
 
         pub fn rollback_protection_required_before_readiness(self) -> bool {
@@ -2841,6 +3082,60 @@ pub mod production {
         }
 
         pub fn runtime_messaging_enabled(&self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionConversationDeleteSummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn runtime_material_reconstructable(self) -> bool {
+            self.runtime_material_reconstructable
+        }
+
+        pub fn sent_messages_deleted(self) -> usize {
+            self.sent_messages_deleted
+        }
+
+        pub fn received_messages_deleted(self) -> usize {
+            self.received_messages_deleted
+        }
+
+        pub fn message_envelopes_deleted(self) -> usize {
+            self.message_envelopes_deleted
+        }
+
+        pub fn local_message_indexes_deleted(self) -> usize {
+            self.local_message_indexes_deleted
+        }
+
+        pub fn message_counter_deleted(self) -> bool {
+            self.message_counter_deleted
+        }
+
+        pub fn conversation_records_deleted(self) -> usize {
+            self.conversation_records_deleted
+        }
+
+        pub fn session_records_preserved(self) -> bool {
+            self.session_records_preserved
+        }
+
+        pub fn plaintext_exposed(self) -> bool {
+            self.plaintext_exposed
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
             self.runtime_messaging_enabled
         }
     }
@@ -4578,6 +4873,161 @@ pub mod production {
         })
     }
 
+    pub fn production_pairing_session_lifecycle_status(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionPairingSessionLifecycleStatusSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let draft = load_latest_session_draft(&store, &profile)?;
+        let Some(draft) = draft else {
+            return Ok(ProductionPairingSessionLifecycleStatusSummary {
+                storage_opened: true,
+                session_draft_present: false,
+                channel_id_derivable: false,
+                remote_endpoint_state_present: false,
+                remote_endpoint_status_present: false,
+                replay_window_present: false,
+                pending_handshake_state_present: store
+                    .get(&production_pending_handshake_initiator_state_record_id())?
+                    .is_some(),
+                session_transport_state_present: false,
+                runtime_material_reconstructable: false,
+                ready_for_message_envelope: false,
+                session_resume_ready: false,
+                key_material_exposed: false,
+                transport_io_opened: false,
+                runtime_messaging_enabled: false,
+            });
+        };
+        let expected_replay_id = production_replay_record_id_text(&draft.channel_id);
+        let channel_id_derivable =
+            !draft.channel_id.is_empty() && draft.replay_record_id == expected_replay_id;
+        let remote_endpoint_state_present = load_remote_endpoint_state(&store, &draft)?.is_some();
+        let remote_endpoint_status_present = load_remote_endpoint_status(&store, &draft)?.is_some();
+        let replay_window_present = store
+            .load_replay_window(&production_replay_record_id(&draft.channel_id))?
+            .is_some();
+        let pending_handshake_state_present = store
+            .get(&production_pending_handshake_initiator_state_record_id())?
+            .is_some();
+        let session_transport_state_present =
+            load_session_transport_state(&store, &profile, &draft)?.is_some();
+        let local_noise_static_matches_draft = store
+            .get(&production_latest_pairing_noise_static_record_id())?
+            .map(decode_production_noise_static_private_key_record)
+            .transpose()?
+            .is_some_and(|local_noise_static| {
+                local_noise_static.keypair.public_key() == draft.local_noise_static_public_key
+            });
+        let runtime_material_reconstructable = channel_id_derivable
+            && local_noise_static_matches_draft
+            && !draft.remote_noise_static_public_key.is_empty()
+            && remote_endpoint_state_present
+            && replay_window_present;
+        let ready_for_message_envelope =
+            runtime_material_reconstructable && session_transport_state_present;
+
+        Ok(ProductionPairingSessionLifecycleStatusSummary {
+            storage_opened: true,
+            session_draft_present: true,
+            channel_id_derivable,
+            remote_endpoint_state_present,
+            remote_endpoint_status_present,
+            replay_window_present,
+            pending_handshake_state_present,
+            session_transport_state_present,
+            runtime_material_reconstructable,
+            ready_for_message_envelope,
+            session_resume_ready: ready_for_message_envelope,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_pairing_session_delete(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionPairingSessionDeleteSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let draft = load_latest_session_draft(&store, &profile)?;
+        let Some(draft) = draft else {
+            let pending_handshake_state_present = store
+                .get(&production_pending_handshake_initiator_state_record_id())?
+                .is_some();
+            store.delete(&production_pending_handshake_initiator_state_record_id())?;
+            return Ok(ProductionPairingSessionDeleteSummary {
+                storage_opened: true,
+                session_draft_loaded: false,
+                session_draft_deleted: false,
+                remote_endpoint_state_deleted: false,
+                remote_endpoint_status_deleted: false,
+                replay_window_deleted: false,
+                pending_handshake_state_deleted: pending_handshake_state_present,
+                session_transport_state_deleted: false,
+                session_records_deleted: true,
+                session_resume_closed: true,
+                message_records_preserved: true,
+                key_material_exposed: false,
+                transport_io_opened: false,
+                runtime_messaging_enabled: false,
+            });
+        };
+
+        let remote_endpoint_state_present = load_remote_endpoint_state(&store, &draft)?.is_some();
+        let remote_endpoint_status_present = load_remote_endpoint_status(&store, &draft)?.is_some();
+        let replay_window_present = store
+            .load_replay_window(&production_replay_record_id(&draft.channel_id))?
+            .is_some();
+        let pending_handshake_state_present = store
+            .get(&production_pending_handshake_initiator_state_record_id())?
+            .is_some();
+        let session_transport_state_present =
+            load_session_transport_state(&store, &profile, &draft)?.is_some();
+        store.delete(&production_latest_session_draft_record_id())?;
+        store.delete(&production_endpoint_state_record_id(
+            &draft.channel_id,
+            &draft.remote_contact_id,
+        ))?;
+        store.delete(&production_endpoint_status_record_id(
+            &draft.channel_id,
+            &draft.remote_contact_id,
+        ))?;
+        store.delete(&production_replay_record_id(&draft.channel_id))?;
+        store.delete(&production_pending_handshake_initiator_state_record_id())?;
+        store.delete(&production_session_transport_state_record_id(
+            &draft.channel_id,
+        ))?;
+        let after = load_latest_session_draft(&store, &profile)?;
+
+        Ok(ProductionPairingSessionDeleteSummary {
+            storage_opened: true,
+            session_draft_loaded: true,
+            session_draft_deleted: true,
+            remote_endpoint_state_deleted: remote_endpoint_state_present,
+            remote_endpoint_status_deleted: remote_endpoint_status_present,
+            replay_window_deleted: replay_window_present,
+            pending_handshake_state_deleted: pending_handshake_state_present,
+            session_transport_state_deleted: session_transport_state_present,
+            session_records_deleted: true,
+            session_resume_closed: after.is_none(),
+            message_records_preserved: true,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
     pub fn production_pairing_session_load_runtime(
         store_path: impl AsRef<std::path::Path>,
         profile: ProfileName,
@@ -5712,7 +6162,10 @@ pub mod production {
                         return Err(ProductionSessionError::NoiseStaticKeyMismatch);
                     }
                     transport
-                        .encrypt_with_nonce(message_number - 1, &padded)
+                        .encrypt_with_nonce(
+                            production_message_transport_nonce(message_number, &MessageType::Data)?,
+                            &padded,
+                        )
                         .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
                 }
                 SessionRole::Responder => {
@@ -5739,7 +6192,10 @@ pub mod production {
                         return Err(ProductionSessionError::NoiseStaticKeyMismatch);
                     }
                     transport
-                        .encrypt_with_nonce(message_number - 1, &padded)
+                        .encrypt_with_nonce(
+                            production_message_transport_nonce(message_number, &MessageType::Data)?,
+                            &padded,
+                        )
                         .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
                 }
             };
@@ -5975,7 +6431,10 @@ pub mod production {
                     return Err(ProductionSessionError::NoiseStaticKeyMismatch);
                 }
                 transport
-                    .encrypt_with_nonce(message_number - 1, &padded)
+                    .encrypt_with_nonce(
+                        production_message_transport_nonce(message_number, &MessageType::Control)?,
+                        &padded,
+                    )
                     .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
             }
             SessionRole::Responder => {
@@ -6002,7 +6461,10 @@ pub mod production {
                     return Err(ProductionSessionError::NoiseStaticKeyMismatch);
                 }
                 transport
-                    .encrypt_with_nonce(message_number - 1, &padded)
+                    .encrypt_with_nonce(
+                        production_message_transport_nonce(message_number, &MessageType::Control)?,
+                        &padded,
+                    )
                     .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
             }
         };
@@ -6127,7 +6589,13 @@ pub mod production {
                     return Err(ProductionSessionError::NoiseStaticKeyMismatch);
                 }
                 transport
-                    .decrypt_with_nonce(envelope.message_number - 1, &envelope.padded_ciphertext)
+                    .decrypt_with_nonce(
+                        production_message_transport_nonce(
+                            envelope.message_number,
+                            &envelope.message_type,
+                        )?,
+                        &envelope.padded_ciphertext,
+                    )
                     .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
             }
             SessionRole::Responder => {
@@ -6154,7 +6622,13 @@ pub mod production {
                     return Err(ProductionSessionError::NoiseStaticKeyMismatch);
                 }
                 transport
-                    .decrypt_with_nonce(envelope.message_number - 1, &envelope.padded_ciphertext)
+                    .decrypt_with_nonce(
+                        production_message_transport_nonce(
+                            envelope.message_number,
+                            &envelope.message_type,
+                        )?,
+                        &envelope.padded_ciphertext,
+                    )
                     .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
             }
         };
@@ -6294,7 +6768,13 @@ pub mod production {
                     return Err(ProductionSessionError::NoiseStaticKeyMismatch);
                 }
                 transport
-                    .decrypt_with_nonce(envelope.message_number - 1, &envelope.padded_ciphertext)
+                    .decrypt_with_nonce(
+                        production_message_transport_nonce(
+                            envelope.message_number,
+                            &envelope.message_type,
+                        )?,
+                        &envelope.padded_ciphertext,
+                    )
                     .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
             }
             SessionRole::Responder => {
@@ -6321,7 +6801,13 @@ pub mod production {
                     return Err(ProductionSessionError::NoiseStaticKeyMismatch);
                 }
                 transport
-                    .decrypt_with_nonce(envelope.message_number - 1, &envelope.padded_ciphertext)
+                    .decrypt_with_nonce(
+                        production_message_transport_nonce(
+                            envelope.message_number,
+                            &envelope.message_type,
+                        )?,
+                        &envelope.padded_ciphertext,
+                    )
                     .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?
             }
         };
@@ -6653,6 +7139,129 @@ pub mod production {
         Ok(out)
     }
 
+    pub fn production_conversation_delete(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionConversationDeleteSummary, ProductionSessionError> {
+        let locked = LockedProfileStore::new(store_path.as_ref());
+        let store = locked.unlock(passphrase)?;
+        if !store.profile_marker_exists(&profile)? {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        let material = load_session_runtime_material(&store, &profile)?;
+        let mut sent_messages_deleted = 0;
+        let mut received_messages_deleted = 0;
+        let mut message_envelopes_deleted = 0;
+        let mut local_message_indexes_deleted = 0;
+
+        for (record_id, record) in store.records_with_id_prefix("sent_")? {
+            if record.kind != ProductionRecordKind::SentMessage {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            let state = String::from_utf8(record.sealed_body)
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let sent = SentMessageRecord::decode(&state)?;
+            if sent.contact_id != material.remote_contact_id
+                || sent.message_type != MessageType::Data
+                || record_id
+                    != production_sent_message_record_id(
+                        &material.channel_id,
+                        &material.remote_contact_id,
+                        sent.message_number,
+                    )
+            {
+                continue;
+            }
+            store.delete(&record_id)?;
+            sent_messages_deleted += 1;
+
+            let index_id = production_local_message_index_record_id(
+                &material.channel_id,
+                &material.remote_contact_id,
+                sent.message_number,
+            );
+            if store.get(&index_id)?.is_some() {
+                store.delete(&index_id)?;
+                local_message_indexes_deleted += 1;
+            }
+
+            let envelope_id = production_message_envelope_record_id(
+                &material.channel_id,
+                sent.message_number,
+                MessageType::Data,
+            );
+            if store.get(&envelope_id)?.is_some() {
+                store.delete(&envelope_id)?;
+                message_envelopes_deleted += 1;
+            }
+        }
+
+        for (record_id, record) in store.records_with_id_prefix("received_")? {
+            if record.kind != ProductionRecordKind::ReceivedMessage {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            let state = String::from_utf8(record.sealed_body)
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            let received = ReceivedMessageRecord::decode(&state)?;
+            if received.contact_id != material.remote_contact_id
+                || received.message_type != MessageType::Data
+                || record_id
+                    != production_received_message_record_id(
+                        &material.channel_id,
+                        &material.remote_contact_id,
+                        received.message_number,
+                    )
+            {
+                continue;
+            }
+            store.delete(&record_id)?;
+            received_messages_deleted += 1;
+        }
+
+        for (record_id, record) in store.records_with_id_prefix("message_")? {
+            if record.kind != ProductionRecordKind::MessageEnvelope {
+                return Err(ProductionSessionError::UnexpectedEnvelope);
+            }
+            let state = String::from_utf8(record.sealed_body)
+                .map_err(|_| ProductionSessionError::UnexpectedEnvelope)?;
+            if Envelope::decode(&state)
+                .map(|envelope| envelope.channel_id == material.channel_id)
+                .unwrap_or(false)
+            {
+                store.delete(&record_id)?;
+                message_envelopes_deleted += 1;
+            }
+        }
+
+        let counter_id =
+            production_message_counter_record_id(&material.channel_id, &material.remote_contact_id);
+        let message_counter_deleted = store.get(&counter_id)?.is_some();
+        if message_counter_deleted {
+            store.delete(&counter_id)?;
+        }
+
+        Ok(ProductionConversationDeleteSummary {
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            sent_messages_deleted,
+            received_messages_deleted,
+            message_envelopes_deleted,
+            local_message_indexes_deleted,
+            message_counter_deleted,
+            conversation_records_deleted: sent_messages_deleted
+                + received_messages_deleted
+                + message_envelopes_deleted
+                + local_message_indexes_deleted
+                + usize::from(message_counter_deleted),
+            session_records_preserved: load_latest_session_draft(&store, &profile)?.is_some(),
+            plaintext_exposed: false,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
     fn escape_transcript_tsv_cell(value: &str) -> String {
         let mut escaped = String::with_capacity(value.len());
         for ch in value.chars() {
@@ -6675,11 +7284,23 @@ pub mod production {
             canonical_dialer_stable: true,
             ciphertext_tamper_rejected: true,
             replay_guard_before_decrypt: true,
-            session_state_in_memory_only: true,
+            session_state_in_memory_only: false,
             production_e2ee_ready: false,
-            durable_session_persistence_ready: false,
+            durable_session_persistence_ready: true,
+            readiness_blockers: PRODUCTION_SESSION_READINESS_BLOCKERS,
             tauri_production_messaging_command_ready: false,
             usable_async_messaging_ready: false,
+        }
+    }
+
+    pub fn production_session_readiness_gate() -> ProductionSessionReadinessGate {
+        let summary = production_session_evaluation_summary();
+
+        ProductionSessionReadinessGate {
+            production_e2ee_ready: summary.production_e2ee_ready(),
+            durable_session_persistence_ready: summary.durable_session_persistence_ready(),
+            runtime_messaging_enabled: false,
+            blockers: summary.readiness_blockers(),
         }
     }
 
@@ -6777,8 +7398,8 @@ pub mod production {
 
     pub fn session_durable_state_connector_test_harness() -> SessionDurableStateConnectorHarness {
         let gate = session_durable_state_connector_gate();
-        let session_transport_persistence_rejected =
-            require_persistence_allowed(ProductionRecordKind::SessionTransportState).is_err();
+        let session_transport_persistence_allowed =
+            require_persistence_allowed(ProductionRecordKind::SessionTransportState).is_ok();
 
         SessionDurableStateConnectorHarness {
             selected_connector: gate.selected_connector(),
@@ -6793,7 +7414,7 @@ pub mod production {
                 ProductionRecordKind::ReplayWindowState,
             )
             .is_ok(),
-            session_transport_persistence_rejected,
+            session_transport_persistence_allowed,
             rollback_protection_required_before_readiness: gate.rollback_protection()
                 == ReplayRollbackProtection::NotProvided,
             opens_storage_unlock_command: false,
@@ -6866,9 +7487,9 @@ pub mod production {
             prepared_records_persisted: session_durable_state_encrypted_record_adapter_spike()
                 .persists_records_to_store(),
             store_write_enabled: false,
-            durable_session_persistence_ready: false,
+            durable_session_persistence_ready: true,
             production_e2ee_ready: production_session_evaluation_summary().production_e2ee_ready(),
-            durable_noise_transport_persistence_allowed: false,
+            durable_noise_transport_persistence_allowed: true,
             runtime_messaging_enabled: false,
         }
     }
@@ -7402,6 +8023,25 @@ pub mod production {
             MessageType::Ack => "ack",
             MessageType::Control => "control",
         }
+    }
+
+    fn production_message_transport_nonce(
+        message_number: u64,
+        message_type: &MessageType,
+    ) -> Result<u64, ProductionSessionError> {
+        if message_number == 0 {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let type_slot = match message_type {
+            MessageType::Data => 0,
+            MessageType::Ack => 1,
+            MessageType::Control => 2,
+        };
+        message_number
+            .checked_sub(1)
+            .and_then(|value| value.checked_mul(4))
+            .and_then(|value| value.checked_add(type_slot))
+            .ok_or(ProductionSessionError::UnexpectedEnvelope)
     }
 
     fn parse_message_type_tag(value: &str) -> Result<MessageType, ProductionSessionError> {
@@ -8119,6 +8759,71 @@ pub mod production {
             EndpointUpdateChannel, OnionServiceEndpoint, PairwiseRendezvousEndpoint,
             RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
         };
+
+        #[test]
+        fn production_session_readiness_gate_lists_blockers_without_opening_runtime() {
+            let summary = production_session_evaluation_summary();
+            let gate = production_session_readiness_gate();
+
+            assert!(!summary.production_e2ee_ready());
+            assert!(summary.durable_session_persistence_ready());
+            assert!(!summary.session_state_in_memory_only());
+            assert!(!summary.tauri_production_messaging_command_ready());
+            assert!(!summary.usable_async_messaging_ready());
+            assert_eq!(
+                summary.readiness_blocker_tags(),
+                vec![
+                    "reviewed_protocol_decision",
+                    "runtime_command_surface",
+                    "async_delivery_semantics",
+                ]
+            );
+            assert!(!gate.production_e2ee_ready());
+            assert!(gate.durable_session_persistence_ready());
+            assert!(!gate.runtime_messaging_enabled());
+            assert_eq!(gate.blockers(), summary.readiness_blockers());
+        }
+
+        #[test]
+        fn production_message_transport_nonce_separates_message_types() {
+            assert_eq!(
+                production_message_transport_nonce(1, &MessageType::Data),
+                Ok(0)
+            );
+            assert_eq!(
+                production_message_transport_nonce(1, &MessageType::Ack),
+                Ok(1)
+            );
+            assert_eq!(
+                production_message_transport_nonce(1, &MessageType::Control),
+                Ok(2)
+            );
+            assert_eq!(
+                production_message_transport_nonce(2, &MessageType::Data),
+                Ok(4)
+            );
+            assert_eq!(
+                production_message_transport_nonce(0, &MessageType::Data),
+                Err(ProductionSessionError::UnexpectedEnvelope)
+            );
+            assert_eq!(
+                production_message_transport_nonce(u64::MAX, &MessageType::Data),
+                Err(ProductionSessionError::UnexpectedEnvelope)
+            );
+        }
+
+        #[test]
+        fn session_durable_state_harness_allows_transport_state_persistence_without_runtime() {
+            let harness = session_durable_state_connector_test_harness();
+            let guard = session_durable_state_adapter_non_readiness_guard();
+
+            assert!(harness.replay_window_encrypted_record_allowed());
+            assert!(harness.session_transport_persistence_allowed());
+            assert!(guard.durable_session_persistence_ready());
+            assert!(guard.durable_noise_transport_persistence_allowed());
+            assert!(!guard.production_e2ee_ready());
+            assert!(!guard.runtime_messaging_enabled());
+        }
 
         #[test]
         fn production_profile_init_opens_store_and_writes_marker_without_runtime() {
@@ -10071,13 +10776,91 @@ pub mod production {
             assert!(matches!(
                 production_message_send_prepare(
                     outbound_store,
-                    outbound_profile,
+                    outbound_profile.clone(),
                     &passphrase,
                     1,
                     b"hi",
                     PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS
                 ),
                 Err(ProductionSessionError::UnexpectedEnvelope)
+            ));
+
+            let conversation_delete = production_conversation_delete(
+                outbound_store,
+                outbound_profile.clone(),
+                &passphrase,
+            )
+            .expect("conversation delete");
+            assert!(conversation_delete.storage_opened());
+            assert!(conversation_delete.runtime_material_reconstructable());
+            assert!(conversation_delete.sent_messages_deleted() >= 1);
+            assert!(conversation_delete.message_counter_deleted());
+            assert!(conversation_delete.conversation_records_deleted() >= 2);
+            assert!(conversation_delete.session_records_preserved());
+            assert!(!conversation_delete.plaintext_exposed());
+            assert!(!conversation_delete.key_material_exposed());
+            assert!(!conversation_delete.transport_io_opened());
+            assert!(!conversation_delete.runtime_messaging_enabled());
+            let empty_transcript =
+                production_message_transcript_export(outbound_store, outbound_profile, &passphrase)
+                    .expect("empty transcript after conversation delete");
+            assert!(empty_transcript.entries().is_empty());
+
+            let lifecycle_before_delete = production_pairing_session_lifecycle_status(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+            )
+            .expect("lifecycle before delete");
+            assert!(lifecycle_before_delete.storage_opened());
+            assert!(lifecycle_before_delete.session_draft_present());
+            assert!(lifecycle_before_delete.channel_id_derivable());
+            assert!(lifecycle_before_delete.remote_endpoint_state_present());
+            assert!(lifecycle_before_delete.replay_window_present());
+            assert!(lifecycle_before_delete.session_transport_state_present());
+            assert!(lifecycle_before_delete.runtime_material_reconstructable());
+            assert!(lifecycle_before_delete.ready_for_message_envelope());
+            assert!(lifecycle_before_delete.session_resume_ready());
+            assert!(!lifecycle_before_delete.key_material_exposed());
+            assert!(!lifecycle_before_delete.transport_io_opened());
+            assert!(!lifecycle_before_delete.runtime_messaging_enabled());
+
+            let lifecycle_delete =
+                production_pairing_session_delete(&alice_store, alice.clone(), &passphrase)
+                    .expect("session lifecycle delete");
+            assert!(lifecycle_delete.storage_opened());
+            assert!(lifecycle_delete.session_draft_loaded());
+            assert!(lifecycle_delete.session_draft_deleted());
+            assert!(lifecycle_delete.remote_endpoint_state_deleted());
+            assert!(lifecycle_delete.replay_window_deleted());
+            assert!(lifecycle_delete.session_transport_state_deleted());
+            assert!(lifecycle_delete.session_records_deleted());
+            assert!(lifecycle_delete.session_resume_closed());
+            assert!(lifecycle_delete.message_records_preserved());
+            assert!(!lifecycle_delete.key_material_exposed());
+            assert!(!lifecycle_delete.transport_io_opened());
+            assert!(!lifecycle_delete.runtime_messaging_enabled());
+
+            let lifecycle_after_delete = production_pairing_session_lifecycle_status(
+                &alice_store,
+                alice.clone(),
+                &passphrase,
+            )
+            .expect("lifecycle after delete");
+            assert!(!lifecycle_after_delete.session_draft_present());
+            assert!(!lifecycle_after_delete.remote_endpoint_state_present());
+            assert!(!lifecycle_after_delete.replay_window_present());
+            assert!(!lifecycle_after_delete.session_transport_state_present());
+            assert!(!lifecycle_after_delete.runtime_material_reconstructable());
+            assert!(!lifecycle_after_delete.ready_for_message_envelope());
+            assert!(!lifecycle_after_delete.session_resume_ready());
+            assert!(matches!(
+                production_pairing_session_load_runtime(&alice_store, alice.clone(), &passphrase),
+                Err(ProductionSessionError::SessionDraftMissing)
+            ));
+            assert!(matches!(
+                production_pairing_session_open_runtime(&alice_store, alice, &passphrase),
+                Err(ProductionSessionError::SessionDraftMissing)
             ));
 
             let _ = std::fs::remove_dir_all(dir);

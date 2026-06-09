@@ -2,7 +2,7 @@
 
 Another Dimension Chat does not have a complete production encrypted local storage lifecycle today.
 
-This document records the current public-safe storage boundary around a narrow SQLCipher-backed `ADREC1` spike. It is intentionally conservative: default production code must not silently persist sensitive production records as plaintext files, and the current spike must not be described as complete production key management, rollback protection, secure deletion, backup, recovery, or durable session persistence.
+This document records the current public-safe storage boundary around a narrow SQLCipher-backed `ADREC1` spike. It is intentionally conservative: default production code must not silently persist sensitive production records as plaintext files, and the current spike must not be described as complete production key management, rollback protection, secure deletion, backup, recovery, or production E2EE readiness.
 
 ## Current State
 
@@ -12,9 +12,9 @@ The repository currently has:
 - A default-build production storage policy boundary in `crates/storage`.
 - Production record classification for schema markers, pairing payloads, private keys, replay state, message envelopes, local message indexes, and session transport state.
 - Tests that reject plaintext writes for production pairing payloads, private keys, replay state, message envelopes, local message indexes, and session transport state.
-- Tests that keep Noise/session transport state `InMemoryOnly`, even after an encrypted storage backend exists.
+- Tests that allow Noise/session transport state only through encrypted-at-rest session lifecycle records.
 - A backend-independent encrypted record envelope format, `ADREC1`, for storing nonce plus sealed record body produced by a separate encryption layer.
-- Tests that reject `ADREC1` records for plaintext-only schema markers and in-memory-only session transport state.
+- Tests that reject `ADREC1` records for plaintext-only schema markers and require session transport state to stay encrypted-at-rest.
 - A narrow SQLCipher-backed `ADREC1` record store spike using `rusqlite`, with raw database key opening kept internal to the storage module.
 - Tests that round-trip `ADREC1` through SQLCipher and assert that the sealed body and `ADREC1` marker are not visible in database file bytes.
 - An opaque `EncryptedRecordId` boundary so row identifiers cannot be path-like profile/contact strings.
@@ -27,16 +27,16 @@ The repository currently has:
 - Core receive boundary that persists replay state only after successful decrypt/replay acceptance.
 - Local message index skeleton persistence through `ProductionEnvelopeSession`.
 - Local record lifecycle deletion helpers for encrypted records, replay state, message envelopes, local message indexes, and pairwise endpoint state.
-- A storage backend integration summary that reports the current SQLCipher-backed `ADREC1` spike, passphrase-first unlock boundary, encrypted record-body storage, no production key-management readiness, no replay rollback protection, no secure deletion from physical media, and no session transport persistence.
-- A production message storage boundary summary that keeps replay windows, message envelopes, local message indexes, and endpoint state encrypted-at-rest while keeping session transport state in-memory only.
-- A session durable-state connector gate draft that maps pairwise identity private keys, Noise static private keys, and replay window state to encrypted-at-rest records while keeping Noise/session transport state in-memory only.
-- A session durable-state connector harness that applies the gate to storage policy before connector implementation: encrypted-record paths are accepted for private-key and replay records, while session transport persistence is rejected.
-- A session durable-state persistence adapter skeleton that maps those record kinds to storage policy without implementing unlock, transport I/O, runtime messaging, or durable Noise transport persistence.
+- A storage backend integration summary that reports the current SQLCipher-backed `ADREC1` spike, passphrase-first unlock boundary, encrypted record-body storage, no production key-management readiness, no replay rollback protection, and no secure deletion from physical media.
+- A production message storage boundary summary that keeps replay windows, message envelopes, local message indexes, endpoint state, and session transport state encrypted-at-rest.
+- A session durable-state connector gate draft that maps pairwise identity private keys, Noise static private keys, replay window state, and Noise/session transport state to encrypted-at-rest records.
+- A session durable-state connector harness that applies the gate to storage policy before runtime execution: encrypted-record paths are accepted for private-key, replay, and session transport records.
+- A session durable-state persistence adapter skeleton that maps those record kinds to storage policy without implementing unlock, transport I/O, or runtime messaging.
 - A session durable-state encrypted-record adapter spike that prepares allowed sealed records without opening unlock/runtime commands.
-- A session durable-state adapter non-readiness guard that keeps rollback protection, product store writes, durable session persistence, production E2EE readiness, durable Noise transport persistence, and runtime messaging false.
+- A session durable-state adapter non-readiness guard that keeps rollback protection, product store writes, production E2EE readiness, and runtime messaging false while allowing encrypted-at-rest durable session transport persistence.
 - A session durable-state store-write adapter that writes caller-supplied prepared sealed records through an already-unlocked `SqlCipherRecordStore` only after kind, scope, and record-id prefix binding checks.
-- A session durable-state store-write status mirror that reports the adapter boundary while keeping production store write, unlock command, durable persistence, rollback protection, and runtime messaging unavailable.
-- A session durable-state product unlock blocker summary that keeps product unlock closed until key wrapping, backup exclusion, rollback protection, and durable session lifecycle decisions are complete.
+- A session durable-state store-write status mirror that reports the adapter boundary while keeping production store write, unlock command, rollback protection, and runtime messaging unavailable.
+- A session durable-state product unlock blocker summary that keeps product unlock closed until key wrapping, backup exclusion, and rollback protection decisions are complete.
 - A session durable-state unlock policy handoff summary that reuses the storage unlock policy to require high-risk passphrase input and reject OS-keystore-only unlock while product unlock remains unavailable.
 - A session unlock/lock command design gate that requires explicit lock, idle auto-lock, redacted unlock errors, and passphrase-first high-risk policy before any product command is implemented.
 - A session unlock command fail-closed skeleton that defines request/result shapes but returns disabled without opening SQLCipher storage, writing session records, exposing key material, or enabling runtime messaging.
@@ -94,14 +94,14 @@ Current storage direction: keep the SQLCipher spike narrow and explicit while th
 | `ReplayWindowState` | `EncryptedAtRestRequired` | Reveals message counters and receive state. |
 | `MessageEnvelope` | `EncryptedAtRestRequired` | Ciphertext still carries metadata such as channel id, message number, size bucket, and timing when stored. |
 | `LocalMessageIndex` | `EncryptedAtRestRequired` | Reveals local conversation structure and message metadata. |
-| `SessionTransportState` | `InMemoryOnly` | Noise transport state must not be persisted without a separate session lifecycle decision. |
+| `SessionTransportState` | `EncryptedAtRestRequired` | Durable session resume state is persisted only through the encrypted-record path after the session lifecycle decision. |
 
 ## Non-Negotiable Rules
 
 - Do not write production private keys to plaintext local files.
 - Do not write production pairing payloads to plaintext local files by default.
 - Do not write production replay state, message envelopes, or local message indexes to plaintext local files.
-- Do not persist Noise transport state just because encrypted storage exists.
+- Persist Noise transport state only through the reviewed session lifecycle path and encrypted-record storage policy.
 - Keep `dev-insecure` file storage behind the `dev-insecure` feature.
 - Do not treat encrypted message ciphertext as safe-to-store plaintext metadata.
 - Do not add a storage encryption dependency without documenting key derivation, unlock behavior, backup exclusion, platform support, and failure modes.
@@ -151,7 +151,7 @@ The first backend spike should:
 - Add the storage dependency only after an encrypted record envelope is defined.
 - Keep the database writer behind production storage policy checks.
 - Store only records classified as `EncryptedAtRestRequired`.
-- Reject `SessionTransportState` even when encrypted storage is available.
+- Accept `SessionTransportState` only when it is encoded as an encrypted record scoped to the session contact.
 - Use a test-only ephemeral key in tests, clearly separated from production unlock/key wrapping.
 - Avoid OS keychain integration in the first spike.
 - Avoid migrations from `dev-insecure` data.
@@ -217,7 +217,7 @@ It supports:
 - Opening a SQLCipher-backed database through passphrase-first public unlock APIs.
 - Storing and loading `ADREC1` records by opaque `EncryptedRecordId`.
 - Rejecting empty or path-like record ids before write.
-- Keeping `SessionTransportState` outside persistent storage through the existing storage policy.
+- Keeping `SessionTransportState` inside encrypted-at-rest storage only after the session lifecycle decision and contact-scoped record binding.
 - Internal raw database key opening for local verification and storage-module plumbing only.
 - Test-only key construction for local verification.
 - Passphrase-based unlock through `ProfilePassphrase`.
@@ -349,10 +349,10 @@ Current lifecycle boundary:
 - Replay state commit ordering is tested for the current database state.
 - Opaque record ids are used for replay, message index, and endpoint state records.
 - Local record deletion helpers remove rows by opaque id only.
-- `storage_backend_integration_boundary_summary()` exposes these guardrails as integration status, while keeping production key management, replay rollback protection, secure media deletion, and session transport persistence explicitly unavailable.
-- `production_message_storage_boundary_summary()` exposes the current production message-path storage status: replay windows, message envelopes, local message indexes, and endpoint state require encrypted-at-rest records; session transport state remains in-memory only; replay commits only after decrypt; rollback protection, production key management, secure media deletion, and durable session transport persistence remain unavailable.
-- `session_durable_state_connector_gate()` records the current cross-core session persistence contract: pairwise identity private keys, Noise static private keys, and replay windows require encrypted-at-rest records; session transport state remains in-memory-only; rollback protection and runtime execution remain unavailable.
-- `session_durable_state_connector_test_harness()` verifies that contract against storage policy without adding storage unlock commands or durable Noise transport persistence.
+- `storage_backend_integration_boundary_summary()` exposes these guardrails as integration status, while keeping production key management, replay rollback protection, and secure media deletion explicitly unavailable.
+- `production_message_storage_boundary_summary()` exposes the current production message-path storage status: replay windows, message envelopes, local message indexes, endpoint state, and session transport state require encrypted-at-rest records; replay commits only after decrypt; rollback protection, production key management, and secure media deletion remain unavailable.
+- `session_durable_state_connector_gate()` records the current cross-core session persistence contract: pairwise identity private keys, Noise static private keys, replay windows, and session transport state require encrypted-at-rest records; rollback protection and runtime execution remain unavailable.
+- `session_durable_state_connector_test_harness()` verifies that contract against storage policy without adding storage unlock commands or runtime messaging.
 - `session_durable_state_persistence_adapter_skeleton()` maps the allowed durable-state record policies before adding an encrypted-record adapter implementation.
 - `session_durable_state_encrypted_record_adapter_spike()` prepares allowed sealed records but does not perform unlock or durable Noise transport persistence.
 - `session_durable_state_adapter_non_readiness_guard()` records that sealed-record preparation does not provide rollback protection, durable session persistence, production E2EE readiness, product store writes, or runtime messaging.
@@ -458,7 +458,7 @@ It does not provide:
 - Secure deletion.
 - Database page encryption.
 
-Only records classified as `EncryptedAtRestRequired` may be encoded as `ADREC1`. `SchemaMarker` remains outside this encrypted record envelope, and `SessionTransportState` remains `InMemoryOnly`.
+Only records classified as `EncryptedAtRestRequired` may be encoded as `ADREC1`. `SchemaMarker` remains outside this encrypted record envelope, and `SessionTransportState` is allowed only through encrypted-at-rest session lifecycle records.
 
 ## Implementation Sequence
 

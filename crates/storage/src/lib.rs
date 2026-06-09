@@ -35,6 +35,8 @@ pub mod production {
     use rusqlite::{params, Connection, OptionalExtension};
     use std::path::Path;
 
+    pub const PRODUCTION_SCHEMA_VERSION: i64 = 1;
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum ProductionRecordKind {
         SchemaMarker,
@@ -559,6 +561,7 @@ pub mod production {
             let connection = Connection::open(path)?;
             connection.pragma_update(None, "key", key.expose_for_sqlcipher())?;
             verify_sqlcipher_key(&connection)?;
+            apply_forward_only_schema_version(&connection)?;
             connection.execute_batch(
                 "CREATE TABLE IF NOT EXISTS encrypted_records (
                     record_id TEXT PRIMARY KEY NOT NULL,
@@ -566,6 +569,12 @@ pub mod production {
                 ) STRICT;",
             )?;
             Ok(Self { connection })
+        }
+
+        pub fn schema_version(&self) -> Result<i64, ProductionStorageError> {
+            self.connection
+                .pragma_query_value(None, "user_version", |row| row.get::<_, i64>(0))
+                .map_err(ProductionStorageError::from)
         }
 
         pub fn put(
@@ -726,6 +735,20 @@ pub mod production {
         connection
             .query_row("SELECT count(*) FROM sqlite_master", [], |_row| Ok(()))
             .map_err(|_| ProductionStorageError::UnlockFailed)
+    }
+
+    fn apply_forward_only_schema_version(
+        connection: &Connection,
+    ) -> Result<(), ProductionStorageError> {
+        let version =
+            connection.pragma_query_value(None, "user_version", |row| row.get::<_, i64>(0))?;
+        if version > PRODUCTION_SCHEMA_VERSION {
+            return Err(ProductionStorageError::InvalidRecord);
+        }
+        if version == 0 {
+            connection.pragma_update(None, "user_version", PRODUCTION_SCHEMA_VERSION)?;
+        }
+        Ok(())
     }
 
     pub fn protection_for(kind: ProductionRecordKind) -> StorageProtection {
@@ -986,6 +1009,10 @@ pub mod production {
             let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
             let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
                 .expect("open store");
+            assert_eq!(
+                store.schema_version().expect("schema version"),
+                PRODUCTION_SCHEMA_VERSION
+            );
             let record = EncryptedRecord::new(
                 ProductionRecordKind::MessageEnvelope,
                 EncryptedRecordScope::contact(
@@ -1003,6 +1030,30 @@ pub mod production {
             let database_bytes = std::fs::read(&path).expect("read database");
             assert!(!contains_bytes(&database_bytes, b"sealed-body-for-test"));
             assert!(!contains_bytes(&database_bytes, b"ADREC1"));
+        }
+
+        #[test]
+        fn sqlcipher_store_schema_migration_is_forward_only() {
+            let (_dir, path) = unique_test_database_path("schema-version");
+            let key = StorageDatabaseKey::test_only("test-key");
+            let store = SqlCipherRecordStore::open(&path, &key).expect("open v1 store");
+            assert_eq!(
+                store.schema_version().expect("schema version"),
+                PRODUCTION_SCHEMA_VERSION
+            );
+            drop(store);
+
+            let raw = Connection::open(&path).expect("open raw sqlite");
+            raw.pragma_update(None, "key", key.expose_for_sqlcipher())
+                .expect("set key");
+            raw.pragma_update(None, "user_version", PRODUCTION_SCHEMA_VERSION + 1)
+                .expect("set future version");
+            drop(raw);
+
+            assert!(matches!(
+                SqlCipherRecordStore::open(&path, &key),
+                Err(ProductionStorageError::InvalidRecord)
+            ));
         }
 
         #[test]
