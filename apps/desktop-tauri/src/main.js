@@ -30,6 +30,7 @@ import {
   productionProfileUnlockView,
   productionReceivedMessageExportView,
   productionSessionDraftView,
+  productionSessionLifecycleView,
   productionSessionStateView,
   productionInviteRoomConversationMetadata,
   productionInviteCodeProfiles,
@@ -185,12 +186,22 @@ const fields = {
   useBobProductionProfile: document.querySelector("#use-bob-production-profile"),
   productionProfilePassphrase: document.querySelector("#production-profile-passphrase"),
   unlockProductionProfile: document.querySelector("#unlock-production-profile"),
+  lockProductionProfile: document.querySelector("#lock-production-profile"),
+  checkProductionProductUnlock: document.querySelector("#check-production-product-unlock"),
   productionProfileState: document.querySelector("#production-profile-state"),
   productionProfileNextAction: document.querySelector("#production-profile-next-action"),
   productionProfileWarning: document.querySelector("#production-profile-warning"),
+  productionProductUnlockState: document.querySelector("#production-product-unlock-state"),
   productionProfileStorage: document.querySelector("#production-profile-storage"),
   productionProfileIdentity: document.querySelector("#production-profile-identity"),
   productionProfileBoundary: document.querySelector("#production-profile-boundary"),
+  productionDataLifecycle: document.querySelector("#production-data-lifecycle"),
+  checkProductionDataLifecycle: document.querySelector("#check-production-data-lifecycle"),
+  prepareProductionDataLifecycle: document.querySelector("#prepare-production-data-lifecycle"),
+  productionProfileDeleteConfirmation: document.querySelector("#production-profile-delete-confirmation"),
+  deleteProductionProfile: document.querySelector("#delete-production-profile"),
+  productionFullWipeConfirmation: document.querySelector("#production-full-wipe-confirmation"),
+  wipeProductionLocalData: document.querySelector("#wipe-production-local-data"),
   productionManualRoute: document.querySelector("#production-manual-route"),
   productionManualDirection: document.querySelector("#production-manual-direction"),
   productionManualSlots: document.querySelector("#production-manual-slots"),
@@ -256,15 +267,19 @@ const fields = {
   exportProductionHandshakeFinish: document.querySelector("#export-production-handshake-finish"),
   importProductionHandshakeFinish: document.querySelector("#import-production-handshake-finish"),
   checkProductionSessionState: document.querySelector("#check-production-session-state"),
+  checkProductionSessionLifecycle: document.querySelector("#check-production-session-lifecycle"),
+  deleteProductionSessionLifecycle: document.querySelector("#delete-production-session-lifecycle"),
   productionPairingStorage: document.querySelector("#production-pairing-storage"),
   productionPairingSession: document.querySelector("#production-pairing-session"),
   productionHandshakeState: document.querySelector("#production-handshake-state"),
+  productionSessionLifecycle: document.querySelector("#production-session-lifecycle"),
   productionPairingBoundary: document.querySelector("#production-pairing-boundary"),
   productionMessageAutoNumber: document.querySelector("#production-message-auto-number"),
   productionMessageNumber: document.querySelector("#production-message-number"),
   productionMessageTtl: document.querySelector("#production-message-ttl"),
   productionMessageBody: document.querySelector("#production-message-body"),
   exportProductionMessageEnvelope: document.querySelector("#export-production-message-envelope"),
+  deleteProductionConversation: document.querySelector("#delete-production-conversation"),
   productionMessageState: document.querySelector("#production-message-state"),
   productionMessageNextAction: document.querySelector("#production-message-next-action"),
   productionMessageWarning: document.querySelector("#production-message-warning"),
@@ -419,6 +434,10 @@ const fields = {
   fieldTestNextAction: document.querySelector("#field-test-next-action"),
   refreshFieldTestReport: document.querySelector("#refresh-field-test-report"),
   copyFieldTestReport: document.querySelector("#copy-field-test-report"),
+  publicBetaDiagnostics: document.querySelector("#public-beta-diagnostics"),
+  publicBetaDiagnosticsSummary: document.querySelector("#public-beta-diagnostics-summary"),
+  refreshPublicBetaDiagnostics: document.querySelector("#refresh-public-beta-diagnostics"),
+  copyPublicBetaDiagnostics: document.querySelector("#copy-public-beta-diagnostics"),
   productionTwoProfileTranscriptExport: document.querySelector("#production-two-profile-transcript-export"),
   productionTwoProfileNextStep: document.querySelector("#production-two-profile-next-step"),
   openManualProductionTools: document.querySelector("#open-manual-production-tools"),
@@ -1317,9 +1336,10 @@ function localizedBoundaryStatus(message) {
     "snow noise xx synchronous evaluation boundary only": "productionSessionBoundary",
     "cli production boundary self-test only": "productionSelfTestBoundary",
     "read-only production skeleton blockers copy": "productionPreflightValue",
-    "store-write adapter boundary; product unlock disabled": "sessionDurableStateValue",
-    "high-risk passphrase required os-keystore-only rejected": "sessionUnlockPolicyValue",
-    "redacted product-unlock-disabled boundary copy": "sessionUnlockRejectionValue",
+    "store-write adapter boundary; product unlock available durable persistence pending":
+      "sessionDurableStateValue",
+    "passphrase-first high-risk policy os-keystore-only rejected": "sessionUnlockPolicyValue",
+    "cli production unlock disabled; desktop product unlock available": "sessionUnlockRejectionValue",
     "pre-network fail-closed only": "transportValue",
     "network execution disabled": "networkExecutionValue",
     "network execution disabled in browser preview": "networkExecutionValue",
@@ -5295,8 +5315,8 @@ function fieldTestReportTriageState(report) {
   return privateDeliveryState.fieldTestReportTriageState(report);
 }
 
-function fieldTestReportComparison(localReport, peerReport) {
-  return privateDeliveryState.fieldTestReportComparison(localReport, peerReport);
+function publicBetaDiagnosticsReport(report, options = {}) {
+  return privateDeliveryState.publicBetaDiagnosticsReport(report, options);
 }
 
 function fieldTestReportsAligned(localReport, peerReport) {
@@ -5313,14 +5333,6 @@ function fieldTestPeerLocalStateNextActionKey(localReport, peerReport) {
     peerReport,
     fieldTestNextActionKey,
   );
-}
-
-function fieldTestReportRecoveryActionForNextKey(report, nextActionKey) {
-  return privateDeliveryState.fieldTestReportRecoveryActionForNextKey(report, nextActionKey);
-}
-
-function fieldTestReportComposerAction(report) {
-  return privateDeliveryState.fieldTestReportComposerAction(report);
 }
 
 function fieldTestBuildIdentityMatches(localReport, peerReport) {
@@ -5527,6 +5539,23 @@ function fieldTestRecoveryActionNextKey(action) {
   }
 }
 
+function fieldTestPeerReportStatusKey(status) {
+  switch (status) {
+    case "peer-report-missing":
+      return "fieldTestPeerStatusMissing";
+    case "build-mismatch":
+      return "fieldTestPeerStatusBuildMismatch";
+    case "reports-aligned-local-state-diff":
+      return "fieldTestPeerStatusLocalStateDiff";
+    case "reports-aligned":
+      return "fieldTestPeerStatusAligned";
+    case "report-mismatch":
+      return "fieldTestPeerStatusReportMismatch";
+    default:
+      return "fieldTestPeerStatusUnknown";
+  }
+}
+
 function fieldTestNextActionKey(report, peerReport = "") {
   const parsed = parseFieldTestReport(report);
   const sentRows = Number.parseInt(parsed.sent_rows ?? "0", 10) || 0;
@@ -5642,39 +5671,41 @@ function renderFieldTestReportComparison() {
   if (!fields.fieldTestReportCompare) {
     return "";
   }
-  const comparison = fieldTestReportComparison(fields.fieldTestReport?.value ?? "", fields.peerFieldTestReport?.value ?? "");
-  fields.fieldTestReportCompare.textContent = comparison;
-  fields.fieldTestReportCompare.hidden = !comparison;
-  renderFieldTestChecklist(fields.fieldTestReport?.value ?? "", fields.peerFieldTestReport?.value ?? "");
-  renderFieldTestNextAction(fields.fieldTestReport?.value ?? "", fields.peerFieldTestReport?.value ?? "");
-  return comparison;
+  const localReport = fields.fieldTestReport?.value ?? "";
+  const peerReport = fields.peerFieldTestReport?.value ?? "";
+  const panelState = privateDeliveryState.fieldTestReportPanelState(
+    localReport,
+    peerReport,
+    fieldTestNextActionKey,
+  );
+  const statusText = t(fieldTestPeerReportStatusKey(panelState.comparisonStatus));
+  fields.fieldTestReportCompare.dataset.peerReportStatus = panelState.comparisonStatus;
+  fields.fieldTestReportCompare.textContent = panelState.comparison
+    ? `${statusText}\n${panelState.comparison}`
+    : statusText;
+  fields.fieldTestReportCompare.hidden = !statusText;
+  renderFieldTestChecklist(localReport, peerReport);
+  renderFieldTestNextAction(localReport, peerReport);
+  return panelState.comparison;
 }
 
 function fieldTestReportCopyPayload(report) {
   const peerReport = fields.peerFieldTestReport?.value ?? "";
-  const comparison = fieldTestReportComparison(report, peerReport);
-  const nextActionKey = fieldTestNextActionKey(report, peerReport);
-  const localRecoveryAction = fieldTestReportRecoveryActionForNextKey(report, nextActionKey);
-  const composerAction = fieldTestReportComposerAction(report);
-  const nextAction = [
-    `next_action=${fieldTestReportValue(nextActionKey, "none")}`,
-    composerAction ? `composer_action=${fieldTestReportValue(composerAction, "none")}` : "",
-    localRecoveryAction && localRecoveryAction !== "none"
-      ? `local_recovery_action=${fieldTestReportValue(localRecoveryAction, "none")}`
-      : "",
-  ].filter(Boolean).join("\n");
-  const peerNextActionKey = fieldTestPeerLocalStateNextActionKey(report, peerReport);
-  const peerRecoveryAction = peerNextActionKey
-    ? fieldTestReportRecoveryActionForNextKey(peerReport, peerNextActionKey)
-    : "";
-  const peerNextAction = peerNextActionKey
-    ? [
-        `peer_next_action=${fieldTestReportValue(peerNextActionKey, "none")}`,
-        `peer_recovery_action=${fieldTestReportValue(peerRecoveryAction, "none")}`,
-      ].join("\n")
-    : "";
-  const actionLines = peerNextAction ? `${nextAction}\n${peerNextAction}` : nextAction;
-  return comparison ? `${report}\n${comparison}\n${actionLines}` : `${report}\n${actionLines}`;
+  const panelState = privateDeliveryState.fieldTestReportPanelState(report, peerReport, fieldTestNextActionKey);
+  const actionLines = panelState.copyActionLines.join("\n");
+  return panelState.comparison
+    ? `${report}\n${panelState.comparison}\n${actionLines}`
+    : `${report}\n${actionLines}`;
+}
+
+function selectFieldTestReportCopyPayload(payload) {
+  if (!fields.fieldTestReport) {
+    return false;
+  }
+  fields.fieldTestReport.value = payload;
+  fields.fieldTestReport.focus?.();
+  fields.fieldTestReport.select?.();
+  return true;
 }
 
 function realOnionResultConfirmsExternalPeerDelivery(result) {
@@ -6337,7 +6368,49 @@ function refreshFieldTestReport() {
   fields.fieldTestReport.value = report;
   renderFieldTestReportSummary(report);
   renderFieldTestReportComparison();
+  refreshPublicBetaDiagnostics(report);
   return report;
+}
+
+function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || buildFieldTestReport()) {
+  if (!fields.publicBetaDiagnostics) {
+    return "";
+  }
+  const payload = publicBetaDiagnosticsReport(report, { includeCopyBoundary: true });
+  fields.publicBetaDiagnostics.value = payload;
+  const parsed = parseFieldTestReport(report);
+  const failureClass = fieldTestReportValue(fieldTestReportBlocker(parsed), "none");
+  if (fields.publicBetaDiagnosticsSummary) {
+    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics ready failure_class=${failureClass} app_launch_network=false`;
+  }
+  return payload;
+}
+
+function selectPublicBetaDiagnosticsPayload(payload) {
+  if (!fields.publicBetaDiagnostics) {
+    return;
+  }
+  fields.publicBetaDiagnostics.value = payload;
+  fields.publicBetaDiagnostics.focus?.();
+  fields.publicBetaDiagnostics.select?.();
+}
+
+async function copyPublicBetaDiagnostics() {
+  const payload = refreshPublicBetaDiagnostics();
+  if (!payload) {
+    return false;
+  }
+  try {
+    await navigator.clipboard.writeText(payload);
+    setProductionTwoProfileState("Public diagnostics copied");
+    setText(fields.productionTwoProfileWarning, t("publicBetaDiagnosticsCopied"));
+    return true;
+  } catch {
+    selectPublicBetaDiagnosticsPayload(payload);
+    setProductionTwoProfileState("Public diagnostics selected");
+    setText(fields.productionTwoProfileWarning, t("publicBetaDiagnosticsCopyFallback"));
+    return false;
+  }
 }
 
 async function copyFieldTestReport() {
@@ -6352,8 +6425,7 @@ async function copyFieldTestReport() {
     setText(fields.productionTwoProfileWarning, t("fieldTestReportCopied"));
     return true;
   } catch {
-    fields.fieldTestReport?.focus?.();
-    fields.fieldTestReport?.select?.();
+    selectFieldTestReportCopyPayload(payload);
     setProductionTwoProfileState("Field test report selected");
     setText(fields.productionTwoProfileWarning, t("fieldTestReportCopyFallback"));
     return false;
@@ -11437,6 +11509,37 @@ function applyProductionActionState() {
     latestProductionManualFocusTarget === "unlock-profile",
   );
   setActionButtonState(
+    fields.checkProductionDataLifecycle,
+    busy,
+    "Wait for the active production action.",
+    false,
+  );
+  setActionButtonState(
+    fields.prepareProductionDataLifecycle,
+    busy,
+    "Wait for the active production action.",
+    false,
+  );
+  setActionButtonState(
+    fields.deleteProductionProfile,
+    busy ||
+      !productionProfileInput().profile ||
+      (fields.productionProfileDeleteConfirmation?.value ?? "").trim() !==
+        productionProfileInput().profile,
+    busy
+      ? "Wait for the active production action."
+      : "Type the exact profile name before deleting the profile store.",
+    false,
+  );
+  setActionButtonState(
+    fields.wipeProductionLocalData,
+    busy || (fields.productionFullWipeConfirmation?.value ?? "").trim() !== "WIPE LOCAL DATA",
+    busy
+      ? "Wait for the active production action."
+      : "Type WIPE LOCAL DATA before wiping local app data.",
+    false,
+  );
+  setActionButtonState(
     fields.exportProductionPairing,
     !availability.exportPairing,
     busy ? "Wait for the active production action." : "Enter profile, passphrase, and onion endpoint first.",
@@ -11454,6 +11557,18 @@ function applyProductionActionState() {
   );
   setActionButtonState(
     fields.checkProductionSessionState,
+    !availability.checkSessionState,
+    busy ? "Wait for the active production action." : "Enter profile and passphrase first.",
+    false,
+  );
+  setActionButtonState(
+    fields.checkProductionSessionLifecycle,
+    !availability.checkSessionState,
+    busy ? "Wait for the active production action." : "Enter profile and passphrase first.",
+    false,
+  );
+  setActionButtonState(
+    fields.deleteProductionSessionLifecycle,
     !availability.checkSessionState,
     busy ? "Wait for the active production action." : "Enter profile and passphrase first.",
     false,
@@ -11495,6 +11610,12 @@ function applyProductionActionState() {
           ? "Reapply the pending row before exporting; manual number/body or auto-number mode no longer matches the selected message."
         : "Complete session state, then enter message number and message.",
     latestProductionManualFocusTarget === "export-message-envelope",
+  );
+  setActionButtonState(
+    fields.deleteProductionConversation,
+    !availability.checkSessionState,
+    busy ? "Wait for the active production action." : "Enter profile and passphrase first.",
+    false,
   );
   setActionButtonState(
     fields.importProductionMessageEnvelope,
@@ -12285,9 +12406,14 @@ function resetProductionTwoProfileView() {
 function resetProductionProfileView() {
   setProductionProfileState("Profile locked");
   setText(fields.productionProfileWarning, "Production profile has not been unlocked yet.");
+  setText(fields.productionProductUnlockState, "Not checked yet");
   setText(fields.productionProfileStorage, "Not checked yet");
   setText(fields.productionProfileIdentity, "Not checked yet");
   setText(fields.productionProfileBoundary, "Not checked yet");
+  setText(fields.productionDataLifecycle, "Not checked yet");
+  if (fields.lockProductionProfile) {
+    fields.lockProductionProfile.disabled = true;
+  }
   applyProductionActionState();
 }
 
@@ -12377,6 +12503,7 @@ function resetProductionPairingView(options = {}) {
   setText(fields.productionPairingStorage, t("notCheckedYet"));
   setText(fields.productionPairingSession, t("notCheckedYet"));
   setText(fields.productionHandshakeState, t("notCheckedYet"));
+  setText(fields.productionSessionLifecycle, t("notCheckedYet"));
   setText(fields.productionPairingBoundary, t("notCheckedYet"));
   applyProductionActionState();
 }
@@ -16401,6 +16528,192 @@ async function runProductionRoundtrip() {
   }
 }
 
+function renderProductionProductUnlockStatus(result) {
+  const unlocked = result?.unlocked === true;
+  const reason = result?.redacted_reason || "unknown";
+  const profile = result?.profile ? ` profile=${result.profile}` : "";
+  const expires = result?.expires_at_ms ? ` expires_at_ms=${result.expires_at_ms}` : "";
+  setText(
+    fields.productionProductUnlockState,
+    `unlocked=${unlocked}${profile} reason=${reason} idle_auto_lock_seconds=${result?.idle_auto_lock_seconds ?? 60}${expires}`,
+  );
+  setText(
+    fields.productionProfileBoundary,
+    `store_path_returned=${result?.store_path_returned === true} passphrase_retained=${result?.passphrase_retained === true} key_material=${result?.key_material_exposed === true} raw_error=${result?.raw_storage_error_exposed === true} runtime=${result?.runtime_messaging_enabled === true}`,
+  );
+  if (fields.lockProductionProfile) {
+    fields.lockProductionProfile.disabled = !unlocked || productionBusyAction !== null;
+  }
+  return unlocked;
+}
+
+async function checkProductionProductUnlockStatus() {
+  try {
+    const result = await invoke("production_product_unlock_status");
+    renderProductionProductUnlockStatus(result);
+    setText(fields.productionProfileWarning, result.warning);
+    setProductionProfileState(result.unlocked ? "Profile unlocked" : "Profile locked");
+    return result;
+  } catch (error) {
+    setProductionProfileState("Profile unlock status failed");
+    setText(fields.productionProfileWarning, String(error));
+    setText(fields.productionProductUnlockState, "status failed without exposing local path details");
+    return null;
+  }
+}
+
+async function lockProductionProfile() {
+  try {
+    const result = await invoke("production_product_lock");
+    renderProductionProductUnlockStatus(result);
+    setProductionProfileState("Profile locked");
+    setText(fields.productionProfileWarning, result.warning);
+    setText(fields.productionProfileStorage, "Locked");
+    setText(fields.productionProfileIdentity, "Locked");
+    return result;
+  } catch (error) {
+    setProductionProfileState("Profile lock failed");
+    setText(fields.productionProfileWarning, String(error));
+    return null;
+  }
+}
+
+function dataLifecycleSummary(result) {
+  return (
+    `profiles=${result.profile_count ?? 0} transport=${result.transport_data_present === true} ` +
+    `marker=${result.lifecycle_marker_present === true} backup_checked=${result.backup_exclusion_checked === true} ` +
+    `backup=${result.backup_exclusion_verified === true} migration_v=${result.migration_current_version ?? 0} ` +
+    `migration_marker=${result.migration_marker_present === true} forward_only=${result.forward_only_migration === true} ` +
+    `destructive_blocked=${result.destructive_migration_blocked === true} rollback_marker=${result.rollback_marker_present === true} ` +
+    `rollback_detection=${result.rollback_detection_ready === true} rollback_prevention=${result.rollback_prevention_claimed === true} ` +
+    `wiped=${result.full_local_data_wiped === true}`
+  );
+}
+
+function dataLifecycleBoundary(result) {
+  return (
+    `path_returned=${result.store_path_returned === true} passphrase_retained=${result.passphrase_retained === true} ` +
+    `key_material=${result.key_material_exposed === true} secure_delete_claim=${result.secure_deletion_from_media_claimed === true} ` +
+    `network_io=${result.network_io_attempted === true} transport_io=${result.transport_io_opened === true} ` +
+    `runtime=${result.runtime_messaging_enabled === true}`
+  );
+}
+
+async function checkProductionDataLifecycle() {
+  setProductionProfileState("Data lifecycle checking");
+  productionBusyAction = "data-lifecycle";
+  applyProductionActionState();
+  try {
+    const result = await invoke("production_data_lifecycle_status");
+    setProductionProfileState("Data lifecycle checked");
+    setText(fields.productionProfileWarning, result.warning);
+    setText(fields.productionDataLifecycle, dataLifecycleSummary(result));
+    setText(fields.productionProfileBoundary, dataLifecycleBoundary(result));
+    return result;
+  } catch (error) {
+    setProductionProfileState("Data lifecycle check failed");
+    setText(fields.productionProfileWarning, String(error));
+    setText(fields.productionDataLifecycle, "Failed");
+    return null;
+  } finally {
+    clearProductionBusyAction("data-lifecycle");
+    applyProductionActionState();
+  }
+}
+
+async function prepareProductionDataLifecycle() {
+  setProductionProfileState("Data lifecycle preparing");
+  productionBusyAction = "data-lifecycle-prepare";
+  applyProductionActionState();
+  try {
+    const result = await invoke("production_data_lifecycle_prepare");
+    setProductionProfileState("Data lifecycle prepared");
+    setText(fields.productionProfileWarning, result.warning);
+    setText(fields.productionDataLifecycle, dataLifecycleSummary(result));
+    setText(fields.productionProfileBoundary, dataLifecycleBoundary(result));
+    return result;
+  } catch (error) {
+    setProductionProfileState("Data lifecycle prepare failed");
+    setText(fields.productionProfileWarning, String(error));
+    setText(fields.productionDataLifecycle, "Failed");
+    return null;
+  } finally {
+    clearProductionBusyAction("data-lifecycle-prepare");
+    applyProductionActionState();
+  }
+}
+
+async function deleteProductionProfile() {
+  const input = productionProfileInput();
+  const confirmation = (fields.productionProfileDeleteConfirmation?.value ?? "").trim();
+  if (!input.profile || confirmation !== input.profile) {
+    setProductionProfileState("Profile delete needs confirmation");
+    setText(fields.productionProfileWarning, "Type the exact profile name before deleting.");
+    return null;
+  }
+  productionBusyAction = "profile-delete";
+  setProductionProfileState("Profile deleting");
+  applyProductionActionState();
+  try {
+    const result = await invoke("production_profile_delete", {
+      profile: input.profile,
+      confirmation,
+    });
+    setProductionProfileState(result.profile_deleted ? "Profile deleted" : "Profile not found");
+    setText(fields.productionProfileWarning, result.warning);
+    setText(
+      fields.productionDataLifecycle,
+      `profile_deleted=${result.profile_deleted} existed=${result.profile_existed_before_delete} exists_after=${result.profile_exists_after_delete} unlock_locked=${result.product_unlock_locked}`,
+    );
+    setText(
+      fields.productionProfileBoundary,
+      `path_returned=${result.store_path_returned} passphrase_required=${result.passphrase_required} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} secure_delete_claim=${result.secure_deletion_from_media_claimed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+    resetProductionPairingView({ preserveTwoProfileStatus: true });
+    resetProductionMessageView();
+    await loadProductionProfileList();
+    return result;
+  } catch (error) {
+    setProductionProfileState("Profile delete failed");
+    setText(fields.productionProfileWarning, String(error));
+    return null;
+  } finally {
+    clearProductionBusyAction("profile-delete");
+    applyProductionActionState();
+  }
+}
+
+async function wipeProductionLocalData() {
+  const confirmation = (fields.productionFullWipeConfirmation?.value ?? "").trim();
+  if (confirmation !== "WIPE LOCAL DATA") {
+    setProductionProfileState("Local wipe needs confirmation");
+    setText(fields.productionProfileWarning, "Type WIPE LOCAL DATA before wiping local app data.");
+    return null;
+  }
+  productionBusyAction = "full-local-data-wipe";
+  setProductionProfileState("Local data wiping");
+  applyProductionActionState();
+  try {
+    const result = await invoke("production_full_local_data_wipe", { confirmation });
+    resetProductionProfileView();
+    resetProductionPairingView();
+    resetProductionMessageView();
+    setProductionProfileState(result.full_local_data_wiped ? "Local data wiped" : "Local wipe incomplete");
+    setText(fields.productionProfileWarning, result.warning);
+    setText(fields.productionDataLifecycle, dataLifecycleSummary(result));
+    setText(fields.productionProfileBoundary, dataLifecycleBoundary(result));
+    await loadProductionProfileList();
+    return result;
+  } catch (error) {
+    setProductionProfileState("Local data wipe failed");
+    setText(fields.productionProfileWarning, String(error));
+    return null;
+  } finally {
+    clearProductionBusyAction("full-local-data-wipe");
+    applyProductionActionState();
+  }
+}
+
 async function unlockProductionProfile() {
   const input = productionProfileInput();
   const { profile, passphrase } = input;
@@ -16422,6 +16735,15 @@ async function unlockProductionProfile() {
     fields.unlockProductionProfile.disabled = true;
   }
   try {
+    const productUnlock = await invoke("production_product_unlock", { profile, passphrase });
+    renderProductionProductUnlockStatus(productUnlock);
+    if (productUnlock.unlocked !== true) {
+      setProductionProfileState("Profile unlock failed");
+      setText(fields.productionProfileWarning, productUnlock.warning);
+      setText(fields.productionProfileStorage, `Locked reason=${productUnlock.redacted_reason}`);
+      setText(fields.productionProfileIdentity, "Not opened");
+      return;
+    }
     const result = await invoke("production_profile_unlock", { profile, passphrase });
     if (!productionProfileInputStillCurrent(input)) {
       return;
@@ -16802,6 +17124,98 @@ async function checkProductionSessionState(input = productionPairingInput()) {
     clearProductionBusyAction("session-state");
     if (fields.checkProductionSessionState) {
       fields.checkProductionSessionState.disabled = false;
+    }
+    applyProductionActionState();
+  }
+}
+
+async function checkProductionSessionLifecycle(input = productionPairingInput()) {
+  const { profile, passphrase } = input;
+  if (!profile || !passphrase) {
+    setProductionPairingState("Session lifecycle needs profile");
+    setText(fields.productionPairingWarning, "Enter profile and passphrase.");
+    return;
+  }
+
+  setProductionPairingState("Session lifecycle checking");
+  productionBusyAction = "session-lifecycle";
+  applyProductionActionState();
+  if (fields.checkProductionSessionLifecycle) {
+    fields.checkProductionSessionLifecycle.disabled = true;
+  }
+  try {
+    const result = await invoke("production_session_lifecycle_status", { profile, passphrase });
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
+      return;
+    }
+    const view = productionSessionLifecycleView(result);
+    setProductionPairingState(
+      result.session_resume_ready ? "Session lifecycle resumable" : "Session lifecycle incomplete",
+    );
+    setText(fields.productionPairingWarning, result.warning);
+    setText(fields.productionSessionLifecycle, view.lifecycle);
+    setText(fields.productionPairingBoundary, view.boundary);
+  } catch (error) {
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
+      return;
+    }
+    setProductionPairingState("Session lifecycle check failed");
+    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionSessionLifecycle, "Failed");
+  } finally {
+    clearProductionBusyAction("session-lifecycle");
+    if (fields.checkProductionSessionLifecycle) {
+      fields.checkProductionSessionLifecycle.disabled = false;
+    }
+    applyProductionActionState();
+  }
+}
+
+async function deleteProductionSessionLifecycle(input = productionPairingInput()) {
+  const { profile, passphrase } = input;
+  if (!profile || !passphrase) {
+    setProductionPairingState("Session delete needs profile");
+    setText(fields.productionPairingWarning, "Enter profile and passphrase.");
+    return;
+  }
+
+  setProductionPairingState("Session lifecycle deleting");
+  setText(
+    fields.productionPairingWarning,
+    "Deleting local session lifecycle records. Message data wipe is handled separately.",
+  );
+  productionBusyAction = "session-lifecycle-delete";
+  applyProductionActionState();
+  if (fields.deleteProductionSessionLifecycle) {
+    fields.deleteProductionSessionLifecycle.disabled = true;
+  }
+  try {
+    const result = await invoke("production_session_lifecycle_delete", { profile, passphrase });
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
+      return;
+    }
+    const view = productionSessionLifecycleView(result);
+    rememberProductionSessionState(input, null);
+    setProductionPairingState(
+      result.session_resume_closed ? "Session lifecycle deleted" : "Session lifecycle delete incomplete",
+    );
+    setText(fields.productionPairingWarning, result.warning);
+    setText(fields.productionPairingSession, "Stored session no longer resumable");
+    setText(fields.productionSessionLifecycle, view.lifecycle);
+    setText(fields.productionPairingBoundary, view.boundary);
+    setProductionMessageState("Message flow idle");
+    setText(fields.productionMessageBoundary, view.boundary);
+  } catch (error) {
+    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
+      return;
+    }
+    setProductionPairingState("Session lifecycle delete failed");
+    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionSessionLifecycle, "Failed");
+  } finally {
+    clearProductionBusyAction("session-lifecycle-delete");
+    if (fields.deleteProductionSessionLifecycle) {
+      fields.deleteProductionSessionLifecycle.disabled = false;
     }
     applyProductionActionState();
   }
@@ -17633,6 +18047,55 @@ async function exportProductionMessageEnvelope() {
   }
 }
 
+async function deleteProductionConversation() {
+  const input = productionProfileInput();
+  const { profile, passphrase } = input;
+  if (!profile || !passphrase) {
+    setProductionMessageState("Conversation delete needs profile");
+    setText(fields.productionMessageWarning, "Enter profile and passphrase first.");
+    return;
+  }
+  setProductionMessageState("Conversation deleting");
+  setText(fields.productionMessageWarning, "Deleting local conversation message records.");
+  productionBusyAction = "conversation-delete";
+  applyProductionActionState();
+  try {
+    const result = await invoke("production_conversation_delete", { profile, passphrase });
+    if (!productionProfileInputStillCurrent(input)) {
+      return;
+    }
+    resetProductionMessageTranscript();
+    resetProductionMessageImportState();
+    if (fields.productionMessageEnvelope) {
+      fields.productionMessageEnvelope.value = "";
+    }
+    setProductionMessageState("Conversation deleted");
+    setText(fields.productionMessageWarning, result.warning);
+    setText(
+      fields.productionMessageOutbound,
+      `sent_deleted=${result.sent_messages_deleted} envelopes_deleted=${result.message_envelopes_deleted} indexes_deleted=${result.local_message_indexes_deleted} counter_deleted=${result.message_counter_deleted}`,
+    );
+    setText(
+      fields.productionMessageInbound,
+      `received_deleted=${result.received_messages_deleted} total_records=${result.conversation_records_deleted} session_preserved=${result.session_records_preserved}`,
+    );
+    setText(
+      fields.productionMessageBoundary,
+      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} plaintext=${result.plaintext_exposed} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    );
+    await checkProductionSessionState(input);
+  } catch (error) {
+    if (!productionProfileInputStillCurrent(input)) {
+      return;
+    }
+    setProductionMessageState("Conversation delete failed");
+    setText(fields.productionMessageWarning, String(error));
+  } finally {
+    clearProductionBusyAction("conversation-delete");
+    applyProductionActionState();
+  }
+}
+
 async function importProductionMessageEnvelope() {
   const input = productionMessageInput();
   const { profile, passphrase, messageNumber, envelopePayload, messageTtlSeconds } = input;
@@ -18277,6 +18740,39 @@ if (fields.unlockProductionProfile) {
   fields.unlockProductionProfile.addEventListener("click", unlockProductionProfile);
 }
 
+if (fields.lockProductionProfile) {
+  fields.lockProductionProfile.addEventListener("click", lockProductionProfile);
+  fields.lockProductionProfile.disabled = true;
+}
+
+if (fields.checkProductionProductUnlock) {
+  fields.checkProductionProductUnlock.addEventListener("click", checkProductionProductUnlockStatus);
+}
+
+if (fields.checkProductionDataLifecycle) {
+  fields.checkProductionDataLifecycle.addEventListener("click", checkProductionDataLifecycle);
+}
+
+if (fields.prepareProductionDataLifecycle) {
+  fields.prepareProductionDataLifecycle.addEventListener("click", prepareProductionDataLifecycle);
+}
+
+if (fields.productionProfileDeleteConfirmation) {
+  fields.productionProfileDeleteConfirmation.addEventListener("input", applyProductionActionState);
+}
+
+if (fields.deleteProductionProfile) {
+  fields.deleteProductionProfile.addEventListener("click", deleteProductionProfile);
+}
+
+if (fields.productionFullWipeConfirmation) {
+  fields.productionFullWipeConfirmation.addEventListener("input", applyProductionActionState);
+}
+
+if (fields.wipeProductionLocalData) {
+  fields.wipeProductionLocalData.addEventListener("click", wipeProductionLocalData);
+}
+
 if (fields.exportProductionPairing) {
   fields.exportProductionPairing.addEventListener("click", exportProductionPairingPayload);
 }
@@ -18467,6 +18963,14 @@ if (fields.checkProductionSessionState) {
   fields.checkProductionSessionState.addEventListener("click", checkProductionSessionState);
 }
 
+if (fields.checkProductionSessionLifecycle) {
+  fields.checkProductionSessionLifecycle.addEventListener("click", checkProductionSessionLifecycle);
+}
+
+if (fields.deleteProductionSessionLifecycle) {
+  fields.deleteProductionSessionLifecycle.addEventListener("click", deleteProductionSessionLifecycle);
+}
+
 if (fields.checkProductionTwoProfileSessionStatus) {
   fields.checkProductionTwoProfileSessionStatus.addEventListener(
     "click",
@@ -18483,6 +18987,10 @@ if (fields.checkProductionTwoProfileSessionStatusInline) {
 
 if (fields.exportProductionMessageEnvelope) {
   fields.exportProductionMessageEnvelope.addEventListener("click", exportProductionMessageEnvelope);
+}
+
+if (fields.deleteProductionConversation) {
+  fields.deleteProductionConversation.addEventListener("click", deleteProductionConversation);
 }
 
 if (fields.useProductionMessageEnvelope) {
@@ -18701,6 +19209,14 @@ if (fields.refreshFieldTestReport) {
 
 if (fields.copyFieldTestReport) {
   fields.copyFieldTestReport.addEventListener("click", copyFieldTestReport);
+}
+
+if (fields.refreshPublicBetaDiagnostics) {
+  fields.refreshPublicBetaDiagnostics.addEventListener("click", () => refreshPublicBetaDiagnostics());
+}
+
+if (fields.copyPublicBetaDiagnostics) {
+  fields.copyPublicBetaDiagnostics.addEventListener("click", copyPublicBetaDiagnostics);
 }
 
 if (fields.peerFieldTestReport) {

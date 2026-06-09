@@ -2,12 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   fieldTestReportComposerAction,
+  fieldTestReportComparisonStatus,
+  fieldTestReportCopyActionLines,
   fieldTestReportNextActionValue,
+  fieldTestReportPanelState,
   fieldTestReportResolvedRoomListAction,
   fieldTestReportRoomListAction,
   fieldTestReportSummary,
   fieldTestReportTriageState,
   parseFieldTestReport,
+  publicBetaDiagnosticsReport,
   realOnionResultConfirmsExternalPeerDelivery,
   savedInviteRoomActionCanUseRetryableOutbound,
   savedInviteRoomReceiveOwnershipBlocksRecovery,
@@ -146,4 +150,206 @@ test("route-ready compose state stays separate from recovery next action", () =>
   assert.equal(fieldTestReportNextActionValue(parseFieldTestReport(report)), "none");
   assert.equal(fieldTestReportComposerAction(report), "send-message");
   assert.match(fieldTestReportSummary(report), /next=none/);
+});
+
+test("field test comparison status separates missing peer, build mismatch, and local state diffs", () => {
+  const readyReport = [
+    "app_version=0.1.0",
+    "build_channel=beta-onion",
+    "build_commit=806ecad1",
+    "room_present=true",
+    "session_ready=true",
+    "safety_confirmed=true",
+    "route_ready=true",
+    "route_readiness_ready=true",
+    "route_readiness_next_action=none",
+    "receive_enabled=true",
+    "receive_state=running",
+    "real_onion_external_peer_delivery_confirmed=true",
+    "real_onion_local_dev_roundtrip_result=false",
+  ].join("\n");
+  const peerNeedsReceive = [
+    "app_version=0.1.0",
+    "build_channel=beta-onion",
+    "build_commit=806ecad1",
+    "room_present=true",
+    "session_ready=true",
+    "safety_confirmed=true",
+    "route_ready=true",
+    "route_readiness_ready=true",
+    "route_readiness_next_action=none",
+    "receive_enabled=false",
+    "receive_state=stopped",
+    "real_onion_external_peer_delivery_confirmed=true",
+    "real_onion_local_dev_roundtrip_result=false",
+  ].join("\n");
+  const wrongBuild = readyReport.replace("build_commit=806ecad1", "build_commit=deadbeef");
+
+  assert.equal(fieldTestReportComparisonStatus(readyReport, ""), "peer-report-missing");
+  assert.equal(fieldTestReportComparisonStatus(readyReport, wrongBuild), "build-mismatch");
+  assert.equal(
+    fieldTestReportComparisonStatus(readyReport, peerNeedsReceive),
+    "reports-aligned-local-state-diff",
+  );
+  assert.equal(fieldTestReportComparisonStatus(readyReport, readyReport), "reports-aligned");
+});
+
+test("field test copy action lines include peer status and local recovery hints", () => {
+  const localNeedsRoute = [
+    "app_version=0.1.0",
+    "build_channel=beta-onion",
+    "build_commit=806ecad1",
+    "room_present=true",
+    "session_ready=true",
+    "safety_confirmed=true",
+    "route_ready=false",
+    "route_readiness_ready=false",
+    "route_readiness_next_action=prepare-private-route",
+    "route_readiness_failure_kind=PeerEndpointMissing",
+    "receive_enabled=true",
+    "receive_state=running",
+    "real_onion_external_peer_delivery_confirmed=false",
+    "composer_next_action=send-message",
+  ].join("\n");
+  const peerNeedsReceive = [
+    "app_version=0.1.0",
+    "build_channel=beta-onion",
+    "build_commit=806ecad1",
+    "room_present=true",
+    "session_ready=true",
+    "safety_confirmed=true",
+    "route_ready=true",
+    "route_readiness_ready=true",
+    "route_readiness_next_action=none",
+    "receive_enabled=false",
+    "receive_state=stopped",
+    "real_onion_external_peer_delivery_confirmed=true",
+    "real_onion_local_dev_roundtrip_result=false",
+  ].join("\n");
+  const localReady = peerNeedsReceive
+    .replace("receive_enabled=false", "receive_enabled=true")
+    .replace("receive_state=stopped", "receive_state=running");
+  const peerNeedsRoute = localReady
+    .replace("route_ready=true", "route_ready=false")
+    .replace("route_readiness_ready=true", "route_readiness_ready=false")
+    .replace("route_readiness_next_action=none", "route_readiness_next_action=prepare-private-route")
+    .concat("\nroute_readiness_failure_kind=PeerEndpointMissing");
+  const nextActionKeyForReport = (report, peerReport = "") => {
+    const parsed = parseFieldTestReport(report);
+    if (parsed.route_readiness_next_action === "prepare-private-route") {
+      return "fieldTestNextSetupRoute";
+    }
+    if (parsed.receive_enabled !== "true") {
+      return "fieldTestNextStartReceive";
+    }
+    return String(peerReport ?? "").trim() ? "fieldTestNextComplete" : "fieldTestNextPastePeerReport";
+  };
+
+  assert.deepEqual(fieldTestReportCopyActionLines(localNeedsRoute, "", nextActionKeyForReport), [
+    "peer_report_status=peer-report-missing",
+    "next_action=fieldTestNextSetupRoute",
+    "composer_action=send-message",
+    "local_recovery_action=prepare-private-route",
+  ]);
+  assert.deepEqual(fieldTestReportCopyActionLines(localReady, peerNeedsRoute, nextActionKeyForReport), [
+    "peer_report_status=reports-aligned-local-state-diff",
+    "next_action=fieldTestNextComplete",
+    "peer_next_action=fieldTestNextSetupRoute",
+    "peer_recovery_action=prepare-private-route",
+  ]);
+});
+
+test("field test panel state keeps comparison, next action, and copy lines in sync", () => {
+  const localReady = [
+    "app_version=0.1.0",
+    "build_channel=beta-onion",
+    "build_commit=806ecad1",
+    "room_present=true",
+    "session_ready=true",
+    "safety_confirmed=true",
+    "route_ready=true",
+    "route_readiness_ready=true",
+    "route_readiness_next_action=none",
+    "receive_enabled=true",
+    "receive_state=running",
+    "real_onion_external_peer_delivery_confirmed=true",
+    "real_onion_local_dev_roundtrip_result=false",
+  ].join("\n");
+  const peerNeedsRoute = localReady
+    .replace("route_ready=true", "route_ready=false")
+    .replace("route_readiness_ready=true", "route_readiness_ready=false")
+    .replace("route_readiness_next_action=none", "route_readiness_next_action=prepare-private-route")
+    .concat("\nroute_readiness_failure_kind=PeerEndpointMissing");
+  const nextActionKeyForReport = (report, peerReport = "") => {
+    const parsed = parseFieldTestReport(report);
+    if (parsed.route_readiness_next_action === "prepare-private-route") {
+      return "fieldTestNextSetupRoute";
+    }
+    return String(peerReport ?? "").trim() ? "fieldTestNextComplete" : "fieldTestNextPastePeerReport";
+  };
+
+  assert.deepEqual(fieldTestReportPanelState(localReady, "", nextActionKeyForReport), {
+    hasPeerReport: false,
+    comparison: "",
+    comparisonStatus: "peer-report-missing",
+    nextActionKey: "fieldTestNextPastePeerReport",
+    peerNextActionKey: "",
+    copyActionLines: [
+      "peer_report_status=peer-report-missing",
+      "next_action=fieldTestNextPastePeerReport",
+    ],
+  });
+  assert.deepEqual(fieldTestReportPanelState(localReady, peerNeedsRoute, nextActionKeyForReport), {
+    hasPeerReport: true,
+    comparison: "compare reports-aligned local_state route:route-ready!=route-missing next:none!=prepare-private-route blocker:none!=PeerEndpointMissing",
+    comparisonStatus: "reports-aligned-local-state-diff",
+    nextActionKey: "fieldTestNextComplete",
+    peerNextActionKey: "fieldTestNextSetupRoute",
+    copyActionLines: [
+      "peer_report_status=reports-aligned-local-state-diff",
+      "next_action=fieldTestNextComplete",
+      "peer_next_action=fieldTestNextSetupRoute",
+      "peer_recovery_action=prepare-private-route",
+    ],
+  });
+});
+
+test("public beta diagnostics keeps only status, build, and failure class", () => {
+  const report = [
+    "app_version=0.1.0",
+    "build_channel=beta-onion",
+    "build_commit=806ecad1",
+    "room_present=true",
+    "session_ready=true",
+    "safety_confirmed=false",
+    "route_ready=false",
+    "route_readiness_ready=false",
+    "route_readiness_next_action=prepare-private-route",
+    "route_readiness_failure_kind=PeerEndpointMissing",
+    "receive_enabled=false",
+    "receive_state=stopped",
+    "manual_network_permission=true",
+    "real_onion_attempted=true",
+    "real_onion_next_blocker=BootstrapTimeout",
+    "bridge_line=obfs4 198.51.100.4:443 SECRET",
+    "onion_endpoint=examplehiddenservice.onion:443",
+    "invite_code=ADINVITE-secret",
+    "safety_phrase=alpha bravo",
+    "message_text=hello secret",
+    "local_path=/Users/alex/private",
+    "passphrase=correct horse battery staple",
+    "key_material=deadbeef",
+  ].join("\n");
+  const diagnostics = publicBetaDiagnosticsReport(report, { includeCopyBoundary: true });
+
+  assert.match(diagnostics, /release_channel=unsigned-experimental-public-beta/);
+  assert.match(diagnostics, /security_claim=not-production-ready/);
+  assert.match(diagnostics, /sensitive_communication=sensitive-communication-prohibited/);
+  assert.match(diagnostics, /app_version=0.1.0/);
+  assert.match(diagnostics, /failure_class=PeerEndpointMissing/);
+  assert.match(diagnostics, /app_launch_network=false/);
+  assert.match(diagnostics, /payload_boundary=status-build-failure-class-only/);
+  assert.doesNotMatch(diagnostics, /next_action=/);
+  assert.doesNotMatch(diagnostics, /obfs4|198\.51\.100\.4|examplehiddenservice|ADINVITE|alpha bravo|hello secret/);
+  assert.doesNotMatch(diagnostics, /\/Users\/alex|correct horse|deadbeef/);
 });

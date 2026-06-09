@@ -138,6 +138,36 @@ h1 {
   letter-spacing: 0;
 }
 
+.public-beta-warning {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--panel-border));
+  border-left-width: 4px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--panel) 92%, var(--danger));
+}
+
+.public-beta-warning .eyebrow {
+  margin-bottom: 0;
+  border-color: color-mix(in srgb, var(--danger) 48%, var(--badge-border));
+}
+
+.public-beta-warning h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.public-beta-warning p {
+  max-width: 78ch;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .local-dev-peer-label {
   position: fixed;
   z-index: 31;
@@ -1609,6 +1639,25 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
   line-height: 1.45;
 }
 
+.public-diagnostics-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  border-top: 1px solid var(--panel-border);
+  padding-top: 10px;
+}
+
+.public-diagnostics-panel h5 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.public-diagnostics-panel textarea {
+  min-height: 120px;
+}
+
 .field-test-report-summary {
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 28%, var(--panel-border));
   border-radius: 4px;
@@ -1619,6 +1668,25 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
   font-size: 11px;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.field-test-report-summary[data-peer-report-status="reports-aligned"] {
+  border-color: color-mix(in srgb, var(--accent-green) 42%, var(--panel-border));
+  color: var(--text-primary);
+}
+
+.field-test-report-summary[data-peer-report-status="reports-aligned-local-state-diff"] {
+  border-color: color-mix(in srgb, var(--accent-amber) 46%, var(--panel-border));
+}
+
+.field-test-report-summary[data-peer-report-status="build-mismatch"],
+.field-test-report-summary[data-peer-report-status="report-mismatch"] {
+  border-color: color-mix(in srgb, var(--warning) 58%, var(--panel-border));
+  color: var(--text-primary);
+}
+
+.field-test-report-summary[data-peer-report-status="peer-report-missing"] {
+  opacity: 0.82;
 }
 
 .field-test-checklist {
