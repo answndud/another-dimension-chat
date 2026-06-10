@@ -19,6 +19,7 @@ Users must download these files from the same GitHub Release:
 - `GITHUB_RELEASE_BODY.md`
 - `UPDATE_INTEGRITY.md`
 - `SUPPLY_CHAIN_BASELINE.md`
+- `DEPENDENCY_INVENTORY.md`
 - `DEPENDENCY_LOCKFILES.sha256`
 
 Then users must verify the DMG checksum before opening the app:
@@ -56,6 +57,7 @@ not only the local source artifact. It must include:
 - `startup_network_sockets=none`
 - source provenance SHA-256
 - dependency lockfile hash file name
+- dependency inventory file name
 - manual update integrity file name
 - supply-chain baseline file name
 - public non-claims
@@ -76,5 +78,6 @@ This policy does not claim:
 - automatic rollback prevention
 - malware review
 - dependency audit completion
+- SBOM publication
 - reproducible build equivalence
 - secure messenger readiness

@@ -480,6 +480,18 @@ pub mod production {
         "external_two_machine_evidence_required",
     ];
 
+    const PRODUCTION_SUPPLY_CHAIN_INTEGRITY_POLICIES: &[&str] = &[
+        "manual_github_release_download",
+        "dmg_sha256_required",
+        "public_provenance_required",
+        "release_manifest_required",
+        "dependency_inventory_required",
+        "dependency_lockfile_hash_baseline_required",
+        "auto_update_disabled",
+        "signing_notarization_non_claim",
+        "sbom_dependency_audit_reproducible_build_non_claim",
+    ];
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionRuntimeCommandSurfaceSummary {
         reviewed_categories: &'static [&'static str],
@@ -571,6 +583,24 @@ pub mod production {
         reliable_real_network_onion_delivery_claimed: bool,
         boundary_closed: bool,
         production_messaging_ready: bool,
+        security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionSupplyChainIntegrityBoundarySummary {
+        policies: &'static [&'static str],
+        manual_github_release_download_required: bool,
+        dmg_sha256_required: bool,
+        public_provenance_required: bool,
+        release_manifest_required: bool,
+        dependency_inventory_required: bool,
+        dependency_lockfile_hash_baseline_required: bool,
+        auto_update_enabled: bool,
+        signing_or_notarization_claimed: bool,
+        sbom_published: bool,
+        dependency_audit_complete: bool,
+        reproducible_build_proof_available: bool,
+        boundary_closed: bool,
         security_ready_claimed: bool,
     }
 
@@ -873,6 +903,64 @@ pub mod production {
 
         pub fn production_messaging_ready(self) -> bool {
             self.production_messaging_ready
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+    }
+
+    impl ProductionSupplyChainIntegrityBoundarySummary {
+        pub fn policies(self) -> &'static [&'static str] {
+            self.policies
+        }
+
+        pub fn manual_github_release_download_required(self) -> bool {
+            self.manual_github_release_download_required
+        }
+
+        pub fn dmg_sha256_required(self) -> bool {
+            self.dmg_sha256_required
+        }
+
+        pub fn public_provenance_required(self) -> bool {
+            self.public_provenance_required
+        }
+
+        pub fn release_manifest_required(self) -> bool {
+            self.release_manifest_required
+        }
+
+        pub fn dependency_inventory_required(self) -> bool {
+            self.dependency_inventory_required
+        }
+
+        pub fn dependency_lockfile_hash_baseline_required(self) -> bool {
+            self.dependency_lockfile_hash_baseline_required
+        }
+
+        pub fn auto_update_enabled(self) -> bool {
+            self.auto_update_enabled
+        }
+
+        pub fn signing_or_notarization_claimed(self) -> bool {
+            self.signing_or_notarization_claimed
+        }
+
+        pub fn sbom_published(self) -> bool {
+            self.sbom_published
+        }
+
+        pub fn dependency_audit_complete(self) -> bool {
+            self.dependency_audit_complete
+        }
+
+        pub fn reproducible_build_proof_available(self) -> bool {
+            self.reproducible_build_proof_available
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -8328,6 +8416,49 @@ pub mod production {
         }
     }
 
+    pub fn production_supply_chain_integrity_boundary_summary(
+    ) -> ProductionSupplyChainIntegrityBoundarySummary {
+        let manual_github_release_download_required = true;
+        let dmg_sha256_required = true;
+        let public_provenance_required = true;
+        let release_manifest_required = true;
+        let dependency_inventory_required = true;
+        let dependency_lockfile_hash_baseline_required = true;
+        let auto_update_enabled = false;
+        let signing_or_notarization_claimed = false;
+        let sbom_published = false;
+        let dependency_audit_complete = false;
+        let reproducible_build_proof_available = false;
+        let boundary_closed = manual_github_release_download_required
+            && dmg_sha256_required
+            && public_provenance_required
+            && release_manifest_required
+            && dependency_inventory_required
+            && dependency_lockfile_hash_baseline_required
+            && !auto_update_enabled
+            && !signing_or_notarization_claimed
+            && !sbom_published
+            && !dependency_audit_complete
+            && !reproducible_build_proof_available;
+
+        ProductionSupplyChainIntegrityBoundarySummary {
+            policies: PRODUCTION_SUPPLY_CHAIN_INTEGRITY_POLICIES,
+            manual_github_release_download_required,
+            dmg_sha256_required,
+            public_provenance_required,
+            release_manifest_required,
+            dependency_inventory_required,
+            dependency_lockfile_hash_baseline_required,
+            auto_update_enabled,
+            signing_or_notarization_claimed,
+            sbom_published,
+            dependency_audit_complete,
+            reproducible_build_proof_available,
+            boundary_closed,
+            security_ready_claimed: false,
+        }
+    }
+
     pub fn production_session_readiness_gate() -> ProductionSessionReadinessGate {
         let summary = production_session_evaluation_summary();
 
@@ -10075,6 +10206,32 @@ pub mod production {
                 selection.required_gate(),
                 "real external peer reports without fabricated local evidence"
             );
+        }
+
+        #[test]
+        fn production_supply_chain_integrity_boundary_closes_manual_release_evidence_without_audit_claim(
+        ) {
+            let boundary = production_supply_chain_integrity_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.manual_github_release_download_required());
+            assert!(boundary.dmg_sha256_required());
+            assert!(boundary.public_provenance_required());
+            assert!(boundary.release_manifest_required());
+            assert!(boundary.dependency_inventory_required());
+            assert!(boundary.dependency_lockfile_hash_baseline_required());
+            assert!(!boundary.auto_update_enabled());
+            assert!(!boundary.signing_or_notarization_claimed());
+            assert!(!boundary.sbom_published());
+            assert!(!boundary.dependency_audit_complete());
+            assert!(!boundary.reproducible_build_proof_available());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .policies()
+                .contains(&"dependency_inventory_required"));
+            assert!(boundary
+                .policies()
+                .contains(&"sbom_dependency_audit_reproducible_build_non_claim"));
         }
 
         #[test]

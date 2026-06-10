@@ -52,6 +52,7 @@ Expected public GitHub Release files:
 - `GITHUB_RELEASE_BODY.md`
 - `UPDATE_INTEGRITY.md`
 - `SUPPLY_CHAIN_BASELINE.md`
+- `DEPENDENCY_INVENTORY.md`
 - `PUBLIC_THREAT_MODEL.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
 - `DEPENDENCY_LOCKFILES.sha256`
@@ -63,7 +64,7 @@ Prepare the ignored local upload folder from the frozen local DMG:
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, and dependency lockfile hash evidence are missing. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
+The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, and dependency lockfile hash evidence are missing. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
 What exists today:
 
