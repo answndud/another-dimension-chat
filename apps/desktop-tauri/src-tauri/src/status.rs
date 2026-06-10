@@ -291,7 +291,7 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         release_integrity_status:
             "unsigned GitHub beta uses manual GitHub Release download, manual SHA-256 verification, same-release SHA-256 verification, public provenance, manifest, dependency inventory, dependency lockfile hashes, no branch-file release proof, no auto-update, no signing, no notarization, no supply-chain audit claim",
         supply_chain_integrity_boundary: format!(
-            "boundary_closed={} manual_github_release_download_required={} dmg_sha256_required={} public_provenance_required={} release_manifest_required={} dependency_inventory_required={} dependency_lockfile_hash_baseline_required={} auto_update_enabled={} signing_or_notarization_claimed={} sbom_published={} dependency_audit_complete={} reproducible_build_proof_available={} security_ready_claimed={} policies={}",
+            "boundary_closed={} manual_github_release_download_required={} dmg_sha256_required={} public_provenance_required={} release_manifest_required={} dependency_inventory_required={} dependency_lockfile_hash_baseline_required={} dependency_lockfile_evidence_count={} dependency_lockfile_evidence_files={} dependency_inventory_runtime_visible={} vulnerability_triage_signoff_complete={} live_dependency_scan_performed={} auto_update_enabled={} signing_or_notarization_claimed={} sbom_published={} dependency_audit_complete={} reproducible_build_proof_available={} security_ready_claimed={} policies={}",
             supply_chain.boundary_closed(),
             supply_chain.manual_github_release_download_required(),
             supply_chain.dmg_sha256_required(),
@@ -299,6 +299,11 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             supply_chain.release_manifest_required(),
             supply_chain.dependency_inventory_required(),
             supply_chain.dependency_lockfile_hash_baseline_required(),
+            supply_chain.dependency_lockfile_evidence_count(),
+            supply_chain.dependency_lockfile_evidence_files().join("|"),
+            supply_chain.dependency_inventory_runtime_visible(),
+            supply_chain.vulnerability_triage_signoff_complete(),
+            supply_chain.live_dependency_scan_performed(),
             supply_chain.auto_update_enabled(),
             supply_chain.signing_or_notarization_claimed(),
             supply_chain.sbom_published(),
@@ -509,6 +514,21 @@ mod tests {
         assert!(status
             .supply_chain_integrity_boundary
             .contains("dependency_inventory_required=true"));
+        assert!(status
+            .supply_chain_integrity_boundary
+            .contains("dependency_lockfile_evidence_count=3"));
+        assert!(status
+            .supply_chain_integrity_boundary
+            .contains("apps/desktop-tauri/package-lock.json"));
+        assert!(status
+            .supply_chain_integrity_boundary
+            .contains("dependency_inventory_runtime_visible=true"));
+        assert!(status
+            .supply_chain_integrity_boundary
+            .contains("vulnerability_triage_signoff_complete=false"));
+        assert!(status
+            .supply_chain_integrity_boundary
+            .contains("live_dependency_scan_performed=false"));
         assert!(status
             .supply_chain_integrity_boundary
             .contains("dependency_audit_complete=false"));

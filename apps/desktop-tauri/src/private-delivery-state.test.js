@@ -366,6 +366,15 @@ test("public beta diagnostics keeps only status, build, and failure class", () =
   assert.match(diagnostics, /offline_mesh_claim=false/);
   assert.match(diagnostics, /independent_review_complete=false/);
   assert.match(diagnostics, /security_ready_claim=false/);
+  assert.match(diagnostics, /dependency_inventory_present=true/);
+  assert.match(diagnostics, /dependency_lockfile_hashes_present=true/);
+  assert.match(diagnostics, /dependency_lockfile_evidence_count=3/);
+  assert.match(diagnostics, /apps\/desktop-tauri\/package-lock\.json/);
+  assert.match(diagnostics, /supply_chain_audit_complete=false/);
+  assert.match(diagnostics, /sbom_published=false/);
+  assert.match(diagnostics, /vulnerability_triage_signoff_complete=false/);
+  assert.match(diagnostics, /reproducible_build_proof=false/);
+  assert.match(diagnostics, /live_dependency_scan_performed=false/);
   assert.match(diagnostics, /app_version=0.1.0/);
   assert.match(diagnostics, /failure_class=PeerEndpointMissing/);
   assert.match(diagnostics, /app_launch_network=false/);
