@@ -101,6 +101,8 @@ const fields = {
   bootstrapStatus: document.querySelector("#bootstrap-status"),
   transportIo: document.querySelector("#transport-io"),
   storage: document.querySelector("#storage"),
+  releaseIntegrity: document.querySelector("#release-integrity"),
+  supplyChainBoundary: document.querySelector("#supply-chain-boundary"),
   verification: document.querySelector("#verification"),
   checkOnionPreflight: document.querySelector("#check-onion-preflight"),
   onionPreflightState: document.querySelector("#onion-preflight-state"),
@@ -12938,6 +12940,8 @@ async function renderPrototypeStatus() {
     setText(fields.bootstrapStatus, localizedBoundaryStatus(status.bootstrap_status_classification));
     setText(fields.transportIo, localizedBoundaryStatus(status.transport_io_status));
     setText(fields.storage, localizedBoundaryStatus(status.storage_status));
+    setText(fields.releaseIntegrity, localizedBoundaryStatus(status.release_integrity_status));
+    setText(fields.supplyChainBoundary, localizedBoundaryStatus(status.supply_chain_integrity_boundary));
     setText(fields.verification, localizedBoundaryStatus(status.verification_status));
   } catch (_error) {
     renderAppStateSummary({
@@ -12981,6 +12985,8 @@ async function renderPrototypeStatus() {
     setText(fields.bootstrapStatus, t("bootstrapStatusValue"));
     setText(fields.transportIo, t("transportIoValue"));
     setText(fields.storage, t("storageValue"));
+    setText(fields.releaseIntegrity, t("releaseIntegrityValue"));
+    setText(fields.supplyChainBoundary, t("supplyChainBoundaryValue"));
     setText(fields.verification, t("verificationValue"));
   }
 }
