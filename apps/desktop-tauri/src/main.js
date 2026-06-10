@@ -3444,6 +3444,73 @@ function forgetInviteRoom(code) {
   renderSavedInviteRooms();
 }
 
+function savedInviteRoomReferencesProfile(room, profile) {
+  const normalizedProfile = String(profile ?? "").trim().toLowerCase();
+  const code = String(room?.code ?? "").trim();
+  if (!normalizedProfile || !code) {
+    return false;
+  }
+  for (const role of ["inviter", "joiner"]) {
+    const { localProfile, peerProfile } = productionInviteCodeProfiles(code, role);
+    if (
+      String(localProfile ?? "").trim().toLowerCase() === normalizedProfile ||
+      String(peerProfile ?? "").trim().toLowerCase() === normalizedProfile
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function clearSavedInviteRoomRuntimeState(room) {
+  const code = String(room?.code ?? "").trim();
+  if (!code) {
+    return false;
+  }
+  for (const role of ["inviter", "joiner"]) {
+    const input = savedInviteRoomInput({ ...room, role });
+    rememberReceiveIntentForRoom(input, false);
+    forgetTwoProfileSessionStatusForInput(input);
+    clearPrivateRouteFollowupForRoom(input);
+  }
+  clearSavedInviteRoomRetryableOutbound(room);
+  return true;
+}
+
+function clearSavedInviteRoomRuntimeStateForProfile(profile) {
+  let cleared = 0;
+  for (const room of savedInviteRooms()) {
+    if (savedInviteRoomReferencesProfile(room, profile) && clearSavedInviteRoomRuntimeState(room)) {
+      cleared += 1;
+    }
+  }
+  if (cleared > 0) {
+    renderSavedInviteRooms();
+  }
+  return cleared;
+}
+
+function clearAllSavedInviteRoomLocalState() {
+  for (const room of savedInviteRooms()) {
+    clearSavedInviteRoomRuntimeState(room);
+  }
+  localStoreRemove(inviteRoomsStorageKey);
+  localStoreRemove(lastInviteRoomStorageKey);
+  localStoreRemove(receiveIntentRoomsStorageKey);
+  localPrivateRouteCodesByRoom.clear();
+  activeLocalPrivateRouteCodesByRoom.clear();
+  localPrivateRouteLifecycleByRoom.clear();
+  peerPrivateRouteDraftsByRoom.clear();
+  latestProductionTwoProfileRealOnionResultsByRoom.clear();
+  latestProductionTwoProfileRealOnionRecoveriesByRoom.clear();
+  latestProductionTwoProfileRealOnionWaitCanceledFingerprints.clear();
+  persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
+  persistPrivateRouteLifecycleMap(localPrivateRouteLifecycleStorageKey, localPrivateRouteLifecycleByRoom);
+  persistPrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
+  persistRealOnionRecoveries();
+  renderSavedInviteRooms();
+}
+
 function savedLastInviteRoom() {
   try {
     const saved = JSON.parse(localStoreGet(lastInviteRoomStorageKey) ?? "null");
@@ -16795,6 +16862,57 @@ function renderProductionDataLifecycleAction(result, action = "status") {
   return view;
 }
 
+function twoProfileInputReferencesProfile(input, profile) {
+  const normalizedProfile = String(profile ?? "").trim().toLowerCase();
+  if (!normalizedProfile) {
+    return false;
+  }
+  return [input?.profileA, input?.profileB].some(
+    (value) => String(value ?? "").trim().toLowerCase() === normalizedProfile,
+  );
+}
+
+function applyPostDestructiveLifecycleRebuildGuidance(action, options = {}) {
+  const deletedProfile = String(options.deletedProfile ?? "").trim();
+  const input = options.input ?? productionTwoProfileInput();
+  const fullWipe = action === "full-local-wipe";
+  const affectedCurrentRoom = fullWipe || twoProfileInputReferencesProfile(input, deletedProfile);
+  const clearedRooms = fullWipe
+    ? savedInviteRooms().length
+    : clearSavedInviteRoomRuntimeStateForProfile(deletedProfile);
+
+  stopInviteRoomTranscriptRefresh();
+  stopInviteRoomPresenceRefresh();
+  latestProductionTwoProfileSessionStatus = null;
+  latestProductionTwoProfileSafety = null;
+  resetProductionTwoProfileTranscript();
+  clearManualMessagePayloadsForRoomContextChange();
+  if (fullWipe) {
+    clearAllSavedInviteRoomLocalState();
+    clearCurrentInviteRoomInput();
+    showRoomList();
+  } else if (affectedCurrentRoom) {
+    clearCurrentInviteRoomInput();
+  } else {
+    renderSavedInviteRooms();
+  }
+  setProductionTwoProfileState(fullWipe ? "Local rooms cleared" : "Room rebuild needed");
+  setText(
+    fields.productionTwoProfileWarning,
+    fullWipe ? t("postWipeRoomRebuildWarning") : t("postDeleteRoomRebuildWarning"),
+  );
+  setText(
+    fields.productionTwoProfileSession,
+    `stale_room_retry_cleared=true affected_current_room=${affectedCurrentRoom} saved_rooms_cleared=${clearedRooms}`,
+  );
+  setText(
+    fields.productionTwoProfileBoundary,
+    `local_only=true stale_room_retry_cleared=true rebuild_required=true backup_recovery=false cloud_backup_sync=false rollback_prevention=false secure_delete_claim=false security_ready=false`,
+  );
+  setProductionFollowupActions(true, fullWipe ? t("postWipeRoomRebuildNext") : t("postDeleteRoomRebuildNext"));
+  return { affectedCurrentRoom, clearedRooms };
+}
+
 async function checkProductionDataLifecycle() {
   setProductionProfileState("Data lifecycle checking");
   productionBusyAction = "data-lifecycle";
@@ -16843,6 +16961,7 @@ async function prepareProductionDataLifecycle() {
 
 async function deleteProductionProfile() {
   const input = productionProfileInput();
+  const roomInputBeforeDelete = productionTwoProfileInput();
   const confirmation = (fields.productionProfileDeleteConfirmation?.value ?? "").trim();
   if (!input.profile || confirmation !== input.profile) {
     setProductionProfileState("Profile delete needs confirmation");
@@ -16865,6 +16984,10 @@ async function deleteProductionProfile() {
     setText(fields.productionProfileWarning, `${result.warning} ${view.next}`);
     resetProductionPairingView({ preserveTwoProfileStatus: true });
     resetProductionMessageView();
+    applyPostDestructiveLifecycleRebuildGuidance("profile-delete", {
+      deletedProfile: input.profile,
+      input: roomInputBeforeDelete,
+    });
     await loadProductionProfileList();
     return result;
   } catch (error) {
@@ -16879,6 +17002,7 @@ async function deleteProductionProfile() {
 }
 
 async function wipeProductionLocalData() {
+  const roomInputBeforeWipe = productionTwoProfileInput();
   const confirmation = (fields.productionFullWipeConfirmation?.value ?? "").trim();
   if (confirmation !== "WIPE LOCAL DATA") {
     setProductionProfileState("Local wipe needs confirmation");
@@ -16899,6 +17023,7 @@ async function wipeProductionLocalData() {
     const view = renderProductionDataLifecycleAction(result, "full-local-wipe");
     setProductionProfileState(result.full_local_data_wiped ? "Local app data wiped" : "Local wipe incomplete");
     setText(fields.productionProfileWarning, `${result.warning} ${view.next}`);
+    applyPostDestructiveLifecycleRebuildGuidance("full-local-wipe", { input: roomInputBeforeWipe });
     await loadProductionProfileList();
     return result;
   } catch (error) {

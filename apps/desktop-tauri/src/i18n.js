@@ -834,6 +834,12 @@ const dictionaries = {
     dataLifecycleDeleteRunning: "Deleting the local profile store. No cloud, backup, or secure-delete claim is made.",
     dataLifecycleWipeRunning: "Wiping local app data. No cloud, backup, or secure-delete claim is made.",
     dataLifecycleDestructiveRunningNext: "Next: wait for the redacted local result before retrying setup.",
+    postDeleteRoomRebuildWarning:
+      "Related room runtime state was cleared. Recreate the local profile or build a new invite room before retrying messages.",
+    postDeleteRoomRebuildNext: "Next: recreate the local profile, then create or join a fresh invite room.",
+    postWipeRoomRebuildWarning:
+      "Saved room metadata was cleared after local wipe. Start again with local profiles and a new invite room.",
+    postWipeRoomRebuildNext: "Next: create local profiles, then create or join a new invite room.",
     profileLocked: "Profile locked",
     nextEnterProfilePassphrase: "Next: enter profile and passphrase.",
     productionProfileLockedWarning: "Production profile has not been unlocked yet.",
@@ -1785,6 +1791,12 @@ const dictionaries = {
     dataLifecycleDeleteRunning: "로컬 프로필 저장소를 삭제 중입니다. 클라우드, 백업, 보안 삭제 주장은 하지 않습니다.",
     dataLifecycleWipeRunning: "로컬 앱 데이터를 삭제 중입니다. 클라우드, 백업, 보안 삭제 주장은 하지 않습니다.",
     dataLifecycleDestructiveRunningNext: "다음: redacted local result가 나올 때까지 기다린 뒤 설정을 다시 시도하세요.",
+    postDeleteRoomRebuildWarning:
+      "관련 채팅방 실행 상태를 정리했습니다. 메시지를 다시 시도하기 전에 로컬 프로필을 다시 만들거나 새 초대방을 만드세요.",
+    postDeleteRoomRebuildNext: "다음: 로컬 프로필을 다시 만든 뒤 새 초대방을 만들거나 참여하세요.",
+    postWipeRoomRebuildWarning:
+      "로컬 삭제 후 저장된 채팅방 메타데이터를 정리했습니다. 로컬 프로필과 새 초대방으로 다시 시작하세요.",
+    postWipeRoomRebuildNext: "다음: 로컬 프로필을 만든 뒤 새 초대방을 만들거나 참여하세요.",
     profileLocked: "프로필 잠김",
     nextEnterProfilePassphrase: "다음: 프로필과 패스프레이즈를 입력하세요.",
     productionProfileLockedWarning: "아직 프로필을 열지 않았습니다.",
