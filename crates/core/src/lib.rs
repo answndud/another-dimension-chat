@@ -673,6 +673,11 @@ pub mod production {
         release_manifest_required: bool,
         dependency_inventory_required: bool,
         dependency_lockfile_hash_baseline_required: bool,
+        dependency_lockfile_evidence_count: u8,
+        dependency_lockfile_evidence_files: &'static [&'static str],
+        dependency_inventory_runtime_visible: bool,
+        vulnerability_triage_signoff_complete: bool,
+        live_dependency_scan_performed: bool,
         auto_update_enabled: bool,
         signing_or_notarization_claimed: bool,
         sbom_published: bool,
@@ -1106,6 +1111,26 @@ pub mod production {
 
         pub fn dependency_lockfile_hash_baseline_required(self) -> bool {
             self.dependency_lockfile_hash_baseline_required
+        }
+
+        pub fn dependency_lockfile_evidence_count(self) -> u8 {
+            self.dependency_lockfile_evidence_count
+        }
+
+        pub fn dependency_lockfile_evidence_files(self) -> &'static [&'static str] {
+            self.dependency_lockfile_evidence_files
+        }
+
+        pub fn dependency_inventory_runtime_visible(self) -> bool {
+            self.dependency_inventory_runtime_visible
+        }
+
+        pub fn vulnerability_triage_signoff_complete(self) -> bool {
+            self.vulnerability_triage_signoff_complete
+        }
+
+        pub fn live_dependency_scan_performed(self) -> bool {
+            self.live_dependency_scan_performed
         }
 
         pub fn auto_update_enabled(self) -> bool {
@@ -8724,6 +8749,15 @@ pub mod production {
         let release_manifest_required = true;
         let dependency_inventory_required = true;
         let dependency_lockfile_hash_baseline_required = true;
+        let dependency_lockfile_evidence_count = 3;
+        let dependency_lockfile_evidence_files = &[
+            "Cargo.lock",
+            "apps/desktop-tauri/src-tauri/Cargo.lock",
+            "apps/desktop-tauri/package-lock.json",
+        ];
+        let dependency_inventory_runtime_visible = true;
+        let vulnerability_triage_signoff_complete = false;
+        let live_dependency_scan_performed = false;
         let auto_update_enabled = false;
         let signing_or_notarization_claimed = false;
         let sbom_published = false;
@@ -8735,6 +8769,10 @@ pub mod production {
             && release_manifest_required
             && dependency_inventory_required
             && dependency_lockfile_hash_baseline_required
+            && dependency_lockfile_evidence_count == 3
+            && dependency_inventory_runtime_visible
+            && !vulnerability_triage_signoff_complete
+            && !live_dependency_scan_performed
             && !auto_update_enabled
             && !signing_or_notarization_claimed
             && !sbom_published
@@ -8749,6 +8787,11 @@ pub mod production {
             release_manifest_required,
             dependency_inventory_required,
             dependency_lockfile_hash_baseline_required,
+            dependency_lockfile_evidence_count,
+            dependency_lockfile_evidence_files,
+            dependency_inventory_runtime_visible,
+            vulnerability_triage_signoff_complete,
+            live_dependency_scan_performed,
             auto_update_enabled,
             signing_or_notarization_claimed,
             sbom_published,
@@ -10610,6 +10653,18 @@ pub mod production {
             assert!(boundary.release_manifest_required());
             assert!(boundary.dependency_inventory_required());
             assert!(boundary.dependency_lockfile_hash_baseline_required());
+            assert_eq!(boundary.dependency_lockfile_evidence_count(), 3);
+            assert_eq!(
+                boundary.dependency_lockfile_evidence_files(),
+                &[
+                    "Cargo.lock",
+                    "apps/desktop-tauri/src-tauri/Cargo.lock",
+                    "apps/desktop-tauri/package-lock.json",
+                ]
+            );
+            assert!(boundary.dependency_inventory_runtime_visible());
+            assert!(!boundary.vulnerability_triage_signoff_complete());
+            assert!(!boundary.live_dependency_scan_performed());
             assert!(!boundary.auto_update_enabled());
             assert!(!boundary.signing_or_notarization_claimed());
             assert!(!boundary.sbom_published());

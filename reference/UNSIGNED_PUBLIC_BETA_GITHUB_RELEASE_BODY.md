@@ -63,7 +63,7 @@ This beta does not claim:
 - signing or notarization
 - auto-update integrity
 - reproducible-build proof
-- SBOM or dependency audit completion
+- SBOM, dependency audit completion, live dependency scan, or vulnerability triage signoff
 - completed independent review
 - reviewer signoff or public user safety signoff
 - reliable real-network Tor/onion delivery
@@ -74,6 +74,11 @@ This beta does not claim:
 - destructive migration
 - rollback prevention
 - secure deletion from storage media
+
+Dependency evidence is limited to `DEPENDENCY_INVENTORY.md` and exactly three
+lockfile hash entries in `DEPENDENCY_LOCKFILES.sha256`: `Cargo.lock`,
+`apps/desktop-tauri/src-tauri/Cargo.lock`, and
+`apps/desktop-tauri/package-lock.json`.
 
 External two-machine onion delivery has not yet been independently verified.
 Same-machine dual-profile rehearsal is development evidence only, not peer field-test evidence.

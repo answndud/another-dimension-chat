@@ -15,6 +15,12 @@ The generated release file is:
 - `DEPENDENCY_LOCKFILES.sha256`
 - `DEPENDENCY_INVENTORY.md`
 
+The public beta currently treats exactly three lockfiles as release evidence:
+
+- `Cargo.lock`
+- `apps/desktop-tauri/src-tauri/Cargo.lock`
+- `apps/desktop-tauri/package-lock.json`
+
 This lets reviewers see which lockfiles were present when the public upload set
 was prepared and which dependency scopes are intentionally in the beta upload
 boundary. It does not prove dependency safety.
@@ -48,6 +54,7 @@ Not included:
 - external security audit
 - SBOM publication
 - vulnerability triage signoff
+- live dependency scan
 - reproducible-build proof
 - notarized or signed release pipeline
 - auto-update integrity

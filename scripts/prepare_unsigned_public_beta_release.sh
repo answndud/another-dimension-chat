@@ -85,6 +85,8 @@ fi
 
 source_provenance_sha="$(shasum -a 256 "$SOURCE_PROVENANCE" | awk '{print $1}')"
 artifact_size_bytes="$(wc -c < "$SOURCE_DMG" | tr -d '[:space:]')"
+dependency_lockfile_evidence_count=3
+dependency_lockfile_evidence_files="Cargo.lock|apps/desktop-tauri/src-tauri/Cargo.lock|apps/desktop-tauri/package-lock.json"
 
 require_text "$SOURCE_PROVENANCE" "\"artifact_sha256\": \"$EXPECTED_DMG_SHA\""
 require_text "$SOURCE_PROVENANCE" "\"app_version\": \"$APP_VERSION\""
@@ -139,6 +141,18 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "source_provenance_sha256": "$source_provenance_sha",
   "dependency_lockfiles_sha256_file": "DEPENDENCY_LOCKFILES.sha256",
   "dependency_inventory_file": "DEPENDENCY_INVENTORY.md",
+  "dependency_lockfile_evidence_count": $dependency_lockfile_evidence_count,
+  "dependency_lockfile_evidence_files": [
+    "Cargo.lock",
+    "apps/desktop-tauri/src-tauri/Cargo.lock",
+    "apps/desktop-tauri/package-lock.json"
+  ],
+  "dependency_inventory_runtime_visible": true,
+  "supply_chain_audit_complete": false,
+  "sbom_published": false,
+  "vulnerability_triage_signoff_complete": false,
+  "reproducible_build_proof": false,
+  "live_dependency_scan_performed": false,
   "public_threat_model_file": "PUBLIC_THREAT_MODEL.md",
   "privacy_model_comparison_file": "PRIVACY_MODEL_COMPARISON.md",
   "independent_review_packet_file": "INDEPENDENT_REVIEW_PACKET.md",
@@ -235,6 +249,14 @@ This folder is for a GitHub Release upload.
 - Source provenance SHA-256: \`$source_provenance_sha\`
 - Dependency inventory: \`DEPENDENCY_INVENTORY.md\`
 - Dependency lockfile hashes: \`DEPENDENCY_LOCKFILES.sha256\`
+- Dependency lockfile evidence count: $dependency_lockfile_evidence_count
+- Dependency lockfile evidence files: \`$dependency_lockfile_evidence_files\`
+- Dependency inventory runtime visible: true
+- Supply-chain audit complete: false
+- SBOM published: false
+- Vulnerability triage signoff complete: false
+- Reproducible-build proof: false
+- Live dependency scan performed: false
 - Public threat model: \`PUBLIC_THREAT_MODEL.md\`
 - Privacy model comparison: \`PRIVACY_MODEL_COMPARISON.md\`
 - Independent review packet: \`INDEPENDENT_REVIEW_PACKET.md\`
@@ -276,8 +298,10 @@ this beta. Same-machine dual-profile rehearsal is development evidence only.
 
 Manual update integrity is limited to user-verified SHA-256 files and the
 provenance/dependency-inventory/lockfile-hash evidence in this upload set.
-There is no auto-update, signing, notarization, reproducible-build, SBOM, or
-security-audit claim.
+There are exactly $dependency_lockfile_evidence_count lockfile hash evidence
+entries in this upload set: \`$dependency_lockfile_evidence_files\`.
+There is no live dependency scan, vulnerability triage signoff, auto-update,
+signing, notarization, reproducible-build, SBOM, or security-audit claim.
 
 Local backup exclusion is a required local verification boundary for this beta,
 not a cloud backup/sync or backup recovery feature. Schema lifecycle is
@@ -318,6 +342,14 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact\": \"$RELEASE_DMG\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact_sha256\": \"$EXPECTED_DMG_SHA\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"source_provenance_sha256\": \"$source_provenance_sha\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"dependency_inventory_file\": \"DEPENDENCY_INVENTORY.md\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"dependency_lockfile_evidence_count\": $dependency_lockfile_evidence_count"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"apps/desktop-tauri/package-lock.json\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"dependency_inventory_runtime_visible\": true"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"supply_chain_audit_complete\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"sbom_published\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"vulnerability_triage_signoff_complete\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"reproducible_build_proof\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"live_dependency_scan_performed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_threat_model_file\": \"PUBLIC_THREAT_MODEL.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"privacy_model_comparison_file\": \"PRIVACY_MODEL_COMPARISON.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"independent_review_packet_file\": \"INDEPENDENT_REVIEW_PACKET.md\""
@@ -357,6 +389,13 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Reviewer signoff claimed: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public diagnostics boundary: status-build-failure-class-only"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only"
 require_text "$RELEASE_DIR/MANIFEST.md" "Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails"
+require_text "$RELEASE_DIR/MANIFEST.md" "Dependency lockfile evidence count: $dependency_lockfile_evidence_count"
+require_text "$RELEASE_DIR/MANIFEST.md" "Dependency inventory runtime visible: true"
+require_text "$RELEASE_DIR/MANIFEST.md" "Supply-chain audit complete: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "SBOM published: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Vulnerability triage signoff complete: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Reproducible-build proof: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Live dependency scan performed: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Privacy model comparison: \`PRIVACY_MODEL_COMPARISON.md\`"
 require_text "$RELEASE_DIR/MANIFEST.md" "Briar/Cwtch-equivalent claim: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Audited E2EE claim: false"
@@ -386,6 +425,9 @@ require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "destructive migration"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "private vulnerability reporting"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "External two-machine onion delivery has not yet been independently verified"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "Briar/Cwtch-equivalent"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "live dependency scan"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "vulnerability triage"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "apps/desktop-tauri/package-lock.json"
 require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "does not provide auto-update"
 require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "same GitHub Release"
 require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "Branch files can move after a release"
@@ -395,6 +437,8 @@ require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "branch files copied from 
 require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "no auto-update channel"
 require_text "$RELEASE_DIR/SUPPLY_CHAIN_BASELINE.md" "not a supply-chain audit"
 require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "not an SBOM"
+require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "Lockfile Evidence Summary"
+require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "Vulnerability triage signoff complete: false"
 require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "not a secure messenger release today"
 require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "public diagnostics"
 require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "raw logs"

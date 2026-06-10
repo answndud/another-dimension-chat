@@ -67,7 +67,7 @@ Prepare the ignored local upload folder from the frozen local DMG:
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, dependency lockfile hash evidence, public threat model, privacy model comparison, independent review packet, public intake policy, repository governance guardrails, and explicit review-gap evidence are missing. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
+The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, dependency lockfile hash evidence, public threat model, privacy model comparison, independent review packet, public intake policy, repository governance guardrails, and explicit review-gap evidence are missing. The dependency evidence is exactly three lockfiles: `Cargo.lock`, `apps/desktop-tauri/src-tauri/Cargo.lock`, and `apps/desktop-tauri/package-lock.json`; it is not a live dependency scan, vulnerability triage signoff, SBOM, audit, or reproducible-build proof. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
 What exists today:
 
@@ -97,7 +97,7 @@ What exists today:
   network work still requires user action, direct fallback is rejected, send and
   receive adapters remain fail-closed, envelope I/O context is redacted, and
   external two-machine onion delivery is still not claimed.
-- Manual update integrity evidence for the unsigned public beta release path: DMG `.sha256`, public provenance JSON, release manifest, update-integrity policy, supply-chain baseline note, and dependency lockfile SHA-256 list.
+- Manual update integrity evidence for the unsigned public beta release path: DMG `.sha256`, public provenance JSON, release manifest, update-integrity policy, supply-chain baseline note, dependency inventory, and a three-lockfile SHA-256 list for `Cargo.lock`, `apps/desktop-tauri/src-tauri/Cargo.lock`, and `apps/desktop-tauri/package-lock.json`.
 - Public threat model and independent review packet that state allowed claims, non-claims, known gaps, public-safe review commands, and the current no-signoff/no-completed-review gap.
 - Public intake policy and GitHub issue templates that require redacted public diagnostics or minimal private-contact requests instead of raw logs, payloads, endpoints, paths, passphrases, private keys, key material, crash dumps, or private planning notes.
 - Repository governance guardrails for maintainer-driven main-branch work, unsigned beta non-claims, no-central-trusted-server scope, release file discipline, and private-data redaction.
@@ -131,7 +131,7 @@ What does not exist yet:
 - Voice or video calls.
 - Multi-device support.
 - Release signing, notarization, auto-update integrity, or reproducible builds.
-- Dependency/supply-chain audit or SBOM evidence.
+- Dependency/supply-chain audit, live dependency scan, vulnerability triage signoff, or SBOM evidence.
 - Completed external security review, independent review result, reviewer signoff, or user safety signoff.
 
 ## Security Boundary

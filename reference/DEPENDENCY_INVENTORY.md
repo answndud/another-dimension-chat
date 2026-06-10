@@ -16,6 +16,23 @@ hashes for:
 Those hashes identify the lockfiles used when the upload set was prepared. They
 do not prove dependency safety.
 
+## Lockfile Evidence Summary
+
+- Lockfile evidence count: 3
+- Lockfile evidence files:
+  - `Cargo.lock`
+  - `apps/desktop-tauri/src-tauri/Cargo.lock`
+  - `apps/desktop-tauri/package-lock.json`
+- Dependency inventory runtime visible: true
+- Supply-chain audit complete: false
+- SBOM published: false
+- Vulnerability triage signoff complete: false
+- Reproducible-build proof: false
+- Live dependency scan performed: false
+
+This is deterministic release evidence for reviewers, not a live vulnerability
+scan or safety verdict.
+
 ## Package Manager Scope
 
 - Root Rust workspace: Cargo, default non-`dev-insecure` workspace members.
@@ -61,6 +78,7 @@ This inventory does not claim:
 - dependency audit completion
 - SBOM publication
 - vulnerability triage signoff
+- live dependency scan completion
 - reproducible-build equivalence
 - signed or notarized release integrity
 - auto-update integrity
