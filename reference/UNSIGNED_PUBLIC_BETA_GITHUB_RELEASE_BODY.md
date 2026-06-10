@@ -20,6 +20,7 @@ Download all files from this same GitHub Release:
 - `PUBLIC_THREAT_MODEL.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
 - `PUBLIC_INTAKE_POLICY.md`
+- `REPOSITORY_GOVERNANCE.md`
 - `DEPENDENCY_LOCKFILES.sha256`
 - `MANIFEST.md`
 
@@ -77,3 +78,7 @@ Every update is a new manual GitHub Release download and must be verified with t
 For support requests, use only redacted public diagnostics. For security reports
 with sensitive details, use private vulnerability reporting when available or
 open a minimal public contact request without exploit details.
+
+Repository governance for this beta is maintainer-driven main-branch work with
+unsigned beta non-claims, no-central-trusted-server scope, private-data
+redaction, and no fabricated external peer evidence.
