@@ -7170,9 +7170,48 @@ function runtimeResumeRollbackBlocked(result) {
 
 function runtimeResumeRollbackBlockedMessage(result) {
   return (
-    `Stored conversation resume blocked: marker-based rollback suspicion detected. ` +
+    `${t("runtimeResumeRollbackBlockedWarning")} ` +
     `key_policy=${result?.key_policy_status ?? "unknown"} rollback_prevention=false secure_delete_claim=false`
   );
+}
+
+function runtimeResumeRollbackRecoveryView(result, options = {}) {
+  const source = String(options.source ?? "saved-room-resume").trim() || "saved-room-resume";
+  const rollbackSuspicion = result?.rollback_suspicion_detected === true;
+  const resumeBlocked = result?.rollback_resume_blocked === true;
+  const keyPolicy = result?.key_policy_status ?? "unknown";
+  const rollbackPrevention = result?.rollback_prevention_claimed === true;
+  const secureDelete = result?.secure_deletion_from_media_claimed === true;
+  return {
+    state: "Resume blocked",
+    warning: runtimeResumeRollbackBlockedMessage(result),
+    next: t("runtimeResumeRollbackBlockedNext"),
+    lifecycle:
+      `resume_blocked=${resumeBlocked} local_recovery=check-data-lifecycle ` +
+      `rollback_suspicion=${rollbackSuspicion} rollback_marker=${result?.rollback_marker_present === true} ` +
+      `rollback_detection=${result?.rollback_detection_ready === true} rollback_prevention=${rollbackPrevention} ` +
+      `backup_recovery=false cloud_backup_sync=false secure_delete_claim=${secureDelete}`,
+    boundary:
+      `local_only=true recovery=check-data-lifecycle source=${source} key_policy=${keyPolicy} ` +
+      `rollback_suspicion=${rollbackSuspicion} resume_blocked=${resumeBlocked} ` +
+      `passphrase_first=${result?.passphrase_first_unlock_required === true} ` +
+      `os_keychain_fallback=false os_keystore_only_rejected=${result?.os_keystore_only_unlock_rejected === true} ` +
+      `backup_recovery=false cloud_backup_sync=false rollback_prevention=${rollbackPrevention} ` +
+      `secure_delete_claim=${secureDelete} security_ready=false passphrase_retained=${result?.passphrase_retained === true} ` +
+      `key_material=${result?.key_material_exposed === true} network_io=${result?.network_io_attempted === true} ` +
+      `transport_io=${result?.transport_io_opened === true} runtime=${result?.runtime_messaging_enabled === true}`,
+  };
+}
+
+function applyRuntimeResumeRollbackRecovery(result, options = {}) {
+  const view = runtimeResumeRollbackRecoveryView(result, options);
+  setProductionTwoProfileState(view.state);
+  setText(fields.productionTwoProfileWarning, view.warning);
+  setText(fields.productionTwoProfileBoundary, view.boundary);
+  setText(fields.productionDataLifecycle, view.lifecycle);
+  setText(fields.productionProfileNextAction, view.next);
+  setProductionFollowupActions(true, view.next);
+  return view;
 }
 
 async function invokeInviteRoomSetup(input = productionTwoProfileInput()) {
@@ -16915,8 +16954,7 @@ async function refreshTwoProfileSessionAfterProfileUnlock(
       return false;
     }
     if (runtimeResumeRollbackBlocked(resume)) {
-      setProductionTwoProfileState("Resume blocked");
-      setText(fields.productionTwoProfileWarning, runtimeResumeRollbackBlockedMessage(resume));
+      applyRuntimeResumeRollbackRecovery(resume, { source: "profile-unlock-auto-resume" });
       return false;
     }
     const result = resume.session_status;
@@ -17479,12 +17517,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
         : null
     );
     if (runtimeResumeRollbackBlocked(runtimeResumeResult)) {
-      setProductionTwoProfileState("Resume blocked");
-      setText(fields.productionTwoProfileWarning, runtimeResumeRollbackBlockedMessage(runtimeResumeResult));
-      setText(
-        fields.productionTwoProfileBoundary,
-        `key_policy=${runtimeResumeResult.key_policy_status ?? "unknown"} rollback_suspicion=true rollback_prevention=false secure_delete_claim=false`,
-      );
+      applyRuntimeResumeRollbackRecovery(runtimeResumeResult, { source: "transcript-load" });
       return false;
     }
     const [profileAResult, profileBResult] = runtimeResumeResult
