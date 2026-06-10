@@ -22,6 +22,14 @@ If you find a security issue, please use GitHub's private vulnerability reportin
 
 If private vulnerability reporting is not enabled, open a minimal public issue that does not include exploit details or sensitive information, and ask for a private contact path.
 
+Public issues, release comments, and support requests must follow
+`reference/PUBLIC_INTAKE_POLICY.md`. Use only redacted public diagnostics or a
+minimal private-contact request. Do not post bridge lines, onion endpoints,
+invite codes, pairing/envelope/endpoint payloads, safety phrases, profile names,
+message text, local paths, raw logs, crash dumps, screenshots of private room
+data, passphrases, private keys, key material, private planning notes, files
+from `docs/`, or local app data.
+
 ## Non-Claims
 
 This project does not currently claim:
@@ -84,13 +92,13 @@ The current public upload set is prepared from the ignored local beta DMG with:
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-The generated public release folder is `apps/desktop-tauri/public-release/unsigned-public-beta/`. It is ignored and should contain only the DMG, matching `.sha256`, public provenance JSON, `INSTALL_UNSIGNED_MACOS.md`, `RELEASE_NOTES.md`, `GITHUB_RELEASE_BODY.md`, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, `DEPENDENCY_INVENTORY.md`, `PUBLIC_THREAT_MODEL.md`, `INDEPENDENT_REVIEW_PACKET.md`, `DEPENDENCY_LOCKFILES.sha256`, and `MANIFEST.md`.
+The generated public release folder is `apps/desktop-tauri/public-release/unsigned-public-beta/`. It is ignored and should contain only the DMG, matching `.sha256`, public provenance JSON, `INSTALL_UNSIGNED_MACOS.md`, `RELEASE_NOTES.md`, `GITHUB_RELEASE_BODY.md`, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, `DEPENDENCY_INVENTORY.md`, `PUBLIC_THREAT_MODEL.md`, `INDEPENDENT_REVIEW_PACKET.md`, `PUBLIC_INTAKE_POLICY.md`, `DEPENDENCY_LOCKFILES.sha256`, and `MANIFEST.md`.
 
 Public users must verify the DMG checksum before using the normal macOS Privacy & Security manual allow path. This project does not ask users to bypass macOS protections with terminal quarantine removal commands. There is no auto-update channel; every update is a manual GitHub Release download with a matching `.sha256` file.
 
 The unsigned release upload set includes public provenance JSON, `GITHUB_RELEASE_BODY.md`, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, `DEPENDENCY_INVENTORY.md`, and `DEPENDENCY_LOCKFILES.sha256` as review evidence. The release script regenerates the public provenance for the public DMG name, records the source provenance SHA-256, records the public threat model and independent review packet, marks `independent_review_complete=false`, marks `public_review_gap_published=true`, marks `reviewer_signoff_claimed=false`, and checks the GitHub Release body non-claims before declaring the upload set ready. These files are not an audit, SBOM, reproducible-build proof, malware review, signing substitute, notarization substitute, external review result, reviewer signoff, or secure messenger claim.
 
-The upload set also includes `PUBLIC_THREAT_MODEL.md` and `INDEPENDENT_REVIEW_PACKET.md` so reviewers can inspect allowed claims, non-claims, known gaps, and public-safe review commands without private planning notes.
+The upload set also includes `PUBLIC_THREAT_MODEL.md`, `INDEPENDENT_REVIEW_PACKET.md`, and `PUBLIC_INTAKE_POLICY.md` so reviewers can inspect allowed claims, non-claims, known gaps, public-safe review commands, and public issue/security intake redaction rules without private planning notes.
 
 The app's public diagnostics export is local-copy only and limited to status, build, failure class, manual network permission state, and app-launch network boundary. It does not provide crash upload, telemetry, or raw log export. It must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, profile names, message text, local paths, raw logs, passphrases, private keys, key material, or private planning notes.
 

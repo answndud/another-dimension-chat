@@ -19,6 +19,7 @@ Download all files from this same GitHub Release:
 - `DEPENDENCY_INVENTORY.md`
 - `PUBLIC_THREAT_MODEL.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
+- `PUBLIC_INTAKE_POLICY.md`
 - `DEPENDENCY_LOCKFILES.sha256`
 - `MANIFEST.md`
 
@@ -54,6 +55,9 @@ This beta does not claim:
 - production-ready E2EE
 - sensitive communication safety
 - crash upload, telemetry, raw log export, or safe publication of private logs
+- safe publication of bridge lines, onion endpoints, invite codes, payloads,
+  safety phrases, messages, paths, crash dumps, passphrases, private keys, key
+  material, screenshots of private room data, or private planning notes
 - signing or notarization
 - auto-update integrity
 - reproducible-build proof
@@ -69,3 +73,7 @@ External two-machine onion delivery has not yet been independently verified.
 Same-machine dual-profile rehearsal is development evidence only, not peer field-test evidence.
 
 Every update is a new manual GitHub Release download and must be verified with the matching `.sha256` file.
+
+For support requests, use only redacted public diagnostics. For security reports
+with sensitive details, use private vulnerability reporting when available or
+open a minimal public contact request without exploit details.

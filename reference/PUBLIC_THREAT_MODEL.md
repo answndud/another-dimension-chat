@@ -62,6 +62,8 @@ Current implementation evidence includes:
 - explicit public review gap with no completed-review or reviewer-signoff claim
 - local-copy public diagnostics limited to status, build, failure class, manual
   network permission, and app-launch network boundary
+- public issue and security intake policy that requires redacted diagnostics or
+  minimal private-contact requests instead of raw sensitive material
 
 These are implementation guardrails, not a secure messenger claim.
 
@@ -84,6 +86,9 @@ This beta does not claim:
 - dependency audit, SBOM, reproducible build, signing, notarization, or auto-update
 - completed independent review, reviewer signoff, or public user safety signoff
 - crash upload, telemetry, raw log export, or safe publication of private logs
+- safe public posting of endpoints, payloads, safety phrases, messages, paths,
+  passphrases, private keys, key material, crash dumps, screenshots of private
+  room data, or private planning notes
 
 ## Non-Goals
 
