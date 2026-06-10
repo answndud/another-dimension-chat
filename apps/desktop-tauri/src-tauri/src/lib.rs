@@ -393,10 +393,18 @@ fn product_unlock_status_from_session(
             .map(|session| session.profile.clone())
             .unwrap_or_default(),
         redacted_reason,
+        key_policy_status: "passphrase-first-runtime-unlock-required",
         unlock_command_enabled: true,
         lock_command_enabled: unlocked,
         passphrase_first: true,
         os_keystore_only_rejected: true,
+        production_key_management_ready: false,
+        rollback_marker_present: false,
+        rollback_detection_ready: false,
+        rollback_suspicion_detected: false,
+        rollback_resume_blocked: false,
+        rollback_prevention_claimed: false,
+        secure_deletion_from_media_claimed: false,
         idle_auto_lock_seconds: (PRODUCT_UNLOCK_IDLE_TIMEOUT_MS / 1000) as u16,
         explicit_lock_available: true,
         storage_opened: unlocked,
@@ -419,6 +427,96 @@ fn product_unlock_locked_status(
     now_ms: u128,
 ) -> ProductionProductUnlockStatusResult {
     product_unlock_status_from_session(None, redacted_reason, now_ms)
+}
+
+#[derive(Clone, Copy)]
+struct ProductionRuntimeKeyPolicyGate {
+    key_policy_status: &'static str,
+    passphrase_first_unlock_required: bool,
+    os_keystore_only_unlock_rejected: bool,
+    production_key_management_ready: bool,
+    rollback_marker_present: bool,
+    rollback_detection_ready: bool,
+    rollback_suspicion_detected: bool,
+    rollback_resume_blocked: bool,
+    rollback_prevention_claimed: bool,
+    secure_deletion_from_media_claimed: bool,
+}
+
+impl ProductionRuntimeKeyPolicyGate {
+    fn from_lifecycle(result: &ProductionDataLifecycleResult) -> Self {
+        let marker_family_present = result.lifecycle_marker_present
+            || result.migration_marker_present
+            || result.profile_snapshot_marker_present
+            || result.rollback_marker_present;
+        let partial_marker_family = marker_family_present
+            && (!result.lifecycle_marker_present
+                || !result.migration_marker_present
+                || !result.profile_snapshot_marker_present
+                || !result.rollback_marker_present);
+        let rollback_suspicion_detected =
+            result.rollback_suspicion_detected || partial_marker_family;
+        Self {
+            key_policy_status: if rollback_suspicion_detected {
+                "rollback-suspicion-blocks-runtime-actions"
+            } else if result.rollback_detection_ready {
+                "passphrase-first-runtime-unlock-with-marker-based-rollback-detection"
+            } else {
+                "passphrase-first-runtime-unlock-rollback-marker-unavailable"
+            },
+            passphrase_first_unlock_required: true,
+            os_keystore_only_unlock_rejected: true,
+            production_key_management_ready: false,
+            rollback_marker_present: result.rollback_marker_present,
+            rollback_detection_ready: result.rollback_detection_ready,
+            rollback_suspicion_detected,
+            rollback_resume_blocked: rollback_suspicion_detected,
+            rollback_prevention_claimed: false,
+            secure_deletion_from_media_claimed: false,
+        }
+    }
+
+    fn apply_to_unlock_status(
+        self,
+        mut status: ProductionProductUnlockStatusResult,
+    ) -> ProductionProductUnlockStatusResult {
+        status.key_policy_status = self.key_policy_status;
+        status.production_key_management_ready = self.production_key_management_ready;
+        status.rollback_marker_present = self.rollback_marker_present;
+        status.rollback_detection_ready = self.rollback_detection_ready;
+        status.rollback_suspicion_detected = self.rollback_suspicion_detected;
+        status.rollback_resume_blocked = self.rollback_resume_blocked;
+        status.rollback_prevention_claimed = self.rollback_prevention_claimed;
+        status.secure_deletion_from_media_claimed = self.secure_deletion_from_media_claimed;
+        status
+    }
+}
+
+fn run_production_runtime_key_policy_status(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+) -> Result<ProductionRuntimeKeyPolicyGate, String> {
+    let lifecycle = run_production_data_lifecycle_status(app_data_root, app_cache_root, false)?;
+    Ok(ProductionRuntimeKeyPolicyGate::from_lifecycle(&lifecycle))
+}
+
+fn run_production_runtime_key_policy_prepare(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+) -> Result<ProductionRuntimeKeyPolicyGate, String> {
+    let lifecycle = run_production_data_lifecycle_status(app_data_root, app_cache_root, true)?;
+    Ok(ProductionRuntimeKeyPolicyGate::from_lifecycle(&lifecycle))
+}
+
+fn ensure_runtime_key_policy_allows_actions(
+    app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
+) -> Result<ProductionRuntimeKeyPolicyGate, String> {
+    let gate = run_production_runtime_key_policy_status(app_data_root, app_cache_root)?;
+    if gate.rollback_suspicion_detected {
+        return Err("runtime action blocked by marker-based rollback suspicion".to_string());
+    }
+    Ok(gate)
 }
 
 #[cfg(feature = "manual-onion-client-attempt")]
@@ -695,10 +793,18 @@ pub struct ProductionProductUnlockStatusResult {
     unlocked: bool,
     profile: String,
     redacted_reason: &'static str,
+    key_policy_status: &'static str,
     unlock_command_enabled: bool,
     lock_command_enabled: bool,
     passphrase_first: bool,
     os_keystore_only_rejected: bool,
+    production_key_management_ready: bool,
+    rollback_marker_present: bool,
+    rollback_detection_ready: bool,
+    rollback_suspicion_detected: bool,
+    rollback_resume_blocked: bool,
+    rollback_prevention_claimed: bool,
+    secure_deletion_from_media_claimed: bool,
     idle_auto_lock_seconds: u16,
     explicit_lock_available: bool,
     storage_opened: bool,
@@ -893,9 +999,13 @@ pub struct ProductionDataLifecycleResult {
     migration_marker_written: bool,
     forward_only_migration: bool,
     destructive_migration_blocked: bool,
+    profile_snapshot_marker_present: bool,
+    profile_snapshot_marker_written: bool,
+    profile_snapshot_mismatch: bool,
     rollback_marker_present: bool,
     rollback_marker_written: bool,
     rollback_detection_ready: bool,
+    rollback_suspicion_detected: bool,
     rollback_prevention_claimed: bool,
     full_local_data_wiped: bool,
     profiles_deleted: bool,
@@ -1171,6 +1281,16 @@ pub struct ProductionTwoProfileRuntimeResumeResult {
     expired_messages_purged: usize,
     runtime_resume_ready: bool,
     retry_review_required: bool,
+    key_policy_status: &'static str,
+    passphrase_first_unlock_required: bool,
+    os_keystore_only_unlock_rejected: bool,
+    production_key_management_ready: bool,
+    rollback_marker_present: bool,
+    rollback_detection_ready: bool,
+    rollback_suspicion_detected: bool,
+    rollback_resume_blocked: bool,
+    rollback_prevention_claimed: bool,
+    secure_deletion_from_media_claimed: bool,
     store_path_returned: bool,
     passphrase_retained: bool,
     key_material_exposed: bool,
@@ -2279,6 +2399,10 @@ fn production_onion_outbound_envelope_send_prepare(
     let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion outbound envelope send prepare failed without exposing local path details"
     })?;
+    ensure_runtime_key_policy_allows_actions(&app_data_root, &app_cache_root).map_err(|_| {
+        "production onion outbound envelope send prepare blocked without exposing rollback marker details"
+            .to_string()
+    })?;
     let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
     run_production_onion_outbound_envelope_send_prepare(
         app_data_root,
@@ -2310,6 +2434,10 @@ async fn production_onion_outbound_envelope_send_attempt(
     })?;
     let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion outbound envelope send attempt failed without exposing local path details"
+    })?;
+    ensure_runtime_key_policy_allows_actions(&app_data_root, &app_cache_root).map_err(|_| {
+        "production onion outbound envelope send attempt blocked without exposing rollback marker details"
+            .to_string()
     })?;
     let mut result = run_production_onion_outbound_envelope_send_attempt(
         &app_data_root,
@@ -2357,6 +2485,10 @@ async fn production_onion_outbound_envelope_send_stored_endpoint_attempt(
     })?;
     let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion outbound envelope send stored-endpoint attempt failed without exposing local path details"
+    })?;
+    ensure_runtime_key_policy_allows_actions(&app_data_root, &app_cache_root).map_err(|_| {
+        "production onion outbound envelope send stored-endpoint attempt blocked without exposing rollback marker details"
+            .to_string()
     })?;
     let persistent_client_ready = run_production_onion_persistent_client_ready(&state)
         .unwrap_or(false);
@@ -2477,6 +2609,10 @@ async fn production_onion_endpoint_update_control_send_stored_endpoint_attempt(
     let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion endpoint update send attempt failed without exposing local path details"
     })?;
+    ensure_runtime_key_policy_allows_actions(&app_data_root, &app_cache_root).map_err(|_| {
+        "production onion endpoint update send attempt blocked without exposing rollback marker details"
+            .to_string()
+    })?;
     let mut result = run_production_onion_endpoint_update_control_send_stored_endpoint_attempt(
         &app_data_root,
         app_cache_root,
@@ -2548,19 +2684,40 @@ fn production_product_unlock(
     }
     let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "product unlock failed without exposing local path details")?;
+    let app_cache_root = production_app_cache_dir(&app)
+        .map_err(|_| "product unlock failed without exposing local cache path details")?;
+    let preflight_gate =
+        run_production_runtime_key_policy_status(&app_data_root, &app_cache_root).map_err(|_| {
+            "product unlock failed without exposing local path or key policy details".to_string()
+        })?;
+    if preflight_gate.rollback_suspicion_detected {
+        return Ok(preflight_gate.apply_to_unlock_status(product_unlock_locked_status(
+            "rollback-suspicion-detected",
+            now_unix_ms(),
+        )));
+    }
+    let prepared_gate =
+        run_production_runtime_key_policy_prepare(&app_data_root, &app_cache_root).map_err(|_| {
+            "product unlock failed without exposing local path or key policy details".to_string()
+        })?;
     let profile = profile.as_str().to_string();
-    match run_production_profile_unlock(app_data_root, profile.clone(), passphrase) {
+    match run_production_profile_unlock(&app_data_root, profile.clone(), passphrase) {
         Ok(result) if result.storage_opened && !result.key_material_exposed => {
-            Ok(state.record_unlocked(profile, now_unix_ms()))
+            let post_unlock_gate =
+                run_production_runtime_key_policy_prepare(&app_data_root, &app_cache_root)
+                    .unwrap_or(prepared_gate);
+            Ok(post_unlock_gate.apply_to_unlock_status(
+                state.record_unlocked(profile, now_unix_ms()),
+            ))
         }
-        Ok(_) => Ok(product_unlock_locked_status(
+        Ok(_) => Ok(prepared_gate.apply_to_unlock_status(product_unlock_locked_status(
             "unlock-boundary-not-ready",
             now_unix_ms(),
-        )),
-        Err(_) => Ok(product_unlock_locked_status(
+        ))),
+        Err(_) => Ok(prepared_gate.apply_to_unlock_status(product_unlock_locked_status(
             "wrong-passphrase-or-store-unavailable",
             now_unix_ms(),
-        )),
+        ))),
     }
 }
 
@@ -2573,9 +2730,18 @@ fn production_product_lock(
 
 #[tauri::command]
 fn production_product_unlock_status(
+    app: tauri::AppHandle,
     state: tauri::State<'_, ProductUnlockRuntimeState>,
 ) -> Result<ProductionProductUnlockStatusResult, String> {
-    Ok(state.status(now_unix_ms()))
+    let mut status = state.status(now_unix_ms());
+    let app_data_root = production_app_data_dir(&app)
+        .map_err(|_| "product unlock status failed without exposing local path details")?;
+    let app_cache_root = production_app_cache_dir(&app)
+        .map_err(|_| "product unlock status failed without exposing local cache path details")?;
+    if let Ok(gate) = run_production_runtime_key_policy_status(app_data_root, app_cache_root) {
+        status = gate.apply_to_unlock_status(status);
+    }
+    Ok(status)
 }
 
 #[tauri::command]
@@ -2872,8 +3038,12 @@ fn production_two_profile_runtime_resume_status(
     let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production two-profile runtime resume failed without exposing local path details"
     })?;
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
+        "production two-profile runtime resume failed without exposing local cache path details"
+    })?;
     run_production_two_profile_runtime_resume_status(
         app_data_root,
+        app_cache_root,
         local_profile,
         peer_profile,
         passphrase,
@@ -2959,6 +3129,11 @@ fn production_message_envelope_export(
 ) -> Result<ProductionMessageEnvelopeExportResult, String> {
     let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production message export failed without exposing local path details")?;
+    let app_cache_root = production_app_cache_dir(&app)
+        .map_err(|_| "production message export failed without exposing local cache path details")?;
+    ensure_runtime_key_policy_allows_actions(&app_data_root, &app_cache_root).map_err(|_| {
+        "production message export blocked without exposing rollback marker details".to_string()
+    })?;
     run_production_message_envelope_export(
         app_data_root,
         profile,
@@ -2985,6 +3160,11 @@ fn production_message_envelope_import(
 ) -> Result<ProductionMessageEnvelopeImportResult, String> {
     let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production message import failed without exposing local path details")?;
+    let app_cache_root = production_app_cache_dir(&app)
+        .map_err(|_| "production message import failed without exposing local cache path details")?;
+    ensure_runtime_key_policy_allows_actions(&app_data_root, &app_cache_root).map_err(|_| {
+        "production message import blocked without exposing rollback marker details".to_string()
+    })?;
     run_production_message_envelope_import(
         app_data_root,
         profile,
@@ -3010,6 +3190,13 @@ fn production_endpoint_update_control_envelope_export(
     let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production endpoint update export failed without exposing local path details"
     })?;
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
+        "production endpoint update export failed without exposing local cache path details"
+    })?;
+    ensure_runtime_key_policy_allows_actions(&app_data_root, &app_cache_root).map_err(|_| {
+        "production endpoint update export blocked without exposing rollback marker details"
+            .to_string()
+    })?;
     run_production_endpoint_update_control_envelope_export(
         app_data_root,
         profile,
@@ -3032,6 +3219,13 @@ fn production_endpoint_update_control_envelope_import(
 ) -> Result<ProductionEndpointUpdateControlEnvelopeImportResult, String> {
     let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production endpoint update import failed without exposing local path details"
+    })?;
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
+        "production endpoint update import failed without exposing local cache path details"
+    })?;
+    ensure_runtime_key_policy_allows_actions(&app_data_root, &app_cache_root).map_err(|_| {
+        "production endpoint update import blocked without exposing rollback marker details"
+            .to_string()
     })?;
     run_production_endpoint_update_control_envelope_import(
         app_data_root,
@@ -8422,7 +8616,19 @@ const DATA_LIFECYCLE_SCHEMA_VERSION: u16 = 1;
 const DATA_LIFECYCLE_DIR: &str = "lifecycle";
 const DATA_LIFECYCLE_MARKER: &str = "data-lifecycle-v1.marker";
 const DATA_LIFECYCLE_MIGRATION_MARKER: &str = "schema-migration-v1.marker";
+const DATA_LIFECYCLE_PROFILE_SNAPSHOT_MARKER: &str = "profile-snapshot-v1.marker";
 const DATA_LIFECYCLE_ROLLBACK_MARKER: &str = "rollback-detection-v1.marker";
+
+fn encode_profile_snapshot_marker(profiles: &[String]) -> String {
+    format!(
+        "AD-PROFILE-SNAPSHOT-V1\nprofiles={}\n",
+        profiles.join(",")
+    )
+}
+
+fn profile_snapshot_marker_matches(marker: &str, profiles: &[String]) -> bool {
+    marker == encode_profile_snapshot_marker(profiles)
+}
 
 fn run_production_data_lifecycle_status(
     app_data_root: impl AsRef<std::path::Path>,
@@ -8434,10 +8640,12 @@ fn run_production_data_lifecycle_status(
     let lifecycle_dir = app_data_root.join(DATA_LIFECYCLE_DIR);
     let lifecycle_marker = lifecycle_dir.join(DATA_LIFECYCLE_MARKER);
     let migration_marker = lifecycle_dir.join(DATA_LIFECYCLE_MIGRATION_MARKER);
+    let profile_snapshot_marker = lifecycle_dir.join(DATA_LIFECYCLE_PROFILE_SNAPSHOT_MARKER);
     let rollback_marker = lifecycle_dir.join(DATA_LIFECYCLE_ROLLBACK_MARKER);
 
     let mut lifecycle_marker_written = false;
     let mut migration_marker_written = false;
+    let mut profile_snapshot_marker_written = false;
     let mut rollback_marker_written = false;
     let mut backup_exclusion_checked = false;
     let mut backup_exclusion_verified = false;
@@ -8471,9 +8679,36 @@ fn run_production_data_lifecycle_status(
         backup_exclusion_verified = backup.backup_exclusion_verified;
     }
 
-    let profile_count = run_production_profile_list(app_data_root)?.profile_count;
+    let profile_list = run_production_profile_list(app_data_root)?;
+    let profile_count = profile_list.profile_count;
+    if prepare {
+        std::fs::write(
+            &profile_snapshot_marker,
+            encode_profile_snapshot_marker(&profile_list.profiles),
+        )
+        .map_err(|_| "failed to write profile snapshot marker".to_string())?;
+        profile_snapshot_marker_written = true;
+    }
+    let profile_snapshot_marker_present = profile_snapshot_marker.exists();
+    let profile_snapshot_mismatch = if profile_snapshot_marker_present {
+        let marker = std::fs::read_to_string(&profile_snapshot_marker)
+            .map_err(|_| "failed to read profile snapshot marker".to_string())?;
+        !profile_snapshot_marker_matches(&marker, &profile_list.profiles)
+    } else {
+        false
+    };
     let transport_data_present = app_data_root.join("transport").exists()
         || app_cache_root.join("transport").exists();
+    let marker_family_present = lifecycle_marker.exists()
+        || migration_marker.exists()
+        || profile_snapshot_marker_present
+        || rollback_marker.exists();
+    let partial_marker_family = marker_family_present
+        && (!lifecycle_marker.exists()
+            || !migration_marker.exists()
+            || !profile_snapshot_marker_present
+            || !rollback_marker.exists());
+    let rollback_suspicion_detected = partial_marker_family || profile_snapshot_mismatch;
 
     Ok(ProductionDataLifecycleResult {
         warning: "local data lifecycle boundary only; rollback detection is marker-based and secure deletion from media is not claimed",
@@ -8489,9 +8724,13 @@ fn run_production_data_lifecycle_status(
         migration_marker_written,
         forward_only_migration: true,
         destructive_migration_blocked: true,
+        profile_snapshot_marker_present,
+        profile_snapshot_marker_written,
+        profile_snapshot_mismatch,
         rollback_marker_present: rollback_marker.exists(),
         rollback_marker_written,
-        rollback_detection_ready: rollback_marker.exists(),
+        rollback_detection_ready: rollback_marker.exists() && profile_snapshot_marker_present,
+        rollback_suspicion_detected,
         rollback_prevention_claimed: false,
         full_local_data_wiped: false,
         profiles_deleted: false,
@@ -8550,9 +8789,13 @@ fn run_production_full_local_data_wipe(
         migration_marker_written: false,
         forward_only_migration: true,
         destructive_migration_blocked: true,
+        profile_snapshot_marker_present: false,
+        profile_snapshot_marker_written: false,
+        profile_snapshot_mismatch: false,
         rollback_marker_present: false,
         rollback_marker_written: false,
         rollback_detection_ready: false,
+        rollback_suspicion_detected: false,
         rollback_prevention_claimed: false,
         full_local_data_wiped: !app_data_root.join("profiles").exists()
             && !app_data_root.join("transport").exists()
@@ -8861,11 +9104,17 @@ fn run_production_two_profile_session_status(
 
 fn run_production_two_profile_runtime_resume_status(
     app_data_root: impl AsRef<std::path::Path>,
+    app_cache_root: impl AsRef<std::path::Path>,
     profile_a: String,
     profile_b: String,
     passphrase: String,
 ) -> Result<ProductionTwoProfileRuntimeResumeResult, String> {
     let app_data_root = app_data_root.as_ref();
+    let key_policy_gate =
+        run_production_runtime_key_policy_status(app_data_root, app_cache_root.as_ref())?;
+    if key_policy_gate.rollback_suspicion_detected {
+        return Err("runtime resume blocked by marker-based rollback suspicion".to_string());
+    }
     let profile_a_name = sanitize_production_profile(profile_a)?.as_str().to_string();
     let profile_b_name = sanitize_production_profile(profile_b)?.as_str().to_string();
     if profile_a_name == profile_b_name {
@@ -8941,6 +9190,16 @@ fn run_production_two_profile_runtime_resume_status(
         expired_messages_purged,
         runtime_resume_ready,
         retry_review_required: retryable_outbound_count > 0,
+        key_policy_status: key_policy_gate.key_policy_status,
+        passphrase_first_unlock_required: key_policy_gate.passphrase_first_unlock_required,
+        os_keystore_only_unlock_rejected: key_policy_gate.os_keystore_only_unlock_rejected,
+        production_key_management_ready: key_policy_gate.production_key_management_ready,
+        rollback_marker_present: key_policy_gate.rollback_marker_present,
+        rollback_detection_ready: key_policy_gate.rollback_detection_ready,
+        rollback_suspicion_detected: key_policy_gate.rollback_suspicion_detected,
+        rollback_resume_blocked: key_policy_gate.rollback_resume_blocked,
+        rollback_prevention_claimed: key_policy_gate.rollback_prevention_claimed,
+        secure_deletion_from_media_claimed: key_policy_gate.secure_deletion_from_media_claimed,
         store_path_returned: false,
         passphrase_retained: false,
         key_material_exposed,
@@ -16448,8 +16707,12 @@ replay check: no replayed messages after message 2
         assert!(prepared.migration_marker_written);
         assert!(prepared.forward_only_migration);
         assert!(prepared.destructive_migration_blocked);
+        assert!(prepared.profile_snapshot_marker_present);
+        assert!(prepared.profile_snapshot_marker_written);
+        assert!(!prepared.profile_snapshot_mismatch);
         assert!(prepared.rollback_marker_present);
         assert!(prepared.rollback_detection_ready);
+        assert!(!prepared.rollback_suspicion_detected);
         assert!(!prepared.rollback_prevention_claimed);
         assert!(!prepared.secure_deletion_from_media_claimed);
         assert!(!prepared.store_path_returned);
@@ -16464,6 +16727,12 @@ replay check: no replayed messages after message 2
         assert!(profile_delete.profile_deleted);
         assert!(profile_delete.profile_existed_before_delete);
         assert!(!profile_delete.profile_exists_after_delete);
+        let rollback_suspicion = run_production_data_lifecycle_status(&root, &cache, false)
+            .expect("rollback suspicion after profile snapshot mismatch");
+        assert!(rollback_suspicion.profile_snapshot_marker_present);
+        assert!(rollback_suspicion.profile_snapshot_mismatch);
+        assert!(rollback_suspicion.rollback_suspicion_detected);
+        assert!(super::ensure_runtime_key_policy_allows_actions(&root, &cache).is_err());
         assert!(!profile_delete.secure_deletion_from_media_claimed);
         assert!(!profile_delete.store_path_returned);
 
@@ -16887,6 +17156,7 @@ replay check: no replayed messages after message 2
         .expect("receiver transcript after resume");
         let resume = run_production_two_profile_runtime_resume_status(
             &root,
+            &root,
             "alice".to_string(),
             "bob".to_string(),
             "correct-passphrase".to_string(),
@@ -16904,6 +17174,17 @@ replay check: no replayed messages after message 2
         assert!(resume.session_status.both_ready_for_message_envelope);
         assert_eq!(resume.profile_a_transcript.entries.len(), 1);
         assert_eq!(resume.profile_b_transcript.entries.len(), 1);
+        assert_eq!(
+            resume.key_policy_status,
+            "passphrase-first-runtime-unlock-rollback-marker-unavailable"
+        );
+        assert!(resume.passphrase_first_unlock_required);
+        assert!(resume.os_keystore_only_unlock_rejected);
+        assert!(!resume.production_key_management_ready);
+        assert!(!resume.rollback_suspicion_detected);
+        assert!(!resume.rollback_resume_blocked);
+        assert!(!resume.rollback_prevention_claimed);
+        assert!(!resume.secure_deletion_from_media_claimed);
         assert!(!resume.store_path_returned);
         assert!(!resume.passphrase_retained);
         assert!(!resume.key_material_exposed);
@@ -17053,6 +17334,7 @@ replay check: no replayed messages after message 2
         assert!(!resumed_status.runtime_messaging_enabled);
         let resume = run_production_two_profile_runtime_resume_status(
             &root,
+            &root,
             "alice".to_string(),
             "bob".to_string(),
             "correct-passphrase".to_string(),
@@ -17069,6 +17351,9 @@ replay check: no replayed messages after message 2
             resume.latest_retryable_message_number,
             Some(outbound.selected_message_number)
         );
+        assert!(!resume.production_key_management_ready);
+        assert!(!resume.rollback_suspicion_detected);
+        assert!(!resume.rollback_resume_blocked);
         assert!(!resume.passphrase_retained);
         assert!(!resume.key_material_exposed);
         assert!(!resume.network_io_attempted);
