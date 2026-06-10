@@ -135,6 +135,26 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "independent_review_complete": false,
   "public_review_gap_published": true,
   "reviewer_signoff_claimed": false,
+  "public_diagnostics_boundary": "status-build-failure-class-only",
+  "crash_upload": false,
+  "telemetry": false,
+  "raw_log_export": false,
+  "diagnostics_forbidden_fields": [
+    "bridge lines",
+    "onion endpoints",
+    "invite codes",
+    "pairing payloads",
+    "envelope payloads",
+    "safety phrases",
+    "profile names",
+    "message text",
+    "local paths",
+    "raw logs",
+    "passphrases",
+    "private keys",
+    "key material",
+    "private planning notes"
+  ],
   "manual_update_integrity_file": "UPDATE_INTEGRITY.md",
   "supply_chain_baseline_file": "SUPPLY_CHAIN_BASELINE.md",
   "public_non_claims": [
@@ -188,6 +208,10 @@ This folder is for a GitHub Release upload.
 - Independent review complete: false
 - Public review gap published: true
 - Reviewer signoff claimed: false
+- Public diagnostics boundary: status-build-failure-class-only
+- Crash upload: disabled
+- Telemetry: disabled
+- Raw log export: disabled
 - Auto-update: disabled
 - Signing/notarization: disabled
 
@@ -207,6 +231,13 @@ security-audit claim.
 The public threat model and independent review packet are review inputs only.
 No independent review, reviewer signoff, public user safety signoff, or secure
 messenger claim is made by this upload set.
+
+Public diagnostics are local-copy only and limited to status, build, failure
+class, manual network permission, and app-launch network boundary. No crash
+upload, telemetry, raw log export, bridge line, onion endpoint, invite code,
+pairing payload, envelope payload, safety phrase, profile name, message text,
+local path, passphrase, private key, key material, or private planning note is
+permitted in public diagnostics or release artifacts.
 EOF
 
 for release_file in "${REQUIRED_RELEASE_FILES[@]}"; do
@@ -222,6 +253,10 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"independent_review_packet_fil
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"independent_review_complete\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_review_gap_published\": true"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"reviewer_signoff_claimed\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_diagnostics_boundary\": \"status-build-failure-class-only\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"crash_upload\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"telemetry\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"raw_log_export\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"auto_update\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"signed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"notarized\": false"
@@ -230,17 +265,24 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Signing/notarization: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Independent review complete: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public review gap published: true"
 require_text "$RELEASE_DIR/MANIFEST.md" "Reviewer signoff claimed: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Public diagnostics boundary: status-build-failure-class-only"
+require_text "$RELEASE_DIR/MANIFEST.md" "Crash upload: disabled"
+require_text "$RELEASE_DIR/MANIFEST.md" "Telemetry: disabled"
+require_text "$RELEASE_DIR/MANIFEST.md" "Raw log export: disabled"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "unsigned experimental public beta"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not audited"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not production-ready"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "sensitive communication prohibited"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GITHUB_RELEASE_BODY.md"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "completed independent review"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "crash upload, telemetry, raw log export"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "External two-machine onion delivery has not yet been independently verified"
 require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "does not provide auto-update"
 require_text "$RELEASE_DIR/SUPPLY_CHAIN_BASELINE.md" "not a supply-chain audit"
 require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "not an SBOM"
 require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "not a secure messenger release today"
+require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "public diagnostics"
+require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "raw logs"
 require_text "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md" "not an external review result"
 require_text "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md" "Known Review Gaps"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "Cargo.lock"

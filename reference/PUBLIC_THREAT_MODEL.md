@@ -60,6 +60,8 @@ Current implementation evidence includes:
 - dependency lockfile hash baseline for reviewers
 - public threat-model and independent-review packet publication
 - explicit public review gap with no completed-review or reviewer-signoff claim
+- local-copy public diagnostics limited to status, build, failure class, manual
+  network permission, and app-launch network boundary
 
 These are implementation guardrails, not a secure messenger claim.
 
@@ -81,6 +83,7 @@ This beta does not claim:
 - secure deletion from storage media
 - dependency audit, SBOM, reproducible build, signing, notarization, or auto-update
 - completed independent review, reviewer signoff, or public user safety signoff
+- crash upload, telemetry, raw log export, or safe publication of private logs
 
 ## Non-Goals
 

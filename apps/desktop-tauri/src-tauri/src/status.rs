@@ -33,6 +33,7 @@ pub struct PrototypeStatus {
     release_integrity_status: &'static str,
     supply_chain_integrity_boundary: String,
     independent_review_boundary: String,
+    diagnostics_redaction_boundary: String,
     verification_status: &'static str,
     local_dev_peer_label: String,
 }
@@ -62,6 +63,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         another_dimension_core::production::production_supply_chain_integrity_boundary_summary();
     let independent_review =
         another_dimension_core::production::production_independent_review_boundary_summary();
+    let diagnostics_redaction =
+        another_dimension_core::production::production_diagnostics_redaction_boundary_summary();
 
     PrototypeStatus {
         secure_release: false,
@@ -292,6 +295,20 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             independent_review.security_ready_claimed(),
             independent_review.policies().join(","),
         ),
+        diagnostics_redaction_boundary: format!(
+            "boundary_closed={} local_copy_only={} crash_upload_enabled={} telemetry_enabled={} raw_log_export_enabled={} private_field_redaction_required={} app_launch_network_boundary_required={} security_ready_claimed={} allowed_fields={} forbidden_fields={} policies={}",
+            diagnostics_redaction.boundary_closed(),
+            diagnostics_redaction.public_diagnostics_local_copy_only(),
+            diagnostics_redaction.crash_upload_enabled(),
+            diagnostics_redaction.telemetry_enabled(),
+            diagnostics_redaction.raw_log_export_enabled(),
+            diagnostics_redaction.private_field_redaction_required(),
+            diagnostics_redaction.app_launch_network_boundary_required(),
+            diagnostics_redaction.security_ready_claimed(),
+            diagnostics_redaction.allowed_fields().join(","),
+            diagnostics_redaction.forbidden_fields().join(","),
+            diagnostics_redaction.policies().join(","),
+        ),
         verification_status: "lightweight checks only",
         local_dev_peer_label: local_dev_peer_label(),
     }
@@ -436,6 +453,33 @@ mod tests {
         assert!(status
             .independent_review_boundary
             .contains("public_review_gap_published=true"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("boundary_closed=true"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("local_copy_only=true"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("crash_upload_enabled=false"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("telemetry_enabled=false"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("raw_log_export_enabled=false"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("allowed_fields=status,build,failure_class"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("forbidden_fields=bridge_lines,onion_endpoints"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("passphrases"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("key_material"));
         assert!(status.local_dev_peer_label.is_empty());
     }
 }
