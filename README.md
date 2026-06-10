@@ -28,7 +28,7 @@ Published unsigned public beta:
 - Release: <https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned>
 - DMG: <https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-beta-onion-unsigned/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg>
 - Checksum: <https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-beta-onion-unsigned/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256>
-- Expected SHA-256: `625ee389d930330b0f2e369a53c4f582df076dd612920f6cf0366aab4a3edb95`
+- Expected SHA-256: `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`
 
 Release/source boundary: the published DMG, checksum, provenance, and install
 documents are the assets attached to the GitHub Release above. The `main`
