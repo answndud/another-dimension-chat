@@ -416,8 +416,12 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     lines.push("crash_upload=false");
     lines.push("telemetry=false");
     lines.push("raw_log_export=false");
+    lines.push("crash_dump_export=false");
+    lines.push("automated_log_collection=false");
+    lines.push("support_bundle_export=false");
+    lines.push("raw_diagnostic_file_export=false");
     lines.push(
-      "excluded_fields=codes,endpoints,messages,profiles,paths,logs,passphrases,key_material,private_planning_notes",
+      "excluded_fields=codes,endpoints,messages,profiles,paths,logs,crash_dumps,screenshots,passphrases,key_material,private_planning_notes",
     );
   }
   return lines.join("\n");

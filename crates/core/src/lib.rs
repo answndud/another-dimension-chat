@@ -534,6 +534,8 @@ pub mod production {
         "message_text",
         "local_paths",
         "raw_logs",
+        "crash_dumps",
+        "screenshots_private_room_data",
         "passphrases",
         "private_keys",
         "key_material",
@@ -546,6 +548,10 @@ pub mod production {
         "crash_upload_disabled",
         "telemetry_disabled",
         "raw_log_export_disabled",
+        "crash_dump_export_disabled",
+        "automated_log_collection_disabled",
+        "support_bundle_export_disabled",
+        "raw_diagnostic_file_export_disabled",
         "private_field_redaction_required",
         "manual_network_permission_visible_without_secret",
         "app_launch_network_boundary_visible",
@@ -710,6 +716,10 @@ pub mod production {
         crash_upload_enabled: bool,
         telemetry_enabled: bool,
         raw_log_export_enabled: bool,
+        crash_dump_export_enabled: bool,
+        automated_log_collection_enabled: bool,
+        support_bundle_export_enabled: bool,
+        raw_diagnostic_file_export_enabled: bool,
         private_field_redaction_required: bool,
         app_launch_network_boundary_required: bool,
         boundary_closed: bool,
@@ -1231,6 +1241,22 @@ pub mod production {
 
         pub fn raw_log_export_enabled(self) -> bool {
             self.raw_log_export_enabled
+        }
+
+        pub fn crash_dump_export_enabled(self) -> bool {
+            self.crash_dump_export_enabled
+        }
+
+        pub fn automated_log_collection_enabled(self) -> bool {
+            self.automated_log_collection_enabled
+        }
+
+        pub fn support_bundle_export_enabled(self) -> bool {
+            self.support_bundle_export_enabled
+        }
+
+        pub fn raw_diagnostic_file_export_enabled(self) -> bool {
+            self.raw_diagnostic_file_export_enabled
         }
 
         pub fn private_field_redaction_required(self) -> bool {
@@ -8839,18 +8865,27 @@ pub mod production {
         let crash_upload_enabled = false;
         let telemetry_enabled = false;
         let raw_log_export_enabled = false;
+        let crash_dump_export_enabled = false;
+        let automated_log_collection_enabled = false;
+        let support_bundle_export_enabled = false;
+        let raw_diagnostic_file_export_enabled = false;
         let private_field_redaction_required = true;
         let app_launch_network_boundary_required = true;
         let boundary_closed = public_diagnostics_local_copy_only
             && !crash_upload_enabled
             && !telemetry_enabled
             && !raw_log_export_enabled
+            && !crash_dump_export_enabled
+            && !automated_log_collection_enabled
+            && !support_bundle_export_enabled
+            && !raw_diagnostic_file_export_enabled
             && private_field_redaction_required
             && app_launch_network_boundary_required
             && PRODUCTION_DIAGNOSTICS_ALLOWED_FIELDS.contains(&"failure_class")
             && PRODUCTION_DIAGNOSTICS_FORBIDDEN_FIELDS.contains(&"passphrases")
             && PRODUCTION_DIAGNOSTICS_FORBIDDEN_FIELDS.contains(&"key_material")
-            && PRODUCTION_DIAGNOSTICS_FORBIDDEN_FIELDS.contains(&"raw_logs");
+            && PRODUCTION_DIAGNOSTICS_FORBIDDEN_FIELDS.contains(&"raw_logs")
+            && PRODUCTION_DIAGNOSTICS_FORBIDDEN_FIELDS.contains(&"crash_dumps");
 
         ProductionDiagnosticsRedactionBoundarySummary {
             policies: PRODUCTION_DIAGNOSTICS_POLICIES,
@@ -8860,6 +8895,10 @@ pub mod production {
             crash_upload_enabled,
             telemetry_enabled,
             raw_log_export_enabled,
+            crash_dump_export_enabled,
+            automated_log_collection_enabled,
+            support_bundle_export_enabled,
+            raw_diagnostic_file_export_enabled,
             private_field_redaction_required,
             app_launch_network_boundary_required,
             boundary_closed,
@@ -10706,6 +10745,10 @@ pub mod production {
             assert!(!boundary.crash_upload_enabled());
             assert!(!boundary.telemetry_enabled());
             assert!(!boundary.raw_log_export_enabled());
+            assert!(!boundary.crash_dump_export_enabled());
+            assert!(!boundary.automated_log_collection_enabled());
+            assert!(!boundary.support_bundle_export_enabled());
+            assert!(!boundary.raw_diagnostic_file_export_enabled());
             assert!(boundary.private_field_redaction_required());
             assert!(boundary.app_launch_network_boundary_required());
             assert!(!boundary.security_ready_claimed());
@@ -10718,10 +10761,21 @@ pub mod production {
             assert!(boundary.forbidden_fields().contains(&"message_text"));
             assert!(boundary.forbidden_fields().contains(&"local_paths"));
             assert!(boundary.forbidden_fields().contains(&"raw_logs"));
+            assert!(boundary.forbidden_fields().contains(&"crash_dumps"));
+            assert!(boundary
+                .forbidden_fields()
+                .contains(&"screenshots_private_room_data"));
             assert!(boundary.forbidden_fields().contains(&"passphrases"));
             assert!(boundary.forbidden_fields().contains(&"key_material"));
             assert!(boundary.policies().contains(&"telemetry_disabled"));
             assert!(boundary.policies().contains(&"raw_log_export_disabled"));
+            assert!(boundary.policies().contains(&"crash_dump_export_disabled"));
+            assert!(boundary
+                .policies()
+                .contains(&"automated_log_collection_disabled"));
+            assert!(boundary
+                .policies()
+                .contains(&"support_bundle_export_disabled"));
         }
 
         #[test]

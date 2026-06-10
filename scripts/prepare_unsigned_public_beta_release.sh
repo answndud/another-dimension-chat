@@ -181,6 +181,10 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "crash_upload": false,
   "telemetry": false,
   "raw_log_export": false,
+  "crash_dump_export": false,
+  "automated_log_collection": false,
+  "support_bundle_export": false,
+  "raw_diagnostic_file_export": false,
   "diagnostics_forbidden_fields": [
     "bridge lines",
     "onion endpoints",
@@ -192,6 +196,8 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
     "message text",
     "local paths",
     "raw logs",
+    "crash dumps",
+    "screenshots of private room data",
     "passphrases",
     "private keys",
     "key material",
@@ -285,6 +291,10 @@ This folder is for a GitHub Release upload.
 - Crash upload: disabled
 - Telemetry: disabled
 - Raw log export: disabled
+- Crash dump export: disabled
+- Automated log collection: disabled
+- Support bundle export: disabled
+- Raw diagnostic file export: disabled
 - Auto-update: disabled
 - Signing/notarization: disabled
 
@@ -319,10 +329,12 @@ onion delivery, offline-mesh capable, independently reviewed, or security-ready.
 
 Public diagnostics are local-copy only and limited to status, build, failure
 class, manual network permission, and app-launch network boundary. No crash
-upload, telemetry, raw log export, bridge line, onion endpoint, invite code,
-pairing payload, envelope payload, safety phrase, profile name, message text,
-local path, passphrase, private key, key material, or private planning note is
-permitted in public diagnostics or release artifacts.
+upload, telemetry, raw log export, crash dump export, automated log collection,
+support bundle export, raw diagnostic file export, bridge line, onion endpoint,
+invite code, pairing payload, envelope payload, safety phrase, profile name,
+message text, local path, passphrase, private key, key material, screenshot of
+private room data, or private planning note is permitted in public diagnostics
+or release artifacts.
 
 Public GitHub issues and release comments must use the same redaction boundary.
 Security reports with exploit details or sensitive material must use private
@@ -378,6 +390,10 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"secure_media_deletion_claimed
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"crash_upload\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"telemetry\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"raw_log_export\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"crash_dump_export\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"automated_log_collection\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"support_bundle_export\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"raw_diagnostic_file_export\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"auto_update\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"signed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"notarized\": false"
@@ -413,6 +429,10 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Secure media deletion claimed: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Crash upload: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Telemetry: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Raw log export: disabled"
+require_text "$RELEASE_DIR/MANIFEST.md" "Crash dump export: disabled"
+require_text "$RELEASE_DIR/MANIFEST.md" "Automated log collection: disabled"
+require_text "$RELEASE_DIR/MANIFEST.md" "Support bundle export: disabled"
+require_text "$RELEASE_DIR/MANIFEST.md" "Raw diagnostic file export: disabled"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "unsigned experimental public beta"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not audited"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not production-ready"
@@ -420,6 +440,9 @@ require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "sensitive communication proh
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GITHUB_RELEASE_BODY.md"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "completed independent review"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "crash upload, telemetry, raw log export"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "automated log"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "support bundle"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "raw diagnostic file"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "cloud backup/sync or backup recovery"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "destructive migration"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "private vulnerability reporting"
@@ -449,6 +472,8 @@ require_text "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md" "not an external review
 require_text "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md" "Known Review Gaps"
 require_text "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md" "Forbidden Public Intake"
 require_text "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md" "private vulnerability reporting"
+require_text "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md" "support bundles"
+require_text "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md" "raw diagnostic"
 require_text "$RELEASE_DIR/REPOSITORY_GOVERNANCE.md" "Direction Lock"
 require_text "$RELEASE_DIR/REPOSITORY_GOVERNANCE.md" "Release Guardrails"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "Cargo.lock"

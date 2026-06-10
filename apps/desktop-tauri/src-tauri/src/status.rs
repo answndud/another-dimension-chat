@@ -326,12 +326,16 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             independent_review.policies().join(","),
         ),
         diagnostics_redaction_boundary: format!(
-            "boundary_closed={} local_copy_only={} crash_upload_enabled={} telemetry_enabled={} raw_log_export_enabled={} private_field_redaction_required={} app_launch_network_boundary_required={} security_ready_claimed={} allowed_fields={} forbidden_fields={} policies={}",
+            "boundary_closed={} local_copy_only={} crash_upload_enabled={} telemetry_enabled={} raw_log_export_enabled={} crash_dump_export_enabled={} automated_log_collection_enabled={} support_bundle_export_enabled={} raw_diagnostic_file_export_enabled={} private_field_redaction_required={} app_launch_network_boundary_required={} security_ready_claimed={} allowed_fields={} forbidden_fields={} policies={}",
             diagnostics_redaction.boundary_closed(),
             diagnostics_redaction.public_diagnostics_local_copy_only(),
             diagnostics_redaction.crash_upload_enabled(),
             diagnostics_redaction.telemetry_enabled(),
             diagnostics_redaction.raw_log_export_enabled(),
+            diagnostics_redaction.crash_dump_export_enabled(),
+            diagnostics_redaction.automated_log_collection_enabled(),
+            diagnostics_redaction.support_bundle_export_enabled(),
+            diagnostics_redaction.raw_diagnostic_file_export_enabled(),
             diagnostics_redaction.private_field_redaction_required(),
             diagnostics_redaction.app_launch_network_boundary_required(),
             diagnostics_redaction.security_ready_claimed(),
@@ -567,6 +571,18 @@ mod tests {
             .contains("raw_log_export_enabled=false"));
         assert!(status
             .diagnostics_redaction_boundary
+            .contains("crash_dump_export_enabled=false"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("automated_log_collection_enabled=false"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("support_bundle_export_enabled=false"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("raw_diagnostic_file_export_enabled=false"));
+        assert!(status
+            .diagnostics_redaction_boundary
             .contains("allowed_fields=status,build,failure_class"));
         assert!(status
             .diagnostics_redaction_boundary
@@ -574,6 +590,12 @@ mod tests {
         assert!(status
             .diagnostics_redaction_boundary
             .contains("passphrases"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("crash_dumps"));
+        assert!(status
+            .diagnostics_redaction_boundary
+            .contains("screenshots_private_room_data"));
         assert!(status
             .diagnostics_redaction_boundary
             .contains("key_material"));

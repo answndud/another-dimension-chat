@@ -58,9 +58,10 @@ keys, paths, endpoints, or private data. Ask for a private contact path.
 ## Public Diagnostics Boundary
 
 The app's public diagnostics are local-copy only. They do not upload crash
-reports, telemetry, raw logs, or local files. The intended public diagnostic
-payload is limited to status, build, failure class, manual network permission,
-and app-launch network boundary.
+reports, telemetry, raw logs, crash dumps, support bundles, raw diagnostic
+files, or local files. The intended public diagnostic payload is limited to
+status, build, failure class, manual network permission, and app-launch network
+boundary.
 
 ## Non-Claims
 
@@ -74,3 +75,5 @@ This intake policy does not claim:
 - completed external two-machine onion evidence
 - completed independent review
 - safe publication of private logs or crash dumps
+- automated log collection, support bundle export, raw diagnostic file export,
+  or crash dump export
