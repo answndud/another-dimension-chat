@@ -37,6 +37,8 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
   as a gap map, not a current capability claim.
 - Explicit review-gap provenance showing no completed review and no reviewer
   signoff claim.
+- Explicit no-public-user-safety-signoff, private-reporting boundary, and
+  no-fabricated-review/peer-evidence boundary.
 - Local backup-exclusion verification and forward-only schema migration
   boundary, with destructive migration blocked.
 - Public intake policy and GitHub issue templates for redacted support reports
@@ -60,6 +62,7 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - SBOM, dependency audit completion, live dependency scan, or vulnerability triage signoff.
 - Completed independent review.
 - Reviewer signoff or public user safety signoff.
+- Fabricated external review or external peer evidence.
 - Protection against device compromise, coercion, malicious contacts, or global traffic correlation.
 - Crash upload, telemetry, raw log export, crash dump export, automated log
   collection, support bundle export, raw diagnostic file export, or safe

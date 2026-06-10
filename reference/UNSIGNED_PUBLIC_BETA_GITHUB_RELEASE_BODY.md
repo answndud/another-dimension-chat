@@ -68,6 +68,7 @@ This beta does not claim:
 - SBOM, dependency audit completion, live dependency scan, or vulnerability triage signoff
 - completed independent review
 - reviewer signoff or public user safety signoff
+- fabricated external review or external peer evidence
 - reliable real-network Tor/onion delivery
 - independently verified external two-machine onion delivery
 - Briar/Cwtch-equivalent privacy or security level

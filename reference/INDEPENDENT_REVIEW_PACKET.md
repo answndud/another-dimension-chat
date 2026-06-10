@@ -12,9 +12,24 @@ The unsigned public beta release packet must publish this gap explicitly:
 - `independent_review_complete=false`
 - `public_review_gap_published=true`
 - `reviewer_signoff_claimed=false`
+- `public_user_safety_signoff_claimed=false`
+- `review_packet_inputs_public_safe=true`
+- `known_review_gaps_published=true`
+- `public_safe_review_commands_required=true`
+- `private_reporting_boundary=private-vulnerability-reporting-or-minimal-public-contact-request`
+- `minimal_public_contact_request_allowed=true`
+- `fabricated_review_or_peer_evidence_allowed=false`
 
 These fields mean the project has prepared review inputs only. They do not mean
 the project has passed review.
+
+## Private Reporting Boundary
+
+Security findings with exploit details, endpoint material, logs, payloads,
+paths, keys, screenshots of private room data, or other sensitive material must
+use private vulnerability reporting when available. If private reporting is not
+available, the only allowed public report is a minimal contact request that says
+a security report exists and asks for a private channel.
 
 ## Review Scope
 
@@ -93,10 +108,13 @@ Review the unsigned experimental public beta boundary:
 - `reference/COMPONENT_BOUNDARIES.md`: component replacement and readiness map.
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and
-  no-reviewer-signoff flag.
+  no-reviewer-signoff/no-public-user-safety-signoff flags.
 - Generated release provenance and manifest: record the public diagnostics
   boundary, crash-upload-disabled flag, telemetry-disabled flag, raw-log-export
   disabled flag, and forbidden diagnostics field categories.
+- Generated release provenance and manifest: record public-safe review input,
+  known-review-gap, public-safe command, private-reporting boundary, minimal
+  public contact request, and fabricated-review/peer-evidence-forbidden flags.
 - Generated release provenance and manifest: record the backup/migration
   boundary, cloud-backup/sync-disabled flag, backup-recovery non-claim,
   forward-only schema migration requirement, destructive-migration block,
@@ -126,7 +144,10 @@ shasum -a 256 -c another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.
 
 - No external security review has been completed.
 - The public release packet publishes the review gap but does not close it.
+- No reviewer signoff or public user safety signoff exists.
 - External two-machine onion peer reports have not been received.
+- Fabricated local peer reports or synthetic external review evidence are not
+  allowed as substitutes for real independent review or external peer evidence.
 - No SBOM is published.
 - No reproducible-build proof exists.
 - No signing, notarization, or auto-update channel exists.
