@@ -16,6 +16,7 @@ import {
   productionManualRelayDisabledReasons,
   productionManualRelayAvailability,
   productionManualRelaySuccessWarning,
+  productionLocalLifecycleBoundaryView,
   productionManualMessageStatusView,
   productionManualStatusView,
   productionMessageEnvelopeExportView,
@@ -5315,6 +5316,10 @@ function fieldTestReportTriageState(report) {
   return privateDeliveryState.fieldTestReportTriageState(report);
 }
 
+function fieldTestReportComparison(localReport, peerReport) {
+  return privateDeliveryState.fieldTestReportComparison(localReport, peerReport);
+}
+
 function publicBetaDiagnosticsReport(report, options = {}) {
   return privateDeliveryState.publicBetaDiagnosticsReport(report, options);
 }
@@ -5684,18 +5689,21 @@ function renderFieldTestReportComparison() {
     ? `${statusText}\n${panelState.comparison}`
     : statusText;
   fields.fieldTestReportCompare.hidden = !statusText;
-  renderFieldTestChecklist(localReport, peerReport);
-  renderFieldTestNextAction(localReport, peerReport);
+  renderFieldTestChecklist(fields.fieldTestReport?.value ?? "", fields.peerFieldTestReport?.value ?? "");
+  renderFieldTestNextAction(fields.fieldTestReport?.value ?? "", fields.peerFieldTestReport?.value ?? "");
   return panelState.comparison;
 }
 
 function fieldTestReportCopyPayload(report) {
   const peerReport = fields.peerFieldTestReport?.value ?? "";
   const panelState = privateDeliveryState.fieldTestReportPanelState(report, peerReport, fieldTestNextActionKey);
+  const comparison = fieldTestReportComparison(report, peerReport);
+  const nextAction = fieldTestNextActionKey(report, peerReport);
+  const nextActionLine = `next_action=${nextAction}`;
   const actionLines = panelState.copyActionLines.join("\n");
-  return panelState.comparison
-    ? `${report}\n${panelState.comparison}\n${actionLines}`
-    : `${report}\n${actionLines}`;
+  return comparison
+    ? `${report}\n${comparison}\n${nextActionLine}\n${actionLines}`
+    : `${report}\n${nextActionLine}\n${actionLines}`;
 }
 
 function selectFieldTestReportCopyPayload(payload) {
@@ -9443,7 +9451,10 @@ function transcriptRetentionWarning(result) {
 }
 
 function transcriptBoundarySummary(result) {
-  return `plaintext_after_unlock=${result.plaintext_returned_after_unlock} expired_purged=${result.expired_messages_purged ?? 0} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`;
+  return (
+    `expired_purged=${result.expired_messages_purged ?? 0} ` +
+    productionLocalLifecycleBoundaryView(result, { includePaths: false })
+  );
 }
 
 function appendExpiredMessagesPurged(message, purged) {
@@ -16582,7 +16593,7 @@ function dataLifecycleSummary(result) {
   return (
     `profiles=${result.profile_count ?? 0} transport=${result.transport_data_present === true} ` +
     `marker=${result.lifecycle_marker_present === true} backup_checked=${result.backup_exclusion_checked === true} ` +
-    `backup=${result.backup_exclusion_verified === true} migration_v=${result.migration_current_version ?? 0} ` +
+    `backup=${result.backup_exclusion_verified === true} backup_recovery=false cloud_backup_sync=false migration_v=${result.migration_current_version ?? 0} ` +
     `migration_marker=${result.migration_marker_present === true} forward_only=${result.forward_only_migration === true} ` +
     `destructive_blocked=${result.destructive_migration_blocked === true} rollback_marker=${result.rollback_marker_present === true} ` +
     `rollback_detection=${result.rollback_detection_ready === true} rollback_prevention=${result.rollback_prevention_claimed === true} ` +
@@ -16591,12 +16602,7 @@ function dataLifecycleSummary(result) {
 }
 
 function dataLifecycleBoundary(result) {
-  return (
-    `path_returned=${result.store_path_returned === true} passphrase_retained=${result.passphrase_retained === true} ` +
-    `key_material=${result.key_material_exposed === true} secure_delete_claim=${result.secure_deletion_from_media_claimed === true} ` +
-    `network_io=${result.network_io_attempted === true} transport_io=${result.transport_io_opened === true} ` +
-    `runtime=${result.runtime_messaging_enabled === true}`
-  );
+  return productionLocalLifecycleBoundaryView(result);
 }
 
 async function checkProductionDataLifecycle() {
@@ -16659,16 +16665,13 @@ async function deleteProductionProfile() {
       profile: input.profile,
       confirmation,
     });
-    setProductionProfileState(result.profile_deleted ? "Profile deleted" : "Profile not found");
+    setProductionProfileState(result.profile_deleted ? "Local profile deleted" : "Local profile not found");
     setText(fields.productionProfileWarning, result.warning);
     setText(
       fields.productionDataLifecycle,
-      `profile_deleted=${result.profile_deleted} existed=${result.profile_existed_before_delete} exists_after=${result.profile_exists_after_delete} unlock_locked=${result.product_unlock_locked}`,
+      `profile_deleted=${result.profile_deleted} existed=${result.profile_existed_before_delete} exists_after=${result.profile_exists_after_delete} unlock_locked=${result.product_unlock_locked} local_only=true backup_recovery=false cloud_backup_sync=false`,
     );
-    setText(
-      fields.productionProfileBoundary,
-      `path_returned=${result.store_path_returned} passphrase_required=${result.passphrase_required} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} secure_delete_claim=${result.secure_deletion_from_media_claimed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    setText(fields.productionProfileBoundary, dataLifecycleBoundary(result));
     resetProductionPairingView({ preserveTwoProfileStatus: true });
     resetProductionMessageView();
     await loadProductionProfileList();
@@ -16698,7 +16701,7 @@ async function wipeProductionLocalData() {
     resetProductionProfileView();
     resetProductionPairingView();
     resetProductionMessageView();
-    setProductionProfileState(result.full_local_data_wiped ? "Local data wiped" : "Local wipe incomplete");
+    setProductionProfileState(result.full_local_data_wiped ? "Local app data wiped" : "Local wipe incomplete");
     setText(fields.productionProfileWarning, result.warning);
     setText(fields.productionDataLifecycle, dataLifecycleSummary(result));
     setText(fields.productionProfileBoundary, dataLifecycleBoundary(result));
@@ -16859,7 +16862,7 @@ async function restoreProductionSessionAfterUnlock(input) {
     setProductionMessageState("Message flow idle");
     setText(
       fields.productionMessageWarning,
-      "Profile unlocked. No stored message session was recovered.",
+      "Profile unlocked. No local stored message session is ready.",
     );
     setText(fields.productionMessageBoundary, "Not checked yet");
     return;
@@ -16871,7 +16874,7 @@ async function restoreProductionSessionAfterUnlock(input) {
   const view = productionSessionStateView(session);
   rememberProductionSessionState(input, session);
   setProductionPairingState(
-    session.ready_for_message_envelope ? "Stored session recovered" : "Stored session incomplete",
+    session.ready_for_message_envelope ? "Local stored session loaded" : "Stored session incomplete",
   );
   setText(fields.productionPairingWarning, session.warning);
   setText(fields.productionPairingSession, view.session);
@@ -16881,7 +16884,7 @@ async function restoreProductionSessionAfterUnlock(input) {
     setProductionMessageState("Message flow idle");
     setText(
       fields.productionMessageWarning,
-      "Profile unlocked. Complete pairing and handshake before message recovery.",
+      "Profile unlocked. Complete pairing and handshake before local message resume.",
     );
     return;
   }
@@ -16892,17 +16895,17 @@ async function restoreProductionSessionAfterUnlock(input) {
       return;
     }
     renderProductionTranscriptEntries(profile, transcript.entries);
-    setProductionMessageState("Stored transcript recovered");
+    setProductionMessageState("Local transcript loaded");
     setText(fields.productionMessageWarning, transcriptRetentionWarning(transcript));
     setText(fields.productionMessageBoundary, transcriptBoundarySummary(transcript));
   } catch {
     if (!productionProfileInputStillCurrent(input)) {
       return;
     }
-    setProductionMessageState("Transcript recovery unavailable");
+    setProductionMessageState("Transcript load unavailable");
     setText(
       fields.productionMessageWarning,
-      "Stored session recovered. Transcript can be loaded after message records exist.",
+      "Local stored session is ready. Transcript can be loaded after message records exist.",
     );
   }
 }
@@ -17182,7 +17185,7 @@ async function deleteProductionSessionLifecycle(input = productionPairingInput()
   setProductionPairingState("Session lifecycle deleting");
   setText(
     fields.productionPairingWarning,
-    "Deleting local session lifecycle records. Message data wipe is handled separately.",
+    "Deleting local session lifecycle records only. Message data, backups, and secure deletion claims are handled separately.",
   );
   productionBusyAction = "session-lifecycle-delete";
   applyProductionActionState();
@@ -17200,7 +17203,7 @@ async function deleteProductionSessionLifecycle(input = productionPairingInput()
       result.session_resume_closed ? "Session lifecycle deleted" : "Session lifecycle delete incomplete",
     );
     setText(fields.productionPairingWarning, result.warning);
-    setText(fields.productionPairingSession, "Stored session no longer resumable");
+    setText(fields.productionPairingSession, "Local stored session no longer resumable");
     setText(fields.productionSessionLifecycle, view.lifecycle);
     setText(fields.productionPairingBoundary, view.boundary);
     setProductionMessageState("Message flow idle");
@@ -17412,7 +17415,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
     }
     const resumeWarning = appendStaleMessageEnvelopeSlotsPruned(
       appendExpiredMessagesPurged(
-        "Stored conversation and message-ready sessions recovered after local unlock.",
+        "Local stored conversation and message-ready sessions loaded after local unlock.",
         expiredMessagesPurged,
       ),
       staleMessageEnvelopeSlotsPruned,
@@ -17455,7 +17458,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       const resumeTarget = autoSelectTwoProfileResumeTarget(sessionStatus);
       const autoResumeBaseWarning = appendExpiredMessagesPurged(
         appendStaleMessageEnvelopeSlotsPruned(
-          "Stored conversation and message-ready sessions recovered after local unlock. Write a message to continue.",
+          "Local stored conversation and message-ready sessions loaded after local unlock. Write a message to continue.",
           staleMessageEnvelopeSlotsPruned,
         ),
         expiredMessagesPurged,
@@ -18056,7 +18059,10 @@ async function deleteProductionConversation() {
     return;
   }
   setProductionMessageState("Conversation deleting");
-  setText(fields.productionMessageWarning, "Deleting local conversation message records.");
+  setText(
+    fields.productionMessageWarning,
+    "Deleting local conversation message records only. This is not backup recovery, rollback prevention, or secure media deletion.",
+  );
   productionBusyAction = "conversation-delete";
   applyProductionActionState();
   try {
@@ -18079,10 +18085,7 @@ async function deleteProductionConversation() {
       fields.productionMessageInbound,
       `received_deleted=${result.received_messages_deleted} total_records=${result.conversation_records_deleted} session_preserved=${result.session_records_preserved}`,
     );
-    setText(
-      fields.productionMessageBoundary,
-      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} plaintext=${result.plaintext_exposed} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
-    );
+    setText(fields.productionMessageBoundary, productionLocalLifecycleBoundaryView(result));
     await checkProductionSessionState(input);
   } catch (error) {
     if (!productionProfileInputStillCurrent(input)) {

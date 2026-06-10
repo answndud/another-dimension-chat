@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   chatNoticeForSendReceiveText,
+  productionLocalLifecycleBoundaryView,
   productionInviteCodeProfiles,
   productionInviteRoomConversationMetadata,
   productionOnionReceiveLoopRefreshPlan,
@@ -15,6 +16,7 @@ import {
   productionTwoProfileRealOnionRecoveryPlan,
   productionTwoProfileRealOnionUserView,
   productionTwoProfileResumeTarget,
+  productionSessionLifecycleView,
   productionTwoProfileSendAttemptUserView,
   productionTwoProfileShouldShowOutboundRecovery,
 } from "./action-state.js";
@@ -97,6 +99,57 @@ test("resume target prioritizes retryable sends before normal replies", () => {
     }),
     "reply-latest",
   );
+});
+
+test("local lifecycle boundary keeps backup recovery and secure delete as non-claims", () => {
+  const boundary = productionLocalLifecycleBoundaryView({
+    store_path_returned: false,
+    passphrase_retained: false,
+    plaintext_exposed: false,
+    key_material_exposed: false,
+    network_io_attempted: false,
+    transport_io_opened: false,
+    runtime_messaging_enabled: false,
+    rollback_prevention_claimed: false,
+    secure_deletion_from_media_claimed: false,
+  });
+
+  assert.match(boundary, /local_only=true/);
+  assert.match(boundary, /cloud_backup_sync=false/);
+  assert.match(boundary, /backup_recovery=false/);
+  assert.match(boundary, /marker_only_rollback=true/);
+  assert.match(boundary, /rollback_prevention=false/);
+  assert.match(boundary, /secure_delete_claim=false/);
+  assert.match(boundary, /path_returned=false/);
+  assert.match(boundary, /key_material=false/);
+});
+
+test("session lifecycle view exposes local-only lifecycle non-claims", () => {
+  const view = productionSessionLifecycleView({
+    session_draft_present: true,
+    remote_endpoint_state_present: true,
+    remote_endpoint_status_present: true,
+    replay_window_present: true,
+    pending_handshake_state_present: false,
+    session_transport_state_present: true,
+    session_resume_ready: true,
+    session_deleted: false,
+    session_resume_closed: false,
+    message_records_preserved: true,
+    store_path_returned: false,
+    passphrase_retained: false,
+    key_material_exposed: false,
+    network_io_attempted: false,
+    transport_io_opened: false,
+    runtime_messaging_enabled: false,
+  });
+
+  assert.match(view.lifecycle, /resume=true/);
+  assert.match(view.boundary, /message_records_preserved=true/);
+  assert.match(view.boundary, /local_only=true/);
+  assert.match(view.boundary, /backup_recovery=false/);
+  assert.match(view.boundary, /cloud_backup_sync=false/);
+  assert.match(view.boundary, /secure_delete_claim=false/);
 });
 
 test("failed outbound messages stay retryable or cancelable from the active device", () => {
