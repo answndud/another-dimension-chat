@@ -97,7 +97,7 @@ What exists today:
 - Manual update integrity evidence for the unsigned public beta release path: DMG `.sha256`, public provenance JSON, release manifest, update-integrity policy, supply-chain baseline note, and dependency lockfile SHA-256 list.
 - Public threat model and independent review packet that state allowed claims, non-claims, known gaps, public-safe review commands, and the current no-signoff/no-completed-review gap.
 - A local Tauri desktop beta shell for invite-code rooms, safety phrase confirmation, encrypted local profile/session/message records, saved-room resume, manual private-route exchange, explicit receive start/stop, retry/cancel recovery, and redacted field-test reports.
-- In-app unsigned public beta warnings and public diagnostics export limited to status, build, and failure class.
+- In-app unsigned public beta warnings and public diagnostics export limited to status, build, failure class, manual network permission, and app-launch network boundary; no crash upload, telemetry, raw log export, paths, endpoints, passphrases, or key material.
 - Explicit user-triggered onion/Tor attempt paths for beta field testing. The app must not bootstrap Tor, host onion services, publish descriptors, open streams, send envelopes, or receive envelopes on app launch.
 - Lightweight verification scripts, CLI hardening tests, Tauri scaffold static checks, and GitHub Actions verification.
 - Local beta DMG handoff is possible from the Tauri app directory, but signing, notarization, reproducible/equivalent builds, dependency review, external review, signoff, and auto-update integrity are not implemented.
@@ -261,7 +261,7 @@ To stage the current unsigned public GitHub Release upload set from the local ig
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-Upload only the generated public release files from `apps/desktop-tauri/public-release/unsigned-public-beta/`. Use `GITHUB_RELEASE_BODY.md` as the GitHub Release body. The public release body, notes, and install guide must keep the unsigned experimental beta warning, sensitive communication prohibition, not audited status, not production-ready status, and external two-machine onion delivery non-claim. Users must treat every update as a fresh manual download and verify the matching `.sha256` file.
+Upload only the generated public release files from `apps/desktop-tauri/public-release/unsigned-public-beta/`. Use `GITHUB_RELEASE_BODY.md` as the GitHub Release body. The public release body, notes, install guide, manifest, and provenance must keep the unsigned experimental beta warning, sensitive communication prohibition, not audited status, not production-ready status, external two-machine onion delivery non-claim, and public diagnostics redaction boundary. Users must treat every update as a fresh manual download and verify the matching `.sha256` file.
 
 For the current local field-test handoff, send only the per-peer delivery folder contents from:
 
@@ -270,7 +270,7 @@ For the current local field-test handoff, send only the per-peer delivery folder
 
 Each folder should contain the transfer zip, matching `.sha256`, `PEER_HANDOFF_MESSAGE.md`, and `MANIFEST.md`. The peer-side preflight verifier must be run from the extracted `another-dimension-beta-handoff` folder. It checks bundle contents without launching the app or starting network/onion work.
 
-Do not publish `docs/`, app data, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, raw logs, `target/`, `dist/`, `node_modules/`, or `beta-artifacts/`.
+Do not publish `docs/`, app data, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, key material, raw logs, crash dumps, `target/`, `dist/`, `node_modules/`, or `beta-artifacts/`.
 
 For desktop-specific commands and beta notes, see [apps/desktop-tauri/README.md](apps/desktop-tauri/README.md).
 For the public-safe beta handoff checklist, see [reference/BETA_RELEASE_CHECKLIST.md](reference/BETA_RELEASE_CHECKLIST.md).

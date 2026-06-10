@@ -24,6 +24,7 @@ Review the unsigned experimental public beta boundary:
 - unsigned macOS install guidance
 - checksum/provenance/manual update integrity model
 - public diagnostics redaction boundary
+- crash/log redaction and no-upload/no-telemetry boundary
 - passphrase-first local unlock/lock boundary
 - durable local session lifecycle boundary
 - local data lifecycle and migration boundary
@@ -37,6 +38,8 @@ Review the unsigned experimental public beta boundary:
 - manual GitHub Release download
 - user-verified SHA-256 checksum
 - public diagnostics export is redacted by design
+- public diagnostics are local-copy only and do not provide crash upload,
+  telemetry, or raw log export
 - no automatic network/onion work on app launch
 - passphrase-first local unlock path exists
 - local data lifecycle controls exist
@@ -76,6 +79,9 @@ Review the unsigned experimental public beta boundary:
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and
   no-reviewer-signoff flag.
+- Generated release provenance and manifest: record the public diagnostics
+  boundary, crash-upload-disabled flag, telemetry-disabled flag, raw-log-export
+  disabled flag, and forbidden diagnostics field categories.
 - `docs/FINAL_ACCEPTANCE_CHECKLIST.md`: private final gate checklist; do not publish.
 
 ## Suggested Public-Safe Review Commands
@@ -114,6 +120,8 @@ The reviewer should report:
 - any GitHub Release body wording that omits required non-claims
 - any release artifact that omits checksum/provenance/update-integrity evidence
 - any diagnostic/reporting path that could expose sensitive material
+- any crash/log path that uploads, copies, or publishes raw logs, paths,
+  endpoints, passphrases, private keys, key material, or private planning notes
 - any command path that starts network/onion work without explicit user action
 - any missing non-claim around audit, production readiness, onion reliability,
   rollback prevention, secure deletion, or supply-chain review

@@ -386,6 +386,12 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
   ];
   if (options.includeCopyBoundary === true) {
     lines.push("payload_boundary=status-build-failure-class-only");
+    lines.push("crash_upload=false");
+    lines.push("telemetry=false");
+    lines.push("raw_log_export=false");
+    lines.push(
+      "excluded_fields=codes,endpoints,messages,profiles,paths,logs,passphrases,key_material,private_planning_notes",
+    );
   }
   return lines.join("\n");
 }

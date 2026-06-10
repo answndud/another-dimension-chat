@@ -53,6 +53,7 @@ This beta does not claim:
 - audited security
 - production-ready E2EE
 - sensitive communication safety
+- crash upload, telemetry, raw log export, or safe publication of private logs
 - signing or notarization
 - auto-update integrity
 - reproducible-build proof

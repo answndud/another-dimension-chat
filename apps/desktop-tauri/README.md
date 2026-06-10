@@ -8,7 +8,7 @@ Current boundary:
 
 - Rust owns security-sensitive state and future protocol/storage/transport behavior.
 - Frontend may request redacted status, run local `dev-insecure` diagnostics, and call explicit local encrypted-store production commands.
-- The main view shows an unsigned public beta warning. Public diagnostics export only status, build, failure class, manual network permission state, and app-launch network boundary.
+- The main view shows an unsigned public beta warning. Public diagnostics export only status, build, failure class, manual network permission state, and app-launch network boundary. It does not provide crash upload, telemetry, raw log export, paths, endpoints, passphrases, or key material.
 - Redacted status separates release-claim, messaging-surface, core, profile, pairing, production-session, production-self-test, production-session limits, production-preflight, preflight-blockers, session durable-state, session unlock-policy, session unlock-limits, session unlock-rejection, transport, network-execution, experimental-transport, bootstrap-status classification, transport-I/O, storage, and verification boundaries without exposing profile/contact/endpoint data.
 - The core status is static boundary copy; security-sensitive protocol, storage, and transport work stays in Rust commands rather than frontend logic.
 - The production-session status is static evaluation copy for the `snow` Noise XX synchronous boundary. Message commands use local encrypted stores, and onion transport commands are separate explicit user-triggered actions.
@@ -195,7 +195,7 @@ App data and migration expectations:
 - v0.1 beta has no destructive migration step. SQLCipher profile stores use a forward-only schema version boundary and reject future schema versions instead of silently downgrading or rewriting user data.
 - The data lifecycle marker records that rollback detection is marker-only. It is not rollback prevention and still requires external monotonic state before any stronger claim.
 - Deleting a conversation removes local message records for the current encrypted session while preserving session records. Deleting a profile removes that profile store file. Full local wipe removes owned `profiles/`, `transport/`, lifecycle markers, and transport cache; it does not claim secure deletion from media.
-- Build artifacts must not include local app data, local dev stores, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, raw logs, `docs/`, `target/`, `dist/`, `node_modules/`, or `beta-artifacts/`.
+- Build artifacts must not include local app data, local dev stores, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, key material, raw logs, crash dumps, `docs/`, `target/`, `dist/`, `node_modules/`, or `beta-artifacts/`.
 
 From the repository root:
 
