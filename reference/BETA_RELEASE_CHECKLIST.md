@@ -14,6 +14,7 @@ Allowed beta scope:
 - Explicit receive start/stop.
 - Failed-send retry and cancel recovery.
 - Redacted field-test report copy/compare.
+- Public diagnostics local-copy boundary with no crash upload, telemetry, or raw log export.
 - Explicit onion/Tor attempt paths after manual network permission.
 
 Out of scope:
@@ -72,7 +73,7 @@ shasum -a 256 /path/to/artifact
 
 - Store local handoff artifacts under `apps/desktop-tauri/beta-artifacts/`.
 - Do not commit `beta-artifacts/`.
-- Do not include `docs/`, local app data, build caches, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, raw logs, `target/`, `dist/`, or `node_modules/`.
+- Do not include `docs/`, local app data, build caches, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, key material, raw logs, crash dumps, `target/`, `dist/`, or `node_modules/`.
 - Tester notes must say the beta is not secure and must not be used for sensitive communication.
 - Field-test notes should record whether bootstrap, onion endpoint launch, route exchange, send, receive, retry, and cancel complete or fail closed.
 
@@ -130,4 +131,4 @@ and the GitHub Release body must say:
 - Users must verify the checksum before using the normal macOS Privacy & Security manual allow path.
 - Auto-update is not supported; every update is a manual GitHub Release download plus SHA-256 verification.
 
-Do not upload or commit `docs/`, local app data, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, raw logs, build caches, `target/`, `dist/`, `node_modules/`, `beta-artifacts/`, or the ignored `public-release/` folder itself.
+Do not upload or commit `docs/`, local app data, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, key material, raw logs, crash dumps, build caches, `target/`, `dist/`, `node_modules/`, `beta-artifacts/`, or the ignored `public-release/` folder itself.

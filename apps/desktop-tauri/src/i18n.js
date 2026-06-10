@@ -85,7 +85,7 @@ const dictionaries = {
     fieldTestReportCopyFallback: "Could not copy automatically. The report is selected; copy it manually.",
     publicBetaDiagnostics: "Public diagnostics",
     publicBetaDiagnosticsHint:
-      "Status, build, and failure class only. It excludes codes, endpoints, messages, profiles, paths, logs, passphrases, and key material.",
+      "Status, build, and failure class only. No crash upload, telemetry, or raw log export. It excludes codes, endpoints, messages, profiles, paths, logs, passphrases, and key material.",
     refreshPublicBetaDiagnostics: "Refresh diagnostics",
     copyPublicBetaDiagnostics: "Copy diagnostics",
     publicBetaDiagnosticsCopied: "Public diagnostics copied.",
@@ -982,7 +982,7 @@ const dictionaries = {
     fieldTestReportCopyFallback: "자동 복사에 실패했습니다. 리포트를 선택해 두었으니 직접 복사하세요.",
     publicBetaDiagnostics: "공개 진단 정보",
     publicBetaDiagnosticsHint:
-      "상태, 빌드, 실패 분류만 포함합니다. 코드, endpoint, 메시지, 프로필명, 경로, 로그, passphrase, key material은 제외합니다.",
+      "상태, 빌드, 실패 분류만 포함합니다. crash upload, telemetry, raw log export는 없습니다. 코드, endpoint, 메시지, 프로필명, 경로, 로그, passphrase, key material은 제외합니다.",
     refreshPublicBetaDiagnostics: "진단 정보 새로고침",
     copyPublicBetaDiagnostics: "진단 정보 복사",
     publicBetaDiagnosticsCopied: "공개 진단 정보를 복사했습니다.",

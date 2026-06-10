@@ -502,6 +502,43 @@ pub mod production {
         "no_security_ready_claim",
     ];
 
+    const PRODUCTION_DIAGNOSTICS_ALLOWED_FIELDS: &[&str] = &[
+        "status",
+        "build",
+        "failure_class",
+        "manual_network_permission",
+        "app_launch_network_boundary",
+        "redacted_runtime_flags",
+    ];
+
+    const PRODUCTION_DIAGNOSTICS_FORBIDDEN_FIELDS: &[&str] = &[
+        "bridge_lines",
+        "onion_endpoints",
+        "invite_codes",
+        "pairing_payloads",
+        "envelope_payloads",
+        "safety_phrases",
+        "profile_names",
+        "message_text",
+        "local_paths",
+        "raw_logs",
+        "passphrases",
+        "private_keys",
+        "key_material",
+        "private_planning_notes",
+    ];
+
+    const PRODUCTION_DIAGNOSTICS_POLICIES: &[&str] = &[
+        "public_diagnostics_local_copy_only",
+        "status_build_failure_class_only",
+        "crash_upload_disabled",
+        "telemetry_disabled",
+        "raw_log_export_disabled",
+        "private_field_redaction_required",
+        "manual_network_permission_visible_without_secret",
+        "app_launch_network_boundary_visible",
+    ];
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionRuntimeCommandSurfaceSummary {
         reviewed_categories: &'static [&'static str],
@@ -624,6 +661,21 @@ pub mod production {
         reviewer_signoff_claimed: bool,
         public_review_gap_published: bool,
         sensitive_communication_allowed: bool,
+        boundary_closed: bool,
+        security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionDiagnosticsRedactionBoundarySummary {
+        policies: &'static [&'static str],
+        allowed_fields: &'static [&'static str],
+        forbidden_fields: &'static [&'static str],
+        public_diagnostics_local_copy_only: bool,
+        crash_upload_enabled: bool,
+        telemetry_enabled: bool,
+        raw_log_export_enabled: bool,
+        private_field_redaction_required: bool,
+        app_launch_network_boundary_required: bool,
         boundary_closed: bool,
         security_ready_claimed: bool,
     }
@@ -1023,6 +1075,52 @@ pub mod production {
 
         pub fn sensitive_communication_allowed(self) -> bool {
             self.sensitive_communication_allowed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+    }
+
+    impl ProductionDiagnosticsRedactionBoundarySummary {
+        pub fn policies(self) -> &'static [&'static str] {
+            self.policies
+        }
+
+        pub fn allowed_fields(self) -> &'static [&'static str] {
+            self.allowed_fields
+        }
+
+        pub fn forbidden_fields(self) -> &'static [&'static str] {
+            self.forbidden_fields
+        }
+
+        pub fn public_diagnostics_local_copy_only(self) -> bool {
+            self.public_diagnostics_local_copy_only
+        }
+
+        pub fn crash_upload_enabled(self) -> bool {
+            self.crash_upload_enabled
+        }
+
+        pub fn telemetry_enabled(self) -> bool {
+            self.telemetry_enabled
+        }
+
+        pub fn raw_log_export_enabled(self) -> bool {
+            self.raw_log_export_enabled
+        }
+
+        pub fn private_field_redaction_required(self) -> bool {
+            self.private_field_redaction_required
+        }
+
+        pub fn app_launch_network_boundary_required(self) -> bool {
+            self.app_launch_network_boundary_required
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -8556,6 +8654,40 @@ pub mod production {
         }
     }
 
+    pub fn production_diagnostics_redaction_boundary_summary(
+    ) -> ProductionDiagnosticsRedactionBoundarySummary {
+        let public_diagnostics_local_copy_only = true;
+        let crash_upload_enabled = false;
+        let telemetry_enabled = false;
+        let raw_log_export_enabled = false;
+        let private_field_redaction_required = true;
+        let app_launch_network_boundary_required = true;
+        let boundary_closed = public_diagnostics_local_copy_only
+            && !crash_upload_enabled
+            && !telemetry_enabled
+            && !raw_log_export_enabled
+            && private_field_redaction_required
+            && app_launch_network_boundary_required
+            && PRODUCTION_DIAGNOSTICS_ALLOWED_FIELDS.contains(&"failure_class")
+            && PRODUCTION_DIAGNOSTICS_FORBIDDEN_FIELDS.contains(&"passphrases")
+            && PRODUCTION_DIAGNOSTICS_FORBIDDEN_FIELDS.contains(&"key_material")
+            && PRODUCTION_DIAGNOSTICS_FORBIDDEN_FIELDS.contains(&"raw_logs");
+
+        ProductionDiagnosticsRedactionBoundarySummary {
+            policies: PRODUCTION_DIAGNOSTICS_POLICIES,
+            allowed_fields: PRODUCTION_DIAGNOSTICS_ALLOWED_FIELDS,
+            forbidden_fields: PRODUCTION_DIAGNOSTICS_FORBIDDEN_FIELDS,
+            public_diagnostics_local_copy_only,
+            crash_upload_enabled,
+            telemetry_enabled,
+            raw_log_export_enabled,
+            private_field_redaction_required,
+            app_launch_network_boundary_required,
+            boundary_closed,
+            security_ready_claimed: false,
+        }
+    }
+
     pub fn production_session_readiness_gate() -> ProductionSessionReadinessGate {
         let summary = production_session_evaluation_summary();
 
@@ -10346,6 +10478,34 @@ pub mod production {
             assert!(!boundary.security_ready_claimed());
             assert!(boundary.policies().contains(&"review_gap_published"));
             assert!(boundary.policies().contains(&"no_reviewer_signoff_claim"));
+        }
+
+        #[test]
+        fn production_diagnostics_redaction_boundary_closes_public_copy_without_uploads_or_secrets()
+        {
+            let boundary = production_diagnostics_redaction_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.public_diagnostics_local_copy_only());
+            assert!(!boundary.crash_upload_enabled());
+            assert!(!boundary.telemetry_enabled());
+            assert!(!boundary.raw_log_export_enabled());
+            assert!(boundary.private_field_redaction_required());
+            assert!(boundary.app_launch_network_boundary_required());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary.allowed_fields().contains(&"status"));
+            assert!(boundary.allowed_fields().contains(&"build"));
+            assert!(boundary.allowed_fields().contains(&"failure_class"));
+            assert!(boundary.forbidden_fields().contains(&"bridge_lines"));
+            assert!(boundary.forbidden_fields().contains(&"onion_endpoints"));
+            assert!(boundary.forbidden_fields().contains(&"invite_codes"));
+            assert!(boundary.forbidden_fields().contains(&"message_text"));
+            assert!(boundary.forbidden_fields().contains(&"local_paths"));
+            assert!(boundary.forbidden_fields().contains(&"raw_logs"));
+            assert!(boundary.forbidden_fields().contains(&"passphrases"));
+            assert!(boundary.forbidden_fields().contains(&"key_material"));
+            assert!(boundary.policies().contains(&"telemetry_disabled"));
+            assert!(boundary.policies().contains(&"raw_log_export_disabled"));
         }
 
         #[test]

@@ -92,9 +92,9 @@ The unsigned release upload set includes public provenance JSON, `GITHUB_RELEASE
 
 The upload set also includes `PUBLIC_THREAT_MODEL.md` and `INDEPENDENT_REVIEW_PACKET.md` so reviewers can inspect allowed claims, non-claims, known gaps, and public-safe review commands without private planning notes.
 
-The app's public diagnostics export is limited to status, build, failure class, manual network permission state, and app-launch network boundary. It must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, profile names, message text, local paths, raw logs, passphrases, or key material.
+The app's public diagnostics export is local-copy only and limited to status, build, failure class, manual network permission state, and app-launch network boundary. It does not provide crash upload, telemetry, or raw log export. It must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, profile names, message text, local paths, raw logs, passphrases, private keys, key material, or private planning notes.
 
-Public unsigned beta artifacts must not include local app data, private planning notes, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, raw diagnostic logs, build caches, `docs/`, `target/`, `dist/`, `node_modules/`, `beta-artifacts/`, or generated public release folders committed into the repository.
+Public unsigned beta artifacts must not include local app data, private planning notes, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, key material, raw diagnostic logs, crash dumps, build caches, `docs/`, `target/`, `dist/`, `node_modules/`, `beta-artifacts/`, or generated public release folders committed into the repository.
 
 ## Development Expectations
 

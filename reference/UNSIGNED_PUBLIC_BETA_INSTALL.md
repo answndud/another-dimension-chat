@@ -77,6 +77,10 @@ baseline. It is reviewer evidence, not a dependency audit or security guarantee.
 only. The release provenance records that independent review is not complete and
 that no reviewer signoff is claimed.
 
+Public diagnostics are local-copy only. They are limited to status, build,
+failure class, manual network permission, and app-launch network boundary. They
+do not provide crash upload, telemetry, or raw log export.
+
 ## Safety Boundary
 
 - No phone number, email, global account, searchable username, centralized contact discovery, central message server, push notification, or cloud backup is part of this beta.

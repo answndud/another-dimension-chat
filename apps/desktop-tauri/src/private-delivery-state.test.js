@@ -349,6 +349,10 @@ test("public beta diagnostics keeps only status, build, and failure class", () =
   assert.match(diagnostics, /failure_class=PeerEndpointMissing/);
   assert.match(diagnostics, /app_launch_network=false/);
   assert.match(diagnostics, /payload_boundary=status-build-failure-class-only/);
+  assert.match(diagnostics, /crash_upload=false/);
+  assert.match(diagnostics, /telemetry=false/);
+  assert.match(diagnostics, /raw_log_export=false/);
+  assert.match(diagnostics, /excluded_fields=codes,endpoints,messages,profiles,paths,logs,passphrases,key_material,private_planning_notes/);
   assert.doesNotMatch(diagnostics, /next_action=/);
   assert.doesNotMatch(diagnostics, /obfs4|198\.51\.100\.4|examplehiddenservice|ADINVITE|alpha bravo|hello secret/);
   assert.doesNotMatch(diagnostics, /\/Users\/alex|correct horse|deadbeef/);
