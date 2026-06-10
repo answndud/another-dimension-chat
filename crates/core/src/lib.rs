@@ -492,6 +492,16 @@ pub mod production {
         "sbom_dependency_audit_reproducible_build_non_claim",
     ];
 
+    const PRODUCTION_INDEPENDENT_REVIEW_POLICIES: &[&str] = &[
+        "public_threat_model_required",
+        "independent_review_packet_required",
+        "public_non_claims_required",
+        "review_gap_published",
+        "no_external_review_claim",
+        "no_reviewer_signoff_claim",
+        "no_security_ready_claim",
+    ];
+
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionRuntimeCommandSurfaceSummary {
         reviewed_categories: &'static [&'static str],
@@ -600,6 +610,20 @@ pub mod production {
         sbom_published: bool,
         dependency_audit_complete: bool,
         reproducible_build_proof_available: bool,
+        boundary_closed: bool,
+        security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionIndependentReviewBoundarySummary {
+        policies: &'static [&'static str],
+        public_threat_model_required: bool,
+        independent_review_packet_required: bool,
+        public_non_claims_required: bool,
+        external_review_completed: bool,
+        reviewer_signoff_claimed: bool,
+        public_review_gap_published: bool,
+        sensitive_communication_allowed: bool,
         boundary_closed: bool,
         security_ready_claimed: bool,
     }
@@ -957,6 +981,48 @@ pub mod production {
 
         pub fn reproducible_build_proof_available(self) -> bool {
             self.reproducible_build_proof_available
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+    }
+
+    impl ProductionIndependentReviewBoundarySummary {
+        pub fn policies(self) -> &'static [&'static str] {
+            self.policies
+        }
+
+        pub fn public_threat_model_required(self) -> bool {
+            self.public_threat_model_required
+        }
+
+        pub fn independent_review_packet_required(self) -> bool {
+            self.independent_review_packet_required
+        }
+
+        pub fn public_non_claims_required(self) -> bool {
+            self.public_non_claims_required
+        }
+
+        pub fn external_review_completed(self) -> bool {
+            self.external_review_completed
+        }
+
+        pub fn reviewer_signoff_claimed(self) -> bool {
+            self.reviewer_signoff_claimed
+        }
+
+        pub fn public_review_gap_published(self) -> bool {
+            self.public_review_gap_published
+        }
+
+        pub fn sensitive_communication_allowed(self) -> bool {
+            self.sensitive_communication_allowed
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -8459,6 +8525,37 @@ pub mod production {
         }
     }
 
+    pub fn production_independent_review_boundary_summary(
+    ) -> ProductionIndependentReviewBoundarySummary {
+        let public_threat_model_required = true;
+        let independent_review_packet_required = true;
+        let public_non_claims_required = true;
+        let external_review_completed = false;
+        let reviewer_signoff_claimed = false;
+        let public_review_gap_published = true;
+        let sensitive_communication_allowed = false;
+        let boundary_closed = public_threat_model_required
+            && independent_review_packet_required
+            && public_non_claims_required
+            && !external_review_completed
+            && !reviewer_signoff_claimed
+            && public_review_gap_published
+            && !sensitive_communication_allowed;
+
+        ProductionIndependentReviewBoundarySummary {
+            policies: PRODUCTION_INDEPENDENT_REVIEW_POLICIES,
+            public_threat_model_required,
+            independent_review_packet_required,
+            public_non_claims_required,
+            external_review_completed,
+            reviewer_signoff_claimed,
+            public_review_gap_published,
+            sensitive_communication_allowed,
+            boundary_closed,
+            security_ready_claimed: false,
+        }
+    }
+
     pub fn production_session_readiness_gate() -> ProductionSessionReadinessGate {
         let summary = production_session_evaluation_summary();
 
@@ -10232,6 +10329,23 @@ pub mod production {
             assert!(boundary
                 .policies()
                 .contains(&"sbom_dependency_audit_reproducible_build_non_claim"));
+        }
+
+        #[test]
+        fn production_independent_review_boundary_publishes_review_gap_without_signoff_claim() {
+            let boundary = production_independent_review_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.public_threat_model_required());
+            assert!(boundary.independent_review_packet_required());
+            assert!(boundary.public_non_claims_required());
+            assert!(!boundary.external_review_completed());
+            assert!(!boundary.reviewer_signoff_claimed());
+            assert!(boundary.public_review_gap_published());
+            assert!(!boundary.sensitive_communication_allowed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary.policies().contains(&"review_gap_published"));
+            assert!(boundary.policies().contains(&"no_reviewer_signoff_claim"));
         }
 
         #[test]

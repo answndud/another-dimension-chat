@@ -130,6 +130,11 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "source_provenance_sha256": "$source_provenance_sha",
   "dependency_lockfiles_sha256_file": "DEPENDENCY_LOCKFILES.sha256",
   "dependency_inventory_file": "DEPENDENCY_INVENTORY.md",
+  "public_threat_model_file": "PUBLIC_THREAT_MODEL.md",
+  "independent_review_packet_file": "INDEPENDENT_REVIEW_PACKET.md",
+  "independent_review_complete": false,
+  "public_review_gap_published": true,
+  "reviewer_signoff_claimed": false,
   "manual_update_integrity_file": "UPDATE_INTEGRITY.md",
   "supply_chain_baseline_file": "SUPPLY_CHAIN_BASELINE.md",
   "public_non_claims": [
@@ -140,7 +145,9 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
     "sensitive communication prohibited",
     "no auto-update",
     "no dependency audit claim",
-    "no reproducible-build claim"
+    "no reproducible-build claim",
+    "no completed independent review claim",
+    "no reviewer signoff claim"
   ]
 }
 EOF
@@ -176,6 +183,11 @@ This folder is for a GitHub Release upload.
 - Source provenance SHA-256: \`$source_provenance_sha\`
 - Dependency inventory: \`DEPENDENCY_INVENTORY.md\`
 - Dependency lockfile hashes: \`DEPENDENCY_LOCKFILES.sha256\`
+- Public threat model: \`PUBLIC_THREAT_MODEL.md\`
+- Independent review packet: \`INDEPENDENT_REVIEW_PACKET.md\`
+- Independent review complete: false
+- Public review gap published: true
+- Reviewer signoff claimed: false
 - Auto-update: disabled
 - Signing/notarization: disabled
 
@@ -191,6 +203,10 @@ Manual update integrity is limited to user-verified SHA-256 files and the
 provenance/dependency-inventory/lockfile-hash evidence in this upload set.
 There is no auto-update, signing, notarization, reproducible-build, SBOM, or
 security-audit claim.
+
+The public threat model and independent review packet are review inputs only.
+No independent review, reviewer signoff, public user safety signoff, or secure
+messenger claim is made by this upload set.
 EOF
 
 for release_file in "${REQUIRED_RELEASE_FILES[@]}"; do
@@ -201,20 +217,32 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact\": \"$RELEASE_DMG\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact_sha256\": \"$EXPECTED_DMG_SHA\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"source_provenance_sha256\": \"$source_provenance_sha\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"dependency_inventory_file\": \"DEPENDENCY_INVENTORY.md\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_threat_model_file\": \"PUBLIC_THREAT_MODEL.md\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"independent_review_packet_file\": \"INDEPENDENT_REVIEW_PACKET.md\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"independent_review_complete\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_review_gap_published\": true"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"reviewer_signoff_claimed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"auto_update\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"signed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"notarized\": false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Auto-update: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Signing/notarization: disabled"
+require_text "$RELEASE_DIR/MANIFEST.md" "Independent review complete: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Public review gap published: true"
+require_text "$RELEASE_DIR/MANIFEST.md" "Reviewer signoff claimed: false"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "unsigned experimental public beta"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not audited"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not production-ready"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "sensitive communication prohibited"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GITHUB_RELEASE_BODY.md"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "completed independent review"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "External two-machine onion delivery has not yet been independently verified"
 require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "does not provide auto-update"
 require_text "$RELEASE_DIR/SUPPLY_CHAIN_BASELINE.md" "not a supply-chain audit"
 require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "not an SBOM"
+require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "not a secure messenger release today"
+require_text "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md" "not an external review result"
+require_text "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md" "Known Review Gaps"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "Cargo.lock"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/src-tauri/Cargo.lock"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/package-lock.json"

@@ -29,6 +29,8 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Public dependency inventory for reviewers.
 - Public dependency lockfile hash baseline for reviewers.
 - Public threat model and independent review packet for claim review.
+- Explicit review-gap provenance showing no completed review and no reviewer
+  signoff claim.
 
 ## What This Beta Does Not Claim
 
@@ -41,6 +43,7 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Signed, notarized, auto-updating, reproducible, or supply-chain-reviewed release status.
 - SBOM or dependency audit completion.
 - Completed independent review.
+- Reviewer signoff or public user safety signoff.
 - Protection against device compromise, coercion, malicious contacts, or global traffic correlation.
 
 ## Install

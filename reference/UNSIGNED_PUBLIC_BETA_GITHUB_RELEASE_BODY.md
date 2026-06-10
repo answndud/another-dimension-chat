@@ -58,6 +58,7 @@ This beta does not claim:
 - reproducible-build proof
 - SBOM or dependency audit completion
 - completed independent review
+- reviewer signoff or public user safety signoff
 - reliable real-network Tor/onion delivery
 - independently verified external two-machine onion delivery
 - rollback prevention

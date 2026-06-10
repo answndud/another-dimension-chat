@@ -73,6 +73,10 @@ GitHub Release and verify the checksum again before opening the app.
 `DEPENDENCY_LOCKFILES.sha256` records the lockfile hashes used for the release
 baseline. It is reviewer evidence, not a dependency audit or security guarantee.
 
+`PUBLIC_THREAT_MODEL.md` and `INDEPENDENT_REVIEW_PACKET.md` are reviewer inputs
+only. The release provenance records that independent review is not complete and
+that no reviewer signoff is claimed.
+
 ## Safety Boundary
 
 - No phone number, email, global account, searchable username, centralized contact discovery, central message server, push notification, or cloud backup is part of this beta.

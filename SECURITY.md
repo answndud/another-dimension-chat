@@ -12,7 +12,7 @@ The public cross-component replacement inventory is tracked in `reference/COMPON
 
 The public privacy-model comparison is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`. It maps the intended Korean Briar/Cwtch-style direction to current public beta gaps and LINDDUN categories; it is not a claim that the current beta has reached that level.
 
-The public threat model is tracked in `reference/PUBLIC_THREAT_MODEL.md`, and the independent review packet is tracked in `reference/INDEPENDENT_REVIEW_PACKET.md`. These are review inputs, not evidence that a review has been completed.
+The public threat model is tracked in `reference/PUBLIC_THREAT_MODEL.md`, and the independent review packet is tracked in `reference/INDEPENDENT_REVIEW_PACKET.md`. These are review inputs, not evidence that a review has been completed. The public beta upload set explicitly records the current review gap and does not claim reviewer signoff.
 
 Do not use this project to communicate sensitive information.
 
@@ -50,7 +50,7 @@ This project does not currently claim:
 - Audited or security-ready durable production session lifecycle.
 - Replay rollback prevention against encrypted database snapshot restore.
 - Signed, notarized, reproducible, auto-updating, or supply-chain-reviewed releases.
-- External audit, independent review, or public user safety signoff.
+- External audit, independent review, reviewer signoff, or public user safety signoff.
 - Protection against device compromise.
 - Protection against coercion.
 - Protection against malicious contacts.
@@ -88,7 +88,7 @@ The generated public release folder is `apps/desktop-tauri/public-release/unsign
 
 Public users must verify the DMG checksum before using the normal macOS Privacy & Security manual allow path. This project does not ask users to bypass macOS protections with terminal quarantine removal commands. There is no auto-update channel; every update is a manual GitHub Release download with a matching `.sha256` file.
 
-The unsigned release upload set includes public provenance JSON, `GITHUB_RELEASE_BODY.md`, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, `DEPENDENCY_INVENTORY.md`, and `DEPENDENCY_LOCKFILES.sha256` as review evidence. The release script regenerates the public provenance for the public DMG name, records the source provenance SHA-256, and checks the GitHub Release body non-claims before declaring the upload set ready. These files are not an audit, SBOM, reproducible-build proof, malware review, signing substitute, notarization substitute, or secure messenger claim.
+The unsigned release upload set includes public provenance JSON, `GITHUB_RELEASE_BODY.md`, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, `DEPENDENCY_INVENTORY.md`, and `DEPENDENCY_LOCKFILES.sha256` as review evidence. The release script regenerates the public provenance for the public DMG name, records the source provenance SHA-256, records the public threat model and independent review packet, marks `independent_review_complete=false`, marks `public_review_gap_published=true`, marks `reviewer_signoff_claimed=false`, and checks the GitHub Release body non-claims before declaring the upload set ready. These files are not an audit, SBOM, reproducible-build proof, malware review, signing substitute, notarization substitute, external review result, reviewer signoff, or secure messenger claim.
 
 The upload set also includes `PUBLIC_THREAT_MODEL.md` and `INDEPENDENT_REVIEW_PACKET.md` so reviewers can inspect allowed claims, non-claims, known gaps, and public-safe review commands without private planning notes.
 

@@ -58,6 +58,8 @@ Current implementation evidence includes:
 - public diagnostics redaction boundary
 - manual GitHub Release download with SHA-256 verification
 - dependency lockfile hash baseline for reviewers
+- public threat-model and independent-review packet publication
+- explicit public review gap with no completed-review or reviewer-signoff claim
 
 These are implementation guardrails, not a secure messenger claim.
 
@@ -78,6 +80,7 @@ This beta does not claim:
 - rollback prevention against restored encrypted database snapshots
 - secure deletion from storage media
 - dependency audit, SBOM, reproducible build, signing, notarization, or auto-update
+- completed independent review, reviewer signoff, or public user safety signoff
 
 ## Non-Goals
 

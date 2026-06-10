@@ -5,6 +5,17 @@ Another Dimension Chat is not a secure messenger release today.
 This packet gives an independent reviewer a public-safe starting point. It is
 not an external review result and does not imply approval.
 
+## Review Gap Boundary
+
+The unsigned public beta release packet must publish this gap explicitly:
+
+- `independent_review_complete=false`
+- `public_review_gap_published=true`
+- `reviewer_signoff_claimed=false`
+
+These fields mean the project has prepared review inputs only. They do not mean
+the project has passed review.
+
 ## Review Scope
 
 Review the unsigned experimental public beta boundary:
@@ -62,6 +73,9 @@ Review the unsigned experimental public beta boundary:
   comparison and current public beta gap map.
 - `reference/PUBLIC_THREAT_MODEL.md`: public threat model and non-goals.
 - `reference/COMPONENT_BOUNDARIES.md`: component replacement and readiness map.
+- Generated release provenance: records the public threat model, independent
+  review packet, incomplete-review flag, published-review-gap flag, and
+  no-reviewer-signoff flag.
 - `docs/FINAL_ACCEPTANCE_CHECKLIST.md`: private final gate checklist; do not publish.
 
 ## Suggested Public-Safe Review Commands
@@ -85,6 +99,7 @@ shasum -a 256 -c another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.
 ## Known Review Gaps
 
 - No external security review has been completed.
+- The public release packet publishes the review gap but does not close it.
 - External two-machine onion peer reports have not been received.
 - No SBOM is published.
 - No reproducible-build proof exists.
