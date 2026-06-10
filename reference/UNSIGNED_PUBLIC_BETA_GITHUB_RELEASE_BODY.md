@@ -18,6 +18,7 @@ Download all files from this same GitHub Release:
 - `SUPPLY_CHAIN_BASELINE.md`
 - `DEPENDENCY_INVENTORY.md`
 - `PUBLIC_THREAT_MODEL.md`
+- `PRIVACY_MODEL_COMPARISON.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
 - `PUBLIC_INTAKE_POLICY.md`
 - `REPOSITORY_GOVERNANCE.md`
@@ -67,6 +68,8 @@ This beta does not claim:
 - reviewer signoff or public user safety signoff
 - reliable real-network Tor/onion delivery
 - independently verified external two-machine onion delivery
+- Briar/Cwtch-equivalent privacy or security level
+- repeated external onion evidence, offline mesh delivery, or security-ready status
 - cloud backup/sync or backup recovery
 - destructive migration
 - rollback prevention
@@ -74,6 +77,10 @@ This beta does not claim:
 
 External two-machine onion delivery has not yet been independently verified.
 Same-machine dual-profile rehearsal is development evidence only, not peer field-test evidence.
+
+`PRIVACY_MODEL_COMPARISON.md` is a public gap map for the Korean
+Briar/Cwtch-style direction. It is not a claim that this beta has reached those
+systems' level.
 
 Every update is a new manual GitHub Release download and must be verified with the matching `.sha256` file.
 

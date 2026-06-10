@@ -30,6 +30,7 @@ pub struct PrototypeStatus {
     experimental_transport_status: &'static str,
     bootstrap_status_classification: &'static str,
     transport_io_status: String,
+    privacy_model_boundary: &'static str,
     storage_status: &'static str,
     release_integrity_status: &'static str,
     supply_chain_integrity_boundary: String,
@@ -283,6 +284,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             preflight.production_messaging_ready(),
             next_connector.required_gate(),
         ),
+        privacy_model_boundary:
+            "target=no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server; current_beta_not_briar_cwtch_equivalent=true; audited_e2ee=false; repeated_external_onion_evidence=false; offline_mesh=false; independent_review_complete=false; security_ready=false",
         storage_status:
             "ADREC1 storage spike plus forward-only schema and local data lifecycle boundary",
         release_integrity_status:
@@ -472,6 +475,19 @@ mod tests {
         assert!(status
             .transport_io_status
             .contains("transport_send_receive=false"));
+        assert!(status.privacy_model_boundary.contains("target=no-phone"));
+        assert!(status
+            .privacy_model_boundary
+            .contains("current_beta_not_briar_cwtch_equivalent=true"));
+        assert!(status.privacy_model_boundary.contains("audited_e2ee=false"));
+        assert!(status
+            .privacy_model_boundary
+            .contains("repeated_external_onion_evidence=false"));
+        assert!(status.privacy_model_boundary.contains("offline_mesh=false"));
+        assert!(status
+            .privacy_model_boundary
+            .contains("independent_review_complete=false"));
+        assert!(status.privacy_model_boundary.contains("security_ready=false"));
         assert!(status
             .transport_io_status
             .contains("real external peer reports without fabricated local evidence"));
