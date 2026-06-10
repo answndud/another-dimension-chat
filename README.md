@@ -87,7 +87,7 @@ What exists today:
   channel/message-number/nonce binding is fixed, replay state is committed only
   after decrypt, and tamper failure must not advance receive state. This is still
   not an audited or production-ready E2EE claim.
-- Local data lifecycle controls for conversation message-record deletion, profile-store deletion, owned local app-data wipe, backup-exclusion preparation, forward-only schema versioning, and marker-only rollback detection. These controls do not claim secure deletion from media or rollback prevention.
+- Local data lifecycle controls for conversation message-record deletion, profile-store deletion, owned local app-data wipe, backup-exclusion preparation, local backup-exclusion verification boundaries, forward-only schema versioning, destructive-migration blocking, and marker-only rollback detection. These controls do not provide cloud backup/sync, backup recovery, secure deletion from media, or rollback prevention.
 - A v0.1 key and rollback boundary decision: passphrase-first remains required,
   OS keystore or Secure Enclave style wrapping is optional and not required,
   OS-keystore-only unlock is rejected, app key wrapping is not claimed, and
@@ -120,7 +120,7 @@ What does not exist yet:
 - Actual onion service private key material.
 - Complete production key management. The desktop shell now has a passphrase-first product unlock/lock state, local durable session lifecycle records, local data lifecycle controls, and a v0.1 key/rollback boundary decision, but it does not claim app key wrapping, secure deletion from media, rollback prevention, audited E2EE readiness, or automatic/network runtime messaging readiness.
 - OS keychain/DPAPI/Keystore wrapping.
-- Complete production encrypted local storage lifecycle with secure deletion guarantees.
+- Complete production encrypted local storage lifecycle with cloud backup/sync, backup recovery, or secure deletion guarantees.
 - Replay rollback prevention against encrypted database snapshot restore.
 - Production Tauri desktop app. The current Tauri shell is a local beta candidate, not a secure release.
 - Android or iOS app.
@@ -207,9 +207,9 @@ This runs:
 - Production skeleton preflight summary aggregates current crypto/session, transport, storage, and command-surface blockers without exposing production messaging.
 - Session lifecycle records now persist pairing draft, endpoint state, replay window, and Noise transport state in the local encrypted profile store, with status/delete commands that do not return channel ids, paths, passphrases, endpoints, payloads, or key material.
 - Session lifecycle delete closes restart/resume and message-envelope readiness for the active session while preserving message records for the later data-lifecycle phase.
-- Data lifecycle commands delete conversation records, profile store files, and owned local app data without returning paths, passphrases, plaintext, or key material; secure deletion from media remains false.
-- SQLCipher stores now apply a forward-only `user_version` migration boundary and reject future schema versions instead of silently downgrading or destructively rewriting data.
-- Rollback detection is marker-only and still requires external monotonic state before any rollback-prevention claim.
+- Data lifecycle commands delete conversation records, profile store files, and owned local app data without returning paths, passphrases, plaintext, or key material; cloud backup/sync, backup recovery, and secure deletion from media remain false.
+- SQLCipher stores now apply a forward-only `user_version` migration boundary and reject future schema versions instead of silently downgrading or destructively rewriting data; destructive migration remains blocked.
+- Rollback detection is marker-only and still requires external monotonic state before any rollback-prevention claim; the current boundary does not claim rollback prevention.
 - Desktop product unlock opens the local encrypted profile store through a passphrase-first command, then records only redacted unlocked/locked metadata with explicit lock and 60-second idle auto-lock.
 - Session unlock policy keeps OS-keystore-only unlock rejected for high-risk mode and does not use Apple keychain, Secure Enclave, DPAPI, Keystore, or cloud key wrapping in v0.1.
 - Key/rollback policy is closed for v0.1 as a non-claim boundary: passphrase-first is required, OS wrapping is optional/non-required, app key wrapping is not ready, rollback prevention is not claimed, and external monotonic state is required before any future rollback-prevention claim.
@@ -265,7 +265,7 @@ To stage the current unsigned public GitHub Release upload set from the local ig
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-Upload only the generated public release files from `apps/desktop-tauri/public-release/unsigned-public-beta/`. Use `GITHUB_RELEASE_BODY.md` as the GitHub Release body. The public release body, notes, install guide, manifest, and provenance must keep the unsigned experimental beta warning, sensitive communication prohibition, not audited status, not production-ready status, external two-machine onion delivery non-claim, and public diagnostics redaction boundary. Users must treat every update as a fresh manual download and verify the matching `.sha256` file.
+Upload only the generated public release files from `apps/desktop-tauri/public-release/unsigned-public-beta/`. Use `GITHUB_RELEASE_BODY.md` as the GitHub Release body. The public release body, notes, install guide, manifest, and provenance must keep the unsigned experimental beta warning, sensitive communication prohibition, not audited status, not production-ready status, external two-machine onion delivery non-claim, backup/migration non-claims, and public diagnostics redaction boundary. Users must treat every update as a fresh manual download and verify the matching `.sha256` file.
 
 For the current local field-test handoff, send only the per-peer delivery folder contents from:
 

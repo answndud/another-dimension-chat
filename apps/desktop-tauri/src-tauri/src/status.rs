@@ -19,6 +19,7 @@ pub struct PrototypeStatus {
     session_durable_state_status: &'static str,
     local_data_lifecycle_policy: String,
     key_rollback_boundary: String,
+    backup_migration_boundary: String,
     transport_envelope_io_boundary: String,
     session_unlock_policy_status: &'static str,
     session_unlock_non_readiness: &'static str,
@@ -57,6 +58,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         another_dimension_core::production::production_local_data_lifecycle_policy_summary();
     let key_rollback =
         another_dimension_core::production::production_key_rollback_boundary_summary();
+    let backup_migration =
+        another_dimension_core::production::production_backup_migration_boundary_summary();
     let transport_boundary =
         another_dimension_core::production::production_transport_envelope_io_boundary_summary();
     let supply_chain =
@@ -213,6 +216,24 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             key_rollback.production_key_management_ready(),
             key_rollback.security_ready_claimed(),
             key_rollback.policies().join(","),
+        ),
+        backup_migration_boundary: format!(
+            "boundary_closed={} backup_policy_decided={} backup_verification_required={} backup_verified_by_core_status={} cloud_backup_or_sync_enabled={} backup_recovery_claimed={} forward_only_schema_migration_required={} migration_marker_required={} destructive_migration_blocked={} prototype_data_migration_ready={} rollback_detection_marker_only={} rollback_prevention_claimed={} secure_media_deletion_claimed={} security_ready_claimed={} policies={}",
+            backup_migration.boundary_closed(),
+            backup_migration.backup_exclusion_policy_decided(),
+            backup_migration.backup_exclusion_verification_required(),
+            backup_migration.backup_exclusion_verified_by_core_status(),
+            backup_migration.cloud_backup_or_sync_enabled(),
+            backup_migration.backup_recovery_claimed(),
+            backup_migration.forward_only_schema_migration_required(),
+            backup_migration.migration_marker_required(),
+            backup_migration.destructive_migration_blocked(),
+            backup_migration.prototype_data_migration_ready(),
+            backup_migration.rollback_detection_marker_only(),
+            backup_migration.rollback_prevention_claimed(),
+            backup_migration.secure_media_deletion_claimed(),
+            backup_migration.security_ready_claimed(),
+            backup_migration.policies().join(","),
         ),
         transport_envelope_io_boundary: format!(
             "boundary_closed={} explicit_user_action_required={} automatic_network_on_launch={} high_risk_onion_only_policy={} direct_fallback_allowed={} route_allowed_by_policy={} outbound_fail_closed_adapter_ready={} inbound_fail_closed_adapter_ready={} redacted_envelope_io_context_required={} remote_peer_authentication_required={} verified_pairwise_session_required={} send_receive_available={} external_two_machine_onion_delivery_verified={} reliable_real_network_onion_delivery_claimed={} production_messaging_ready={} security_ready_claimed={} policies={}",
@@ -386,6 +407,30 @@ mod tests {
         assert!(status
             .key_rollback_boundary
             .contains("production_key_management_ready=false"));
+        assert!(status
+            .backup_migration_boundary
+            .contains("boundary_closed=true"));
+        assert!(status
+            .backup_migration_boundary
+            .contains("backup_verification_required=true"));
+        assert!(status
+            .backup_migration_boundary
+            .contains("backup_verified_by_core_status=false"));
+        assert!(status
+            .backup_migration_boundary
+            .contains("cloud_backup_or_sync_enabled=false"));
+        assert!(status
+            .backup_migration_boundary
+            .contains("backup_recovery_claimed=false"));
+        assert!(status
+            .backup_migration_boundary
+            .contains("forward_only_schema_migration_required=true"));
+        assert!(status
+            .backup_migration_boundary
+            .contains("destructive_migration_blocked=true"));
+        assert!(status
+            .backup_migration_boundary
+            .contains("rollback_prevention_claimed=false"));
         assert!(status
             .transport_envelope_io_boundary
             .contains("boundary_closed=true"));

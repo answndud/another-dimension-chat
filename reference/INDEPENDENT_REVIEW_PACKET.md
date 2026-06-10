@@ -50,6 +50,8 @@ Review the unsigned experimental public beta boundary:
 - no automatic network/onion work on app launch
 - passphrase-first local unlock path exists
 - local data lifecycle controls exist
+- local backup-exclusion verification and forward-only migration boundaries
+  exist, while cloud backup/sync and backup recovery are non-claims
 - dependency lockfile hash baseline exists
 
 ## Public Claims Not Allowed Today
@@ -65,6 +67,8 @@ Review the unsigned experimental public beta boundary:
 - reliable real-network onion delivery
 - independently verified external two-machine onion delivery
 - audited bridge/censorship support
+- cloud backup/sync or backup recovery
+- destructive migration
 - rollback prevention
 - secure deletion from storage media
 
@@ -93,6 +97,11 @@ Review the unsigned experimental public beta boundary:
 - Generated release provenance and manifest: record the public diagnostics
   boundary, crash-upload-disabled flag, telemetry-disabled flag, raw-log-export
   disabled flag, and forbidden diagnostics field categories.
+- Generated release provenance and manifest: record the backup/migration
+  boundary, cloud-backup/sync-disabled flag, backup-recovery non-claim,
+  forward-only schema migration requirement, destructive-migration block,
+  marker-only rollback detection, rollback-prevention non-claim, and
+  secure-media-deletion non-claim.
 - `docs/FINAL_ACCEPTANCE_CHECKLIST.md`: private final gate checklist; do not publish.
 
 ## Suggested Public-Safe Review Commands
@@ -103,7 +112,7 @@ private planning notes:
 ```bash
 bash -n scripts/prepare_unsigned_public_beta_release.sh
 shasum -a 256 Cargo.lock apps/desktop-tauri/src-tauri/Cargo.lock apps/desktop-tauri/package-lock.json
-rg -n "secure messenger|production-ready|sensitive communication|not audited|not notarized|auto-update|rollback prevention|secure deletion" README.md SECURITY.md reference apps/desktop-tauri/README.md
+rg -n "secure messenger|production-ready|sensitive communication|not audited|not notarized|auto-update|backup recovery|rollback prevention|secure deletion" README.md SECURITY.md reference apps/desktop-tauri/README.md
 git diff --check
 ```
 
@@ -138,4 +147,5 @@ The reviewer should report:
   screenshots of private room data
 - any command path that starts network/onion work without explicit user action
 - any missing non-claim around audit, production readiness, onion reliability,
-  rollback prevention, secure deletion, or supply-chain review
+  cloud backup/sync, backup recovery, rollback prevention, secure deletion, or
+  supply-chain review

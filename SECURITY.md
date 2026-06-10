@@ -53,10 +53,11 @@ This project does not currently claim:
 - Actual onion service private key material.
 - Complete production key management. The desktop shell has a passphrase-first local product unlock/lock path, local durable session lifecycle records, local data lifecycle controls, an explicit manual envelope export/import runtime gate, a local manual E2EE runtime failure-model gate, and a v0.1 key/rollback policy decision, but app key wrapping, secure deletion from media, rollback prevention, audited E2EE readiness, automatic messaging readiness, and network send/receive readiness are still not claimed.
 - OS keychain/DPAPI/Keystore wrapping.
-- Complete production encrypted local storage lifecycle with secure deletion guarantees.
+- Complete production encrypted local storage lifecycle with cloud backup/sync, backup recovery, or secure deletion guarantees.
 - Durable production key storage.
 - Audited or security-ready durable production session lifecycle.
 - Replay rollback prevention against encrypted database snapshot restore.
+- Cloud backup/sync, backup recovery, destructive migration, secure media deletion, or rollback prevention.
 - Signed, notarized, reproducible, auto-updating, or supply-chain-reviewed releases.
 - External audit, independent review, reviewer signoff, or public user safety signoff.
 - Protection against device compromise.
@@ -96,7 +97,7 @@ The generated public release folder is `apps/desktop-tauri/public-release/unsign
 
 Public users must verify the DMG checksum before using the normal macOS Privacy & Security manual allow path. This project does not ask users to bypass macOS protections with terminal quarantine removal commands. There is no auto-update channel; every update is a manual GitHub Release download with a matching `.sha256` file.
 
-The unsigned release upload set includes public provenance JSON, `GITHUB_RELEASE_BODY.md`, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, `DEPENDENCY_INVENTORY.md`, and `DEPENDENCY_LOCKFILES.sha256` as review evidence. The release script regenerates the public provenance for the public DMG name, records the source provenance SHA-256, records the public threat model and independent review packet, marks `independent_review_complete=false`, marks `public_review_gap_published=true`, marks `reviewer_signoff_claimed=false`, and checks the GitHub Release body non-claims before declaring the upload set ready. These files are not an audit, SBOM, reproducible-build proof, malware review, signing substitute, notarization substitute, external review result, reviewer signoff, or secure messenger claim.
+The unsigned release upload set includes public provenance JSON, `GITHUB_RELEASE_BODY.md`, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, `DEPENDENCY_INVENTORY.md`, and `DEPENDENCY_LOCKFILES.sha256` as review evidence. The release script regenerates the public provenance for the public DMG name, records the source provenance SHA-256, records the public threat model and independent review packet, marks `independent_review_complete=false`, marks `public_review_gap_published=true`, marks `reviewer_signoff_claimed=false`, records the backup/migration non-claim boundary, and checks the GitHub Release body non-claims before declaring the upload set ready. These files are not an audit, SBOM, reproducible-build proof, malware review, signing substitute, notarization substitute, external review result, reviewer signoff, cloud backup/sync feature, backup recovery feature, rollback-prevention proof, secure-deletion proof, or secure messenger claim.
 
 The upload set also includes `PUBLIC_THREAT_MODEL.md`, `INDEPENDENT_REVIEW_PACKET.md`, `PUBLIC_INTAKE_POLICY.md`, and `REPOSITORY_GOVERNANCE.md` so reviewers can inspect allowed claims, non-claims, known gaps, public-safe review commands, public issue/security intake redaction rules, maintainer-driven main-branch governance, and release guardrails without private planning notes.
 

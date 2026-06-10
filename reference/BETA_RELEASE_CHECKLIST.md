@@ -15,6 +15,7 @@ Allowed beta scope:
 - Failed-send retry and cancel recovery.
 - Redacted field-test report copy/compare.
 - Public diagnostics local-copy boundary with no crash upload, telemetry, or raw log export.
+- Local backup-exclusion verification and forward-only migration boundary.
 - Explicit onion/Tor attempt paths after manual network permission.
 
 Out of scope:
@@ -23,6 +24,7 @@ Out of scope:
 - Public secure messenger release.
 - Phone/email/global account/contact discovery.
 - Central message server, push notification, or cloud backup.
+- Cloud backup/sync, backup recovery, destructive migration, rollback prevention, or secure deletion guarantees.
 - Signed, notarized, auto-updating, reproducible, audited, or externally reviewed release claims.
 
 ## Pre-Handoff Checks

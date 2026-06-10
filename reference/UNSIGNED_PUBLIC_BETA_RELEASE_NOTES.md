@@ -34,6 +34,8 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Public threat model and independent review packet for claim review.
 - Explicit review-gap provenance showing no completed review and no reviewer
   signoff claim.
+- Local backup-exclusion verification and forward-only schema migration
+  boundary, with destructive migration blocked.
 - Public intake policy and GitHub issue templates for redacted support reports
   and minimal security contact requests.
 - Repository governance guardrails for maintainer-driven main work, unsigned
@@ -47,6 +49,8 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Reliable real-network Tor/onion delivery.
 - Independently verified external two-machine onion delivery.
 - Bridge/censorship support beyond tested configurations.
+- Cloud backup/sync, backup recovery, destructive migration, rollback
+  prevention, or secure deletion from storage media.
 - Signed, notarized, auto-updating, reproducible, or supply-chain-reviewed release status.
 - SBOM or dependency audit completion.
 - Completed independent review.

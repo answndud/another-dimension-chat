@@ -468,6 +468,18 @@ pub mod production {
         "secure_media_deletion_non_claim",
     ];
 
+    const PRODUCTION_BACKUP_MIGRATION_BOUNDARY_POLICIES: &[&str] = &[
+        "local_backup_exclusion_verification_required",
+        "forward_only_schema_migration_required",
+        "migration_marker_required",
+        "destructive_migration_blocked",
+        "rollback_detection_marker_only",
+        "cloud_backup_sync_non_claim",
+        "backup_recovery_non_claim",
+        "secure_media_deletion_non_claim",
+        "rollback_prevention_non_claim",
+    ];
+
     const PRODUCTION_TRANSPORT_ENVELOPE_IO_POLICIES: &[&str] = &[
         "explicit_user_action_required",
         "no_network_on_launch",
@@ -609,6 +621,25 @@ pub mod production {
         secure_media_deletion_claimed: bool,
         boundary_closed: bool,
         production_key_management_ready: bool,
+        security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionBackupMigrationBoundarySummary {
+        policies: &'static [&'static str],
+        backup_exclusion_policy_decided: bool,
+        backup_exclusion_verification_required: bool,
+        backup_exclusion_verified_by_core_status: bool,
+        cloud_backup_or_sync_enabled: bool,
+        backup_recovery_claimed: bool,
+        forward_only_schema_migration_required: bool,
+        migration_marker_required: bool,
+        destructive_migration_blocked: bool,
+        prototype_data_migration_ready: bool,
+        rollback_detection_marker_only: bool,
+        rollback_prevention_claimed: bool,
+        secure_media_deletion_claimed: bool,
+        boundary_closed: bool,
         security_ready_claimed: bool,
     }
 
@@ -909,6 +940,68 @@ pub mod production {
 
         pub fn production_key_management_ready(self) -> bool {
             self.production_key_management_ready
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+    }
+
+    impl ProductionBackupMigrationBoundarySummary {
+        pub fn policies(self) -> &'static [&'static str] {
+            self.policies
+        }
+
+        pub fn backup_exclusion_policy_decided(self) -> bool {
+            self.backup_exclusion_policy_decided
+        }
+
+        pub fn backup_exclusion_verification_required(self) -> bool {
+            self.backup_exclusion_verification_required
+        }
+
+        pub fn backup_exclusion_verified_by_core_status(self) -> bool {
+            self.backup_exclusion_verified_by_core_status
+        }
+
+        pub fn cloud_backup_or_sync_enabled(self) -> bool {
+            self.cloud_backup_or_sync_enabled
+        }
+
+        pub fn backup_recovery_claimed(self) -> bool {
+            self.backup_recovery_claimed
+        }
+
+        pub fn forward_only_schema_migration_required(self) -> bool {
+            self.forward_only_schema_migration_required
+        }
+
+        pub fn migration_marker_required(self) -> bool {
+            self.migration_marker_required
+        }
+
+        pub fn destructive_migration_blocked(self) -> bool {
+            self.destructive_migration_blocked
+        }
+
+        pub fn prototype_data_migration_ready(self) -> bool {
+            self.prototype_data_migration_ready
+        }
+
+        pub fn rollback_detection_marker_only(self) -> bool {
+            self.rollback_detection_marker_only
+        }
+
+        pub fn rollback_prevention_claimed(self) -> bool {
+            self.rollback_prevention_claimed
+        }
+
+        pub fn secure_media_deletion_claimed(self) -> bool {
+            self.secure_media_deletion_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -8519,6 +8612,49 @@ pub mod production {
         }
     }
 
+    pub fn production_backup_migration_boundary_summary() -> ProductionBackupMigrationBoundarySummary
+    {
+        let local_data = production_local_data_lifecycle_policy_summary();
+        let backup_exclusion_verification_required = true;
+        let cloud_backup_or_sync_enabled = false;
+        let backup_recovery_claimed = false;
+        let migration_marker_required = true;
+        let destructive_migration_blocked = true;
+        let rollback_detection_marker_only = true;
+        let rollback_prevention_claimed = false;
+        let secure_media_deletion_claimed = local_data.secure_media_deletion_claimed();
+        let boundary_closed = local_data.backup_exclusion_policy_decided()
+            && backup_exclusion_verification_required
+            && !local_data.backup_exclusion_verified()
+            && !cloud_backup_or_sync_enabled
+            && !backup_recovery_claimed
+            && local_data.forward_only_schema_migration()
+            && migration_marker_required
+            && destructive_migration_blocked
+            && !local_data.prototype_data_migration_ready()
+            && rollback_detection_marker_only
+            && !rollback_prevention_claimed
+            && !secure_media_deletion_claimed;
+
+        ProductionBackupMigrationBoundarySummary {
+            policies: PRODUCTION_BACKUP_MIGRATION_BOUNDARY_POLICIES,
+            backup_exclusion_policy_decided: local_data.backup_exclusion_policy_decided(),
+            backup_exclusion_verification_required,
+            backup_exclusion_verified_by_core_status: local_data.backup_exclusion_verified(),
+            cloud_backup_or_sync_enabled,
+            backup_recovery_claimed,
+            forward_only_schema_migration_required: local_data.forward_only_schema_migration(),
+            migration_marker_required,
+            destructive_migration_blocked,
+            prototype_data_migration_ready: local_data.prototype_data_migration_ready(),
+            rollback_detection_marker_only,
+            rollback_prevention_claimed,
+            secure_media_deletion_claimed,
+            boundary_closed,
+            security_ready_claimed: false,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -10397,6 +10533,31 @@ pub mod production {
                 ProductionSkeletonConnector::ExternalOnionEvidence
             );
             assert!(!selection.production_messaging_ready());
+        }
+
+        #[test]
+        fn production_backup_migration_boundary_closes_local_policy_without_recovery_claim() {
+            let boundary = production_backup_migration_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.backup_exclusion_policy_decided());
+            assert!(boundary.backup_exclusion_verification_required());
+            assert!(!boundary.backup_exclusion_verified_by_core_status());
+            assert!(!boundary.cloud_backup_or_sync_enabled());
+            assert!(!boundary.backup_recovery_claimed());
+            assert!(boundary.forward_only_schema_migration_required());
+            assert!(boundary.migration_marker_required());
+            assert!(boundary.destructive_migration_blocked());
+            assert!(!boundary.prototype_data_migration_ready());
+            assert!(boundary.rollback_detection_marker_only());
+            assert!(!boundary.rollback_prevention_claimed());
+            assert!(!boundary.secure_media_deletion_claimed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .policies()
+                .contains(&"local_backup_exclusion_verification_required"));
+            assert!(boundary.policies().contains(&"cloud_backup_sync_non_claim"));
+            assert!(boundary.policies().contains(&"backup_recovery_non_claim"));
         }
 
         #[test]
