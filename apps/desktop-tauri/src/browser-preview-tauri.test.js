@@ -620,6 +620,19 @@ test("browser preview keeps room transcript, retryable send, and receive state a
     profile: receiver,
     passphrase,
   });
+  const resumedRuntime = await afterReload("production_two_profile_runtime_resume_status", {
+    localProfile: sender,
+    peerProfile: receiver,
+    passphrase,
+  });
+  assert.equal(resumedRuntime.runtime_resume_ready, true);
+  assert.equal(resumedRuntime.retry_review_required, true);
+  assert.equal(resumedRuntime.retryable_outbound_count, 1);
+  assert.equal(resumedRuntime.latest_retryable_profile, sender);
+  assert.equal(resumedRuntime.latest_retryable_message_number, 1);
+  assert.equal(resumedRuntime.passphrase_retained, false);
+  assert.equal(resumedRuntime.key_material_exposed, false);
+  assert.equal(resumedRuntime.network_io_attempted, false);
   assert.equal(
     reloadedSenderTranscript.entries.some(
       (entry) =>
