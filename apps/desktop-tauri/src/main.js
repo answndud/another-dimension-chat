@@ -7164,6 +7164,17 @@ async function invokeTwoProfileRuntimeResumeStatus(input = productionTwoProfileI
   return invoke("production_two_profile_runtime_resume_status", inviteRoomCommandInput(input));
 }
 
+function runtimeResumeRollbackBlocked(result) {
+  return Boolean(result?.rollback_suspicion_detected === true || result?.rollback_resume_blocked === true);
+}
+
+function runtimeResumeRollbackBlockedMessage(result) {
+  return (
+    `Stored conversation resume blocked: marker-based rollback suspicion detected. ` +
+    `key_policy=${result?.key_policy_status ?? "unknown"} rollback_prevention=false secure_delete_claim=false`
+  );
+}
+
 async function invokeInviteRoomSetup(input = productionTwoProfileInput()) {
   return invoke("production_invite_room_setup", inviteRoomCommandInput(input));
 }
@@ -16565,11 +16576,11 @@ function renderProductionProductUnlockStatus(result) {
   const expires = result?.expires_at_ms ? ` expires_at_ms=${result.expires_at_ms}` : "";
   setText(
     fields.productionProductUnlockState,
-    `unlocked=${unlocked}${profile} reason=${reason} idle_auto_lock_seconds=${result?.idle_auto_lock_seconds ?? 60}${expires}`,
+    `unlocked=${unlocked}${profile} reason=${reason} key_policy=${result?.key_policy_status ?? "unknown"} rollback_suspicion=${result?.rollback_suspicion_detected === true} idle_auto_lock_seconds=${result?.idle_auto_lock_seconds ?? 60}${expires}`,
   );
   setText(
     fields.productionProfileBoundary,
-    `store_path_returned=${result?.store_path_returned === true} passphrase_retained=${result?.passphrase_retained === true} key_material=${result?.key_material_exposed === true} raw_error=${result?.raw_storage_error_exposed === true} runtime=${result?.runtime_messaging_enabled === true}`,
+    `passphrase_first=${result?.passphrase_first === true} os_keystore_only_rejected=${result?.os_keystore_only_rejected === true} production_key_management_ready=${result?.production_key_management_ready === true} rollback_marker=${result?.rollback_marker_present === true} rollback_detection=${result?.rollback_detection_ready === true} rollback_blocked=${result?.rollback_resume_blocked === true} rollback_prevention=${result?.rollback_prevention_claimed === true} secure_delete_claim=${result?.secure_deletion_from_media_claimed === true} store_path_returned=${result?.store_path_returned === true} passphrase_retained=${result?.passphrase_retained === true} key_material=${result?.key_material_exposed === true} raw_error=${result?.raw_storage_error_exposed === true} runtime=${result?.runtime_messaging_enabled === true}`,
   );
   if (fields.lockProductionProfile) {
     fields.lockProductionProfile.disabled = !unlocked || productionBusyAction !== null;
@@ -16615,7 +16626,8 @@ function dataLifecycleSummary(result) {
     `backup=${result.backup_exclusion_verified === true} backup_recovery=false cloud_backup_sync=false migration_v=${result.migration_current_version ?? 0} ` +
     `migration_marker=${result.migration_marker_present === true} forward_only=${result.forward_only_migration === true} ` +
     `destructive_blocked=${result.destructive_migration_blocked === true} rollback_marker=${result.rollback_marker_present === true} ` +
-    `rollback_detection=${result.rollback_detection_ready === true} rollback_prevention=${result.rollback_prevention_claimed === true} ` +
+    `snapshot_marker=${result.profile_snapshot_marker_present === true} snapshot_mismatch=${result.profile_snapshot_mismatch === true} ` +
+    `rollback_detection=${result.rollback_detection_ready === true} rollback_suspicion=${result.rollback_suspicion_detected === true} rollback_prevention=${result.rollback_prevention_claimed === true} ` +
     `wiped=${result.full_local_data_wiped === true}`
   );
 }
@@ -16831,6 +16843,11 @@ async function refreshTwoProfileSessionAfterProfileUnlock(
     }
     const resume = await invokeTwoProfileRuntimeResumeStatus(input);
     if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return false;
+    }
+    if (runtimeResumeRollbackBlocked(resume)) {
+      setProductionTwoProfileState("Resume blocked");
+      setText(fields.productionTwoProfileWarning, runtimeResumeRollbackBlockedMessage(resume));
       return false;
     }
     const result = resume.session_status;
@@ -17392,6 +17409,15 @@ async function loadProductionTwoProfileTranscript(options = {}) {
         ? await invokeTwoProfileRuntimeResumeStatus({ profileA, profileB, passphrase })
         : null
     );
+    if (runtimeResumeRollbackBlocked(runtimeResumeResult)) {
+      setProductionTwoProfileState("Resume blocked");
+      setText(fields.productionTwoProfileWarning, runtimeResumeRollbackBlockedMessage(runtimeResumeResult));
+      setText(
+        fields.productionTwoProfileBoundary,
+        `key_policy=${runtimeResumeResult.key_policy_status ?? "unknown"} rollback_suspicion=true rollback_prevention=false secure_delete_claim=false`,
+      );
+      return false;
+    }
     const [profileAResult, profileBResult] = runtimeResumeResult
       ? [runtimeResumeResult.profile_a_transcript, runtimeResumeResult.profile_b_transcript]
       : await Promise.all([
