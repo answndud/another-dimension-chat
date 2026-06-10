@@ -21,6 +21,17 @@
           <p data-i18n="publicBetaNetworkBody">
             Network and onion delivery stay off on launch. They require manual permission and an explicit delivery action.
           </p>
+          <ul class="public-beta-gate" aria-label="Public beta use boundary" data-i18n-aria-label="publicBetaGateLabel">
+            <li data-i18n="publicBetaChecksumBody">
+              Download updates from the same GitHub Release and verify the matching .sha256 before opening the app.
+            </li>
+            <li data-i18n="publicBetaInstallBody">
+              If macOS blocks the unsigned app, use Privacy & Security manual allow only after the checksum matches.
+            </li>
+            <li data-i18n="publicBetaNoUpdateBody">
+              There is no auto-update, signing, notarization, completed review, or secure messenger readiness claim.
+            </li>
+          </ul>
         </section>
         <details class="system-settings-panel" role="dialog" aria-modal="true" aria-labelledby="app-settings-title">
           <summary id="app-settings-title" data-i18n="systemPanel" data-i18n-title="systemPanel" title="Settings">Settings</summary>

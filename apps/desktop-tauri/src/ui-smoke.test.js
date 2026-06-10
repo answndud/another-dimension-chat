@@ -70,6 +70,19 @@ test("main chat surface keeps invite, message, receive, and retry entry points",
   assert.match(mainJs, /cancelTwoProfileOutboundEntry/);
 });
 
+test("first launch public beta warning keeps release and network boundaries visible", () => {
+  assert.match(indexHtml, /class="public-beta-warning"/);
+  assert.match(indexHtml, /class="public-beta-gate"/);
+  assert.match(indexHtml, /data-i18n="publicBetaChecksumBody"/);
+  assert.match(indexHtml, /data-i18n="publicBetaInstallBody"/);
+  assert.match(indexHtml, /data-i18n="publicBetaNoUpdateBody"/);
+  assert.match(i18nJs, /same GitHub Release/);
+  assert.match(i18nJs, /Privacy & Security manual allow/);
+  assert.match(i18nJs, /nothing starts on app launch/);
+  assert.match(i18nJs, /앱 실행 시 자동 시작되지 않습니다/);
+  assert.match(stylesCss, /\.public-beta-gate/);
+});
+
 test("message composer does not use instructional placeholder text", () => {
   const idIndex = indexHtml.indexOf('id="production-two-profile-message"');
   assert.notEqual(idIndex, -1, "missing production message composer");

@@ -168,6 +168,21 @@ h1 {
   line-height: 1.45;
 }
 
+.public-beta-gate {
+  display: grid;
+  gap: 6px;
+  max-width: 82ch;
+  margin: 2px 0 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.public-beta-gate li {
+  padding-left: 2px;
+}
+
 .local-dev-peer-label {
   position: fixed;
   z-index: 31;
