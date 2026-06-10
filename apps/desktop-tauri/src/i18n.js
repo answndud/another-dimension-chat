@@ -818,6 +818,18 @@ const dictionaries = {
     profileLocked: "Profile locked",
     nextEnterProfilePassphrase: "Next: enter profile and passphrase.",
     productionProfileLockedWarning: "Production profile has not been unlocked yet.",
+    profileRecoveryUnlocked: "Profile unlocked. Next: check saved room state; passphrase is not retained.",
+    profileRecoveryLocked:
+      "Profile stayed locked. Re-enter the passphrase or create a new local profile; no OS keychain, cloud recovery, or backup recovery is available.",
+    profileRecoveryLockedNext: "Next: retry the passphrase or create a new local profile.",
+    profileRecoveryLockedByUser: "Profile locked locally. Unlock again with the passphrase when needed.",
+    profileRecoveryRollbackBlocked:
+      "Local rollback suspicion detected. Saved-room resume is blocked; check data lifecycle before using this profile.",
+    profileRecoveryRollbackBlockedNext:
+      "Next: check data lifecycle and restore only from a trusted local copy; keep network delivery off.",
+    profileRecoveryNeedsInputNext: "Next: enter the local profile name and passphrase.",
+    profileRecoveryStatusFailedNext:
+      "Next: retry locally; do not paste raw logs publicly and do not use cloud recovery.",
     identity: "Identity",
     productionPairing: "Pairing details",
     publicPayloadExport: "Public payload export",
@@ -1734,6 +1746,18 @@ const dictionaries = {
     profileLocked: "프로필 잠김",
     nextEnterProfilePassphrase: "다음: 프로필과 패스프레이즈를 입력하세요.",
     productionProfileLockedWarning: "아직 프로필을 열지 않았습니다.",
+    profileRecoveryUnlocked: "프로필을 열었습니다. 다음: 저장된 채팅방 상태를 확인하세요. 패스프레이즈는 보관하지 않습니다.",
+    profileRecoveryLocked:
+      "프로필이 잠긴 상태입니다. 패스프레이즈를 다시 입력하거나 새 로컬 프로필을 만드세요. OS keychain, 클라우드 복구, 백업 복구는 없습니다.",
+    profileRecoveryLockedNext: "다음: 패스프레이즈를 다시 입력하거나 새 로컬 프로필을 만드세요.",
+    profileRecoveryLockedByUser: "프로필을 로컬에서 잠갔습니다. 필요할 때 패스프레이즈로 다시 여세요.",
+    profileRecoveryRollbackBlocked:
+      "로컬 롤백 의심 상태입니다. 저장된 채팅방 재개를 막았으니 이 프로필을 쓰기 전에 데이터 생명주기를 확인하세요.",
+    profileRecoveryRollbackBlockedNext:
+      "다음: 데이터 생명주기를 확인하고 신뢰할 수 있는 로컬 사본에서만 복구하세요. 네트워크 전송은 꺼두세요.",
+    profileRecoveryNeedsInputNext: "다음: 로컬 프로필 이름과 패스프레이즈를 입력하세요.",
+    profileRecoveryStatusFailedNext:
+      "다음: 로컬에서 다시 시도하세요. 원본 로그를 공개로 붙여넣지 말고 클라우드 복구를 쓰지 마세요.",
     identity: "신원",
     productionPairing: "페어링 세부 정보",
     publicPayloadExport: "공개 페어링 정보 내보내기",
