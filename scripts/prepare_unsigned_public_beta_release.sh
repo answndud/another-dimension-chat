@@ -29,6 +29,7 @@ REQUIRED_RELEASE_FILES=(
   "PUBLIC_THREAT_MODEL.md"
   "INDEPENDENT_REVIEW_PACKET.md"
   "PUBLIC_INTAKE_POLICY.md"
+  "REPOSITORY_GOVERNANCE.md"
   "DEPENDENCY_LOCKFILES.sha256"
   "MANIFEST.md"
 )
@@ -67,6 +68,7 @@ require_file "$ROOT_DIR/reference/DEPENDENCY_INVENTORY.md"
 require_file "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md"
 require_file "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md"
 require_file "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md"
+require_file "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md"
 require_file "$ROOT_DIR/Cargo.lock"
 require_file "$ROOT_DIR/apps/desktop-tauri/src-tauri/Cargo.lock"
 require_file "$ROOT_DIR/apps/desktop-tauri/package-lock.json"
@@ -102,6 +104,7 @@ cp "$ROOT_DIR/reference/DEPENDENCY_INVENTORY.md" "$RELEASE_DIR/DEPENDENCY_INVENT
 cp "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md"
 cp "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md"
 cp "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md"
+cp "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md" "$RELEASE_DIR/REPOSITORY_GOVERNANCE.md"
 
 (
   cd "$RELEASE_DIR"
@@ -136,11 +139,13 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "public_threat_model_file": "PUBLIC_THREAT_MODEL.md",
   "independent_review_packet_file": "INDEPENDENT_REVIEW_PACKET.md",
   "public_intake_policy_file": "PUBLIC_INTAKE_POLICY.md",
+  "repository_governance_file": "REPOSITORY_GOVERNANCE.md",
   "independent_review_complete": false,
   "public_review_gap_published": true,
   "reviewer_signoff_claimed": false,
   "public_diagnostics_boundary": "status-build-failure-class-only",
   "public_intake_boundary": "redacted-public-diagnostics-or-minimal-contact-request-only",
+  "repository_governance_boundary": "main-maintainer-unsigned-beta-non-claim-redaction-guardrails",
   "crash_upload": false,
   "telemetry": false,
   "raw_log_export": false,
@@ -196,6 +201,7 @@ This folder is for a GitHub Release upload.
 - \`PUBLIC_THREAT_MODEL.md\`
 - \`INDEPENDENT_REVIEW_PACKET.md\`
 - \`PUBLIC_INTAKE_POLICY.md\`
+- \`REPOSITORY_GOVERNANCE.md\`
 - \`DEPENDENCY_LOCKFILES.sha256\`
 
 ## Build
@@ -212,11 +218,13 @@ This folder is for a GitHub Release upload.
 - Public threat model: \`PUBLIC_THREAT_MODEL.md\`
 - Independent review packet: \`INDEPENDENT_REVIEW_PACKET.md\`
 - Public intake policy: \`PUBLIC_INTAKE_POLICY.md\`
+- Repository governance: \`REPOSITORY_GOVERNANCE.md\`
 - Independent review complete: false
 - Public review gap published: true
 - Reviewer signoff claimed: false
 - Public diagnostics boundary: status-build-failure-class-only
 - Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only
+- Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails
 - Crash upload: disabled
 - Telemetry: disabled
 - Raw log export: disabled
@@ -251,6 +259,10 @@ Public GitHub issues and release comments must use the same redaction boundary.
 Security reports with exploit details or sensitive material must use private
 vulnerability reporting when available, or a minimal public contact request when
 private reporting is unavailable.
+
+Repository governance keeps the public beta aligned with maintainer-driven
+main-branch changes, no-central-trusted-server scope, unsigned release
+non-claims, private-data redaction, and no fabricated external peer evidence.
 EOF
 
 for release_file in "${REQUIRED_RELEASE_FILES[@]}"; do
@@ -264,11 +276,13 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"dependency_inventory_file\": 
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_threat_model_file\": \"PUBLIC_THREAT_MODEL.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"independent_review_packet_file\": \"INDEPENDENT_REVIEW_PACKET.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_intake_policy_file\": \"PUBLIC_INTAKE_POLICY.md\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"repository_governance_file\": \"REPOSITORY_GOVERNANCE.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"independent_review_complete\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_review_gap_published\": true"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"reviewer_signoff_claimed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_diagnostics_boundary\": \"status-build-failure-class-only\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_intake_boundary\": \"redacted-public-diagnostics-or-minimal-contact-request-only\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"repository_governance_boundary\": \"main-maintainer-unsigned-beta-non-claim-redaction-guardrails\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"crash_upload\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"telemetry\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"raw_log_export\": false"
@@ -282,6 +296,7 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Public review gap published: true"
 require_text "$RELEASE_DIR/MANIFEST.md" "Reviewer signoff claimed: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public diagnostics boundary: status-build-failure-class-only"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only"
+require_text "$RELEASE_DIR/MANIFEST.md" "Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails"
 require_text "$RELEASE_DIR/MANIFEST.md" "Crash upload: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Telemetry: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Raw log export: disabled"
@@ -304,6 +319,8 @@ require_text "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md" "not an external review
 require_text "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md" "Known Review Gaps"
 require_text "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md" "Forbidden Public Intake"
 require_text "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md" "private vulnerability reporting"
+require_text "$RELEASE_DIR/REPOSITORY_GOVERNANCE.md" "Direction Lock"
+require_text "$RELEASE_DIR/REPOSITORY_GOVERNANCE.md" "Release Guardrails"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "Cargo.lock"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/src-tauri/Cargo.lock"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/package-lock.json"

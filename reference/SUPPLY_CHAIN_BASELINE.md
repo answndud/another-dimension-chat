@@ -39,8 +39,9 @@ non-claims.
 The public release script fails if the upload set does not include the expected
 DMG, `.sha256`, public provenance JSON, manifest, manual update integrity note,
 supply-chain baseline note, dependency inventory, threat model, independent
-review packet, public intake policy, and dependency lockfile hashes. This is an
-upload-set completeness check, not a dependency safety review.
+review packet, public intake policy, repository governance, and dependency
+lockfile hashes. This is an upload-set completeness check, not a dependency
+safety review.
 
 Not included:
 

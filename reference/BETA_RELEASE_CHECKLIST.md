@@ -119,6 +119,7 @@ Upload exactly these generated files to the GitHub Release:
 - `PUBLIC_THREAT_MODEL.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
 - `PUBLIC_INTAKE_POLICY.md`
+- `REPOSITORY_GOVERNANCE.md`
 - `DEPENDENCY_LOCKFILES.sha256`
 - `MANIFEST.md`
 

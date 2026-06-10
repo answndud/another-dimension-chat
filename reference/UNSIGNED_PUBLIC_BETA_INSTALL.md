@@ -22,6 +22,7 @@ Download these files from the GitHub Release:
 - `PUBLIC_THREAT_MODEL.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
 - `PUBLIC_INTAKE_POLICY.md`
+- `REPOSITORY_GOVERNANCE.md`
 - `DEPENDENCY_LOCKFILES.sha256`
 - `MANIFEST.md`
 
@@ -83,6 +84,9 @@ release comments. Use redacted public diagnostics only. Do not post raw logs,
 crash dumps, endpoints, payloads, paths, passphrases, private keys, key
 material, screenshots of private room data, private planning notes, or local app
 data.
+
+`REPOSITORY_GOVERNANCE.md` records maintainer-driven main-branch governance,
+release guardrails, redaction rules, and non-goals for this unsigned beta.
 
 Public diagnostics are local-copy only. They are limited to status, build,
 failure class, manual network permission, and app-launch network boundary. They

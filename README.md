@@ -56,6 +56,7 @@ Expected public GitHub Release files:
 - `PUBLIC_THREAT_MODEL.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
 - `PUBLIC_INTAKE_POLICY.md`
+- `REPOSITORY_GOVERNANCE.md`
 - `DEPENDENCY_LOCKFILES.sha256`
 - `MANIFEST.md`
 
@@ -65,7 +66,7 @@ Prepare the ignored local upload folder from the frozen local DMG:
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, dependency lockfile hash evidence, public threat model, independent review packet, public intake policy, and explicit review-gap evidence are missing. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
+The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, dependency lockfile hash evidence, public threat model, independent review packet, public intake policy, repository governance guardrails, and explicit review-gap evidence are missing. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
 What exists today:
 
@@ -98,6 +99,7 @@ What exists today:
 - Manual update integrity evidence for the unsigned public beta release path: DMG `.sha256`, public provenance JSON, release manifest, update-integrity policy, supply-chain baseline note, and dependency lockfile SHA-256 list.
 - Public threat model and independent review packet that state allowed claims, non-claims, known gaps, public-safe review commands, and the current no-signoff/no-completed-review gap.
 - Public intake policy and GitHub issue templates that require redacted public diagnostics or minimal private-contact requests instead of raw logs, payloads, endpoints, paths, passphrases, private keys, key material, crash dumps, or private planning notes.
+- Repository governance guardrails for maintainer-driven main-branch work, unsigned beta non-claims, no-central-trusted-server scope, release file discipline, and private-data redaction.
 - A local Tauri desktop beta shell for invite-code rooms, safety phrase confirmation, encrypted local profile/session/message records, saved-room resume, manual private-route exchange, explicit receive start/stop, retry/cancel recovery, and redacted field-test reports.
 - In-app unsigned public beta warnings and public diagnostics export limited to status, build, failure class, manual network permission, and app-launch network boundary; no crash upload, telemetry, raw log export, paths, endpoints, passphrases, or key material.
 - Explicit user-triggered onion/Tor attempt paths for beta field testing. The app must not bootstrap Tor, host onion services, publish descriptors, open streams, send envelopes, or receive envelopes on app launch.
@@ -276,7 +278,7 @@ Do not publish `docs/`, app data, bridge lines, onion endpoints, invite codes, p
 
 For desktop-specific commands and beta notes, see [apps/desktop-tauri/README.md](apps/desktop-tauri/README.md).
 For the public-safe beta handoff checklist, see [reference/BETA_RELEASE_CHECKLIST.md](reference/BETA_RELEASE_CHECKLIST.md).
-For public review scope, see [reference/PUBLIC_THREAT_MODEL.md](reference/PUBLIC_THREAT_MODEL.md) and [reference/INDEPENDENT_REVIEW_PACKET.md](reference/INDEPENDENT_REVIEW_PACKET.md).
+For public review scope, see [reference/PUBLIC_THREAT_MODEL.md](reference/PUBLIC_THREAT_MODEL.md), [reference/INDEPENDENT_REVIEW_PACKET.md](reference/INDEPENDENT_REVIEW_PACKET.md), [reference/PUBLIC_INTAKE_POLICY.md](reference/PUBLIC_INTAKE_POLICY.md), and [reference/REPOSITORY_GOVERNANCE.md](reference/REPOSITORY_GOVERNANCE.md).
 
 ## CLI Prototype
 
