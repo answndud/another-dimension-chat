@@ -67,7 +67,7 @@ Prepare the ignored local upload folder from the frozen local DMG:
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, dependency lockfile hash evidence, public threat model, privacy model comparison, independent review packet, public intake policy, repository governance guardrails, and explicit review-gap evidence are missing. The dependency evidence is exactly three lockfiles: `Cargo.lock`, `apps/desktop-tauri/src-tauri/Cargo.lock`, and `apps/desktop-tauri/package-lock.json`; it is not a live dependency scan, vulnerability triage signoff, SBOM, audit, or reproducible-build proof. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
+The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, dependency lockfile hash evidence, public threat model, privacy model comparison, independent review packet, public intake policy, repository governance guardrails, explicit review-gap evidence, private-reporting boundary, and fabricated-review/peer-evidence-forbidden evidence are missing. The dependency evidence is exactly three lockfiles: `Cargo.lock`, `apps/desktop-tauri/src-tauri/Cargo.lock`, and `apps/desktop-tauri/package-lock.json`; it is not a live dependency scan, vulnerability triage signoff, SBOM, audit, or reproducible-build proof. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
 What exists today:
 
@@ -98,7 +98,7 @@ What exists today:
   receive adapters remain fail-closed, envelope I/O context is redacted, and
   external two-machine onion delivery is still not claimed.
 - Manual update integrity evidence for the unsigned public beta release path: DMG `.sha256`, public provenance JSON, release manifest, update-integrity policy, supply-chain baseline note, dependency inventory, and a three-lockfile SHA-256 list for `Cargo.lock`, `apps/desktop-tauri/src-tauri/Cargo.lock`, and `apps/desktop-tauri/package-lock.json`.
-- Public threat model and independent review packet that state allowed claims, non-claims, known gaps, public-safe review commands, and the current no-signoff/no-completed-review gap.
+- Public threat model and independent review packet that state allowed claims, non-claims, known gaps, public-safe review commands, private-reporting boundary, and the current no-reviewer-signoff/no-public-user-safety-signoff/no-completed-review gap.
 - Public intake policy and GitHub issue templates that require redacted public diagnostics or minimal private-contact requests instead of raw logs, payloads, endpoints, paths, passphrases, private keys, key material, crash dumps, or private planning notes.
 - Repository governance guardrails for maintainer-driven main-branch work, unsigned beta non-claims, no-central-trusted-server scope, release file discipline, and private-data redaction.
 - A local Tauri desktop beta shell for invite-code rooms, safety phrase confirmation, encrypted local profile/session/message records, saved-room resume, manual private-route exchange, explicit receive start/stop, retry/cancel recovery, and redacted field-test reports.
@@ -132,7 +132,7 @@ What does not exist yet:
 - Multi-device support.
 - Release signing, notarization, auto-update integrity, or reproducible builds.
 - Dependency/supply-chain audit, live dependency scan, vulnerability triage signoff, or SBOM evidence.
-- Completed external security review, independent review result, reviewer signoff, or user safety signoff.
+- Completed external security review, independent review result, reviewer signoff, public user safety signoff, or fabricated external review/peer evidence.
 
 ## Security Boundary
 

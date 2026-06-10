@@ -365,6 +365,18 @@ test("public beta diagnostics keeps only status, build, and failure class", () =
   assert.match(diagnostics, /repeated_external_onion_evidence=false/);
   assert.match(diagnostics, /offline_mesh_claim=false/);
   assert.match(diagnostics, /independent_review_complete=false/);
+  assert.match(diagnostics, /public_review_gap_published=true/);
+  assert.match(diagnostics, /reviewer_signoff_claimed=false/);
+  assert.match(diagnostics, /public_user_safety_signoff_claimed=false/);
+  assert.match(diagnostics, /review_packet_inputs_public_safe=true/);
+  assert.match(diagnostics, /known_review_gaps_published=true/);
+  assert.match(diagnostics, /public_safe_review_commands_required=true/);
+  assert.match(
+    diagnostics,
+    /private_reporting_boundary=private-vulnerability-reporting-or-minimal-public-contact-request/,
+  );
+  assert.match(diagnostics, /minimal_public_contact_request_allowed=true/);
+  assert.match(diagnostics, /fabricated_review_or_peer_evidence_allowed=false/);
   assert.match(diagnostics, /security_ready_claim=false/);
   assert.match(diagnostics, /dependency_inventory_present=true/);
   assert.match(diagnostics, /dependency_lockfile_hashes_present=true/);
