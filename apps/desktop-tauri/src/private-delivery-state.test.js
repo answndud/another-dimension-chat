@@ -356,6 +356,16 @@ test("public beta diagnostics keeps only status, build, and failure class", () =
   assert.match(diagnostics, /audited_censorship_circumvention_claim=false/);
   assert.match(diagnostics, /reliable_onion_delivery_claim=false/);
   assert.match(diagnostics, /external_peer_evidence_required=true/);
+  assert.match(
+    diagnostics,
+    /privacy_model_target=no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server/,
+  );
+  assert.match(diagnostics, /briar_cwtch_equivalent_claim=false/);
+  assert.match(diagnostics, /audited_e2ee_claim=false/);
+  assert.match(diagnostics, /repeated_external_onion_evidence=false/);
+  assert.match(diagnostics, /offline_mesh_claim=false/);
+  assert.match(diagnostics, /independent_review_complete=false/);
+  assert.match(diagnostics, /security_ready_claim=false/);
   assert.match(diagnostics, /app_version=0.1.0/);
   assert.match(diagnostics, /failure_class=PeerEndpointMissing/);
   assert.match(diagnostics, /app_launch_network=false/);
