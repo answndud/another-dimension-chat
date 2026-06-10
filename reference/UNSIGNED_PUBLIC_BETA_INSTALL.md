@@ -21,6 +21,7 @@ Download these files from the GitHub Release:
 - `DEPENDENCY_INVENTORY.md`
 - `PUBLIC_THREAT_MODEL.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
+- `PUBLIC_INTAKE_POLICY.md`
 - `DEPENDENCY_LOCKFILES.sha256`
 - `MANIFEST.md`
 
@@ -76,6 +77,12 @@ baseline. It is reviewer evidence, not a dependency audit or security guarantee.
 `PUBLIC_THREAT_MODEL.md` and `INDEPENDENT_REVIEW_PACKET.md` are reviewer inputs
 only. The release provenance records that independent review is not complete and
 that no reviewer signoff is claimed.
+
+`PUBLIC_INTAKE_POLICY.md` describes what can be posted in public issues and
+release comments. Use redacted public diagnostics only. Do not post raw logs,
+crash dumps, endpoints, payloads, paths, passphrases, private keys, key
+material, screenshots of private room data, private planning notes, or local app
+data.
 
 Public diagnostics are local-copy only. They are limited to status, build,
 failure class, manual network permission, and app-launch network boundary. They

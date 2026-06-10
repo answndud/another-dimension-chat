@@ -48,6 +48,7 @@ Every unsigned public beta upload must ship:
 - `DEPENDENCY_LOCKFILES.sha256`
 - `PUBLIC_THREAT_MODEL.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
+- `PUBLIC_INTAKE_POLICY.md`
 
 The release script must fail if any of these files are missing from the upload
 set.

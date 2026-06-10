@@ -34,6 +34,8 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Public threat model and independent review packet for claim review.
 - Explicit review-gap provenance showing no completed review and no reviewer
   signoff claim.
+- Public intake policy and GitHub issue templates for redacted support reports
+  and minimal security contact requests.
 
 ## What This Beta Does Not Claim
 
@@ -49,6 +51,9 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Reviewer signoff or public user safety signoff.
 - Protection against device compromise, coercion, malicious contacts, or global traffic correlation.
 - Crash upload, telemetry, raw log export, or safe publication of private logs.
+- Safe public issue posting of endpoints, payloads, messages, local paths,
+  passphrases, private keys, key material, crash dumps, screenshots of private
+  room data, or private planning notes.
 
 ## Install
 

@@ -25,6 +25,7 @@ Review the unsigned experimental public beta boundary:
 - checksum/provenance/manual update integrity model
 - public diagnostics redaction boundary
 - crash/log redaction and no-upload/no-telemetry boundary
+- public issue and security intake redaction boundary
 - passphrase-first local unlock/lock boundary
 - durable local session lifecycle boundary
 - local data lifecycle and migration boundary
@@ -40,6 +41,8 @@ Review the unsigned experimental public beta boundary:
 - public diagnostics export is redacted by design
 - public diagnostics are local-copy only and do not provide crash upload,
   telemetry, or raw log export
+- public support intake uses redacted diagnostics or minimal contact requests
+  instead of raw logs, payloads, endpoints, paths, keys, or private data
 - no automatic network/onion work on app launch
 - passphrase-first local unlock path exists
 - local data lifecycle controls exist
@@ -75,6 +78,8 @@ Review the unsigned experimental public beta boundary:
 - `reference/PRIVACY_MODEL_COMPARISON.md`: LINDDUN/Briar/Cwtch-style target
   comparison and current public beta gap map.
 - `reference/PUBLIC_THREAT_MODEL.md`: public threat model and non-goals.
+- `reference/PUBLIC_INTAKE_POLICY.md`: public issue, release comment, and
+  security contact redaction rules.
 - `reference/COMPONENT_BOUNDARIES.md`: component replacement and readiness map.
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and
@@ -122,6 +127,9 @@ The reviewer should report:
 - any diagnostic/reporting path that could expose sensitive material
 - any crash/log path that uploads, copies, or publishes raw logs, paths,
   endpoints, passphrases, private keys, key material, or private planning notes
+- any issue template or support path that asks users to paste raw logs, payloads,
+  endpoints, paths, passphrases, private keys, key material, crash dumps, or
+  screenshots of private room data
 - any command path that starts network/onion work without explicit user action
 - any missing non-claim around audit, production readiness, onion reliability,
   rollback prevention, secure deletion, or supply-chain review
