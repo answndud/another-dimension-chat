@@ -7,6 +7,13 @@ const dictionaries = {
       "This build is unsigned, not notarized, not audited, not production-ready, and must not be used for sensitive communication.",
     publicBetaNetworkBody:
       "Network and onion delivery stay off on launch. They require manual permission and an explicit delivery action.",
+    publicBetaGateLabel: "Public beta use boundary",
+    publicBetaChecksumBody:
+      "Download updates from the same GitHub Release and verify the matching .sha256 before opening the app.",
+    publicBetaInstallBody:
+      "If macOS blocks the unsigned app, use Privacy & Security manual allow only after the checksum matches.",
+    publicBetaNoUpdateBody:
+      "There is no auto-update, signing, notarization, completed review, or secure messenger readiness claim.",
     displayMode: "Display mode",
     language: "Language",
     darkMode: "Dark mode",
@@ -72,7 +79,8 @@ const dictionaries = {
     preparePrivateRoute: "Set up delivery",
     privateDelivery: "Message delivery",
     allowPrivateDelivery: "Allow network delivery only when I press send or listen",
-    privateDeliveryHint: "When this is off, messages stay local. When this is on, network delivery starts only after a send or listen action.",
+    privateDeliveryHint:
+      "When this is off, messages stay local. When this is on, network delivery still starts only after a send or listen action; nothing starts on app launch.",
     privateDeliveryPermissionRequired: "Allow private delivery before sending or listening.",
     privateDeliveryNeedsMessage: "Join the room and write a message before trying private delivery.",
     privateDeliveryFollowupLocked: "Private delivery is running. Other actions are locked until it finishes.",
@@ -918,6 +926,13 @@ const dictionaries = {
       "이 빌드는 서명되지 않았고, notarization을 받지 않았으며, 감사되지 않았고, production-ready가 아니며, 민감한 통신에 사용하면 안 됩니다.",
     publicBetaNetworkBody:
       "네트워크와 onion 전송은 앱 실행 시 자동으로 시작되지 않습니다. 수동 허용과 명시적인 전송 동작이 필요합니다.",
+    publicBetaGateLabel: "공개 베타 사용 경계",
+    publicBetaChecksumBody:
+      "업데이트는 같은 GitHub Release에서 받고, 앱을 열기 전에 함께 첨부된 .sha256을 확인하세요.",
+    publicBetaInstallBody:
+      "macOS가 서명되지 않은 앱을 차단하면 checksum이 일치한 뒤에만 Privacy & Security에서 수동 허용하세요.",
+    publicBetaNoUpdateBody:
+      "auto-update, signing, notarization, 완료된 review, secure messenger readiness 주장은 없습니다.",
     displayMode: "화면 모드",
     language: "언어",
     darkMode: "다크 모드",
@@ -984,7 +999,7 @@ const dictionaries = {
     privateDelivery: "메시지 전송",
     allowPrivateDelivery: "보내기나 받기를 눌렀을 때만 네트워크 전송 허용",
     privateDeliveryHint:
-      "꺼져 있으면 메시지는 로컬에만 남습니다. 켜져 있어도 보내기나 받기 동작을 눌러야 네트워크 전송이 시작됩니다.",
+      "꺼져 있으면 메시지는 로컬에만 남습니다. 켜져 있어도 보내기나 받기 동작을 눌러야 네트워크 전송이 시작되며, 앱 실행 시 자동 시작되지 않습니다.",
     privateDeliveryPermissionRequired: "보내거나 받기 전에 비공개 전송을 허용하세요.",
     privateDeliveryNeedsMessage: "비공개 전송을 시도하기 전에 방에 들어가 메시지를 작성하세요.",
     privateDeliveryFollowupLocked: "비공개 전송 중입니다. 끝날 때까지 다른 작업은 잠겨 있습니다.",
