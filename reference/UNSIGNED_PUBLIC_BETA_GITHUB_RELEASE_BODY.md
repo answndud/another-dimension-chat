@@ -56,7 +56,9 @@ This beta does not claim:
 - audited security
 - production-ready E2EE
 - sensitive communication safety
-- crash upload, telemetry, raw log export, or safe publication of private logs
+- crash upload, telemetry, raw log export, crash dump export, automated log
+  collection, support bundle export, raw diagnostic file export, or safe
+  publication of private logs
 - safe publication of bridge lines, onion endpoints, invite codes, payloads,
   safety phrases, messages, paths, crash dumps, passphrases, private keys, key
   material, screenshots of private room data, or private planning notes

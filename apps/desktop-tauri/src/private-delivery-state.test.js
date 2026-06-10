@@ -382,7 +382,11 @@ test("public beta diagnostics keeps only status, build, and failure class", () =
   assert.match(diagnostics, /crash_upload=false/);
   assert.match(diagnostics, /telemetry=false/);
   assert.match(diagnostics, /raw_log_export=false/);
-  assert.match(diagnostics, /excluded_fields=codes,endpoints,messages,profiles,paths,logs,passphrases,key_material,private_planning_notes/);
+  assert.match(diagnostics, /crash_dump_export=false/);
+  assert.match(diagnostics, /automated_log_collection=false/);
+  assert.match(diagnostics, /support_bundle_export=false/);
+  assert.match(diagnostics, /raw_diagnostic_file_export=false/);
+  assert.match(diagnostics, /excluded_fields=codes,endpoints,messages,profiles,paths,logs,crash_dumps,screenshots,passphrases,key_material,private_planning_notes/);
   assert.doesNotMatch(diagnostics, /next_action=/);
   assert.doesNotMatch(diagnostics, /obfs4|198\.51\.100\.4|examplehiddenservice|ADINVITE|alpha bravo|hello secret/);
   assert.doesNotMatch(diagnostics, /\/Users\/alex|correct horse|deadbeef/);
