@@ -32,6 +32,7 @@ pub struct PrototypeStatus {
     storage_status: &'static str,
     release_integrity_status: &'static str,
     supply_chain_integrity_boundary: String,
+    independent_review_boundary: String,
     verification_status: &'static str,
     local_dev_peer_label: String,
 }
@@ -59,6 +60,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         another_dimension_core::production::production_transport_envelope_io_boundary_summary();
     let supply_chain =
         another_dimension_core::production::production_supply_chain_integrity_boundary_summary();
+    let independent_review =
+        another_dimension_core::production::production_independent_review_boundary_summary();
 
     PrototypeStatus {
         secure_release: false,
@@ -276,6 +279,19 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             supply_chain.security_ready_claimed(),
             supply_chain.policies().join(","),
         ),
+        independent_review_boundary: format!(
+            "boundary_closed={} public_threat_model_required={} independent_review_packet_required={} public_non_claims_required={} external_review_completed={} reviewer_signoff_claimed={} public_review_gap_published={} sensitive_communication_allowed={} security_ready_claimed={} policies={}",
+            independent_review.boundary_closed(),
+            independent_review.public_threat_model_required(),
+            independent_review.independent_review_packet_required(),
+            independent_review.public_non_claims_required(),
+            independent_review.external_review_completed(),
+            independent_review.reviewer_signoff_claimed(),
+            independent_review.public_review_gap_published(),
+            independent_review.sensitive_communication_allowed(),
+            independent_review.security_ready_claimed(),
+            independent_review.policies().join(","),
+        ),
         verification_status: "lightweight checks only",
         local_dev_peer_label: local_dev_peer_label(),
     }
@@ -405,6 +421,21 @@ mod tests {
         assert!(status
             .supply_chain_integrity_boundary
             .contains("sbom_published=false"));
+        assert!(status
+            .independent_review_boundary
+            .contains("boundary_closed=true"));
+        assert!(status
+            .independent_review_boundary
+            .contains("independent_review_packet_required=true"));
+        assert!(status
+            .independent_review_boundary
+            .contains("external_review_completed=false"));
+        assert!(status
+            .independent_review_boundary
+            .contains("reviewer_signoff_claimed=false"));
+        assert!(status
+            .independent_review_boundary
+            .contains("public_review_gap_published=true"));
         assert!(status.local_dev_peer_label.is_empty());
     }
 }
