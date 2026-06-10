@@ -1663,6 +1663,18 @@ export function productionTwoProfileRealOnionRecoveryPlan(result) {
   };
 }
 
+export function productionBridgeCensorshipBoundaryView(result = {}) {
+  return [
+    "bridge_lines_local_sensitive=true",
+    "bridge_support=configuration_specific",
+    "audited_censorship_circumvention_claim=false",
+    "reliable_onion_delivery_claim=false",
+    "external_peer_evidence_required=true",
+    `bridge_configured=${result?.bridge_configured_for_bootstrap === true}`,
+    `bridge_capable=${result?.bridge_capable_build === true}`,
+  ].join(" ");
+}
+
 export function productionTwoProfileSendAttemptUserView(result, messageNumber = 0) {
   const number = Number.parseInt(messageNumber, 10);
   const label = Number.isInteger(number) && number > 0 ? `#${number}` : "";
@@ -1789,6 +1801,7 @@ export function productionTwoProfileRealOnionUserView(result) {
     };
   }
   if (recovery.action === "prepare-network-or-bridge") {
+    const bridgeBoundary = productionBridgeCensorshipBoundaryView(result);
     const bridgeConfigMissing = recovery.reason === "network-or-bridge-config";
     const bridgeConfigInvalid = recovery.reason === "network-or-bridge-invalid-config";
     const bridgeTransportMissing = recovery.reason === "network-or-bridge-transport";
@@ -1816,20 +1829,20 @@ export function productionTwoProfileRealOnionUserView(result) {
         ? "Change network or add private bridge config, then retry private delivery."
         : "Change network or use a bridge-capable build, then retry private delivery.",
       boundary: bridgeConfigInvalid
-        ? "No message was sent because the saved bridge config is invalid."
+        ? `No message was sent because the saved bridge config is invalid. ${bridgeBoundary}`
         : bridgeTransportRefresh
-        ? "No message was sent after bridge bootstrap exhausted retries with pluggable transport configured."
+        ? `No message was sent after bridge bootstrap exhausted retries with pluggable transport configured. ${bridgeBoundary}`
         : bridgeTransportInvalid
-        ? "No message was sent because the saved pluggable transport binary path is invalid."
+        ? `No message was sent because the saved pluggable transport binary path is invalid. ${bridgeBoundary}`
         : bridgeTransportMissing
-        ? "No message was sent because pluggable transport is not configured."
+        ? `No message was sent because pluggable transport is not configured. ${bridgeBoundary}`
         : bridgeConfigRefresh
-        ? "No message was sent after bridge bootstrap exhausted retries."
+        ? `No message was sent after bridge bootstrap exhausted retries. ${bridgeBoundary}`
         : differentNetwork
-        ? "No message was sent after network bootstrap exhausted retries."
+        ? `No message was sent after network bootstrap exhausted retries. ${bridgeBoundary}`
         : bridgeConfigMissing
-        ? "No message was sent and no bridge config was used."
-        : "No message was sent and this build did not report bridge support.",
+        ? `No message was sent and no bridge config was used. ${bridgeBoundary}`
+        : `No message was sent and this build did not report bridge support. ${bridgeBoundary}`,
     };
   }
   if (recovery.action === "bootstrap-cancelled") {

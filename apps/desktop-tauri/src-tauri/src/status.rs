@@ -273,9 +273,10 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             next_connector.connector(),
             next_connector.opens_runtime_execution(),
         ),
-        experimental_transport_status: "manual bootstrap gate summary only",
+        experimental_transport_status:
+            "manual bootstrap gate summary only; bridge config local-sensitive and configuration-specific; no audited censorship-circumvention claim",
         bootstrap_status_classification:
-            "network-disabled; censorship-or-bridge-required; timeout-or-transient-network-failure",
+            "network-disabled; censorship-or-bridge-required; timeout-or-transient-network-failure; no reliable onion delivery claim without external peer evidence",
         transport_io_status: format!(
             "transport_send_receive={} runtime_messaging={} required_gate={}",
             preflight.transport_send_receive_available(),
@@ -459,6 +460,15 @@ mod tests {
         assert!(status
             .network_execution_status
             .contains("next_connector=ExternalOnionEvidence"));
+        assert!(status
+            .experimental_transport_status
+            .contains("bridge config local-sensitive"));
+        assert!(status
+            .experimental_transport_status
+            .contains("no audited censorship-circumvention claim"));
+        assert!(status
+            .bootstrap_status_classification
+            .contains("no reliable onion delivery claim without external peer evidence"));
         assert!(status
             .transport_io_status
             .contains("transport_send_receive=false"));

@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   chatNoticeForSendReceiveText,
   productionLocalLifecycleBoundaryView,
+  productionBridgeCensorshipBoundaryView,
   productionInviteCodeProfiles,
   productionInviteRoomConversationMetadata,
   productionOnionReceiveLoopRefreshPlan,
@@ -20,6 +21,24 @@ import {
   productionTwoProfileSendAttemptUserView,
   productionTwoProfileShouldShowOutboundRecovery,
 } from "./action-state.js";
+
+test("bridge censorship boundary keeps support and delivery claims explicit", () => {
+  assert.equal(
+    productionBridgeCensorshipBoundaryView({
+      bridge_capable_build: true,
+      bridge_configured_for_bootstrap: true,
+    }),
+    [
+      "bridge_lines_local_sensitive=true",
+      "bridge_support=configuration_specific",
+      "audited_censorship_circumvention_claim=false",
+      "reliable_onion_delivery_claim=false",
+      "external_peer_evidence_required=true",
+      "bridge_configured=true",
+      "bridge_capable=true",
+    ].join(" "),
+  );
+});
 
 test("invite code creates opposite local and peer roles", () => {
   assert.deepEqual(productionInviteCodeProfiles("ABCD-2345", "inviter"), {
@@ -496,7 +515,11 @@ test("real onion exhausted bootstrap with bridge-capable build but no config poi
     profiles: "Room is saved.",
     session: "Delivery network did not finish starting.",
     message: "Change network or add private bridge config, then retry private delivery.",
-    boundary: "No message was sent and no bridge config was used.",
+    boundary:
+      "No message was sent and no bridge config was used. " +
+      "bridge_lines_local_sensitive=true bridge_support=configuration_specific " +
+      "audited_censorship_circumvention_claim=false reliable_onion_delivery_claim=false " +
+      "external_peer_evidence_required=true bridge_configured=false bridge_capable=true",
   });
 });
 
@@ -531,7 +554,10 @@ test("real onion exhausted managed bridge bootstrap points to bridge or transpor
     message:
       "Refresh the private bridge config or replace the pluggable transport binary, then retry private delivery.",
     boundary:
-      "No message was sent after bridge bootstrap exhausted retries with pluggable transport configured.",
+      "No message was sent after bridge bootstrap exhausted retries with pluggable transport configured. " +
+      "bridge_lines_local_sensitive=true bridge_support=configuration_specific " +
+      "audited_censorship_circumvention_claim=false reliable_onion_delivery_claim=false " +
+      "external_peer_evidence_required=true bridge_configured=true bridge_capable=true",
   });
 });
 

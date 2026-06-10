@@ -3,6 +3,7 @@ import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import {
   chatNoticeForProductionState,
   chatNoticeForSendReceiveText,
+  productionBridgeCensorshipBoundaryView,
   productionActionAvailability,
   productionCounterpartProfile,
   productionHandshakeFinishImportView,
@@ -5921,6 +5922,7 @@ function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manua
 
 function renderProductionOnionBridgeConfigStatus(result) {
   latestProductionOnionBridgeConfigStatus = result ?? null;
+  const bridgeBoundary = productionBridgeCensorshipBoundaryView(result);
   const stateKey =
     result?.bridge_capable_build !== true
       ? "bridgeConfigUnsupported"
@@ -5945,7 +5947,8 @@ function renderProductionOnionBridgeConfigStatus(result) {
       `raw_bridge_lines=${result?.raw_bridge_lines_returned === true} ` +
       `network_io=${result?.network_io_attempted === true} ` +
       `transport_io=${result?.transport_io_opened === true} ` +
-      `runtime=${result?.runtime_messaging_enabled === true}`,
+      `runtime=${result?.runtime_messaging_enabled === true} ` +
+      bridgeBoundary,
   );
   refreshFieldTestReport();
 }
@@ -5968,7 +5971,8 @@ function rememberProductionOnionBridgeConfigStatusFallback(status = {}) {
       `bridge_capable=${latestProductionOnionBridgeConfigStatus.bridge_capable_build === true} ` +
       `bridge_state=${fieldTestReportValue(latestProductionOnionBridgeConfigStatus.bridge_config_state, "unknown")} ` +
       `bridge_next=${fieldTestReportValue(latestProductionOnionBridgeConfigStatus.bridge_config_next_action, "unknown")} ` +
-      "bridge_configured=false raw_path=false raw_bridge_lines=false network_io=false transport_io=false runtime=false",
+      "bridge_configured=false raw_path=false raw_bridge_lines=false network_io=false transport_io=false runtime=false " +
+      productionBridgeCensorshipBoundaryView(latestProductionOnionBridgeConfigStatus),
   );
   refreshFieldTestReport();
 }
