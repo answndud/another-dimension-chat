@@ -755,6 +755,41 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(wipeBody, /renderProductionDataLifecycleAction\(result, "full-local-wipe"\)/);
 });
 
+test("destructive lifecycle actions clear stale room retry state before rebuild", () => {
+  const roomReferenceBody = functionBody(mainJs, "savedInviteRoomReferencesProfile");
+  assert.match(roomReferenceBody, /productionInviteCodeProfiles\(code, role\)/);
+  assert.match(roomReferenceBody, /localProfile/);
+  assert.match(roomReferenceBody, /peerProfile/);
+
+  const roomRuntimeClearBody = functionBody(mainJs, "clearSavedInviteRoomRuntimeState");
+  assert.match(roomRuntimeClearBody, /rememberReceiveIntentForRoom\(input, false\)/);
+  assert.match(roomRuntimeClearBody, /forgetTwoProfileSessionStatusForInput\(input\)/);
+  assert.match(roomRuntimeClearBody, /clearPrivateRouteFollowupForRoom\(input\)/);
+  assert.match(roomRuntimeClearBody, /clearSavedInviteRoomRetryableOutbound\(room\)/);
+
+  const allRoomClearBody = functionBody(mainJs, "clearAllSavedInviteRoomLocalState");
+  assert.match(allRoomClearBody, /localStoreRemove\(inviteRoomsStorageKey\)/);
+  assert.match(allRoomClearBody, /localStoreRemove\(lastInviteRoomStorageKey\)/);
+  assert.match(allRoomClearBody, /localStoreRemove\(receiveIntentRoomsStorageKey\)/);
+  assert.match(allRoomClearBody, /latestProductionTwoProfileRealOnionRecoveriesByRoom\.clear\(\)/);
+
+  const rebuildBody = functionBody(mainJs, "applyPostDestructiveLifecycleRebuildGuidance");
+  assert.match(rebuildBody, /stale_room_retry_cleared=true/);
+  assert.match(rebuildBody, /rebuild_required=true/);
+  assert.match(rebuildBody, /backup_recovery=false/);
+  assert.match(rebuildBody, /cloud_backup_sync=false/);
+  assert.match(rebuildBody, /rollback_prevention=false/);
+  assert.match(rebuildBody, /secure_delete_claim=false/);
+  assert.match(rebuildBody, /security_ready=false/);
+  assert.match(rebuildBody, /clearCurrentInviteRoomInput\(\)/);
+  assert.match(rebuildBody, /setProductionFollowupActions\(true/);
+
+  assert.match(functionBody(mainJs, "deleteProductionProfile"), /roomInputBeforeDelete = productionTwoProfileInput\(\)/);
+  assert.match(functionBody(mainJs, "deleteProductionProfile"), /applyPostDestructiveLifecycleRebuildGuidance\("profile-delete"/);
+  assert.match(functionBody(mainJs, "wipeProductionLocalData"), /roomInputBeforeWipe = productionTwoProfileInput\(\)/);
+  assert.match(functionBody(mainJs, "wipeProductionLocalData"), /applyPostDestructiveLifecycleRebuildGuidance\("full-local-wipe"/);
+});
+
 test("manual session readiness is scoped to the active profile passphrase", () => {
   assert.match(mainJs, /let latestProductionSessionStateFingerprint = ""/);
   assert.match(functionBody(mainJs, "productionSessionStateFingerprint"), /input\.passphrase/);
