@@ -700,6 +700,29 @@ test("product unlock lockout shows local-only recovery actions", () => {
   assert.match(lockBody, /renderProductionProductUnlockRecovery\(result, \{ lockedByUser: true \}\)/);
 });
 
+test("runtime resume rollback block routes users to local data recovery", () => {
+  const recoveryBody = functionBody(mainJs, "runtimeResumeRollbackRecoveryView");
+  assert.match(recoveryBody, /local_recovery=check-data-lifecycle/);
+  assert.match(recoveryBody, /recovery=check-data-lifecycle/);
+  assert.match(recoveryBody, /os_keychain_fallback=false/);
+  assert.match(recoveryBody, /backup_recovery=false/);
+  assert.match(recoveryBody, /cloud_backup_sync=false/);
+  assert.match(recoveryBody, /security_ready=false/);
+  assert.match(recoveryBody, /rollback_prevention/);
+  assert.match(recoveryBody, /secure_delete_claim/);
+
+  const applyBody = functionBody(mainJs, "applyRuntimeResumeRollbackRecovery");
+  assert.match(applyBody, /fields\.productionDataLifecycle/);
+  assert.match(applyBody, /fields\.productionProfileNextAction/);
+  assert.match(applyBody, /setProductionFollowupActions\(true, view\.next\)/);
+
+  const profileUnlockResumeBody = functionBody(mainJs, "refreshTwoProfileSessionAfterProfileUnlock");
+  assert.match(profileUnlockResumeBody, /applyRuntimeResumeRollbackRecovery\(resume, \{ source: "profile-unlock-auto-resume" \}\)/);
+
+  const loadTranscriptBody = functionBody(mainJs, "loadProductionTwoProfileTranscript");
+  assert.match(loadTranscriptBody, /applyRuntimeResumeRollbackRecovery\(runtimeResumeResult, \{ source: "transcript-load" \}\)/);
+});
+
 test("manual session readiness is scoped to the active profile passphrase", () => {
   assert.match(mainJs, /let latestProductionSessionStateFingerprint = ""/);
   assert.match(functionBody(mainJs, "productionSessionStateFingerprint"), /input\.passphrase/);

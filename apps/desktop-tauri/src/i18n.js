@@ -827,6 +827,10 @@ const dictionaries = {
       "Local rollback suspicion detected. Saved-room resume is blocked; check data lifecycle before using this profile.",
     profileRecoveryRollbackBlockedNext:
       "Next: check data lifecycle and restore only from a trusted local copy; keep network delivery off.",
+    runtimeResumeRollbackBlockedWarning:
+      "Saved-room resume blocked by local rollback suspicion. Check data lifecycle before retrying room actions.",
+    runtimeResumeRollbackBlockedNext:
+      "Next: check data lifecycle, restore only from a trusted local copy if needed, then unlock again before retrying the room.",
     profileRecoveryNeedsInputNext: "Next: enter the local profile name and passphrase.",
     profileRecoveryStatusFailedNext:
       "Next: retry locally; do not paste raw logs publicly and do not use cloud recovery.",
@@ -1755,6 +1759,10 @@ const dictionaries = {
       "로컬 롤백 의심 상태입니다. 저장된 채팅방 재개를 막았으니 이 프로필을 쓰기 전에 데이터 생명주기를 확인하세요.",
     profileRecoveryRollbackBlockedNext:
       "다음: 데이터 생명주기를 확인하고 신뢰할 수 있는 로컬 사본에서만 복구하세요. 네트워크 전송은 꺼두세요.",
+    runtimeResumeRollbackBlockedWarning:
+      "로컬 롤백 의심으로 저장된 채팅방 재개를 막았습니다. 채팅방 작업을 다시 시도하기 전에 데이터 생명주기를 확인하세요.",
+    runtimeResumeRollbackBlockedNext:
+      "다음: 데이터 생명주기를 확인하고 필요하면 신뢰할 수 있는 로컬 사본에서만 복구한 뒤 다시 잠금 해제하고 채팅방을 재시도하세요.",
     profileRecoveryNeedsInputNext: "다음: 로컬 프로필 이름과 패스프레이즈를 입력하세요.",
     profileRecoveryStatusFailedNext:
       "다음: 로컬에서 다시 시도하세요. 원본 로그를 공개로 붙여넣지 말고 클라우드 복구를 쓰지 마세요.",
