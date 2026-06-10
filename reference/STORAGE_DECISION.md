@@ -44,6 +44,7 @@ The repository currently has:
 - A session unlock redacted error taxonomy that classifies disabled, passphrase-required, and OS-keystore-only rejected states without exposing raw storage errors, OS keychain errors, paths, identifiers, key material, or passphrase detail.
 - A default CLI `production unlock` boundary rejection that returns `product-unlock-disabled` without opening storage, writing session records, exposing key material, or enabling runtime messaging.
 - A local data lifecycle policy summary that fixes the v0.1 policy boundary: passphrase-first unlock is required, OS-keystore wrapping is optional and non-required, OS-keystore-only unlock remains rejected, key wrapping is not ready, rollback protection is a non-claim, backup exclusion is a required best-effort policy but not verified here, deletion is logical only, secure media deletion is not claimed, schema migration is forward-only, and prototype data migration is not ready.
+- A backup/migration boundary summary that fixes the public beta non-claims: local backup-exclusion verification is required, cloud backup/sync and backup recovery are not provided, schema migration is forward-only, destructive migration is blocked, rollback detection is marker-only, and rollback prevention plus secure media deletion remain non-claims.
 
 The repository does not currently have:
 
@@ -53,7 +54,7 @@ The repository does not currently have:
 - Durable production private key storage.
 - Replay rollback protection.
 - Durable Noise transport or ratchet state storage.
-- Verified backup exclusion, export/import recovery, or prototype data migration behavior.
+- Verified backup exclusion, cloud backup/sync, backup recovery, export/import recovery, or prototype data migration behavior.
 - Production account recovery or key rotation.
 - Record-level encryption implementation. `ADREC1` is a container format, not an encryption algorithm.
 - Full production message persistence and rich local message index schema.
@@ -83,7 +84,7 @@ Deferred:
 - Replay rollback protection.
 - Secure deletion from physical media.
 
-Current v0.1 storage direction: keep the SQLCipher spike narrow and explicit, require passphrase-first unlock, treat OS keystore/Secure Enclave style wrapping as optional future support, and keep rollback prevention and secure media deletion as explicit non-claims. Do not add durable private key storage, production key wrapping, backup/recovery, or replay rollback-protection claims without a separate phase decision.
+Current v0.1 storage direction: keep the SQLCipher spike narrow and explicit, require passphrase-first unlock, treat OS keystore/Secure Enclave style wrapping as optional future support, require local backup-exclusion verification, and keep cloud backup/sync, backup recovery, rollback prevention, and secure media deletion as explicit non-claims. Do not add durable private key storage, production key wrapping, backup/recovery, or replay rollback-protection claims without a separate phase decision.
 
 ## Production Storage Classes
 

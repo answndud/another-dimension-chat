@@ -92,6 +92,10 @@ Public diagnostics are local-copy only. They are limited to status, build,
 failure class, manual network permission, and app-launch network boundary. They
 do not provide crash upload, telemetry, or raw log export.
 
+Local backup exclusion is a required local verification boundary only. This
+beta does not provide cloud backup/sync, backup recovery, rollback prevention,
+or secure deletion from storage media.
+
 ## Safety Boundary
 
 - No phone number, email, global account, searchable username, centralized contact discovery, central message server, push notification, or cloud backup is part of this beta.

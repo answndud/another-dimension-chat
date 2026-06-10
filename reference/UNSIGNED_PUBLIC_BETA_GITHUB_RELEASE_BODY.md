@@ -67,6 +67,8 @@ This beta does not claim:
 - reviewer signoff or public user safety signoff
 - reliable real-network Tor/onion delivery
 - independently verified external two-machine onion delivery
+- cloud backup/sync or backup recovery
+- destructive migration
 - rollback prevention
 - secure deletion from storage media
 

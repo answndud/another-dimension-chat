@@ -146,6 +146,14 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "public_diagnostics_boundary": "status-build-failure-class-only",
   "public_intake_boundary": "redacted-public-diagnostics-or-minimal-contact-request-only",
   "repository_governance_boundary": "main-maintainer-unsigned-beta-non-claim-redaction-guardrails",
+  "backup_migration_boundary": "local-backup-exclusion-verification-forward-only-migration-non-claim",
+  "cloud_backup_or_sync": false,
+  "backup_recovery_claimed": false,
+  "forward_only_schema_migration_required": true,
+  "destructive_migration_blocked": true,
+  "rollback_detection": "marker-only",
+  "rollback_prevention_claimed": false,
+  "secure_media_deletion_claimed": false,
   "crash_upload": false,
   "telemetry": false,
   "raw_log_export": false,
@@ -225,6 +233,14 @@ This folder is for a GitHub Release upload.
 - Public diagnostics boundary: status-build-failure-class-only
 - Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only
 - Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails
+- Backup/migration boundary: local-backup-exclusion-verification-forward-only-migration-non-claim
+- Cloud backup or sync: disabled
+- Backup recovery claimed: false
+- Forward-only schema migration required: true
+- Destructive migration blocked: true
+- Rollback detection: marker-only
+- Rollback prevention claimed: false
+- Secure media deletion claimed: false
 - Crash upload: disabled
 - Telemetry: disabled
 - Raw log export: disabled
@@ -243,6 +259,11 @@ Manual update integrity is limited to user-verified SHA-256 files and the
 provenance/dependency-inventory/lockfile-hash evidence in this upload set.
 There is no auto-update, signing, notarization, reproducible-build, SBOM, or
 security-audit claim.
+
+Local backup exclusion is a required local verification boundary for this beta,
+not a cloud backup/sync or backup recovery feature. Schema lifecycle is
+forward-only, destructive migration is blocked, rollback detection is
+marker-only, and no rollback prevention or secure media deletion claim is made.
 
 The public threat model and independent review packet are review inputs only.
 No independent review, reviewer signoff, public user safety signoff, or secure
@@ -283,6 +304,14 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"reviewer_signoff_claimed\": f
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_diagnostics_boundary\": \"status-build-failure-class-only\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_intake_boundary\": \"redacted-public-diagnostics-or-minimal-contact-request-only\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"repository_governance_boundary\": \"main-maintainer-unsigned-beta-non-claim-redaction-guardrails\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"backup_migration_boundary\": \"local-backup-exclusion-verification-forward-only-migration-non-claim\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"cloud_backup_or_sync\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"backup_recovery_claimed\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"forward_only_schema_migration_required\": true"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"destructive_migration_blocked\": true"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"rollback_detection\": \"marker-only\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"rollback_prevention_claimed\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"secure_media_deletion_claimed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"crash_upload\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"telemetry\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"raw_log_export\": false"
@@ -297,6 +326,14 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Reviewer signoff claimed: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public diagnostics boundary: status-build-failure-class-only"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only"
 require_text "$RELEASE_DIR/MANIFEST.md" "Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails"
+require_text "$RELEASE_DIR/MANIFEST.md" "Backup/migration boundary: local-backup-exclusion-verification-forward-only-migration-non-claim"
+require_text "$RELEASE_DIR/MANIFEST.md" "Cloud backup or sync: disabled"
+require_text "$RELEASE_DIR/MANIFEST.md" "Backup recovery claimed: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Forward-only schema migration required: true"
+require_text "$RELEASE_DIR/MANIFEST.md" "Destructive migration blocked: true"
+require_text "$RELEASE_DIR/MANIFEST.md" "Rollback detection: marker-only"
+require_text "$RELEASE_DIR/MANIFEST.md" "Rollback prevention claimed: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Secure media deletion claimed: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Crash upload: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Telemetry: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Raw log export: disabled"
@@ -307,6 +344,8 @@ require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "sensitive communication proh
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GITHUB_RELEASE_BODY.md"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "completed independent review"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "crash upload, telemetry, raw log export"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "cloud backup/sync or backup recovery"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "destructive migration"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "private vulnerability reporting"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "External two-machine onion delivery has not yet been independently verified"
 require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "does not provide auto-update"
