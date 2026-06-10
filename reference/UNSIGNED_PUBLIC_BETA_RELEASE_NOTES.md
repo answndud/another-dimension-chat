@@ -29,6 +29,8 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
   raw log export, crash dump export, automated log collection, support bundle
   export, or raw diagnostic file export.
 - Manual GitHub Release download with SHA-256 verification.
+- Same GitHub Release assets are the release authority; source branch files and
+  GitHub source archives are not DMG verification authority.
 - Public provenance JSON for the public DMG upload name.
 - Public dependency inventory for reviewers.
 - Public dependency lockfile hash baseline for reviewers.
@@ -76,6 +78,7 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 Read `INSTALL_UNSIGNED_MACOS.md` before opening the DMG.
 
 Verify the checksum before using the macOS Privacy & Security manual allow path.
+Do not use terminal quarantine-removal commands as an install step.
 
 Do not use this beta for sensitive communication.
 

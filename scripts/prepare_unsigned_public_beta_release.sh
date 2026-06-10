@@ -7,6 +7,8 @@ APP_VERSION="0.1.0"
 BUILD_CHANNEL="beta-onion"
 BUILD_COMMIT="806ecad1"
 PLATFORM="macos-aarch64"
+RELEASE_TAG="v0.1.0-beta-onion-unsigned"
+RELEASE_URL="https://github.com/answndud/another-dimension-chat/releases/tag/$RELEASE_TAG"
 EXPECTED_DMG_SHA="625ee389d930330b0f2e369a53c4f582df076dd612920f6cf0366aab4a3edb95"
 
 SOURCE_DIR="$ROOT_DIR/apps/desktop-tauri/beta-artifacts"
@@ -134,6 +136,13 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "build_commit": "$BUILD_COMMIT",
   "platform": "$PLATFORM",
   "distribution": "unsigned-github-public-beta",
+  "release_tag": "$RELEASE_TAG",
+  "release_url": "$RELEASE_URL",
+  "release_authority": "same-github-release-assets",
+  "same_release_checksum_required": true,
+  "source_branch_release_authority": false,
+  "install_allow_path": "macos-privacy-security-manual-allow-after-checksum",
+  "terminal_quarantine_removal_install_step": false,
   "notarized": false,
   "signed": false,
   "auto_update": false,
@@ -259,7 +268,14 @@ This folder is for a GitHub Release upload.
 - Build channel: \`$BUILD_CHANNEL\`
 - Build commit: \`$BUILD_COMMIT\`
 - Platform: \`$PLATFORM\`
+- Release tag: \`$RELEASE_TAG\`
+- Release URL: \`$RELEASE_URL\`
+- Release authority: same-github-release-assets
 - DMG SHA-256: \`$EXPECTED_DMG_SHA\`
+- Same-release checksum required: true
+- Source branch release authority: false
+- Install allow path: macos-privacy-security-manual-allow-after-checksum
+- Terminal quarantine-removal install step: false
 - Public provenance: \`$RELEASE_PROVENANCE\`
 - Source provenance SHA-256: \`$source_provenance_sha\`
 - Dependency inventory: \`DEPENDENCY_INVENTORY.md\`
@@ -322,8 +338,10 @@ not production-ready, and sensitive communication prohibited.
 External two-machine onion delivery has not been independently verified for
 this beta. Same-machine dual-profile rehearsal is development evidence only.
 
-Manual update integrity is limited to user-verified SHA-256 files and the
-provenance/dependency-inventory/lockfile-hash evidence in this upload set.
+Manual update integrity is limited to same GitHub Release assets, user-verified
+SHA-256 files, and the provenance/dependency-inventory/lockfile-hash evidence
+in this upload set. The source branch and source archive are not release
+authority for a downloaded DMG.
 There are exactly $dependency_lockfile_evidence_count lockfile hash evidence
 entries in this upload set: \`$dependency_lockfile_evidence_files\`.
 There is no live dependency scan, vulnerability triage signoff, auto-update,
@@ -368,6 +386,13 @@ done
 
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact\": \"$RELEASE_DMG\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact_sha256\": \"$EXPECTED_DMG_SHA\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"release_tag\": \"$RELEASE_TAG\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"release_url\": \"$RELEASE_URL\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"release_authority\": \"same-github-release-assets\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"same_release_checksum_required\": true"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"source_branch_release_authority\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"install_allow_path\": \"macos-privacy-security-manual-allow-after-checksum\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"terminal_quarantine_removal_install_step\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"source_provenance_sha256\": \"$source_provenance_sha\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"dependency_inventory_file\": \"DEPENDENCY_INVENTORY.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"dependency_lockfile_evidence_count\": $dependency_lockfile_evidence_count"
@@ -422,6 +447,13 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"signed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"notarized\": false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Auto-update: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Signing/notarization: disabled"
+require_text "$RELEASE_DIR/MANIFEST.md" "Release tag: \`$RELEASE_TAG\`"
+require_text "$RELEASE_DIR/MANIFEST.md" "Release URL: \`$RELEASE_URL\`"
+require_text "$RELEASE_DIR/MANIFEST.md" "Release authority: same-github-release-assets"
+require_text "$RELEASE_DIR/MANIFEST.md" "Same-release checksum required: true"
+require_text "$RELEASE_DIR/MANIFEST.md" "Source branch release authority: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Install allow path: macos-privacy-security-manual-allow-after-checksum"
+require_text "$RELEASE_DIR/MANIFEST.md" "Terminal quarantine-removal install step: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Independent review complete: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public review gap published: true"
 require_text "$RELEASE_DIR/MANIFEST.md" "Reviewer signoff claimed: false"
@@ -468,6 +500,7 @@ require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not audited"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not production-ready"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "sensitive communication prohibited"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GITHUB_RELEASE_BODY.md"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GitHub source archives"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "completed independent review"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "fabricated external review"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "crash upload, telemetry, raw log export"
@@ -488,7 +521,12 @@ require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "Branch files can move after a r
 require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "branch-file or source-archive release proof"
 require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "Use the files attached to that GitHub Release as the release authority"
 require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "branch files copied from GitHub's source"
+require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "GitHub source archives"
+require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "Privacy & Security"
+require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "Do not use terminal quarantine-removal commands"
 require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "no auto-update channel"
+require_text "$RELEASE_DIR/RELEASE_NOTES.md" "Same GitHub Release assets are the release authority"
+require_text "$RELEASE_DIR/RELEASE_NOTES.md" "Do not use terminal quarantine-removal commands"
 require_text "$RELEASE_DIR/SUPPLY_CHAIN_BASELINE.md" "not a supply-chain audit"
 require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "not an SBOM"
 require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "Lockfile Evidence Summary"

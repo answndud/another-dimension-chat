@@ -289,7 +289,7 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         storage_status:
             "ADREC1 storage spike plus forward-only schema and local data lifecycle boundary",
         release_integrity_status:
-            "unsigned GitHub beta uses manual GitHub Release download, manual SHA-256 verification, same-release SHA-256 verification, public provenance, manifest, dependency inventory, dependency lockfile hashes, no branch-file release proof, no auto-update, no signing, no notarization, no supply-chain audit claim",
+            "unsigned GitHub beta uses manual GitHub Release download, same GitHub Release assets as release authority, manual SHA-256 verification, same-release SHA-256 verification, macOS Privacy & Security manual allow only after checksum match, source branch is not release authority, public provenance, manifest, dependency inventory, dependency lockfile hashes, no branch-file release proof, no terminal quarantine-removal install step, no auto-update, no signing, no notarization, no supply-chain audit claim",
         supply_chain_integrity_boundary: format!(
             "boundary_closed={} manual_github_release_download_required={} dmg_sha256_required={} public_provenance_required={} release_manifest_required={} dependency_inventory_required={} dependency_lockfile_hash_baseline_required={} dependency_lockfile_evidence_count={} dependency_lockfile_evidence_files={} dependency_inventory_runtime_visible={} vulnerability_triage_signoff_complete={} live_dependency_scan_performed={} auto_update_enabled={} signing_or_notarization_claimed={} sbom_published={} dependency_audit_complete={} reproducible_build_proof_available={} security_ready_claimed={} policies={}",
             supply_chain.boundary_closed(),
@@ -512,10 +512,22 @@ mod tests {
             .contains("manual SHA-256 verification"));
         assert!(status
             .release_integrity_status
+            .contains("same GitHub Release assets as release authority"));
+        assert!(status
+            .release_integrity_status
             .contains("same-release SHA-256 verification"));
         assert!(status
             .release_integrity_status
+            .contains("Privacy & Security manual allow"));
+        assert!(status
+            .release_integrity_status
+            .contains("source branch is not release authority"));
+        assert!(status
+            .release_integrity_status
             .contains("no branch-file release proof"));
+        assert!(status
+            .release_integrity_status
+            .contains("no terminal quarantine-removal install step"));
         assert!(status
             .release_integrity_status
             .contains("no auto-update"));
