@@ -11,6 +11,8 @@ public beta.
 - Public issues must use redacted templates.
 - Sensitive security details must use private vulnerability reporting when
   available.
+- If private reporting is unavailable, public reports must be minimal contact
+  requests without exploit details or sensitive material.
 - Private planning notes stay in ignored `docs/`.
 - Generated public release folders stay ignored and are not committed.
 - External peer evidence must come from real external reports, not synthetic
@@ -46,7 +48,10 @@ The public beta release remains:
 - no reproducible-build claim
 - no SBOM or dependency audit claim
 - no independent review completion claim
+- no reviewer signoff claim
+- no public user safety signoff claim
 - no external two-machine onion delivery claim
+- no fabricated external review or external peer evidence
 
 ## Redaction Guardrails
 

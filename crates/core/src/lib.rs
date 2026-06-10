@@ -508,10 +508,16 @@ pub mod production {
         "public_threat_model_required",
         "independent_review_packet_required",
         "public_non_claims_required",
+        "known_review_gaps_required",
+        "public_safe_review_commands_required",
+        "private_reporting_boundary_required",
+        "minimal_public_contact_request_allowed",
         "review_gap_published",
         "no_external_review_claim",
         "no_reviewer_signoff_claim",
+        "no_public_user_safety_signoff_claim",
         "no_security_ready_claim",
+        "fabricated_review_or_peer_evidence_forbidden",
     ];
 
     const PRODUCTION_DIAGNOSTICS_ALLOWED_FIELDS: &[&str] = &[
@@ -699,8 +705,15 @@ pub mod production {
         public_threat_model_required: bool,
         independent_review_packet_required: bool,
         public_non_claims_required: bool,
+        review_packet_inputs_public_safe: bool,
+        known_review_gaps_published: bool,
+        public_safe_review_commands_required: bool,
+        private_reporting_boundary_required: bool,
+        minimal_public_contact_request_allowed: bool,
         external_review_completed: bool,
         reviewer_signoff_claimed: bool,
+        public_user_safety_signoff_claimed: bool,
+        fabricated_review_or_peer_evidence_allowed: bool,
         public_review_gap_published: bool,
         sensitive_communication_allowed: bool,
         boundary_closed: bool,
@@ -1189,12 +1202,40 @@ pub mod production {
             self.public_non_claims_required
         }
 
+        pub fn review_packet_inputs_public_safe(self) -> bool {
+            self.review_packet_inputs_public_safe
+        }
+
+        pub fn known_review_gaps_published(self) -> bool {
+            self.known_review_gaps_published
+        }
+
+        pub fn public_safe_review_commands_required(self) -> bool {
+            self.public_safe_review_commands_required
+        }
+
+        pub fn private_reporting_boundary_required(self) -> bool {
+            self.private_reporting_boundary_required
+        }
+
+        pub fn minimal_public_contact_request_allowed(self) -> bool {
+            self.minimal_public_contact_request_allowed
+        }
+
         pub fn external_review_completed(self) -> bool {
             self.external_review_completed
         }
 
         pub fn reviewer_signoff_claimed(self) -> bool {
             self.reviewer_signoff_claimed
+        }
+
+        pub fn public_user_safety_signoff_claimed(self) -> bool {
+            self.public_user_safety_signoff_claimed
+        }
+
+        pub fn fabricated_review_or_peer_evidence_allowed(self) -> bool {
+            self.fabricated_review_or_peer_evidence_allowed
         }
 
         pub fn public_review_gap_published(self) -> bool {
@@ -8833,15 +8874,29 @@ pub mod production {
         let public_threat_model_required = true;
         let independent_review_packet_required = true;
         let public_non_claims_required = true;
+        let review_packet_inputs_public_safe = true;
+        let known_review_gaps_published = true;
+        let public_safe_review_commands_required = true;
+        let private_reporting_boundary_required = true;
+        let minimal_public_contact_request_allowed = true;
         let external_review_completed = false;
         let reviewer_signoff_claimed = false;
+        let public_user_safety_signoff_claimed = false;
+        let fabricated_review_or_peer_evidence_allowed = false;
         let public_review_gap_published = true;
         let sensitive_communication_allowed = false;
         let boundary_closed = public_threat_model_required
             && independent_review_packet_required
             && public_non_claims_required
+            && review_packet_inputs_public_safe
+            && known_review_gaps_published
+            && public_safe_review_commands_required
+            && private_reporting_boundary_required
+            && minimal_public_contact_request_allowed
             && !external_review_completed
             && !reviewer_signoff_claimed
+            && !public_user_safety_signoff_claimed
+            && !fabricated_review_or_peer_evidence_allowed
             && public_review_gap_published
             && !sensitive_communication_allowed;
 
@@ -8850,8 +8905,15 @@ pub mod production {
             public_threat_model_required,
             independent_review_packet_required,
             public_non_claims_required,
+            review_packet_inputs_public_safe,
+            known_review_gaps_published,
+            public_safe_review_commands_required,
+            private_reporting_boundary_required,
+            minimal_public_contact_request_allowed,
             external_review_completed,
             reviewer_signoff_claimed,
+            public_user_safety_signoff_claimed,
+            fabricated_review_or_peer_evidence_allowed,
             public_review_gap_published,
             sensitive_communication_allowed,
             boundary_closed,
@@ -10726,13 +10788,26 @@ pub mod production {
             assert!(boundary.public_threat_model_required());
             assert!(boundary.independent_review_packet_required());
             assert!(boundary.public_non_claims_required());
+            assert!(boundary.review_packet_inputs_public_safe());
+            assert!(boundary.known_review_gaps_published());
+            assert!(boundary.public_safe_review_commands_required());
+            assert!(boundary.private_reporting_boundary_required());
+            assert!(boundary.minimal_public_contact_request_allowed());
             assert!(!boundary.external_review_completed());
             assert!(!boundary.reviewer_signoff_claimed());
+            assert!(!boundary.public_user_safety_signoff_claimed());
+            assert!(!boundary.fabricated_review_or_peer_evidence_allowed());
             assert!(boundary.public_review_gap_published());
             assert!(!boundary.sensitive_communication_allowed());
             assert!(!boundary.security_ready_claimed());
             assert!(boundary.policies().contains(&"review_gap_published"));
             assert!(boundary.policies().contains(&"no_reviewer_signoff_claim"));
+            assert!(boundary
+                .policies()
+                .contains(&"no_public_user_safety_signoff_claim"));
+            assert!(boundary
+                .policies()
+                .contains(&"fabricated_review_or_peer_evidence_forbidden"));
         }
 
         #[test]

@@ -313,13 +313,20 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             supply_chain.policies().join(","),
         ),
         independent_review_boundary: format!(
-            "boundary_closed={} public_threat_model_required={} independent_review_packet_required={} public_non_claims_required={} external_review_completed={} reviewer_signoff_claimed={} public_review_gap_published={} sensitive_communication_allowed={} security_ready_claimed={} policies={}",
+            "boundary_closed={} public_threat_model_required={} independent_review_packet_required={} public_non_claims_required={} review_packet_inputs_public_safe={} known_review_gaps_published={} public_safe_review_commands_required={} private_reporting_boundary_required={} minimal_public_contact_request_allowed={} external_review_completed={} reviewer_signoff_claimed={} public_user_safety_signoff_claimed={} fabricated_review_or_peer_evidence_allowed={} public_review_gap_published={} sensitive_communication_allowed={} security_ready_claimed={} policies={}",
             independent_review.boundary_closed(),
             independent_review.public_threat_model_required(),
             independent_review.independent_review_packet_required(),
             independent_review.public_non_claims_required(),
+            independent_review.review_packet_inputs_public_safe(),
+            independent_review.known_review_gaps_published(),
+            independent_review.public_safe_review_commands_required(),
+            independent_review.private_reporting_boundary_required(),
+            independent_review.minimal_public_contact_request_allowed(),
             independent_review.external_review_completed(),
             independent_review.reviewer_signoff_claimed(),
+            independent_review.public_user_safety_signoff_claimed(),
+            independent_review.fabricated_review_or_peer_evidence_allowed(),
             independent_review.public_review_gap_published(),
             independent_review.sensitive_communication_allowed(),
             independent_review.security_ready_claimed(),
@@ -547,10 +554,31 @@ mod tests {
             .contains("independent_review_packet_required=true"));
         assert!(status
             .independent_review_boundary
+            .contains("review_packet_inputs_public_safe=true"));
+        assert!(status
+            .independent_review_boundary
+            .contains("known_review_gaps_published=true"));
+        assert!(status
+            .independent_review_boundary
+            .contains("public_safe_review_commands_required=true"));
+        assert!(status
+            .independent_review_boundary
+            .contains("private_reporting_boundary_required=true"));
+        assert!(status
+            .independent_review_boundary
+            .contains("minimal_public_contact_request_allowed=true"));
+        assert!(status
+            .independent_review_boundary
             .contains("external_review_completed=false"));
         assert!(status
             .independent_review_boundary
             .contains("reviewer_signoff_claimed=false"));
+        assert!(status
+            .independent_review_boundary
+            .contains("public_user_safety_signoff_claimed=false"));
+        assert!(status
+            .independent_review_boundary
+            .contains("fabricated_review_or_peer_evidence_allowed=false"));
         assert!(status
             .independent_review_boundary
             .contains("public_review_gap_published=true"));

@@ -161,6 +161,13 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "independent_review_complete": false,
   "public_review_gap_published": true,
   "reviewer_signoff_claimed": false,
+  "public_user_safety_signoff_claimed": false,
+  "review_packet_inputs_public_safe": true,
+  "known_review_gaps_published": true,
+  "public_safe_review_commands_required": true,
+  "private_reporting_boundary": "private-vulnerability-reporting-or-minimal-public-contact-request",
+  "minimal_public_contact_request_allowed": true,
+  "fabricated_review_or_peer_evidence_allowed": false,
   "public_diagnostics_boundary": "status-build-failure-class-only",
   "public_intake_boundary": "redacted-public-diagnostics-or-minimal-contact-request-only",
   "repository_governance_boundary": "main-maintainer-unsigned-beta-non-claim-redaction-guardrails",
@@ -216,6 +223,8 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
     "no reproducible-build claim",
     "no completed independent review claim",
     "no reviewer signoff claim",
+    "no public user safety signoff claim",
+    "no fabricated external review or peer evidence",
     "no Briar/Cwtch-equivalent claim"
   ]
 }
@@ -271,6 +280,13 @@ This folder is for a GitHub Release upload.
 - Independent review complete: false
 - Public review gap published: true
 - Reviewer signoff claimed: false
+- Public user safety signoff claimed: false
+- Review packet inputs public safe: true
+- Known review gaps published: true
+- Public-safe review commands required: true
+- Private reporting boundary: private-vulnerability-reporting-or-minimal-public-contact-request
+- Minimal public contact request allowed: true
+- Fabricated review or peer evidence allowed: false
 - Public diagnostics boundary: status-build-failure-class-only
 - Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only
 - Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails
@@ -319,8 +335,8 @@ forward-only, destructive migration is blocked, rollback detection is
 marker-only, and no rollback prevention or secure media deletion claim is made.
 
 The public threat model and independent review packet are review inputs only.
-No independent review, reviewer signoff, public user safety signoff, or secure
-messenger claim is made by this upload set.
+No independent review, reviewer signoff, public user safety signoff, fabricated
+review/peer evidence, or secure messenger claim is made by this upload set.
 
 The privacy model comparison is a public gap map for the Korean
 Briar/Cwtch-style direction. It is not a claim that this beta is
@@ -370,6 +386,13 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"repository_governance_file\":
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"independent_review_complete\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_review_gap_published\": true"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"reviewer_signoff_claimed\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_user_safety_signoff_claimed\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"review_packet_inputs_public_safe\": true"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"known_review_gaps_published\": true"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_safe_review_commands_required\": true"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"private_reporting_boundary\": \"private-vulnerability-reporting-or-minimal-public-contact-request\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"minimal_public_contact_request_allowed\": true"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"fabricated_review_or_peer_evidence_allowed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_diagnostics_boundary\": \"status-build-failure-class-only\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_intake_boundary\": \"redacted-public-diagnostics-or-minimal-contact-request-only\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"repository_governance_boundary\": \"main-maintainer-unsigned-beta-non-claim-redaction-guardrails\""
@@ -402,6 +425,13 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Signing/notarization: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Independent review complete: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public review gap published: true"
 require_text "$RELEASE_DIR/MANIFEST.md" "Reviewer signoff claimed: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Public user safety signoff claimed: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Review packet inputs public safe: true"
+require_text "$RELEASE_DIR/MANIFEST.md" "Known review gaps published: true"
+require_text "$RELEASE_DIR/MANIFEST.md" "Public-safe review commands required: true"
+require_text "$RELEASE_DIR/MANIFEST.md" "Private reporting boundary: private-vulnerability-reporting-or-minimal-public-contact-request"
+require_text "$RELEASE_DIR/MANIFEST.md" "Minimal public contact request allowed: true"
+require_text "$RELEASE_DIR/MANIFEST.md" "Fabricated review or peer evidence allowed: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public diagnostics boundary: status-build-failure-class-only"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only"
 require_text "$RELEASE_DIR/MANIFEST.md" "Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails"
@@ -439,6 +469,7 @@ require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not production-ready"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "sensitive communication prohibited"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GITHUB_RELEASE_BODY.md"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "completed independent review"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "fabricated external review"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "crash upload, telemetry, raw log export"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "automated log"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "support bundle"
