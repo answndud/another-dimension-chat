@@ -678,6 +678,28 @@ test("profile unlock and transcript load ignore stale profile inputs", () => {
   assert.match(transcriptBody, /if \(!productionProfileInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
 });
 
+test("product unlock lockout shows local-only recovery actions", () => {
+  const recoveryBody = functionBody(mainJs, "productionProductUnlockRecoveryView");
+  assert.match(recoveryBody, /os_keychain_fallback=false/);
+  assert.match(recoveryBody, /backup_recovery=false/);
+  assert.match(recoveryBody, /cloud_backup_sync=false/);
+  assert.match(recoveryBody, /security_ready=false/);
+  assert.match(recoveryBody, /rollback_suspicion_detected/);
+  assert.match(recoveryBody, /rollback_resume_blocked/);
+  assert.match(recoveryBody, /local_recovery=check-data-lifecycle/);
+  assert.match(recoveryBody, /local_recovery=retry-passphrase-or-new-local-profile/);
+
+  const renderBody = functionBody(mainJs, "renderProductionProductUnlockRecovery");
+  assert.match(renderBody, /fields\.productionProfileNextAction/);
+
+  const unlockBody = functionBody(mainJs, "unlockProductionProfile");
+  assert.match(unlockBody, /const productUnlockRecovery = renderProductionProductUnlockRecovery\(productUnlock\)/);
+  assert.match(unlockBody, /setText\(fields\.productionProfileBoundary, productUnlockRecovery\.boundary\)/);
+
+  const lockBody = functionBody(mainJs, "lockProductionProfile");
+  assert.match(lockBody, /renderProductionProductUnlockRecovery\(result, \{ lockedByUser: true \}\)/);
+});
+
 test("manual session readiness is scoped to the active profile passphrase", () => {
   assert.match(mainJs, /let latestProductionSessionStateFingerprint = ""/);
   assert.match(functionBody(mainJs, "productionSessionStateFingerprint"), /input\.passphrase/);

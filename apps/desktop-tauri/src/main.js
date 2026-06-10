@@ -16588,17 +16588,81 @@ function renderProductionProductUnlockStatus(result) {
   return unlocked;
 }
 
+function productionProductUnlockRecoveryView(result, options = {}) {
+  const unlocked = result?.unlocked === true;
+  const lockedByUser = options.lockedByUser === true;
+  const reason = String(result?.redacted_reason ?? "unknown").trim() || "unknown";
+  const rollbackBlocked =
+    result?.rollback_suspicion_detected === true || result?.rollback_resume_blocked === true;
+  const boundary =
+    `local_only=true passphrase_first=${result?.passphrase_first === true} ` +
+    `os_keychain_fallback=false os_keystore_only_rejected=${result?.os_keystore_only_rejected === true} ` +
+    `backup_recovery=false cloud_backup_sync=false rollback_prevention=${result?.rollback_prevention_claimed === true} ` +
+    `secure_delete_claim=${result?.secure_deletion_from_media_claimed === true} security_ready=false ` +
+    `passphrase_retained=${result?.passphrase_retained === true} key_material=${result?.key_material_exposed === true} raw_error=${result?.raw_storage_error_exposed === true}`;
+
+  if (unlocked) {
+    return {
+      state: "Profile unlocked",
+      warning: result?.warning || t("profileRecoveryUnlocked"),
+      storage: `Unlocked reason=${reason} local_recovery=not_needed`,
+      identity: "Identity opened; passphrase not retained",
+      next: t("profileRecoveryUnlocked"),
+      boundary: `${boundary} recovery=unlocked rollback_suspicion=${rollbackBlocked}`,
+    };
+  }
+
+  if (rollbackBlocked) {
+    return {
+      state: "Profile locked",
+      warning: t("profileRecoveryRollbackBlocked"),
+      storage: `Locked reason=${reason} local_recovery=check-data-lifecycle`,
+      identity: "Not opened; saved-room resume blocked",
+      next: t("profileRecoveryRollbackBlockedNext"),
+      boundary: `${boundary} recovery=rollback-suspicion rollback_suspicion=true resume_blocked=true`,
+    };
+  }
+
+  if (lockedByUser) {
+    return {
+      state: "Profile locked",
+      warning: result?.warning || t("profileRecoveryLockedByUser"),
+      storage: `Locked reason=${reason} local_recovery=unlock-with-passphrase`,
+      identity: "Locked locally",
+      next: t("profileRecoveryLockedByUser"),
+      boundary: `${boundary} recovery=manual-lock rollback_suspicion=false resume_blocked=false`,
+    };
+  }
+
+  return {
+    state: "Profile locked",
+    warning: t("profileRecoveryLocked"),
+    storage: `Locked reason=${reason} local_recovery=retry-passphrase-or-new-local-profile`,
+    identity: "Not opened; no raw storage error exposed",
+    next: t("profileRecoveryLockedNext"),
+    boundary: `${boundary} recovery=passphrase-first-lockout rollback_suspicion=false resume_blocked=false`,
+  };
+}
+
+function renderProductionProductUnlockRecovery(result, options = {}) {
+  const view = productionProductUnlockRecoveryView(result, options);
+  setText(fields.productionProfileNextAction, view.next);
+  return view;
+}
+
 async function checkProductionProductUnlockStatus() {
   try {
     const result = await invoke("production_product_unlock_status");
     renderProductionProductUnlockStatus(result);
-    setText(fields.productionProfileWarning, result.warning);
-    setProductionProfileState(result.unlocked ? "Profile unlocked" : "Profile locked");
+    const view = renderProductionProductUnlockRecovery(result);
+    setText(fields.productionProfileWarning, view.warning);
+    setProductionProfileState(view.state);
     return result;
   } catch (error) {
     setProductionProfileState("Profile unlock status failed");
     setText(fields.productionProfileWarning, String(error));
     setText(fields.productionProductUnlockState, "status failed without exposing local path details");
+    setText(fields.productionProfileNextAction, t("profileRecoveryStatusFailedNext"));
     return null;
   }
 }
@@ -16607,10 +16671,11 @@ async function lockProductionProfile() {
   try {
     const result = await invoke("production_product_lock");
     renderProductionProductUnlockStatus(result);
-    setProductionProfileState("Profile locked");
-    setText(fields.productionProfileWarning, result.warning);
-    setText(fields.productionProfileStorage, "Locked");
-    setText(fields.productionProfileIdentity, "Locked");
+    const view = renderProductionProductUnlockRecovery(result, { lockedByUser: true });
+    setProductionProfileState(view.state);
+    setText(fields.productionProfileWarning, view.warning);
+    setText(fields.productionProfileStorage, view.storage);
+    setText(fields.productionProfileIdentity, view.identity);
     return result;
   } catch (error) {
     setProductionProfileState("Profile lock failed");
@@ -16755,6 +16820,7 @@ async function unlockProductionProfile() {
   if (!profile || !passphrase) {
     setProductionProfileState("Profile unlock needs input");
     setText(fields.productionProfileWarning, "Enter a profile name and passphrase.");
+    setText(fields.productionProfileNextAction, t("profileRecoveryNeedsInputNext"));
     return;
   }
 
@@ -16771,11 +16837,13 @@ async function unlockProductionProfile() {
   try {
     const productUnlock = await invoke("production_product_unlock", { profile, passphrase });
     renderProductionProductUnlockStatus(productUnlock);
+    const productUnlockRecovery = renderProductionProductUnlockRecovery(productUnlock);
     if (productUnlock.unlocked !== true) {
-      setProductionProfileState("Profile unlock failed");
-      setText(fields.productionProfileWarning, productUnlock.warning);
-      setText(fields.productionProfileStorage, `Locked reason=${productUnlock.redacted_reason}`);
-      setText(fields.productionProfileIdentity, "Not opened");
+      setProductionProfileState(productUnlockRecovery.state);
+      setText(fields.productionProfileWarning, productUnlockRecovery.warning);
+      setText(fields.productionProfileStorage, productUnlockRecovery.storage);
+      setText(fields.productionProfileIdentity, productUnlockRecovery.identity);
+      setText(fields.productionProfileBoundary, productUnlockRecovery.boundary);
       return;
     }
     const result = await invoke("production_profile_unlock", { profile, passphrase });
@@ -16810,6 +16878,7 @@ async function unlockProductionProfile() {
     setText(fields.productionProfileStorage, "Failed");
     setText(fields.productionProfileIdentity, "Failed");
     setText(fields.productionProfileBoundary, "Failed");
+    setText(fields.productionProfileNextAction, t("profileRecoveryStatusFailedNext"));
   } finally {
     clearProductionBusyAction("profile-unlock");
     if (fields.unlockProductionProfile) {
