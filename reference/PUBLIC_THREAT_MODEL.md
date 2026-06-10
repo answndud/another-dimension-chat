@@ -26,6 +26,9 @@ The v0.1 unsigned public beta is narrower:
 The public gap map for the intended Korean Briar/Cwtch-style privacy direction
 is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`.
 
+That comparison is a gap map, not a claim that the current beta is
+Briar/Cwtch-equivalent.
+
 ## Assets
 
 The project is designed to eventually protect:
@@ -79,6 +82,9 @@ This beta does not claim:
 - reliable real-network Tor/onion delivery
 - independently verified external two-machine onion delivery
 - verified bridge/censorship support beyond returned external reports
+- Briar/Cwtch-equivalent privacy or security level
+- repeated external onion evidence
+- offline mesh delivery
 - protection against endpoint compromise
 - protection against coercion
 - protection against malicious contacts

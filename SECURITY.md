@@ -65,6 +65,8 @@ This project does not currently claim:
 - Protection against malicious contacts.
 - Protection against global traffic correlation.
 - Security superiority over Signal.
+- Briar/Cwtch-equivalent privacy or security level, repeated external onion
+  evidence, offline mesh delivery, or security-ready status.
 
 ## Beta Distribution Boundary
 

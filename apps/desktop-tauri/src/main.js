@@ -79,6 +79,7 @@ const fields = {
   appReleaseSummary: document.querySelector("#app-release-summary"),
   localCapabilitySummary: document.querySelector("#local-capability-summary"),
   mainBlockerSummary: document.querySelector("#main-blocker-summary"),
+  privacyModelSummary: document.querySelector("#privacy-model-summary"),
   releaseClaim: document.querySelector("#release-claim"),
   messaging: document.querySelector("#messaging"),
   localDevPeerLabel: document.querySelector("#local-dev-peer-label"),
@@ -101,6 +102,7 @@ const fields = {
   experimentalTransport: document.querySelector("#experimental-transport"),
   bootstrapStatus: document.querySelector("#bootstrap-status"),
   transportIo: document.querySelector("#transport-io"),
+  privacyModelBoundary: document.querySelector("#privacy-model-boundary"),
   storage: document.querySelector("#storage"),
   releaseIntegrity: document.querySelector("#release-integrity"),
   supplyChainBoundary: document.querySelector("#supply-chain-boundary"),
@@ -2904,6 +2906,7 @@ function renderAppStateSummary(status) {
   setText(fields.appReleaseSummary, releaseSummary);
   setText(fields.localCapabilitySummary, localCapabilitySummary);
   setText(fields.mainBlockerSummary, mainBlockerSummary);
+  setText(fields.privacyModelSummary, t("privacyModelSummary"));
   const devPeerLabel = String(status.local_dev_peer_label ?? "").trim();
   const devPeerName =
     devPeerLabel === "peer-a" ? t("localPeerA") : devPeerLabel === "peer-b" ? t("localPeerB") : devPeerLabel;
@@ -12943,6 +12946,7 @@ async function renderPrototypeStatus() {
     setText(fields.experimentalTransport, localizedBoundaryStatus(status.experimental_transport_status));
     setText(fields.bootstrapStatus, localizedBoundaryStatus(status.bootstrap_status_classification));
     setText(fields.transportIo, localizedBoundaryStatus(status.transport_io_status));
+    setText(fields.privacyModelBoundary, localizedBoundaryStatus(status.privacy_model_boundary));
     setText(fields.storage, localizedBoundaryStatus(status.storage_status));
     setText(fields.releaseIntegrity, localizedBoundaryStatus(status.release_integrity_status));
     setText(fields.supplyChainBoundary, localizedBoundaryStatus(status.supply_chain_integrity_boundary));
@@ -12988,6 +12992,7 @@ async function renderPrototypeStatus() {
     setText(fields.experimentalTransport, t("experimentalTransportValue"));
     setText(fields.bootstrapStatus, t("bootstrapStatusValue"));
     setText(fields.transportIo, t("transportIoValue"));
+    setText(fields.privacyModelBoundary, t("privacyModelBoundaryValue"));
     setText(fields.storage, t("storageValue"));
     setText(fields.releaseIntegrity, t("releaseIntegrityValue"));
     setText(fields.supplyChainBoundary, t("supplyChainBoundaryValue"));

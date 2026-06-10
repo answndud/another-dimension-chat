@@ -54,6 +54,7 @@ Expected public GitHub Release files:
 - `SUPPLY_CHAIN_BASELINE.md`
 - `DEPENDENCY_INVENTORY.md`
 - `PUBLIC_THREAT_MODEL.md`
+- `PRIVACY_MODEL_COMPARISON.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
 - `PUBLIC_INTAKE_POLICY.md`
 - `REPOSITORY_GOVERNANCE.md`
@@ -66,7 +67,7 @@ Prepare the ignored local upload folder from the frozen local DMG:
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, dependency lockfile hash evidence, public threat model, independent review packet, public intake policy, repository governance guardrails, and explicit review-gap evidence are missing. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
+The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, dependency lockfile hash evidence, public threat model, privacy model comparison, independent review packet, public intake policy, repository governance guardrails, and explicit review-gap evidence are missing. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
 What exists today:
 
@@ -146,6 +147,11 @@ WARNING: dev-insecure build. Not for real communication.
 Do not remove, hide, or weaken that warning while the prototype uses fake crypto, mock/file transport, or development storage.
 
 The project also does not claim to be generally more secure than Signal. The intended research direction is narrower: reducing phone-number identity, centralized account infrastructure, centralized contact discovery, and transport metadata exposure under a specific threat model.
+
+The Korean high-risk messenger direction is documented as a gap map, not a
+current capability claim. The beta does not claim Briar/Cwtch equivalence,
+audited E2EE readiness, repeated external onion evidence, offline mesh
+delivery, independent review completion, or security-ready status.
 
 ## Repository Layout
 
@@ -265,7 +271,7 @@ To stage the current unsigned public GitHub Release upload set from the local ig
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-Upload only the generated public release files from `apps/desktop-tauri/public-release/unsigned-public-beta/`. Use `GITHUB_RELEASE_BODY.md` as the GitHub Release body. The public release body, notes, install guide, manifest, and provenance must keep the unsigned experimental beta warning, sensitive communication prohibition, not audited status, not production-ready status, external two-machine onion delivery non-claim, backup/migration non-claims, and public diagnostics redaction boundary. Users must treat every update as a fresh manual download and verify the matching `.sha256` file.
+Upload only the generated public release files from `apps/desktop-tauri/public-release/unsigned-public-beta/`. Use `GITHUB_RELEASE_BODY.md` as the GitHub Release body. The public release body, notes, install guide, manifest, provenance, and privacy model comparison must keep the unsigned experimental beta warning, sensitive communication prohibition, not audited status, not production-ready status, external two-machine onion delivery non-claim, Briar/Cwtch-equivalent non-claim, backup/migration non-claims, and public diagnostics redaction boundary. Users must treat every update as a fresh manual download and verify the matching `.sha256` file.
 
 For the current local field-test handoff, send only the per-peer delivery folder contents from:
 

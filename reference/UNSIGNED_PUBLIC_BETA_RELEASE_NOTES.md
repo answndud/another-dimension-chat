@@ -32,6 +32,8 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Public dependency inventory for reviewers.
 - Public dependency lockfile hash baseline for reviewers.
 - Public threat model and independent review packet for claim review.
+- Public privacy model comparison for the Korean Briar/Cwtch-style direction
+  as a gap map, not a current capability claim.
 - Explicit review-gap provenance showing no completed review and no reviewer
   signoff claim.
 - Local backup-exclusion verification and forward-only schema migration
@@ -49,6 +51,8 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Reliable real-network Tor/onion delivery.
 - Independently verified external two-machine onion delivery.
 - Bridge/censorship support beyond tested configurations.
+- Briar/Cwtch-equivalent privacy or security level, repeated external onion
+  evidence, offline mesh delivery, or security-ready status.
 - Cloud backup/sync, backup recovery, destructive migration, rollback
   prevention, or secure deletion from storage media.
 - Signed, notarized, auto-updating, reproducible, or supply-chain-reviewed release status.

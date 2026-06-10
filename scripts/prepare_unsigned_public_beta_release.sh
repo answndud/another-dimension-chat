@@ -27,6 +27,7 @@ REQUIRED_RELEASE_FILES=(
   "SUPPLY_CHAIN_BASELINE.md"
   "DEPENDENCY_INVENTORY.md"
   "PUBLIC_THREAT_MODEL.md"
+  "PRIVACY_MODEL_COMPARISON.md"
   "INDEPENDENT_REVIEW_PACKET.md"
   "PUBLIC_INTAKE_POLICY.md"
   "REPOSITORY_GOVERNANCE.md"
@@ -66,6 +67,7 @@ require_file "$ROOT_DIR/reference/UPDATE_INTEGRITY.md"
 require_file "$ROOT_DIR/reference/SUPPLY_CHAIN_BASELINE.md"
 require_file "$ROOT_DIR/reference/DEPENDENCY_INVENTORY.md"
 require_file "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md"
+require_file "$ROOT_DIR/reference/PRIVACY_MODEL_COMPARISON.md"
 require_file "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md"
 require_file "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md"
 require_file "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md"
@@ -102,6 +104,7 @@ cp "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "$RELEASE_DIR/UPDATE_INTEGRITY.md"
 cp "$ROOT_DIR/reference/SUPPLY_CHAIN_BASELINE.md" "$RELEASE_DIR/SUPPLY_CHAIN_BASELINE.md"
 cp "$ROOT_DIR/reference/DEPENDENCY_INVENTORY.md" "$RELEASE_DIR/DEPENDENCY_INVENTORY.md"
 cp "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md"
+cp "$ROOT_DIR/reference/PRIVACY_MODEL_COMPARISON.md" "$RELEASE_DIR/PRIVACY_MODEL_COMPARISON.md"
 cp "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md"
 cp "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md"
 cp "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md" "$RELEASE_DIR/REPOSITORY_GOVERNANCE.md"
@@ -137,6 +140,7 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "dependency_lockfiles_sha256_file": "DEPENDENCY_LOCKFILES.sha256",
   "dependency_inventory_file": "DEPENDENCY_INVENTORY.md",
   "public_threat_model_file": "PUBLIC_THREAT_MODEL.md",
+  "privacy_model_comparison_file": "PRIVACY_MODEL_COMPARISON.md",
   "independent_review_packet_file": "INDEPENDENT_REVIEW_PACKET.md",
   "public_intake_policy_file": "PUBLIC_INTAKE_POLICY.md",
   "repository_governance_file": "REPOSITORY_GOVERNANCE.md",
@@ -146,6 +150,12 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "public_diagnostics_boundary": "status-build-failure-class-only",
   "public_intake_boundary": "redacted-public-diagnostics-or-minimal-contact-request-only",
   "repository_governance_boundary": "main-maintainer-unsigned-beta-non-claim-redaction-guardrails",
+  "privacy_model_target": "no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server",
+  "briar_cwtch_equivalent_claim": false,
+  "audited_e2ee_claim": false,
+  "repeated_external_onion_evidence": false,
+  "offline_mesh_claim": false,
+  "security_ready_claim": false,
   "backup_migration_boundary": "local-backup-exclusion-verification-forward-only-migration-non-claim",
   "cloud_backup_or_sync": false,
   "backup_recovery_claimed": false,
@@ -185,7 +195,8 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
     "no dependency audit claim",
     "no reproducible-build claim",
     "no completed independent review claim",
-    "no reviewer signoff claim"
+    "no reviewer signoff claim",
+    "no Briar/Cwtch-equivalent claim"
   ]
 }
 EOF
@@ -207,6 +218,7 @@ This folder is for a GitHub Release upload.
 - \`SUPPLY_CHAIN_BASELINE.md\`
 - \`DEPENDENCY_INVENTORY.md\`
 - \`PUBLIC_THREAT_MODEL.md\`
+- \`PRIVACY_MODEL_COMPARISON.md\`
 - \`INDEPENDENT_REVIEW_PACKET.md\`
 - \`PUBLIC_INTAKE_POLICY.md\`
 - \`REPOSITORY_GOVERNANCE.md\`
@@ -224,6 +236,7 @@ This folder is for a GitHub Release upload.
 - Dependency inventory: \`DEPENDENCY_INVENTORY.md\`
 - Dependency lockfile hashes: \`DEPENDENCY_LOCKFILES.sha256\`
 - Public threat model: \`PUBLIC_THREAT_MODEL.md\`
+- Privacy model comparison: \`PRIVACY_MODEL_COMPARISON.md\`
 - Independent review packet: \`INDEPENDENT_REVIEW_PACKET.md\`
 - Public intake policy: \`PUBLIC_INTAKE_POLICY.md\`
 - Repository governance: \`REPOSITORY_GOVERNANCE.md\`
@@ -233,6 +246,12 @@ This folder is for a GitHub Release upload.
 - Public diagnostics boundary: status-build-failure-class-only
 - Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only
 - Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails
+- Privacy model target: no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server
+- Briar/Cwtch-equivalent claim: false
+- Audited E2EE claim: false
+- Repeated external onion evidence: false
+- Offline mesh claim: false
+- Security-ready claim: false
 - Backup/migration boundary: local-backup-exclusion-verification-forward-only-migration-non-claim
 - Cloud backup or sync: disabled
 - Backup recovery claimed: false
@@ -269,6 +288,11 @@ The public threat model and independent review packet are review inputs only.
 No independent review, reviewer signoff, public user safety signoff, or secure
 messenger claim is made by this upload set.
 
+The privacy model comparison is a public gap map for the Korean
+Briar/Cwtch-style direction. It is not a claim that this beta is
+Briar/Cwtch-equivalent, audited E2EE-ready, repeatedly verified on external
+onion delivery, offline-mesh capable, independently reviewed, or security-ready.
+
 Public diagnostics are local-copy only and limited to status, build, failure
 class, manual network permission, and app-launch network boundary. No crash
 upload, telemetry, raw log export, bridge line, onion endpoint, invite code,
@@ -295,6 +319,7 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact_sha256\": \"$EXPECTE
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"source_provenance_sha256\": \"$source_provenance_sha\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"dependency_inventory_file\": \"DEPENDENCY_INVENTORY.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_threat_model_file\": \"PUBLIC_THREAT_MODEL.md\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"privacy_model_comparison_file\": \"PRIVACY_MODEL_COMPARISON.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"independent_review_packet_file\": \"INDEPENDENT_REVIEW_PACKET.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_intake_policy_file\": \"PUBLIC_INTAKE_POLICY.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"repository_governance_file\": \"REPOSITORY_GOVERNANCE.md\""
@@ -304,6 +329,12 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"reviewer_signoff_claimed\": f
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_diagnostics_boundary\": \"status-build-failure-class-only\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_intake_boundary\": \"redacted-public-diagnostics-or-minimal-contact-request-only\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"repository_governance_boundary\": \"main-maintainer-unsigned-beta-non-claim-redaction-guardrails\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"privacy_model_target\": \"no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"briar_cwtch_equivalent_claim\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"audited_e2ee_claim\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"repeated_external_onion_evidence\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"offline_mesh_claim\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"security_ready_claim\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"backup_migration_boundary\": \"local-backup-exclusion-verification-forward-only-migration-non-claim\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"cloud_backup_or_sync\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"backup_recovery_claimed\": false"
@@ -326,6 +357,12 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Reviewer signoff claimed: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public diagnostics boundary: status-build-failure-class-only"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only"
 require_text "$RELEASE_DIR/MANIFEST.md" "Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails"
+require_text "$RELEASE_DIR/MANIFEST.md" "Privacy model comparison: \`PRIVACY_MODEL_COMPARISON.md\`"
+require_text "$RELEASE_DIR/MANIFEST.md" "Briar/Cwtch-equivalent claim: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Audited E2EE claim: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Repeated external onion evidence: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Offline mesh claim: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Security-ready claim: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Backup/migration boundary: local-backup-exclusion-verification-forward-only-migration-non-claim"
 require_text "$RELEASE_DIR/MANIFEST.md" "Cloud backup or sync: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Backup recovery claimed: false"
@@ -348,6 +385,7 @@ require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "cloud backup/sync or backup 
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "destructive migration"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "private vulnerability reporting"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "External two-machine onion delivery has not yet been independently verified"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "Briar/Cwtch-equivalent"
 require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "does not provide auto-update"
 require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "same GitHub Release"
 require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "Branch files can move after a release"
@@ -360,6 +398,9 @@ require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "not an SBOM"
 require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "not a secure messenger release today"
 require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "public diagnostics"
 require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "raw logs"
+require_text "$RELEASE_DIR/PRIVACY_MODEL_COMPARISON.md" "gap map, not a"
+require_text "$RELEASE_DIR/PRIVACY_MODEL_COMPARISON.md" "Where the Current Beta Is Behind Briar/Cwtch"
+require_text "$RELEASE_DIR/PRIVACY_MODEL_COMPARISON.md" "not audited, not production-ready, and sensitive communication prohibited"
 require_text "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md" "not an external review result"
 require_text "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md" "Known Review Gaps"
 require_text "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md" "Forbidden Public Intake"
