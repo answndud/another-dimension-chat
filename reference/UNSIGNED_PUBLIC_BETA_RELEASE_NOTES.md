@@ -56,7 +56,7 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Cloud backup/sync, backup recovery, destructive migration, rollback
   prevention, or secure deletion from storage media.
 - Signed, notarized, auto-updating, reproducible, or supply-chain-reviewed release status.
-- SBOM or dependency audit completion.
+- SBOM, dependency audit completion, live dependency scan, or vulnerability triage signoff.
 - Completed independent review.
 - Reviewer signoff or public user safety signoff.
 - Protection against device compromise, coercion, malicious contacts, or global traffic correlation.
@@ -81,6 +81,8 @@ There is no auto-update. Every update is a manual GitHub Release download and
 must be verified with the matching `.sha256` file.
 
 The provenance JSON, `DEPENDENCY_INVENTORY.md`, and
-`DEPENDENCY_LOCKFILES.sha256` are upload-set evidence only. They are not
-signing, notarization, reproducible-build proof, SBOM, dependency audit
-completion, or a secure messenger claim.
+`DEPENDENCY_LOCKFILES.sha256` are upload-set evidence only. The lockfile
+evidence is exactly `Cargo.lock`, `apps/desktop-tauri/src-tauri/Cargo.lock`,
+and `apps/desktop-tauri/package-lock.json`. They are not signing,
+notarization, reproducible-build proof, SBOM, dependency audit completion, live
+dependency scan, vulnerability triage signoff, or a secure messenger claim.
