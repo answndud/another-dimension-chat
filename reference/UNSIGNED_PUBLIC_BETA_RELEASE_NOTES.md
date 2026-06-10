@@ -26,7 +26,8 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Redacted diagnostics and field-test reporting.
 - Public diagnostics limited to status, build, failure class, manual network
   permission, and app-launch network boundary, with no crash upload, telemetry,
-  or raw log export.
+  raw log export, crash dump export, automated log collection, support bundle
+  export, or raw diagnostic file export.
 - Manual GitHub Release download with SHA-256 verification.
 - Public provenance JSON for the public DMG upload name.
 - Public dependency inventory for reviewers.
@@ -60,7 +61,9 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Completed independent review.
 - Reviewer signoff or public user safety signoff.
 - Protection against device compromise, coercion, malicious contacts, or global traffic correlation.
-- Crash upload, telemetry, raw log export, or safe publication of private logs.
+- Crash upload, telemetry, raw log export, crash dump export, automated log
+  collection, support bundle export, raw diagnostic file export, or safe
+  publication of private logs.
 - Safe public issue posting of endpoints, payloads, messages, local paths,
   passphrases, private keys, key material, crash dumps, screenshots of private
   room data, or private planning notes.
