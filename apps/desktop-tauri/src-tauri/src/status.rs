@@ -285,7 +285,7 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         storage_status:
             "ADREC1 storage spike plus forward-only schema and local data lifecycle boundary",
         release_integrity_status:
-            "unsigned GitHub beta uses manual SHA-256 verification, public provenance, manifest, dependency inventory, dependency lockfile hashes, no auto-update, no signing, no notarization, no supply-chain audit claim",
+            "unsigned GitHub beta uses manual GitHub Release download, manual SHA-256 verification, same-release SHA-256 verification, public provenance, manifest, dependency inventory, dependency lockfile hashes, no branch-file release proof, no auto-update, no signing, no notarization, no supply-chain audit claim",
         supply_chain_integrity_boundary: format!(
             "boundary_closed={} manual_github_release_download_required={} dmg_sha256_required={} public_provenance_required={} release_manifest_required={} dependency_inventory_required={} dependency_lockfile_hash_baseline_required={} auto_update_enabled={} signing_or_notarization_claimed={} sbom_published={} dependency_audit_complete={} reproducible_build_proof_available={} security_ready_claimed={} policies={}",
             supply_chain.boundary_closed(),
@@ -468,6 +468,12 @@ mod tests {
         assert!(status
             .release_integrity_status
             .contains("manual SHA-256 verification"));
+        assert!(status
+            .release_integrity_status
+            .contains("same-release SHA-256 verification"));
+        assert!(status
+            .release_integrity_status
+            .contains("no branch-file release proof"));
         assert!(status
             .release_integrity_status
             .contains("no auto-update"));

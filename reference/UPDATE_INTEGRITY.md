@@ -34,11 +34,20 @@ Expected result:
 another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg: OK
 ```
 
+Do not verify a downloaded DMG against files copied from GitHub's branch source
+browser. Branch files can move after a release. The release authority for this
+beta is the DMG, `.sha256`, provenance JSON, manifest, and notes attached to the
+same GitHub Release.
+
 ## Release Publisher Boundary
 
 The release publisher must not replace a DMG without replacing the matching
 `.sha256`, provenance JSON, manifest, release notes, and dependency lockfile
 hash evidence in the same release.
+
+The release publisher must not ask users to mix a DMG from one GitHub Release
+with a checksum, provenance file, manifest, install guide, or notes copied from
+another release, a branch view, or the source archive.
 
 The generated public provenance JSON must describe the public upload artifact,
 not only the local source artifact. It must include:
@@ -75,6 +84,7 @@ The public release body must repeat:
 This policy does not claim:
 
 - update authenticity beyond the GitHub Release page the user chooses to trust
+- branch-file or source-archive release proof
 - automatic rollback prevention
 - malware review
 - dependency audit completion
