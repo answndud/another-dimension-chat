@@ -1288,6 +1288,50 @@ export function productionProfileUnlockView(result) {
   };
 }
 
+export function productionLocalLifecycleBoundaryView(result = {}, options = {}) {
+  const includePaths = options.includePaths !== false;
+  const localOnly = true;
+  const cloudBackupSync = false;
+  const backupRecovery = false;
+  const markerOnlyRollback = true;
+  const rollbackPrevention = result.rollback_prevention_claimed === true;
+  const secureDeletion =
+    result.secure_deletion_from_media_claimed === true ||
+    result.secure_deletion_from_media === true ||
+    result.secure_delete_claim === true;
+  const pathReturned = result.store_path_returned === true;
+  const passphraseRetained = result.passphrase_retained === true;
+  const keyMaterial = result.key_material_exposed === true;
+  const networkIo = result.network_io_attempted === true;
+  const transportIo = result.transport_io_opened === true;
+  const runtime = result.runtime_messaging_enabled === true;
+  const plaintext =
+    result.plaintext_exposed === true ||
+    result.plaintext_returned === true ||
+    result.plaintext_returned_after_unlock === true ||
+    result.plaintext_returned_to_frontend === true;
+
+  const privacyFlags = [
+    `local_only=${localOnly}`,
+    `cloud_backup_sync=${cloudBackupSync}`,
+    `backup_recovery=${backupRecovery}`,
+    `marker_only_rollback=${markerOnlyRollback}`,
+    `rollback_prevention=${rollbackPrevention}`,
+    `secure_delete_claim=${secureDeletion}`,
+  ];
+  const exposureFlags = [
+    includePaths ? `path_returned=${pathReturned}` : null,
+    `passphrase_retained=${passphraseRetained}`,
+    `plaintext=${plaintext}`,
+    `key_material=${keyMaterial}`,
+    `network_io=${networkIo}`,
+    `transport_io=${transportIo}`,
+    `runtime=${runtime}`,
+  ].filter(Boolean);
+
+  return [...privacyFlags, ...exposureFlags].join(" ");
+}
+
 export function productionPairingPayloadView(result) {
   return {
     storage:
@@ -2028,9 +2072,7 @@ export function productionSessionLifecycleView(result) {
       `deleted=${result.session_deleted} closed=${result.session_resume_closed}`,
     boundary:
       `message_records_preserved=${result.message_records_preserved} ` +
-      `path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} ` +
-      `key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} ` +
-      `transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+      productionLocalLifecycleBoundaryView(result),
   };
 }
 
