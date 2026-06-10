@@ -13,9 +13,11 @@ The unsigned public beta release script records SHA-256 hashes for:
 The generated release file is:
 
 - `DEPENDENCY_LOCKFILES.sha256`
+- `DEPENDENCY_INVENTORY.md`
 
 This lets reviewers see which lockfiles were present when the public upload set
-was prepared. It does not prove dependency safety.
+was prepared and which dependency scopes are intentionally in the beta upload
+boundary. It does not prove dependency safety.
 
 The release script also records the SHA-256 of the local source provenance JSON
 inside the public provenance JSON. That links the public upload name to the
@@ -31,13 +33,14 @@ authenticity beyond the GitHub Release that the user chooses to trust.
 ## Dependency Review Boundary
 
 For this public beta, dependency review is limited to lockfile presence, release
-artifact checksum evidence, and public non-claims.
+artifact checksum evidence, public dependency inventory presence, and public
+non-claims.
 
 The public release script fails if the upload set does not include the expected
 DMG, `.sha256`, public provenance JSON, manifest, manual update integrity note,
-supply-chain baseline note, threat model, independent review packet, and
-dependency lockfile hashes. This is an upload-set completeness check, not a
-dependency safety review.
+supply-chain baseline note, dependency inventory, threat model, independent
+review packet, and dependency lockfile hashes. This is an upload-set
+completeness check, not a dependency safety review.
 
 Not included:
 

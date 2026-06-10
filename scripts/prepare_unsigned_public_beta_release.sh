@@ -25,6 +25,7 @@ REQUIRED_RELEASE_FILES=(
   "GITHUB_RELEASE_BODY.md"
   "UPDATE_INTEGRITY.md"
   "SUPPLY_CHAIN_BASELINE.md"
+  "DEPENDENCY_INVENTORY.md"
   "PUBLIC_THREAT_MODEL.md"
   "INDEPENDENT_REVIEW_PACKET.md"
   "DEPENDENCY_LOCKFILES.sha256"
@@ -61,6 +62,7 @@ require_file "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md"
 require_file "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md"
 require_file "$ROOT_DIR/reference/UPDATE_INTEGRITY.md"
 require_file "$ROOT_DIR/reference/SUPPLY_CHAIN_BASELINE.md"
+require_file "$ROOT_DIR/reference/DEPENDENCY_INVENTORY.md"
 require_file "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md"
 require_file "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md"
 require_file "$ROOT_DIR/Cargo.lock"
@@ -94,6 +96,7 @@ cp "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "$RELEASE_DIR/REL
 cp "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "$RELEASE_DIR/GITHUB_RELEASE_BODY.md"
 cp "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "$RELEASE_DIR/UPDATE_INTEGRITY.md"
 cp "$ROOT_DIR/reference/SUPPLY_CHAIN_BASELINE.md" "$RELEASE_DIR/SUPPLY_CHAIN_BASELINE.md"
+cp "$ROOT_DIR/reference/DEPENDENCY_INVENTORY.md" "$RELEASE_DIR/DEPENDENCY_INVENTORY.md"
 cp "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md"
 cp "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md"
 
@@ -126,6 +129,7 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "startup_network_sockets": "none",
   "source_provenance_sha256": "$source_provenance_sha",
   "dependency_lockfiles_sha256_file": "DEPENDENCY_LOCKFILES.sha256",
+  "dependency_inventory_file": "DEPENDENCY_INVENTORY.md",
   "manual_update_integrity_file": "UPDATE_INTEGRITY.md",
   "supply_chain_baseline_file": "SUPPLY_CHAIN_BASELINE.md",
   "public_non_claims": [
@@ -156,6 +160,7 @@ This folder is for a GitHub Release upload.
 - \`GITHUB_RELEASE_BODY.md\`
 - \`UPDATE_INTEGRITY.md\`
 - \`SUPPLY_CHAIN_BASELINE.md\`
+- \`DEPENDENCY_INVENTORY.md\`
 - \`PUBLIC_THREAT_MODEL.md\`
 - \`INDEPENDENT_REVIEW_PACKET.md\`
 - \`DEPENDENCY_LOCKFILES.sha256\`
@@ -169,6 +174,7 @@ This folder is for a GitHub Release upload.
 - DMG SHA-256: \`$EXPECTED_DMG_SHA\`
 - Public provenance: \`$RELEASE_PROVENANCE\`
 - Source provenance SHA-256: \`$source_provenance_sha\`
+- Dependency inventory: \`DEPENDENCY_INVENTORY.md\`
 - Dependency lockfile hashes: \`DEPENDENCY_LOCKFILES.sha256\`
 - Auto-update: disabled
 - Signing/notarization: disabled
@@ -182,8 +188,9 @@ External two-machine onion delivery has not been independently verified for
 this beta. Same-machine dual-profile rehearsal is development evidence only.
 
 Manual update integrity is limited to user-verified SHA-256 files and the
-provenance/lockfile-hash evidence in this upload set. There is no auto-update,
-signing, notarization, reproducible-build, SBOM, or security-audit claim.
+provenance/dependency-inventory/lockfile-hash evidence in this upload set.
+There is no auto-update, signing, notarization, reproducible-build, SBOM, or
+security-audit claim.
 EOF
 
 for release_file in "${REQUIRED_RELEASE_FILES[@]}"; do
@@ -193,6 +200,7 @@ done
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact\": \"$RELEASE_DMG\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact_sha256\": \"$EXPECTED_DMG_SHA\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"source_provenance_sha256\": \"$source_provenance_sha\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"dependency_inventory_file\": \"DEPENDENCY_INVENTORY.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"auto_update\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"signed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"notarized\": false"
@@ -206,6 +214,7 @@ require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GITHUB_RELEASE_BODY.md"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "External two-machine onion delivery has not yet been independently verified"
 require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "does not provide auto-update"
 require_text "$RELEASE_DIR/SUPPLY_CHAIN_BASELINE.md" "not a supply-chain audit"
+require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "not an SBOM"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "Cargo.lock"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/src-tauri/Cargo.lock"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/package-lock.json"

@@ -26,6 +26,7 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Redacted diagnostics and field-test reporting.
 - Manual GitHub Release download with SHA-256 verification.
 - Public provenance JSON for the public DMG upload name.
+- Public dependency inventory for reviewers.
 - Public dependency lockfile hash baseline for reviewers.
 - Public threat model and independent review packet for claim review.
 
@@ -57,6 +58,7 @@ field-test evidence.
 There is no auto-update. Every update is a manual GitHub Release download and
 must be verified with the matching `.sha256` file.
 
-The provenance JSON and `DEPENDENCY_LOCKFILES.sha256` are upload-set evidence
-only. They are not signing, notarization, reproducible-build proof, SBOM,
-dependency audit completion, or a secure messenger claim.
+The provenance JSON, `DEPENDENCY_INVENTORY.md`, and
+`DEPENDENCY_LOCKFILES.sha256` are upload-set evidence only. They are not
+signing, notarization, reproducible-build proof, SBOM, dependency audit
+completion, or a secure messenger claim.

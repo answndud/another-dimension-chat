@@ -31,6 +31,7 @@ pub struct PrototypeStatus {
     transport_io_status: String,
     storage_status: &'static str,
     release_integrity_status: &'static str,
+    supply_chain_integrity_boundary: String,
     verification_status: &'static str,
     local_dev_peer_label: String,
 }
@@ -56,6 +57,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         another_dimension_core::production::production_key_rollback_boundary_summary();
     let transport_boundary =
         another_dimension_core::production::production_transport_envelope_io_boundary_summary();
+    let supply_chain =
+        another_dimension_core::production::production_supply_chain_integrity_boundary_summary();
 
     PrototypeStatus {
         secure_release: false,
@@ -255,7 +258,24 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         storage_status:
             "ADREC1 storage spike plus forward-only schema and local data lifecycle boundary",
         release_integrity_status:
-            "unsigned GitHub beta uses manual SHA-256 verification, public provenance, dependency lockfile hashes, no auto-update, no signing, no notarization, no supply-chain audit claim",
+            "unsigned GitHub beta uses manual SHA-256 verification, public provenance, manifest, dependency inventory, dependency lockfile hashes, no auto-update, no signing, no notarization, no supply-chain audit claim",
+        supply_chain_integrity_boundary: format!(
+            "boundary_closed={} manual_github_release_download_required={} dmg_sha256_required={} public_provenance_required={} release_manifest_required={} dependency_inventory_required={} dependency_lockfile_hash_baseline_required={} auto_update_enabled={} signing_or_notarization_claimed={} sbom_published={} dependency_audit_complete={} reproducible_build_proof_available={} security_ready_claimed={} policies={}",
+            supply_chain.boundary_closed(),
+            supply_chain.manual_github_release_download_required(),
+            supply_chain.dmg_sha256_required(),
+            supply_chain.public_provenance_required(),
+            supply_chain.release_manifest_required(),
+            supply_chain.dependency_inventory_required(),
+            supply_chain.dependency_lockfile_hash_baseline_required(),
+            supply_chain.auto_update_enabled(),
+            supply_chain.signing_or_notarization_claimed(),
+            supply_chain.sbom_published(),
+            supply_chain.dependency_audit_complete(),
+            supply_chain.reproducible_build_proof_available(),
+            supply_chain.security_ready_claimed(),
+            supply_chain.policies().join(","),
+        ),
         verification_status: "lightweight checks only",
         local_dev_peer_label: local_dev_peer_label(),
     }
@@ -373,6 +393,18 @@ mod tests {
         assert!(status
             .release_integrity_status
             .contains("no auto-update"));
+        assert!(status
+            .supply_chain_integrity_boundary
+            .contains("boundary_closed=true"));
+        assert!(status
+            .supply_chain_integrity_boundary
+            .contains("dependency_inventory_required=true"));
+        assert!(status
+            .supply_chain_integrity_boundary
+            .contains("dependency_audit_complete=false"));
+        assert!(status
+            .supply_chain_integrity_boundary
+            .contains("sbom_published=false"));
         assert!(status.local_dev_peer_label.is_empty());
     }
 }
