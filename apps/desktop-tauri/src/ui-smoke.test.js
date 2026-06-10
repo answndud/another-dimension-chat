@@ -723,6 +723,38 @@ test("runtime resume rollback block routes users to local data recovery", () => 
   assert.match(loadTranscriptBody, /applyRuntimeResumeRollbackRecovery\(runtimeResumeResult, \{ source: "transcript-load" \}\)/);
 });
 
+test("local data lifecycle actions expose destructive local-only boundaries", () => {
+  const viewBody = functionBody(mainJs, "dataLifecycleActionView");
+  assert.match(viewBody, /destructive_action=\$\{destructiveAction\}/);
+  assert.match(viewBody, /redacted_result=true/);
+  assert.match(viewBody, /local_only=true/);
+  assert.match(viewBody, /backup_recovery=false/);
+  assert.match(viewBody, /cloud_backup_sync=false/);
+  assert.match(viewBody, /security_ready=false/);
+  assert.match(viewBody, /rollback_prevention/);
+  assert.match(viewBody, /secure_delete_claim/);
+  assert.match(viewBody, /profile_deleted/);
+  assert.match(viewBody, /full_local_data_wiped/);
+
+  const renderBody = functionBody(mainJs, "renderProductionDataLifecycleAction");
+  assert.match(renderBody, /fields\.productionDataLifecycle/);
+  assert.match(renderBody, /fields\.productionProfileBoundary/);
+  assert.match(renderBody, /fields\.productionProfileNextAction/);
+
+  assert.match(functionBody(mainJs, "checkProductionDataLifecycle"), /renderProductionDataLifecycleAction\(result, "status"\)/);
+  assert.match(functionBody(mainJs, "prepareProductionDataLifecycle"), /renderProductionDataLifecycleAction\(result, "prepare"\)/);
+
+  const deleteBody = functionBody(mainJs, "deleteProductionProfile");
+  assert.match(deleteBody, /dataLifecycleDeleteConfirmWarning/);
+  assert.match(deleteBody, /dataLifecycleDeleteRunning/);
+  assert.match(deleteBody, /renderProductionDataLifecycleAction\(result, "profile-delete"\)/);
+
+  const wipeBody = functionBody(mainJs, "wipeProductionLocalData");
+  assert.match(wipeBody, /dataLifecycleWipeConfirmWarning/);
+  assert.match(wipeBody, /dataLifecycleWipeRunning/);
+  assert.match(wipeBody, /renderProductionDataLifecycleAction\(result, "full-local-wipe"\)/);
+});
+
 test("manual session readiness is scoped to the active profile passphrase", () => {
   assert.match(mainJs, /let latestProductionSessionStateFingerprint = ""/);
   assert.match(functionBody(mainJs, "productionSessionStateFingerprint"), /input\.passphrase/);

@@ -815,6 +815,25 @@ const dictionaries = {
     deleteProfile: "Delete profile",
     fullWipeConfirm: "Type WIPE LOCAL DATA to wipe local app data",
     wipeLocalData: "Wipe local data",
+    dataLifecycleStatusNext: "Next: continue only after the local lifecycle status matches the room action you want.",
+    dataLifecyclePreparedNext:
+      "Next: retry unlock or room resume locally; this does not claim rollback prevention or backup recovery.",
+    dataLifecycleRollbackNext:
+      "Next: stop room actions, inspect local data lifecycle, and restore only from a trusted local copy if needed.",
+    dataLifecycleProfileDeletedNext:
+      "Next: recreate the profile locally if needed; no cloud or backup recovery was performed.",
+    dataLifecycleWipedNext:
+      "Next: restart setup from local profiles; no secure deletion from storage media is claimed.",
+    dataLifecycleFailedNext: "Next: retry the local lifecycle action; do not paste raw local logs publicly.",
+    dataLifecycleDeleteConfirmWarning:
+      "Type the exact profile name before deleting. This is local-only and does not provide backup recovery.",
+    dataLifecycleDeleteConfirmNext: "Next: type the profile name exactly or cancel this local destructive action.",
+    dataLifecycleWipeConfirmWarning:
+      "Type WIPE LOCAL DATA before wiping local app data. This does not claim secure deletion from storage media.",
+    dataLifecycleWipeConfirmNext: "Next: type WIPE LOCAL DATA exactly or cancel this local destructive action.",
+    dataLifecycleDeleteRunning: "Deleting the local profile store. No cloud, backup, or secure-delete claim is made.",
+    dataLifecycleWipeRunning: "Wiping local app data. No cloud, backup, or secure-delete claim is made.",
+    dataLifecycleDestructiveRunningNext: "Next: wait for the redacted local result before retrying setup.",
     profileLocked: "Profile locked",
     nextEnterProfilePassphrase: "Next: enter profile and passphrase.",
     productionProfileLockedWarning: "Production profile has not been unlocked yet.",
@@ -1747,6 +1766,25 @@ const dictionaries = {
     deleteProfile: "프로필 삭제",
     fullWipeConfirm: "로컬 앱 데이터를 지우려면 WIPE LOCAL DATA를 입력하세요",
     wipeLocalData: "로컬 데이터 삭제",
+    dataLifecycleStatusNext: "다음: 원하는 채팅방 작업과 로컬 생명주기 상태가 맞을 때만 계속하세요.",
+    dataLifecyclePreparedNext:
+      "다음: 로컬에서 잠금 해제나 채팅방 재개를 다시 시도하세요. 롤백 보호나 백업 복구 주장은 하지 않습니다.",
+    dataLifecycleRollbackNext:
+      "다음: 채팅방 작업을 멈추고 로컬 데이터 생명주기를 확인한 뒤 필요하면 신뢰할 수 있는 로컬 사본에서만 복구하세요.",
+    dataLifecycleProfileDeletedNext:
+      "다음: 필요하면 프로필을 로컬에서 다시 만드세요. 클라우드나 백업 복구는 수행하지 않았습니다.",
+    dataLifecycleWipedNext:
+      "다음: 로컬 프로필부터 다시 설정하세요. 저장 매체에서의 보안 삭제는 주장하지 않습니다.",
+    dataLifecycleFailedNext: "다음: 로컬 생명주기 작업을 다시 시도하세요. 원본 로컬 로그를 공개로 붙여넣지 마세요.",
+    dataLifecycleDeleteConfirmWarning:
+      "삭제 전에 정확한 프로필 이름을 입력하세요. 이 작업은 로컬-only이며 백업 복구를 제공하지 않습니다.",
+    dataLifecycleDeleteConfirmNext: "다음: 프로필 이름을 정확히 입력하거나 이 로컬 파괴 작업을 취소하세요.",
+    dataLifecycleWipeConfirmWarning:
+      "로컬 앱 데이터를 지우려면 WIPE LOCAL DATA를 입력하세요. 저장 매체에서의 보안 삭제를 주장하지 않습니다.",
+    dataLifecycleWipeConfirmNext: "다음: WIPE LOCAL DATA를 정확히 입력하거나 이 로컬 파괴 작업을 취소하세요.",
+    dataLifecycleDeleteRunning: "로컬 프로필 저장소를 삭제 중입니다. 클라우드, 백업, 보안 삭제 주장은 하지 않습니다.",
+    dataLifecycleWipeRunning: "로컬 앱 데이터를 삭제 중입니다. 클라우드, 백업, 보안 삭제 주장은 하지 않습니다.",
+    dataLifecycleDestructiveRunningNext: "다음: redacted local result가 나올 때까지 기다린 뒤 설정을 다시 시도하세요.",
     profileLocked: "프로필 잠김",
     nextEnterProfilePassphrase: "다음: 프로필과 패스프레이즈를 입력하세요.",
     productionProfileLockedWarning: "아직 프로필을 열지 않았습니다.",
