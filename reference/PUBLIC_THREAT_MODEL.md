@@ -51,7 +51,9 @@ Current implementation evidence includes:
 - local encrypted profile/session/message store boundaries
 - durable local session lifecycle records
 - conversation/profile/full local data wipe controls
+- local backup-exclusion verification boundary
 - forward-only schema version boundary
+- destructive migration blocked
 - marker-only rollback detection boundary
 - fail-closed onion/Tor attempt paths
 - disabled network/onion work on app launch
@@ -82,6 +84,8 @@ This beta does not claim:
 - protection against malicious contacts
 - protection against global traffic correlation
 - rollback prevention against restored encrypted database snapshots
+- cloud backup/sync or backup recovery
+- destructive migration
 - secure deletion from storage media
 - dependency audit, SBOM, reproducible build, signing, notarization, or auto-update
 - completed independent review, reviewer signoff, or public user safety signoff
@@ -102,6 +106,7 @@ v0.1 does not include:
 - centralized message server
 - push notification service
 - cloud backup
+- backup recovery
 - offline mailbox
 - group chat
 - file transfer
