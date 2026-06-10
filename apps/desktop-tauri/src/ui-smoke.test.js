@@ -141,7 +141,7 @@ test("saved room open carries current session status into metadata reconciliatio
   assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /sessionStatus: status/);
   assert.match(
     functionBody(mainJs, "loadProductionTwoProfileTranscript"),
-    /options\.sessionStatus \?\? latestTwoProfileSessionStatusForCurrentInput\(transcriptInput\)/,
+    /options\.sessionStatus \?\?[\s\S]*runtimeResumeResult\?\.session_status[\s\S]*latestTwoProfileSessionStatusForCurrentInput\(transcriptInput\)/,
   );
   assert.match(
     functionBody(mainJs, "loadProductionTwoProfileTranscript"),
@@ -497,9 +497,10 @@ test("profile unlock and manual import refresh the room captured at action start
 
   const unlockRefreshBody = functionBody(mainJs, "refreshTwoProfileSessionAfterProfileUnlock");
   assert.match(mainJs, /async function refreshTwoProfileSessionAfterProfileUnlock\([\s\S]*input = productionTwoProfileInput\(\),[\s\S]*\)/);
-  assert.match(unlockRefreshBody, /invokeInviteRoomSessionStatus\(input\)/);
+  assert.match(unlockRefreshBody, /invokeTwoProfileRuntimeResumeStatus\(input\)/);
   assert.match(unlockRefreshBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
   assert.match(unlockRefreshBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*autoResume: true,[\s\S]*input/);
+  assert.match(unlockRefreshBody, /runtimeResumeResult: resume/);
   assert.match(unlockRefreshBody, /rememberTwoProfileSessionStatus\(input, result\)/);
 
   const importBody = functionBody(mainJs, "importProductionMessageEnvelope");
@@ -719,6 +720,8 @@ test("two-profile onion setup actions ignore stale room results", () => {
   const loadTranscriptBody = functionBody(mainJs, "loadProductionTwoProfileTranscript");
   assert.match(loadTranscriptBody, /const input = options\.input \?\? productionTwoProfileInput\(\)/);
   assert.match(loadTranscriptBody, /if \(!twoProfileTranscriptInputStillCurrent\(transcriptInput\)\) \{\s*return false;\s*\}/);
+  assert.match(loadTranscriptBody, /invokeTwoProfileRuntimeResumeStatus/);
+  assert.match(loadTranscriptBody, /runtimeResumeResult\?\.session_status/);
 
   const updateBody = functionBody(mainJs, "sendProductionTwoProfileEndpointUpdate");
   assert.match(updateBody, /const input = productionTwoProfileInput\(\)/);

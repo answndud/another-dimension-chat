@@ -1155,6 +1155,31 @@ pub struct ProductionMessageTranscriptExportResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionTwoProfileRuntimeResumeResult {
+    warning: &'static str,
+    session_status: ProductionTwoProfileSessionStatusResult,
+    profile_a_transcript: ProductionMessageTranscriptExportResult,
+    profile_b_transcript: ProductionMessageTranscriptExportResult,
+    profile_a_transcript_entries: usize,
+    profile_b_transcript_entries: usize,
+    total_transcript_entries: usize,
+    sent_message_count: usize,
+    received_message_count: usize,
+    retryable_outbound_count: usize,
+    latest_retryable_profile: Option<String>,
+    latest_retryable_message_number: Option<u64>,
+    expired_messages_purged: usize,
+    runtime_resume_ready: bool,
+    retry_review_required: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionMessageRetentionPreferenceResult {
     warning: &'static str,
     storage_opened: bool,
@@ -2835,6 +2860,28 @@ fn production_invite_room_session_status(
             "production invite room session status failed without exposing profile, path, or key details"
                 .to_string()
         })
+}
+
+#[tauri::command]
+fn production_two_profile_runtime_resume_status(
+    app: tauri::AppHandle,
+    local_profile: String,
+    peer_profile: String,
+    passphrase: String,
+) -> Result<ProductionTwoProfileRuntimeResumeResult, String> {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production two-profile runtime resume failed without exposing local path details"
+    })?;
+    run_production_two_profile_runtime_resume_status(
+        app_data_root,
+        local_profile,
+        peer_profile,
+        passphrase,
+    )
+    .map_err(|_| {
+        "production two-profile runtime resume failed without exposing profile, path, message, or key details"
+            .to_string()
+    })
 }
 
 #[tauri::command]
@@ -8812,6 +8859,133 @@ fn run_production_two_profile_session_status(
     })
 }
 
+fn run_production_two_profile_runtime_resume_status(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile_a: String,
+    profile_b: String,
+    passphrase: String,
+) -> Result<ProductionTwoProfileRuntimeResumeResult, String> {
+    let app_data_root = app_data_root.as_ref();
+    let profile_a_name = sanitize_production_profile(profile_a)?.as_str().to_string();
+    let profile_b_name = sanitize_production_profile(profile_b)?.as_str().to_string();
+    if profile_a_name == profile_b_name {
+        return Err("production two-profile runtime resume requires distinct profiles".to_string());
+    }
+    let session_status = run_production_two_profile_session_status(
+        app_data_root,
+        profile_a_name.clone(),
+        profile_b_name.clone(),
+        passphrase.clone(),
+    )?;
+    let profile_a_transcript = run_production_message_transcript_export(
+        app_data_root,
+        profile_a_name.clone(),
+        passphrase.clone(),
+    )?;
+    let profile_b_transcript =
+        run_production_message_transcript_export(app_data_root, profile_b_name.clone(), passphrase)?;
+    let profile_a_transcript_entries = profile_a_transcript.entries.len();
+    let profile_b_transcript_entries = profile_b_transcript.entries.len();
+    let total_transcript_entries = profile_a_transcript_entries + profile_b_transcript_entries;
+    let sent_message_count = count_transcript_direction(&profile_a_transcript, "sent")
+        + count_transcript_direction(&profile_b_transcript, "sent");
+    let received_message_count = count_transcript_direction(&profile_a_transcript, "received")
+        + count_transcript_direction(&profile_b_transcript, "received");
+    let retryable_a = retryable_transcript_entries(&profile_a_transcript);
+    let retryable_b = retryable_transcript_entries(&profile_b_transcript);
+    let retryable_outbound_count = retryable_a.len() + retryable_b.len();
+    let latest_retryable = [
+        latest_retryable_transcript_entry(&profile_a_name, &retryable_a),
+        latest_retryable_transcript_entry(&profile_b_name, &retryable_b),
+    ]
+    .into_iter()
+    .flatten()
+    .max_by_key(|(_, entry)| (entry.created_at_ms, entry.message_number));
+    let (latest_retryable_profile, latest_retryable_message_number) =
+        latest_retryable.map_or((None, None), |(profile, entry)| {
+            (Some(profile), Some(entry.message_number))
+        });
+    let expired_messages_purged =
+        profile_a_transcript.expired_messages_purged + profile_b_transcript.expired_messages_purged;
+    let key_material_exposed = session_status.key_material_exposed
+        || profile_a_transcript.key_material_exposed
+        || profile_b_transcript.key_material_exposed;
+    let network_io_attempted = session_status.network_io_attempted
+        || profile_a_transcript.network_io_attempted
+        || profile_b_transcript.network_io_attempted;
+    let transport_io_opened = session_status.transport_io_opened
+        || profile_a_transcript.transport_io_opened
+        || profile_b_transcript.transport_io_opened;
+    let runtime_messaging_enabled = session_status.runtime_messaging_enabled
+        || profile_a_transcript.runtime_messaging_enabled
+        || profile_b_transcript.runtime_messaging_enabled;
+    let runtime_resume_ready = session_status.both_ready_for_message_envelope
+        && profile_a_transcript.storage_opened
+        && profile_b_transcript.storage_opened
+        && profile_a_transcript.runtime_material_reconstructable
+        && profile_b_transcript.runtime_material_reconstructable;
+
+    Ok(ProductionTwoProfileRuntimeResumeResult {
+        warning: "runtime resume status read encrypted local session and transcript stores only; no network or transport IO opened",
+        session_status,
+        profile_a_transcript,
+        profile_b_transcript,
+        profile_a_transcript_entries,
+        profile_b_transcript_entries,
+        total_transcript_entries,
+        sent_message_count,
+        received_message_count,
+        retryable_outbound_count,
+        latest_retryable_profile,
+        latest_retryable_message_number,
+        expired_messages_purged,
+        runtime_resume_ready,
+        retry_review_required: retryable_outbound_count > 0,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed,
+        network_io_attempted,
+        transport_io_opened,
+        runtime_messaging_enabled,
+    })
+}
+
+fn count_transcript_direction(
+    transcript: &ProductionMessageTranscriptExportResult,
+    direction: &str,
+) -> usize {
+    transcript
+        .entries
+        .iter()
+        .filter(|entry| entry.direction == direction)
+        .count()
+}
+
+fn retryable_transcript_entries(
+    transcript: &ProductionMessageTranscriptExportResult,
+) -> Vec<&ProductionMessageTranscriptEntryResult> {
+    transcript
+        .entries
+        .iter()
+        .filter(|entry| {
+            entry.direction == "sent"
+                && entry.outbound_delivery_state.as_deref() == Some("failed")
+                && entry.outbound_retryable
+        })
+        .collect()
+}
+
+fn latest_retryable_transcript_entry<'a>(
+    profile: &str,
+    entries: &[&'a ProductionMessageTranscriptEntryResult],
+) -> Option<(String, &'a ProductionMessageTranscriptEntryResult)> {
+    entries
+        .iter()
+        .copied()
+        .max_by_key(|entry| (entry.created_at_ms, entry.message_number))
+        .map(|entry| (profile.to_string(), entry))
+}
+
 fn production_remote_endpoint_matches_redacted_value(
     app_data_root: impl AsRef<std::path::Path>,
     profile: String,
@@ -12524,6 +12698,7 @@ pub fn run() {
             production_full_local_data_wipe,
             production_invite_room_session_status,
             production_two_profile_session_status,
+            production_two_profile_runtime_resume_status,
             production_handshake_init_export,
             production_handshake_reply_export,
             production_handshake_finish_export,
@@ -12610,7 +12785,8 @@ mod tests {
         ProductionOnionInboundEnvelopeReceiveAttemptResult,
         run_production_two_profile_message_roundtrip, run_production_two_profile_real_onion_roundtrip,
         run_production_two_profile_room_setup, run_production_two_profile_roundtrip,
-        run_production_two_profile_session_status, sanitize_envelope_payload,
+        run_production_two_profile_runtime_resume_status, run_production_two_profile_session_status,
+        sanitize_envelope_payload,
         sanitize_handshake_payload, sanitize_loop_messages, sanitize_pairing_payload,
         sanitize_pairing_rendezvous_endpoint, sanitize_production_message_text,
         sanitize_production_profile, sanitize_production_roundtrip_message,
@@ -16709,6 +16885,31 @@ replay check: no replayed messages after message 2
             "correct-passphrase".to_string(),
         )
         .expect("receiver transcript after resume");
+        let resume = run_production_two_profile_runtime_resume_status(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("runtime resume status");
+        assert!(resume.runtime_resume_ready);
+        assert!(!resume.retry_review_required);
+        assert_eq!(resume.total_transcript_entries, 2);
+        assert_eq!(resume.sent_message_count, 1);
+        assert_eq!(resume.received_message_count, 1);
+        assert_eq!(resume.retryable_outbound_count, 0);
+        assert_eq!(resume.latest_retryable_profile, None);
+        assert_eq!(resume.latest_retryable_message_number, None);
+        assert_eq!(resume.expired_messages_purged, 0);
+        assert!(resume.session_status.both_ready_for_message_envelope);
+        assert_eq!(resume.profile_a_transcript.entries.len(), 1);
+        assert_eq!(resume.profile_b_transcript.entries.len(), 1);
+        assert!(!resume.store_path_returned);
+        assert!(!resume.passphrase_retained);
+        assert!(!resume.key_material_exposed);
+        assert!(!resume.network_io_attempted);
+        assert!(!resume.transport_io_opened);
+        assert!(!resume.runtime_messaging_enabled);
         assert_eq!(sender_transcript.entries.len(), 1);
         assert_eq!(receiver_transcript.entries.len(), 1);
         assert_eq!(sender_transcript.expired_messages_purged, 0);
@@ -16746,6 +16947,9 @@ replay check: no replayed messages after message 2
         assert!(!serialized_status.contains("correct-passphrase"));
         assert!(!serialized_status.contains("/tmp"));
         assert!(!serialized_status.contains("resume after restart"));
+        let serialized_resume = serde_json::to_string(&resume).expect("serialize resume");
+        assert!(!serialized_resume.contains("correct-passphrase"));
+        assert!(!serialized_resume.contains("/tmp"));
 
         let _ = std::fs::remove_dir_all(root);
     }
@@ -16847,6 +17051,29 @@ replay check: no replayed messages after message 2
         assert!(!resumed_status.network_io_attempted);
         assert!(!resumed_status.transport_io_opened);
         assert!(!resumed_status.runtime_messaging_enabled);
+        let resume = run_production_two_profile_runtime_resume_status(
+            &root,
+            "alice".to_string(),
+            "bob".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("retryable runtime resume");
+        assert!(resume.runtime_resume_ready);
+        assert!(resume.retry_review_required);
+        assert_eq!(resume.retryable_outbound_count, 1);
+        assert_eq!(
+            resume.latest_retryable_profile.as_deref(),
+            Some(setup.sender_profile.as_str())
+        );
+        assert_eq!(
+            resume.latest_retryable_message_number,
+            Some(outbound.selected_message_number)
+        );
+        assert!(!resume.passphrase_retained);
+        assert!(!resume.key_material_exposed);
+        assert!(!resume.network_io_attempted);
+        assert!(!resume.transport_io_opened);
+        assert!(!resume.runtime_messaging_enabled);
 
         let resumed_sender_transcript = run_production_message_transcript_export(
             &root,
