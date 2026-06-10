@@ -55,6 +55,7 @@ Expected public GitHub Release files:
 - `DEPENDENCY_INVENTORY.md`
 - `PUBLIC_THREAT_MODEL.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
+- `PUBLIC_INTAKE_POLICY.md`
 - `DEPENDENCY_LOCKFILES.sha256`
 - `MANIFEST.md`
 
@@ -64,7 +65,7 @@ Prepare the ignored local upload folder from the frozen local DMG:
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, dependency lockfile hash evidence, public threat model, independent review packet, and explicit review-gap evidence are missing. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
+The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, dependency lockfile hash evidence, public threat model, independent review packet, public intake policy, and explicit review-gap evidence are missing. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
 What exists today:
 
@@ -96,6 +97,7 @@ What exists today:
   external two-machine onion delivery is still not claimed.
 - Manual update integrity evidence for the unsigned public beta release path: DMG `.sha256`, public provenance JSON, release manifest, update-integrity policy, supply-chain baseline note, and dependency lockfile SHA-256 list.
 - Public threat model and independent review packet that state allowed claims, non-claims, known gaps, public-safe review commands, and the current no-signoff/no-completed-review gap.
+- Public intake policy and GitHub issue templates that require redacted public diagnostics or minimal private-contact requests instead of raw logs, payloads, endpoints, paths, passphrases, private keys, key material, crash dumps, or private planning notes.
 - A local Tauri desktop beta shell for invite-code rooms, safety phrase confirmation, encrypted local profile/session/message records, saved-room resume, manual private-route exchange, explicit receive start/stop, retry/cancel recovery, and redacted field-test reports.
 - In-app unsigned public beta warnings and public diagnostics export limited to status, build, failure class, manual network permission, and app-launch network boundary; no crash upload, telemetry, raw log export, paths, endpoints, passphrases, or key material.
 - Explicit user-triggered onion/Tor attempt paths for beta field testing. The app must not bootstrap Tor, host onion services, publish descriptors, open streams, send envelopes, or receive envelopes on app launch.
@@ -270,7 +272,7 @@ For the current local field-test handoff, send only the per-peer delivery folder
 
 Each folder should contain the transfer zip, matching `.sha256`, `PEER_HANDOFF_MESSAGE.md`, and `MANIFEST.md`. The peer-side preflight verifier must be run from the extracted `another-dimension-beta-handoff` folder. It checks bundle contents without launching the app or starting network/onion work.
 
-Do not publish `docs/`, app data, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, key material, raw logs, crash dumps, `target/`, `dist/`, `node_modules/`, or `beta-artifacts/`.
+Do not publish `docs/`, app data, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, key material, raw logs, crash dumps, screenshots of private room data, `target/`, `dist/`, `node_modules/`, or `beta-artifacts/`. Use the public issue templates for redacted support reports and use private vulnerability reporting for sensitive security details when available.
 
 For desktop-specific commands and beta notes, see [apps/desktop-tauri/README.md](apps/desktop-tauri/README.md).
 For the public-safe beta handoff checklist, see [reference/BETA_RELEASE_CHECKLIST.md](reference/BETA_RELEASE_CHECKLIST.md).

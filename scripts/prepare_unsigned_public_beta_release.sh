@@ -28,6 +28,7 @@ REQUIRED_RELEASE_FILES=(
   "DEPENDENCY_INVENTORY.md"
   "PUBLIC_THREAT_MODEL.md"
   "INDEPENDENT_REVIEW_PACKET.md"
+  "PUBLIC_INTAKE_POLICY.md"
   "DEPENDENCY_LOCKFILES.sha256"
   "MANIFEST.md"
 )
@@ -65,6 +66,7 @@ require_file "$ROOT_DIR/reference/SUPPLY_CHAIN_BASELINE.md"
 require_file "$ROOT_DIR/reference/DEPENDENCY_INVENTORY.md"
 require_file "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md"
 require_file "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md"
+require_file "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md"
 require_file "$ROOT_DIR/Cargo.lock"
 require_file "$ROOT_DIR/apps/desktop-tauri/src-tauri/Cargo.lock"
 require_file "$ROOT_DIR/apps/desktop-tauri/package-lock.json"
@@ -99,6 +101,7 @@ cp "$ROOT_DIR/reference/SUPPLY_CHAIN_BASELINE.md" "$RELEASE_DIR/SUPPLY_CHAIN_BAS
 cp "$ROOT_DIR/reference/DEPENDENCY_INVENTORY.md" "$RELEASE_DIR/DEPENDENCY_INVENTORY.md"
 cp "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md"
 cp "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md"
+cp "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md"
 
 (
   cd "$RELEASE_DIR"
@@ -132,10 +135,12 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "dependency_inventory_file": "DEPENDENCY_INVENTORY.md",
   "public_threat_model_file": "PUBLIC_THREAT_MODEL.md",
   "independent_review_packet_file": "INDEPENDENT_REVIEW_PACKET.md",
+  "public_intake_policy_file": "PUBLIC_INTAKE_POLICY.md",
   "independent_review_complete": false,
   "public_review_gap_published": true,
   "reviewer_signoff_claimed": false,
   "public_diagnostics_boundary": "status-build-failure-class-only",
+  "public_intake_boundary": "redacted-public-diagnostics-or-minimal-contact-request-only",
   "crash_upload": false,
   "telemetry": false,
   "raw_log_export": false,
@@ -190,6 +195,7 @@ This folder is for a GitHub Release upload.
 - \`DEPENDENCY_INVENTORY.md\`
 - \`PUBLIC_THREAT_MODEL.md\`
 - \`INDEPENDENT_REVIEW_PACKET.md\`
+- \`PUBLIC_INTAKE_POLICY.md\`
 - \`DEPENDENCY_LOCKFILES.sha256\`
 
 ## Build
@@ -205,10 +211,12 @@ This folder is for a GitHub Release upload.
 - Dependency lockfile hashes: \`DEPENDENCY_LOCKFILES.sha256\`
 - Public threat model: \`PUBLIC_THREAT_MODEL.md\`
 - Independent review packet: \`INDEPENDENT_REVIEW_PACKET.md\`
+- Public intake policy: \`PUBLIC_INTAKE_POLICY.md\`
 - Independent review complete: false
 - Public review gap published: true
 - Reviewer signoff claimed: false
 - Public diagnostics boundary: status-build-failure-class-only
+- Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only
 - Crash upload: disabled
 - Telemetry: disabled
 - Raw log export: disabled
@@ -238,6 +246,11 @@ upload, telemetry, raw log export, bridge line, onion endpoint, invite code,
 pairing payload, envelope payload, safety phrase, profile name, message text,
 local path, passphrase, private key, key material, or private planning note is
 permitted in public diagnostics or release artifacts.
+
+Public GitHub issues and release comments must use the same redaction boundary.
+Security reports with exploit details or sensitive material must use private
+vulnerability reporting when available, or a minimal public contact request when
+private reporting is unavailable.
 EOF
 
 for release_file in "${REQUIRED_RELEASE_FILES[@]}"; do
@@ -250,10 +263,12 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"source_provenance_sha256\": \
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"dependency_inventory_file\": \"DEPENDENCY_INVENTORY.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_threat_model_file\": \"PUBLIC_THREAT_MODEL.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"independent_review_packet_file\": \"INDEPENDENT_REVIEW_PACKET.md\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_intake_policy_file\": \"PUBLIC_INTAKE_POLICY.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"independent_review_complete\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_review_gap_published\": true"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"reviewer_signoff_claimed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_diagnostics_boundary\": \"status-build-failure-class-only\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_intake_boundary\": \"redacted-public-diagnostics-or-minimal-contact-request-only\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"crash_upload\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"telemetry\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"raw_log_export\": false"
@@ -266,6 +281,7 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Independent review complete: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public review gap published: true"
 require_text "$RELEASE_DIR/MANIFEST.md" "Reviewer signoff claimed: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public diagnostics boundary: status-build-failure-class-only"
+require_text "$RELEASE_DIR/MANIFEST.md" "Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only"
 require_text "$RELEASE_DIR/MANIFEST.md" "Crash upload: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Telemetry: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Raw log export: disabled"
@@ -276,6 +292,7 @@ require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "sensitive communication proh
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GITHUB_RELEASE_BODY.md"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "completed independent review"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "crash upload, telemetry, raw log export"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "private vulnerability reporting"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "External two-machine onion delivery has not yet been independently verified"
 require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "does not provide auto-update"
 require_text "$RELEASE_DIR/SUPPLY_CHAIN_BASELINE.md" "not a supply-chain audit"
@@ -285,6 +302,8 @@ require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "public diagnostics"
 require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "raw logs"
 require_text "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md" "not an external review result"
 require_text "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md" "Known Review Gaps"
+require_text "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md" "Forbidden Public Intake"
+require_text "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md" "private vulnerability reporting"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "Cargo.lock"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/src-tauri/Cargo.lock"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/package-lock.json"

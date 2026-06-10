@@ -1,0 +1,30 @@
+name: Security contact request
+description: Request a private security contact path without posting sensitive details.
+title: "[security contact] "
+labels:
+  - security-contact
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this only when private vulnerability reporting is unavailable or inaccessible.
+
+        Do not post exploit details, bridge lines, onion endpoints, invite codes, payloads, safety phrases, profile names, message text, local paths, raw logs, crash dumps, passphrases, private keys, key material, private planning notes, files from docs/, or local app data.
+  - type: checkboxes
+    id: redaction
+    attributes:
+      label: Redaction checklist
+      options:
+        - label: I am not including exploit details or sensitive material in this public issue.
+          required: true
+        - label: I am asking only for a private contact path.
+          required: true
+  - type: textarea
+    id: minimal_summary
+    attributes:
+      label: Minimal public summary
+      description: State the broad category only, such as redaction concern, install integrity concern, or local data handling concern.
+      placeholder: "I need a private contact path for a redaction concern."
+    validations:
+      required: true
