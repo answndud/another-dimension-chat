@@ -30,7 +30,7 @@ Download these files from the GitHub Release:
 Use the files attached to that GitHub Release as the release authority. The
 `main` branch may contain later documentation or source updates, so do not
 verify the downloaded DMG against branch files copied from GitHub's source
-browser.
+browser, GitHub source archives, or files from a different release.
 
 ## Verify The Download
 
@@ -63,6 +63,8 @@ Use only the normal macOS manual allow path:
 3. If macOS blocks it, open System Settings.
 4. Go to Privacy & Security.
 5. Allow the blocked app only if the checksum matched the expected SHA-256.
+
+Do not use terminal quarantine-removal commands as an install step.
 
 Do not use this app for sensitive communication.
 

@@ -346,7 +346,16 @@ test("public beta diagnostics keeps only status, build, and failure class", () =
   assert.match(diagnostics, /security_claim=not-production-ready/);
   assert.match(diagnostics, /sensitive_communication=sensitive-communication-prohibited/);
   assert.match(diagnostics, /update_channel=manual-github-release-download/);
+  assert.match(diagnostics, /release_authority=same-github-release-assets/);
+  assert.match(diagnostics, /release_tag=v0\.1\.0-beta-onion-unsigned/);
   assert.match(diagnostics, /checksum_scope=same-release-sha256-required/);
+  assert.match(diagnostics, /same_release_checksum_required=true/);
+  assert.match(diagnostics, /source_branch_release_authority=false/);
+  assert.match(
+    diagnostics,
+    /install_allow_path=macos-privacy-security-manual-allow-after-checksum/,
+  );
+  assert.match(diagnostics, /terminal_quarantine_removal_install_step=false/);
   assert.match(diagnostics, /branch_file_release_proof=false/);
   assert.match(diagnostics, /auto_update=false/);
   assert.match(diagnostics, /signed=false/);

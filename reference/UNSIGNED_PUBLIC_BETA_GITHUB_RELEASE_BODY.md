@@ -28,7 +28,7 @@ Download all files from this same GitHub Release:
 Use the files attached to this GitHub Release as the release authority. The
 `main` branch may contain later documentation or source updates, so do not
 verify the downloaded DMG against branch files copied from GitHub's source
-browser.
+browser, GitHub source archives, or files from a different release.
 
 ## Verify Before Opening
 
