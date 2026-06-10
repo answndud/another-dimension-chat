@@ -49,7 +49,7 @@ another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg: OK
 Expected DMG SHA-256:
 
 ```text
-625ee389d930330b0f2e369a53c4f582df076dd612920f6cf0366aab4a3edb95
+7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a
 ```
 
 ## Open On macOS
