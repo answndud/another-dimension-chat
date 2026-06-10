@@ -7160,6 +7160,10 @@ async function invokeInviteRoomSessionStatus(input = productionTwoProfileInput()
   return invoke("production_invite_room_session_status", inviteRoomCommandInput(input));
 }
 
+async function invokeTwoProfileRuntimeResumeStatus(input = productionTwoProfileInput()) {
+  return invoke("production_two_profile_runtime_resume_status", inviteRoomCommandInput(input));
+}
+
 async function invokeInviteRoomSetup(input = productionTwoProfileInput()) {
   return invoke("production_invite_room_setup", inviteRoomCommandInput(input));
 }
@@ -16825,18 +16829,21 @@ async function refreshTwoProfileSessionAfterProfileUnlock(
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return false;
     }
-    const result = await invokeInviteRoomSessionStatus(input);
+    const resume = await invokeTwoProfileRuntimeResumeStatus(input);
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return false;
     }
+    const result = resume.session_status;
     rememberTwoProfileSessionStatus(input, result);
     renderProductionTwoProfileSessionStatusResult(result);
-    if (result.both_ready_for_message_envelope) {
+    if (resume.runtime_resume_ready) {
       await loadProductionTwoProfileTranscript({
         quiet: true,
         refreshSessionStatus: false,
         autoResume: true,
         input,
+        runtimeResumeResult: resume,
+        sessionStatus: result,
       });
       if (!twoProfileTranscriptInputStillCurrent(input)) {
         return false;
@@ -17380,10 +17387,17 @@ async function loadProductionTwoProfileTranscript(options = {}) {
   }
 
   try {
-    const [profileAResult, profileBResult] = await Promise.all([
-      invoke("production_message_transcript_export", { profile: profileA, passphrase }),
-      invoke("production_message_transcript_export", { profile: profileB, passphrase }),
-    ]);
+    const runtimeResumeResult = options.runtimeResumeResult ?? (
+      refreshSessionStatus
+        ? await invokeTwoProfileRuntimeResumeStatus({ profileA, profileB, passphrase })
+        : null
+    );
+    const [profileAResult, profileBResult] = runtimeResumeResult
+      ? [runtimeResumeResult.profile_a_transcript, runtimeResumeResult.profile_b_transcript]
+      : await Promise.all([
+          invoke("production_message_transcript_export", { profile: profileA, passphrase }),
+          invoke("production_message_transcript_export", { profile: profileB, passphrase }),
+        ]);
     const entries = [
       ...twoProfileTranscriptEntriesFromProfile(profileA, profileB, profileAResult.entries),
       ...twoProfileTranscriptEntriesFromProfile(profileB, profileA, profileBResult.entries),
@@ -17394,8 +17408,16 @@ async function loadProductionTwoProfileTranscript(options = {}) {
     const expiredMessagesPurged =
       Number.parseInt(profileAResult.expired_messages_purged ?? 0, 10) +
       Number.parseInt(profileBResult.expired_messages_purged ?? 0, 10);
-    let sessionStatus = options.sessionStatus ?? latestTwoProfileSessionStatusForCurrentInput(transcriptInput);
-    if (refreshSessionStatus) {
+    let sessionStatus =
+      options.sessionStatus ??
+      runtimeResumeResult?.session_status ??
+      latestTwoProfileSessionStatusForCurrentInput(transcriptInput);
+    if (runtimeResumeResult?.session_status) {
+      sessionStatus = runtimeResumeResult.session_status;
+      rememberTwoProfileSessionStatus(transcriptInput, sessionStatus);
+      renderProductionTwoProfileSessionStatusResult(sessionStatus);
+      setText(fields.productionPairingWarning, sessionStatus.warning);
+    } else if (refreshSessionStatus) {
       sessionStatus = await invokeInviteRoomSessionStatus({
         profileA,
         profileB,

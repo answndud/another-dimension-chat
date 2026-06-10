@@ -887,6 +887,66 @@ if (previewHost && (forcedBrowserPreviewPeer || !hasUsableTauriInvoke)) {
         case "production_invite_room_session_status":
         case "production_two_profile_session_status":
           return twoProfileStatus(args);
+        case "production_two_profile_runtime_resume_status": {
+          const localProfile = args.localProfile ?? args.profileA;
+          const peerProfile = args.peerProfile ?? args.profileB;
+          const sessionStatus = twoProfileStatus(args);
+          const localTranscript = await exportedTranscriptEntries(localProfile);
+          const peerTranscript = await exportedTranscriptEntries(peerProfile);
+          const allEntries = [...localTranscript.entries, ...peerTranscript.entries];
+          const retryableEntries = [
+            ...localTranscript.entries.map((entry) => ({ entry, profile: localProfile })),
+            ...peerTranscript.entries.map((entry) => ({ entry, profile: peerProfile })),
+          ].filter(
+            ({ entry }) =>
+              entry.direction === "sent" &&
+              entry.outbound_delivery_state === "failed" &&
+              entry.outbound_retryable === true,
+          );
+          const latestRetryable = retryableEntries
+            .slice()
+            .sort(
+              (left, right) =>
+                Number(right.entry.created_at_ms ?? 0) - Number(left.entry.created_at_ms ?? 0) ||
+                Number(right.entry.message_number ?? 0) - Number(left.entry.message_number ?? 0),
+            )[0];
+          const transcriptResult = (transcript) => ({
+            entries: transcript.entries,
+            transcript_tsv: "",
+            expired_messages_purged: transcript.expiredMessagesPurged,
+            storage_opened: true,
+            runtime_material_reconstructable: true,
+            plaintext_returned_after_unlock: true,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+          });
+          return {
+            warning: "browser preview runtime resume status only; no production security claim",
+            session_status: sessionStatus,
+            profile_a_transcript: transcriptResult(localTranscript),
+            profile_b_transcript: transcriptResult(peerTranscript),
+            profile_a_transcript_entries: localTranscript.entries.length,
+            profile_b_transcript_entries: peerTranscript.entries.length,
+            total_transcript_entries: allEntries.length,
+            sent_message_count: allEntries.filter((entry) => entry.direction === "sent").length,
+            received_message_count: allEntries.filter((entry) => entry.direction === "received").length,
+            retryable_outbound_count: retryableEntries.length,
+            latest_retryable_profile: latestRetryable?.profile ?? null,
+            latest_retryable_message_number: latestRetryable?.entry?.message_number ?? null,
+            expired_messages_purged:
+              localTranscript.expiredMessagesPurged + peerTranscript.expiredMessagesPurged,
+            runtime_resume_ready: sessionStatus.both_ready_for_message_envelope === true,
+            retry_review_required: retryableEntries.length > 0,
+            store_path_returned: false,
+            passphrase_retained: false,
+            key_material_exposed: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+          };
+        }
         case "production_message_transcript_export": {
           const transcript = await exportedTranscriptEntries(args.profile);
           return {
