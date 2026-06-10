@@ -26,6 +26,7 @@ Review the unsigned experimental public beta boundary:
 - public diagnostics redaction boundary
 - crash/log redaction and no-upload/no-telemetry boundary
 - public issue and security intake redaction boundary
+- repository governance and release guardrail boundary
 - passphrase-first local unlock/lock boundary
 - durable local session lifecycle boundary
 - local data lifecycle and migration boundary
@@ -43,6 +44,9 @@ Review the unsigned experimental public beta boundary:
   telemetry, or raw log export
 - public support intake uses redacted diagnostics or minimal contact requests
   instead of raw logs, payloads, endpoints, paths, keys, or private data
+- repository governance keeps main-branch changes aligned with unsigned beta
+  non-claims, no-central-trusted-server scope, redaction, and no fabricated
+  external evidence
 - no automatic network/onion work on app launch
 - passphrase-first local unlock path exists
 - local data lifecycle controls exist
@@ -80,6 +84,8 @@ Review the unsigned experimental public beta boundary:
 - `reference/PUBLIC_THREAT_MODEL.md`: public threat model and non-goals.
 - `reference/PUBLIC_INTAKE_POLICY.md`: public issue, release comment, and
   security contact redaction rules.
+- `reference/REPOSITORY_GOVERNANCE.md`: maintainer-driven main workflow,
+  release guardrails, redaction guardrails, and explicit governance non-goals.
 - `reference/COMPONENT_BOUNDARIES.md`: component replacement and readiness map.
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and

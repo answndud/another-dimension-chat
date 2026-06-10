@@ -36,6 +36,8 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
   signoff claim.
 - Public intake policy and GitHub issue templates for redacted support reports
   and minimal security contact requests.
+- Repository governance guardrails for maintainer-driven main work, unsigned
+  beta non-claims, release discipline, and no fabricated external evidence.
 
 ## What This Beta Does Not Claim
 
