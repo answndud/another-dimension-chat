@@ -1004,6 +1004,36 @@ pub mod production {
         "security_ready_toggle",
     ];
 
+    const PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FIELDS: &[&str] = &[
+        "schema_version",
+        "platform",
+        "profile_lock_state",
+        "runtime_command_surface",
+        "mobile_command_surface",
+        "local_data_lifecycle_state",
+        "backup_exclusion_state",
+        "install_update_integrity_state",
+        "diagnostics_redaction_state",
+        "public_non_claims",
+    ];
+
+    const PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FORBIDDEN_FIELDS: &[&str] = &[
+        "profile_path",
+        "database_path",
+        "store_path",
+        "passphrase",
+        "private_key",
+        "key_material",
+        "plaintext_message",
+        "onion_address",
+        "network_endpoint",
+        "delivery_runtime_handle",
+        "push_token",
+        "cloud_backup_identifier",
+        "central_account_identifier",
+        "security_ready_toggle",
+    ];
+
     const PRODUCTION_MANUAL_RUNTIME_MESSAGING_OPERATIONS: &[&str] = &[
         "passphrase_unlock",
         "load_session_runtime_material",
@@ -1441,6 +1471,28 @@ pub mod production {
         delivery_runtime_opened: bool,
         runtime_messaging_enabled: bool,
         security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileWrapperStatusCommandDtoBoundarySummary {
+        dto_fields: &'static [&'static str],
+        forbidden_fields: &'static [&'static str],
+        inherits_mobile_runtime_status_boundary: bool,
+        inherits_mobile_ffi_signature_placeholder_boundary: bool,
+        redacted_status_dto_only: bool,
+        side_effect_free_serialization: bool,
+        stable_schema_version_required: bool,
+        public_non_claims_included: bool,
+        platform_specific_command_allowed: bool,
+        storage_path_returned: bool,
+        secret_material_returned: bool,
+        plaintext_returned: bool,
+        network_endpoint_returned: bool,
+        delivery_runtime_handle_returned: bool,
+        push_or_cloud_identifier_returned: bool,
+        central_account_identifier_returned: bool,
+        security_ready_toggle_returned: bool,
         boundary_closed: bool,
     }
 
@@ -1948,6 +2000,80 @@ pub mod production {
 
         pub fn security_ready_claimed(self) -> bool {
             self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileWrapperStatusCommandDtoBoundarySummary {
+        pub fn dto_fields(self) -> &'static [&'static str] {
+            self.dto_fields
+        }
+
+        pub fn forbidden_fields(self) -> &'static [&'static str] {
+            self.forbidden_fields
+        }
+
+        pub fn inherits_mobile_runtime_status_boundary(self) -> bool {
+            self.inherits_mobile_runtime_status_boundary
+        }
+
+        pub fn inherits_mobile_ffi_signature_placeholder_boundary(self) -> bool {
+            self.inherits_mobile_ffi_signature_placeholder_boundary
+        }
+
+        pub fn redacted_status_dto_only(self) -> bool {
+            self.redacted_status_dto_only
+        }
+
+        pub fn side_effect_free_serialization(self) -> bool {
+            self.side_effect_free_serialization
+        }
+
+        pub fn stable_schema_version_required(self) -> bool {
+            self.stable_schema_version_required
+        }
+
+        pub fn public_non_claims_included(self) -> bool {
+            self.public_non_claims_included
+        }
+
+        pub fn platform_specific_command_allowed(self) -> bool {
+            self.platform_specific_command_allowed
+        }
+
+        pub fn storage_path_returned(self) -> bool {
+            self.storage_path_returned
+        }
+
+        pub fn secret_material_returned(self) -> bool {
+            self.secret_material_returned
+        }
+
+        pub fn plaintext_returned(self) -> bool {
+            self.plaintext_returned
+        }
+
+        pub fn network_endpoint_returned(self) -> bool {
+            self.network_endpoint_returned
+        }
+
+        pub fn delivery_runtime_handle_returned(self) -> bool {
+            self.delivery_runtime_handle_returned
+        }
+
+        pub fn push_or_cloud_identifier_returned(self) -> bool {
+            self.push_or_cloud_identifier_returned
+        }
+
+        pub fn central_account_identifier_returned(self) -> bool {
+            self.central_account_identifier_returned
+        }
+
+        pub fn security_ready_toggle_returned(self) -> bool {
+            self.security_ready_toggle_returned
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -10880,6 +11006,108 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_wrapper_status_command_dto_boundary_summary(
+    ) -> ProductionMobileWrapperStatusCommandDtoBoundarySummary {
+        let status = production_mobile_runtime_command_surface_status_summary();
+        let ffi = production_mobile_ffi_signature_placeholder_boundary_summary();
+        let inherits_mobile_runtime_status_boundary = status.boundary_closed()
+            && status.redacted_status_only()
+            && status.source_surface() == "shared_core_runtime_command_surface"
+            && status
+                .status_surfaces()
+                .contains(&"shared_core_status_surface")
+            && status
+                .status_surfaces()
+                .contains(&"production_runtime_command_surface_status");
+        let inherits_mobile_ffi_signature_placeholder_boundary = ffi.boundary_closed()
+            && ffi.signature_placeholder_only()
+            && ffi
+                .signature_shapes()
+                .contains(&"redacted_structured_results")
+            && !ffi.callable_abi_claimed()
+            && !ffi.binding_generation_claimed();
+        let redacted_status_dto_only = true;
+        let side_effect_free_serialization = true;
+        let stable_schema_version_required = true;
+        let public_non_claims_included = true;
+        let platform_specific_command_allowed = false;
+        let storage_path_returned = false;
+        let secret_material_returned = false;
+        let plaintext_returned = false;
+        let network_endpoint_returned = false;
+        let delivery_runtime_handle_returned = false;
+        let push_or_cloud_identifier_returned = false;
+        let central_account_identifier_returned = false;
+        let security_ready_toggle_returned = false;
+        let boundary_closed = inherits_mobile_runtime_status_boundary
+            && inherits_mobile_ffi_signature_placeholder_boundary
+            && redacted_status_dto_only
+            && side_effect_free_serialization
+            && stable_schema_version_required
+            && public_non_claims_included
+            && !platform_specific_command_allowed
+            && !storage_path_returned
+            && !secret_material_returned
+            && !plaintext_returned
+            && !network_endpoint_returned
+            && !delivery_runtime_handle_returned
+            && !push_or_cloud_identifier_returned
+            && !central_account_identifier_returned
+            && !security_ready_toggle_returned
+            && !status.store_path_returned()
+            && !status.passphrase_retained()
+            && !status.key_material_exposed()
+            && !status.network_io_attempted()
+            && !status.transport_io_opened()
+            && !status.delivery_runtime_opened()
+            && !status.runtime_messaging_enabled()
+            && !status.security_ready_claimed()
+            && PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FIELDS.contains(&"schema_version")
+            && PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FIELDS.contains(&"platform")
+            && PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FIELDS
+                .contains(&"runtime_command_surface")
+            && PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FIELDS
+                .contains(&"diagnostics_redaction_state")
+            && PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FIELDS.contains(&"public_non_claims")
+            && PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FORBIDDEN_FIELDS
+                .contains(&"profile_path")
+            && PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FORBIDDEN_FIELDS
+                .contains(&"passphrase")
+            && PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FORBIDDEN_FIELDS
+                .contains(&"key_material")
+            && PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FORBIDDEN_FIELDS
+                .contains(&"network_endpoint")
+            && PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FORBIDDEN_FIELDS
+                .contains(&"delivery_runtime_handle")
+            && PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FORBIDDEN_FIELDS
+                .contains(&"push_token")
+            && PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FORBIDDEN_FIELDS
+                .contains(&"central_account_identifier")
+            && PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FORBIDDEN_FIELDS
+                .contains(&"security_ready_toggle");
+
+        ProductionMobileWrapperStatusCommandDtoBoundarySummary {
+            dto_fields: PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FIELDS,
+            forbidden_fields: PRODUCTION_MOBILE_WRAPPER_STATUS_COMMAND_DTO_FORBIDDEN_FIELDS,
+            inherits_mobile_runtime_status_boundary,
+            inherits_mobile_ffi_signature_placeholder_boundary,
+            redacted_status_dto_only,
+            side_effect_free_serialization,
+            stable_schema_version_required,
+            public_non_claims_included,
+            platform_specific_command_allowed,
+            storage_path_returned,
+            secret_material_returned,
+            plaintext_returned,
+            network_endpoint_returned,
+            delivery_runtime_handle_returned,
+            push_or_cloud_identifier_returned,
+            central_account_identifier_returned,
+            security_ready_toggle_returned,
+            boundary_closed,
+        }
+    }
+
     pub fn production_manual_runtime_messaging_gate_summary(
     ) -> ProductionManualRuntimeMessagingGateSummary {
         let async_delivery = production_async_delivery_semantics_summary();
@@ -14279,6 +14507,54 @@ pub mod production {
             assert!(status
                 .rejected_mobile_surfaces()
                 .contains(&"security_ready_toggle"));
+        }
+
+        #[test]
+        fn production_mobile_wrapper_status_command_dto_boundary_is_redacted_and_non_callable() {
+            let dto = production_mobile_wrapper_status_command_dto_boundary_summary();
+
+            assert!(dto.boundary_closed());
+            assert!(dto.inherits_mobile_runtime_status_boundary());
+            assert!(dto.inherits_mobile_ffi_signature_placeholder_boundary());
+            assert!(dto.redacted_status_dto_only());
+            assert!(dto.side_effect_free_serialization());
+            assert!(dto.stable_schema_version_required());
+            assert!(dto.public_non_claims_included());
+            assert!(!dto.platform_specific_command_allowed());
+            assert!(!dto.storage_path_returned());
+            assert!(!dto.secret_material_returned());
+            assert!(!dto.plaintext_returned());
+            assert!(!dto.network_endpoint_returned());
+            assert!(!dto.delivery_runtime_handle_returned());
+            assert!(!dto.push_or_cloud_identifier_returned());
+            assert!(!dto.central_account_identifier_returned());
+            assert!(!dto.security_ready_toggle_returned());
+            assert!(dto.dto_fields().contains(&"schema_version"));
+            assert!(dto.dto_fields().contains(&"platform"));
+            assert!(dto.dto_fields().contains(&"profile_lock_state"));
+            assert!(dto.dto_fields().contains(&"runtime_command_surface"));
+            assert!(dto.dto_fields().contains(&"mobile_command_surface"));
+            assert!(dto.dto_fields().contains(&"local_data_lifecycle_state"));
+            assert!(dto.dto_fields().contains(&"backup_exclusion_state"));
+            assert!(dto.dto_fields().contains(&"install_update_integrity_state"));
+            assert!(dto.dto_fields().contains(&"diagnostics_redaction_state"));
+            assert!(dto.dto_fields().contains(&"public_non_claims"));
+            assert!(dto.forbidden_fields().contains(&"profile_path"));
+            assert!(dto.forbidden_fields().contains(&"database_path"));
+            assert!(dto.forbidden_fields().contains(&"store_path"));
+            assert!(dto.forbidden_fields().contains(&"passphrase"));
+            assert!(dto.forbidden_fields().contains(&"private_key"));
+            assert!(dto.forbidden_fields().contains(&"key_material"));
+            assert!(dto.forbidden_fields().contains(&"plaintext_message"));
+            assert!(dto.forbidden_fields().contains(&"onion_address"));
+            assert!(dto.forbidden_fields().contains(&"network_endpoint"));
+            assert!(dto.forbidden_fields().contains(&"delivery_runtime_handle"));
+            assert!(dto.forbidden_fields().contains(&"push_token"));
+            assert!(dto.forbidden_fields().contains(&"cloud_backup_identifier"));
+            assert!(dto
+                .forbidden_fields()
+                .contains(&"central_account_identifier"));
+            assert!(dto.forbidden_fields().contains(&"security_ready_toggle"));
         }
 
         #[test]
