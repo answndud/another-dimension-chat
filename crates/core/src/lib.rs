@@ -1926,6 +1926,46 @@ pub mod production {
         "safe for sensitive communication",
     ];
 
+    const PRODUCTION_MOBILE_BLOCKER_IMPLEMENTATION_ROADMAP_REQUIRED_ITEMS: &[&str] = &[
+        "mobile blocker-to-implementation roadmap status only",
+        "implementation phase mapping only",
+        "documentation-only wrapper phase recorded",
+        "buildable mobile app implementation phase recorded",
+        "store distribution decision phase recorded",
+        "runtime messaging implementation phase recorded",
+        "external onion delivery evidence phase recorded",
+        "push notification exclusion phase recorded",
+        "cloud backup exclusion phase recorded",
+        "central account and contact discovery exclusion phase recorded",
+        "independent audit evidence phase recorded",
+        "release approval evidence phase recorded",
+        "roadmap does not clear blockers",
+        "roadmap does not implement mobile app",
+        "roadmap does not claim release readiness",
+        "roadmap does not claim security readiness",
+    ];
+
+    const PRODUCTION_MOBILE_BLOCKER_IMPLEMENTATION_ROADMAP_FORBIDDEN_CLAIMS: &[&str] = &[
+        "roadmap blockers resolved",
+        "implementation complete",
+        "mobile implementation complete",
+        "mobile app implemented",
+        "store distribution decided",
+        "runtime messaging implemented",
+        "external onion delivery evidence recorded",
+        "push notification implemented",
+        "cloud backup implemented",
+        "central account implemented",
+        "contact discovery implemented",
+        "independent audit evidence recorded",
+        "release approval recorded",
+        "all roadmap items complete",
+        "release ready",
+        "security-ready",
+        "production-ready",
+        "safe for sensitive communication",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -2812,6 +2852,38 @@ pub mod production {
         cloud_backup_ready_claimed: bool,
         central_account_or_contact_discovery_ready_claimed: bool,
         independent_audit_complete_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileBlockerImplementationRoadmapBoundarySummary {
+        required_roadmap_items: &'static [&'static str],
+        forbidden_roadmap_claims: &'static [&'static str],
+        inherits_mobile_release_blocker_inventory_boundary: bool,
+        roadmap_status_only_label_required: bool,
+        implementation_phase_mapping_only_label_required: bool,
+        documentation_only_wrapper_phase_recorded: bool,
+        buildable_mobile_app_phase_recorded: bool,
+        store_distribution_decision_phase_recorded: bool,
+        runtime_messaging_implementation_phase_recorded: bool,
+        external_delivery_evidence_phase_recorded: bool,
+        push_notification_exclusion_phase_recorded: bool,
+        cloud_backup_exclusion_phase_recorded: bool,
+        central_account_or_contact_discovery_exclusion_phase_recorded: bool,
+        independent_audit_evidence_phase_recorded: bool,
+        release_approval_evidence_phase_recorded: bool,
+        blockers_cleared_by_roadmap: bool,
+        mobile_app_implemented_by_roadmap: bool,
+        release_readiness_claimed: bool,
+        security_readiness_claimed: bool,
+        runtime_messaging_implemented: bool,
+        external_delivery_evidence_recorded: bool,
+        store_distribution_decided: bool,
+        push_notification_implemented: bool,
+        cloud_backup_implemented: bool,
+        central_account_or_contact_discovery_implemented: bool,
+        independent_audit_evidence_recorded: bool,
+        release_approval_recorded: bool,
         boundary_closed: bool,
     }
 
@@ -5475,6 +5547,120 @@ pub mod production {
 
         pub fn independent_audit_complete_claimed(self) -> bool {
             self.independent_audit_complete_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileBlockerImplementationRoadmapBoundarySummary {
+        pub fn required_roadmap_items(self) -> &'static [&'static str] {
+            self.required_roadmap_items
+        }
+
+        pub fn forbidden_roadmap_claims(self) -> &'static [&'static str] {
+            self.forbidden_roadmap_claims
+        }
+
+        pub fn inherits_mobile_release_blocker_inventory_boundary(self) -> bool {
+            self.inherits_mobile_release_blocker_inventory_boundary
+        }
+
+        pub fn roadmap_status_only_label_required(self) -> bool {
+            self.roadmap_status_only_label_required
+        }
+
+        pub fn implementation_phase_mapping_only_label_required(self) -> bool {
+            self.implementation_phase_mapping_only_label_required
+        }
+
+        pub fn documentation_only_wrapper_phase_recorded(self) -> bool {
+            self.documentation_only_wrapper_phase_recorded
+        }
+
+        pub fn buildable_mobile_app_phase_recorded(self) -> bool {
+            self.buildable_mobile_app_phase_recorded
+        }
+
+        pub fn store_distribution_decision_phase_recorded(self) -> bool {
+            self.store_distribution_decision_phase_recorded
+        }
+
+        pub fn runtime_messaging_implementation_phase_recorded(self) -> bool {
+            self.runtime_messaging_implementation_phase_recorded
+        }
+
+        pub fn external_delivery_evidence_phase_recorded(self) -> bool {
+            self.external_delivery_evidence_phase_recorded
+        }
+
+        pub fn push_notification_exclusion_phase_recorded(self) -> bool {
+            self.push_notification_exclusion_phase_recorded
+        }
+
+        pub fn cloud_backup_exclusion_phase_recorded(self) -> bool {
+            self.cloud_backup_exclusion_phase_recorded
+        }
+
+        pub fn central_account_or_contact_discovery_exclusion_phase_recorded(self) -> bool {
+            self.central_account_or_contact_discovery_exclusion_phase_recorded
+        }
+
+        pub fn independent_audit_evidence_phase_recorded(self) -> bool {
+            self.independent_audit_evidence_phase_recorded
+        }
+
+        pub fn release_approval_evidence_phase_recorded(self) -> bool {
+            self.release_approval_evidence_phase_recorded
+        }
+
+        pub fn blockers_cleared_by_roadmap(self) -> bool {
+            self.blockers_cleared_by_roadmap
+        }
+
+        pub fn mobile_app_implemented_by_roadmap(self) -> bool {
+            self.mobile_app_implemented_by_roadmap
+        }
+
+        pub fn release_readiness_claimed(self) -> bool {
+            self.release_readiness_claimed
+        }
+
+        pub fn security_readiness_claimed(self) -> bool {
+            self.security_readiness_claimed
+        }
+
+        pub fn runtime_messaging_implemented(self) -> bool {
+            self.runtime_messaging_implemented
+        }
+
+        pub fn external_delivery_evidence_recorded(self) -> bool {
+            self.external_delivery_evidence_recorded
+        }
+
+        pub fn store_distribution_decided(self) -> bool {
+            self.store_distribution_decided
+        }
+
+        pub fn push_notification_implemented(self) -> bool {
+            self.push_notification_implemented
+        }
+
+        pub fn cloud_backup_implemented(self) -> bool {
+            self.cloud_backup_implemented
+        }
+
+        pub fn central_account_or_contact_discovery_implemented(self) -> bool {
+            self.central_account_or_contact_discovery_implemented
+        }
+
+        pub fn independent_audit_evidence_recorded(self) -> bool {
+            self.independent_audit_evidence_recorded
+        }
+
+        pub fn release_approval_recorded(self) -> bool {
+            self.release_approval_recorded
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -16522,6 +16708,126 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_blocker_implementation_roadmap_boundary_summary(
+    ) -> ProductionMobileBlockerImplementationRoadmapBoundarySummary {
+        let inventory = production_mobile_release_blocker_inventory_boundary_summary();
+        let inherits_mobile_release_blocker_inventory_boundary = inventory.boundary_closed()
+            && inventory.inventory_status_only_label_required()
+            && inventory.remaining_blocker_inventory_only_label_required()
+            && inventory.buildable_mobile_app_blocker_recorded()
+            && inventory.runtime_messaging_blocker_recorded()
+            && inventory.external_delivery_evidence_blocker_recorded()
+            && inventory.push_notification_blocker_recorded()
+            && inventory.cloud_backup_blocker_recorded()
+            && inventory.central_account_or_contact_discovery_blocker_recorded()
+            && inventory.independent_audit_blocker_recorded()
+            && inventory.release_approval_blocker_recorded()
+            && !inventory.blockers_cleared()
+            && !inventory.release_readiness_claimed()
+            && !inventory.security_readiness_claimed()
+            && !inventory.store_distribution_ready_claimed()
+            && !inventory.runtime_messaging_ready_claimed()
+            && !inventory.external_delivery_success_claim_allowed()
+            && !inventory.independent_audit_complete_claimed();
+        let roadmap_status_only_label_required = true;
+        let implementation_phase_mapping_only_label_required = true;
+        let documentation_only_wrapper_phase_recorded = true;
+        let buildable_mobile_app_phase_recorded = true;
+        let store_distribution_decision_phase_recorded = true;
+        let runtime_messaging_implementation_phase_recorded = true;
+        let external_delivery_evidence_phase_recorded = true;
+        let push_notification_exclusion_phase_recorded = true;
+        let cloud_backup_exclusion_phase_recorded = true;
+        let central_account_or_contact_discovery_exclusion_phase_recorded = true;
+        let independent_audit_evidence_phase_recorded = true;
+        let release_approval_evidence_phase_recorded = true;
+        let blockers_cleared_by_roadmap = false;
+        let mobile_app_implemented_by_roadmap = false;
+        let release_readiness_claimed = false;
+        let security_readiness_claimed = false;
+        let runtime_messaging_implemented = false;
+        let external_delivery_evidence_recorded = false;
+        let store_distribution_decided = false;
+        let push_notification_implemented = false;
+        let cloud_backup_implemented = false;
+        let central_account_or_contact_discovery_implemented = false;
+        let independent_audit_evidence_recorded = false;
+        let release_approval_recorded = false;
+        let boundary_closed = inherits_mobile_release_blocker_inventory_boundary
+            && roadmap_status_only_label_required
+            && implementation_phase_mapping_only_label_required
+            && documentation_only_wrapper_phase_recorded
+            && buildable_mobile_app_phase_recorded
+            && store_distribution_decision_phase_recorded
+            && runtime_messaging_implementation_phase_recorded
+            && external_delivery_evidence_phase_recorded
+            && push_notification_exclusion_phase_recorded
+            && cloud_backup_exclusion_phase_recorded
+            && central_account_or_contact_discovery_exclusion_phase_recorded
+            && independent_audit_evidence_phase_recorded
+            && release_approval_evidence_phase_recorded
+            && !blockers_cleared_by_roadmap
+            && !mobile_app_implemented_by_roadmap
+            && !release_readiness_claimed
+            && !security_readiness_claimed
+            && !runtime_messaging_implemented
+            && !external_delivery_evidence_recorded
+            && !store_distribution_decided
+            && !push_notification_implemented
+            && !cloud_backup_implemented
+            && !central_account_or_contact_discovery_implemented
+            && !independent_audit_evidence_recorded
+            && !release_approval_recorded
+            && PRODUCTION_MOBILE_BLOCKER_IMPLEMENTATION_ROADMAP_REQUIRED_ITEMS
+                .contains(&"mobile blocker-to-implementation roadmap status only")
+            && PRODUCTION_MOBILE_BLOCKER_IMPLEMENTATION_ROADMAP_REQUIRED_ITEMS
+                .contains(&"implementation phase mapping only")
+            && PRODUCTION_MOBILE_BLOCKER_IMPLEMENTATION_ROADMAP_REQUIRED_ITEMS
+                .contains(&"runtime messaging implementation phase recorded")
+            && PRODUCTION_MOBILE_BLOCKER_IMPLEMENTATION_ROADMAP_REQUIRED_ITEMS
+                .contains(&"roadmap does not clear blockers")
+            && PRODUCTION_MOBILE_BLOCKER_IMPLEMENTATION_ROADMAP_FORBIDDEN_CLAIMS
+                .contains(&"roadmap blockers resolved")
+            && PRODUCTION_MOBILE_BLOCKER_IMPLEMENTATION_ROADMAP_FORBIDDEN_CLAIMS
+                .contains(&"implementation complete")
+            && PRODUCTION_MOBILE_BLOCKER_IMPLEMENTATION_ROADMAP_FORBIDDEN_CLAIMS
+                .contains(&"external onion delivery evidence recorded")
+            && PRODUCTION_MOBILE_BLOCKER_IMPLEMENTATION_ROADMAP_FORBIDDEN_CLAIMS
+                .contains(&"release approval recorded");
+
+        ProductionMobileBlockerImplementationRoadmapBoundarySummary {
+            required_roadmap_items: PRODUCTION_MOBILE_BLOCKER_IMPLEMENTATION_ROADMAP_REQUIRED_ITEMS,
+            forbidden_roadmap_claims:
+                PRODUCTION_MOBILE_BLOCKER_IMPLEMENTATION_ROADMAP_FORBIDDEN_CLAIMS,
+            inherits_mobile_release_blocker_inventory_boundary,
+            roadmap_status_only_label_required,
+            implementation_phase_mapping_only_label_required,
+            documentation_only_wrapper_phase_recorded,
+            buildable_mobile_app_phase_recorded,
+            store_distribution_decision_phase_recorded,
+            runtime_messaging_implementation_phase_recorded,
+            external_delivery_evidence_phase_recorded,
+            push_notification_exclusion_phase_recorded,
+            cloud_backup_exclusion_phase_recorded,
+            central_account_or_contact_discovery_exclusion_phase_recorded,
+            independent_audit_evidence_phase_recorded,
+            release_approval_evidence_phase_recorded,
+            blockers_cleared_by_roadmap,
+            mobile_app_implemented_by_roadmap,
+            release_readiness_claimed,
+            security_readiness_claimed,
+            runtime_messaging_implemented,
+            external_delivery_evidence_recorded,
+            store_distribution_decided,
+            push_notification_implemented,
+            cloud_backup_implemented,
+            central_account_or_contact_discovery_implemented,
+            independent_audit_evidence_recorded,
+            release_approval_recorded,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -21561,6 +21867,141 @@ pub mod production {
                 .contains(&"production-ready"));
             assert!(boundary
                 .forbidden_blocker_claims()
+                .contains(&"safe for sensitive communication"));
+        }
+
+        #[test]
+        fn production_mobile_blocker_implementation_roadmap_boundary_maps_without_implementation_claims(
+        ) {
+            let boundary = production_mobile_blocker_implementation_roadmap_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_release_blocker_inventory_boundary());
+            assert!(boundary.roadmap_status_only_label_required());
+            assert!(boundary.implementation_phase_mapping_only_label_required());
+            assert!(boundary.documentation_only_wrapper_phase_recorded());
+            assert!(boundary.buildable_mobile_app_phase_recorded());
+            assert!(boundary.store_distribution_decision_phase_recorded());
+            assert!(boundary.runtime_messaging_implementation_phase_recorded());
+            assert!(boundary.external_delivery_evidence_phase_recorded());
+            assert!(boundary.push_notification_exclusion_phase_recorded());
+            assert!(boundary.cloud_backup_exclusion_phase_recorded());
+            assert!(boundary.central_account_or_contact_discovery_exclusion_phase_recorded());
+            assert!(boundary.independent_audit_evidence_phase_recorded());
+            assert!(boundary.release_approval_evidence_phase_recorded());
+            assert!(!boundary.blockers_cleared_by_roadmap());
+            assert!(!boundary.mobile_app_implemented_by_roadmap());
+            assert!(!boundary.release_readiness_claimed());
+            assert!(!boundary.security_readiness_claimed());
+            assert!(!boundary.runtime_messaging_implemented());
+            assert!(!boundary.external_delivery_evidence_recorded());
+            assert!(!boundary.store_distribution_decided());
+            assert!(!boundary.push_notification_implemented());
+            assert!(!boundary.cloud_backup_implemented());
+            assert!(!boundary.central_account_or_contact_discovery_implemented());
+            assert!(!boundary.independent_audit_evidence_recorded());
+            assert!(!boundary.release_approval_recorded());
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"mobile blocker-to-implementation roadmap status only"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"implementation phase mapping only"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"documentation-only wrapper phase recorded"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"buildable mobile app implementation phase recorded"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"store distribution decision phase recorded"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"runtime messaging implementation phase recorded"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"external onion delivery evidence phase recorded"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"push notification exclusion phase recorded"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"cloud backup exclusion phase recorded"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"central account and contact discovery exclusion phase recorded"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"independent audit evidence phase recorded"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"release approval evidence phase recorded"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"roadmap does not clear blockers"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"roadmap does not implement mobile app"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"roadmap does not claim release readiness"));
+            assert!(boundary
+                .required_roadmap_items()
+                .contains(&"roadmap does not claim security readiness"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"roadmap blockers resolved"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"implementation complete"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"mobile implementation complete"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"mobile app implemented"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"store distribution decided"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"runtime messaging implemented"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"external onion delivery evidence recorded"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"push notification implemented"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"cloud backup implemented"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"central account implemented"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"contact discovery implemented"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"independent audit evidence recorded"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"release approval recorded"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"all roadmap items complete"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"release ready"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"security-ready"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
+                .contains(&"production-ready"));
+            assert!(boundary
+                .forbidden_roadmap_claims()
                 .contains(&"safe for sensitive communication"));
         }
 

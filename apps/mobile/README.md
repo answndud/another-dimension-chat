@@ -653,3 +653,44 @@ Release-blocker inventories must not show independent audit complete.
 Release-blocker inventories must not show security-ready.
 Release-blocker inventories must not show production-ready.
 Release-blocker inventories must not show safe for sensitive communication.
+
+## Blocker-To-Implementation Roadmap Boundary
+
+Future mobile blocker-to-implementation roadmaps are documentation-only
+candidates until a separate implementation phase exists.
+
+Blocker-to-implementation roadmaps may show mobile blocker-to-implementation roadmap status only.
+Blocker-to-implementation roadmaps may show implementation phase mapping only.
+Blocker-to-implementation roadmaps may show documentation-only wrapper phase recorded.
+Blocker-to-implementation roadmaps may show buildable mobile app implementation phase recorded.
+Blocker-to-implementation roadmaps may show store distribution decision phase recorded.
+Blocker-to-implementation roadmaps may show runtime messaging implementation phase recorded.
+Blocker-to-implementation roadmaps may show external onion delivery evidence phase recorded.
+Blocker-to-implementation roadmaps may show push notification exclusion phase recorded.
+Blocker-to-implementation roadmaps may show cloud backup exclusion phase recorded.
+Blocker-to-implementation roadmaps may show central account and contact discovery exclusion phase recorded.
+Blocker-to-implementation roadmaps may show independent audit evidence phase recorded.
+Blocker-to-implementation roadmaps may show release approval evidence phase recorded.
+Blocker-to-implementation roadmaps may show roadmap does not clear blockers.
+Blocker-to-implementation roadmaps may show roadmap does not implement mobile app.
+Blocker-to-implementation roadmaps may show roadmap does not claim release readiness.
+Blocker-to-implementation roadmaps may show roadmap does not claim security readiness.
+
+Blocker-to-implementation roadmaps must not show roadmap blockers resolved.
+Blocker-to-implementation roadmaps must not show implementation complete.
+Blocker-to-implementation roadmaps must not show mobile implementation complete.
+Blocker-to-implementation roadmaps must not show mobile app implemented.
+Blocker-to-implementation roadmaps must not show store distribution decided.
+Blocker-to-implementation roadmaps must not show runtime messaging implemented.
+Blocker-to-implementation roadmaps must not show external onion delivery evidence recorded.
+Blocker-to-implementation roadmaps must not show push notification implemented.
+Blocker-to-implementation roadmaps must not show cloud backup implemented.
+Blocker-to-implementation roadmaps must not show central account implemented.
+Blocker-to-implementation roadmaps must not show contact discovery implemented.
+Blocker-to-implementation roadmaps must not show independent audit evidence recorded.
+Blocker-to-implementation roadmaps must not show release approval recorded.
+Blocker-to-implementation roadmaps must not show all roadmap items complete.
+Blocker-to-implementation roadmaps must not show release ready.
+Blocker-to-implementation roadmaps must not show security-ready.
+Blocker-to-implementation roadmaps must not show production-ready.
+Blocker-to-implementation roadmaps must not show safe for sensitive communication.
