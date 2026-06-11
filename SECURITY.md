@@ -6,6 +6,19 @@ Another Dimension Chat is not ready for real communication.
 
 The current public repository contains a Rust/Tauri prototype and a local desktop beta candidate. It is useful for testing development flow, local encrypted-store boundaries, invite-room recovery, explicit private-delivery actions, and fail-closed onion/Tor attempt behavior, but it does not provide production-grade confidentiality, anonymity, metadata resistance, endpoint protection, or user safety.
 
+For the v0.1 unsigned public beta, the product surface is the desktop Tauri
+beta shell. Android is only the next mobile client candidate after the shared
+Rust core/API boundary remains platform-neutral; iOS follows after the same
+boundary is preserved. Mobile clients are not part of this public beta, and
+the platform split is not a security-readiness or production-readiness claim.
+
+The shared core boundary means Rust owns profile identity, pairing payload and
+safety transcript logic, message orchestration, protocol envelopes and replay,
+encrypted local storage policy, and fail-closed transport policy. UI shells may
+request redacted status and explicit user-triggered actions only; they must not
+define separate security-sensitive protocol, storage, transport, pairing, or
+contact-discovery behavior.
+
 Default-build production code now includes narrow decision boundaries for pairing, session setup, durable local session lifecycle records, local data lifecycle controls, forward-only schema versioning, marker-only rollback detection, envelope handling, explicit manual envelope export/import runtime gating, local manual E2EE runtime failure-model gating, passphrase-first key and rollback non-claim policy gating, explicit transport envelope I/O non-claim gating, replay rejection, transport policy, fail-closed onion transport behavior, pre-network transport blockers, backup-exclusion verification boundaries, onion service key lifecycle policy boundaries, onion service launch preflight boundaries, bridge/censorship readiness policy boundaries, bootstrap execution boundaries, bounded Arti adapter spikes, local-only manual bootstrap gates, profile-scoped transport directory resolution, persistent Arti client lifecycle ownership, storage policy tests, SQLCipher-backed storage work, passphrase unlock tests, high-risk unlock policy tests, replay-window persistence tests, receive-flow replay commit-order tests, session-scoped opaque replay record-id derivation, and desktop beta recovery UI checks. These are implementation guardrails, not a secure messenger release.
 
 The public cross-component replacement inventory is tracked in `reference/COMPONENT_BOUNDARIES.md`. It is a boundary map for future work, not a production-readiness statement.
