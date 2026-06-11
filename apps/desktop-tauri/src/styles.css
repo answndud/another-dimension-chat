@@ -1126,7 +1126,7 @@ body.is-room-list-mode .room-list-panel {
 
 .saved-room-list-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 8px;
   align-items: center;
   min-height: 52px;
@@ -1253,6 +1253,10 @@ body.is-room-list-mode .room-list-panel {
 
 .saved-room-remove {
   color: var(--text-muted);
+}
+
+.saved-room-primary-action {
+  min-width: 112px;
 }
 
 .saved-room-next-action {

@@ -4014,6 +4014,44 @@ function savedInviteRoomResumePriority(room) {
   return 0;
 }
 
+function savedRoomActionLabelKey(action, fallbackLabelKey = "openRoom") {
+  const normalized = String(action ?? "").trim();
+  if (normalized === "enable-private-delivery" || normalized === "real-onion-enable-private-delivery") {
+    return "savedRoomActionEnableDelivery";
+  }
+  if (normalized === "prepare-private-route" || normalized === "real-onion-network-settings") {
+    return "savedRoomActionShareDeliveryCode";
+  }
+  if (normalized === "refresh-endpoint") {
+    return "savedRoomActionUpdateDeliveryCode";
+  }
+  if (normalized === "refresh-and-retry") {
+    return "savedRoomActionUpdateCodeAndRetry";
+  }
+  if (normalized === "start-receiving") {
+    return "savedRoomActionStartReceiving";
+  }
+  if (normalized === "wait-receive-stop") {
+    return "savedRoomActionWaitReceivingStop";
+  }
+  if (normalized === "retry-network") {
+    return "savedRoomActionRetryNetwork";
+  }
+  if (normalized === "verify-safety") {
+    return "savedRoomActionComparePhrase";
+  }
+  if (normalized === "retry") {
+    return "savedRoomActionRetrySavedMessage";
+  }
+  if (normalized === "paste-peer-code") {
+    return "savedRoomActionPastePeerCode";
+  }
+  if (normalized === "real-onion-retry") {
+    return "savedRoomActionRetryDelivery";
+  }
+  return fallbackLabelKey;
+}
+
 function savedInviteRoomPriorityEntries(rooms = savedInviteRooms()) {
   pruneExpiredRealOnionRecoveries();
   return (Array.isArray(rooms) ? rooms : []).map((room, index) => ({
@@ -4098,27 +4136,27 @@ function savedInviteRoomListAction(room, options = {}) {
   if (savedInviteRoomHasRetryableOutbound(room)) {
     const action = savedInviteRoomRetryableAction(room.retryableOutboundAction);
     if (action === "enable-private-delivery") {
-      return { action, labelKey: "enablePrivateDelivery", origin: "retryable-outbound" };
+      return { action, labelKey: savedRoomActionLabelKey(action), origin: "retryable-outbound" };
     }
     if (action === "prepare-private-route") {
-      return { action, labelKey: "preparePrivateRoute", origin: "retryable-outbound" };
+      return { action, labelKey: savedRoomActionLabelKey(action), origin: "retryable-outbound" };
     }
     if (action === "refresh-and-retry") {
-      return { action, labelKey: "refreshAndRetry", origin: "retryable-outbound" };
+      return { action, labelKey: savedRoomActionLabelKey(action), origin: "retryable-outbound" };
     }
     if (action === "start-receiving") {
-      return { action, labelKey: "startReceiving", origin: "retryable-outbound" };
+      return { action, labelKey: savedRoomActionLabelKey(action), origin: "retryable-outbound" };
     }
     if (action === "wait-receive-stop") {
-      return { action, labelKey: "receiveStopPending", origin: "retryable-outbound" };
+      return { action, labelKey: savedRoomActionLabelKey(action), origin: "retryable-outbound" };
     }
     if (action === "retry-network") {
-      return { action, labelKey: "retryNetwork", origin: "retryable-outbound" };
+      return { action, labelKey: savedRoomActionLabelKey(action), origin: "retryable-outbound" };
     }
     if (action === "verify-safety") {
-      return { action, labelKey: "comparePhraseAction", origin: "retryable-outbound" };
+      return { action, labelKey: savedRoomActionLabelKey(action), origin: "retryable-outbound" };
     }
-    return { action: "retry", labelKey: "retrySend", origin: "retryable-outbound" };
+    return { action: "retry", labelKey: savedRoomActionLabelKey("retry"), origin: "retryable-outbound" };
   }
   const hasRealOnionRecoveryView = Object.prototype.hasOwnProperty.call(options, "realOnionRecoveryView");
   let realOnionRecovery = hasRealOnionRecoveryView
@@ -4139,20 +4177,28 @@ function savedInviteRoomListAction(room, options = {}) {
     realOnionRecovery = null;
   }
   if (realOnionRecovery) {
-    return { action: realOnionRecovery.action, labelKey: realOnionRecovery.labelKey, origin: "real-onion-recovery" };
+    return {
+      action: realOnionRecovery.action,
+      labelKey: savedRoomActionLabelKey(realOnionRecovery.action, realOnionRecovery.labelKey),
+      origin: "real-onion-recovery",
+    };
   }
   if (receiveState === "stopping") {
-    return { action: "wait-receive-stop", labelKey: "receiveStopPending", origin: "receive-state" };
+    return { action: "wait-receive-stop", labelKey: savedRoomActionLabelKey("wait-receive-stop"), origin: "receive-state" };
   }
   if (receiveState === "paused") {
-    return { action: "start-receiving", labelKey: "startReceiving", origin: "receive-state" };
+    return { action: "start-receiving", labelKey: savedRoomActionLabelKey("start-receiving"), origin: "receive-state" };
   }
   const waitingPeerCode = options.waitingPeerCode ?? savedInviteRoomWaitingForPeerCode(room);
   if (waitingPeerCode) {
-    return { action: "paste-peer-code", labelKey: "roomActionPastePeerCode", origin: "peer-code" };
+    return { action: "paste-peer-code", labelKey: savedRoomActionLabelKey("paste-peer-code"), origin: "peer-code" };
   }
   if (routeReadinessView) {
-    return { action: routeReadinessView.action, labelKey: routeReadinessView.labelKey, origin: "route-readiness" };
+    return {
+      action: routeReadinessView.action,
+      labelKey: savedRoomActionLabelKey(routeReadinessView.action, routeReadinessView.labelKey),
+      origin: "route-readiness",
+    };
   }
   return null;
 }
@@ -5392,22 +5438,20 @@ function renderSavedInviteRooms() {
     const state = document.createElement("span");
     state.className = `saved-room-state is-${view.state.key}`;
     state.textContent = view.state.label;
-    const open = document.createElement("button");
-    open.type = "button";
-    open.className = "flow-control is-secondary";
-    open.textContent = t("openRoom");
-    open.addEventListener("click", () => {
-      openSavedInviteRoom(room);
-    });
-    const nextAction = document.createElement("button");
-    nextAction.type = "button";
-    nextAction.className = "flow-control saved-room-next-action";
-    nextAction.hidden = !view.nextAction;
-    nextAction.textContent = view.nextAction ? t(view.nextAction.labelKey) : "";
-    nextAction.addEventListener("click", () => {
+    const primaryAction = document.createElement("button");
+    primaryAction.type = "button";
+    primaryAction.className = [
+      "flow-control",
+      "saved-room-primary-action",
+      view.nextAction ? "saved-room-next-action" : "is-secondary",
+    ].join(" ");
+    primaryAction.textContent = view.nextAction ? t(view.nextAction.labelKey) : t("openRoom");
+    primaryAction.addEventListener("click", () => {
       if (view.nextAction) {
         runSavedInviteRoomListAction(view.room ?? room, view.nextAction.action, { actionOrigin: view.nextAction.origin });
+        return;
       }
+      openSavedInviteRoom(room);
     });
     const remove = document.createElement("button");
     remove.type = "button";
@@ -5416,7 +5460,7 @@ function renderSavedInviteRooms() {
     remove.addEventListener("click", () => {
       removeSavedInviteRoom(room);
     });
-    item.append(summary, state, open, nextAction, remove);
+    item.append(summary, state, primaryAction, remove);
     fields.savedRoomList.append(item);
   }
 }
