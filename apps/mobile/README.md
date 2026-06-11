@@ -293,3 +293,40 @@ Manual envelope exchange checklists must not show key material exposed.
 Manual envelope exchange checklists must not show cloud backup enabled.
 Manual envelope exchange checklists must not show safe for sensitive communication.
 Manual envelope exchange checklists must not show security-ready claims.
+
+## Receive/Import Checklist Boundary
+
+Future mobile receive/import checklists are documentation-only candidates until
+a separate wrapper UI implementation phase exists.
+
+Receive/import checklists may show receive/import checklist status only.
+Receive/import checklists may show encrypted envelope import is explicit user action.
+Receive/import checklists may show inbound envelope decoded locally.
+Receive/import checklists may show verified pairwise session required before import.
+Receive/import checklists may show session transport required before import.
+Receive/import checklists may show replay window check required.
+Receive/import checklists may show tamper failure does not advance state.
+Receive/import checklists may show received transcript write is local.
+Receive/import checklists may show plaintext shown only after local decrypt.
+Receive/import checklists may show network receive not claimed.
+Receive/import checklists may show external onion delivery not claimed.
+Receive/import checklists may show background receive not claimed.
+Receive/import checklists may show security-ready not claimed.
+
+Receive/import checklists must not show receive in background.
+Receive/import checklists must not show automatic network receive.
+Receive/import checklists must not show push receive enabled.
+Receive/import checklists must not show message received from network.
+Receive/import checklists must not show connected to peer.
+Receive/import checklists must not show message delivery verified.
+Receive/import checklists must not show delivery acknowledgement received.
+Receive/import checklists must not show external onion delivery verified.
+Receive/import checklists must not show replay prevention guaranteed.
+Receive/import checklists must not show tamper recovery guaranteed.
+Receive/import checklists must not show plaintext stored unencrypted.
+Receive/import checklists must not show key material exposed.
+Receive/import checklists must not show cloud backup enabled.
+Receive/import checklists must not show production messaging ready.
+Receive/import checklists must not show production E2EE ready.
+Receive/import checklists must not show safe for sensitive communication.
+Receive/import checklists must not show security-ready claims.
