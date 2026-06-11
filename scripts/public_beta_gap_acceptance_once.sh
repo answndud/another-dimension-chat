@@ -34,6 +34,7 @@ fi
 
 require_text "$PLAN_FILE" "single-machine blocked external evidence gap"
 require_text "$PLAN_FILE" "not completed as real external evidence"
+require_text "$PLAN_FILE" "accepted for unsigned public beta release gating only"
 require_text "$PLAN_FILE" "Codex가 이 파일들을 직접 만들면 fabricated evidence가 되므로 금지한다"
 
 PUBLIC_CLAIM_FILES=(
@@ -64,10 +65,13 @@ require_text "$ROOT_DIR/SECURITY.md" "External two-machine onion delivery has no
 require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "External two-machine onion delivery has not yet been independently verified"
 require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "External two-machine onion delivery has not yet been independently verified"
 require_text "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "External two-machine onion delivery has not yet been independently verified"
+require_text "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "accepted for unsigned public beta release gating only"
 require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "independently verified external two-machine onion delivery"
+require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "accepted for unsigned public beta release gating only"
 require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "Release body"
 
-echo "status=public-beta-gap-acceptance-ready"
+echo "status=public-beta-release-gate-accepted-with-external-evidence-gap"
 echo "peer_a_report=absent"
 echo "peer_b_report=absent"
+echo "final_security_ready_acceptance=blocked_until_real_external_peer_reports"
 echo "next=prepare or upload unsigned public beta artifacts without claiming external onion delivery"

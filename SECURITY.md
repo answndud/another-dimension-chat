@@ -101,6 +101,9 @@ External two-machine onion delivery has not yet been independently verified for
 this public beta. Do not treat same-machine dual-profile rehearsal, local smoke
 tests, or operator-prepared peer packets as proof of real external onion
 delivery.
+This external evidence gap is accepted for unsigned public beta release gating only.
+It does not close Phase AZ, final security-ready acceptance, or any external
+delivery claim.
 
 The current public upload set is prepared from the ignored local beta DMG with:
 

@@ -85,6 +85,9 @@ Do not use this beta for sensitive communication.
 External two-machine onion delivery has not yet been independently verified.
 Same-machine dual-profile rehearsal is development evidence only, not peer
 field-test evidence.
+This external evidence gap is accepted for unsigned public beta release gating only.
+It does not close Phase AZ, final security-ready acceptance, or any external
+delivery claim.
 
 There is no auto-update. Every update is a manual GitHub Release download and
 must be verified with the matching `.sha256` file.

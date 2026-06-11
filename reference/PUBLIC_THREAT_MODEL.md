@@ -134,6 +134,9 @@ not production-ready, and sensitive communication prohibited.
 External two-machine onion delivery has not yet been independently verified.
 Same-machine local rehearsal can exercise development flow, but it is not
 external peer evidence and must not be presented as such.
+This external evidence gap is accepted for unsigned public beta release gating only.
+It does not close Phase AZ, final security-ready acceptance, or any external
+delivery claim.
 
 macOS may require the user to manually allow the app in Privacy & Security. The
 project does not ask users to bypass macOS protections with terminal quarantine
