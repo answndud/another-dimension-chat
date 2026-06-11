@@ -119,6 +119,7 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(mainJs, /removeRoomConfirm/);
   assert.match(stylesCss, /\.saved-room-preview/);
   assert.match(stylesCss, /\.saved-room-state/);
+  assert.match(stylesCss, /\.saved-room-primary-action/);
   assert.match(stylesCss, /\.room-list-sync-status/);
   assert.match(stylesCss, /\.saved-room-list-item\.is-resume-recommended/);
   assert.doesNotMatch(mainJs, /restoreLastInviteRoom\(\);/);
@@ -194,6 +195,12 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /action === "enable-private-delivery"/);
   assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /action === "prepare-private-route"/);
   assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /action === "refresh-and-retry"/);
+  assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /savedRoomActionLabelKey\(action\)/);
+  assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /savedRoomActionLabelKey\(routeReadinessView\.action, routeReadinessView\.labelKey\)/);
+  assert.match(functionBody(mainJs, "savedRoomActionLabelKey"), /savedRoomActionEnableDelivery/);
+  assert.match(functionBody(mainJs, "savedRoomActionLabelKey"), /savedRoomActionShareDeliveryCode/);
+  assert.match(functionBody(mainJs, "savedRoomActionLabelKey"), /savedRoomActionUpdateCodeAndRetry/);
+  assert.match(functionBody(mainJs, "savedRoomActionLabelKey"), /savedRoomActionWaitReceivingStop/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "enable-private-delivery"/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "prepare-private-route"/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "refresh-and-retry"/);
@@ -220,6 +227,11 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /is-waiting-peer-code/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /has-retryable-send/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /is-resume-recommended/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /saved-room-primary-action/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /view\.nextAction \? t\(view\.nextAction\.labelKey\) : t\("openRoom"\)/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /item\.append\(summary, state, primaryAction, remove\)/);
+  assert.doesNotMatch(functionBody(mainJs, "renderSavedInviteRooms"), /nextAction\.hidden/);
+  assert.doesNotMatch(functionBody(mainJs, "renderSavedInviteRooms"), /const open = document\.createElement/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
   assert.match(
     functionBody(mainJs, "startProductionTwoProfileOnionReceive"),
@@ -237,7 +249,24 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(stylesCss, /\.saved-room-state\.is-enable-delivery/);
   assert.match(stylesCss, /\.saved-room-state\.is-setup-delivery/);
   assert.match(stylesCss, /\.saved-room-state\.is-refresh-address/);
+  assert.match(stylesCss, /grid-template-columns: minmax\(0, 1fr\) auto auto auto/);
   assert.match(stylesCss, /\.saved-room-next-action/);
+  assert.match(i18nJs, /openRoom: "Open room"/);
+  assert.match(i18nJs, /roomActionPastePeerCode: "Paste delivery code"/);
+  assert.match(i18nJs, /roomStateSetupDelivery: "Share delivery code"/);
+  assert.match(i18nJs, /roomStateWaitingPeerCode: "Need their delivery code"/);
+  assert.match(i18nJs, /savedRoomActionEnableDelivery: "Turn on delivery"/);
+  assert.match(i18nJs, /savedRoomActionShareDeliveryCode: "Share delivery code"/);
+  assert.match(i18nJs, /savedRoomActionWaitReceivingStop: "Wait"/);
+  assert.match(i18nJs, /savedRoomActionRetrySavedMessage: "Retry message"/);
+  assert.match(i18nJs, /openRoom: "채팅방 열기"/);
+  assert.match(i18nJs, /roomActionPastePeerCode: "전송 코드 붙여넣기"/);
+  assert.match(i18nJs, /roomStateSetupDelivery: "전송 코드 공유"/);
+  assert.match(i18nJs, /roomStateWaitingPeerCode: "상대 전송 코드 필요"/);
+  assert.match(i18nJs, /savedRoomActionEnableDelivery: "전송 켜기"/);
+  assert.match(i18nJs, /savedRoomActionShareDeliveryCode: "전송 코드 공유"/);
+  assert.match(i18nJs, /savedRoomActionWaitReceivingStop: "기다리기"/);
+  assert.match(i18nJs, /savedRoomActionRetrySavedMessage: "메시지 다시 보내기"/);
 });
 
 test("receive controls are scoped to the active room", () => {
@@ -301,7 +330,8 @@ test("receive restart intent owns the room primary action", () => {
   assert.match(mainJs, /action: "start-receiving"[\s\S]*labelKey: "startReceiving"/);
   assert.match(mainJs, /function savedInviteRoomListAction/);
   assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /receiveState === "paused"/);
-  assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /labelKey: "startReceiving"/);
+  assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /savedRoomActionLabelKey\("start-receiving"\)/);
+  assert.match(functionBody(mainJs, "savedRoomActionLabelKey"), /savedRoomActionStartReceiving/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /rememberReceiveIntentForRoom\(input, true\)/);
   const actionBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
   assert.match(actionBody, /intent\.action === "start-receiving"/);
