@@ -12,6 +12,11 @@ For the v0.1 unsigned public beta, the product surface is the desktop Tauri
 beta shell. Android is the next mobile client candidate only after the shared
 Rust core/API boundary remains platform-neutral; iOS follows after that same
 boundary is preserved. Mobile clients are not part of this public beta.
+The public beta artifact is currently the unsigned macOS DMG path. Windows is a
+local desktop build candidate only: it must use the same Tauri app-data
+resolver, encrypted local store, local deletion controls, redacted diagnostics,
+explicit user-action boundary, no auto-update channel, and no
+signing/notarization/app-store trust claim before it becomes a public artifact.
 
 The shared core boundary means Rust owns profile identity, pairing payload and
 safety transcript logic, message orchestration, protocol envelopes and replay,
@@ -24,6 +29,8 @@ This split does not add phone numbers, email, global accounts, searchable
 usernames, centralized contact discovery, centralized message servers, push
 notifications, cloud backup, app-store/TestFlight dependency, signing
 dependency, notarization dependency, or a production/security readiness claim.
+It also does not make Windows DPAPI, Apple notarization, Developer ID, or any
+store approval a trusted security boundary.
 
 Do not use it for real communication.
 
@@ -119,6 +126,11 @@ What exists today:
 - Public intake policy and GitHub issue templates that require redacted public diagnostics or minimal private-contact requests instead of raw logs, payloads, endpoints, paths, passphrases, private keys, key material, crash dumps, or private planning notes.
 - Repository governance guardrails for maintainer-driven main-branch work, unsigned beta non-claims, no-central-trusted-server scope, release file discipline, and private-data redaction.
 - A local Tauri desktop beta shell for invite-code rooms, safety phrase confirmation, encrypted local profile/session/message records, saved-room resume, manual private-route exchange, explicit receive start/stop, retry/cancel recovery, and redacted field-test reports.
+- A desktop platform boundary for macOS and Windows: macOS public beta remains
+  an unsigned experimental DMG, Windows remains a local build candidate, and
+  both desktop shells must preserve the same local app-data, encrypted-store,
+  local deletion, redacted diagnostics, explicit action, no auto-update, and
+  non-security-signing semantics.
 - In-app unsigned public beta warnings and public diagnostics export limited to status, build, failure class, manual network permission, and app-launch network boundary; no crash upload, telemetry, raw log export, crash dump export, automated log collection, support bundle export, raw diagnostic file export, paths, endpoints, passphrases, or key material.
 - Explicit user-triggered onion/Tor attempt paths for beta field testing. The app must not bootstrap Tor, host onion services, publish descriptors, open streams, send envelopes, or receive envelopes on app launch.
 - Lightweight verification scripts, CLI hardening tests, Tauri scaffold static checks, and GitHub Actions verification.
@@ -141,6 +153,9 @@ What does not exist yet:
 - Complete production encrypted local storage lifecycle with cloud backup/sync, backup recovery, or secure deletion guarantees.
 - Replay rollback prevention against encrypted database snapshot restore.
 - Production Tauri desktop app. The current Tauri shell is a local beta candidate, not a secure release.
+- Public Windows installer or Windows public beta artifact. Windows is only a
+  local build candidate until the desktop boundary is satisfied and documented
+  for a release artifact.
 - Android or iOS app.
 - Offline mailbox.
 - Group chat.

@@ -11,6 +11,11 @@ beta shell. Android is only the next mobile client candidate after the shared
 Rust core/API boundary remains platform-neutral; iOS follows after the same
 boundary is preserved. Mobile clients are not part of this public beta, and
 the platform split is not a security-readiness or production-readiness claim.
+The public desktop artifact is currently the unsigned macOS DMG path. Windows
+is a local desktop build candidate only; before any public Windows artifact, it
+must keep the same Tauri app-data resolver semantics, encrypted local store,
+local deletion controls, redacted diagnostics, explicit user-action boundary,
+no auto-update channel, and no signing/notarization/store trust claim.
 
 The shared core boundary means Rust owns profile identity, pairing payload and
 safety transcript logic, message orchestration, protocol envelopes and replay,
@@ -72,6 +77,9 @@ This project does not currently claim:
 - Replay rollback prevention against encrypted database snapshot restore.
 - Cloud backup/sync, backup recovery, destructive migration, secure media deletion, or rollback prevention.
 - Signed, notarized, reproducible, auto-updating, or supply-chain-reviewed releases.
+- Public Windows installer readiness. Windows is currently a local build
+  candidate only and does not add DPAPI-only unlock, auto-update, store approval,
+  or a platform signing trust boundary.
 - External audit, independent review, reviewer signoff, or public user safety signoff.
 - Protection against device compromise.
 - Protection against coercion.
@@ -96,6 +104,11 @@ Completed field-test reports must not include bridge lines, onion endpoints, inv
 ## Unsigned Public Beta Boundary
 
 The public GitHub DMG path is an unsigned experimental public beta distribution path only. It is not signed, not notarized, not audited, not production-ready, and sensitive communication prohibited.
+
+There is no public Windows beta artifact yet. A local Windows build must preserve
+the same local app-data, encrypted-store, local deletion, diagnostics redaction,
+explicit network action, and no-auto-update semantics as the macOS desktop shell
+before it can be documented as a public artifact.
 
 External two-machine onion delivery has not yet been independently verified for
 this public beta. Do not treat same-machine dual-profile rehearsal, local smoke
