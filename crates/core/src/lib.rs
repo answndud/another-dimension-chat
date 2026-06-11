@@ -1024,6 +1024,31 @@ pub mod production {
         "rollback_prevention_non_claim",
     ];
 
+    const PRODUCTION_MOBILE_BACKUP_EXCLUSION_PLATFORMS: &[&str] =
+        &["android_shell_candidate", "ios_shell_candidate"];
+
+    const PRODUCTION_MOBILE_BACKUP_EXCLUSION_REQUIRED_CHECKS: &[&str] = &[
+        "platform_private_storage_root_resolved",
+        "local_store_directory_app_private",
+        "transport_state_directory_app_private",
+        "transport_cache_directory_app_private",
+        "os_backup_exclusion_mark_written_by_wrapper",
+        "os_backup_exclusion_verification_token_required",
+        "redacted_status_only",
+    ];
+
+    const PRODUCTION_MOBILE_BACKUP_EXCLUSION_REJECTED_CLAIMS: &[&str] = &[
+        "cloud_backup_sync",
+        "backup_recovery",
+        "backup_exclusion_verified_without_platform_token",
+        "rollback_prevention",
+        "secure_media_deletion",
+        "shared_external_storage",
+        "ios_shared_app_group_storage",
+        "icloud_backup",
+        "google_drive_backup",
+    ];
+
     const PRODUCTION_LOCAL_STORAGE_LIFECYCLE_PRODUCT_SCOPES: &[&str] = &[
         "conversation_delete_removes_message_records_preserves_session",
         "session_delete_removes_resume_records_preserves_messages",
@@ -1261,6 +1286,30 @@ pub mod production {
         destructive_migration_blocked: bool,
         prototype_data_migration_ready: bool,
         rollback_detection_marker_only: bool,
+        rollback_prevention_claimed: bool,
+        secure_media_deletion_claimed: bool,
+        boundary_closed: bool,
+        security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileBackupExclusionVerificationBoundarySummary {
+        platforms: &'static [&'static str],
+        required_checks: &'static [&'static str],
+        rejected_claims: &'static [&'static str],
+        inherits_backup_migration_boundary: bool,
+        android_app_private_storage_required: bool,
+        android_shared_external_storage_allowed: bool,
+        ios_app_container_storage_required: bool,
+        ios_shared_app_group_storage_allowed: bool,
+        ios_icloud_backup_exclusion_required: bool,
+        wrapper_must_write_backup_exclusion_marker: bool,
+        wrapper_must_verify_backup_exclusion_marker: bool,
+        platform_verification_token_required: bool,
+        backup_exclusion_verified_by_core_status: bool,
+        redacted_status_only: bool,
+        cloud_backup_or_sync_enabled: bool,
+        backup_recovery_claimed: bool,
         rollback_prevention_claimed: bool,
         secure_media_deletion_claimed: bool,
         boundary_closed: bool,
@@ -1726,6 +1775,88 @@ pub mod production {
 
         pub fn rollback_detection_marker_only(self) -> bool {
             self.rollback_detection_marker_only
+        }
+
+        pub fn rollback_prevention_claimed(self) -> bool {
+            self.rollback_prevention_claimed
+        }
+
+        pub fn secure_media_deletion_claimed(self) -> bool {
+            self.secure_media_deletion_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+    }
+
+    impl ProductionMobileBackupExclusionVerificationBoundarySummary {
+        pub fn platforms(self) -> &'static [&'static str] {
+            self.platforms
+        }
+
+        pub fn required_checks(self) -> &'static [&'static str] {
+            self.required_checks
+        }
+
+        pub fn rejected_claims(self) -> &'static [&'static str] {
+            self.rejected_claims
+        }
+
+        pub fn inherits_backup_migration_boundary(self) -> bool {
+            self.inherits_backup_migration_boundary
+        }
+
+        pub fn android_app_private_storage_required(self) -> bool {
+            self.android_app_private_storage_required
+        }
+
+        pub fn android_shared_external_storage_allowed(self) -> bool {
+            self.android_shared_external_storage_allowed
+        }
+
+        pub fn ios_app_container_storage_required(self) -> bool {
+            self.ios_app_container_storage_required
+        }
+
+        pub fn ios_shared_app_group_storage_allowed(self) -> bool {
+            self.ios_shared_app_group_storage_allowed
+        }
+
+        pub fn ios_icloud_backup_exclusion_required(self) -> bool {
+            self.ios_icloud_backup_exclusion_required
+        }
+
+        pub fn wrapper_must_write_backup_exclusion_marker(self) -> bool {
+            self.wrapper_must_write_backup_exclusion_marker
+        }
+
+        pub fn wrapper_must_verify_backup_exclusion_marker(self) -> bool {
+            self.wrapper_must_verify_backup_exclusion_marker
+        }
+
+        pub fn platform_verification_token_required(self) -> bool {
+            self.platform_verification_token_required
+        }
+
+        pub fn backup_exclusion_verified_by_core_status(self) -> bool {
+            self.backup_exclusion_verified_by_core_status
+        }
+
+        pub fn redacted_status_only(self) -> bool {
+            self.redacted_status_only
+        }
+
+        pub fn cloud_backup_or_sync_enabled(self) -> bool {
+            self.cloud_backup_or_sync_enabled
+        }
+
+        pub fn backup_recovery_claimed(self) -> bool {
+            self.backup_recovery_claimed
         }
 
         pub fn rollback_prevention_claimed(self) -> bool {
@@ -10098,6 +10229,87 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_backup_exclusion_verification_boundary_summary(
+    ) -> ProductionMobileBackupExclusionVerificationBoundarySummary {
+        let android = production_android_shell_candidate_summary();
+        let ios = production_ios_shell_candidate_summary();
+        let backup = production_backup_migration_boundary_summary();
+        let inherits_backup_migration_boundary = backup.boundary_closed()
+            && backup.backup_exclusion_policy_decided()
+            && backup.backup_exclusion_verification_required()
+            && !backup.backup_exclusion_verified_by_core_status()
+            && !backup.cloud_backup_or_sync_enabled()
+            && !backup.backup_recovery_claimed();
+        let android_app_private_storage_required = android.app_private_storage_required();
+        let android_shared_external_storage_allowed = android.shared_external_storage_allowed();
+        let ios_app_container_storage_required = ios.app_container_storage_required();
+        let ios_shared_app_group_storage_allowed = ios.shared_app_group_storage_allowed();
+        let ios_icloud_backup_exclusion_required = ios.icloud_backup_exclusion_required();
+        let wrapper_must_write_backup_exclusion_marker = true;
+        let wrapper_must_verify_backup_exclusion_marker = true;
+        let platform_verification_token_required = true;
+        let backup_exclusion_verified_by_core_status =
+            backup.backup_exclusion_verified_by_core_status();
+        let redacted_status_only = !android.local_storage_paths_in_diagnostics_allowed()
+            && !ios.local_storage_paths_in_diagnostics_allowed()
+            && android.redacted_diagnostics_required()
+            && ios.redacted_diagnostics_required();
+        let cloud_backup_or_sync_enabled = backup.cloud_backup_or_sync_enabled()
+            || android.cloud_backup_allowed()
+            || ios.icloud_backup_allowed();
+        let backup_recovery_claimed = backup.backup_recovery_claimed();
+        let rollback_prevention_claimed = backup.rollback_prevention_claimed();
+        let secure_media_deletion_claimed = backup.secure_media_deletion_claimed();
+        let boundary_closed = inherits_backup_migration_boundary
+            && android_app_private_storage_required
+            && !android_shared_external_storage_allowed
+            && android.platform_backup_exclusion_required()
+            && ios_app_container_storage_required
+            && !ios_shared_app_group_storage_allowed
+            && ios_icloud_backup_exclusion_required
+            && wrapper_must_write_backup_exclusion_marker
+            && wrapper_must_verify_backup_exclusion_marker
+            && platform_verification_token_required
+            && !backup_exclusion_verified_by_core_status
+            && redacted_status_only
+            && !cloud_backup_or_sync_enabled
+            && !backup_recovery_claimed
+            && !rollback_prevention_claimed
+            && !secure_media_deletion_claimed
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_REQUIRED_CHECKS
+                .contains(&"platform_private_storage_root_resolved")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_REQUIRED_CHECKS
+                .contains(&"os_backup_exclusion_verification_token_required")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_REJECTED_CLAIMS.contains(&"cloud_backup_sync")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_REJECTED_CLAIMS.contains(&"backup_recovery")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_REJECTED_CLAIMS.contains(&"rollback_prevention")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_REJECTED_CLAIMS
+                .contains(&"secure_media_deletion");
+
+        ProductionMobileBackupExclusionVerificationBoundarySummary {
+            platforms: PRODUCTION_MOBILE_BACKUP_EXCLUSION_PLATFORMS,
+            required_checks: PRODUCTION_MOBILE_BACKUP_EXCLUSION_REQUIRED_CHECKS,
+            rejected_claims: PRODUCTION_MOBILE_BACKUP_EXCLUSION_REJECTED_CLAIMS,
+            inherits_backup_migration_boundary,
+            android_app_private_storage_required,
+            android_shared_external_storage_allowed,
+            ios_app_container_storage_required,
+            ios_shared_app_group_storage_allowed,
+            ios_icloud_backup_exclusion_required,
+            wrapper_must_write_backup_exclusion_marker,
+            wrapper_must_verify_backup_exclusion_marker,
+            platform_verification_token_required,
+            backup_exclusion_verified_by_core_status,
+            redacted_status_only,
+            cloud_backup_or_sync_enabled,
+            backup_recovery_claimed,
+            rollback_prevention_claimed,
+            secure_media_deletion_claimed,
+            boundary_closed,
+            security_ready_claimed: false,
+        }
+    }
+
     pub fn production_local_storage_lifecycle_product_summary(
     ) -> ProductionLocalStorageLifecycleProductSummary {
         let local_data = production_local_data_lifecycle_policy_summary();
@@ -12901,6 +13113,64 @@ pub mod production {
                 .contains(&"local_backup_exclusion_verification_required"));
             assert!(boundary.policies().contains(&"cloud_backup_sync_non_claim"));
             assert!(boundary.policies().contains(&"backup_recovery_non_claim"));
+        }
+
+        #[test]
+        fn production_mobile_backup_exclusion_verification_boundary_closes_without_backup_recovery_claim(
+        ) {
+            let boundary = production_mobile_backup_exclusion_verification_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_backup_migration_boundary());
+            assert_eq!(
+                boundary.platforms(),
+                &["android_shell_candidate", "ios_shell_candidate"]
+            );
+            assert!(boundary.android_app_private_storage_required());
+            assert!(!boundary.android_shared_external_storage_allowed());
+            assert!(boundary.ios_app_container_storage_required());
+            assert!(!boundary.ios_shared_app_group_storage_allowed());
+            assert!(boundary.ios_icloud_backup_exclusion_required());
+            assert!(boundary.wrapper_must_write_backup_exclusion_marker());
+            assert!(boundary.wrapper_must_verify_backup_exclusion_marker());
+            assert!(boundary.platform_verification_token_required());
+            assert!(!boundary.backup_exclusion_verified_by_core_status());
+            assert!(boundary.redacted_status_only());
+            assert!(!boundary.cloud_backup_or_sync_enabled());
+            assert!(!boundary.backup_recovery_claimed());
+            assert!(!boundary.rollback_prevention_claimed());
+            assert!(!boundary.secure_media_deletion_claimed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_checks()
+                .contains(&"platform_private_storage_root_resolved"));
+            assert!(boundary
+                .required_checks()
+                .contains(&"local_store_directory_app_private"));
+            assert!(boundary
+                .required_checks()
+                .contains(&"transport_state_directory_app_private"));
+            assert!(boundary
+                .required_checks()
+                .contains(&"os_backup_exclusion_mark_written_by_wrapper"));
+            assert!(boundary
+                .required_checks()
+                .contains(&"os_backup_exclusion_verification_token_required"));
+            assert!(boundary.required_checks().contains(&"redacted_status_only"));
+            assert!(boundary.rejected_claims().contains(&"cloud_backup_sync"));
+            assert!(boundary.rejected_claims().contains(&"backup_recovery"));
+            assert!(boundary.rejected_claims().contains(&"icloud_backup"));
+            assert!(boundary.rejected_claims().contains(&"google_drive_backup"));
+            assert!(boundary
+                .rejected_claims()
+                .contains(&"shared_external_storage"));
+            assert!(boundary
+                .rejected_claims()
+                .contains(&"ios_shared_app_group_storage"));
+            assert!(boundary.rejected_claims().contains(&"rollback_prevention"));
+            assert!(boundary
+                .rejected_claims()
+                .contains(&"secure_media_deletion"));
         }
 
         #[test]
