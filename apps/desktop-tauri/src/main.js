@@ -3016,6 +3016,7 @@ let savedRoomMetadataSyncInFlight = false;
 let savedRoomMetadataSyncStatus = { key: "", tone: "muted", values: {} };
 let roomDetailOpen = false;
 let currentInviteCodeShareVisible = false;
+let latestManualInviteRoomRebuildFlow = null;
 
 function setRoomScreen(screen) {
   roomDetailOpen = screen === "detail";
@@ -3509,6 +3510,18 @@ function clearAllSavedInviteRoomLocalState() {
   persistPrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
   persistRealOnionRecoveries();
   renderSavedInviteRooms();
+}
+
+function rememberManualInviteRoomRebuildFlow(source) {
+  latestManualInviteRoomRebuildFlow = {
+    source: String(source ?? "local-lifecycle").trim() || "local-lifecycle",
+    updatedAt: Date.now(),
+  };
+  return latestManualInviteRoomRebuildFlow;
+}
+
+function manualInviteRoomRebuildFlowActive() {
+  return Boolean(latestManualInviteRoomRebuildFlow);
 }
 
 function savedLastInviteRoom() {
@@ -6662,6 +6675,7 @@ async function startInviteRoomFromCode({ code, role, copyBeforePrepare = false }
     fields.productionTwoProfileWarning,
     role === "inviter" ? t("inviteCodeCreatedHint") : t("receivedCodeReadyHint"),
   );
+  renderManualInviteRoomRebuildFlow("invite-room-started");
   setChatDeliveryNoticeByKey(role === "inviter" ? "inviteCodeReadyNotice" : "receivedInviteCodeReadyNotice", "success");
   closeChatSettingsPanel();
   renderCurrentInviteCodeDisplay();
@@ -6708,14 +6722,18 @@ async function finishInviteRoomReadyFromStatus(input, status, warningText) {
     input,
   });
   const recoveryNoticeShown = showSavedInviteRoomRecoveryAfterOpen(roomInput);
-  if (!recoveryNoticeShown) {
+  const rebuildNoticeShown = renderManualInviteRoomRebuildFlow("room-ready");
+  if (rebuildNoticeShown) {
+    setProductionTwoProfileState("Room ready");
+  }
+  if (!recoveryNoticeShown && !rebuildNoticeShown) {
     setProductionTwoProfileState("Room ready");
     setText(fields.productionTwoProfileWarning, warningText);
     setChatDeliveryNoticeByKey("inviteRoomReadyAfterSessionCode", "success", input);
   }
   startInviteRoomPresenceRefresh(roomInput);
   startInviteRoomTranscriptRefresh(roomInput);
-  if (recoveryNoticeShown) {
+  if (recoveryNoticeShown || rebuildNoticeShown) {
     refreshFieldTestReport();
   } else if (inviteRole === "inviter") {
     focusCurrentInviteCodeDisplay();
@@ -6776,12 +6794,17 @@ async function openInviteRoomFromToken(input = productionTwoProfileInput()) {
   setInviteRoomOpenBusy(openInput);
   setProductionTwoProfileState(currentInviteCodeRole() === "inviter" ? "Opening room" : "Joining room");
   setText(fields.productionTwoProfileWarning, currentInviteCodeRole() === "inviter" ? t("inviteCodeCreatedHint") : t("receivedCodeReadyHint"));
-  setText(fields.productionTwoProfileSession, t("setupSessionWaiting"));
+  renderManualInviteRoomRebuildFlow("room-opening");
+  if (!manualInviteRoomRebuildFlowActive()) {
+    setText(fields.productionTwoProfileSession, t("setupSessionWaiting"));
+  }
   setText(
     fields.productionTwoProfileMessageState,
     currentLanguage === "ko" ? "초대 코드로 채팅방을 여는 중" : "Opening room from invite code",
   );
-  setText(fields.productionTwoProfileBoundary, t("setupBoundaryWaiting"));
+  if (!manualInviteRoomRebuildFlowActive()) {
+    setText(fields.productionTwoProfileBoundary, t("setupBoundaryWaiting"));
+  }
   applyProductionActionState();
 
   try {
@@ -16872,6 +16895,53 @@ function twoProfileInputReferencesProfile(input, profile) {
   );
 }
 
+function manualInviteRoomRebuildStepView(step, options = {}) {
+  const source = latestManualInviteRoomRebuildFlow?.source ?? options.source ?? "local-lifecycle";
+  const normalizedStep = String(step ?? "rebuild-needed").trim() || "rebuild-needed";
+  const nextKeyByStep = {
+    "rebuild-needed": "manualRebuildNeededNext",
+    "invite-room-started": "manualRebuildInviteStartedNext",
+    "room-opening": "manualRebuildRoomOpeningNext",
+    "room-ready": "manualRebuildRoomReadyNext",
+    "session-check": "manualRebuildSessionCheckNext",
+    "conversation-loaded": "manualRebuildConversationLoadedNext",
+  };
+  const warningKeyByStep = {
+    "invite-room-started": "manualRebuildInviteStartedWarning",
+    "room-opening": "manualRebuildRoomOpeningWarning",
+    "room-ready": "manualRebuildRoomReadyWarning",
+    "session-check": "manualRebuildSessionCheckWarning",
+    "conversation-loaded": "manualRebuildConversationLoadedWarning",
+  };
+  const next = t(nextKeyByStep[normalizedStep] ?? "manualRebuildNeededNext");
+  return {
+    warning: warningKeyByStep[normalizedStep] ? t(warningKeyByStep[normalizedStep]) : "",
+    next,
+    session:
+      `manual_rebuild_flow=true source=${source} step=${normalizedStep} ` +
+      `profile_unlock_required=true saved_room_check_required=true first_message_setup_required=true`,
+    boundary:
+      `local_only=true manual_rebuild_flow=true source=${source} step=${normalizedStep} ` +
+      `no_cloud_recovery=true backup_recovery=false cloud_backup_sync=false rollback_prevention=false ` +
+      `secure_delete_claim=false security_ready=false live_network_attempt=false`,
+  };
+}
+
+function renderManualInviteRoomRebuildFlow(step, options = {}) {
+  if (!manualInviteRoomRebuildFlowActive() && options.force !== true) {
+    return false;
+  }
+  const view = manualInviteRoomRebuildStepView(step, options);
+  if (view.warning && options.warning !== false) {
+    setText(fields.productionTwoProfileWarning, view.warning);
+  }
+  setText(fields.productionTwoProfileSession, view.session);
+  setText(fields.productionTwoProfileBoundary, view.boundary);
+  setText(fields.productionProfileNextAction, view.next);
+  setProductionFollowupActions(true, view.next);
+  return true;
+}
+
 function applyPostDestructiveLifecycleRebuildGuidance(action, options = {}) {
   const deletedProfile = String(options.deletedProfile ?? "").trim();
   const input = options.input ?? productionTwoProfileInput();
@@ -16885,6 +16955,7 @@ function applyPostDestructiveLifecycleRebuildGuidance(action, options = {}) {
   stopInviteRoomPresenceRefresh();
   latestProductionTwoProfileSessionStatus = null;
   latestProductionTwoProfileSafety = null;
+  rememberManualInviteRoomRebuildFlow(action);
   resetProductionTwoProfileTranscript();
   clearManualMessagePayloadsForRoomContextChange();
   if (fullWipe) {
@@ -16910,6 +16981,7 @@ function applyPostDestructiveLifecycleRebuildGuidance(action, options = {}) {
     `local_only=true stale_room_retry_cleared=true rebuild_required=true backup_recovery=false cloud_backup_sync=false rollback_prevention=false secure_delete_claim=false security_ready=false`,
   );
   setProductionFollowupActions(true, fullWipe ? t("postWipeRoomRebuildNext") : t("postDeleteRoomRebuildNext"));
+  renderManualInviteRoomRebuildFlow("rebuild-needed", { force: true, warning: false });
   return { affectedCurrentRoom, clearedRooms };
 }
 
@@ -17579,6 +17651,7 @@ async function checkProductionTwoProfileSessionStatus() {
   setText(fields.productionTwoProfileSessionStatus, "Checking encrypted local stores");
   setProductionTwoProfileState("Sessions checking");
   setText(fields.productionTwoProfileWarning, "Checking the saved room on this device.");
+  renderManualInviteRoomRebuildFlow("session-check");
   setTwoProfileSessionStatusBusy(sessionCheckInput);
   let postCheckFocus = null;
   applyProductionActionState();
@@ -17613,12 +17686,14 @@ async function checkProductionTwoProfileSessionStatus() {
         );
       } else {
         setProductionTwoProfileState("Sessions ready");
-        setText(
-          fields.productionTwoProfileWarning,
-          hasDraft
-            ? "Room is ready. Send the message."
-            : "Room is ready. Write a message to continue.",
-        );
+        if (!renderManualInviteRoomRebuildFlow("room-ready")) {
+          setText(
+            fields.productionTwoProfileWarning,
+            hasDraft
+              ? "Room is ready. Send the message."
+              : "Room is ready. Write a message to continue.",
+          );
+        }
         postCheckFocus = hasDraft
           ? fields.runProductionTwoProfileMessageRoundtrip
           : fields.productionTwoProfileMessage;
@@ -17781,17 +17856,19 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       const ready = Boolean(sessionStatus?.both_ready_for_message_envelope);
       setProductionTwoProfileState(ready ? "Conversation resumed" : "Conversation loaded");
       const resumeTarget = ready ? autoSelectTwoProfileResumeTarget(sessionStatus) : null;
-      setText(
-        fields.productionTwoProfileWarning,
-        ready
-          ? twoProfileResumeWarningForTarget(
-              resumeTarget,
-              resumeWarning,
-              staleMessageEnvelopeSlotsPruned,
-              expiredMessagesPurged,
-            )
-          : loadedWarning,
-      );
+      if (!renderManualInviteRoomRebuildFlow(ready ? "conversation-loaded" : "session-check")) {
+        setText(
+          fields.productionTwoProfileWarning,
+          ready
+            ? twoProfileResumeWarningForTarget(
+                resumeTarget,
+                resumeWarning,
+                staleMessageEnvelopeSlotsPruned,
+                expiredMessagesPurged,
+              )
+            : loadedWarning,
+        );
+      }
       if (ready && resumeTarget !== "pending-review") {
         renderProductionTwoProfileMemory();
       }
