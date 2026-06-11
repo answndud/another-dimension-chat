@@ -126,12 +126,12 @@ const dictionaries = {
     copyFieldTestReport: "Copy report",
     fieldTestReportCopied: "Field test report copied.",
     fieldTestReportCopyFallback: "Could not copy automatically. The report is selected; copy it manually.",
-    publicBetaDiagnostics: "Public diagnostics",
+    publicBetaDiagnostics: "Public support diagnostics",
     publicBetaDiagnosticsHint:
-      "Status, build, and failure class only. No crash upload, telemetry, or raw log export. It excludes codes, endpoints, messages, profiles, paths, logs, passphrases, and key material.",
+      "Support-safe status, build, broad failure class, and next action only. No crash upload, telemetry, raw log export, workflow state, codes, endpoints, messages, profiles, paths, passphrases, or key material.",
     refreshPublicBetaDiagnostics: "Refresh diagnostics",
     copyPublicBetaDiagnostics: "Copy diagnostics",
-    publicBetaDiagnosticsCopied: "Public diagnostics copied.",
+    publicBetaDiagnosticsCopied: "Public support diagnostics copied.",
     publicBetaDiagnosticsCopyFallback:
       "Could not copy automatically. The diagnostics are selected; copy them manually.",
     peerFieldTestReport: "Peer report",
@@ -1182,12 +1182,12 @@ const dictionaries = {
     copyFieldTestReport: "리포트 복사",
     fieldTestReportCopied: "현장 테스트 리포트를 복사했습니다.",
     fieldTestReportCopyFallback: "자동 복사에 실패했습니다. 리포트를 선택해 두었으니 직접 복사하세요.",
-    publicBetaDiagnostics: "공개 진단 정보",
+    publicBetaDiagnostics: "공개 지원용 진단 정보",
     publicBetaDiagnosticsHint:
-      "상태, 빌드, 실패 분류만 포함합니다. crash upload, telemetry, raw log export는 없습니다. 코드, endpoint, 메시지, 프로필명, 경로, 로그, passphrase, key material은 제외합니다.",
+      "지원에 필요한 상태, 빌드, 넓은 실패 분류, 다음 액션만 포함합니다. crash upload, telemetry, raw log export, 작업 흐름 상태, 코드, endpoint, 메시지, 프로필명, 경로, passphrase, key material은 제외합니다.",
     refreshPublicBetaDiagnostics: "진단 정보 새로고침",
     copyPublicBetaDiagnostics: "진단 정보 복사",
-    publicBetaDiagnosticsCopied: "공개 진단 정보를 복사했습니다.",
+    publicBetaDiagnosticsCopied: "공개 지원용 진단 정보를 복사했습니다.",
     publicBetaDiagnosticsCopyFallback:
       "자동 복사에 실패했습니다. 진단 정보를 선택해 두었으니 직접 복사하세요.",
     peerFieldTestReport: "상대 리포트",

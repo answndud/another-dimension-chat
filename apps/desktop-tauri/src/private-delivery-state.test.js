@@ -12,6 +12,7 @@ import {
   fieldTestReportTriageState,
   parseFieldTestReport,
   publicBetaDiagnosticsReport,
+  publicDiagnosticsFailureClass,
   realOnionResultConfirmsExternalPeerDelivery,
   savedInviteRoomActionCanUseRetryableOutbound,
   savedInviteRoomReceiveOwnershipBlocksRecovery,
@@ -314,7 +315,7 @@ test("field test panel state keeps comparison, next action, and copy lines in sy
   });
 });
 
-test("public beta diagnostics keeps only status, build, and failure class", () => {
+test("public beta diagnostics keeps only support-safe status, build, failure class, and next action", () => {
   const report = [
     "app_version=0.1.0",
     "build_channel=beta-onion",
@@ -344,65 +345,16 @@ test("public beta diagnostics keeps only status, build, and failure class", () =
   ].join("\n");
   const diagnostics = publicBetaDiagnosticsReport(report, { includeCopyBoundary: true });
 
-  assert.match(diagnostics, /release_channel=unsigned-experimental-public-beta/);
-  assert.match(diagnostics, /security_claim=not-production-ready/);
-  assert.match(diagnostics, /sensitive_communication=sensitive-communication-prohibited/);
-  assert.match(diagnostics, /update_channel=manual-github-release-download/);
-  assert.match(diagnostics, /release_authority=same-github-release-assets/);
-  assert.match(diagnostics, /release_tag=v0\.1\.0-beta-onion-unsigned/);
-  assert.match(diagnostics, /checksum_scope=same-release-sha256-required/);
-  assert.match(diagnostics, /same_release_checksum_required=true/);
-  assert.match(diagnostics, /source_branch_release_authority=false/);
-  assert.match(
-    diagnostics,
-    /install_allow_path=macos-privacy-security-manual-allow-after-checksum/,
-  );
-  assert.match(diagnostics, /terminal_quarantine_removal_install_step=false/);
-  assert.match(diagnostics, /branch_file_release_proof=false/);
-  assert.match(diagnostics, /auto_update=false/);
-  assert.match(diagnostics, /signed=false/);
-  assert.match(diagnostics, /notarized=false/);
-  assert.match(diagnostics, /bridge_config_publication=forbidden/);
-  assert.match(diagnostics, /bridge_support=configuration-specific/);
-  assert.match(diagnostics, /audited_censorship_circumvention_claim=false/);
-  assert.match(diagnostics, /reliable_onion_delivery_claim=false/);
-  assert.match(diagnostics, /external_peer_evidence_required=true/);
-  assert.match(
-    diagnostics,
-    /privacy_model_target=no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server/,
-  );
-  assert.match(diagnostics, /briar_cwtch_equivalent_claim=false/);
-  assert.match(diagnostics, /audited_e2ee_claim=false/);
-  assert.match(diagnostics, /repeated_external_onion_evidence=false/);
-  assert.match(diagnostics, /offline_mesh_claim=false/);
-  assert.match(diagnostics, /independent_review_complete=false/);
-  assert.match(diagnostics, /public_review_gap_published=true/);
-  assert.match(diagnostics, /reviewer_signoff_claimed=false/);
-  assert.match(diagnostics, /public_user_safety_signoff_claimed=false/);
-  assert.match(diagnostics, /review_packet_inputs_public_safe=true/);
-  assert.match(diagnostics, /known_review_gaps_published=true/);
-  assert.match(diagnostics, /public_safe_review_commands_required=true/);
-  assert.match(
-    diagnostics,
-    /private_reporting_boundary=private-vulnerability-reporting-or-minimal-public-contact-request/,
-  );
-  assert.match(diagnostics, /minimal_public_contact_request_allowed=true/);
-  assert.match(diagnostics, /fabricated_review_or_peer_evidence_allowed=false/);
-  assert.match(diagnostics, /security_ready_claim=false/);
-  assert.match(diagnostics, /dependency_inventory_present=true/);
-  assert.match(diagnostics, /dependency_lockfile_hashes_present=true/);
-  assert.match(diagnostics, /dependency_lockfile_evidence_count=3/);
-  assert.match(diagnostics, /apps\/desktop-tauri\/package-lock\.json/);
-  assert.match(diagnostics, /supply_chain_audit_complete=false/);
-  assert.match(diagnostics, /sbom_published=false/);
-  assert.match(diagnostics, /vulnerability_triage_signoff_complete=false/);
-  assert.match(diagnostics, /reproducible_build_proof=false/);
-  assert.match(diagnostics, /live_dependency_scan_performed=false/);
+  assert.match(diagnostics, /Another Dimension Chat public support diagnostics/);
+  assert.match(diagnostics, /diagnostic_version=2/);
+  assert.match(diagnostics, /diagnostic_scope=public-support/);
+  assert.match(diagnostics, /payload_boundary=status-build-failure-class-recovery-action-only/);
   assert.match(diagnostics, /app_version=0.1.0/);
-  assert.match(diagnostics, /failure_class=PeerEndpointMissing/);
+  assert.match(diagnostics, /build_channel=beta-onion/);
+  assert.match(diagnostics, /build_commit=806ecad1/);
+  assert.match(diagnostics, /failure_class=safety-unverified/);
   assert.match(diagnostics, /recovery_next_action=verify/);
   assert.match(diagnostics, /app_launch_network=false/);
-  assert.match(diagnostics, /payload_boundary=status-build-failure-class-recovery-action-only/);
   assert.match(diagnostics, /crash_upload=false/);
   assert.match(diagnostics, /telemetry=false/);
   assert.match(diagnostics, /raw_log_export=false/);
@@ -411,7 +363,46 @@ test("public beta diagnostics keeps only status, build, and failure class", () =
   assert.match(diagnostics, /support_bundle_export=false/);
   assert.match(diagnostics, /raw_diagnostic_file_export=false/);
   assert.match(diagnostics, /excluded_fields=codes,endpoints,messages,profiles,paths,logs,crash_dumps,screenshots,passphrases,key_material,private_planning_notes/);
+  assert.doesNotMatch(diagnostics, /^room_status=/m);
+  assert.doesNotMatch(diagnostics, /^safety_status=/m);
+  assert.doesNotMatch(diagnostics, /^delivery_status=/m);
+  assert.doesNotMatch(diagnostics, /^route_status=/m);
+  assert.doesNotMatch(diagnostics, /^receive_status=/m);
+  assert.doesNotMatch(diagnostics, /^manual_network_permission=/m);
+  assert.doesNotMatch(diagnostics, /^real_onion_attempted=/m);
+  assert.doesNotMatch(diagnostics, /^manual_rebuild_flow=/m);
+  assert.doesNotMatch(diagnostics, /^rebuild_/m);
   assert.doesNotMatch(diagnostics, /^next_action=/m);
   assert.doesNotMatch(diagnostics, /obfs4|198\.51\.100\.4|examplehiddenservice|ADINVITE|alpha bravo|hello secret|alice-private|payload-secret/);
   assert.doesNotMatch(diagnostics, /\/Users\/alex|correct horse|deadbeef/);
+});
+
+test("public diagnostics failure class maps detailed blockers to broad support classes", () => {
+  assert.equal(publicDiagnosticsFailureClass(parseFieldTestReport("room_present=false")), "room-not-open");
+  assert.equal(
+    publicDiagnosticsFailureClass(parseFieldTestReport("room_present=true\nsession_ready=false")),
+    "session-not-ready",
+  );
+  assert.equal(
+    publicDiagnosticsFailureClass(
+      parseFieldTestReport("room_present=true\nsession_ready=true\nsafety_confirmed=false"),
+    ),
+    "safety-unverified",
+  );
+  assert.equal(
+    publicDiagnosticsFailureClass(
+      parseFieldTestReport(
+        "room_present=true\nsession_ready=true\nsafety_confirmed=true\nroute_readiness_ready=false\nroute_readiness_failure_kind=PeerEndpointMissing",
+      ),
+    ),
+    "route-readiness-blocked",
+  );
+  assert.equal(
+    publicDiagnosticsFailureClass(
+      parseFieldTestReport(
+        "room_present=true\nsession_ready=true\nsafety_confirmed=true\nroute_readiness_ready=true\nreal_onion_next_blocker=BootstrapTimeout",
+      ),
+    ),
+    "advanced-transport-blocked",
+  );
 });
