@@ -11,6 +11,9 @@ beta shell. Android is only the next mobile client candidate after the shared
 Rust core/API boundary remains platform-neutral; iOS follows after the same
 boundary is preserved. Mobile clients are not part of this public beta, and
 the platform split is not a security-readiness or production-readiness claim.
+The Android candidate is a thin Kotlin shell over UniFFI or another narrow FFI
+boundary into the shared Rust core. It must not define independent protocol,
+storage, transport, pairing, or contact-discovery semantics.
 The public desktop artifact is currently the unsigned macOS DMG path. Windows
 is a local desktop build candidate only; before any public Windows artifact, it
 must keep the same Tauri app-data resolver semantics, encrypted local store,
@@ -80,6 +83,10 @@ This project does not currently claim:
 - Public Windows installer readiness. Windows is currently a local build
   candidate only and does not add DPAPI-only unlock, auto-update, store approval,
   or a platform signing trust boundary.
+- Android app readiness. Android is currently only a shared-core shell
+  candidate and does not add Google-account identity, Play Services, Firebase
+  Cloud Messaging, Play Store trust, Android Keystore-only unlock, cloud backup,
+  or wrapper-specific protocol/storage/transport semantics.
 - External audit, independent review, reviewer signoff, or public user safety signoff.
 - Protection against device compromise.
 - Protection against coercion.

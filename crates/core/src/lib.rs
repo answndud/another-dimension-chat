@@ -217,6 +217,38 @@ pub mod production {
         "wrapper_specific_security_protocol",
     ];
 
+    const PRODUCTION_ANDROID_WRAPPER_CANDIDATE_RESPONSIBILITIES: &[&str] = &[
+        "kotlin_shell",
+        "uniffi_or_ffi_shared_core_calls",
+        "passphrase_unlock_ui",
+        "redacted_diagnostics_display",
+        "explicit_user_triggered_actions",
+        "local_storage_permission_explanation",
+    ];
+
+    const PRODUCTION_ANDROID_SHARED_CORE_API_BOUNDARY: &[&str] = &[
+        "profile_identity",
+        "pairing_payload_and_safety_transcript",
+        "message_orchestration",
+        "protocol_envelope_and_replay",
+        "encrypted_local_storage_policy",
+        "fail_closed_transport_policy",
+        "redacted_status_models",
+    ];
+
+    const PRODUCTION_ANDROID_REJECTED_DEPENDENCIES: &[&str] = &[
+        "google_account_identity",
+        "phone_number_identity",
+        "play_services_required",
+        "firebase_cloud_messaging_required",
+        "push_notification_dependency",
+        "cloud_backup",
+        "central_contact_discovery",
+        "central_message_server",
+        "wrapper_specific_security_protocol",
+        "play_store_security_trust_dependency",
+    ];
+
     const PRODUCTION_ASYNC_DELIVERY_SEMANTIC_STATES: &[&str] = &[
         "outbound_pending",
         "encrypted_envelope_exported",
@@ -432,6 +464,28 @@ pub mod production {
         security_ready_claimed: bool,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionAndroidShellCandidateSummary {
+        candidate_surface: &'static str,
+        preferred_wrapper: &'static str,
+        shared_core_required: bool,
+        wrapper_specific_protocol_allowed: bool,
+        wrapper_specific_storage_semantics_allowed: bool,
+        wrapper_specific_transport_semantics_allowed: bool,
+        android_local_storage_required: bool,
+        passphrase_unlock_required: bool,
+        redacted_diagnostics_required: bool,
+        explicit_user_action_required: bool,
+        push_notification_dependency_allowed: bool,
+        google_account_dependency_allowed: bool,
+        play_store_dependency_allowed: bool,
+        cloud_backup_allowed: bool,
+        security_ready_claimed: bool,
+        responsibilities: &'static [&'static str],
+        shared_core_api_boundary: &'static [&'static str],
+        rejected_dependencies: &'static [&'static str],
+    }
+
     impl ProductionProtocolDecisionSummary {
         pub fn selected_session_protocol(self) -> &'static str {
             self.selected_session_protocol
@@ -537,6 +591,80 @@ pub mod production {
 
         pub fn security_ready_claimed(self) -> bool {
             self.security_ready_claimed
+        }
+    }
+
+    impl ProductionAndroidShellCandidateSummary {
+        pub fn candidate_surface(self) -> &'static str {
+            self.candidate_surface
+        }
+
+        pub fn preferred_wrapper(self) -> &'static str {
+            self.preferred_wrapper
+        }
+
+        pub fn shared_core_required(self) -> bool {
+            self.shared_core_required
+        }
+
+        pub fn wrapper_specific_protocol_allowed(self) -> bool {
+            self.wrapper_specific_protocol_allowed
+        }
+
+        pub fn wrapper_specific_storage_semantics_allowed(self) -> bool {
+            self.wrapper_specific_storage_semantics_allowed
+        }
+
+        pub fn wrapper_specific_transport_semantics_allowed(self) -> bool {
+            self.wrapper_specific_transport_semantics_allowed
+        }
+
+        pub fn android_local_storage_required(self) -> bool {
+            self.android_local_storage_required
+        }
+
+        pub fn passphrase_unlock_required(self) -> bool {
+            self.passphrase_unlock_required
+        }
+
+        pub fn redacted_diagnostics_required(self) -> bool {
+            self.redacted_diagnostics_required
+        }
+
+        pub fn explicit_user_action_required(self) -> bool {
+            self.explicit_user_action_required
+        }
+
+        pub fn push_notification_dependency_allowed(self) -> bool {
+            self.push_notification_dependency_allowed
+        }
+
+        pub fn google_account_dependency_allowed(self) -> bool {
+            self.google_account_dependency_allowed
+        }
+
+        pub fn play_store_dependency_allowed(self) -> bool {
+            self.play_store_dependency_allowed
+        }
+
+        pub fn cloud_backup_allowed(self) -> bool {
+            self.cloud_backup_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn responsibilities(self) -> &'static [&'static str] {
+            self.responsibilities
+        }
+
+        pub fn shared_core_api_boundary(self) -> &'static [&'static str] {
+            self.shared_core_api_boundary
+        }
+
+        pub fn rejected_dependencies(self) -> &'static [&'static str] {
+            self.rejected_dependencies
         }
     }
 
@@ -8692,6 +8820,29 @@ pub mod production {
         }
     }
 
+    pub fn production_android_shell_candidate_summary() -> ProductionAndroidShellCandidateSummary {
+        ProductionAndroidShellCandidateSummary {
+            candidate_surface: "android_shell_candidate",
+            preferred_wrapper: "kotlin_shell_with_uniffi_or_ffi_shared_core_boundary",
+            shared_core_required: true,
+            wrapper_specific_protocol_allowed: false,
+            wrapper_specific_storage_semantics_allowed: false,
+            wrapper_specific_transport_semantics_allowed: false,
+            android_local_storage_required: true,
+            passphrase_unlock_required: true,
+            redacted_diagnostics_required: true,
+            explicit_user_action_required: true,
+            push_notification_dependency_allowed: false,
+            google_account_dependency_allowed: false,
+            play_store_dependency_allowed: false,
+            cloud_backup_allowed: false,
+            security_ready_claimed: false,
+            responsibilities: PRODUCTION_ANDROID_WRAPPER_CANDIDATE_RESPONSIBILITIES,
+            shared_core_api_boundary: PRODUCTION_ANDROID_SHARED_CORE_API_BOUNDARY,
+            rejected_dependencies: PRODUCTION_ANDROID_REJECTED_DEPENDENCIES,
+        }
+    }
+
     pub fn production_runtime_command_surface_summary() -> ProductionRuntimeCommandSurfaceSummary {
         ProductionRuntimeCommandSurfaceSummary {
             reviewed_categories: PRODUCTION_RUNTIME_COMMAND_SURFACE_REVIEWED_CATEGORIES,
@@ -10709,6 +10860,52 @@ pub mod production {
             assert!(decision
                 .rejected_dependencies()
                 .contains(&"app_store_or_notarization_dependency"));
+        }
+
+        #[test]
+        fn production_android_shell_candidate_uses_shared_core_without_mobile_trust_dependencies() {
+            let android = production_android_shell_candidate_summary();
+
+            assert_eq!(android.candidate_surface(), "android_shell_candidate");
+            assert_eq!(
+                android.preferred_wrapper(),
+                "kotlin_shell_with_uniffi_or_ffi_shared_core_boundary"
+            );
+            assert!(android.shared_core_required());
+            assert!(!android.wrapper_specific_protocol_allowed());
+            assert!(!android.wrapper_specific_storage_semantics_allowed());
+            assert!(!android.wrapper_specific_transport_semantics_allowed());
+            assert!(android.android_local_storage_required());
+            assert!(android.passphrase_unlock_required());
+            assert!(android.redacted_diagnostics_required());
+            assert!(android.explicit_user_action_required());
+            assert!(!android.push_notification_dependency_allowed());
+            assert!(!android.google_account_dependency_allowed());
+            assert!(!android.play_store_dependency_allowed());
+            assert!(!android.cloud_backup_allowed());
+            assert!(!android.security_ready_claimed());
+            assert!(android.responsibilities().contains(&"kotlin_shell"));
+            assert!(android
+                .responsibilities()
+                .contains(&"uniffi_or_ffi_shared_core_calls"));
+            assert!(android
+                .shared_core_api_boundary()
+                .contains(&"pairing_payload_and_safety_transcript"));
+            assert!(android
+                .shared_core_api_boundary()
+                .contains(&"protocol_envelope_and_replay"));
+            assert!(android
+                .shared_core_api_boundary()
+                .contains(&"encrypted_local_storage_policy"));
+            assert!(android
+                .rejected_dependencies()
+                .contains(&"firebase_cloud_messaging_required"));
+            assert!(android
+                .rejected_dependencies()
+                .contains(&"google_account_identity"));
+            assert!(android
+                .rejected_dependencies()
+                .contains(&"play_store_security_trust_dependency"));
         }
 
         #[test]

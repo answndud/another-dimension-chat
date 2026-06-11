@@ -12,6 +12,9 @@ For the v0.1 unsigned public beta, the product surface is the desktop Tauri
 beta shell. Android is the next mobile client candidate only after the shared
 Rust core/API boundary remains platform-neutral; iOS follows after that same
 boundary is preserved. Mobile clients are not part of this public beta.
+The Android candidate is a thin Kotlin shell over UniFFI or another narrow FFI
+boundary into the shared Rust core. It must not define independent protocol,
+storage, transport, pairing, or contact-discovery semantics.
 The public beta artifact is currently the unsigned macOS DMG path. Windows is a
 local desktop build candidate only: it must use the same Tauri app-data
 resolver, encrypted local store, local deletion controls, redacted diagnostics,
@@ -31,6 +34,9 @@ notifications, cloud backup, app-store/TestFlight dependency, signing
 dependency, notarization dependency, or a production/security readiness claim.
 It also does not make Windows DPAPI, Apple notarization, Developer ID, or any
 store approval a trusted security boundary.
+For Android, it also does not make Google accounts, Play Services, Firebase
+Cloud Messaging, Play Store distribution, Android Keystore-only unlock, or cloud
+backup a required trust dependency.
 
 Do not use it for real communication.
 
@@ -131,6 +137,11 @@ What exists today:
   both desktop shells must preserve the same local app-data, encrypted-store,
   local deletion, redacted diagnostics, explicit action, no auto-update, and
   non-security-signing semantics.
+- An Android shell candidate boundary: Android is next after desktop, using a
+  Kotlin shell with UniFFI or a narrow FFI shared-core boundary, passphrase
+  unlock UI, local storage explanation, redacted diagnostics, explicit actions,
+  and no Google-account, Play-Services, push-notification, cloud-backup,
+  central-discovery, or wrapper-specific protocol dependency.
 - In-app unsigned public beta warnings and public diagnostics export limited to status, build, failure class, manual network permission, and app-launch network boundary; no crash upload, telemetry, raw log export, crash dump export, automated log collection, support bundle export, raw diagnostic file export, paths, endpoints, passphrases, or key material.
 - Explicit user-triggered onion/Tor attempt paths for beta field testing. The app must not bootstrap Tor, host onion services, publish descriptors, open streams, send envelopes, or receive envelopes on app launch.
 - Lightweight verification scripts, CLI hardening tests, Tauri scaffold static checks, and GitHub Actions verification.
@@ -156,7 +167,8 @@ What does not exist yet:
 - Public Windows installer or Windows public beta artifact. Windows is only a
   local build candidate until the desktop boundary is satisfied and documented
   for a release artifact.
-- Android or iOS app.
+- Android or iOS app. Android is only a shared-core shell candidate, not an
+  implemented mobile app or mobile security claim.
 - Offline mailbox.
 - Group chat.
 - File transfer.
