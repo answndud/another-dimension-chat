@@ -330,3 +330,42 @@ Receive/import checklists must not show production messaging ready.
 Receive/import checklists must not show production E2EE ready.
 Receive/import checklists must not show safe for sensitive communication.
 Receive/import checklists must not show security-ready claims.
+
+## Retry/Cancel Checklist Boundary
+
+Future mobile retry/cancel checklists are documentation-only candidates until
+a separate wrapper UI implementation phase exists.
+
+Retry/cancel checklists may show retry/cancel checklist status only.
+Retry/cancel checklists may show retryable failure is local outbound state.
+Retry/cancel checklists may show retry requires explicit user action.
+Retry/cancel checklists may show cancel requires explicit user action.
+Retry/cancel checklists may show retry reuses encrypted envelope export flow.
+Retry/cancel checklists may show cancel terminal is local outbound state.
+Retry/cancel checklists may show cancel does not send network notification.
+Retry/cancel checklists may show pending outbound can be retried or canceled.
+Retry/cancel checklists may show received import state is unchanged by cancel.
+Retry/cancel checklists may show remote acknowledgement not required.
+Retry/cancel checklists may show delivery acknowledgement not claimed.
+Retry/cancel checklists may show external onion delivery not claimed.
+Retry/cancel checklists may show network retry not claimed.
+Retry/cancel checklists may show background retry not claimed.
+Retry/cancel checklists may show security-ready not claimed.
+
+Retry/cancel checklists must not show retry sent automatically.
+Retry/cancel checklists must not show cancel notified peer.
+Retry/cancel checklists must not show remote cancellation delivered.
+Retry/cancel checklists must not show delivery acknowledgement required.
+Retry/cancel checklists must not show retry delivery verified.
+Retry/cancel checklists must not show background retry enabled.
+Retry/cancel checklists must not show push retry enabled.
+Retry/cancel checklists must not show message delivered after retry.
+Retry/cancel checklists must not show connected to peer.
+Retry/cancel checklists must not show external onion delivery verified.
+Retry/cancel checklists must not show remote ack protocol ready.
+Retry/cancel checklists must not show cancel deletes peer copy.
+Retry/cancel checklists must not show cancel guarantees remote deletion.
+Retry/cancel checklists must not show production messaging ready.
+Retry/cancel checklists must not show production E2EE ready.
+Retry/cancel checklists must not show safe for sensitive communication.
+Retry/cancel checklists must not show security-ready claims.
