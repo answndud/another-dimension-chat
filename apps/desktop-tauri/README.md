@@ -166,7 +166,7 @@ Run that command from the repository root after the frozen local DMG and provena
 - `DEPENDENCY_LOCKFILES.sha256`
 - `MANIFEST.md`
 
-This public path is still an unsigned experimental public beta. It is not notarized, not audited, not production-ready, and sensitive communication prohibited. External two-machine onion delivery has not been independently verified; same-machine dual-profile rehearsal is development evidence only. This external evidence gap is accepted for unsigned public beta release gating only; it does not close Phase AZ, final security-ready acceptance, or any external delivery claim. Users must verify the checksum attached to the same GitHub Release as the DMG before using the normal macOS Privacy & Security manual allow path. Branch source files, source archives, or copied docs are not release proof. Updates are manual GitHub Release downloads only; there is no auto-update channel.
+This public path is still an unsigned experimental public beta. It is not notarized, not audited, not production-ready, and sensitive communication prohibited. External onion delivery is outside the v0.1 public product claim; same-machine dual-profile rehearsal is development evidence only. No peer report is expected or required for this v0.1 claim, and no external delivery claim is made. Users must verify the checksum attached to the same GitHub Release as the DMG before using the normal macOS Privacy & Security manual allow path. Branch source files, source archives, or copied docs are not release proof. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
 Run the local desktop shell during development:
 

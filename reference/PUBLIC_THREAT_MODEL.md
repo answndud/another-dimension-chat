@@ -132,12 +132,10 @@ The unsigned public beta is for development and review only.
 It is an unsigned experimental public beta, not notarized, not audited,
 not production-ready, and sensitive communication prohibited.
 
-External two-machine onion delivery has not yet been independently verified.
-Same-machine local rehearsal can exercise development flow, but it is not
-external peer evidence and must not be presented as such.
-This external evidence gap is accepted for unsigned public beta release gating only.
-It does not close the external-evidence gate, final security-ready acceptance, or any external
-delivery claim.
+External onion delivery is outside the v0.1 public product claim. Same-machine
+local rehearsal can exercise development flow, but it is not external peer
+evidence and must not be presented as such. No peer report is expected or
+required for this v0.1 claim, and no external delivery claim is made.
 
 macOS may require the user to manually allow the app in Privacy & Security. The
 project does not ask users to bypass macOS protections with terminal quarantine

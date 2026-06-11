@@ -85,8 +85,8 @@ For a Korean Briar/Cwtch-style model, the fastest useful order is:
 2. Close production E2EE and durable session lifecycle as one subsystem.
 3. Close passphrase-first key management, rollback boundary, and local data
    lifecycle as one subsystem.
-4. Finish external two-machine onion delivery evidence when a second machine or
-   external tester exists.
+4. Keep external onion delivery as a v0.1 non-claim; only revisit it if a
+   future scope explicitly requires real external evidence.
 5. Close bridge/censorship support with only verified configurations.
 6. Close dependency/supply-chain review and manual update integrity.
 7. Complete independent review or publish an explicit review gap.
@@ -101,5 +101,5 @@ The current public claim remains limited to:
 - no central account or contact-discovery direction
 - redacted diagnostics boundary
 - no automatic network/onion work on launch
-- external two-machine onion delivery not independently verified
+- external onion delivery outside the v0.1 public product claim
 - not audited, not production-ready, and sensitive communication prohibited

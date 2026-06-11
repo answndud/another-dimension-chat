@@ -131,13 +131,11 @@ the same local app-data, encrypted-store, local deletion, diagnostics redaction,
 explicit network action, and no-auto-update semantics as the macOS desktop shell
 before it can be documented as a public artifact.
 
-External two-machine onion delivery has not yet been independently verified for
-this public beta. Do not treat same-machine dual-profile rehearsal, local smoke
-tests, or operator-prepared peer packets as proof of real external onion
-delivery.
-This external evidence gap is accepted for unsigned public beta release gating only.
-It does not close the external-evidence gate, final security-ready acceptance, or any external
-delivery claim.
+External onion delivery is outside the v0.1 public product claim for this public
+beta. Do not treat same-machine dual-profile rehearsal, local smoke tests, or
+operator-prepared peer packets as proof of real external onion delivery. No peer
+report is expected or required for this v0.1 claim, and no external delivery
+claim is made.
 
 The current public upload set is prepared from the ignored local beta DMG with:
 
