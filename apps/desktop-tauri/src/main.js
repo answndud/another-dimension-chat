@@ -38,6 +38,7 @@ import {
   productionInviteRoomConversationMetadata,
   productionInviteCodeProfiles,
   productionTwoProfileLatestRetryableOutbound,
+  productionTwoProfileManualLifecycleView,
   productionTwoProfilePairFromProfiles,
   productionTwoProfileOutboundActionState,
   productionTwoProfileOutboundPrimaryAction,
@@ -60,9 +61,9 @@ import {
 } from "./action-state.js";
 import {
   createMessageEnvelopeSlot,
+  messageEnvelopeSlotImportReadyForEntry,
   messageEnvelopeSlotMatchesEntry,
   messageEnvelopeSlotPayload,
-  messageEnvelopeSlotReadyForEntry as envelopeSlotReadyForEntry,
 } from "./message-envelope-slots.js";
 import { combinedTwoProfileTranscriptTsv } from "./transcript-export.js";
 import { transcriptRetentionView } from "./transcript-retention.js";
@@ -9102,7 +9103,7 @@ function appendProductionTranscriptEntry(kind, profile, messageNumber, message, 
 
 function messageEnvelopeSlotReadyForEntry(profile, entry) {
   const slot = messageEnvelopeSlotRecord(profile, messageEnvelopeSlotRoomFingerprintForEntry(entry));
-  return envelopeSlotReadyForEntry(slot, entry);
+  return messageEnvelopeSlotImportReadyForEntry(slot, entry);
 }
 
 function pendingMessageEnvelopeSlotForActiveProfile(profile = activeProductionProfileName()) {
@@ -9126,7 +9127,7 @@ function pendingMessageEnvelopeSlotForActiveProfile(profile = activeProductionPr
 
 function activeMessageEnvelopeSlotReady(profile = activeProductionProfileName()) {
   const { entry, slot, value } = pendingMessageEnvelopeSlotForActiveProfile(profile);
-  return Boolean(entry && value && messageEnvelopeSlotMatchesEntry(slot, entry));
+  return Boolean(entry && value && messageEnvelopeSlotImportReadyForEntry(slot, entry));
 }
 
 function messageEnvelopeSlotRoomFingerprintForEntry(entry) {
@@ -9178,10 +9179,10 @@ function pruneStaleMessageEnvelopeSlots() {
       continue;
     }
     const payload = messageEnvelopeSlotPayload(slot);
-    const stillMatchesConversation = [...productionTwoProfileConversationEntries.values()].some((entry) =>
-      messageEnvelopeSlotMatchesEntry(slot, entry),
+    const stillImportReadyForConversation = [...productionTwoProfileConversationEntries.values()].some((entry) =>
+      messageEnvelopeSlotImportReadyForEntry(slot, entry),
     );
-    if (!payload || !stillMatchesConversation) {
+    if (!payload || !stillImportReadyForConversation) {
       productionPayloadSlots.messageEnvelope.delete(key);
       clearMessageEnvelopeFieldsForPayload(payload);
       pruned += 1;
@@ -9344,6 +9345,7 @@ function renderProductionTwoProfileConversationList() {
     const reviewable = twoProfileConversationPendingReviewable(entry);
     const selectable = replyable || reviewable;
     const senderEnvelopeSlotPresent = messageEnvelopeSlotReadyForEntry(entry.sender, entry);
+    const manualLifecycle = productionTwoProfileManualLifecycleView(entry, senderEnvelopeSlotPresent);
     const selected = selectable && key === selectedTwoProfileConversationKey;
     const currentReplyTarget = key === replyTargetKey;
     const currentReviewTarget = selected && !currentReplyTarget && !delivered;
@@ -9439,6 +9441,16 @@ function renderProductionTwoProfileConversationList() {
     details.className = "transcript-details";
     details.textContent = `${slot.textContent} / ${actionView.rowLabel}${entry.outboundFailureKind ? ` / ${entry.outboundFailureKind}` : ""}`;
 
+    const lifecycle = document.createElement("span");
+    lifecycle.className = `transcript-lifecycle ${manualLifecycle.state}`;
+    const lifecyclePhase = document.createElement("strong");
+    lifecyclePhase.className = "transcript-lifecycle-phase";
+    lifecyclePhase.textContent = manualLifecycle.phase;
+    const lifecycleText = document.createElement("span");
+    lifecycleText.className = "transcript-lifecycle-text";
+    lifecycleText.textContent = `${manualLifecycle.step} / ${manualLifecycle.detail} / ${manualLifecycle.boundary}`;
+    lifecycle.append(lifecyclePhase, lifecycleText);
+
     const body = document.createElement("span");
     body.className = "transcript-body";
     body.textContent = entry.message;
@@ -9483,7 +9495,7 @@ function renderProductionTwoProfileConversationList() {
     if (recoveryNote.textContent) {
       item.append(recoveryNote);
     }
-    item.append(footer, retention, action, details);
+    item.append(footer, retention, action, lifecycle, details);
     if (outboundNeedsAction) {
       const actions = document.createElement("span");
       actions.className = "transcript-row-actions";
@@ -16219,6 +16231,7 @@ async function cancelTwoProfileOutboundEntry(entry) {
       passphrase: input.passphrase,
       messageNumber: Number.parseInt(currentEntry.messageNumber, 10),
     });
+    clearMessageEnvelopeSlotForConversationEntry(currentEntry);
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }

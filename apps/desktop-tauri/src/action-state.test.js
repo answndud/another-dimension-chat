@@ -11,6 +11,7 @@ import {
   productionOnionReceiveRuntimeView,
   productionTwoProfileCurrentAction,
   productionTwoProfileLatestRetryableOutbound,
+  productionTwoProfileManualLifecycleView,
   productionTwoProfileOutboundActionState,
   productionTwoProfileOutboundNeedsEndpointRefresh,
   productionTwoProfileOutboundPrimaryAction,
@@ -325,6 +326,58 @@ test("outbound failure classes keep missing route separate from stale endpoint",
     noticeKey: "sendFailedGeneric",
     recoveryKey: "sendRecoveryGeneric",
   });
+});
+
+test("manual lifecycle view summarizes envelope state without sensitive payloads", () => {
+  const base = {
+    messageNumber: 7,
+    message: "secret text",
+    sender: "alice-profile",
+    receiver: "bob-profile",
+    roomFingerprint: "room-secret",
+  };
+
+  const exportNeeded = productionTwoProfileManualLifecycleView({
+    ...base,
+    statuses: new Set(),
+    outboundDeliveryState: "pending",
+  });
+  assert.equal(exportNeeded.phase, "export-needed");
+  assert.equal(exportNeeded.step, "export sender envelope");
+  assert.match(exportNeeded.boundary, /network_io=false/);
+
+  const importReady = productionTwoProfileManualLifecycleView(
+    {
+      ...base,
+      statuses: new Set(["sent"]),
+      outboundDeliveryState: "sent",
+    },
+    true,
+  );
+  assert.equal(importReady.phase, "import-ready");
+  assert.equal(importReady.step, "import on receiver");
+
+  const retryable = productionTwoProfileManualLifecycleView({
+    ...base,
+    statuses: new Set(["sent"]),
+    outboundDeliveryState: "failed",
+    outboundRetryable: true,
+  });
+  assert.equal(retryable.phase, "retryable");
+  assert.equal(retryable.step, "retry or cancel");
+
+  const complete = productionTwoProfileManualLifecycleView({
+    ...base,
+    statuses: new Set(["sent", "received"]),
+    outboundDeliveryState: "sent",
+  });
+  assert.equal(complete.phase, "complete");
+  assert.equal(complete.step, "sender stored / receiver stored");
+
+  const rendered = [exportNeeded, importReady, retryable, complete]
+    .map((view) => Object.values(view).join(" "))
+    .join("\n");
+  assert.doesNotMatch(rendered, /secret text|alice-profile|bob-profile|room-secret|passphrase|payload|endpoint|path/);
 });
 
 test("send receive notices separate bootstrap retry from route setup", () => {

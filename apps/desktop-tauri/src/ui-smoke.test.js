@@ -5,6 +5,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
   createMessageEnvelopeSlot,
+  messageEnvelopeSlotImportReadyForEntry,
   messageEnvelopeSlotMatchesEntry,
 } from "./message-envelope-slots.js";
 
@@ -13,6 +14,7 @@ const appRoot = join(here, "..");
 const indexHtml = readFileSync(join(appRoot, "index.html"), "utf8");
 const mainJs = readFileSync(join(here, "main.js"), "utf8");
 const i18nJs = readFileSync(join(here, "i18n.js"), "utf8");
+const actionStateJs = readFileSync(join(here, "action-state.js"), "utf8");
 const privateDeliveryStateJs = readFileSync(join(here, "private-delivery-state.js"), "utf8");
 const stylesCss = readFileSync(join(here, "styles.css"), "utf8");
 const functionBodyCache = new Map();
@@ -663,17 +665,55 @@ test("manual message envelope slots require the active pending message", () => {
   assert.match(functionBody(mainJs, "pendingMessageEnvelopeSlotForActiveProfile"), /selectedTwoProfilePendingConversationEntry\(\)/);
   assert.match(functionBody(mainJs, "pendingMessageEnvelopeSlotForActiveProfile"), /latestTwoProfilePendingConversationEntry\(\)/);
   assert.match(functionBody(mainJs, "pendingMessageEnvelopeSlotForActiveProfile"), /messageEnvelopeSlotRecord\(counterpart, entry\.roomFingerprint\)/);
-  assert.match(functionBody(mainJs, "activeMessageEnvelopeSlotReady"), /messageEnvelopeSlotMatchesEntry\(slot, entry\)/);
+  assert.match(functionBody(mainJs, "messageEnvelopeSlotReadyForEntry"), /messageEnvelopeSlotImportReadyForEntry\(slot, entry\)/);
+  assert.match(functionBody(mainJs, "activeMessageEnvelopeSlotReady"), /messageEnvelopeSlotImportReadyForEntry\(slot, entry\)/);
   assert.match(functionBody(mainJs, "messageEnvelopeSlotKey"), /productionPayloadSlotKey\(profile, roomFingerprint\)/);
   assert.match(functionBody(mainJs, "messageEnvelopeSlotRecord"), /messageEnvelopeSlotKey\(profile, roomFingerprint\)/);
   assert.match(functionBody(mainJs, "storeMessageEnvelopeSlot"), /roomFingerprint/);
   assert.match(functionBody(mainJs, "storeMessageEnvelopeSlot"), /messageEnvelopeSlotKey\(slot\.sender, slot\.roomFingerprint\)/);
+  assert.match(functionBody(mainJs, "pruneStaleMessageEnvelopeSlots"), /stillImportReadyForConversation/);
+  assert.match(functionBody(mainJs, "pruneStaleMessageEnvelopeSlots"), /messageEnvelopeSlotImportReadyForEntry\(slot, entry\)/);
 
   const loadBody = functionBody(mainJs, "loadProductionMessageEnvelope");
   assert.match(loadBody, /pendingMessageEnvelopeSlotForActiveProfile\(profile\)/);
   assert.match(loadBody, /if \(!entry\)/);
   assert.match(loadBody, /value && !messageEnvelopeSlotMatchesEntry\(slot, entry\)/);
   assert.match(functionBody(mainJs, "applyProductionActionState"), /activeMessageEnvelopeSlotReady\(activeProductionProfileName\(\)\)/);
+});
+
+test("manual message envelope slots are import-ready only for active lifecycle rows", () => {
+  const slot = createMessageEnvelopeSlot("alice", "ADENV1PAYLOAD", {
+    receiver: "bob",
+    roomFingerprint: "room-1",
+    messageNumber: 9,
+    message: "hello",
+  });
+  const sentEntry = {
+    sender: "alice",
+    receiver: "bob",
+    roomFingerprint: "room-1",
+    messageNumber: 9,
+    message: "hello",
+    statuses: new Set(["sent"]),
+    outboundDeliveryState: "sent",
+  };
+  assert.equal(messageEnvelopeSlotMatchesEntry(slot, sentEntry), true);
+  assert.equal(messageEnvelopeSlotImportReadyForEntry(slot, sentEntry), true);
+  assert.equal(
+    messageEnvelopeSlotImportReadyForEntry(slot, {
+      ...sentEntry,
+      outboundDeliveryState: "canceled",
+    }),
+    false,
+  );
+  assert.equal(
+    messageEnvelopeSlotImportReadyForEntry(slot, {
+      ...sentEntry,
+      statuses: new Set(["sent", "received"]),
+    }),
+    false,
+  );
+  assert.match(functionBody(mainJs, "cancelTwoProfileOutboundEntry"), /clearMessageEnvelopeSlotForConversationEntry\(currentEntry\)/);
 });
 
 test("manual message envelope slots are scoped to the room fingerprint", () => {
@@ -1578,6 +1618,7 @@ test("message send retry and cancel results stay scoped to the current room", ()
 
   const cancelBody = functionBody(mainJs, "cancelTwoProfileOutboundEntry");
   assert.match(cancelBody, /production_message_outbound_cancel_pending/);
+  assert.match(cancelBody, /clearMessageEnvelopeSlotForConversationEntry\(currentEntry\)/);
   assert.match(cancelBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(cancelBody, /setSelectedTwoProfileConversationEntry\(null\)/);
   assert.match(cancelBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*quiet: true,[\s\S]*refreshSessionStatus: false,[\s\S]*allowRetryableMetadataFallback: false,[\s\S]*input/);
@@ -1589,6 +1630,21 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(composerBody, /stillCurrent/);
   assert.match(composerBody, /if \(!stillCurrent \|\| !twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(composerBody, /completeInviteRoomOutboundDelivery\(input, messageNumber\)/);
+});
+
+test("conversation rows show manual lifecycle summary without stronger delivery claims", () => {
+  const renderBody = functionBody(mainJs, "renderProductionTwoProfileConversationList");
+  assert.match(mainJs, /productionTwoProfileManualLifecycleView/);
+  assert.match(renderBody, /const manualLifecycle = productionTwoProfileManualLifecycleView\(entry, senderEnvelopeSlotPresent\)/);
+  assert.match(renderBody, /transcript-lifecycle/);
+  assert.match(renderBody, /manualLifecycle\.phase/);
+  assert.match(renderBody, /manualLifecycle\.step/);
+  assert.match(renderBody, /manualLifecycle\.detail/);
+  assert.match(renderBody, /manualLifecycle\.boundary/);
+  assert.match(stylesCss, /\.transcript-lifecycle/);
+  assert.match(stylesCss, /\.transcript-lifecycle-phase/);
+  assert.match(stylesCss, /body\.is-chat-active \.message-transcript \.transcript-lifecycle/);
+  assert.match(actionStateJs, /manual lifecycle only; network_io=false/);
 });
 
 test("real onion roundtrip and wait cancel stay scoped to the current room", () => {
