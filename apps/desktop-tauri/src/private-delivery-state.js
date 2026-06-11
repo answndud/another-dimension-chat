@@ -44,6 +44,21 @@ export function fieldTestBoundarySummary(text) {
     "key_material",
     "network",
     "transport",
+    "local_only",
+    "manual_rebuild_flow",
+    "rebuilt_room_scoped",
+    "delivery_scope",
+    "delivery_action",
+    "retry_scoped",
+    "receive_scoped",
+    "delivery_code_exchange_scoped",
+    "explicit_private_delivery_required",
+    "live_network_attempt",
+    "backup_recovery",
+    "cloud_backup_sync",
+    "rollback_prevention",
+    "secure_delete_claim",
+    "security_ready",
   ];
   const parts = [];
   for (const key of allowedKeys) {
@@ -364,6 +379,9 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
   const triage = fieldTestReportTriageState(report);
   const manualNetworkPermission = parsed.manual_network_permission === "true";
   const realOnionAttempted = parsed.real_onion_attempted === "true";
+  const manualRebuildFlow = parsed.manual_rebuild_flow === "true";
+  const rebuildDeliveryNetworkIo = parsed.rebuild_delivery_network_io === "true";
+  const rebuildDeliveryLiveNetworkAttempt = parsed.rebuild_delivery_live_network_attempt === "true";
   const failureClass = fieldTestReportBlocker(parsed);
   const lines = [
     "Another Dimension Chat public beta diagnostics",
@@ -424,6 +442,16 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     `failure_class=${fieldTestReportValue(failureClass, "none")}`,
     `manual_network_permission=${manualNetworkPermission}`,
     `real_onion_attempted=${realOnionAttempted}`,
+    `manual_rebuild_flow=${manualRebuildFlow}`,
+    `rebuild_delivery_scope=${fieldTestReportValue(parsed.rebuild_delivery_scope, "none")}`,
+    `rebuild_delivery_action=${fieldTestReportValue(parsed.rebuild_delivery_action, "none")}`,
+    `rebuild_retry_scoped=${parsed.rebuild_retry_scoped === "true"}`,
+    `rebuild_receive_scoped=${parsed.rebuild_receive_scoped === "true"}`,
+    `rebuild_delivery_code_exchange_scoped=${parsed.rebuild_delivery_code_exchange_scoped === "true"}`,
+    `rebuild_explicit_private_delivery_required=${parsed.rebuild_explicit_private_delivery_required === "true"}`,
+    `rebuild_delivery_network_io=${rebuildDeliveryNetworkIo}`,
+    `rebuild_delivery_live_network_attempt=${rebuildDeliveryLiveNetworkAttempt}`,
+    "rebuild_external_peer_evidence_claim=false",
     `app_launch_network=false`,
   ];
   if (options.includeCopyBoundary === true) {
