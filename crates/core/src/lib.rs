@@ -880,6 +880,15 @@ pub mod production {
         "rollback_prevention_non_claim",
     ];
 
+    const PRODUCTION_LOCAL_STORAGE_LIFECYCLE_PRODUCT_SCOPES: &[&str] = &[
+        "conversation_delete_removes_message_records_preserves_session",
+        "session_delete_removes_resume_records_preserves_messages",
+        "profile_delete_removes_profile_store_locks_unlock_state",
+        "full_local_wipe_removes_owned_app_data",
+        "backup_exclusion_is_best_effort_policy_not_recovery",
+        "rollback_detection_is_marker_only_not_prevention",
+    ];
+
     const PRODUCTION_TRANSPORT_ENVELOPE_IO_POLICIES: &[&str] = &[
         "explicit_user_action_required",
         "no_network_on_launch",
@@ -1052,6 +1061,31 @@ pub mod production {
         rollback_prevention_claimed: bool,
         secure_media_deletion_claimed: bool,
         boundary_closed: bool,
+        security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionLocalStorageLifecycleProductSummary {
+        scopes: &'static [&'static str],
+        conversation_delete_available: bool,
+        conversation_delete_preserves_session: bool,
+        session_delete_available: bool,
+        session_delete_preserves_messages: bool,
+        profile_delete_available: bool,
+        full_local_wipe_available: bool,
+        passphrase_first_required: bool,
+        encrypted_store_required: bool,
+        backup_exclusion_best_effort_only: bool,
+        cloud_backup_or_sync_enabled: bool,
+        backup_recovery_claimed: bool,
+        rollback_detection_marker_only: bool,
+        rollback_prevention_claimed: bool,
+        secure_media_deletion_claimed: bool,
+        store_path_returned: bool,
+        passphrase_retained: bool,
+        plaintext_exposed: bool,
+        key_material_exposed: bool,
+        product_lifecycle_closed: bool,
         security_ready_claimed: bool,
     }
 
@@ -1430,6 +1464,92 @@ pub mod production {
 
         pub fn boundary_closed(self) -> bool {
             self.boundary_closed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+    }
+
+    impl ProductionLocalStorageLifecycleProductSummary {
+        pub fn scopes(self) -> &'static [&'static str] {
+            self.scopes
+        }
+
+        pub fn conversation_delete_available(self) -> bool {
+            self.conversation_delete_available
+        }
+
+        pub fn conversation_delete_preserves_session(self) -> bool {
+            self.conversation_delete_preserves_session
+        }
+
+        pub fn session_delete_available(self) -> bool {
+            self.session_delete_available
+        }
+
+        pub fn session_delete_preserves_messages(self) -> bool {
+            self.session_delete_preserves_messages
+        }
+
+        pub fn profile_delete_available(self) -> bool {
+            self.profile_delete_available
+        }
+
+        pub fn full_local_wipe_available(self) -> bool {
+            self.full_local_wipe_available
+        }
+
+        pub fn passphrase_first_required(self) -> bool {
+            self.passphrase_first_required
+        }
+
+        pub fn encrypted_store_required(self) -> bool {
+            self.encrypted_store_required
+        }
+
+        pub fn backup_exclusion_best_effort_only(self) -> bool {
+            self.backup_exclusion_best_effort_only
+        }
+
+        pub fn cloud_backup_or_sync_enabled(self) -> bool {
+            self.cloud_backup_or_sync_enabled
+        }
+
+        pub fn backup_recovery_claimed(self) -> bool {
+            self.backup_recovery_claimed
+        }
+
+        pub fn rollback_detection_marker_only(self) -> bool {
+            self.rollback_detection_marker_only
+        }
+
+        pub fn rollback_prevention_claimed(self) -> bool {
+            self.rollback_prevention_claimed
+        }
+
+        pub fn secure_media_deletion_claimed(self) -> bool {
+            self.secure_media_deletion_claimed
+        }
+
+        pub fn store_path_returned(self) -> bool {
+            self.store_path_returned
+        }
+
+        pub fn passphrase_retained(self) -> bool {
+            self.passphrase_retained
+        }
+
+        pub fn plaintext_exposed(self) -> bool {
+            self.plaintext_exposed
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn product_lifecycle_closed(self) -> bool {
+            self.product_lifecycle_closed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -9216,6 +9336,53 @@ pub mod production {
         }
     }
 
+    pub fn production_local_storage_lifecycle_product_summary(
+    ) -> ProductionLocalStorageLifecycleProductSummary {
+        let local_data = production_local_data_lifecycle_policy_summary();
+        let backup = production_backup_migration_boundary_summary();
+        let key_rollback = production_key_rollback_boundary_summary();
+        let encrypted_store_required =
+            local_data.backend() == StorageBackendKind::SqlCipherAdrec1Spike;
+        let backup_exclusion_best_effort_only = backup.backup_exclusion_policy_decided()
+            && backup.backup_exclusion_verification_required()
+            && !backup.backup_exclusion_verified_by_core_status()
+            && !backup.backup_recovery_claimed();
+        let product_lifecycle_closed = local_data.passphrase_first_required()
+            && encrypted_store_required
+            && local_data.logical_delete_available()
+            && backup.boundary_closed()
+            && key_rollback.boundary_closed()
+            && backup_exclusion_best_effort_only
+            && backup.rollback_detection_marker_only()
+            && !backup.cloud_backup_or_sync_enabled()
+            && !backup.rollback_prevention_claimed()
+            && !backup.secure_media_deletion_claimed();
+
+        ProductionLocalStorageLifecycleProductSummary {
+            scopes: PRODUCTION_LOCAL_STORAGE_LIFECYCLE_PRODUCT_SCOPES,
+            conversation_delete_available: true,
+            conversation_delete_preserves_session: true,
+            session_delete_available: true,
+            session_delete_preserves_messages: true,
+            profile_delete_available: true,
+            full_local_wipe_available: true,
+            passphrase_first_required: local_data.passphrase_first_required(),
+            encrypted_store_required,
+            backup_exclusion_best_effort_only,
+            cloud_backup_or_sync_enabled: backup.cloud_backup_or_sync_enabled(),
+            backup_recovery_claimed: backup.backup_recovery_claimed(),
+            rollback_detection_marker_only: backup.rollback_detection_marker_only(),
+            rollback_prevention_claimed: backup.rollback_prevention_claimed(),
+            secure_media_deletion_claimed: backup.secure_media_deletion_claimed(),
+            store_path_returned: false,
+            passphrase_retained: false,
+            plaintext_exposed: false,
+            key_material_exposed: false,
+            product_lifecycle_closed,
+            security_ready_claimed: false,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -11188,6 +11355,48 @@ pub mod production {
             assert!(policy
                 .policy_tags()
                 .contains(&"rollback_protection_non_claim"));
+        }
+
+        #[test]
+        fn production_local_storage_lifecycle_product_matrix_closes_without_backup_or_rollback_claims(
+        ) {
+            let lifecycle = production_local_storage_lifecycle_product_summary();
+
+            assert!(lifecycle.product_lifecycle_closed());
+            assert!(lifecycle.conversation_delete_available());
+            assert!(lifecycle.conversation_delete_preserves_session());
+            assert!(lifecycle.session_delete_available());
+            assert!(lifecycle.session_delete_preserves_messages());
+            assert!(lifecycle.profile_delete_available());
+            assert!(lifecycle.full_local_wipe_available());
+            assert!(lifecycle.passphrase_first_required());
+            assert!(lifecycle.encrypted_store_required());
+            assert!(lifecycle.backup_exclusion_best_effort_only());
+            assert!(!lifecycle.cloud_backup_or_sync_enabled());
+            assert!(!lifecycle.backup_recovery_claimed());
+            assert!(lifecycle.rollback_detection_marker_only());
+            assert!(!lifecycle.rollback_prevention_claimed());
+            assert!(!lifecycle.secure_media_deletion_claimed());
+            assert!(!lifecycle.store_path_returned());
+            assert!(!lifecycle.passphrase_retained());
+            assert!(!lifecycle.plaintext_exposed());
+            assert!(!lifecycle.key_material_exposed());
+            assert!(!lifecycle.security_ready_claimed());
+            assert!(lifecycle
+                .scopes()
+                .contains(&"conversation_delete_removes_message_records_preserves_session"));
+            assert!(lifecycle
+                .scopes()
+                .contains(&"session_delete_removes_resume_records_preserves_messages"));
+            assert!(lifecycle
+                .scopes()
+                .contains(&"profile_delete_removes_profile_store_locks_unlock_state"));
+            assert!(lifecycle
+                .scopes()
+                .contains(&"full_local_wipe_removes_owned_app_data"));
+            assert!(lifecycle
+                .scopes()
+                .contains(&"rollback_detection_is_marker_only_not_prevention"));
         }
 
         #[test]
