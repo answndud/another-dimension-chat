@@ -1289,6 +1289,43 @@ pub mod production {
         "mobile_build_output_directories",
     ];
 
+    const PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_SHAPES: &[&str] = &[
+        "opaque_profile_handle",
+        "locked_unlocked_status_handles",
+        "utf8_strings",
+        "canonical_byte_buffers",
+        "redacted_structured_results",
+        "explicit_error_codes",
+        "caller_owned_input_buffers",
+        "core_owned_returned_buffers",
+        "explicit_release",
+        "explicit_user_action_tokens",
+    ];
+
+    const PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_ERRORS: &[&str] = &[
+        "locked_profile",
+        "malformed_payload",
+        "replay_rejected",
+        "policy_blocked",
+        "transport_unavailable",
+        "unsupported_mobile_surface",
+    ];
+
+    const PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_FORBIDDEN_CROSSINGS: &[&str] = &[
+        "passphrase_crossing",
+        "private_key_crossing",
+        "key_material_crossing",
+        "plaintext_history_crossing",
+        "local_database_handle_crossing",
+        "raw_filesystem_path_crossing",
+        "background_delivery_loop",
+        "push_notification_delivery",
+        "central_discovery",
+        "central_message_server",
+        "abi_stability_claim",
+        "mobile_app_readiness_claim",
+    ];
+
     const PRODUCTION_INDEPENDENT_REVIEW_POLICIES: &[&str] = &[
         "public_threat_model_required",
         "independent_review_packet_required",
@@ -1704,6 +1741,26 @@ pub mod production {
         network_or_build_execution_allowed: bool,
         mobile_readiness_claimed: bool,
         security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileFfiSignaturePlaceholderBoundarySummary {
+        signature_shapes: &'static [&'static str],
+        error_codes: &'static [&'static str],
+        forbidden_crossings: &'static [&'static str],
+        inherits_mobile_ffi_inventory_boundary: bool,
+        inherits_mobile_skeleton_verification_boundary: bool,
+        signature_placeholder_only: bool,
+        callable_abi_claimed: bool,
+        stable_abi_claimed: bool,
+        memory_ownership_contract_claimed: bool,
+        serialization_contract_claimed: bool,
+        binding_generation_claimed: bool,
+        platform_packaging_claimed: bool,
+        mobile_app_readiness_claimed: bool,
+        secrets_or_plaintext_crossing_allowed: bool,
+        delivery_or_central_service_crossing_allowed: bool,
         boundary_closed: bool,
     }
 
@@ -2895,6 +2952,72 @@ pub mod production {
 
         pub fn security_ready_claimed(self) -> bool {
             self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileFfiSignaturePlaceholderBoundarySummary {
+        pub fn signature_shapes(self) -> &'static [&'static str] {
+            self.signature_shapes
+        }
+
+        pub fn error_codes(self) -> &'static [&'static str] {
+            self.error_codes
+        }
+
+        pub fn forbidden_crossings(self) -> &'static [&'static str] {
+            self.forbidden_crossings
+        }
+
+        pub fn inherits_mobile_ffi_inventory_boundary(self) -> bool {
+            self.inherits_mobile_ffi_inventory_boundary
+        }
+
+        pub fn inherits_mobile_skeleton_verification_boundary(self) -> bool {
+            self.inherits_mobile_skeleton_verification_boundary
+        }
+
+        pub fn signature_placeholder_only(self) -> bool {
+            self.signature_placeholder_only
+        }
+
+        pub fn callable_abi_claimed(self) -> bool {
+            self.callable_abi_claimed
+        }
+
+        pub fn stable_abi_claimed(self) -> bool {
+            self.stable_abi_claimed
+        }
+
+        pub fn memory_ownership_contract_claimed(self) -> bool {
+            self.memory_ownership_contract_claimed
+        }
+
+        pub fn serialization_contract_claimed(self) -> bool {
+            self.serialization_contract_claimed
+        }
+
+        pub fn binding_generation_claimed(self) -> bool {
+            self.binding_generation_claimed
+        }
+
+        pub fn platform_packaging_claimed(self) -> bool {
+            self.platform_packaging_claimed
+        }
+
+        pub fn mobile_app_readiness_claimed(self) -> bool {
+            self.mobile_app_readiness_claimed
+        }
+
+        pub fn secrets_or_plaintext_crossing_allowed(self) -> bool {
+            self.secrets_or_plaintext_crossing_allowed
+        }
+
+        pub fn delivery_or_central_service_crossing_allowed(self) -> bool {
+            self.delivery_or_central_service_crossing_allowed
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -11651,6 +11774,82 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_ffi_signature_placeholder_boundary_summary(
+    ) -> ProductionMobileFfiSignaturePlaceholderBoundarySummary {
+        let ffi = production_mobile_shared_core_ffi_inventory_boundary_summary();
+        let verification = production_mobile_skeleton_verification_script_boundary_summary();
+        let inherits_mobile_ffi_inventory_boundary = ffi.boundary_closed()
+            && ffi.documentation_only()
+            && ffi.uniffi_or_ffi_placeholder_only()
+            && !ffi.generated_bindings_claimed();
+        let inherits_mobile_skeleton_verification_boundary = verification.boundary_closed()
+            && verification.script_is_read_only()
+            && verification.rejects_generated_bindings()
+            && verification.rejects_mobile_artifacts();
+        let signature_placeholder_only = true;
+        let callable_abi_claimed = false;
+        let stable_abi_claimed = false;
+        let memory_ownership_contract_claimed = false;
+        let serialization_contract_claimed = false;
+        let binding_generation_claimed = false;
+        let platform_packaging_claimed = false;
+        let mobile_app_readiness_claimed = false;
+        let secrets_or_plaintext_crossing_allowed = false;
+        let delivery_or_central_service_crossing_allowed = false;
+        let boundary_closed = inherits_mobile_ffi_inventory_boundary
+            && inherits_mobile_skeleton_verification_boundary
+            && signature_placeholder_only
+            && !callable_abi_claimed
+            && !stable_abi_claimed
+            && !memory_ownership_contract_claimed
+            && !serialization_contract_claimed
+            && !binding_generation_claimed
+            && !platform_packaging_claimed
+            && !mobile_app_readiness_claimed
+            && !secrets_or_plaintext_crossing_allowed
+            && !delivery_or_central_service_crossing_allowed
+            && PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_SHAPES
+                .contains(&"opaque_profile_handle")
+            && PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_SHAPES
+                .contains(&"canonical_byte_buffers")
+            && PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_SHAPES
+                .contains(&"redacted_structured_results")
+            && PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_SHAPES
+                .contains(&"explicit_user_action_tokens")
+            && PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_ERRORS.contains(&"locked_profile")
+            && PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_ERRORS
+                .contains(&"unsupported_mobile_surface")
+            && PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_FORBIDDEN_CROSSINGS
+                .contains(&"passphrase_crossing")
+            && PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_FORBIDDEN_CROSSINGS
+                .contains(&"raw_filesystem_path_crossing")
+            && PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_FORBIDDEN_CROSSINGS
+                .contains(&"push_notification_delivery")
+            && PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_FORBIDDEN_CROSSINGS
+                .contains(&"central_message_server")
+            && PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_FORBIDDEN_CROSSINGS
+                .contains(&"mobile_app_readiness_claim");
+
+        ProductionMobileFfiSignaturePlaceholderBoundarySummary {
+            signature_shapes: PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_SHAPES,
+            error_codes: PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_ERRORS,
+            forbidden_crossings: PRODUCTION_MOBILE_FFI_SIGNATURE_PLACEHOLDER_FORBIDDEN_CROSSINGS,
+            inherits_mobile_ffi_inventory_boundary,
+            inherits_mobile_skeleton_verification_boundary,
+            signature_placeholder_only,
+            callable_abi_claimed,
+            stable_abi_claimed,
+            memory_ownership_contract_claimed,
+            serialization_contract_claimed,
+            binding_generation_claimed,
+            platform_packaging_claimed,
+            mobile_app_readiness_claimed,
+            secrets_or_plaintext_crossing_allowed,
+            delivery_or_central_service_crossing_allowed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_independent_review_boundary_summary(
     ) -> ProductionIndependentReviewBoundarySummary {
         let public_threat_model_required = true;
@@ -14748,6 +14947,95 @@ pub mod production {
             assert!(boundary
                 .rejected_file_patterns()
                 .contains(&"mobile_build_output_directories"));
+        }
+
+        #[test]
+        fn production_mobile_ffi_signature_placeholder_boundary_is_non_callable() {
+            let boundary = production_mobile_ffi_signature_placeholder_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_ffi_inventory_boundary());
+            assert!(boundary.inherits_mobile_skeleton_verification_boundary());
+            assert!(boundary.signature_placeholder_only());
+            assert!(!boundary.callable_abi_claimed());
+            assert!(!boundary.stable_abi_claimed());
+            assert!(!boundary.memory_ownership_contract_claimed());
+            assert!(!boundary.serialization_contract_claimed());
+            assert!(!boundary.binding_generation_claimed());
+            assert!(!boundary.platform_packaging_claimed());
+            assert!(!boundary.mobile_app_readiness_claimed());
+            assert!(!boundary.secrets_or_plaintext_crossing_allowed());
+            assert!(!boundary.delivery_or_central_service_crossing_allowed());
+            assert!(boundary
+                .signature_shapes()
+                .contains(&"opaque_profile_handle"));
+            assert!(boundary
+                .signature_shapes()
+                .contains(&"locked_unlocked_status_handles"));
+            assert!(boundary.signature_shapes().contains(&"utf8_strings"));
+            assert!(boundary
+                .signature_shapes()
+                .contains(&"canonical_byte_buffers"));
+            assert!(boundary
+                .signature_shapes()
+                .contains(&"redacted_structured_results"));
+            assert!(boundary
+                .signature_shapes()
+                .contains(&"explicit_error_codes"));
+            assert!(boundary
+                .signature_shapes()
+                .contains(&"caller_owned_input_buffers"));
+            assert!(boundary
+                .signature_shapes()
+                .contains(&"core_owned_returned_buffers"));
+            assert!(boundary.signature_shapes().contains(&"explicit_release"));
+            assert!(boundary
+                .signature_shapes()
+                .contains(&"explicit_user_action_tokens"));
+            assert!(boundary.error_codes().contains(&"locked_profile"));
+            assert!(boundary.error_codes().contains(&"malformed_payload"));
+            assert!(boundary.error_codes().contains(&"replay_rejected"));
+            assert!(boundary.error_codes().contains(&"policy_blocked"));
+            assert!(boundary.error_codes().contains(&"transport_unavailable"));
+            assert!(boundary
+                .error_codes()
+                .contains(&"unsupported_mobile_surface"));
+            assert!(boundary
+                .forbidden_crossings()
+                .contains(&"passphrase_crossing"));
+            assert!(boundary
+                .forbidden_crossings()
+                .contains(&"private_key_crossing"));
+            assert!(boundary
+                .forbidden_crossings()
+                .contains(&"key_material_crossing"));
+            assert!(boundary
+                .forbidden_crossings()
+                .contains(&"plaintext_history_crossing"));
+            assert!(boundary
+                .forbidden_crossings()
+                .contains(&"local_database_handle_crossing"));
+            assert!(boundary
+                .forbidden_crossings()
+                .contains(&"raw_filesystem_path_crossing"));
+            assert!(boundary
+                .forbidden_crossings()
+                .contains(&"background_delivery_loop"));
+            assert!(boundary
+                .forbidden_crossings()
+                .contains(&"push_notification_delivery"));
+            assert!(boundary
+                .forbidden_crossings()
+                .contains(&"central_discovery"));
+            assert!(boundary
+                .forbidden_crossings()
+                .contains(&"central_message_server"));
+            assert!(boundary
+                .forbidden_crossings()
+                .contains(&"abi_stability_claim"));
+            assert!(boundary
+                .forbidden_crossings()
+                .contains(&"mobile_app_readiness_claim"));
         }
 
         #[test]
