@@ -1282,6 +1282,8 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /app_version=/);
   assert.match(reportBody, /build_channel=/);
   assert.match(reportBody, /build_commit=/);
+  assert.match(reportBody, /productionInviteIdentityBoundaryView\(input\)/);
+  assert.match(reportBody, /accountless_invite_boundary=/);
   assert.match(reportBody, /receive_state=/);
   assert.match(reportBody, /retryable_outbound_present=/);
   assert.match(reportBody, /outbound_failure_class=/);
@@ -1342,6 +1344,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(functionBody(mainJs, "cancelProductionTwoProfileRealOnionWait"), /latestProductionTwoProfileRealOnionWaitCanceledFingerprint/);
   assert.match(functionBody(mainJs, "cancelProductionTwoProfileRealOnionWait"), /production_two_profile_real_onion_wait_cancel/);
   assert.doesNotMatch(reportBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
+  assert.doesNotMatch(reportBody, /receivedInviteCode|productionInviteCodeProfiles\(input|profileA=.*profileB=/);
   assert.doesNotMatch(reportBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
   assert.doesNotMatch(reportBody, /outbound_recovery_message=|outbound_message=|peer_endpoint=|onion_endpoint=/);
   assert.doesNotMatch(summaryBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);

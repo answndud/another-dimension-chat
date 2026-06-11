@@ -5,6 +5,7 @@ import {
   productionLocalLifecycleBoundaryView,
   productionBridgeCensorshipBoundaryView,
   productionInviteCodeProfiles,
+  productionInviteIdentityBoundaryView,
   productionInviteRoomConversationMetadata,
   productionOnionReceiveLoopRefreshPlan,
   productionOnionReceiveRuntimeView,
@@ -55,6 +56,28 @@ test("invite code creates opposite local and peer roles", () => {
     localProfile: "joiner-abcd-2345-1ufszcs",
     peerProfile: "inviter-abcd-2345-1ufszcs",
   });
+});
+
+test("invite identity boundary stays accountless and redacted", () => {
+  const boundary = productionInviteIdentityBoundaryView({
+    profileA: "inviter-abcd-2345-1ufszcs",
+    profileB: "joiner-abcd-2345-1ufszcs",
+    passphrase: "ABCD-2345",
+  });
+
+  assert.match(boundary, /accountless=true/);
+  assert.match(boundary, /phone_number_required=false/);
+  assert.match(boundary, /email_required=false/);
+  assert.match(boundary, /global_account_required=false/);
+  assert.match(boundary, /searchable_username=false/);
+  assert.match(boundary, /central_contact_discovery=false/);
+  assert.match(boundary, /central_message_server=false/);
+  assert.match(boundary, /pairwise_identity=true/);
+  assert.match(boundary, /pairwise_profiles_derived=true/);
+  assert.match(boundary, /invite_code_sensitive=true/);
+  assert.match(boundary, /invite_code_in_diagnostics=false/);
+  assert.match(boundary, /qr_required=false/);
+  assert.doesNotMatch(boundary, /ABCD-2345|inviter-abcd|joiner-abcd/);
 });
 
 test("chat action moves from setup to compose to stored send", () => {

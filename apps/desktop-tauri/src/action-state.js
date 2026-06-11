@@ -63,6 +63,31 @@ export function productionInviteCodeProfileName(value) {
   return /^(inviter|joiner)-/.test(String(value ?? "").trim().toLowerCase());
 }
 
+export function productionInviteIdentityBoundaryView(input = {}) {
+  const profileA = String(input.profileA ?? "").trim();
+  const profileB = String(input.profileB ?? "").trim();
+  const hasRoom = Boolean(profileA && profileB && profileA !== profileB && input.passphrase);
+  const pairwiseProfilesDerived =
+    productionInviteCodeProfileName(profileA) && productionInviteCodeProfileName(profileB);
+  return [
+    "accountless=true",
+    "phone_number_required=false",
+    "email_required=false",
+    "global_account_required=false",
+    "searchable_username=false",
+    "public_directory=false",
+    "central_contact_discovery=false",
+    "central_message_server=false",
+    "pairwise_identity=true",
+    `pairwise_profiles_derived=${pairwiseProfilesDerived}`,
+    "invite_code_sensitive=true",
+    "invite_code_in_diagnostics=false",
+    "qr_required=false",
+    "qr_optional_future=true",
+    `room_present=${hasRoom}`,
+  ].join(" ");
+}
+
 export function productionTwoProfileCurrentAction(state) {
   const input = state?.input ?? {};
   if (state?.busy) {
