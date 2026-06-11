@@ -86,7 +86,7 @@ External two-machine onion delivery has not yet been independently verified.
 Same-machine dual-profile rehearsal is development evidence only, not peer
 field-test evidence.
 This external evidence gap is accepted for unsigned public beta release gating only.
-It does not close Phase AZ, final security-ready acceptance, or any external
+It does not close the external-evidence gate, final security-ready acceptance, or any external
 delivery claim.
 
 There is no auto-update. Every update is a manual GitHub Release download and

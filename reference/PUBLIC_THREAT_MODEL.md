@@ -19,7 +19,8 @@ The v0.1 unsigned public beta is narrower:
 - safety phrase confirmation
 - local encrypted profile/session/message store exercise
 - saved-room restart/resume recovery
-- explicit private-route setup
+- explicit local manual encrypted envelope exchange
+- explicit private-route setup only for advanced transport work
 - explicit onion/Tor attempt paths after manual user action
 - redacted diagnostics and public release artifact verification
 
@@ -60,15 +61,15 @@ Current implementation evidence includes:
 - marker-only rollback detection boundary
 - fail-closed onion/Tor attempt paths
 - disabled network/onion work on app launch
-- public diagnostics redaction boundary
+- public support diagnostics redaction boundary
 - manual GitHub Release download with SHA-256 verification
 - dependency lockfile hash baseline for reviewers
 - public threat-model and independent-review packet publication
 - explicit public review gap with no completed-review or reviewer-signoff claim
 - explicit no-public-user-safety-signoff and no-fabricated-review/peer-evidence
   boundary
-- local-copy public diagnostics limited to status, build, failure class, manual
-  network permission, and app-launch network boundary
+- local-copy public support diagnostics limited to app status, build identity,
+  broad failure class, recovery next action, and app-launch network boundary
 - public issue and security intake policy that requires redacted diagnostics or
   minimal private-contact requests instead of raw sensitive material
 - private vulnerability reporting or a minimal public contact request for
@@ -135,7 +136,7 @@ External two-machine onion delivery has not yet been independently verified.
 Same-machine local rehearsal can exercise development flow, but it is not
 external peer evidence and must not be presented as such.
 This external evidence gap is accepted for unsigned public beta release gating only.
-It does not close Phase AZ, final security-ready acceptance, or any external
+It does not close the external-evidence gate, final security-ready acceptance, or any external
 delivery claim.
 
 macOS may require the user to manually allow the app in Privacy & Security. The
