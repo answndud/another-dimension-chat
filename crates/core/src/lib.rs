@@ -1230,6 +1230,33 @@ pub mod production {
         "security-ready",
     ];
 
+    const PRODUCTION_MOBILE_STATUS_SCREEN_COPY_REQUIRED_PHRASES: &[&str] = &[
+        "status only",
+        "redacted status only",
+        "not connected",
+        "manual action required",
+        "sensitive communication prohibited",
+        "not audited",
+        "not production-ready",
+        "external onion delivery not claimed",
+        "manual update verification required",
+    ];
+
+    const PRODUCTION_MOBILE_STATUS_SCREEN_COPY_FORBIDDEN_CLAIMS: &[&str] = &[
+        "send now",
+        "receive in background",
+        "push delivery enabled",
+        "connected to peer",
+        "onion delivery verified",
+        "secure messenger",
+        "safe for sensitive communication",
+        "audited",
+        "production-ready",
+        "store approved",
+        "cloud backup enabled",
+        "security-ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -1736,6 +1763,26 @@ pub mod production {
         cloud_backup_claim_allowed: bool,
         external_onion_delivery_success_claim_allowed: bool,
         briar_cwtch_equivalence_claim_allowed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileWrapperStatusScreenCopyBoundarySummary {
+        required_screen_phrases: &'static [&'static str],
+        forbidden_screen_claims: &'static [&'static str],
+        inherits_mobile_ux_copy_boundary: bool,
+        inherits_mobile_status_dto_boundary: bool,
+        status_only_label_required: bool,
+        manual_action_required_label_required: bool,
+        sensitive_communication_prohibited_label_required: bool,
+        not_audited_label_required: bool,
+        not_production_ready_label_required: bool,
+        external_delivery_non_claim_required: bool,
+        send_or_receive_cta_allowed: bool,
+        connected_peer_claim_allowed: bool,
+        push_or_background_delivery_claim_allowed: bool,
+        store_or_cloud_trust_claim_allowed: bool,
         security_ready_claimed: bool,
         boundary_closed: bool,
     }
@@ -2892,6 +2939,72 @@ pub mod production {
 
         pub fn briar_cwtch_equivalence_claim_allowed(self) -> bool {
             self.briar_cwtch_equivalence_claim_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileWrapperStatusScreenCopyBoundarySummary {
+        pub fn required_screen_phrases(self) -> &'static [&'static str] {
+            self.required_screen_phrases
+        }
+
+        pub fn forbidden_screen_claims(self) -> &'static [&'static str] {
+            self.forbidden_screen_claims
+        }
+
+        pub fn inherits_mobile_ux_copy_boundary(self) -> bool {
+            self.inherits_mobile_ux_copy_boundary
+        }
+
+        pub fn inherits_mobile_status_dto_boundary(self) -> bool {
+            self.inherits_mobile_status_dto_boundary
+        }
+
+        pub fn status_only_label_required(self) -> bool {
+            self.status_only_label_required
+        }
+
+        pub fn manual_action_required_label_required(self) -> bool {
+            self.manual_action_required_label_required
+        }
+
+        pub fn sensitive_communication_prohibited_label_required(self) -> bool {
+            self.sensitive_communication_prohibited_label_required
+        }
+
+        pub fn not_audited_label_required(self) -> bool {
+            self.not_audited_label_required
+        }
+
+        pub fn not_production_ready_label_required(self) -> bool {
+            self.not_production_ready_label_required
+        }
+
+        pub fn external_delivery_non_claim_required(self) -> bool {
+            self.external_delivery_non_claim_required
+        }
+
+        pub fn send_or_receive_cta_allowed(self) -> bool {
+            self.send_or_receive_cta_allowed
+        }
+
+        pub fn connected_peer_claim_allowed(self) -> bool {
+            self.connected_peer_claim_allowed
+        }
+
+        pub fn push_or_background_delivery_claim_allowed(self) -> bool {
+            self.push_or_background_delivery_claim_allowed
+        }
+
+        pub fn store_or_cloud_trust_claim_allowed(self) -> bool {
+            self.store_or_cloud_trust_claim_allowed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -11797,6 +11910,97 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_wrapper_status_screen_copy_boundary_summary(
+    ) -> ProductionMobileWrapperStatusScreenCopyBoundarySummary {
+        let ux = production_mobile_wrapper_ux_copy_boundary_summary();
+        let dto = production_mobile_wrapper_status_command_dto_boundary_summary();
+        let inherits_mobile_ux_copy_boundary = ux.boundary_closed()
+            && ux
+                .required_public_phrases()
+                .contains(&"unsigned experimental public beta")
+            && ux
+                .required_public_phrases()
+                .contains(&"redacted status only")
+            && ux
+                .required_public_phrases()
+                .contains(&"external onion delivery not claimed")
+            && !ux.security_ready_claimed();
+        let inherits_mobile_status_dto_boundary = dto.boundary_closed()
+            && dto.redacted_status_dto_only()
+            && dto.dto_fields().contains(&"platform")
+            && dto.dto_fields().contains(&"profile_lock_state")
+            && dto.dto_fields().contains(&"public_non_claims")
+            && dto.forbidden_fields().contains(&"passphrase")
+            && dto.forbidden_fields().contains(&"network_endpoint");
+        let status_only_label_required = true;
+        let manual_action_required_label_required = true;
+        let sensitive_communication_prohibited_label_required = true;
+        let not_audited_label_required = true;
+        let not_production_ready_label_required = true;
+        let external_delivery_non_claim_required = true;
+        let send_or_receive_cta_allowed = false;
+        let connected_peer_claim_allowed = false;
+        let push_or_background_delivery_claim_allowed = false;
+        let store_or_cloud_trust_claim_allowed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_ux_copy_boundary
+            && inherits_mobile_status_dto_boundary
+            && status_only_label_required
+            && manual_action_required_label_required
+            && sensitive_communication_prohibited_label_required
+            && not_audited_label_required
+            && not_production_ready_label_required
+            && external_delivery_non_claim_required
+            && !send_or_receive_cta_allowed
+            && !connected_peer_claim_allowed
+            && !push_or_background_delivery_claim_allowed
+            && !store_or_cloud_trust_claim_allowed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_REQUIRED_PHRASES.contains(&"status only")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"redacted status only")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"sensitive communication prohibited")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_REQUIRED_PHRASES.contains(&"not audited")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"not production-ready")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"manual action required")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"external onion delivery not claimed")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_FORBIDDEN_CLAIMS.contains(&"send now")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"receive in background")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"push delivery enabled")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_FORBIDDEN_CLAIMS.contains(&"connected to peer")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"onion delivery verified")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_FORBIDDEN_CLAIMS.contains(&"secure messenger")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"cloud backup enabled")
+            && PRODUCTION_MOBILE_STATUS_SCREEN_COPY_FORBIDDEN_CLAIMS.contains(&"security-ready");
+
+        ProductionMobileWrapperStatusScreenCopyBoundarySummary {
+            required_screen_phrases: PRODUCTION_MOBILE_STATUS_SCREEN_COPY_REQUIRED_PHRASES,
+            forbidden_screen_claims: PRODUCTION_MOBILE_STATUS_SCREEN_COPY_FORBIDDEN_CLAIMS,
+            inherits_mobile_ux_copy_boundary,
+            inherits_mobile_status_dto_boundary,
+            status_only_label_required,
+            manual_action_required_label_required,
+            sensitive_communication_prohibited_label_required,
+            not_audited_label_required,
+            not_production_ready_label_required,
+            external_delivery_non_claim_required,
+            send_or_receive_cta_allowed,
+            connected_peer_claim_allowed,
+            push_or_background_delivery_claim_allowed,
+            store_or_cloud_trust_claim_allowed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_mobile_wrapper_skeleton_directory_boundary_summary(
     ) -> ProductionMobileWrapperSkeletonDirectoryBoundarySummary {
         let ux = production_mobile_wrapper_ux_copy_boundary_summary();
@@ -15046,6 +15250,82 @@ pub mod production {
                 .forbidden_claims()
                 .contains(&"external onion delivery success"));
             assert!(boundary.forbidden_claims().contains(&"security-ready"));
+        }
+
+        #[test]
+        fn production_mobile_wrapper_status_screen_copy_boundary_projects_redacted_dto_without_new_claims(
+        ) {
+            let boundary = production_mobile_wrapper_status_screen_copy_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_ux_copy_boundary());
+            assert!(boundary.inherits_mobile_status_dto_boundary());
+            assert!(boundary.status_only_label_required());
+            assert!(boundary.manual_action_required_label_required());
+            assert!(boundary.sensitive_communication_prohibited_label_required());
+            assert!(boundary.not_audited_label_required());
+            assert!(boundary.not_production_ready_label_required());
+            assert!(boundary.external_delivery_non_claim_required());
+            assert!(!boundary.send_or_receive_cta_allowed());
+            assert!(!boundary.connected_peer_claim_allowed());
+            assert!(!boundary.push_or_background_delivery_claim_allowed());
+            assert!(!boundary.store_or_cloud_trust_claim_allowed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary.required_screen_phrases().contains(&"status only"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"redacted status only"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"not connected"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"manual action required"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"sensitive communication prohibited"));
+            assert!(boundary.required_screen_phrases().contains(&"not audited"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"not production-ready"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"external onion delivery not claimed"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"manual update verification required"));
+            assert!(boundary.forbidden_screen_claims().contains(&"send now"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"receive in background"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"push delivery enabled"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"connected to peer"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"onion delivery verified"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"secure messenger"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"safe for sensitive communication"));
+            assert!(boundary.forbidden_screen_claims().contains(&"audited"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"production-ready"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"store approved"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"cloud backup enabled"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"security-ready"));
         }
 
         #[test]
