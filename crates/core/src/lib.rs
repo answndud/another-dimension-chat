@@ -1612,6 +1612,44 @@ pub mod production {
         "security-ready",
     ];
 
+    const PRODUCTION_MOBILE_RETRY_CANCEL_CHECKLIST_REQUIRED_ITEMS: &[&str] = &[
+        "retry/cancel checklist status only",
+        "retryable failure is local outbound state",
+        "retry requires explicit user action",
+        "cancel requires explicit user action",
+        "retry reuses encrypted envelope export flow",
+        "cancel terminal is local outbound state",
+        "cancel does not send network notification",
+        "pending outbound can be retried or canceled",
+        "received import state is unchanged by cancel",
+        "remote acknowledgement not required",
+        "delivery acknowledgement not claimed",
+        "external onion delivery not claimed",
+        "network retry not claimed",
+        "background retry not claimed",
+        "security-ready not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_RETRY_CANCEL_CHECKLIST_FORBIDDEN_CLAIMS: &[&str] = &[
+        "retry sent automatically",
+        "cancel notified peer",
+        "remote cancellation delivered",
+        "delivery acknowledgement required",
+        "retry delivery verified",
+        "background retry enabled",
+        "push retry enabled",
+        "message delivered after retry",
+        "connected to peer",
+        "external onion delivery verified",
+        "remote ack protocol ready",
+        "cancel deletes peer copy",
+        "cancel guarantees remote deletion",
+        "production messaging ready",
+        "production E2EE ready",
+        "safe for sensitive communication",
+        "security-ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -2248,6 +2286,38 @@ pub mod production {
         delivery_success_claim_allowed: bool,
         replay_prevention_claim_allowed: bool,
         plaintext_or_key_material_exposure_allowed: bool,
+        production_messaging_ready_claimed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileRetryCancelChecklistBoundarySummary {
+        required_checklist_items: &'static [&'static str],
+        forbidden_retry_cancel_claims: &'static [&'static str],
+        inherits_mobile_receive_import_checklist_boundary: bool,
+        inherits_async_delivery_semantics_boundary: bool,
+        inherits_manual_runtime_messaging_gate: bool,
+        retry_cancel_status_only_label_required: bool,
+        retryable_failure_local_state_label_required: bool,
+        retry_explicit_user_action_label_required: bool,
+        cancel_explicit_user_action_label_required: bool,
+        retry_encrypted_export_flow_label_required: bool,
+        cancel_terminal_local_state_label_required: bool,
+        cancel_no_network_notification_label_required: bool,
+        pending_outbound_retry_or_cancel_label_required: bool,
+        received_import_unchanged_by_cancel_label_required: bool,
+        remote_ack_not_required_label_required: bool,
+        delivery_ack_non_claim_required: bool,
+        external_delivery_non_claim_required: bool,
+        network_retry_non_claim_required: bool,
+        background_retry_non_claim_required: bool,
+        automatic_retry_claim_allowed: bool,
+        peer_cancel_notification_claim_allowed: bool,
+        remote_cancellation_delivery_claim_allowed: bool,
+        retry_delivery_success_claim_allowed: bool,
+        remote_ack_protocol_claimed: bool,
+        remote_delete_claim_allowed: bool,
         production_messaging_ready_claimed: bool,
         security_ready_claimed: bool,
         boundary_closed: bool,
@@ -4025,6 +4095,120 @@ pub mod production {
 
         pub fn plaintext_or_key_material_exposure_allowed(self) -> bool {
             self.plaintext_or_key_material_exposure_allowed
+        }
+
+        pub fn production_messaging_ready_claimed(self) -> bool {
+            self.production_messaging_ready_claimed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileRetryCancelChecklistBoundarySummary {
+        pub fn required_checklist_items(self) -> &'static [&'static str] {
+            self.required_checklist_items
+        }
+
+        pub fn forbidden_retry_cancel_claims(self) -> &'static [&'static str] {
+            self.forbidden_retry_cancel_claims
+        }
+
+        pub fn inherits_mobile_receive_import_checklist_boundary(self) -> bool {
+            self.inherits_mobile_receive_import_checklist_boundary
+        }
+
+        pub fn inherits_async_delivery_semantics_boundary(self) -> bool {
+            self.inherits_async_delivery_semantics_boundary
+        }
+
+        pub fn inherits_manual_runtime_messaging_gate(self) -> bool {
+            self.inherits_manual_runtime_messaging_gate
+        }
+
+        pub fn retry_cancel_status_only_label_required(self) -> bool {
+            self.retry_cancel_status_only_label_required
+        }
+
+        pub fn retryable_failure_local_state_label_required(self) -> bool {
+            self.retryable_failure_local_state_label_required
+        }
+
+        pub fn retry_explicit_user_action_label_required(self) -> bool {
+            self.retry_explicit_user_action_label_required
+        }
+
+        pub fn cancel_explicit_user_action_label_required(self) -> bool {
+            self.cancel_explicit_user_action_label_required
+        }
+
+        pub fn retry_encrypted_export_flow_label_required(self) -> bool {
+            self.retry_encrypted_export_flow_label_required
+        }
+
+        pub fn cancel_terminal_local_state_label_required(self) -> bool {
+            self.cancel_terminal_local_state_label_required
+        }
+
+        pub fn cancel_no_network_notification_label_required(self) -> bool {
+            self.cancel_no_network_notification_label_required
+        }
+
+        pub fn pending_outbound_retry_or_cancel_label_required(self) -> bool {
+            self.pending_outbound_retry_or_cancel_label_required
+        }
+
+        pub fn received_import_unchanged_by_cancel_label_required(self) -> bool {
+            self.received_import_unchanged_by_cancel_label_required
+        }
+
+        pub fn remote_ack_not_required_label_required(self) -> bool {
+            self.remote_ack_not_required_label_required
+        }
+
+        pub fn delivery_ack_non_claim_required(self) -> bool {
+            self.delivery_ack_non_claim_required
+        }
+
+        pub fn external_delivery_non_claim_required(self) -> bool {
+            self.external_delivery_non_claim_required
+        }
+
+        pub fn network_retry_non_claim_required(self) -> bool {
+            self.network_retry_non_claim_required
+        }
+
+        pub fn background_retry_non_claim_required(self) -> bool {
+            self.background_retry_non_claim_required
+        }
+
+        pub fn automatic_retry_claim_allowed(self) -> bool {
+            self.automatic_retry_claim_allowed
+        }
+
+        pub fn peer_cancel_notification_claim_allowed(self) -> bool {
+            self.peer_cancel_notification_claim_allowed
+        }
+
+        pub fn remote_cancellation_delivery_claim_allowed(self) -> bool {
+            self.remote_cancellation_delivery_claim_allowed
+        }
+
+        pub fn retry_delivery_success_claim_allowed(self) -> bool {
+            self.retry_delivery_success_claim_allowed
+        }
+
+        pub fn remote_ack_protocol_claimed(self) -> bool {
+            self.remote_ack_protocol_claimed
+        }
+
+        pub fn remote_delete_claim_allowed(self) -> bool {
+            self.remote_delete_claim_allowed
         }
 
         pub fn production_messaging_ready_claimed(self) -> bool {
@@ -14013,6 +14197,141 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_retry_cancel_checklist_boundary_summary(
+    ) -> ProductionMobileRetryCancelChecklistBoundarySummary {
+        let receive = production_mobile_receive_import_checklist_boundary_summary();
+        let async_delivery = production_async_delivery_semantics_summary();
+        let gate = production_manual_runtime_messaging_gate_summary();
+        let inherits_mobile_receive_import_checklist_boundary = receive.boundary_closed()
+            && receive.explicit_inbound_import_label_required()
+            && receive.local_received_transcript_label_required()
+            && receive.external_delivery_non_claim_required()
+            && receive.background_receive_non_claim_required()
+            && !receive.automatic_receive_claim_allowed()
+            && !receive.push_receive_claim_allowed()
+            && !receive.delivery_success_claim_allowed()
+            && !receive.security_ready_claimed();
+        let inherits_async_delivery_semantics_boundary = async_delivery.semantics_reviewed()
+            && async_delivery.retryable_failure_ready()
+            && async_delivery.cancel_terminal_ready()
+            && async_delivery
+                .semantic_states()
+                .contains(&"send_failed_retryable")
+            && async_delivery
+                .semantic_states()
+                .contains(&"send_canceled_terminal")
+            && !async_delivery.remote_ack_protocol_ready()
+            && !async_delivery.external_onion_delivery_verified()
+            && !async_delivery.runtime_messaging_enabled();
+        let inherits_manual_runtime_messaging_gate = gate.gate_reviewed()
+            && gate.manual_runtime_messaging_enabled()
+            && gate.explicit_user_action_required()
+            && gate.encrypted_envelope_export_import_ready()
+            && gate.local_transcript_ready()
+            && !gate.automatic_network_on_launch_allowed()
+            && !gate.network_io_attempted()
+            && !gate.external_onion_delivery_verified()
+            && !gate.production_messaging_ready()
+            && !gate.security_ready_claimed();
+        let retry_cancel_status_only_label_required = true;
+        let retryable_failure_local_state_label_required = true;
+        let retry_explicit_user_action_label_required = true;
+        let cancel_explicit_user_action_label_required = true;
+        let retry_encrypted_export_flow_label_required = true;
+        let cancel_terminal_local_state_label_required = true;
+        let cancel_no_network_notification_label_required = true;
+        let pending_outbound_retry_or_cancel_label_required = true;
+        let received_import_unchanged_by_cancel_label_required = true;
+        let remote_ack_not_required_label_required = true;
+        let delivery_ack_non_claim_required = true;
+        let external_delivery_non_claim_required = true;
+        let network_retry_non_claim_required = true;
+        let background_retry_non_claim_required = true;
+        let automatic_retry_claim_allowed = false;
+        let peer_cancel_notification_claim_allowed = false;
+        let remote_cancellation_delivery_claim_allowed = false;
+        let retry_delivery_success_claim_allowed = false;
+        let remote_ack_protocol_claimed = false;
+        let remote_delete_claim_allowed = false;
+        let production_messaging_ready_claimed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_receive_import_checklist_boundary
+            && inherits_async_delivery_semantics_boundary
+            && inherits_manual_runtime_messaging_gate
+            && retry_cancel_status_only_label_required
+            && retryable_failure_local_state_label_required
+            && retry_explicit_user_action_label_required
+            && cancel_explicit_user_action_label_required
+            && retry_encrypted_export_flow_label_required
+            && cancel_terminal_local_state_label_required
+            && cancel_no_network_notification_label_required
+            && pending_outbound_retry_or_cancel_label_required
+            && received_import_unchanged_by_cancel_label_required
+            && remote_ack_not_required_label_required
+            && delivery_ack_non_claim_required
+            && external_delivery_non_claim_required
+            && network_retry_non_claim_required
+            && background_retry_non_claim_required
+            && !automatic_retry_claim_allowed
+            && !peer_cancel_notification_claim_allowed
+            && !remote_cancellation_delivery_claim_allowed
+            && !retry_delivery_success_claim_allowed
+            && !remote_ack_protocol_claimed
+            && !remote_delete_claim_allowed
+            && !production_messaging_ready_claimed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_RETRY_CANCEL_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"retry/cancel checklist status only")
+            && PRODUCTION_MOBILE_RETRY_CANCEL_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"retryable failure is local outbound state")
+            && PRODUCTION_MOBILE_RETRY_CANCEL_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"cancel terminal is local outbound state")
+            && PRODUCTION_MOBILE_RETRY_CANCEL_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"delivery acknowledgement not claimed")
+            && PRODUCTION_MOBILE_RETRY_CANCEL_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"retry sent automatically")
+            && PRODUCTION_MOBILE_RETRY_CANCEL_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"cancel notified peer")
+            && PRODUCTION_MOBILE_RETRY_CANCEL_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"message delivered after retry")
+            && PRODUCTION_MOBILE_RETRY_CANCEL_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"remote ack protocol ready")
+            && PRODUCTION_MOBILE_RETRY_CANCEL_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"security-ready");
+
+        ProductionMobileRetryCancelChecklistBoundarySummary {
+            required_checklist_items: PRODUCTION_MOBILE_RETRY_CANCEL_CHECKLIST_REQUIRED_ITEMS,
+            forbidden_retry_cancel_claims:
+                PRODUCTION_MOBILE_RETRY_CANCEL_CHECKLIST_FORBIDDEN_CLAIMS,
+            inherits_mobile_receive_import_checklist_boundary,
+            inherits_async_delivery_semantics_boundary,
+            inherits_manual_runtime_messaging_gate,
+            retry_cancel_status_only_label_required,
+            retryable_failure_local_state_label_required,
+            retry_explicit_user_action_label_required,
+            cancel_explicit_user_action_label_required,
+            retry_encrypted_export_flow_label_required,
+            cancel_terminal_local_state_label_required,
+            cancel_no_network_notification_label_required,
+            pending_outbound_retry_or_cancel_label_required,
+            received_import_unchanged_by_cancel_label_required,
+            remote_ack_not_required_label_required,
+            delivery_ack_non_claim_required,
+            external_delivery_non_claim_required,
+            network_retry_non_claim_required,
+            background_retry_non_claim_required,
+            automatic_retry_claim_allowed,
+            peer_cancel_notification_claim_allowed,
+            remote_cancellation_delivery_claim_allowed,
+            retry_delivery_success_claim_allowed,
+            remote_ack_protocol_claimed,
+            remote_delete_claim_allowed,
+            production_messaging_ready_claimed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -18008,6 +18327,135 @@ pub mod production {
                 .contains(&"safe for sensitive communication"));
             assert!(boundary
                 .forbidden_receive_claims()
+                .contains(&"security-ready"));
+        }
+
+        #[test]
+        fn production_mobile_retry_cancel_checklist_boundary_keeps_retry_cancel_local_and_non_claiming(
+        ) {
+            let boundary = production_mobile_retry_cancel_checklist_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_receive_import_checklist_boundary());
+            assert!(boundary.inherits_async_delivery_semantics_boundary());
+            assert!(boundary.inherits_manual_runtime_messaging_gate());
+            assert!(boundary.retry_cancel_status_only_label_required());
+            assert!(boundary.retryable_failure_local_state_label_required());
+            assert!(boundary.retry_explicit_user_action_label_required());
+            assert!(boundary.cancel_explicit_user_action_label_required());
+            assert!(boundary.retry_encrypted_export_flow_label_required());
+            assert!(boundary.cancel_terminal_local_state_label_required());
+            assert!(boundary.cancel_no_network_notification_label_required());
+            assert!(boundary.pending_outbound_retry_or_cancel_label_required());
+            assert!(boundary.received_import_unchanged_by_cancel_label_required());
+            assert!(boundary.remote_ack_not_required_label_required());
+            assert!(boundary.delivery_ack_non_claim_required());
+            assert!(boundary.external_delivery_non_claim_required());
+            assert!(boundary.network_retry_non_claim_required());
+            assert!(boundary.background_retry_non_claim_required());
+            assert!(!boundary.automatic_retry_claim_allowed());
+            assert!(!boundary.peer_cancel_notification_claim_allowed());
+            assert!(!boundary.remote_cancellation_delivery_claim_allowed());
+            assert!(!boundary.retry_delivery_success_claim_allowed());
+            assert!(!boundary.remote_ack_protocol_claimed());
+            assert!(!boundary.remote_delete_claim_allowed());
+            assert!(!boundary.production_messaging_ready_claimed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"retry/cancel checklist status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"retryable failure is local outbound state"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"retry requires explicit user action"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"cancel requires explicit user action"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"retry reuses encrypted envelope export flow"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"cancel terminal is local outbound state"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"cancel does not send network notification"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"pending outbound can be retried or canceled"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"received import state is unchanged by cancel"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"remote acknowledgement not required"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"delivery acknowledgement not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"external onion delivery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"network retry not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"background retry not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"security-ready not claimed"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"retry sent automatically"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"cancel notified peer"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"remote cancellation delivered"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"delivery acknowledgement required"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"retry delivery verified"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"background retry enabled"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"push retry enabled"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"message delivered after retry"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"connected to peer"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"external onion delivery verified"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"remote ack protocol ready"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"cancel deletes peer copy"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"cancel guarantees remote deletion"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"production messaging ready"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"production E2EE ready"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
+                .contains(&"safe for sensitive communication"));
+            assert!(boundary
+                .forbidden_retry_cancel_claims()
                 .contains(&"security-ready"));
         }
 
