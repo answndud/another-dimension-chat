@@ -854,6 +854,50 @@ test("rebuild first message stops at explicit private delivery gate", () => {
   assert.match(messageBody, /completeInviteRoomOutboundDelivery\(input, messageNumber\)/);
 });
 
+test("rebuild delivery retry and receive actions stay room-scoped", () => {
+  const scopeViewBody = functionBody(mainJs, "manualRebuildDeliveryScopeView");
+  assert.match(scopeViewBody, /twoProfileAutoResumeFingerprint\(input\)/);
+  assert.match(scopeViewBody, /manual_rebuild_flow=true/);
+  assert.match(scopeViewBody, /rebuilt_room_scoped=/);
+  assert.match(scopeViewBody, /retry_scoped=true/);
+  assert.match(scopeViewBody, /receive_scoped=true/);
+  assert.match(scopeViewBody, /delivery_code_exchange_scoped=true/);
+  assert.match(scopeViewBody, /explicit_private_delivery_required=true/);
+  assert.match(scopeViewBody, /network_io=false/);
+  assert.match(scopeViewBody, /live_network_attempt=false/);
+  assert.match(scopeViewBody, /backup_recovery=false/);
+  assert.match(scopeViewBody, /cloud_backup_sync=false/);
+  assert.match(scopeViewBody, /security_ready=false/);
+
+  const scopeRenderBody = functionBody(mainJs, "renderManualRebuildDeliveryScopeGate");
+  assert.match(scopeRenderBody, /manualInviteRoomRebuildFlowActive\(\)/);
+  assert.match(scopeRenderBody, /fields\.productionTwoProfileSession/);
+  assert.match(scopeRenderBody, /fields\.productionTwoProfileBoundary/);
+  assert.match(scopeRenderBody, /setProductionFollowupActions\(true, view\.next\)/);
+
+  const continueBody = functionBody(mainJs, "continueAfterPeerPrivateRouteSaved");
+  assert.match(continueBody, /manualInviteRoomRebuildFlowActive\(\)/);
+  assert.match(continueBody, /renderManualRebuildDeliveryScopeGate\(input, followup\.action/);
+  assert.match(continueBody, /followup\.action === "retry-outbound"[\s\S]*return true/);
+  assert.match(continueBody, /followup\.action === "receive"[\s\S]*return true/);
+  assert.match(continueBody, /followup\.action === "send-draft"[\s\S]*return true/);
+
+  const retryBody = functionBody(mainJs, "runSavedInviteRoomRetryableOutboundAction");
+  assert.match(retryBody, /renderManualRebuildDeliveryScopeGate\(input, action, \{ messageNumber: pending\.messageNumber \}\)/);
+
+  const savedRoomActionBody = functionBody(mainJs, "runSavedInviteRoomListAction");
+  assert.match(savedRoomActionBody, /action === "paste-peer-code"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, action\)/);
+  assert.match(savedRoomActionBody, /action === "prepare-private-route"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, action\)/);
+  assert.match(savedRoomActionBody, /action === "refresh-endpoint"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, action\)/);
+  assert.match(savedRoomActionBody, /action === "start-receiving"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, action\)/);
+
+  const composerBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
+  assert.match(composerBody, /intent\.action === "enable-private-delivery"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, intent\.action\)/);
+  assert.match(composerBody, /intent\.action === "prepare-private-route"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, intent\.action\)/);
+  assert.match(composerBody, /intent\.action === "refresh-endpoint"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, intent\.action\)/);
+  assert.match(composerBody, /intent\.action === "start-receiving"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, intent\.action\)/);
+});
+
 test("manual session readiness is scoped to the active profile passphrase", () => {
   assert.match(mainJs, /let latestProductionSessionStateFingerprint = ""/);
   assert.match(functionBody(mainJs, "productionSessionStateFingerprint"), /input\.passphrase/);
