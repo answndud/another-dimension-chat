@@ -5338,27 +5338,108 @@ function savedInviteRoomListItemView(room, context = {}) {
     ? null
     : routeReadinessViewCandidate;
   const resumeRecommended = Boolean(resumeRoom && viewRoom.code === resumeRoom.code && viewRoom.role === resumeRoom.role);
+  const nextAction = savedInviteRoomListAction(viewRoom, {
+    realOnionRecoveryView,
+    receiveState,
+    routeReadinessView,
+    waitingPeerCode,
+  });
+  const state = savedInviteRoomState(viewRoom, {
+    realOnionRecoveryView,
+    receiveState,
+    resumeRecommended,
+    routeReadinessView,
+    waitingPeerCode,
+  });
+  const hasRetryableSend = savedInviteRoomHasRetryableOutbound(viewRoom);
+  const readinessReview = savedInviteRoomReadinessReview({
+    current: viewRoom.code === currentCode,
+    hasRetryableSend,
+    nextAction,
+    receiveState,
+    resumeRecommended,
+    state,
+    waitingPeerCode,
+  });
   return {
     current: viewRoom.code === currentCode,
-    hasRetryableSend: savedInviteRoomHasRetryableOutbound(viewRoom),
-    nextAction: savedInviteRoomListAction(viewRoom, {
-      realOnionRecoveryView,
-      receiveState,
-      routeReadinessView,
-      waitingPeerCode,
-    }),
+    hasRetryableSend,
+    nextAction,
     preview: savedInviteRoomPreview(viewRoom),
+    readinessReview,
     receiveState,
     resumeRecommended,
     room: viewRoom,
-    state: savedInviteRoomState(viewRoom, {
-      realOnionRecoveryView,
-      receiveState,
-      resumeRecommended,
-      routeReadinessView,
-      waitingPeerCode,
-    }),
+    state,
     waitingPeerCode,
+  };
+}
+
+function savedInviteRoomReadinessBlockerKey(view) {
+  if (view.hasRetryableSend) {
+    return "retryable-outbound";
+  }
+  if (view.receiveState === "stopping") {
+    return "receive-stopping";
+  }
+  if (view.receiveState === "paused") {
+    return "receive-paused";
+  }
+  if (view.waitingPeerCode) {
+    return "peer-delivery-code";
+  }
+  const action = String(view.nextAction?.action ?? "").trim();
+  if (action === "enable-private-delivery" || action === "real-onion-enable-private-delivery") {
+    return "private-delivery-disabled";
+  }
+  if (action === "verify-safety") {
+    return "safety-unverified";
+  }
+  if (action === "prepare-private-route" || action === "refresh-endpoint" || action === "paste-peer-code") {
+    return "delivery-code-needed";
+  }
+  if (action === "retry-network" || action === "real-onion-retry") {
+    return "delivery-retry-needed";
+  }
+  return view.nextAction ? "local-action-needed" : "none";
+}
+
+function savedInviteRoomReadinessSummaryKey(view) {
+  if (view.hasRetryableSend) {
+    return "roomReadinessRetryable";
+  }
+  if (view.receiveState === "listening") {
+    return "roomReadinessListening";
+  }
+  if (view.receiveState === "stopping") {
+    return "roomReadinessReceiveStopping";
+  }
+  if (view.receiveState === "paused") {
+    return "roomReadinessReceivePaused";
+  }
+  if (view.waitingPeerCode) {
+    return "roomReadinessPeerCode";
+  }
+  if (view.nextAction) {
+    return "roomReadinessNeedsAction";
+  }
+  if (view.current) {
+    return "roomReadinessCurrent";
+  }
+  if (view.resumeRecommended) {
+    return "roomReadinessResume";
+  }
+  return "roomReadinessOpen";
+}
+
+function savedInviteRoomReadinessReview(view) {
+  const blockerKey = savedInviteRoomReadinessBlockerKey(view);
+  return {
+    boundaryKey: "roomReadinessBoundary",
+    blockerKey,
+    nextLabelKey: view.nextAction?.labelKey ?? "openRoom",
+    statusKey: savedInviteRoomReadinessSummaryKey(view),
+    titleKey: "roomReadinessReview",
   };
 }
 
@@ -5514,6 +5595,18 @@ function renderSavedInviteRooms() {
     const state = document.createElement("span");
     state.className = `saved-room-state is-${view.state.key}`;
     state.textContent = view.state.label;
+    const readiness = document.createElement("span");
+    readiness.className = "saved-room-readiness";
+    const readinessTitle = document.createElement("span");
+    readinessTitle.className = "saved-room-readiness-title";
+    readinessTitle.textContent = t(view.readinessReview.titleKey);
+    const readinessStatus = document.createElement("span");
+    readinessStatus.className = "saved-room-readiness-status";
+    readinessStatus.textContent = t(view.readinessReview.statusKey);
+    const readinessMeta = document.createElement("span");
+    readinessMeta.className = "saved-room-readiness-meta";
+    readinessMeta.textContent = `next=${t(view.readinessReview.nextLabelKey)} / blocker=${view.readinessReview.blockerKey} / ${t(view.readinessReview.boundaryKey)}`;
+    readiness.append(readinessTitle, readinessStatus, readinessMeta);
     const primaryAction = document.createElement("button");
     primaryAction.type = "button";
     primaryAction.className = [
@@ -5536,7 +5629,7 @@ function renderSavedInviteRooms() {
     remove.addEventListener("click", () => {
       removeSavedInviteRoom(room);
     });
-    item.append(summary, state, primaryAction, remove);
+    item.append(summary, state, primaryAction, remove, readiness);
     fields.savedRoomList.append(item);
   }
 }
