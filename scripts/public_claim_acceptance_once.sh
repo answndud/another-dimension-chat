@@ -77,6 +77,16 @@ require_text "$ROOT_DIR/SECURITY.md" "COMPONENT_BOUNDARIES.md"
 require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "COMPONENT_BOUNDARIES.md"
 require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "public support diagnostics"
 require_text "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "public support diagnostics"
+require_text "$ROOT_DIR/README.md" "External onion delivery is outside the v0.1 public product claim"
+require_text "$ROOT_DIR/SECURITY.md" "External onion delivery is outside the v0.1 public product claim"
+require_text "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "External onion delivery is outside the v0.1 public product claim"
+require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "External onion delivery is outside the v0.1 public product claim"
+require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "External onion delivery is outside the v0.1 public product claim"
+require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "External onion delivery is outside the v0.1 public product claim"
+require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "External onion delivery is outside the v0.1 public product claim"
+require_text "$ROOT_DIR/README.md" "no external delivery claim is made"
+require_text "$ROOT_DIR/SECURITY.md" "report is expected or required for this v0.1 claim"
+require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "No peer report is"
 
 if git -C "$ROOT_DIR" ls-files docs | grep -q .; then
   echo "FAIL private docs are tracked in git" >&2
@@ -89,6 +99,8 @@ for file in "${PUBLIC_CLAIM_FILES[@]}"; do
   reject_text "$file" "Briar/Cwtch-equivalent privacy or security level achieved"
   reject_text "$file" "independent review complete=true"
   reject_text "$file" "security_ready_claim=true"
+  reject_text "$file" "does not close the external-evidence gate"
+  reject_text "$file" "accepted for unsigned public beta release gating only"
 done
 
 bash -n "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh"
