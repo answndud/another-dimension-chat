@@ -5510,11 +5510,9 @@ pub mod production {
             envelope: &Envelope,
             replay_window: &mut ReplayWindow,
         ) -> Result<Vec<u8>, ProductionSessionError> {
-            let mut next_replay_window = replay_window.clone();
-            next_replay_window.accept(envelope.message_number)?;
-            let plaintext = self.decrypt_at_responder(envelope)?;
-            *replay_window = next_replay_window;
-            Ok(plaintext)
+            replay_window.accept_after_decrypt(envelope.message_number, || {
+                self.decrypt_at_responder(envelope)
+            })
         }
 
         fn decrypt_at_responder_with_persistent_replay(
@@ -14190,17 +14188,23 @@ pub mod dev_insecure {
                     &envelope.channel_id,
                     REPLAY_WINDOW_SIZE,
                 )?;
-                match replay_window.accept(envelope.message_number) {
-                    Ok(()) => {
+                match replay_window.accept_after_decrypt(envelope.message_number, || {
+                    self.crypto
+                        .decrypt(&envelope.padded_ciphertext)
+                        .map_err(CoreError::from)
+                }) {
+                    Ok(plaintext) => {
                         self.store.save_replay_window(
                             &profile,
                             &envelope.channel_id,
                             &replay_window,
                         )?;
-                        messages.push(self.crypto.decrypt(&envelope.padded_ciphertext)?);
+                        messages.push(plaintext);
                     }
-                    Err(ProtocolError::ReplayMessage | ProtocolError::OldMessage) => {}
-                    Err(error) => return Err(CoreError::Protocol(error)),
+                    Err(CoreError::Protocol(
+                        ProtocolError::ReplayMessage | ProtocolError::OldMessage,
+                    )) => {}
+                    Err(error) => return Err(error),
                 }
             }
             Ok(messages)
@@ -14357,6 +14361,56 @@ pub mod dev_insecure {
             let replayed_messages = app.message_receive(bob).expect("bob receives again");
             assert!(replayed_messages.is_empty());
             assert!(!tree_contains(&root, "hello after confirm"));
+
+            let _ = fs::remove_dir_all(root);
+        }
+
+        #[test]
+        fn tampered_receive_does_not_persist_replay_before_valid_same_number() {
+            let root = temp_root("tampered_receive_does_not_persist_replay");
+            let app = DevApp::new(&root);
+            let bob = ProfileName::new("bob").expect("valid profile");
+            let channel_id = "dev-channel-alice-bob".to_string();
+            app.init_profile(bob.clone()).expect("bob profile");
+
+            let tampered = Envelope {
+                protocol_version: 1,
+                channel_id: channel_id.clone(),
+                message_number: 42,
+                message_type: MessageType::Data,
+                padded_ciphertext: vec![0x55],
+            };
+            app.store
+                .save_inbox_envelope(&bob, &tampered)
+                .expect("tampered envelope saved");
+
+            assert!(matches!(
+                app.message_receive(bob.clone()),
+                Err(CoreError::Crypto(_))
+            ));
+            assert_eq!(
+                app.store
+                    .load_replay_window(&bob, &channel_id, REPLAY_WINDOW_SIZE)
+                    .expect("load replay after tamper")
+                    .highest_seen(),
+                0
+            );
+
+            let valid = Envelope {
+                protocol_version: 1,
+                channel_id,
+                message_number: 42,
+                message_type: MessageType::Data,
+                padded_ciphertext: app.crypto.encrypt("valid after tamper").expect("encrypt"),
+            };
+            app.store
+                .save_inbox_envelope(&bob, &valid)
+                .expect("valid envelope saved");
+
+            assert_eq!(
+                app.message_receive(bob).expect("receive valid envelope"),
+                vec!["valid after tamper".to_string()]
+            );
 
             let _ = fs::remove_dir_all(root);
         }

@@ -140,6 +140,21 @@ impl ReplayWindow {
         Ok(())
     }
 
+    pub fn accept_after_decrypt<T, E>(
+        &mut self,
+        message_number: u64,
+        decrypt: impl FnOnce() -> Result<T, E>,
+    ) -> Result<T, E>
+    where
+        E: From<ProtocolError>,
+    {
+        let mut next = self.clone();
+        next.accept(message_number)?;
+        let plaintext = decrypt()?;
+        *self = next;
+        Ok(plaintext)
+    }
+
     pub fn highest_seen(&self) -> u64 {
         self.highest_seen
     }
@@ -260,6 +275,26 @@ mod tests {
         assert_eq!(window.accept(6), Ok(()));
         assert_eq!(window.accept(1), Err(ProtocolError::OldMessage));
         assert_eq!(window.highest_seen(), 6);
+    }
+
+    #[test]
+    fn replay_window_accept_after_decrypt_does_not_commit_on_decrypt_error() {
+        let mut window = ReplayWindow::new(3).expect("valid replay window");
+
+        assert_eq!(
+            window.accept_after_decrypt(7, || Err::<(), _>(ProtocolError::InvalidEnvelope)),
+            Err(ProtocolError::InvalidEnvelope)
+        );
+        assert_eq!(window.highest_seen(), 0);
+        assert_eq!(
+            window.accept_after_decrypt(7, || Ok::<_, ProtocolError>("message")),
+            Ok("message")
+        );
+        assert_eq!(window.highest_seen(), 7);
+        assert_eq!(
+            window.accept_after_decrypt(7, || Ok::<_, ProtocolError>("replay")),
+            Err(ProtocolError::ReplayMessage)
+        );
     }
 
     #[test]
