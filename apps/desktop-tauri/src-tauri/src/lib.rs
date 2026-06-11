@@ -839,6 +839,27 @@ pub struct ProductionProfileUnlockResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionRuntimeCommandSurfaceResult {
+    warning: &'static str,
+    reviewed_categories: Vec<&'static str>,
+    rejected_categories: Vec<&'static str>,
+    command_inventory_reviewed: bool,
+    default_build_has_dev_insecure_commands: bool,
+    implicit_network_on_launch_allowed: bool,
+    explicit_user_network_attempts_only: bool,
+    plaintext_stdout_secret_export_allowed: bool,
+    runtime_messaging_enabled: bool,
+    command_surface_ready: bool,
+    shared_core_api_boundary: bool,
+    platform_wrapper_required: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionProductUnlockStatusResult {
     warning: &'static str,
     unlocked: bool,
@@ -1977,6 +1998,34 @@ fn production_message_retention_policy() -> ProductionMessageRetentionPolicyResu
         allowed_ttl_seconds: another_dimension_core::production::PRODUCTION_ALLOWED_MESSAGE_TTL_SECONDS
             .to_vec(),
     }
+}
+
+fn run_production_runtime_command_surface_status() -> ProductionRuntimeCommandSurfaceResult {
+    let surface = another_dimension_core::production::production_runtime_command_surface_summary();
+    ProductionRuntimeCommandSurfaceResult {
+        warning: "shared core runtime command surface boundary only; no storage, network, delivery, or security-ready claim",
+        reviewed_categories: surface.reviewed_categories().to_vec(),
+        rejected_categories: surface.rejected_categories().to_vec(),
+        command_inventory_reviewed: surface.command_inventory_reviewed(),
+        default_build_has_dev_insecure_commands: surface.default_build_has_dev_insecure_commands(),
+        implicit_network_on_launch_allowed: surface.implicit_network_on_launch_allowed(),
+        explicit_user_network_attempts_only: surface.explicit_user_network_attempts_only(),
+        plaintext_stdout_secret_export_allowed: surface.plaintext_stdout_secret_export_allowed(),
+        runtime_messaging_enabled: surface.runtime_messaging_enabled(),
+        command_surface_ready: surface.command_surface_ready(),
+        shared_core_api_boundary: true,
+        platform_wrapper_required: true,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: false,
+        network_io_attempted: false,
+        transport_io_opened: false,
+    }
+}
+
+#[tauri::command]
+fn production_runtime_command_surface_status() -> ProductionRuntimeCommandSurfaceResult {
+    run_production_runtime_command_surface_status()
 }
 
 #[tauri::command]
@@ -12957,6 +13006,7 @@ pub fn run() {
         .manage(ProductUnlockRuntimeState::default())
         .invoke_handler(tauri::generate_handler![
             prototype_status,
+            production_runtime_command_surface_status,
             production_message_retention_policy,
             production_onion_bridge_config_status,
             production_onion_bridge_config_save,
@@ -13089,7 +13139,8 @@ mod tests {
         run_production_pairing_session_draft_save,
         run_production_pairing_session_remote_endpoint_mark_send_failure,
         run_production_pairing_session_remote_endpoint_update, run_production_profile_list,
-        run_production_profile_delete, run_production_profile_unlock, ProductUnlockRuntimeState,
+        run_production_profile_delete, run_production_profile_unlock,
+        run_production_runtime_command_surface_status, ProductUnlockRuntimeState,
         PRODUCT_UNLOCK_IDLE_TIMEOUT_MS,
         run_production_session_lifecycle_delete, run_production_session_lifecycle_status,
         run_production_session_state_check, ProductionOnionClientRuntimeState,
@@ -13145,6 +13196,36 @@ mod tests {
         assert!(!explicit.unlocked);
         assert_eq!(explicit.redacted_reason, "explicit-lock");
         assert!(!explicit.storage_opened);
+    }
+
+    #[test]
+    fn production_runtime_command_surface_status_is_shared_core_and_non_secret() {
+        let result = run_production_runtime_command_surface_status();
+
+        assert!(result.shared_core_api_boundary);
+        assert!(result.platform_wrapper_required);
+        assert!(result.command_inventory_reviewed);
+        assert!(result.command_surface_ready);
+        assert!(result.explicit_user_network_attempts_only);
+        assert!(!result.default_build_has_dev_insecure_commands);
+        assert!(!result.implicit_network_on_launch_allowed);
+        assert!(!result.plaintext_stdout_secret_export_allowed);
+        assert!(!result.store_path_returned);
+        assert!(!result.passphrase_retained);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        assert!(result
+            .reviewed_categories
+            .contains(&"explicit_envelope_file_exchange"));
+        assert!(result
+            .rejected_categories
+            .contains(&"dev_insecure_commands"));
+        let serialized = serde_json::to_string(&result).expect("serialize command surface");
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("/tmp/"));
+        assert!(!serialized.contains(".onion"));
     }
 
     #[test]
