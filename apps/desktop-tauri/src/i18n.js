@@ -870,6 +870,22 @@ const dictionaries = {
       "First message is saved locally. Private delivery is not ready yet.",
     manualRebuildDeliveryGateBlockedNext:
       "Next: prepare private delivery settings or share delivery codes before retrying delivery.",
+    manualRebuildRetryScopeWarning:
+      "Rebuild retry is scoped to this room. It will not continue from saved delivery-code setup automatically.",
+    manualRebuildRetryScopeNext:
+      "Next: use the saved retry action in this rebuilt room when you are ready for private delivery.",
+    manualRebuildReceiveScopeWarning:
+      "Receiving setup is scoped to this rebuilt room. Starting receive remains an explicit action.",
+    manualRebuildReceiveScopeNext:
+      "Next: start receiving explicitly in this rebuilt room after the delivery codes match.",
+    manualRebuildDeliveryCodeScopeWarning:
+      "Delivery-code exchange is scoped to this rebuilt room. Network delivery has not started.",
+    manualRebuildDeliveryCodeScopeNext:
+      "Next: create, share, or paste delivery codes for this rebuilt room before retrying delivery.",
+    manualRebuildExplicitDeliveryScopeWarning:
+      "Private delivery is scoped to this rebuilt room and remains behind an explicit action.",
+    manualRebuildExplicitDeliveryScopeNext:
+      "Next: run the explicit private delivery action only after this room's route is ready.",
     profileLocked: "Profile locked",
     nextEnterProfilePassphrase: "Next: enter profile and passphrase.",
     productionProfileLockedWarning: "Production profile has not been unlocked yet.",
@@ -1857,6 +1873,22 @@ const dictionaries = {
       "첫 메시지를 로컬에 저장했습니다. 아직 비공개 전송 준비가 끝나지 않았습니다.",
     manualRebuildDeliveryGateBlockedNext:
       "다음: 전송을 다시 시도하기 전에 비공개 전송 설정을 준비하거나 전송 코드를 공유하세요.",
+    manualRebuildRetryScopeWarning:
+      "rebuild 재시도는 이 방에 고정됩니다. 저장된 전송 코드 설정 뒤 자동으로 이어서 전송하지 않습니다.",
+    manualRebuildRetryScopeNext:
+      "다음: 비공개 전송 준비가 됐을 때 이 rebuild 방의 저장된 재시도 액션을 직접 사용하세요.",
+    manualRebuildReceiveScopeWarning:
+      "받기 설정은 이 rebuild 방에 고정됩니다. 메시지 받기 시작은 명시적 액션으로 유지합니다.",
+    manualRebuildReceiveScopeNext:
+      "다음: 전송 코드가 이 방과 맞을 때 이 rebuild 방에서 받기를 직접 시작하세요.",
+    manualRebuildDeliveryCodeScopeWarning:
+      "전송 코드 교환은 이 rebuild 방에 고정됩니다. 네트워크 전송은 시작하지 않았습니다.",
+    manualRebuildDeliveryCodeScopeNext:
+      "다음: 전송을 다시 시도하기 전에 이 rebuild 방의 전송 코드를 만들고 공유하거나 붙여넣으세요.",
+    manualRebuildExplicitDeliveryScopeWarning:
+      "비공개 전송은 이 rebuild 방에 고정되며 명시적 액션 뒤에 유지됩니다.",
+    manualRebuildExplicitDeliveryScopeNext:
+      "다음: 이 방의 경로가 준비된 뒤 명시적 비공개 전송 액션을 실행하세요.",
     profileLocked: "프로필 잠김",
     nextEnterProfilePassphrase: "다음: 프로필과 패스프레이즈를 입력하세요.",
     productionProfileLockedWarning: "아직 프로필을 열지 않았습니다.",

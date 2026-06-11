@@ -4042,6 +4042,7 @@ async function runSavedInviteRoomRetryableOutboundAction(room, input, action, ac
   }
   selectTwoProfileConversationEntry(pending);
   showRetryableTwoProfileOutboundNotice(pending);
+  renderManualRebuildDeliveryScopeGate(input, action, { messageNumber: pending.messageNumber });
   if (options.reviewOnly === true) {
     return true;
   }
@@ -4480,6 +4481,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
   if (action === "paste-peer-code") {
     rememberReceiveIntentForRoom(input, true);
     rememberPrivateRouteFollowup("receive", input);
+    renderManualRebuildDeliveryScopeGate(input, action);
     focusPrivateRouteNextAction(input);
     return true;
   }
@@ -4496,6 +4498,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
       return true;
     }
+    renderManualRebuildDeliveryScopeGate(input, action);
     openPrivateDeliverySettings(input);
     return true;
   }
@@ -4503,6 +4506,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
       return true;
     }
+    renderManualRebuildDeliveryScopeGate(input, action);
     focusPrivateRouteNextAction(input);
     return true;
   }
@@ -4510,6 +4514,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
       return true;
     }
+    renderManualRebuildDeliveryScopeGate(input, action);
     setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
     await preparePrivateDeliveryRoute({ input, forceRefresh: true, allowRetryRecovery: false });
     return true;
@@ -4528,6 +4533,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
       return true;
     }
+    renderManualRebuildDeliveryScopeGate(input, action);
     await startProductionTwoProfileOnionReceive();
     return true;
   }
@@ -9801,6 +9807,27 @@ async function continueAfterPeerPrivateRouteSaved(input = productionTwoProfileIn
   }
   const followup = pendingPrivateRouteFollowup;
   clearPrivateRouteFollowup();
+  if (manualInviteRoomRebuildFlowActive()) {
+    if (followup.action === "retry-outbound") {
+      const pending = retryableOutboundEntryForPrivateRouteFollowup(followup, input);
+      if (pending) {
+        selectTwoProfileConversationEntry(pending);
+        showRetryableTwoProfileOutboundNotice(pending);
+      }
+      renderManualRebuildDeliveryScopeGate(input, followup.action, { messageNumber: followup.retryMessageNumber });
+      return true;
+    }
+    if (followup.action === "receive") {
+      renderManualRebuildDeliveryScopeGate(input, followup.action);
+      fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
+      return true;
+    }
+    if (followup.action === "send-draft") {
+      renderManualRebuildDeliveryScopeGate(input, followup.action);
+      fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
+      return true;
+    }
+  }
   if (followup.action === "retry-outbound") {
     const pending = retryableOutboundEntryForPrivateRouteFollowup(followup, input);
     if (pending) {
@@ -16326,22 +16353,26 @@ async function runProductionTwoProfileComposerPrimaryAction() {
   });
   if (intent.action === "enable-private-delivery") {
     rememberPrivateRouteFollowup(input.message ? "send-draft" : "receive", input);
+    renderManualRebuildDeliveryScopeGate(input, intent.action);
     enablePrivateDeliveryPermission({ preserveFollowup: true });
     return;
   }
   if (intent.action === "prepare-private-route") {
     rememberPrivateRouteFollowup(input.message ? "send-draft" : "receive", input);
+    renderManualRebuildDeliveryScopeGate(input, intent.action);
     setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted", input);
     await preparePrivateDeliveryRoute({ input, allowRetryRecovery: false });
     return;
   }
   if (intent.action === "refresh-endpoint") {
     rememberPrivateRouteFollowup(input.message ? "send-draft" : "receive", input);
+    renderManualRebuildDeliveryScopeGate(input, intent.action);
     setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
     await preparePrivateDeliveryRoute({ input, forceRefresh: true, allowRetryRecovery: false });
     return;
   }
   if (intent.action === "start-receiving") {
+    renderManualRebuildDeliveryScopeGate(input, intent.action);
     setChatDeliveryNoticeByKey("chatNoticeReceiveRestart", "success", input);
     await startProductionTwoProfileOnionReceive();
     return;
@@ -16961,6 +16992,66 @@ function manualRebuildFirstMessageDeliveryGateView(input, messageNumber) {
       `route_readiness_failure_kind=${routeReadiness.failureKind ?? "none"} network_io=false live_network_attempt=false ` +
       `backup_recovery=false cloud_backup_sync=false rollback_prevention=false secure_delete_claim=false security_ready=false`,
   };
+}
+
+function manualRebuildDeliveryScopeKind(action) {
+  const normalizedAction = String(action ?? "").trim();
+  if (new Set(["retry", "retry-network", "retry-outbound", "refresh-and-retry"]).has(normalizedAction)) {
+    return "retry";
+  }
+  if (new Set(["receive", "start-receiving", "stop-receiving", "wait-receive-stop"]).has(normalizedAction)) {
+    return "receive";
+  }
+  if (new Set(["paste-peer-code", "prepare-private-route", "refresh-endpoint"]).has(normalizedAction)) {
+    return "delivery-code";
+  }
+  return "explicit-delivery";
+}
+
+function manualRebuildDeliveryScopeView(input, action, options = {}) {
+  const normalizedAction = String(action ?? "explicit-delivery").trim() || "explicit-delivery";
+  const scopeKind = manualRebuildDeliveryScopeKind(normalizedAction);
+  const roomFingerprint = twoProfileAutoResumeFingerprint(input);
+  const messageNumber = Number.parseInt(options.messageNumber, 10) || 0;
+  const warningKeyByKind = {
+    retry: "manualRebuildRetryScopeWarning",
+    receive: "manualRebuildReceiveScopeWarning",
+    "delivery-code": "manualRebuildDeliveryCodeScopeWarning",
+    "explicit-delivery": "manualRebuildExplicitDeliveryScopeWarning",
+  };
+  const nextKeyByKind = {
+    retry: "manualRebuildRetryScopeNext",
+    receive: "manualRebuildReceiveScopeNext",
+    "delivery-code": "manualRebuildDeliveryCodeScopeNext",
+    "explicit-delivery": "manualRebuildExplicitDeliveryScopeNext",
+  };
+  return {
+    warning: t(warningKeyByKind[scopeKind]),
+    next: t(nextKeyByKind[scopeKind]),
+    session:
+      `manual_rebuild_flow=true rebuilt_room_scoped=${Boolean(roomFingerprint)} delivery_scope=${scopeKind} ` +
+      `delivery_action=${normalizedAction} message_number=${messageNumber} retry_scoped=true receive_scoped=true ` +
+      `delivery_code_exchange_scoped=true explicit_private_delivery_required=true`,
+    boundary:
+      `local_only=true manual_rebuild_flow=true rebuilt_room_scoped=${Boolean(roomFingerprint)} delivery_scope=${scopeKind} ` +
+      `delivery_action=${normalizedAction} message_number=${messageNumber} retry_scoped=true receive_scoped=true ` +
+      `delivery_code_exchange_scoped=true explicit_private_delivery_required=true network_io=false live_network_attempt=false ` +
+      `backup_recovery=false cloud_backup_sync=false rollback_prevention=false secure_delete_claim=false security_ready=false`,
+  };
+}
+
+function renderManualRebuildDeliveryScopeGate(input, action, options = {}) {
+  if (!manualInviteRoomRebuildFlowActive()) {
+    return false;
+  }
+  const view = manualRebuildDeliveryScopeView(input, action, options);
+  setProductionTwoProfileState("Rebuild delivery scoped");
+  setText(fields.productionTwoProfileWarning, view.warning);
+  setText(fields.productionTwoProfileSession, view.session);
+  setText(fields.productionTwoProfileBoundary, view.boundary);
+  setText(fields.productionProfileNextAction, view.next);
+  setProductionFollowupActions(true, view.next);
+  return true;
 }
 
 function renderManualRebuildFirstMessageDeliveryGate(input, messageNumber) {
