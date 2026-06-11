@@ -277,6 +277,7 @@ pub mod production {
     const PRODUCTION_IOS_WRAPPER_CANDIDATE_RESPONSIBILITIES: &[&str] = &[
         "swift_shell",
         "uniffi_or_ffi_shared_core_calls",
+        "thin_viewcontroller_viewmodel_bridge",
         "passphrase_unlock_ui",
         "redacted_diagnostics_display",
         "explicit_user_triggered_actions",
@@ -285,6 +286,17 @@ pub mod production {
         "ios_app_container_storage_required",
         "ios_icloud_backup_exclusion_required",
         "local_storage_paths_redacted",
+    ];
+
+    const PRODUCTION_IOS_WRAPPER_API_GROUPS: &[&str] = &[
+        "profile_unlock_lock_status",
+        "invite_code_create_join",
+        "pairing_payload_export_import",
+        "safety_transcript_confirm",
+        "manual_envelope_export_import",
+        "message_transcript_view",
+        "local_data_lifecycle",
+        "redacted_support_diagnostics",
     ];
 
     const PRODUCTION_IOS_SHARED_CORE_API_BOUNDARY: &[&str] = &[
@@ -305,6 +317,10 @@ pub mod production {
         "icloud_backup",
         "icloud_keychain_required",
         "apple_push_notification_service_required",
+        "background_fetch_delivery",
+        "notification_message_delivery",
+        "contacts_framework_discovery",
+        "share_extension_message_ingress",
         "push_notification_dependency",
         "cloud_backup",
         "cloud_backup_sync",
@@ -579,8 +595,13 @@ pub mod production {
         passphrase_unlock_required: bool,
         keychain_only_unlock_allowed: bool,
         keychain_optional_wrapping_allowed_later: bool,
+        icloud_keychain_dependency_allowed: bool,
         redacted_diagnostics_required: bool,
         explicit_user_action_required: bool,
+        background_fetch_delivery_allowed: bool,
+        notification_message_delivery_allowed: bool,
+        contacts_framework_discovery_allowed: bool,
+        share_extension_message_ingress_allowed: bool,
         push_notification_dependency_allowed: bool,
         apple_account_dependency_allowed: bool,
         icloud_backup_allowed: bool,
@@ -588,6 +609,7 @@ pub mod production {
         notarization_or_developer_id_trusted_security_boundary: bool,
         security_ready_claimed: bool,
         responsibilities: &'static [&'static str],
+        wrapper_api_groups: &'static [&'static str],
         shared_core_api_boundary: &'static [&'static str],
         rejected_dependencies: &'static [&'static str],
     }
@@ -867,12 +889,32 @@ pub mod production {
             self.keychain_optional_wrapping_allowed_later
         }
 
+        pub fn icloud_keychain_dependency_allowed(self) -> bool {
+            self.icloud_keychain_dependency_allowed
+        }
+
         pub fn redacted_diagnostics_required(self) -> bool {
             self.redacted_diagnostics_required
         }
 
         pub fn explicit_user_action_required(self) -> bool {
             self.explicit_user_action_required
+        }
+
+        pub fn background_fetch_delivery_allowed(self) -> bool {
+            self.background_fetch_delivery_allowed
+        }
+
+        pub fn notification_message_delivery_allowed(self) -> bool {
+            self.notification_message_delivery_allowed
+        }
+
+        pub fn contacts_framework_discovery_allowed(self) -> bool {
+            self.contacts_framework_discovery_allowed
+        }
+
+        pub fn share_extension_message_ingress_allowed(self) -> bool {
+            self.share_extension_message_ingress_allowed
         }
 
         pub fn push_notification_dependency_allowed(self) -> bool {
@@ -901,6 +943,10 @@ pub mod production {
 
         pub fn responsibilities(self) -> &'static [&'static str] {
             self.responsibilities
+        }
+
+        pub fn wrapper_api_groups(self) -> &'static [&'static str] {
+            self.wrapper_api_groups
         }
 
         pub fn shared_core_api_boundary(self) -> &'static [&'static str] {
@@ -9577,8 +9623,13 @@ pub mod production {
             passphrase_unlock_required: true,
             keychain_only_unlock_allowed: false,
             keychain_optional_wrapping_allowed_later: true,
+            icloud_keychain_dependency_allowed: false,
             redacted_diagnostics_required: true,
             explicit_user_action_required: true,
+            background_fetch_delivery_allowed: false,
+            notification_message_delivery_allowed: false,
+            contacts_framework_discovery_allowed: false,
+            share_extension_message_ingress_allowed: false,
             push_notification_dependency_allowed: false,
             apple_account_dependency_allowed: false,
             icloud_backup_allowed: false,
@@ -9586,6 +9637,7 @@ pub mod production {
             notarization_or_developer_id_trusted_security_boundary: false,
             security_ready_claimed: false,
             responsibilities: PRODUCTION_IOS_WRAPPER_CANDIDATE_RESPONSIBILITIES,
+            wrapper_api_groups: PRODUCTION_IOS_WRAPPER_API_GROUPS,
             shared_core_api_boundary: PRODUCTION_IOS_SHARED_CORE_API_BOUNDARY,
             rejected_dependencies: PRODUCTION_IOS_REJECTED_DEPENDENCIES,
         }
@@ -12116,8 +12168,13 @@ pub mod production {
             assert!(ios.passphrase_unlock_required());
             assert!(!ios.keychain_only_unlock_allowed());
             assert!(ios.keychain_optional_wrapping_allowed_later());
+            assert!(!ios.icloud_keychain_dependency_allowed());
             assert!(ios.redacted_diagnostics_required());
             assert!(ios.explicit_user_action_required());
+            assert!(!ios.background_fetch_delivery_allowed());
+            assert!(!ios.notification_message_delivery_allowed());
+            assert!(!ios.contacts_framework_discovery_allowed());
+            assert!(!ios.share_extension_message_ingress_allowed());
             assert!(!ios.push_notification_dependency_allowed());
             assert!(!ios.apple_account_dependency_allowed());
             assert!(!ios.icloud_backup_allowed());
@@ -12130,6 +12187,9 @@ pub mod production {
                 .contains(&"uniffi_or_ffi_shared_core_calls"));
             assert!(ios
                 .responsibilities()
+                .contains(&"thin_viewcontroller_viewmodel_bridge"));
+            assert!(ios
+                .responsibilities()
                 .contains(&"platform_private_storage_root_resolver"));
             assert!(ios
                 .responsibilities()
@@ -12140,6 +12200,19 @@ pub mod production {
             assert!(ios
                 .responsibilities()
                 .contains(&"local_storage_paths_redacted"));
+            assert_eq!(
+                ios.wrapper_api_groups(),
+                &[
+                    "profile_unlock_lock_status",
+                    "invite_code_create_join",
+                    "pairing_payload_export_import",
+                    "safety_transcript_confirm",
+                    "manual_envelope_export_import",
+                    "message_transcript_view",
+                    "local_data_lifecycle",
+                    "redacted_support_diagnostics",
+                ]
+            );
             assert!(ios
                 .shared_core_api_boundary()
                 .contains(&"pairing_payload_and_safety_transcript"));
@@ -12168,7 +12241,25 @@ pub mod production {
                 .contains(&"apple_push_notification_service_required"));
             assert!(ios
                 .rejected_dependencies()
+                .contains(&"icloud_keychain_required"));
+            assert!(ios
+                .rejected_dependencies()
+                .contains(&"background_fetch_delivery"));
+            assert!(ios
+                .rejected_dependencies()
+                .contains(&"notification_message_delivery"));
+            assert!(ios
+                .rejected_dependencies()
+                .contains(&"contacts_framework_discovery"));
+            assert!(ios
+                .rejected_dependencies()
+                .contains(&"share_extension_message_ingress"));
+            assert!(ios
+                .rejected_dependencies()
                 .contains(&"app_store_or_testflight_security_trust_dependency"));
+            assert!(ios
+                .rejected_dependencies()
+                .contains(&"developer_id_or_notarization_security_trust_dependency"));
             assert!(ios
                 .rejected_dependencies()
                 .contains(&"keychain_only_unlock"));
