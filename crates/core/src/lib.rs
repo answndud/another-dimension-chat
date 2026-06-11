@@ -233,6 +233,7 @@ pub mod production {
     ];
 
     const PRODUCTION_ANDROID_WRAPPER_API_GROUPS: &[&str] = &[
+        "shared_core_status_surface",
         "profile_unlock_lock_status",
         "invite_code_create_join",
         "pairing_payload_export_import",
@@ -289,6 +290,7 @@ pub mod production {
     ];
 
     const PRODUCTION_IOS_WRAPPER_API_GROUPS: &[&str] = &[
+        "shared_core_status_surface",
         "profile_unlock_lock_status",
         "invite_code_create_join",
         "pairing_payload_export_import",
@@ -978,6 +980,30 @@ pub mod production {
         "plaintext_stdout_secret_export",
     ];
 
+    const PRODUCTION_MOBILE_WRAPPER_COMMAND_SURFACE_PLATFORMS: &[&str] =
+        &["android_shell_candidate", "ios_shell_candidate"];
+
+    const PRODUCTION_MOBILE_WRAPPER_STATUS_SURFACES: &[&str] = &[
+        "shared_core_status_surface",
+        "production_runtime_command_surface_status",
+        "product_unlock_redacted_status",
+        "mobile_diagnostics_redacted_status",
+        "mobile_install_update_integrity_status",
+        "mobile_backup_exclusion_status",
+    ];
+
+    const PRODUCTION_MOBILE_WRAPPER_REJECTED_COMMAND_SURFACES: &[&str] = &[
+        "background_runtime_start",
+        "implicit_network_bootstrap",
+        "automatic_delivery_loop",
+        "push_notification_delivery",
+        "raw_log_export",
+        "plaintext_secret_export",
+        "wrapper_specific_storage_command",
+        "wrapper_specific_transport_command",
+        "security_ready_toggle",
+    ];
+
     const PRODUCTION_MANUAL_RUNTIME_MESSAGING_OPERATIONS: &[&str] = &[
         "passphrase_unlock",
         "load_session_runtime_material",
@@ -1211,6 +1237,32 @@ pub mod production {
         plaintext_stdout_secret_export_allowed: bool,
         runtime_messaging_enabled: bool,
         command_surface_ready: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileRuntimeCommandSurfaceStatusSummary {
+        platforms: &'static [&'static str],
+        source_surface: &'static str,
+        exposure_mode: &'static str,
+        status_surfaces: &'static [&'static str],
+        reviewed_categories: &'static [&'static str],
+        rejected_categories: &'static [&'static str],
+        rejected_mobile_surfaces: &'static [&'static str],
+        command_inventory_reviewed: bool,
+        shared_core_api_boundary: bool,
+        platform_wrapper_required: bool,
+        android_wrapper_candidate_required: bool,
+        ios_wrapper_candidate_required: bool,
+        redacted_status_only: bool,
+        store_path_returned: bool,
+        passphrase_retained: bool,
+        key_material_exposed: bool,
+        network_io_attempted: bool,
+        transport_io_opened: bool,
+        delivery_runtime_opened: bool,
+        runtime_messaging_enabled: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1531,6 +1583,96 @@ pub mod production {
 
         pub fn command_surface_ready(self) -> bool {
             self.command_surface_ready
+        }
+    }
+
+    impl ProductionMobileRuntimeCommandSurfaceStatusSummary {
+        pub fn platforms(self) -> &'static [&'static str] {
+            self.platforms
+        }
+
+        pub fn source_surface(self) -> &'static str {
+            self.source_surface
+        }
+
+        pub fn exposure_mode(self) -> &'static str {
+            self.exposure_mode
+        }
+
+        pub fn status_surfaces(self) -> &'static [&'static str] {
+            self.status_surfaces
+        }
+
+        pub fn reviewed_categories(self) -> &'static [&'static str] {
+            self.reviewed_categories
+        }
+
+        pub fn rejected_categories(self) -> &'static [&'static str] {
+            self.rejected_categories
+        }
+
+        pub fn rejected_mobile_surfaces(self) -> &'static [&'static str] {
+            self.rejected_mobile_surfaces
+        }
+
+        pub fn command_inventory_reviewed(self) -> bool {
+            self.command_inventory_reviewed
+        }
+
+        pub fn shared_core_api_boundary(self) -> bool {
+            self.shared_core_api_boundary
+        }
+
+        pub fn platform_wrapper_required(self) -> bool {
+            self.platform_wrapper_required
+        }
+
+        pub fn android_wrapper_candidate_required(self) -> bool {
+            self.android_wrapper_candidate_required
+        }
+
+        pub fn ios_wrapper_candidate_required(self) -> bool {
+            self.ios_wrapper_candidate_required
+        }
+
+        pub fn redacted_status_only(self) -> bool {
+            self.redacted_status_only
+        }
+
+        pub fn store_path_returned(self) -> bool {
+            self.store_path_returned
+        }
+
+        pub fn passphrase_retained(self) -> bool {
+            self.passphrase_retained
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn network_io_attempted(self) -> bool {
+            self.network_io_attempted
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn delivery_runtime_opened(self) -> bool {
+            self.delivery_runtime_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
         }
     }
 
@@ -10042,6 +10184,93 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_runtime_command_surface_status_summary(
+    ) -> ProductionMobileRuntimeCommandSurfaceStatusSummary {
+        let surface = production_runtime_command_surface_summary();
+        let android = production_android_shell_candidate_summary();
+        let ios = production_ios_shell_candidate_summary();
+        let diagnostics = production_mobile_diagnostics_redaction_boundary_summary();
+        let shared_core_api_boundary = android.shared_core_required()
+            && ios.shared_core_required()
+            && android
+                .wrapper_api_groups()
+                .contains(&"shared_core_status_surface")
+            && ios
+                .wrapper_api_groups()
+                .contains(&"shared_core_status_surface");
+        let platform_wrapper_required = android.wrapper_api_groups() == ios.wrapper_api_groups()
+            && android
+                .wrapper_api_groups()
+                .contains(&"redacted_support_diagnostics");
+        let android_wrapper_candidate_required =
+            android.candidate_surface() == "android_shell_candidate";
+        let ios_wrapper_candidate_required = ios.candidate_surface() == "ios_shell_candidate";
+        let redacted_status_only = diagnostics.boundary_closed()
+            && diagnostics.local_copy_only()
+            && !diagnostics.raw_log_export_enabled()
+            && !diagnostics.support_bundle_export_enabled();
+        let store_path_returned = false;
+        let passphrase_retained = false;
+        let key_material_exposed = false;
+        let network_io_attempted = false;
+        let transport_io_opened = false;
+        let delivery_runtime_opened = false;
+        let runtime_messaging_enabled = surface.runtime_messaging_enabled();
+        let security_ready_claimed = false;
+        let boundary_closed = surface.command_inventory_reviewed()
+            && surface.command_surface_ready()
+            && shared_core_api_boundary
+            && platform_wrapper_required
+            && android_wrapper_candidate_required
+            && ios_wrapper_candidate_required
+            && redacted_status_only
+            && !store_path_returned
+            && !passphrase_retained
+            && !key_material_exposed
+            && !network_io_attempted
+            && !transport_io_opened
+            && !delivery_runtime_opened
+            && !runtime_messaging_enabled
+            && !security_ready_claimed
+            && surface
+                .rejected_categories()
+                .contains(&"default_automatic_messaging")
+            && surface
+                .rejected_categories()
+                .contains(&"implicit_network_on_launch")
+            && PRODUCTION_MOBILE_WRAPPER_REJECTED_COMMAND_SURFACES
+                .contains(&"background_runtime_start")
+            && PRODUCTION_MOBILE_WRAPPER_REJECTED_COMMAND_SURFACES
+                .contains(&"wrapper_specific_storage_command")
+            && PRODUCTION_MOBILE_WRAPPER_REJECTED_COMMAND_SURFACES
+                .contains(&"security_ready_toggle");
+
+        ProductionMobileRuntimeCommandSurfaceStatusSummary {
+            platforms: PRODUCTION_MOBILE_WRAPPER_COMMAND_SURFACE_PLATFORMS,
+            source_surface: "shared_core_runtime_command_surface",
+            exposure_mode: "redacted_status_only",
+            status_surfaces: PRODUCTION_MOBILE_WRAPPER_STATUS_SURFACES,
+            reviewed_categories: surface.reviewed_categories(),
+            rejected_categories: surface.rejected_categories(),
+            rejected_mobile_surfaces: PRODUCTION_MOBILE_WRAPPER_REJECTED_COMMAND_SURFACES,
+            command_inventory_reviewed: surface.command_inventory_reviewed(),
+            shared_core_api_boundary,
+            platform_wrapper_required,
+            android_wrapper_candidate_required,
+            ios_wrapper_candidate_required,
+            redacted_status_only,
+            store_path_returned,
+            passphrase_retained,
+            key_material_exposed,
+            network_io_attempted,
+            transport_io_opened,
+            delivery_runtime_opened,
+            runtime_messaging_enabled,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_manual_runtime_messaging_gate_summary(
     ) -> ProductionManualRuntimeMessagingGateSummary {
         let async_delivery = production_async_delivery_semantics_summary();
@@ -12704,6 +12933,7 @@ pub mod production {
             assert_eq!(
                 android.wrapper_api_groups(),
                 &[
+                    "shared_core_status_surface",
                     "profile_unlock_lock_status",
                     "invite_code_create_join",
                     "pairing_payload_export_import",
@@ -12812,6 +13042,7 @@ pub mod production {
             assert_eq!(
                 ios.wrapper_api_groups(),
                 &[
+                    "shared_core_status_surface",
                     "profile_unlock_lock_status",
                     "invite_code_create_join",
                     "pairing_payload_export_import",
@@ -12993,6 +13224,79 @@ pub mod production {
                 .contains(&"default_automatic_messaging"));
             assert!(preflight.default_runtime_command_surface_closed());
             assert!(!preflight.production_messaging_ready());
+        }
+
+        #[test]
+        fn production_mobile_runtime_command_surface_status_is_redacted_and_side_effect_free() {
+            let status = production_mobile_runtime_command_surface_status_summary();
+
+            assert!(status.boundary_closed());
+            assert_eq!(
+                status.platforms(),
+                &["android_shell_candidate", "ios_shell_candidate"]
+            );
+            assert_eq!(
+                status.source_surface(),
+                "shared_core_runtime_command_surface"
+            );
+            assert_eq!(status.exposure_mode(), "redacted_status_only");
+            assert!(status.command_inventory_reviewed());
+            assert!(status.shared_core_api_boundary());
+            assert!(status.platform_wrapper_required());
+            assert!(status.android_wrapper_candidate_required());
+            assert!(status.ios_wrapper_candidate_required());
+            assert!(status.redacted_status_only());
+            assert!(!status.store_path_returned());
+            assert!(!status.passphrase_retained());
+            assert!(!status.key_material_exposed());
+            assert!(!status.network_io_attempted());
+            assert!(!status.transport_io_opened());
+            assert!(!status.delivery_runtime_opened());
+            assert!(!status.runtime_messaging_enabled());
+            assert!(!status.security_ready_claimed());
+            assert!(status
+                .status_surfaces()
+                .contains(&"shared_core_status_surface"));
+            assert!(status
+                .status_surfaces()
+                .contains(&"production_runtime_command_surface_status"));
+            assert!(status
+                .status_surfaces()
+                .contains(&"product_unlock_redacted_status"));
+            assert!(status
+                .status_surfaces()
+                .contains(&"mobile_diagnostics_redacted_status"));
+            assert!(status.reviewed_categories().contains(&"status_preflight"));
+            assert!(status
+                .reviewed_categories()
+                .contains(&"local_data_lifecycle"));
+            assert!(status
+                .rejected_categories()
+                .contains(&"default_automatic_messaging"));
+            assert!(status
+                .rejected_categories()
+                .contains(&"implicit_network_on_launch"));
+            assert!(status
+                .rejected_categories()
+                .contains(&"plaintext_stdout_secret_export"));
+            assert!(status
+                .rejected_mobile_surfaces()
+                .contains(&"background_runtime_start"));
+            assert!(status
+                .rejected_mobile_surfaces()
+                .contains(&"implicit_network_bootstrap"));
+            assert!(status
+                .rejected_mobile_surfaces()
+                .contains(&"automatic_delivery_loop"));
+            assert!(status
+                .rejected_mobile_surfaces()
+                .contains(&"wrapper_specific_storage_command"));
+            assert!(status
+                .rejected_mobile_surfaces()
+                .contains(&"wrapper_specific_transport_command"));
+            assert!(status
+                .rejected_mobile_surfaces()
+                .contains(&"security_ready_toggle"));
         }
 
         #[test]
