@@ -14,6 +14,9 @@ the platform split is not a security-readiness or production-readiness claim.
 The Android candidate is a thin Kotlin shell over UniFFI or another narrow FFI
 boundary into the shared Rust core. It must not define independent protocol,
 storage, transport, pairing, or contact-discovery semantics.
+The later iOS candidate follows the same shape as a thin Swift shell over
+UniFFI or another narrow FFI boundary into the shared Rust core. iOS-specific
+distribution constraints are product constraints, not security claims.
 The public desktop artifact is currently the unsigned macOS DMG path. Windows
 is a local desktop build candidate only; before any public Windows artifact, it
 must keep the same Tauri app-data resolver semantics, encrypted local store,
@@ -87,6 +90,10 @@ This project does not currently claim:
   candidate and does not add Google-account identity, Play Services, Firebase
   Cloud Messaging, Play Store trust, Android Keystore-only unlock, cloud backup,
   or wrapper-specific protocol/storage/transport semantics.
+- iOS app readiness. iOS is currently only a shared-core shell candidate and
+  does not add Apple-account identity, iCloud, APNs, App Store/TestFlight trust,
+  Developer ID, notarization, iOS Keychain-only unlock, cloud backup, or
+  wrapper-specific protocol/storage/transport semantics.
 - External audit, independent review, reviewer signoff, or public user safety signoff.
 - Protection against device compromise.
 - Protection against coercion.
