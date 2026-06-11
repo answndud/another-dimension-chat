@@ -249,6 +249,41 @@ pub mod production {
         "play_store_security_trust_dependency",
     ];
 
+    const PRODUCTION_IOS_WRAPPER_CANDIDATE_RESPONSIBILITIES: &[&str] = &[
+        "swift_shell",
+        "uniffi_or_ffi_shared_core_calls",
+        "passphrase_unlock_ui",
+        "redacted_diagnostics_display",
+        "explicit_user_triggered_actions",
+        "local_storage_permission_explanation",
+    ];
+
+    const PRODUCTION_IOS_SHARED_CORE_API_BOUNDARY: &[&str] = &[
+        "profile_identity",
+        "pairing_payload_and_safety_transcript",
+        "message_orchestration",
+        "protocol_envelope_and_replay",
+        "encrypted_local_storage_policy",
+        "fail_closed_transport_policy",
+        "redacted_status_models",
+    ];
+
+    const PRODUCTION_IOS_REJECTED_DEPENDENCIES: &[&str] = &[
+        "apple_account_identity",
+        "phone_number_identity",
+        "icloud_backup",
+        "icloud_keychain_required",
+        "apple_push_notification_service_required",
+        "push_notification_dependency",
+        "cloud_backup",
+        "central_contact_discovery",
+        "central_message_server",
+        "wrapper_specific_security_protocol",
+        "app_store_or_testflight_security_trust_dependency",
+        "developer_id_or_notarization_security_trust_dependency",
+        "keychain_only_unlock",
+    ];
+
     const PRODUCTION_ASYNC_DELIVERY_SEMANTIC_STATES: &[&str] = &[
         "outbound_pending",
         "encrypted_envelope_exported",
@@ -486,6 +521,31 @@ pub mod production {
         rejected_dependencies: &'static [&'static str],
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionIosShellCandidateSummary {
+        candidate_surface: &'static str,
+        preferred_wrapper: &'static str,
+        shared_core_required: bool,
+        wrapper_specific_protocol_allowed: bool,
+        wrapper_specific_storage_semantics_allowed: bool,
+        wrapper_specific_transport_semantics_allowed: bool,
+        ios_local_storage_required: bool,
+        passphrase_unlock_required: bool,
+        keychain_only_unlock_allowed: bool,
+        keychain_optional_wrapping_allowed_later: bool,
+        redacted_diagnostics_required: bool,
+        explicit_user_action_required: bool,
+        push_notification_dependency_allowed: bool,
+        apple_account_dependency_allowed: bool,
+        icloud_backup_allowed: bool,
+        app_store_or_testflight_trusted_security_boundary: bool,
+        notarization_or_developer_id_trusted_security_boundary: bool,
+        security_ready_claimed: bool,
+        responsibilities: &'static [&'static str],
+        shared_core_api_boundary: &'static [&'static str],
+        rejected_dependencies: &'static [&'static str],
+    }
+
     impl ProductionProtocolDecisionSummary {
         pub fn selected_session_protocol(self) -> &'static str {
             self.selected_session_protocol
@@ -649,6 +709,92 @@ pub mod production {
 
         pub fn cloud_backup_allowed(self) -> bool {
             self.cloud_backup_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn responsibilities(self) -> &'static [&'static str] {
+            self.responsibilities
+        }
+
+        pub fn shared_core_api_boundary(self) -> &'static [&'static str] {
+            self.shared_core_api_boundary
+        }
+
+        pub fn rejected_dependencies(self) -> &'static [&'static str] {
+            self.rejected_dependencies
+        }
+    }
+
+    impl ProductionIosShellCandidateSummary {
+        pub fn candidate_surface(self) -> &'static str {
+            self.candidate_surface
+        }
+
+        pub fn preferred_wrapper(self) -> &'static str {
+            self.preferred_wrapper
+        }
+
+        pub fn shared_core_required(self) -> bool {
+            self.shared_core_required
+        }
+
+        pub fn wrapper_specific_protocol_allowed(self) -> bool {
+            self.wrapper_specific_protocol_allowed
+        }
+
+        pub fn wrapper_specific_storage_semantics_allowed(self) -> bool {
+            self.wrapper_specific_storage_semantics_allowed
+        }
+
+        pub fn wrapper_specific_transport_semantics_allowed(self) -> bool {
+            self.wrapper_specific_transport_semantics_allowed
+        }
+
+        pub fn ios_local_storage_required(self) -> bool {
+            self.ios_local_storage_required
+        }
+
+        pub fn passphrase_unlock_required(self) -> bool {
+            self.passphrase_unlock_required
+        }
+
+        pub fn keychain_only_unlock_allowed(self) -> bool {
+            self.keychain_only_unlock_allowed
+        }
+
+        pub fn keychain_optional_wrapping_allowed_later(self) -> bool {
+            self.keychain_optional_wrapping_allowed_later
+        }
+
+        pub fn redacted_diagnostics_required(self) -> bool {
+            self.redacted_diagnostics_required
+        }
+
+        pub fn explicit_user_action_required(self) -> bool {
+            self.explicit_user_action_required
+        }
+
+        pub fn push_notification_dependency_allowed(self) -> bool {
+            self.push_notification_dependency_allowed
+        }
+
+        pub fn apple_account_dependency_allowed(self) -> bool {
+            self.apple_account_dependency_allowed
+        }
+
+        pub fn icloud_backup_allowed(self) -> bool {
+            self.icloud_backup_allowed
+        }
+
+        pub fn app_store_or_testflight_trusted_security_boundary(self) -> bool {
+            self.app_store_or_testflight_trusted_security_boundary
+        }
+
+        pub fn notarization_or_developer_id_trusted_security_boundary(self) -> bool {
+            self.notarization_or_developer_id_trusted_security_boundary
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -8843,6 +8989,32 @@ pub mod production {
         }
     }
 
+    pub fn production_ios_shell_candidate_summary() -> ProductionIosShellCandidateSummary {
+        ProductionIosShellCandidateSummary {
+            candidate_surface: "ios_shell_candidate",
+            preferred_wrapper: "swift_shell_with_uniffi_or_ffi_shared_core_boundary",
+            shared_core_required: true,
+            wrapper_specific_protocol_allowed: false,
+            wrapper_specific_storage_semantics_allowed: false,
+            wrapper_specific_transport_semantics_allowed: false,
+            ios_local_storage_required: true,
+            passphrase_unlock_required: true,
+            keychain_only_unlock_allowed: false,
+            keychain_optional_wrapping_allowed_later: true,
+            redacted_diagnostics_required: true,
+            explicit_user_action_required: true,
+            push_notification_dependency_allowed: false,
+            apple_account_dependency_allowed: false,
+            icloud_backup_allowed: false,
+            app_store_or_testflight_trusted_security_boundary: false,
+            notarization_or_developer_id_trusted_security_boundary: false,
+            security_ready_claimed: false,
+            responsibilities: PRODUCTION_IOS_WRAPPER_CANDIDATE_RESPONSIBILITIES,
+            shared_core_api_boundary: PRODUCTION_IOS_SHARED_CORE_API_BOUNDARY,
+            rejected_dependencies: PRODUCTION_IOS_REJECTED_DEPENDENCIES,
+        }
+    }
+
     pub fn production_runtime_command_surface_summary() -> ProductionRuntimeCommandSurfaceSummary {
         ProductionRuntimeCommandSurfaceSummary {
             reviewed_categories: PRODUCTION_RUNTIME_COMMAND_SURFACE_REVIEWED_CATEGORIES,
@@ -10906,6 +11078,59 @@ pub mod production {
             assert!(android
                 .rejected_dependencies()
                 .contains(&"play_store_security_trust_dependency"));
+        }
+
+        #[test]
+        fn production_ios_shell_candidate_uses_shared_core_without_apple_trust_dependencies() {
+            let ios = production_ios_shell_candidate_summary();
+
+            assert_eq!(ios.candidate_surface(), "ios_shell_candidate");
+            assert_eq!(
+                ios.preferred_wrapper(),
+                "swift_shell_with_uniffi_or_ffi_shared_core_boundary"
+            );
+            assert!(ios.shared_core_required());
+            assert!(!ios.wrapper_specific_protocol_allowed());
+            assert!(!ios.wrapper_specific_storage_semantics_allowed());
+            assert!(!ios.wrapper_specific_transport_semantics_allowed());
+            assert!(ios.ios_local_storage_required());
+            assert!(ios.passphrase_unlock_required());
+            assert!(!ios.keychain_only_unlock_allowed());
+            assert!(ios.keychain_optional_wrapping_allowed_later());
+            assert!(ios.redacted_diagnostics_required());
+            assert!(ios.explicit_user_action_required());
+            assert!(!ios.push_notification_dependency_allowed());
+            assert!(!ios.apple_account_dependency_allowed());
+            assert!(!ios.icloud_backup_allowed());
+            assert!(!ios.app_store_or_testflight_trusted_security_boundary());
+            assert!(!ios.notarization_or_developer_id_trusted_security_boundary());
+            assert!(!ios.security_ready_claimed());
+            assert!(ios.responsibilities().contains(&"swift_shell"));
+            assert!(ios
+                .responsibilities()
+                .contains(&"uniffi_or_ffi_shared_core_calls"));
+            assert!(ios
+                .shared_core_api_boundary()
+                .contains(&"pairing_payload_and_safety_transcript"));
+            assert!(ios
+                .shared_core_api_boundary()
+                .contains(&"protocol_envelope_and_replay"));
+            assert!(ios
+                .shared_core_api_boundary()
+                .contains(&"encrypted_local_storage_policy"));
+            assert!(ios
+                .rejected_dependencies()
+                .contains(&"apple_account_identity"));
+            assert!(ios.rejected_dependencies().contains(&"icloud_backup"));
+            assert!(ios
+                .rejected_dependencies()
+                .contains(&"apple_push_notification_service_required"));
+            assert!(ios
+                .rejected_dependencies()
+                .contains(&"app_store_or_testflight_security_trust_dependency"));
+            assert!(ios
+                .rejected_dependencies()
+                .contains(&"keychain_only_unlock"));
         }
 
         #[test]
