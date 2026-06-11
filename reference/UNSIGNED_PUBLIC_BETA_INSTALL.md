@@ -83,7 +83,7 @@ only. The release provenance records that independent review is not complete and
 that no reviewer signoff is claimed.
 
 `PUBLIC_INTAKE_POLICY.md` describes what can be posted in public issues and
-release comments. Use redacted public diagnostics only. Do not post raw logs,
+release comments. Use redacted public support diagnostics only. Do not post raw logs,
 crash dumps, endpoints, payloads, paths, passphrases, private keys, key
 material, screenshots of private room data, private planning notes, or local app
 data.
@@ -91,9 +91,10 @@ data.
 `REPOSITORY_GOVERNANCE.md` records maintainer-driven main-branch governance,
 release guardrails, redaction rules, and non-goals for this unsigned beta.
 
-Public diagnostics are local-copy only. They are limited to status, build,
-failure class, manual network permission, and app-launch network boundary. They
-do not provide crash upload, telemetry, or raw log export.
+Public support diagnostics are local-copy only. They are limited to app status,
+build identity, broad failure class, recovery next action, and app-launch
+network boundary. They do not provide workflow-state export, crash upload,
+telemetry, raw log export, support bundle export, or raw diagnostic file export.
 
 Local backup exclusion is a required local verification boundary only. This
 beta does not provide cloud backup/sync, backup recovery, rollback prevention,
