@@ -1810,6 +1810,43 @@ pub mod production {
         "security-ready",
     ];
 
+    const PRODUCTION_MOBILE_LIFECYCLE_INDEX_CHECKLIST_REQUIRED_ITEMS: &[&str] = &[
+        "mobile lifecycle checklist index status only",
+        "checklist coverage index only",
+        "non-claim index only",
+        "first-run checklist coverage included",
+        "local data lifecycle coverage included",
+        "transcript status coverage included",
+        "conversation deletion coverage included",
+        "session profile wipe coverage included",
+        "destructive confirmation coverage included",
+        "documentation-only mobile wrapper boundary",
+        "mobile app readiness not claimed",
+        "production messaging not claimed",
+        "security-ready not claimed",
+        "external onion delivery not claimed",
+        "cloud backup not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_LIFECYCLE_INDEX_CHECKLIST_FORBIDDEN_CLAIMS: &[&str] = &[
+        "mobile app ready",
+        "mobile lifecycle ready",
+        "all lifecycle checks passed",
+        "production messaging ready",
+        "production E2EE ready",
+        "safe for sensitive communication",
+        "audited",
+        "security-ready",
+        "external onion delivery verified",
+        "store approved",
+        "push delivery enabled",
+        "cloud backup enabled",
+        "secure deletion guaranteed",
+        "remote wipe available",
+        "no remaining mobile work",
+        "release ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -2606,6 +2643,36 @@ pub mod production {
         path_or_secret_display_allowed: bool,
         production_messaging_ready_claimed: bool,
         security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileLifecycleChecklistIndexBoundarySummary {
+        required_checklist_items: &'static [&'static str],
+        forbidden_index_claims: &'static [&'static str],
+        inherits_mobile_first_run_platform_readiness_checklist_boundary: bool,
+        inherits_mobile_transcript_status_checklist_boundary: bool,
+        inherits_mobile_conversation_deletion_checklist_boundary: bool,
+        inherits_mobile_session_profile_wipe_checklist_boundary: bool,
+        inherits_mobile_destructive_action_confirmation_checklist_boundary: bool,
+        lifecycle_index_status_only_label_required: bool,
+        checklist_coverage_index_only_label_required: bool,
+        non_claim_index_only_label_required: bool,
+        first_run_coverage_label_required: bool,
+        local_data_lifecycle_coverage_label_required: bool,
+        transcript_status_coverage_label_required: bool,
+        conversation_deletion_coverage_label_required: bool,
+        session_profile_wipe_coverage_label_required: bool,
+        destructive_confirmation_coverage_label_required: bool,
+        documentation_only_boundary_label_required: bool,
+        mobile_app_readiness_claimed: bool,
+        production_messaging_ready_claimed: bool,
+        security_ready_claimed: bool,
+        external_delivery_success_claim_allowed: bool,
+        cloud_backup_claim_allowed: bool,
+        store_or_review_trust_claim_allowed: bool,
+        all_checks_passed_claim_allowed: bool,
+        release_ready_claim_allowed: bool,
         boundary_closed: bool,
     }
 
@@ -4951,6 +5018,112 @@ pub mod production {
 
         pub fn security_ready_claimed(self) -> bool {
             self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileLifecycleChecklistIndexBoundarySummary {
+        pub fn required_checklist_items(self) -> &'static [&'static str] {
+            self.required_checklist_items
+        }
+
+        pub fn forbidden_index_claims(self) -> &'static [&'static str] {
+            self.forbidden_index_claims
+        }
+
+        pub fn inherits_mobile_first_run_platform_readiness_checklist_boundary(self) -> bool {
+            self.inherits_mobile_first_run_platform_readiness_checklist_boundary
+        }
+
+        pub fn inherits_mobile_transcript_status_checklist_boundary(self) -> bool {
+            self.inherits_mobile_transcript_status_checklist_boundary
+        }
+
+        pub fn inherits_mobile_conversation_deletion_checklist_boundary(self) -> bool {
+            self.inherits_mobile_conversation_deletion_checklist_boundary
+        }
+
+        pub fn inherits_mobile_session_profile_wipe_checklist_boundary(self) -> bool {
+            self.inherits_mobile_session_profile_wipe_checklist_boundary
+        }
+
+        pub fn inherits_mobile_destructive_action_confirmation_checklist_boundary(self) -> bool {
+            self.inherits_mobile_destructive_action_confirmation_checklist_boundary
+        }
+
+        pub fn lifecycle_index_status_only_label_required(self) -> bool {
+            self.lifecycle_index_status_only_label_required
+        }
+
+        pub fn checklist_coverage_index_only_label_required(self) -> bool {
+            self.checklist_coverage_index_only_label_required
+        }
+
+        pub fn non_claim_index_only_label_required(self) -> bool {
+            self.non_claim_index_only_label_required
+        }
+
+        pub fn first_run_coverage_label_required(self) -> bool {
+            self.first_run_coverage_label_required
+        }
+
+        pub fn local_data_lifecycle_coverage_label_required(self) -> bool {
+            self.local_data_lifecycle_coverage_label_required
+        }
+
+        pub fn transcript_status_coverage_label_required(self) -> bool {
+            self.transcript_status_coverage_label_required
+        }
+
+        pub fn conversation_deletion_coverage_label_required(self) -> bool {
+            self.conversation_deletion_coverage_label_required
+        }
+
+        pub fn session_profile_wipe_coverage_label_required(self) -> bool {
+            self.session_profile_wipe_coverage_label_required
+        }
+
+        pub fn destructive_confirmation_coverage_label_required(self) -> bool {
+            self.destructive_confirmation_coverage_label_required
+        }
+
+        pub fn documentation_only_boundary_label_required(self) -> bool {
+            self.documentation_only_boundary_label_required
+        }
+
+        pub fn mobile_app_readiness_claimed(self) -> bool {
+            self.mobile_app_readiness_claimed
+        }
+
+        pub fn production_messaging_ready_claimed(self) -> bool {
+            self.production_messaging_ready_claimed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn external_delivery_success_claim_allowed(self) -> bool {
+            self.external_delivery_success_claim_allowed
+        }
+
+        pub fn cloud_backup_claim_allowed(self) -> bool {
+            self.cloud_backup_claim_allowed
+        }
+
+        pub fn store_or_review_trust_claim_allowed(self) -> bool {
+            self.store_or_review_trust_claim_allowed
+        }
+
+        pub fn all_checks_passed_claim_allowed(self) -> bool {
+            self.all_checks_passed_claim_allowed
+        }
+
+        pub fn release_ready_claim_allowed(self) -> bool {
+            self.release_ready_claim_allowed
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -15632,6 +15805,145 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_lifecycle_checklist_index_boundary_summary(
+    ) -> ProductionMobileLifecycleChecklistIndexBoundarySummary {
+        let first_run = production_mobile_first_run_platform_readiness_checklist_boundary_summary();
+        let transcript = production_mobile_transcript_status_checklist_boundary_summary();
+        let deletion = production_mobile_conversation_deletion_checklist_boundary_summary();
+        let wipe = production_mobile_session_profile_wipe_checklist_boundary_summary();
+        let confirmation =
+            production_mobile_destructive_action_confirmation_checklist_boundary_summary();
+        let inherits_mobile_first_run_platform_readiness_checklist_boundary = first_run
+            .boundary_closed()
+            && first_run.first_run_status_only_label_required()
+            && first_run.local_data_lifecycle_status_label_required()
+            && first_run.backup_exclusion_status_label_required()
+            && first_run.cloud_backup_non_claim_required()
+            && first_run.external_delivery_non_claim_required()
+            && !first_run.mobile_app_readiness_claimed()
+            && !first_run.store_or_review_trust_claim_allowed()
+            && !first_run.external_delivery_success_claim_allowed()
+            && !first_run.security_ready_claimed();
+        let inherits_mobile_transcript_status_checklist_boundary = transcript.boundary_closed()
+            && transcript.transcript_status_only_label_required()
+            && transcript.network_sync_non_claim_required()
+            && !transcript.sent_delivery_claim_allowed()
+            && !transcript.remote_transcript_sync_claim_allowed()
+            && !transcript.cloud_transcript_backup_claim_allowed()
+            && !transcript.security_ready_claimed();
+        let inherits_mobile_conversation_deletion_checklist_boundary = deletion.boundary_closed()
+            && deletion.conversation_deletion_status_only_label_required()
+            && deletion.local_lifecycle_state_only_label_required()
+            && deletion.secure_deletion_non_claim_required()
+            && deletion.remote_deletion_non_claim_required()
+            && !deletion.remote_wipe_or_delete_claim_allowed()
+            && !deletion.security_ready_claimed();
+        let inherits_mobile_session_profile_wipe_checklist_boundary = wipe.boundary_closed()
+            && wipe.session_profile_wipe_status_only_label_required()
+            && wipe.cloud_backup_non_claim_required()
+            && wipe.secure_deletion_non_claim_required()
+            && wipe.remote_wipe_non_claim_required()
+            && !wipe.cloud_account_or_backup_claim_allowed()
+            && !wipe.security_ready_claimed();
+        let inherits_mobile_destructive_action_confirmation_checklist_boundary = confirmation
+            .boundary_closed()
+            && confirmation.confirmation_status_only_label_required()
+            && confirmation.local_only_impact_label_required()
+            && confirmation.secure_deletion_non_claim_required()
+            && confirmation.remote_deletion_non_claim_required()
+            && !confirmation.one_tap_destructive_action_allowed()
+            && !confirmation.cloud_backup_or_recovery_claim_allowed()
+            && !confirmation.security_ready_claimed();
+        let lifecycle_index_status_only_label_required = true;
+        let checklist_coverage_index_only_label_required = true;
+        let non_claim_index_only_label_required = true;
+        let first_run_coverage_label_required = true;
+        let local_data_lifecycle_coverage_label_required = true;
+        let transcript_status_coverage_label_required = true;
+        let conversation_deletion_coverage_label_required = true;
+        let session_profile_wipe_coverage_label_required = true;
+        let destructive_confirmation_coverage_label_required = true;
+        let documentation_only_boundary_label_required = true;
+        let mobile_app_readiness_claimed = false;
+        let production_messaging_ready_claimed = false;
+        let security_ready_claimed = false;
+        let external_delivery_success_claim_allowed = false;
+        let cloud_backup_claim_allowed = false;
+        let store_or_review_trust_claim_allowed = false;
+        let all_checks_passed_claim_allowed = false;
+        let release_ready_claim_allowed = false;
+        let boundary_closed = inherits_mobile_first_run_platform_readiness_checklist_boundary
+            && inherits_mobile_transcript_status_checklist_boundary
+            && inherits_mobile_conversation_deletion_checklist_boundary
+            && inherits_mobile_session_profile_wipe_checklist_boundary
+            && inherits_mobile_destructive_action_confirmation_checklist_boundary
+            && lifecycle_index_status_only_label_required
+            && checklist_coverage_index_only_label_required
+            && non_claim_index_only_label_required
+            && first_run_coverage_label_required
+            && local_data_lifecycle_coverage_label_required
+            && transcript_status_coverage_label_required
+            && conversation_deletion_coverage_label_required
+            && session_profile_wipe_coverage_label_required
+            && destructive_confirmation_coverage_label_required
+            && documentation_only_boundary_label_required
+            && !mobile_app_readiness_claimed
+            && !production_messaging_ready_claimed
+            && !security_ready_claimed
+            && !external_delivery_success_claim_allowed
+            && !cloud_backup_claim_allowed
+            && !store_or_review_trust_claim_allowed
+            && !all_checks_passed_claim_allowed
+            && !release_ready_claim_allowed
+            && PRODUCTION_MOBILE_LIFECYCLE_INDEX_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"mobile lifecycle checklist index status only")
+            && PRODUCTION_MOBILE_LIFECYCLE_INDEX_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"checklist coverage index only")
+            && PRODUCTION_MOBILE_LIFECYCLE_INDEX_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"mobile app readiness not claimed")
+            && PRODUCTION_MOBILE_LIFECYCLE_INDEX_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"security-ready not claimed")
+            && PRODUCTION_MOBILE_LIFECYCLE_INDEX_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"mobile app ready")
+            && PRODUCTION_MOBILE_LIFECYCLE_INDEX_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"all lifecycle checks passed")
+            && PRODUCTION_MOBILE_LIFECYCLE_INDEX_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"production messaging ready")
+            && PRODUCTION_MOBILE_LIFECYCLE_INDEX_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"release ready")
+            && PRODUCTION_MOBILE_LIFECYCLE_INDEX_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"security-ready");
+
+        ProductionMobileLifecycleChecklistIndexBoundarySummary {
+            required_checklist_items: PRODUCTION_MOBILE_LIFECYCLE_INDEX_CHECKLIST_REQUIRED_ITEMS,
+            forbidden_index_claims: PRODUCTION_MOBILE_LIFECYCLE_INDEX_CHECKLIST_FORBIDDEN_CLAIMS,
+            inherits_mobile_first_run_platform_readiness_checklist_boundary,
+            inherits_mobile_transcript_status_checklist_boundary,
+            inherits_mobile_conversation_deletion_checklist_boundary,
+            inherits_mobile_session_profile_wipe_checklist_boundary,
+            inherits_mobile_destructive_action_confirmation_checklist_boundary,
+            lifecycle_index_status_only_label_required,
+            checklist_coverage_index_only_label_required,
+            non_claim_index_only_label_required,
+            first_run_coverage_label_required,
+            local_data_lifecycle_coverage_label_required,
+            transcript_status_coverage_label_required,
+            conversation_deletion_coverage_label_required,
+            session_profile_wipe_coverage_label_required,
+            destructive_confirmation_coverage_label_required,
+            documentation_only_boundary_label_required,
+            mobile_app_readiness_claimed,
+            production_messaging_ready_claimed,
+            security_ready_claimed,
+            external_delivery_success_claim_allowed,
+            cloud_backup_claim_allowed,
+            store_or_review_trust_claim_allowed,
+            all_checks_passed_claim_allowed,
+            release_ready_claim_allowed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -20294,6 +20606,126 @@ pub mod production {
             assert!(boundary
                 .forbidden_confirmation_claims()
                 .contains(&"security-ready"));
+        }
+
+        #[test]
+        fn production_mobile_lifecycle_checklist_index_boundary_is_coverage_only_and_non_claiming()
+        {
+            let boundary = production_mobile_lifecycle_checklist_index_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_first_run_platform_readiness_checklist_boundary());
+            assert!(boundary.inherits_mobile_transcript_status_checklist_boundary());
+            assert!(boundary.inherits_mobile_conversation_deletion_checklist_boundary());
+            assert!(boundary.inherits_mobile_session_profile_wipe_checklist_boundary());
+            assert!(boundary.inherits_mobile_destructive_action_confirmation_checklist_boundary());
+            assert!(boundary.lifecycle_index_status_only_label_required());
+            assert!(boundary.checklist_coverage_index_only_label_required());
+            assert!(boundary.non_claim_index_only_label_required());
+            assert!(boundary.first_run_coverage_label_required());
+            assert!(boundary.local_data_lifecycle_coverage_label_required());
+            assert!(boundary.transcript_status_coverage_label_required());
+            assert!(boundary.conversation_deletion_coverage_label_required());
+            assert!(boundary.session_profile_wipe_coverage_label_required());
+            assert!(boundary.destructive_confirmation_coverage_label_required());
+            assert!(boundary.documentation_only_boundary_label_required());
+            assert!(!boundary.mobile_app_readiness_claimed());
+            assert!(!boundary.production_messaging_ready_claimed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(!boundary.external_delivery_success_claim_allowed());
+            assert!(!boundary.cloud_backup_claim_allowed());
+            assert!(!boundary.store_or_review_trust_claim_allowed());
+            assert!(!boundary.all_checks_passed_claim_allowed());
+            assert!(!boundary.release_ready_claim_allowed());
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"mobile lifecycle checklist index status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"checklist coverage index only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"non-claim index only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"first-run checklist coverage included"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"local data lifecycle coverage included"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"transcript status coverage included"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"conversation deletion coverage included"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"session profile wipe coverage included"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"destructive confirmation coverage included"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"documentation-only mobile wrapper boundary"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"mobile app readiness not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"production messaging not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"security-ready not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"external onion delivery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"cloud backup not claimed"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"mobile app ready"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"mobile lifecycle ready"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"all lifecycle checks passed"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"production messaging ready"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"production E2EE ready"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"safe for sensitive communication"));
+            assert!(boundary.forbidden_index_claims().contains(&"audited"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"security-ready"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"external onion delivery verified"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"store approved"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"push delivery enabled"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"cloud backup enabled"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"secure deletion guaranteed"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"remote wipe available"));
+            assert!(boundary
+                .forbidden_index_claims()
+                .contains(&"no remaining mobile work"));
+            assert!(boundary.forbidden_index_claims().contains(&"release ready"));
         }
 
         #[test]
