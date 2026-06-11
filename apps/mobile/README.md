@@ -449,3 +449,46 @@ Conversation deletion checklists must not show production messaging ready.
 Conversation deletion checklists must not show production E2EE ready.
 Conversation deletion checklists must not show safe for sensitive communication.
 Conversation deletion checklists must not show security-ready claims.
+
+## Session/Profile/Wipe Checklist Boundary
+
+Future mobile session/profile/wipe checklists are documentation-only
+candidates until a separate wrapper UI implementation phase exists.
+
+Session/profile/wipe checklists may show session profile wipe checklist status only.
+Session/profile/wipe checklists may show session delete is explicit user action.
+Session/profile/wipe checklists may show session delete removes resume records.
+Session/profile/wipe checklists may show session delete preserves message records.
+Session/profile/wipe checklists may show profile delete is explicit user action.
+Session/profile/wipe checklists may show profile delete removes profile store locks.
+Session/profile/wipe checklists may show profile delete clears unlock state.
+Session/profile/wipe checklists may show full local wipe is explicit user action.
+Session/profile/wipe checklists may show full local wipe removes owned app data.
+Session/profile/wipe checklists may show backup exclusion remains best-effort only.
+Session/profile/wipe checklists may show rollback detection remains marker only.
+Session/profile/wipe checklists may show cloud backup not claimed.
+Session/profile/wipe checklists may show backup recovery not claimed.
+Session/profile/wipe checklists may show secure deletion not claimed.
+Session/profile/wipe checklists may show remote wipe not claimed.
+Session/profile/wipe checklists may show security-ready not claimed.
+
+Session/profile/wipe checklists must not show session delete removes peer messages.
+Session/profile/wipe checklists must not show profile delete removes cloud account.
+Session/profile/wipe checklists must not show full wipe deletes peer copy.
+Session/profile/wipe checklists must not show remote wipe available.
+Session/profile/wipe checklists must not show remote deletion verified.
+Session/profile/wipe checklists must not show secure deletion guaranteed.
+Session/profile/wipe checklists must not show forensic deletion guaranteed.
+Session/profile/wipe checklists must not show cloud backup deleted.
+Session/profile/wipe checklists must not show cloud sync disabled remotely.
+Session/profile/wipe checklists must not show backup recovery available.
+Session/profile/wipe checklists must not show data safe after device restore.
+Session/profile/wipe checklists must not show rollback prevention guaranteed.
+Session/profile/wipe checklists must not show store path shown.
+Session/profile/wipe checklists must not show passphrase retained.
+Session/profile/wipe checklists must not show plaintext exposed.
+Session/profile/wipe checklists must not show key material exposed.
+Session/profile/wipe checklists must not show production messaging ready.
+Session/profile/wipe checklists must not show production E2EE ready.
+Session/profile/wipe checklists must not show safe for sensitive communication.
+Session/profile/wipe checklists must not show security-ready claims.
