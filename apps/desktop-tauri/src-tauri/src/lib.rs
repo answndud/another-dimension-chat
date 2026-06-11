@@ -115,6 +115,57 @@ struct DevInviteRoomMessageRecord {
 }
 
 const DEV_INVITE_ROOM_TTL_MS: u128 = 10_000;
+pub const DESKTOP_PLATFORM_BOUNDARY_POLICIES: [&str; 8] = [
+    "macos_unsigned_public_beta_is_dmg_only",
+    "windows_is_local_build_candidate_only",
+    "same_tauri_app_data_semantics",
+    "encrypted_store_required_on_all_desktop_platforms",
+    "local_deletion_semantics_match",
+    "public_diagnostics_redacted_on_all_desktop_platforms",
+    "no_auto_update_channel",
+    "signing_notarization_or_store_not_trusted_security_boundary",
+];
+
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct DesktopPlatformBoundarySummary {
+    pub desktop_shell: &'static str,
+    pub macos_distribution: &'static str,
+    pub windows_distribution: &'static str,
+    pub tauri_app_data_resolver_required: bool,
+    pub encrypted_store_required: bool,
+    pub local_deletion_controls_required: bool,
+    pub diagnostics_redacted: bool,
+    pub explicit_user_action_required: bool,
+    pub automatic_network_on_launch_allowed: bool,
+    pub auto_update_channel: bool,
+    pub signing_notarization_or_store_trusted_security_boundary: bool,
+    pub app_store_dependency: bool,
+    pub windows_dpapi_required: bool,
+    pub public_beta_security_ready_claimed: bool,
+    pub sensitive_communication_allowed: bool,
+    pub policies: &'static [&'static str],
+}
+
+pub fn desktop_platform_boundary_summary() -> DesktopPlatformBoundarySummary {
+    DesktopPlatformBoundarySummary {
+        desktop_shell: "tauri",
+        macos_distribution: "unsigned-experimental-public-beta-dmg",
+        windows_distribution: "local-build-candidate-only",
+        tauri_app_data_resolver_required: true,
+        encrypted_store_required: true,
+        local_deletion_controls_required: true,
+        diagnostics_redacted: true,
+        explicit_user_action_required: true,
+        automatic_network_on_launch_allowed: false,
+        auto_update_channel: false,
+        signing_notarization_or_store_trusted_security_boundary: false,
+        app_store_dependency: false,
+        windows_dpapi_required: false,
+        public_beta_security_ready_claimed: false,
+        sensitive_communication_allowed: false,
+        policies: &DESKTOP_PLATFORM_BOUNDARY_POLICIES,
+    }
+}
 
 fn now_unix_ms() -> u128 {
     std::time::SystemTime::now()
@@ -13000,6 +13051,7 @@ fn install_manual_onion_tls_provider() {
 mod tests {
     use super::{
         build_demo_simulation, parse_demo_steps, parse_loop_messages,
+        desktop_platform_boundary_summary,
         production_message_retention_policy,
         run_production_conversation_delete,
         run_production_data_lifecycle_status,
@@ -16754,6 +16806,42 @@ replay check: no replayed messages after message 2
 
         let _ = std::fs::remove_dir_all(root);
         let _ = std::fs::remove_dir_all(cache);
+    }
+
+    #[test]
+    fn desktop_platform_boundary_keeps_macos_and_windows_local_redacted_semantics() {
+        let summary = desktop_platform_boundary_summary();
+
+        assert_eq!(summary.desktop_shell, "tauri");
+        assert_eq!(
+            summary.macos_distribution,
+            "unsigned-experimental-public-beta-dmg"
+        );
+        assert_eq!(summary.windows_distribution, "local-build-candidate-only");
+        assert!(summary.tauri_app_data_resolver_required);
+        assert!(summary.encrypted_store_required);
+        assert!(summary.local_deletion_controls_required);
+        assert!(summary.diagnostics_redacted);
+        assert!(summary.explicit_user_action_required);
+        assert!(!summary.automatic_network_on_launch_allowed);
+        assert!(!summary.auto_update_channel);
+        assert!(!summary.signing_notarization_or_store_trusted_security_boundary);
+        assert!(!summary.app_store_dependency);
+        assert!(!summary.windows_dpapi_required);
+        assert!(!summary.public_beta_security_ready_claimed);
+        assert!(!summary.sensitive_communication_allowed);
+        assert!(summary
+            .policies
+            .contains(&"macos_unsigned_public_beta_is_dmg_only"));
+        assert!(summary
+            .policies
+            .contains(&"windows_is_local_build_candidate_only"));
+        assert!(summary
+            .policies
+            .contains(&"same_tauri_app_data_semantics"));
+        assert!(summary
+            .policies
+            .contains(&"public_diagnostics_redacted_on_all_desktop_platforms"));
     }
 
     #[test]
