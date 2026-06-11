@@ -6312,6 +6312,31 @@ function fieldTestRoomListNextAction(currentSavedRoom, outboundRecoveryAction, r
     : "none";
 }
 
+function manualRebuildDeliveryDiagnostics(input, boundaryText) {
+  const manualRebuildFlow =
+    manualInviteRoomRebuildFlowActive() ||
+    fieldTestBoundaryValue(boundaryText, "manual_rebuild_flow", "false") === "true";
+  const deliveryScope = fieldTestBoundaryValue(boundaryText, "delivery_scope", "none");
+  const deliveryAction = fieldTestBoundaryValue(boundaryText, "delivery_action", "none");
+  const activeDeliveryScope = manualRebuildFlow && deliveryScope !== "none";
+  return {
+    manualRebuildFlow,
+    rebuiltRoomScoped:
+      activeDeliveryScope && fieldTestBoundaryValue(boundaryText, "rebuilt_room_scoped", "false") === "true",
+    deliveryScope: activeDeliveryScope ? deliveryScope : "none",
+    deliveryAction: activeDeliveryScope ? deliveryAction : "none",
+    retryScoped: activeDeliveryScope && fieldTestBoundaryValue(boundaryText, "retry_scoped", "false") === "true",
+    receiveScoped: activeDeliveryScope && fieldTestBoundaryValue(boundaryText, "receive_scoped", "false") === "true",
+    deliveryCodeExchangeScoped:
+      activeDeliveryScope && fieldTestBoundaryValue(boundaryText, "delivery_code_exchange_scoped", "false") === "true",
+    explicitPrivateDeliveryRequired:
+      activeDeliveryScope && fieldTestBoundaryValue(boundaryText, "explicit_private_delivery_required", "false") === "true",
+    networkIo: activeDeliveryScope && fieldTestBoundaryValue(boundaryText, "network_io", "false") === "true",
+    liveNetworkAttempt:
+      activeDeliveryScope && fieldTestBoundaryValue(boundaryText, "live_network_attempt", "false") === "true",
+  };
+}
+
 function buildFieldTestReport(input = productionTwoProfileInput()) {
   const hasRoom = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase);
   const route = twoProfilePeerEndpointState(input);
@@ -6332,6 +6357,7 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const outboundRecoveryAction = currentOutboundRecovery?.action ?? "none";
   const receiveMode = fieldTestReceiveModeSnapshot(input);
   const boundaryText = fields.productionTwoProfileBoundary?.textContent ?? "";
+  const rebuildDeliveryDiagnostics = manualRebuildDeliveryDiagnostics(input, boundaryText);
   const sendAttemptBoundaryText = fields.onionOutboundEnvelopeSendAttempt?.textContent ?? "";
   const receiveFailureKind = receiveMode.ownerCurrentRoom
     ? fieldTestBoundaryValue(boundaryText, "failure")
@@ -6457,6 +6483,17 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `delivery_notice_current_room=${deliveryNoticeCurrentRoom}`,
     `delivery_notice_key=${fieldTestReportValue(deliveryNoticeKey, "none")}`,
     `delivery_notice_tone=${fieldTestReportValue(deliveryNoticeTone, "neutral")}`,
+    `manual_rebuild_flow=${rebuildDeliveryDiagnostics.manualRebuildFlow === true}`,
+    `rebuild_room_scoped=${rebuildDeliveryDiagnostics.rebuiltRoomScoped === true}`,
+    `rebuild_delivery_scope=${fieldTestReportValue(rebuildDeliveryDiagnostics.deliveryScope, "none")}`,
+    `rebuild_delivery_action=${fieldTestReportValue(rebuildDeliveryDiagnostics.deliveryAction, "none")}`,
+    `rebuild_retry_scoped=${rebuildDeliveryDiagnostics.retryScoped === true}`,
+    `rebuild_receive_scoped=${rebuildDeliveryDiagnostics.receiveScoped === true}`,
+    `rebuild_delivery_code_exchange_scoped=${rebuildDeliveryDiagnostics.deliveryCodeExchangeScoped === true}`,
+    `rebuild_explicit_private_delivery_required=${rebuildDeliveryDiagnostics.explicitPrivateDeliveryRequired === true}`,
+    `rebuild_delivery_network_io=${rebuildDeliveryDiagnostics.networkIo === true}`,
+    `rebuild_delivery_live_network_attempt=${rebuildDeliveryDiagnostics.liveNetworkAttempt === true}`,
+    "rebuild_external_peer_evidence_claim=false",
     `ui_state=${fieldTestReportValue(fields.productionTwoProfileState?.textContent)}`,
     `redacted_boundary=${fieldTestBoundarySummary(boundaryText)}`,
   ].join("\n");
