@@ -1994,6 +1994,14 @@ function outboundPrimaryActionLabel(primaryAction) {
   return t(primaryAction?.labelKey || "retrySend");
 }
 
+function normalizedExpectedOutboundPrimaryAction(action) {
+  const normalized = String(action?.action ?? action ?? "").trim();
+  if (normalized === "verify-safety") {
+    return "verify";
+  }
+  return normalized;
+}
+
 async function restoreInviteRoomForConversationEntry(entry) {
   const expectedFingerprint = String(entry?.roomFingerprint ?? "").trim();
   if (!expectedFingerprint || twoProfileSessionStatusFingerprint(productionTwoProfileInput()) === expectedFingerprint) {
@@ -2108,7 +2116,7 @@ function showCurrentRetryableOutboundMissing(entry) {
   return false;
 }
 
-async function runTwoProfileOutboundPrimaryAction(entry) {
+async function runTwoProfileOutboundPrimaryAction(entry, expectedPrimaryAction = null) {
   if (!(await restoreInviteRoomForConversationEntry(entry))) {
     return;
   }
@@ -2127,6 +2135,12 @@ async function runTwoProfileOutboundPrimaryAction(entry) {
     return;
   }
   const resolvedPrimaryAction = currentTwoProfileOutboundPrimaryAction(resolvedEntry);
+  const expectedAction = normalizedExpectedOutboundPrimaryAction(expectedPrimaryAction);
+  if (expectedAction && resolvedPrimaryAction.action !== expectedAction) {
+    selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
+    showExactRetryableOutboundPrompt(resolvedEntry);
+    return;
+  }
   if (resolvedPrimaryAction.action === "enable-private-delivery") {
     selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
     rememberPrivateRouteFollowupForOutboundRetry(resolvedEntry);
@@ -4260,7 +4274,7 @@ async function runSavedInviteRoomRetryableOutboundAction(room, input, action, ac
   if (options.reviewOnly === true) {
     return true;
   }
-  await runTwoProfileOutboundPrimaryAction(pending);
+  await runTwoProfileOutboundPrimaryAction(pending, { action });
   return true;
 }
 
