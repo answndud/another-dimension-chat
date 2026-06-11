@@ -53,6 +53,21 @@ plaintext message history, local database handles, raw filesystem paths,
 background delivery loops, push notification delivery, central discovery, or
 central message server behavior to cross the boundary.
 
+## Status Command DTO Boundary
+
+The future mobile wrapper status command DTO is a documentation-only redacted
+status object, not a callable command surface.
+
+Allowed DTO vocabulary is limited to schema version, platform, profile lock
+state, runtime command surface, mobile command surface, local data lifecycle
+state, backup-exclusion state, install/update integrity state, diagnostics
+redaction state, and public non-claims.
+
+The DTO must not contain profile paths, database paths, store paths,
+passphrases, private keys, key material, plaintext messages, onion addresses,
+network endpoints, delivery runtime handles, push tokens, cloud backup
+identifiers, central account identifiers, or security-ready toggles.
+
 This inventory must not export raw storage open calls, local paths, passphrases,
 private keys, key material, plaintext messages, automatic network bootstrap,
 background delivery loops, push delivery, central contact discovery, central
