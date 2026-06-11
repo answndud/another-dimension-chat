@@ -1966,6 +1966,48 @@ pub mod production {
         "safe for sensitive communication",
     ];
 
+    const PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_ENTRY_CRITERIA_REQUIRED_ITEMS: &[&str] = &[
+        "mobile wrapper implementation entry criteria status only",
+        "entry criteria list only",
+        "target platform decision criteria recorded",
+        "shared core FFI boundary criteria recorded",
+        "status DTO and redaction criteria recorded",
+        "local data lifecycle criteria recorded",
+        "explicit user action criteria recorded",
+        "no central account criteria recorded",
+        "no push notification dependency criteria recorded",
+        "no cloud backup criteria recorded",
+        "platform build scaffold criteria recorded",
+        "wrapper test plan criteria recorded",
+        "public non-claim copy criteria recorded",
+        "criteria are not satisfied",
+        "implementation has not started",
+        "release readiness not claimed",
+        "security readiness not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_ENTRY_CRITERIA_FORBIDDEN_CLAIMS: &[&str] = &[
+        "entry criteria satisfied",
+        "implementation can start",
+        "mobile implementation started",
+        "mobile implementation complete",
+        "mobile app implemented",
+        "Android implementation ready",
+        "iOS implementation ready",
+        "FFI boundary stable",
+        "runtime messaging available",
+        "external onion delivery evidence recorded",
+        "store distribution ready",
+        "push notification implemented",
+        "cloud backup implemented",
+        "central account implemented",
+        "all entry criteria met",
+        "release ready",
+        "security-ready",
+        "production-ready",
+        "safe for sensitive communication",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -2884,6 +2926,38 @@ pub mod production {
         central_account_or_contact_discovery_implemented: bool,
         independent_audit_evidence_recorded: bool,
         release_approval_recorded: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileWrapperImplementationEntryCriteriaBoundarySummary {
+        required_entry_criteria: &'static [&'static str],
+        forbidden_entry_claims: &'static [&'static str],
+        inherits_mobile_blocker_implementation_roadmap_boundary: bool,
+        entry_criteria_status_only_label_required: bool,
+        entry_criteria_list_only_label_required: bool,
+        target_platform_decision_criteria_recorded: bool,
+        shared_core_ffi_boundary_criteria_recorded: bool,
+        status_dto_redaction_criteria_recorded: bool,
+        local_data_lifecycle_criteria_recorded: bool,
+        explicit_user_action_criteria_recorded: bool,
+        no_central_account_criteria_recorded: bool,
+        no_push_notification_dependency_criteria_recorded: bool,
+        no_cloud_backup_criteria_recorded: bool,
+        platform_build_scaffold_criteria_recorded: bool,
+        wrapper_test_plan_criteria_recorded: bool,
+        public_non_claim_copy_criteria_recorded: bool,
+        entry_criteria_satisfied: bool,
+        implementation_started: bool,
+        release_readiness_claimed: bool,
+        security_readiness_claimed: bool,
+        ffi_boundary_stable_claimed: bool,
+        runtime_messaging_available_claimed: bool,
+        external_delivery_evidence_recorded: bool,
+        store_distribution_ready_claimed: bool,
+        push_notification_implemented: bool,
+        cloud_backup_implemented: bool,
+        central_account_implemented: bool,
         boundary_closed: bool,
     }
 
@@ -5661,6 +5735,120 @@ pub mod production {
 
         pub fn release_approval_recorded(self) -> bool {
             self.release_approval_recorded
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileWrapperImplementationEntryCriteriaBoundarySummary {
+        pub fn required_entry_criteria(self) -> &'static [&'static str] {
+            self.required_entry_criteria
+        }
+
+        pub fn forbidden_entry_claims(self) -> &'static [&'static str] {
+            self.forbidden_entry_claims
+        }
+
+        pub fn inherits_mobile_blocker_implementation_roadmap_boundary(self) -> bool {
+            self.inherits_mobile_blocker_implementation_roadmap_boundary
+        }
+
+        pub fn entry_criteria_status_only_label_required(self) -> bool {
+            self.entry_criteria_status_only_label_required
+        }
+
+        pub fn entry_criteria_list_only_label_required(self) -> bool {
+            self.entry_criteria_list_only_label_required
+        }
+
+        pub fn target_platform_decision_criteria_recorded(self) -> bool {
+            self.target_platform_decision_criteria_recorded
+        }
+
+        pub fn shared_core_ffi_boundary_criteria_recorded(self) -> bool {
+            self.shared_core_ffi_boundary_criteria_recorded
+        }
+
+        pub fn status_dto_redaction_criteria_recorded(self) -> bool {
+            self.status_dto_redaction_criteria_recorded
+        }
+
+        pub fn local_data_lifecycle_criteria_recorded(self) -> bool {
+            self.local_data_lifecycle_criteria_recorded
+        }
+
+        pub fn explicit_user_action_criteria_recorded(self) -> bool {
+            self.explicit_user_action_criteria_recorded
+        }
+
+        pub fn no_central_account_criteria_recorded(self) -> bool {
+            self.no_central_account_criteria_recorded
+        }
+
+        pub fn no_push_notification_dependency_criteria_recorded(self) -> bool {
+            self.no_push_notification_dependency_criteria_recorded
+        }
+
+        pub fn no_cloud_backup_criteria_recorded(self) -> bool {
+            self.no_cloud_backup_criteria_recorded
+        }
+
+        pub fn platform_build_scaffold_criteria_recorded(self) -> bool {
+            self.platform_build_scaffold_criteria_recorded
+        }
+
+        pub fn wrapper_test_plan_criteria_recorded(self) -> bool {
+            self.wrapper_test_plan_criteria_recorded
+        }
+
+        pub fn public_non_claim_copy_criteria_recorded(self) -> bool {
+            self.public_non_claim_copy_criteria_recorded
+        }
+
+        pub fn entry_criteria_satisfied(self) -> bool {
+            self.entry_criteria_satisfied
+        }
+
+        pub fn implementation_started(self) -> bool {
+            self.implementation_started
+        }
+
+        pub fn release_readiness_claimed(self) -> bool {
+            self.release_readiness_claimed
+        }
+
+        pub fn security_readiness_claimed(self) -> bool {
+            self.security_readiness_claimed
+        }
+
+        pub fn ffi_boundary_stable_claimed(self) -> bool {
+            self.ffi_boundary_stable_claimed
+        }
+
+        pub fn runtime_messaging_available_claimed(self) -> bool {
+            self.runtime_messaging_available_claimed
+        }
+
+        pub fn external_delivery_evidence_recorded(self) -> bool {
+            self.external_delivery_evidence_recorded
+        }
+
+        pub fn store_distribution_ready_claimed(self) -> bool {
+            self.store_distribution_ready_claimed
+        }
+
+        pub fn push_notification_implemented(self) -> bool {
+            self.push_notification_implemented
+        }
+
+        pub fn cloud_backup_implemented(self) -> bool {
+            self.cloud_backup_implemented
+        }
+
+        pub fn central_account_implemented(self) -> bool {
+            self.central_account_implemented
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -16828,6 +17016,127 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_wrapper_implementation_entry_criteria_boundary_summary(
+    ) -> ProductionMobileWrapperImplementationEntryCriteriaBoundarySummary {
+        let roadmap = production_mobile_blocker_implementation_roadmap_boundary_summary();
+        let inherits_mobile_blocker_implementation_roadmap_boundary = roadmap.boundary_closed()
+            && roadmap.roadmap_status_only_label_required()
+            && roadmap.implementation_phase_mapping_only_label_required()
+            && roadmap.buildable_mobile_app_phase_recorded()
+            && roadmap.runtime_messaging_implementation_phase_recorded()
+            && roadmap.external_delivery_evidence_phase_recorded()
+            && roadmap.push_notification_exclusion_phase_recorded()
+            && roadmap.cloud_backup_exclusion_phase_recorded()
+            && roadmap.central_account_or_contact_discovery_exclusion_phase_recorded()
+            && !roadmap.blockers_cleared_by_roadmap()
+            && !roadmap.mobile_app_implemented_by_roadmap()
+            && !roadmap.release_readiness_claimed()
+            && !roadmap.security_readiness_claimed()
+            && !roadmap.runtime_messaging_implemented()
+            && !roadmap.external_delivery_evidence_recorded()
+            && !roadmap.store_distribution_decided()
+            && !roadmap.independent_audit_evidence_recorded()
+            && !roadmap.release_approval_recorded();
+        let entry_criteria_status_only_label_required = true;
+        let entry_criteria_list_only_label_required = true;
+        let target_platform_decision_criteria_recorded = true;
+        let shared_core_ffi_boundary_criteria_recorded = true;
+        let status_dto_redaction_criteria_recorded = true;
+        let local_data_lifecycle_criteria_recorded = true;
+        let explicit_user_action_criteria_recorded = true;
+        let no_central_account_criteria_recorded = true;
+        let no_push_notification_dependency_criteria_recorded = true;
+        let no_cloud_backup_criteria_recorded = true;
+        let platform_build_scaffold_criteria_recorded = true;
+        let wrapper_test_plan_criteria_recorded = true;
+        let public_non_claim_copy_criteria_recorded = true;
+        let entry_criteria_satisfied = false;
+        let implementation_started = false;
+        let release_readiness_claimed = false;
+        let security_readiness_claimed = false;
+        let ffi_boundary_stable_claimed = false;
+        let runtime_messaging_available_claimed = false;
+        let external_delivery_evidence_recorded = false;
+        let store_distribution_ready_claimed = false;
+        let push_notification_implemented = false;
+        let cloud_backup_implemented = false;
+        let central_account_implemented = false;
+        let boundary_closed = inherits_mobile_blocker_implementation_roadmap_boundary
+            && entry_criteria_status_only_label_required
+            && entry_criteria_list_only_label_required
+            && target_platform_decision_criteria_recorded
+            && shared_core_ffi_boundary_criteria_recorded
+            && status_dto_redaction_criteria_recorded
+            && local_data_lifecycle_criteria_recorded
+            && explicit_user_action_criteria_recorded
+            && no_central_account_criteria_recorded
+            && no_push_notification_dependency_criteria_recorded
+            && no_cloud_backup_criteria_recorded
+            && platform_build_scaffold_criteria_recorded
+            && wrapper_test_plan_criteria_recorded
+            && public_non_claim_copy_criteria_recorded
+            && !entry_criteria_satisfied
+            && !implementation_started
+            && !release_readiness_claimed
+            && !security_readiness_claimed
+            && !ffi_boundary_stable_claimed
+            && !runtime_messaging_available_claimed
+            && !external_delivery_evidence_recorded
+            && !store_distribution_ready_claimed
+            && !push_notification_implemented
+            && !cloud_backup_implemented
+            && !central_account_implemented
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_ENTRY_CRITERIA_REQUIRED_ITEMS
+                .contains(&"mobile wrapper implementation entry criteria status only")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_ENTRY_CRITERIA_REQUIRED_ITEMS
+                .contains(&"entry criteria list only")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_ENTRY_CRITERIA_REQUIRED_ITEMS
+                .contains(&"shared core FFI boundary criteria recorded")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_ENTRY_CRITERIA_REQUIRED_ITEMS
+                .contains(&"criteria are not satisfied")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_ENTRY_CRITERIA_FORBIDDEN_CLAIMS
+                .contains(&"entry criteria satisfied")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_ENTRY_CRITERIA_FORBIDDEN_CLAIMS
+                .contains(&"implementation can start")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_ENTRY_CRITERIA_FORBIDDEN_CLAIMS
+                .contains(&"FFI boundary stable")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_ENTRY_CRITERIA_FORBIDDEN_CLAIMS
+                .contains(&"runtime messaging available");
+
+        ProductionMobileWrapperImplementationEntryCriteriaBoundarySummary {
+            required_entry_criteria:
+                PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_ENTRY_CRITERIA_REQUIRED_ITEMS,
+            forbidden_entry_claims:
+                PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_ENTRY_CRITERIA_FORBIDDEN_CLAIMS,
+            inherits_mobile_blocker_implementation_roadmap_boundary,
+            entry_criteria_status_only_label_required,
+            entry_criteria_list_only_label_required,
+            target_platform_decision_criteria_recorded,
+            shared_core_ffi_boundary_criteria_recorded,
+            status_dto_redaction_criteria_recorded,
+            local_data_lifecycle_criteria_recorded,
+            explicit_user_action_criteria_recorded,
+            no_central_account_criteria_recorded,
+            no_push_notification_dependency_criteria_recorded,
+            no_cloud_backup_criteria_recorded,
+            platform_build_scaffold_criteria_recorded,
+            wrapper_test_plan_criteria_recorded,
+            public_non_claim_copy_criteria_recorded,
+            entry_criteria_satisfied,
+            implementation_started,
+            release_readiness_claimed,
+            security_readiness_claimed,
+            ffi_boundary_stable_claimed,
+            runtime_messaging_available_claimed,
+            external_delivery_evidence_recorded,
+            store_distribution_ready_claimed,
+            push_notification_implemented,
+            cloud_backup_implemented,
+            central_account_implemented,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -22002,6 +22311,145 @@ pub mod production {
                 .contains(&"production-ready"));
             assert!(boundary
                 .forbidden_roadmap_claims()
+                .contains(&"safe for sensitive communication"));
+        }
+
+        #[test]
+        fn production_mobile_wrapper_implementation_entry_criteria_boundary_is_not_satisfied() {
+            let boundary =
+                production_mobile_wrapper_implementation_entry_criteria_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_blocker_implementation_roadmap_boundary());
+            assert!(boundary.entry_criteria_status_only_label_required());
+            assert!(boundary.entry_criteria_list_only_label_required());
+            assert!(boundary.target_platform_decision_criteria_recorded());
+            assert!(boundary.shared_core_ffi_boundary_criteria_recorded());
+            assert!(boundary.status_dto_redaction_criteria_recorded());
+            assert!(boundary.local_data_lifecycle_criteria_recorded());
+            assert!(boundary.explicit_user_action_criteria_recorded());
+            assert!(boundary.no_central_account_criteria_recorded());
+            assert!(boundary.no_push_notification_dependency_criteria_recorded());
+            assert!(boundary.no_cloud_backup_criteria_recorded());
+            assert!(boundary.platform_build_scaffold_criteria_recorded());
+            assert!(boundary.wrapper_test_plan_criteria_recorded());
+            assert!(boundary.public_non_claim_copy_criteria_recorded());
+            assert!(!boundary.entry_criteria_satisfied());
+            assert!(!boundary.implementation_started());
+            assert!(!boundary.release_readiness_claimed());
+            assert!(!boundary.security_readiness_claimed());
+            assert!(!boundary.ffi_boundary_stable_claimed());
+            assert!(!boundary.runtime_messaging_available_claimed());
+            assert!(!boundary.external_delivery_evidence_recorded());
+            assert!(!boundary.store_distribution_ready_claimed());
+            assert!(!boundary.push_notification_implemented());
+            assert!(!boundary.cloud_backup_implemented());
+            assert!(!boundary.central_account_implemented());
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"mobile wrapper implementation entry criteria status only"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"entry criteria list only"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"target platform decision criteria recorded"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"shared core FFI boundary criteria recorded"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"status DTO and redaction criteria recorded"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"local data lifecycle criteria recorded"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"explicit user action criteria recorded"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"no central account criteria recorded"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"no push notification dependency criteria recorded"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"no cloud backup criteria recorded"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"platform build scaffold criteria recorded"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"wrapper test plan criteria recorded"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"public non-claim copy criteria recorded"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"criteria are not satisfied"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"implementation has not started"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"release readiness not claimed"));
+            assert!(boundary
+                .required_entry_criteria()
+                .contains(&"security readiness not claimed"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"entry criteria satisfied"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"implementation can start"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"mobile implementation started"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"mobile implementation complete"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"mobile app implemented"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"Android implementation ready"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"iOS implementation ready"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"FFI boundary stable"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"runtime messaging available"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"external onion delivery evidence recorded"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"store distribution ready"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"push notification implemented"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"cloud backup implemented"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"central account implemented"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"all entry criteria met"));
+            assert!(boundary.forbidden_entry_claims().contains(&"release ready"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"security-ready"));
+            assert!(boundary
+                .forbidden_entry_claims()
+                .contains(&"production-ready"));
+            assert!(boundary
+                .forbidden_entry_claims()
                 .contains(&"safe for sensitive communication"));
         }
 
