@@ -6,8 +6,18 @@ It is a local beta candidate, not a secure-release claim.
 
 Current boundary:
 
+- v0.1 unsigned public beta product surface is this desktop Tauri beta shell.
+  Android is the next mobile client candidate only after the shared Rust
+  core/API boundary stays platform-neutral; iOS follows after that same
+  boundary is preserved. Mobile clients are not part of this public beta.
 - Rust owns security-sensitive state and future protocol/storage/transport behavior.
+- Shared Rust core owns profile identity, pairing payload and safety
+  transcript logic, message orchestration, protocol envelopes and replay,
+  encrypted local storage policy, and fail-closed transport policy.
 - Frontend may request redacted status, run local `dev-insecure` diagnostics, and call explicit local encrypted-store production commands.
+- UI shells must not define separate security-sensitive protocol, storage,
+  transport, pairing, contact-discovery, account, push notification, or cloud
+  backup behavior.
 - The main view shows an unsigned public beta warning. Public diagnostics export only status, build, failure class, manual network permission state, and app-launch network boundary. It does not provide crash upload, telemetry, raw log export, paths, endpoints, passphrases, or key material.
 - Redacted status separates release-claim, messaging-surface, core, profile, pairing, production-session, production-self-test, production-session limits, production-preflight, preflight-blockers, session durable-state, session unlock-policy, session unlock-limits, session unlock-rejection, transport, network-execution, experimental-transport, bootstrap-status classification, transport-I/O, storage, and verification boundaries without exposing profile/contact/endpoint data.
 - The core status is static boundary copy; security-sensitive protocol, storage, and transport work stays in Rust commands rather than frontend logic.
