@@ -694,3 +694,46 @@ Blocker-to-implementation roadmaps must not show release ready.
 Blocker-to-implementation roadmaps must not show security-ready.
 Blocker-to-implementation roadmaps must not show production-ready.
 Blocker-to-implementation roadmaps must not show safe for sensitive communication.
+
+## Mobile Wrapper Implementation Entry Criteria Boundary
+
+Future mobile wrapper implementation entry criteria are documentation-only
+candidates until a separate implementation authorization phase exists.
+
+Implementation entry criteria may show mobile wrapper implementation entry criteria status only.
+Implementation entry criteria may show entry criteria list only.
+Implementation entry criteria may show target platform decision criteria recorded.
+Implementation entry criteria may show shared core FFI boundary criteria recorded.
+Implementation entry criteria may show status DTO and redaction criteria recorded.
+Implementation entry criteria may show local data lifecycle criteria recorded.
+Implementation entry criteria may show explicit user action criteria recorded.
+Implementation entry criteria may show no central account criteria recorded.
+Implementation entry criteria may show no push notification dependency criteria recorded.
+Implementation entry criteria may show no cloud backup criteria recorded.
+Implementation entry criteria may show platform build scaffold criteria recorded.
+Implementation entry criteria may show wrapper test plan criteria recorded.
+Implementation entry criteria may show public non-claim copy criteria recorded.
+Implementation entry criteria may show criteria are not satisfied.
+Implementation entry criteria may show implementation has not started.
+Implementation entry criteria may show release readiness not claimed.
+Implementation entry criteria may show security readiness not claimed.
+
+Implementation entry criteria must not show entry criteria satisfied.
+Implementation entry criteria must not show implementation can start.
+Implementation entry criteria must not show mobile implementation started.
+Implementation entry criteria must not show mobile implementation complete.
+Implementation entry criteria must not show mobile app implemented.
+Implementation entry criteria must not show Android implementation ready.
+Implementation entry criteria must not show iOS implementation ready.
+Implementation entry criteria must not show FFI boundary stable.
+Implementation entry criteria must not show runtime messaging available.
+Implementation entry criteria must not show external onion delivery evidence recorded.
+Implementation entry criteria must not show store distribution ready.
+Implementation entry criteria must not show push notification implemented.
+Implementation entry criteria must not show cloud backup implemented.
+Implementation entry criteria must not show central account implemented.
+Implementation entry criteria must not show all entry criteria met.
+Implementation entry criteria must not show release ready.
+Implementation entry criteria must not show security-ready.
+Implementation entry criteria must not show production-ready.
+Implementation entry criteria must not show safe for sensitive communication.
