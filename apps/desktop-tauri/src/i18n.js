@@ -856,6 +856,20 @@ const dictionaries = {
     manualRebuildConversationLoadedWarning:
       "Rebuild conversation loaded locally. Continue with a fresh message before enabling delivery.",
     manualRebuildConversationLoadedNext: "Next: write the first message for the rebuilt room.",
+    manualRebuildFirstMessageDraftWarning:
+      "Saving the first rebuild message locally. Private delivery will stay behind an explicit gate.",
+    manualRebuildFirstMessageDraftNext: "Next: save the first message locally, then review the delivery gate.",
+    manualRebuildLocalMessageSavedWarning:
+      "First rebuild message saved locally. Review private delivery readiness before any network action.",
+    manualRebuildLocalMessageSavedNext: "Next: review private delivery readiness; network delivery has not started.",
+    manualRebuildLocalMessageSavedState: "First message saved locally; delivery gate pending.",
+    manualRebuildDeliveryGateReadyWarning:
+      "First message is saved locally and private delivery is ready. Run delivery only with an explicit action.",
+    manualRebuildDeliveryGateReadyNext: "Next: use the explicit private delivery action when you are ready.",
+    manualRebuildDeliveryGateBlockedWarning:
+      "First message is saved locally. Private delivery is not ready yet.",
+    manualRebuildDeliveryGateBlockedNext:
+      "Next: prepare private delivery settings or share delivery codes before retrying delivery.",
     profileLocked: "Profile locked",
     nextEnterProfilePassphrase: "Next: enter profile and passphrase.",
     productionProfileLockedWarning: "Production profile has not been unlocked yet.",
@@ -1829,6 +1843,20 @@ const dictionaries = {
     manualRebuildConversationLoadedWarning:
       "rebuild 대화를 로컬에서 불러왔습니다. 전송을 켜기 전에 새 메시지부터 작성하세요.",
     manualRebuildConversationLoadedNext: "다음: rebuild 방의 첫 메시지를 작성하세요.",
+    manualRebuildFirstMessageDraftWarning:
+      "rebuild 첫 메시지를 로컬에 저장하는 중입니다. 비공개 전송은 명시적 gate 뒤에 유지합니다.",
+    manualRebuildFirstMessageDraftNext: "다음: 첫 메시지를 로컬에 저장한 뒤 전송 gate를 확인하세요.",
+    manualRebuildLocalMessageSavedWarning:
+      "rebuild 첫 메시지를 로컬에 저장했습니다. 네트워크 작업 전 비공개 전송 준비 상태를 확인하세요.",
+    manualRebuildLocalMessageSavedNext: "다음: 비공개 전송 준비 상태를 확인하세요. 네트워크 전송은 시작하지 않았습니다.",
+    manualRebuildLocalMessageSavedState: "첫 메시지를 로컬에 저장했습니다. 전송 gate 확인이 필요합니다.",
+    manualRebuildDeliveryGateReadyWarning:
+      "첫 메시지를 로컬에 저장했고 비공개 전송 준비가 됐습니다. 명시적 액션으로만 전송하세요.",
+    manualRebuildDeliveryGateReadyNext: "다음: 준비됐을 때 명시적 비공개 전송 액션을 사용하세요.",
+    manualRebuildDeliveryGateBlockedWarning:
+      "첫 메시지를 로컬에 저장했습니다. 아직 비공개 전송 준비가 끝나지 않았습니다.",
+    manualRebuildDeliveryGateBlockedNext:
+      "다음: 전송을 다시 시도하기 전에 비공개 전송 설정을 준비하거나 전송 코드를 공유하세요.",
     profileLocked: "프로필 잠김",
     nextEnterProfilePassphrase: "다음: 프로필과 패스프레이즈를 입력하세요.",
     productionProfileLockedWarning: "아직 프로필을 열지 않았습니다.",
