@@ -38,13 +38,15 @@ Review the unsigned experimental public beta boundary:
 - public release artifact contents
 - unsigned macOS install guidance
 - checksum/provenance/manual update integrity model
-- public diagnostics redaction boundary
+- public support diagnostics redaction boundary
 - crash/log redaction and no-upload/no-telemetry boundary
 - public issue and security intake redaction boundary
 - repository governance and release guardrail boundary
 - passphrase-first local unlock/lock boundary
 - durable local session lifecycle boundary
 - local data lifecycle and migration boundary
+- practical transport split between local manual encrypted envelope exchange and
+  advanced fail-closed onion/Tor attempts
 - onion/Tor attempt non-readiness and external-evidence gap
 - public non-claims in README and SECURITY
 
@@ -54,9 +56,13 @@ Review the unsigned experimental public beta boundary:
 - local desktop beta candidate
 - manual GitHub Release download
 - user-verified SHA-256 checksum
-- public diagnostics export is redacted by design
-- public diagnostics are local-copy only and do not provide crash upload,
-  telemetry, or raw log export
+- public support diagnostics export is redacted by design
+- public support diagnostics are local-copy only and limited to app status,
+  build identity, broad failure class, recovery next action, and app-launch
+  network boundary
+- public support diagnostics do not provide crash upload, telemetry, raw log
+  export, workflow-state export, support bundle export, or raw diagnostic file
+  export
 - public support intake uses redacted diagnostics or minimal contact requests
   instead of raw logs, payloads, endpoints, paths, keys, or private data
 - repository governance keeps main-branch changes aligned with unsigned beta
@@ -67,6 +73,9 @@ Review the unsigned experimental public beta boundary:
 - local data lifecycle controls exist
 - local backup-exclusion verification and forward-only migration boundaries
   exist, while cloud backup/sync and backup recovery are non-claims
+- current and future public artifacts must use manual GitHub Release download,
+  same-release checksum, public provenance, manifest, update-integrity notes,
+  dependency evidence, and no-auto-update semantics
 - dependency lockfile hash baseline exists
 
 ## Public Claims Not Allowed Today
@@ -111,7 +120,8 @@ Review the unsigned experimental public beta boundary:
   no-reviewer-signoff/no-public-user-safety-signoff flags.
 - Generated release provenance and manifest: record the public diagnostics
   boundary, crash-upload-disabled flag, telemetry-disabled flag, raw-log-export
-  disabled flag, and forbidden diagnostics field categories.
+  disabled flag, workflow-state-export-disabled boundary, and forbidden
+  diagnostics field categories.
 - Generated release provenance and manifest: record public-safe review input,
   known-review-gap, public-safe command, private-reporting boundary, minimal
   public contact request, and fabricated-review/peer-evidence-forbidden flags.
@@ -147,7 +157,7 @@ shasum -a 256 -c another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.
 - No reviewer signoff or public user safety signoff exists.
 - External two-machine onion peer reports have not been received.
 - The external evidence gap is accepted for unsigned public beta release gating only.
-  It does not close Phase AZ, final security-ready acceptance, or any external
+  It does not close the external-evidence gate, final security-ready acceptance, or any external
   delivery claim.
 - Fabricated local peer reports or synthetic external review evidence are not
   allowed as substitutes for real independent review or external peer evidence.

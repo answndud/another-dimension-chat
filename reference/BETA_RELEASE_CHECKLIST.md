@@ -122,6 +122,7 @@ Upload exactly these generated files to the GitHub Release:
 - `INDEPENDENT_REVIEW_PACKET.md`
 - `PUBLIC_INTAKE_POLICY.md`
 - `REPOSITORY_GOVERNANCE.md`
+- `COMPONENT_BOUNDARIES.md`
 - `DEPENDENCY_LOCKFILES.sha256`
 - `MANIFEST.md`
 

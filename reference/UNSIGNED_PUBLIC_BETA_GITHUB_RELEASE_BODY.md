@@ -86,7 +86,7 @@ lockfile hash entries in `DEPENDENCY_LOCKFILES.sha256`: `Cargo.lock`,
 External two-machine onion delivery has not yet been independently verified.
 Same-machine dual-profile rehearsal is development evidence only, not peer field-test evidence.
 This external evidence gap is accepted for unsigned public beta release gating only.
-It does not close Phase AZ, final security-ready acceptance, or any external
+It does not close the external-evidence gate, final security-ready acceptance, or any external
 delivery claim.
 
 `PRIVACY_MODEL_COMPARISON.md` is a public gap map for the Korean
@@ -95,7 +95,7 @@ systems' level.
 
 Every update is a new manual GitHub Release download and must be verified with the matching `.sha256` file.
 
-For support requests, use only redacted public diagnostics. For security reports
+For support requests, use only redacted public support diagnostics. For security reports
 with sensitive details, use private vulnerability reporting when available or
 open a minimal public contact request without exploit details.
 

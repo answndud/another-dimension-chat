@@ -33,6 +33,7 @@ REQUIRED_RELEASE_FILES=(
   "INDEPENDENT_REVIEW_PACKET.md"
   "PUBLIC_INTAKE_POLICY.md"
   "REPOSITORY_GOVERNANCE.md"
+  "COMPONENT_BOUNDARIES.md"
   "DEPENDENCY_LOCKFILES.sha256"
   "MANIFEST.md"
 )
@@ -112,6 +113,7 @@ require_file "$ROOT_DIR/reference/PRIVACY_MODEL_COMPARISON.md"
 require_file "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md"
 require_file "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md"
 require_file "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md"
+require_file "$ROOT_DIR/reference/COMPONENT_BOUNDARIES.md"
 require_file "$ROOT_DIR/Cargo.lock"
 require_file "$ROOT_DIR/apps/desktop-tauri/src-tauri/Cargo.lock"
 require_file "$ROOT_DIR/apps/desktop-tauri/package-lock.json"
@@ -151,6 +153,7 @@ cp "$ROOT_DIR/reference/PRIVACY_MODEL_COMPARISON.md" "$RELEASE_DIR/PRIVACY_MODEL
 cp "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "$RELEASE_DIR/INDEPENDENT_REVIEW_PACKET.md"
 cp "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md"
 cp "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md" "$RELEASE_DIR/REPOSITORY_GOVERNANCE.md"
+cp "$ROOT_DIR/reference/COMPONENT_BOUNDARIES.md" "$RELEASE_DIR/COMPONENT_BOUNDARIES.md"
 
 (
   cd "$RELEASE_DIR"
@@ -206,6 +209,7 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "independent_review_packet_file": "INDEPENDENT_REVIEW_PACKET.md",
   "public_intake_policy_file": "PUBLIC_INTAKE_POLICY.md",
   "repository_governance_file": "REPOSITORY_GOVERNANCE.md",
+  "component_boundaries_file": "COMPONENT_BOUNDARIES.md",
   "independent_review_complete": false,
   "public_review_gap_published": true,
   "reviewer_signoff_claimed": false,
@@ -299,6 +303,7 @@ This folder is for a GitHub Release upload.
 - \`INDEPENDENT_REVIEW_PACKET.md\`
 - \`PUBLIC_INTAKE_POLICY.md\`
 - \`REPOSITORY_GOVERNANCE.md\`
+- \`COMPONENT_BOUNDARIES.md\`
 - \`DEPENDENCY_LOCKFILES.sha256\`
 
 ## Build
@@ -332,6 +337,7 @@ This folder is for a GitHub Release upload.
 - Independent review packet: \`INDEPENDENT_REVIEW_PACKET.md\`
 - Public intake policy: \`PUBLIC_INTAKE_POLICY.md\`
 - Repository governance: \`REPOSITORY_GOVERNANCE.md\`
+- Component boundaries: \`COMPONENT_BOUNDARIES.md\`
 - Independent review complete: false
 - Public review gap published: true
 - Reviewer signoff claimed: false
@@ -377,7 +383,7 @@ not production-ready, and sensitive communication prohibited.
 External two-machine onion delivery has not been independently verified for
 this beta. Same-machine dual-profile rehearsal is development evidence only.
 This external evidence gap is accepted for unsigned public beta release gating only.
-It does not close Phase AZ, final security-ready acceptance, or any external
+It does not close the external-evidence gate, final security-ready acceptance, or any external
 delivery claim.
 
 Manual update integrity is limited to same GitHub Release assets, user-verified
@@ -403,14 +409,14 @@ Briar/Cwtch-style direction. It is not a claim that this beta is
 Briar/Cwtch-equivalent, audited E2EE-ready, repeatedly verified on external
 onion delivery, offline-mesh capable, independently reviewed, or security-ready.
 
-Public diagnostics are local-copy only and limited to status, build, failure
-class, manual network permission, and app-launch network boundary. No crash
-upload, telemetry, raw log export, crash dump export, automated log collection,
-support bundle export, raw diagnostic file export, bridge line, onion endpoint,
-invite code, pairing payload, envelope payload, safety phrase, profile name,
-message text, local path, passphrase, private key, key material, screenshot of
-private room data, or private planning note is permitted in public diagnostics
-or release artifacts.
+Public support diagnostics are local-copy only and limited to app status, build
+identity, broad failure class, recovery next action, and app-launch network
+boundary. No workflow-state export, crash upload, telemetry, raw log export,
+crash dump export, automated log collection, support bundle export, raw
+diagnostic file export, bridge line, onion endpoint, invite code, pairing
+payload, envelope payload, safety phrase, profile name, message text, local
+path, passphrase, private key, key material, screenshot of private room data, or
+private planning note is permitted in public diagnostics or release artifacts.
 
 Public GitHub issues and release comments must use the same redaction boundary.
 Security reports with exploit details or sensitive material must use private
@@ -450,6 +456,7 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"privacy_model_comparison_file
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"independent_review_packet_file\": \"INDEPENDENT_REVIEW_PACKET.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_intake_policy_file\": \"PUBLIC_INTAKE_POLICY.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"repository_governance_file\": \"REPOSITORY_GOVERNANCE.md\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"component_boundaries_file\": \"COMPONENT_BOUNDARIES.md\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"independent_review_complete\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_review_gap_published\": true"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"reviewer_signoff_claimed\": false"
@@ -517,6 +524,7 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Vulnerability triage signoff complete: 
 require_text "$RELEASE_DIR/MANIFEST.md" "Reproducible-build proof: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Live dependency scan performed: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Privacy model comparison: \`PRIVACY_MODEL_COMPARISON.md\`"
+require_text "$RELEASE_DIR/MANIFEST.md" "Component boundaries: \`COMPONENT_BOUNDARIES.md\`"
 require_text "$RELEASE_DIR/MANIFEST.md" "Briar/Cwtch-equivalent claim: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Audited E2EE claim: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Repeated external onion evidence: false"
@@ -575,7 +583,7 @@ require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "not an SBOM"
 require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "Lockfile Evidence Summary"
 require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "Vulnerability triage signoff complete: false"
 require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "not a secure messenger release today"
-require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "public diagnostics"
+require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "public support diagnostics"
 require_text "$RELEASE_DIR/PUBLIC_THREAT_MODEL.md" "raw logs"
 require_text "$RELEASE_DIR/PRIVACY_MODEL_COMPARISON.md" "gap map, not a"
 require_text "$RELEASE_DIR/PRIVACY_MODEL_COMPARISON.md" "Where the Current Beta Is Behind Briar/Cwtch"
@@ -588,6 +596,8 @@ require_text "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md" "support bundles"
 require_text "$RELEASE_DIR/PUBLIC_INTAKE_POLICY.md" "raw diagnostic"
 require_text "$RELEASE_DIR/REPOSITORY_GOVERNANCE.md" "Direction Lock"
 require_text "$RELEASE_DIR/REPOSITORY_GOVERNANCE.md" "Release Guardrails"
+require_text "$RELEASE_DIR/COMPONENT_BOUNDARIES.md" "Release and updates"
+require_text "$RELEASE_DIR/COMPONENT_BOUNDARIES.md" "not a secure messenger release today"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "Cargo.lock"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/src-tauri/Cargo.lock"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/package-lock.json"

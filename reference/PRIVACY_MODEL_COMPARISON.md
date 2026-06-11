@@ -19,7 +19,8 @@ The target product is a Korean-language high-risk 1:1 messenger with:
 - no central message server
 - no push notification dependency
 - no cloud backup
-- onion-first private transport for high-risk mode
+- default practical transport through explicit local manual encrypted envelope
+  exchange, with advanced onion/Tor transport kept opt-in and fail-closed
 - pairwise contacts and pairwise local state
 - local encrypted storage controlled by the user
 - public release artifacts that do not require App Store, notarization, or a
@@ -36,7 +37,7 @@ experimental local beta candidate.
 | Linkability | Pairwise identities, pairwise contacts, no global account, no central contact graph. | Partially aligned in architecture. Current beta still lacks audited production E2EE, reliable real-network onion delivery, and external two-machine evidence. |
 | Identifiability | No phone number, email, searchable username, or public directory. | Aligned as a product boundary. Current app must keep invite and diagnostics data redacted. |
 | Non-repudiation | Avoid central logs and avoid product claims that create false evidentiary confidence. | Partially aligned. Local logs and diagnostics are redacted, but production deniability properties are not claimed. |
-| Detectability | Onion-first high-risk transport, no automatic network work on launch, bridge/censorship support only when verified. | Early boundary only. App has explicit onion/Tor attempt paths and launch-time network suppression, but reliable external onion delivery and bridge behavior are not proven. |
+| Detectability | Default practical transport avoids automatic network work; advanced onion/Tor remains opt-in, user-triggered, and fail-closed until verified. | Early boundary only. App has explicit onion/Tor attempt paths and launch-time network suppression, but reliable external onion delivery and bridge behavior are not proven. |
 | Disclosure of Information | Production E2EE, local encrypted stores, redacted reports, data lifecycle controls. | Partially implemented as local guardrails. Not audited, not production E2EE-ready, no secure deletion guarantee, no rollback-prevention claim. |
 | Unawareness | Korean UI and release docs must clearly warn that beta is unsigned, unaudited, not production-ready, and not safe for sensitive communication. | Public docs and beta warnings contain non-claims. Must be preserved until security-ready criteria are met. |
 | Non-compliance | Public release must avoid overclaiming, publish security boundaries, and keep private planning data out of artifacts. | Partially aligned through README, SECURITY, public threat model, release checklist, and ignored docs. No independent review result yet. |
@@ -47,10 +48,14 @@ experimental local beta candidate.
 
 - No central trusted account provider is in scope.
 - Phone-number identity and central contact discovery are excluded.
-- High-risk mode rejects default direct P2P and aims at onion/private delivery.
+- Default practical delivery is local manual encrypted envelope exchange, while
+  advanced high-risk delivery rejects default direct P2P and aims at
+  onion/private delivery.
 - The desktop beta does not start network/onion work automatically on launch.
 - Local encrypted profile/session/message storage boundaries exist.
-- Public diagnostics and field-test reports are designed to be redacted.
+- Public support diagnostics are limited to app status, build identity, broad
+  failure class, recovery next action, and app-launch network boundary.
+  Field-test reports remain separate and must be redacted before public use.
 - The release path can distribute an unsigned GitHub DMG without Apple Store or
   notarization dependency, with explicit manual checksum verification.
 
