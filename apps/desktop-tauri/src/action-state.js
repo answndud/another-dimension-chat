@@ -441,6 +441,77 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
   };
 }
 
+export function productionTwoProfileManualLifecycleView(entry, senderEnvelopeSlotPresent = false) {
+  const sentCopyPresent = Boolean(entry?.statuses?.has?.("sent"));
+  const receivedCopyPresent = Boolean(entry?.statuses?.has?.("received"));
+  const canceled = entry?.outboundDeliveryState === "canceled";
+  const retryable = entry?.outboundRetryable === true && entry?.outboundDeliveryState === "failed";
+  const number = Number.parseInt(entry?.messageNumber, 10) || 0;
+  const label = number > 0 ? `message #${number}` : "message";
+  const boundary = "manual lifecycle only; network_io=false";
+  if (sentCopyPresent && receivedCopyPresent) {
+    return {
+      boundary,
+      detail: `${label} has sender and receiver records; write a reply if needed.`,
+      phase: "complete",
+      state: "is-complete",
+      step: "sender stored / receiver stored",
+    };
+  }
+  if (receivedCopyPresent) {
+    return {
+      boundary,
+      detail: `${label} has a receiver record; review plaintext locally before replying.`,
+      phase: "received",
+      state: "is-received",
+      step: "receiver stored",
+    };
+  }
+  if (canceled) {
+    return {
+      boundary,
+      detail: `${label} was canceled locally; write a new message to continue.`,
+      phase: "canceled",
+      state: "is-canceled",
+      step: "terminal local cancel",
+    };
+  }
+  if (retryable) {
+    return {
+      boundary,
+      detail: `${label} is saved and can be retried or canceled from this device.`,
+      phase: "retryable",
+      state: "is-retryable",
+      step: "retry or cancel",
+    };
+  }
+  if (sentCopyPresent && senderEnvelopeSlotPresent) {
+    return {
+      boundary,
+      detail: `${label} has a sender record and an envelope slot ready for peer import.`,
+      phase: "import-ready",
+      state: "is-import-ready",
+      step: "import on receiver",
+    };
+  }
+  if (sentCopyPresent) {
+    return {
+      boundary,
+      detail: `${label} has a sender record; load or paste the envelope for receiver import.`,
+      phase: "awaiting-import",
+      state: "is-awaiting-import",
+      step: "load envelope",
+    };
+  }
+  return {
+    boundary,
+    detail: `${label} is pending local sender export before peer import.`,
+    phase: "export-needed",
+    state: "is-export-needed",
+    step: "export sender envelope",
+  };
+}
+
 export function productionTwoProfileOutboundStatusLabel(entry) {
   if (entry?.outboundDeliveryState === "canceled") {
     return "canceled";

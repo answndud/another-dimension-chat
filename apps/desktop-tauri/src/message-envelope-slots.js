@@ -22,6 +22,13 @@ export function messageEnvelopeSlotReadyForEntry(slot, entry) {
   return Boolean(messageEnvelopeSlotPayload(slot) && messageEnvelopeSlotMatchesEntry(slot, entry));
 }
 
+export function messageEnvelopeSlotImportReadyForEntry(slot, entry) {
+  if (entry?.outboundDeliveryState === "canceled" || entry?.statuses?.has?.("received")) {
+    return false;
+  }
+  return messageEnvelopeSlotReadyForEntry(slot, entry);
+}
+
 export function createMessageEnvelopeSlot(profile, payload, metadata = {}) {
   const normalizedProfile = String(profile ?? "").trim().toLowerCase();
   const envelope = String(payload ?? "").trim();
