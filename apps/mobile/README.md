@@ -141,3 +141,42 @@ Local data lifecycle screens must not show plaintext exposed.
 Local data lifecycle screens must not show key material exposed.
 Local data lifecycle screens must not show remote wipe available.
 Local data lifecycle screens must not show security-ready claims.
+
+## First-Run Platform Readiness Checklist Boundary
+
+Future mobile first-run platform readiness checklists are documentation-only
+candidates until a separate wrapper UI implementation phase exists.
+
+First-run checklists may show first-run checklist status only.
+First-run checklists may show mobile wrapper is documentation-only.
+First-run checklists may show platform is Android shell candidate or iOS shell candidate.
+First-run checklists may show manual update verification required.
+First-run checklists may show redacted status only.
+First-run checklists may show local data lifecycle status only.
+First-run checklists may show backup exclusion status only.
+First-run checklists may show app-private storage required.
+First-run checklists may show app-container storage required.
+First-run checklists may show platform verification token present.
+First-run checklists may show cloud backup not claimed.
+First-run checklists may show push delivery not claimed.
+First-run checklists may show external onion delivery not claimed.
+First-run checklists may show mobile app readiness not claimed.
+First-run checklists may show security-ready not claimed.
+
+First-run checklists must not show mobile app ready.
+First-run checklists must not show Android app ready.
+First-run checklists must not show iOS app ready.
+First-run checklists must not show store approved.
+First-run checklists must not show Play Store verified.
+First-run checklists must not show App Store verified.
+First-run checklists must not show TestFlight verified.
+First-run checklists must not show push delivery enabled.
+First-run checklists must not show background delivery enabled.
+First-run checklists must not show cloud backup enabled.
+First-run checklists must not show cloud sync enabled.
+First-run checklists must not show external onion delivery verified.
+First-run checklists must not show connected to peer.
+First-run checklists must not show safe for sensitive communication.
+First-run checklists must not show audited.
+First-run checklists must not show production-ready.
+First-run checklists must not show security-ready claims.
