@@ -613,3 +613,43 @@ Pre-release non-claim audits must not show central account ready.
 Pre-release non-claim audits must not show all blockers cleared.
 Pre-release non-claim audits must not show no remaining mobile work.
 Pre-release non-claim audits must not show release ready.
+
+## Release-Blocker Inventory Boundary
+
+Future mobile release-blocker inventories are documentation-only candidates
+until a separate wrapper implementation and release review phase exists.
+
+Release-blocker inventories may show mobile release-blocker inventory status only.
+Release-blocker inventories may show remaining blocker inventory only.
+Release-blocker inventories may show documentation-only wrapper blocker recorded.
+Release-blocker inventories may show buildable mobile app blocker recorded.
+Release-blocker inventories may show store distribution blocker recorded.
+Release-blocker inventories may show runtime messaging blocker recorded.
+Release-blocker inventories may show external onion delivery evidence blocker recorded.
+Release-blocker inventories may show push notification blocker recorded.
+Release-blocker inventories may show cloud backup blocker recorded.
+Release-blocker inventories may show central account and contact discovery blocker recorded.
+Release-blocker inventories may show independent audit blocker recorded.
+Release-blocker inventories may show release approval blocker recorded.
+Release-blocker inventories may show blockers are not cleared.
+Release-blocker inventories may show release readiness not claimed.
+Release-blocker inventories may show security readiness not claimed.
+
+Release-blocker inventories must not show all blockers cleared.
+Release-blocker inventories must not show no remaining mobile blockers.
+Release-blocker inventories must not show release blockers resolved.
+Release-blocker inventories must not show release approved.
+Release-blocker inventories must not show mobile release ready.
+Release-blocker inventories must not show mobile beta ready.
+Release-blocker inventories must not show mobile app ready.
+Release-blocker inventories must not show store distribution ready.
+Release-blocker inventories must not show runtime messaging ready.
+Release-blocker inventories must not show external onion delivery verified.
+Release-blocker inventories must not show push notification ready.
+Release-blocker inventories must not show cloud backup ready.
+Release-blocker inventories must not show central account ready.
+Release-blocker inventories must not show contact discovery ready.
+Release-blocker inventories must not show independent audit complete.
+Release-blocker inventories must not show security-ready.
+Release-blocker inventories must not show production-ready.
+Release-blocker inventories must not show safe for sensitive communication.

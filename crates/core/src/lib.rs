@@ -1887,6 +1887,45 @@ pub mod production {
         "release ready",
     ];
 
+    const PRODUCTION_MOBILE_RELEASE_BLOCKER_INVENTORY_REQUIRED_ITEMS: &[&str] = &[
+        "mobile release-blocker inventory status only",
+        "remaining blocker inventory only",
+        "documentation-only wrapper blocker recorded",
+        "buildable mobile app blocker recorded",
+        "store distribution blocker recorded",
+        "runtime messaging blocker recorded",
+        "external onion delivery evidence blocker recorded",
+        "push notification blocker recorded",
+        "cloud backup blocker recorded",
+        "central account and contact discovery blocker recorded",
+        "independent audit blocker recorded",
+        "release approval blocker recorded",
+        "blockers are not cleared",
+        "release readiness not claimed",
+        "security readiness not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_RELEASE_BLOCKER_INVENTORY_FORBIDDEN_CLAIMS: &[&str] = &[
+        "all blockers cleared",
+        "no remaining mobile blockers",
+        "release blockers resolved",
+        "release approved",
+        "mobile release ready",
+        "mobile beta ready",
+        "mobile app ready",
+        "store distribution ready",
+        "runtime messaging ready",
+        "external onion delivery verified",
+        "push notification ready",
+        "cloud backup ready",
+        "central account ready",
+        "contact discovery ready",
+        "independent audit complete",
+        "security-ready",
+        "production-ready",
+        "safe for sensitive communication",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -2743,6 +2782,36 @@ pub mod production {
         central_account_or_contact_discovery_claim_allowed: bool,
         all_blockers_cleared_claim_allowed: bool,
         release_ready_claim_allowed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileReleaseBlockerInventoryBoundarySummary {
+        required_blocker_items: &'static [&'static str],
+        forbidden_blocker_claims: &'static [&'static str],
+        inherits_mobile_pre_release_non_claim_audit_boundary: bool,
+        inventory_status_only_label_required: bool,
+        remaining_blocker_inventory_only_label_required: bool,
+        documentation_only_wrapper_blocker_recorded: bool,
+        buildable_mobile_app_blocker_recorded: bool,
+        store_distribution_blocker_recorded: bool,
+        runtime_messaging_blocker_recorded: bool,
+        external_delivery_evidence_blocker_recorded: bool,
+        push_notification_blocker_recorded: bool,
+        cloud_backup_blocker_recorded: bool,
+        central_account_or_contact_discovery_blocker_recorded: bool,
+        independent_audit_blocker_recorded: bool,
+        release_approval_blocker_recorded: bool,
+        blockers_cleared: bool,
+        release_readiness_claimed: bool,
+        security_readiness_claimed: bool,
+        store_distribution_ready_claimed: bool,
+        runtime_messaging_ready_claimed: bool,
+        external_delivery_success_claim_allowed: bool,
+        push_notification_ready_claimed: bool,
+        cloud_backup_ready_claimed: bool,
+        central_account_or_contact_discovery_ready_claimed: bool,
+        independent_audit_complete_claimed: bool,
         boundary_closed: bool,
     }
 
@@ -5300,6 +5369,112 @@ pub mod production {
 
         pub fn release_ready_claim_allowed(self) -> bool {
             self.release_ready_claim_allowed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileReleaseBlockerInventoryBoundarySummary {
+        pub fn required_blocker_items(self) -> &'static [&'static str] {
+            self.required_blocker_items
+        }
+
+        pub fn forbidden_blocker_claims(self) -> &'static [&'static str] {
+            self.forbidden_blocker_claims
+        }
+
+        pub fn inherits_mobile_pre_release_non_claim_audit_boundary(self) -> bool {
+            self.inherits_mobile_pre_release_non_claim_audit_boundary
+        }
+
+        pub fn inventory_status_only_label_required(self) -> bool {
+            self.inventory_status_only_label_required
+        }
+
+        pub fn remaining_blocker_inventory_only_label_required(self) -> bool {
+            self.remaining_blocker_inventory_only_label_required
+        }
+
+        pub fn documentation_only_wrapper_blocker_recorded(self) -> bool {
+            self.documentation_only_wrapper_blocker_recorded
+        }
+
+        pub fn buildable_mobile_app_blocker_recorded(self) -> bool {
+            self.buildable_mobile_app_blocker_recorded
+        }
+
+        pub fn store_distribution_blocker_recorded(self) -> bool {
+            self.store_distribution_blocker_recorded
+        }
+
+        pub fn runtime_messaging_blocker_recorded(self) -> bool {
+            self.runtime_messaging_blocker_recorded
+        }
+
+        pub fn external_delivery_evidence_blocker_recorded(self) -> bool {
+            self.external_delivery_evidence_blocker_recorded
+        }
+
+        pub fn push_notification_blocker_recorded(self) -> bool {
+            self.push_notification_blocker_recorded
+        }
+
+        pub fn cloud_backup_blocker_recorded(self) -> bool {
+            self.cloud_backup_blocker_recorded
+        }
+
+        pub fn central_account_or_contact_discovery_blocker_recorded(self) -> bool {
+            self.central_account_or_contact_discovery_blocker_recorded
+        }
+
+        pub fn independent_audit_blocker_recorded(self) -> bool {
+            self.independent_audit_blocker_recorded
+        }
+
+        pub fn release_approval_blocker_recorded(self) -> bool {
+            self.release_approval_blocker_recorded
+        }
+
+        pub fn blockers_cleared(self) -> bool {
+            self.blockers_cleared
+        }
+
+        pub fn release_readiness_claimed(self) -> bool {
+            self.release_readiness_claimed
+        }
+
+        pub fn security_readiness_claimed(self) -> bool {
+            self.security_readiness_claimed
+        }
+
+        pub fn store_distribution_ready_claimed(self) -> bool {
+            self.store_distribution_ready_claimed
+        }
+
+        pub fn runtime_messaging_ready_claimed(self) -> bool {
+            self.runtime_messaging_ready_claimed
+        }
+
+        pub fn external_delivery_success_claim_allowed(self) -> bool {
+            self.external_delivery_success_claim_allowed
+        }
+
+        pub fn push_notification_ready_claimed(self) -> bool {
+            self.push_notification_ready_claimed
+        }
+
+        pub fn cloud_backup_ready_claimed(self) -> bool {
+            self.cloud_backup_ready_claimed
+        }
+
+        pub fn central_account_or_contact_discovery_ready_claimed(self) -> bool {
+            self.central_account_or_contact_discovery_ready_claimed
+        }
+
+        pub fn independent_audit_complete_claimed(self) -> bool {
+            self.independent_audit_complete_claimed
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -16231,6 +16406,122 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_release_blocker_inventory_boundary_summary(
+    ) -> ProductionMobileReleaseBlockerInventoryBoundarySummary {
+        let audit = production_mobile_pre_release_non_claim_audit_boundary_summary();
+        let inherits_mobile_pre_release_non_claim_audit_boundary = audit.boundary_closed()
+            && audit.audit_status_only_label_required()
+            && audit.public_wording_audit_only_label_required()
+            && audit.documentation_only_wrapper_state_reviewed()
+            && audit.no_buildable_mobile_app_recorded()
+            && audit.no_store_distribution_recorded()
+            && audit.no_runtime_messaging_recorded()
+            && audit.not_audited_retained()
+            && audit.not_production_ready_retained()
+            && !audit.mobile_app_readiness_claimed()
+            && !audit.release_candidate_approval_claimed()
+            && !audit.security_audit_passed_claimed()
+            && !audit.store_review_ready_claimed()
+            && !audit.external_delivery_success_claim_allowed()
+            && !audit.cloud_backup_claim_allowed()
+            && !audit.push_notification_claim_allowed()
+            && !audit.central_account_or_contact_discovery_claim_allowed()
+            && !audit.all_blockers_cleared_claim_allowed()
+            && !audit.release_ready_claim_allowed();
+        let inventory_status_only_label_required = true;
+        let remaining_blocker_inventory_only_label_required = true;
+        let documentation_only_wrapper_blocker_recorded = true;
+        let buildable_mobile_app_blocker_recorded = true;
+        let store_distribution_blocker_recorded = true;
+        let runtime_messaging_blocker_recorded = true;
+        let external_delivery_evidence_blocker_recorded = true;
+        let push_notification_blocker_recorded = true;
+        let cloud_backup_blocker_recorded = true;
+        let central_account_or_contact_discovery_blocker_recorded = true;
+        let independent_audit_blocker_recorded = true;
+        let release_approval_blocker_recorded = true;
+        let blockers_cleared = false;
+        let release_readiness_claimed = false;
+        let security_readiness_claimed = false;
+        let store_distribution_ready_claimed = false;
+        let runtime_messaging_ready_claimed = false;
+        let external_delivery_success_claim_allowed = false;
+        let push_notification_ready_claimed = false;
+        let cloud_backup_ready_claimed = false;
+        let central_account_or_contact_discovery_ready_claimed = false;
+        let independent_audit_complete_claimed = false;
+        let boundary_closed = inherits_mobile_pre_release_non_claim_audit_boundary
+            && inventory_status_only_label_required
+            && remaining_blocker_inventory_only_label_required
+            && documentation_only_wrapper_blocker_recorded
+            && buildable_mobile_app_blocker_recorded
+            && store_distribution_blocker_recorded
+            && runtime_messaging_blocker_recorded
+            && external_delivery_evidence_blocker_recorded
+            && push_notification_blocker_recorded
+            && cloud_backup_blocker_recorded
+            && central_account_or_contact_discovery_blocker_recorded
+            && independent_audit_blocker_recorded
+            && release_approval_blocker_recorded
+            && !blockers_cleared
+            && !release_readiness_claimed
+            && !security_readiness_claimed
+            && !store_distribution_ready_claimed
+            && !runtime_messaging_ready_claimed
+            && !external_delivery_success_claim_allowed
+            && !push_notification_ready_claimed
+            && !cloud_backup_ready_claimed
+            && !central_account_or_contact_discovery_ready_claimed
+            && !independent_audit_complete_claimed
+            && PRODUCTION_MOBILE_RELEASE_BLOCKER_INVENTORY_REQUIRED_ITEMS
+                .contains(&"mobile release-blocker inventory status only")
+            && PRODUCTION_MOBILE_RELEASE_BLOCKER_INVENTORY_REQUIRED_ITEMS
+                .contains(&"remaining blocker inventory only")
+            && PRODUCTION_MOBILE_RELEASE_BLOCKER_INVENTORY_REQUIRED_ITEMS
+                .contains(&"buildable mobile app blocker recorded")
+            && PRODUCTION_MOBILE_RELEASE_BLOCKER_INVENTORY_REQUIRED_ITEMS
+                .contains(&"external onion delivery evidence blocker recorded")
+            && PRODUCTION_MOBILE_RELEASE_BLOCKER_INVENTORY_REQUIRED_ITEMS
+                .contains(&"blockers are not cleared")
+            && PRODUCTION_MOBILE_RELEASE_BLOCKER_INVENTORY_FORBIDDEN_CLAIMS
+                .contains(&"all blockers cleared")
+            && PRODUCTION_MOBILE_RELEASE_BLOCKER_INVENTORY_FORBIDDEN_CLAIMS
+                .contains(&"release blockers resolved")
+            && PRODUCTION_MOBILE_RELEASE_BLOCKER_INVENTORY_FORBIDDEN_CLAIMS
+                .contains(&"mobile release ready")
+            && PRODUCTION_MOBILE_RELEASE_BLOCKER_INVENTORY_FORBIDDEN_CLAIMS
+                .contains(&"independent audit complete");
+
+        ProductionMobileReleaseBlockerInventoryBoundarySummary {
+            required_blocker_items: PRODUCTION_MOBILE_RELEASE_BLOCKER_INVENTORY_REQUIRED_ITEMS,
+            forbidden_blocker_claims: PRODUCTION_MOBILE_RELEASE_BLOCKER_INVENTORY_FORBIDDEN_CLAIMS,
+            inherits_mobile_pre_release_non_claim_audit_boundary,
+            inventory_status_only_label_required,
+            remaining_blocker_inventory_only_label_required,
+            documentation_only_wrapper_blocker_recorded,
+            buildable_mobile_app_blocker_recorded,
+            store_distribution_blocker_recorded,
+            runtime_messaging_blocker_recorded,
+            external_delivery_evidence_blocker_recorded,
+            push_notification_blocker_recorded,
+            cloud_backup_blocker_recorded,
+            central_account_or_contact_discovery_blocker_recorded,
+            independent_audit_blocker_recorded,
+            release_approval_blocker_recorded,
+            blockers_cleared,
+            release_readiness_claimed,
+            security_readiness_claimed,
+            store_distribution_ready_claimed,
+            runtime_messaging_ready_claimed,
+            external_delivery_success_claim_allowed,
+            push_notification_ready_claimed,
+            cloud_backup_ready_claimed,
+            central_account_or_contact_discovery_ready_claimed,
+            independent_audit_complete_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -21142,6 +21433,135 @@ pub mod production {
                 .forbidden_audit_claims()
                 .contains(&"no remaining mobile work"));
             assert!(boundary.forbidden_audit_claims().contains(&"release ready"));
+        }
+
+        #[test]
+        fn production_mobile_release_blocker_inventory_boundary_keeps_blockers_uncleared() {
+            let boundary = production_mobile_release_blocker_inventory_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_pre_release_non_claim_audit_boundary());
+            assert!(boundary.inventory_status_only_label_required());
+            assert!(boundary.remaining_blocker_inventory_only_label_required());
+            assert!(boundary.documentation_only_wrapper_blocker_recorded());
+            assert!(boundary.buildable_mobile_app_blocker_recorded());
+            assert!(boundary.store_distribution_blocker_recorded());
+            assert!(boundary.runtime_messaging_blocker_recorded());
+            assert!(boundary.external_delivery_evidence_blocker_recorded());
+            assert!(boundary.push_notification_blocker_recorded());
+            assert!(boundary.cloud_backup_blocker_recorded());
+            assert!(boundary.central_account_or_contact_discovery_blocker_recorded());
+            assert!(boundary.independent_audit_blocker_recorded());
+            assert!(boundary.release_approval_blocker_recorded());
+            assert!(!boundary.blockers_cleared());
+            assert!(!boundary.release_readiness_claimed());
+            assert!(!boundary.security_readiness_claimed());
+            assert!(!boundary.store_distribution_ready_claimed());
+            assert!(!boundary.runtime_messaging_ready_claimed());
+            assert!(!boundary.external_delivery_success_claim_allowed());
+            assert!(!boundary.push_notification_ready_claimed());
+            assert!(!boundary.cloud_backup_ready_claimed());
+            assert!(!boundary.central_account_or_contact_discovery_ready_claimed());
+            assert!(!boundary.independent_audit_complete_claimed());
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"mobile release-blocker inventory status only"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"remaining blocker inventory only"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"documentation-only wrapper blocker recorded"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"buildable mobile app blocker recorded"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"store distribution blocker recorded"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"runtime messaging blocker recorded"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"external onion delivery evidence blocker recorded"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"push notification blocker recorded"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"cloud backup blocker recorded"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"central account and contact discovery blocker recorded"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"independent audit blocker recorded"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"release approval blocker recorded"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"blockers are not cleared"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"release readiness not claimed"));
+            assert!(boundary
+                .required_blocker_items()
+                .contains(&"security readiness not claimed"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"all blockers cleared"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"no remaining mobile blockers"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"release blockers resolved"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"release approved"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"mobile release ready"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"mobile beta ready"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"mobile app ready"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"store distribution ready"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"runtime messaging ready"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"external onion delivery verified"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"push notification ready"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"cloud backup ready"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"central account ready"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"contact discovery ready"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"independent audit complete"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"security-ready"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"production-ready"));
+            assert!(boundary
+                .forbidden_blocker_claims()
+                .contains(&"safe for sensitive communication"));
         }
 
         #[test]
