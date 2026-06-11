@@ -369,3 +369,43 @@ Retry/cancel checklists must not show production messaging ready.
 Retry/cancel checklists must not show production E2EE ready.
 Retry/cancel checklists must not show safe for sensitive communication.
 Retry/cancel checklists must not show security-ready claims.
+
+## Transcript Status Checklist Boundary
+
+Future mobile transcript status checklists are documentation-only candidates
+until a separate wrapper UI implementation phase exists.
+
+Transcript status checklists may show transcript status checklist status only.
+Transcript status checklists may show sent direction is local outbound record.
+Transcript status checklists may show received direction is local inbound record.
+Transcript status checklists may show outbound pending is local state.
+Transcript status checklists may show outbound failed is retryable local state.
+Transcript status checklists may show outbound sent is local export status only.
+Transcript status checklists may show outbound canceled is terminal local state.
+Transcript status checklists may show expired message status is local lifecycle state.
+Transcript status checklists may show conversation deleted status is local lifecycle state.
+Transcript status checklists may show plaintext shown only from local decrypt.
+Transcript status checklists may show transcript export is explicit user action.
+Transcript status checklists may show delivery acknowledgement not claimed.
+Transcript status checklists may show external onion delivery not claimed.
+Transcript status checklists may show network sync not claimed.
+Transcript status checklists may show security-ready not claimed.
+
+Transcript status checklists must not show sent means delivered.
+Transcript status checklists must not show message delivered to peer.
+Transcript status checklists must not show message read by peer.
+Transcript status checklists must not show delivery acknowledgement received.
+Transcript status checklists must not show remote transcript synchronized.
+Transcript status checklists must not show cloud transcript backup.
+Transcript status checklists must not show transcript proves delivery.
+Transcript status checklists must not show transcript proves receipt.
+Transcript status checklists must not show connected to peer.
+Transcript status checklists must not show external onion delivery verified.
+Transcript status checklists must not show remote deletion verified.
+Transcript status checklists must not show conversation deleted remotely.
+Transcript status checklists must not show plaintext synced.
+Transcript status checklists must not show key material exposed.
+Transcript status checklists must not show production messaging ready.
+Transcript status checklists must not show production E2EE ready.
+Transcript status checklists must not show safe for sensitive communication.
+Transcript status checklists must not show security-ready claims.

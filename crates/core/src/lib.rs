@@ -1650,6 +1650,45 @@ pub mod production {
         "security-ready",
     ];
 
+    const PRODUCTION_MOBILE_TRANSCRIPT_STATUS_CHECKLIST_REQUIRED_ITEMS: &[&str] = &[
+        "transcript status checklist status only",
+        "sent direction is local outbound record",
+        "received direction is local inbound record",
+        "outbound pending is local state",
+        "outbound failed is retryable local state",
+        "outbound sent is local export status only",
+        "outbound canceled is terminal local state",
+        "expired message status is local lifecycle state",
+        "conversation deleted status is local lifecycle state",
+        "plaintext shown only from local decrypt",
+        "transcript export is explicit user action",
+        "delivery acknowledgement not claimed",
+        "external onion delivery not claimed",
+        "network sync not claimed",
+        "security-ready not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_TRANSCRIPT_STATUS_CHECKLIST_FORBIDDEN_CLAIMS: &[&str] = &[
+        "sent means delivered",
+        "message delivered to peer",
+        "message read by peer",
+        "delivery acknowledgement received",
+        "remote transcript synchronized",
+        "cloud transcript backup",
+        "transcript proves delivery",
+        "transcript proves receipt",
+        "connected to peer",
+        "external onion delivery verified",
+        "remote deletion verified",
+        "conversation deleted remotely",
+        "plaintext synced",
+        "key material exposed",
+        "production messaging ready",
+        "production E2EE ready",
+        "safe for sensitive communication",
+        "security-ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -2318,6 +2357,39 @@ pub mod production {
         retry_delivery_success_claim_allowed: bool,
         remote_ack_protocol_claimed: bool,
         remote_delete_claim_allowed: bool,
+        production_messaging_ready_claimed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileTranscriptStatusChecklistBoundarySummary {
+        required_checklist_items: &'static [&'static str],
+        forbidden_transcript_claims: &'static [&'static str],
+        inherits_mobile_retry_cancel_checklist_boundary: bool,
+        inherits_async_delivery_semantics_boundary: bool,
+        inherits_manual_runtime_messaging_gate: bool,
+        transcript_status_only_label_required: bool,
+        sent_direction_local_record_label_required: bool,
+        received_direction_local_record_label_required: bool,
+        outbound_pending_local_state_label_required: bool,
+        outbound_failed_retryable_local_state_label_required: bool,
+        outbound_sent_local_export_status_label_required: bool,
+        outbound_canceled_terminal_local_state_label_required: bool,
+        expired_message_local_lifecycle_label_required: bool,
+        conversation_deleted_local_lifecycle_label_required: bool,
+        plaintext_local_decrypt_label_required: bool,
+        transcript_export_explicit_user_action_label_required: bool,
+        delivery_ack_non_claim_required: bool,
+        external_delivery_non_claim_required: bool,
+        network_sync_non_claim_required: bool,
+        sent_delivery_claim_allowed: bool,
+        read_receipt_claim_allowed: bool,
+        remote_transcript_sync_claim_allowed: bool,
+        cloud_transcript_backup_claim_allowed: bool,
+        transcript_delivery_proof_claim_allowed: bool,
+        remote_delete_claim_allowed: bool,
+        plaintext_or_key_material_sync_allowed: bool,
         production_messaging_ready_claimed: bool,
         security_ready_claimed: bool,
         boundary_closed: bool,
@@ -4209,6 +4281,124 @@ pub mod production {
 
         pub fn remote_delete_claim_allowed(self) -> bool {
             self.remote_delete_claim_allowed
+        }
+
+        pub fn production_messaging_ready_claimed(self) -> bool {
+            self.production_messaging_ready_claimed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileTranscriptStatusChecklistBoundarySummary {
+        pub fn required_checklist_items(self) -> &'static [&'static str] {
+            self.required_checklist_items
+        }
+
+        pub fn forbidden_transcript_claims(self) -> &'static [&'static str] {
+            self.forbidden_transcript_claims
+        }
+
+        pub fn inherits_mobile_retry_cancel_checklist_boundary(self) -> bool {
+            self.inherits_mobile_retry_cancel_checklist_boundary
+        }
+
+        pub fn inherits_async_delivery_semantics_boundary(self) -> bool {
+            self.inherits_async_delivery_semantics_boundary
+        }
+
+        pub fn inherits_manual_runtime_messaging_gate(self) -> bool {
+            self.inherits_manual_runtime_messaging_gate
+        }
+
+        pub fn transcript_status_only_label_required(self) -> bool {
+            self.transcript_status_only_label_required
+        }
+
+        pub fn sent_direction_local_record_label_required(self) -> bool {
+            self.sent_direction_local_record_label_required
+        }
+
+        pub fn received_direction_local_record_label_required(self) -> bool {
+            self.received_direction_local_record_label_required
+        }
+
+        pub fn outbound_pending_local_state_label_required(self) -> bool {
+            self.outbound_pending_local_state_label_required
+        }
+
+        pub fn outbound_failed_retryable_local_state_label_required(self) -> bool {
+            self.outbound_failed_retryable_local_state_label_required
+        }
+
+        pub fn outbound_sent_local_export_status_label_required(self) -> bool {
+            self.outbound_sent_local_export_status_label_required
+        }
+
+        pub fn outbound_canceled_terminal_local_state_label_required(self) -> bool {
+            self.outbound_canceled_terminal_local_state_label_required
+        }
+
+        pub fn expired_message_local_lifecycle_label_required(self) -> bool {
+            self.expired_message_local_lifecycle_label_required
+        }
+
+        pub fn conversation_deleted_local_lifecycle_label_required(self) -> bool {
+            self.conversation_deleted_local_lifecycle_label_required
+        }
+
+        pub fn plaintext_local_decrypt_label_required(self) -> bool {
+            self.plaintext_local_decrypt_label_required
+        }
+
+        pub fn transcript_export_explicit_user_action_label_required(self) -> bool {
+            self.transcript_export_explicit_user_action_label_required
+        }
+
+        pub fn delivery_ack_non_claim_required(self) -> bool {
+            self.delivery_ack_non_claim_required
+        }
+
+        pub fn external_delivery_non_claim_required(self) -> bool {
+            self.external_delivery_non_claim_required
+        }
+
+        pub fn network_sync_non_claim_required(self) -> bool {
+            self.network_sync_non_claim_required
+        }
+
+        pub fn sent_delivery_claim_allowed(self) -> bool {
+            self.sent_delivery_claim_allowed
+        }
+
+        pub fn read_receipt_claim_allowed(self) -> bool {
+            self.read_receipt_claim_allowed
+        }
+
+        pub fn remote_transcript_sync_claim_allowed(self) -> bool {
+            self.remote_transcript_sync_claim_allowed
+        }
+
+        pub fn cloud_transcript_backup_claim_allowed(self) -> bool {
+            self.cloud_transcript_backup_claim_allowed
+        }
+
+        pub fn transcript_delivery_proof_claim_allowed(self) -> bool {
+            self.transcript_delivery_proof_claim_allowed
+        }
+
+        pub fn remote_delete_claim_allowed(self) -> bool {
+            self.remote_delete_claim_allowed
+        }
+
+        pub fn plaintext_or_key_material_sync_allowed(self) -> bool {
+            self.plaintext_or_key_material_sync_allowed
         }
 
         pub fn production_messaging_ready_claimed(self) -> bool {
@@ -14332,6 +14522,160 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_transcript_status_checklist_boundary_summary(
+    ) -> ProductionMobileTranscriptStatusChecklistBoundarySummary {
+        let retry_cancel = production_mobile_retry_cancel_checklist_boundary_summary();
+        let async_delivery = production_async_delivery_semantics_summary();
+        let gate = production_manual_runtime_messaging_gate_summary();
+        let inherits_mobile_retry_cancel_checklist_boundary = retry_cancel.boundary_closed()
+            && retry_cancel.retryable_failure_local_state_label_required()
+            && retry_cancel.cancel_terminal_local_state_label_required()
+            && retry_cancel.delivery_ack_non_claim_required()
+            && retry_cancel.external_delivery_non_claim_required()
+            && retry_cancel.network_retry_non_claim_required()
+            && !retry_cancel.retry_delivery_success_claim_allowed()
+            && !retry_cancel.remote_ack_protocol_claimed()
+            && !retry_cancel.security_ready_claimed();
+        let inherits_async_delivery_semantics_boundary = async_delivery.semantics_reviewed()
+            && async_delivery.local_encrypted_outbound_ready()
+            && async_delivery.received_transcript_ready()
+            && async_delivery
+                .semantic_states()
+                .contains(&"outbound_pending")
+            && async_delivery
+                .semantic_states()
+                .contains(&"encrypted_envelope_exported")
+            && async_delivery
+                .semantic_states()
+                .contains(&"send_failed_retryable")
+            && async_delivery
+                .semantic_states()
+                .contains(&"send_canceled_terminal")
+            && async_delivery
+                .semantic_states()
+                .contains(&"inbound_envelope_imported")
+            && async_delivery
+                .semantic_states()
+                .contains(&"received_message_stored")
+            && async_delivery
+                .semantic_states()
+                .contains(&"received_message_expired")
+            && async_delivery
+                .semantic_states()
+                .contains(&"conversation_deleted")
+            && !async_delivery.remote_ack_protocol_ready()
+            && !async_delivery.external_onion_delivery_verified()
+            && !async_delivery.runtime_messaging_enabled();
+        let inherits_manual_runtime_messaging_gate = gate.gate_reviewed()
+            && gate.manual_runtime_messaging_enabled()
+            && gate.explicit_user_action_required()
+            && gate.local_transcript_ready()
+            && !gate.network_io_attempted()
+            && !gate.external_onion_delivery_verified()
+            && !gate.production_messaging_ready()
+            && !gate.security_ready_claimed();
+        let transcript_status_only_label_required = true;
+        let sent_direction_local_record_label_required = true;
+        let received_direction_local_record_label_required = true;
+        let outbound_pending_local_state_label_required = true;
+        let outbound_failed_retryable_local_state_label_required = true;
+        let outbound_sent_local_export_status_label_required = true;
+        let outbound_canceled_terminal_local_state_label_required = true;
+        let expired_message_local_lifecycle_label_required = true;
+        let conversation_deleted_local_lifecycle_label_required = true;
+        let plaintext_local_decrypt_label_required = true;
+        let transcript_export_explicit_user_action_label_required = true;
+        let delivery_ack_non_claim_required = true;
+        let external_delivery_non_claim_required = true;
+        let network_sync_non_claim_required = true;
+        let sent_delivery_claim_allowed = false;
+        let read_receipt_claim_allowed = false;
+        let remote_transcript_sync_claim_allowed = false;
+        let cloud_transcript_backup_claim_allowed = false;
+        let transcript_delivery_proof_claim_allowed = false;
+        let remote_delete_claim_allowed = false;
+        let plaintext_or_key_material_sync_allowed = false;
+        let production_messaging_ready_claimed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_retry_cancel_checklist_boundary
+            && inherits_async_delivery_semantics_boundary
+            && inherits_manual_runtime_messaging_gate
+            && transcript_status_only_label_required
+            && sent_direction_local_record_label_required
+            && received_direction_local_record_label_required
+            && outbound_pending_local_state_label_required
+            && outbound_failed_retryable_local_state_label_required
+            && outbound_sent_local_export_status_label_required
+            && outbound_canceled_terminal_local_state_label_required
+            && expired_message_local_lifecycle_label_required
+            && conversation_deleted_local_lifecycle_label_required
+            && plaintext_local_decrypt_label_required
+            && transcript_export_explicit_user_action_label_required
+            && delivery_ack_non_claim_required
+            && external_delivery_non_claim_required
+            && network_sync_non_claim_required
+            && !sent_delivery_claim_allowed
+            && !read_receipt_claim_allowed
+            && !remote_transcript_sync_claim_allowed
+            && !cloud_transcript_backup_claim_allowed
+            && !transcript_delivery_proof_claim_allowed
+            && !remote_delete_claim_allowed
+            && !plaintext_or_key_material_sync_allowed
+            && !production_messaging_ready_claimed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_TRANSCRIPT_STATUS_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"transcript status checklist status only")
+            && PRODUCTION_MOBILE_TRANSCRIPT_STATUS_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"sent direction is local outbound record")
+            && PRODUCTION_MOBILE_TRANSCRIPT_STATUS_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"outbound sent is local export status only")
+            && PRODUCTION_MOBILE_TRANSCRIPT_STATUS_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"network sync not claimed")
+            && PRODUCTION_MOBILE_TRANSCRIPT_STATUS_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"sent means delivered")
+            && PRODUCTION_MOBILE_TRANSCRIPT_STATUS_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"remote transcript synchronized")
+            && PRODUCTION_MOBILE_TRANSCRIPT_STATUS_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"transcript proves delivery")
+            && PRODUCTION_MOBILE_TRANSCRIPT_STATUS_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"plaintext synced")
+            && PRODUCTION_MOBILE_TRANSCRIPT_STATUS_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"security-ready");
+
+        ProductionMobileTranscriptStatusChecklistBoundarySummary {
+            required_checklist_items: PRODUCTION_MOBILE_TRANSCRIPT_STATUS_CHECKLIST_REQUIRED_ITEMS,
+            forbidden_transcript_claims:
+                PRODUCTION_MOBILE_TRANSCRIPT_STATUS_CHECKLIST_FORBIDDEN_CLAIMS,
+            inherits_mobile_retry_cancel_checklist_boundary,
+            inherits_async_delivery_semantics_boundary,
+            inherits_manual_runtime_messaging_gate,
+            transcript_status_only_label_required,
+            sent_direction_local_record_label_required,
+            received_direction_local_record_label_required,
+            outbound_pending_local_state_label_required,
+            outbound_failed_retryable_local_state_label_required,
+            outbound_sent_local_export_status_label_required,
+            outbound_canceled_terminal_local_state_label_required,
+            expired_message_local_lifecycle_label_required,
+            conversation_deleted_local_lifecycle_label_required,
+            plaintext_local_decrypt_label_required,
+            transcript_export_explicit_user_action_label_required,
+            delivery_ack_non_claim_required,
+            external_delivery_non_claim_required,
+            network_sync_non_claim_required,
+            sent_delivery_claim_allowed,
+            read_receipt_claim_allowed,
+            remote_transcript_sync_claim_allowed,
+            cloud_transcript_backup_claim_allowed,
+            transcript_delivery_proof_claim_allowed,
+            remote_delete_claim_allowed,
+            plaintext_or_key_material_sync_allowed,
+            production_messaging_ready_claimed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -18456,6 +18800,139 @@ pub mod production {
                 .contains(&"safe for sensitive communication"));
             assert!(boundary
                 .forbidden_retry_cancel_claims()
+                .contains(&"security-ready"));
+        }
+
+        #[test]
+        fn production_mobile_transcript_status_checklist_boundary_keeps_transcript_local_and_non_claiming(
+        ) {
+            let boundary = production_mobile_transcript_status_checklist_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_retry_cancel_checklist_boundary());
+            assert!(boundary.inherits_async_delivery_semantics_boundary());
+            assert!(boundary.inherits_manual_runtime_messaging_gate());
+            assert!(boundary.transcript_status_only_label_required());
+            assert!(boundary.sent_direction_local_record_label_required());
+            assert!(boundary.received_direction_local_record_label_required());
+            assert!(boundary.outbound_pending_local_state_label_required());
+            assert!(boundary.outbound_failed_retryable_local_state_label_required());
+            assert!(boundary.outbound_sent_local_export_status_label_required());
+            assert!(boundary.outbound_canceled_terminal_local_state_label_required());
+            assert!(boundary.expired_message_local_lifecycle_label_required());
+            assert!(boundary.conversation_deleted_local_lifecycle_label_required());
+            assert!(boundary.plaintext_local_decrypt_label_required());
+            assert!(boundary.transcript_export_explicit_user_action_label_required());
+            assert!(boundary.delivery_ack_non_claim_required());
+            assert!(boundary.external_delivery_non_claim_required());
+            assert!(boundary.network_sync_non_claim_required());
+            assert!(!boundary.sent_delivery_claim_allowed());
+            assert!(!boundary.read_receipt_claim_allowed());
+            assert!(!boundary.remote_transcript_sync_claim_allowed());
+            assert!(!boundary.cloud_transcript_backup_claim_allowed());
+            assert!(!boundary.transcript_delivery_proof_claim_allowed());
+            assert!(!boundary.remote_delete_claim_allowed());
+            assert!(!boundary.plaintext_or_key_material_sync_allowed());
+            assert!(!boundary.production_messaging_ready_claimed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"transcript status checklist status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"sent direction is local outbound record"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"received direction is local inbound record"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"outbound pending is local state"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"outbound failed is retryable local state"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"outbound sent is local export status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"outbound canceled is terminal local state"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"expired message status is local lifecycle state"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"conversation deleted status is local lifecycle state"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"plaintext shown only from local decrypt"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"transcript export is explicit user action"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"delivery acknowledgement not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"external onion delivery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"network sync not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"security-ready not claimed"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"sent means delivered"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"message delivered to peer"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"message read by peer"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"delivery acknowledgement received"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"remote transcript synchronized"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"cloud transcript backup"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"transcript proves delivery"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"transcript proves receipt"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"connected to peer"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"external onion delivery verified"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"remote deletion verified"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"conversation deleted remotely"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"plaintext synced"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"key material exposed"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"production messaging ready"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"production E2EE ready"));
+            assert!(boundary
+                .forbidden_transcript_claims()
+                .contains(&"safe for sensitive communication"));
+            assert!(boundary
+                .forbidden_transcript_claims()
                 .contains(&"security-ready"));
         }
 
