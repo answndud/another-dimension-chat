@@ -144,6 +144,9 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundCount"\)/);
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundMessageNumber"\)/);
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundAction"\)/);
+  assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "manualRebuildFlow"\)/);
+  assert.match(functionBody(mainJs, "roomListStoragePayload"), /manualRebuildFlow: normalizedSavedRoomManualRebuildFlow/);
+  assert.match(functionBody(mainJs, "savedInviteRooms"), /manualRebuildDeliveryScope: normalizedSavedRoomManualRebuildDeliveryScope/);
   assert.match(indexHtml, /id="back-to-room-list"/);
   assert.match(stylesCss, /body\.is-room-list-mode [\s\S]*#production-two-profile-transcript/);
   assert.match(stylesCss, /body\.is-room-detail-mode \.room-list-panel/);
@@ -871,6 +874,9 @@ test("rebuild delivery retry and receive actions stay room-scoped", () => {
 
   const scopeRenderBody = functionBody(mainJs, "renderManualRebuildDeliveryScopeGate");
   assert.match(scopeRenderBody, /manualInviteRoomRebuildFlowActive\(\)/);
+  assert.match(scopeRenderBody, /savedInviteRoomManualRebuildFlowForInput\(input\)/);
+  assert.match(scopeRenderBody, /options\.force !== true/);
+  assert.match(scopeRenderBody, /rememberManualRebuildRecoveryForInput\(input, action, options\)/);
   assert.match(scopeRenderBody, /fields\.productionTwoProfileSession/);
   assert.match(scopeRenderBody, /fields\.productionTwoProfileBoundary/);
   assert.match(scopeRenderBody, /setProductionFollowupActions\(true, view\.next\)/);
@@ -896,6 +902,41 @@ test("rebuild delivery retry and receive actions stay room-scoped", () => {
   assert.match(composerBody, /intent\.action === "prepare-private-route"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, intent\.action\)/);
   assert.match(composerBody, /intent\.action === "refresh-endpoint"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, intent\.action\)/);
   assert.match(composerBody, /intent\.action === "start-receiving"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, intent\.action\)/);
+});
+
+test("manual rebuild recovery resumes from saved room metadata", () => {
+  assert.match(mainJs, /function normalizedSavedRoomManualRebuildFlow/);
+  assert.match(mainJs, /function normalizedSavedRoomManualRebuildDeliveryScope/);
+  assert.match(mainJs, /function normalizedSavedRoomManualRebuildDeliveryAction/);
+  assert.match(mainJs, /function rememberManualRebuildRecoveryForInput/);
+  assert.match(mainJs, /function savedInviteRoomManualRebuildRecoveryCandidate/);
+  assert.match(mainJs, /function showManualRebuildRecoveryAfterSavedRoomOpen/);
+
+  const rememberBody = functionBody(mainJs, "rememberManualRebuildRecoveryForInput");
+  assert.match(rememberBody, /manualRebuildFlow: true/);
+  assert.match(rememberBody, /manualRebuildDeliveryScope: manualRebuildDeliveryScopeKind/);
+  assert.match(rememberBody, /manualRebuildDeliveryAction: normalizedAction/);
+  assert.match(rememberBody, /manualRebuildMessageNumber/);
+  assert.match(rememberBody, /rememberInviteRoom/);
+
+  const candidateBody = functionBody(mainJs, "savedInviteRoomManualRebuildRecoveryCandidate");
+  assert.match(candidateBody, /room\?\.manualRebuildFlow !== true/);
+  assert.match(candidateBody, /savedInviteRoomHasRetryableOutbound\(room\)/);
+  assert.match(candidateBody, /savedInviteRoomWaitingForPeerCode\(room\)/);
+  assert.match(candidateBody, /receiveState === "paused"/);
+  assert.match(candidateBody, /receiveState === "stopping"/);
+  assert.match(candidateBody, /savedInviteRoomRouteReadinessView\(room\)/);
+
+  const reopenBody = functionBody(mainJs, "showManualRebuildRecoveryAfterSavedRoomOpen");
+  assert.match(reopenBody, /savedInviteRoomManualRebuildRecoveryCandidate\(current, input\)/);
+  assert.match(reopenBody, /savedInviteRoomResolvedRetryableOutbound/);
+  assert.match(reopenBody, /renderManualRebuildDeliveryScopeGate\(input, candidate\.action, \{[\s\S]*force: true/);
+  assert.match(reopenBody, /focusManualRebuildRecoveryAction\(candidate\.action, input\)/);
+  assert.match(reopenBody, /refreshFieldTestReport\(\)/);
+
+  const openRecoveryBody = functionBody(mainJs, "showSavedInviteRoomRecoveryAfterOpen");
+  assert.match(openRecoveryBody, /showManualRebuildRecoveryAfterSavedRoomOpen\(current, input\)[\s\S]*return true/);
+  assert.ok(openRecoveryBody.indexOf("showManualRebuildRecoveryAfterSavedRoomOpen") < openRecoveryBody.indexOf("!current.action"));
 });
 
 test("manual session readiness is scoped to the active profile passphrase", () => {
