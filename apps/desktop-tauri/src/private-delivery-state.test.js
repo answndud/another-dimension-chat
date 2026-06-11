@@ -336,6 +336,8 @@ test("public beta diagnostics keeps only status, build, and failure class", () =
     "invite_code=ADINVITE-secret",
     "safety_phrase=alpha bravo",
     "message_text=hello secret",
+    "sender_profile=alice-private",
+    "envelope_payload=payload-secret",
     "local_path=/Users/alex/private",
     "passphrase=correct horse battery staple",
     "key_material=deadbeef",
@@ -398,8 +400,9 @@ test("public beta diagnostics keeps only status, build, and failure class", () =
   assert.match(diagnostics, /live_dependency_scan_performed=false/);
   assert.match(diagnostics, /app_version=0.1.0/);
   assert.match(diagnostics, /failure_class=PeerEndpointMissing/);
+  assert.match(diagnostics, /recovery_next_action=verify/);
   assert.match(diagnostics, /app_launch_network=false/);
-  assert.match(diagnostics, /payload_boundary=status-build-failure-class-only/);
+  assert.match(diagnostics, /payload_boundary=status-build-failure-class-recovery-action-only/);
   assert.match(diagnostics, /crash_upload=false/);
   assert.match(diagnostics, /telemetry=false/);
   assert.match(diagnostics, /raw_log_export=false/);
@@ -408,7 +411,7 @@ test("public beta diagnostics keeps only status, build, and failure class", () =
   assert.match(diagnostics, /support_bundle_export=false/);
   assert.match(diagnostics, /raw_diagnostic_file_export=false/);
   assert.match(diagnostics, /excluded_fields=codes,endpoints,messages,profiles,paths,logs,crash_dumps,screenshots,passphrases,key_material,private_planning_notes/);
-  assert.doesNotMatch(diagnostics, /next_action=/);
-  assert.doesNotMatch(diagnostics, /obfs4|198\.51\.100\.4|examplehiddenservice|ADINVITE|alpha bravo|hello secret/);
+  assert.doesNotMatch(diagnostics, /^next_action=/m);
+  assert.doesNotMatch(diagnostics, /obfs4|198\.51\.100\.4|examplehiddenservice|ADINVITE|alpha bravo|hello secret|alice-private|payload-secret/);
   assert.doesNotMatch(diagnostics, /\/Users\/alex|correct horse|deadbeef/);
 });
