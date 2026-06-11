@@ -1666,6 +1666,22 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
   padding-top: 10px;
 }
 
+.local-rehearsal-panel {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel-strong) 58%, transparent);
+}
+
+.local-rehearsal-panel h5 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .public-diagnostics-panel h5 {
   margin: 0;
   color: var(--text-primary);

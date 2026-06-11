@@ -851,6 +851,7 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(roomRuntimeClearBody, /forgetTwoProfileSessionStatusForInput\(input\)/);
   assert.match(roomRuntimeClearBody, /clearPrivateRouteFollowupForRoom\(input\)/);
   assert.match(roomRuntimeClearBody, /clearSavedInviteRoomRetryableOutbound\(room\)/);
+  assert.match(roomRuntimeClearBody, /clearSavedInviteRoomManualRebuildMetadata\(room\)/);
 
   const allRoomClearBody = functionBody(mainJs, "clearAllSavedInviteRoomLocalState");
   assert.match(allRoomClearBody, /localStoreRemove\(inviteRoomsStorageKey\)/);
@@ -860,7 +861,11 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
 
   const rebuildBody = functionBody(mainJs, "applyPostDestructiveLifecycleRebuildGuidance");
   assert.match(rebuildBody, /stale_room_retry_cleared=true/);
+  assert.match(rebuildBody, /stale_receive_cleared=true/);
+  assert.match(rebuildBody, /stale_delivery_code_cleared=true/);
+  assert.match(rebuildBody, /stale_manual_rebuild_cleared=true/);
   assert.match(rebuildBody, /rebuild_required=true/);
+  assert.match(rebuildBody, /external_evidence_claim=false/);
   assert.match(rebuildBody, /backup_recovery=false/);
   assert.match(rebuildBody, /cloud_backup_sync=false/);
   assert.match(rebuildBody, /rollback_prevention=false/);
@@ -1320,6 +1325,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /rebuild_delivery_network_io=/);
   assert.match(reportBody, /rebuild_delivery_live_network_attempt=/);
   assert.match(reportBody, /rebuild_external_peer_evidence_claim=false/);
+  assert.match(reportBody, /localRehearsalReportLines\(reportLines\.join\("\\n"\)\)/);
   assert.match(rebuildDiagnosticsBody, /manualInviteRoomRebuildFlowActive\(\)/);
   assert.match(rebuildDiagnosticsBody, /fieldTestBoundaryValue\(boundaryText, "delivery_scope", "none"\)/);
   assert.match(rebuildDiagnosticsBody, /fieldTestBoundaryValue\(boundaryText, "network_io", "false"\)/);
@@ -1343,6 +1349,47 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.doesNotMatch(compareBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
   assert.doesNotMatch(compareBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
   assert.doesNotMatch(reportBody, /room_list_code|currentRoomCode=/);
+});
+
+test("single-machine local rehearsal is scoped apart from external field evidence", () => {
+  assert.match(indexHtml, /id="local-rehearsal-checklist"/);
+  assert.match(indexHtml, /id="local-rehearsal-next-action"/);
+  assert.match(indexHtml, /data-i18n="localRehearsalHint"/);
+  assert.match(i18nJs, /Single-machine dual-profile rehearsal only/);
+  assert.match(i18nJs, /외부 onion delivery evidence가 아닙니다/);
+
+  assert.match(mainJs, /localRehearsalChecklist: document\.querySelector\("#local-rehearsal-checklist"\)/);
+  assert.match(mainJs, /localRehearsalNextAction: document\.querySelector\("#local-rehearsal-next-action"\)/);
+  assert.match(mainJs, /function localRehearsalChecklistItems/);
+  assert.match(mainJs, /function localRehearsalNextActionKey/);
+  assert.match(mainJs, /function localRehearsalReportLines/);
+  assert.match(mainJs, /function renderLocalRehearsal/);
+
+  const rehearsalItemsBody = functionBody(mainJs, "localRehearsalChecklistItems");
+  assert.match(rehearsalItemsBody, /localRehearsalInvite/);
+  assert.match(rehearsalItemsBody, /localRehearsalSafety/);
+  assert.match(rehearsalItemsBody, /localRehearsalDeliveryCode/);
+  assert.match(rehearsalItemsBody, /localRehearsalReceive/);
+  assert.match(rehearsalItemsBody, /localRehearsalRetry/);
+
+  const rehearsalNextBody = functionBody(mainJs, "localRehearsalNextActionKey");
+  assert.match(rehearsalNextBody, /fieldTestNextActionKey\(report, ""\)/);
+  assert.match(rehearsalNextBody, /fieldTestNextPastePeerReport/);
+  assert.match(rehearsalNextBody, /localRehearsalNextRepeatOrReset/);
+  assert.match(rehearsalNextBody, /real_onion_external_peer_delivery_confirmed/);
+  assert.match(rehearsalNextBody, /localRehearsalNextExternalEvidenceIgnored/);
+
+  const reportLinesBody = functionBody(mainJs, "localRehearsalReportLines");
+  assert.match(reportLinesBody, /rehearsal_scope=single_machine_local/);
+  assert.match(reportLinesBody, /rehearsal_dual_profile=true/);
+  assert.match(reportLinesBody, /rehearsal_external_peer_evidence=false/);
+  assert.match(reportLinesBody, /rehearsal_external_onion_delivery_claim=false/);
+  assert.match(reportLinesBody, /rehearsal_peer_report_required=false/);
+  assert.match(reportLinesBody, /local_rehearsal_next_action=/);
+
+  assert.match(functionBody(mainJs, "renderFieldTestReportSummary"), /renderLocalRehearsal\(report\)/);
+  assert.match(functionBody(mainJs, "renderFieldTestReportComparison"), /renderLocalRehearsal/);
+  assert.match(functionBody(mainJs, "buildFieldTestReport"), /localRehearsalReportLines\(reportLines\.join\("\\n"\)\)/);
 });
 
 test("send diagnostics expose runtime owner match without raw profile names", () => {
