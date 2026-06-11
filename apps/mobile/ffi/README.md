@@ -26,6 +26,33 @@ These names are inventory labels, not exported functions. A later binding phase
 must still define concrete signatures, error taxonomy, serialization, memory
 ownership, and platform packaging.
 
+## Signature Placeholder Boundary
+
+The first concrete signature pass must remain documentation-only until a
+separate binding implementation phase exists.
+
+All future mobile-callable signatures must use a narrow handle-and-bytes shape:
+
+- opaque `ProfileHandle` or explicit locked/unlocked status handles, not raw
+  filesystem paths or secrets
+- UTF-8 strings or canonical byte buffers for invite, pairing, envelope,
+  transcript, lifecycle, and diagnostics inputs
+- redacted structured result objects for status and diagnostics outputs
+- explicit error codes for locked profile, malformed payload, replay rejected,
+  policy blocked, transport unavailable, and unsupported mobile surface
+- caller-owned input buffers and core-owned returned buffers with explicit release
+  in the binding layer
+- explicit user action tokens for destructive lifecycle or transport-adjacent
+  operations
+
+This placeholder does not define a `.udl` file, generated bindings, FFI symbols,
+callable mobile FFI, stable ABI, memory ownership contract, serialization
+contract, thread model, mobile packaging, binding generation, or mobile app readiness.
+It also does not allow passphrases, private keys, key material,
+plaintext message history, local database handles, raw filesystem paths,
+background delivery loops, push notification delivery, central discovery, or
+central message server behavior to cross the boundary.
+
 This inventory must not export raw storage open calls, local paths, passphrases,
 private keys, key material, plaintext messages, automatic network bootstrap,
 background delivery loops, push delivery, central contact discovery, central
