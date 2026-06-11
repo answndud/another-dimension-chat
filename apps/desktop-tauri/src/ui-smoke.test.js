@@ -248,7 +248,8 @@ test("receive controls are scoped to the active room", () => {
   assert.match(functionBody(mainJs, "productionTwoProfileReceiveRuntimeMismatched"), /ownerMatchesReceiveProfile/);
   assert.match(functionBody(mainJs, "updateChatPrimaryActionMode"), /is-receiving-other-room/);
   assert.match(functionBody(mainJs, "updateChatPrimaryActionMode"), /is-receiving-runtime-mismatch/);
-  assert.match(functionBody(mainJs, "renderRoomStatusSummary"), /productionTwoProfileReceiveMatchesInput\(input\)/);
+  assert.match(functionBody(mainJs, "renderRoomStatusSummary"), /friendFamilyOnboardingView\(input, sessionsReady\)/);
+  assert.match(functionBody(mainJs, "friendFamilyOnboardingView"), /productionTwoProfileReceiveMatchesInput\(input\)/);
   assert.match(functionBody(mainJs, "renderRoomStatusSummary"), /roomStatusShortReceiveMismatch/);
   assert.match(functionBody(mainJs, "renderRoomIdentityBar"), /roomReceivingOther/);
   assert.match(functionBody(mainJs, "renderRoomIdentityBar"), /roomReceivingMismatch/);
@@ -261,6 +262,37 @@ test("receive controls are scoped to the active room", () => {
   assert.match(i18nJs, /roomReceivingMismatch/);
   assert.match(i18nJs, /receiveRuntimeMismatch/);
   assert.match(i18nJs, /receiveOtherRoomActive/);
+});
+
+test("friend and family onboarding shows room status next actions", () => {
+  assert.match(mainJs, /function friendFamilyOnboardingView/);
+  const viewBody = functionBody(mainJs, "friendFamilyOnboardingView");
+  assert.match(viewBody, /roomOnboardingNextInvite/);
+  assert.match(viewBody, /roomOnboardingNextVerify/);
+  assert.match(viewBody, /roomOnboardingNextExchangeDeliveryCodes/);
+  assert.match(viewBody, /roomOnboardingNextStartReceive/);
+  assert.match(viewBody, /roomOnboardingNextSend/);
+  assert.match(viewBody, /externalPeerSendReadiness\(input/);
+  assert.match(functionBody(mainJs, "renderRoomStatusSummary"), /\$\{view\.label\} · \$\{view\.next\}/);
+  assert.match(functionBody(mainJs, "renderRoomSetupProgress"), /dataset\.nextAction = view\.nextKey/);
+  assert.match(functionBody(mainJs, "twoProfilePrimaryReadiness"), /friendFamilyOnboardingView\(input, sessionsReady\)/);
+  for (const key of [
+    "roomOnboardingNextInvite",
+    "roomOnboardingNextOpenRoom",
+    "roomOnboardingNextRebuild",
+    "roomOnboardingNextVerify",
+    "roomOnboardingNextEnableDelivery",
+    "roomOnboardingNextExchangeDeliveryCodes",
+    "roomOnboardingNextStartReceive",
+    "roomOnboardingNextWaitReceiveStop",
+    "roomOnboardingNextRestartReceive",
+    "roomOnboardingNextRetryOrCancel",
+    "roomOnboardingNextWaitOrReply",
+    "roomOnboardingNextWriteMessage",
+    "roomOnboardingNextSend",
+  ]) {
+    assert.match(i18nJs, new RegExp(`${key}:`));
+  }
 });
 
 test("receive restart intent owns the room primary action", () => {
