@@ -42,6 +42,44 @@ fn local_only_policy_rejects_onion_and_direct_routes() {
 }
 
 #[test]
+fn practical_default_is_local_manual_not_network_route() {
+    let policy = TransportPolicy::practical_default();
+    let local = TransportRoute::local("manual-envelope-exchange").expect("local route");
+    let onion = TransportRoute::onion("example.onion").expect("onion route");
+    let direct = TransportRoute::direct_peer("peer.example").expect("direct route");
+
+    assert_eq!(policy.mode(), TransportMode::LocalOnly);
+    assert_eq!(policy.require_allowed(&local), Ok(()));
+    assert_eq!(
+        policy.require_allowed(&onion),
+        Err(TransportError::PolicyViolation)
+    );
+    assert_eq!(
+        policy.require_allowed(&direct),
+        Err(TransportError::PolicyViolation)
+    );
+}
+
+#[test]
+fn advanced_high_risk_onion_policy_keeps_direct_fallback_rejected() {
+    let policy = TransportPolicy::advanced_high_risk_onion();
+    let onion = TransportRoute::onion("example.onion").expect("onion route");
+    let direct = TransportRoute::direct_peer("peer.example").expect("direct route");
+    let local = TransportRoute::local("manual-envelope-exchange").expect("local route");
+
+    assert_eq!(policy.mode(), TransportMode::HighRiskOnionOnly);
+    assert_eq!(policy.require_allowed(&onion), Ok(()));
+    assert_eq!(
+        policy.require_allowed(&direct),
+        Err(TransportError::PolicyViolation)
+    );
+    assert_eq!(
+        policy.require_allowed(&local),
+        Err(TransportError::PolicyViolation)
+    );
+}
+
+#[test]
 fn direct_peer_requires_explicit_low_risk_policy() {
     let policy = TransportPolicy::low_risk_direct_allowed();
     let onion = TransportRoute::onion("example.onion").expect("onion route");

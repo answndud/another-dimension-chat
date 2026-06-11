@@ -4,7 +4,7 @@
 
 Another Dimension Chat is not ready for real communication.
 
-The current public repository contains a Rust/Tauri prototype and a local desktop beta candidate. It is useful for testing development flow, local encrypted-store boundaries, invite-room recovery, explicit private-delivery actions, and fail-closed onion/Tor attempt behavior, but it does not provide production-grade confidentiality, anonymity, metadata resistance, endpoint protection, or user safety.
+The current public repository contains a Rust/Tauri prototype and a local desktop beta candidate. It is useful for testing development flow, local encrypted-store boundaries, invite-room recovery, explicit user-mediated private-delivery actions, and fail-closed advanced onion/Tor attempt behavior, but it does not provide production-grade confidentiality, anonymity, metadata resistance, endpoint protection, or user safety.
 
 For the v0.1 unsigned public beta, the product surface is the desktop Tauri
 beta shell. Android is only the next mobile client candidate after the shared
@@ -67,9 +67,12 @@ This project does not currently claim:
 - Reliable real-network Tor/onion delivery.
 - Completed independent external two-machine onion delivery evidence. Current
   single-machine local rehearsal is not external peer evidence.
-- Automatic network-on-launch, direct fallback, or usable send/receive transport
-  messaging. The transport envelope I/O boundary is fail-closed and explicit
-  user-triggered only.
+- Automatic network-on-launch, automatic background delivery, direct fallback,
+  central message server delivery, push-notification delivery dependency,
+  central contact discovery, or usable send/receive transport messaging. The
+  default practical transport path is explicit local manual encrypted envelope
+  exchange, and the advanced onion/Tor envelope I/O boundary is fail-closed and
+  explicit user-triggered only.
 - Audited production transport adapter implementation.
 - Audited bridge or censorship-circumvention support.
 - Production-ready Arti transport bootstrap, onion service launch, system Tor discovery, runtime Tor connectivity, or bridge/censorship behavior.
@@ -109,7 +112,7 @@ This project does not currently claim:
 
 ## Beta Distribution Boundary
 
-Internal beta artifacts are for field testing only. A beta handoff may exercise local encrypted stores, invite-room recovery, explicit receive start/stop, retry/cancel recovery, and explicit onion/Tor attempts, but it must not be described as secure, anonymous, audited, hardened, or suitable for sensitive communication.
+Internal beta artifacts are for field testing only. A beta handoff may exercise local encrypted stores, invite-room recovery, explicit receive start/stop, retry/cancel recovery, local manual encrypted envelope exchange, and explicit advanced onion/Tor attempts, but it must not be described as secure, anonymous, audited, hardened, or suitable for sensitive communication.
 
 The current internal field-test handoff record, when present in ignored local artifacts, uses transfer bundle SHA-256 `f231dcc3a95b63d5d32b6b36cb503443a46547fa1dcbb44d58f772be831d0907` and app DMG SHA-256 `625ee389d930330b0f2e369a53c4f582df076dd612920f6cf0366aab4a3edb95`. A different transfer bundle hash is a different handoff and must update the peer message, checksum file, and intake expectation before testers use it.
 
@@ -159,6 +162,8 @@ Public unsigned beta artifacts must not include local app data, private planning
 - Keep development-only crypto, storage, and transport behavior behind `dev-insecure`.
 - Preserve the `WARNING: dev-insecure build. Not for real communication.` runtime warning.
 - Do not add new security claims without matching implementation, tests, and review.
-- Keep high-risk transport policy onion-only unless a separate ADR changes that rule.
+- Keep the advanced high-risk onion/Tor transport policy onion-only unless a
+  separate ADR changes that rule. Any relay/store-and-forward design must first
+  prove it preserves the no-central-trusted-server model.
 - Do not persist production private keys, replay state, message envelopes, local message indexes, or session transport state as plaintext.
 - Do not publish private planning notes or sensitive threat-model details from ignored local documentation.

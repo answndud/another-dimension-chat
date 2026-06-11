@@ -38,7 +38,8 @@ pub mod production {
         PairwiseStreamSessionBinding, ProfileTransportUnlockReady,
         RedactedRemotePeerAuthenticationContext, RedactedStreamSessionVerificationContext,
         RemotePeerAuthenticationReady, RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
-        TransportBackupExclusionVerification, TransportKind, TransportPolicy, TransportRoute,
+        TransportBackupExclusionVerification, TransportKind, TransportMode, TransportPolicy,
+        TransportRoute,
     };
     use sha2::{Digest, Sha256};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -901,6 +902,18 @@ pub mod production {
         "external_two_machine_evidence_required",
     ];
 
+    const PRODUCTION_PRACTICAL_TRANSPORT_SPLIT_POLICIES: &[&str] = &[
+        "default_practical_transport_is_local_manual_envelope_exchange",
+        "advanced_high_risk_transport_is_onion_tor_only",
+        "advanced_transport_requires_explicit_user_action",
+        "no_network_on_launch",
+        "no_central_message_server",
+        "no_push_notification_dependency",
+        "no_central_contact_discovery",
+        "no_external_onion_delivery_claim_without_peer_reports",
+        "relay_store_and_forward_requires_separate_no_trusted_server_decision",
+    ];
+
     const PRODUCTION_SUPPLY_CHAIN_INTEGRITY_POLICIES: &[&str] = &[
         "manual_github_release_download",
         "dmg_sha256_required",
@@ -1107,6 +1120,30 @@ pub mod production {
         reliable_real_network_onion_delivery_claimed: bool,
         boundary_closed: bool,
         production_messaging_ready: bool,
+        security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPracticalTransportSplitSummary {
+        policies: &'static [&'static str],
+        default_transport_mode: TransportMode,
+        default_transport_route: TransportKind,
+        default_route_allowed_by_policy: bool,
+        default_manual_envelope_exchange: bool,
+        default_network_io_attempted: bool,
+        default_automatic_background_delivery_claimed: bool,
+        advanced_transport_mode: TransportMode,
+        advanced_transport_route: TransportKind,
+        advanced_route_allowed_by_policy: bool,
+        advanced_explicit_user_action_required: bool,
+        advanced_send_receive_available: bool,
+        advanced_external_onion_delivery_verified: bool,
+        central_message_server_allowed: bool,
+        push_notification_dependency_allowed: bool,
+        central_contact_discovery_allowed: bool,
+        relay_store_and_forward_decided: bool,
+        relay_store_and_forward_allowed: bool,
+        split_closed: bool,
         security_ready_claimed: bool,
     }
 
@@ -1620,6 +1657,88 @@ pub mod production {
 
         pub fn production_messaging_ready(self) -> bool {
             self.production_messaging_ready
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+    }
+
+    impl ProductionPracticalTransportSplitSummary {
+        pub fn policies(self) -> &'static [&'static str] {
+            self.policies
+        }
+
+        pub fn default_transport_mode(self) -> TransportMode {
+            self.default_transport_mode
+        }
+
+        pub fn default_transport_route(self) -> TransportKind {
+            self.default_transport_route
+        }
+
+        pub fn default_route_allowed_by_policy(self) -> bool {
+            self.default_route_allowed_by_policy
+        }
+
+        pub fn default_manual_envelope_exchange(self) -> bool {
+            self.default_manual_envelope_exchange
+        }
+
+        pub fn default_network_io_attempted(self) -> bool {
+            self.default_network_io_attempted
+        }
+
+        pub fn default_automatic_background_delivery_claimed(self) -> bool {
+            self.default_automatic_background_delivery_claimed
+        }
+
+        pub fn advanced_transport_mode(self) -> TransportMode {
+            self.advanced_transport_mode
+        }
+
+        pub fn advanced_transport_route(self) -> TransportKind {
+            self.advanced_transport_route
+        }
+
+        pub fn advanced_route_allowed_by_policy(self) -> bool {
+            self.advanced_route_allowed_by_policy
+        }
+
+        pub fn advanced_explicit_user_action_required(self) -> bool {
+            self.advanced_explicit_user_action_required
+        }
+
+        pub fn advanced_send_receive_available(self) -> bool {
+            self.advanced_send_receive_available
+        }
+
+        pub fn advanced_external_onion_delivery_verified(self) -> bool {
+            self.advanced_external_onion_delivery_verified
+        }
+
+        pub fn central_message_server_allowed(self) -> bool {
+            self.central_message_server_allowed
+        }
+
+        pub fn push_notification_dependency_allowed(self) -> bool {
+            self.push_notification_dependency_allowed
+        }
+
+        pub fn central_contact_discovery_allowed(self) -> bool {
+            self.central_contact_discovery_allowed
+        }
+
+        pub fn relay_store_and_forward_decided(self) -> bool {
+            self.relay_store_and_forward_decided
+        }
+
+        pub fn relay_store_and_forward_allowed(self) -> bool {
+            self.relay_store_and_forward_allowed
+        }
+
+        pub fn split_closed(self) -> bool {
+            self.split_closed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -9444,6 +9563,85 @@ pub mod production {
         }
     }
 
+    pub fn production_practical_transport_split_summary() -> ProductionPracticalTransportSplitSummary
+    {
+        let command_surface = production_runtime_command_surface_summary();
+        let onion_boundary = production_transport_envelope_io_boundary_summary();
+        let default_policy = TransportPolicy::practical_default();
+        let default_route = TransportRoute::local("manual-envelope-exchange")
+            .expect("static local manual exchange route is valid");
+        let advanced_policy = TransportPolicy::advanced_high_risk_onion();
+        let advanced_route =
+            TransportRoute::onion("advanced-preflight.onion").expect("static onion route is valid");
+        let direct_peer_default_allowed = default_policy
+            .require_allowed(
+                &TransportRoute::direct_peer("direct-peer")
+                    .expect("static direct peer endpoint is valid"),
+            )
+            .is_ok();
+
+        let default_route_allowed_by_policy =
+            default_policy.require_allowed(&default_route).is_ok();
+        let advanced_route_allowed_by_policy =
+            advanced_policy.require_allowed(&advanced_route).is_ok();
+        let default_manual_envelope_exchange = default_policy.mode() == TransportMode::LocalOnly
+            && default_route.kind() == TransportKind::LocalOnly
+            && !direct_peer_default_allowed;
+        let default_network_io_attempted = false;
+        let default_automatic_background_delivery_claimed = false;
+        let advanced_explicit_user_action_required =
+            command_surface.explicit_user_network_attempts_only();
+        let advanced_send_receive_available = onion_boundary.send_receive_available();
+        let advanced_external_onion_delivery_verified =
+            onion_boundary.external_two_machine_onion_delivery_verified();
+        let central_message_server_allowed = false;
+        let push_notification_dependency_allowed = false;
+        let central_contact_discovery_allowed = false;
+        let relay_store_and_forward_decided = false;
+        let relay_store_and_forward_allowed = false;
+        let split_closed = default_route_allowed_by_policy
+            && default_manual_envelope_exchange
+            && !default_network_io_attempted
+            && !default_automatic_background_delivery_claimed
+            && advanced_policy.mode() == TransportMode::HighRiskOnionOnly
+            && advanced_route.kind() == TransportKind::OnionService
+            && advanced_route_allowed_by_policy
+            && advanced_explicit_user_action_required
+            && !onion_boundary.automatic_network_on_launch_allowed()
+            && !advanced_send_receive_available
+            && !advanced_external_onion_delivery_verified
+            && !central_message_server_allowed
+            && !push_notification_dependency_allowed
+            && !central_contact_discovery_allowed
+            && !relay_store_and_forward_decided
+            && !relay_store_and_forward_allowed
+            && !onion_boundary.reliable_real_network_onion_delivery_claimed()
+            && !onion_boundary.security_ready_claimed();
+
+        ProductionPracticalTransportSplitSummary {
+            policies: PRODUCTION_PRACTICAL_TRANSPORT_SPLIT_POLICIES,
+            default_transport_mode: default_policy.mode(),
+            default_transport_route: default_route.kind(),
+            default_route_allowed_by_policy,
+            default_manual_envelope_exchange,
+            default_network_io_attempted,
+            default_automatic_background_delivery_claimed,
+            advanced_transport_mode: advanced_policy.mode(),
+            advanced_transport_route: advanced_route.kind(),
+            advanced_route_allowed_by_policy,
+            advanced_explicit_user_action_required,
+            advanced_send_receive_available,
+            advanced_external_onion_delivery_verified,
+            central_message_server_allowed,
+            push_notification_dependency_allowed,
+            central_contact_discovery_allowed,
+            relay_store_and_forward_decided,
+            relay_store_and_forward_allowed,
+            split_closed,
+            security_ready_claimed: false,
+        }
+    }
+
     pub fn production_supply_chain_integrity_boundary_summary(
     ) -> ProductionSupplyChainIntegrityBoundarySummary {
         let manual_github_release_download_required = true;
@@ -11577,6 +11775,46 @@ pub mod production {
                 selection.required_gate(),
                 "real external peer reports without fabricated local evidence"
             );
+        }
+
+        #[test]
+        fn production_practical_transport_split_keeps_default_manual_and_onion_advanced() {
+            let split = production_practical_transport_split_summary();
+
+            assert!(split.split_closed());
+            assert_eq!(split.default_transport_mode(), TransportMode::LocalOnly);
+            assert_eq!(split.default_transport_route(), TransportKind::LocalOnly);
+            assert!(split.default_route_allowed_by_policy());
+            assert!(split.default_manual_envelope_exchange());
+            assert!(!split.default_network_io_attempted());
+            assert!(!split.default_automatic_background_delivery_claimed());
+            assert_eq!(
+                split.advanced_transport_mode(),
+                TransportMode::HighRiskOnionOnly
+            );
+            assert_eq!(
+                split.advanced_transport_route(),
+                TransportKind::OnionService
+            );
+            assert!(split.advanced_route_allowed_by_policy());
+            assert!(split.advanced_explicit_user_action_required());
+            assert!(!split.advanced_send_receive_available());
+            assert!(!split.advanced_external_onion_delivery_verified());
+            assert!(!split.central_message_server_allowed());
+            assert!(!split.push_notification_dependency_allowed());
+            assert!(!split.central_contact_discovery_allowed());
+            assert!(!split.relay_store_and_forward_decided());
+            assert!(!split.relay_store_and_forward_allowed());
+            assert!(!split.security_ready_claimed());
+            assert!(split
+                .policies()
+                .contains(&"default_practical_transport_is_local_manual_envelope_exchange"));
+            assert!(split
+                .policies()
+                .contains(&"advanced_high_risk_transport_is_onion_tor_only"));
+            assert!(split
+                .policies()
+                .contains(&"relay_store_and_forward_requires_separate_no_trusted_server_decision"));
         }
 
         #[test]

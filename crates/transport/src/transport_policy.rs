@@ -34,6 +34,14 @@ pub struct TransportPolicy {
 }
 
 impl TransportPolicy {
+    pub fn practical_default() -> Self {
+        Self::local_only()
+    }
+
+    pub fn advanced_high_risk_onion() -> Self {
+        Self::high_risk_default()
+    }
+
     pub fn high_risk_default() -> Self {
         Self {
             mode: TransportMode::HighRiskOnionOnly,
