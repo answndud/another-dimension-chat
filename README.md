@@ -124,7 +124,15 @@ What exists today:
   channel/message-number/nonce binding is fixed, replay state is committed only
   after decrypt, and tamper failure must not advance receive state. This is still
   not an audited or production-ready E2EE claim.
-- Local data lifecycle controls for conversation message-record deletion, profile-store deletion, owned local app-data wipe, backup-exclusion preparation, local backup-exclusion verification boundaries, forward-only schema versioning, destructive-migration blocking, and marker-only rollback detection. These controls do not provide cloud backup/sync, backup recovery, secure deletion from media, or rollback prevention.
+- Local data lifecycle controls for conversation message-record deletion, session
+  resume-record deletion, profile-store deletion, owned local app-data wipe,
+  backup-exclusion preparation, local backup-exclusion verification boundaries,
+  forward-only schema versioning, destructive-migration blocking, and
+  marker-only rollback detection. The product scope is explicit:
+  conversation delete preserves session records, session delete preserves
+  message records, profile delete removes the local profile store, and full wipe
+  removes owned app data. These controls do not provide cloud backup/sync,
+  backup recovery, secure deletion from media, or rollback prevention.
 - A v0.1 key and rollback boundary decision: passphrase-first remains required,
   OS keystore or Secure Enclave style wrapping is optional and not required,
   OS-keystore-only unlock is rejected, app key wrapping is not claimed, and
@@ -173,7 +181,8 @@ What does not exist yet:
 - Actual onion service private key material.
 - Complete production key management. The desktop shell now has a passphrase-first product unlock/lock state, local durable session lifecycle records, local data lifecycle controls, and a v0.1 key/rollback boundary decision, but it does not claim app key wrapping, secure deletion from media, rollback prevention, audited E2EE readiness, or automatic/network runtime messaging readiness.
 - OS keychain/DPAPI/Keystore wrapping.
-- Complete production encrypted local storage lifecycle with cloud backup/sync, backup recovery, or secure deletion guarantees.
+- Complete production encrypted local storage lifecycle with cloud backup/sync,
+  backup recovery, rollback prevention, or secure deletion guarantees.
 - Replay rollback prevention against encrypted database snapshot restore.
 - Production Tauri desktop app. The current Tauri shell is a local beta candidate, not a secure release.
 - Public Windows installer or Windows public beta artifact. Windows is only a

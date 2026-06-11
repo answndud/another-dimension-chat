@@ -77,7 +77,11 @@ This project does not currently claim:
 - Actual onion service private key material.
 - Complete production key management. The desktop shell has a passphrase-first local product unlock/lock path, local durable session lifecycle records, local data lifecycle controls, an explicit manual envelope export/import runtime gate, a local manual E2EE runtime failure-model gate, and a v0.1 key/rollback policy decision, but app key wrapping, secure deletion from media, rollback prevention, audited E2EE readiness, automatic messaging readiness, and network send/receive readiness are still not claimed.
 - OS keychain/DPAPI/Keystore wrapping.
-- Complete production encrypted local storage lifecycle with cloud backup/sync, backup recovery, or secure deletion guarantees.
+- Complete production encrypted local storage lifecycle with cloud backup/sync,
+  backup recovery, rollback prevention, or secure deletion guarantees. The
+  current product lifecycle matrix only distinguishes local conversation delete,
+  session resume-record delete, profile delete, and full local app-data wipe
+  scopes.
 - Durable production key storage.
 - Audited or security-ready durable production session lifecycle.
 - Replay rollback prevention against encrypted database snapshot restore.
