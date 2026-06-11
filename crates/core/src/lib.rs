@@ -1576,6 +1576,42 @@ pub mod production {
         "security-ready",
     ];
 
+    const PRODUCTION_MOBILE_RECEIVE_IMPORT_CHECKLIST_REQUIRED_ITEMS: &[&str] = &[
+        "receive/import checklist status only",
+        "encrypted envelope import is explicit user action",
+        "inbound envelope decoded locally",
+        "verified pairwise session required before import",
+        "session transport required before import",
+        "replay window check required",
+        "tamper failure does not advance state",
+        "received transcript write is local",
+        "plaintext shown only after local decrypt",
+        "network receive not claimed",
+        "external onion delivery not claimed",
+        "background receive not claimed",
+        "security-ready not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_RECEIVE_IMPORT_CHECKLIST_FORBIDDEN_CLAIMS: &[&str] = &[
+        "receive in background",
+        "automatic network receive",
+        "push receive enabled",
+        "message received from network",
+        "connected to peer",
+        "message delivery verified",
+        "delivery acknowledgement received",
+        "external onion delivery verified",
+        "replay prevention guaranteed",
+        "tamper recovery guaranteed",
+        "plaintext stored unencrypted",
+        "key material exposed",
+        "cloud backup enabled",
+        "production messaging ready",
+        "production E2EE ready",
+        "safe for sensitive communication",
+        "security-ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -2182,6 +2218,37 @@ pub mod production {
         delivery_success_claim_allowed: bool,
         plaintext_or_key_material_display_allowed: bool,
         production_e2ee_ready_claimed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileReceiveImportChecklistBoundarySummary {
+        required_checklist_items: &'static [&'static str],
+        forbidden_receive_claims: &'static [&'static str],
+        inherits_mobile_manual_envelope_exchange_checklist_boundary: bool,
+        inherits_manual_runtime_messaging_gate: bool,
+        inherits_local_manual_e2ee_runtime_boundary: bool,
+        receive_import_status_only_label_required: bool,
+        explicit_inbound_import_label_required: bool,
+        inbound_envelope_decoded_locally_label_required: bool,
+        verified_pairwise_session_label_required: bool,
+        session_transport_label_required: bool,
+        replay_window_check_label_required: bool,
+        tamper_failure_non_advance_label_required: bool,
+        local_received_transcript_label_required: bool,
+        plaintext_after_local_decrypt_label_required: bool,
+        network_receive_non_claim_required: bool,
+        external_delivery_non_claim_required: bool,
+        background_receive_non_claim_required: bool,
+        automatic_receive_claim_allowed: bool,
+        push_receive_claim_allowed: bool,
+        network_message_received_claim_allowed: bool,
+        peer_connected_claim_allowed: bool,
+        delivery_success_claim_allowed: bool,
+        replay_prevention_claim_allowed: bool,
+        plaintext_or_key_material_exposure_allowed: bool,
+        production_messaging_ready_claimed: bool,
         security_ready_claimed: bool,
         boundary_closed: bool,
     }
@@ -3852,6 +3919,116 @@ pub mod production {
 
         pub fn production_e2ee_ready_claimed(self) -> bool {
             self.production_e2ee_ready_claimed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileReceiveImportChecklistBoundarySummary {
+        pub fn required_checklist_items(self) -> &'static [&'static str] {
+            self.required_checklist_items
+        }
+
+        pub fn forbidden_receive_claims(self) -> &'static [&'static str] {
+            self.forbidden_receive_claims
+        }
+
+        pub fn inherits_mobile_manual_envelope_exchange_checklist_boundary(self) -> bool {
+            self.inherits_mobile_manual_envelope_exchange_checklist_boundary
+        }
+
+        pub fn inherits_manual_runtime_messaging_gate(self) -> bool {
+            self.inherits_manual_runtime_messaging_gate
+        }
+
+        pub fn inherits_local_manual_e2ee_runtime_boundary(self) -> bool {
+            self.inherits_local_manual_e2ee_runtime_boundary
+        }
+
+        pub fn receive_import_status_only_label_required(self) -> bool {
+            self.receive_import_status_only_label_required
+        }
+
+        pub fn explicit_inbound_import_label_required(self) -> bool {
+            self.explicit_inbound_import_label_required
+        }
+
+        pub fn inbound_envelope_decoded_locally_label_required(self) -> bool {
+            self.inbound_envelope_decoded_locally_label_required
+        }
+
+        pub fn verified_pairwise_session_label_required(self) -> bool {
+            self.verified_pairwise_session_label_required
+        }
+
+        pub fn session_transport_label_required(self) -> bool {
+            self.session_transport_label_required
+        }
+
+        pub fn replay_window_check_label_required(self) -> bool {
+            self.replay_window_check_label_required
+        }
+
+        pub fn tamper_failure_non_advance_label_required(self) -> bool {
+            self.tamper_failure_non_advance_label_required
+        }
+
+        pub fn local_received_transcript_label_required(self) -> bool {
+            self.local_received_transcript_label_required
+        }
+
+        pub fn plaintext_after_local_decrypt_label_required(self) -> bool {
+            self.plaintext_after_local_decrypt_label_required
+        }
+
+        pub fn network_receive_non_claim_required(self) -> bool {
+            self.network_receive_non_claim_required
+        }
+
+        pub fn external_delivery_non_claim_required(self) -> bool {
+            self.external_delivery_non_claim_required
+        }
+
+        pub fn background_receive_non_claim_required(self) -> bool {
+            self.background_receive_non_claim_required
+        }
+
+        pub fn automatic_receive_claim_allowed(self) -> bool {
+            self.automatic_receive_claim_allowed
+        }
+
+        pub fn push_receive_claim_allowed(self) -> bool {
+            self.push_receive_claim_allowed
+        }
+
+        pub fn network_message_received_claim_allowed(self) -> bool {
+            self.network_message_received_claim_allowed
+        }
+
+        pub fn peer_connected_claim_allowed(self) -> bool {
+            self.peer_connected_claim_allowed
+        }
+
+        pub fn delivery_success_claim_allowed(self) -> bool {
+            self.delivery_success_claim_allowed
+        }
+
+        pub fn replay_prevention_claim_allowed(self) -> bool {
+            self.replay_prevention_claim_allowed
+        }
+
+        pub fn plaintext_or_key_material_exposure_allowed(self) -> bool {
+            self.plaintext_or_key_material_exposure_allowed
+        }
+
+        pub fn production_messaging_ready_claimed(self) -> bool {
+            self.production_messaging_ready_claimed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -13705,6 +13882,137 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_receive_import_checklist_boundary_summary(
+    ) -> ProductionMobileReceiveImportChecklistBoundarySummary {
+        let exchange = production_mobile_manual_envelope_exchange_checklist_boundary_summary();
+        let gate = production_manual_runtime_messaging_gate_summary();
+        let runtime = production_local_manual_e2ee_runtime_summary();
+        let inherits_mobile_manual_envelope_exchange_checklist_boundary = exchange
+            .boundary_closed()
+            && exchange.explicit_envelope_import_label_required()
+            && exchange.local_transcript_write_label_required()
+            && exchange.network_io_non_claim_required()
+            && exchange.external_delivery_non_claim_required()
+            && exchange.delivery_ack_non_claim_required()
+            && !exchange.automatic_network_claim_allowed()
+            && !exchange.push_or_background_delivery_claim_allowed()
+            && !exchange.delivery_success_claim_allowed()
+            && !exchange.security_ready_claimed();
+        let inherits_manual_runtime_messaging_gate = gate.gate_reviewed()
+            && gate.manual_runtime_messaging_enabled()
+            && gate.explicit_user_action_required()
+            && gate.encrypted_envelope_export_import_ready()
+            && gate.local_transcript_ready()
+            && !gate.automatic_network_on_launch_allowed()
+            && !gate.network_io_attempted()
+            && !gate.external_onion_delivery_verified()
+            && !gate.production_messaging_ready()
+            && !gate.security_ready_claimed();
+        let inherits_local_manual_e2ee_runtime_boundary = runtime.gate_reviewed()
+            && runtime.local_manual_e2ee_runtime_ready()
+            && runtime.remote_static_verification_required()
+            && runtime.safety_transcript_bound()
+            && runtime.replay_commit_after_decrypt()
+            && runtime.tamper_failure_non_advance()
+            && runtime.explicit_envelope_export_import_ready()
+            && !runtime.network_io_attempted()
+            && !runtime.production_e2ee_ready()
+            && !runtime.security_ready_claimed();
+        let receive_import_status_only_label_required = true;
+        let explicit_inbound_import_label_required = true;
+        let inbound_envelope_decoded_locally_label_required = true;
+        let verified_pairwise_session_label_required = true;
+        let session_transport_label_required = true;
+        let replay_window_check_label_required = true;
+        let tamper_failure_non_advance_label_required = true;
+        let local_received_transcript_label_required = true;
+        let plaintext_after_local_decrypt_label_required = true;
+        let network_receive_non_claim_required = true;
+        let external_delivery_non_claim_required = true;
+        let background_receive_non_claim_required = true;
+        let automatic_receive_claim_allowed = false;
+        let push_receive_claim_allowed = false;
+        let network_message_received_claim_allowed = false;
+        let peer_connected_claim_allowed = false;
+        let delivery_success_claim_allowed = false;
+        let replay_prevention_claim_allowed = false;
+        let plaintext_or_key_material_exposure_allowed = false;
+        let production_messaging_ready_claimed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_manual_envelope_exchange_checklist_boundary
+            && inherits_manual_runtime_messaging_gate
+            && inherits_local_manual_e2ee_runtime_boundary
+            && receive_import_status_only_label_required
+            && explicit_inbound_import_label_required
+            && inbound_envelope_decoded_locally_label_required
+            && verified_pairwise_session_label_required
+            && session_transport_label_required
+            && replay_window_check_label_required
+            && tamper_failure_non_advance_label_required
+            && local_received_transcript_label_required
+            && plaintext_after_local_decrypt_label_required
+            && network_receive_non_claim_required
+            && external_delivery_non_claim_required
+            && background_receive_non_claim_required
+            && !automatic_receive_claim_allowed
+            && !push_receive_claim_allowed
+            && !network_message_received_claim_allowed
+            && !peer_connected_claim_allowed
+            && !delivery_success_claim_allowed
+            && !replay_prevention_claim_allowed
+            && !plaintext_or_key_material_exposure_allowed
+            && !production_messaging_ready_claimed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_RECEIVE_IMPORT_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"receive/import checklist status only")
+            && PRODUCTION_MOBILE_RECEIVE_IMPORT_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"encrypted envelope import is explicit user action")
+            && PRODUCTION_MOBILE_RECEIVE_IMPORT_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"inbound envelope decoded locally")
+            && PRODUCTION_MOBILE_RECEIVE_IMPORT_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"network receive not claimed")
+            && PRODUCTION_MOBILE_RECEIVE_IMPORT_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"automatic network receive")
+            && PRODUCTION_MOBILE_RECEIVE_IMPORT_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"message received from network")
+            && PRODUCTION_MOBILE_RECEIVE_IMPORT_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"replay prevention guaranteed")
+            && PRODUCTION_MOBILE_RECEIVE_IMPORT_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"plaintext stored unencrypted")
+            && PRODUCTION_MOBILE_RECEIVE_IMPORT_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"security-ready");
+
+        ProductionMobileReceiveImportChecklistBoundarySummary {
+            required_checklist_items: PRODUCTION_MOBILE_RECEIVE_IMPORT_CHECKLIST_REQUIRED_ITEMS,
+            forbidden_receive_claims: PRODUCTION_MOBILE_RECEIVE_IMPORT_CHECKLIST_FORBIDDEN_CLAIMS,
+            inherits_mobile_manual_envelope_exchange_checklist_boundary,
+            inherits_manual_runtime_messaging_gate,
+            inherits_local_manual_e2ee_runtime_boundary,
+            receive_import_status_only_label_required,
+            explicit_inbound_import_label_required,
+            inbound_envelope_decoded_locally_label_required,
+            verified_pairwise_session_label_required,
+            session_transport_label_required,
+            replay_window_check_label_required,
+            tamper_failure_non_advance_label_required,
+            local_received_transcript_label_required,
+            plaintext_after_local_decrypt_label_required,
+            network_receive_non_claim_required,
+            external_delivery_non_claim_required,
+            background_receive_non_claim_required,
+            automatic_receive_claim_allowed,
+            push_receive_claim_allowed,
+            network_message_received_claim_allowed,
+            peer_connected_claim_allowed,
+            delivery_success_claim_allowed,
+            replay_prevention_claim_allowed,
+            plaintext_or_key_material_exposure_allowed,
+            production_messaging_ready_claimed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -17578,6 +17886,128 @@ pub mod production {
                 .contains(&"safe for sensitive communication"));
             assert!(boundary
                 .forbidden_exchange_claims()
+                .contains(&"security-ready"));
+        }
+
+        #[test]
+        fn production_mobile_receive_import_checklist_boundary_keeps_receive_local_and_non_claiming(
+        ) {
+            let boundary = production_mobile_receive_import_checklist_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_manual_envelope_exchange_checklist_boundary());
+            assert!(boundary.inherits_manual_runtime_messaging_gate());
+            assert!(boundary.inherits_local_manual_e2ee_runtime_boundary());
+            assert!(boundary.receive_import_status_only_label_required());
+            assert!(boundary.explicit_inbound_import_label_required());
+            assert!(boundary.inbound_envelope_decoded_locally_label_required());
+            assert!(boundary.verified_pairwise_session_label_required());
+            assert!(boundary.session_transport_label_required());
+            assert!(boundary.replay_window_check_label_required());
+            assert!(boundary.tamper_failure_non_advance_label_required());
+            assert!(boundary.local_received_transcript_label_required());
+            assert!(boundary.plaintext_after_local_decrypt_label_required());
+            assert!(boundary.network_receive_non_claim_required());
+            assert!(boundary.external_delivery_non_claim_required());
+            assert!(boundary.background_receive_non_claim_required());
+            assert!(!boundary.automatic_receive_claim_allowed());
+            assert!(!boundary.push_receive_claim_allowed());
+            assert!(!boundary.network_message_received_claim_allowed());
+            assert!(!boundary.peer_connected_claim_allowed());
+            assert!(!boundary.delivery_success_claim_allowed());
+            assert!(!boundary.replay_prevention_claim_allowed());
+            assert!(!boundary.plaintext_or_key_material_exposure_allowed());
+            assert!(!boundary.production_messaging_ready_claimed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"receive/import checklist status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"encrypted envelope import is explicit user action"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"inbound envelope decoded locally"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"verified pairwise session required before import"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"session transport required before import"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"replay window check required"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"tamper failure does not advance state"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"received transcript write is local"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"plaintext shown only after local decrypt"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"network receive not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"external onion delivery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"background receive not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"security-ready not claimed"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"receive in background"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"automatic network receive"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"push receive enabled"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"message received from network"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"connected to peer"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"message delivery verified"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"delivery acknowledgement received"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"external onion delivery verified"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"replay prevention guaranteed"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"tamper recovery guaranteed"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"plaintext stored unencrypted"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"key material exposed"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"cloud backup enabled"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"production messaging ready"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"production E2EE ready"));
+            assert!(boundary
+                .forbidden_receive_claims()
+                .contains(&"safe for sensitive communication"));
+            assert!(boundary
+                .forbidden_receive_claims()
                 .contains(&"security-ready"));
         }
 
