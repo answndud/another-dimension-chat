@@ -1147,6 +1147,59 @@ pub mod production {
         "notarization_security_claim",
     ];
 
+    const PRODUCTION_MOBILE_WRAPPER_UX_COPY_PLATFORMS: &[&str] =
+        &["android_shell_candidate", "ios_shell_candidate"];
+
+    const PRODUCTION_MOBILE_WRAPPER_UX_REQUIRED_PUBLIC_PHRASES: &[&str] = &[
+        "unsigned experimental public beta",
+        "mobile clients are not part of this public beta",
+        "sensitive communication prohibited",
+        "not audited",
+        "not production-ready",
+        "redacted status only",
+        "manual update verification required",
+        "external onion delivery not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_WRAPPER_UX_FORBIDDEN_CLAIMS: &[&str] = &[
+        "mobile_public_beta_claim",
+        "android_app_readiness",
+        "ios_app_readiness",
+        "secure messenger",
+        "safe for sensitive communication",
+        "audited",
+        "production-ready",
+        "sensitive_communication_allowed",
+        "independent_protocol_semantics",
+        "wrapper_specific_storage_semantics",
+        "wrapper_specific_transport_semantics",
+        "central_contact_discovery",
+        "central_message_server",
+        "store approval security",
+        "testflight security",
+        "play_store_security_trust",
+        "app_store_security_trust",
+        "testflight_security_trust",
+        "mobile_review_security_claim",
+        "platform_signing_security_claim",
+        "google_account_identity",
+        "play_services_required",
+        "firebase_cloud_messaging_required",
+        "android_keystore_only_unlock",
+        "apple_account_identity",
+        "icloud_backup",
+        "apple_push_notification_service_required",
+        "keychain_only_unlock",
+        "push delivery available",
+        "background delivery available",
+        "push_notification_delivery",
+        "cloud backup available",
+        "cloud_backup_sync",
+        "external onion delivery success",
+        "briar_cwtch_equivalent",
+        "security-ready",
+    ];
+
     const PRODUCTION_INDEPENDENT_REVIEW_POLICIES: &[&str] = &[
         "public_threat_model_required",
         "independent_review_packet_required",
@@ -1483,6 +1536,30 @@ pub mod production {
         copied_cross_release_evidence_allowed: bool,
         boundary_closed: bool,
         security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileWrapperUxCopyBoundarySummary {
+        platforms: &'static [&'static str],
+        required_public_phrases: &'static [&'static str],
+        forbidden_claims: &'static [&'static str],
+        inherits_public_non_claims: bool,
+        inherits_mobile_install_update_boundary: bool,
+        inherits_mobile_status_boundary: bool,
+        unsigned_experimental_beta_phrase_required: bool,
+        sensitive_communication_prohibited_phrase_required: bool,
+        not_audited_phrase_required: bool,
+        not_production_ready_phrase_required: bool,
+        redacted_status_only_phrase_required: bool,
+        manual_update_verification_phrase_required: bool,
+        external_onion_delivery_non_claim_required: bool,
+        store_trust_claim_allowed: bool,
+        push_or_background_delivery_claim_allowed: bool,
+        cloud_backup_claim_allowed: bool,
+        external_onion_delivery_success_claim_allowed: bool,
+        briar_cwtch_equivalence_claim_allowed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -2413,6 +2490,88 @@ pub mod production {
 
         pub fn security_ready_claimed(self) -> bool {
             self.security_ready_claimed
+        }
+    }
+
+    impl ProductionMobileWrapperUxCopyBoundarySummary {
+        pub fn platforms(self) -> &'static [&'static str] {
+            self.platforms
+        }
+
+        pub fn required_public_phrases(self) -> &'static [&'static str] {
+            self.required_public_phrases
+        }
+
+        pub fn forbidden_claims(self) -> &'static [&'static str] {
+            self.forbidden_claims
+        }
+
+        pub fn inherits_public_non_claims(self) -> bool {
+            self.inherits_public_non_claims
+        }
+
+        pub fn inherits_mobile_install_update_boundary(self) -> bool {
+            self.inherits_mobile_install_update_boundary
+        }
+
+        pub fn inherits_mobile_status_boundary(self) -> bool {
+            self.inherits_mobile_status_boundary
+        }
+
+        pub fn unsigned_experimental_beta_phrase_required(self) -> bool {
+            self.unsigned_experimental_beta_phrase_required
+        }
+
+        pub fn sensitive_communication_prohibited_phrase_required(self) -> bool {
+            self.sensitive_communication_prohibited_phrase_required
+        }
+
+        pub fn not_audited_phrase_required(self) -> bool {
+            self.not_audited_phrase_required
+        }
+
+        pub fn not_production_ready_phrase_required(self) -> bool {
+            self.not_production_ready_phrase_required
+        }
+
+        pub fn redacted_status_only_phrase_required(self) -> bool {
+            self.redacted_status_only_phrase_required
+        }
+
+        pub fn manual_update_verification_phrase_required(self) -> bool {
+            self.manual_update_verification_phrase_required
+        }
+
+        pub fn external_onion_delivery_non_claim_required(self) -> bool {
+            self.external_onion_delivery_non_claim_required
+        }
+
+        pub fn store_trust_claim_allowed(self) -> bool {
+            self.store_trust_claim_allowed
+        }
+
+        pub fn push_or_background_delivery_claim_allowed(self) -> bool {
+            self.push_or_background_delivery_claim_allowed
+        }
+
+        pub fn cloud_backup_claim_allowed(self) -> bool {
+            self.cloud_backup_claim_allowed
+        }
+
+        pub fn external_onion_delivery_success_claim_allowed(self) -> bool {
+            self.external_onion_delivery_success_claim_allowed
+        }
+
+        pub fn briar_cwtch_equivalence_claim_allowed(self) -> bool {
+            self.briar_cwtch_equivalence_claim_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
         }
     }
 
@@ -10868,6 +11027,98 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_wrapper_ux_copy_boundary_summary(
+    ) -> ProductionMobileWrapperUxCopyBoundarySummary {
+        let install_update = production_mobile_install_update_integrity_boundary_summary();
+        let status = production_mobile_runtime_command_surface_status_summary();
+        let review = production_independent_review_boundary_summary();
+        let inherits_public_non_claims = review.boundary_closed()
+            && review.public_non_claims_required()
+            && !review.sensitive_communication_allowed()
+            && !review.security_ready_claimed();
+        let inherits_mobile_install_update_boundary = install_update.boundary_closed()
+            && install_update.public_non_claims_required()
+            && !install_update.store_distribution_security_claimed()
+            && !install_update.auto_update_enabled();
+        let inherits_mobile_status_boundary = status.boundary_closed()
+            && status.redacted_status_only()
+            && !status.network_io_attempted()
+            && !status.runtime_messaging_enabled();
+        let unsigned_experimental_beta_phrase_required = true;
+        let sensitive_communication_prohibited_phrase_required = true;
+        let not_audited_phrase_required = true;
+        let not_production_ready_phrase_required = true;
+        let redacted_status_only_phrase_required = true;
+        let manual_update_verification_phrase_required = true;
+        let external_onion_delivery_non_claim_required = true;
+        let store_trust_claim_allowed = false;
+        let push_or_background_delivery_claim_allowed = false;
+        let cloud_backup_claim_allowed = false;
+        let external_onion_delivery_success_claim_allowed = false;
+        let briar_cwtch_equivalence_claim_allowed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_public_non_claims
+            && inherits_mobile_install_update_boundary
+            && inherits_mobile_status_boundary
+            && unsigned_experimental_beta_phrase_required
+            && sensitive_communication_prohibited_phrase_required
+            && not_audited_phrase_required
+            && not_production_ready_phrase_required
+            && redacted_status_only_phrase_required
+            && manual_update_verification_phrase_required
+            && external_onion_delivery_non_claim_required
+            && !store_trust_claim_allowed
+            && !push_or_background_delivery_claim_allowed
+            && !cloud_backup_claim_allowed
+            && !external_onion_delivery_success_claim_allowed
+            && !briar_cwtch_equivalence_claim_allowed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_WRAPPER_UX_REQUIRED_PUBLIC_PHRASES
+                .contains(&"unsigned experimental public beta")
+            && PRODUCTION_MOBILE_WRAPPER_UX_REQUIRED_PUBLIC_PHRASES
+                .contains(&"mobile clients are not part of this public beta")
+            && PRODUCTION_MOBILE_WRAPPER_UX_REQUIRED_PUBLIC_PHRASES
+                .contains(&"sensitive communication prohibited")
+            && PRODUCTION_MOBILE_WRAPPER_UX_REQUIRED_PUBLIC_PHRASES.contains(&"not audited")
+            && PRODUCTION_MOBILE_WRAPPER_UX_REQUIRED_PUBLIC_PHRASES
+                .contains(&"not production-ready")
+            && PRODUCTION_MOBILE_WRAPPER_UX_FORBIDDEN_CLAIMS.contains(&"android_app_readiness")
+            && PRODUCTION_MOBILE_WRAPPER_UX_FORBIDDEN_CLAIMS.contains(&"ios_app_readiness")
+            && PRODUCTION_MOBILE_WRAPPER_UX_FORBIDDEN_CLAIMS.contains(&"secure messenger")
+            && PRODUCTION_MOBILE_WRAPPER_UX_FORBIDDEN_CLAIMS
+                .contains(&"safe for sensitive communication")
+            && PRODUCTION_MOBILE_WRAPPER_UX_FORBIDDEN_CLAIMS
+                .contains(&"wrapper_specific_storage_semantics")
+            && PRODUCTION_MOBILE_WRAPPER_UX_FORBIDDEN_CLAIMS
+                .contains(&"wrapper_specific_transport_semantics")
+            && PRODUCTION_MOBILE_WRAPPER_UX_FORBIDDEN_CLAIMS
+                .contains(&"external onion delivery success")
+            && PRODUCTION_MOBILE_WRAPPER_UX_FORBIDDEN_CLAIMS.contains(&"security-ready");
+
+        ProductionMobileWrapperUxCopyBoundarySummary {
+            platforms: PRODUCTION_MOBILE_WRAPPER_UX_COPY_PLATFORMS,
+            required_public_phrases: PRODUCTION_MOBILE_WRAPPER_UX_REQUIRED_PUBLIC_PHRASES,
+            forbidden_claims: PRODUCTION_MOBILE_WRAPPER_UX_FORBIDDEN_CLAIMS,
+            inherits_public_non_claims,
+            inherits_mobile_install_update_boundary,
+            inherits_mobile_status_boundary,
+            unsigned_experimental_beta_phrase_required,
+            sensitive_communication_prohibited_phrase_required,
+            not_audited_phrase_required,
+            not_production_ready_phrase_required,
+            redacted_status_only_phrase_required,
+            manual_update_verification_phrase_required,
+            external_onion_delivery_non_claim_required,
+            store_trust_claim_allowed,
+            push_or_background_delivery_claim_allowed,
+            cloud_backup_claim_allowed,
+            external_onion_delivery_success_claim_allowed,
+            briar_cwtch_equivalence_claim_allowed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_independent_review_boundary_summary(
     ) -> ProductionIndependentReviewBoundarySummary {
         let public_threat_model_required = true;
@@ -13665,6 +13916,129 @@ pub mod production {
             assert!(boundary
                 .rejected_trust_channels()
                 .contains(&"notarization_security_claim"));
+        }
+
+        #[test]
+        fn production_mobile_wrapper_ux_copy_boundary_preserves_public_non_claims() {
+            let boundary = production_mobile_wrapper_ux_copy_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert_eq!(
+                boundary.platforms(),
+                &["android_shell_candidate", "ios_shell_candidate"]
+            );
+            assert!(boundary.inherits_public_non_claims());
+            assert!(boundary.inherits_mobile_install_update_boundary());
+            assert!(boundary.inherits_mobile_status_boundary());
+            assert!(boundary.unsigned_experimental_beta_phrase_required());
+            assert!(boundary.sensitive_communication_prohibited_phrase_required());
+            assert!(boundary.not_audited_phrase_required());
+            assert!(boundary.not_production_ready_phrase_required());
+            assert!(boundary.redacted_status_only_phrase_required());
+            assert!(boundary.manual_update_verification_phrase_required());
+            assert!(boundary.external_onion_delivery_non_claim_required());
+            assert!(!boundary.store_trust_claim_allowed());
+            assert!(!boundary.push_or_background_delivery_claim_allowed());
+            assert!(!boundary.cloud_backup_claim_allowed());
+            assert!(!boundary.external_onion_delivery_success_claim_allowed());
+            assert!(!boundary.briar_cwtch_equivalence_claim_allowed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_public_phrases()
+                .contains(&"unsigned experimental public beta"));
+            assert!(boundary
+                .required_public_phrases()
+                .contains(&"mobile clients are not part of this public beta"));
+            assert!(boundary
+                .required_public_phrases()
+                .contains(&"sensitive communication prohibited"));
+            assert!(boundary.required_public_phrases().contains(&"not audited"));
+            assert!(boundary
+                .required_public_phrases()
+                .contains(&"not production-ready"));
+            assert!(boundary
+                .required_public_phrases()
+                .contains(&"redacted status only"));
+            assert!(boundary
+                .required_public_phrases()
+                .contains(&"manual update verification required"));
+            assert!(boundary
+                .required_public_phrases()
+                .contains(&"external onion delivery not claimed"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"mobile_public_beta_claim"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"android_app_readiness"));
+            assert!(boundary.forbidden_claims().contains(&"ios_app_readiness"));
+            assert!(boundary.forbidden_claims().contains(&"secure messenger"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"safe for sensitive communication"));
+            assert!(boundary.forbidden_claims().contains(&"production-ready"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"sensitive_communication_allowed"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"independent_protocol_semantics"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"wrapper_specific_storage_semantics"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"wrapper_specific_transport_semantics"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"central_contact_discovery"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"central_message_server"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"store approval security"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"play_store_security_trust"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"app_store_security_trust"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"testflight_security_trust"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"mobile_review_security_claim"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"platform_signing_security_claim"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"google_account_identity"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"firebase_cloud_messaging_required"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"apple_account_identity"));
+            assert!(boundary.forbidden_claims().contains(&"icloud_backup"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"push delivery available"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"push_notification_delivery"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"background delivery available"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"cloud backup available"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"external onion delivery success"));
+            assert!(boundary.forbidden_claims().contains(&"security-ready"));
         }
 
         #[test]
