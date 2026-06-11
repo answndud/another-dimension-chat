@@ -840,6 +840,22 @@ const dictionaries = {
     postWipeRoomRebuildWarning:
       "Saved room metadata was cleared after local wipe. Start again with local profiles and a new invite room.",
     postWipeRoomRebuildNext: "Next: create local profiles, then create or join a new invite room.",
+    manualRebuildNeededNext: "Next: create or join an invite room as a local-only rebuild flow.",
+    manualRebuildInviteStartedWarning:
+      "Local rebuild flow started. Unlock/create the local profiles, then open and check the saved room state.",
+    manualRebuildInviteStartedNext:
+      "Next: unlock or create local profiles for this invite room, then open the room.",
+    manualRebuildRoomOpeningWarning:
+      "Opening the rebuild room locally. No cloud recovery, backup recovery, or network delivery is started.",
+    manualRebuildRoomOpeningNext: "Next: wait for the local room open result, then check saved room state.",
+    manualRebuildRoomReadyWarning:
+      "Rebuild room is ready locally. Write the first message or check the saved room state before retrying delivery.",
+    manualRebuildRoomReadyNext: "Next: write the first message or check the saved room state.",
+    manualRebuildSessionCheckWarning: "Checking rebuild room state in local encrypted stores only.",
+    manualRebuildSessionCheckNext: "Next: wait for the local saved-room check, then write the first message.",
+    manualRebuildConversationLoadedWarning:
+      "Rebuild conversation loaded locally. Continue with a fresh message before enabling delivery.",
+    manualRebuildConversationLoadedNext: "Next: write the first message for the rebuilt room.",
     profileLocked: "Profile locked",
     nextEnterProfilePassphrase: "Next: enter profile and passphrase.",
     productionProfileLockedWarning: "Production profile has not been unlocked yet.",
@@ -1797,6 +1813,22 @@ const dictionaries = {
     postWipeRoomRebuildWarning:
       "로컬 삭제 후 저장된 채팅방 메타데이터를 정리했습니다. 로컬 프로필과 새 초대방으로 다시 시작하세요.",
     postWipeRoomRebuildNext: "다음: 로컬 프로필을 만든 뒤 새 초대방을 만들거나 참여하세요.",
+    manualRebuildNeededNext: "다음: local-only rebuild 흐름으로 초대방을 만들거나 참여하세요.",
+    manualRebuildInviteStartedWarning:
+      "로컬 rebuild 흐름을 시작했습니다. 로컬 프로필을 열거나 만든 뒤 채팅방을 열고 저장된 방 상태를 확인하세요.",
+    manualRebuildInviteStartedNext:
+      "다음: 이 초대방의 로컬 프로필을 열거나 만든 뒤 채팅방을 여세요.",
+    manualRebuildRoomOpeningWarning:
+      "rebuild 방을 로컬에서 여는 중입니다. 클라우드 복구, 백업 복구, 네트워크 전송은 시작하지 않습니다.",
+    manualRebuildRoomOpeningNext: "다음: 로컬 채팅방 열기 결과를 기다린 뒤 저장된 방 상태를 확인하세요.",
+    manualRebuildRoomReadyWarning:
+      "rebuild 방이 로컬에서 준비됐습니다. 전송을 다시 시도하기 전에 첫 메시지를 쓰거나 저장된 방 상태를 확인하세요.",
+    manualRebuildRoomReadyNext: "다음: 첫 메시지를 쓰거나 저장된 방 상태를 확인하세요.",
+    manualRebuildSessionCheckWarning: "로컬 암호화 저장소에서만 rebuild 방 상태를 확인하는 중입니다.",
+    manualRebuildSessionCheckNext: "다음: 로컬 저장된 방 확인을 기다린 뒤 첫 메시지를 쓰세요.",
+    manualRebuildConversationLoadedWarning:
+      "rebuild 대화를 로컬에서 불러왔습니다. 전송을 켜기 전에 새 메시지부터 작성하세요.",
+    manualRebuildConversationLoadedNext: "다음: rebuild 방의 첫 메시지를 작성하세요.",
     profileLocked: "프로필 잠김",
     nextEnterProfilePassphrase: "다음: 프로필과 패스프레이즈를 입력하세요.",
     productionProfileLockedWarning: "아직 프로필을 열지 않았습니다.",

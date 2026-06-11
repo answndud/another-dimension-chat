@@ -790,6 +790,40 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(functionBody(mainJs, "wipeProductionLocalData"), /applyPostDestructiveLifecycleRebuildGuidance\("full-local-wipe"/);
 });
 
+test("manual invite room rebuild flow stays local-only across setup steps", () => {
+  assert.match(mainJs, /let latestManualInviteRoomRebuildFlow = null/);
+  assert.match(functionBody(mainJs, "rememberManualInviteRoomRebuildFlow"), /source/);
+  assert.match(functionBody(mainJs, "manualInviteRoomRebuildFlowActive"), /latestManualInviteRoomRebuildFlow/);
+
+  const stepViewBody = functionBody(mainJs, "manualInviteRoomRebuildStepView");
+  assert.match(stepViewBody, /manual_rebuild_flow=true/);
+  assert.match(stepViewBody, /profile_unlock_required=true/);
+  assert.match(stepViewBody, /saved_room_check_required=true/);
+  assert.match(stepViewBody, /first_message_setup_required=true/);
+  assert.match(stepViewBody, /backup_recovery=false/);
+  assert.match(stepViewBody, /cloud_backup_sync=false/);
+  assert.match(stepViewBody, /rollback_prevention=false/);
+  assert.match(stepViewBody, /secure_delete_claim=false/);
+  assert.match(stepViewBody, /security_ready=false/);
+  assert.match(stepViewBody, /live_network_attempt=false/);
+
+  const renderBody = functionBody(mainJs, "renderManualInviteRoomRebuildFlow");
+  assert.match(renderBody, /fields\.productionTwoProfileSession/);
+  assert.match(renderBody, /fields\.productionTwoProfileBoundary/);
+  assert.match(renderBody, /fields\.productionProfileNextAction/);
+  assert.match(renderBody, /setProductionFollowupActions\(true, view\.next\)/);
+
+  const lifecycleBody = functionBody(mainJs, "applyPostDestructiveLifecycleRebuildGuidance");
+  assert.match(lifecycleBody, /rememberManualInviteRoomRebuildFlow\(action\)/);
+  assert.match(lifecycleBody, /renderManualInviteRoomRebuildFlow\("rebuild-needed"/);
+
+  assert.match(functionBody(mainJs, "startInviteRoomFromCode"), /renderManualInviteRoomRebuildFlow\("invite-room-started"\)/);
+  assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /renderManualInviteRoomRebuildFlow\("room-opening"\)/);
+  assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /renderManualInviteRoomRebuildFlow\("room-ready"\)/);
+  assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /renderManualInviteRoomRebuildFlow\("session-check"\)/);
+  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /renderManualInviteRoomRebuildFlow\(ready \? "conversation-loaded" : "session-check"\)/);
+});
+
 test("manual session readiness is scoped to the active profile passphrase", () => {
   assert.match(mainJs, /let latestProductionSessionStateFingerprint = ""/);
   assert.match(functionBody(mainJs, "productionSessionStateFingerprint"), /input\.passphrase/);
