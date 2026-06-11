@@ -1077,6 +1077,44 @@ pub mod production {
         "security_ready_toggle",
     ];
 
+    const PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FIELDS: &[&str] = &[
+        "schema_version",
+        "platform",
+        "status",
+        "build",
+        "failure_class",
+        "manual_network_permission",
+        "app_launch_network_boundary",
+        "redacted_runtime_flags",
+        "diagnostics_redaction_state",
+        "public_non_claims",
+    ];
+
+    const PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FORBIDDEN_FIELDS: &[&str] = &[
+        "bridge_lines",
+        "onion_endpoints",
+        "invite_codes",
+        "pairing_payloads",
+        "envelope_payloads",
+        "safety_phrases",
+        "profile_names",
+        "message_text",
+        "local_paths",
+        "raw_logs",
+        "crash_dumps",
+        "screenshots_private_room_data",
+        "passphrases",
+        "private_keys",
+        "key_material",
+        "support_bundles",
+        "android_logcat",
+        "ios_sysdiagnose",
+        "telemetry_upload",
+        "crash_upload",
+        "background_diagnostics_upload",
+        "share_sheet_private_data_prefill",
+    ];
+
     const PRODUCTION_MANUAL_RUNTIME_MESSAGING_OPERATIONS: &[&str] = &[
         "passphrase_unlock",
         "load_session_runtime_material",
@@ -1587,6 +1625,33 @@ pub mod production {
         security_ready_claimed: bool,
         raw_or_secret_field_serialization_allowed: bool,
         runtime_or_account_identifier_serialization_allowed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileRedactedDiagnosticsPayloadPlaceholderBoundarySummary {
+        payload_fields: &'static [&'static str],
+        forbidden_payload_fields: &'static [&'static str],
+        allowed_channels: &'static [&'static str],
+        rejected_channels: &'static [&'static str],
+        inherits_mobile_diagnostics_redaction_boundary: bool,
+        inherits_mobile_dto_serialization_placeholder_boundary: bool,
+        documentation_only: bool,
+        local_copy_only: bool,
+        explicit_user_action_required: bool,
+        redacted_payload_only: bool,
+        serializer_implemented: bool,
+        parser_implemented: bool,
+        stable_wire_format_claimed: bool,
+        mobile_packaging_claimed: bool,
+        raw_log_export_enabled: bool,
+        support_bundle_export_enabled: bool,
+        crash_dump_export_enabled: bool,
+        telemetry_upload_enabled: bool,
+        background_upload_enabled: bool,
+        platform_log_export_enabled: bool,
+        share_sheet_private_prefill_enabled: bool,
+        security_ready_claimed: bool,
         boundary_closed: bool,
     }
 
@@ -2270,6 +2335,100 @@ pub mod production {
 
         pub fn runtime_or_account_identifier_serialization_allowed(self) -> bool {
             self.runtime_or_account_identifier_serialization_allowed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileRedactedDiagnosticsPayloadPlaceholderBoundarySummary {
+        pub fn payload_fields(self) -> &'static [&'static str] {
+            self.payload_fields
+        }
+
+        pub fn forbidden_payload_fields(self) -> &'static [&'static str] {
+            self.forbidden_payload_fields
+        }
+
+        pub fn allowed_channels(self) -> &'static [&'static str] {
+            self.allowed_channels
+        }
+
+        pub fn rejected_channels(self) -> &'static [&'static str] {
+            self.rejected_channels
+        }
+
+        pub fn inherits_mobile_diagnostics_redaction_boundary(self) -> bool {
+            self.inherits_mobile_diagnostics_redaction_boundary
+        }
+
+        pub fn inherits_mobile_dto_serialization_placeholder_boundary(self) -> bool {
+            self.inherits_mobile_dto_serialization_placeholder_boundary
+        }
+
+        pub fn documentation_only(self) -> bool {
+            self.documentation_only
+        }
+
+        pub fn local_copy_only(self) -> bool {
+            self.local_copy_only
+        }
+
+        pub fn explicit_user_action_required(self) -> bool {
+            self.explicit_user_action_required
+        }
+
+        pub fn redacted_payload_only(self) -> bool {
+            self.redacted_payload_only
+        }
+
+        pub fn serializer_implemented(self) -> bool {
+            self.serializer_implemented
+        }
+
+        pub fn parser_implemented(self) -> bool {
+            self.parser_implemented
+        }
+
+        pub fn stable_wire_format_claimed(self) -> bool {
+            self.stable_wire_format_claimed
+        }
+
+        pub fn mobile_packaging_claimed(self) -> bool {
+            self.mobile_packaging_claimed
+        }
+
+        pub fn raw_log_export_enabled(self) -> bool {
+            self.raw_log_export_enabled
+        }
+
+        pub fn support_bundle_export_enabled(self) -> bool {
+            self.support_bundle_export_enabled
+        }
+
+        pub fn crash_dump_export_enabled(self) -> bool {
+            self.crash_dump_export_enabled
+        }
+
+        pub fn telemetry_upload_enabled(self) -> bool {
+            self.telemetry_upload_enabled
+        }
+
+        pub fn background_upload_enabled(self) -> bool {
+            self.background_upload_enabled
+        }
+
+        pub fn platform_log_export_enabled(self) -> bool {
+            self.platform_log_export_enabled
+        }
+
+        pub fn share_sheet_private_prefill_enabled(self) -> bool {
+            self.share_sheet_private_prefill_enabled
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -12694,6 +12853,120 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_redacted_diagnostics_payload_placeholder_boundary_summary(
+    ) -> ProductionMobileRedactedDiagnosticsPayloadPlaceholderBoundarySummary {
+        let diagnostics = production_mobile_diagnostics_redaction_boundary_summary();
+        let serialization = production_mobile_dto_serialization_placeholder_boundary_summary();
+        let inherits_mobile_diagnostics_redaction_boundary = diagnostics.boundary_closed()
+            && diagnostics.inherits_public_diagnostics_boundary()
+            && diagnostics.local_copy_only()
+            && diagnostics.explicit_user_action_required()
+            && !diagnostics.raw_log_export_enabled()
+            && !diagnostics.support_bundle_export_enabled()
+            && !diagnostics.background_diagnostics_upload_enabled()
+            && !diagnostics.security_ready_claimed();
+        let inherits_mobile_dto_serialization_placeholder_boundary = serialization
+            .boundary_closed()
+            && serialization.deterministic_utf8_json_placeholder()
+            && serialization.reject_unknown_fields_required()
+            && !serialization.serializer_implemented()
+            && !serialization.stable_wire_format_claimed()
+            && !serialization.mobile_packaging_claimed();
+        let documentation_only = true;
+        let local_copy_only = true;
+        let explicit_user_action_required = true;
+        let redacted_payload_only = true;
+        let serializer_implemented = false;
+        let parser_implemented = false;
+        let stable_wire_format_claimed = false;
+        let mobile_packaging_claimed = false;
+        let raw_log_export_enabled = false;
+        let support_bundle_export_enabled = false;
+        let crash_dump_export_enabled = false;
+        let telemetry_upload_enabled = false;
+        let background_upload_enabled = false;
+        let platform_log_export_enabled = false;
+        let share_sheet_private_prefill_enabled = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_diagnostics_redaction_boundary
+            && inherits_mobile_dto_serialization_placeholder_boundary
+            && documentation_only
+            && local_copy_only
+            && explicit_user_action_required
+            && redacted_payload_only
+            && !serializer_implemented
+            && !parser_implemented
+            && !stable_wire_format_claimed
+            && !mobile_packaging_claimed
+            && !raw_log_export_enabled
+            && !support_bundle_export_enabled
+            && !crash_dump_export_enabled
+            && !telemetry_upload_enabled
+            && !background_upload_enabled
+            && !platform_log_export_enabled
+            && !share_sheet_private_prefill_enabled
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FIELDS.contains(&"schema_version")
+            && PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FIELDS.contains(&"platform")
+            && PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FIELDS.contains(&"status")
+            && PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FIELDS.contains(&"build")
+            && PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FIELDS.contains(&"failure_class")
+            && PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FIELDS
+                .contains(&"diagnostics_redaction_state")
+            && PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FORBIDDEN_FIELDS
+                .contains(&"local_paths")
+            && PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FORBIDDEN_FIELDS
+                .contains(&"raw_logs")
+            && PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FORBIDDEN_FIELDS
+                .contains(&"crash_dumps")
+            && PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FORBIDDEN_FIELDS
+                .contains(&"passphrases")
+            && PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FORBIDDEN_FIELDS
+                .contains(&"private_keys")
+            && PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FORBIDDEN_FIELDS
+                .contains(&"key_material")
+            && PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FORBIDDEN_FIELDS
+                .contains(&"message_text")
+            && PRODUCTION_MOBILE_DIAGNOSTICS_ALLOWED_CHANNELS
+                .contains(&"in_app_redacted_text_view")
+            && PRODUCTION_MOBILE_DIAGNOSTICS_ALLOWED_CHANNELS
+                .contains(&"explicit_user_initiated_copy")
+            && PRODUCTION_MOBILE_DIAGNOSTICS_REJECTED_CHANNELS.contains(&"automatic_crash_upload")
+            && PRODUCTION_MOBILE_DIAGNOSTICS_REJECTED_CHANNELS.contains(&"telemetry_upload")
+            && PRODUCTION_MOBILE_DIAGNOSTICS_REJECTED_CHANNELS.contains(&"raw_log_export")
+            && PRODUCTION_MOBILE_DIAGNOSTICS_REJECTED_CHANNELS.contains(&"android_logcat_export")
+            && PRODUCTION_MOBILE_DIAGNOSTICS_REJECTED_CHANNELS.contains(&"ios_sysdiagnose_export")
+            && PRODUCTION_MOBILE_DIAGNOSTICS_REJECTED_CHANNELS
+                .contains(&"background_diagnostics_upload");
+
+        ProductionMobileRedactedDiagnosticsPayloadPlaceholderBoundarySummary {
+            payload_fields: PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FIELDS,
+            forbidden_payload_fields:
+                PRODUCTION_MOBILE_REDACTED_DIAGNOSTICS_PAYLOAD_FORBIDDEN_FIELDS,
+            allowed_channels: PRODUCTION_MOBILE_DIAGNOSTICS_ALLOWED_CHANNELS,
+            rejected_channels: PRODUCTION_MOBILE_DIAGNOSTICS_REJECTED_CHANNELS,
+            inherits_mobile_diagnostics_redaction_boundary,
+            inherits_mobile_dto_serialization_placeholder_boundary,
+            documentation_only,
+            local_copy_only,
+            explicit_user_action_required,
+            redacted_payload_only,
+            serializer_implemented,
+            parser_implemented,
+            stable_wire_format_claimed,
+            mobile_packaging_claimed,
+            raw_log_export_enabled,
+            support_bundle_export_enabled,
+            crash_dump_export_enabled,
+            telemetry_upload_enabled,
+            background_upload_enabled,
+            platform_log_export_enabled,
+            share_sheet_private_prefill_enabled,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_session_readiness_gate() -> ProductionSessionReadinessGate {
         let summary = production_session_evaluation_summary();
 
@@ -16062,6 +16335,111 @@ pub mod production {
                 .rejected_channels()
                 .contains(&"background_diagnostics_upload"));
             assert!(boundary
+                .rejected_channels()
+                .contains(&"share_sheet_prefill_with_private_data"));
+        }
+
+        #[test]
+        fn production_mobile_redacted_diagnostics_payload_placeholder_inherits_redaction_without_exports(
+        ) {
+            let payload =
+                production_mobile_redacted_diagnostics_payload_placeholder_boundary_summary();
+
+            assert!(payload.boundary_closed());
+            assert!(payload.inherits_mobile_diagnostics_redaction_boundary());
+            assert!(payload.inherits_mobile_dto_serialization_placeholder_boundary());
+            assert!(payload.documentation_only());
+            assert!(payload.local_copy_only());
+            assert!(payload.explicit_user_action_required());
+            assert!(payload.redacted_payload_only());
+            assert!(!payload.serializer_implemented());
+            assert!(!payload.parser_implemented());
+            assert!(!payload.stable_wire_format_claimed());
+            assert!(!payload.mobile_packaging_claimed());
+            assert!(!payload.raw_log_export_enabled());
+            assert!(!payload.support_bundle_export_enabled());
+            assert!(!payload.crash_dump_export_enabled());
+            assert!(!payload.telemetry_upload_enabled());
+            assert!(!payload.background_upload_enabled());
+            assert!(!payload.platform_log_export_enabled());
+            assert!(!payload.share_sheet_private_prefill_enabled());
+            assert!(!payload.security_ready_claimed());
+            assert!(payload.payload_fields().contains(&"schema_version"));
+            assert!(payload.payload_fields().contains(&"platform"));
+            assert!(payload.payload_fields().contains(&"status"));
+            assert!(payload.payload_fields().contains(&"build"));
+            assert!(payload.payload_fields().contains(&"failure_class"));
+            assert!(payload
+                .payload_fields()
+                .contains(&"manual_network_permission"));
+            assert!(payload
+                .payload_fields()
+                .contains(&"app_launch_network_boundary"));
+            assert!(payload.payload_fields().contains(&"redacted_runtime_flags"));
+            assert!(payload
+                .payload_fields()
+                .contains(&"diagnostics_redaction_state"));
+            assert!(payload.payload_fields().contains(&"public_non_claims"));
+            assert!(payload.forbidden_payload_fields().contains(&"bridge_lines"));
+            assert!(payload
+                .forbidden_payload_fields()
+                .contains(&"onion_endpoints"));
+            assert!(payload.forbidden_payload_fields().contains(&"invite_codes"));
+            assert!(payload
+                .forbidden_payload_fields()
+                .contains(&"pairing_payloads"));
+            assert!(payload
+                .forbidden_payload_fields()
+                .contains(&"envelope_payloads"));
+            assert!(payload
+                .forbidden_payload_fields()
+                .contains(&"safety_phrases"));
+            assert!(payload
+                .forbidden_payload_fields()
+                .contains(&"profile_names"));
+            assert!(payload.forbidden_payload_fields().contains(&"message_text"));
+            assert!(payload.forbidden_payload_fields().contains(&"local_paths"));
+            assert!(payload.forbidden_payload_fields().contains(&"raw_logs"));
+            assert!(payload.forbidden_payload_fields().contains(&"crash_dumps"));
+            assert!(payload
+                .forbidden_payload_fields()
+                .contains(&"screenshots_private_room_data"));
+            assert!(payload.forbidden_payload_fields().contains(&"passphrases"));
+            assert!(payload.forbidden_payload_fields().contains(&"private_keys"));
+            assert!(payload.forbidden_payload_fields().contains(&"key_material"));
+            assert!(payload
+                .forbidden_payload_fields()
+                .contains(&"support_bundles"));
+            assert!(payload
+                .forbidden_payload_fields()
+                .contains(&"android_logcat"));
+            assert!(payload
+                .forbidden_payload_fields()
+                .contains(&"ios_sysdiagnose"));
+            assert!(payload
+                .allowed_channels()
+                .contains(&"in_app_redacted_text_view"));
+            assert!(payload
+                .allowed_channels()
+                .contains(&"explicit_user_initiated_copy"));
+            assert!(payload
+                .rejected_channels()
+                .contains(&"automatic_crash_upload"));
+            assert!(payload.rejected_channels().contains(&"telemetry_upload"));
+            assert!(payload.rejected_channels().contains(&"raw_log_export"));
+            assert!(payload
+                .rejected_channels()
+                .contains(&"support_bundle_export"));
+            assert!(payload
+                .rejected_channels()
+                .contains(&"android_logcat_export"));
+            assert!(payload
+                .rejected_channels()
+                .contains(&"ios_sysdiagnose_export"));
+            assert!(payload
+                .rejected_channels()
+                .contains(&"background_diagnostics_upload"));
+            assert!(payload
                 .rejected_channels()
                 .contains(&"share_sheet_prefill_with_private_data"));
         }

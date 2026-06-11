@@ -87,6 +87,26 @@ endpoints, delivery runtime handles, push tokens, cloud backup identifiers,
 central account identifiers, raw logs, support bundles, crash dumps, or
 security-ready toggles.
 
+## Redacted Diagnostics Payload Placeholder Boundary
+
+The future mobile diagnostics payload is documentation-only and local-copy-only
+until a separate implementation phase exists.
+
+Allowed diagnostics payload fields are limited to status, build, failure class,
+manual network permission, app launch network boundary, redacted runtime flags,
+diagnostics redaction state, schema version, platform, and public non-claims.
+
+Allowed diagnostics channels are limited to in-app redacted text view.
+Allowed diagnostics channels are limited to explicit user-initiated copy.
+Allowed diagnostics channels are limited to minimal private security contact request.
+
+The payload must not include bridge lines, onion endpoints, invite codes,
+pairing payloads, envelope payloads, safety phrases, profile names, message
+text, local paths, raw logs, crash dumps, screenshots with private room data,
+passphrases, private keys, key material, support bundles, Android logcat, iOS
+sysdiagnose, telemetry uploads, crash uploads, background diagnostics uploads,
+or share-sheet private data prefill.
+
 This inventory must not export raw storage open calls, local paths, passphrases,
 private keys, key material, plaintext messages, automatic network bootstrap,
 background delivery loops, push delivery, central contact discovery, central
