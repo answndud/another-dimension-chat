@@ -145,8 +145,8 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundMessageNumber"\)/);
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundAction"\)/);
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "manualRebuildFlow"\)/);
-  assert.match(functionBody(mainJs, "roomListStoragePayload"), /manualRebuildFlow: normalizedSavedRoomManualRebuildFlow/);
-  assert.match(functionBody(mainJs, "savedInviteRooms"), /manualRebuildDeliveryScope: normalizedSavedRoomManualRebuildDeliveryScope/);
+  assert.match(functionBody(mainJs, "roomListStoragePayload"), /const manualRebuildMetadata = normalizeSavedRoomManualRebuildMetadata\(room\)/);
+  assert.match(functionBody(mainJs, "savedInviteRooms"), /const manualRebuildMetadata = normalizeSavedRoomManualRebuildMetadata\(room\)/);
   assert.match(indexHtml, /id="back-to-room-list"/);
   assert.match(stylesCss, /body\.is-room-list-mode [\s\S]*#production-two-profile-transcript/);
   assert.match(stylesCss, /body\.is-room-detail-mode \.room-list-panel/);
@@ -908,9 +908,20 @@ test("manual rebuild recovery resumes from saved room metadata", () => {
   assert.match(mainJs, /function normalizedSavedRoomManualRebuildFlow/);
   assert.match(mainJs, /function normalizedSavedRoomManualRebuildDeliveryScope/);
   assert.match(mainJs, /function normalizedSavedRoomManualRebuildDeliveryAction/);
+  assert.match(mainJs, /const manualRebuildRecoveryPersistenceTtlMs = 7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(mainJs, /function savedRoomManualRebuildExpired/);
+  assert.match(mainJs, /function normalizeSavedRoomManualRebuildMetadata/);
+  assert.match(mainJs, /function inviteRoomMetadataWithoutManualRebuild/);
   assert.match(mainJs, /function rememberManualRebuildRecoveryForInput/);
   assert.match(mainJs, /function savedInviteRoomManualRebuildRecoveryCandidate/);
   assert.match(mainJs, /function showManualRebuildRecoveryAfterSavedRoomOpen/);
+  assert.match(mainJs, /function clearSavedInviteRoomManualRebuildMetadata/);
+  assert.match(mainJs, /function savedInviteRoomManualRebuildNeedsRecovery/);
+  assert.match(mainJs, /function savedInviteRoomWithoutResolvedManualRebuild/);
+
+  assert.match(functionBody(mainJs, "savedInviteRooms"), /normalizeSavedRoomManualRebuildMetadata\(room\)/);
+  assert.match(functionBody(mainJs, "roomListStoragePayload"), /normalizeSavedRoomManualRebuildMetadata\(room\)/);
+  assert.match(functionBody(mainJs, "rememberInviteRoom"), /normalizeSavedRoomManualRebuildMetadata/);
 
   const rememberBody = functionBody(mainJs, "rememberManualRebuildRecoveryForInput");
   assert.match(rememberBody, /manualRebuildFlow: true/);
@@ -926,6 +937,21 @@ test("manual rebuild recovery resumes from saved room metadata", () => {
   assert.match(candidateBody, /receiveState === "paused"/);
   assert.match(candidateBody, /receiveState === "stopping"/);
   assert.match(candidateBody, /savedInviteRoomRouteReadinessView\(room\)/);
+
+  const needsRecoveryBody = functionBody(mainJs, "savedInviteRoomManualRebuildNeedsRecovery");
+  assert.match(needsRecoveryBody, /savedRoomManualRebuildExpired\(room\.manualRebuildUpdatedAt\)/);
+  assert.match(needsRecoveryBody, /savedInviteRoomHasRetryableOutbound\(room\)/);
+  assert.match(needsRecoveryBody, /receiveState === "paused" \|\| receiveState === "stopping"/);
+  assert.match(needsRecoveryBody, /savedInviteRoomWaitingForPeerCode\(room\)/);
+  assert.match(needsRecoveryBody, /savedInviteRoomRouteReadinessView\(room\)/);
+
+  const cleanupBody = functionBody(mainJs, "savedInviteRoomWithoutResolvedManualRebuild");
+  assert.match(cleanupBody, /savedInviteRoomManualRebuildNeedsRecovery\(room\)/);
+  assert.match(cleanupBody, /clearSavedInviteRoomManualRebuildMetadata\(room\)/);
+  assert.match(cleanupBody, /inviteRoomMetadataWithoutManualRebuild\(room\)/);
+  assert.match(functionBody(mainJs, "clearSavedInviteRoomRuntimeState"), /clearSavedInviteRoomManualRebuildMetadata\(room\)/);
+  assert.match(functionBody(mainJs, "savedInviteRoomListItemView"), /savedInviteRoomWithoutResolvedManualRebuild/);
+  assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /savedInviteRoomWithoutResolvedManualRebuild/);
 
   const reopenBody = functionBody(mainJs, "showManualRebuildRecoveryAfterSavedRoomOpen");
   assert.match(reopenBody, /savedInviteRoomManualRebuildRecoveryCandidate\(current, input\)/);
