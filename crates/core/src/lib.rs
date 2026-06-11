@@ -1230,6 +1230,38 @@ pub mod production {
         "mobile_security_ready_claim",
     ];
 
+    const PRODUCTION_MOBILE_SHARED_CORE_FFI_INVENTORY_PATHS: &[&str] =
+        &["apps/mobile/ffi/README.md"];
+
+    const PRODUCTION_MOBILE_SHARED_CORE_FFI_API_GROUPS: &[&str] = &[
+        "shared_core_status_surface",
+        "profile_unlock_lock_status",
+        "invite_code_create_join",
+        "pairing_payload_export_import",
+        "safety_transcript_confirm",
+        "manual_envelope_export_import",
+        "message_transcript_view",
+        "local_data_lifecycle",
+        "redacted_support_diagnostics",
+    ];
+
+    const PRODUCTION_MOBILE_SHARED_CORE_FFI_REJECTED_EXPORTS: &[&str] = &[
+        "raw_storage_open",
+        "raw_store_path_export",
+        "passphrase_retention",
+        "key_material_export",
+        "plaintext_message_export",
+        "automatic_network_bootstrap",
+        "background_delivery_loop",
+        "push_notification_delivery",
+        "central_contact_discovery",
+        "central_message_server",
+        "wrapper_specific_protocol",
+        "wrapper_specific_storage",
+        "wrapper_specific_transport",
+        "security_ready_claim",
+    ];
+
     const PRODUCTION_INDEPENDENT_REVIEW_POLICIES: &[&str] = &[
         "public_threat_model_required",
         "independent_review_packet_required",
@@ -1606,6 +1638,25 @@ pub mod production {
         mobile_public_beta_artifact_claimed: bool,
         store_distribution_claimed: bool,
         runtime_command_implementation_claimed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileSharedCoreFfiInventoryBoundarySummary {
+        inventory_paths: &'static [&'static str],
+        api_groups: &'static [&'static str],
+        rejected_exports: &'static [&'static str],
+        inherits_mobile_skeleton_boundary: bool,
+        android_api_groups_match_inventory: bool,
+        ios_api_groups_match_inventory: bool,
+        documentation_only: bool,
+        uniffi_or_ffi_placeholder_only: bool,
+        generated_bindings_claimed: bool,
+        kotlin_or_swift_runtime_source_claimed: bool,
+        raw_storage_or_secret_export_allowed: bool,
+        network_or_delivery_runtime_export_allowed: bool,
+        wrapper_specific_semantics_allowed: bool,
         security_ready_claimed: bool,
         boundary_closed: bool,
     }
@@ -2670,6 +2721,68 @@ pub mod production {
 
         pub fn runtime_command_implementation_claimed(self) -> bool {
             self.runtime_command_implementation_claimed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileSharedCoreFfiInventoryBoundarySummary {
+        pub fn inventory_paths(self) -> &'static [&'static str] {
+            self.inventory_paths
+        }
+
+        pub fn api_groups(self) -> &'static [&'static str] {
+            self.api_groups
+        }
+
+        pub fn rejected_exports(self) -> &'static [&'static str] {
+            self.rejected_exports
+        }
+
+        pub fn inherits_mobile_skeleton_boundary(self) -> bool {
+            self.inherits_mobile_skeleton_boundary
+        }
+
+        pub fn android_api_groups_match_inventory(self) -> bool {
+            self.android_api_groups_match_inventory
+        }
+
+        pub fn ios_api_groups_match_inventory(self) -> bool {
+            self.ios_api_groups_match_inventory
+        }
+
+        pub fn documentation_only(self) -> bool {
+            self.documentation_only
+        }
+
+        pub fn uniffi_or_ffi_placeholder_only(self) -> bool {
+            self.uniffi_or_ffi_placeholder_only
+        }
+
+        pub fn generated_bindings_claimed(self) -> bool {
+            self.generated_bindings_claimed
+        }
+
+        pub fn kotlin_or_swift_runtime_source_claimed(self) -> bool {
+            self.kotlin_or_swift_runtime_source_claimed
+        }
+
+        pub fn raw_storage_or_secret_export_allowed(self) -> bool {
+            self.raw_storage_or_secret_export_allowed
+        }
+
+        pub fn network_or_delivery_runtime_export_allowed(self) -> bool {
+            self.network_or_delivery_runtime_export_allowed
+        }
+
+        pub fn wrapper_specific_semantics_allowed(self) -> bool {
+            self.wrapper_specific_semantics_allowed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -11286,6 +11399,67 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_shared_core_ffi_inventory_boundary_summary(
+    ) -> ProductionMobileSharedCoreFfiInventoryBoundarySummary {
+        let skeleton = production_mobile_wrapper_skeleton_directory_boundary_summary();
+        let android = production_android_shell_candidate_summary();
+        let ios = production_ios_shell_candidate_summary();
+        let inherits_mobile_skeleton_boundary =
+            skeleton.boundary_closed() && skeleton.documentation_only();
+        let android_api_groups_match_inventory =
+            android.wrapper_api_groups() == PRODUCTION_MOBILE_SHARED_CORE_FFI_API_GROUPS;
+        let ios_api_groups_match_inventory =
+            ios.wrapper_api_groups() == PRODUCTION_MOBILE_SHARED_CORE_FFI_API_GROUPS;
+        let documentation_only = true;
+        let uniffi_or_ffi_placeholder_only = true;
+        let generated_bindings_claimed = false;
+        let kotlin_or_swift_runtime_source_claimed = false;
+        let raw_storage_or_secret_export_allowed = false;
+        let network_or_delivery_runtime_export_allowed = false;
+        let wrapper_specific_semantics_allowed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_skeleton_boundary
+            && android_api_groups_match_inventory
+            && ios_api_groups_match_inventory
+            && documentation_only
+            && uniffi_or_ffi_placeholder_only
+            && !generated_bindings_claimed
+            && !kotlin_or_swift_runtime_source_claimed
+            && !raw_storage_or_secret_export_allowed
+            && !network_or_delivery_runtime_export_allowed
+            && !wrapper_specific_semantics_allowed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_SHARED_CORE_FFI_INVENTORY_PATHS
+                .contains(&"apps/mobile/ffi/README.md")
+            && PRODUCTION_MOBILE_SHARED_CORE_FFI_API_GROUPS.contains(&"shared_core_status_surface")
+            && PRODUCTION_MOBILE_SHARED_CORE_FFI_API_GROUPS
+                .contains(&"redacted_support_diagnostics")
+            && PRODUCTION_MOBILE_SHARED_CORE_FFI_REJECTED_EXPORTS.contains(&"raw_storage_open")
+            && PRODUCTION_MOBILE_SHARED_CORE_FFI_REJECTED_EXPORTS.contains(&"key_material_export")
+            && PRODUCTION_MOBILE_SHARED_CORE_FFI_REJECTED_EXPORTS
+                .contains(&"automatic_network_bootstrap")
+            && PRODUCTION_MOBILE_SHARED_CORE_FFI_REJECTED_EXPORTS
+                .contains(&"wrapper_specific_transport");
+
+        ProductionMobileSharedCoreFfiInventoryBoundarySummary {
+            inventory_paths: PRODUCTION_MOBILE_SHARED_CORE_FFI_INVENTORY_PATHS,
+            api_groups: PRODUCTION_MOBILE_SHARED_CORE_FFI_API_GROUPS,
+            rejected_exports: PRODUCTION_MOBILE_SHARED_CORE_FFI_REJECTED_EXPORTS,
+            inherits_mobile_skeleton_boundary,
+            android_api_groups_match_inventory,
+            ios_api_groups_match_inventory,
+            documentation_only,
+            uniffi_or_ffi_placeholder_only,
+            generated_bindings_claimed,
+            kotlin_or_swift_runtime_source_claimed,
+            raw_storage_or_secret_export_allowed,
+            network_or_delivery_runtime_export_allowed,
+            wrapper_specific_semantics_allowed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_independent_review_boundary_summary(
     ) -> ProductionIndependentReviewBoundarySummary {
         let public_threat_model_required = true;
@@ -14259,6 +14433,79 @@ pub mod production {
             assert!(boundary
                 .rejected_content()
                 .contains(&"mobile_security_ready_claim"));
+        }
+
+        #[test]
+        fn production_mobile_shared_core_ffi_inventory_boundary_is_documentation_only() {
+            let boundary = production_mobile_shared_core_ffi_inventory_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_skeleton_boundary());
+            assert!(boundary.android_api_groups_match_inventory());
+            assert!(boundary.ios_api_groups_match_inventory());
+            assert!(boundary.documentation_only());
+            assert!(boundary.uniffi_or_ffi_placeholder_only());
+            assert!(!boundary.generated_bindings_claimed());
+            assert!(!boundary.kotlin_or_swift_runtime_source_claimed());
+            assert!(!boundary.raw_storage_or_secret_export_allowed());
+            assert!(!boundary.network_or_delivery_runtime_export_allowed());
+            assert!(!boundary.wrapper_specific_semantics_allowed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .inventory_paths()
+                .contains(&"apps/mobile/ffi/README.md"));
+            assert_eq!(
+                boundary.api_groups(),
+                &[
+                    "shared_core_status_surface",
+                    "profile_unlock_lock_status",
+                    "invite_code_create_join",
+                    "pairing_payload_export_import",
+                    "safety_transcript_confirm",
+                    "manual_envelope_export_import",
+                    "message_transcript_view",
+                    "local_data_lifecycle",
+                    "redacted_support_diagnostics",
+                ]
+            );
+            assert!(boundary.rejected_exports().contains(&"raw_storage_open"));
+            assert!(boundary
+                .rejected_exports()
+                .contains(&"raw_store_path_export"));
+            assert!(boundary
+                .rejected_exports()
+                .contains(&"passphrase_retention"));
+            assert!(boundary.rejected_exports().contains(&"key_material_export"));
+            assert!(boundary
+                .rejected_exports()
+                .contains(&"plaintext_message_export"));
+            assert!(boundary
+                .rejected_exports()
+                .contains(&"automatic_network_bootstrap"));
+            assert!(boundary
+                .rejected_exports()
+                .contains(&"background_delivery_loop"));
+            assert!(boundary
+                .rejected_exports()
+                .contains(&"push_notification_delivery"));
+            assert!(boundary
+                .rejected_exports()
+                .contains(&"central_contact_discovery"));
+            assert!(boundary
+                .rejected_exports()
+                .contains(&"central_message_server"));
+            assert!(boundary
+                .rejected_exports()
+                .contains(&"wrapper_specific_protocol"));
+            assert!(boundary
+                .rejected_exports()
+                .contains(&"wrapper_specific_storage"));
+            assert!(boundary
+                .rejected_exports()
+                .contains(&"wrapper_specific_transport"));
+            assert!(boundary
+                .rejected_exports()
+                .contains(&"security_ready_claim"));
         }
 
         #[test]
