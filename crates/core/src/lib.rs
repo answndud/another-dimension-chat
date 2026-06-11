@@ -1539,6 +1539,43 @@ pub mod production {
         "security-ready",
     ];
 
+    const PRODUCTION_MOBILE_MANUAL_ENVELOPE_EXCHANGE_CHECKLIST_REQUIRED_ITEMS: &[&str] = &[
+        "manual envelope exchange checklist status only",
+        "verified pairwise session required before envelope exchange",
+        "passphrase-first unlock required",
+        "session runtime material required",
+        "message number reserved locally",
+        "encrypted envelope export is explicit user action",
+        "encrypted envelope import is explicit user action",
+        "local transcript write after import",
+        "network I/O not attempted",
+        "external onion delivery not claimed",
+        "delivery acknowledgement not claimed",
+        "production messaging not claimed",
+        "security-ready not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_MANUAL_ENVELOPE_EXCHANGE_CHECKLIST_FORBIDDEN_CLAIMS: &[&str] = &[
+        "send now",
+        "receive in background",
+        "automatic network send",
+        "automatic network receive",
+        "push delivery enabled",
+        "background delivery enabled",
+        "connected to peer",
+        "message delivered",
+        "message delivery verified",
+        "delivery acknowledgement received",
+        "external onion delivery verified",
+        "production messaging ready",
+        "production E2EE ready",
+        "plaintext message shown",
+        "key material exposed",
+        "cloud backup enabled",
+        "safe for sensitive communication",
+        "security-ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -2116,6 +2153,35 @@ pub mod production {
         session_ready_after_invite_claim_allowed: bool,
         delivery_success_claim_allowed: bool,
         central_service_claim_allowed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileManualEnvelopeExchangeChecklistBoundarySummary {
+        required_checklist_items: &'static [&'static str],
+        forbidden_exchange_claims: &'static [&'static str],
+        inherits_mobile_invite_verification_checklist_boundary: bool,
+        inherits_manual_runtime_messaging_gate: bool,
+        inherits_local_manual_e2ee_runtime_boundary: bool,
+        envelope_exchange_status_only_label_required: bool,
+        verified_pairwise_session_label_required: bool,
+        passphrase_first_label_required: bool,
+        session_runtime_material_label_required: bool,
+        message_number_local_reservation_label_required: bool,
+        explicit_envelope_export_label_required: bool,
+        explicit_envelope_import_label_required: bool,
+        local_transcript_write_label_required: bool,
+        network_io_non_claim_required: bool,
+        external_delivery_non_claim_required: bool,
+        delivery_ack_non_claim_required: bool,
+        production_messaging_non_claim_required: bool,
+        automatic_network_claim_allowed: bool,
+        push_or_background_delivery_claim_allowed: bool,
+        peer_connected_claim_allowed: bool,
+        delivery_success_claim_allowed: bool,
+        plaintext_or_key_material_display_allowed: bool,
+        production_e2ee_ready_claimed: bool,
         security_ready_claimed: bool,
         boundary_closed: bool,
     }
@@ -3684,6 +3750,108 @@ pub mod production {
 
         pub fn central_service_claim_allowed(self) -> bool {
             self.central_service_claim_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileManualEnvelopeExchangeChecklistBoundarySummary {
+        pub fn required_checklist_items(self) -> &'static [&'static str] {
+            self.required_checklist_items
+        }
+
+        pub fn forbidden_exchange_claims(self) -> &'static [&'static str] {
+            self.forbidden_exchange_claims
+        }
+
+        pub fn inherits_mobile_invite_verification_checklist_boundary(self) -> bool {
+            self.inherits_mobile_invite_verification_checklist_boundary
+        }
+
+        pub fn inherits_manual_runtime_messaging_gate(self) -> bool {
+            self.inherits_manual_runtime_messaging_gate
+        }
+
+        pub fn inherits_local_manual_e2ee_runtime_boundary(self) -> bool {
+            self.inherits_local_manual_e2ee_runtime_boundary
+        }
+
+        pub fn envelope_exchange_status_only_label_required(self) -> bool {
+            self.envelope_exchange_status_only_label_required
+        }
+
+        pub fn verified_pairwise_session_label_required(self) -> bool {
+            self.verified_pairwise_session_label_required
+        }
+
+        pub fn passphrase_first_label_required(self) -> bool {
+            self.passphrase_first_label_required
+        }
+
+        pub fn session_runtime_material_label_required(self) -> bool {
+            self.session_runtime_material_label_required
+        }
+
+        pub fn message_number_local_reservation_label_required(self) -> bool {
+            self.message_number_local_reservation_label_required
+        }
+
+        pub fn explicit_envelope_export_label_required(self) -> bool {
+            self.explicit_envelope_export_label_required
+        }
+
+        pub fn explicit_envelope_import_label_required(self) -> bool {
+            self.explicit_envelope_import_label_required
+        }
+
+        pub fn local_transcript_write_label_required(self) -> bool {
+            self.local_transcript_write_label_required
+        }
+
+        pub fn network_io_non_claim_required(self) -> bool {
+            self.network_io_non_claim_required
+        }
+
+        pub fn external_delivery_non_claim_required(self) -> bool {
+            self.external_delivery_non_claim_required
+        }
+
+        pub fn delivery_ack_non_claim_required(self) -> bool {
+            self.delivery_ack_non_claim_required
+        }
+
+        pub fn production_messaging_non_claim_required(self) -> bool {
+            self.production_messaging_non_claim_required
+        }
+
+        pub fn automatic_network_claim_allowed(self) -> bool {
+            self.automatic_network_claim_allowed
+        }
+
+        pub fn push_or_background_delivery_claim_allowed(self) -> bool {
+            self.push_or_background_delivery_claim_allowed
+        }
+
+        pub fn peer_connected_claim_allowed(self) -> bool {
+            self.peer_connected_claim_allowed
+        }
+
+        pub fn delivery_success_claim_allowed(self) -> bool {
+            self.delivery_success_claim_allowed
+        }
+
+        pub fn plaintext_or_key_material_display_allowed(self) -> bool {
+            self.plaintext_or_key_material_display_allowed
+        }
+
+        pub fn production_e2ee_ready_claimed(self) -> bool {
+            self.production_e2ee_ready_claimed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -13412,6 +13580,131 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_manual_envelope_exchange_checklist_boundary_summary(
+    ) -> ProductionMobileManualEnvelopeExchangeChecklistBoundarySummary {
+        let invite = production_mobile_invite_verification_checklist_boundary_summary();
+        let gate = production_manual_runtime_messaging_gate_summary();
+        let runtime = production_local_manual_e2ee_runtime_summary();
+        let inherits_mobile_invite_verification_checklist_boundary = invite.boundary_closed()
+            && invite.safety_transcript_confirm_label_required()
+            && invite.handshake_still_required_label_required()
+            && !invite.session_ready_after_invite_claim_allowed()
+            && !invite.delivery_success_claim_allowed()
+            && !invite.security_ready_claimed();
+        let inherits_manual_runtime_messaging_gate = gate.gate_reviewed()
+            && gate.manual_runtime_messaging_enabled()
+            && gate.explicit_user_action_required()
+            && gate.passphrase_first_storage_required()
+            && gate.session_runtime_material_required()
+            && gate.encrypted_envelope_export_import_ready()
+            && gate.local_transcript_ready()
+            && !gate.automatic_network_on_launch_allowed()
+            && !gate.network_io_attempted()
+            && !gate.external_onion_delivery_verified()
+            && !gate.production_messaging_ready()
+            && !gate.security_ready_claimed();
+        let inherits_local_manual_e2ee_runtime_boundary = runtime.gate_reviewed()
+            && runtime.local_manual_e2ee_runtime_ready()
+            && runtime.remote_static_verification_required()
+            && runtime.safety_transcript_bound()
+            && runtime.message_number_nonce_binding_required()
+            && runtime.explicit_envelope_export_import_ready()
+            && !runtime.automatic_network_on_launch_allowed()
+            && !runtime.network_io_attempted()
+            && !runtime.external_onion_delivery_verified()
+            && !runtime.production_e2ee_ready()
+            && !runtime.security_ready_claimed();
+        let envelope_exchange_status_only_label_required = true;
+        let verified_pairwise_session_label_required = true;
+        let passphrase_first_label_required = true;
+        let session_runtime_material_label_required = true;
+        let message_number_local_reservation_label_required = true;
+        let explicit_envelope_export_label_required = true;
+        let explicit_envelope_import_label_required = true;
+        let local_transcript_write_label_required = true;
+        let network_io_non_claim_required = true;
+        let external_delivery_non_claim_required = true;
+        let delivery_ack_non_claim_required = true;
+        let production_messaging_non_claim_required = true;
+        let automatic_network_claim_allowed = false;
+        let push_or_background_delivery_claim_allowed = false;
+        let peer_connected_claim_allowed = false;
+        let delivery_success_claim_allowed = false;
+        let plaintext_or_key_material_display_allowed = false;
+        let production_e2ee_ready_claimed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_invite_verification_checklist_boundary
+            && inherits_manual_runtime_messaging_gate
+            && inherits_local_manual_e2ee_runtime_boundary
+            && envelope_exchange_status_only_label_required
+            && verified_pairwise_session_label_required
+            && passphrase_first_label_required
+            && session_runtime_material_label_required
+            && message_number_local_reservation_label_required
+            && explicit_envelope_export_label_required
+            && explicit_envelope_import_label_required
+            && local_transcript_write_label_required
+            && network_io_non_claim_required
+            && external_delivery_non_claim_required
+            && delivery_ack_non_claim_required
+            && production_messaging_non_claim_required
+            && !automatic_network_claim_allowed
+            && !push_or_background_delivery_claim_allowed
+            && !peer_connected_claim_allowed
+            && !delivery_success_claim_allowed
+            && !plaintext_or_key_material_display_allowed
+            && !production_e2ee_ready_claimed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_MANUAL_ENVELOPE_EXCHANGE_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"manual envelope exchange checklist status only")
+            && PRODUCTION_MOBILE_MANUAL_ENVELOPE_EXCHANGE_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"encrypted envelope export is explicit user action")
+            && PRODUCTION_MOBILE_MANUAL_ENVELOPE_EXCHANGE_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"encrypted envelope import is explicit user action")
+            && PRODUCTION_MOBILE_MANUAL_ENVELOPE_EXCHANGE_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"external onion delivery not claimed")
+            && PRODUCTION_MOBILE_MANUAL_ENVELOPE_EXCHANGE_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"automatic network send")
+            && PRODUCTION_MOBILE_MANUAL_ENVELOPE_EXCHANGE_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"message delivery verified")
+            && PRODUCTION_MOBILE_MANUAL_ENVELOPE_EXCHANGE_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"production E2EE ready")
+            && PRODUCTION_MOBILE_MANUAL_ENVELOPE_EXCHANGE_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"plaintext message shown")
+            && PRODUCTION_MOBILE_MANUAL_ENVELOPE_EXCHANGE_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"security-ready");
+
+        ProductionMobileManualEnvelopeExchangeChecklistBoundarySummary {
+            required_checklist_items:
+                PRODUCTION_MOBILE_MANUAL_ENVELOPE_EXCHANGE_CHECKLIST_REQUIRED_ITEMS,
+            forbidden_exchange_claims:
+                PRODUCTION_MOBILE_MANUAL_ENVELOPE_EXCHANGE_CHECKLIST_FORBIDDEN_CLAIMS,
+            inherits_mobile_invite_verification_checklist_boundary,
+            inherits_manual_runtime_messaging_gate,
+            inherits_local_manual_e2ee_runtime_boundary,
+            envelope_exchange_status_only_label_required,
+            verified_pairwise_session_label_required,
+            passphrase_first_label_required,
+            session_runtime_material_label_required,
+            message_number_local_reservation_label_required,
+            explicit_envelope_export_label_required,
+            explicit_envelope_import_label_required,
+            local_transcript_write_label_required,
+            network_io_non_claim_required,
+            external_delivery_non_claim_required,
+            delivery_ack_non_claim_required,
+            production_messaging_non_claim_required,
+            automatic_network_claim_allowed,
+            push_or_background_delivery_claim_allowed,
+            peer_connected_claim_allowed,
+            delivery_success_claim_allowed,
+            plaintext_or_key_material_display_allowed,
+            production_e2ee_ready_claimed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -17164,6 +17457,127 @@ pub mod production {
                 .contains(&"safe for sensitive communication"));
             assert!(boundary
                 .forbidden_invite_claims()
+                .contains(&"security-ready"));
+        }
+
+        #[test]
+        fn production_mobile_manual_envelope_exchange_checklist_boundary_keeps_delivery_non_claims()
+        {
+            let boundary = production_mobile_manual_envelope_exchange_checklist_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_invite_verification_checklist_boundary());
+            assert!(boundary.inherits_manual_runtime_messaging_gate());
+            assert!(boundary.inherits_local_manual_e2ee_runtime_boundary());
+            assert!(boundary.envelope_exchange_status_only_label_required());
+            assert!(boundary.verified_pairwise_session_label_required());
+            assert!(boundary.passphrase_first_label_required());
+            assert!(boundary.session_runtime_material_label_required());
+            assert!(boundary.message_number_local_reservation_label_required());
+            assert!(boundary.explicit_envelope_export_label_required());
+            assert!(boundary.explicit_envelope_import_label_required());
+            assert!(boundary.local_transcript_write_label_required());
+            assert!(boundary.network_io_non_claim_required());
+            assert!(boundary.external_delivery_non_claim_required());
+            assert!(boundary.delivery_ack_non_claim_required());
+            assert!(boundary.production_messaging_non_claim_required());
+            assert!(!boundary.automatic_network_claim_allowed());
+            assert!(!boundary.push_or_background_delivery_claim_allowed());
+            assert!(!boundary.peer_connected_claim_allowed());
+            assert!(!boundary.delivery_success_claim_allowed());
+            assert!(!boundary.plaintext_or_key_material_display_allowed());
+            assert!(!boundary.production_e2ee_ready_claimed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"manual envelope exchange checklist status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"verified pairwise session required before envelope exchange"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"passphrase-first unlock required"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"session runtime material required"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"message number reserved locally"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"encrypted envelope export is explicit user action"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"encrypted envelope import is explicit user action"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"local transcript write after import"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"network I/O not attempted"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"external onion delivery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"delivery acknowledgement not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"production messaging not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"security-ready not claimed"));
+            assert!(boundary.forbidden_exchange_claims().contains(&"send now"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"receive in background"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"automatic network send"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"automatic network receive"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"push delivery enabled"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"background delivery enabled"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"connected to peer"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"message delivered"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"message delivery verified"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"delivery acknowledgement received"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"external onion delivery verified"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"production messaging ready"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"production E2EE ready"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"plaintext message shown"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"key material exposed"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"cloud backup enabled"));
+            assert!(boundary
+                .forbidden_exchange_claims()
+                .contains(&"safe for sensitive communication"));
+            assert!(boundary
+                .forbidden_exchange_claims()
                 .contains(&"security-ready"));
         }
 
