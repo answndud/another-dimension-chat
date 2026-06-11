@@ -255,3 +255,41 @@ Invite verification checklists must not show push delivery enabled.
 Invite verification checklists must not show cloud backup enabled.
 Invite verification checklists must not show safe for sensitive communication.
 Invite verification checklists must not show security-ready claims.
+
+## Manual Envelope Exchange Checklist Boundary
+
+Future mobile manual envelope exchange checklists are documentation-only
+candidates until a separate wrapper UI implementation phase exists.
+
+Manual envelope exchange checklists may show manual envelope exchange checklist status only.
+Manual envelope exchange checklists may show verified pairwise session required before envelope exchange.
+Manual envelope exchange checklists may show passphrase-first unlock required.
+Manual envelope exchange checklists may show session runtime material required.
+Manual envelope exchange checklists may show message number reserved locally.
+Manual envelope exchange checklists may show encrypted envelope export is explicit user action.
+Manual envelope exchange checklists may show encrypted envelope import is explicit user action.
+Manual envelope exchange checklists may show local transcript write after import.
+Manual envelope exchange checklists may show network I/O not attempted.
+Manual envelope exchange checklists may show external onion delivery not claimed.
+Manual envelope exchange checklists may show delivery acknowledgement not claimed.
+Manual envelope exchange checklists may show production messaging not claimed.
+Manual envelope exchange checklists may show security-ready not claimed.
+
+Manual envelope exchange checklists must not show send now.
+Manual envelope exchange checklists must not show receive in background.
+Manual envelope exchange checklists must not show automatic network send.
+Manual envelope exchange checklists must not show automatic network receive.
+Manual envelope exchange checklists must not show push delivery enabled.
+Manual envelope exchange checklists must not show background delivery enabled.
+Manual envelope exchange checklists must not show connected to peer.
+Manual envelope exchange checklists must not show message delivered.
+Manual envelope exchange checklists must not show message delivery verified.
+Manual envelope exchange checklists must not show delivery acknowledgement received.
+Manual envelope exchange checklists must not show external onion delivery verified.
+Manual envelope exchange checklists must not show production messaging ready.
+Manual envelope exchange checklists must not show production E2EE ready.
+Manual envelope exchange checklists must not show plaintext message shown.
+Manual envelope exchange checklists must not show key material exposed.
+Manual envelope exchange checklists must not show cloud backup enabled.
+Manual envelope exchange checklists must not show safe for sensitive communication.
+Manual envelope exchange checklists must not show security-ready claims.
