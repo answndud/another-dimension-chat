@@ -146,6 +146,9 @@ shasum -a 256 -c another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.
 - The public release packet publishes the review gap but does not close it.
 - No reviewer signoff or public user safety signoff exists.
 - External two-machine onion peer reports have not been received.
+- The external evidence gap is accepted for unsigned public beta release gating only.
+  It does not close Phase AZ, final security-ready acceptance, or any external
+  delivery claim.
 - Fabricated local peer reports or synthetic external review evidence are not
   allowed as substitutes for real independent review or external peer evidence.
 - No SBOM is published.
