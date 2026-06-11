@@ -56,8 +56,9 @@ fi
 
 if grep -Fq "single-machine blocked external evidence gap" "$PLAN_FILE" &&
   ! exists "$PEER_A" && ! exists "$PEER_B"; then
-  echo "status=single-machine-external-evidence-gap"
+  echo "status=public-beta-release-gate-accepted-with-external-evidence-gap"
   echo "operator_packet_path=$PACKET_ZIP"
+  echo "final_security_ready_acceptance=blocked_until_real_external_peer_reports"
   echo "next=scripts/public_beta_gap_acceptance_once.sh"
   exit 0
 fi

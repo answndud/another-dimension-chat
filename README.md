@@ -38,7 +38,7 @@ The current internal field-test handoff record, if the ignored local artifact di
 
 This handoff is not a public release, not signed or notarized, not audited, and not suitable for sensitive communication. The ignored `beta-artifacts/` directory is local-only and must not be committed.
 
-The current unsigned public beta release path repackages the local DMG into a GitHub Release upload set. It is still an unsigned experimental public beta, not notarized, not audited, not production-ready, and sensitive communication prohibited. External two-machine onion delivery has not been independently verified; same-machine dual-profile rehearsal is development evidence only. The public review packet is included as reviewer input, and the independent-review gap remains explicit.
+The current unsigned public beta release path repackages the local DMG into a GitHub Release upload set. It is still an unsigned experimental public beta, not notarized, not audited, not production-ready, and sensitive communication prohibited. External two-machine onion delivery has not been independently verified; same-machine dual-profile rehearsal is development evidence only. This external evidence gap is accepted for unsigned public beta release gating only; it does not close Phase AZ, final security-ready acceptance, or any external delivery claim. The public review packet is included as reviewer input, and the independent-review gap remains explicit.
 
 Published unsigned public beta:
 

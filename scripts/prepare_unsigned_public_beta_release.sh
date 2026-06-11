@@ -337,6 +337,9 @@ not production-ready, and sensitive communication prohibited.
 
 External two-machine onion delivery has not been independently verified for
 this beta. Same-machine dual-profile rehearsal is development evidence only.
+This external evidence gap is accepted for unsigned public beta release gating only.
+It does not close Phase AZ, final security-ready acceptance, or any external
+delivery claim.
 
 Manual update integrity is limited to same GitHub Release assets, user-verified
 SHA-256 files, and the provenance/dependency-inventory/lockfile-hash evidence
@@ -511,6 +514,7 @@ require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "cloud backup/sync or backup 
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "destructive migration"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "private vulnerability reporting"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "External two-machine onion delivery has not yet been independently verified"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "accepted for unsigned public beta release gating only"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "Briar/Cwtch-equivalent"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "live dependency scan"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "vulnerability triage"
