@@ -28,3 +28,25 @@ Required public copy remains: unsigned experimental public beta, sensitive
 communication prohibited, not audited, not production-ready, redacted status
 only, manual update verification required, and external onion delivery not
 claimed.
+
+## Status Screen Copy Boundary
+
+Future mobile status screens are documentation-only candidates until a separate
+wrapper UI implementation phase exists.
+
+Status screens may show status only, redacted status only, not connected,
+manual action required, sensitive communication prohibited, not audited,
+not production-ready, manual update verification required, and external onion
+delivery not claimed.
+
+Status screen labels may project only the status DTO vocabulary: platform,
+profile lock state, runtime command surface, mobile command surface, local data
+lifecycle state, backup-exclusion state, install/update integrity state,
+diagnostics redaction state, and public non-claims.
+
+Status screens must not show send now or receive in background.
+Status screens must not claim push delivery enabled, connected to peer, or
+onion delivery verified.
+Status screens must not claim secure messenger, safe for sensitive
+communication, audited, production-ready, store approved, cloud backup enabled,
+or security-ready claims.
