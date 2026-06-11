@@ -165,7 +165,12 @@ What exists today:
   Keychain wrapping only, and no Apple-account, iCloud, APNs, App Store,
   TestFlight, notarization, cloud-backup, or wrapper-specific protocol
   dependency.
-- In-app unsigned public beta warnings and public diagnostics export limited to status, build, failure class, manual network permission, and app-launch network boundary; no crash upload, telemetry, raw log export, crash dump export, automated log collection, support bundle export, raw diagnostic file export, paths, endpoints, passphrases, or key material.
+- In-app unsigned public beta warnings and public support diagnostics export
+  limited to app status, build identity, broad failure class, recovery next
+  action, and app-launch network boundary; no workflow-state export, crash
+  upload, telemetry, raw log export, crash dump export, automated log
+  collection, support bundle export, raw diagnostic file export, codes,
+  endpoints, messages, profile names, paths, passphrases, or key material.
 - Explicit user-triggered advanced onion/Tor attempt paths for beta field testing. The default practical delivery path is manual encrypted envelope exchange. The app must not bootstrap Tor, host onion services, publish descriptors, open streams, send envelopes, or receive envelopes on app launch.
 - Lightweight verification scripts, CLI hardening tests, Tauri scaffold static checks, and GitHub Actions verification.
 - Local beta DMG handoff is possible from the Tauri app directory, but signing, notarization, reproducible/equivalent builds, dependency review, external review, signoff, and auto-update integrity are not implemented.

@@ -5853,6 +5853,10 @@ function publicBetaDiagnosticsReport(report, options = {}) {
   return privateDeliveryState.publicBetaDiagnosticsReport(report, options);
 }
 
+function publicDiagnosticsFailureClass(parsed) {
+  return privateDeliveryState.publicDiagnosticsFailureClass(parsed);
+}
+
 function fieldTestReportsAligned(localReport, peerReport) {
   return privateDeliveryState.fieldTestReportsAligned(localReport, peerReport);
 }
@@ -7074,7 +7078,7 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
   const payload = publicBetaDiagnosticsReport(report, { includeCopyBoundary: true });
   fields.publicBetaDiagnostics.value = payload;
   const parsed = parseFieldTestReport(report);
-  const failureClass = fieldTestReportValue(fieldTestReportBlocker(parsed), "none");
+  const failureClass = fieldTestReportValue(publicDiagnosticsFailureClass(parsed), "none");
   if (fields.publicBetaDiagnosticsSummary) {
     fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics ready failure_class=${failureClass} app_launch_network=false`;
   }
