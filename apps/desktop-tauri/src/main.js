@@ -34,6 +34,7 @@ import {
   productionSessionDraftView,
   productionSessionLifecycleView,
   productionSessionStateView,
+  productionInviteIdentityBoundaryView,
   productionInviteRoomConversationMetadata,
   productionInviteCodeProfiles,
   productionTwoProfileLatestRetryableOutbound,
@@ -6954,6 +6955,7 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
       ? "send-message"
       : "write-message"
     : "none";
+  const inviteIdentityBoundary = productionInviteIdentityBoundaryView(input);
   const roomListNextAction = fieldTestRoomListNextAction(
     currentSavedRoom,
     outboundRecoveryAction,
@@ -6970,6 +6972,7 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `room_present=${hasRoom}`,
     `session_ready=${twoProfileSessionsReadyForInput(input)}`,
     `safety_confirmed=${twoProfileSafetyConfirmedForInput(input)}`,
+    `accountless_invite_boundary=${fieldTestReportValue(inviteIdentityBoundary)}`,
     `manual_network_permission=${manualNetworkPermissionEnabled()}`,
     `route_ready=${route.ready === true}`,
     `route_stale=${route.stale === true}`,
