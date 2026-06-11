@@ -1334,10 +1334,13 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(rebuildDiagnosticsBody, /fieldTestBoundaryValue\(boundaryText, "live_network_attempt", "false"\)/);
   assert.match(privateDeliveryStateJs, /manual_rebuild_flow/);
   assert.match(privateDeliveryStateJs, /delivery_code_exchange_scoped/);
-  assert.match(publicDiagnosticsBody, /rebuild_delivery_scope=/);
-  assert.match(publicDiagnosticsBody, /rebuild_delivery_action=/);
-  assert.match(publicDiagnosticsBody, /rebuild_delivery_network_io=/);
-  assert.match(publicDiagnosticsBody, /rebuild_external_peer_evidence_claim=false/);
+  assert.match(publicDiagnosticsBody, /diagnostic_scope=public-support/);
+  assert.match(publicDiagnosticsBody, /payload_boundary=status-build-failure-class-recovery-action-only/);
+  assert.match(publicDiagnosticsBody, /publicDiagnosticsFailureClass\(parsed\)/);
+  assert.doesNotMatch(publicDiagnosticsBody, /rebuild_delivery_scope=/);
+  assert.doesNotMatch(publicDiagnosticsBody, /rebuild_delivery_action=/);
+  assert.doesNotMatch(publicDiagnosticsBody, /rebuild_delivery_network_io=/);
+  assert.doesNotMatch(publicDiagnosticsBody, /rebuild_external_peer_evidence_claim=false/);
   assert.match(reportBody, /redacted_boundary=/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /productionTwoProfileRealOnionSyntheticFailureResult/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /bootstrapRetryLimit/);

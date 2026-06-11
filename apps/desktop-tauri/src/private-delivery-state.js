@@ -39,9 +39,6 @@ export function fieldTestBoundarySummary(text) {
     "retryable",
     "next",
     "app_launch_network",
-    "raw_profile",
-    "passphrase",
-    "key_material",
     "network",
     "transport",
     "local_only",
@@ -396,90 +393,49 @@ function publicDiagnosticsRecoveryNextAction(parsed) {
   return publicDiagnosticsRecoveryActions.has(action) ? action : "review-field-test-report";
 }
 
+export function publicDiagnosticsFailureClass(parsed) {
+  if (parsed.room_present !== "true") {
+    return "room-not-open";
+  }
+  if (parsed.session_ready !== "true") {
+    return "session-not-ready";
+  }
+  if (parsed.safety_confirmed !== "true") {
+    return "safety-unverified";
+  }
+  if (fieldTestRouteReadinessBlocked(parsed)) {
+    return "route-readiness-blocked";
+  }
+  if (parsed.receive_failure_kind && parsed.receive_failure_kind !== "none") {
+    return "receive-blocked";
+  }
+  if (fieldTestReportOutboundFailureClass(parsed)) {
+    return "outbound-delivery-blocked";
+  }
+  if (parsed.real_onion_next_blocker && parsed.real_onion_next_blocker !== "none") {
+    return "advanced-transport-blocked";
+  }
+  return "none";
+}
+
 export function publicBetaDiagnosticsReport(report, options = {}) {
   const parsed = parseFieldTestReport(report);
   const triage = fieldTestReportTriageState(report);
-  const manualNetworkPermission = parsed.manual_network_permission === "true";
-  const realOnionAttempted = parsed.real_onion_attempted === "true";
-  const manualRebuildFlow = parsed.manual_rebuild_flow === "true";
-  const rebuildDeliveryNetworkIo = parsed.rebuild_delivery_network_io === "true";
-  const rebuildDeliveryLiveNetworkAttempt = parsed.rebuild_delivery_live_network_attempt === "true";
-  const failureClass = fieldTestReportBlocker(parsed);
+  const failureClass = publicDiagnosticsFailureClass(parsed);
   const recoveryNextAction = publicDiagnosticsRecoveryNextAction(parsed);
   const lines = [
-    "Another Dimension Chat public beta diagnostics",
-    "diagnostic_version=1",
-    "release_channel=unsigned-experimental-public-beta",
-    "security_claim=not-production-ready",
-    "sensitive_communication=sensitive-communication-prohibited",
-    "update_channel=manual-github-release-download",
-    "release_authority=same-github-release-assets",
-    "release_tag=v0.1.0-beta-onion-unsigned",
-    "checksum_scope=same-release-sha256-required",
-    "same_release_checksum_required=true",
-    "source_branch_release_authority=false",
-    "install_allow_path=macos-privacy-security-manual-allow-after-checksum",
-    "terminal_quarantine_removal_install_step=false",
-    "branch_file_release_proof=false",
-    "auto_update=false",
-    "signed=false",
-    "notarized=false",
-    "bridge_config_publication=forbidden",
-    "bridge_support=configuration-specific",
-    "audited_censorship_circumvention_claim=false",
-    "reliable_onion_delivery_claim=false",
-    "external_peer_evidence_required=true",
-    "privacy_model_target=no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server",
-    "briar_cwtch_equivalent_claim=false",
-    "audited_e2ee_claim=false",
-    "repeated_external_onion_evidence=false",
-    "offline_mesh_claim=false",
-    "independent_review_complete=false",
-    "public_review_gap_published=true",
-    "reviewer_signoff_claimed=false",
-    "public_user_safety_signoff_claimed=false",
-    "review_packet_inputs_public_safe=true",
-    "known_review_gaps_published=true",
-    "public_safe_review_commands_required=true",
-    "private_reporting_boundary=private-vulnerability-reporting-or-minimal-public-contact-request",
-    "minimal_public_contact_request_allowed=true",
-    "fabricated_review_or_peer_evidence_allowed=false",
-    "security_ready_claim=false",
-    "dependency_inventory_present=true",
-    "dependency_lockfile_hashes_present=true",
-    "dependency_lockfile_evidence_count=3",
-    "dependency_lockfile_evidence_files=Cargo.lock|apps/desktop-tauri/src-tauri/Cargo.lock|apps/desktop-tauri/package-lock.json",
-    "supply_chain_audit_complete=false",
-    "sbom_published=false",
-    "vulnerability_triage_signoff_complete=false",
-    "reproducible_build_proof=false",
-    "live_dependency_scan_performed=false",
+    "Another Dimension Chat public support diagnostics",
+    "diagnostic_version=2",
+    "diagnostic_scope=public-support",
+    "payload_boundary=status-build-failure-class-recovery-action-only",
     `app_version=${fieldTestReportValue(triage.appVersion, "unknown")}`,
     `build_channel=${fieldTestReportValue(triage.buildChannel, "unknown")}`,
     `build_commit=${fieldTestReportValue(triage.buildCommit, "unknown")}`,
-    `room_status=${fieldTestReportValue(triage.room, "unknown")}`,
-    `safety_status=${fieldTestReportValue(triage.safety, "unknown")}`,
-    `delivery_status=${fieldTestReportValue(triage.delivery, "unknown")}`,
-    `route_status=${fieldTestReportValue(triage.route, "unknown")}`,
-    `receive_status=${fieldTestReportValue(triage.receive, "unknown")}`,
     `failure_class=${fieldTestReportValue(failureClass, "none")}`,
     `recovery_next_action=${recoveryNextAction}`,
-    `manual_network_permission=${manualNetworkPermission}`,
-    `real_onion_attempted=${realOnionAttempted}`,
-    `manual_rebuild_flow=${manualRebuildFlow}`,
-    `rebuild_delivery_scope=${fieldTestReportValue(parsed.rebuild_delivery_scope, "none")}`,
-    `rebuild_delivery_action=${fieldTestReportValue(parsed.rebuild_delivery_action, "none")}`,
-    `rebuild_retry_scoped=${parsed.rebuild_retry_scoped === "true"}`,
-    `rebuild_receive_scoped=${parsed.rebuild_receive_scoped === "true"}`,
-    `rebuild_delivery_code_exchange_scoped=${parsed.rebuild_delivery_code_exchange_scoped === "true"}`,
-    `rebuild_explicit_private_delivery_required=${parsed.rebuild_explicit_private_delivery_required === "true"}`,
-    `rebuild_delivery_network_io=${rebuildDeliveryNetworkIo}`,
-    `rebuild_delivery_live_network_attempt=${rebuildDeliveryLiveNetworkAttempt}`,
-    "rebuild_external_peer_evidence_claim=false",
     `app_launch_network=false`,
   ];
   if (options.includeCopyBoundary === true) {
-    lines.push("payload_boundary=status-build-failure-class-recovery-action-only");
     lines.push("crash_upload=false");
     lines.push("telemetry=false");
     lines.push("raw_log_export=false");
