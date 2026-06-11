@@ -1466,6 +1466,43 @@ pub mod production {
         "security-ready",
     ];
 
+    const PRODUCTION_MOBILE_MANUAL_PAIRING_CHECKLIST_REQUIRED_ITEMS: &[&str] = &[
+        "manual pairing checklist status only",
+        "invite code create or join is explicit user action",
+        "pairing payload export/import is manual",
+        "safety transcript confirm required",
+        "pairwise identity only",
+        "verified pairwise session required before messaging",
+        "redacted pairing status only",
+        "no central contact discovery",
+        "no searchable username",
+        "no phone number account",
+        "no email account",
+        "external onion delivery not claimed",
+        "push delivery not claimed",
+        "security-ready not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_MANUAL_PAIRING_CHECKLIST_FORBIDDEN_CLAIMS: &[&str] = &[
+        "automatic contact discovery",
+        "searchable username",
+        "phone number lookup",
+        "email lookup",
+        "global account",
+        "central account",
+        "central contact discovery",
+        "central message server",
+        "QR scan proves identity",
+        "pairing automatically verified",
+        "connected to peer",
+        "message delivery verified",
+        "external onion delivery verified",
+        "push delivery enabled",
+        "cloud backup enabled",
+        "safe for sensitive communication",
+        "security-ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -1987,6 +2024,35 @@ pub mod production {
         push_or_background_delivery_claim_allowed: bool,
         cloud_backup_or_sync_claim_allowed: bool,
         external_delivery_success_claim_allowed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileManualPairingChecklistScreenCopyBoundarySummary {
+        required_checklist_items: &'static [&'static str],
+        forbidden_pairing_claims: &'static [&'static str],
+        inherits_mobile_first_run_checklist_boundary: bool,
+        inherits_mobile_ffi_inventory_boundary: bool,
+        inherits_mobile_status_screen_copy_boundary: bool,
+        manual_pairing_status_only_label_required: bool,
+        explicit_user_action_label_required: bool,
+        invite_code_create_join_label_required: bool,
+        pairing_payload_export_import_label_required: bool,
+        safety_transcript_confirm_label_required: bool,
+        pairwise_identity_only_label_required: bool,
+        verified_pairwise_session_before_messaging_label_required: bool,
+        redacted_pairing_status_only_label_required: bool,
+        central_discovery_non_claim_required: bool,
+        account_lookup_non_claim_required: bool,
+        push_delivery_non_claim_required: bool,
+        external_delivery_non_claim_required: bool,
+        automatic_contact_discovery_claim_allowed: bool,
+        account_or_username_lookup_claim_allowed: bool,
+        central_service_claim_allowed: bool,
+        qr_or_payload_identity_proof_claim_allowed: bool,
+        pairing_auto_verified_claim_allowed: bool,
+        delivery_success_claim_allowed: bool,
         security_ready_claimed: bool,
         boundary_closed: bool,
     }
@@ -3359,6 +3425,108 @@ pub mod production {
 
         pub fn external_delivery_success_claim_allowed(self) -> bool {
             self.external_delivery_success_claim_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileManualPairingChecklistScreenCopyBoundarySummary {
+        pub fn required_checklist_items(self) -> &'static [&'static str] {
+            self.required_checklist_items
+        }
+
+        pub fn forbidden_pairing_claims(self) -> &'static [&'static str] {
+            self.forbidden_pairing_claims
+        }
+
+        pub fn inherits_mobile_first_run_checklist_boundary(self) -> bool {
+            self.inherits_mobile_first_run_checklist_boundary
+        }
+
+        pub fn inherits_mobile_ffi_inventory_boundary(self) -> bool {
+            self.inherits_mobile_ffi_inventory_boundary
+        }
+
+        pub fn inherits_mobile_status_screen_copy_boundary(self) -> bool {
+            self.inherits_mobile_status_screen_copy_boundary
+        }
+
+        pub fn manual_pairing_status_only_label_required(self) -> bool {
+            self.manual_pairing_status_only_label_required
+        }
+
+        pub fn explicit_user_action_label_required(self) -> bool {
+            self.explicit_user_action_label_required
+        }
+
+        pub fn invite_code_create_join_label_required(self) -> bool {
+            self.invite_code_create_join_label_required
+        }
+
+        pub fn pairing_payload_export_import_label_required(self) -> bool {
+            self.pairing_payload_export_import_label_required
+        }
+
+        pub fn safety_transcript_confirm_label_required(self) -> bool {
+            self.safety_transcript_confirm_label_required
+        }
+
+        pub fn pairwise_identity_only_label_required(self) -> bool {
+            self.pairwise_identity_only_label_required
+        }
+
+        pub fn verified_pairwise_session_before_messaging_label_required(self) -> bool {
+            self.verified_pairwise_session_before_messaging_label_required
+        }
+
+        pub fn redacted_pairing_status_only_label_required(self) -> bool {
+            self.redacted_pairing_status_only_label_required
+        }
+
+        pub fn central_discovery_non_claim_required(self) -> bool {
+            self.central_discovery_non_claim_required
+        }
+
+        pub fn account_lookup_non_claim_required(self) -> bool {
+            self.account_lookup_non_claim_required
+        }
+
+        pub fn push_delivery_non_claim_required(self) -> bool {
+            self.push_delivery_non_claim_required
+        }
+
+        pub fn external_delivery_non_claim_required(self) -> bool {
+            self.external_delivery_non_claim_required
+        }
+
+        pub fn automatic_contact_discovery_claim_allowed(self) -> bool {
+            self.automatic_contact_discovery_claim_allowed
+        }
+
+        pub fn account_or_username_lookup_claim_allowed(self) -> bool {
+            self.account_or_username_lookup_claim_allowed
+        }
+
+        pub fn central_service_claim_allowed(self) -> bool {
+            self.central_service_claim_allowed
+        }
+
+        pub fn qr_or_payload_identity_proof_claim_allowed(self) -> bool {
+            self.qr_or_payload_identity_proof_claim_allowed
+        }
+
+        pub fn pairing_auto_verified_claim_allowed(self) -> bool {
+            self.pairing_auto_verified_claim_allowed
+        }
+
+        pub fn delivery_success_claim_allowed(self) -> bool {
+            self.delivery_success_claim_allowed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -12868,6 +13036,118 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_manual_pairing_checklist_screen_copy_boundary_summary(
+    ) -> ProductionMobileManualPairingChecklistScreenCopyBoundarySummary {
+        let first_run = production_mobile_first_run_platform_readiness_checklist_boundary_summary();
+        let ffi = production_mobile_shared_core_ffi_inventory_boundary_summary();
+        let status = production_mobile_wrapper_status_screen_copy_boundary_summary();
+        let inherits_mobile_first_run_checklist_boundary = first_run.boundary_closed()
+            && first_run.first_run_status_only_label_required()
+            && !first_run.mobile_app_readiness_claimed()
+            && !first_run.external_delivery_success_claim_allowed()
+            && !first_run.security_ready_claimed();
+        let inherits_mobile_ffi_inventory_boundary = ffi.boundary_closed()
+            && ffi.api_groups().contains(&"invite_code_create_join")
+            && ffi.api_groups().contains(&"pairing_payload_export_import")
+            && ffi.api_groups().contains(&"safety_transcript_confirm")
+            && ffi.api_groups().contains(&"message_transcript_view")
+            && ffi.rejected_exports().contains(&"central_contact_discovery")
+            && ffi.rejected_exports().contains(&"central_message_server")
+            && !ffi.security_ready_claimed();
+        let inherits_mobile_status_screen_copy_boundary = status.boundary_closed()
+            && status.status_only_label_required()
+            && !status.send_or_receive_cta_allowed()
+            && !status.connected_peer_claim_allowed()
+            && !status.security_ready_claimed();
+        let manual_pairing_status_only_label_required = true;
+        let explicit_user_action_label_required = true;
+        let invite_code_create_join_label_required = true;
+        let pairing_payload_export_import_label_required = true;
+        let safety_transcript_confirm_label_required = true;
+        let pairwise_identity_only_label_required = true;
+        let verified_pairwise_session_before_messaging_label_required = true;
+        let redacted_pairing_status_only_label_required = true;
+        let central_discovery_non_claim_required = true;
+        let account_lookup_non_claim_required = true;
+        let push_delivery_non_claim_required = true;
+        let external_delivery_non_claim_required = true;
+        let automatic_contact_discovery_claim_allowed = false;
+        let account_or_username_lookup_claim_allowed = false;
+        let central_service_claim_allowed = false;
+        let qr_or_payload_identity_proof_claim_allowed = false;
+        let pairing_auto_verified_claim_allowed = false;
+        let delivery_success_claim_allowed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_first_run_checklist_boundary
+            && inherits_mobile_ffi_inventory_boundary
+            && inherits_mobile_status_screen_copy_boundary
+            && manual_pairing_status_only_label_required
+            && explicit_user_action_label_required
+            && invite_code_create_join_label_required
+            && pairing_payload_export_import_label_required
+            && safety_transcript_confirm_label_required
+            && pairwise_identity_only_label_required
+            && verified_pairwise_session_before_messaging_label_required
+            && redacted_pairing_status_only_label_required
+            && central_discovery_non_claim_required
+            && account_lookup_non_claim_required
+            && push_delivery_non_claim_required
+            && external_delivery_non_claim_required
+            && !automatic_contact_discovery_claim_allowed
+            && !account_or_username_lookup_claim_allowed
+            && !central_service_claim_allowed
+            && !qr_or_payload_identity_proof_claim_allowed
+            && !pairing_auto_verified_claim_allowed
+            && !delivery_success_claim_allowed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_MANUAL_PAIRING_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"manual pairing checklist status only")
+            && PRODUCTION_MOBILE_MANUAL_PAIRING_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"pairing payload export/import is manual")
+            && PRODUCTION_MOBILE_MANUAL_PAIRING_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"safety transcript confirm required")
+            && PRODUCTION_MOBILE_MANUAL_PAIRING_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"verified pairwise session required before messaging")
+            && PRODUCTION_MOBILE_MANUAL_PAIRING_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"automatic contact discovery")
+            && PRODUCTION_MOBILE_MANUAL_PAIRING_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"QR scan proves identity")
+            && PRODUCTION_MOBILE_MANUAL_PAIRING_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"pairing automatically verified")
+            && PRODUCTION_MOBILE_MANUAL_PAIRING_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"message delivery verified")
+            && PRODUCTION_MOBILE_MANUAL_PAIRING_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"security-ready");
+
+        ProductionMobileManualPairingChecklistScreenCopyBoundarySummary {
+            required_checklist_items: PRODUCTION_MOBILE_MANUAL_PAIRING_CHECKLIST_REQUIRED_ITEMS,
+            forbidden_pairing_claims: PRODUCTION_MOBILE_MANUAL_PAIRING_CHECKLIST_FORBIDDEN_CLAIMS,
+            inherits_mobile_first_run_checklist_boundary,
+            inherits_mobile_ffi_inventory_boundary,
+            inherits_mobile_status_screen_copy_boundary,
+            manual_pairing_status_only_label_required,
+            explicit_user_action_label_required,
+            invite_code_create_join_label_required,
+            pairing_payload_export_import_label_required,
+            safety_transcript_confirm_label_required,
+            pairwise_identity_only_label_required,
+            verified_pairwise_session_before_messaging_label_required,
+            redacted_pairing_status_only_label_required,
+            central_discovery_non_claim_required,
+            account_lookup_non_claim_required,
+            push_delivery_non_claim_required,
+            external_delivery_non_claim_required,
+            automatic_contact_discovery_claim_allowed,
+            account_or_username_lookup_claim_allowed,
+            central_service_claim_allowed,
+            qr_or_payload_identity_proof_claim_allowed,
+            pairing_auto_verified_claim_allowed,
+            delivery_success_claim_allowed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -16378,6 +16658,130 @@ pub mod production {
                 .contains(&"production-ready"));
             assert!(boundary
                 .forbidden_readiness_claims()
+                .contains(&"security-ready"));
+        }
+
+        #[test]
+        fn production_mobile_manual_pairing_checklist_screen_copy_boundary_requires_manual_verification_without_discovery_claims(
+        ) {
+            let boundary =
+                production_mobile_manual_pairing_checklist_screen_copy_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_first_run_checklist_boundary());
+            assert!(boundary.inherits_mobile_ffi_inventory_boundary());
+            assert!(boundary.inherits_mobile_status_screen_copy_boundary());
+            assert!(boundary.manual_pairing_status_only_label_required());
+            assert!(boundary.explicit_user_action_label_required());
+            assert!(boundary.invite_code_create_join_label_required());
+            assert!(boundary.pairing_payload_export_import_label_required());
+            assert!(boundary.safety_transcript_confirm_label_required());
+            assert!(boundary.pairwise_identity_only_label_required());
+            assert!(boundary.verified_pairwise_session_before_messaging_label_required());
+            assert!(boundary.redacted_pairing_status_only_label_required());
+            assert!(boundary.central_discovery_non_claim_required());
+            assert!(boundary.account_lookup_non_claim_required());
+            assert!(boundary.push_delivery_non_claim_required());
+            assert!(boundary.external_delivery_non_claim_required());
+            assert!(!boundary.automatic_contact_discovery_claim_allowed());
+            assert!(!boundary.account_or_username_lookup_claim_allowed());
+            assert!(!boundary.central_service_claim_allowed());
+            assert!(!boundary.qr_or_payload_identity_proof_claim_allowed());
+            assert!(!boundary.pairing_auto_verified_claim_allowed());
+            assert!(!boundary.delivery_success_claim_allowed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"manual pairing checklist status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"invite code create or join is explicit user action"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"pairing payload export/import is manual"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"safety transcript confirm required"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"pairwise identity only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"verified pairwise session required before messaging"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"redacted pairing status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"no central contact discovery"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"no searchable username"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"no phone number account"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"no email account"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"external onion delivery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"push delivery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"security-ready not claimed"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"automatic contact discovery"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"searchable username"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"phone number lookup"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"email lookup"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"global account"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"central account"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"central contact discovery"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"central message server"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"QR scan proves identity"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"pairing automatically verified"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"connected to peer"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"message delivery verified"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"external onion delivery verified"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"push delivery enabled"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"cloud backup enabled"));
+            assert!(boundary
+                .forbidden_pairing_claims()
+                .contains(&"safe for sensitive communication"));
+            assert!(boundary
+                .forbidden_pairing_claims()
                 .contains(&"security-ready"));
         }
 
