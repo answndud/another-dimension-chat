@@ -137,3 +137,20 @@ and the GitHub Release body must say:
 - Auto-update is not supported; every update is a manual GitHub Release download plus SHA-256 verification.
 
 Do not upload or commit `docs/`, local app data, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, key material, raw logs, crash dumps, build caches, `target/`, `dist/`, `node_modules/`, `beta-artifacts/`, or the ignored `public-release/` folder itself.
+
+## Platform Release Boundary
+
+The current public artifact is the unsigned macOS DMG. Future Windows, Android,
+and iOS public artifacts must each have a matching checksum, public provenance,
+manifest, release notes, update-integrity note, and dependency evidence attached
+to the same GitHub Release as the artifact.
+
+Do not describe a Windows installer, Android APK/AAB, iOS build, TestFlight
+build, app-store listing, notarized artifact, signed artifact, or SmartScreen
+reputation as a security boundary for v0.1. Those mechanisms may improve
+distribution ergonomics later, but they do not replace same-release checksum
+verification, provenance, non-claims, or the no-auto-update boundary.
+
+Do not introduce auto-update until a separate update-integrity design covers
+signed update metadata, rollback handling, channel separation, platform-specific
+trust boundaries, and public non-claims.
