@@ -79,6 +79,24 @@ The public release body must repeat:
 - not production-ready
 - sensitive communication prohibited
 
+## Future Platform Artifacts
+
+The current public artifact is the macOS unsigned DMG. Future public Windows,
+Android, or iOS artifacts must not weaken the release/update boundary.
+
+Every future public Windows, Android, or iOS artifact must be attached to a
+GitHub Release with its own matching checksum and provenance file. The artifact,
+checksum, provenance, manifest, release notes, update-integrity note, and
+dependency evidence must be attached to the same GitHub Release. Branch files,
+source archives, another release, or a platform store page are not release
+authority for a downloaded artifact.
+
+A platform store, notarization service, Developer ID signature, SmartScreen
+reputation, Play Store approval, App Store/TestFlight approval, or mobile review
+process may be a distribution aid, but it is not a trusted security boundary for
+v0.1. If auto-update is introduced later, it requires a separate integrity
+design before it can be described as supported.
+
 ## Non-Claims
 
 This policy does not claim:
