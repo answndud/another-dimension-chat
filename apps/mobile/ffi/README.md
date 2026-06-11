@@ -68,6 +68,25 @@ passphrases, private keys, key material, plaintext messages, onion addresses,
 network endpoints, delivery runtime handles, push tokens, cloud backup
 identifiers, central account identifiers, or security-ready toggles.
 
+## DTO Serialization Placeholder Boundary
+
+The future mobile status DTO serialization is documentation-only until a
+separate implementation phase defines concrete code.
+
+Allowed serialization vocabulary is limited to deterministic UTF-8 JSON object
+shape, explicit schema version, sorted keys, string enums, booleans, redacted
+diagnostic strings, bounded arrays of status labels, canonical byte buffers only
+where a later binding explicitly requires bytes, and reject-unknown-fields
+parsing.
+
+The placeholder does not define a serializer, parser, schema file, generated
+model, stable wire format, cross-version migration, ABI, or mobile packaging.
+It must not serialize profile paths, database paths, store paths, passphrases,
+private keys, key material, plaintext messages, onion addresses, network
+endpoints, delivery runtime handles, push tokens, cloud backup identifiers,
+central account identifiers, raw logs, support bundles, crash dumps, or
+security-ready toggles.
+
 This inventory must not export raw storage open calls, local paths, passphrases,
 private keys, key material, plaintext messages, automatic network bootstrap,
 background delivery loops, push delivery, central contact discovery, central
