@@ -892,6 +892,10 @@ const dictionaries = {
     dataLifecycleWipeConfirmWarning:
       "Type WIPE LOCAL DATA before wiping local app data. This does not claim secure deletion from storage media.",
     dataLifecycleWipeConfirmNext: "Next: type WIPE LOCAL DATA exactly or cancel this local destructive action.",
+    dataLifecycleDestructivePreflightReady:
+      "Destructive local action confirmed. This is not backup recovery, rollback prevention, or secure media deletion.",
+    dataLifecycleDestructivePreflightReadyNext:
+      "Next: the local destructive action can run; rebuild any affected room afterward.",
     dataLifecycleDeleteRunning: "Deleting the local profile store. No cloud, backup, or secure-delete claim is made.",
     dataLifecycleWipeRunning: "Wiping local app data. No cloud, backup, or secure-delete claim is made.",
     dataLifecycleDestructiveRunningNext: "Next: wait for the redacted local result before retrying setup.",
@@ -1956,6 +1960,10 @@ const dictionaries = {
     dataLifecycleWipeConfirmWarning:
       "로컬 앱 데이터를 지우려면 WIPE LOCAL DATA를 입력하세요. 저장 매체에서의 보안 삭제를 주장하지 않습니다.",
     dataLifecycleWipeConfirmNext: "다음: WIPE LOCAL DATA를 정확히 입력하거나 이 로컬 파괴 작업을 취소하세요.",
+    dataLifecycleDestructivePreflightReady:
+      "파괴적 로컬 작업 확인이 끝났습니다. 백업 복구, 롤백 방지, 저장 매체 보안 삭제가 아닙니다.",
+    dataLifecycleDestructivePreflightReadyNext:
+      "다음: 로컬 파괴 작업을 실행할 수 있습니다. 영향을 받은 채팅방은 이후 다시 만드세요.",
     dataLifecycleDeleteRunning: "로컬 프로필 저장소를 삭제 중입니다. 클라우드, 백업, 보안 삭제 주장은 하지 않습니다.",
     dataLifecycleWipeRunning: "로컬 앱 데이터를 삭제 중입니다. 클라우드, 백업, 보안 삭제 주장은 하지 않습니다.",
     dataLifecycleDestructiveRunningNext: "다음: redacted local result가 나올 때까지 기다린 뒤 설정을 다시 시도하세요.",

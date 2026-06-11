@@ -17566,6 +17566,50 @@ function renderProductionDataLifecycleAction(result, action = "status") {
   return view;
 }
 
+function dataLifecycleDestructivePreflightView(action, options = {}) {
+  const fullWipe = action === "full-local-wipe";
+  const profileDelete = action === "profile-delete";
+  const confirmationMatched = options.confirmationMatched === true;
+  const profilePresent = String(options.profile ?? "").trim().length > 0;
+  const summary = [
+    `destructive_preflight=true`,
+    `action=${action}`,
+    `profile_target_present=${profilePresent}`,
+    `confirmation_matched=${confirmationMatched}`,
+    `profile_delete=${profileDelete}`,
+    `full_local_wipe=${fullWipe}`,
+    `local_only=true`,
+    `backup_recovery=false`,
+    `cloud_backup_sync=false`,
+    `rollback_prevention=false`,
+    `secure_delete_claim=false`,
+    `security_ready=false`,
+    `network_io=false`,
+  ].join(" ");
+  const next = confirmationMatched
+    ? t("dataLifecycleDestructivePreflightReadyNext")
+    : fullWipe
+      ? t("dataLifecycleWipeConfirmNext")
+      : t("dataLifecycleDeleteConfirmNext");
+  return {
+    next,
+    summary,
+    warning: confirmationMatched
+      ? t("dataLifecycleDestructivePreflightReady")
+      : fullWipe
+        ? t("dataLifecycleWipeConfirmWarning")
+        : t("dataLifecycleDeleteConfirmWarning"),
+  };
+}
+
+function renderDataLifecycleDestructivePreflight(action, options = {}) {
+  const view = dataLifecycleDestructivePreflightView(action, options);
+  setText(fields.productionDataLifecycle, view.summary);
+  setText(fields.productionProfileBoundary, view.summary);
+  setText(fields.productionProfileNextAction, view.next);
+  return view;
+}
+
 function twoProfileInputReferencesProfile(input, profile) {
   const normalizedProfile = String(profile ?? "").trim().toLowerCase();
   if (!normalizedProfile) {
@@ -17827,15 +17871,19 @@ async function deleteProductionProfile() {
   const input = productionProfileInput();
   const roomInputBeforeDelete = productionTwoProfileInput();
   const confirmation = (fields.productionProfileDeleteConfirmation?.value ?? "").trim();
+  const preflight = renderDataLifecycleDestructivePreflight("profile-delete", {
+    confirmationMatched: Boolean(input.profile && confirmation === input.profile),
+    profile: input.profile,
+  });
   if (!input.profile || confirmation !== input.profile) {
     setProductionProfileState("Profile delete needs confirmation");
-    setText(fields.productionProfileWarning, t("dataLifecycleDeleteConfirmWarning"));
-    setText(fields.productionProfileNextAction, t("dataLifecycleDeleteConfirmNext"));
+    setText(fields.productionProfileWarning, preflight.warning);
+    setText(fields.productionProfileNextAction, preflight.next);
     return null;
   }
   productionBusyAction = "profile-delete";
   setProductionProfileState("Profile deleting");
-  setText(fields.productionProfileWarning, t("dataLifecycleDeleteRunning"));
+  setText(fields.productionProfileWarning, `${preflight.warning} ${t("dataLifecycleDeleteRunning")}`);
   setText(fields.productionProfileNextAction, t("dataLifecycleDestructiveRunningNext"));
   applyProductionActionState();
   try {
@@ -17853,6 +17901,7 @@ async function deleteProductionProfile() {
       input: roomInputBeforeDelete,
     });
     await loadProductionProfileList();
+    await checkProductionProductUnlockStatus();
     return result;
   } catch (error) {
     setProductionProfileState("Profile delete failed");
@@ -17868,15 +17917,19 @@ async function deleteProductionProfile() {
 async function wipeProductionLocalData() {
   const roomInputBeforeWipe = productionTwoProfileInput();
   const confirmation = (fields.productionFullWipeConfirmation?.value ?? "").trim();
+  const preflight = renderDataLifecycleDestructivePreflight("full-local-wipe", {
+    confirmationMatched: confirmation === "WIPE LOCAL DATA",
+    profile: productionProfileInput().profile,
+  });
   if (confirmation !== "WIPE LOCAL DATA") {
     setProductionProfileState("Local wipe needs confirmation");
-    setText(fields.productionProfileWarning, t("dataLifecycleWipeConfirmWarning"));
-    setText(fields.productionProfileNextAction, t("dataLifecycleWipeConfirmNext"));
+    setText(fields.productionProfileWarning, preflight.warning);
+    setText(fields.productionProfileNextAction, preflight.next);
     return null;
   }
   productionBusyAction = "full-local-data-wipe";
   setProductionProfileState("Local data wiping");
-  setText(fields.productionProfileWarning, t("dataLifecycleWipeRunning"));
+  setText(fields.productionProfileWarning, `${preflight.warning} ${t("dataLifecycleWipeRunning")}`);
   setText(fields.productionProfileNextAction, t("dataLifecycleDestructiveRunningNext"));
   applyProductionActionState();
   try {
@@ -17889,6 +17942,7 @@ async function wipeProductionLocalData() {
     setText(fields.productionProfileWarning, `${result.warning} ${view.next}`);
     applyPostDestructiveLifecycleRebuildGuidance("full-local-wipe", { input: roomInputBeforeWipe });
     await loadProductionProfileList();
+    await checkProductionProductUnlockStatus();
     return result;
   } catch (error) {
     setProductionProfileState("Local data wipe failed");
