@@ -2072,6 +2072,50 @@ pub mod production {
         "safe for sensitive communication",
     ];
 
+    const PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_KICKOFF_BLOCKER_REQUIRED_ITEMS: &[&str] = &[
+        "mobile wrapper implementation kickoff blocker status only",
+        "kickoff blocker record only",
+        "authorization not granted blocker recorded",
+        "entry criteria not satisfied blocker recorded",
+        "implementation kickoff blocked",
+        "no implementation task opened",
+        "no mobile source scaffold created",
+        "no Android build scaffold created",
+        "no iOS build scaffold created",
+        "no runtime messaging scaffold created",
+        "no store distribution task opened",
+        "no external delivery evidence task opened",
+        "push notification remains excluded",
+        "cloud backup remains excluded",
+        "central account remains excluded",
+        "kickoff blocker does not claim mobile readiness",
+        "kickoff blocker does not claim release readiness",
+        "kickoff blocker does not claim security readiness",
+    ];
+
+    const PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_KICKOFF_BLOCKER_FORBIDDEN_CLAIMS: &[&str] = &[
+        "implementation kickoff allowed",
+        "implementation kickoff unblocked",
+        "implementation task opened",
+        "mobile implementation started",
+        "mobile implementation complete",
+        "mobile source scaffold created",
+        "Android build scaffold created",
+        "iOS build scaffold created",
+        "runtime messaging scaffold created",
+        "store distribution task opened",
+        "external delivery evidence task opened",
+        "implementation authorized",
+        "authorization granted",
+        "entry criteria satisfied",
+        "mobile app ready",
+        "mobile readiness",
+        "release ready",
+        "security-ready",
+        "production-ready",
+        "safe for sensitive communication",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -3053,6 +3097,32 @@ pub mod production {
         runtime_messaging_available_claimed: bool,
         store_readiness_claimed: bool,
         external_delivery_evidence_recorded: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileWrapperImplementationKickoffBlockerBoundarySummary {
+        required_kickoff_blocker_items: &'static [&'static str],
+        forbidden_kickoff_claims: &'static [&'static str],
+        inherits_mobile_wrapper_implementation_authorization_boundary: bool,
+        kickoff_blocker_status_only_label_required: bool,
+        kickoff_blocker_record_only_label_required: bool,
+        authorization_not_granted_blocker_recorded: bool,
+        entry_criteria_not_satisfied_blocker_recorded: bool,
+        implementation_kickoff_blocked: bool,
+        implementation_task_opened: bool,
+        mobile_source_scaffold_created: bool,
+        android_build_scaffold_created: bool,
+        ios_build_scaffold_created: bool,
+        runtime_messaging_scaffold_created: bool,
+        store_distribution_task_opened: bool,
+        external_delivery_evidence_task_opened: bool,
+        push_notification_excluded: bool,
+        cloud_backup_excluded: bool,
+        central_account_excluded: bool,
+        mobile_readiness_claimed: bool,
+        release_readiness_claimed: bool,
+        security_readiness_claimed: bool,
         boundary_closed: bool,
     }
 
@@ -6054,6 +6124,96 @@ pub mod production {
 
         pub fn external_delivery_evidence_recorded(self) -> bool {
             self.external_delivery_evidence_recorded
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileWrapperImplementationKickoffBlockerBoundarySummary {
+        pub fn required_kickoff_blocker_items(self) -> &'static [&'static str] {
+            self.required_kickoff_blocker_items
+        }
+
+        pub fn forbidden_kickoff_claims(self) -> &'static [&'static str] {
+            self.forbidden_kickoff_claims
+        }
+
+        pub fn inherits_mobile_wrapper_implementation_authorization_boundary(self) -> bool {
+            self.inherits_mobile_wrapper_implementation_authorization_boundary
+        }
+
+        pub fn kickoff_blocker_status_only_label_required(self) -> bool {
+            self.kickoff_blocker_status_only_label_required
+        }
+
+        pub fn kickoff_blocker_record_only_label_required(self) -> bool {
+            self.kickoff_blocker_record_only_label_required
+        }
+
+        pub fn authorization_not_granted_blocker_recorded(self) -> bool {
+            self.authorization_not_granted_blocker_recorded
+        }
+
+        pub fn entry_criteria_not_satisfied_blocker_recorded(self) -> bool {
+            self.entry_criteria_not_satisfied_blocker_recorded
+        }
+
+        pub fn implementation_kickoff_blocked(self) -> bool {
+            self.implementation_kickoff_blocked
+        }
+
+        pub fn implementation_task_opened(self) -> bool {
+            self.implementation_task_opened
+        }
+
+        pub fn mobile_source_scaffold_created(self) -> bool {
+            self.mobile_source_scaffold_created
+        }
+
+        pub fn android_build_scaffold_created(self) -> bool {
+            self.android_build_scaffold_created
+        }
+
+        pub fn ios_build_scaffold_created(self) -> bool {
+            self.ios_build_scaffold_created
+        }
+
+        pub fn runtime_messaging_scaffold_created(self) -> bool {
+            self.runtime_messaging_scaffold_created
+        }
+
+        pub fn store_distribution_task_opened(self) -> bool {
+            self.store_distribution_task_opened
+        }
+
+        pub fn external_delivery_evidence_task_opened(self) -> bool {
+            self.external_delivery_evidence_task_opened
+        }
+
+        pub fn push_notification_excluded(self) -> bool {
+            self.push_notification_excluded
+        }
+
+        pub fn cloud_backup_excluded(self) -> bool {
+            self.cloud_backup_excluded
+        }
+
+        pub fn central_account_excluded(self) -> bool {
+            self.central_account_excluded
+        }
+
+        pub fn mobile_readiness_claimed(self) -> bool {
+            self.mobile_readiness_claimed
+        }
+
+        pub fn release_readiness_claimed(self) -> bool {
+            self.release_readiness_claimed
+        }
+
+        pub fn security_readiness_claimed(self) -> bool {
+            self.security_readiness_claimed
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -17463,6 +17623,107 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_wrapper_implementation_kickoff_blocker_boundary_summary(
+    ) -> ProductionMobileWrapperImplementationKickoffBlockerBoundarySummary {
+        let authorization =
+            production_mobile_wrapper_implementation_authorization_boundary_summary();
+        let inherits_mobile_wrapper_implementation_authorization_boundary = authorization
+            .boundary_closed()
+            && authorization.authorization_status_only_label_required()
+            && authorization.authorization_record_only_label_required()
+            && authorization.entry_criteria_reviewed_but_not_satisfied()
+            && authorization.explicit_owner_authorization_required()
+            && !authorization.implementation_authorization_granted()
+            && !authorization.implementation_can_start_claimed()
+            && !authorization.mobile_implementation_started()
+            && !authorization.mobile_implementation_complete_claimed()
+            && !authorization.mobile_readiness_claimed()
+            && !authorization.runtime_messaging_authorization_granted()
+            && !authorization.external_delivery_evidence_recorded()
+            && !authorization.release_readiness_claimed()
+            && !authorization.security_readiness_claimed();
+        let kickoff_blocker_status_only_label_required = true;
+        let kickoff_blocker_record_only_label_required = true;
+        let authorization_not_granted_blocker_recorded = true;
+        let entry_criteria_not_satisfied_blocker_recorded = true;
+        let implementation_kickoff_blocked = true;
+        let implementation_task_opened = false;
+        let mobile_source_scaffold_created = false;
+        let android_build_scaffold_created = false;
+        let ios_build_scaffold_created = false;
+        let runtime_messaging_scaffold_created = false;
+        let store_distribution_task_opened = false;
+        let external_delivery_evidence_task_opened = false;
+        let push_notification_excluded = true;
+        let cloud_backup_excluded = true;
+        let central_account_excluded = true;
+        let mobile_readiness_claimed = false;
+        let release_readiness_claimed = false;
+        let security_readiness_claimed = false;
+        let boundary_closed = inherits_mobile_wrapper_implementation_authorization_boundary
+            && kickoff_blocker_status_only_label_required
+            && kickoff_blocker_record_only_label_required
+            && authorization_not_granted_blocker_recorded
+            && entry_criteria_not_satisfied_blocker_recorded
+            && implementation_kickoff_blocked
+            && !implementation_task_opened
+            && !mobile_source_scaffold_created
+            && !android_build_scaffold_created
+            && !ios_build_scaffold_created
+            && !runtime_messaging_scaffold_created
+            && !store_distribution_task_opened
+            && !external_delivery_evidence_task_opened
+            && push_notification_excluded
+            && cloud_backup_excluded
+            && central_account_excluded
+            && !mobile_readiness_claimed
+            && !release_readiness_claimed
+            && !security_readiness_claimed
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_KICKOFF_BLOCKER_REQUIRED_ITEMS
+                .contains(&"mobile wrapper implementation kickoff blocker status only")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_KICKOFF_BLOCKER_REQUIRED_ITEMS
+                .contains(&"kickoff blocker record only")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_KICKOFF_BLOCKER_REQUIRED_ITEMS
+                .contains(&"implementation kickoff blocked")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_KICKOFF_BLOCKER_REQUIRED_ITEMS
+                .contains(&"no mobile source scaffold created")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_KICKOFF_BLOCKER_FORBIDDEN_CLAIMS
+                .contains(&"implementation kickoff allowed")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_KICKOFF_BLOCKER_FORBIDDEN_CLAIMS
+                .contains(&"implementation task opened")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_KICKOFF_BLOCKER_FORBIDDEN_CLAIMS
+                .contains(&"runtime messaging scaffold created")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_KICKOFF_BLOCKER_FORBIDDEN_CLAIMS
+                .contains(&"release ready");
+
+        ProductionMobileWrapperImplementationKickoffBlockerBoundarySummary {
+            required_kickoff_blocker_items:
+                PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_KICKOFF_BLOCKER_REQUIRED_ITEMS,
+            forbidden_kickoff_claims:
+                PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_KICKOFF_BLOCKER_FORBIDDEN_CLAIMS,
+            inherits_mobile_wrapper_implementation_authorization_boundary,
+            kickoff_blocker_status_only_label_required,
+            kickoff_blocker_record_only_label_required,
+            authorization_not_granted_blocker_recorded,
+            entry_criteria_not_satisfied_blocker_recorded,
+            implementation_kickoff_blocked,
+            implementation_task_opened,
+            mobile_source_scaffold_created,
+            android_build_scaffold_created,
+            ios_build_scaffold_created,
+            runtime_messaging_scaffold_created,
+            store_distribution_task_opened,
+            external_delivery_evidence_task_opened,
+            push_notification_excluded,
+            cloud_backup_excluded,
+            central_account_excluded,
+            mobile_readiness_claimed,
+            release_readiness_claimed,
+            security_readiness_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -22940,6 +23201,144 @@ pub mod production {
                 .contains(&"production-ready"));
             assert!(boundary
                 .forbidden_authorization_claims()
+                .contains(&"safe for sensitive communication"));
+        }
+
+        #[test]
+        fn production_mobile_wrapper_implementation_kickoff_blocker_boundary_blocks_kickoff() {
+            let boundary =
+                production_mobile_wrapper_implementation_kickoff_blocker_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_wrapper_implementation_authorization_boundary());
+            assert!(boundary.kickoff_blocker_status_only_label_required());
+            assert!(boundary.kickoff_blocker_record_only_label_required());
+            assert!(boundary.authorization_not_granted_blocker_recorded());
+            assert!(boundary.entry_criteria_not_satisfied_blocker_recorded());
+            assert!(boundary.implementation_kickoff_blocked());
+            assert!(!boundary.implementation_task_opened());
+            assert!(!boundary.mobile_source_scaffold_created());
+            assert!(!boundary.android_build_scaffold_created());
+            assert!(!boundary.ios_build_scaffold_created());
+            assert!(!boundary.runtime_messaging_scaffold_created());
+            assert!(!boundary.store_distribution_task_opened());
+            assert!(!boundary.external_delivery_evidence_task_opened());
+            assert!(boundary.push_notification_excluded());
+            assert!(boundary.cloud_backup_excluded());
+            assert!(boundary.central_account_excluded());
+            assert!(!boundary.mobile_readiness_claimed());
+            assert!(!boundary.release_readiness_claimed());
+            assert!(!boundary.security_readiness_claimed());
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"mobile wrapper implementation kickoff blocker status only"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"kickoff blocker record only"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"authorization not granted blocker recorded"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"entry criteria not satisfied blocker recorded"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"implementation kickoff blocked"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"no implementation task opened"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"no mobile source scaffold created"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"no Android build scaffold created"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"no iOS build scaffold created"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"no runtime messaging scaffold created"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"no store distribution task opened"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"no external delivery evidence task opened"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"push notification remains excluded"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"cloud backup remains excluded"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"central account remains excluded"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"kickoff blocker does not claim mobile readiness"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"kickoff blocker does not claim release readiness"));
+            assert!(boundary
+                .required_kickoff_blocker_items()
+                .contains(&"kickoff blocker does not claim security readiness"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"implementation kickoff allowed"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"implementation kickoff unblocked"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"implementation task opened"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"mobile implementation started"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"mobile source scaffold created"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"Android build scaffold created"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"iOS build scaffold created"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"runtime messaging scaffold created"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"store distribution task opened"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"external delivery evidence task opened"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"implementation authorized"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"authorization granted"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"entry criteria satisfied"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"mobile app ready"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"mobile readiness"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"release ready"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"security-ready"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
+                .contains(&"production-ready"));
+            assert!(boundary
+                .forbidden_kickoff_claims()
                 .contains(&"safe for sensitive communication"));
         }
 
