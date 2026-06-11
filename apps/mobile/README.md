@@ -180,3 +180,41 @@ First-run checklists must not show safe for sensitive communication.
 First-run checklists must not show audited.
 First-run checklists must not show production-ready.
 First-run checklists must not show security-ready claims.
+
+## Manual Pairing Checklist Screen Copy Boundary
+
+Future mobile manual pairing checklists are documentation-only candidates until
+a separate wrapper UI implementation phase exists.
+
+Manual pairing checklists may show manual pairing checklist status only.
+Manual pairing checklists may show invite code create or join is explicit user action.
+Manual pairing checklists may show pairing payload export/import is manual.
+Manual pairing checklists may show safety transcript confirm required.
+Manual pairing checklists may show pairwise identity only.
+Manual pairing checklists may show verified pairwise session required before messaging.
+Manual pairing checklists may show redacted pairing status only.
+Manual pairing checklists may show no central contact discovery.
+Manual pairing checklists may show no searchable username.
+Manual pairing checklists may show no phone number account.
+Manual pairing checklists may show no email account.
+Manual pairing checklists may show external onion delivery not claimed.
+Manual pairing checklists may show push delivery not claimed.
+Manual pairing checklists may show security-ready not claimed.
+
+Manual pairing checklists must not show automatic contact discovery.
+Manual pairing checklists must not show searchable username lookup.
+Manual pairing checklists must not show phone number lookup.
+Manual pairing checklists must not show email lookup.
+Manual pairing checklists must not show global account.
+Manual pairing checklists must not show central account.
+Manual pairing checklists must not show central contact discovery.
+Manual pairing checklists must not show central message server.
+Manual pairing checklists must not show QR scan proves identity.
+Manual pairing checklists must not show pairing automatically verified.
+Manual pairing checklists must not show connected to peer.
+Manual pairing checklists must not show message delivery verified.
+Manual pairing checklists must not show external onion delivery verified.
+Manual pairing checklists must not show push delivery enabled.
+Manual pairing checklists must not show cloud backup enabled.
+Manual pairing checklists must not show safe for sensitive communication.
+Manual pairing checklists must not show security-ready claims.
