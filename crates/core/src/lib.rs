@@ -1262,6 +1262,33 @@ pub mod production {
         "security_ready_claim",
     ];
 
+    const PRODUCTION_MOBILE_SKELETON_VERIFICATION_SCRIPT_PATHS: &[&str] =
+        &["scripts/verify_mobile_skeleton_boundary.sh"];
+
+    const PRODUCTION_MOBILE_SKELETON_VERIFICATION_REQUIRED_FILES: &[&str] = &[
+        "apps/mobile/README.md",
+        "apps/mobile/android/README.md",
+        "apps/mobile/ios/README.md",
+        "apps/mobile/ffi/README.md",
+    ];
+
+    const PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS: &[&str] = &[
+        "build.gradle",
+        "settings.gradle",
+        "AndroidManifest.xml",
+        "*.xcodeproj",
+        "*.xcworkspace",
+        "Package.swift",
+        "Info.plist",
+        "*.kt",
+        "*.swift",
+        "*.udl",
+        "*.apk",
+        "*.aab",
+        "*.ipa",
+        "mobile_build_output_directories",
+    ];
+
     const PRODUCTION_INDEPENDENT_REVIEW_POLICIES: &[&str] = &[
         "public_threat_model_required",
         "independent_review_packet_required",
@@ -1657,6 +1684,25 @@ pub mod production {
         raw_storage_or_secret_export_allowed: bool,
         network_or_delivery_runtime_export_allowed: bool,
         wrapper_specific_semantics_allowed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileSkeletonVerificationScriptBoundarySummary {
+        script_paths: &'static [&'static str],
+        required_files: &'static [&'static str],
+        rejected_file_patterns: &'static [&'static str],
+        inherits_mobile_skeleton_boundary: bool,
+        inherits_mobile_ffi_inventory_boundary: bool,
+        script_is_read_only: bool,
+        requires_mobile_readmes: bool,
+        rejects_buildable_android_project_files: bool,
+        rejects_buildable_ios_project_files: bool,
+        rejects_generated_bindings: bool,
+        rejects_mobile_artifacts: bool,
+        network_or_build_execution_allowed: bool,
+        mobile_readiness_claimed: bool,
         security_ready_claimed: bool,
         boundary_closed: bool,
     }
@@ -2783,6 +2829,68 @@ pub mod production {
 
         pub fn wrapper_specific_semantics_allowed(self) -> bool {
             self.wrapper_specific_semantics_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileSkeletonVerificationScriptBoundarySummary {
+        pub fn script_paths(self) -> &'static [&'static str] {
+            self.script_paths
+        }
+
+        pub fn required_files(self) -> &'static [&'static str] {
+            self.required_files
+        }
+
+        pub fn rejected_file_patterns(self) -> &'static [&'static str] {
+            self.rejected_file_patterns
+        }
+
+        pub fn inherits_mobile_skeleton_boundary(self) -> bool {
+            self.inherits_mobile_skeleton_boundary
+        }
+
+        pub fn inherits_mobile_ffi_inventory_boundary(self) -> bool {
+            self.inherits_mobile_ffi_inventory_boundary
+        }
+
+        pub fn script_is_read_only(self) -> bool {
+            self.script_is_read_only
+        }
+
+        pub fn requires_mobile_readmes(self) -> bool {
+            self.requires_mobile_readmes
+        }
+
+        pub fn rejects_buildable_android_project_files(self) -> bool {
+            self.rejects_buildable_android_project_files
+        }
+
+        pub fn rejects_buildable_ios_project_files(self) -> bool {
+            self.rejects_buildable_ios_project_files
+        }
+
+        pub fn rejects_generated_bindings(self) -> bool {
+            self.rejects_generated_bindings
+        }
+
+        pub fn rejects_mobile_artifacts(self) -> bool {
+            self.rejects_mobile_artifacts
+        }
+
+        pub fn network_or_build_execution_allowed(self) -> bool {
+            self.network_or_build_execution_allowed
+        }
+
+        pub fn mobile_readiness_claimed(self) -> bool {
+            self.mobile_readiness_claimed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -11460,6 +11568,89 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_skeleton_verification_script_boundary_summary(
+    ) -> ProductionMobileSkeletonVerificationScriptBoundarySummary {
+        let skeleton = production_mobile_wrapper_skeleton_directory_boundary_summary();
+        let ffi = production_mobile_shared_core_ffi_inventory_boundary_summary();
+        let inherits_mobile_skeleton_boundary =
+            skeleton.boundary_closed() && skeleton.documentation_only();
+        let inherits_mobile_ffi_inventory_boundary = ffi.boundary_closed()
+            && ffi.documentation_only()
+            && ffi.uniffi_or_ffi_placeholder_only();
+        let script_is_read_only = true;
+        let requires_mobile_readmes = PRODUCTION_MOBILE_SKELETON_VERIFICATION_REQUIRED_FILES
+            .contains(&"apps/mobile/README.md")
+            && PRODUCTION_MOBILE_SKELETON_VERIFICATION_REQUIRED_FILES
+                .contains(&"apps/mobile/android/README.md")
+            && PRODUCTION_MOBILE_SKELETON_VERIFICATION_REQUIRED_FILES
+                .contains(&"apps/mobile/ios/README.md")
+            && PRODUCTION_MOBILE_SKELETON_VERIFICATION_REQUIRED_FILES
+                .contains(&"apps/mobile/ffi/README.md");
+        let rejects_buildable_android_project_files =
+            PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS
+                .contains(&"build.gradle")
+                && PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS
+                    .contains(&"settings.gradle")
+                && PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS
+                    .contains(&"AndroidManifest.xml");
+        let rejects_buildable_ios_project_files =
+            PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS.contains(&"*.xcodeproj")
+                && PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS
+                    .contains(&"*.xcworkspace")
+                && PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS
+                    .contains(&"Package.swift")
+                && PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS
+                    .contains(&"Info.plist");
+        let rejects_generated_bindings =
+            PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS.contains(&"*.kt")
+                && PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS
+                    .contains(&"*.swift")
+                && PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS
+                    .contains(&"*.udl");
+        let rejects_mobile_artifacts =
+            PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS.contains(&"*.apk")
+                && PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS
+                    .contains(&"*.aab")
+                && PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS
+                    .contains(&"*.ipa")
+                && PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS
+                    .contains(&"mobile_build_output_directories");
+        let network_or_build_execution_allowed = false;
+        let mobile_readiness_claimed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_skeleton_boundary
+            && inherits_mobile_ffi_inventory_boundary
+            && script_is_read_only
+            && requires_mobile_readmes
+            && rejects_buildable_android_project_files
+            && rejects_buildable_ios_project_files
+            && rejects_generated_bindings
+            && rejects_mobile_artifacts
+            && !network_or_build_execution_allowed
+            && !mobile_readiness_claimed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_SKELETON_VERIFICATION_SCRIPT_PATHS
+                .contains(&"scripts/verify_mobile_skeleton_boundary.sh");
+
+        ProductionMobileSkeletonVerificationScriptBoundarySummary {
+            script_paths: PRODUCTION_MOBILE_SKELETON_VERIFICATION_SCRIPT_PATHS,
+            required_files: PRODUCTION_MOBILE_SKELETON_VERIFICATION_REQUIRED_FILES,
+            rejected_file_patterns: PRODUCTION_MOBILE_SKELETON_VERIFICATION_REJECTED_FILE_PATTERNS,
+            inherits_mobile_skeleton_boundary,
+            inherits_mobile_ffi_inventory_boundary,
+            script_is_read_only,
+            requires_mobile_readmes,
+            rejects_buildable_android_project_files,
+            rejects_buildable_ios_project_files,
+            rejects_generated_bindings,
+            rejects_mobile_artifacts,
+            network_or_build_execution_allowed,
+            mobile_readiness_claimed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_independent_review_boundary_summary(
     ) -> ProductionIndependentReviewBoundarySummary {
         let public_threat_model_required = true;
@@ -14506,6 +14697,57 @@ pub mod production {
             assert!(boundary
                 .rejected_exports()
                 .contains(&"security_ready_claim"));
+        }
+
+        #[test]
+        fn production_mobile_skeleton_verification_script_boundary_is_read_only_and_non_claiming() {
+            let boundary = production_mobile_skeleton_verification_script_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_skeleton_boundary());
+            assert!(boundary.inherits_mobile_ffi_inventory_boundary());
+            assert!(boundary.script_is_read_only());
+            assert!(boundary.requires_mobile_readmes());
+            assert!(boundary.rejects_buildable_android_project_files());
+            assert!(boundary.rejects_buildable_ios_project_files());
+            assert!(boundary.rejects_generated_bindings());
+            assert!(boundary.rejects_mobile_artifacts());
+            assert!(!boundary.network_or_build_execution_allowed());
+            assert!(!boundary.mobile_readiness_claimed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .script_paths()
+                .contains(&"scripts/verify_mobile_skeleton_boundary.sh"));
+            assert!(boundary.required_files().contains(&"apps/mobile/README.md"));
+            assert!(boundary
+                .required_files()
+                .contains(&"apps/mobile/android/README.md"));
+            assert!(boundary
+                .required_files()
+                .contains(&"apps/mobile/ios/README.md"));
+            assert!(boundary
+                .required_files()
+                .contains(&"apps/mobile/ffi/README.md"));
+            assert!(boundary.rejected_file_patterns().contains(&"build.gradle"));
+            assert!(boundary
+                .rejected_file_patterns()
+                .contains(&"settings.gradle"));
+            assert!(boundary
+                .rejected_file_patterns()
+                .contains(&"AndroidManifest.xml"));
+            assert!(boundary.rejected_file_patterns().contains(&"*.xcodeproj"));
+            assert!(boundary.rejected_file_patterns().contains(&"*.xcworkspace"));
+            assert!(boundary.rejected_file_patterns().contains(&"Package.swift"));
+            assert!(boundary.rejected_file_patterns().contains(&"Info.plist"));
+            assert!(boundary.rejected_file_patterns().contains(&"*.kt"));
+            assert!(boundary.rejected_file_patterns().contains(&"*.swift"));
+            assert!(boundary.rejected_file_patterns().contains(&"*.udl"));
+            assert!(boundary.rejected_file_patterns().contains(&"*.apk"));
+            assert!(boundary.rejected_file_patterns().contains(&"*.aab"));
+            assert!(boundary.rejected_file_patterns().contains(&"*.ipa"));
+            assert!(boundary
+                .rejected_file_patterns()
+                .contains(&"mobile_build_output_directories"));
         }
 
         #[test]
