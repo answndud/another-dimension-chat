@@ -1258,6 +1258,36 @@ pub mod production {
         "notarization_security_claim",
     ];
 
+    const PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_REQUIRED_PHRASES: &[&str] = &[
+        "manual update verification required",
+        "same GitHub Release artifact",
+        "same release checksum",
+        "public provenance",
+        "release manifest",
+        "release notes",
+        "dependency evidence",
+        "not audited",
+        "not production-ready",
+        "store trust not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_FORBIDDEN_CLAIMS: &[&str] = &[
+        "auto-update available",
+        "automatic update",
+        "update installed automatically",
+        "Play Store verified",
+        "App Store verified",
+        "TestFlight verified",
+        "store approved security",
+        "platform signing security",
+        "notarization security",
+        "mobile review security",
+        "branch checksum accepted",
+        "source archive checksum accepted",
+        "copied checksum accepted",
+        "security-ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_UX_COPY_PLATFORMS: &[&str] =
         &["android_shell_candidate", "ios_shell_candidate"];
 
@@ -1873,6 +1903,26 @@ pub mod production {
         copied_cross_release_evidence_allowed: bool,
         boundary_closed: bool,
         security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileInstallUpdateScreenCopyBoundarySummary {
+        required_screen_phrases: &'static [&'static str],
+        forbidden_screen_claims: &'static [&'static str],
+        inherits_mobile_install_update_boundary: bool,
+        inherits_mobile_ux_copy_boundary: bool,
+        manual_update_verification_label_required: bool,
+        same_release_artifact_label_required: bool,
+        same_release_checksum_label_required: bool,
+        public_provenance_label_required: bool,
+        store_trust_non_claim_required: bool,
+        auto_update_cta_allowed: bool,
+        store_verified_claim_allowed: bool,
+        platform_signing_security_claim_allowed: bool,
+        branch_or_source_archive_evidence_allowed: bool,
+        copied_checksum_allowed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -3173,6 +3223,72 @@ pub mod production {
 
         pub fn security_ready_claimed(self) -> bool {
             self.security_ready_claimed
+        }
+    }
+
+    impl ProductionMobileInstallUpdateScreenCopyBoundarySummary {
+        pub fn required_screen_phrases(self) -> &'static [&'static str] {
+            self.required_screen_phrases
+        }
+
+        pub fn forbidden_screen_claims(self) -> &'static [&'static str] {
+            self.forbidden_screen_claims
+        }
+
+        pub fn inherits_mobile_install_update_boundary(self) -> bool {
+            self.inherits_mobile_install_update_boundary
+        }
+
+        pub fn inherits_mobile_ux_copy_boundary(self) -> bool {
+            self.inherits_mobile_ux_copy_boundary
+        }
+
+        pub fn manual_update_verification_label_required(self) -> bool {
+            self.manual_update_verification_label_required
+        }
+
+        pub fn same_release_artifact_label_required(self) -> bool {
+            self.same_release_artifact_label_required
+        }
+
+        pub fn same_release_checksum_label_required(self) -> bool {
+            self.same_release_checksum_label_required
+        }
+
+        pub fn public_provenance_label_required(self) -> bool {
+            self.public_provenance_label_required
+        }
+
+        pub fn store_trust_non_claim_required(self) -> bool {
+            self.store_trust_non_claim_required
+        }
+
+        pub fn auto_update_cta_allowed(self) -> bool {
+            self.auto_update_cta_allowed
+        }
+
+        pub fn store_verified_claim_allowed(self) -> bool {
+            self.store_verified_claim_allowed
+        }
+
+        pub fn platform_signing_security_claim_allowed(self) -> bool {
+            self.platform_signing_security_claim_allowed
+        }
+
+        pub fn branch_or_source_archive_evidence_allowed(self) -> bool {
+            self.branch_or_source_archive_evidence_allowed
+        }
+
+        pub fn copied_checksum_allowed(self) -> bool {
+            self.copied_checksum_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
         }
     }
 
@@ -12228,6 +12344,99 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_install_update_screen_copy_boundary_summary(
+    ) -> ProductionMobileInstallUpdateScreenCopyBoundarySummary {
+        let install_update = production_mobile_install_update_integrity_boundary_summary();
+        let ux = production_mobile_wrapper_ux_copy_boundary_summary();
+        let inherits_mobile_install_update_boundary = install_update.boundary_closed()
+            && install_update.manual_download_required()
+            && install_update.same_release_artifact_required()
+            && install_update.same_release_checksum_required()
+            && install_update.public_provenance_required()
+            && install_update.release_manifest_required()
+            && install_update.public_non_claims_required()
+            && !install_update.auto_update_enabled()
+            && !install_update.store_distribution_security_claimed()
+            && !install_update.mobile_review_security_claimed()
+            && !install_update.platform_signing_security_claimed()
+            && !install_update.security_ready_claimed();
+        let inherits_mobile_ux_copy_boundary = ux.boundary_closed()
+            && ux.manual_update_verification_phrase_required()
+            && ux.required_public_phrases().contains(&"not audited")
+            && ux
+                .required_public_phrases()
+                .contains(&"not production-ready")
+            && !ux.store_trust_claim_allowed()
+            && !ux.security_ready_claimed();
+        let manual_update_verification_label_required = true;
+        let same_release_artifact_label_required = true;
+        let same_release_checksum_label_required = true;
+        let public_provenance_label_required = true;
+        let store_trust_non_claim_required = true;
+        let auto_update_cta_allowed = false;
+        let store_verified_claim_allowed = false;
+        let platform_signing_security_claim_allowed = false;
+        let branch_or_source_archive_evidence_allowed = false;
+        let copied_checksum_allowed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_install_update_boundary
+            && inherits_mobile_ux_copy_boundary
+            && manual_update_verification_label_required
+            && same_release_artifact_label_required
+            && same_release_checksum_label_required
+            && public_provenance_label_required
+            && store_trust_non_claim_required
+            && !auto_update_cta_allowed
+            && !store_verified_claim_allowed
+            && !platform_signing_security_claim_allowed
+            && !branch_or_source_archive_evidence_allowed
+            && !copied_checksum_allowed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"manual update verification required")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"same GitHub Release artifact")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"same release checksum")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"public provenance")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"store trust not claimed")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"auto-update available")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"Play Store verified")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"App Store verified")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"TestFlight verified")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"platform signing security")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"branch checksum accepted")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"security-ready");
+
+        ProductionMobileInstallUpdateScreenCopyBoundarySummary {
+            required_screen_phrases: PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_REQUIRED_PHRASES,
+            forbidden_screen_claims: PRODUCTION_MOBILE_INSTALL_UPDATE_SCREEN_COPY_FORBIDDEN_CLAIMS,
+            inherits_mobile_install_update_boundary,
+            inherits_mobile_ux_copy_boundary,
+            manual_update_verification_label_required,
+            same_release_artifact_label_required,
+            same_release_checksum_label_required,
+            public_provenance_label_required,
+            store_trust_non_claim_required,
+            auto_update_cta_allowed,
+            store_verified_claim_allowed,
+            platform_signing_security_claim_allowed,
+            branch_or_source_archive_evidence_allowed,
+            copied_checksum_allowed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_mobile_wrapper_ux_copy_boundary_summary(
     ) -> ProductionMobileWrapperUxCopyBoundarySummary {
         let install_update = production_mobile_install_update_integrity_boundary_summary();
@@ -15729,6 +15938,97 @@ pub mod production {
             assert!(boundary
                 .rejected_trust_channels()
                 .contains(&"notarization_security_claim"));
+        }
+
+        #[test]
+        fn production_mobile_install_update_screen_copy_boundary_requires_manual_evidence_without_store_or_auto_update_claims(
+        ) {
+            let boundary = production_mobile_install_update_screen_copy_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_install_update_boundary());
+            assert!(boundary.inherits_mobile_ux_copy_boundary());
+            assert!(boundary.manual_update_verification_label_required());
+            assert!(boundary.same_release_artifact_label_required());
+            assert!(boundary.same_release_checksum_label_required());
+            assert!(boundary.public_provenance_label_required());
+            assert!(boundary.store_trust_non_claim_required());
+            assert!(!boundary.auto_update_cta_allowed());
+            assert!(!boundary.store_verified_claim_allowed());
+            assert!(!boundary.platform_signing_security_claim_allowed());
+            assert!(!boundary.branch_or_source_archive_evidence_allowed());
+            assert!(!boundary.copied_checksum_allowed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"manual update verification required"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"same GitHub Release artifact"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"same release checksum"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"public provenance"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"release manifest"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"release notes"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"dependency evidence"));
+            assert!(boundary.required_screen_phrases().contains(&"not audited"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"not production-ready"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"store trust not claimed"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"auto-update available"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"automatic update"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"update installed automatically"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"Play Store verified"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"App Store verified"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"TestFlight verified"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"store approved security"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"mobile review security"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"platform signing security"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"notarization security"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"branch checksum accepted"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"source archive checksum accepted"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"copied checksum accepted"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"security-ready"));
         }
 
         #[test]
