@@ -1200,6 +1200,36 @@ pub mod production {
         "security-ready",
     ];
 
+    const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
+        "apps/mobile/README.md",
+        "apps/mobile/android/README.md",
+        "apps/mobile/ios/README.md",
+    ];
+
+    const PRODUCTION_MOBILE_WRAPPER_SKELETON_ALLOWED_CONTENT: &[&str] = &[
+        "documentation_only_boundary",
+        "android_shared_core_shell_candidate",
+        "ios_shared_core_shell_candidate",
+        "uniffi_or_ffi_boundary_placeholder",
+        "no_buildable_mobile_app",
+        "no_mobile_public_beta_artifact",
+        "no_store_distribution",
+        "no_runtime_command_implementation",
+    ];
+
+    const PRODUCTION_MOBILE_WRAPPER_SKELETON_REJECTED_CONTENT: &[&str] = &[
+        "android_app_readiness",
+        "ios_app_readiness",
+        "gradle_project_claim",
+        "xcode_project_claim",
+        "apk_or_aab_artifact",
+        "ipa_artifact",
+        "play_store_distribution",
+        "app_store_or_testflight_distribution",
+        "mobile_runtime_messaging_enabled",
+        "mobile_security_ready_claim",
+    ];
+
     const PRODUCTION_INDEPENDENT_REVIEW_POLICIES: &[&str] = &[
         "public_threat_model_required",
         "independent_review_packet_required",
@@ -1558,6 +1588,24 @@ pub mod production {
         cloud_backup_claim_allowed: bool,
         external_onion_delivery_success_claim_allowed: bool,
         briar_cwtch_equivalence_claim_allowed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileWrapperSkeletonDirectoryBoundarySummary {
+        skeleton_paths: &'static [&'static str],
+        allowed_content: &'static [&'static str],
+        rejected_content: &'static [&'static str],
+        inherits_mobile_ux_copy_boundary: bool,
+        inherits_mobile_status_boundary: bool,
+        documentation_only: bool,
+        android_skeleton_present: bool,
+        ios_skeleton_present: bool,
+        buildable_mobile_app_claimed: bool,
+        mobile_public_beta_artifact_claimed: bool,
+        store_distribution_claimed: bool,
+        runtime_command_implementation_claimed: bool,
         security_ready_claimed: bool,
         boundary_closed: bool,
     }
@@ -2564,6 +2612,64 @@ pub mod production {
 
         pub fn briar_cwtch_equivalence_claim_allowed(self) -> bool {
             self.briar_cwtch_equivalence_claim_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileWrapperSkeletonDirectoryBoundarySummary {
+        pub fn skeleton_paths(self) -> &'static [&'static str] {
+            self.skeleton_paths
+        }
+
+        pub fn allowed_content(self) -> &'static [&'static str] {
+            self.allowed_content
+        }
+
+        pub fn rejected_content(self) -> &'static [&'static str] {
+            self.rejected_content
+        }
+
+        pub fn inherits_mobile_ux_copy_boundary(self) -> bool {
+            self.inherits_mobile_ux_copy_boundary
+        }
+
+        pub fn inherits_mobile_status_boundary(self) -> bool {
+            self.inherits_mobile_status_boundary
+        }
+
+        pub fn documentation_only(self) -> bool {
+            self.documentation_only
+        }
+
+        pub fn android_skeleton_present(self) -> bool {
+            self.android_skeleton_present
+        }
+
+        pub fn ios_skeleton_present(self) -> bool {
+            self.ios_skeleton_present
+        }
+
+        pub fn buildable_mobile_app_claimed(self) -> bool {
+            self.buildable_mobile_app_claimed
+        }
+
+        pub fn mobile_public_beta_artifact_claimed(self) -> bool {
+            self.mobile_public_beta_artifact_claimed
+        }
+
+        pub fn store_distribution_claimed(self) -> bool {
+            self.store_distribution_claimed
+        }
+
+        pub fn runtime_command_implementation_claimed(self) -> bool {
+            self.runtime_command_implementation_claimed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -11119,6 +11225,67 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_wrapper_skeleton_directory_boundary_summary(
+    ) -> ProductionMobileWrapperSkeletonDirectoryBoundarySummary {
+        let ux = production_mobile_wrapper_ux_copy_boundary_summary();
+        let status = production_mobile_runtime_command_surface_status_summary();
+        let inherits_mobile_ux_copy_boundary = ux.boundary_closed()
+            && ux
+                .required_public_phrases()
+                .contains(&"mobile clients are not part of this public beta")
+            && !ux.security_ready_claimed();
+        let inherits_mobile_status_boundary = status.boundary_closed()
+            && status.redacted_status_only()
+            && !status.delivery_runtime_opened();
+        let documentation_only = true;
+        let android_skeleton_present = true;
+        let ios_skeleton_present = true;
+        let buildable_mobile_app_claimed = false;
+        let mobile_public_beta_artifact_claimed = false;
+        let store_distribution_claimed = false;
+        let runtime_command_implementation_claimed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_ux_copy_boundary
+            && inherits_mobile_status_boundary
+            && documentation_only
+            && android_skeleton_present
+            && ios_skeleton_present
+            && !buildable_mobile_app_claimed
+            && !mobile_public_beta_artifact_claimed
+            && !store_distribution_claimed
+            && !runtime_command_implementation_claimed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS.contains(&"apps/mobile/README.md")
+            && PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS.contains(&"apps/mobile/android/README.md")
+            && PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS.contains(&"apps/mobile/ios/README.md")
+            && PRODUCTION_MOBILE_WRAPPER_SKELETON_ALLOWED_CONTENT
+                .contains(&"documentation_only_boundary")
+            && PRODUCTION_MOBILE_WRAPPER_SKELETON_ALLOWED_CONTENT
+                .contains(&"uniffi_or_ffi_boundary_placeholder")
+            && PRODUCTION_MOBILE_WRAPPER_SKELETON_REJECTED_CONTENT
+                .contains(&"android_app_readiness")
+            && PRODUCTION_MOBILE_WRAPPER_SKELETON_REJECTED_CONTENT.contains(&"ios_app_readiness")
+            && PRODUCTION_MOBILE_WRAPPER_SKELETON_REJECTED_CONTENT
+                .contains(&"mobile_runtime_messaging_enabled");
+
+        ProductionMobileWrapperSkeletonDirectoryBoundarySummary {
+            skeleton_paths: PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS,
+            allowed_content: PRODUCTION_MOBILE_WRAPPER_SKELETON_ALLOWED_CONTENT,
+            rejected_content: PRODUCTION_MOBILE_WRAPPER_SKELETON_REJECTED_CONTENT,
+            inherits_mobile_ux_copy_boundary,
+            inherits_mobile_status_boundary,
+            documentation_only,
+            android_skeleton_present,
+            ios_skeleton_present,
+            buildable_mobile_app_claimed,
+            mobile_public_beta_artifact_claimed,
+            store_distribution_claimed,
+            runtime_command_implementation_claimed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_independent_review_boundary_summary(
     ) -> ProductionIndependentReviewBoundarySummary {
         let public_threat_model_required = true;
@@ -14039,6 +14206,59 @@ pub mod production {
                 .forbidden_claims()
                 .contains(&"external onion delivery success"));
             assert!(boundary.forbidden_claims().contains(&"security-ready"));
+        }
+
+        #[test]
+        fn production_mobile_wrapper_skeleton_directory_boundary_is_documentation_only() {
+            let boundary = production_mobile_wrapper_skeleton_directory_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_ux_copy_boundary());
+            assert!(boundary.inherits_mobile_status_boundary());
+            assert!(boundary.documentation_only());
+            assert!(boundary.android_skeleton_present());
+            assert!(boundary.ios_skeleton_present());
+            assert!(!boundary.buildable_mobile_app_claimed());
+            assert!(!boundary.mobile_public_beta_artifact_claimed());
+            assert!(!boundary.store_distribution_claimed());
+            assert!(!boundary.runtime_command_implementation_claimed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary.skeleton_paths().contains(&"apps/mobile/README.md"));
+            assert!(boundary
+                .skeleton_paths()
+                .contains(&"apps/mobile/android/README.md"));
+            assert!(boundary
+                .skeleton_paths()
+                .contains(&"apps/mobile/ios/README.md"));
+            assert!(boundary
+                .allowed_content()
+                .contains(&"documentation_only_boundary"));
+            assert!(boundary
+                .allowed_content()
+                .contains(&"android_shared_core_shell_candidate"));
+            assert!(boundary
+                .allowed_content()
+                .contains(&"ios_shared_core_shell_candidate"));
+            assert!(boundary
+                .allowed_content()
+                .contains(&"uniffi_or_ffi_boundary_placeholder"));
+            assert!(boundary
+                .allowed_content()
+                .contains(&"no_buildable_mobile_app"));
+            assert!(boundary
+                .rejected_content()
+                .contains(&"android_app_readiness"));
+            assert!(boundary.rejected_content().contains(&"ios_app_readiness"));
+            assert!(boundary
+                .rejected_content()
+                .contains(&"gradle_project_claim"));
+            assert!(boundary.rejected_content().contains(&"xcode_project_claim"));
+            assert!(boundary
+                .rejected_content()
+                .contains(&"mobile_runtime_messaging_enabled"));
+            assert!(boundary
+                .rejected_content()
+                .contains(&"mobile_security_ready_claim"));
         }
 
         #[test]
