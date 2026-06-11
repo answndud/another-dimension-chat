@@ -2,7 +2,7 @@
 
 Another Dimension Chat is an early Rust prototype for a high-risk 1:1 messenger architecture.
 
-The project goal is not "a serverless chat app" in the loose sense. The long-term goal is a no-central-trusted-server messenger that avoids phone-number identity, global accounts, centralized contact discovery, centralized push notifications, and default direct P2P transport in high-risk mode.
+The project goal is not "a serverless chat app" in the loose sense. The long-term goal is a no-central-trusted-server messenger that avoids phone-number identity, global accounts, centralized contact discovery, centralized push notifications, central message servers, and default direct P2P transport in high-risk mode. The current practical default transport path is explicit user-mediated encrypted envelope exchange; advanced onion/Tor work remains an opt-in, fail-closed, user-triggered path.
 
 ## Current Status
 
@@ -46,7 +46,7 @@ or iCloud backup a required trust dependency.
 
 Do not use it for real communication.
 
-The current implementation has a local Tauri desktop beta candidate for two-profile invite rooms, local encrypted profile/session/message stores, explicit private-delivery setup, restart/resume recovery, and fail-closed onion/Tor attempt paths. It still exists to test protocol, storage, transport, and UI recovery boundaries before any production security claim.
+The current implementation has a local Tauri desktop beta candidate for two-profile invite rooms, local encrypted profile/session/message stores, explicit user-mediated private-delivery setup, restart/resume recovery, and fail-closed onion/Tor attempt paths. It still exists to test protocol, storage, transport, and UI recovery boundaries before any production security claim.
 
 The current internal field-test handoff record, if the ignored local artifact directory is present, is:
 
@@ -137,15 +137,18 @@ What exists today:
   OS keystore or Secure Enclave style wrapping is optional and not required,
   OS-keystore-only unlock is rejected, app key wrapping is not claimed, and
   rollback prevention is not claimed without an external monotonic-state design.
-- An explicit transport envelope I/O boundary for high-risk onion-only routing:
-  network work still requires user action, direct fallback is rejected, send and
-  receive adapters remain fail-closed, envelope I/O context is redacted, and
-  external two-machine onion delivery is still not claimed.
+- A practical transport split for v0.1: the default path is local manual
+  encrypted envelope exchange with no network I/O, no automatic background
+  delivery claim, no central message server, no push-notification dependency,
+  and no central contact discovery. The advanced high-risk onion/Tor path stays
+  onion-only, requires explicit user action, rejects direct fallback, keeps send
+  and receive adapters fail-closed, redacts envelope I/O context, and does not
+  claim external two-machine onion delivery.
 - Manual update integrity evidence for the unsigned public beta release path: DMG `.sha256`, public provenance JSON, release manifest, update-integrity policy, supply-chain baseline note, dependency inventory, and a three-lockfile SHA-256 list for `Cargo.lock`, `apps/desktop-tauri/src-tauri/Cargo.lock`, and `apps/desktop-tauri/package-lock.json`.
 - Public threat model and independent review packet that state allowed claims, non-claims, known gaps, public-safe review commands, private-reporting boundary, and the current no-reviewer-signoff/no-public-user-safety-signoff/no-completed-review gap.
 - Public intake policy and GitHub issue templates that require redacted public diagnostics or minimal private-contact requests instead of raw logs, payloads, endpoints, paths, passphrases, private keys, key material, crash dumps, or private planning notes.
 - Repository governance guardrails for maintainer-driven main-branch work, unsigned beta non-claims, no-central-trusted-server scope, release file discipline, and private-data redaction.
-- A local Tauri desktop beta shell for invite-code rooms, safety phrase confirmation, encrypted local profile/session/message records, saved-room resume, manual private-route exchange, explicit receive start/stop, retry/cancel recovery, and redacted field-test reports.
+- A local Tauri desktop beta shell for invite-code rooms, safety phrase confirmation, encrypted local profile/session/message records, saved-room resume, manual private-delivery exchange UI, explicit receive start/stop, retry/cancel recovery, and redacted field-test reports.
 - A desktop platform boundary for macOS and Windows: macOS public beta remains
   an unsigned experimental DMG, Windows remains a local build candidate, and
   both desktop shells must preserve the same local app-data, encrypted-store,
@@ -163,7 +166,7 @@ What exists today:
   TestFlight, notarization, cloud-backup, or wrapper-specific protocol
   dependency.
 - In-app unsigned public beta warnings and public diagnostics export limited to status, build, failure class, manual network permission, and app-launch network boundary; no crash upload, telemetry, raw log export, crash dump export, automated log collection, support bundle export, raw diagnostic file export, paths, endpoints, passphrases, or key material.
-- Explicit user-triggered onion/Tor attempt paths for beta field testing. The app must not bootstrap Tor, host onion services, publish descriptors, open streams, send envelopes, or receive envelopes on app launch.
+- Explicit user-triggered advanced onion/Tor attempt paths for beta field testing. The default practical delivery path is manual encrypted envelope exchange. The app must not bootstrap Tor, host onion services, publish descriptors, open streams, send envelopes, or receive envelopes on app launch.
 - Lightweight verification scripts, CLI hardening tests, Tauri scaffold static checks, and GitHub Actions verification.
 - Local beta DMG handoff is possible from the Tauri app directory, but signing, notarization, reproducible/equivalent builds, dependency review, external review, signoff, and auto-update integrity are not implemented.
 
@@ -175,6 +178,8 @@ What does not exist yet:
   guarantee.
 - Secure production messaging suitable for sensitive communication.
 - Reliable Tor/onion transport across real networks.
+- Automatic background delivery, central message server delivery,
+  push-notification delivery dependency, or central contact discovery.
 - Completed external two-machine onion delivery evidence.
 - Audited production transport adapter implementation.
 - Audited bridge or censorship-circumvention support.
@@ -285,9 +290,10 @@ This runs:
 - Session unlock policy keeps OS-keystore-only unlock rejected for high-risk mode and does not use Apple keychain, Secure Enclave, DPAPI, Keystore, or cloud key wrapping in v0.1.
 - Key/rollback policy is closed for v0.1 as a non-claim boundary: passphrase-first is required, OS wrapping is optional/non-required, app key wrapping is not ready, rollback prevention is not claimed, and external monotonic state is required before any future rollback-prevention claim.
 - Transport envelope I/O policy is closed for v0.1 as a non-claim boundary:
-  high-risk routing is onion-only, direct fallback is rejected, network work is
-  never automatic on launch, and send/receive remains fail-closed until real
-  external evidence exists.
+  default practical transport is local manual encrypted envelope exchange, the
+  advanced high-risk onion/Tor path is onion-only, direct fallback is rejected,
+  network work is never automatic on launch, and advanced send/receive remains
+  fail-closed until real external evidence exists.
 - Session unlock/lock UX exposes redacted wrong-passphrase/locked states without returning raw storage errors, local paths, identifiers, passphrase detail, or key material.
 - Session unlock redacted error taxonomy classifies disabled, passphrase-required, and OS-keystore-only rejected states without exposing raw storage errors, OS keychain errors, paths, identifiers, key material, or passphrase detail.
 - Default CLI `production unlock` is a fail-closed boundary command that returns the redacted disabled taxonomy without opening storage, writing session records, exposing key material, or enabling automatic runtime messaging.
