@@ -1503,6 +1503,42 @@ pub mod production {
         "security-ready",
     ];
 
+    const PRODUCTION_MOBILE_INVITE_VERIFICATION_CHECKLIST_REQUIRED_ITEMS: &[&str] = &[
+        "invite verification checklist status only",
+        "invite code entered by explicit user action",
+        "invite code create or join is manual",
+        "pairing payload decodable before verification",
+        "safety transcript displayed before confirmation",
+        "safety transcript confirm required",
+        "pairwise session draft only after safety confirmation",
+        "message session still requires handshake",
+        "redacted invite verification status only",
+        "central contact discovery not claimed",
+        "account lookup not claimed",
+        "external onion delivery not claimed",
+        "security-ready not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_INVITE_VERIFICATION_CHECKLIST_FORBIDDEN_CLAIMS: &[&str] = &[
+        "invite code proves identity",
+        "invite code discovers contacts",
+        "invite code searches username",
+        "invite code looks up phone number",
+        "invite code looks up email",
+        "invite accepted automatically",
+        "safety transcript automatically confirmed",
+        "session ready after invite",
+        "connected to peer",
+        "message delivery verified",
+        "external onion delivery verified",
+        "central contact discovery",
+        "central message server",
+        "push delivery enabled",
+        "cloud backup enabled",
+        "safe for sensitive communication",
+        "security-ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -2053,6 +2089,33 @@ pub mod production {
         qr_or_payload_identity_proof_claim_allowed: bool,
         pairing_auto_verified_claim_allowed: bool,
         delivery_success_claim_allowed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileInviteVerificationChecklistBoundarySummary {
+        required_checklist_items: &'static [&'static str],
+        forbidden_invite_claims: &'static [&'static str],
+        inherits_mobile_manual_pairing_checklist_boundary: bool,
+        inherits_mobile_ffi_inventory_boundary: bool,
+        invite_verification_status_only_label_required: bool,
+        explicit_user_action_label_required: bool,
+        manual_invite_create_join_label_required: bool,
+        pairing_payload_decodable_label_required: bool,
+        safety_transcript_display_label_required: bool,
+        safety_transcript_confirm_label_required: bool,
+        draft_after_safety_confirmation_label_required: bool,
+        handshake_still_required_label_required: bool,
+        redacted_invite_status_only_label_required: bool,
+        central_discovery_non_claim_required: bool,
+        account_lookup_non_claim_required: bool,
+        external_delivery_non_claim_required: bool,
+        invite_identity_proof_claim_allowed: bool,
+        automatic_accept_or_confirm_claim_allowed: bool,
+        session_ready_after_invite_claim_allowed: bool,
+        delivery_success_claim_allowed: bool,
+        central_service_claim_allowed: bool,
         security_ready_claimed: bool,
         boundary_closed: bool,
     }
@@ -3527,6 +3590,100 @@ pub mod production {
 
         pub fn delivery_success_claim_allowed(self) -> bool {
             self.delivery_success_claim_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileInviteVerificationChecklistBoundarySummary {
+        pub fn required_checklist_items(self) -> &'static [&'static str] {
+            self.required_checklist_items
+        }
+
+        pub fn forbidden_invite_claims(self) -> &'static [&'static str] {
+            self.forbidden_invite_claims
+        }
+
+        pub fn inherits_mobile_manual_pairing_checklist_boundary(self) -> bool {
+            self.inherits_mobile_manual_pairing_checklist_boundary
+        }
+
+        pub fn inherits_mobile_ffi_inventory_boundary(self) -> bool {
+            self.inherits_mobile_ffi_inventory_boundary
+        }
+
+        pub fn invite_verification_status_only_label_required(self) -> bool {
+            self.invite_verification_status_only_label_required
+        }
+
+        pub fn explicit_user_action_label_required(self) -> bool {
+            self.explicit_user_action_label_required
+        }
+
+        pub fn manual_invite_create_join_label_required(self) -> bool {
+            self.manual_invite_create_join_label_required
+        }
+
+        pub fn pairing_payload_decodable_label_required(self) -> bool {
+            self.pairing_payload_decodable_label_required
+        }
+
+        pub fn safety_transcript_display_label_required(self) -> bool {
+            self.safety_transcript_display_label_required
+        }
+
+        pub fn safety_transcript_confirm_label_required(self) -> bool {
+            self.safety_transcript_confirm_label_required
+        }
+
+        pub fn draft_after_safety_confirmation_label_required(self) -> bool {
+            self.draft_after_safety_confirmation_label_required
+        }
+
+        pub fn handshake_still_required_label_required(self) -> bool {
+            self.handshake_still_required_label_required
+        }
+
+        pub fn redacted_invite_status_only_label_required(self) -> bool {
+            self.redacted_invite_status_only_label_required
+        }
+
+        pub fn central_discovery_non_claim_required(self) -> bool {
+            self.central_discovery_non_claim_required
+        }
+
+        pub fn account_lookup_non_claim_required(self) -> bool {
+            self.account_lookup_non_claim_required
+        }
+
+        pub fn external_delivery_non_claim_required(self) -> bool {
+            self.external_delivery_non_claim_required
+        }
+
+        pub fn invite_identity_proof_claim_allowed(self) -> bool {
+            self.invite_identity_proof_claim_allowed
+        }
+
+        pub fn automatic_accept_or_confirm_claim_allowed(self) -> bool {
+            self.automatic_accept_or_confirm_claim_allowed
+        }
+
+        pub fn session_ready_after_invite_claim_allowed(self) -> bool {
+            self.session_ready_after_invite_claim_allowed
+        }
+
+        pub fn delivery_success_claim_allowed(self) -> bool {
+            self.delivery_success_claim_allowed
+        }
+
+        pub fn central_service_claim_allowed(self) -> bool {
+            self.central_service_claim_allowed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -13148,6 +13305,113 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_invite_verification_checklist_boundary_summary(
+    ) -> ProductionMobileInviteVerificationChecklistBoundarySummary {
+        let pairing = production_mobile_manual_pairing_checklist_screen_copy_boundary_summary();
+        let ffi = production_mobile_shared_core_ffi_inventory_boundary_summary();
+        let inherits_mobile_manual_pairing_checklist_boundary = pairing.boundary_closed()
+            && pairing.manual_pairing_status_only_label_required()
+            && pairing.invite_code_create_join_label_required()
+            && pairing.safety_transcript_confirm_label_required()
+            && !pairing.qr_or_payload_identity_proof_claim_allowed()
+            && !pairing.pairing_auto_verified_claim_allowed()
+            && !pairing.delivery_success_claim_allowed()
+            && !pairing.security_ready_claimed();
+        let inherits_mobile_ffi_inventory_boundary = ffi.boundary_closed()
+            && ffi.api_groups().contains(&"invite_code_create_join")
+            && ffi.api_groups().contains(&"pairing_payload_export_import")
+            && ffi.api_groups().contains(&"safety_transcript_confirm")
+            && ffi
+                .rejected_exports()
+                .contains(&"central_contact_discovery")
+            && ffi.rejected_exports().contains(&"central_message_server")
+            && !ffi.security_ready_claimed();
+        let invite_verification_status_only_label_required = true;
+        let explicit_user_action_label_required = true;
+        let manual_invite_create_join_label_required = true;
+        let pairing_payload_decodable_label_required = true;
+        let safety_transcript_display_label_required = true;
+        let safety_transcript_confirm_label_required = true;
+        let draft_after_safety_confirmation_label_required = true;
+        let handshake_still_required_label_required = true;
+        let redacted_invite_status_only_label_required = true;
+        let central_discovery_non_claim_required = true;
+        let account_lookup_non_claim_required = true;
+        let external_delivery_non_claim_required = true;
+        let invite_identity_proof_claim_allowed = false;
+        let automatic_accept_or_confirm_claim_allowed = false;
+        let session_ready_after_invite_claim_allowed = false;
+        let delivery_success_claim_allowed = false;
+        let central_service_claim_allowed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_manual_pairing_checklist_boundary
+            && inherits_mobile_ffi_inventory_boundary
+            && invite_verification_status_only_label_required
+            && explicit_user_action_label_required
+            && manual_invite_create_join_label_required
+            && pairing_payload_decodable_label_required
+            && safety_transcript_display_label_required
+            && safety_transcript_confirm_label_required
+            && draft_after_safety_confirmation_label_required
+            && handshake_still_required_label_required
+            && redacted_invite_status_only_label_required
+            && central_discovery_non_claim_required
+            && account_lookup_non_claim_required
+            && external_delivery_non_claim_required
+            && !invite_identity_proof_claim_allowed
+            && !automatic_accept_or_confirm_claim_allowed
+            && !session_ready_after_invite_claim_allowed
+            && !delivery_success_claim_allowed
+            && !central_service_claim_allowed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_INVITE_VERIFICATION_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"invite verification checklist status only")
+            && PRODUCTION_MOBILE_INVITE_VERIFICATION_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"pairing payload decodable before verification")
+            && PRODUCTION_MOBILE_INVITE_VERIFICATION_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"safety transcript confirm required")
+            && PRODUCTION_MOBILE_INVITE_VERIFICATION_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"message session still requires handshake")
+            && PRODUCTION_MOBILE_INVITE_VERIFICATION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"invite code proves identity")
+            && PRODUCTION_MOBILE_INVITE_VERIFICATION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"safety transcript automatically confirmed")
+            && PRODUCTION_MOBILE_INVITE_VERIFICATION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"session ready after invite")
+            && PRODUCTION_MOBILE_INVITE_VERIFICATION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"message delivery verified")
+            && PRODUCTION_MOBILE_INVITE_VERIFICATION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"security-ready");
+
+        ProductionMobileInviteVerificationChecklistBoundarySummary {
+            required_checklist_items:
+                PRODUCTION_MOBILE_INVITE_VERIFICATION_CHECKLIST_REQUIRED_ITEMS,
+            forbidden_invite_claims:
+                PRODUCTION_MOBILE_INVITE_VERIFICATION_CHECKLIST_FORBIDDEN_CLAIMS,
+            inherits_mobile_manual_pairing_checklist_boundary,
+            inherits_mobile_ffi_inventory_boundary,
+            invite_verification_status_only_label_required,
+            explicit_user_action_label_required,
+            manual_invite_create_join_label_required,
+            pairing_payload_decodable_label_required,
+            safety_transcript_display_label_required,
+            safety_transcript_confirm_label_required,
+            draft_after_safety_confirmation_label_required,
+            handshake_still_required_label_required,
+            redacted_invite_status_only_label_required,
+            central_discovery_non_claim_required,
+            account_lookup_non_claim_required,
+            external_delivery_non_claim_required,
+            invite_identity_proof_claim_allowed,
+            automatic_accept_or_confirm_claim_allowed,
+            session_ready_after_invite_claim_allowed,
+            delivery_success_claim_allowed,
+            central_service_claim_allowed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -16782,6 +17046,124 @@ pub mod production {
                 .contains(&"safe for sensitive communication"));
             assert!(boundary
                 .forbidden_pairing_claims()
+                .contains(&"security-ready"));
+        }
+
+        #[test]
+        fn production_mobile_invite_verification_checklist_boundary_requires_safety_confirmation_without_readiness_claims(
+        ) {
+            let boundary = production_mobile_invite_verification_checklist_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_manual_pairing_checklist_boundary());
+            assert!(boundary.inherits_mobile_ffi_inventory_boundary());
+            assert!(boundary.invite_verification_status_only_label_required());
+            assert!(boundary.explicit_user_action_label_required());
+            assert!(boundary.manual_invite_create_join_label_required());
+            assert!(boundary.pairing_payload_decodable_label_required());
+            assert!(boundary.safety_transcript_display_label_required());
+            assert!(boundary.safety_transcript_confirm_label_required());
+            assert!(boundary.draft_after_safety_confirmation_label_required());
+            assert!(boundary.handshake_still_required_label_required());
+            assert!(boundary.redacted_invite_status_only_label_required());
+            assert!(boundary.central_discovery_non_claim_required());
+            assert!(boundary.account_lookup_non_claim_required());
+            assert!(boundary.external_delivery_non_claim_required());
+            assert!(!boundary.invite_identity_proof_claim_allowed());
+            assert!(!boundary.automatic_accept_or_confirm_claim_allowed());
+            assert!(!boundary.session_ready_after_invite_claim_allowed());
+            assert!(!boundary.delivery_success_claim_allowed());
+            assert!(!boundary.central_service_claim_allowed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"invite verification checklist status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"invite code entered by explicit user action"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"invite code create or join is manual"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"pairing payload decodable before verification"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"safety transcript displayed before confirmation"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"safety transcript confirm required"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"pairwise session draft only after safety confirmation"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"message session still requires handshake"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"redacted invite verification status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"central contact discovery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"account lookup not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"external onion delivery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"security-ready not claimed"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"invite code proves identity"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"invite code discovers contacts"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"invite code searches username"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"invite code looks up phone number"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"invite code looks up email"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"invite accepted automatically"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"safety transcript automatically confirmed"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"session ready after invite"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"connected to peer"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"message delivery verified"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"external onion delivery verified"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"central contact discovery"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"central message server"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"push delivery enabled"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"cloud backup enabled"));
+            assert!(boundary
+                .forbidden_invite_claims()
+                .contains(&"safe for sensitive communication"));
+            assert!(boundary
+                .forbidden_invite_claims()
                 .contains(&"security-ready"));
         }
 

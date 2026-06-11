@@ -218,3 +218,40 @@ Manual pairing checklists must not show push delivery enabled.
 Manual pairing checklists must not show cloud backup enabled.
 Manual pairing checklists must not show safe for sensitive communication.
 Manual pairing checklists must not show security-ready claims.
+
+## Invite Verification Checklist Boundary
+
+Future mobile invite verification checklists are documentation-only candidates
+until a separate wrapper UI implementation phase exists.
+
+Invite verification checklists may show invite verification checklist status only.
+Invite verification checklists may show invite code entered by explicit user action.
+Invite verification checklists may show invite code create or join is manual.
+Invite verification checklists may show pairing payload decodable before verification.
+Invite verification checklists may show safety transcript displayed before confirmation.
+Invite verification checklists may show safety transcript confirm required.
+Invite verification checklists may show pairwise session draft only after safety confirmation.
+Invite verification checklists may show message session still requires handshake.
+Invite verification checklists may show redacted invite verification status only.
+Invite verification checklists may show central contact discovery not claimed.
+Invite verification checklists may show account lookup not claimed.
+Invite verification checklists may show external onion delivery not claimed.
+Invite verification checklists may show security-ready not claimed.
+
+Invite verification checklists must not show invite code proves identity.
+Invite verification checklists must not show invite code discovers contacts.
+Invite verification checklists must not show invite code searches username.
+Invite verification checklists must not show invite code looks up phone number.
+Invite verification checklists must not show invite code looks up email.
+Invite verification checklists must not show invite accepted automatically.
+Invite verification checklists must not show safety transcript automatically confirmed.
+Invite verification checklists must not show session ready after invite.
+Invite verification checklists must not show connected to peer.
+Invite verification checklists must not show message delivery verified.
+Invite verification checklists must not show external onion delivery verified.
+Invite verification checklists must not show central contact discovery.
+Invite verification checklists must not show central message server.
+Invite verification checklists must not show push delivery enabled.
+Invite verification checklists must not show cloud backup enabled.
+Invite verification checklists must not show safe for sensitive communication.
+Invite verification checklists must not show security-ready claims.
