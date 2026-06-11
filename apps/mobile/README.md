@@ -108,3 +108,36 @@ Backup-exclusion screens must not show Google backup available.
 Backup-exclusion screens must not show backup complete.
 Backup-exclusion screens must not show data safe after device restore.
 Backup-exclusion screens must not show security-ready claims.
+
+## Local Data Lifecycle Screen Copy Boundary
+
+Future mobile local data lifecycle screens are documentation-only candidates
+until a separate wrapper UI implementation phase exists.
+
+Local data lifecycle screens may show local data lifecycle status only.
+Local data lifecycle screens may show conversation delete available.
+Local data lifecycle screens may show conversation delete preserves session.
+Local data lifecycle screens may show session delete available.
+Local data lifecycle screens may show session delete preserves messages.
+Local data lifecycle screens may show profile delete available.
+Local data lifecycle screens may show full local wipe available.
+Local data lifecycle screens may show passphrase-first unlock required.
+Local data lifecycle screens may show encrypted store required.
+Local data lifecycle screens may show backup exclusion best-effort only.
+Local data lifecycle screens may show rollback detection marker only.
+Local data lifecycle screens may show cloud backup not claimed.
+Local data lifecycle screens may show backup recovery not claimed.
+Local data lifecycle screens may show secure deletion not claimed.
+
+Local data lifecycle screens must not show cloud backup enabled.
+Local data lifecycle screens must not show cloud sync enabled.
+Local data lifecycle screens must not show backup recovery available.
+Local data lifecycle screens must not show rollback prevention guaranteed.
+Local data lifecycle screens must not show secure deletion guaranteed.
+Local data lifecycle screens must not show data safe after device restore.
+Local data lifecycle screens must not show store path shown.
+Local data lifecycle screens must not show passphrase retained.
+Local data lifecycle screens must not show plaintext exposed.
+Local data lifecycle screens must not show key material exposed.
+Local data lifecycle screens must not show remote wipe available.
+Local data lifecycle screens must not show security-ready claims.

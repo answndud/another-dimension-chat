@@ -1195,6 +1195,38 @@ pub mod production {
         "rollback_detection_is_marker_only_not_prevention",
     ];
 
+    const PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_REQUIRED_PHRASES: &[&str] = &[
+        "local data lifecycle status only",
+        "conversation delete available",
+        "conversation delete preserves session",
+        "session delete available",
+        "session delete preserves messages",
+        "profile delete available",
+        "full local wipe available",
+        "passphrase-first unlock required",
+        "encrypted store required",
+        "backup exclusion best-effort only",
+        "rollback detection marker only",
+        "cloud backup not claimed",
+        "backup recovery not claimed",
+        "secure deletion not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_FORBIDDEN_CLAIMS: &[&str] = &[
+        "cloud backup enabled",
+        "cloud sync enabled",
+        "backup recovery available",
+        "rollback prevention guaranteed",
+        "secure deletion guaranteed",
+        "data safe after device restore",
+        "store path shown",
+        "passphrase retained",
+        "plaintext exposed",
+        "key material exposed",
+        "remote wipe available",
+        "security-ready",
+    ];
+
     const PRODUCTION_TRANSPORT_ENVELOPE_IO_POLICIES: &[&str] = &[
         "explicit_user_action_required",
         "no_network_on_launch",
@@ -1863,6 +1895,34 @@ pub mod production {
         key_material_exposed: bool,
         product_lifecycle_closed: bool,
         security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileLocalDataLifecycleScreenCopyBoundarySummary {
+        required_screen_phrases: &'static [&'static str],
+        forbidden_screen_claims: &'static [&'static str],
+        inherits_local_storage_lifecycle_product: bool,
+        inherits_mobile_status_screen_copy_boundary: bool,
+        local_data_lifecycle_status_only_label_required: bool,
+        conversation_delete_label_required: bool,
+        session_delete_label_required: bool,
+        profile_delete_label_required: bool,
+        full_local_wipe_label_required: bool,
+        passphrase_first_label_required: bool,
+        encrypted_store_label_required: bool,
+        backup_exclusion_best_effort_label_required: bool,
+        rollback_detection_marker_only_label_required: bool,
+        cloud_backup_non_claim_required: bool,
+        backup_recovery_non_claim_required: bool,
+        secure_deletion_non_claim_required: bool,
+        destructive_remote_wipe_claim_allowed: bool,
+        path_or_secret_display_allowed: bool,
+        cloud_backup_or_sync_claim_allowed: bool,
+        backup_recovery_claim_allowed: bool,
+        rollback_prevention_claim_allowed: bool,
+        secure_deletion_claim_allowed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -3045,6 +3105,104 @@ pub mod production {
 
         pub fn security_ready_claimed(self) -> bool {
             self.security_ready_claimed
+        }
+    }
+
+    impl ProductionMobileLocalDataLifecycleScreenCopyBoundarySummary {
+        pub fn required_screen_phrases(self) -> &'static [&'static str] {
+            self.required_screen_phrases
+        }
+
+        pub fn forbidden_screen_claims(self) -> &'static [&'static str] {
+            self.forbidden_screen_claims
+        }
+
+        pub fn inherits_local_storage_lifecycle_product(self) -> bool {
+            self.inherits_local_storage_lifecycle_product
+        }
+
+        pub fn inherits_mobile_status_screen_copy_boundary(self) -> bool {
+            self.inherits_mobile_status_screen_copy_boundary
+        }
+
+        pub fn local_data_lifecycle_status_only_label_required(self) -> bool {
+            self.local_data_lifecycle_status_only_label_required
+        }
+
+        pub fn conversation_delete_label_required(self) -> bool {
+            self.conversation_delete_label_required
+        }
+
+        pub fn session_delete_label_required(self) -> bool {
+            self.session_delete_label_required
+        }
+
+        pub fn profile_delete_label_required(self) -> bool {
+            self.profile_delete_label_required
+        }
+
+        pub fn full_local_wipe_label_required(self) -> bool {
+            self.full_local_wipe_label_required
+        }
+
+        pub fn passphrase_first_label_required(self) -> bool {
+            self.passphrase_first_label_required
+        }
+
+        pub fn encrypted_store_label_required(self) -> bool {
+            self.encrypted_store_label_required
+        }
+
+        pub fn backup_exclusion_best_effort_label_required(self) -> bool {
+            self.backup_exclusion_best_effort_label_required
+        }
+
+        pub fn rollback_detection_marker_only_label_required(self) -> bool {
+            self.rollback_detection_marker_only_label_required
+        }
+
+        pub fn cloud_backup_non_claim_required(self) -> bool {
+            self.cloud_backup_non_claim_required
+        }
+
+        pub fn backup_recovery_non_claim_required(self) -> bool {
+            self.backup_recovery_non_claim_required
+        }
+
+        pub fn secure_deletion_non_claim_required(self) -> bool {
+            self.secure_deletion_non_claim_required
+        }
+
+        pub fn destructive_remote_wipe_claim_allowed(self) -> bool {
+            self.destructive_remote_wipe_claim_allowed
+        }
+
+        pub fn path_or_secret_display_allowed(self) -> bool {
+            self.path_or_secret_display_allowed
+        }
+
+        pub fn cloud_backup_or_sync_claim_allowed(self) -> bool {
+            self.cloud_backup_or_sync_claim_allowed
+        }
+
+        pub fn backup_recovery_claim_allowed(self) -> bool {
+            self.backup_recovery_claim_allowed
+        }
+
+        pub fn rollback_prevention_claim_allowed(self) -> bool {
+            self.rollback_prevention_claim_allowed
+        }
+
+        pub fn secure_deletion_claim_allowed(self) -> bool {
+            self.secure_deletion_claim_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
         }
     }
 
@@ -12297,6 +12455,127 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_local_data_lifecycle_screen_copy_boundary_summary(
+    ) -> ProductionMobileLocalDataLifecycleScreenCopyBoundarySummary {
+        let lifecycle = production_local_storage_lifecycle_product_summary();
+        let status = production_mobile_wrapper_status_screen_copy_boundary_summary();
+        let inherits_local_storage_lifecycle_product = lifecycle.product_lifecycle_closed()
+            && lifecycle.conversation_delete_available()
+            && lifecycle.session_delete_available()
+            && lifecycle.profile_delete_available()
+            && lifecycle.full_local_wipe_available()
+            && lifecycle.passphrase_first_required()
+            && lifecycle.encrypted_store_required()
+            && lifecycle.backup_exclusion_best_effort_only()
+            && lifecycle.rollback_detection_marker_only()
+            && !lifecycle.cloud_backup_or_sync_enabled()
+            && !lifecycle.backup_recovery_claimed()
+            && !lifecycle.rollback_prevention_claimed()
+            && !lifecycle.secure_media_deletion_claimed()
+            && !lifecycle.store_path_returned()
+            && !lifecycle.passphrase_retained()
+            && !lifecycle.plaintext_exposed()
+            && !lifecycle.key_material_exposed()
+            && !lifecycle.security_ready_claimed();
+        let inherits_mobile_status_screen_copy_boundary = status.boundary_closed()
+            && status.status_only_label_required()
+            && !status.store_or_cloud_trust_claim_allowed()
+            && !status.security_ready_claimed();
+        let local_data_lifecycle_status_only_label_required = true;
+        let conversation_delete_label_required = true;
+        let session_delete_label_required = true;
+        let profile_delete_label_required = true;
+        let full_local_wipe_label_required = true;
+        let passphrase_first_label_required = true;
+        let encrypted_store_label_required = true;
+        let backup_exclusion_best_effort_label_required = true;
+        let rollback_detection_marker_only_label_required = true;
+        let cloud_backup_non_claim_required = true;
+        let backup_recovery_non_claim_required = true;
+        let secure_deletion_non_claim_required = true;
+        let destructive_remote_wipe_claim_allowed = false;
+        let path_or_secret_display_allowed = false;
+        let cloud_backup_or_sync_claim_allowed = false;
+        let backup_recovery_claim_allowed = false;
+        let rollback_prevention_claim_allowed = false;
+        let secure_deletion_claim_allowed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_local_storage_lifecycle_product
+            && inherits_mobile_status_screen_copy_boundary
+            && local_data_lifecycle_status_only_label_required
+            && conversation_delete_label_required
+            && session_delete_label_required
+            && profile_delete_label_required
+            && full_local_wipe_label_required
+            && passphrase_first_label_required
+            && encrypted_store_label_required
+            && backup_exclusion_best_effort_label_required
+            && rollback_detection_marker_only_label_required
+            && cloud_backup_non_claim_required
+            && backup_recovery_non_claim_required
+            && secure_deletion_non_claim_required
+            && !destructive_remote_wipe_claim_allowed
+            && !path_or_secret_display_allowed
+            && !cloud_backup_or_sync_claim_allowed
+            && !backup_recovery_claim_allowed
+            && !rollback_prevention_claim_allowed
+            && !secure_deletion_claim_allowed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"local data lifecycle status only")
+            && PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"conversation delete available")
+            && PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"session delete preserves messages")
+            && PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"backup exclusion best-effort only")
+            && PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"rollback detection marker only")
+            && PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"cloud backup enabled")
+            && PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"backup recovery available")
+            && PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"rollback prevention guaranteed")
+            && PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"secure deletion guaranteed")
+            && PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"store path shown")
+            && PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"key material exposed")
+            && PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"security-ready");
+
+        ProductionMobileLocalDataLifecycleScreenCopyBoundarySummary {
+            required_screen_phrases:
+                PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_REQUIRED_PHRASES,
+            forbidden_screen_claims:
+                PRODUCTION_MOBILE_LOCAL_DATA_LIFECYCLE_SCREEN_COPY_FORBIDDEN_CLAIMS,
+            inherits_local_storage_lifecycle_product,
+            inherits_mobile_status_screen_copy_boundary,
+            local_data_lifecycle_status_only_label_required,
+            conversation_delete_label_required,
+            session_delete_label_required,
+            profile_delete_label_required,
+            full_local_wipe_label_required,
+            passphrase_first_label_required,
+            encrypted_store_label_required,
+            backup_exclusion_best_effort_label_required,
+            rollback_detection_marker_only_label_required,
+            cloud_backup_non_claim_required,
+            backup_recovery_non_claim_required,
+            secure_deletion_non_claim_required,
+            destructive_remote_wipe_claim_allowed,
+            path_or_secret_display_allowed,
+            cloud_backup_or_sync_claim_allowed,
+            backup_recovery_claim_allowed,
+            rollback_prevention_claim_allowed,
+            secure_deletion_claim_allowed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -15584,6 +15863,113 @@ pub mod production {
             assert!(lifecycle
                 .scopes()
                 .contains(&"rollback_detection_is_marker_only_not_prevention"));
+        }
+
+        #[test]
+        fn production_mobile_local_data_lifecycle_screen_copy_boundary_projects_local_only_non_claims(
+        ) {
+            let boundary = production_mobile_local_data_lifecycle_screen_copy_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_local_storage_lifecycle_product());
+            assert!(boundary.inherits_mobile_status_screen_copy_boundary());
+            assert!(boundary.local_data_lifecycle_status_only_label_required());
+            assert!(boundary.conversation_delete_label_required());
+            assert!(boundary.session_delete_label_required());
+            assert!(boundary.profile_delete_label_required());
+            assert!(boundary.full_local_wipe_label_required());
+            assert!(boundary.passphrase_first_label_required());
+            assert!(boundary.encrypted_store_label_required());
+            assert!(boundary.backup_exclusion_best_effort_label_required());
+            assert!(boundary.rollback_detection_marker_only_label_required());
+            assert!(boundary.cloud_backup_non_claim_required());
+            assert!(boundary.backup_recovery_non_claim_required());
+            assert!(boundary.secure_deletion_non_claim_required());
+            assert!(!boundary.destructive_remote_wipe_claim_allowed());
+            assert!(!boundary.path_or_secret_display_allowed());
+            assert!(!boundary.cloud_backup_or_sync_claim_allowed());
+            assert!(!boundary.backup_recovery_claim_allowed());
+            assert!(!boundary.rollback_prevention_claim_allowed());
+            assert!(!boundary.secure_deletion_claim_allowed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"local data lifecycle status only"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"conversation delete available"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"conversation delete preserves session"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"session delete available"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"session delete preserves messages"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"profile delete available"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"full local wipe available"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"passphrase-first unlock required"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"encrypted store required"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"backup exclusion best-effort only"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"rollback detection marker only"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"cloud backup not claimed"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"backup recovery not claimed"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"secure deletion not claimed"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"cloud backup enabled"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"cloud sync enabled"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"backup recovery available"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"rollback prevention guaranteed"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"secure deletion guaranteed"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"data safe after device restore"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"store path shown"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"passphrase retained"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"plaintext exposed"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"key material exposed"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"remote wipe available"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"security-ready"));
         }
 
         #[test]
