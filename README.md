@@ -8,6 +8,23 @@ The project goal is not "a serverless chat app" in the loose sense. The long-ter
 
 This repository is a prototype moving toward a local desktop beta.
 
+For the v0.1 unsigned public beta, the product surface is the desktop Tauri
+beta shell. Android is the next mobile client candidate only after the shared
+Rust core/API boundary remains platform-neutral; iOS follows after that same
+boundary is preserved. Mobile clients are not part of this public beta.
+
+The shared core boundary means Rust owns profile identity, pairing payload and
+safety transcript logic, message orchestration, protocol envelopes and replay,
+encrypted local storage policy, and fail-closed transport policy. UI shells may
+request redacted status and explicit user-triggered actions only; they must not
+define separate security-sensitive protocol, storage, transport, pairing, or
+contact-discovery behavior.
+
+This split does not add phone numbers, email, global accounts, searchable
+usernames, centralized contact discovery, centralized message servers, push
+notifications, cloud backup, app-store/TestFlight dependency, signing
+dependency, notarization dependency, or a production/security readiness claim.
+
 Do not use it for real communication.
 
 The current implementation has a local Tauri desktop beta candidate for two-profile invite rooms, local encrypted profile/session/message stores, explicit private-delivery setup, restart/resume recovery, and fail-closed onion/Tor attempt paths. It still exists to test protocol, storage, transport, and UI recovery boundaries before any production security claim.

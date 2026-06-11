@@ -182,6 +182,41 @@ pub mod production {
         "independent_security_review",
     ];
 
+    const PRODUCTION_PLATFORM_PRIORITY: &[&str] = &[
+        "desktop_tauri_unsigned_public_beta",
+        "android_candidate_after_shared_core_boundary",
+        "ios_candidate_after_android_and_shared_core_boundary",
+    ];
+
+    const PRODUCTION_SHARED_CORE_RESPONSIBILITIES: &[&str] = &[
+        "profile_identity",
+        "pairing_payload_and_safety_transcript",
+        "message_orchestration",
+        "protocol_envelope_and_replay",
+        "encrypted_local_storage_policy",
+        "fail_closed_transport_policy",
+    ];
+
+    const PRODUCTION_WRAPPER_RESPONSIBILITIES: &[&str] = &[
+        "redacted_status_display",
+        "explicit_user_triggered_actions",
+        "local_permission_prompts",
+        "platform_install_and_update_instructions",
+    ];
+
+    const PRODUCTION_PLATFORM_REJECTED_DEPENDENCIES: &[&str] = &[
+        "phone_number_identity",
+        "email_identity",
+        "global_account",
+        "searchable_username",
+        "central_contact_discovery",
+        "central_message_server",
+        "push_notification_dependency",
+        "cloud_backup",
+        "app_store_or_notarization_dependency",
+        "wrapper_specific_security_protocol",
+    ];
+
     const PRODUCTION_ASYNC_DELIVERY_SEMANTIC_STATES: &[&str] = &[
         "outbound_pending",
         "encrypted_envelope_exported",
@@ -376,6 +411,27 @@ pub mod production {
         production_e2ee_ready: bool,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPlatformSplitDecisionSummary {
+        public_beta_surface: &'static str,
+        next_mobile_candidate: &'static str,
+        ios_priority: &'static str,
+        shared_core_required: bool,
+        desktop_wrapper_allowed: bool,
+        android_wrapper_allowed: bool,
+        ios_wrapper_allowed: bool,
+        wrapper_specific_security_protocol_allowed: bool,
+        push_notifications_allowed: bool,
+        central_account_allowed: bool,
+        cloud_backup_allowed: bool,
+        app_store_or_notarization_required: bool,
+        platform_priority: &'static [&'static str],
+        shared_core_responsibilities: &'static [&'static str],
+        wrapper_responsibilities: &'static [&'static str],
+        rejected_dependencies: &'static [&'static str],
+        security_ready_claimed: bool,
+    }
+
     impl ProductionProtocolDecisionSummary {
         pub fn selected_session_protocol(self) -> &'static str {
             self.selected_session_protocol
@@ -411,6 +467,76 @@ pub mod production {
 
         pub fn production_e2ee_ready(self) -> bool {
             self.production_e2ee_ready
+        }
+    }
+
+    impl ProductionPlatformSplitDecisionSummary {
+        pub fn public_beta_surface(self) -> &'static str {
+            self.public_beta_surface
+        }
+
+        pub fn next_mobile_candidate(self) -> &'static str {
+            self.next_mobile_candidate
+        }
+
+        pub fn ios_priority(self) -> &'static str {
+            self.ios_priority
+        }
+
+        pub fn shared_core_required(self) -> bool {
+            self.shared_core_required
+        }
+
+        pub fn desktop_wrapper_allowed(self) -> bool {
+            self.desktop_wrapper_allowed
+        }
+
+        pub fn android_wrapper_allowed(self) -> bool {
+            self.android_wrapper_allowed
+        }
+
+        pub fn ios_wrapper_allowed(self) -> bool {
+            self.ios_wrapper_allowed
+        }
+
+        pub fn wrapper_specific_security_protocol_allowed(self) -> bool {
+            self.wrapper_specific_security_protocol_allowed
+        }
+
+        pub fn push_notifications_allowed(self) -> bool {
+            self.push_notifications_allowed
+        }
+
+        pub fn central_account_allowed(self) -> bool {
+            self.central_account_allowed
+        }
+
+        pub fn cloud_backup_allowed(self) -> bool {
+            self.cloud_backup_allowed
+        }
+
+        pub fn app_store_or_notarization_required(self) -> bool {
+            self.app_store_or_notarization_required
+        }
+
+        pub fn platform_priority(self) -> &'static [&'static str] {
+            self.platform_priority
+        }
+
+        pub fn shared_core_responsibilities(self) -> &'static [&'static str] {
+            self.shared_core_responsibilities
+        }
+
+        pub fn wrapper_responsibilities(self) -> &'static [&'static str] {
+            self.wrapper_responsibilities
+        }
+
+        pub fn rejected_dependencies(self) -> &'static [&'static str] {
+            self.rejected_dependencies
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
         }
     }
 
@@ -8546,6 +8672,28 @@ pub mod production {
         }
     }
 
+    pub fn production_platform_split_decision_summary() -> ProductionPlatformSplitDecisionSummary {
+        ProductionPlatformSplitDecisionSummary {
+            public_beta_surface: "desktop_tauri_unsigned_public_beta",
+            next_mobile_candidate: "android_after_shared_core_boundary",
+            ios_priority: "after_android_candidate_and_shared_core_boundary",
+            shared_core_required: true,
+            desktop_wrapper_allowed: true,
+            android_wrapper_allowed: true,
+            ios_wrapper_allowed: true,
+            wrapper_specific_security_protocol_allowed: false,
+            push_notifications_allowed: false,
+            central_account_allowed: false,
+            cloud_backup_allowed: false,
+            app_store_or_notarization_required: false,
+            platform_priority: PRODUCTION_PLATFORM_PRIORITY,
+            shared_core_responsibilities: PRODUCTION_SHARED_CORE_RESPONSIBILITIES,
+            wrapper_responsibilities: PRODUCTION_WRAPPER_RESPONSIBILITIES,
+            rejected_dependencies: PRODUCTION_PLATFORM_REJECTED_DEPENDENCIES,
+            security_ready_claimed: false,
+        }
+    }
+
     pub fn production_runtime_command_surface_summary() -> ProductionRuntimeCommandSurfaceSummary {
         ProductionRuntimeCommandSurfaceSummary {
             reviewed_categories: PRODUCTION_RUNTIME_COMMAND_SURFACE_REVIEWED_CATEGORIES,
@@ -10503,6 +10651,66 @@ pub mod production {
                 summary.protocol_candidate(),
                 "snow Noise XX synchronous 1:1 invite-code boundary"
             );
+        }
+
+        #[test]
+        fn production_platform_split_keeps_mobile_wrappers_behind_shared_core() {
+            let decision = production_platform_split_decision_summary();
+
+            assert_eq!(
+                decision.public_beta_surface(),
+                "desktop_tauri_unsigned_public_beta"
+            );
+            assert_eq!(
+                decision.next_mobile_candidate(),
+                "android_after_shared_core_boundary"
+            );
+            assert_eq!(
+                decision.ios_priority(),
+                "after_android_candidate_and_shared_core_boundary"
+            );
+            assert!(decision.shared_core_required());
+            assert!(decision.desktop_wrapper_allowed());
+            assert!(decision.android_wrapper_allowed());
+            assert!(decision.ios_wrapper_allowed());
+            assert!(!decision.wrapper_specific_security_protocol_allowed());
+            assert!(!decision.push_notifications_allowed());
+            assert!(!decision.central_account_allowed());
+            assert!(!decision.cloud_backup_allowed());
+            assert!(!decision.app_store_or_notarization_required());
+            assert!(!decision.security_ready_claimed());
+            assert_eq!(
+                decision.platform_priority(),
+                &[
+                    "desktop_tauri_unsigned_public_beta",
+                    "android_candidate_after_shared_core_boundary",
+                    "ios_candidate_after_android_and_shared_core_boundary",
+                ]
+            );
+            assert!(decision
+                .shared_core_responsibilities()
+                .contains(&"pairing_payload_and_safety_transcript"));
+            assert!(decision
+                .shared_core_responsibilities()
+                .contains(&"protocol_envelope_and_replay"));
+            assert!(decision
+                .shared_core_responsibilities()
+                .contains(&"fail_closed_transport_policy"));
+            assert!(decision
+                .wrapper_responsibilities()
+                .contains(&"redacted_status_display"));
+            assert!(decision
+                .wrapper_responsibilities()
+                .contains(&"explicit_user_triggered_actions"));
+            assert!(decision
+                .rejected_dependencies()
+                .contains(&"central_contact_discovery"));
+            assert!(decision
+                .rejected_dependencies()
+                .contains(&"push_notification_dependency"));
+            assert!(decision
+                .rejected_dependencies()
+                .contains(&"app_store_or_notarization_dependency"));
         }
 
         #[test]
