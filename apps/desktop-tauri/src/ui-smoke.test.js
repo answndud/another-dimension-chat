@@ -824,6 +824,36 @@ test("manual invite room rebuild flow stays local-only across setup steps", () =
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /renderManualInviteRoomRebuildFlow\(ready \? "conversation-loaded" : "session-check"\)/);
 });
 
+test("rebuild first message stops at explicit private delivery gate", () => {
+  const stepViewBody = functionBody(mainJs, "manualInviteRoomRebuildStepView");
+  assert.match(stepViewBody, /first-message-draft/);
+  assert.match(stepViewBody, /local-message-saved/);
+
+  const gateViewBody = functionBody(mainJs, "manualRebuildFirstMessageDeliveryGateView");
+  assert.match(gateViewBody, /latestTwoProfileOutboundOnionMessage\(roomInput, \{ messageNumber \}\)/);
+  assert.match(gateViewBody, /externalPeerSendReadiness\(roomInput/);
+  assert.match(gateViewBody, /first_message_saved=true/);
+  assert.match(gateViewBody, /private_delivery_gate=/);
+  assert.match(gateViewBody, /route_readiness_ready=/);
+  assert.match(gateViewBody, /network_io=false/);
+  assert.match(gateViewBody, /live_network_attempt=false/);
+  assert.match(gateViewBody, /backup_recovery=false/);
+  assert.match(gateViewBody, /cloud_backup_sync=false/);
+  assert.match(gateViewBody, /security_ready=false/);
+
+  const gateRenderBody = functionBody(mainJs, "renderManualRebuildFirstMessageDeliveryGate");
+  assert.match(gateRenderBody, /manualInviteRoomRebuildFlowActive\(\)/);
+  assert.match(gateRenderBody, /fields\.productionTwoProfileMessageState/);
+  assert.match(gateRenderBody, /fields\.productionTwoProfileBoundary/);
+  assert.match(gateRenderBody, /fields\.productionProfileNextAction/);
+  assert.match(gateRenderBody, /setProductionFollowupActions\(true, view\.next\)/);
+
+  const messageBody = functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip");
+  assert.match(messageBody, /renderManualInviteRoomRebuildFlow\("first-message-draft"\)/);
+  assert.match(messageBody, /if \(renderManualRebuildFirstMessageDeliveryGate\(input, messageNumber\)\) \{[\s\S]*return;[\s\S]*\}/);
+  assert.match(messageBody, /completeInviteRoomOutboundDelivery\(input, messageNumber\)/);
+});
+
 test("manual session readiness is scoped to the active profile passphrase", () => {
   assert.match(mainJs, /let latestProductionSessionStateFingerprint = ""/);
   assert.match(functionBody(mainJs, "productionSessionStateFingerprint"), /input\.passphrase/);

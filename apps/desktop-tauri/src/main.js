@@ -16263,9 +16263,14 @@ async function runProductionTwoProfileMessageRoundtrip() {
   setProductionTwoProfileState("Message send running");
   setText(fields.productionTwoProfileWarning, t("messageRunningWarning"));
   setText(fields.productionTwoProfileProfiles, t("messageProfilesWaiting"));
-  setText(fields.productionTwoProfileSession, t("messageSessionWaiting"));
+  renderManualInviteRoomRebuildFlow("first-message-draft");
+  if (!manualInviteRoomRebuildFlowActive()) {
+    setText(fields.productionTwoProfileSession, t("messageSessionWaiting"));
+  }
   setText(fields.productionTwoProfileMessageState, t("setupMessageWaiting"));
-  setText(fields.productionTwoProfileBoundary, t("setupBoundaryWaiting"));
+  if (!manualInviteRoomRebuildFlowActive()) {
+    setText(fields.productionTwoProfileBoundary, t("setupBoundaryWaiting"));
+  }
   setProductionFollowupActions(false, t("messageFollowupLocked"));
   setTwoProfileMessageRoundtripBusy(input);
   applyProductionActionState();
@@ -16283,6 +16288,10 @@ async function runProductionTwoProfileMessageRoundtrip() {
     }
     setProductionTwoProfileState("Message saved");
     setText(fields.productionTwoProfileWarning, result.warning);
+    if (renderManualRebuildFirstMessageDeliveryGate(input, messageNumber)) {
+      await loadProductionProfileList();
+      return;
+    }
     await completeInviteRoomOutboundDelivery(input, messageNumber);
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
@@ -16905,6 +16914,8 @@ function manualInviteRoomRebuildStepView(step, options = {}) {
     "room-ready": "manualRebuildRoomReadyNext",
     "session-check": "manualRebuildSessionCheckNext",
     "conversation-loaded": "manualRebuildConversationLoadedNext",
+    "first-message-draft": "manualRebuildFirstMessageDraftNext",
+    "local-message-saved": "manualRebuildLocalMessageSavedNext",
   };
   const warningKeyByStep = {
     "invite-room-started": "manualRebuildInviteStartedWarning",
@@ -16912,6 +16923,8 @@ function manualInviteRoomRebuildStepView(step, options = {}) {
     "room-ready": "manualRebuildRoomReadyWarning",
     "session-check": "manualRebuildSessionCheckWarning",
     "conversation-loaded": "manualRebuildConversationLoadedWarning",
+    "first-message-draft": "manualRebuildFirstMessageDraftWarning",
+    "local-message-saved": "manualRebuildLocalMessageSavedWarning",
   };
   const next = t(nextKeyByStep[normalizedStep] ?? "manualRebuildNeededNext");
   return {
@@ -16925,6 +16938,44 @@ function manualInviteRoomRebuildStepView(step, options = {}) {
       `no_cloud_recovery=true backup_recovery=false cloud_backup_sync=false rollback_prevention=false ` +
       `secure_delete_claim=false security_ready=false live_network_attempt=false`,
   };
+}
+
+function manualRebuildFirstMessageDeliveryGateView(input, messageNumber) {
+  const roomInput = twoProfileRoomIdentityInput(input);
+  const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(roomInput, { messageNumber });
+  const routeReadiness = externalPeerSendReadiness(roomInput, {
+    latestOnionOutbound,
+    messageNumber,
+  });
+  const ready = routeReadiness.ready === true;
+  return {
+    ready,
+    warning: ready ? t("manualRebuildDeliveryGateReadyWarning") : routeReadiness.disabledReason || t("manualRebuildDeliveryGateBlockedWarning"),
+    next: ready ? t("manualRebuildDeliveryGateReadyNext") : t("manualRebuildDeliveryGateBlockedNext"),
+    session:
+      `manual_rebuild_flow=true first_message_saved=true message_number=${Number.parseInt(messageNumber, 10) || 0} ` +
+      `private_delivery_gate=${ready ? "ready" : "blocked"} route_readiness_next_action=${routeReadiness.nextAction ?? "none"}`,
+    boundary:
+      `local_only=true manual_rebuild_flow=true first_message_saved=true private_delivery_gate=${ready ? "ready" : "blocked"} ` +
+      `route_readiness_ready=${ready} route_readiness_next_action=${routeReadiness.nextAction ?? "none"} ` +
+      `route_readiness_failure_kind=${routeReadiness.failureKind ?? "none"} network_io=false live_network_attempt=false ` +
+      `backup_recovery=false cloud_backup_sync=false rollback_prevention=false secure_delete_claim=false security_ready=false`,
+  };
+}
+
+function renderManualRebuildFirstMessageDeliveryGate(input, messageNumber) {
+  if (!manualInviteRoomRebuildFlowActive()) {
+    return false;
+  }
+  const view = manualRebuildFirstMessageDeliveryGateView(input, messageNumber);
+  setProductionTwoProfileState("First message saved");
+  setText(fields.productionTwoProfileWarning, view.warning);
+  setText(fields.productionTwoProfileSession, view.session);
+  setText(fields.productionTwoProfileMessageState, t("manualRebuildLocalMessageSavedState"));
+  setText(fields.productionTwoProfileBoundary, view.boundary);
+  setText(fields.productionProfileNextAction, view.next);
+  setProductionFollowupActions(true, view.next);
+  return true;
 }
 
 function renderManualInviteRoomRebuildFlow(step, options = {}) {
