@@ -513,34 +513,25 @@ struct ProductionRuntimeKeyPolicyGate {
 
 impl ProductionRuntimeKeyPolicyGate {
     fn from_lifecycle(result: &ProductionDataLifecycleResult) -> Self {
-        let marker_family_present = result.lifecycle_marker_present
-            || result.migration_marker_present
-            || result.profile_snapshot_marker_present
-            || result.rollback_marker_present;
-        let partial_marker_family = marker_family_present
-            && (!result.lifecycle_marker_present
-                || !result.migration_marker_present
-                || !result.profile_snapshot_marker_present
-                || !result.rollback_marker_present);
-        let rollback_suspicion_detected =
-            result.rollback_suspicion_detected || partial_marker_family;
+        let snapshot = another_dimension_core::production::production_product_unlock_key_policy_snapshot_from_markers(
+            result.lifecycle_marker_present,
+            result.migration_marker_present,
+            result.profile_snapshot_marker_present,
+            result.rollback_marker_present,
+            result.rollback_detection_ready,
+            result.rollback_suspicion_detected,
+        );
         Self {
-            key_policy_status: if rollback_suspicion_detected {
-                "rollback-suspicion-blocks-runtime-actions"
-            } else if result.rollback_detection_ready {
-                "passphrase-first-runtime-unlock-with-marker-based-rollback-detection"
-            } else {
-                "passphrase-first-runtime-unlock-rollback-marker-unavailable"
-            },
-            passphrase_first_unlock_required: true,
-            os_keystore_only_unlock_rejected: true,
-            production_key_management_ready: false,
-            rollback_marker_present: result.rollback_marker_present,
-            rollback_detection_ready: result.rollback_detection_ready,
-            rollback_suspicion_detected,
-            rollback_resume_blocked: rollback_suspicion_detected,
-            rollback_prevention_claimed: false,
-            secure_deletion_from_media_claimed: false,
+            key_policy_status: snapshot.key_policy_status(),
+            passphrase_first_unlock_required: snapshot.passphrase_first_unlock_required(),
+            os_keystore_only_unlock_rejected: snapshot.os_keystore_only_unlock_rejected(),
+            production_key_management_ready: snapshot.production_key_management_ready(),
+            rollback_marker_present: snapshot.rollback_marker_present(),
+            rollback_detection_ready: snapshot.rollback_detection_ready(),
+            rollback_suspicion_detected: snapshot.rollback_suspicion_detected(),
+            rollback_resume_blocked: snapshot.rollback_resume_blocked(),
+            rollback_prevention_claimed: snapshot.rollback_prevention_claimed(),
+            secure_deletion_from_media_claimed: snapshot.secure_deletion_from_media_claimed(),
         }
     }
 
