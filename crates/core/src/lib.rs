@@ -1069,6 +1069,33 @@ pub mod production {
         "sbom_dependency_audit_reproducible_build_non_claim",
     ];
 
+    const PRODUCTION_MOBILE_INSTALL_UPDATE_PLATFORMS: &[&str] =
+        &["android_shell_candidate", "ios_shell_candidate"];
+
+    const PRODUCTION_MOBILE_INSTALL_UPDATE_REQUIRED_EVIDENCE: &[&str] = &[
+        "same_github_release_artifact",
+        "same_release_checksum",
+        "public_provenance_json",
+        "release_manifest",
+        "release_notes",
+        "update_integrity_note",
+        "dependency_evidence",
+        "public_non_claims",
+    ];
+
+    const PRODUCTION_MOBILE_INSTALL_UPDATE_REJECTED_TRUST_CHANNELS: &[&str] = &[
+        "auto_update_channel",
+        "branch_file_release_proof",
+        "source_archive_release_proof",
+        "copied_checksum_from_other_release",
+        "play_store_security_trust",
+        "app_store_security_trust",
+        "testflight_security_trust",
+        "mobile_review_security_claim",
+        "platform_signing_security_claim",
+        "notarization_security_claim",
+    ];
+
     const PRODUCTION_INDEPENDENT_REVIEW_POLICIES: &[&str] = &[
         "public_threat_model_required",
         "independent_review_packet_required",
@@ -1329,6 +1356,30 @@ pub mod production {
         sbom_published: bool,
         dependency_audit_complete: bool,
         reproducible_build_proof_available: bool,
+        boundary_closed: bool,
+        security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileInstallUpdateIntegrityBoundarySummary {
+        platforms: &'static [&'static str],
+        required_evidence: &'static [&'static str],
+        rejected_trust_channels: &'static [&'static str],
+        inherits_unsigned_public_beta_boundary: bool,
+        same_release_artifact_required: bool,
+        same_release_checksum_required: bool,
+        public_provenance_required: bool,
+        release_manifest_required: bool,
+        update_integrity_note_required: bool,
+        dependency_evidence_required: bool,
+        public_non_claims_required: bool,
+        manual_download_required: bool,
+        auto_update_enabled: bool,
+        store_distribution_security_claimed: bool,
+        mobile_review_security_claimed: bool,
+        platform_signing_security_claimed: bool,
+        branch_or_source_archive_release_proof_allowed: bool,
+        copied_cross_release_evidence_allowed: bool,
         boundary_closed: bool,
         security_ready_claimed: bool,
     }
@@ -1999,6 +2050,88 @@ pub mod production {
 
         pub fn reproducible_build_proof_available(self) -> bool {
             self.reproducible_build_proof_available
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+    }
+
+    impl ProductionMobileInstallUpdateIntegrityBoundarySummary {
+        pub fn platforms(self) -> &'static [&'static str] {
+            self.platforms
+        }
+
+        pub fn required_evidence(self) -> &'static [&'static str] {
+            self.required_evidence
+        }
+
+        pub fn rejected_trust_channels(self) -> &'static [&'static str] {
+            self.rejected_trust_channels
+        }
+
+        pub fn inherits_unsigned_public_beta_boundary(self) -> bool {
+            self.inherits_unsigned_public_beta_boundary
+        }
+
+        pub fn same_release_artifact_required(self) -> bool {
+            self.same_release_artifact_required
+        }
+
+        pub fn same_release_checksum_required(self) -> bool {
+            self.same_release_checksum_required
+        }
+
+        pub fn public_provenance_required(self) -> bool {
+            self.public_provenance_required
+        }
+
+        pub fn release_manifest_required(self) -> bool {
+            self.release_manifest_required
+        }
+
+        pub fn update_integrity_note_required(self) -> bool {
+            self.update_integrity_note_required
+        }
+
+        pub fn dependency_evidence_required(self) -> bool {
+            self.dependency_evidence_required
+        }
+
+        pub fn public_non_claims_required(self) -> bool {
+            self.public_non_claims_required
+        }
+
+        pub fn manual_download_required(self) -> bool {
+            self.manual_download_required
+        }
+
+        pub fn auto_update_enabled(self) -> bool {
+            self.auto_update_enabled
+        }
+
+        pub fn store_distribution_security_claimed(self) -> bool {
+            self.store_distribution_security_claimed
+        }
+
+        pub fn mobile_review_security_claimed(self) -> bool {
+            self.mobile_review_security_claimed
+        }
+
+        pub fn platform_signing_security_claimed(self) -> bool {
+            self.platform_signing_security_claimed
+        }
+
+        pub fn branch_or_source_archive_release_proof_allowed(self) -> bool {
+            self.branch_or_source_archive_release_proof_allowed
+        }
+
+        pub fn copied_cross_release_evidence_allowed(self) -> bool {
+            self.copied_cross_release_evidence_allowed
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -10213,6 +10346,87 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_install_update_integrity_boundary_summary(
+    ) -> ProductionMobileInstallUpdateIntegrityBoundarySummary {
+        let supply_chain = production_supply_chain_integrity_boundary_summary();
+        let inherits_unsigned_public_beta_boundary = supply_chain.boundary_closed()
+            && supply_chain.manual_github_release_download_required()
+            && supply_chain.public_provenance_required()
+            && supply_chain.release_manifest_required()
+            && supply_chain.dependency_inventory_required()
+            && !supply_chain.auto_update_enabled()
+            && !supply_chain.signing_or_notarization_claimed()
+            && !supply_chain.security_ready_claimed();
+        let same_release_artifact_required = true;
+        let same_release_checksum_required = true;
+        let public_provenance_required = true;
+        let release_manifest_required = true;
+        let update_integrity_note_required = true;
+        let dependency_evidence_required = true;
+        let public_non_claims_required = true;
+        let manual_download_required = true;
+        let auto_update_enabled = false;
+        let store_distribution_security_claimed = false;
+        let mobile_review_security_claimed = false;
+        let platform_signing_security_claimed = false;
+        let branch_or_source_archive_release_proof_allowed = false;
+        let copied_cross_release_evidence_allowed = false;
+        let boundary_closed = inherits_unsigned_public_beta_boundary
+            && same_release_artifact_required
+            && same_release_checksum_required
+            && public_provenance_required
+            && release_manifest_required
+            && update_integrity_note_required
+            && dependency_evidence_required
+            && public_non_claims_required
+            && manual_download_required
+            && !auto_update_enabled
+            && !store_distribution_security_claimed
+            && !mobile_review_security_claimed
+            && !platform_signing_security_claimed
+            && !branch_or_source_archive_release_proof_allowed
+            && !copied_cross_release_evidence_allowed
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_REQUIRED_EVIDENCE
+                .contains(&"same_github_release_artifact")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_REQUIRED_EVIDENCE
+                .contains(&"same_release_checksum")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_REJECTED_TRUST_CHANNELS
+                .contains(&"auto_update_channel")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_REJECTED_TRUST_CHANNELS
+                .contains(&"play_store_security_trust")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_REJECTED_TRUST_CHANNELS
+                .contains(&"app_store_security_trust")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_REJECTED_TRUST_CHANNELS
+                .contains(&"testflight_security_trust")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_REJECTED_TRUST_CHANNELS
+                .contains(&"branch_file_release_proof")
+            && PRODUCTION_MOBILE_INSTALL_UPDATE_REJECTED_TRUST_CHANNELS
+                .contains(&"source_archive_release_proof");
+
+        ProductionMobileInstallUpdateIntegrityBoundarySummary {
+            platforms: PRODUCTION_MOBILE_INSTALL_UPDATE_PLATFORMS,
+            required_evidence: PRODUCTION_MOBILE_INSTALL_UPDATE_REQUIRED_EVIDENCE,
+            rejected_trust_channels: PRODUCTION_MOBILE_INSTALL_UPDATE_REJECTED_TRUST_CHANNELS,
+            inherits_unsigned_public_beta_boundary,
+            same_release_artifact_required,
+            same_release_checksum_required,
+            public_provenance_required,
+            release_manifest_required,
+            update_integrity_note_required,
+            dependency_evidence_required,
+            public_non_claims_required,
+            manual_download_required,
+            auto_update_enabled,
+            store_distribution_security_claimed,
+            mobile_review_security_claimed,
+            platform_signing_security_claimed,
+            branch_or_source_archive_release_proof_allowed,
+            copied_cross_release_evidence_allowed,
+            boundary_closed,
+            security_ready_claimed: false,
+        }
+    }
+
     pub fn production_independent_review_boundary_summary(
     ) -> ProductionIndependentReviewBoundarySummary {
         let public_threat_model_required = true;
@@ -12803,6 +13017,80 @@ pub mod production {
             assert!(boundary
                 .policies()
                 .contains(&"sbom_dependency_audit_reproducible_build_non_claim"));
+        }
+
+        #[test]
+        fn production_mobile_install_update_integrity_boundary_requires_same_release_evidence_without_store_trust(
+        ) {
+            let boundary = production_mobile_install_update_integrity_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_unsigned_public_beta_boundary());
+            assert_eq!(
+                boundary.platforms(),
+                &["android_shell_candidate", "ios_shell_candidate"]
+            );
+            assert!(boundary.same_release_artifact_required());
+            assert!(boundary.same_release_checksum_required());
+            assert!(boundary.public_provenance_required());
+            assert!(boundary.release_manifest_required());
+            assert!(boundary.update_integrity_note_required());
+            assert!(boundary.dependency_evidence_required());
+            assert!(boundary.public_non_claims_required());
+            assert!(boundary.manual_download_required());
+            assert!(!boundary.auto_update_enabled());
+            assert!(!boundary.store_distribution_security_claimed());
+            assert!(!boundary.mobile_review_security_claimed());
+            assert!(!boundary.platform_signing_security_claimed());
+            assert!(!boundary.branch_or_source_archive_release_proof_allowed());
+            assert!(!boundary.copied_cross_release_evidence_allowed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_evidence()
+                .contains(&"same_github_release_artifact"));
+            assert!(boundary
+                .required_evidence()
+                .contains(&"same_release_checksum"));
+            assert!(boundary
+                .required_evidence()
+                .contains(&"public_provenance_json"));
+            assert!(boundary.required_evidence().contains(&"release_manifest"));
+            assert!(boundary
+                .required_evidence()
+                .contains(&"update_integrity_note"));
+            assert!(boundary
+                .required_evidence()
+                .contains(&"dependency_evidence"));
+            assert!(boundary
+                .required_evidence()
+                .contains(&"public_non_claims"));
+            assert!(boundary
+                .rejected_trust_channels()
+                .contains(&"auto_update_channel"));
+            assert!(boundary
+                .rejected_trust_channels()
+                .contains(&"branch_file_release_proof"));
+            assert!(boundary
+                .rejected_trust_channels()
+                .contains(&"source_archive_release_proof"));
+            assert!(boundary
+                .rejected_trust_channels()
+                .contains(&"play_store_security_trust"));
+            assert!(boundary
+                .rejected_trust_channels()
+                .contains(&"app_store_security_trust"));
+            assert!(boundary
+                .rejected_trust_channels()
+                .contains(&"testflight_security_trust"));
+            assert!(boundary
+                .rejected_trust_channels()
+                .contains(&"mobile_review_security_claim"));
+            assert!(boundary
+                .rejected_trust_channels()
+                .contains(&"platform_signing_security_claim"));
+            assert!(boundary
+                .rejected_trust_channels()
+                .contains(&"notarization_security_claim"));
         }
 
         #[test]
