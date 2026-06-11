@@ -492,3 +492,45 @@ Session/profile/wipe checklists must not show production messaging ready.
 Session/profile/wipe checklists must not show production E2EE ready.
 Session/profile/wipe checklists must not show safe for sensitive communication.
 Session/profile/wipe checklists must not show security-ready claims.
+
+## Destructive Action Confirmation Checklist Boundary
+
+Future mobile destructive action confirmation checklists are
+documentation-only candidates until a separate wrapper UI implementation phase
+exists.
+
+Destructive action confirmation checklists may show destructive action confirmation checklist status only.
+Destructive action confirmation checklists may show confirmation required before conversation delete.
+Destructive action confirmation checklists may show confirmation required before session delete.
+Destructive action confirmation checklists may show confirmation required before profile delete.
+Destructive action confirmation checklists may show confirmation required before full local wipe.
+Destructive action confirmation checklists may show action scope shown before confirmation.
+Destructive action confirmation checklists may show local-only impact shown before confirmation.
+Destructive action confirmation checklists may show pairwise session preservation shown when applicable.
+Destructive action confirmation checklists may show message preservation shown when applicable.
+Destructive action confirmation checklists may show owned app data scope shown before full wipe.
+Destructive action confirmation checklists may show backup exclusion best-effort shown before confirmation.
+Destructive action confirmation checklists may show secure deletion not claimed.
+Destructive action confirmation checklists may show remote deletion not claimed.
+Destructive action confirmation checklists may show cloud recovery not claimed.
+Destructive action confirmation checklists may show security-ready not claimed.
+
+Destructive action confirmation checklists must not show one tap destructive action.
+Destructive action confirmation checklists must not show silent destructive action.
+Destructive action confirmation checklists must not show secure deletion guaranteed.
+Destructive action confirmation checklists must not show forensic deletion guaranteed.
+Destructive action confirmation checklists must not show remote wipe available.
+Destructive action confirmation checklists must not show peer copy deleted.
+Destructive action confirmation checklists must not show remote deletion verified.
+Destructive action confirmation checklists must not show cloud backup deleted.
+Destructive action confirmation checklists must not show cloud recovery available.
+Destructive action confirmation checklists must not show data safe after device restore.
+Destructive action confirmation checklists must not show rollback prevention guaranteed.
+Destructive action confirmation checklists must not show store path shown.
+Destructive action confirmation checklists must not show passphrase retained.
+Destructive action confirmation checklists must not show plaintext exposed.
+Destructive action confirmation checklists must not show key material exposed.
+Destructive action confirmation checklists must not show production messaging ready.
+Destructive action confirmation checklists must not show production E2EE ready.
+Destructive action confirmation checklists must not show safe for sensitive communication.
+Destructive action confirmation checklists must not show security-ready claims.
