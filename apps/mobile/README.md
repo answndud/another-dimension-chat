@@ -79,3 +79,32 @@ Install/update screens must not show notarization security.
 Install/update screens must not show branch checksum accepted.
 Install/update screens must not show source archive checksum accepted.
 Install/update screens must not show copied checksum accepted or security-ready claims.
+
+## Backup-Exclusion Screen Copy Boundary
+
+Future mobile backup-exclusion screens are documentation-only candidates until a
+separate wrapper UI implementation phase exists.
+
+Backup-exclusion screens may show backup exclusion status only.
+Backup-exclusion screens may show app-private storage required.
+Backup-exclusion screens may show app-container storage required.
+Backup-exclusion screens may show backup exclusion marker written by wrapper.
+Backup-exclusion screens may show backup exclusion marker verified by wrapper.
+Backup-exclusion screens may show platform verification token present.
+Backup-exclusion screens may show cloud backup not claimed.
+Backup-exclusion screens may show backup recovery not claimed.
+Backup-exclusion screens may show rollback prevention not claimed.
+Backup-exclusion screens may show secure deletion not claimed.
+
+Backup-exclusion screens must not show cloud backup enabled.
+Backup-exclusion screens must not show cloud sync enabled.
+Backup-exclusion screens must not show backup recovery available.
+Backup-exclusion screens must not show rollback prevention guaranteed.
+Backup-exclusion screens must not show secure deletion guaranteed.
+Backup-exclusion screens must not show shared external storage allowed.
+Backup-exclusion screens must not show shared app group storage allowed.
+Backup-exclusion screens must not show iCloud backup available.
+Backup-exclusion screens must not show Google backup available.
+Backup-exclusion screens must not show backup complete.
+Backup-exclusion screens must not show data safe after device restore.
+Backup-exclusion screens must not show security-ready claims.

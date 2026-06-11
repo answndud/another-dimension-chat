@@ -1288,6 +1288,34 @@ pub mod production {
         "security-ready",
     ];
 
+    const PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_REQUIRED_PHRASES: &[&str] = &[
+        "backup exclusion status only",
+        "app-private storage required",
+        "app-container storage required",
+        "backup exclusion marker written by wrapper",
+        "backup exclusion marker verified by wrapper",
+        "platform verification token present",
+        "cloud backup not claimed",
+        "backup recovery not claimed",
+        "rollback prevention not claimed",
+        "secure deletion not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_FORBIDDEN_CLAIMS: &[&str] = &[
+        "cloud backup enabled",
+        "cloud sync enabled",
+        "backup recovery available",
+        "rollback prevention guaranteed",
+        "secure deletion guaranteed",
+        "shared external storage allowed",
+        "shared app group storage allowed",
+        "iCloud backup available",
+        "Google backup available",
+        "backup complete",
+        "data safe after device restore",
+        "security-ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_UX_COPY_PLATFORMS: &[&str] =
         &["android_shell_candidate", "ios_shell_candidate"];
 
@@ -1786,6 +1814,30 @@ pub mod production {
         secure_media_deletion_claimed: bool,
         boundary_closed: bool,
         security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileBackupExclusionScreenCopyBoundarySummary {
+        required_screen_phrases: &'static [&'static str],
+        forbidden_screen_claims: &'static [&'static str],
+        inherits_mobile_backup_exclusion_boundary: bool,
+        inherits_mobile_status_screen_copy_boundary: bool,
+        backup_exclusion_status_only_label_required: bool,
+        app_private_storage_label_required: bool,
+        marker_written_label_required: bool,
+        marker_verified_label_required: bool,
+        platform_verification_token_label_required: bool,
+        cloud_backup_non_claim_required: bool,
+        backup_recovery_non_claim_required: bool,
+        rollback_prevention_non_claim_required: bool,
+        secure_deletion_non_claim_required: bool,
+        cloud_backup_or_sync_claim_allowed: bool,
+        backup_recovery_claim_allowed: bool,
+        rollback_prevention_claim_allowed: bool,
+        secure_deletion_claim_allowed: bool,
+        shared_storage_claim_allowed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -2825,6 +2877,88 @@ pub mod production {
 
         pub fn security_ready_claimed(self) -> bool {
             self.security_ready_claimed
+        }
+    }
+
+    impl ProductionMobileBackupExclusionScreenCopyBoundarySummary {
+        pub fn required_screen_phrases(self) -> &'static [&'static str] {
+            self.required_screen_phrases
+        }
+
+        pub fn forbidden_screen_claims(self) -> &'static [&'static str] {
+            self.forbidden_screen_claims
+        }
+
+        pub fn inherits_mobile_backup_exclusion_boundary(self) -> bool {
+            self.inherits_mobile_backup_exclusion_boundary
+        }
+
+        pub fn inherits_mobile_status_screen_copy_boundary(self) -> bool {
+            self.inherits_mobile_status_screen_copy_boundary
+        }
+
+        pub fn backup_exclusion_status_only_label_required(self) -> bool {
+            self.backup_exclusion_status_only_label_required
+        }
+
+        pub fn app_private_storage_label_required(self) -> bool {
+            self.app_private_storage_label_required
+        }
+
+        pub fn marker_written_label_required(self) -> bool {
+            self.marker_written_label_required
+        }
+
+        pub fn marker_verified_label_required(self) -> bool {
+            self.marker_verified_label_required
+        }
+
+        pub fn platform_verification_token_label_required(self) -> bool {
+            self.platform_verification_token_label_required
+        }
+
+        pub fn cloud_backup_non_claim_required(self) -> bool {
+            self.cloud_backup_non_claim_required
+        }
+
+        pub fn backup_recovery_non_claim_required(self) -> bool {
+            self.backup_recovery_non_claim_required
+        }
+
+        pub fn rollback_prevention_non_claim_required(self) -> bool {
+            self.rollback_prevention_non_claim_required
+        }
+
+        pub fn secure_deletion_non_claim_required(self) -> bool {
+            self.secure_deletion_non_claim_required
+        }
+
+        pub fn cloud_backup_or_sync_claim_allowed(self) -> bool {
+            self.cloud_backup_or_sync_claim_allowed
+        }
+
+        pub fn backup_recovery_claim_allowed(self) -> bool {
+            self.backup_recovery_claim_allowed
+        }
+
+        pub fn rollback_prevention_claim_allowed(self) -> bool {
+            self.rollback_prevention_claim_allowed
+        }
+
+        pub fn secure_deletion_claim_allowed(self) -> bool {
+            self.secure_deletion_claim_allowed
+        }
+
+        pub fn shared_storage_claim_allowed(self) -> bool {
+            self.shared_storage_claim_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
         }
     }
 
@@ -12015,6 +12149,107 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_backup_exclusion_screen_copy_boundary_summary(
+    ) -> ProductionMobileBackupExclusionScreenCopyBoundarySummary {
+        let backup = production_mobile_backup_exclusion_verification_boundary_summary();
+        let status = production_mobile_wrapper_status_screen_copy_boundary_summary();
+        let inherits_mobile_backup_exclusion_boundary = backup.boundary_closed()
+            && backup.wrapper_must_write_backup_exclusion_marker()
+            && backup.wrapper_must_verify_backup_exclusion_marker()
+            && backup.platform_verification_token_required()
+            && backup.redacted_status_only()
+            && !backup.cloud_backup_or_sync_enabled()
+            && !backup.backup_recovery_claimed()
+            && !backup.rollback_prevention_claimed()
+            && !backup.secure_media_deletion_claimed()
+            && !backup.security_ready_claimed();
+        let inherits_mobile_status_screen_copy_boundary = status.boundary_closed()
+            && status.status_only_label_required()
+            && !status.store_or_cloud_trust_claim_allowed()
+            && !status.security_ready_claimed();
+        let backup_exclusion_status_only_label_required = true;
+        let app_private_storage_label_required = true;
+        let marker_written_label_required = true;
+        let marker_verified_label_required = true;
+        let platform_verification_token_label_required = true;
+        let cloud_backup_non_claim_required = true;
+        let backup_recovery_non_claim_required = true;
+        let rollback_prevention_non_claim_required = true;
+        let secure_deletion_non_claim_required = true;
+        let cloud_backup_or_sync_claim_allowed = false;
+        let backup_recovery_claim_allowed = false;
+        let rollback_prevention_claim_allowed = false;
+        let secure_deletion_claim_allowed = false;
+        let shared_storage_claim_allowed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_backup_exclusion_boundary
+            && inherits_mobile_status_screen_copy_boundary
+            && backup_exclusion_status_only_label_required
+            && app_private_storage_label_required
+            && marker_written_label_required
+            && marker_verified_label_required
+            && platform_verification_token_label_required
+            && cloud_backup_non_claim_required
+            && backup_recovery_non_claim_required
+            && rollback_prevention_non_claim_required
+            && secure_deletion_non_claim_required
+            && !cloud_backup_or_sync_claim_allowed
+            && !backup_recovery_claim_allowed
+            && !rollback_prevention_claim_allowed
+            && !secure_deletion_claim_allowed
+            && !shared_storage_claim_allowed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"backup exclusion status only")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"app-private storage required")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"backup exclusion marker written by wrapper")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"platform verification token present")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_REQUIRED_PHRASES
+                .contains(&"backup recovery not claimed")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"cloud backup enabled")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"cloud sync enabled")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"backup recovery available")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"rollback prevention guaranteed")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"secure deletion guaranteed")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"data safe after device restore")
+            && PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_FORBIDDEN_CLAIMS
+                .contains(&"security-ready");
+
+        ProductionMobileBackupExclusionScreenCopyBoundarySummary {
+            required_screen_phrases:
+                PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_REQUIRED_PHRASES,
+            forbidden_screen_claims:
+                PRODUCTION_MOBILE_BACKUP_EXCLUSION_SCREEN_COPY_FORBIDDEN_CLAIMS,
+            inherits_mobile_backup_exclusion_boundary,
+            inherits_mobile_status_screen_copy_boundary,
+            backup_exclusion_status_only_label_required,
+            app_private_storage_label_required,
+            marker_written_label_required,
+            marker_verified_label_required,
+            platform_verification_token_label_required,
+            cloud_backup_non_claim_required,
+            backup_recovery_non_claim_required,
+            rollback_prevention_non_claim_required,
+            secure_deletion_non_claim_required,
+            cloud_backup_or_sync_claim_allowed,
+            backup_recovery_claim_allowed,
+            rollback_prevention_claim_allowed,
+            secure_deletion_claim_allowed,
+            shared_storage_claim_allowed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_local_storage_lifecycle_product_summary(
     ) -> ProductionLocalStorageLifecycleProductSummary {
         let local_data = production_local_data_lifecycle_policy_summary();
@@ -15748,6 +15983,97 @@ pub mod production {
             assert!(boundary
                 .rejected_claims()
                 .contains(&"secure_media_deletion"));
+        }
+
+        #[test]
+        fn production_mobile_backup_exclusion_screen_copy_boundary_requires_marker_evidence_without_backup_claims(
+        ) {
+            let boundary = production_mobile_backup_exclusion_screen_copy_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_backup_exclusion_boundary());
+            assert!(boundary.inherits_mobile_status_screen_copy_boundary());
+            assert!(boundary.backup_exclusion_status_only_label_required());
+            assert!(boundary.app_private_storage_label_required());
+            assert!(boundary.marker_written_label_required());
+            assert!(boundary.marker_verified_label_required());
+            assert!(boundary.platform_verification_token_label_required());
+            assert!(boundary.cloud_backup_non_claim_required());
+            assert!(boundary.backup_recovery_non_claim_required());
+            assert!(boundary.rollback_prevention_non_claim_required());
+            assert!(boundary.secure_deletion_non_claim_required());
+            assert!(!boundary.cloud_backup_or_sync_claim_allowed());
+            assert!(!boundary.backup_recovery_claim_allowed());
+            assert!(!boundary.rollback_prevention_claim_allowed());
+            assert!(!boundary.secure_deletion_claim_allowed());
+            assert!(!boundary.shared_storage_claim_allowed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"backup exclusion status only"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"app-private storage required"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"app-container storage required"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"backup exclusion marker written by wrapper"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"backup exclusion marker verified by wrapper"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"platform verification token present"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"cloud backup not claimed"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"backup recovery not claimed"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"rollback prevention not claimed"));
+            assert!(boundary
+                .required_screen_phrases()
+                .contains(&"secure deletion not claimed"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"cloud backup enabled"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"cloud sync enabled"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"backup recovery available"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"rollback prevention guaranteed"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"secure deletion guaranteed"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"shared external storage allowed"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"shared app group storage allowed"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"iCloud backup available"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"Google backup available"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"backup complete"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"data safe after device restore"));
+            assert!(boundary
+                .forbidden_screen_claims()
+                .contains(&"security-ready"));
         }
 
         #[test]
