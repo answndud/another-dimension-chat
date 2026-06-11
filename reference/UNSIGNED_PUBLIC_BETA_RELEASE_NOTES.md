@@ -82,12 +82,10 @@ Do not use terminal quarantine-removal commands as an install step.
 
 Do not use this beta for sensitive communication.
 
-External two-machine onion delivery has not yet been independently verified.
-Same-machine dual-profile rehearsal is development evidence only, not peer
-field-test evidence.
-This external evidence gap is accepted for unsigned public beta release gating only.
-It does not close the external-evidence gate, final security-ready acceptance, or any external
-delivery claim.
+External onion delivery is outside the v0.1 public product claim. Same-machine
+dual-profile rehearsal is development evidence only, not peer field-test evidence.
+No peer report is expected or required for this v0.1 claim, and no external
+delivery claim is made.
 
 There is no auto-update. Every update is a manual GitHub Release download and
 must be verified with the matching `.sha256` file.

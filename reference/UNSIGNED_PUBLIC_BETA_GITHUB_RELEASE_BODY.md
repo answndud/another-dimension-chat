@@ -83,11 +83,10 @@ lockfile hash entries in `DEPENDENCY_LOCKFILES.sha256`: `Cargo.lock`,
 `apps/desktop-tauri/src-tauri/Cargo.lock`, and
 `apps/desktop-tauri/package-lock.json`.
 
-External two-machine onion delivery has not yet been independently verified.
-Same-machine dual-profile rehearsal is development evidence only, not peer field-test evidence.
-This external evidence gap is accepted for unsigned public beta release gating only.
-It does not close the external-evidence gate, final security-ready acceptance, or any external
-delivery claim.
+External onion delivery is outside the v0.1 public product claim. Same-machine
+dual-profile rehearsal is development evidence only, not peer field-test evidence.
+No peer report is expected or required for this v0.1 claim, and no external
+delivery claim is made.
 
 `PRIVACY_MODEL_COMPARISON.md` is a public gap map for the Korean
 Briar/Cwtch-style direction. It is not a claim that this beta has reached those
