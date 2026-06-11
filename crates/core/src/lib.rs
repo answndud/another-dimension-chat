@@ -221,6 +221,7 @@ pub mod production {
     const PRODUCTION_ANDROID_WRAPPER_CANDIDATE_RESPONSIBILITIES: &[&str] = &[
         "kotlin_shell",
         "uniffi_or_ffi_shared_core_calls",
+        "thin_activity_viewmodel_bridge",
         "passphrase_unlock_ui",
         "redacted_diagnostics_display",
         "explicit_user_triggered_actions",
@@ -229,6 +230,17 @@ pub mod production {
         "android_app_private_storage_required",
         "android_shared_external_storage_rejected",
         "local_storage_paths_redacted",
+    ];
+
+    const PRODUCTION_ANDROID_WRAPPER_API_GROUPS: &[&str] = &[
+        "profile_unlock_lock_status",
+        "invite_code_create_join",
+        "pairing_payload_export_import",
+        "safety_transcript_confirm",
+        "manual_envelope_export_import",
+        "message_transcript_view",
+        "local_data_lifecycle",
+        "redacted_support_diagnostics",
     ];
 
     const PRODUCTION_ANDROID_SHARED_CORE_API_BOUNDARY: &[&str] = &[
@@ -248,6 +260,10 @@ pub mod production {
         "phone_number_identity",
         "play_services_required",
         "firebase_cloud_messaging_required",
+        "android_background_delivery_service",
+        "notification_message_delivery",
+        "intent_based_contact_discovery",
+        "android_keystore_only_unlock",
         "push_notification_dependency",
         "cloud_backup",
         "cloud_backup_sync",
@@ -532,12 +548,17 @@ pub mod production {
         passphrase_unlock_required: bool,
         redacted_diagnostics_required: bool,
         explicit_user_action_required: bool,
+        background_delivery_service_allowed: bool,
+        notification_message_delivery_allowed: bool,
+        intent_based_contact_discovery_allowed: bool,
+        android_keystore_only_unlock_allowed: bool,
         push_notification_dependency_allowed: bool,
         google_account_dependency_allowed: bool,
         play_store_dependency_allowed: bool,
         cloud_backup_allowed: bool,
         security_ready_claimed: bool,
         responsibilities: &'static [&'static str],
+        wrapper_api_groups: &'static [&'static str],
         shared_core_api_boundary: &'static [&'static str],
         rejected_dependencies: &'static [&'static str],
     }
@@ -736,6 +757,22 @@ pub mod production {
             self.explicit_user_action_required
         }
 
+        pub fn background_delivery_service_allowed(self) -> bool {
+            self.background_delivery_service_allowed
+        }
+
+        pub fn notification_message_delivery_allowed(self) -> bool {
+            self.notification_message_delivery_allowed
+        }
+
+        pub fn intent_based_contact_discovery_allowed(self) -> bool {
+            self.intent_based_contact_discovery_allowed
+        }
+
+        pub fn android_keystore_only_unlock_allowed(self) -> bool {
+            self.android_keystore_only_unlock_allowed
+        }
+
         pub fn push_notification_dependency_allowed(self) -> bool {
             self.push_notification_dependency_allowed
         }
@@ -758,6 +795,10 @@ pub mod production {
 
         pub fn responsibilities(self) -> &'static [&'static str] {
             self.responsibilities
+        }
+
+        pub fn wrapper_api_groups(self) -> &'static [&'static str] {
+            self.wrapper_api_groups
         }
 
         pub fn shared_core_api_boundary(self) -> &'static [&'static str] {
@@ -9504,12 +9545,17 @@ pub mod production {
             passphrase_unlock_required: true,
             redacted_diagnostics_required: true,
             explicit_user_action_required: true,
+            background_delivery_service_allowed: false,
+            notification_message_delivery_allowed: false,
+            intent_based_contact_discovery_allowed: false,
+            android_keystore_only_unlock_allowed: false,
             push_notification_dependency_allowed: false,
             google_account_dependency_allowed: false,
             play_store_dependency_allowed: false,
             cloud_backup_allowed: false,
             security_ready_claimed: false,
             responsibilities: PRODUCTION_ANDROID_WRAPPER_CANDIDATE_RESPONSIBILITIES,
+            wrapper_api_groups: PRODUCTION_ANDROID_WRAPPER_API_GROUPS,
             shared_core_api_boundary: PRODUCTION_ANDROID_SHARED_CORE_API_BOUNDARY,
             rejected_dependencies: PRODUCTION_ANDROID_REJECTED_DEPENDENCIES,
         }
@@ -11966,6 +12012,10 @@ pub mod production {
             assert!(android.passphrase_unlock_required());
             assert!(android.redacted_diagnostics_required());
             assert!(android.explicit_user_action_required());
+            assert!(!android.background_delivery_service_allowed());
+            assert!(!android.notification_message_delivery_allowed());
+            assert!(!android.intent_based_contact_discovery_allowed());
+            assert!(!android.android_keystore_only_unlock_allowed());
             assert!(!android.push_notification_dependency_allowed());
             assert!(!android.google_account_dependency_allowed());
             assert!(!android.play_store_dependency_allowed());
@@ -11975,6 +12025,9 @@ pub mod production {
             assert!(android
                 .responsibilities()
                 .contains(&"uniffi_or_ffi_shared_core_calls"));
+            assert!(android
+                .responsibilities()
+                .contains(&"thin_activity_viewmodel_bridge"));
             assert!(android
                 .responsibilities()
                 .contains(&"platform_private_storage_root_resolver"));
@@ -11987,6 +12040,19 @@ pub mod production {
             assert!(android
                 .responsibilities()
                 .contains(&"local_storage_paths_redacted"));
+            assert_eq!(
+                android.wrapper_api_groups(),
+                &[
+                    "profile_unlock_lock_status",
+                    "invite_code_create_join",
+                    "pairing_payload_export_import",
+                    "safety_transcript_confirm",
+                    "manual_envelope_export_import",
+                    "message_transcript_view",
+                    "local_data_lifecycle",
+                    "redacted_support_diagnostics",
+                ]
+            );
             assert!(android
                 .shared_core_api_boundary()
                 .contains(&"pairing_payload_and_safety_transcript"));
@@ -12005,6 +12071,18 @@ pub mod production {
             assert!(android
                 .rejected_dependencies()
                 .contains(&"firebase_cloud_messaging_required"));
+            assert!(android
+                .rejected_dependencies()
+                .contains(&"android_background_delivery_service"));
+            assert!(android
+                .rejected_dependencies()
+                .contains(&"notification_message_delivery"));
+            assert!(android
+                .rejected_dependencies()
+                .contains(&"intent_based_contact_discovery"));
+            assert!(android
+                .rejected_dependencies()
+                .contains(&"android_keystore_only_unlock"));
             assert!(android
                 .rejected_dependencies()
                 .contains(&"wrapper_specific_storage_semantics"));
