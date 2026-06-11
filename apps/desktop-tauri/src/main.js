@@ -435,6 +435,8 @@ const fields = {
   fieldTestReport: document.querySelector("#field-test-report"),
   fieldTestReportSummary: document.querySelector("#field-test-report-summary"),
   fieldTestChecklist: document.querySelector("#field-test-checklist"),
+  localRehearsalChecklist: document.querySelector("#local-rehearsal-checklist"),
+  localRehearsalNextAction: document.querySelector("#local-rehearsal-next-action"),
   peerFieldTestReport: document.querySelector("#peer-field-test-report"),
   fieldTestReportCompare: document.querySelector("#field-test-report-compare"),
   fieldTestNextAction: document.querySelector("#field-test-next-action"),
@@ -6187,6 +6189,115 @@ function renderFieldTestChecklist(report, peerReport = fields.peerFieldTestRepor
   return items;
 }
 
+function localRehearsalChecklistItems(report) {
+  const parsed = parseFieldTestReport(report);
+  const routeReady = parsed.route_ready === "true" && parsed.route_stale !== "true";
+  const receiveReady =
+    parsed.receive_enabled === "true" &&
+    !new Set(["stopped", "stopping"]).has(fieldTestReportValue(parsed.receive_state, "stopped"));
+  const retryAction = fieldTestReportValue(parsed.outbound_recovery_action, "none");
+  const roomListAction = fieldTestReportValue(parsed.room_list_next_action, "none");
+  const retryVisible =
+    parsed.retryable_outbound_present === "true" ||
+    new Set(["retry", "retry-network", "refresh-and-retry"]).has(retryAction) ||
+    new Set(["retry", "retry-network", "refresh-and-retry"]).has(roomListAction);
+  const sentRows = Number.parseInt(parsed.sent_rows ?? "0", 10) || 0;
+  const receivedRows = Number.parseInt(parsed.received_rows ?? "0", 10) || 0;
+  return [
+    {
+      key: "invite",
+      status: parsed.room_present === "true" && parsed.session_ready === "true" ? "done" : "pending",
+      label: t("localRehearsalInvite"),
+    },
+    {
+      key: "safety",
+      status: parsed.safety_confirmed === "true" ? "done" : "pending",
+      label: t("localRehearsalSafety"),
+    },
+    {
+      key: "delivery-code",
+      status: routeReady ? "done" : "pending",
+      label: t("localRehearsalDeliveryCode"),
+    },
+    {
+      key: "receive",
+      status: receiveReady ? "done" : "pending",
+      label: t("localRehearsalReceive"),
+    },
+    {
+      key: "retry",
+      status: retryVisible ? "check" : sentRows > 0 || receivedRows > 0 ? "done" : "pending",
+      label: t("localRehearsalRetry"),
+    },
+  ];
+}
+
+function localRehearsalNextActionKey(report) {
+  const parsed = parseFieldTestReport(report);
+  const baseNext = fieldTestNextActionKey(report, "");
+  if (baseNext === "fieldTestNextPastePeerReport" || baseNext === "fieldTestNextComplete") {
+    return "localRehearsalNextRepeatOrReset";
+  }
+  if (parsed.real_onion_external_peer_delivery_confirmed === "true") {
+    return "localRehearsalNextExternalEvidenceIgnored";
+  }
+  const mapping = {
+    fieldTestNextOpenRoom: "localRehearsalNextOpenRoom",
+    fieldTestNextVerifySafety: "localRehearsalNextVerifySafety",
+    fieldTestNextSetupRoute: "localRehearsalNextSetupRoute",
+    fieldTestNextStartReceive: "localRehearsalNextStartReceive",
+    fieldTestNextStopReceive: "localRehearsalNextStopReceive",
+    fieldTestNextWaitReceiveStop: "localRehearsalNextWaitReceiveStop",
+    fieldTestNextExchangeMessages: "localRehearsalNextExchangeMessages",
+    fieldTestNextRestartResume: "localRehearsalNextRestartResume",
+    fieldTestNextEnablePrivateDelivery: "localRehearsalNextEnablePrivateDelivery",
+    fieldTestNextRetryNetwork: "localRehearsalNextRetryNetwork",
+    fieldTestNextRetryDelivery: "localRehearsalNextRetryDelivery",
+    fieldTestNextInspectDiagnostics: "localRehearsalNextInspectDiagnostics",
+  };
+  return mapping[baseNext] ?? "localRehearsalNextContinue";
+}
+
+function localRehearsalReportLines(report) {
+  const items = localRehearsalChecklistItems(report);
+  const steps = items.map((item) => `${item.key}:${item.status}`).join(",");
+  return [
+    "rehearsal_scope=single_machine_local",
+    "rehearsal_dual_profile=true",
+    "rehearsal_external_peer_evidence=false",
+    "rehearsal_external_onion_delivery_claim=false",
+    "rehearsal_peer_report_required=false",
+    `local_rehearsal_steps=${fieldTestReportValue(steps, "none")}`,
+    `local_rehearsal_next_action=${fieldTestReportValue(localRehearsalNextActionKey(report), "none")}`,
+  ];
+}
+
+function renderLocalRehearsal(report) {
+  const items = localRehearsalChecklistItems(report);
+  const statusLabels = {
+    done: t("fieldTestStatusDone"),
+    pending: t("fieldTestStatusPending"),
+    check: t("fieldTestStatusCheck"),
+  };
+  if (fields.localRehearsalChecklist) {
+    fields.localRehearsalChecklist.innerHTML = "";
+    for (const item of items) {
+      const node = document.createElement("li");
+      node.className = `field-test-checklist-item is-${item.status}`;
+      node.dataset.localRehearsalStep = item.key;
+      node.textContent = `${statusLabels[item.status] ?? item.status} ${item.label}`;
+      fields.localRehearsalChecklist.append(node);
+    }
+  }
+  const nextKey = localRehearsalNextActionKey(report);
+  const nextText = t(nextKey);
+  if (fields.localRehearsalNextAction) {
+    fields.localRehearsalNextAction.textContent = nextText;
+    fields.localRehearsalNextAction.hidden = !nextText;
+  }
+  return { items, nextKey };
+}
+
 function renderFieldTestReportSummary(report) {
   if (!fields.fieldTestReportSummary) {
     return "";
@@ -6194,6 +6305,7 @@ function renderFieldTestReportSummary(report) {
   const summary = fieldTestReportSummary(report);
   fields.fieldTestReportSummary.textContent = summary;
   renderFieldTestChecklist(report);
+  renderLocalRehearsal(report);
   renderFieldTestNextAction(report);
   return summary;
 }
@@ -6216,6 +6328,7 @@ function renderFieldTestReportComparison() {
     : statusText;
   fields.fieldTestReportCompare.hidden = !statusText;
   renderFieldTestChecklist(fields.fieldTestReport?.value ?? "", fields.peerFieldTestReport?.value ?? "");
+  renderLocalRehearsal(fields.fieldTestReport?.value ?? "");
   renderFieldTestNextAction(fields.fieldTestReport?.value ?? "", fields.peerFieldTestReport?.value ?? "");
   return panelState.comparison;
 }
@@ -6847,7 +6960,7 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     retryableOutbound,
   );
 
-  return [
+  const reportLines = [
     "Another Dimension Chat beta field test report",
     "report_version=1",
     `app_version=${FIELD_TEST_APP_VERSION}`,
@@ -6934,7 +7047,8 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     "rebuild_external_peer_evidence_claim=false",
     `ui_state=${fieldTestReportValue(fields.productionTwoProfileState?.textContent)}`,
     `redacted_boundary=${fieldTestBoundarySummary(boundaryText)}`,
-  ].join("\n");
+  ];
+  return [...reportLines, ...localRehearsalReportLines(reportLines.join("\n"))].join("\n");
 }
 
 function refreshFieldTestReport() {
@@ -17536,11 +17650,14 @@ function applyPostDestructiveLifecycleRebuildGuidance(action, options = {}) {
   );
   setText(
     fields.productionTwoProfileSession,
-    `stale_room_retry_cleared=true affected_current_room=${affectedCurrentRoom} saved_rooms_cleared=${clearedRooms}`,
+    `stale_room_retry_cleared=true stale_receive_cleared=true stale_delivery_code_cleared=true ` +
+      `stale_manual_rebuild_cleared=true affected_current_room=${affectedCurrentRoom} saved_rooms_cleared=${clearedRooms}`,
   );
   setText(
     fields.productionTwoProfileBoundary,
-    `local_only=true stale_room_retry_cleared=true rebuild_required=true backup_recovery=false cloud_backup_sync=false rollback_prevention=false secure_delete_claim=false security_ready=false`,
+    `local_only=true stale_room_retry_cleared=true stale_receive_cleared=true stale_delivery_code_cleared=true ` +
+      `stale_manual_rebuild_cleared=true rebuild_required=true external_evidence_claim=false backup_recovery=false ` +
+      `cloud_backup_sync=false rollback_prevention=false secure_delete_claim=false security_ready=false`,
   );
   setProductionFollowupActions(true, fullWipe ? t("postWipeRoomRebuildNext") : t("postDeleteRoomRebuildNext"));
   renderManualInviteRoomRebuildFlow("rebuild-needed", { force: true, warning: false });
