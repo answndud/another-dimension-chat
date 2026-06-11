@@ -205,6 +205,12 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "prepare-private-route"/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "refresh-and-retry"/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /runSavedInviteRoomRetryableOutboundAction\(room, input, action, actionOrigin\)/);
+  assert.match(functionBody(mainJs, "runSavedInviteRoomRetryableOutboundAction"), /runTwoProfileOutboundPrimaryAction\(pending, \{ action \}\)/);
+  assert.match(mainJs, /function normalizedExpectedOutboundPrimaryAction/);
+  assert.match(functionBody(mainJs, "normalizedExpectedOutboundPrimaryAction"), /normalized === "verify-safety"[\s\S]*return "verify"/);
+  assert.match(mainJs, /async function runTwoProfileOutboundPrimaryAction\(entry, expectedPrimaryAction = null\)/);
+  assert.match(functionBody(mainJs, "runTwoProfileOutboundPrimaryAction"), /normalizedExpectedOutboundPrimaryAction\(expectedPrimaryAction\)/);
+  assert.match(functionBody(mainJs, "runTwoProfileOutboundPrimaryAction"), /resolvedPrimaryAction\.action !== expectedAction[\s\S]*showExactRetryableOutboundPrompt\(resolvedEntry\)/);
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 30/);
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 20/);
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 18/);
