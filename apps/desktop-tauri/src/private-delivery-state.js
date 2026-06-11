@@ -374,6 +374,28 @@ export function fieldTestReportTriageState(report) {
   };
 }
 
+const publicDiagnosticsRecoveryActions = new Set([
+  "check-session",
+  "enable-private-delivery",
+  "prepare-private-route",
+  "refresh-and-retry",
+  "refresh-endpoint",
+  "retry",
+  "retry-network",
+  "send-message",
+  "start-receiving",
+  "stop-receiving",
+  "verify",
+  "wait-receive-stop",
+  "write-message",
+  "none",
+]);
+
+function publicDiagnosticsRecoveryNextAction(parsed) {
+  const action = fieldTestReportValue(fieldTestReportNextActionValue(parsed), "none");
+  return publicDiagnosticsRecoveryActions.has(action) ? action : "review-field-test-report";
+}
+
 export function publicBetaDiagnosticsReport(report, options = {}) {
   const parsed = parseFieldTestReport(report);
   const triage = fieldTestReportTriageState(report);
@@ -383,6 +405,7 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
   const rebuildDeliveryNetworkIo = parsed.rebuild_delivery_network_io === "true";
   const rebuildDeliveryLiveNetworkAttempt = parsed.rebuild_delivery_live_network_attempt === "true";
   const failureClass = fieldTestReportBlocker(parsed);
+  const recoveryNextAction = publicDiagnosticsRecoveryNextAction(parsed);
   const lines = [
     "Another Dimension Chat public beta diagnostics",
     "diagnostic_version=1",
@@ -440,6 +463,7 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     `route_status=${fieldTestReportValue(triage.route, "unknown")}`,
     `receive_status=${fieldTestReportValue(triage.receive, "unknown")}`,
     `failure_class=${fieldTestReportValue(failureClass, "none")}`,
+    `recovery_next_action=${recoveryNextAction}`,
     `manual_network_permission=${manualNetworkPermission}`,
     `real_onion_attempted=${realOnionAttempted}`,
     `manual_rebuild_flow=${manualRebuildFlow}`,
@@ -455,7 +479,7 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     `app_launch_network=false`,
   ];
   if (options.includeCopyBoundary === true) {
-    lines.push("payload_boundary=status-build-failure-class-only");
+    lines.push("payload_boundary=status-build-failure-class-recovery-action-only");
     lines.push("crash_upload=false");
     lines.push("telemetry=false");
     lines.push("raw_log_export=false");

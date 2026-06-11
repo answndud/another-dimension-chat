@@ -1597,9 +1597,7 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
     reason.textContent = t(outboundRecoveryReasonKey(primaryAction, productionTwoProfileOutboundStatusLabel(pendingEntry)));
     const next = document.createElement("span");
     next.className = "chat-delivery-notice-chip is-next";
-    next.textContent = outboundActionState.canRunNow
-      ? `${t("sendRecoveryNext")}: ${outboundPrimaryActionLabel(primaryAction)}`
-      : outboundActionState.disabledReason;
+    next.textContent = outboundRecoveryNextText(primaryAction, outboundActionState);
     const actions = document.createElement("span");
     actions.className = "chat-delivery-notice-actions";
     const retry = document.createElement("button");
@@ -1744,6 +1742,30 @@ function currentTwoProfileOutboundAction(entry, options = {}) {
   return {
     entry: currentEntry,
     primaryAction: currentTwoProfileOutboundPrimaryAction(currentEntry, input),
+  };
+}
+
+function currentComposerPendingOutboundAction(input = productionTwoProfileInput()) {
+  const entry = restoreLatestChatDeliveryPendingOutbound(input) ?? automaticVisibleTwoProfileRetryableOutboundEntry(input);
+  if (!entry) {
+    return null;
+  }
+  const currentEntry = currentTwoProfileRetryableOutboundEntry(entry);
+  if (!currentEntry) {
+    return null;
+  }
+  const actionState = currentTwoProfileOutboundActionState(
+    currentEntry,
+    input,
+    twoProfileInviteCodeModeActive(),
+  );
+  if (!actionState.showActions) {
+    return null;
+  }
+  return {
+    entry: currentEntry,
+    primaryAction: currentTwoProfileOutboundPrimaryAction(currentEntry, input),
+    actionState,
   };
 }
 
@@ -1992,6 +2014,43 @@ function currentTwoProfileOutboundActionState(entry, input = productionTwoProfil
 
 function outboundPrimaryActionLabel(primaryAction) {
   return t(primaryAction?.labelKey || "retrySend");
+}
+
+function outboundRecoveryMessage(primaryAction) {
+  return t(primaryAction?.recoveryKey || "sendRecoveryGeneric");
+}
+
+function outboundRecoveryNextText(primaryAction, actionState = null) {
+  if (!primaryAction) {
+    return "";
+  }
+  if (actionState && !actionState.canRunNow) {
+    return actionState.disabledReason || outboundRecoveryMessage(primaryAction);
+  }
+  return `${t("sendRecoveryNext")}: ${outboundPrimaryActionLabel(primaryAction)}`;
+}
+
+function outboundRecoveryFocusTarget(primaryAction) {
+  const action = String(primaryAction?.action ?? "").trim();
+  if (action === "refresh-and-retry") {
+    return "refresh-endpoint";
+  }
+  if (action === "start-receiving") {
+    return "start-receiving";
+  }
+  if (action === "stop-receiving") {
+    return "stop-receiving";
+  }
+  if (action === "prepare-private-route") {
+    return "private-route";
+  }
+  if (action === "enable-private-delivery") {
+    return "private-delivery";
+  }
+  if (action === "verify") {
+    return "verify";
+  }
+  return "retry-send";
 }
 
 function normalizedExpectedOutboundPrimaryAction(action) {
@@ -6730,6 +6789,8 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     ? currentTwoProfileOutboundPrimaryAction(retryableOutbound, input)
     : null;
   const outboundRecoveryAction = currentOutboundRecovery?.action ?? "none";
+  const outboundRecoveryKey = currentOutboundRecovery?.recoveryKey ?? "none";
+  const outboundRecoveryNoticeKey = currentOutboundRecovery?.noticeKey ?? "none";
   const receiveMode = fieldTestReceiveModeSnapshot(input);
   const boundaryText = fields.productionTwoProfileBoundary?.textContent ?? "";
   const rebuildDeliveryDiagnostics = manualRebuildDeliveryDiagnostics(input, boundaryText);
@@ -6822,6 +6883,8 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `retryable_outbound_present=${Boolean(retryableOutbound)}`,
     `outbound_failure_class=${fieldTestReportValue(outboundFailureClass, "none")}`,
     `outbound_recovery_action=${fieldTestReportValue(outboundRecoveryAction, "none")}`,
+    `outbound_recovery_key=${fieldTestReportValue(outboundRecoveryKey, "none")}`,
+    `outbound_recovery_notice_key=${fieldTestReportValue(outboundRecoveryNoticeKey, "none")}`,
     `room_list_state_key=${fieldTestReportValue(currentSavedRoomView?.state?.key, "none")}`,
     `room_list_state_label=${fieldTestReportValue(currentSavedRoomView?.state?.label, "none")}`,
     `room_list_next_action=${fieldTestReportValue(roomListNextAction, "none")}`,
@@ -9177,11 +9240,9 @@ function renderProductionTwoProfileConversationList() {
           : localizedOutboundStatus(outboundStatusLabel);
     const recoveryNote = document.createElement("span");
     recoveryNote.className = `transcript-recovery-note ${recoveryClass}`.trim();
-    recoveryNote.textContent = outboundNeedsAction && !outboundActionState.canRunNow
-      ? outboundActionState.disabledReason
-      : primaryAction
-        ? t(outboundRecoveryReasonKey(primaryAction, outboundStatusLabel))
-        : "";
+    recoveryNote.textContent = outboundNeedsAction
+      ? outboundRecoveryNextText(primaryAction, outboundActionState)
+      : "";
     const recoverySummary = document.createElement("span");
     recoverySummary.className = `transcript-recovery-summary ${recoveryClass}`.trim();
     if (primaryAction) {
@@ -9190,7 +9251,7 @@ function renderProductionTwoProfileConversationList() {
       recoveryStatus.textContent = localizedOutboundStatus(outboundStatusLabel);
       const recoveryText = document.createElement("span");
       recoveryText.className = "transcript-recovery-text";
-      recoveryText.textContent = recoveryNote.textContent;
+      recoveryText.textContent = outboundRecoveryMessage(primaryAction);
       recoverySummary.append(recoveryStatus, recoveryText);
     }
 
@@ -9511,82 +9572,23 @@ function twoProfileRetryableOutboundActionView(entry, fallback) {
   }
   const current = currentTwoProfileOutboundAction(entry);
   const primaryAction = current?.primaryAction ?? currentTwoProfileOutboundPrimaryAction(entry);
+  const actionState = currentTwoProfileOutboundActionState(
+    entry,
+    productionTwoProfileInput(),
+    twoProfileInviteCodeModeActive(),
+  );
   const number = Number.parseInt(entry?.messageNumber, 10);
   const label = Number.isInteger(number) ? `#${number}` : "";
-  const common = {
+  return {
     state: "is-ready",
     manualTarget: null,
     manualButtonLabel: "Open manual tools",
-  };
-  if (primaryAction.action === "refresh-and-retry") {
-    return {
-      ...common,
-      nextAction: `Stale address: refresh the peer address, then retry message ${label}.`,
-      rowLabel: "action: refresh address and retry",
-      focusTarget: "refresh-endpoint",
-    };
-  }
-  if (primaryAction.action === "start-receiving") {
-    return {
-      ...common,
-      nextAction: `Receive stopped: start receiving, then retry message ${label}.`,
-      rowLabel: "action: start receiving",
-      focusTarget: "start-receiving",
-    };
-  }
-  if (primaryAction.action === "stop-receiving") {
-    return {
-      ...common,
-      nextAction: `Receiver owner mismatch: stop receiving, then restart it before retrying message ${label}.`,
-      rowLabel: "action: stop mismatched receive",
-      focusTarget: "stop-receiving",
-    };
-  }
-  if (primaryAction.action === "wait-receive-stop") {
-    return {
-      ...common,
-      nextAction: `Receive is stopping: wait until it finishes, then retry message ${label}.`,
-      rowLabel: "action: wait for receive stop",
-      focusTarget: "retry-send",
-    };
-  }
-  if (primaryAction.action === "retry-network") {
-    return {
-      ...common,
-      nextAction: `Network retry needed: retry private delivery for message ${label}.`,
-      rowLabel: "action: retry network",
-      focusTarget: "retry-send",
-    };
-  }
-  if (primaryAction.action === "prepare-private-route") {
-    return {
-      ...common,
-      nextAction: `Delivery code needed: set up delivery, then retry message ${label}.`,
-      rowLabel: "action: set up delivery",
-      focusTarget: "private-route",
-    };
-  }
-  if (primaryAction.action === "enable-private-delivery") {
-    return {
-      ...common,
-      nextAction: `Private delivery is off: turn it on, then retry message ${label}.`,
-      rowLabel: "action: turn on private delivery",
-      focusTarget: "private-delivery",
-    };
-  }
-  if (primaryAction.action === "verify") {
-    return {
-      ...common,
-      nextAction: `Verify peer identity, then retry message ${label}.`,
-      rowLabel: "action: verify peer",
-      focusTarget: "verify",
-    };
-  }
-  return {
-    ...common,
-    nextAction: `Retry send: message ${label} can be sent again or canceled.`,
-    rowLabel: "action: retry send",
-    focusTarget: "retry-send",
+    nextAction: formatTemplate("sendRecoveryRowNext", {
+      label,
+      next: outboundRecoveryNextText(primaryAction, actionState),
+    }),
+    rowLabel: t(outboundRecoveryReasonKey(primaryAction, productionTwoProfileOutboundStatusLabel(entry))),
+    focusTarget: outboundRecoveryFocusTarget(primaryAction),
   };
 }
 
@@ -9622,39 +9624,10 @@ function retryableTwoProfileOutboundWarning(entry) {
   const label = Number.isInteger(number) ? `#${number}` : "";
   const current = currentTwoProfileOutboundAction(entry);
   const primaryAction = current?.primaryAction ?? currentTwoProfileOutboundPrimaryAction(entry);
-  if (primaryAction.action === "refresh-and-retry") {
-    return currentLanguage === "ko"
-      ? `메시지 ${label} 전송이 멈췄습니다. 상대 주소를 갱신한 뒤 다시 보내거나 취소할 수 있습니다.`
-      : `Message ${label} is waiting. Refresh the peer address, then retry or cancel this send.`;
-  }
-  if (primaryAction.action === "start-receiving") {
-    return currentLanguage === "ko"
-      ? `메시지 ${label} 전송이 멈췄습니다. 메시지 받기를 시작한 뒤 다시 보내거나 취소할 수 있습니다.`
-      : `Message ${label} is waiting. Start receiving, then retry or cancel this send.`;
-  }
-  if (primaryAction.action === "stop-receiving") {
-    return currentLanguage === "ko"
-      ? `메시지 ${label} 전송이 멈췄습니다. 현재 받기를 중지한 뒤 다시 시작하고 전송을 재시도하세요.`
-      : `Message ${label} is waiting. Stop the current receiver, restart receiving, then retry this send.`;
-  }
-  if (primaryAction.action === "wait-receive-stop") {
-    return currentLanguage === "ko"
-      ? `메시지 ${label} 전송이 멈췄습니다. 받기 중지가 완료된 뒤 다시 보내거나 취소할 수 있습니다.`
-      : `Message ${label} is waiting. Wait for receiving to stop, then retry or cancel this send.`;
-  }
-  if (primaryAction.action === "retry-network") {
-    return currentLanguage === "ko"
-      ? `메시지 ${label} 전송 네트워크를 다시 시도해야 합니다. 다시 보내거나 취소할 수 있습니다.`
-      : `Message ${label} needs a network retry. Retry private delivery or cancel this send.`;
-  }
-  if (primaryAction.action === "prepare-private-route") {
-    return currentLanguage === "ko"
-      ? `메시지 ${label} 전송 경로가 준비되지 않았습니다. 전송을 준비한 뒤 다시 보내거나 취소할 수 있습니다.`
-      : `Message ${label} needs a delivery route. Set up delivery, then retry or cancel this send.`;
-  }
-  return currentLanguage === "ko"
-    ? `메시지 ${label} 전송이 실패했습니다. 다시 보내거나 취소할 수 있습니다.`
-    : `Message ${label} failed to send. You can retry or cancel it.`;
+  return formatTemplate("sendRecoverySelectedWarning", {
+    label,
+    recovery: outboundRecoveryMessage(primaryAction),
+  });
 }
 
 function twoProfileConversationUserActionMessage(entry) {
@@ -10927,6 +10900,18 @@ function twoProfileComposerPrimaryIntent({
       !productionTwoProfileOnionReceiveMode.stopRequested &&
       !productionTwoProfileReceiveActiveInOtherRoom(input),
   );
+  const pendingOutboundAction = currentComposerPendingOutboundAction(input);
+  if (!busy && sessionsReady && pendingOutboundAction && (!input.message || latestChatDeliveryNoticePendingOutbound)) {
+    return {
+      action: pendingOutboundAction.primaryAction.action,
+      labelKey: pendingOutboundAction.primaryAction.labelKey,
+      disabledReason: pendingOutboundAction.actionState.canRunNow
+        ? ""
+        : pendingOutboundAction.actionState.disabledReason || outboundRecoveryMessage(pendingOutboundAction.primaryAction),
+      pendingOutboundEntry: pendingOutboundAction.entry,
+      expectedPrimaryAction: pendingOutboundAction.primaryAction,
+    };
+  }
   if (busy || !sessionsReady || (!input.message && !needsReceiveStart)) {
     return {
       action: "send",
@@ -16776,6 +16761,10 @@ async function runProductionTwoProfileComposerPrimaryAction() {
     manualNetworkPermission: manualNetworkPermissionEnabled(),
     peerEndpointState: twoProfilePeerEndpointState(input),
   });
+  if (intent.pendingOutboundEntry) {
+    await runTwoProfileOutboundPrimaryAction(intent.pendingOutboundEntry, intent.expectedPrimaryAction);
+    return;
+  }
   if (intent.action === "enable-private-delivery") {
     rememberPrivateRouteFollowup(input.message ? "send-draft" : "receive", input);
     renderManualRebuildDeliveryScopeGate(input, intent.action);
