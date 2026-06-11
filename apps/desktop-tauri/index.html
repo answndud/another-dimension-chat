@@ -631,6 +631,14 @@
                     Redacted delivery status for beta testing. It does not include codes, endpoints, messages, profiles, local paths, logs, passphrases, or key material.
                   </p>
                 </div>
+                <section class="local-rehearsal-panel" aria-labelledby="local-rehearsal-title">
+                  <h5 id="local-rehearsal-title" data-i18n="localRehearsal">Local rehearsal</h5>
+                  <p data-i18n="localRehearsalHint">
+                    Single-machine dual-profile rehearsal only. It helps repeat invite, safety, delivery-code, receive, and retry steps, but it is not external onion delivery evidence.
+                  </p>
+                  <ol id="local-rehearsal-checklist" class="field-test-checklist" aria-live="polite"></ol>
+                  <p id="local-rehearsal-next-action" class="field-test-report-summary" aria-live="polite"></p>
+                </section>
                 <textarea id="field-test-report" rows="8" readonly></textarea>
                 <p id="field-test-report-summary" class="field-test-report-summary" aria-live="polite"></p>
                 <ol id="field-test-checklist" class="field-test-checklist" aria-live="polite"></ol>
