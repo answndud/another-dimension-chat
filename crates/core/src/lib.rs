@@ -1847,6 +1847,46 @@ pub mod production {
         "release ready",
     ];
 
+    const PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_REQUIRED_ITEMS: &[&str] = &[
+        "mobile pre-release non-claim audit status only",
+        "public wording audit only",
+        "documentation-only wrapper state reviewed",
+        "no buildable mobile app recorded",
+        "no store distribution recorded",
+        "no runtime messaging recorded",
+        "non-claim wording coverage included",
+        "lifecycle checklist index coverage included",
+        "unsigned experimental public beta retained",
+        "sensitive communication prohibited retained",
+        "not audited retained",
+        "not production-ready retained",
+        "external onion delivery not claimed",
+        "cloud backup not claimed",
+        "push notification not claimed",
+        "central account or contact discovery not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_FORBIDDEN_CLAIMS: &[&str] = &[
+        "pre-release approved",
+        "release candidate approved",
+        "mobile beta ready",
+        "mobile app ready",
+        "security audit passed",
+        "audited",
+        "production-ready",
+        "safe for sensitive communication",
+        "store review ready",
+        "App Store ready",
+        "Play Store ready",
+        "external onion delivery verified",
+        "push notifications ready",
+        "cloud backup ready",
+        "central account ready",
+        "all blockers cleared",
+        "no remaining mobile work",
+        "release ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -2672,6 +2712,36 @@ pub mod production {
         cloud_backup_claim_allowed: bool,
         store_or_review_trust_claim_allowed: bool,
         all_checks_passed_claim_allowed: bool,
+        release_ready_claim_allowed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobilePreReleaseNonClaimAuditBoundarySummary {
+        required_audit_items: &'static [&'static str],
+        forbidden_audit_claims: &'static [&'static str],
+        inherits_mobile_lifecycle_checklist_index_boundary: bool,
+        audit_status_only_label_required: bool,
+        public_wording_audit_only_label_required: bool,
+        documentation_only_wrapper_state_reviewed: bool,
+        no_buildable_mobile_app_recorded: bool,
+        no_store_distribution_recorded: bool,
+        no_runtime_messaging_recorded: bool,
+        non_claim_wording_coverage_included: bool,
+        lifecycle_index_coverage_included: bool,
+        unsigned_experimental_public_beta_retained: bool,
+        sensitive_communication_prohibited_retained: bool,
+        not_audited_retained: bool,
+        not_production_ready_retained: bool,
+        mobile_app_readiness_claimed: bool,
+        release_candidate_approval_claimed: bool,
+        security_audit_passed_claimed: bool,
+        store_review_ready_claimed: bool,
+        external_delivery_success_claim_allowed: bool,
+        cloud_backup_claim_allowed: bool,
+        push_notification_claim_allowed: bool,
+        central_account_or_contact_discovery_claim_allowed: bool,
+        all_blockers_cleared_claim_allowed: bool,
         release_ready_claim_allowed: bool,
         boundary_closed: bool,
     }
@@ -5120,6 +5190,112 @@ pub mod production {
 
         pub fn all_checks_passed_claim_allowed(self) -> bool {
             self.all_checks_passed_claim_allowed
+        }
+
+        pub fn release_ready_claim_allowed(self) -> bool {
+            self.release_ready_claim_allowed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobilePreReleaseNonClaimAuditBoundarySummary {
+        pub fn required_audit_items(self) -> &'static [&'static str] {
+            self.required_audit_items
+        }
+
+        pub fn forbidden_audit_claims(self) -> &'static [&'static str] {
+            self.forbidden_audit_claims
+        }
+
+        pub fn inherits_mobile_lifecycle_checklist_index_boundary(self) -> bool {
+            self.inherits_mobile_lifecycle_checklist_index_boundary
+        }
+
+        pub fn audit_status_only_label_required(self) -> bool {
+            self.audit_status_only_label_required
+        }
+
+        pub fn public_wording_audit_only_label_required(self) -> bool {
+            self.public_wording_audit_only_label_required
+        }
+
+        pub fn documentation_only_wrapper_state_reviewed(self) -> bool {
+            self.documentation_only_wrapper_state_reviewed
+        }
+
+        pub fn no_buildable_mobile_app_recorded(self) -> bool {
+            self.no_buildable_mobile_app_recorded
+        }
+
+        pub fn no_store_distribution_recorded(self) -> bool {
+            self.no_store_distribution_recorded
+        }
+
+        pub fn no_runtime_messaging_recorded(self) -> bool {
+            self.no_runtime_messaging_recorded
+        }
+
+        pub fn non_claim_wording_coverage_included(self) -> bool {
+            self.non_claim_wording_coverage_included
+        }
+
+        pub fn lifecycle_index_coverage_included(self) -> bool {
+            self.lifecycle_index_coverage_included
+        }
+
+        pub fn unsigned_experimental_public_beta_retained(self) -> bool {
+            self.unsigned_experimental_public_beta_retained
+        }
+
+        pub fn sensitive_communication_prohibited_retained(self) -> bool {
+            self.sensitive_communication_prohibited_retained
+        }
+
+        pub fn not_audited_retained(self) -> bool {
+            self.not_audited_retained
+        }
+
+        pub fn not_production_ready_retained(self) -> bool {
+            self.not_production_ready_retained
+        }
+
+        pub fn mobile_app_readiness_claimed(self) -> bool {
+            self.mobile_app_readiness_claimed
+        }
+
+        pub fn release_candidate_approval_claimed(self) -> bool {
+            self.release_candidate_approval_claimed
+        }
+
+        pub fn security_audit_passed_claimed(self) -> bool {
+            self.security_audit_passed_claimed
+        }
+
+        pub fn store_review_ready_claimed(self) -> bool {
+            self.store_review_ready_claimed
+        }
+
+        pub fn external_delivery_success_claim_allowed(self) -> bool {
+            self.external_delivery_success_claim_allowed
+        }
+
+        pub fn cloud_backup_claim_allowed(self) -> bool {
+            self.cloud_backup_claim_allowed
+        }
+
+        pub fn push_notification_claim_allowed(self) -> bool {
+            self.push_notification_claim_allowed
+        }
+
+        pub fn central_account_or_contact_discovery_claim_allowed(self) -> bool {
+            self.central_account_or_contact_discovery_claim_allowed
+        }
+
+        pub fn all_blockers_cleared_claim_allowed(self) -> bool {
+            self.all_blockers_cleared_claim_allowed
         }
 
         pub fn release_ready_claim_allowed(self) -> bool {
@@ -15944,6 +16120,117 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_pre_release_non_claim_audit_boundary_summary(
+    ) -> ProductionMobilePreReleaseNonClaimAuditBoundarySummary {
+        let lifecycle = production_mobile_lifecycle_checklist_index_boundary_summary();
+        let inherits_mobile_lifecycle_checklist_index_boundary = lifecycle.boundary_closed()
+            && lifecycle.checklist_coverage_index_only_label_required()
+            && lifecycle.non_claim_index_only_label_required()
+            && lifecycle.documentation_only_boundary_label_required()
+            && !lifecycle.mobile_app_readiness_claimed()
+            && !lifecycle.production_messaging_ready_claimed()
+            && !lifecycle.security_ready_claimed()
+            && !lifecycle.external_delivery_success_claim_allowed()
+            && !lifecycle.cloud_backup_claim_allowed()
+            && !lifecycle.store_or_review_trust_claim_allowed()
+            && !lifecycle.all_checks_passed_claim_allowed()
+            && !lifecycle.release_ready_claim_allowed();
+        let audit_status_only_label_required = true;
+        let public_wording_audit_only_label_required = true;
+        let documentation_only_wrapper_state_reviewed = true;
+        let no_buildable_mobile_app_recorded = true;
+        let no_store_distribution_recorded = true;
+        let no_runtime_messaging_recorded = true;
+        let non_claim_wording_coverage_included = true;
+        let lifecycle_index_coverage_included = true;
+        let unsigned_experimental_public_beta_retained = true;
+        let sensitive_communication_prohibited_retained = true;
+        let not_audited_retained = true;
+        let not_production_ready_retained = true;
+        let mobile_app_readiness_claimed = false;
+        let release_candidate_approval_claimed = false;
+        let security_audit_passed_claimed = false;
+        let store_review_ready_claimed = false;
+        let external_delivery_success_claim_allowed = false;
+        let cloud_backup_claim_allowed = false;
+        let push_notification_claim_allowed = false;
+        let central_account_or_contact_discovery_claim_allowed = false;
+        let all_blockers_cleared_claim_allowed = false;
+        let release_ready_claim_allowed = false;
+        let boundary_closed = inherits_mobile_lifecycle_checklist_index_boundary
+            && audit_status_only_label_required
+            && public_wording_audit_only_label_required
+            && documentation_only_wrapper_state_reviewed
+            && no_buildable_mobile_app_recorded
+            && no_store_distribution_recorded
+            && no_runtime_messaging_recorded
+            && non_claim_wording_coverage_included
+            && lifecycle_index_coverage_included
+            && unsigned_experimental_public_beta_retained
+            && sensitive_communication_prohibited_retained
+            && not_audited_retained
+            && not_production_ready_retained
+            && !mobile_app_readiness_claimed
+            && !release_candidate_approval_claimed
+            && !security_audit_passed_claimed
+            && !store_review_ready_claimed
+            && !external_delivery_success_claim_allowed
+            && !cloud_backup_claim_allowed
+            && !push_notification_claim_allowed
+            && !central_account_or_contact_discovery_claim_allowed
+            && !all_blockers_cleared_claim_allowed
+            && !release_ready_claim_allowed
+            && PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_REQUIRED_ITEMS
+                .contains(&"mobile pre-release non-claim audit status only")
+            && PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_REQUIRED_ITEMS
+                .contains(&"public wording audit only")
+            && PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_REQUIRED_ITEMS
+                .contains(&"unsigned experimental public beta retained")
+            && PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_REQUIRED_ITEMS
+                .contains(&"sensitive communication prohibited retained")
+            && PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_REQUIRED_ITEMS
+                .contains(&"not audited retained")
+            && PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_REQUIRED_ITEMS
+                .contains(&"not production-ready retained")
+            && PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_FORBIDDEN_CLAIMS
+                .contains(&"pre-release approved")
+            && PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_FORBIDDEN_CLAIMS
+                .contains(&"security audit passed")
+            && PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_FORBIDDEN_CLAIMS
+                .contains(&"store review ready")
+            && PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_FORBIDDEN_CLAIMS
+                .contains(&"release ready");
+
+        ProductionMobilePreReleaseNonClaimAuditBoundarySummary {
+            required_audit_items: PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_REQUIRED_ITEMS,
+            forbidden_audit_claims: PRODUCTION_MOBILE_PRE_RELEASE_NON_CLAIM_AUDIT_FORBIDDEN_CLAIMS,
+            inherits_mobile_lifecycle_checklist_index_boundary,
+            audit_status_only_label_required,
+            public_wording_audit_only_label_required,
+            documentation_only_wrapper_state_reviewed,
+            no_buildable_mobile_app_recorded,
+            no_store_distribution_recorded,
+            no_runtime_messaging_recorded,
+            non_claim_wording_coverage_included,
+            lifecycle_index_coverage_included,
+            unsigned_experimental_public_beta_retained,
+            sensitive_communication_prohibited_retained,
+            not_audited_retained,
+            not_production_ready_retained,
+            mobile_app_readiness_claimed,
+            release_candidate_approval_claimed,
+            security_audit_passed_claimed,
+            store_review_ready_claimed,
+            external_delivery_success_claim_allowed,
+            cloud_backup_claim_allowed,
+            push_notification_claim_allowed,
+            central_account_or_contact_discovery_claim_allowed,
+            all_blockers_cleared_claim_allowed,
+            release_ready_claim_allowed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -20726,6 +21013,135 @@ pub mod production {
                 .forbidden_index_claims()
                 .contains(&"no remaining mobile work"));
             assert!(boundary.forbidden_index_claims().contains(&"release ready"));
+        }
+
+        #[test]
+        fn production_mobile_pre_release_non_claim_audit_boundary_is_status_only_and_non_claiming()
+        {
+            let boundary = production_mobile_pre_release_non_claim_audit_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_lifecycle_checklist_index_boundary());
+            assert!(boundary.audit_status_only_label_required());
+            assert!(boundary.public_wording_audit_only_label_required());
+            assert!(boundary.documentation_only_wrapper_state_reviewed());
+            assert!(boundary.no_buildable_mobile_app_recorded());
+            assert!(boundary.no_store_distribution_recorded());
+            assert!(boundary.no_runtime_messaging_recorded());
+            assert!(boundary.non_claim_wording_coverage_included());
+            assert!(boundary.lifecycle_index_coverage_included());
+            assert!(boundary.unsigned_experimental_public_beta_retained());
+            assert!(boundary.sensitive_communication_prohibited_retained());
+            assert!(boundary.not_audited_retained());
+            assert!(boundary.not_production_ready_retained());
+            assert!(!boundary.mobile_app_readiness_claimed());
+            assert!(!boundary.release_candidate_approval_claimed());
+            assert!(!boundary.security_audit_passed_claimed());
+            assert!(!boundary.store_review_ready_claimed());
+            assert!(!boundary.external_delivery_success_claim_allowed());
+            assert!(!boundary.cloud_backup_claim_allowed());
+            assert!(!boundary.push_notification_claim_allowed());
+            assert!(!boundary.central_account_or_contact_discovery_claim_allowed());
+            assert!(!boundary.all_blockers_cleared_claim_allowed());
+            assert!(!boundary.release_ready_claim_allowed());
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"mobile pre-release non-claim audit status only"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"public wording audit only"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"documentation-only wrapper state reviewed"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"no buildable mobile app recorded"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"no store distribution recorded"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"no runtime messaging recorded"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"non-claim wording coverage included"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"lifecycle checklist index coverage included"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"unsigned experimental public beta retained"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"sensitive communication prohibited retained"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"not audited retained"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"not production-ready retained"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"external onion delivery not claimed"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"cloud backup not claimed"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"push notification not claimed"));
+            assert!(boundary
+                .required_audit_items()
+                .contains(&"central account or contact discovery not claimed"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"pre-release approved"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"release candidate approved"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"mobile beta ready"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"mobile app ready"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"security audit passed"));
+            assert!(boundary.forbidden_audit_claims().contains(&"audited"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"production-ready"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"safe for sensitive communication"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"store review ready"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"App Store ready"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"Play Store ready"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"external onion delivery verified"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"push notifications ready"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"cloud backup ready"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"central account ready"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"all blockers cleared"));
+            assert!(boundary
+                .forbidden_audit_claims()
+                .contains(&"no remaining mobile work"));
+            assert!(boundary.forbidden_audit_claims().contains(&"release ready"));
         }
 
         #[test]

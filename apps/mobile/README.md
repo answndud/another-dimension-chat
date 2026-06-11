@@ -572,3 +572,44 @@ Lifecycle checklist indexes must not show secure deletion guaranteed.
 Lifecycle checklist indexes must not show remote wipe available.
 Lifecycle checklist indexes must not show no remaining mobile work.
 Lifecycle checklist indexes must not show release ready.
+
+## Pre-Release Non-Claim Audit Boundary
+
+Future mobile pre-release non-claim audits are documentation-only candidates
+until a separate wrapper release review phase exists.
+
+Pre-release non-claim audits may show mobile pre-release non-claim audit status only.
+Pre-release non-claim audits may show public wording audit only.
+Pre-release non-claim audits may show documentation-only wrapper state reviewed.
+Pre-release non-claim audits may show no buildable mobile app recorded.
+Pre-release non-claim audits may show no store distribution recorded.
+Pre-release non-claim audits may show no runtime messaging recorded.
+Pre-release non-claim audits may show non-claim wording coverage included.
+Pre-release non-claim audits may show lifecycle checklist index coverage included.
+Pre-release non-claim audits may show unsigned experimental public beta retained.
+Pre-release non-claim audits may show sensitive communication prohibited retained.
+Pre-release non-claim audits may show not audited retained.
+Pre-release non-claim audits may show not production-ready retained.
+Pre-release non-claim audits may show external onion delivery not claimed.
+Pre-release non-claim audits may show cloud backup not claimed.
+Pre-release non-claim audits may show push notification not claimed.
+Pre-release non-claim audits may show central account or contact discovery not claimed.
+
+Pre-release non-claim audits must not show pre-release approved.
+Pre-release non-claim audits must not show release candidate approved.
+Pre-release non-claim audits must not show mobile beta ready.
+Pre-release non-claim audits must not show mobile app ready.
+Pre-release non-claim audits must not show security audit passed.
+Pre-release non-claim audits must not show audited as an audit completion claim.
+Pre-release non-claim audits must not show production-ready.
+Pre-release non-claim audits must not show safe for sensitive communication.
+Pre-release non-claim audits must not show store review ready.
+Pre-release non-claim audits must not show App Store ready.
+Pre-release non-claim audits must not show Play Store ready.
+Pre-release non-claim audits must not show external onion delivery verified.
+Pre-release non-claim audits must not show push notifications ready.
+Pre-release non-claim audits must not show cloud backup ready.
+Pre-release non-claim audits must not show central account ready.
+Pre-release non-claim audits must not show all blockers cleared.
+Pre-release non-claim audits must not show no remaining mobile work.
+Pre-release non-claim audits must not show release ready.
