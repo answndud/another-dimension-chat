@@ -5152,6 +5152,195 @@ pub mod production {
     }
 
     #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct ProductionProductUnlockStatusSnapshot {
+        warning: &'static str,
+        unlocked: bool,
+        profile: String,
+        redacted_reason: &'static str,
+        key_policy_status: &'static str,
+        unlock_command_enabled: bool,
+        lock_command_enabled: bool,
+        passphrase_first: bool,
+        os_keystore_only_rejected: bool,
+        production_key_management_ready: bool,
+        rollback_marker_present: bool,
+        rollback_detection_ready: bool,
+        rollback_suspicion_detected: bool,
+        rollback_resume_blocked: bool,
+        rollback_prevention_claimed: bool,
+        secure_deletion_from_media_claimed: bool,
+        idle_auto_lock_seconds: u16,
+        explicit_lock_available: bool,
+        storage_opened: bool,
+        session_records_written: bool,
+        store_path_returned: bool,
+        passphrase_retained: bool,
+        key_material_exposed: bool,
+        raw_storage_error_exposed: bool,
+        path_or_identifier_exposed: bool,
+        runtime_messaging_enabled: bool,
+        unlocked_at_ms: Option<u128>,
+        last_activity_ms: Option<u128>,
+        expires_at_ms: Option<u128>,
+        checked_at_ms: u128,
+    }
+
+    impl ProductionProductUnlockStatusSnapshot {
+        pub fn warning(&self) -> &'static str {
+            self.warning
+        }
+
+        pub fn unlocked(&self) -> bool {
+            self.unlocked
+        }
+
+        pub fn profile(&self) -> &str {
+            &self.profile
+        }
+
+        pub fn redacted_reason(&self) -> &'static str {
+            self.redacted_reason
+        }
+
+        pub fn key_policy_status(&self) -> &'static str {
+            self.key_policy_status
+        }
+
+        pub fn unlock_command_enabled(&self) -> bool {
+            self.unlock_command_enabled
+        }
+
+        pub fn lock_command_enabled(&self) -> bool {
+            self.lock_command_enabled
+        }
+
+        pub fn passphrase_first(&self) -> bool {
+            self.passphrase_first
+        }
+
+        pub fn os_keystore_only_rejected(&self) -> bool {
+            self.os_keystore_only_rejected
+        }
+
+        pub fn production_key_management_ready(&self) -> bool {
+            self.production_key_management_ready
+        }
+
+        pub fn rollback_marker_present(&self) -> bool {
+            self.rollback_marker_present
+        }
+
+        pub fn rollback_detection_ready(&self) -> bool {
+            self.rollback_detection_ready
+        }
+
+        pub fn rollback_suspicion_detected(&self) -> bool {
+            self.rollback_suspicion_detected
+        }
+
+        pub fn rollback_resume_blocked(&self) -> bool {
+            self.rollback_resume_blocked
+        }
+
+        pub fn rollback_prevention_claimed(&self) -> bool {
+            self.rollback_prevention_claimed
+        }
+
+        pub fn secure_deletion_from_media_claimed(&self) -> bool {
+            self.secure_deletion_from_media_claimed
+        }
+
+        pub fn idle_auto_lock_seconds(&self) -> u16 {
+            self.idle_auto_lock_seconds
+        }
+
+        pub fn explicit_lock_available(&self) -> bool {
+            self.explicit_lock_available
+        }
+
+        pub fn storage_opened(&self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn session_records_written(&self) -> bool {
+            self.session_records_written
+        }
+
+        pub fn store_path_returned(&self) -> bool {
+            self.store_path_returned
+        }
+
+        pub fn passphrase_retained(&self) -> bool {
+            self.passphrase_retained
+        }
+
+        pub fn key_material_exposed(&self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn raw_storage_error_exposed(&self) -> bool {
+            self.raw_storage_error_exposed
+        }
+
+        pub fn path_or_identifier_exposed(&self) -> bool {
+            self.path_or_identifier_exposed
+        }
+
+        pub fn runtime_messaging_enabled(&self) -> bool {
+            self.runtime_messaging_enabled
+        }
+
+        pub fn unlocked_at_ms(&self) -> Option<u128> {
+            self.unlocked_at_ms
+        }
+
+        pub fn last_activity_ms(&self) -> Option<u128> {
+            self.last_activity_ms
+        }
+
+        pub fn expires_at_ms(&self) -> Option<u128> {
+            self.expires_at_ms
+        }
+
+        pub fn checked_at_ms(&self) -> u128 {
+            self.checked_at_ms
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionProductUnlockKeyPolicySnapshot {
+        key_policy_status: &'static str,
+        production_key_management_ready: bool,
+        rollback_marker_present: bool,
+        rollback_detection_ready: bool,
+        rollback_suspicion_detected: bool,
+        rollback_resume_blocked: bool,
+        rollback_prevention_claimed: bool,
+        secure_deletion_from_media_claimed: bool,
+    }
+
+    impl ProductionProductUnlockKeyPolicySnapshot {
+        pub fn rollback_suspicion_detected(self) -> bool {
+            self.rollback_suspicion_detected
+        }
+
+        pub fn apply_to_status(
+            self,
+            mut status: ProductionProductUnlockStatusSnapshot,
+        ) -> ProductionProductUnlockStatusSnapshot {
+            status.key_policy_status = self.key_policy_status;
+            status.production_key_management_ready = self.production_key_management_ready;
+            status.rollback_marker_present = self.rollback_marker_present;
+            status.rollback_detection_ready = self.rollback_detection_ready;
+            status.rollback_suspicion_detected = self.rollback_suspicion_detected;
+            status.rollback_resume_blocked = self.rollback_resume_blocked;
+            status.rollback_prevention_claimed = self.rollback_prevention_claimed;
+            status.secure_deletion_from_media_claimed = self.secure_deletion_from_media_claimed;
+            status
+        }
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct SessionUnlockCommandRequest {
         passphrase_provided: bool,
         os_keystore_wrapped_key_provided: bool,
@@ -10103,6 +10292,114 @@ pub mod production {
         }
     }
 
+    fn production_product_unlock_status_snapshot_from_parts(
+        unlocked: bool,
+        profile: String,
+        redacted_reason: &'static str,
+        unlocked_at_ms: Option<u128>,
+        last_activity_ms: Option<u128>,
+        expires_at_ms: Option<u128>,
+        idle_auto_lock_seconds: u16,
+        checked_at_ms: u128,
+    ) -> ProductionProductUnlockStatusSnapshot {
+        let gate = session_unlock_lock_command_design_gate();
+        ProductionProductUnlockStatusSnapshot {
+            warning: if unlocked {
+                "passphrase-first product unlock active; passphrase not retained; no network or secure-release claim"
+            } else {
+                "product store locked; passphrase-first unlock required"
+            },
+            unlocked,
+            profile,
+            redacted_reason,
+            key_policy_status: "passphrase-first-runtime-unlock-required",
+            unlock_command_enabled: true,
+            lock_command_enabled: unlocked && gate.explicit_lock_required(),
+            passphrase_first: gate.high_risk_requires_passphrase(),
+            os_keystore_only_rejected: gate.os_keystore_only_rejected(),
+            production_key_management_ready: false,
+            rollback_marker_present: false,
+            rollback_detection_ready: false,
+            rollback_suspicion_detected: false,
+            rollback_resume_blocked: false,
+            rollback_prevention_claimed: false,
+            secure_deletion_from_media_claimed: false,
+            idle_auto_lock_seconds,
+            explicit_lock_available: gate.explicit_lock_required(),
+            storage_opened: unlocked,
+            session_records_written: false,
+            store_path_returned: false,
+            passphrase_retained: false,
+            key_material_exposed: false,
+            raw_storage_error_exposed: false,
+            path_or_identifier_exposed: false,
+            runtime_messaging_enabled: gate.runtime_messaging_enabled(),
+            unlocked_at_ms,
+            last_activity_ms,
+            expires_at_ms,
+            checked_at_ms,
+        }
+    }
+
+    pub fn production_product_unlock_locked_status_snapshot(
+        redacted_reason: &'static str,
+        idle_auto_lock_seconds: u16,
+        checked_at_ms: u128,
+    ) -> ProductionProductUnlockStatusSnapshot {
+        production_product_unlock_status_snapshot_from_parts(
+            false,
+            String::new(),
+            redacted_reason,
+            None,
+            None,
+            None,
+            idle_auto_lock_seconds,
+            checked_at_ms,
+        )
+    }
+
+    pub fn production_product_unlock_unlocked_status_snapshot(
+        profile: impl Into<String>,
+        redacted_reason: &'static str,
+        unlocked_at_ms: u128,
+        last_activity_ms: u128,
+        expires_at_ms: u128,
+        idle_auto_lock_seconds: u16,
+        checked_at_ms: u128,
+    ) -> ProductionProductUnlockStatusSnapshot {
+        production_product_unlock_status_snapshot_from_parts(
+            true,
+            profile.into(),
+            redacted_reason,
+            Some(unlocked_at_ms),
+            Some(last_activity_ms),
+            Some(expires_at_ms),
+            idle_auto_lock_seconds,
+            checked_at_ms,
+        )
+    }
+
+    pub fn production_product_unlock_key_policy_snapshot(
+        key_policy_status: &'static str,
+        production_key_management_ready: bool,
+        rollback_marker_present: bool,
+        rollback_detection_ready: bool,
+        rollback_suspicion_detected: bool,
+        rollback_prevention_claimed: bool,
+        secure_deletion_from_media_claimed: bool,
+    ) -> ProductionProductUnlockKeyPolicySnapshot {
+        ProductionProductUnlockKeyPolicySnapshot {
+            key_policy_status,
+            production_key_management_ready,
+            rollback_marker_present,
+            rollback_detection_ready,
+            rollback_suspicion_detected,
+            rollback_resume_blocked: rollback_suspicion_detected,
+            rollback_prevention_claimed,
+            secure_deletion_from_media_claimed,
+        }
+    }
+
     pub fn session_unlock_command_fail_closed(
         _request: &SessionUnlockCommandRequest,
     ) -> SessionUnlockCommandFailClosedResult {
@@ -11309,6 +11606,68 @@ pub mod production {
             assert!(gate.durable_session_persistence_ready());
             assert!(!gate.runtime_messaging_enabled());
             assert_eq!(gate.blockers(), summary.readiness_blockers());
+        }
+
+        #[test]
+        fn production_product_unlock_status_snapshot_is_redacted_and_portable() {
+            let locked =
+                production_product_unlock_locked_status_snapshot("wrong-passphrase", 60, 1_000);
+            assert!(!locked.unlocked());
+            assert_eq!(locked.profile(), "");
+            assert_eq!(locked.redacted_reason(), "wrong-passphrase");
+            assert!(locked.unlock_command_enabled());
+            assert!(!locked.lock_command_enabled());
+            assert!(locked.passphrase_first());
+            assert!(locked.os_keystore_only_rejected());
+            assert!(!locked.storage_opened());
+            assert!(!locked.store_path_returned());
+            assert!(!locked.passphrase_retained());
+            assert!(!locked.key_material_exposed());
+            assert!(!locked.raw_storage_error_exposed());
+            assert!(!locked.path_or_identifier_exposed());
+            assert!(!locked.runtime_messaging_enabled());
+            assert!(!locked.rollback_prevention_claimed());
+            assert!(!locked.secure_deletion_from_media_claimed());
+
+            let unlocked = production_product_unlock_unlocked_status_snapshot(
+                "alice".to_string(),
+                "status",
+                2_000,
+                2_100,
+                62_000,
+                60,
+                2_200,
+            );
+            assert!(unlocked.unlocked());
+            assert_eq!(unlocked.profile(), "alice");
+            assert_eq!(unlocked.redacted_reason(), "status");
+            assert!(unlocked.lock_command_enabled());
+            assert_eq!(unlocked.unlocked_at_ms(), Some(2_000));
+            assert_eq!(unlocked.last_activity_ms(), Some(2_100));
+            assert_eq!(unlocked.expires_at_ms(), Some(62_000));
+            assert_eq!(unlocked.checked_at_ms(), 2_200);
+            assert!(!unlocked.passphrase_retained());
+            assert!(!unlocked.key_material_exposed());
+            assert!(!unlocked.store_path_returned());
+            assert!(!unlocked.runtime_messaging_enabled());
+
+            let blocked = production_product_unlock_key_policy_snapshot(
+                "rollback-suspicion-blocks-runtime-actions",
+                false,
+                true,
+                true,
+                true,
+                false,
+                false,
+            )
+            .apply_to_status(unlocked);
+            assert!(blocked.rollback_marker_present());
+            assert!(blocked.rollback_detection_ready());
+            assert!(blocked.rollback_suspicion_detected());
+            assert!(blocked.rollback_resume_blocked());
+            assert!(!blocked.rollback_prevention_claimed());
+            assert!(!blocked.secure_deletion_from_media_claimed());
+            assert!(!blocked.key_material_exposed());
         }
 
         #[test]
