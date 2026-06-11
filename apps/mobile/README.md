@@ -50,3 +50,32 @@ onion delivery verified.
 Status screens must not claim secure messenger, safe for sensitive
 communication, audited, production-ready, store approved, cloud backup enabled,
 or security-ready claims.
+
+## Install/Update Screen Copy Boundary
+
+Future mobile install/update screens are documentation-only candidates until a
+separate wrapper UI implementation phase exists.
+
+Install/update screens may show manual update verification required.
+Install/update screens may show same GitHub Release artifact.
+Install/update screens may show same release checksum.
+Install/update screens may show public provenance.
+Install/update screens may show release manifest.
+Install/update screens may show release notes.
+Install/update screens may show dependency evidence.
+Install/update screens may show not audited and not production-ready.
+Install/update screens may show store trust not claimed.
+
+Install/update screens must not show auto-update available.
+Install/update screens must not show automatic update.
+Install/update screens must not show update installed automatically.
+Install/update screens must not show Play Store verified.
+Install/update screens must not show App Store verified.
+Install/update screens must not show TestFlight verified.
+Install/update screens must not show store approved security.
+Install/update screens must not show mobile review security.
+Install/update screens must not show platform signing security.
+Install/update screens must not show notarization security.
+Install/update screens must not show branch checksum accepted.
+Install/update screens must not show source archive checksum accepted.
+Install/update screens must not show copied checksum accepted or security-ready claims.
