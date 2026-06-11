@@ -211,6 +211,20 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(mainJs, /async function runTwoProfileOutboundPrimaryAction\(entry, expectedPrimaryAction = null\)/);
   assert.match(functionBody(mainJs, "runTwoProfileOutboundPrimaryAction"), /normalizedExpectedOutboundPrimaryAction\(expectedPrimaryAction\)/);
   assert.match(functionBody(mainJs, "runTwoProfileOutboundPrimaryAction"), /resolvedPrimaryAction\.action !== expectedAction[\s\S]*showExactRetryableOutboundPrompt\(resolvedEntry\)/);
+  assert.match(mainJs, /function outboundRecoveryMessage/);
+  assert.match(mainJs, /function outboundRecoveryNextText/);
+  assert.match(mainJs, /function currentComposerPendingOutboundAction/);
+  assert.match(functionBody(mainJs, "currentComposerPendingOutboundAction"), /restoreLatestChatDeliveryPendingOutbound\(input\) \?\? automaticVisibleTwoProfileRetryableOutboundEntry\(input\)/);
+  assert.match(functionBody(mainJs, "twoProfileComposerPrimaryIntent"), /currentComposerPendingOutboundAction\(input\)/);
+  assert.match(functionBody(mainJs, "twoProfileComposerPrimaryIntent"), /pendingOutboundEntry: pendingOutboundAction\.entry/);
+  assert.match(functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"), /runTwoProfileOutboundPrimaryAction\(intent\.pendingOutboundEntry, intent\.expectedPrimaryAction\)/);
+  assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /outboundRecoveryNextText\(primaryAction, outboundActionState\)/);
+  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /outboundRecoveryMessage\(primaryAction\)/);
+  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /outboundRecoveryNextText\(primaryAction, outboundActionState\)/);
+  assert.match(functionBody(mainJs, "twoProfileRetryableOutboundActionView"), /sendRecoveryRowNext/);
+  assert.match(functionBody(mainJs, "retryableTwoProfileOutboundWarning"), /sendRecoverySelectedWarning/);
+  assert.match(i18nJs, /sendRecoveryRowNext/);
+  assert.match(i18nJs, /sendRecoverySelectedWarning/);
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 30/);
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 20/);
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 18/);
@@ -1267,6 +1281,8 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /retryable_outbound_present=/);
   assert.match(reportBody, /outbound_failure_class=/);
   assert.match(reportBody, /outbound_recovery_action=/);
+  assert.match(reportBody, /outbound_recovery_key=/);
+  assert.match(reportBody, /outbound_recovery_notice_key=/);
   assert.match(reportBody, /currentSavedInviteRoomView\(input\)/);
   assert.match(reportBody, /room_list_state_key=/);
   assert.match(reportBody, /room_list_state_label=/);
@@ -1321,6 +1337,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(functionBody(mainJs, "cancelProductionTwoProfileRealOnionWait"), /production_two_profile_real_onion_wait_cancel/);
   assert.doesNotMatch(reportBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
   assert.doesNotMatch(reportBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
+  assert.doesNotMatch(reportBody, /outbound_recovery_message=|outbound_message=|peer_endpoint=|onion_endpoint=/);
   assert.doesNotMatch(summaryBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
   assert.doesNotMatch(summaryBody, /productionTwoProfilePassphrase|productionTwoProfileMessage/);
   assert.doesNotMatch(compareBody, /roomInviteTokenDisplay|createdInviteCodeDisplay|localPrivateRouteCode|peerPrivateRouteCode/);
