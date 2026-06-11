@@ -5310,6 +5310,8 @@ pub mod production {
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionProductUnlockKeyPolicySnapshot {
         key_policy_status: &'static str,
+        passphrase_first_unlock_required: bool,
+        os_keystore_only_unlock_rejected: bool,
         production_key_management_ready: bool,
         rollback_marker_present: bool,
         rollback_detection_ready: bool,
@@ -5320,8 +5322,44 @@ pub mod production {
     }
 
     impl ProductionProductUnlockKeyPolicySnapshot {
+        pub fn key_policy_status(self) -> &'static str {
+            self.key_policy_status
+        }
+
+        pub fn passphrase_first_unlock_required(self) -> bool {
+            self.passphrase_first_unlock_required
+        }
+
+        pub fn os_keystore_only_unlock_rejected(self) -> bool {
+            self.os_keystore_only_unlock_rejected
+        }
+
+        pub fn production_key_management_ready(self) -> bool {
+            self.production_key_management_ready
+        }
+
+        pub fn rollback_marker_present(self) -> bool {
+            self.rollback_marker_present
+        }
+
+        pub fn rollback_detection_ready(self) -> bool {
+            self.rollback_detection_ready
+        }
+
         pub fn rollback_suspicion_detected(self) -> bool {
             self.rollback_suspicion_detected
+        }
+
+        pub fn rollback_resume_blocked(self) -> bool {
+            self.rollback_resume_blocked
+        }
+
+        pub fn rollback_prevention_claimed(self) -> bool {
+            self.rollback_prevention_claimed
+        }
+
+        pub fn secure_deletion_from_media_claimed(self) -> bool {
+            self.secure_deletion_from_media_claimed
         }
 
         pub fn apply_to_status(
@@ -10390,6 +10428,8 @@ pub mod production {
     ) -> ProductionProductUnlockKeyPolicySnapshot {
         ProductionProductUnlockKeyPolicySnapshot {
             key_policy_status,
+            passphrase_first_unlock_required: true,
+            os_keystore_only_unlock_rejected: true,
             production_key_management_ready,
             rollback_marker_present,
             rollback_detection_ready,
@@ -10398,6 +10438,42 @@ pub mod production {
             rollback_prevention_claimed,
             secure_deletion_from_media_claimed,
         }
+    }
+
+    pub fn production_product_unlock_key_policy_snapshot_from_markers(
+        lifecycle_marker_present: bool,
+        migration_marker_present: bool,
+        profile_snapshot_marker_present: bool,
+        rollback_marker_present: bool,
+        rollback_detection_ready: bool,
+        rollback_suspicion_detected: bool,
+    ) -> ProductionProductUnlockKeyPolicySnapshot {
+        let marker_family_present = lifecycle_marker_present
+            || migration_marker_present
+            || profile_snapshot_marker_present
+            || rollback_marker_present;
+        let partial_marker_family = marker_family_present
+            && (!lifecycle_marker_present
+                || !migration_marker_present
+                || !profile_snapshot_marker_present
+                || !rollback_marker_present);
+        let rollback_suspicion_detected =
+            rollback_suspicion_detected || partial_marker_family;
+        production_product_unlock_key_policy_snapshot(
+            if rollback_suspicion_detected {
+                "rollback-suspicion-blocks-runtime-actions"
+            } else if rollback_detection_ready {
+                "passphrase-first-runtime-unlock-with-marker-based-rollback-detection"
+            } else {
+                "passphrase-first-runtime-unlock-rollback-marker-unavailable"
+            },
+            false,
+            rollback_marker_present,
+            rollback_detection_ready,
+            rollback_suspicion_detected,
+            false,
+            false,
+        )
     }
 
     pub fn session_unlock_command_fail_closed(
@@ -11668,6 +11744,53 @@ pub mod production {
             assert!(!blocked.rollback_prevention_claimed());
             assert!(!blocked.secure_deletion_from_media_claimed());
             assert!(!blocked.key_material_exposed());
+
+            let no_markers = production_product_unlock_key_policy_snapshot_from_markers(
+                false, false, false, false, false, false,
+            );
+            assert_eq!(
+                no_markers.key_policy_status(),
+                "passphrase-first-runtime-unlock-rollback-marker-unavailable"
+            );
+            assert!(!no_markers.rollback_marker_present());
+            assert!(!no_markers.rollback_detection_ready());
+            assert!(!no_markers.rollback_suspicion_detected());
+            assert!(!no_markers.rollback_resume_blocked());
+
+            let prepared = production_product_unlock_key_policy_snapshot_from_markers(
+                true, true, true, true, true, false,
+            );
+            assert_eq!(
+                prepared.key_policy_status(),
+                "passphrase-first-runtime-unlock-with-marker-based-rollback-detection"
+            );
+            assert!(prepared.passphrase_first_unlock_required());
+            assert!(prepared.os_keystore_only_unlock_rejected());
+            assert!(!prepared.rollback_suspicion_detected());
+            assert!(!prepared.rollback_resume_blocked());
+
+            let partial_marker_family =
+                production_product_unlock_key_policy_snapshot_from_markers(
+                    true, false, true, true, true, false,
+                );
+            assert_eq!(
+                partial_marker_family.key_policy_status(),
+                "rollback-suspicion-blocks-runtime-actions"
+            );
+            assert!(partial_marker_family.rollback_suspicion_detected());
+            assert!(partial_marker_family.rollback_resume_blocked());
+            assert!(!partial_marker_family.rollback_prevention_claimed());
+            assert!(!partial_marker_family.secure_deletion_from_media_claimed());
+
+            let explicit_suspicion = production_product_unlock_key_policy_snapshot_from_markers(
+                true, true, true, true, true, true,
+            );
+            assert_eq!(
+                explicit_suspicion.key_policy_status(),
+                "rollback-suspicion-blocks-runtime-actions"
+            );
+            assert!(explicit_suspicion.rollback_suspicion_detected());
+            assert!(explicit_suspicion.rollback_resume_blocked());
         }
 
         #[test]
