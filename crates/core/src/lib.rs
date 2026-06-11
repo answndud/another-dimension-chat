@@ -1689,6 +1689,45 @@ pub mod production {
         "security-ready",
     ];
 
+    const PRODUCTION_MOBILE_CONVERSATION_DELETION_CHECKLIST_REQUIRED_ITEMS: &[&str] = &[
+        "conversation deletion checklist status only",
+        "conversation delete is explicit user action",
+        "local sent message records removed",
+        "local received message records removed",
+        "local message envelopes removed",
+        "local message indexes removed",
+        "local message counter removed",
+        "pairwise session record preserved",
+        "transcript empty after local delete",
+        "local lifecycle state only",
+        "secure deletion not claimed",
+        "remote deletion not claimed",
+        "cloud backup recovery not claimed",
+        "external onion delivery not claimed",
+        "security-ready not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_CONVERSATION_DELETION_CHECKLIST_FORBIDDEN_CLAIMS: &[&str] = &[
+        "secure deletion guaranteed",
+        "forensic deletion guaranteed",
+        "peer copy deleted",
+        "remote deletion verified",
+        "remote wipe available",
+        "conversation deleted remotely",
+        "cloud backup deleted",
+        "backup recovery available",
+        "data safe after device restore",
+        "rollback prevention guaranteed",
+        "store path shown",
+        "passphrase retained",
+        "plaintext exposed",
+        "key material exposed",
+        "production messaging ready",
+        "production E2EE ready",
+        "safe for sensitive communication",
+        "security-ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -2390,6 +2429,37 @@ pub mod production {
         transcript_delivery_proof_claim_allowed: bool,
         remote_delete_claim_allowed: bool,
         plaintext_or_key_material_sync_allowed: bool,
+        production_messaging_ready_claimed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileConversationDeletionChecklistBoundarySummary {
+        required_checklist_items: &'static [&'static str],
+        forbidden_deletion_claims: &'static [&'static str],
+        inherits_mobile_transcript_status_checklist_boundary: bool,
+        inherits_mobile_local_data_lifecycle_screen_copy_boundary: bool,
+        inherits_local_storage_lifecycle_product: bool,
+        conversation_deletion_status_only_label_required: bool,
+        explicit_user_action_label_required: bool,
+        sent_records_removed_label_required: bool,
+        received_records_removed_label_required: bool,
+        message_envelopes_removed_label_required: bool,
+        message_indexes_removed_label_required: bool,
+        message_counter_removed_label_required: bool,
+        pairwise_session_preserved_label_required: bool,
+        transcript_empty_after_delete_label_required: bool,
+        local_lifecycle_state_only_label_required: bool,
+        secure_deletion_non_claim_required: bool,
+        remote_deletion_non_claim_required: bool,
+        cloud_backup_recovery_non_claim_required: bool,
+        external_delivery_non_claim_required: bool,
+        secure_deletion_claim_allowed: bool,
+        remote_wipe_or_delete_claim_allowed: bool,
+        cloud_backup_delete_or_recovery_claim_allowed: bool,
+        rollback_prevention_claim_allowed: bool,
+        path_or_secret_display_allowed: bool,
         production_messaging_ready_claimed: bool,
         security_ready_claimed: bool,
         boundary_closed: bool,
@@ -4399,6 +4469,116 @@ pub mod production {
 
         pub fn plaintext_or_key_material_sync_allowed(self) -> bool {
             self.plaintext_or_key_material_sync_allowed
+        }
+
+        pub fn production_messaging_ready_claimed(self) -> bool {
+            self.production_messaging_ready_claimed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileConversationDeletionChecklistBoundarySummary {
+        pub fn required_checklist_items(self) -> &'static [&'static str] {
+            self.required_checklist_items
+        }
+
+        pub fn forbidden_deletion_claims(self) -> &'static [&'static str] {
+            self.forbidden_deletion_claims
+        }
+
+        pub fn inherits_mobile_transcript_status_checklist_boundary(self) -> bool {
+            self.inherits_mobile_transcript_status_checklist_boundary
+        }
+
+        pub fn inherits_mobile_local_data_lifecycle_screen_copy_boundary(self) -> bool {
+            self.inherits_mobile_local_data_lifecycle_screen_copy_boundary
+        }
+
+        pub fn inherits_local_storage_lifecycle_product(self) -> bool {
+            self.inherits_local_storage_lifecycle_product
+        }
+
+        pub fn conversation_deletion_status_only_label_required(self) -> bool {
+            self.conversation_deletion_status_only_label_required
+        }
+
+        pub fn explicit_user_action_label_required(self) -> bool {
+            self.explicit_user_action_label_required
+        }
+
+        pub fn sent_records_removed_label_required(self) -> bool {
+            self.sent_records_removed_label_required
+        }
+
+        pub fn received_records_removed_label_required(self) -> bool {
+            self.received_records_removed_label_required
+        }
+
+        pub fn message_envelopes_removed_label_required(self) -> bool {
+            self.message_envelopes_removed_label_required
+        }
+
+        pub fn message_indexes_removed_label_required(self) -> bool {
+            self.message_indexes_removed_label_required
+        }
+
+        pub fn message_counter_removed_label_required(self) -> bool {
+            self.message_counter_removed_label_required
+        }
+
+        pub fn pairwise_session_preserved_label_required(self) -> bool {
+            self.pairwise_session_preserved_label_required
+        }
+
+        pub fn transcript_empty_after_delete_label_required(self) -> bool {
+            self.transcript_empty_after_delete_label_required
+        }
+
+        pub fn local_lifecycle_state_only_label_required(self) -> bool {
+            self.local_lifecycle_state_only_label_required
+        }
+
+        pub fn secure_deletion_non_claim_required(self) -> bool {
+            self.secure_deletion_non_claim_required
+        }
+
+        pub fn remote_deletion_non_claim_required(self) -> bool {
+            self.remote_deletion_non_claim_required
+        }
+
+        pub fn cloud_backup_recovery_non_claim_required(self) -> bool {
+            self.cloud_backup_recovery_non_claim_required
+        }
+
+        pub fn external_delivery_non_claim_required(self) -> bool {
+            self.external_delivery_non_claim_required
+        }
+
+        pub fn secure_deletion_claim_allowed(self) -> bool {
+            self.secure_deletion_claim_allowed
+        }
+
+        pub fn remote_wipe_or_delete_claim_allowed(self) -> bool {
+            self.remote_wipe_or_delete_claim_allowed
+        }
+
+        pub fn cloud_backup_delete_or_recovery_claim_allowed(self) -> bool {
+            self.cloud_backup_delete_or_recovery_claim_allowed
+        }
+
+        pub fn rollback_prevention_claim_allowed(self) -> bool {
+            self.rollback_prevention_claim_allowed
+        }
+
+        pub fn path_or_secret_display_allowed(self) -> bool {
+            self.path_or_secret_display_allowed
         }
 
         pub fn production_messaging_ready_claimed(self) -> bool {
@@ -14676,6 +14856,145 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_conversation_deletion_checklist_boundary_summary(
+    ) -> ProductionMobileConversationDeletionChecklistBoundarySummary {
+        let transcript = production_mobile_transcript_status_checklist_boundary_summary();
+        let lifecycle_screen =
+            production_mobile_local_data_lifecycle_screen_copy_boundary_summary();
+        let lifecycle_product = production_local_storage_lifecycle_product_summary();
+        let inherits_mobile_transcript_status_checklist_boundary = transcript.boundary_closed()
+            && transcript.conversation_deleted_local_lifecycle_label_required()
+            && transcript.delivery_ack_non_claim_required()
+            && transcript.external_delivery_non_claim_required()
+            && transcript.network_sync_non_claim_required()
+            && !transcript.remote_delete_claim_allowed()
+            && !transcript.remote_transcript_sync_claim_allowed()
+            && !transcript.cloud_transcript_backup_claim_allowed()
+            && !transcript.security_ready_claimed();
+        let inherits_mobile_local_data_lifecycle_screen_copy_boundary = lifecycle_screen
+            .boundary_closed()
+            && lifecycle_screen.conversation_delete_label_required()
+            && lifecycle_screen.cloud_backup_non_claim_required()
+            && lifecycle_screen.backup_recovery_non_claim_required()
+            && lifecycle_screen.secure_deletion_non_claim_required()
+            && !lifecycle_screen.destructive_remote_wipe_claim_allowed()
+            && !lifecycle_screen.path_or_secret_display_allowed()
+            && !lifecycle_screen.cloud_backup_or_sync_claim_allowed()
+            && !lifecycle_screen.backup_recovery_claim_allowed()
+            && !lifecycle_screen.rollback_prevention_claim_allowed()
+            && !lifecycle_screen.secure_deletion_claim_allowed()
+            && !lifecycle_screen.security_ready_claimed();
+        let inherits_local_storage_lifecycle_product = lifecycle_product.product_lifecycle_closed()
+            && lifecycle_product.conversation_delete_available()
+            && lifecycle_product.conversation_delete_preserves_session()
+            && lifecycle_product.backup_exclusion_best_effort_only()
+            && lifecycle_product.rollback_detection_marker_only()
+            && !lifecycle_product.cloud_backup_or_sync_enabled()
+            && !lifecycle_product.backup_recovery_claimed()
+            && !lifecycle_product.rollback_prevention_claimed()
+            && !lifecycle_product.secure_media_deletion_claimed()
+            && !lifecycle_product.store_path_returned()
+            && !lifecycle_product.passphrase_retained()
+            && !lifecycle_product.plaintext_exposed()
+            && !lifecycle_product.key_material_exposed()
+            && !lifecycle_product.security_ready_claimed();
+        let conversation_deletion_status_only_label_required = true;
+        let explicit_user_action_label_required = true;
+        let sent_records_removed_label_required = true;
+        let received_records_removed_label_required = true;
+        let message_envelopes_removed_label_required = true;
+        let message_indexes_removed_label_required = true;
+        let message_counter_removed_label_required = true;
+        let pairwise_session_preserved_label_required = true;
+        let transcript_empty_after_delete_label_required = true;
+        let local_lifecycle_state_only_label_required = true;
+        let secure_deletion_non_claim_required = true;
+        let remote_deletion_non_claim_required = true;
+        let cloud_backup_recovery_non_claim_required = true;
+        let external_delivery_non_claim_required = true;
+        let secure_deletion_claim_allowed = false;
+        let remote_wipe_or_delete_claim_allowed = false;
+        let cloud_backup_delete_or_recovery_claim_allowed = false;
+        let rollback_prevention_claim_allowed = false;
+        let path_or_secret_display_allowed = false;
+        let production_messaging_ready_claimed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_transcript_status_checklist_boundary
+            && inherits_mobile_local_data_lifecycle_screen_copy_boundary
+            && inherits_local_storage_lifecycle_product
+            && conversation_deletion_status_only_label_required
+            && explicit_user_action_label_required
+            && sent_records_removed_label_required
+            && received_records_removed_label_required
+            && message_envelopes_removed_label_required
+            && message_indexes_removed_label_required
+            && message_counter_removed_label_required
+            && pairwise_session_preserved_label_required
+            && transcript_empty_after_delete_label_required
+            && local_lifecycle_state_only_label_required
+            && secure_deletion_non_claim_required
+            && remote_deletion_non_claim_required
+            && cloud_backup_recovery_non_claim_required
+            && external_delivery_non_claim_required
+            && !secure_deletion_claim_allowed
+            && !remote_wipe_or_delete_claim_allowed
+            && !cloud_backup_delete_or_recovery_claim_allowed
+            && !rollback_prevention_claim_allowed
+            && !path_or_secret_display_allowed
+            && !production_messaging_ready_claimed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_CONVERSATION_DELETION_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"conversation deletion checklist status only")
+            && PRODUCTION_MOBILE_CONVERSATION_DELETION_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"local message envelopes removed")
+            && PRODUCTION_MOBILE_CONVERSATION_DELETION_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"pairwise session record preserved")
+            && PRODUCTION_MOBILE_CONVERSATION_DELETION_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"secure deletion not claimed")
+            && PRODUCTION_MOBILE_CONVERSATION_DELETION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"secure deletion guaranteed")
+            && PRODUCTION_MOBILE_CONVERSATION_DELETION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"peer copy deleted")
+            && PRODUCTION_MOBILE_CONVERSATION_DELETION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"cloud backup deleted")
+            && PRODUCTION_MOBILE_CONVERSATION_DELETION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"rollback prevention guaranteed")
+            && PRODUCTION_MOBILE_CONVERSATION_DELETION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"security-ready");
+
+        ProductionMobileConversationDeletionChecklistBoundarySummary {
+            required_checklist_items:
+                PRODUCTION_MOBILE_CONVERSATION_DELETION_CHECKLIST_REQUIRED_ITEMS,
+            forbidden_deletion_claims:
+                PRODUCTION_MOBILE_CONVERSATION_DELETION_CHECKLIST_FORBIDDEN_CLAIMS,
+            inherits_mobile_transcript_status_checklist_boundary,
+            inherits_mobile_local_data_lifecycle_screen_copy_boundary,
+            inherits_local_storage_lifecycle_product,
+            conversation_deletion_status_only_label_required,
+            explicit_user_action_label_required,
+            sent_records_removed_label_required,
+            received_records_removed_label_required,
+            message_envelopes_removed_label_required,
+            message_indexes_removed_label_required,
+            message_counter_removed_label_required,
+            pairwise_session_preserved_label_required,
+            transcript_empty_after_delete_label_required,
+            local_lifecycle_state_only_label_required,
+            secure_deletion_non_claim_required,
+            remote_deletion_non_claim_required,
+            cloud_backup_recovery_non_claim_required,
+            external_delivery_non_claim_required,
+            secure_deletion_claim_allowed,
+            remote_wipe_or_delete_claim_allowed,
+            cloud_backup_delete_or_recovery_claim_allowed,
+            rollback_prevention_claim_allowed,
+            path_or_secret_display_allowed,
+            production_messaging_ready_claimed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -18933,6 +19252,137 @@ pub mod production {
                 .contains(&"safe for sensitive communication"));
             assert!(boundary
                 .forbidden_transcript_claims()
+                .contains(&"security-ready"));
+        }
+
+        #[test]
+        fn production_mobile_conversation_deletion_checklist_boundary_keeps_delete_local_and_non_claiming(
+        ) {
+            let boundary = production_mobile_conversation_deletion_checklist_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_transcript_status_checklist_boundary());
+            assert!(boundary.inherits_mobile_local_data_lifecycle_screen_copy_boundary());
+            assert!(boundary.inherits_local_storage_lifecycle_product());
+            assert!(boundary.conversation_deletion_status_only_label_required());
+            assert!(boundary.explicit_user_action_label_required());
+            assert!(boundary.sent_records_removed_label_required());
+            assert!(boundary.received_records_removed_label_required());
+            assert!(boundary.message_envelopes_removed_label_required());
+            assert!(boundary.message_indexes_removed_label_required());
+            assert!(boundary.message_counter_removed_label_required());
+            assert!(boundary.pairwise_session_preserved_label_required());
+            assert!(boundary.transcript_empty_after_delete_label_required());
+            assert!(boundary.local_lifecycle_state_only_label_required());
+            assert!(boundary.secure_deletion_non_claim_required());
+            assert!(boundary.remote_deletion_non_claim_required());
+            assert!(boundary.cloud_backup_recovery_non_claim_required());
+            assert!(boundary.external_delivery_non_claim_required());
+            assert!(!boundary.secure_deletion_claim_allowed());
+            assert!(!boundary.remote_wipe_or_delete_claim_allowed());
+            assert!(!boundary.cloud_backup_delete_or_recovery_claim_allowed());
+            assert!(!boundary.rollback_prevention_claim_allowed());
+            assert!(!boundary.path_or_secret_display_allowed());
+            assert!(!boundary.production_messaging_ready_claimed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"conversation deletion checklist status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"conversation delete is explicit user action"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"local sent message records removed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"local received message records removed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"local message envelopes removed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"local message indexes removed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"local message counter removed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"pairwise session record preserved"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"transcript empty after local delete"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"local lifecycle state only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"secure deletion not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"remote deletion not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"cloud backup recovery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"external onion delivery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"security-ready not claimed"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"secure deletion guaranteed"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"forensic deletion guaranteed"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"peer copy deleted"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"remote deletion verified"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"remote wipe available"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"conversation deleted remotely"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"cloud backup deleted"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"backup recovery available"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"data safe after device restore"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"rollback prevention guaranteed"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"store path shown"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"passphrase retained"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"plaintext exposed"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"key material exposed"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"production messaging ready"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"production E2EE ready"));
+            assert!(boundary
+                .forbidden_deletion_claims()
+                .contains(&"safe for sensitive communication"));
+            assert!(boundary
+                .forbidden_deletion_claims()
                 .contains(&"security-ready"));
         }
 

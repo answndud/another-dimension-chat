@@ -409,3 +409,43 @@ Transcript status checklists must not show production messaging ready.
 Transcript status checklists must not show production E2EE ready.
 Transcript status checklists must not show safe for sensitive communication.
 Transcript status checklists must not show security-ready claims.
+
+## Conversation Deletion Checklist Boundary
+
+Future mobile conversation deletion checklists are documentation-only
+candidates until a separate wrapper UI implementation phase exists.
+
+Conversation deletion checklists may show conversation deletion checklist status only.
+Conversation deletion checklists may show conversation delete is explicit user action.
+Conversation deletion checklists may show local sent message records removed.
+Conversation deletion checklists may show local received message records removed.
+Conversation deletion checklists may show local message envelopes removed.
+Conversation deletion checklists may show local message indexes removed.
+Conversation deletion checklists may show local message counter removed.
+Conversation deletion checklists may show pairwise session record preserved.
+Conversation deletion checklists may show transcript empty after local delete.
+Conversation deletion checklists may show local lifecycle state only.
+Conversation deletion checklists may show secure deletion not claimed.
+Conversation deletion checklists may show remote deletion not claimed.
+Conversation deletion checklists may show cloud backup recovery not claimed.
+Conversation deletion checklists may show external onion delivery not claimed.
+Conversation deletion checklists may show security-ready not claimed.
+
+Conversation deletion checklists must not show secure deletion guaranteed.
+Conversation deletion checklists must not show forensic deletion guaranteed.
+Conversation deletion checklists must not show peer copy deleted.
+Conversation deletion checklists must not show remote deletion verified.
+Conversation deletion checklists must not show remote wipe available.
+Conversation deletion checklists must not show conversation deleted remotely.
+Conversation deletion checklists must not show cloud backup deleted.
+Conversation deletion checklists must not show backup recovery available.
+Conversation deletion checklists must not show data safe after device restore.
+Conversation deletion checklists must not show rollback prevention guaranteed.
+Conversation deletion checklists must not show store path shown.
+Conversation deletion checklists must not show passphrase retained.
+Conversation deletion checklists must not show plaintext exposed.
+Conversation deletion checklists must not show key material exposed.
+Conversation deletion checklists must not show production messaging ready.
+Conversation deletion checklists must not show production E2EE ready.
+Conversation deletion checklists must not show safe for sensitive communication.
+Conversation deletion checklists must not show security-ready claims.
