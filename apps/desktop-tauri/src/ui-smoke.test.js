@@ -880,6 +880,20 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(viewBody, /profile_deleted/);
   assert.match(viewBody, /full_local_data_wiped/);
 
+  const preflightBody = functionBody(mainJs, "dataLifecycleDestructivePreflightView");
+  assert.match(preflightBody, /destructive_preflight=true/);
+  assert.match(preflightBody, /confirmation_matched=\$\{confirmationMatched\}/);
+  assert.match(preflightBody, /profile_target_present=\$\{profilePresent\}/);
+  assert.match(preflightBody, /backup_recovery=false/);
+  assert.match(preflightBody, /cloud_backup_sync=false/);
+  assert.match(preflightBody, /rollback_prevention=false/);
+  assert.match(preflightBody, /secure_delete_claim=false/);
+  assert.match(preflightBody, /network_io=false/);
+  assert.match(preflightBody, /dataLifecycleDestructivePreflightReady/);
+  assert.match(preflightBody, /dataLifecycleDeleteConfirmWarning/);
+  assert.match(preflightBody, /dataLifecycleWipeConfirmWarning/);
+  assert.match(mainJs, /function renderDataLifecycleDestructivePreflight/);
+
   const renderBody = functionBody(mainJs, "renderProductionDataLifecycleAction");
   assert.match(renderBody, /fields\.productionDataLifecycle/);
   assert.match(renderBody, /fields\.productionProfileBoundary/);
@@ -889,14 +903,20 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(functionBody(mainJs, "prepareProductionDataLifecycle"), /renderProductionDataLifecycleAction\(result, "prepare"\)/);
 
   const deleteBody = functionBody(mainJs, "deleteProductionProfile");
-  assert.match(deleteBody, /dataLifecycleDeleteConfirmWarning/);
+  assert.match(deleteBody, /renderDataLifecycleDestructivePreflight\("profile-delete"/);
+  assert.match(deleteBody, /confirmationMatched: Boolean\(input\.profile && confirmation === input\.profile\)/);
   assert.match(deleteBody, /dataLifecycleDeleteRunning/);
   assert.match(deleteBody, /renderProductionDataLifecycleAction\(result, "profile-delete"\)/);
+  assert.match(deleteBody, /await checkProductionProductUnlockStatus\(\)/);
 
   const wipeBody = functionBody(mainJs, "wipeProductionLocalData");
-  assert.match(wipeBody, /dataLifecycleWipeConfirmWarning/);
+  assert.match(wipeBody, /renderDataLifecycleDestructivePreflight\("full-local-wipe"/);
+  assert.match(wipeBody, /confirmationMatched: confirmation === "WIPE LOCAL DATA"/);
   assert.match(wipeBody, /dataLifecycleWipeRunning/);
   assert.match(wipeBody, /renderProductionDataLifecycleAction\(result, "full-local-wipe"\)/);
+  assert.match(wipeBody, /await checkProductionProductUnlockStatus\(\)/);
+  assert.match(i18nJs, /dataLifecycleDestructivePreflightReady/);
+  assert.match(i18nJs, /파괴적 로컬 작업 확인/);
 });
 
 test("destructive lifecycle actions clear stale room retry state before rebuild", () => {
