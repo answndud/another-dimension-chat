@@ -1034,6 +1034,49 @@ pub mod production {
         "security_ready_toggle",
     ];
 
+    const PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORMATS: &[&str] = &[
+        "deterministic_utf8_json_object",
+        "explicit_schema_version",
+        "sorted_keys",
+        "string_enums",
+        "booleans",
+        "redacted_diagnostic_strings",
+        "bounded_status_label_arrays",
+        "canonical_byte_buffers_only_when_later_required",
+        "reject_unknown_fields",
+    ];
+
+    const PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_NON_CLAIMS: &[&str] = &[
+        "serializer_not_defined",
+        "parser_not_defined",
+        "schema_file_not_defined",
+        "generated_model_not_defined",
+        "stable_wire_format_not_claimed",
+        "cross_version_migration_not_claimed",
+        "abi_not_claimed",
+        "mobile_packaging_not_claimed",
+    ];
+
+    const PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORBIDDEN_FIELDS: &[&str] = &[
+        "profile_path",
+        "database_path",
+        "store_path",
+        "passphrase",
+        "private_key",
+        "key_material",
+        "plaintext_message",
+        "onion_address",
+        "network_endpoint",
+        "delivery_runtime_handle",
+        "push_token",
+        "cloud_backup_identifier",
+        "central_account_identifier",
+        "raw_log",
+        "support_bundle",
+        "crash_dump",
+        "security_ready_toggle",
+    ];
+
     const PRODUCTION_MANUAL_RUNTIME_MESSAGING_OPERATIONS: &[&str] = &[
         "passphrase_unlock",
         "load_session_runtime_material",
@@ -1520,6 +1563,30 @@ pub mod production {
         push_or_cloud_identifier_returned: bool,
         central_account_identifier_returned: bool,
         security_ready_toggle_returned: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileDtoSerializationPlaceholderBoundarySummary {
+        formats: &'static [&'static str],
+        non_claims: &'static [&'static str],
+        forbidden_fields: &'static [&'static str],
+        inherits_mobile_status_dto_boundary: bool,
+        inherits_mobile_ffi_signature_placeholder_boundary: bool,
+        deterministic_utf8_json_placeholder: bool,
+        explicit_schema_version_required: bool,
+        reject_unknown_fields_required: bool,
+        serializer_implemented: bool,
+        parser_implemented: bool,
+        schema_file_defined: bool,
+        generated_model_defined: bool,
+        stable_wire_format_claimed: bool,
+        cross_version_migration_claimed: bool,
+        abi_claimed: bool,
+        mobile_packaging_claimed: bool,
+        security_ready_claimed: bool,
+        raw_or_secret_field_serialization_allowed: bool,
+        runtime_or_account_identifier_serialization_allowed: bool,
         boundary_closed: bool,
     }
 
@@ -2121,6 +2188,88 @@ pub mod production {
 
         pub fn security_ready_toggle_returned(self) -> bool {
             self.security_ready_toggle_returned
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileDtoSerializationPlaceholderBoundarySummary {
+        pub fn formats(self) -> &'static [&'static str] {
+            self.formats
+        }
+
+        pub fn non_claims(self) -> &'static [&'static str] {
+            self.non_claims
+        }
+
+        pub fn forbidden_fields(self) -> &'static [&'static str] {
+            self.forbidden_fields
+        }
+
+        pub fn inherits_mobile_status_dto_boundary(self) -> bool {
+            self.inherits_mobile_status_dto_boundary
+        }
+
+        pub fn inherits_mobile_ffi_signature_placeholder_boundary(self) -> bool {
+            self.inherits_mobile_ffi_signature_placeholder_boundary
+        }
+
+        pub fn deterministic_utf8_json_placeholder(self) -> bool {
+            self.deterministic_utf8_json_placeholder
+        }
+
+        pub fn explicit_schema_version_required(self) -> bool {
+            self.explicit_schema_version_required
+        }
+
+        pub fn reject_unknown_fields_required(self) -> bool {
+            self.reject_unknown_fields_required
+        }
+
+        pub fn serializer_implemented(self) -> bool {
+            self.serializer_implemented
+        }
+
+        pub fn parser_implemented(self) -> bool {
+            self.parser_implemented
+        }
+
+        pub fn schema_file_defined(self) -> bool {
+            self.schema_file_defined
+        }
+
+        pub fn generated_model_defined(self) -> bool {
+            self.generated_model_defined
+        }
+
+        pub fn stable_wire_format_claimed(self) -> bool {
+            self.stable_wire_format_claimed
+        }
+
+        pub fn cross_version_migration_claimed(self) -> bool {
+            self.cross_version_migration_claimed
+        }
+
+        pub fn abi_claimed(self) -> bool {
+            self.abi_claimed
+        }
+
+        pub fn mobile_packaging_claimed(self) -> bool {
+            self.mobile_packaging_claimed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn raw_or_secret_field_serialization_allowed(self) -> bool {
+            self.raw_or_secret_field_serialization_allowed
+        }
+
+        pub fn runtime_or_account_identifier_serialization_allowed(self) -> bool {
+            self.runtime_or_account_identifier_serialization_allowed
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -11221,6 +11370,108 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_dto_serialization_placeholder_boundary_summary(
+    ) -> ProductionMobileDtoSerializationPlaceholderBoundarySummary {
+        let dto = production_mobile_wrapper_status_command_dto_boundary_summary();
+        let ffi = production_mobile_ffi_signature_placeholder_boundary_summary();
+        let inherits_mobile_status_dto_boundary = dto.boundary_closed()
+            && dto.redacted_status_dto_only()
+            && dto.side_effect_free_serialization()
+            && dto.stable_schema_version_required()
+            && dto.dto_fields().contains(&"schema_version")
+            && dto.dto_fields().contains(&"public_non_claims")
+            && dto.forbidden_fields().contains(&"passphrase")
+            && dto.forbidden_fields().contains(&"network_endpoint");
+        let inherits_mobile_ffi_signature_placeholder_boundary = ffi.boundary_closed()
+            && ffi.signature_placeholder_only()
+            && !ffi.serialization_contract_claimed()
+            && !ffi.callable_abi_claimed()
+            && !ffi.platform_packaging_claimed();
+        let deterministic_utf8_json_placeholder = true;
+        let explicit_schema_version_required = true;
+        let reject_unknown_fields_required = true;
+        let serializer_implemented = false;
+        let parser_implemented = false;
+        let schema_file_defined = false;
+        let generated_model_defined = false;
+        let stable_wire_format_claimed = false;
+        let cross_version_migration_claimed = false;
+        let abi_claimed = false;
+        let mobile_packaging_claimed = false;
+        let security_ready_claimed = false;
+        let raw_or_secret_field_serialization_allowed = false;
+        let runtime_or_account_identifier_serialization_allowed = false;
+        let boundary_closed = inherits_mobile_status_dto_boundary
+            && inherits_mobile_ffi_signature_placeholder_boundary
+            && deterministic_utf8_json_placeholder
+            && explicit_schema_version_required
+            && reject_unknown_fields_required
+            && !serializer_implemented
+            && !parser_implemented
+            && !schema_file_defined
+            && !generated_model_defined
+            && !stable_wire_format_claimed
+            && !cross_version_migration_claimed
+            && !abi_claimed
+            && !mobile_packaging_claimed
+            && !security_ready_claimed
+            && !raw_or_secret_field_serialization_allowed
+            && !runtime_or_account_identifier_serialization_allowed
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORMATS
+                .contains(&"deterministic_utf8_json_object")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORMATS
+                .contains(&"explicit_schema_version")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORMATS.contains(&"sorted_keys")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORMATS.contains(&"string_enums")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORMATS
+                .contains(&"bounded_status_label_arrays")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORMATS
+                .contains(&"reject_unknown_fields")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_NON_CLAIMS
+                .contains(&"serializer_not_defined")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_NON_CLAIMS
+                .contains(&"stable_wire_format_not_claimed")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_NON_CLAIMS
+                .contains(&"cross_version_migration_not_claimed")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORBIDDEN_FIELDS
+                .contains(&"profile_path")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORBIDDEN_FIELDS
+                .contains(&"key_material")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORBIDDEN_FIELDS
+                .contains(&"network_endpoint")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORBIDDEN_FIELDS
+                .contains(&"delivery_runtime_handle")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORBIDDEN_FIELDS
+                .contains(&"central_account_identifier")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORBIDDEN_FIELDS
+                .contains(&"raw_log")
+            && PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORBIDDEN_FIELDS
+                .contains(&"crash_dump");
+
+        ProductionMobileDtoSerializationPlaceholderBoundarySummary {
+            formats: PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORMATS,
+            non_claims: PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_NON_CLAIMS,
+            forbidden_fields: PRODUCTION_MOBILE_DTO_SERIALIZATION_PLACEHOLDER_FORBIDDEN_FIELDS,
+            inherits_mobile_status_dto_boundary,
+            inherits_mobile_ffi_signature_placeholder_boundary,
+            deterministic_utf8_json_placeholder,
+            explicit_schema_version_required,
+            reject_unknown_fields_required,
+            serializer_implemented,
+            parser_implemented,
+            schema_file_defined,
+            generated_model_defined,
+            stable_wire_format_claimed,
+            cross_version_migration_claimed,
+            abi_claimed,
+            mobile_packaging_claimed,
+            security_ready_claimed,
+            raw_or_secret_field_serialization_allowed,
+            runtime_or_account_identifier_serialization_allowed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_manual_runtime_messaging_gate_summary(
     ) -> ProductionManualRuntimeMessagingGateSummary {
         let async_delivery = production_async_delivery_semantics_summary();
@@ -14759,6 +15010,84 @@ pub mod production {
                 .forbidden_fields()
                 .contains(&"central_account_identifier"));
             assert!(dto.forbidden_fields().contains(&"security_ready_toggle"));
+        }
+
+        #[test]
+        fn production_mobile_dto_serialization_placeholder_boundary_is_documentation_only_and_redacted(
+        ) {
+            let boundary = production_mobile_dto_serialization_placeholder_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_status_dto_boundary());
+            assert!(boundary.inherits_mobile_ffi_signature_placeholder_boundary());
+            assert!(boundary.deterministic_utf8_json_placeholder());
+            assert!(boundary.explicit_schema_version_required());
+            assert!(boundary.reject_unknown_fields_required());
+            assert!(!boundary.serializer_implemented());
+            assert!(!boundary.parser_implemented());
+            assert!(!boundary.schema_file_defined());
+            assert!(!boundary.generated_model_defined());
+            assert!(!boundary.stable_wire_format_claimed());
+            assert!(!boundary.cross_version_migration_claimed());
+            assert!(!boundary.abi_claimed());
+            assert!(!boundary.mobile_packaging_claimed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(!boundary.raw_or_secret_field_serialization_allowed());
+            assert!(!boundary.runtime_or_account_identifier_serialization_allowed());
+            assert!(boundary
+                .formats()
+                .contains(&"deterministic_utf8_json_object"));
+            assert!(boundary.formats().contains(&"explicit_schema_version"));
+            assert!(boundary.formats().contains(&"sorted_keys"));
+            assert!(boundary.formats().contains(&"string_enums"));
+            assert!(boundary.formats().contains(&"booleans"));
+            assert!(boundary.formats().contains(&"redacted_diagnostic_strings"));
+            assert!(boundary.formats().contains(&"bounded_status_label_arrays"));
+            assert!(boundary
+                .formats()
+                .contains(&"canonical_byte_buffers_only_when_later_required"));
+            assert!(boundary.formats().contains(&"reject_unknown_fields"));
+            assert!(boundary.non_claims().contains(&"serializer_not_defined"));
+            assert!(boundary.non_claims().contains(&"parser_not_defined"));
+            assert!(boundary.non_claims().contains(&"schema_file_not_defined"));
+            assert!(boundary
+                .non_claims()
+                .contains(&"generated_model_not_defined"));
+            assert!(boundary
+                .non_claims()
+                .contains(&"stable_wire_format_not_claimed"));
+            assert!(boundary
+                .non_claims()
+                .contains(&"cross_version_migration_not_claimed"));
+            assert!(boundary.non_claims().contains(&"abi_not_claimed"));
+            assert!(boundary
+                .non_claims()
+                .contains(&"mobile_packaging_not_claimed"));
+            assert!(boundary.forbidden_fields().contains(&"profile_path"));
+            assert!(boundary.forbidden_fields().contains(&"database_path"));
+            assert!(boundary.forbidden_fields().contains(&"store_path"));
+            assert!(boundary.forbidden_fields().contains(&"passphrase"));
+            assert!(boundary.forbidden_fields().contains(&"private_key"));
+            assert!(boundary.forbidden_fields().contains(&"key_material"));
+            assert!(boundary.forbidden_fields().contains(&"plaintext_message"));
+            assert!(boundary.forbidden_fields().contains(&"onion_address"));
+            assert!(boundary.forbidden_fields().contains(&"network_endpoint"));
+            assert!(boundary
+                .forbidden_fields()
+                .contains(&"delivery_runtime_handle"));
+            assert!(boundary.forbidden_fields().contains(&"push_token"));
+            assert!(boundary
+                .forbidden_fields()
+                .contains(&"cloud_backup_identifier"));
+            assert!(boundary
+                .forbidden_fields()
+                .contains(&"central_account_identifier"));
+            assert!(boundary.forbidden_fields().contains(&"raw_log"));
+            assert!(boundary.forbidden_fields().contains(&"support_bundle"));
+            assert!(boundary.forbidden_fields().contains(&"crash_dump"));
+            assert!(boundary
+                .forbidden_fields()
+                .contains(&"security_ready_toggle"));
         }
 
         #[test]
