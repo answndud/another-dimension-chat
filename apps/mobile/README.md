@@ -534,3 +534,41 @@ Destructive action confirmation checklists must not show production messaging re
 Destructive action confirmation checklists must not show production E2EE ready.
 Destructive action confirmation checklists must not show safe for sensitive communication.
 Destructive action confirmation checklists must not show security-ready claims.
+
+## Lifecycle Checklist Index Boundary
+
+Future mobile lifecycle checklist indexes are documentation-only candidates
+until a separate wrapper UI implementation phase exists.
+
+Lifecycle checklist indexes may show mobile lifecycle checklist index status only.
+Lifecycle checklist indexes may show checklist coverage index only.
+Lifecycle checklist indexes may show non-claim index only.
+Lifecycle checklist indexes may show first-run checklist coverage included.
+Lifecycle checklist indexes may show local data lifecycle coverage included.
+Lifecycle checklist indexes may show transcript status coverage included.
+Lifecycle checklist indexes may show conversation deletion coverage included.
+Lifecycle checklist indexes may show session profile wipe coverage included.
+Lifecycle checklist indexes may show destructive confirmation coverage included.
+Lifecycle checklist indexes may show documentation-only mobile wrapper boundary.
+Lifecycle checklist indexes may show mobile app readiness not claimed.
+Lifecycle checklist indexes may show production messaging not claimed.
+Lifecycle checklist indexes may show security-ready not claimed.
+Lifecycle checklist indexes may show external onion delivery not claimed.
+Lifecycle checklist indexes may show cloud backup not claimed.
+
+Lifecycle checklist indexes must not show mobile app ready.
+Lifecycle checklist indexes must not show mobile lifecycle ready.
+Lifecycle checklist indexes must not show all lifecycle checks passed.
+Lifecycle checklist indexes must not show production messaging ready.
+Lifecycle checklist indexes must not show production E2EE ready.
+Lifecycle checklist indexes must not show safe for sensitive communication.
+Lifecycle checklist indexes must not show audited.
+Lifecycle checklist indexes must not show security-ready claims.
+Lifecycle checklist indexes must not show external onion delivery verified.
+Lifecycle checklist indexes must not show store approved.
+Lifecycle checklist indexes must not show push delivery enabled.
+Lifecycle checklist indexes must not show cloud backup enabled.
+Lifecycle checklist indexes must not show secure deletion guaranteed.
+Lifecycle checklist indexes must not show remote wipe available.
+Lifecycle checklist indexes must not show no remaining mobile work.
+Lifecycle checklist indexes must not show release ready.
