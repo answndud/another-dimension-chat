@@ -225,6 +225,10 @@ pub mod production {
         "redacted_diagnostics_display",
         "explicit_user_triggered_actions",
         "local_storage_permission_explanation",
+        "platform_private_storage_root_resolver",
+        "android_app_private_storage_required",
+        "android_shared_external_storage_rejected",
+        "local_storage_paths_redacted",
     ];
 
     const PRODUCTION_ANDROID_SHARED_CORE_API_BOUNDARY: &[&str] = &[
@@ -233,6 +237,8 @@ pub mod production {
         "message_orchestration",
         "protocol_envelope_and_replay",
         "encrypted_local_storage_policy",
+        "product_unlock_status_snapshot",
+        "product_unlock_key_policy_overlay",
         "fail_closed_transport_policy",
         "redacted_status_models",
     ];
@@ -244,9 +250,11 @@ pub mod production {
         "firebase_cloud_messaging_required",
         "push_notification_dependency",
         "cloud_backup",
+        "cloud_backup_sync",
         "central_contact_discovery",
         "central_message_server",
         "wrapper_specific_security_protocol",
+        "wrapper_specific_storage_semantics",
         "play_store_security_trust_dependency",
     ];
 
@@ -257,6 +265,10 @@ pub mod production {
         "redacted_diagnostics_display",
         "explicit_user_triggered_actions",
         "local_storage_permission_explanation",
+        "platform_private_storage_root_resolver",
+        "ios_app_container_storage_required",
+        "ios_icloud_backup_exclusion_required",
+        "local_storage_paths_redacted",
     ];
 
     const PRODUCTION_IOS_SHARED_CORE_API_BOUNDARY: &[&str] = &[
@@ -265,6 +277,8 @@ pub mod production {
         "message_orchestration",
         "protocol_envelope_and_replay",
         "encrypted_local_storage_policy",
+        "product_unlock_status_snapshot",
+        "product_unlock_key_policy_overlay",
         "fail_closed_transport_policy",
         "redacted_status_models",
     ];
@@ -277,9 +291,11 @@ pub mod production {
         "apple_push_notification_service_required",
         "push_notification_dependency",
         "cloud_backup",
+        "cloud_backup_sync",
         "central_contact_discovery",
         "central_message_server",
         "wrapper_specific_security_protocol",
+        "wrapper_specific_storage_semantics",
         "app_store_or_testflight_security_trust_dependency",
         "developer_id_or_notarization_security_trust_dependency",
         "keychain_only_unlock",
@@ -509,6 +525,10 @@ pub mod production {
         wrapper_specific_storage_semantics_allowed: bool,
         wrapper_specific_transport_semantics_allowed: bool,
         android_local_storage_required: bool,
+        app_private_storage_required: bool,
+        shared_external_storage_allowed: bool,
+        platform_backup_exclusion_required: bool,
+        local_storage_paths_in_diagnostics_allowed: bool,
         passphrase_unlock_required: bool,
         redacted_diagnostics_required: bool,
         explicit_user_action_required: bool,
@@ -531,6 +551,10 @@ pub mod production {
         wrapper_specific_storage_semantics_allowed: bool,
         wrapper_specific_transport_semantics_allowed: bool,
         ios_local_storage_required: bool,
+        app_container_storage_required: bool,
+        shared_app_group_storage_allowed: bool,
+        icloud_backup_exclusion_required: bool,
+        local_storage_paths_in_diagnostics_allowed: bool,
         passphrase_unlock_required: bool,
         keychain_only_unlock_allowed: bool,
         keychain_optional_wrapping_allowed_later: bool,
@@ -684,6 +708,22 @@ pub mod production {
             self.android_local_storage_required
         }
 
+        pub fn app_private_storage_required(self) -> bool {
+            self.app_private_storage_required
+        }
+
+        pub fn shared_external_storage_allowed(self) -> bool {
+            self.shared_external_storage_allowed
+        }
+
+        pub fn platform_backup_exclusion_required(self) -> bool {
+            self.platform_backup_exclusion_required
+        }
+
+        pub fn local_storage_paths_in_diagnostics_allowed(self) -> bool {
+            self.local_storage_paths_in_diagnostics_allowed
+        }
+
         pub fn passphrase_unlock_required(self) -> bool {
             self.passphrase_unlock_required
         }
@@ -756,6 +796,22 @@ pub mod production {
 
         pub fn ios_local_storage_required(self) -> bool {
             self.ios_local_storage_required
+        }
+
+        pub fn app_container_storage_required(self) -> bool {
+            self.app_container_storage_required
+        }
+
+        pub fn shared_app_group_storage_allowed(self) -> bool {
+            self.shared_app_group_storage_allowed
+        }
+
+        pub fn icloud_backup_exclusion_required(self) -> bool {
+            self.icloud_backup_exclusion_required
+        }
+
+        pub fn local_storage_paths_in_diagnostics_allowed(self) -> bool {
+            self.local_storage_paths_in_diagnostics_allowed
         }
 
         pub fn passphrase_unlock_required(self) -> bool {
@@ -9441,6 +9497,10 @@ pub mod production {
             wrapper_specific_storage_semantics_allowed: false,
             wrapper_specific_transport_semantics_allowed: false,
             android_local_storage_required: true,
+            app_private_storage_required: true,
+            shared_external_storage_allowed: false,
+            platform_backup_exclusion_required: true,
+            local_storage_paths_in_diagnostics_allowed: false,
             passphrase_unlock_required: true,
             redacted_diagnostics_required: true,
             explicit_user_action_required: true,
@@ -9464,6 +9524,10 @@ pub mod production {
             wrapper_specific_storage_semantics_allowed: false,
             wrapper_specific_transport_semantics_allowed: false,
             ios_local_storage_required: true,
+            app_container_storage_required: true,
+            shared_app_group_storage_allowed: false,
+            icloud_backup_exclusion_required: true,
+            local_storage_paths_in_diagnostics_allowed: false,
             passphrase_unlock_required: true,
             keychain_only_unlock_allowed: false,
             keychain_optional_wrapping_allowed_later: true,
@@ -11895,6 +11959,10 @@ pub mod production {
             assert!(!android.wrapper_specific_storage_semantics_allowed());
             assert!(!android.wrapper_specific_transport_semantics_allowed());
             assert!(android.android_local_storage_required());
+            assert!(android.app_private_storage_required());
+            assert!(!android.shared_external_storage_allowed());
+            assert!(android.platform_backup_exclusion_required());
+            assert!(!android.local_storage_paths_in_diagnostics_allowed());
             assert!(android.passphrase_unlock_required());
             assert!(android.redacted_diagnostics_required());
             assert!(android.explicit_user_action_required());
@@ -11908,6 +11976,18 @@ pub mod production {
                 .responsibilities()
                 .contains(&"uniffi_or_ffi_shared_core_calls"));
             assert!(android
+                .responsibilities()
+                .contains(&"platform_private_storage_root_resolver"));
+            assert!(android
+                .responsibilities()
+                .contains(&"android_app_private_storage_required"));
+            assert!(android
+                .responsibilities()
+                .contains(&"android_shared_external_storage_rejected"));
+            assert!(android
+                .responsibilities()
+                .contains(&"local_storage_paths_redacted"));
+            assert!(android
                 .shared_core_api_boundary()
                 .contains(&"pairing_payload_and_safety_transcript"));
             assert!(android
@@ -11917,8 +11997,18 @@ pub mod production {
                 .shared_core_api_boundary()
                 .contains(&"encrypted_local_storage_policy"));
             assert!(android
+                .shared_core_api_boundary()
+                .contains(&"product_unlock_status_snapshot"));
+            assert!(android
+                .shared_core_api_boundary()
+                .contains(&"product_unlock_key_policy_overlay"));
+            assert!(android
                 .rejected_dependencies()
                 .contains(&"firebase_cloud_messaging_required"));
+            assert!(android
+                .rejected_dependencies()
+                .contains(&"wrapper_specific_storage_semantics"));
+            assert!(android.rejected_dependencies().contains(&"cloud_backup_sync"));
             assert!(android
                 .rejected_dependencies()
                 .contains(&"google_account_identity"));
@@ -11941,6 +12031,10 @@ pub mod production {
             assert!(!ios.wrapper_specific_storage_semantics_allowed());
             assert!(!ios.wrapper_specific_transport_semantics_allowed());
             assert!(ios.ios_local_storage_required());
+            assert!(ios.app_container_storage_required());
+            assert!(!ios.shared_app_group_storage_allowed());
+            assert!(ios.icloud_backup_exclusion_required());
+            assert!(!ios.local_storage_paths_in_diagnostics_allowed());
             assert!(ios.passphrase_unlock_required());
             assert!(!ios.keychain_only_unlock_allowed());
             assert!(ios.keychain_optional_wrapping_allowed_later());
@@ -11957,6 +12051,18 @@ pub mod production {
                 .responsibilities()
                 .contains(&"uniffi_or_ffi_shared_core_calls"));
             assert!(ios
+                .responsibilities()
+                .contains(&"platform_private_storage_root_resolver"));
+            assert!(ios
+                .responsibilities()
+                .contains(&"ios_app_container_storage_required"));
+            assert!(ios
+                .responsibilities()
+                .contains(&"ios_icloud_backup_exclusion_required"));
+            assert!(ios
+                .responsibilities()
+                .contains(&"local_storage_paths_redacted"));
+            assert!(ios
                 .shared_core_api_boundary()
                 .contains(&"pairing_payload_and_safety_transcript"));
             assert!(ios
@@ -11966,9 +12072,19 @@ pub mod production {
                 .shared_core_api_boundary()
                 .contains(&"encrypted_local_storage_policy"));
             assert!(ios
+                .shared_core_api_boundary()
+                .contains(&"product_unlock_status_snapshot"));
+            assert!(ios
+                .shared_core_api_boundary()
+                .contains(&"product_unlock_key_policy_overlay"));
+            assert!(ios
                 .rejected_dependencies()
                 .contains(&"apple_account_identity"));
             assert!(ios.rejected_dependencies().contains(&"icloud_backup"));
+            assert!(ios.rejected_dependencies().contains(&"cloud_backup_sync"));
+            assert!(ios
+                .rejected_dependencies()
+                .contains(&"wrapper_specific_storage_semantics"));
             assert!(ios
                 .rejected_dependencies()
                 .contains(&"apple_push_notification_service_required"));

@@ -115,12 +115,20 @@ struct DevInviteRoomMessageRecord {
 }
 
 const DEV_INVITE_ROOM_TTL_MS: u128 = 10_000;
-pub const DESKTOP_PLATFORM_BOUNDARY_POLICIES: [&str; 8] = [
+pub const DESKTOP_PLATFORM_BOUNDARY_POLICIES: [&str; 16] = [
     "macos_unsigned_public_beta_is_dmg_only",
     "windows_is_local_build_candidate_only",
     "same_tauri_app_data_semantics",
+    "platform_private_app_data_and_cache_roots",
+    "desktop_app_private_data_dir_required",
+    "desktop_user_synced_storage_rejected",
     "encrypted_store_required_on_all_desktop_platforms",
     "local_deletion_semantics_match",
+    "cloud_backup_sync_disabled",
+    "backup_exclusion_policy_required",
+    "backup_exclusion_verified_false",
+    "wrapper_specific_storage_semantics_rejected",
+    "local_storage_paths_redacted",
     "public_diagnostics_redacted_on_all_desktop_platforms",
     "no_auto_update_channel",
     "signing_notarization_or_store_not_trusted_security_boundary",
@@ -132,7 +140,16 @@ pub struct DesktopPlatformBoundarySummary {
     pub macos_distribution: &'static str,
     pub windows_distribution: &'static str,
     pub tauri_app_data_resolver_required: bool,
+    pub tauri_app_cache_resolver_required: bool,
+    pub platform_private_storage_root_required: bool,
+    pub app_private_data_dir_required: bool,
+    pub user_synced_storage_location_allowed: bool,
     pub encrypted_store_required: bool,
+    pub wrapper_specific_storage_semantics_allowed: bool,
+    pub cloud_backup_sync_allowed: bool,
+    pub backup_exclusion_policy_required: bool,
+    pub backup_exclusion_verified: bool,
+    pub local_storage_paths_in_diagnostics_allowed: bool,
     pub local_deletion_controls_required: bool,
     pub diagnostics_redacted: bool,
     pub explicit_user_action_required: bool,
@@ -152,7 +169,16 @@ pub fn desktop_platform_boundary_summary() -> DesktopPlatformBoundarySummary {
         macos_distribution: "unsigned-experimental-public-beta-dmg",
         windows_distribution: "local-build-candidate-only",
         tauri_app_data_resolver_required: true,
+        tauri_app_cache_resolver_required: true,
+        platform_private_storage_root_required: true,
+        app_private_data_dir_required: true,
+        user_synced_storage_location_allowed: false,
         encrypted_store_required: true,
+        wrapper_specific_storage_semantics_allowed: false,
+        cloud_backup_sync_allowed: false,
+        backup_exclusion_policy_required: true,
+        backup_exclusion_verified: false,
+        local_storage_paths_in_diagnostics_allowed: false,
         local_deletion_controls_required: true,
         diagnostics_redacted: true,
         explicit_user_action_required: true,
@@ -16918,7 +16944,16 @@ replay check: no replayed messages after message 2
         );
         assert_eq!(summary.windows_distribution, "local-build-candidate-only");
         assert!(summary.tauri_app_data_resolver_required);
+        assert!(summary.tauri_app_cache_resolver_required);
+        assert!(summary.platform_private_storage_root_required);
+        assert!(summary.app_private_data_dir_required);
+        assert!(!summary.user_synced_storage_location_allowed);
         assert!(summary.encrypted_store_required);
+        assert!(!summary.wrapper_specific_storage_semantics_allowed);
+        assert!(!summary.cloud_backup_sync_allowed);
+        assert!(summary.backup_exclusion_policy_required);
+        assert!(!summary.backup_exclusion_verified);
+        assert!(!summary.local_storage_paths_in_diagnostics_allowed);
         assert!(summary.local_deletion_controls_required);
         assert!(summary.diagnostics_redacted);
         assert!(summary.explicit_user_action_required);
@@ -16938,6 +16973,26 @@ replay check: no replayed messages after message 2
         assert!(summary
             .policies
             .contains(&"same_tauri_app_data_semantics"));
+        assert!(summary
+            .policies
+            .contains(&"platform_private_app_data_and_cache_roots"));
+        assert!(summary
+            .policies
+            .contains(&"desktop_app_private_data_dir_required"));
+        assert!(summary
+            .policies
+            .contains(&"desktop_user_synced_storage_rejected"));
+        assert!(summary.policies.contains(&"cloud_backup_sync_disabled"));
+        assert!(summary
+            .policies
+            .contains(&"backup_exclusion_policy_required"));
+        assert!(summary
+            .policies
+            .contains(&"backup_exclusion_verified_false"));
+        assert!(summary
+            .policies
+            .contains(&"wrapper_specific_storage_semantics_rejected"));
+        assert!(summary.policies.contains(&"local_storage_paths_redacted"));
         assert!(summary
             .policies
             .contains(&"public_diagnostics_redacted_on_all_desktop_platforms"));
