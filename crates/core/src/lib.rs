@@ -1770,6 +1770,46 @@ pub mod production {
         "security-ready",
     ];
 
+    const PRODUCTION_MOBILE_DESTRUCTIVE_ACTION_CONFIRMATION_CHECKLIST_REQUIRED_ITEMS: &[&str] = &[
+        "destructive action confirmation checklist status only",
+        "confirmation required before conversation delete",
+        "confirmation required before session delete",
+        "confirmation required before profile delete",
+        "confirmation required before full local wipe",
+        "action scope shown before confirmation",
+        "local-only impact shown before confirmation",
+        "pairwise session preservation shown when applicable",
+        "message preservation shown when applicable",
+        "owned app data scope shown before full wipe",
+        "backup exclusion best-effort shown before confirmation",
+        "secure deletion not claimed",
+        "remote deletion not claimed",
+        "cloud recovery not claimed",
+        "security-ready not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_DESTRUCTIVE_ACTION_CONFIRMATION_CHECKLIST_FORBIDDEN_CLAIMS: &[&str] = &[
+        "one tap destructive action",
+        "silent destructive action",
+        "secure deletion guaranteed",
+        "forensic deletion guaranteed",
+        "remote wipe available",
+        "peer copy deleted",
+        "remote deletion verified",
+        "cloud backup deleted",
+        "cloud recovery available",
+        "data safe after device restore",
+        "rollback prevention guaranteed",
+        "store path shown",
+        "passphrase retained",
+        "plaintext exposed",
+        "key material exposed",
+        "production messaging ready",
+        "production E2EE ready",
+        "safe for sensitive communication",
+        "security-ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -2532,6 +2572,37 @@ pub mod production {
         peer_or_remote_delete_claim_allowed: bool,
         cloud_account_or_backup_claim_allowed: bool,
         rollback_prevention_claim_allowed: bool,
+        path_or_secret_display_allowed: bool,
+        production_messaging_ready_claimed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileDestructiveActionConfirmationChecklistBoundarySummary {
+        required_checklist_items: &'static [&'static str],
+        forbidden_confirmation_claims: &'static [&'static str],
+        inherits_mobile_session_profile_wipe_checklist_boundary: bool,
+        inherits_mobile_conversation_deletion_checklist_boundary: bool,
+        confirmation_status_only_label_required: bool,
+        conversation_delete_confirmation_required: bool,
+        session_delete_confirmation_required: bool,
+        profile_delete_confirmation_required: bool,
+        full_local_wipe_confirmation_required: bool,
+        action_scope_label_required: bool,
+        local_only_impact_label_required: bool,
+        session_preservation_label_required: bool,
+        message_preservation_label_required: bool,
+        owned_app_data_scope_label_required: bool,
+        backup_exclusion_best_effort_label_required: bool,
+        secure_deletion_non_claim_required: bool,
+        remote_deletion_non_claim_required: bool,
+        cloud_recovery_non_claim_required: bool,
+        one_tap_destructive_action_allowed: bool,
+        silent_destructive_action_allowed: bool,
+        secure_deletion_claim_allowed: bool,
+        remote_wipe_or_delete_claim_allowed: bool,
+        cloud_backup_or_recovery_claim_allowed: bool,
         path_or_secret_display_allowed: bool,
         production_messaging_ready_claimed: bool,
         security_ready_claimed: bool,
@@ -4758,6 +4829,116 @@ pub mod production {
 
         pub fn rollback_prevention_claim_allowed(self) -> bool {
             self.rollback_prevention_claim_allowed
+        }
+
+        pub fn path_or_secret_display_allowed(self) -> bool {
+            self.path_or_secret_display_allowed
+        }
+
+        pub fn production_messaging_ready_claimed(self) -> bool {
+            self.production_messaging_ready_claimed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileDestructiveActionConfirmationChecklistBoundarySummary {
+        pub fn required_checklist_items(self) -> &'static [&'static str] {
+            self.required_checklist_items
+        }
+
+        pub fn forbidden_confirmation_claims(self) -> &'static [&'static str] {
+            self.forbidden_confirmation_claims
+        }
+
+        pub fn inherits_mobile_session_profile_wipe_checklist_boundary(self) -> bool {
+            self.inherits_mobile_session_profile_wipe_checklist_boundary
+        }
+
+        pub fn inherits_mobile_conversation_deletion_checklist_boundary(self) -> bool {
+            self.inherits_mobile_conversation_deletion_checklist_boundary
+        }
+
+        pub fn confirmation_status_only_label_required(self) -> bool {
+            self.confirmation_status_only_label_required
+        }
+
+        pub fn conversation_delete_confirmation_required(self) -> bool {
+            self.conversation_delete_confirmation_required
+        }
+
+        pub fn session_delete_confirmation_required(self) -> bool {
+            self.session_delete_confirmation_required
+        }
+
+        pub fn profile_delete_confirmation_required(self) -> bool {
+            self.profile_delete_confirmation_required
+        }
+
+        pub fn full_local_wipe_confirmation_required(self) -> bool {
+            self.full_local_wipe_confirmation_required
+        }
+
+        pub fn action_scope_label_required(self) -> bool {
+            self.action_scope_label_required
+        }
+
+        pub fn local_only_impact_label_required(self) -> bool {
+            self.local_only_impact_label_required
+        }
+
+        pub fn session_preservation_label_required(self) -> bool {
+            self.session_preservation_label_required
+        }
+
+        pub fn message_preservation_label_required(self) -> bool {
+            self.message_preservation_label_required
+        }
+
+        pub fn owned_app_data_scope_label_required(self) -> bool {
+            self.owned_app_data_scope_label_required
+        }
+
+        pub fn backup_exclusion_best_effort_label_required(self) -> bool {
+            self.backup_exclusion_best_effort_label_required
+        }
+
+        pub fn secure_deletion_non_claim_required(self) -> bool {
+            self.secure_deletion_non_claim_required
+        }
+
+        pub fn remote_deletion_non_claim_required(self) -> bool {
+            self.remote_deletion_non_claim_required
+        }
+
+        pub fn cloud_recovery_non_claim_required(self) -> bool {
+            self.cloud_recovery_non_claim_required
+        }
+
+        pub fn one_tap_destructive_action_allowed(self) -> bool {
+            self.one_tap_destructive_action_allowed
+        }
+
+        pub fn silent_destructive_action_allowed(self) -> bool {
+            self.silent_destructive_action_allowed
+        }
+
+        pub fn secure_deletion_claim_allowed(self) -> bool {
+            self.secure_deletion_claim_allowed
+        }
+
+        pub fn remote_wipe_or_delete_claim_allowed(self) -> bool {
+            self.remote_wipe_or_delete_claim_allowed
+        }
+
+        pub fn cloud_backup_or_recovery_claim_allowed(self) -> bool {
+            self.cloud_backup_or_recovery_claim_allowed
         }
 
         pub fn path_or_secret_display_allowed(self) -> bool {
@@ -15328,6 +15509,129 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_destructive_action_confirmation_checklist_boundary_summary(
+    ) -> ProductionMobileDestructiveActionConfirmationChecklistBoundarySummary {
+        let wipe = production_mobile_session_profile_wipe_checklist_boundary_summary();
+        let deletion = production_mobile_conversation_deletion_checklist_boundary_summary();
+        let inherits_mobile_session_profile_wipe_checklist_boundary = wipe.boundary_closed()
+            && wipe.session_delete_explicit_user_action_label_required()
+            && wipe.profile_delete_explicit_user_action_label_required()
+            && wipe.full_local_wipe_explicit_user_action_label_required()
+            && wipe.backup_exclusion_best_effort_label_required()
+            && wipe.secure_deletion_non_claim_required()
+            && wipe.remote_wipe_non_claim_required()
+            && !wipe.peer_or_remote_delete_claim_allowed()
+            && !wipe.cloud_account_or_backup_claim_allowed()
+            && !wipe.path_or_secret_display_allowed()
+            && !wipe.security_ready_claimed();
+        let inherits_mobile_conversation_deletion_checklist_boundary = deletion.boundary_closed()
+            && deletion.explicit_user_action_label_required()
+            && deletion.pairwise_session_preserved_label_required()
+            && deletion.local_lifecycle_state_only_label_required()
+            && deletion.secure_deletion_non_claim_required()
+            && deletion.remote_deletion_non_claim_required()
+            && deletion.cloud_backup_recovery_non_claim_required()
+            && !deletion.remote_wipe_or_delete_claim_allowed()
+            && !deletion.path_or_secret_display_allowed()
+            && !deletion.security_ready_claimed();
+        let confirmation_status_only_label_required = true;
+        let conversation_delete_confirmation_required = true;
+        let session_delete_confirmation_required = true;
+        let profile_delete_confirmation_required = true;
+        let full_local_wipe_confirmation_required = true;
+        let action_scope_label_required = true;
+        let local_only_impact_label_required = true;
+        let session_preservation_label_required = true;
+        let message_preservation_label_required = true;
+        let owned_app_data_scope_label_required = true;
+        let backup_exclusion_best_effort_label_required = true;
+        let secure_deletion_non_claim_required = true;
+        let remote_deletion_non_claim_required = true;
+        let cloud_recovery_non_claim_required = true;
+        let one_tap_destructive_action_allowed = false;
+        let silent_destructive_action_allowed = false;
+        let secure_deletion_claim_allowed = false;
+        let remote_wipe_or_delete_claim_allowed = false;
+        let cloud_backup_or_recovery_claim_allowed = false;
+        let path_or_secret_display_allowed = false;
+        let production_messaging_ready_claimed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_session_profile_wipe_checklist_boundary
+            && inherits_mobile_conversation_deletion_checklist_boundary
+            && confirmation_status_only_label_required
+            && conversation_delete_confirmation_required
+            && session_delete_confirmation_required
+            && profile_delete_confirmation_required
+            && full_local_wipe_confirmation_required
+            && action_scope_label_required
+            && local_only_impact_label_required
+            && session_preservation_label_required
+            && message_preservation_label_required
+            && owned_app_data_scope_label_required
+            && backup_exclusion_best_effort_label_required
+            && secure_deletion_non_claim_required
+            && remote_deletion_non_claim_required
+            && cloud_recovery_non_claim_required
+            && !one_tap_destructive_action_allowed
+            && !silent_destructive_action_allowed
+            && !secure_deletion_claim_allowed
+            && !remote_wipe_or_delete_claim_allowed
+            && !cloud_backup_or_recovery_claim_allowed
+            && !path_or_secret_display_allowed
+            && !production_messaging_ready_claimed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_DESTRUCTIVE_ACTION_CONFIRMATION_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"destructive action confirmation checklist status only")
+            && PRODUCTION_MOBILE_DESTRUCTIVE_ACTION_CONFIRMATION_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"confirmation required before full local wipe")
+            && PRODUCTION_MOBILE_DESTRUCTIVE_ACTION_CONFIRMATION_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"local-only impact shown before confirmation")
+            && PRODUCTION_MOBILE_DESTRUCTIVE_ACTION_CONFIRMATION_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"secure deletion not claimed")
+            && PRODUCTION_MOBILE_DESTRUCTIVE_ACTION_CONFIRMATION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"one tap destructive action")
+            && PRODUCTION_MOBILE_DESTRUCTIVE_ACTION_CONFIRMATION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"silent destructive action")
+            && PRODUCTION_MOBILE_DESTRUCTIVE_ACTION_CONFIRMATION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"remote wipe available")
+            && PRODUCTION_MOBILE_DESTRUCTIVE_ACTION_CONFIRMATION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"cloud recovery available")
+            && PRODUCTION_MOBILE_DESTRUCTIVE_ACTION_CONFIRMATION_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"security-ready");
+
+        ProductionMobileDestructiveActionConfirmationChecklistBoundarySummary {
+            required_checklist_items:
+                PRODUCTION_MOBILE_DESTRUCTIVE_ACTION_CONFIRMATION_CHECKLIST_REQUIRED_ITEMS,
+            forbidden_confirmation_claims:
+                PRODUCTION_MOBILE_DESTRUCTIVE_ACTION_CONFIRMATION_CHECKLIST_FORBIDDEN_CLAIMS,
+            inherits_mobile_session_profile_wipe_checklist_boundary,
+            inherits_mobile_conversation_deletion_checklist_boundary,
+            confirmation_status_only_label_required,
+            conversation_delete_confirmation_required,
+            session_delete_confirmation_required,
+            profile_delete_confirmation_required,
+            full_local_wipe_confirmation_required,
+            action_scope_label_required,
+            local_only_impact_label_required,
+            session_preservation_label_required,
+            message_preservation_label_required,
+            owned_app_data_scope_label_required,
+            backup_exclusion_best_effort_label_required,
+            secure_deletion_non_claim_required,
+            remote_deletion_non_claim_required,
+            cloud_recovery_non_claim_required,
+            one_tap_destructive_action_allowed,
+            silent_destructive_action_allowed,
+            secure_deletion_claim_allowed,
+            remote_wipe_or_delete_claim_allowed,
+            cloud_backup_or_recovery_claim_allowed,
+            path_or_secret_display_allowed,
+            production_messaging_ready_claimed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -19855,6 +20159,141 @@ pub mod production {
                 .forbidden_wipe_claims()
                 .contains(&"safe for sensitive communication"));
             assert!(boundary.forbidden_wipe_claims().contains(&"security-ready"));
+        }
+
+        #[test]
+        fn production_mobile_destructive_action_confirmation_checklist_boundary_requires_confirmation_without_delete_claims(
+        ) {
+            let boundary =
+                production_mobile_destructive_action_confirmation_checklist_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_session_profile_wipe_checklist_boundary());
+            assert!(boundary.inherits_mobile_conversation_deletion_checklist_boundary());
+            assert!(boundary.confirmation_status_only_label_required());
+            assert!(boundary.conversation_delete_confirmation_required());
+            assert!(boundary.session_delete_confirmation_required());
+            assert!(boundary.profile_delete_confirmation_required());
+            assert!(boundary.full_local_wipe_confirmation_required());
+            assert!(boundary.action_scope_label_required());
+            assert!(boundary.local_only_impact_label_required());
+            assert!(boundary.session_preservation_label_required());
+            assert!(boundary.message_preservation_label_required());
+            assert!(boundary.owned_app_data_scope_label_required());
+            assert!(boundary.backup_exclusion_best_effort_label_required());
+            assert!(boundary.secure_deletion_non_claim_required());
+            assert!(boundary.remote_deletion_non_claim_required());
+            assert!(boundary.cloud_recovery_non_claim_required());
+            assert!(!boundary.one_tap_destructive_action_allowed());
+            assert!(!boundary.silent_destructive_action_allowed());
+            assert!(!boundary.secure_deletion_claim_allowed());
+            assert!(!boundary.remote_wipe_or_delete_claim_allowed());
+            assert!(!boundary.cloud_backup_or_recovery_claim_allowed());
+            assert!(!boundary.path_or_secret_display_allowed());
+            assert!(!boundary.production_messaging_ready_claimed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"destructive action confirmation checklist status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"confirmation required before conversation delete"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"confirmation required before session delete"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"confirmation required before profile delete"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"confirmation required before full local wipe"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"action scope shown before confirmation"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"local-only impact shown before confirmation"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"pairwise session preservation shown when applicable"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"message preservation shown when applicable"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"owned app data scope shown before full wipe"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"backup exclusion best-effort shown before confirmation"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"secure deletion not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"remote deletion not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"cloud recovery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"security-ready not claimed"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"one tap destructive action"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"silent destructive action"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"secure deletion guaranteed"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"forensic deletion guaranteed"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"remote wipe available"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"peer copy deleted"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"remote deletion verified"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"cloud backup deleted"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"cloud recovery available"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"data safe after device restore"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"rollback prevention guaranteed"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"store path shown"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"passphrase retained"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"plaintext exposed"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"key material exposed"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"production messaging ready"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"production E2EE ready"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"safe for sensitive communication"));
+            assert!(boundary
+                .forbidden_confirmation_claims()
+                .contains(&"security-ready"));
         }
 
         #[test]
