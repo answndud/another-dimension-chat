@@ -432,44 +432,61 @@ fn product_unlock_status_from_session(
     redacted_reason: &'static str,
     now_ms: u128,
 ) -> ProductionProductUnlockStatusResult {
-    let unlocked = session.is_some();
+    let idle_auto_lock_seconds = (PRODUCT_UNLOCK_IDLE_TIMEOUT_MS / 1000) as u16;
+    let snapshot = if let Some(session) = session {
+        another_dimension_core::production::production_product_unlock_unlocked_status_snapshot(
+            session.profile.clone(),
+            redacted_reason,
+            session.unlocked_at_ms,
+            session.last_activity_ms,
+            session.expires_at_ms,
+            idle_auto_lock_seconds,
+            now_ms,
+        )
+    } else {
+        another_dimension_core::production::production_product_unlock_locked_status_snapshot(
+            redacted_reason,
+            idle_auto_lock_seconds,
+            now_ms,
+        )
+    };
+    production_product_unlock_status_result_from_snapshot(snapshot)
+}
+
+fn production_product_unlock_status_result_from_snapshot(
+    snapshot: another_dimension_core::production::ProductionProductUnlockStatusSnapshot,
+) -> ProductionProductUnlockStatusResult {
     ProductionProductUnlockStatusResult {
-        warning: if unlocked {
-            "passphrase-first product unlock active; passphrase not retained; no network or secure-release claim"
-        } else {
-            "product store locked; passphrase-first unlock required"
-        },
-        unlocked,
-        profile: session
-            .map(|session| session.profile.clone())
-            .unwrap_or_default(),
-        redacted_reason,
-        key_policy_status: "passphrase-first-runtime-unlock-required",
-        unlock_command_enabled: true,
-        lock_command_enabled: unlocked,
-        passphrase_first: true,
-        os_keystore_only_rejected: true,
-        production_key_management_ready: false,
-        rollback_marker_present: false,
-        rollback_detection_ready: false,
-        rollback_suspicion_detected: false,
-        rollback_resume_blocked: false,
-        rollback_prevention_claimed: false,
-        secure_deletion_from_media_claimed: false,
-        idle_auto_lock_seconds: (PRODUCT_UNLOCK_IDLE_TIMEOUT_MS / 1000) as u16,
-        explicit_lock_available: true,
-        storage_opened: unlocked,
-        session_records_written: false,
-        store_path_returned: false,
-        passphrase_retained: false,
-        key_material_exposed: false,
-        raw_storage_error_exposed: false,
-        path_or_identifier_exposed: false,
-        runtime_messaging_enabled: false,
-        unlocked_at_ms: session.map(|session| session.unlocked_at_ms),
-        last_activity_ms: session.map(|session| session.last_activity_ms),
-        expires_at_ms: session.map(|session| session.expires_at_ms),
-        checked_at_ms: now_ms,
+        warning: snapshot.warning(),
+        unlocked: snapshot.unlocked(),
+        profile: snapshot.profile().to_string(),
+        redacted_reason: snapshot.redacted_reason(),
+        key_policy_status: snapshot.key_policy_status(),
+        unlock_command_enabled: snapshot.unlock_command_enabled(),
+        lock_command_enabled: snapshot.lock_command_enabled(),
+        passphrase_first: snapshot.passphrase_first(),
+        os_keystore_only_rejected: snapshot.os_keystore_only_rejected(),
+        production_key_management_ready: snapshot.production_key_management_ready(),
+        rollback_marker_present: snapshot.rollback_marker_present(),
+        rollback_detection_ready: snapshot.rollback_detection_ready(),
+        rollback_suspicion_detected: snapshot.rollback_suspicion_detected(),
+        rollback_resume_blocked: snapshot.rollback_resume_blocked(),
+        rollback_prevention_claimed: snapshot.rollback_prevention_claimed(),
+        secure_deletion_from_media_claimed: snapshot.secure_deletion_from_media_claimed(),
+        idle_auto_lock_seconds: snapshot.idle_auto_lock_seconds(),
+        explicit_lock_available: snapshot.explicit_lock_available(),
+        storage_opened: snapshot.storage_opened(),
+        session_records_written: snapshot.session_records_written(),
+        store_path_returned: snapshot.store_path_returned(),
+        passphrase_retained: snapshot.passphrase_retained(),
+        key_material_exposed: snapshot.key_material_exposed(),
+        raw_storage_error_exposed: snapshot.raw_storage_error_exposed(),
+        path_or_identifier_exposed: snapshot.path_or_identifier_exposed(),
+        runtime_messaging_enabled: snapshot.runtime_messaging_enabled(),
+        unlocked_at_ms: snapshot.unlocked_at_ms(),
+        last_activity_ms: snapshot.last_activity_ms(),
+        expires_at_ms: snapshot.expires_at_ms(),
+        checked_at_ms: snapshot.checked_at_ms(),
     }
 }
 
@@ -13163,6 +13180,8 @@ mod tests {
         let locked = state.status(1_000);
         assert!(!locked.unlocked);
         assert_eq!(locked.redacted_reason, "status");
+        assert!(locked.unlock_command_enabled);
+        assert!(!locked.lock_command_enabled);
         assert!(!locked.passphrase_retained);
         assert!(!locked.key_material_exposed);
         assert!(!locked.raw_storage_error_exposed);
@@ -13184,10 +13203,14 @@ mod tests {
         let still_unlocked = state.status(2_000 + PRODUCT_UNLOCK_IDLE_TIMEOUT_MS - 1);
         assert!(still_unlocked.unlocked);
         assert_eq!(still_unlocked.profile, "alice");
+        assert_eq!(still_unlocked.redacted_reason, "status");
+        assert!(still_unlocked.unlock_command_enabled);
+        assert!(still_unlocked.lock_command_enabled);
 
         let expired = state.status(2_000 + PRODUCT_UNLOCK_IDLE_TIMEOUT_MS);
         assert!(!expired.unlocked);
         assert_eq!(expired.redacted_reason, "idle-auto-lock");
+        assert!(expired.unlock_command_enabled);
         assert!(!expired.lock_command_enabled);
 
         let relocked = state.record_unlocked("bob".to_string(), 10_000);
@@ -13196,6 +13219,10 @@ mod tests {
         assert!(!explicit.unlocked);
         assert_eq!(explicit.redacted_reason, "explicit-lock");
         assert!(!explicit.storage_opened);
+        let serialized = serde_json::to_string(&explicit).expect("serialize unlock status");
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("/tmp/"));
+        assert!(!serialized.contains(".onion"));
     }
 
     #[test]
