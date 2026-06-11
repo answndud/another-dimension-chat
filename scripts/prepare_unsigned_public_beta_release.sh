@@ -60,6 +60,45 @@ require_text() {
   fi
 }
 
+check_release_integrity_policy() {
+  require_text "$ROOT_DIR/README.md" "Future public Windows, Android, and iOS artifacts must follow the same manual"
+  require_text "$ROOT_DIR/README.md" "GitHub Release integrity model"
+  require_text "$ROOT_DIR/README.md" "matching checksum, public provenance, manifest,"
+  require_text "$ROOT_DIR/README.md" "release notes, update-integrity note, and dependency evidence attached to the"
+  require_text "$ROOT_DIR/README.md" "same GitHub Release as the artifact"
+  require_text "$ROOT_DIR/README.md" "Signing, notarization, app-store approval,"
+  require_text "$ROOT_DIR/README.md" "Play Store approval, TestFlight, Developer ID, SmartScreen reputation, or mobile"
+  require_text "$ROOT_DIR/README.md" "security boundary for v0.1."
+  require_text "$ROOT_DIR/SECURITY.md" "Future public Windows, Android, and iOS artifacts must use the same manual"
+  require_text "$ROOT_DIR/SECURITY.md" "GitHub Release download, same-release checksum, public provenance, manifest, and"
+  require_text "$ROOT_DIR/SECURITY.md" "no-auto-update boundary"
+  require_text "$ROOT_DIR/SECURITY.md" "Platform signing, notarization, app-store approval,"
+  require_text "$ROOT_DIR/SECURITY.md" "Play Store approval, TestFlight, Developer ID, SmartScreen reputation, or mobile"
+  require_text "$ROOT_DIR/SECURITY.md" "store review is not a trusted security boundary for v0.1."
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "Future Platform Artifacts"
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "Every future public Windows, Android, or iOS artifact must be attached to a"
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "GitHub Release with its own matching checksum and provenance file."
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "A platform store, notarization service, Developer ID signature, SmartScreen"
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "Play Store approval, App Store/TestFlight approval, or mobile review"
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "security boundary for"
+  require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "Platform Release Boundary"
+  require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "Future Windows, Android,"
+  require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "iOS public artifacts must each have a matching checksum, public provenance,"
+  require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "same GitHub Release as the artifact."
+  require_text "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md" "Future public Windows, Android, and iOS artifacts must follow the same manual"
+  require_text "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md" "GitHub Release, same-release checksum, public provenance, manifest,"
+  require_text "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md" "non-security-signing boundary as the current macOS DMG path."
+  require_text "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md" "Store approval, notarization, Developer ID signing, SmartScreen reputation, Play"
+  require_text "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md" "Store approval, App Store approval, or TestFlight distribution is not a security"
+  require_text "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md" "boundary for v0.1."
+  echo "status=release-update-integrity-policy-ready"
+}
+
+if [ "${1:-}" = "--check-policy" ]; then
+  check_release_integrity_policy
+  exit 0
+fi
+
 require_file "$SOURCE_DMG"
 require_file "$SOURCE_PROVENANCE"
 require_file "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md"
@@ -177,7 +216,7 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "private_reporting_boundary": "private-vulnerability-reporting-or-minimal-public-contact-request",
   "minimal_public_contact_request_allowed": true,
   "fabricated_review_or_peer_evidence_allowed": false,
-  "public_diagnostics_boundary": "status-build-failure-class-only",
+  "public_diagnostics_boundary": "status-build-failure-class-recovery-action-only",
   "public_intake_boundary": "redacted-public-diagnostics-or-minimal-contact-request-only",
   "repository_governance_boundary": "main-maintainer-unsigned-beta-non-claim-redaction-guardrails",
   "privacy_model_target": "no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server",
@@ -303,7 +342,7 @@ This folder is for a GitHub Release upload.
 - Private reporting boundary: private-vulnerability-reporting-or-minimal-public-contact-request
 - Minimal public contact request allowed: true
 - Fabricated review or peer evidence allowed: false
-- Public diagnostics boundary: status-build-failure-class-only
+- Public diagnostics boundary: status-build-failure-class-recovery-action-only
 - Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only
 - Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails
 - Privacy model target: no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server
@@ -421,7 +460,7 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_safe_review_commands_r
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"private_reporting_boundary\": \"private-vulnerability-reporting-or-minimal-public-contact-request\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"minimal_public_contact_request_allowed\": true"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"fabricated_review_or_peer_evidence_allowed\": false"
-require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_diagnostics_boundary\": \"status-build-failure-class-only\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_diagnostics_boundary\": \"status-build-failure-class-recovery-action-only\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_intake_boundary\": \"redacted-public-diagnostics-or-minimal-contact-request-only\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"repository_governance_boundary\": \"main-maintainer-unsigned-beta-non-claim-redaction-guardrails\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"privacy_model_target\": \"no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server\""
@@ -467,7 +506,7 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Public-safe review commands required: t
 require_text "$RELEASE_DIR/MANIFEST.md" "Private reporting boundary: private-vulnerability-reporting-or-minimal-public-contact-request"
 require_text "$RELEASE_DIR/MANIFEST.md" "Minimal public contact request allowed: true"
 require_text "$RELEASE_DIR/MANIFEST.md" "Fabricated review or peer evidence allowed: false"
-require_text "$RELEASE_DIR/MANIFEST.md" "Public diagnostics boundary: status-build-failure-class-only"
+require_text "$RELEASE_DIR/MANIFEST.md" "Public diagnostics boundary: status-build-failure-class-recovery-action-only"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only"
 require_text "$RELEASE_DIR/MANIFEST.md" "Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails"
 require_text "$RELEASE_DIR/MANIFEST.md" "Dependency lockfile evidence count: $dependency_lockfile_evidence_count"

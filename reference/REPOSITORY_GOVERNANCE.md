@@ -53,6 +53,13 @@ The public beta release remains:
 - no external two-machine onion delivery claim
 - no fabricated external review or external peer evidence
 
+Future public Windows, Android, and iOS artifacts must follow the same manual
+GitHub Release, same-release checksum, public provenance, manifest,
+no-auto-update, and non-security-signing boundary as the current macOS DMG path.
+Store approval, notarization, Developer ID signing, SmartScreen reputation, Play
+Store approval, App Store approval, or TestFlight distribution is not a security
+boundary for v0.1.
+
 ## Redaction Guardrails
 
 Public docs, issues, PRs, release assets, diagnostics, and support requests must

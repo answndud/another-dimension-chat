@@ -105,6 +105,14 @@ scripts/prepare_unsigned_public_beta_release.sh
 
 The command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, records the same-GitHub-Release-assets authority, rejects branch/source archive release authority for DMG verification, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, dependency lockfile hash evidence, public threat model, privacy model comparison, independent review packet, public intake policy, repository governance guardrails, explicit review-gap evidence, private-reporting boundary, and fabricated-review/peer-evidence-forbidden evidence are missing. The dependency evidence is exactly three lockfiles: `Cargo.lock`, `apps/desktop-tauri/src-tauri/Cargo.lock`, and `apps/desktop-tauri/package-lock.json`; it is not a live dependency scan, vulnerability triage signoff, SBOM, audit, or reproducible-build proof. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
+Future public Windows, Android, and iOS artifacts must follow the same manual
+GitHub Release integrity model: matching checksum, public provenance, manifest,
+release notes, update-integrity note, and dependency evidence attached to the
+same GitHub Release as the artifact. Signing, notarization, app-store approval,
+Play Store approval, TestFlight, Developer ID, SmartScreen reputation, or mobile
+store review may improve distribution ergonomics later, but none is a trusted
+security boundary for v0.1.
+
 What exists today:
 
 - Rust workspace split into `identity`, `pairing`, `crypto`, `protocol`, `transport`, `storage`, and `core` crates, plus CLI and Tauri desktop prototype shells.
