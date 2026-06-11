@@ -2008,6 +2008,70 @@ pub mod production {
         "safe for sensitive communication",
     ];
 
+    const PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_REQUIRED_ITEMS: &[&str] = &[
+        "mobile wrapper implementation authorization status only",
+        "authorization record only",
+        "authorization checklist only",
+        "entry criteria reviewed but not satisfied",
+        "explicit owner authorization required",
+        "implementation authorization not granted",
+        "mobile implementation has not started",
+        "security review authorization not granted",
+        "release review authorization not granted",
+        "store distribution authorization not granted",
+        "runtime messaging authorization not granted",
+        "external delivery evidence authorization not granted",
+        "push notification dependency remains excluded",
+        "cloud backup remains excluded",
+        "central account remains excluded",
+        "mobile readiness not claimed",
+        "authorization does not claim release readiness",
+        "authorization does not claim security readiness",
+        "runtime messaging availability not claimed",
+        "store readiness not claimed",
+        "external delivery evidence not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_FORBIDDEN_CLAIMS: &[&str] = &[
+        "implementation authorized",
+        "implementation authorization granted",
+        "authorization granted",
+        "owner approved implementation",
+        "entry criteria satisfied",
+        "all entry criteria met",
+        "implementation can start",
+        "mobile implementation started",
+        "mobile implementation complete",
+        "implementation complete",
+        "mobile app implemented",
+        "mobile app ready",
+        "mobile readiness",
+        "security review approved",
+        "release review approved",
+        "release readiness",
+        "mobile release ready",
+        "security readiness",
+        "store distribution approved",
+        "store readiness",
+        "runtime messaging authorized",
+        "runtime messaging available",
+        "runtime messaging implemented",
+        "runtime messaging ready",
+        "external delivery evidence recorded",
+        "external delivery evidence accepted",
+        "external onion delivery verified",
+        "push notification authorized",
+        "push notification implemented",
+        "cloud backup authorized",
+        "cloud backup implemented",
+        "central account authorized",
+        "central account implemented",
+        "release ready",
+        "security-ready",
+        "production-ready",
+        "safe for sensitive communication",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -2958,6 +3022,37 @@ pub mod production {
         push_notification_implemented: bool,
         cloud_backup_implemented: bool,
         central_account_implemented: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileWrapperImplementationAuthorizationBoundarySummary {
+        required_authorization_items: &'static [&'static str],
+        forbidden_authorization_claims: &'static [&'static str],
+        inherits_mobile_wrapper_implementation_entry_criteria_boundary: bool,
+        authorization_status_only_label_required: bool,
+        authorization_record_only_label_required: bool,
+        authorization_checklist_only_label_required: bool,
+        entry_criteria_reviewed_but_not_satisfied: bool,
+        explicit_owner_authorization_required: bool,
+        implementation_authorization_granted: bool,
+        implementation_can_start_claimed: bool,
+        mobile_implementation_started: bool,
+        mobile_implementation_complete_claimed: bool,
+        mobile_readiness_claimed: bool,
+        security_review_authorization_granted: bool,
+        release_review_authorization_granted: bool,
+        store_distribution_authorization_granted: bool,
+        runtime_messaging_authorization_granted: bool,
+        external_delivery_evidence_authorization_granted: bool,
+        push_notification_dependency_excluded: bool,
+        cloud_backup_excluded: bool,
+        central_account_excluded: bool,
+        release_readiness_claimed: bool,
+        security_readiness_claimed: bool,
+        runtime_messaging_available_claimed: bool,
+        store_readiness_claimed: bool,
+        external_delivery_evidence_recorded: bool,
         boundary_closed: bool,
     }
 
@@ -5849,6 +5944,116 @@ pub mod production {
 
         pub fn central_account_implemented(self) -> bool {
             self.central_account_implemented
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileWrapperImplementationAuthorizationBoundarySummary {
+        pub fn required_authorization_items(self) -> &'static [&'static str] {
+            self.required_authorization_items
+        }
+
+        pub fn forbidden_authorization_claims(self) -> &'static [&'static str] {
+            self.forbidden_authorization_claims
+        }
+
+        pub fn inherits_mobile_wrapper_implementation_entry_criteria_boundary(self) -> bool {
+            self.inherits_mobile_wrapper_implementation_entry_criteria_boundary
+        }
+
+        pub fn authorization_status_only_label_required(self) -> bool {
+            self.authorization_status_only_label_required
+        }
+
+        pub fn authorization_record_only_label_required(self) -> bool {
+            self.authorization_record_only_label_required
+        }
+
+        pub fn authorization_checklist_only_label_required(self) -> bool {
+            self.authorization_checklist_only_label_required
+        }
+
+        pub fn entry_criteria_reviewed_but_not_satisfied(self) -> bool {
+            self.entry_criteria_reviewed_but_not_satisfied
+        }
+
+        pub fn explicit_owner_authorization_required(self) -> bool {
+            self.explicit_owner_authorization_required
+        }
+
+        pub fn implementation_authorization_granted(self) -> bool {
+            self.implementation_authorization_granted
+        }
+
+        pub fn implementation_can_start_claimed(self) -> bool {
+            self.implementation_can_start_claimed
+        }
+
+        pub fn mobile_implementation_started(self) -> bool {
+            self.mobile_implementation_started
+        }
+
+        pub fn mobile_implementation_complete_claimed(self) -> bool {
+            self.mobile_implementation_complete_claimed
+        }
+
+        pub fn mobile_readiness_claimed(self) -> bool {
+            self.mobile_readiness_claimed
+        }
+
+        pub fn security_review_authorization_granted(self) -> bool {
+            self.security_review_authorization_granted
+        }
+
+        pub fn release_review_authorization_granted(self) -> bool {
+            self.release_review_authorization_granted
+        }
+
+        pub fn store_distribution_authorization_granted(self) -> bool {
+            self.store_distribution_authorization_granted
+        }
+
+        pub fn runtime_messaging_authorization_granted(self) -> bool {
+            self.runtime_messaging_authorization_granted
+        }
+
+        pub fn external_delivery_evidence_authorization_granted(self) -> bool {
+            self.external_delivery_evidence_authorization_granted
+        }
+
+        pub fn push_notification_dependency_excluded(self) -> bool {
+            self.push_notification_dependency_excluded
+        }
+
+        pub fn cloud_backup_excluded(self) -> bool {
+            self.cloud_backup_excluded
+        }
+
+        pub fn central_account_excluded(self) -> bool {
+            self.central_account_excluded
+        }
+
+        pub fn release_readiness_claimed(self) -> bool {
+            self.release_readiness_claimed
+        }
+
+        pub fn security_readiness_claimed(self) -> bool {
+            self.security_readiness_claimed
+        }
+
+        pub fn runtime_messaging_available_claimed(self) -> bool {
+            self.runtime_messaging_available_claimed
+        }
+
+        pub fn store_readiness_claimed(self) -> bool {
+            self.store_readiness_claimed
+        }
+
+        pub fn external_delivery_evidence_recorded(self) -> bool {
+            self.external_delivery_evidence_recorded
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -17137,6 +17342,127 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_wrapper_implementation_authorization_boundary_summary(
+    ) -> ProductionMobileWrapperImplementationAuthorizationBoundarySummary {
+        let criteria = production_mobile_wrapper_implementation_entry_criteria_boundary_summary();
+        let inherits_mobile_wrapper_implementation_entry_criteria_boundary = criteria
+            .boundary_closed()
+            && criteria.entry_criteria_status_only_label_required()
+            && criteria.entry_criteria_list_only_label_required()
+            && criteria.shared_core_ffi_boundary_criteria_recorded()
+            && criteria.explicit_user_action_criteria_recorded()
+            && criteria.public_non_claim_copy_criteria_recorded()
+            && !criteria.entry_criteria_satisfied()
+            && !criteria.implementation_started()
+            && !criteria.release_readiness_claimed()
+            && !criteria.security_readiness_claimed()
+            && !criteria.ffi_boundary_stable_claimed()
+            && !criteria.runtime_messaging_available_claimed()
+            && !criteria.external_delivery_evidence_recorded()
+            && !criteria.store_distribution_ready_claimed();
+        let authorization_status_only_label_required = true;
+        let authorization_record_only_label_required = true;
+        let authorization_checklist_only_label_required = true;
+        let entry_criteria_reviewed_but_not_satisfied = true;
+        let explicit_owner_authorization_required = true;
+        let implementation_authorization_granted = false;
+        let implementation_can_start_claimed = false;
+        let mobile_implementation_started = false;
+        let mobile_implementation_complete_claimed = false;
+        let mobile_readiness_claimed = false;
+        let security_review_authorization_granted = false;
+        let release_review_authorization_granted = false;
+        let store_distribution_authorization_granted = false;
+        let runtime_messaging_authorization_granted = false;
+        let external_delivery_evidence_authorization_granted = false;
+        let push_notification_dependency_excluded = true;
+        let cloud_backup_excluded = true;
+        let central_account_excluded = true;
+        let release_readiness_claimed = false;
+        let security_readiness_claimed = false;
+        let runtime_messaging_available_claimed = false;
+        let store_readiness_claimed = false;
+        let external_delivery_evidence_recorded = false;
+        let boundary_closed = inherits_mobile_wrapper_implementation_entry_criteria_boundary
+            && authorization_status_only_label_required
+            && authorization_record_only_label_required
+            && authorization_checklist_only_label_required
+            && entry_criteria_reviewed_but_not_satisfied
+            && explicit_owner_authorization_required
+            && !implementation_authorization_granted
+            && !implementation_can_start_claimed
+            && !mobile_implementation_started
+            && !mobile_implementation_complete_claimed
+            && !mobile_readiness_claimed
+            && !security_review_authorization_granted
+            && !release_review_authorization_granted
+            && !store_distribution_authorization_granted
+            && !runtime_messaging_authorization_granted
+            && !external_delivery_evidence_authorization_granted
+            && push_notification_dependency_excluded
+            && cloud_backup_excluded
+            && central_account_excluded
+            && !release_readiness_claimed
+            && !security_readiness_claimed
+            && !runtime_messaging_available_claimed
+            && !store_readiness_claimed
+            && !external_delivery_evidence_recorded
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_REQUIRED_ITEMS
+                .contains(&"mobile wrapper implementation authorization status only")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_REQUIRED_ITEMS
+                .contains(&"authorization record only")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_REQUIRED_ITEMS
+                .contains(&"authorization checklist only")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_REQUIRED_ITEMS
+                .contains(&"implementation authorization not granted")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_REQUIRED_ITEMS
+                .contains(&"authorization does not claim security readiness")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_FORBIDDEN_CLAIMS
+                .contains(&"implementation authorized")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_FORBIDDEN_CLAIMS
+                .contains(&"implementation authorization granted")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_FORBIDDEN_CLAIMS
+                .contains(&"authorization granted")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_FORBIDDEN_CLAIMS
+                .contains(&"runtime messaging authorized")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_FORBIDDEN_CLAIMS
+                .contains(&"external delivery evidence recorded")
+            && PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_FORBIDDEN_CLAIMS
+                .contains(&"release ready");
+
+        ProductionMobileWrapperImplementationAuthorizationBoundarySummary {
+            required_authorization_items:
+                PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_REQUIRED_ITEMS,
+            forbidden_authorization_claims:
+                PRODUCTION_MOBILE_WRAPPER_IMPLEMENTATION_AUTHORIZATION_FORBIDDEN_CLAIMS,
+            inherits_mobile_wrapper_implementation_entry_criteria_boundary,
+            authorization_status_only_label_required,
+            authorization_record_only_label_required,
+            authorization_checklist_only_label_required,
+            entry_criteria_reviewed_but_not_satisfied,
+            explicit_owner_authorization_required,
+            implementation_authorization_granted,
+            implementation_can_start_claimed,
+            mobile_implementation_started,
+            mobile_implementation_complete_claimed,
+            mobile_readiness_claimed,
+            security_review_authorization_granted,
+            release_review_authorization_granted,
+            store_distribution_authorization_granted,
+            runtime_messaging_authorization_granted,
+            external_delivery_evidence_authorization_granted,
+            push_notification_dependency_excluded,
+            cloud_backup_excluded,
+            central_account_excluded,
+            release_readiness_claimed,
+            security_readiness_claimed,
+            runtime_messaging_available_claimed,
+            store_readiness_claimed,
+            external_delivery_evidence_recorded,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -22450,6 +22776,170 @@ pub mod production {
                 .contains(&"production-ready"));
             assert!(boundary
                 .forbidden_entry_claims()
+                .contains(&"safe for sensitive communication"));
+        }
+
+        #[test]
+        fn production_mobile_wrapper_implementation_authorization_boundary_is_not_granted() {
+            let boundary =
+                production_mobile_wrapper_implementation_authorization_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_wrapper_implementation_entry_criteria_boundary());
+            assert!(boundary.authorization_status_only_label_required());
+            assert!(boundary.authorization_record_only_label_required());
+            assert!(boundary.authorization_checklist_only_label_required());
+            assert!(boundary.entry_criteria_reviewed_but_not_satisfied());
+            assert!(boundary.explicit_owner_authorization_required());
+            assert!(!boundary.implementation_authorization_granted());
+            assert!(!boundary.implementation_can_start_claimed());
+            assert!(!boundary.mobile_implementation_started());
+            assert!(!boundary.mobile_implementation_complete_claimed());
+            assert!(!boundary.mobile_readiness_claimed());
+            assert!(!boundary.security_review_authorization_granted());
+            assert!(!boundary.release_review_authorization_granted());
+            assert!(!boundary.store_distribution_authorization_granted());
+            assert!(!boundary.runtime_messaging_authorization_granted());
+            assert!(!boundary.external_delivery_evidence_authorization_granted());
+            assert!(boundary.push_notification_dependency_excluded());
+            assert!(boundary.cloud_backup_excluded());
+            assert!(boundary.central_account_excluded());
+            assert!(!boundary.release_readiness_claimed());
+            assert!(!boundary.security_readiness_claimed());
+            assert!(!boundary.runtime_messaging_available_claimed());
+            assert!(!boundary.store_readiness_claimed());
+            assert!(!boundary.external_delivery_evidence_recorded());
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"mobile wrapper implementation authorization status only"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"authorization record only"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"authorization checklist only"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"entry criteria reviewed but not satisfied"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"explicit owner authorization required"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"implementation authorization not granted"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"mobile implementation has not started"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"security review authorization not granted"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"release review authorization not granted"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"store distribution authorization not granted"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"runtime messaging authorization not granted"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"external delivery evidence authorization not granted"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"push notification dependency remains excluded"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"cloud backup remains excluded"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"central account remains excluded"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"mobile readiness not claimed"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"authorization does not claim release readiness"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"authorization does not claim security readiness"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"runtime messaging availability not claimed"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"store readiness not claimed"));
+            assert!(boundary
+                .required_authorization_items()
+                .contains(&"external delivery evidence not claimed"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"implementation authorized"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"implementation authorization granted"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"authorization granted"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"owner approved implementation"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"entry criteria satisfied"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"all entry criteria met"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"implementation can start"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"mobile implementation started"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"mobile implementation complete"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"implementation complete"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"mobile app implemented"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"mobile app ready"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"mobile readiness"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"runtime messaging authorized"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"runtime messaging available"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"runtime messaging implemented"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"external delivery evidence recorded"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"external delivery evidence accepted"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"external onion delivery verified"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"release ready"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"security-ready"));
+            assert!(boundary
+                .forbidden_authorization_claims()
+                .contains(&"production-ready"));
+            assert!(boundary
+                .forbidden_authorization_claims()
                 .contains(&"safe for sensitive communication"));
         }
 
