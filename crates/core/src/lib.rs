@@ -1428,6 +1428,44 @@ pub mod production {
         "security-ready",
     ];
 
+    const PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_REQUIRED_ITEMS: &[&str] = &[
+        "first-run checklist status only",
+        "mobile wrapper is documentation-only",
+        "platform is Android shell candidate or iOS shell candidate",
+        "manual update verification required",
+        "redacted status only",
+        "local data lifecycle status only",
+        "backup exclusion status only",
+        "app-private storage required",
+        "app-container storage required",
+        "platform verification token present",
+        "cloud backup not claimed",
+        "push delivery not claimed",
+        "external onion delivery not claimed",
+        "mobile app readiness not claimed",
+        "security-ready not claimed",
+    ];
+
+    const PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_FORBIDDEN_CLAIMS: &[&str] = &[
+        "mobile app ready",
+        "Android app ready",
+        "iOS app ready",
+        "store approved",
+        "Play Store verified",
+        "App Store verified",
+        "TestFlight verified",
+        "push delivery enabled",
+        "background delivery enabled",
+        "cloud backup enabled",
+        "cloud sync enabled",
+        "external onion delivery verified",
+        "connected to peer",
+        "safe for sensitive communication",
+        "audited",
+        "production-ready",
+        "security-ready",
+    ];
+
     const PRODUCTION_MOBILE_WRAPPER_SKELETON_PATHS: &[&str] = &[
         "apps/mobile/README.md",
         "apps/mobile/android/README.md",
@@ -1921,6 +1959,34 @@ pub mod production {
         backup_recovery_claim_allowed: bool,
         rollback_prevention_claim_allowed: bool,
         secure_deletion_claim_allowed: bool,
+        security_ready_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileFirstRunPlatformReadinessChecklistBoundarySummary {
+        required_checklist_items: &'static [&'static str],
+        forbidden_readiness_claims: &'static [&'static str],
+        inherits_mobile_skeleton_verification_boundary: bool,
+        inherits_mobile_ux_copy_boundary: bool,
+        inherits_mobile_install_update_screen_copy_boundary: bool,
+        inherits_mobile_backup_exclusion_screen_copy_boundary: bool,
+        inherits_mobile_local_data_lifecycle_screen_copy_boundary: bool,
+        first_run_status_only_label_required: bool,
+        platform_candidate_label_required: bool,
+        manual_update_verification_label_required: bool,
+        redacted_status_only_label_required: bool,
+        local_data_lifecycle_status_label_required: bool,
+        backup_exclusion_status_label_required: bool,
+        platform_verification_token_label_required: bool,
+        cloud_backup_non_claim_required: bool,
+        push_delivery_non_claim_required: bool,
+        external_delivery_non_claim_required: bool,
+        mobile_app_readiness_claimed: bool,
+        store_or_review_trust_claim_allowed: bool,
+        push_or_background_delivery_claim_allowed: bool,
+        cloud_backup_or_sync_claim_allowed: bool,
+        external_delivery_success_claim_allowed: bool,
         security_ready_claimed: bool,
         boundary_closed: bool,
     }
@@ -3195,6 +3261,104 @@ pub mod production {
 
         pub fn secure_deletion_claim_allowed(self) -> bool {
             self.secure_deletion_claim_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileFirstRunPlatformReadinessChecklistBoundarySummary {
+        pub fn required_checklist_items(self) -> &'static [&'static str] {
+            self.required_checklist_items
+        }
+
+        pub fn forbidden_readiness_claims(self) -> &'static [&'static str] {
+            self.forbidden_readiness_claims
+        }
+
+        pub fn inherits_mobile_skeleton_verification_boundary(self) -> bool {
+            self.inherits_mobile_skeleton_verification_boundary
+        }
+
+        pub fn inherits_mobile_ux_copy_boundary(self) -> bool {
+            self.inherits_mobile_ux_copy_boundary
+        }
+
+        pub fn inherits_mobile_install_update_screen_copy_boundary(self) -> bool {
+            self.inherits_mobile_install_update_screen_copy_boundary
+        }
+
+        pub fn inherits_mobile_backup_exclusion_screen_copy_boundary(self) -> bool {
+            self.inherits_mobile_backup_exclusion_screen_copy_boundary
+        }
+
+        pub fn inherits_mobile_local_data_lifecycle_screen_copy_boundary(self) -> bool {
+            self.inherits_mobile_local_data_lifecycle_screen_copy_boundary
+        }
+
+        pub fn first_run_status_only_label_required(self) -> bool {
+            self.first_run_status_only_label_required
+        }
+
+        pub fn platform_candidate_label_required(self) -> bool {
+            self.platform_candidate_label_required
+        }
+
+        pub fn manual_update_verification_label_required(self) -> bool {
+            self.manual_update_verification_label_required
+        }
+
+        pub fn redacted_status_only_label_required(self) -> bool {
+            self.redacted_status_only_label_required
+        }
+
+        pub fn local_data_lifecycle_status_label_required(self) -> bool {
+            self.local_data_lifecycle_status_label_required
+        }
+
+        pub fn backup_exclusion_status_label_required(self) -> bool {
+            self.backup_exclusion_status_label_required
+        }
+
+        pub fn platform_verification_token_label_required(self) -> bool {
+            self.platform_verification_token_label_required
+        }
+
+        pub fn cloud_backup_non_claim_required(self) -> bool {
+            self.cloud_backup_non_claim_required
+        }
+
+        pub fn push_delivery_non_claim_required(self) -> bool {
+            self.push_delivery_non_claim_required
+        }
+
+        pub fn external_delivery_non_claim_required(self) -> bool {
+            self.external_delivery_non_claim_required
+        }
+
+        pub fn mobile_app_readiness_claimed(self) -> bool {
+            self.mobile_app_readiness_claimed
+        }
+
+        pub fn store_or_review_trust_claim_allowed(self) -> bool {
+            self.store_or_review_trust_claim_allowed
+        }
+
+        pub fn push_or_background_delivery_claim_allowed(self) -> bool {
+            self.push_or_background_delivery_claim_allowed
+        }
+
+        pub fn cloud_backup_or_sync_claim_allowed(self) -> bool {
+            self.cloud_backup_or_sync_claim_allowed
+        }
+
+        pub fn external_delivery_success_claim_allowed(self) -> bool {
+            self.external_delivery_success_claim_allowed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -12576,6 +12740,134 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_first_run_platform_readiness_checklist_boundary_summary(
+    ) -> ProductionMobileFirstRunPlatformReadinessChecklistBoundarySummary {
+        let skeleton = production_mobile_skeleton_verification_script_boundary_summary();
+        let ux = production_mobile_wrapper_ux_copy_boundary_summary();
+        let install_update = production_mobile_install_update_screen_copy_boundary_summary();
+        let backup = production_mobile_backup_exclusion_screen_copy_boundary_summary();
+        let lifecycle = production_mobile_local_data_lifecycle_screen_copy_boundary_summary();
+        let inherits_mobile_skeleton_verification_boundary = skeleton.boundary_closed()
+            && skeleton.script_is_read_only()
+            && skeleton.rejects_mobile_artifacts()
+            && !skeleton.mobile_readiness_claimed()
+            && !skeleton.security_ready_claimed();
+        let inherits_mobile_ux_copy_boundary = ux.boundary_closed()
+            && ux
+                .required_public_phrases()
+                .contains(&"mobile clients are not part of this public beta")
+            && ux
+                .required_public_phrases()
+                .contains(&"external onion delivery not claimed")
+            && !ux.store_trust_claim_allowed()
+            && !ux.push_or_background_delivery_claim_allowed()
+            && !ux.cloud_backup_claim_allowed()
+            && !ux.external_onion_delivery_success_claim_allowed()
+            && !ux.security_ready_claimed();
+        let inherits_mobile_install_update_screen_copy_boundary = install_update.boundary_closed()
+            && install_update.manual_update_verification_label_required()
+            && install_update.store_trust_non_claim_required()
+            && !install_update.auto_update_cta_allowed()
+            && !install_update.store_verified_claim_allowed()
+            && !install_update.security_ready_claimed();
+        let inherits_mobile_backup_exclusion_screen_copy_boundary = backup.boundary_closed()
+            && backup.backup_exclusion_status_only_label_required()
+            && backup.platform_verification_token_label_required()
+            && backup.cloud_backup_non_claim_required()
+            && !backup.cloud_backup_or_sync_claim_allowed()
+            && !backup.security_ready_claimed();
+        let inherits_mobile_local_data_lifecycle_screen_copy_boundary = lifecycle.boundary_closed()
+            && lifecycle.local_data_lifecycle_status_only_label_required()
+            && lifecycle.cloud_backup_non_claim_required()
+            && !lifecycle.cloud_backup_or_sync_claim_allowed()
+            && !lifecycle.security_ready_claimed();
+        let first_run_status_only_label_required = true;
+        let platform_candidate_label_required = true;
+        let manual_update_verification_label_required = true;
+        let redacted_status_only_label_required = true;
+        let local_data_lifecycle_status_label_required = true;
+        let backup_exclusion_status_label_required = true;
+        let platform_verification_token_label_required = true;
+        let cloud_backup_non_claim_required = true;
+        let push_delivery_non_claim_required = true;
+        let external_delivery_non_claim_required = true;
+        let mobile_app_readiness_claimed = false;
+        let store_or_review_trust_claim_allowed = false;
+        let push_or_background_delivery_claim_allowed = false;
+        let cloud_backup_or_sync_claim_allowed = false;
+        let external_delivery_success_claim_allowed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_skeleton_verification_boundary
+            && inherits_mobile_ux_copy_boundary
+            && inherits_mobile_install_update_screen_copy_boundary
+            && inherits_mobile_backup_exclusion_screen_copy_boundary
+            && inherits_mobile_local_data_lifecycle_screen_copy_boundary
+            && first_run_status_only_label_required
+            && platform_candidate_label_required
+            && manual_update_verification_label_required
+            && redacted_status_only_label_required
+            && local_data_lifecycle_status_label_required
+            && backup_exclusion_status_label_required
+            && platform_verification_token_label_required
+            && cloud_backup_non_claim_required
+            && push_delivery_non_claim_required
+            && external_delivery_non_claim_required
+            && !mobile_app_readiness_claimed
+            && !store_or_review_trust_claim_allowed
+            && !push_or_background_delivery_claim_allowed
+            && !cloud_backup_or_sync_claim_allowed
+            && !external_delivery_success_claim_allowed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"first-run checklist status only")
+            && PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"manual update verification required")
+            && PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"backup exclusion status only")
+            && PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_REQUIRED_ITEMS
+                .contains(&"mobile app readiness not claimed")
+            && PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"mobile app ready")
+            && PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"store approved")
+            && PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"push delivery enabled")
+            && PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"cloud backup enabled")
+            && PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"external onion delivery verified")
+            && PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_FORBIDDEN_CLAIMS
+                .contains(&"security-ready");
+
+        ProductionMobileFirstRunPlatformReadinessChecklistBoundarySummary {
+            required_checklist_items: PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_REQUIRED_ITEMS,
+            forbidden_readiness_claims:
+                PRODUCTION_MOBILE_FIRST_RUN_PLATFORM_CHECKLIST_FORBIDDEN_CLAIMS,
+            inherits_mobile_skeleton_verification_boundary,
+            inherits_mobile_ux_copy_boundary,
+            inherits_mobile_install_update_screen_copy_boundary,
+            inherits_mobile_backup_exclusion_screen_copy_boundary,
+            inherits_mobile_local_data_lifecycle_screen_copy_boundary,
+            first_run_status_only_label_required,
+            platform_candidate_label_required,
+            manual_update_verification_label_required,
+            redacted_status_only_label_required,
+            local_data_lifecycle_status_label_required,
+            backup_exclusion_status_label_required,
+            platform_verification_token_label_required,
+            cloud_backup_non_claim_required,
+            push_delivery_non_claim_required,
+            external_delivery_non_claim_required,
+            mobile_app_readiness_claimed,
+            store_or_review_trust_claim_allowed,
+            push_or_background_delivery_claim_allowed,
+            cloud_backup_or_sync_claim_allowed,
+            external_delivery_success_claim_allowed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_transport_envelope_io_boundary_summary(
     ) -> ProductionTransportEnvelopeIoBoundarySummary {
         let command_surface = production_runtime_command_surface_summary();
@@ -15969,6 +16261,123 @@ pub mod production {
                 .contains(&"remote wipe available"));
             assert!(boundary
                 .forbidden_screen_claims()
+                .contains(&"security-ready"));
+        }
+
+        #[test]
+        fn production_mobile_first_run_platform_readiness_checklist_boundary_is_non_claiming() {
+            let boundary =
+                production_mobile_first_run_platform_readiness_checklist_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.inherits_mobile_skeleton_verification_boundary());
+            assert!(boundary.inherits_mobile_ux_copy_boundary());
+            assert!(boundary.inherits_mobile_install_update_screen_copy_boundary());
+            assert!(boundary.inherits_mobile_backup_exclusion_screen_copy_boundary());
+            assert!(boundary.inherits_mobile_local_data_lifecycle_screen_copy_boundary());
+            assert!(boundary.first_run_status_only_label_required());
+            assert!(boundary.platform_candidate_label_required());
+            assert!(boundary.manual_update_verification_label_required());
+            assert!(boundary.redacted_status_only_label_required());
+            assert!(boundary.local_data_lifecycle_status_label_required());
+            assert!(boundary.backup_exclusion_status_label_required());
+            assert!(boundary.platform_verification_token_label_required());
+            assert!(boundary.cloud_backup_non_claim_required());
+            assert!(boundary.push_delivery_non_claim_required());
+            assert!(boundary.external_delivery_non_claim_required());
+            assert!(!boundary.mobile_app_readiness_claimed());
+            assert!(!boundary.store_or_review_trust_claim_allowed());
+            assert!(!boundary.push_or_background_delivery_claim_allowed());
+            assert!(!boundary.cloud_backup_or_sync_claim_allowed());
+            assert!(!boundary.external_delivery_success_claim_allowed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"first-run checklist status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"mobile wrapper is documentation-only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"platform is Android shell candidate or iOS shell candidate"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"manual update verification required"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"redacted status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"local data lifecycle status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"backup exclusion status only"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"platform verification token present"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"cloud backup not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"push delivery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"external onion delivery not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"mobile app readiness not claimed"));
+            assert!(boundary
+                .required_checklist_items()
+                .contains(&"security-ready not claimed"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"mobile app ready"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"Android app ready"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"iOS app ready"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"store approved"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"Play Store verified"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"App Store verified"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"TestFlight verified"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"push delivery enabled"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"background delivery enabled"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"cloud backup enabled"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"cloud sync enabled"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"external onion delivery verified"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"connected to peer"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"safe for sensitive communication"));
+            assert!(boundary.forbidden_readiness_claims().contains(&"audited"));
+            assert!(boundary
+                .forbidden_readiness_claims()
+                .contains(&"production-ready"));
+            assert!(boundary
+                .forbidden_readiness_claims()
                 .contains(&"security-ready"));
         }
 
