@@ -2825,50 +2825,11 @@ function renderRoomIdentityBar(input, sessionsReady) {
 }
 
 function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
-  const hasConnectionCode = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB);
-  const safetyConfirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
-  const retryableOutbound = automaticVisibleTwoProfileRetryableOutboundEntry(input);
-  const pendingConversation = latestTwoProfilePendingConversationEntry();
-  const endpointState = twoProfilePeerEndpointState(input);
-  const inviteTokenRoomReady = twoProfileInviteCodeModeActive() && sessionsReady && safetyConfirmed;
-  const needsDeliveryPermission = Boolean(
-    sessionsReady && safetyConfirmed && !inviteTokenRoomReady && !manualNetworkPermissionEnabled(),
-  );
-  const needsPrivateRoute = Boolean(
-    sessionsReady && safetyConfirmed && !inviteTokenRoomReady && manualNetworkPermissionEnabled() && !endpointState.ready,
-  );
-  const receiving = productionTwoProfileReceiveMatchesInput(input);
-  const receivingRuntimeMismatch = productionTwoProfileReceiveRuntimeMismatched(input);
-  const state = retryableOutbound
-    ? "pending"
-    : pendingConversation
-      ? "waiting"
-    : !hasConnectionCode
-      ? "disconnected"
-      : !sessionsReady
-        ? "code-ready"
-    : !safetyConfirmed
-      ? "verify"
-    : needsDeliveryPermission
-      ? "delivery-off"
-    : needsPrivateRoute
-      ? "route-needed"
-      : "ready";
-  const keyByState = {
-    pending: "roomStatusShortPending",
-    waiting: "roomStatusShortWaiting",
-    disconnected: "roomStatusShortNoConnection",
-    "code-ready": "roomStatusShortCodeReady",
-    verify: "roomStatusShortVerify",
-    "delivery-off": "roomStatusShortDeliveryOff",
-    "route-needed": "roomStatusShortRouteNeeded",
-    ready: "roomStatusShortReady",
-  };
-  const label = t(keyByState[state]);
-  const receiveLabel = receiving
-    ? ` · ${t(receivingRuntimeMismatch ? "roomStatusShortReceiveMismatch" : "roomStatusShortReceiving")}`
+  const view = friendFamilyOnboardingView(input, sessionsReady);
+  const receiveLabel = view.receiving
+    ? ` · ${t(view.receivingRuntimeMismatch ? "roomStatusShortReceiveMismatch" : "roomStatusShortReceiving")}`
     : "";
-  setText(fields.roomStatusSummary, `${label}${receiveLabel}`);
+  setText(fields.roomStatusSummary, `${view.label} · ${view.next}${receiveLabel}`);
   fields.roomStatusSummary?.classList.remove(
     "is-disconnected",
     "is-code-ready",
@@ -2880,11 +2841,94 @@ function renderRoomStatusSummary(input = productionTwoProfileInput(), sessionsRe
     "is-waiting",
     "is-receiving",
   );
-  fields.roomStatusSummary?.classList.add(`is-${state}`);
-  fields.roomStatusSummary?.classList.toggle("is-receiving", receiving);
+  fields.roomStatusSummary?.classList.add(`is-${view.state}`);
+  fields.roomStatusSummary?.classList.toggle("is-receiving", view.receiving);
 }
 
-function renderRoomSetupProgress() {}
+function friendFamilyOnboardingView(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
+  const hasConnectionCode = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB);
+  const safetyConfirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
+  const retryableOutbound = automaticVisibleTwoProfileRetryableOutboundEntry(input);
+  const pendingConversation = latestTwoProfilePendingConversationEntry();
+  const endpointState = twoProfilePeerEndpointState(input);
+  const inviteTokenRoomReady = twoProfileInviteCodeModeActive() && sessionsReady && safetyConfirmed;
+  const receiving = productionTwoProfileReceiveMatchesInput(input);
+  const receivingOtherRoom = productionTwoProfileReceiveActiveInOtherRoom(input);
+  const receivingRuntimeMismatch = productionTwoProfileReceiveRuntimeMismatched(input);
+  const routeReadiness = sessionsReady && safetyConfirmed
+    ? externalPeerSendReadiness(input, {
+        allowMissingMessage: true,
+        latestOnionOutbound: null,
+      })
+    : null;
+  let state = "ready";
+  let labelKey = "roomStatusShortReady";
+  let nextKey = input.message ? "roomOnboardingNextSend" : "roomOnboardingNextWriteMessage";
+
+  if (retryableOutbound) {
+    state = "pending";
+    labelKey = "roomStatusShortPending";
+    nextKey = "roomOnboardingNextRetryOrCancel";
+  } else if (pendingConversation) {
+    state = "waiting";
+    labelKey = "roomStatusShortWaiting";
+    nextKey = "roomOnboardingNextWaitOrReply";
+  } else if (!hasConnectionCode) {
+    state = "disconnected";
+    labelKey = "roomStatusShortNoConnection";
+    nextKey = "roomOnboardingNextInvite";
+  } else if (!sessionsReady) {
+    state = "code-ready";
+    labelKey = "roomStatusShortCodeReady";
+    nextKey = latestTwoProfileSessionStatusForCurrentInput(input)
+      ? "roomOnboardingNextRebuild"
+      : "roomOnboardingNextOpenRoom";
+  } else if (!safetyConfirmed) {
+    state = "verify";
+    labelKey = "roomStatusShortVerify";
+    nextKey = "roomOnboardingNextVerify";
+  } else if (!inviteTokenRoomReady && !manualNetworkPermissionEnabled()) {
+    state = "delivery-off";
+    labelKey = "roomStatusShortDeliveryOff";
+    nextKey = "roomOnboardingNextEnableDelivery";
+  } else if (!inviteTokenRoomReady && receivingOtherRoom) {
+    state = "route-needed";
+    labelKey = "roomStatusShortReceiveMismatch";
+    nextKey = "roomOnboardingNextRestartReceive";
+  } else if (!inviteTokenRoomReady && routeReadinessReceiveStopPending(routeReadiness)) {
+    state = "route-needed";
+    labelKey = "roomStatusShortReceiveMismatch";
+    nextKey = "roomOnboardingNextWaitReceiveStop";
+  } else if (!inviteTokenRoomReady && routeReadiness?.nextAction === "start-receiving") {
+    state = "route-needed";
+    labelKey = "roomStatusShortRouteNeeded";
+    nextKey = "roomOnboardingNextStartReceive";
+  } else if (!inviteTokenRoomReady && (!endpointState.ready || routeReadiness?.ready !== true)) {
+    state = "route-needed";
+    labelKey = "roomStatusShortRouteNeeded";
+    nextKey = "roomOnboardingNextExchangeDeliveryCodes";
+  }
+
+  return {
+    state,
+    label: t(labelKey),
+    next: t(nextKey),
+    nextKey,
+    receiving,
+    receivingRuntimeMismatch,
+  };
+}
+
+function renderRoomSetupProgress(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
+  const view = friendFamilyOnboardingView(input, sessionsReady);
+  if (fields.roomStatusSummary) {
+    fields.roomStatusSummary.dataset.nextAction = view.nextKey;
+  }
+  if (fields.productionTwoProfileReadiness) {
+    fields.productionTwoProfileReadiness.dataset.nextAction = view.nextKey;
+  }
+  return view;
+}
 
 function renderTwoProfileSafetyConfirm(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
   const safety = twoProfileSafetyForInput(input);
@@ -10737,22 +10781,28 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
     return { message: messageTtlInputBlocker(), state: "blocked" };
   }
   if (!sessionsReady) {
+    const onboarding = friendFamilyOnboardingView(input, sessionsReady);
     return {
       message: sessionStatus
         ? currentLanguage === "ko"
           ? "연결 재설정 필요"
           : "Rebuild connection"
-        : currentLanguage === "ko"
-          ? "초대 코드 확인 가능"
-          : "Ready to check invite code",
+        : onboarding.next,
       state: "setup",
     };
   }
   if (sessionsReady && !twoProfileSafetyConfirmedForInput(input)) {
-    return { message: t("phraseNotConfirmed"), state: "blocked" };
+    return { message: friendFamilyOnboardingView(input, sessionsReady).next, state: "blocked" };
   }
   if (!input.message) {
     const selectedReplyTarget = selectedTwoProfileDeliveredReplyTarget(input);
+    const onboarding = friendFamilyOnboardingView(input, sessionsReady);
+    if (onboarding.nextKey !== "roomOnboardingNextWriteMessage") {
+      return {
+        message: onboarding.next,
+        state: onboarding.state === "ready" ? "compose" : "blocked",
+      };
+    }
     return {
       message: sessionsReady
         ? selectedReplyTarget
@@ -10769,15 +10819,22 @@ function twoProfilePrimaryReadiness(input, busy, sessionsReady, hasMessageRetent
     };
   }
   if (sessionsReady) {
+    const onboarding = friendFamilyOnboardingView(input, sessionsReady);
     if (!manualNetworkPermissionEnabled()) {
       return {
-        message: t("deliveryNeedsNetworkPermission"),
+        message: onboarding.next,
         state: "blocked",
       };
     }
     if (!twoProfilePeerEndpointState(input).ready) {
       return {
-        message: t("deliveryNeedsRoute"),
+        message: onboarding.next,
+        state: "blocked",
+      };
+    }
+    if (onboarding.nextKey === "roomOnboardingNextStartReceive") {
+      return {
+        message: onboarding.next,
         state: "blocked",
       };
     }
