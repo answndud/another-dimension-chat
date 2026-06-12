@@ -6,6 +6,11 @@ is not a mobile wrapper source scaffold.
 It is not a Gradle project, not an APK or AAB artifact, not Play Store
 distribution, and not Android app readiness.
 
+Android is the first target platform only after the mobile scope switch criteria,
+explicit owner authorization, and shared-core API freeze prerequisite are closed.
+This file does not grant that authorization and does not create a Gradle,
+Kotlin, runtime, APK, AAB, Play Store, or external delivery evidence task.
+
 The intended Android boundary is a thin Kotlin shell over UniFFI or another
 narrow FFI boundary into the shared Rust core. The wrapper may provide platform
 private storage root resolution, backup-exclusion verification evidence,

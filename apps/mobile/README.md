@@ -29,6 +29,45 @@ communication prohibited, not audited, not production-ready, redacted status
 only, manual update verification required, and external onion delivery not
 claimed.
 
+## Mobile Development Scope Switch Criteria
+
+This section is the scope-switch record for future mobile development. It is
+documentation-only and does not create Android source, iOS source, wrapper
+runtime code, generated bindings, Gradle files, Xcode files, Kotlin files, Swift
+files, or mobile artifacts.
+
+Mobile implementation remains blocked until all criteria below are recorded:
+
+- Owner authorization status: explicit owner authorization required and not
+  granted in this documentation-only phase.
+- Target platform order: Android shell candidate first; iOS shell candidate only
+  after the Android candidate preserves the shared-core boundary.
+- Shared-core API freeze prerequisite: Phase HO must close the mobile-callable
+  API groups, redacted DTO vocabulary, error taxonomy, serialization contract,
+  local data lifecycle commands, and diagnostics redaction contract before any
+  wrapper implementation starts.
+- Wrapper responsibility limit: mobile wrappers may resolve app-private storage,
+  backup-exclusion evidence, local permission explanations, redacted status
+  display, and explicit user-triggered actions only.
+- Core ownership lock: Rust core continues to own protocol, pairing, message
+  envelope semantics, replay policy, storage policy, transport policy, lifecycle
+  rules, diagnostics redaction rules, and public non-claims.
+- Non-claim copy lock: unsigned experimental public beta, sensitive
+  communication prohibited, not audited, not production-ready, external onion
+  delivery not claimed, security-ready not claimed, and mobile readiness not
+  claimed.
+- Excluded dependencies: no phone number account, email account, global account,
+  searchable username, central contact discovery, central message server, push
+  notification delivery, cloud backup, auto-update trust, store trust, or
+  wrapper-specific protocol/storage/transport semantics.
+- Kickoff blocker: no mobile source scaffold, no Android build scaffold, no iOS
+  build scaffold, no runtime messaging scaffold, no store distribution task, and
+  no external delivery evidence task are opened by this phase.
+
+This scope switch record is not approval to implement mobile. It records the
+conditions that must be true before a later explicit implementation phase can
+create mobile source.
+
 ## Status Screen Copy Boundary
 
 Future mobile status screens are documentation-only candidates until a separate

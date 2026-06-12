@@ -10,6 +10,34 @@ The FFI direction is placeholder-only: Android and iOS wrappers may call a thin
 shared Rust core boundary later, but this file does not create that boundary or
 claim it is implemented.
 
+## Shared-Core API Freeze Criteria
+
+The mobile API freeze is a future Phase HO source-boundary task. This inventory
+records criteria only and does not define callable FFI, generated bindings,
+stable ABI, Kotlin source, Swift source, Gradle source, Xcode source, or runtime
+mobile implementation.
+
+The API freeze must close these items before mobile wrapper implementation:
+
+- mobile-callable API groups and command names
+- redacted DTO vocabulary and public non-claim fields
+- error taxonomy for locked profile, malformed payload, replay rejected, policy
+  blocked, transport unavailable, unsupported mobile surface, and lifecycle
+  confirmation required
+- serialization contract with deterministic UTF-8 JSON, explicit schema version,
+  sorted keys, string enums, bounded status arrays, and reject-unknown-fields
+  parsing
+- local data lifecycle command contract for conversation delete, session delete,
+  profile delete, and full local wipe
+- diagnostics redaction contract for status/build/failure/recovery only
+- memory ownership and buffer release model for any later binding layer
+- explicit user action token requirement for destructive or transport-adjacent
+  calls
+
+Until those criteria are closed, wrappers must not add independent protocol,
+storage, transport, pairing, lifecycle, diagnostics, account, discovery,
+delivery, backup, or security-ready semantics.
+
 Allowed API groups mirror the shared core wrapper boundary:
 
 - `shared_core_status_surface`
