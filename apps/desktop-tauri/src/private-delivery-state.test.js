@@ -368,7 +368,7 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /Another Dimension Chat public support diagnostics/);
   assert.match(diagnostics, /diagnostic_version=2/);
   assert.match(diagnostics, /diagnostic_scope=public-support/);
-  assert.match(diagnostics, /payload_boundary=status-build-failure-class-recovery-action-only/);
+  assert.match(diagnostics, /payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only/);
   assert.match(diagnostics, /app_version=0.1.0/);
   assert.match(diagnostics, /build_channel=beta-onion/);
   assert.match(diagnostics, /build_commit=806ecad1/);
@@ -440,7 +440,7 @@ test("desktop-first completion reports local private flow readiness without secu
 
   assert.deepEqual(desktopFirstCompletionStatus(readyReport), {
     scope: "desktop-local-private-flow",
-    status: "ready-for-local-private-message-flow",
+    status: "local-private-flow-no-current-blockers",
     blockers: [],
     blockerSummary: "none",
     externalOnionDeliveryVerified: false,
@@ -460,9 +460,9 @@ test("desktop-first completion reports local private flow readiness without secu
   });
 
   const diagnostics = publicBetaDiagnosticsReport(readyReport);
-  assert.match(diagnostics, /desktop_completion_status=ready-for-local-private-message-flow/);
+  assert.match(diagnostics, /desktop_completion_status=local-private-flow-no-current-blockers/);
   assert.match(diagnostics, /desktop_completion_blockers=none/);
-  assert.match(diagnostics, /desktop_acceptance_status=ready-for-local-private-message-flow/);
+  assert.match(diagnostics, /desktop_acceptance_status=local-private-flow-no-current-blockers/);
   assert.match(diagnostics, /desktop_acceptance_blockers=none/);
   assert.match(diagnostics, /desktop_acceptance_next_action=none/);
   assert.match(diagnostics, /desktop_acceptance_external_delivery_claim=false/);
