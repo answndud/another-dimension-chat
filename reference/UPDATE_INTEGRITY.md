@@ -15,12 +15,20 @@ Users must download these files from the same GitHub Release:
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
-- `MANIFEST.md`
+- `INSTALL_UNSIGNED_MACOS.md`
+- `RELEASE_NOTES.md`
 - `GITHUB_RELEASE_BODY.md`
 - `UPDATE_INTEGRITY.md`
 - `SUPPLY_CHAIN_BASELINE.md`
 - `DEPENDENCY_INVENTORY.md`
+- `PUBLIC_THREAT_MODEL.md`
+- `PRIVACY_MODEL_COMPARISON.md`
+- `INDEPENDENT_REVIEW_PACKET.md`
+- `PUBLIC_INTAKE_POLICY.md`
+- `REPOSITORY_GOVERNANCE.md`
+- `COMPONENT_BOUNDARIES.md`
 - `DEPENDENCY_LOCKFILES.sha256`
+- `MANIFEST.md`
 
 Then users must verify the DMG checksum before opening the app:
 
