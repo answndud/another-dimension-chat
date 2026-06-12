@@ -112,7 +112,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Upload d
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Explicit operator request gate: do not package, upload, or announce unless the user explicitly requested release packaging/upload in the current task"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Hold decision: do not upload, do not announce, and return to desktop hardening"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Operation boundary: this handoff does not perform a GitHub Release upload"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "next_development_axis=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep#default-transport-boundary"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "next_development_axis=windows-packaging-hold-gate#release-packaging-upload-after-explicit-user-request#real-user-test-prep#default-transport-boundary"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "stale existing release output"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "preflight=public-release-readiness"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "status=public-release-readiness-source-preflight-ready"
@@ -138,6 +138,12 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "dmg_rebu
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_readiness=local-build-candidate-only"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_ready=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_installer_ready=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_signing_ready=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_packaging_hold_without_explicit_request=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_packaging_upload_permitted_this_run=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_release_request_required=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_installer_signing_store_claim_allowed=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_generated_artifact_commit_allowed=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_runtime_smoke_required=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_app_data_path_review_required=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_path_separator_review_required=true"
@@ -229,6 +235,10 @@ require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Explic
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Hold decision: do not upload, do not announce, and return to desktop hardening"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Operation boundary: this handoff does not perform a GitHub Release upload"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next_development_axis=desktop-post-release-hardening-or-non-release-product-work"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"windows_public_artifact_ready\": false"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"windows_packaging_hold_without_explicit_request\": true"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Windows packaging hold"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "windows_packaging_hold_without_explicit_request=true"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_allowlist_source": "MANIFEST.md"'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_release_body": "GITHUB_RELEASE_BODY.md"'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_forbidden": "docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"'
@@ -408,6 +418,22 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing Windows installer non-readiness" >&2
     exit 1
   }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_signing_ready=false" || {
+    echo "FAIL release readiness preflight missing Windows signing non-readiness" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_packaging_hold_without_explicit_request=true" || {
+    echo "FAIL release readiness preflight missing Windows packaging hold" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_packaging_upload_permitted_this_run=false" || {
+    echo "FAIL release readiness preflight missing Windows packaging/upload non-permission" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_public_artifact_release_request_required=true" || {
+    echo "FAIL release readiness preflight missing Windows public artifact release request gate" >&2
+    exit 1
+  }
   printf '%s\n' "$preflight_output" | grep -Fq -- "windows_runtime_smoke_required=true" || {
     echo "FAIL release readiness preflight missing Windows runtime smoke blocker" >&2
     exit 1
@@ -532,11 +558,11 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing operator handoff wrap-up" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "next_development_axis=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep#default-transport-boundary" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "next_development_axis=windows-packaging-hold-gate#release-packaging-upload-after-explicit-user-request#real-user-test-prep#default-transport-boundary" || {
     echo "FAIL release readiness preflight missing next development axis" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "next=choose release packaging/upload only after explicit user request, Windows readiness, real-user test preparation, or default transport boundary" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "next=choose Windows packaging hold review, release packaging/upload only after explicit user request, real-user test preparation, or default transport boundary" || {
     echo "FAIL release readiness preflight missing operator next step" >&2
     exit 1
   }
