@@ -1384,6 +1384,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(nextActionBody, /fieldTestNextOpenRoom/);
   assert.match(nextActionBody, /fieldTestNextComplete/);
   assert.match(functionBody(mainJs, "fieldTestRecoveryActionNextKey"), /fieldTestNextStopReceive/);
+  assert.match(functionBody(mainJs, "fieldTestNextActionKey"), /roomListAction !== "none"[\s\S]*room_list_next_origin !== "retryable-outbound"[\s\S]*routeReadinessAction[\s\S]*: roomListAction/);
   assert.match(functionBody(mainJs, "renderFieldTestChecklist"), /fieldTestStatusDone/);
   assert.match(functionBody(mainJs, "renderFieldTestChecklist"), /fieldTestStatusPending/);
   assert.match(functionBody(mainJs, "renderFieldTestChecklist"), /fieldTestStatusCheck/);
@@ -1886,4 +1887,6 @@ test("public diagnostics summary includes desktop completion without production 
     /non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication/,
   );
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /app_launch_network=false/);
+  assert.match(mainJs, /Attempt explicit private delivery for message #/);
+  assert.doesNotMatch(mainJs, /Attempt external onion send/);
 });
