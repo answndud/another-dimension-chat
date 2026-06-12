@@ -474,14 +474,16 @@ require_text "apps/mobile/README.md" "runtime messaging scaffold created"
 require_text "apps/mobile/README.md" "store distribution task opened"
 require_text "apps/mobile/README.md" "external delivery evidence task opened"
 
-require_text "apps/mobile/android/README.md" "documentation-only skeleton"
+require_text "apps/mobile/android/README.md" "documentation-only boundary"
+require_text "apps/mobile/android/README.md" "not a mobile wrapper source scaffold"
 require_text "apps/mobile/android/README.md" "not a Gradle project"
 require_text "apps/mobile/android/README.md" "not an APK or AAB artifact"
 require_text "apps/mobile/android/README.md" "not Android app readiness"
 require_text "apps/mobile/android/README.md" "thin Kotlin shell over UniFFI or another"
 require_text "apps/mobile/android/README.md" "must not define independent protocol, storage, transport"
 
-require_text "apps/mobile/ios/README.md" "documentation-only skeleton"
+require_text "apps/mobile/ios/README.md" "documentation-only boundary"
+require_text "apps/mobile/ios/README.md" "not a mobile wrapper source scaffold"
 require_text "apps/mobile/ios/README.md" "not an Xcode project"
 require_text "apps/mobile/ios/README.md" "not an IPA artifact"
 require_text "apps/mobile/ios/README.md" "not TestFlight distribution"
@@ -578,4 +580,9 @@ reject_find "mobile app artifacts" \
 reject_find "mobile build output directories" \
   \( -type d -name build -o -type d -name DerivedData \)
 
-printf 'status=mobile-skeleton-boundary-verified\n'
+printf 'status=mobile-shared-core-boundary-verified\n'
+printf 'mobile_source_scaffold_created=false\n'
+printf 'android_build_scaffold_created=false\n'
+printf 'ios_build_scaffold_created=false\n'
+printf 'runtime_app_implementation_created=false\n'
+printf 'mobile_readiness_claim=false\n'
