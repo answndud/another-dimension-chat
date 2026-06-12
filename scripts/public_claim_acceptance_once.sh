@@ -162,7 +162,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "high_ris
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_delivery_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "security_ready_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_security_ready_acceptance=false"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_beta_acceptance_matrix=invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_beta_acceptance_matrix=invite#create#join#verify#send#export#import#reply#receive#retry#cancel#delete#unlock#reopen#diagnostics#release-non-claim"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_beta_acceptance_scope=desktop-local-manual-beta-readiness"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_beta_acceptance_excluded=android-ios-runtime#external-peer-evidence#audit#production-ready#security-ready#sensitive-communication"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_final_handoff=OPERATOR_FINAL_HANDOFF.md"
@@ -181,7 +181,7 @@ require_file "$ROOT_DIR/scripts/desktop_windows_readiness_source_audit_once.sh"
 require_file "$ROOT_DIR/scripts/desktop_windows_local_runtime_smoke_boundary_once.sh"
 require_file "$ROOT_DIR/scripts/desktop_real_user_test_prep_once.sh"
 require_file "$ROOT_DIR/scripts/desktop_default_transport_boundary_once.sh"
-require_text "$ROOT_DIR/scripts/desktop_beta_acceptance_matrix_once.sh" 'ACCEPTED_ITEMS="invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim"'
+require_text "$ROOT_DIR/scripts/desktop_beta_acceptance_matrix_once.sh" 'ACCEPTED_ITEMS="invite#create#join#verify#send#export#import#reply#receive#retry#cancel#delete#unlock#reopen#diagnostics#release-non-claim"'
 require_text "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh" "status=desktop-public-beta-source-freeze-candidate-ready"
 require_text "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh" "source_freeze_scope=desktop-source-only-no-dmg-rebuild-no-upload"
 require_text "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh" "next_development_axis=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep#default-transport-boundary"
@@ -500,7 +500,7 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing final acceptance non-claim" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "desktop_beta_acceptance_matrix=invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "desktop_beta_acceptance_matrix=invite#create#join#verify#send#export#import#reply#receive#retry#cancel#delete#unlock#reopen#diagnostics#release-non-claim" || {
     echo "FAIL release readiness preflight missing desktop beta acceptance matrix" >&2
     exit 1
   }
