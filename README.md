@@ -75,7 +75,7 @@ This handoff is not a public release, not signed or notarized, not audited, and 
 
 The current unsigned public beta release path repackages only the pinned public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`: build channel `beta-onion`, commit `e8954df9`, and SHA-256 `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`. It is still an unsigned experimental public beta, not notarized, not audited, not production-ready, and sensitive communication prohibited. External onion delivery is outside the v0.1 public product claim; same-machine dual-profile rehearsal is development evidence only. No peer report is expected or required for this v0.1 claim, and no external delivery claim is made. The public review packet is included as reviewer input, and the independent-review gap remains explicit.
 
-Desktop public beta source freeze candidate: this is a source-only candidate, with no DMG rebuild, no upload, and no generated release artifact commit. Final source acceptance is limited to non-claims, redacted diagnostics, release boundary, and desktop flow blocker checks. The next development axis must be one of: release packaging/upload only after explicit user request, Windows readiness, or real-user test preparation.
+Desktop public beta source freeze candidate: this is a source-only candidate, with no DMG rebuild, no upload, and no generated release artifact commit. Final source acceptance is limited to non-claims, redacted diagnostics, release boundary, and desktop flow blocker checks. The next development axis must be one of: release packaging/upload only after explicit user request, Windows readiness, real-user test preparation, or default-transport-boundary.
 
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
@@ -187,6 +187,16 @@ What exists today:
   onion-only, requires explicit user action, rejects direct fallback, keeps send
   and receive adapters fail-closed, redacts envelope I/O context, and does not
   claim external two-machine onion delivery.
+- Desktop Default Practical Transport Boundary: the desktop default practical
+  path is local manual encrypted envelope exchange. It is the only default
+  source boundary for v0.1 and has `network_io=false`,
+  `automatic_delivery=false`, `central_message_server=false`,
+  `push_notification_dependency=false`, and `central_contact_discovery=false`.
+  The high-risk onion/Tor path is separate, explicit-user-triggered,
+  fail-closed, onion-only, and has `direct_fallback=false`. This boundary is a
+  product decision and first implementation slice, not a claim of reliable
+  external delivery, production readiness, audited security, or sensitive-use
+  safety.
 - Manual update integrity evidence for the unsigned public beta release path: DMG `.sha256`, public provenance JSON, release manifest, update-integrity policy, supply-chain baseline note, dependency inventory, and a three-lockfile SHA-256 list for `Cargo.lock`, `apps/desktop-tauri/src-tauri/Cargo.lock`, and `apps/desktop-tauri/package-lock.json`.
 - Public threat model and independent review packet that state allowed claims, non-claims, known gaps, public-safe review commands, private-reporting boundary, and the current no-reviewer-signoff/no-public-user-safety-signoff/no-completed-review gap.
 - Public intake policy and GitHub issue templates that require redacted public support diagnostics or minimal private-contact requests instead of raw logs, payloads, endpoints, paths, passphrases, private keys, key material, crash dumps, or private planning notes.

@@ -390,6 +390,15 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /desktop_acceptance_external_delivery_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_production_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_sensitive_use_claim=false/);
+  assert.match(diagnostics, /default_transport_path=local-manual-encrypted-envelope-exchange/);
+  assert.match(diagnostics, /default_transport_network_io=false/);
+  assert.match(diagnostics, /default_transport_automatic_delivery=false/);
+  assert.match(diagnostics, /default_transport_central_message_server=false/);
+  assert.match(diagnostics, /default_transport_push_dependency=false/);
+  assert.match(diagnostics, /default_transport_central_contact_discovery=false/);
+  assert.match(diagnostics, /high_risk_onion_path=explicit-user-triggered-fail-closed/);
+  assert.match(diagnostics, /high_risk_onion_direct_fallback=false/);
+  assert.match(diagnostics, /automatic_network_on_launch=false/);
   assert.match(diagnostics, /windows_public_artifact_ready=false/);
   assert.match(diagnostics, /windows_installer_ready=false/);
   assert.match(diagnostics, /windows_signing_ready=false/);
@@ -426,6 +435,29 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.doesNotMatch(diagnostics, /^next_action=/m);
   assert.doesNotMatch(diagnostics, /obfs4|198\.51\.100\.4|examplehiddenservice|ADINVITE|alpha bravo|hello secret|alice-private|payload-secret/);
   assert.doesNotMatch(diagnostics, /\/Users\/alex|correct horse|deadbeef/);
+});
+
+test("default transport boundary keeps the public diagnostic path manual and non-centralized", () => {
+  const diagnostics = publicBetaDiagnosticsReport(
+    [
+      "room_present=true",
+      "session_ready=true",
+      "safety_confirmed=true",
+      "route_readiness_ready=true",
+      "receive_enabled=false",
+      "composer_next_action=send-message",
+    ].join("\n"),
+  );
+
+  assert.match(diagnostics, /default_transport_path=local-manual-encrypted-envelope-exchange/);
+  assert.match(diagnostics, /default_transport_network_io=false/);
+  assert.match(diagnostics, /default_transport_automatic_delivery=false/);
+  assert.match(diagnostics, /default_transport_central_message_server=false/);
+  assert.match(diagnostics, /default_transport_push_dependency=false/);
+  assert.match(diagnostics, /default_transport_central_contact_discovery=false/);
+  assert.match(diagnostics, /automatic_network_on_launch=false/);
+  assert.match(diagnostics, /high_risk_onion_path=explicit-user-triggered-fail-closed/);
+  assert.match(diagnostics, /high_risk_onion_direct_fallback=false/);
 });
 
 test("desktop-first completion reports local private flow readiness without security claims", () => {
