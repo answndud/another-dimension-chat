@@ -31,6 +31,13 @@ Use the files attached to this GitHub Release as the release authority. The
 verify the downloaded DMG against branch files copied from GitHub's source
 browser, GitHub source archives, or files from a different release.
 
+Upload boundary for operators: this GitHub Release should contain exactly the
+files listed above and in `MANIFEST.md`. Use `GITHUB_RELEASE_BODY.md` exactly as
+the release body. Do not upload `docs/`, `beta-artifacts/`, the
+`public-release/` folder itself, branch files, source archives, raw logs, crash
+dumps, screenshots, local app data, private diagnostics, private planning notes,
+or any file not listed in the manifest.
+
 ## Verify Before Opening
 
 Run:
@@ -86,8 +93,7 @@ lockfile hash entries in `DEPENDENCY_LOCKFILES.sha256`: `Cargo.lock`,
 
 External onion delivery is outside the v0.1 public product claim. Same-machine
 dual-profile rehearsal is development evidence only, not peer field-test evidence.
-No peer report is expected or required for this v0.1 claim, and no external
-delivery claim is made.
+No peer report is expected or required for this v0.1 claim, and no external delivery claim is made.
 
 `PRIVACY_MODEL_COMPARISON.md` is a public gap map for the Korean
 Briar/Cwtch-style direction. It is not a claim that this beta has reached those
