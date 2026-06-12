@@ -10,6 +10,32 @@ run_step() {
   "$@"
 }
 
+require_text() {
+  local file="$1"
+  local expected="$2"
+  if ! grep -Fq -- "$expected" "$file"; then
+    echo "FAIL stale existing release output missing expected text in $file: $expected" >&2
+    exit 1
+  fi
+}
+
+check_existing_release_output() {
+  local release_dir="$ROOT_DIR/apps/desktop-tauri/public-release/unsigned-public-beta"
+  if [ ! -d "$release_dir" ]; then
+    echo "existing_release_output=absent"
+    return
+  fi
+
+  echo "existing_release_output=present"
+  require_text "$release_dir/MANIFEST.md" "Operator Upload Boundary"
+  require_text "$release_dir/MANIFEST.md" "Do not upload \`docs/\`, \`beta-artifacts/\`, the \`public-release/\` folder itself"
+  require_text "$release_dir/GITHUB_RELEASE_BODY.md" "Upload boundary for operators"
+  require_text "$release_dir/GITHUB_RELEASE_BODY.md" "Use \`GITHUB_RELEASE_BODY.md\` exactly as"
+  require_text "$release_dir/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json" "\"upload_allowlist_source\": \"MANIFEST.md\""
+  require_text "$release_dir/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json" "\"upload_forbidden\": \"docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data\""
+  echo "existing_release_output_status=current"
+}
+
 echo "preflight=public-release-readiness"
 echo "scope=source-only-no-dmg-required-no-generated-artifacts"
 echo "artifact_generation=false"
@@ -22,6 +48,7 @@ run_step artifact-boundary "$ROOT_DIR/scripts/prepare_unsigned_public_beta_relea
 run_step update-integrity-policy "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" --check-policy
 run_step public-beta-gap "$ROOT_DIR/scripts/public_beta_gap_acceptance_once.sh"
 run_step public-claim-acceptance env PUBLIC_RELEASE_PREFLIGHT_CHILD=1 "$ROOT_DIR/scripts/public_claim_acceptance_once.sh"
+run_step existing-release-output check_existing_release_output
 
 echo "status=public-release-readiness-source-preflight-ready"
 echo "decision=proceed-to-packaging-only-with-frozen-ignored-dmg"
