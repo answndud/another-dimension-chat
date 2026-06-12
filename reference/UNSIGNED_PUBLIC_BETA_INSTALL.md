@@ -92,9 +92,9 @@ data.
 release guardrails, redaction rules, and non-goals for this unsigned beta.
 
 Public support diagnostics are local-copy only. They are limited to app status,
-build identity, broad failure class, recovery next action, and app-launch
-network boundary. They do not provide workflow-state export, crash upload,
-telemetry, raw log export, support bundle export, or raw diagnostic file export.
+build identity, broad failure class, recovery next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary.
+They do not provide workflow-state export, crash upload, telemetry, raw log
+export, support bundle export, or raw diagnostic file export.
 
 Local backup exclusion is a required local verification boundary only. This
 beta does not provide cloud backup/sync, backup recovery, rollback prevention,
