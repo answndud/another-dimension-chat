@@ -434,6 +434,9 @@ test("desktop-first completion reports local private flow readiness without secu
     .replace("receive_state=running", "receive_state=stopped")
     .replace("composer_next_action=send-message", "composer_next_action=none");
   const composeBlockedReport = readyReport.replace("composer_next_action=send-message", "composer_next_action=none");
+  const receiveStoppingReport = readyReport
+    .replace("receive_state=running", "receive_state=stopping")
+    .concat("\nreceive_stop_requested=true");
 
   assert.deepEqual(desktopFirstCompletionStatus(readyReport), {
     scope: "desktop-local-private-flow",
@@ -477,6 +480,12 @@ test("desktop-first completion reports local private flow readiness without secu
   assert.match(receiveBlockedDiagnostics, /recovery_next_action=start-receiving/);
   assert.match(receiveBlockedDiagnostics, /desktop_acceptance_next_action=start-receiving/);
   assert.doesNotMatch(receiveBlockedDiagnostics, /desktop_acceptance_next_action=none/);
+
+  const receiveStoppingDiagnostics = publicBetaDiagnosticsReport(receiveStoppingReport);
+  assert.match(receiveStoppingDiagnostics, /desktop_completion_blockers=receive/);
+  assert.match(receiveStoppingDiagnostics, /recovery_next_action=wait-receive-stop/);
+  assert.match(receiveStoppingDiagnostics, /desktop_acceptance_next_action=wait-receive-stop/);
+  assert.doesNotMatch(receiveStoppingDiagnostics, /desktop_acceptance_next_action=start-receiving/);
 
   const composeBlockedDiagnostics = publicBetaDiagnosticsReport(composeBlockedReport);
   assert.match(composeBlockedDiagnostics, /desktop_completion_blockers=send-or-recover/);
