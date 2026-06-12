@@ -554,11 +554,13 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     "diagnostic_version=2",
     "diagnostic_scope=public-support",
     "payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only",
+    "diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only",
     `app_version=${fieldTestReportValue(triage.appVersion, "unknown")}`,
     `build_channel=${fieldTestReportValue(triage.buildChannel, "unknown")}`,
     `build_commit=${fieldTestReportValue(triage.buildCommit, "unknown")}`,
     `failure_class=${fieldTestReportValue(failureClass, "none")}`,
     `recovery_next_action=${recoveryNextAction}`,
+    `diagnostics_copy_next_action=${recoveryNextAction}`,
     `desktop_completion_scope=${fieldTestReportValue(desktopCompletion.scope, "unknown")}`,
     `desktop_completion_status=${fieldTestReportValue(desktopCompletion.status, "unknown")}`,
     `desktop_completion_blockers=${desktopCompletion.blockerSummary}`,
@@ -582,6 +584,10 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     `security_ready_claimed=${desktopCompletion.securityReadyClaimed === true}`,
     `sensitive_communication_allowed=${desktopCompletion.sensitiveCommunicationAllowed === true}`,
     `app_launch_network=false`,
+    `diagnostics_support_bundle_export=false`,
+    `diagnostics_audit_evidence_claim=false`,
+    `diagnostics_external_delivery_evidence_claim=false`,
+    `diagnostics_security_ready_proof_claim=false`,
   ];
   if (options.includeCopyBoundary === true) {
     lines.push("crash_upload=false");

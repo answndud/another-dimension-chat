@@ -2065,6 +2065,12 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(privateDeliveryStateJs, /desktop_acceptance_status=\$\{fieldTestReportValue\(desktopCompletion\.status/);
   assert.match(privateDeliveryStateJs, /desktop_acceptance_blockers=\$\{desktopCompletion\.blockerSummary\}/);
   assert.match(privateDeliveryStateJs, /desktop_acceptance_next_action=\$\{recoveryNextAction\}/);
+  assert.match(privateDeliveryStateJs, /diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only/);
+  assert.match(privateDeliveryStateJs, /diagnostics_copy_next_action=\$\{recoveryNextAction\}/);
+  assert.match(privateDeliveryStateJs, /diagnostics_support_bundle_export=false/);
+  assert.match(privateDeliveryStateJs, /diagnostics_audit_evidence_claim=false/);
+  assert.match(privateDeliveryStateJs, /diagnostics_external_delivery_evidence_claim=false/);
+  assert.match(privateDeliveryStateJs, /diagnostics_security_ready_proof_claim=false/);
   assert.match(privateDeliveryStateJs, /desktop_acceptance_external_delivery_claim=false/);
   assert.match(privateDeliveryStateJs, /desktop_acceptance_production_claim=false/);
   assert.match(privateDeliveryStateJs, /desktop_acceptance_sensitive_use_claim=false/);
@@ -2082,6 +2088,11 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public diagnostics generated failure_class=/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /recovery_next_action=\$\{recoveryNextAction\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /parseFieldTestReport\(payload\)/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.failure_class/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.diagnostics_copy_next_action/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.desktop_acceptance_next_action/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /payload_next_action_match=\$\{payloadNextActionMatchesSummary\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /raw_state_excluded=\$\{rawStateExcluded\}/);
   assert.doesNotMatch(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public diagnostics ready failure_class=/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_completion=\$\{desktopCompletion\.status\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_blockers=\$\{desktopCompletion\.blockerSummary\}/);
@@ -2093,6 +2104,10 @@ test("public diagnostics summary includes desktop completion without production 
     functionBody(mainJs, "refreshPublicBetaDiagnostics"),
     /non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication/,
   );
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /support_bundle_export=false/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /audit_evidence_claim=false/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /external_delivery_evidence_claim=false/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /security_ready_proof_claim=false/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /app_launch_network=false/);
   assert.match(mainJs, /Attempt explicit private delivery for message #/);
   assert.doesNotMatch(mainJs, /Attempt external onion send/);
