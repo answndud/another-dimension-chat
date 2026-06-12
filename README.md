@@ -102,7 +102,6 @@ Prepare the ignored local upload folder from the frozen local DMG:
 
 ```bash
 scripts/public_release_readiness_preflight.sh
-scripts/prepare_unsigned_public_beta_release.sh --check-artifact-boundary
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 

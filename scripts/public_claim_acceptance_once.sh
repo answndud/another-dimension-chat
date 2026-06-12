@@ -110,6 +110,7 @@ require_text "$ROOT_DIR/SECURITY.md" "scripts/public_release_readiness_preflight
 require_text "$ROOT_DIR/SECURITY.md" "source-only preflight before staging artifacts"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "source-only preflight"
+require_text "$ROOT_DIR/apps/desktop-tauri/README.md" 'upload only the files listed in the generated `MANIFEST.md`'
 require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "status-build-failure-class-recovery-action-desktop-acceptance-only"
@@ -156,6 +157,8 @@ reject_text "$ROOT_DIR/apps/desktop-tauri/README.md" "manual network permission 
 reject_text "$ROOT_DIR/apps/desktop-tauri/src/i18n.js" "external delivery evidence must come from real peer reports"
 reject_text "$ROOT_DIR/apps/desktop-tauri/src/i18n.js" "실제 peer report에서만"
 reject_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "manual network"
+reject_text "$ROOT_DIR/README.md" "scripts/prepare_unsigned_public_beta_release.sh --check-artifact-boundary"
+reject_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "scripts/prepare_unsigned_public_beta_release.sh --check-artifact-boundary"
 
 bash -n "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh"
 bash -n "$ROOT_DIR/scripts/public_release_readiness_preflight.sh"
