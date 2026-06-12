@@ -1,23 +1,41 @@
-# iOS Documentation-Only Boundary
+# iOS Shell Scaffold Boundary
 
-This is a documentation-only boundary for a future iOS shell candidate. It is
-not a mobile wrapper source scaffold.
+This is the first iOS shell source scaffold. It is intentionally narrow and must
+stay a thin Swift shell over the shared Rust core boundary.
 
-It is not an Xcode project, not an IPA artifact, not TestFlight distribution,
-not App Store distribution, and not iOS app readiness.
+It is not an IPA artifact, not TestFlight distribution, not App Store
+distribution, not iOS app readiness, not production-ready, not audited, and not
+suitable for sensitive communication.
 
-iOS follows only after the Android shell candidate preserves the shared-core
-boundary and after explicit owner authorization confirms iOS implementation
-scope. This file does not grant that authorization and does not create an Xcode,
-Swift, runtime, IPA, TestFlight, App Store, or external delivery evidence task.
+Phase HQ records explicit implementation authorization for a minimal iOS source
+scaffold only. It does not authorize release packaging, TestFlight/App Store
+work, external delivery evidence, APNs delivery, cloud backup, central account
+or contact discovery, or security-ready claims.
 
-The intended iOS boundary is a thin Swift shell over UniFFI or another narrow
-FFI boundary into the shared Rust core. The wrapper may provide app-container
-storage resolution, iCloud backup-exclusion verification evidence, redacted
-status display, local permission explanations, and explicit user-triggered
-actions.
+The scaffold provides:
 
-This iOS boundary must not define independent protocol, storage, transport,
-pairing, contact discovery, background fetch delivery, APNs delivery, Apple
-account identity, iCloud backup, Keychain-only unlock, App Store/TestFlight
-trust, Developer ID/notarization trust, or security-ready behavior.
+- Minimal Xcode project marker and SwiftUI app source layout.
+- A Swift `SharedCoreMobileApi` protocol mirroring the Phase HO API groups.
+- A placeholder `IOSSharedCoreBoundary` that returns redacted, blocked status
+  until a real shared Rust binding phase exists.
+- A passphrase-first SwiftUI shell with invite, manual envelope, and diagnostics
+  controls routed through the shared-core boundary protocol.
+- Empty iCloud entitlement arrays to keep iCloud backup not claimed.
+
+The scaffold must not define independent protocol, storage, transport, pairing,
+contact discovery, background fetch delivery, APNs delivery, Apple account
+identity, iCloud backup, Keychain-only unlock, App Store/TestFlight trust,
+Developer ID/notarization trust, external onion delivery success, or
+security-ready behavior.
+
+The only allowed mobile command surface remains:
+
+- `shared_core_status_surface`
+- `profile_unlock_lock_status`
+- `invite_code_create_join`
+- `pairing_payload_export_import`
+- `safety_transcript_confirm`
+- `manual_envelope_export_import`
+- `message_transcript_view`
+- `local_data_lifecycle`
+- `redacted_support_diagnostics`
