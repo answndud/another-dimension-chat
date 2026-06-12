@@ -98,6 +98,7 @@ Peer handoff rules:
 The public beta path starts from the ignored local DMG and creates a separate ignored upload set:
 
 ```bash
+scripts/prepare_unsigned_public_beta_release.sh --check-artifact-boundary
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
@@ -119,6 +120,7 @@ Upload exactly these generated files to the GitHub Release:
 - `SUPPLY_CHAIN_BASELINE.md`
 - `DEPENDENCY_INVENTORY.md`
 - `PUBLIC_THREAT_MODEL.md`
+- `PRIVACY_MODEL_COMPARISON.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
 - `PUBLIC_INTAKE_POLICY.md`
 - `REPOSITORY_GOVERNANCE.md`
@@ -136,6 +138,8 @@ and the GitHub Release body must say:
 - Sensitive communication prohibited.
 - Users must verify the checksum before using the normal macOS Privacy & Security manual allow path.
 - Auto-update is not supported; every update is a manual GitHub Release download plus SHA-256 verification.
+
+Upload files from `apps/desktop-tauri/public-release/unsigned-public-beta/` only. Do not use branch files, GitHub source archives, another release, or the generated folder path itself as release assets.
 
 Do not upload or commit `docs/`, local app data, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, key material, raw logs, crash dumps, build caches, `target/`, `dist/`, `node_modules/`, `beta-artifacts/`, or the ignored `public-release/` folder itself.
 

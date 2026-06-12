@@ -78,6 +78,18 @@ require_ignored_path() {
   fi
 }
 
+require_release_output_dir() {
+  case "$RELEASE_DIR" in
+    "$ROOT_DIR/apps/desktop-tauri/public-release/"*|apps/desktop-tauri/public-release/*)
+      ;;
+    *)
+      echo "FAIL release output must stay under ignored apps/desktop-tauri/public-release/: $RELEASE_DIR" >&2
+      exit 1
+      ;;
+  esac
+  require_ignored_path "$RELEASE_DIR"
+}
+
 check_artifact_boundary() {
   require_ignored_path "$ROOT_DIR/apps/desktop-tauri/public-release/"
   require_ignored_path "$ROOT_DIR/apps/desktop-tauri/beta-artifacts/"
@@ -89,12 +101,28 @@ check_artifact_boundary() {
 
   require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "COMPONENT_BOUNDARIES.md"
   require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" "COMPONENT_BOUNDARIES.md"
+  require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "PRIVACY_MODEL_COMPARISON.md"
+  require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "scripts/prepare_unsigned_public_beta_release.sh --check-artifact-boundary"
+  require_text "$ROOT_DIR/README.md" "scripts/prepare_unsigned_public_beta_release.sh --check-artifact-boundary"
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "INSTALL_UNSIGNED_MACOS.md"
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "RELEASE_NOTES.md"
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "PUBLIC_THREAT_MODEL.md"
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "PRIVACY_MODEL_COMPARISON.md"
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "INDEPENDENT_REVIEW_PACKET.md"
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "PUBLIC_INTAKE_POLICY.md"
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "REPOSITORY_GOVERNANCE.md"
+  require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "COMPONENT_BOUNDARIES.md"
   require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "desktop local-private-flow acceptance status/blockers/non-claims"
   reject_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "manual network"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"public_diagnostics_boundary\": \"status-build-failure-class-recovery-action-desktop-acceptance-only\""
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Public diagnostics boundary: status-build-failure-class-recovery-action-desktop-acceptance-only"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "desktop local-private-flow acceptance status/blockers/non-claims"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "COMPONENT_BOUNDARIES.md"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "release output must stay under ignored apps/desktop-tauri/public-release/"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" 'manifest=$RELEASE_DIR/MANIFEST.md'
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next=upload all and only generated files listed in MANIFEST.md from release_dir"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_release_body=use GITHUB_RELEASE_BODY.md exactly"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
   echo "status=release-artifact-boundary-source-ready"
 }
 
@@ -141,6 +169,8 @@ if [ "${1:-}" = "--check-artifact-boundary" ]; then
   check_artifact_boundary
   exit 0
 fi
+
+require_release_output_dir
 
 require_file "$SOURCE_DMG"
 require_file "$SOURCE_PROVENANCE"
@@ -653,6 +683,12 @@ require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/pack
 
 echo "release_dir=$RELEASE_DIR"
 echo "release_dmg=$RELEASE_DMG"
+echo "manifest=$RELEASE_DIR/MANIFEST.md"
 echo "dmg_sha256=$EXPECTED_DMG_SHA"
 echo "source_provenance_sha256=$source_provenance_sha"
+echo "next=upload all and only generated files listed in MANIFEST.md from release_dir; use GITHUB_RELEASE_BODY.md as the release body"
+echo "operator_release_body=use GITHUB_RELEASE_BODY.md exactly"
+echo "operator_verify=downloaded users must verify ${RELEASE_DMG}.sha256 before opening"
+echo "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
+echo "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
 echo "status=unsigned-public-beta-release-ready"

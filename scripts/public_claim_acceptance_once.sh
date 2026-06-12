@@ -88,9 +88,21 @@ require_text "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "desktop local-private
 require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "desktop local-private-flow acceptance status/blockers/non-claims"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "status-build-failure-class-recovery-action-desktop-acceptance-only"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "--check-artifact-boundary"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "release output must stay under ignored apps/desktop-tauri/public-release/"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next=upload all and only generated files listed in MANIFEST.md from release_dir"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
+require_text "$ROOT_DIR/README.md" "scripts/prepare_unsigned_public_beta_release.sh --check-artifact-boundary"
+require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "scripts/prepare_unsigned_public_beta_release.sh --check-artifact-boundary"
+require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "INSTALL_UNSIGNED_MACOS.md"
+require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "PUBLIC_THREAT_MODEL.md"
+require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "PRIVACY_MODEL_COMPARISON.md"
+require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "INDEPENDENT_REVIEW_PACKET.md"
+require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "COMPONENT_BOUNDARIES.md"
 require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "COMPONENT_BOUNDARIES.md"
 require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" "COMPONENT_BOUNDARIES.md"
 require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "desktop local-private-flow acceptance status/blockers/non-claims"
+require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "PRIVACY_MODEL_COMPARISON.md"
+require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" 'Upload files from `apps/desktop-tauri/public-release/unsigned-public-beta/` only'
 require_text "$ROOT_DIR/README.md" "External onion delivery is outside the v0.1 public product claim"
 require_text "$ROOT_DIR/SECURITY.md" "External onion delivery is outside the v0.1 public product claim"
 require_text "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "External onion delivery is outside the v0.1 public product claim"
@@ -123,7 +135,28 @@ reject_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "manual 
 
 bash -n "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh"
 bash "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" --check-artifact-boundary
+if "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "$ROOT_DIR/release-upload-test" >/tmp/another-dimension-release-output-check.out 2>&1; then
+  echo "FAIL release prepare accepted a non-ignored output directory" >&2
+  exit 1
+fi
+require_text /tmp/another-dimension-release-output-check.out "release output must stay under ignored apps/desktop-tauri/public-release/"
 bash -n "$ROOT_DIR/scripts/public_beta_gap_acceptance_once.sh"
 bash -n "$ROOT_DIR/scripts/final_acceptance_once.sh"
+if final_acceptance_output="$("$ROOT_DIR/scripts/final_acceptance_once.sh" 2>&1)"; then
+  echo "FAIL final acceptance unexpectedly succeeded" >&2
+  exit 1
+fi
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "outside the v0.1 public product claim" || {
+  echo "FAIL final acceptance missing public product claim boundary" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "external_delivery_claim=false" || {
+  echo "FAIL final acceptance missing external delivery non-claim" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "scripts/public_beta_gap_acceptance_once.sh" || {
+  echo "FAIL final acceptance missing public beta gap next step" >&2
+  exit 1
+}
 
 echo "status=public-claim-audit-readiness-ready"
