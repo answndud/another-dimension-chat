@@ -36,6 +36,10 @@ for (const file of publicFiles) {
   requireText(file, "diagnostics behavior");
   requireText(file, "explicit user action");
   requireText(file, "local build candidate only");
+  requireText(file, "Windows local usable criteria are source-defined before artifact work");
+  requireText(file, "Windows public artifact prerequisites");
+  requireText(file, "release request");
+  requireText(file, "local-manual envelope default path");
   requireText(file, "no public Windows artifact");
   requireText(file, "no Windows installer");
   requireText(file, "no public artifact");
@@ -73,7 +77,7 @@ requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_app_dat
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_path_separator_review_required=true");
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_release_blocker=local-build-smoke-and-release-boundary-review");
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only");
-requireText("apps/desktop-tauri/src/private-delivery-state.js", "excluded_fields=codes,endpoints,messages,profiles,paths,logs,crash_dumps,screenshots,passphrases,key_material,private_planning_notes");
+requireText("apps/desktop-tauri/src/private-delivery-state.js", "excluded_fields=${publicSupportDiagnosticsExcludedFieldsValue()}");
 requireText("apps/desktop-tauri/src/private-delivery-state.test.js", "windows_app_data_path_review_required=true");
 requireText("apps/desktop-tauri/src/private-delivery-state.test.js", "windows_path_separator_review_required=true");
 requireText("apps/desktop-tauri/src/ui-smoke.test.js", "windows_release_blocker=local-build-smoke-and-release-boundary-review");
