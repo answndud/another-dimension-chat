@@ -1764,7 +1764,10 @@ function currentTwoProfileOutboundAction(entry, options = {}) {
 }
 
 function currentComposerPendingOutboundAction(input = productionTwoProfileInput()) {
-  const entry = restoreLatestChatDeliveryPendingOutbound(input) ?? automaticVisibleTwoProfileRetryableOutboundEntry(input);
+  const entry =
+    selectedTwoProfileRetryableOutboundEntry(input) ??
+    restoreLatestChatDeliveryPendingOutbound(input) ??
+    automaticVisibleTwoProfileRetryableOutboundEntry(input);
   if (!entry) {
     return null;
   }
@@ -10201,6 +10204,11 @@ function showRetryableTwoProfileOutboundNotice(entry) {
 function showLatestRetryableOutboundNotice(input = productionTwoProfileInput(), options = {}) {
   if (!twoProfileSessionsReadyForInput(input)) {
     return false;
+  }
+  const selected = selectedTwoProfileRetryableOutboundEntry(input);
+  if (selected) {
+    setChatDeliveryNoticeForPendingOutbound(selected, input);
+    return true;
   }
   if (latestChatDeliveryNoticePendingOutbound && chatDeliveryNoticeMatchesInput(input)) {
     const pending = restoreLatestChatDeliveryPendingOutbound(input);
