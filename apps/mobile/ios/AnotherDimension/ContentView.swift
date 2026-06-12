@@ -8,7 +8,7 @@ struct ContentView: View {
 
     init(sharedCore: SharedCoreMobileApi) {
         self.sharedCore = sharedCore
-        _statusText = State(initialValue: ContentView.renderStatus(sharedCore.sharedCoreStatusSurface()))
+        _statusText = State(initialValue: ContentView.renderLaunchNetworkRuntimeBoundary(sharedCore.sharedCoreStatusSurface()))
     }
 
     var body: some View {
@@ -116,6 +116,17 @@ struct ContentView: View {
             "status=\(result.status)",
             "failure_class=\(result.failureClass)",
             "recovery_next_action=\(result.recoveryNextAction)",
+        ].joined(separator: "\n")
+    }
+
+    private static func renderLaunchNetworkRuntimeBoundary(_ status: SharedCoreStatusDto) -> String {
+        [
+            renderStatus(status),
+            "launch_network_boundary=no_native_network_permission_no_bootstrap",
+            "launch_runtime_boundary=no_runtime_messaging_loop_no_background_delivery",
+            "push_notification_boundary=not_requested_not_configured",
+            "implicit_delivery_start=false",
+            "generated_callable_binding=false",
         ].joined(separator: "\n")
     }
 }

@@ -116,6 +116,8 @@ require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "copyRedactedD
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "diagnostics_payload=redacted_status_support_only"
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "sharedCore.localDataLifecycle"
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "lifecycle_confirmation_boundary=display_only_no_local_data_mutation"
+require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "launch_network_boundary=no_native_network_permission_no_bootstrap"
+require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "launch_runtime_boundary=no_runtime_messaging_loop_no_background_delivery"
 
 require_text "apps/mobile/ffi/README.md" "production_mobile_shared_core_api_freeze_boundary_summary"
 require_text "apps/mobile/ffi/shared_core_mobile_api_contract.json" '"first_binding_unit": "status_and_redacted_diagnostics_read_only_adapter"'
