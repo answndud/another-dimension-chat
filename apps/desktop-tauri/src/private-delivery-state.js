@@ -447,7 +447,7 @@ function publicDiagnosticsRecoveryNextAction(parsed) {
   return publicDiagnosticsRecoveryActions.has(action) ? action : "review-field-test-report";
 }
 
-function desktopCompletionBlockerNextAction(blockers = []) {
+function desktopCompletionBlockerNextAction(blockers = [], parsed = {}) {
   const blocker = blockers[0] ?? "none";
   if (blocker === "room" || blocker === "session") {
     return "check-session";
@@ -459,6 +459,9 @@ function desktopCompletionBlockerNextAction(blockers = []) {
     return "prepare-private-route";
   }
   if (blocker === "receive") {
+    if (fieldTestReportReceiveValue(parsed) === "receive-stopping") {
+      return "wait-receive-stop";
+    }
     return "start-receiving";
   }
   if (blocker === "send-or-recover") {
@@ -472,7 +475,7 @@ function publicDiagnosticsDesktopNextAction(parsed, desktopCompletion) {
   if (action !== "none") {
     return action;
   }
-  return desktopCompletionBlockerNextAction(desktopCompletion?.blockers);
+  return desktopCompletionBlockerNextAction(desktopCompletion?.blockers, parsed);
 }
 
 export function publicDiagnosticsFailureClass(parsed) {
