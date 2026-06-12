@@ -142,14 +142,14 @@ operator-prepared peer packets as proof of real external onion delivery. No peer
 report is expected or required for this v0.1 claim, and no external delivery
 claim is made.
 
-The current public upload set is prepared from the ignored local beta DMG with:
+The current public upload set is prepared from the pinned ignored public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`: build channel `beta-onion`, commit `e8954df9`, and SHA-256 `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`.
 
 ```bash
 scripts/public_release_readiness_preflight.sh
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-Run the source-only preflight before staging artifacts; it does not require a DMG and does not generate release files.
+Run the source-only preflight before staging artifacts; it does not require a DMG and does not generate release files. The packaging decision is `proceed-to-packaging-only-with-frozen-ignored-dmg`; if the source preflight fails, return to desktop hardening instead of staging artifacts.
 
 The generated public release folder is `apps/desktop-tauri/public-release/unsigned-public-beta/`. It is ignored and should contain only the DMG, matching `.sha256`, public provenance JSON, `INSTALL_UNSIGNED_MACOS.md`, `RELEASE_NOTES.md`, `GITHUB_RELEASE_BODY.md`, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, `DEPENDENCY_INVENTORY.md`, `PUBLIC_THREAT_MODEL.md`, `PRIVACY_MODEL_COMPARISON.md`, `INDEPENDENT_REVIEW_PACKET.md`, `PUBLIC_INTAKE_POLICY.md`, `REPOSITORY_GOVERNANCE.md`, `COMPONENT_BOUNDARIES.md`, `DEPENDENCY_LOCKFILES.sha256`, and `MANIFEST.md`.
 

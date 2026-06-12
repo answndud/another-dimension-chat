@@ -24,6 +24,8 @@ run_step public-beta-gap "$ROOT_DIR/scripts/public_beta_gap_acceptance_once.sh"
 run_step public-claim-acceptance env PUBLIC_RELEASE_PREFLIGHT_CHILD=1 "$ROOT_DIR/scripts/public_claim_acceptance_once.sh"
 
 echo "status=public-release-readiness-source-preflight-ready"
+echo "decision=proceed-to-packaging-only-with-frozen-ignored-dmg"
+echo "fallback=return-to-desktop-hardening-if-source-preflight-fails"
 echo "scope=source-only-no-dmg-required-no-generated-artifacts"
 echo "artifact_generation=false"
 echo "generated_artifacts_created=false"

@@ -395,6 +395,8 @@ This folder is for a GitHub Release upload.
 - DMG SHA-256: \`$EXPECTED_DMG_SHA\`
 - Same-release checksum required: true
 - Source branch release authority: false
+- Packaging decision: proceed-to-packaging-only-with-frozen-ignored-dmg
+- Packaging fallback: return-to-desktop-hardening-if-source-preflight-fails
 - Install allow path: macos-privacy-security-manual-allow-after-checksum
 - Terminal quarantine-removal install step: false
 - Public provenance: \`$RELEASE_PROVENANCE\`
@@ -426,6 +428,7 @@ This folder is for a GitHub Release upload.
 - Minimal public contact request allowed: true
 - Fabricated review or peer evidence allowed: false
 - Public diagnostics boundary: status-build-failure-class-recovery-action-desktop-acceptance-only
+- Public diagnostics include: desktop local-private-flow acceptance status/blockers/non-claims
 - Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only
 - Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails
 - Privacy model target: no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server

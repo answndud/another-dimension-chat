@@ -93,6 +93,8 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_b
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_claim_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "preflight=public-release-readiness"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "status=public-release-readiness-source-preflight-ready"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "decision=proceed-to-packaging-only-with-frozen-ignored-dmg"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "fallback=return-to-desktop-hardening-if-source-preflight-fails"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "scope=source-only-no-dmg-required-no-generated-artifacts"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "dmg_required=false"
@@ -106,14 +108,24 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "security
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
 require_text "$ROOT_DIR/README.md" "scripts/public_release_readiness_preflight.sh"
+require_text "$ROOT_DIR/README.md" 'pinned public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`'
+require_text "$ROOT_DIR/README.md" 'commit `e8954df9`, and SHA-256 `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`'
+require_text "$ROOT_DIR/README.md" "This is not a packaging readiness, audit readiness, or release go signal."
 require_text "$ROOT_DIR/SECURITY.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/SECURITY.md" "source-only preflight before staging artifacts"
+require_text "$ROOT_DIR/SECURITY.md" 'pinned ignored public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`'
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "source-only preflight"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" 'upload only the files listed in the generated `MANIFEST.md`'
+require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "Build a local-only installable desktop beta"
+require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "This generic Tauri build output is not a public release upload artifact."
+require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "separate from the public release packaging input"
 require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "status-build-failure-class-recovery-action-desktop-acceptance-only"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Packaging decision: proceed-to-packaging-only-with-frozen-ignored-dmg"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Packaging fallback: return-to-desktop-hardening-if-source-preflight-fails"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Public diagnostics include: desktop local-private-flow acceptance status/blockers/non-claims"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "--check-artifact-boundary"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "release output must stay under ignored apps/desktop-tauri/public-release/"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next=upload all and only generated files listed in MANIFEST.md from release_dir"
@@ -175,6 +187,14 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
   fi
   printf '%s\n' "$preflight_output" | grep -Fq -- "status=public-release-readiness-source-preflight-ready" || {
     echo "FAIL release readiness preflight missing ready status" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "decision=proceed-to-packaging-only-with-frozen-ignored-dmg" || {
+    echo "FAIL release readiness preflight missing packaging decision" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "fallback=return-to-desktop-hardening-if-source-preflight-fails" || {
+    echo "FAIL release readiness preflight missing hardening fallback" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,public-beta-gap,public-claim-acceptance" || {
