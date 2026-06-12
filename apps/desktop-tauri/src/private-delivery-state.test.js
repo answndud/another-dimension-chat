@@ -426,8 +426,13 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /windows_installer_ready=false/);
   assert.match(diagnostics, /windows_signing_ready=false/);
   assert.match(diagnostics, /windows_store_ready=false/);
+  assert.match(diagnostics, /windows_local_runtime_smoke_status=source-boundary-only/);
+  assert.match(diagnostics, /windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows/);
   assert.match(diagnostics, /windows_app_data_path_review_required=true/);
   assert.match(diagnostics, /windows_path_separator_review_required=true/);
+  assert.match(diagnostics, /windows_local_deletion_behavior_review_required=true/);
+  assert.match(diagnostics, /windows_redacted_diagnostics_behavior_review_required=true/);
+  assert.match(diagnostics, /windows_explicit_user_action_review_required=true/);
   assert.match(diagnostics, /windows_release_blocker=local-build-smoke-and-release-boundary-review/);
   assert.match(diagnostics, /external_onion_delivery_verified=false/);
   assert.match(diagnostics, /production_messaging_ready=false/);

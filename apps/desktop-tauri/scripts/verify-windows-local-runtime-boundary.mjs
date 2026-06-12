@@ -68,13 +68,23 @@ requireText("apps/desktop-tauri/src-tauri/src/lib.rs", "automatic_network_on_lau
 requireText("apps/desktop-tauri/src-tauri/src/lib.rs", "auto_update_channel: false");
 
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_runtime_smoke_required=true");
+requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_local_runtime_smoke_status=source-boundary-only");
+requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_app_data_path_review_required=true");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_path_separator_review_required=true");
+requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_local_deletion_behavior_review_required=true");
+requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_redacted_diagnostics_behavior_review_required=true");
+requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_explicit_user_action_review_required=true");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "public_artifact_upload_allowed=false");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "remaining_blocker=windows-local-build-smoke-and-release-boundary-review");
 
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_app_data_path_review_required=true");
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_path_separator_review_required=true");
+requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_local_runtime_smoke_status=source-boundary-only");
+requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows");
+requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_local_deletion_behavior_review_required=true");
+requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_redacted_diagnostics_behavior_review_required=true");
+requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_explicit_user_action_review_required=true");
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_release_blocker=local-build-smoke-and-release-boundary-review");
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only");
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "excluded_fields=${publicSupportDiagnosticsExcludedFieldsValue()}");
@@ -92,6 +102,8 @@ rejectText("apps/desktop-tauri/src/main.js", "Windows local runtime smoke passed
 
 console.log("status=desktop-windows-local-runtime-smoke-boundary-ready");
 console.log("windows_runtime_smoke_source_command=npm --prefix apps/desktop-tauri run test:windows-boundary");
+console.log("windows_local_runtime_smoke_status=source-boundary-only");
+console.log("windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows");
 console.log("windows_runtime_smoke_required=true");
 console.log("windows_webview2_required=true");
 console.log("windows_app_data_path_review_required=true");
