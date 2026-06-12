@@ -100,6 +100,10 @@ check_artifact_boundary() {
   fi
 
   require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "COMPONENT_BOUNDARIES.md"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "Upload boundary for operators"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "Use \`GITHUB_RELEASE_BODY.md\` exactly as"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "Do not upload \`docs/\`, \`beta-artifacts/\`, the"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "or any file not listed in the manifest"
   require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" "COMPONENT_BOUNDARIES.md"
   require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "PRIVACY_MODEL_COMPARISON.md"
   require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "scripts/public_release_readiness_preflight.sh"
@@ -127,6 +131,10 @@ check_artifact_boundary() {
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next=upload all and only generated files listed in MANIFEST.md from release_dir"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_release_body=use GITHUB_RELEASE_BODY.md exactly"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"upload_allowlist_source\": \"MANIFEST.md\""
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"upload_release_body\": \"GITHUB_RELEASE_BODY.md\""
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"upload_forbidden\": \"docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data\""
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Operator Upload Boundary"
   echo "status=release-artifact-boundary-source-ready"
 }
 
@@ -259,6 +267,11 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "release_authority": "same-github-release-assets",
   "same_release_checksum_required": true,
   "source_branch_release_authority": false,
+  "packaging_decision": "proceed-to-packaging-only-with-frozen-ignored-dmg",
+  "packaging_fallback": "return-to-desktop-hardening-if-source-preflight-fails",
+  "upload_allowlist_source": "MANIFEST.md",
+  "upload_release_body": "GITHUB_RELEASE_BODY.md",
+  "upload_forbidden": "docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data",
   "install_allow_path": "macos-privacy-security-manual-allow-after-checksum",
   "terminal_quarantine_removal_install_step": false,
   "notarized": false,
@@ -455,6 +468,17 @@ This folder is for a GitHub Release upload.
 - Auto-update: disabled
 - Signing/notarization: disabled
 
+## Operator Upload Boundary
+
+Upload exactly the files listed in this \`MANIFEST.md\` from this generated
+release directory. Use \`GITHUB_RELEASE_BODY.md\` exactly as the GitHub Release
+body.
+
+Do not upload \`docs/\`, \`beta-artifacts/\`, the \`public-release/\` folder itself,
+branch files, source archives, raw logs, crash dumps, screenshots, local app
+data, private diagnostics, private planning notes, or any file not listed in
+this manifest.
+
 ## Boundary
 
 This is an unsigned experimental public beta. It is not notarized, not audited,
@@ -518,6 +542,11 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"release_url\": \"$RELEASE_URL
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"release_authority\": \"same-github-release-assets\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"same_release_checksum_required\": true"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"source_branch_release_authority\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"packaging_decision\": \"proceed-to-packaging-only-with-frozen-ignored-dmg\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"packaging_fallback\": \"return-to-desktop-hardening-if-source-preflight-fails\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"upload_allowlist_source\": \"MANIFEST.md\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"upload_release_body\": \"GITHUB_RELEASE_BODY.md\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"upload_forbidden\": \"docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"install_allow_path\": \"macos-privacy-security-manual-allow-after-checksum\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"terminal_quarantine_removal_install_step\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"source_provenance_sha256\": \"$source_provenance_sha\""
@@ -581,6 +610,12 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Release URL: \`$RELEASE_URL\`"
 require_text "$RELEASE_DIR/MANIFEST.md" "Release authority: same-github-release-assets"
 require_text "$RELEASE_DIR/MANIFEST.md" "Same-release checksum required: true"
 require_text "$RELEASE_DIR/MANIFEST.md" "Source branch release authority: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Operator Upload Boundary"
+require_text "$RELEASE_DIR/MANIFEST.md" "Upload exactly the files listed in this \`MANIFEST.md\` from this generated"
+require_text "$RELEASE_DIR/MANIFEST.md" "Use \`GITHUB_RELEASE_BODY.md\` exactly as the GitHub Release"
+require_text "$RELEASE_DIR/MANIFEST.md" "Do not upload \`docs/\`, \`beta-artifacts/\`, the \`public-release/\` folder itself"
+require_text "$RELEASE_DIR/MANIFEST.md" "branch files, source archives, raw logs, crash dumps"
+require_text "$RELEASE_DIR/MANIFEST.md" "any file not listed in"
 require_text "$RELEASE_DIR/MANIFEST.md" "Install allow path: macos-privacy-security-manual-allow-after-checksum"
 require_text "$RELEASE_DIR/MANIFEST.md" "Terminal quarantine-removal install step: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Independent review complete: false"
@@ -632,6 +667,10 @@ require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not production-ready"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "sensitive communication prohibited"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GITHUB_RELEASE_BODY.md"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "COMPONENT_BOUNDARIES.md"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "Upload boundary for operators"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "Use \`GITHUB_RELEASE_BODY.md\` exactly as"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "Do not upload \`docs/\`, \`beta-artifacts/\`, the"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "or any file not listed in the manifest"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GitHub source archives"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "completed independent review"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "fabricated external review"
@@ -694,6 +733,7 @@ echo "manifest=$RELEASE_DIR/MANIFEST.md"
 echo "dmg_sha256=$EXPECTED_DMG_SHA"
 echo "source_provenance_sha256=$source_provenance_sha"
 echo "next=upload all and only generated files listed in MANIFEST.md from release_dir; use GITHUB_RELEASE_BODY.md as the release body"
+echo "operator_upload_allowlist=MANIFEST.md"
 echo "operator_release_body=use GITHUB_RELEASE_BODY.md exactly"
 echo "operator_verify=downloaded users must verify ${RELEASE_DMG}.sha256 before opening"
 echo "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
