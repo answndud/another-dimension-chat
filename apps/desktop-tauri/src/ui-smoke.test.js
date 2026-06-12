@@ -479,6 +479,7 @@ test("saved room removal is list-only and transcript switching rebuilds entries"
   assert.doesNotMatch(functionBody(mainJs, "removeSavedInviteRoom"), /invoke\(/);
   assert.match(functionBody(mainJs, "forgetInviteRoom"), /rememberReceiveIntentForRoom\(roomInput, false\)/);
   assert.match(functionBody(mainJs, "forgetInviteRoom"), /clearPrivateRouteFollowupForRoom\(roomInput\)/);
+  assert.match(functionBody(mainJs, "forgetInviteRoom"), /clearProductionPayloadSlotsForRoomFingerprint\(roomKey\)/);
   assert.match(functionBody(mainJs, "forgetInviteRoom"), /connectionCode: trimmedCode/);
   assert.match(functionBody(mainJs, "forgetInviteRoom"), /twoProfileSafetyStorageKeys\(roomInput\)/);
   assert.match(functionBody(mainJs, "forgetInviteRoom"), /localStoreRemove\(key\)/);
@@ -933,14 +934,21 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(roomRuntimeClearBody, /rememberReceiveIntentForRoom\(input, false\)/);
   assert.match(roomRuntimeClearBody, /forgetTwoProfileSessionStatusForInput\(input\)/);
   assert.match(roomRuntimeClearBody, /clearPrivateRouteFollowupForRoom\(input\)/);
+  assert.match(roomRuntimeClearBody, /clearProductionPayloadSlotsForRoomFingerprint\(privateRouteRoomKey\(input\)\)/);
   assert.match(roomRuntimeClearBody, /clearSavedInviteRoomRetryableOutbound\(room\)/);
   assert.match(roomRuntimeClearBody, /clearSavedInviteRoomManualRebuildMetadata\(room\)/);
+
+  assert.match(functionBody(mainJs, "clearProductionPayloadSlotsForRoomFingerprint"), /Object\.values\(productionPayloadSlots\)/);
+  assert.match(functionBody(mainJs, "clearProductionPayloadSlotsForRoomFingerprint"), /slot\?\.roomFingerprint/);
+  assert.match(functionBody(mainJs, "clearAllProductionPayloadSlots"), /Object\.values\(productionPayloadSlots\)/);
+  assert.match(functionBody(mainJs, "clearAllProductionPayloadSlots"), /slots\.clear\(\)/);
 
   const allRoomClearBody = functionBody(mainJs, "clearAllSavedInviteRoomLocalState");
   assert.match(allRoomClearBody, /localStoreRemove\(inviteRoomsStorageKey\)/);
   assert.match(allRoomClearBody, /localStoreRemove\(lastInviteRoomStorageKey\)/);
   assert.match(allRoomClearBody, /localStoreRemove\(receiveIntentRoomsStorageKey\)/);
   assert.match(allRoomClearBody, /latestProductionTwoProfileRealOnionRecoveriesByRoom\.clear\(\)/);
+  assert.match(allRoomClearBody, /clearAllProductionPayloadSlots\(\)/);
 
   const rebuildBody = functionBody(mainJs, "applyPostDestructiveLifecycleRebuildGuidance");
   assert.match(rebuildBody, /stale_room_retry_cleared=true/);

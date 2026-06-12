@@ -3626,6 +3626,7 @@ function forgetInviteRoom(code) {
       localStoreRemove(key);
     }
     for (const roomKey of privateRouteRoomKeys(roomInput)) {
+      clearProductionPayloadSlotsForRoomFingerprint(roomKey);
       localPrivateRouteCodesByRoom.delete(roomKey);
       activeLocalPrivateRouteCodesByRoom.delete(roomKey);
       localPrivateRouteLifecycleByRoom.delete(roomKey);
@@ -3672,6 +3673,7 @@ function clearSavedInviteRoomRuntimeState(room) {
     rememberReceiveIntentForRoom(input, false);
     forgetTwoProfileSessionStatusForInput(input);
     clearPrivateRouteFollowupForRoom(input);
+    clearProductionPayloadSlotsForRoomFingerprint(privateRouteRoomKey(input));
   }
   clearSavedInviteRoomRetryableOutbound(room);
   clearSavedInviteRoomManualRebuildMetadata(room);
@@ -3705,6 +3707,7 @@ function clearAllSavedInviteRoomLocalState() {
   latestProductionTwoProfileRealOnionResultsByRoom.clear();
   latestProductionTwoProfileRealOnionRecoveriesByRoom.clear();
   latestProductionTwoProfileRealOnionWaitCanceledFingerprints.clear();
+  clearAllProductionPayloadSlots();
   persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
   persistPrivateRouteLifecycleMap(localPrivateRouteLifecycleStorageKey, localPrivateRouteLifecycleByRoom);
   persistPrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
@@ -10369,6 +10372,32 @@ function productionPayloadSlotValue(kind, profile) {
 
 function productionPayloadSlotReady(kind, profile) {
   return Boolean(productionPayloadSlotValue(kind, profile));
+}
+
+function clearProductionPayloadSlotsForRoomFingerprint(roomFingerprint) {
+  const fingerprint = String(roomFingerprint ?? "").trim();
+  if (!fingerprint) {
+    return 0;
+  }
+  let cleared = 0;
+  for (const slots of Object.values(productionPayloadSlots)) {
+    for (const [key, slot] of slots.entries()) {
+      if (String(slot?.roomFingerprint ?? "").trim() === fingerprint) {
+        slots.delete(key);
+        cleared += 1;
+      }
+    }
+  }
+  return cleared;
+}
+
+function clearAllProductionPayloadSlots() {
+  let cleared = 0;
+  for (const slots of Object.values(productionPayloadSlots)) {
+    cleared += slots.size;
+    slots.clear();
+  }
+  return cleared;
 }
 
 function rememberPrivateRouteFollowup(action, input = productionTwoProfileInput(), options = {}) {
