@@ -925,6 +925,10 @@ const dictionaries = {
     postDeleteRoomRebuildWarning:
       "Related room runtime state was cleared. Recreate the local profile or build a new invite room before retrying messages.",
     postDeleteRoomRebuildNext: "Next: recreate the local profile, then create or join a fresh invite room.",
+    postSessionDeleteRoomRebuildWarning:
+      "Session resume records were cleared while local message records remain. Rebuild the room session before retrying messages.",
+    postSessionDeleteRoomRebuildNext:
+      "Next: check the saved room, then rebuild pairing and session state before retrying messages.",
     postWipeRoomRebuildWarning:
       "Saved room metadata was cleared after local wipe. Start again with local profiles and a new invite room.",
     postWipeRoomRebuildNext: "Next: create local profiles, then create or join a new invite room.",
@@ -2016,6 +2020,10 @@ const dictionaries = {
     postDeleteRoomRebuildWarning:
       "관련 채팅방 실행 상태를 정리했습니다. 메시지를 다시 시도하기 전에 로컬 프로필을 다시 만들거나 새 초대방을 만드세요.",
     postDeleteRoomRebuildNext: "다음: 로컬 프로필을 다시 만든 뒤 새 초대방을 만들거나 참여하세요.",
+    postSessionDeleteRoomRebuildWarning:
+      "세션 재개 기록을 정리했지만 로컬 메시지 기록은 남아 있습니다. 메시지를 다시 시도하기 전에 채팅방 세션을 다시 만드세요.",
+    postSessionDeleteRoomRebuildNext:
+      "다음: 저장된 채팅방을 확인한 뒤 pairing과 session 상태를 다시 만들고 메시지를 다시 시도하세요.",
     postWipeRoomRebuildWarning:
       "로컬 삭제 후 저장된 채팅방 메타데이터를 정리했습니다. 로컬 프로필과 새 초대방으로 다시 시작하세요.",
     postWipeRoomRebuildNext: "다음: 로컬 프로필을 만든 뒤 새 초대방을 만들거나 참여하세요.",
