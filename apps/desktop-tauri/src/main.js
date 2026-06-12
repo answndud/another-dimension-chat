@@ -3747,6 +3747,20 @@ function clearSavedInviteRoomConversationMetadataForProfile(profile) {
   return cleared;
 }
 
+function clearActiveConversationStateAfterLocalDelete(profile, input = productionTwoProfileInput()) {
+  const targetProfile = String(profile ?? "").trim();
+  if (!targetProfile || !twoProfileInputReferencesProfile(input, targetProfile)) {
+    return false;
+  }
+  clearChatDeliveryNoticeForInput(input);
+  clearManualMessagePayloadsForRoomContextChange();
+  clearMessageEnvelopeSlotsForRoomFingerprint(privateRouteRoomKey(input));
+  resetProductionTwoProfileTranscript();
+  renderRoomStatusSummary(input, twoProfileSessionsReadyForInput(input));
+  renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
+  return true;
+}
+
 function clearSavedInviteRoomRuntimeStateForProfile(profile) {
   let cleared = 0;
   for (const room of savedInviteRooms()) {
@@ -19679,6 +19693,7 @@ async function exportProductionMessageEnvelope() {
 
 async function deleteProductionConversation() {
   const input = productionProfileInput();
+  const roomInputBeforeDelete = productionTwoProfileInput();
   const { profile, passphrase } = input;
   if (!profile || !passphrase) {
     setProductionMessageState("Conversation delete needs profile");
@@ -19698,6 +19713,7 @@ async function deleteProductionConversation() {
       return;
     }
     const savedRoomsCleared = clearSavedInviteRoomConversationMetadataForProfile(profile);
+    const activeRoomCleared = clearActiveConversationStateAfterLocalDelete(profile, roomInputBeforeDelete);
     resetProductionMessageTranscript();
     resetProductionMessageImportState();
     if (fields.productionMessageEnvelope) {
@@ -19711,7 +19727,7 @@ async function deleteProductionConversation() {
     );
     setText(
       fields.productionMessageInbound,
-      `received_deleted=${result.received_messages_deleted} total_records=${result.conversation_records_deleted} session_preserved=${result.session_records_preserved} saved_rooms_cleared=${savedRoomsCleared}`,
+      `received_deleted=${result.received_messages_deleted} total_records=${result.conversation_records_deleted} session_preserved=${result.session_records_preserved} saved_rooms_cleared=${savedRoomsCleared} active_room_cleared=${activeRoomCleared}`,
     );
     setText(fields.productionMessageBoundary, productionLocalLifecycleBoundaryView(result));
     await checkProductionSessionState(input);
