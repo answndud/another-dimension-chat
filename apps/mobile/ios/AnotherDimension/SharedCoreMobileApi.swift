@@ -37,7 +37,8 @@ protocol SharedCoreMobileApi {
 
 final class IOSSharedCoreBoundary: SharedCoreMobileApi {
     private let readOnlyStatusAdapter: ReadOnlyNativeStatusAdapter
-    private let blockedCommandSurfaceInventory = [
+    private let blockedCommandAdapter: BlockedMobileCommandAdapter
+    private let sourceBoundaryApiGroupInventory = [
         "shared_core_status_surface",
         "profile_unlock_lock_status",
         "invite_code_create_join",
@@ -48,7 +49,7 @@ final class IOSSharedCoreBoundary: SharedCoreMobileApi {
         "local_data_lifecycle",
         "redacted_support_diagnostics",
     ]
-    private let publicNonClaimsBoundary = [
+    private let sourceBoundaryPublicNonClaims = [
         "unsigned experimental public beta",
         "sensitive communication prohibited",
         "not audited",
@@ -56,9 +57,19 @@ final class IOSSharedCoreBoundary: SharedCoreMobileApi {
         "external onion delivery not claimed",
         "mobile readiness not claimed",
     ]
+    private let sourceBoundaryBlockedErrorTaxonomy = [
+        "locked_profile",
+        "policy_blocked",
+        "ffi_unavailable",
+        "explicit user action required",
+    ]
 
-    init(readOnlyStatusAdapter: ReadOnlyNativeStatusAdapter = SourceBoundaryReadOnlyNativeStatusAdapter()) {
+    init(
+        readOnlyStatusAdapter: ReadOnlyNativeStatusAdapter = SourceBoundaryReadOnlyNativeStatusAdapter(),
+        blockedCommandAdapter: BlockedMobileCommandAdapter = SourceBoundaryBlockedMobileCommandAdapter()
+    ) {
         self.readOnlyStatusAdapter = readOnlyStatusAdapter
+        self.blockedCommandAdapter = blockedCommandAdapter
     }
 
     func sharedCoreStatusSurface() -> SharedCoreStatusDto {
@@ -66,52 +77,34 @@ final class IOSSharedCoreBoundary: SharedCoreMobileApi {
     }
 
     func profileUnlockLockStatus(passphraseProvided: Bool) -> SharedCoreCommandResult {
-        if passphraseProvided {
-            return blocked(failureClass: "ffi_unavailable", recoveryNextAction: "connect shared Rust core binding")
-        }
-        return blocked(failureClass: "locked_profile", recoveryNextAction: "enter passphrase")
+        blockedCommandAdapter.profileUnlockLockStatus(passphraseProvided: passphraseProvided)
     }
 
     func inviteCodeCreateJoin(action: ExplicitUserActionToken) -> SharedCoreCommandResult {
-        explicitActionBoundary(action: action, surface: "invite_code_create_join")
+        blockedCommandAdapter.inviteCodeCreateJoin(action: action)
     }
 
     func pairingPayloadExportImport(action: ExplicitUserActionToken) -> SharedCoreCommandResult {
-        explicitActionBoundary(action: action, surface: "pairing_payload_export_import")
+        blockedCommandAdapter.pairingPayloadExportImport(action: action)
     }
 
     func safetyTranscriptConfirm(action: ExplicitUserActionToken) -> SharedCoreCommandResult {
-        explicitActionBoundary(action: action, surface: "safety_transcript_confirm")
+        blockedCommandAdapter.safetyTranscriptConfirm(action: action)
     }
 
     func manualEnvelopeExportImport(action: ExplicitUserActionToken) -> SharedCoreCommandResult {
-        explicitActionBoundary(action: action, surface: "manual_envelope_export_import")
+        blockedCommandAdapter.manualEnvelopeExportImport(action: action)
     }
 
     func messageTranscriptView() -> SharedCoreCommandResult {
-        blocked(failureClass: "ffi_unavailable", recoveryNextAction: "load transcript through shared Rust core")
+        blockedCommandAdapter.messageTranscriptView()
     }
 
     func localDataLifecycle(action: ExplicitUserActionToken) -> SharedCoreCommandResult {
-        explicitActionBoundary(action: action, surface: "local_data_lifecycle")
+        blockedCommandAdapter.localDataLifecycle(action: action)
     }
 
     func redactedSupportDiagnostics() -> SharedCoreStatusDto {
         readOnlyStatusAdapter.redactedSupportDiagnostics()
-    }
-
-    private func explicitActionBoundary(action: ExplicitUserActionToken, surface: String) -> SharedCoreCommandResult {
-        if action.reason.isEmpty {
-            return blocked(failureClass: "policy_blocked", recoveryNextAction: "explicit user action required")
-        }
-        return blocked(failureClass: "ffi_unavailable", recoveryNextAction: "connect shared Rust core binding for \(surface)")
-    }
-
-    private func blocked(failureClass: String, recoveryNextAction: String) -> SharedCoreCommandResult {
-        SharedCoreCommandResult(
-            status: "blocked",
-            failureClass: failureClass,
-            recoveryNextAction: recoveryNextAction
-        )
     }
 }

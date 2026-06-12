@@ -48,6 +48,7 @@ require_file "apps/mobile/android/app/src/main/res/xml/data_extraction_rules.xml
 require_file "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt"
 require_file "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt"
 require_file "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt"
+require_file "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt"
 require_file "apps/mobile/android/README.md"
 require_file "apps/mobile/ffi/README.md"
 require_file "apps/mobile/ffi/shared_core_mobile_api_contract.json"
@@ -82,6 +83,8 @@ require_text "apps/mobile/android/app/src/main/res/xml/data_extraction_rules.xml
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "interface SharedCoreMobileApi"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "readOnlyStatusAdapter.sharedCoreStatusSurface()"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "readOnlyStatusAdapter.redactedSupportDiagnostics()"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "blockedCommandAdapter.profileUnlockLockStatus(passphraseProvided)"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "blockedCommandAdapter.localDataLifecycle(action)"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "fun sharedCoreStatusSurface"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "fun profileUnlockLockStatus"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "fun inviteCodeCreateJoin"
@@ -102,6 +105,10 @@ require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/androi
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "shared_core_status_surface"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "redacted_support_diagnostics"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "not production-ready"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt" "SourceBoundaryBlockedMobileCommandAdapter"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt" "policy_blocked"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt" "ffi_unavailable"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt" "not production-ready"
 
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "InputType.TYPE_TEXT_VARIATION_PASSWORD"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "sharedCore.profileUnlockLockStatus"
@@ -124,6 +131,9 @@ reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android
 reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "HttpURLConnection"
 reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "Socket"
 reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "Firebase"
+reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt" "HttpURLConnection"
+reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt" "Socket"
+reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt" "Firebase"
 reject_find "Android build outputs or app artifacts" \
   \( -type d -name build -o -name '*.apk' -o -name '*.aab' \)
 
