@@ -81,6 +81,14 @@ class MainActivity : Activity() {
                 statusView.text = copyRedactedDiagnosticsPayload(sharedCore.redactedSupportDiagnostics())
             }
         }
+        val lifecycle = Button(this).apply {
+            text = "Lifecycle"
+            setOnClickListener {
+                statusView.text = renderLifecycleConfirmationBoundary(
+                    sharedCore.localDataLifecycle(ExplicitUserActionToken("tap_lifecycle_review")),
+                )
+            }
+        }
 
         root.addView(title)
         root.addView(warning)
@@ -90,6 +98,7 @@ class MainActivity : Activity() {
         root.addView(envelope)
         root.addView(diagnostics)
         root.addView(copyDiagnostics)
+        root.addView(lifecycle)
         root.addView(statusView)
         setContentView(root)
     }
@@ -136,5 +145,15 @@ class MainActivity : Activity() {
             "diagnostics_copy_boundary=user_initiated_local_clipboard_only",
             "diagnostics_payload=redacted_status_support_only",
             renderStatus(status),
+        ).joinToString(separator = "\n")
+
+    private fun renderLifecycleConfirmationBoundary(result: SharedCoreCommandResult): String =
+        listOf(
+            renderResult(result),
+            "lifecycle_confirmation_boundary=display_only_no_local_data_mutation",
+            "lifecycle_commands=conversation_delete,session_delete,profile_delete,full_local_wipe",
+            "destructive_lifecycle_execution=false",
+            "filesystem_path_exposed=false",
+            "storage_delete_called=false",
         ).joinToString(separator = "\n")
 }
