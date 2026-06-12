@@ -85,6 +85,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Do not a
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Return to desktop hardening if the source preflight or regenerated upload set"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Final Operation Decision Summary"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Upload decision: proceed only after the source preflight prints"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Explicit operator request gate: do not package, upload, or announce unless the user explicitly requested release packaging/upload in the current task"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Hold decision: do not upload, do not announce, and return to desktop hardening"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Operation boundary: this handoff does not perform a GitHub Release upload"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "next_development_axis=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep#default-transport-boundary"
@@ -93,6 +94,9 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "prefligh
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "status=public-release-readiness-source-preflight-ready"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_acceptance=desktop-release-source-accepted-for-operator-staging"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "decision=proceed-to-packaging-only-with-frozen-ignored-dmg"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_explicit_request_required=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_packaging_upload_hold_without_explicit_request=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "packaging_upload_permitted_this_run=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "fallback=return-to-desktop-hardening-if-source-preflight-fails"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "scope=source-only-no-dmg-required-no-generated-artifacts"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "artifact_generation=false"
@@ -138,6 +142,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_beta_acceptance_scope=desktop-local-manual-beta-readiness"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_beta_acceptance_excluded=android-ios-runtime#external-peer-evidence#audit#production-ready#security-ready#sensitive-communication"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_final_handoff=OPERATOR_FINAL_HANDOFF.md"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_request_gate=explicit-user-request-required-before-packaging-upload"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_after_upload_verify=same-release-sha256-before-opening"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_update_authority=same-release-assets-only-no-auto-update-manifest-signing-notarization-store-branch-source-archive"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
@@ -197,7 +202,8 @@ require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"uploa
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_release_body": "GITHUB_RELEASE_BODY.md"'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_forbidden": "docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Operator Upload Boundary"
-require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next=upload all and only generated files listed in MANIFEST.md from release_dir"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_request_gate=explicit-user-request-required-before-packaging-upload"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next=hold unless explicit release upload was requested; upload all and only generated files listed in MANIFEST.md from release_dir"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_upload_allowlist=MANIFEST.md"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" 'operator_final_handoff=$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_update_authority=same-release-assets-only-no-auto-update-manifest-signing-notarization-store-branch-source-archive"
