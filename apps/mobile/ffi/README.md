@@ -115,6 +115,51 @@ validation, not network delivery evidence, and not a mobile readiness claim.
 
 It is not runtime messaging validation.
 
+## Native Binding Readiness Gate
+
+Native binding implementation remains blocked until an explicit later phase
+records that all readiness prerequisites are met. This gate is source-level
+only: it does not create generated bindings, callable FFI, native runtime
+messaging, network delivery, release packaging, or store distribution.
+
+Callable FFI may not start until all of these are true:
+
+- explicit owner authorization for native binding
+- memory ownership and release contract finalized
+- canonical serialization test vectors finalized
+- FFI error mapping table finalized
+- redacted diagnostics payload reviewed
+- Android/iOS adapter parity verified
+- `scripts/verify_mobile_source_handoff.sh` passing
+
+Blocked until a later phase:
+
+- unlock callable FFI
+- invite callable FFI
+- pairing callable FFI
+- envelope callable FFI
+- transcript callable FFI
+- lifecycle callable FFI
+- native network runtime
+- background delivery
+- push notification delivery
+- release packaging
+
+This readiness gate keeps callable FFI implemented false, generated binding
+may start false, native runtime messaging may start false, network delivery may
+start false, release packaging may start false, mobile readiness claimed false,
+and security-ready claimed false.
+
+Readiness flags: callable FFI implemented false; generated binding may start
+false; native runtime messaging may start false; network delivery may start
+false; release packaging may start false; mobile readiness claimed false;
+security-ready claimed false.
+
+- generated binding may start false
+- native runtime messaging may start false
+- network delivery may start false
+- release packaging may start false
+
 Allowed API groups mirror the shared core wrapper boundary:
 
 - `shared_core_status_surface`

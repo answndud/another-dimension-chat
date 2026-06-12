@@ -10,6 +10,7 @@ scripts/verify_mobile_shell_presentation.sh
 scripts/verify_mobile_diagnostics_copy_boundary.sh
 scripts/verify_mobile_lifecycle_boundary.sh
 scripts/verify_mobile_launch_network_boundary.sh
+scripts/verify_mobile_binding_readiness_gate.sh
 scripts/verify_mobile_binding_gate.sh
 scripts/verify_android_shell_boundary.sh
 scripts/verify_ios_shell_boundary.sh
