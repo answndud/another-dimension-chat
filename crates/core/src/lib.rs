@@ -1083,6 +1083,7 @@ pub mod production {
         "status",
         "build",
         "failure_class",
+        "recovery_next_action",
         "manual_network_permission",
         "app_launch_network_boundary",
         "redacted_runtime_flags",
@@ -2242,6 +2243,85 @@ pub mod production {
         "mobile_app_readiness_claim",
     ];
 
+    const PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_GROUPS: &[&str] = &[
+        "shared_core_status_surface",
+        "profile_unlock_lock_status",
+        "invite_code_create_join",
+        "pairing_payload_export_import",
+        "safety_transcript_confirm",
+        "manual_envelope_export_import",
+        "message_transcript_view",
+        "local_data_lifecycle",
+        "redacted_support_diagnostics",
+    ];
+
+    const PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_DTO_FIELDS: &[&str] = &[
+        "schema_version",
+        "platform",
+        "profile_lock_state",
+        "runtime_command_surface",
+        "mobile_command_surface",
+        "local_data_lifecycle_state",
+        "backup_exclusion_state",
+        "install_update_integrity_state",
+        "diagnostics_redaction_state",
+        "public_non_claims",
+    ];
+
+    const PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_ERROR_TAXONOMY: &[&str] = &[
+        "locked_profile",
+        "malformed_payload",
+        "replay_rejected",
+        "policy_blocked",
+        "transport_unavailable",
+        "unsupported_mobile_surface",
+        "lifecycle_confirmation_required",
+    ];
+
+    const PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_SERIALIZATION_CONTRACT: &[&str] = &[
+        "deterministic_utf8_json_object",
+        "explicit_schema_version",
+        "sorted_keys",
+        "string_enums",
+        "bounded_status_label_arrays",
+        "reject_unknown_fields",
+    ];
+
+    const PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_LIFECYCLE_COMMANDS: &[&str] = &[
+        "conversation_delete",
+        "session_delete",
+        "profile_delete",
+        "full_local_wipe",
+    ];
+
+    const PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_DIAGNOSTICS_FIELDS: &[&str] = &[
+        "status",
+        "build",
+        "failure_class",
+        "recovery_next_action",
+        "app_launch_network_boundary",
+        "public_non_claims",
+    ];
+
+    const PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_FORBIDDEN_SEMANTICS: &[&str] = &[
+        "wrapper_specific_protocol",
+        "wrapper_specific_storage",
+        "wrapper_specific_transport",
+        "phone_number_account",
+        "email_account",
+        "global_account",
+        "searchable_username",
+        "central_contact_discovery",
+        "central_message_server",
+        "push_notification_delivery",
+        "cloud_backup",
+        "auto_update_trust",
+        "store_trust",
+        "external_onion_delivery_success_claim",
+        "security_ready_claim",
+        "mobile_readiness_claim",
+    ];
+
     const PRODUCTION_INDEPENDENT_REVIEW_POLICIES: &[&str] = &[
         "public_threat_model_required",
         "independent_review_packet_required",
@@ -2262,6 +2342,7 @@ pub mod production {
         "status",
         "build",
         "failure_class",
+        "recovery_next_action",
         "manual_network_permission",
         "app_launch_network_boundary",
         "redacted_runtime_flags",
@@ -3355,6 +3436,28 @@ pub mod production {
         mobile_app_readiness_claimed: bool,
         secrets_or_plaintext_crossing_allowed: bool,
         delivery_or_central_service_crossing_allowed: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMobileSharedCoreApiFreezeBoundarySummary {
+        api_groups: &'static [&'static str],
+        dto_fields: &'static [&'static str],
+        error_taxonomy: &'static [&'static str],
+        serialization_contract: &'static [&'static str],
+        lifecycle_commands: &'static [&'static str],
+        diagnostics_fields: &'static [&'static str],
+        forbidden_semantics: &'static [&'static str],
+        inherits_mobile_ffi_inventory_boundary: bool,
+        inherits_mobile_status_dto_boundary: bool,
+        inherits_mobile_dto_serialization_boundary: bool,
+        inherits_mobile_diagnostics_redaction_boundary: bool,
+        wrapper_neutral: bool,
+        callable_ffi_implemented: bool,
+        generated_bindings_claimed: bool,
+        wrapper_specific_semantics_allowed: bool,
+        mobile_readiness_claimed: bool,
+        security_ready_claimed: bool,
         boundary_closed: bool,
     }
 
@@ -6988,6 +7091,80 @@ pub mod production {
 
         pub fn delivery_or_central_service_crossing_allowed(self) -> bool {
             self.delivery_or_central_service_crossing_allowed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionMobileSharedCoreApiFreezeBoundarySummary {
+        pub fn api_groups(self) -> &'static [&'static str] {
+            self.api_groups
+        }
+
+        pub fn dto_fields(self) -> &'static [&'static str] {
+            self.dto_fields
+        }
+
+        pub fn error_taxonomy(self) -> &'static [&'static str] {
+            self.error_taxonomy
+        }
+
+        pub fn serialization_contract(self) -> &'static [&'static str] {
+            self.serialization_contract
+        }
+
+        pub fn lifecycle_commands(self) -> &'static [&'static str] {
+            self.lifecycle_commands
+        }
+
+        pub fn diagnostics_fields(self) -> &'static [&'static str] {
+            self.diagnostics_fields
+        }
+
+        pub fn forbidden_semantics(self) -> &'static [&'static str] {
+            self.forbidden_semantics
+        }
+
+        pub fn inherits_mobile_ffi_inventory_boundary(self) -> bool {
+            self.inherits_mobile_ffi_inventory_boundary
+        }
+
+        pub fn inherits_mobile_status_dto_boundary(self) -> bool {
+            self.inherits_mobile_status_dto_boundary
+        }
+
+        pub fn inherits_mobile_dto_serialization_boundary(self) -> bool {
+            self.inherits_mobile_dto_serialization_boundary
+        }
+
+        pub fn inherits_mobile_diagnostics_redaction_boundary(self) -> bool {
+            self.inherits_mobile_diagnostics_redaction_boundary
+        }
+
+        pub fn wrapper_neutral(self) -> bool {
+            self.wrapper_neutral
+        }
+
+        pub fn callable_ffi_implemented(self) -> bool {
+            self.callable_ffi_implemented
+        }
+
+        pub fn generated_bindings_claimed(self) -> bool {
+            self.generated_bindings_claimed
+        }
+
+        pub fn wrapper_specific_semantics_allowed(self) -> bool {
+            self.wrapper_specific_semantics_allowed
+        }
+
+        pub fn mobile_readiness_claimed(self) -> bool {
+            self.mobile_readiness_claimed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -15734,7 +15911,9 @@ pub mod production {
             && ffi.api_groups().contains(&"pairing_payload_export_import")
             && ffi.api_groups().contains(&"safety_transcript_confirm")
             && ffi.api_groups().contains(&"message_transcript_view")
-            && ffi.rejected_exports().contains(&"central_contact_discovery")
+            && ffi
+                .rejected_exports()
+                .contains(&"central_contact_discovery")
             && ffi.rejected_exports().contains(&"central_message_server")
             && !ffi.security_ready_claimed();
         let inherits_mobile_status_screen_copy_boundary = status.boundary_closed()
@@ -18563,6 +18742,90 @@ pub mod production {
         }
     }
 
+    pub fn production_mobile_shared_core_api_freeze_boundary_summary(
+    ) -> ProductionMobileSharedCoreApiFreezeBoundarySummary {
+        let ffi = production_mobile_shared_core_ffi_inventory_boundary_summary();
+        let status_dto = production_mobile_wrapper_status_command_dto_boundary_summary();
+        let serialization = production_mobile_dto_serialization_placeholder_boundary_summary();
+        let diagnostics =
+            production_mobile_redacted_diagnostics_payload_placeholder_boundary_summary();
+
+        let inherits_mobile_ffi_inventory_boundary = ffi.boundary_closed()
+            && ffi.api_groups() == PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_GROUPS
+            && !ffi.wrapper_specific_semantics_allowed()
+            && !ffi.generated_bindings_claimed();
+        let inherits_mobile_status_dto_boundary = status_dto.boundary_closed()
+            && PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_DTO_FIELDS
+                .iter()
+                .all(|field| status_dto.dto_fields().contains(field))
+            && !status_dto.platform_specific_command_allowed()
+            && !status_dto.storage_path_returned()
+            && !status_dto.secret_material_returned();
+        let inherits_mobile_dto_serialization_boundary = serialization.boundary_closed()
+            && PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_SERIALIZATION_CONTRACT
+                .iter()
+                .all(|item| serialization.formats().contains(item))
+            && !serialization.serializer_implemented()
+            && !serialization.parser_implemented()
+            && !serialization.stable_wire_format_claimed();
+        let inherits_mobile_diagnostics_redaction_boundary = diagnostics.boundary_closed()
+            && PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_DIAGNOSTICS_FIELDS
+                .iter()
+                .all(|field| diagnostics.payload_fields().contains(field))
+            && diagnostics.local_copy_only()
+            && !diagnostics.raw_log_export_enabled()
+            && !diagnostics.background_upload_enabled();
+        let wrapper_neutral = true;
+        let callable_ffi_implemented = false;
+        let generated_bindings_claimed = false;
+        let wrapper_specific_semantics_allowed = false;
+        let mobile_readiness_claimed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = inherits_mobile_ffi_inventory_boundary
+            && inherits_mobile_status_dto_boundary
+            && inherits_mobile_dto_serialization_boundary
+            && inherits_mobile_diagnostics_redaction_boundary
+            && wrapper_neutral
+            && !callable_ffi_implemented
+            && !generated_bindings_claimed
+            && !wrapper_specific_semantics_allowed
+            && !mobile_readiness_claimed
+            && !security_ready_claimed
+            && PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_ERROR_TAXONOMY
+                .contains(&"lifecycle_confirmation_required")
+            && PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_LIFECYCLE_COMMANDS
+                .contains(&"conversation_delete")
+            && PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_LIFECYCLE_COMMANDS
+                .contains(&"full_local_wipe")
+            && PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_FORBIDDEN_SEMANTICS
+                .contains(&"wrapper_specific_protocol")
+            && PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_FORBIDDEN_SEMANTICS
+                .contains(&"central_message_server")
+            && PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_FORBIDDEN_SEMANTICS
+                .contains(&"security_ready_claim");
+
+        ProductionMobileSharedCoreApiFreezeBoundarySummary {
+            api_groups: PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_GROUPS,
+            dto_fields: PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_DTO_FIELDS,
+            error_taxonomy: PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_ERROR_TAXONOMY,
+            serialization_contract: PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_SERIALIZATION_CONTRACT,
+            lifecycle_commands: PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_LIFECYCLE_COMMANDS,
+            diagnostics_fields: PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_DIAGNOSTICS_FIELDS,
+            forbidden_semantics: PRODUCTION_MOBILE_SHARED_CORE_API_FREEZE_FORBIDDEN_SEMANTICS,
+            inherits_mobile_ffi_inventory_boundary,
+            inherits_mobile_status_dto_boundary,
+            inherits_mobile_dto_serialization_boundary,
+            inherits_mobile_diagnostics_redaction_boundary,
+            wrapper_neutral,
+            callable_ffi_implemented,
+            generated_bindings_claimed,
+            wrapper_specific_semantics_allowed,
+            mobile_readiness_claimed,
+            security_ready_claimed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_independent_review_boundary_summary(
     ) -> ProductionIndependentReviewBoundarySummary {
         let public_threat_model_required = true;
@@ -19266,8 +19529,7 @@ pub mod production {
                 || !migration_marker_present
                 || !profile_snapshot_marker_present
                 || !rollback_marker_present);
-        let rollback_suspicion_detected =
-            rollback_suspicion_detected || partial_marker_family;
+        let rollback_suspicion_detected = rollback_suspicion_detected || partial_marker_family;
         production_product_unlock_key_policy_snapshot(
             if rollback_suspicion_detected {
                 "rollback-suspicion-blocks-runtime-actions"
@@ -20578,10 +20840,9 @@ pub mod production {
             assert!(!prepared.rollback_suspicion_detected());
             assert!(!prepared.rollback_resume_blocked());
 
-            let partial_marker_family =
-                production_product_unlock_key_policy_snapshot_from_markers(
-                    true, false, true, true, true, false,
-                );
+            let partial_marker_family = production_product_unlock_key_policy_snapshot_from_markers(
+                true, false, true, true, true, false,
+            );
             assert_eq!(
                 partial_marker_family.key_policy_status(),
                 "rollback-suspicion-blocks-runtime-actions"
@@ -20786,7 +21047,9 @@ pub mod production {
             assert!(android
                 .rejected_dependencies()
                 .contains(&"wrapper_specific_storage_semantics"));
-            assert!(android.rejected_dependencies().contains(&"cloud_backup_sync"));
+            assert!(android
+                .rejected_dependencies()
+                .contains(&"cloud_backup_sync"));
             assert!(android
                 .rejected_dependencies()
                 .contains(&"google_account_identity"));
@@ -23990,9 +24253,7 @@ pub mod production {
             assert!(boundary
                 .required_evidence()
                 .contains(&"dependency_evidence"));
-            assert!(boundary
-                .required_evidence()
-                .contains(&"public_non_claims"));
+            assert!(boundary.required_evidence().contains(&"public_non_claims"));
             assert!(boundary
                 .rejected_trust_channels()
                 .contains(&"auto_update_channel"));
@@ -24576,6 +24837,81 @@ pub mod production {
             assert!(boundary
                 .forbidden_crossings()
                 .contains(&"mobile_app_readiness_claim"));
+        }
+
+        #[test]
+        fn production_mobile_shared_core_api_freeze_boundary_is_wrapper_neutral_and_non_callable() {
+            let boundary = production_mobile_shared_core_api_freeze_boundary_summary();
+
+            assert!(boundary.inherits_mobile_ffi_inventory_boundary());
+            assert!(boundary.inherits_mobile_status_dto_boundary());
+            assert!(boundary.inherits_mobile_dto_serialization_boundary());
+            assert!(boundary.inherits_mobile_diagnostics_redaction_boundary());
+            assert!(boundary.wrapper_neutral());
+            assert!(!boundary.callable_ffi_implemented());
+            assert!(!boundary.generated_bindings_claimed());
+            assert!(!boundary.wrapper_specific_semantics_allowed());
+            assert!(!boundary.mobile_readiness_claimed());
+            assert!(!boundary.security_ready_claimed());
+            assert_eq!(
+                boundary.api_groups(),
+                &[
+                    "shared_core_status_surface",
+                    "profile_unlock_lock_status",
+                    "invite_code_create_join",
+                    "pairing_payload_export_import",
+                    "safety_transcript_confirm",
+                    "manual_envelope_export_import",
+                    "message_transcript_view",
+                    "local_data_lifecycle",
+                    "redacted_support_diagnostics",
+                ]
+            );
+            assert!(boundary.dto_fields().contains(&"schema_version"));
+            assert!(boundary.dto_fields().contains(&"public_non_claims"));
+            assert!(boundary.error_taxonomy().contains(&"locked_profile"));
+            assert!(boundary
+                .error_taxonomy()
+                .contains(&"lifecycle_confirmation_required"));
+            assert!(boundary
+                .serialization_contract()
+                .contains(&"deterministic_utf8_json_object"));
+            assert!(boundary
+                .serialization_contract()
+                .contains(&"reject_unknown_fields"));
+            assert!(boundary
+                .lifecycle_commands()
+                .contains(&"conversation_delete"));
+            assert!(boundary.lifecycle_commands().contains(&"session_delete"));
+            assert!(boundary.lifecycle_commands().contains(&"profile_delete"));
+            assert!(boundary.lifecycle_commands().contains(&"full_local_wipe"));
+            assert!(boundary.diagnostics_fields().contains(&"status"));
+            assert!(boundary
+                .diagnostics_fields()
+                .contains(&"recovery_next_action"));
+            assert!(boundary
+                .forbidden_semantics()
+                .contains(&"wrapper_specific_protocol"));
+            assert!(boundary
+                .forbidden_semantics()
+                .contains(&"wrapper_specific_storage"));
+            assert!(boundary
+                .forbidden_semantics()
+                .contains(&"wrapper_specific_transport"));
+            assert!(boundary
+                .forbidden_semantics()
+                .contains(&"central_message_server"));
+            assert!(boundary
+                .forbidden_semantics()
+                .contains(&"push_notification_delivery"));
+            assert!(boundary.forbidden_semantics().contains(&"cloud_backup"));
+            assert!(boundary
+                .forbidden_semantics()
+                .contains(&"security_ready_claim"));
+            assert!(boundary
+                .forbidden_semantics()
+                .contains(&"mobile_readiness_claim"));
+            assert!(boundary.boundary_closed());
         }
 
         #[test]
