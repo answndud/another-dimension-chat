@@ -161,6 +161,15 @@ review, and explicit user action review. Signing, Microsoft Store approval, and
 SmartScreen reputation are distribution concerns, not a security boundary, and
 sensitive communication prohibited remains in force.
 
+Windows local usable criteria are source-defined before artifact work: WebView2
+rendering, Tauri app-data storage roots, encrypted profile stores, local
+deletion behavior, redacted diagnostics, explicit user actions before network
+work, no auto-update, and the same local-manual envelope default path must hold.
+Windows public artifact prerequisites are separate and still require an explicit
+release request, local runtime smoke on a real Windows machine, packaging
+review, installer/signing decisions, checksum provenance, and public upload hold
+review.
+
 Windows local runtime smoke boundary is source-only until a real Windows machine
 runs the local app. The source command is
 `npm --prefix apps/desktop-tauri run test:windows-boundary`; it checks that the

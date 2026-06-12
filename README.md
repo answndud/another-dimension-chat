@@ -30,6 +30,15 @@ runtime smoke, app-data path review, path separator review, redacted diagnostics
 review, and explicit user action review; signing, Microsoft Store approval, and
 SmartScreen reputation are distribution concerns, not a security boundary.
 
+Windows local usable criteria are source-defined before artifact work: a local
+Windows run must preserve WebView2 rendering, Tauri app-data storage roots,
+encrypted profile stores, local deletion behavior, redacted diagnostics,
+explicit user actions before network work, no auto-update, and the same
+local-manual envelope default path. Windows public artifact prerequisites are
+separate and still require an explicit release request, local runtime smoke on a
+real Windows machine, packaging review, installer/signing decisions, checksum
+provenance, and public upload hold review.
+
 Windows local runtime smoke boundary is source-only until a real Windows machine
 runs the local app. The source command is
 `npm --prefix apps/desktop-tauri run test:windows-boundary`; it checks that the
@@ -268,6 +277,9 @@ What does not exist yet:
   action review still required, local deletion behavior review still required,
   no auto-update, and signing/Microsoft Store or SmartScreen reputation is not a
   security boundary.
+- Windows local usable criteria are source-defined separately from Windows
+  public artifact prerequisites; local usability does not imply installer,
+  signing, SmartScreen, store, upload, or production readiness.
 - Android or iOS app. Android and iOS are shared-core shell candidates, not
   implemented mobile apps or mobile security claims.
 - Offline mailbox.
