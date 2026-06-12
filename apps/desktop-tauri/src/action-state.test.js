@@ -222,6 +222,15 @@ test("failed outbound messages stay retryable or cancelable from the active devi
     noticeKey: "messageSavedPrivateDeliveryOff",
     recoveryKey: "sendRecoveryPermissionOff",
   });
+  assert.deepEqual(productionTwoProfileOutboundActionState(entry, { profileA: "bob", profileB: "alice" }, true), {
+    showActions: true,
+    sameDirection: false,
+    canApplyDirection: true,
+    canRunNow: false,
+    canCancelNow: false,
+    disabledReason: "Only pending messages sent from this device can be retried or canceled here.",
+    cancelDisabledReason: "Only pending messages sent from this device can be retried or canceled here.",
+  });
 });
 
 test("outbound failure classes keep missing route separate from stale endpoint", () => {
