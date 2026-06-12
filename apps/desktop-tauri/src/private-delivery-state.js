@@ -417,6 +417,7 @@ export function desktopFirstCompletionStatus(report) {
     scope: "desktop-local-private-flow",
     status: blockers.length === 0 ? "ready-for-local-private-message-flow" : "incomplete",
     blockers,
+    blockerSummary: blockers.length > 0 ? blockers.join("#") : "none",
     externalOnionDeliveryVerified: false,
     productionMessagingReady: false,
     securityReadyClaimed: false,
@@ -477,6 +478,12 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
   const desktopCompletion = desktopFirstCompletionStatus(report);
   const failureClass = publicDiagnosticsFailureClass(parsed);
   const recoveryNextAction = publicDiagnosticsRecoveryNextAction(parsed);
+  const desktopAcceptanceNonClaims = [
+    "external-onion-delivery",
+    "production-messaging",
+    "security-ready",
+    "sensitive-communication",
+  ].join("#");
   const lines = [
     "Another Dimension Chat public support diagnostics",
     "diagnostic_version=2",
@@ -489,7 +496,15 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     `recovery_next_action=${recoveryNextAction}`,
     `desktop_completion_scope=${fieldTestReportValue(desktopCompletion.scope, "unknown")}`,
     `desktop_completion_status=${fieldTestReportValue(desktopCompletion.status, "unknown")}`,
-    `desktop_completion_blockers=${desktopCompletion.blockers.length > 0 ? desktopCompletion.blockers.join("#") : "none"}`,
+    `desktop_completion_blockers=${desktopCompletion.blockerSummary}`,
+    `desktop_acceptance_surface=${fieldTestReportValue(desktopCompletion.scope, "unknown")}`,
+    `desktop_acceptance_status=${fieldTestReportValue(desktopCompletion.status, "unknown")}`,
+    `desktop_acceptance_blockers=${desktopCompletion.blockerSummary}`,
+    `desktop_acceptance_next_action=${recoveryNextAction}`,
+    `desktop_acceptance_non_claims=${desktopAcceptanceNonClaims}`,
+    `desktop_acceptance_external_delivery_claim=false`,
+    `desktop_acceptance_production_claim=false`,
+    `desktop_acceptance_sensitive_use_claim=false`,
     `external_onion_delivery_verified=${desktopCompletion.externalOnionDeliveryVerified === true}`,
     `production_messaging_ready=${desktopCompletion.productionMessagingReady === true}`,
     `security_ready_claimed=${desktopCompletion.securityReadyClaimed === true}`,

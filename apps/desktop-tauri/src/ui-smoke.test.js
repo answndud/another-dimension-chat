@@ -1788,7 +1788,15 @@ test("dark chat palette does not use gold or yellow warning colors", () => {
 test("public diagnostics summary includes desktop completion without production claims", () => {
   assert.match(privateDeliveryStateJs, /function desktopCompletionRouteReady/);
   assert.match(privateDeliveryStateJs, /export function desktopFirstCompletionStatus/);
+  assert.match(privateDeliveryStateJs, /blockerSummary: blockers\.length > 0 \? blockers\.join\("#"\) : "none"/);
   assert.match(privateDeliveryStateJs, /desktop_completion_scope=\$\{fieldTestReportValue\(desktopCompletion\.scope/);
+  assert.match(privateDeliveryStateJs, /desktop_acceptance_surface=\$\{fieldTestReportValue\(desktopCompletion\.scope/);
+  assert.match(privateDeliveryStateJs, /desktop_acceptance_status=\$\{fieldTestReportValue\(desktopCompletion\.status/);
+  assert.match(privateDeliveryStateJs, /desktop_acceptance_blockers=\$\{desktopCompletion\.blockerSummary\}/);
+  assert.match(privateDeliveryStateJs, /desktop_acceptance_next_action=\$\{recoveryNextAction\}/);
+  assert.match(privateDeliveryStateJs, /desktop_acceptance_external_delivery_claim=false/);
+  assert.match(privateDeliveryStateJs, /desktop_acceptance_production_claim=false/);
+  assert.match(privateDeliveryStateJs, /desktop_acceptance_sensitive_use_claim=false/);
   assert.match(
     privateDeliveryStateJs,
     /external_onion_delivery_verified=\$\{desktopCompletion\.externalOnionDeliveryVerified === true\}/,
@@ -1801,5 +1809,10 @@ test("public diagnostics summary includes desktop completion without production 
   );
   assert.match(mainJs, /function desktopFirstCompletionStatus\(report\)/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_completion=\$\{desktopCompletion\.status\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_blockers=\$\{desktopCompletion\.blockerSummary\}/);
+  assert.match(
+    functionBody(mainJs, "refreshPublicBetaDiagnostics"),
+    /non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication/,
+  );
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /app_launch_network=false/);
 });
