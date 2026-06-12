@@ -12412,7 +12412,7 @@ function applyProductionActionState() {
   setTwoProfileComposeCurrent(replyComposerCurrent);
   renderManualMessageStatus(state);
   let selectedPendingActionView = null;
-  if (selectedConversation && !selectedConversationDelivered) {
+  if (!plaintextReviewPending && selectedConversation && !selectedConversationDelivered) {
     selectedPendingActionView = twoProfileConversationActionView(selectedConversation);
     const selectedNextAction = selectedMessageInputStale
       ? `Stale: click Reapply selected to restore ${selectedMessageLabel}.`
@@ -12742,34 +12742,47 @@ function applyProductionActionState() {
   });
   const composerPrimaryAvailableWithoutDraft = composerPrimaryIntent.action !== "send";
   const composerPrimaryWaitingForReceiveStop = composerPrimaryIntent.action === "wait-receive-stop";
-  setActionButtonState(
-    fields.runProductionTwoProfileMessageRoundtrip,
-    composerPrimaryAvailableWithoutDraft
+  const composerPrimaryBlockedByPlaintextReview = Boolean(
+    plaintextReviewPending,
+  );
+  const composerPrimaryDisabled = composerPrimaryBlockedByPlaintextReview
+    ? true
+    : composerPrimaryAvailableWithoutDraft
       ? busy || !hasMessageRetentionPolicy || composerPrimaryWaitingForReceiveStop
-      : !availability.runTwoProfileMessageRoundtrip,
-    busy
-      ? "Wait for the active production action."
+      : !availability.runTwoProfileMessageRoundtrip;
+  const composerPrimaryDisabledReason = busy
+    ? "Wait for the active production action."
+    : composerPrimaryBlockedByPlaintextReview
+      ? "Click Show plaintext before writing or sending a reply."
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
-      : composerPrimaryWaitingForReceiveStop
-        ? composerPrimaryIntent.disabledReason
-      : composerPrimaryIntent.action === "start-receiving"
-        ? t("receiveIntentRestartReady")
-      : composerPrimaryIntent.action !== "send"
-        ? composerPrimaryIntent.disabledReason
-      : twoProfileSessionsReady && !twoProfileSafetyConfirmed
-        ? t("sendLockedUntilVerified")
-      : selectedDeliveredReplyReady && twoProfileReplyDraftReady
-        ? `Send reply to selected message #${selectedConversation.messageNumber}.`
-      : latestReplySelected && twoProfileReplyDraftReady
-        ? "Send reply to the latest delivered message."
-      : twoProfileSessionsReady && twoProfileSafetyConfirmed && !twoProfile.message
-        ? t("writeMessageBeforeSending")
-      : hasTwoProfileInput
-        ? "Check the room before sending."
-        : "Create or paste an invite code, then write a message.",
-    manualPrimaryActions.sendReply ||
-      (!state.hasTwoProfileReplySelected && twoProfileCurrentAction === "stored-message"),
+        : composerPrimaryWaitingForReceiveStop
+          ? composerPrimaryIntent.disabledReason
+          : composerPrimaryIntent.action === "start-receiving"
+            ? t("receiveIntentRestartReady")
+            : composerPrimaryIntent.action !== "send"
+              ? composerPrimaryIntent.disabledReason
+              : twoProfileSessionsReady && !twoProfileSafetyConfirmed
+                ? t("sendLockedUntilVerified")
+                : selectedDeliveredReplyReady && twoProfileReplyDraftReady
+                  ? `Send reply to selected message #${selectedConversation.messageNumber}.`
+                  : latestReplySelected && twoProfileReplyDraftReady
+                    ? "Send reply to the latest delivered message."
+                    : twoProfileSessionsReady && twoProfileSafetyConfirmed && !twoProfile.message
+                      ? t("writeMessageBeforeSending")
+                      : hasTwoProfileInput
+                        ? "Check the room before sending."
+                        : "Create or paste an invite code, then write a message.";
+  const composerPrimaryCurrent = Boolean(
+    !composerPrimaryBlockedByPlaintextReview &&
+      (manualPrimaryActions.sendReply ||
+        (!state.hasTwoProfileReplySelected && twoProfileCurrentAction === "stored-message")),
+  );
+  setActionButtonState(
+    fields.runProductionTwoProfileMessageRoundtrip,
+    composerPrimaryDisabled,
+    composerPrimaryDisabledReason,
+    composerPrimaryCurrent,
   );
   setText(fields.runProductionTwoProfileMessageRoundtrip, t(composerPrimaryIntent.labelKey));
   if (fields.runProductionTwoProfileMessageRoundtrip && composerPrimaryIntent.action !== "send") {

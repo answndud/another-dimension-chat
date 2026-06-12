@@ -8,6 +8,10 @@ import {
   messageEnvelopeSlotImportReadyForEntry,
   messageEnvelopeSlotMatchesEntry,
 } from "./message-envelope-slots.js";
+import {
+  productionManualCurrentFocusTarget,
+  productionManualPrimaryActions,
+} from "./action-state.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = join(here, "..");
@@ -1699,6 +1703,13 @@ test("message send retry and cancel results stay scoped to the current room", ()
 
 test("conversation rows show manual lifecycle summary without stronger delivery claims", () => {
   const renderBody = functionBody(mainJs, "renderProductionTwoProfileConversationList");
+  const actionState = {
+    hasProfileUnlockInput: true,
+    hasImportedMessage: true,
+    hasReceivedMessage: false,
+    hasTwoProfileReplyDraftInput: true,
+    hasTwoProfileReplySelected: true,
+  };
   assert.match(mainJs, /productionTwoProfileManualLifecycleView/);
   assert.match(renderBody, /const manualLifecycle = productionTwoProfileManualLifecycleView\(entry, senderEnvelopeSlotPresent\)/);
   assert.match(renderBody, /const actionView = twoProfileConversationActionView\(entry, senderEnvelopeSlotPresent\)/);
@@ -1710,10 +1721,20 @@ test("conversation rows show manual lifecycle summary without stronger delivery 
   assert.match(actionStateJs, /click Show plaintext before writing the reply/);
   assert.match(actionStateJs, /step: "review plaintext"/);
   assert.match(actionStateJs, /sender record and an envelope slot ready for peer import/);
+  assert.equal(productionManualCurrentFocusTarget(actionState), "show-received");
+  assert.deepEqual(productionManualPrimaryActions(actionState), {
+    showReceived: true,
+    selectReply: false,
+    sendReply: false,
+  });
   assert.match(functionBody(mainJs, "twoProfileConversationUserActionMessage"), /selectedTwoProfileNextActionMessage\(entry\)/);
   assert.doesNotMatch(functionBody(mainJs, "twoProfileConversationUserActionMessage"), /waiting for delivery/);
   assert.match(functionBody(mainJs, "applyProductionActionState"), /const plaintextReviewPending = Boolean\(hasImportedMessage && !hasReceivedMessage\)/);
   assert.match(functionBody(mainJs, "applyProductionActionState"), /!state\.hasTwoProfileReplyDraftInput && !plaintextReviewPending/);
+  assert.match(functionBody(mainJs, "applyProductionActionState"), /if \(!plaintextReviewPending && selectedConversation && !selectedConversationDelivered\)/);
+  assert.match(functionBody(mainJs, "applyProductionActionState"), /const composerPrimaryBlockedByPlaintextReview = Boolean\(\s*plaintextReviewPending,\s*\)/);
+  assert.match(functionBody(mainJs, "applyProductionActionState"), /Click Show plaintext before writing or sending a reply\./);
+  assert.match(functionBody(mainJs, "applyProductionActionState"), /!composerPrimaryBlockedByPlaintextReview[\s\S]*manualPrimaryActions\.sendReply/);
   assert.match(functionBody(mainJs, "exportProductionReceivedMessage"), /Plaintext review running/);
   assert.match(functionBody(mainJs, "exportProductionReceivedMessage"), /Received plaintext reviewed/);
   assert.doesNotMatch(functionBody(mainJs, "exportProductionReceivedMessage"), /Received message exporting/);
